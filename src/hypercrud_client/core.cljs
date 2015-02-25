@@ -2,7 +2,7 @@
   (:require-macros [cljs.core.async.macros :refer [go]])
   (:refer-clojure :exclude [update])
   (:require [goog.Uri]
-            [cljs.core.async :refer [<! >! chan]]
+            [cljs.core.async :refer [<! >! chan map<]]
             [cljs-http.client :as http]
             [reagent.core :as reagent]))
 
@@ -31,14 +31,15 @@
   (create [this href form])
   (read [this href])
   (update [this href form])
-  (delete [this href]))
+  (delete [this href])
+  (t [this]))
 
 
 (defn href-with-base [^String base ^goog.Uri href]
   (goog.Uri. (str base (.toString href))))
 
 
-(deftype HypercrudClient [base-href]
+(deftype HypercrudClient [base-href cur]
   Hypercrud
   (create [this ^goog.Uri href form]
     (assert (not (nil? href)))
@@ -58,15 +59,19 @@
   (update [this ^goog.Uri href form]
     (assert (not (nil? href)))
     (println (pr-str form))
-    (http/put
-      (href-with-base base-href href)
-      {:headers {"content-type" content-type-transit
-                 "accept" content-type-transit}
-       :transit-params form
-       :transit-opts transit-opts}))
+    (->> (http/put (href-with-base base-href href)
+                   {:headers {"content-type" content-type-transit
+                              "accept" content-type-transit}
+                    :transit-params form
+                    :transit-opts transit-opts})
+         (map< (fn [resp]
+                 (reset! (cur [:t]) (-> resp :body :t))
+                 resp))))
   (delete [this ^goog.Uri href]
     (assert (not (nil? href)))
-    nil))
+    nil)
+  (t [this]
+    @(cur [:t])))
 
 
 (defn resolve* [client cj-item] ;;or cj-collection, they are the same
