@@ -69,16 +69,12 @@
     nil))
 
 
-
-(defonce instance (HypercrudClient. "//localhost:8080"))
-
-
-(defn resolve* [cj-item] ;;or cj-collection, they are the same
+(defn resolve* [client cj-item] ;;or cj-collection, they are the same
   (assert (not (nil? cj-item)) "resolve*: cj-item is nil")
   (assert (not (nil? (:href cj-item))) "resolve*: cj-item :href is nil")
   (let [c (chan)]
     (go
-      (let [resolved-cj-item-response (<! (read instance (:href cj-item)))
+      (let [resolved-cj-item-response (<! (read client (:href cj-item)))
             resolved-cj-item (-> resolved-cj-item-response :body :collection)]
         (assert resolved-cj-item (str "bad href: " (:href cj-item)))
         (>! c resolved-cj-item)))
@@ -89,10 +85,10 @@
   "This is a reagent component, can't use it as a function. Use it like this:
       (defn comp [r] [:div r])
       [resolve cj-item comp]"
-  [cj-item comp] ;; or cj-collection, the are the same
+  [client cj-item comp] ;; or cj-collection, the are the same
   (let [a (reagent/atom cj-item)]
-    (go (let [resolved-cj-item (<! (resolve* cj-item))]
+    (go (let [resolved-cj-item (<! (resolve* client cj-item))]
           ;;(println "resolved" resolved-cj-item)
           (reset! a resolved-cj-item)))
-    (fn [cj-item comp]
+    (fn [client cj-item comp]
       (comp @a))))
