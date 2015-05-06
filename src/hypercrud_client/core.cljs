@@ -14,6 +14,17 @@
   (stringRep [this v] (.rep this v)))
 
 
+(extend-type goog.Uri
+  IHash
+  (-hash [this]
+    (goog.string/hashCode (pr-str this)))
+
+  IEquiv
+  (-equiv [this other]
+    (and (instance? goog.Uri other)
+         (= (hash this) (hash other))))) ;TODO find a better way to check equality
+
+
 (def transit-opts
   {:encoding :json-verbose
    :decoding :json-verbose
@@ -89,9 +100,8 @@
       (go
         (let [cache @(cur [:cache])
               cached? (contains? cache href)]
-          #_(js* "0; debugger;")
           (if cached?
-            (>! c (:href cache))
+            (>! c (get cache href))
             (let [resolved-cj-item-response (<! (read this href))
                   resolved-cj-item (-> resolved-cj-item-response :body :hypercrud)
                   cache (-> resolved-cj-item-response :body :cache)]
