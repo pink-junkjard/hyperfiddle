@@ -2,7 +2,7 @@
   (:require-macros [cljs.core.async.macros :refer [go]])
   (:refer-clojure :exclude [update])
   (:require [goog.Uri]
-            [cljs.core.async :refer [<! >! chan map<]]
+            [cljs.core.async :refer [<! >! chan close! map<]]
             [cljs-http.client :as http]
             [reagent.core :as reagent]))
 
@@ -32,7 +32,9 @@
   (read [this href])
   (update [this href form])
   (delete [this href])
-  (t [this]))
+  (t [this])
+  (loaded? [this hc-node])
+  (resolve* [this hc-node]))
 
 
 (defn href-with-base [^String base ^goog.Uri href]
@@ -49,6 +51,7 @@
                  "accept" content-type-transit}
        :transit-params form
        :transit-opts transit-opts}))
+
   (read [this ^goog.Uri href]
     (assert (not (nil? href)))
     (http/get
@@ -56,6 +59,7 @@
       {:headers {"accept" "application/transit+json;charset=UTF-8"}
        :transit-opts transit-opts
        }))
+
   (update [this ^goog.Uri href form]
     (assert (not (nil? href)))
     (println (pr-str form))
@@ -67,23 +71,31 @@
          (map< (fn [resp]
                  (reset! (cur [:t]) (-> resp :body :t))
                  resp))))
+
   (delete [this ^goog.Uri href]
     (assert (not (nil? href)))
     nil)
+
   (t [this]
-    @(cur [:t])))
+    @(cur [:t]))
 
+  (loaded? [this {:keys [data] :as hc-node}]
+    (not (nil? data)))
 
-(defn resolve* [client cj-item] ;;or cj-collection, they are the same
-  (assert (not (nil? cj-item)) "resolve*: cj-item is nil")
-  (assert (not (nil? (:href cj-item))) "resolve*: cj-item :href is nil")
-  (let [c (chan)]
-    (go
-      (let [resolved-cj-item-response (<! (read client (:href cj-item)))
-            resolved-cj-item (-> resolved-cj-item-response :body :collection)]
-        (assert resolved-cj-item (str "bad href: " (:href cj-item)))
-        (>! c resolved-cj-item)))
-    c))
+  (resolve* [this cj-item]
+    (assert (not (nil? cj-item)) "resolve*: cj-item is nil")
+    (assert (not (nil? (:href cj-item))) "resolve*: cj-item :href is nil")
+    (let [c (chan)]
+      (go
+        (let [resolved-cj-item-response (<! (read this (:href cj-item)))
+              resolved-cj-item (-> resolved-cj-item-response :body :hypercrud)
+              cache (-> resolved-cj-item-response :body :cache)]
+          (assert resolved-cj-item (str "bad href: " (:href cj-item)))
+          #_ (<! (util/timeout (+ 0 (rand-int 350))))
+          (reset! (cur [:cache]) cache)                     ;merge?
+          (>! c resolved-cj-item)))
+      c))
+  )
 
 
 (defn resolve
@@ -92,8 +104,11 @@
       [resolve cj-item comp]"
   [client cj-item comp] ;; or cj-collection, the are the same
   (let [a (reagent/atom cj-item)]
-    (go (let [resolved-cj-item (<! (resolve* client cj-item))]
+    (go
+      (if (loaded? client cj-item)
+        (reset! a cj-item) ;skip request
+        (let [resolved-cj-item (<! (resolve* client cj-item))]
           ;;(println "resolved" resolved-cj-item)
-          (reset! a resolved-cj-item)))
+          (reset! a resolved-cj-item))))
     (fn [client cj-item comp]
       (comp @a))))
