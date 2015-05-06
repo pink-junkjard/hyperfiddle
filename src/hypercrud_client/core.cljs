@@ -82,18 +82,23 @@
   (loaded? [this {:keys [data] :as hc-node}]
     (not (nil? data)))
 
-  (resolve* [this cj-item]
+  (resolve* [this {:keys [href] :as cj-item}]
     (assert (not (nil? cj-item)) "resolve*: cj-item is nil")
-    (assert (not (nil? (:href cj-item))) "resolve*: cj-item :href is nil")
+    (assert (not (nil? href)) "resolve*: cj-item :href is nil")
     (let [c (chan)]
       (go
-        (let [resolved-cj-item-response (<! (read this (:href cj-item)))
-              resolved-cj-item (-> resolved-cj-item-response :body :hypercrud)
-              cache (-> resolved-cj-item-response :body :cache)]
-          (assert resolved-cj-item (str "bad href: " (:href cj-item)))
-          #_ (<! (util/timeout (+ 0 (rand-int 350))))
-          (reset! (cur [:cache]) cache)                     ;merge?
-          (>! c resolved-cj-item)))
+        (let [cache @(cur [:cache])
+              cached? (contains? cache href)]
+          #_(js* "0; debugger;")
+          (if cached?
+            (>! c (:href cache))
+            (let [resolved-cj-item-response (<! (read this href))
+                  resolved-cj-item (-> resolved-cj-item-response :body :hypercrud)
+                  cache (-> resolved-cj-item-response :body :cache)]
+              (assert resolved-cj-item (str "bad href: " href))
+              #_ (<! (util/timeout (+ 0 (rand-int 350))))
+              (swap! (cur [:cache]) merge cache)
+              (>! c resolved-cj-item)))))
       c))
   )
 
