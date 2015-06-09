@@ -45,14 +45,15 @@
   (delete [this href])
   (t [this])
   (loaded? [this hc-node])
-  (resolve* [this hc-node]))
+  (resolve* [this hc-node])
+  (enter [this comp]))
 
 
 (defn href-with-base [^String base ^goog.Uri href]
   (goog.Uri. (str base (.toString href))))
 
 
-(deftype HypercrudClient [base-href cur]
+(deftype HypercrudClient [base-href entry-point cur]
   Hypercrud
   (create [this ^goog.Uri href form]
     (assert (not (nil? href)))
@@ -110,6 +111,15 @@
               (swap! (cur [:cache]) merge cache)
               (>! c resolved-cj-item)))))
       c))
+
+  (enter [this comp]
+    (let [hc-node {:href entry-point}
+          a (reagent/atom hc-node)]
+      (go
+        (let [hc-node' (<! (resolve* this hc-node))]
+          (reset! a hc-node')))
+      (fn [this comp]
+        (comp @a))))
   )
 
 
