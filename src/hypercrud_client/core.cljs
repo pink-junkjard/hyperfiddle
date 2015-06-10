@@ -119,7 +119,9 @@
         (let [hc-node' (<! (resolve* this hc-node))]
           (reset! a hc-node')))
       (fn [this comp]
-        (comp @a))))
+        (if (loaded? this @a)
+          (comp @a)
+          [:div "loading"]))))
   )
 
 
@@ -130,10 +132,9 @@
   [client cj-item comp] ;; or cj-collection, the are the same
   (let [a (reagent/atom cj-item)]
     (go
-      (if (loaded? client cj-item)
-        (reset! a cj-item) ;skip request
-        (let [resolved-cj-item (<! (resolve* client cj-item))]
-          ;;(println "resolved" resolved-cj-item)
-          (reset! a resolved-cj-item))))
+      (let [resolved-cj-item (<! (resolve* client cj-item))]
+        (reset! a resolved-cj-item)))
     (fn [client cj-item comp]
-      (comp @a))))
+      (if (loaded? client @a)
+        (comp @a)
+        [:div "loading"]))))
