@@ -129,12 +129,14 @@
   "This is a reagent component, can't use it as a function. Use it like this:
       (defn comp [r] [:div r])
       [resolve cj-item comp]"
-  [client cj-item comp] ;; or cj-collection, the are the same
+  [client cj-item comp & [loading-comp]] ;; or cj-collection, the are the same
   (let [a (reagent/atom cj-item)]
     (go
       (let [resolved-cj-item (<! (resolve* client cj-item))]
         (reset! a resolved-cj-item)))
-    (fn [client cj-item comp]
+    (fn [client cj-item comp & [loading-comp]]
       (if (loaded? client @a)
         (comp @a)
-        [:div "loading"]))))
+        (if loading-comp ;for cases like :tbody that aren't allowed :div children
+          (loading-comp)
+          [:div "loading"])))))
