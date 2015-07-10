@@ -37,45 +37,48 @@
 
 (def content-type-transit "application/transit+json;charset=UTF-8")
 
-
+;; Hypercrud uses URI types, because URIs come out of transit properly typed.
 (defprotocol Hypercrud
-  (create [this href form])
-  (read [this href])
-  (update [this href form])
-  (delete [this href])
+  (create [this ^goog.Uri href form])
+  (read [this ^goog.Uri href])
+  (update [this ^goog.Uri href form])
+  (delete [this ^goog.Uri href])
   (t [this])
   (loaded? [this hc-node])
   (resolve* [this hc-node])
   (enter [this comp]))
 
 
-(defn href-with-base [^String base ^goog.Uri href]
-  (goog.Uri. (str base (.toString href))))
+(defn resolve-root-relative-uri [^goog.Uri entry-uri ^goog.Uri relative-uri]
+  ;; goog.Uri.parse("//api").resolve(goog.Uri.parse("/api/communities?tx=13194139534333")).toString()
+  (-> (.clone entry-uri)
+      (.resolve relative-uri)
+      #_ .toString))
 
 
-(deftype HypercrudClient [base-href entry-point cur]
+(deftype HypercrudClient [^goog.Uri entry-uri cur]
   Hypercrud
-  (create [this ^goog.Uri href form]
-    (assert (not (nil? href)))
+  (create [this ^goog.Uri relative-href form]
+    (assert (not (nil? relative-href)))
     (http/post
-      (href-with-base base-href href)
+      (resolve-root-relative-uri entry-uri relative-href)
       {:headers {"content-type" content-type-transit
                  "accept" content-type-transit}
        :transit-params form
        :transit-opts transit-opts}))
 
-  (read [this ^goog.Uri href]
-    (assert (not (nil? href)))
+  (read [this ^goog.Uri relative-href]
+    (assert (not (nil? relative-href)))
     (http/get
-      (href-with-base base-href href)
+      (resolve-root-relative-uri entry-uri relative-href)
       {:headers {"accept" "application/transit+json;charset=UTF-8"}
        :transit-opts transit-opts
        }))
 
-  (update [this ^goog.Uri href form]
-    (assert (not (nil? href)))
+  (update [this ^goog.Uri relative-href form]
+    (assert (not (nil? relative-href)))
     (println (pr-str form))
-    (->> (http/put (href-with-base base-href href)
+    (->> (http/put (resolve-root-relative-uri entry-uri relative-href)
                    {:headers {"content-type" content-type-transit
                               "accept" content-type-transit}
                     :transit-params form
@@ -84,8 +87,8 @@
                  (reset! (cur [:t]) (-> resp :body :t))
                  resp))))
 
-  (delete [this ^goog.Uri href]
-    (assert (not (nil? href)))
+  (delete [this ^goog.Uri relative-href]
+    (assert (not (nil? relative-href)))
     nil)
 
   (t [this]
@@ -113,7 +116,7 @@
       c))
 
   (enter [this comp]
-    (let [hc-node {:href entry-point}
+    (let [hc-node {:href entry-uri}
           a (reagent/atom hc-node)]
       (go
         (let [hc-node' (<! (resolve* this hc-node))]
