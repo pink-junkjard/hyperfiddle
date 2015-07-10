@@ -30,10 +30,10 @@
    :decoding :json-verbose
 
    :decoding-opts
-             {:handlers {"r" (fn [v] (goog.Uri. v))}}
+   {:handlers {"r" (fn [v] (goog.Uri. v))}}
 
    :encoding-opts
-             {:handlers {goog.Uri (UriHandler.)}}})
+   {:handlers {goog.Uri (UriHandler.)}}})
 
 (def content-type-transit "application/transit+json;charset=UTF-8")
 
