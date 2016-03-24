@@ -92,7 +92,7 @@
     nil)
 
   (t [this]
-    @(cur [:t]))
+    @(cur [:t] 0))
 
   (loaded? [this {:keys [data] :as hc-node}]
     (not (nil? data)))
@@ -102,7 +102,7 @@
     (assert (not (nil? href)) "resolve*: cj-item :href is nil")
     (let [c (chan)]
       (go
-        (let [cache @(cur [:cache])
+        (let [cache @(cur [:cache] {})
               cached? (contains? cache href)]
           (if cached?
             (>! c (get cache href))
