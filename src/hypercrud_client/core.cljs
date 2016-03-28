@@ -45,7 +45,8 @@
   (delete [this ^goog.Uri href])
   (t [this])
   (loaded? [this hc-node])
-  (resolve* [this hc-node])
+  (resolve-async [this hc-node])
+  (resolve-sync [this hc-node])
   (enter [this comp]))
 
 
@@ -97,7 +98,13 @@
   (loaded? [this {:keys [data] :as hc-node}]
     (not (nil? data)))
 
-  (resolve* [this {:keys [href] :as cj-item}]
+  (resolve-sync [this {:keys [href] :as cj-item}]
+    (assert (not (nil? cj-item)) "resolve*: cj-item is nil")
+    (assert (not (nil? href)) "resolve*: cj-item :href is nil")
+    (let [cache @(cur [:cache])]
+      (get cache href)))
+
+  (resolve-async [this {:keys [href] :as cj-item}]
     (assert (not (nil? cj-item)) "resolve*: cj-item is nil")
     (assert (not (nil? href)) "resolve*: cj-item :href is nil")
     (let [c (chan)]
@@ -108,7 +115,8 @@
             (>! c (get cache href))
             (let [resolved-cj-item-response (<! (read this href))
                   resolved-cj-item (-> resolved-cj-item-response :body :hypercrud)
-                  cache (-> resolved-cj-item-response :body :cache)]
+                  cache (assoc (-> resolved-cj-item-response :body :cache)
+                               href resolved-cj-item)]
               (assert resolved-cj-item (str "bad href: " href))
               #_ (<! (util/timeout (+ 0 (rand-int 350))))
               (swap! (cur [:cache]) merge cache)
@@ -117,14 +125,15 @@
 
   (enter [this comp]
     (let [hc-node {:href entry-uri}
-          a (reagent/atom hc-node)]
-      (go
-        (let [hc-node' (<! (resolve* this hc-node))]
-          (reset! a hc-node')))
+          a (reagent/atom (resolve-sync this hc-node))]
       (fn [this comp]
         (if (loaded? this @a)
           (comp @a)
-          [:div "loading"]))))
+          (do
+            (go
+              (let [hc-node' (<! (resolve-async this hc-node))]
+                (reset! a hc-node')))
+            [:div "loading"])))))
   )
 
 
@@ -133,9 +142,9 @@
       (defn comp [r] [:div r])
       [resolve cj-item comp]"
   [client cj-item comp & [loading-comp]] ;; or cj-collection, the are the same
-  (let [a (reagent/atom cj-item)]
+  (let [a (reagent/atom (resolve-sync client cj-item))]
     (go
-      (let [resolved-cj-item (<! (resolve* client cj-item))]
+      (let [resolved-cj-item (<! (resolve-async client cj-item))]
         (reset! a resolved-cj-item)))
     (fn [client cj-item comp & [loading-comp]]
       (if (loaded? client @a)
