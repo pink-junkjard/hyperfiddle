@@ -1,41 +1,28 @@
 (ns hypercrud-client.core
-  (:require-macros [cljs.core.async.macros :refer [go]])
   (:refer-clojure :exclude [update])
-  (:require [goog.Uri]
-            [cljs.core.async :refer [<! >! chan close! map<]]
-            [cljs-http.client :as http]
+  (:require [hypercrud-client.util :as util]
+            [goog.Uri]
+            [cats.core :refer [fmap]]
+            [kvlt.middleware.params]
+            [kvlt.core :as kvlt]
+            [promesa.core :as p]
             [reagent.core :as reagent]))
 
 
-(deftype UriHandler []
-  Object
-  (tag [_ v] "r")
-  (rep [_ v] (.toString v))
-  (stringRep [this v] (.rep this v)))
-
-
-(extend-type goog.Uri
-  IHash
-  (-hash [this]
-    (goog.string/hashCode (pr-str this)))
-
-  IEquiv
-  (-equiv [this other]
-    (and (instance? goog.Uri other)
-         (= (hash this) (hash other))))) ;TODO find a better way to check equality
-
-
-(def transit-opts
-  {:encoding :json-verbose
-   :decoding :json-verbose
-
-   :decoding-opts
-   {:handlers {"r" (fn [v] (goog.Uri. v))}}
-
-   :encoding-opts
-   {:handlers {goog.Uri (UriHandler.)}}})
-
 (def content-type-transit "application/transit+json;charset=UTF-8")
+
+(def transit-encoding-opts {:handlers {goog.Uri (util/UriHandler.)}})
+(def transit-decoding-opts {"r" (fn [v] (goog.Uri. v))})
+
+
+(defmethod kvlt.middleware.params/coerce-form-params (keyword content-type-transit) [{:keys [form-params]}]
+  (util/transit-encode form-params :json-verbose transit-encoding-opts))
+
+
+(defmethod kvlt.middleware/from-content-type (keyword content-type-transit)  [resp]
+  (let [decoded-val (util/transit-decode (:body resp) :json-verbose transit-decoding-opts)]
+    (assoc resp :body decoded-val)))
+
 
 ;; Hypercrud uses URI types, because URIs come out of transit properly typed.
 (defprotocol Hypercrud
@@ -45,8 +32,7 @@
   (delete [this ^goog.Uri href])
   (t [this])
   (loaded? [this hc-node])
-  (resolve-async [this hc-node])
-  (resolve-sync [this hc-node])
+  (resolve* [this hc-node])
   (enter [this comp]))
 
 
@@ -57,34 +43,43 @@
       #_ .toString))
 
 
+(defn resolve
+  [client hc-node comp & [loading-comp]]
+  (let [hc-node' (resolve* client hc-node)
+        cmp (reagent/current-component)]
+    (if (p/resolved? hc-node')
+      (comp (p/extract hc-node'))
+      (do
+        (p/then hc-node' #(reagent/force-update cmp))
+        (if loading-comp (loading-comp) [:div "loading"])))))
+
+
 (deftype HypercrudClient [^goog.Uri entry-uri cur]
   Hypercrud
   (create [this ^goog.Uri relative-href form]
     (assert (not (nil? relative-href)))
-    (http/post
-      (resolve-root-relative-uri entry-uri relative-href)
-      {:headers {"content-type" content-type-transit
+    (kvlt/request!
+      {:url (resolve-root-relative-uri entry-uri relative-href)
+       :headers {"content-type" content-type-transit
                  "accept" content-type-transit}
-       :transit-params form
-       :transit-opts transit-opts}))
+       :form form}))
 
   (read [this ^goog.Uri relative-href]
     (assert (not (nil? relative-href)))
-    (http/get
-      (resolve-root-relative-uri entry-uri relative-href)
-      {:headers {"accept" "application/transit+json;charset=UTF-8"}
-       :transit-opts transit-opts
-       }))
+    (kvlt/request!
+      {:url    (resolve-root-relative-uri entry-uri relative-href)
+       :headers {:accept content-type-transit}
+       :method :get
+       :as     :auto}))
 
   (update [this ^goog.Uri relative-href form]
     (assert (not (nil? relative-href)))
     (println (pr-str form))
-    (->> (http/put (resolve-root-relative-uri entry-uri relative-href)
-                   {:headers {"content-type" content-type-transit
-                              "accept" content-type-transit}
-                    :transit-params form
-                    :transit-opts transit-opts})
-         (map< (fn [resp]
+    (->> (kvlt/request! {:url (resolve-root-relative-uri entry-uri relative-href)
+                         :headers {"content-type" content-type-transit
+                                   "accept"       content-type-transit}
+                         :form form})
+         (fmap (fn [resp]
                  (reset! (cur [:t]) (-> resp :body :t))
                  resp))))
 
@@ -98,57 +93,22 @@
   (loaded? [this {:keys [data] :as hc-node}]
     (not (nil? data)))
 
-  (resolve-sync [this {:keys [href] :as cj-item}]
+  (resolve* [this {:keys [href] :as cj-item}]
     (assert (not (nil? cj-item)) "resolve*: cj-item is nil")
     (assert (not (nil? href)) "resolve*: cj-item :href is nil")
-    (let [cache @(cur [:cache])]
-      (get cache href)))
-
-  (resolve-async [this {:keys [href] :as cj-item}]
-    (assert (not (nil? cj-item)) "resolve*: cj-item is nil")
-    (assert (not (nil? href)) "resolve*: cj-item :href is nil")
-    (let [c (chan)]
-      (go
-        (let [cache @(cur [:cache] {})
-              cached? (contains? cache href)]
-          (if cached?
-            (>! c (get cache href))
-            (let [resolved-cj-item-response (<! (read this href))
-                  resolved-cj-item (-> resolved-cj-item-response :body :hypercrud)
-                  cache (assoc (-> resolved-cj-item-response :body :cache)
-                               href resolved-cj-item)]
-              (assert resolved-cj-item (str "bad href: " href))
-              #_ (<! (util/timeout (+ 0 (rand-int 350))))
-              (swap! (cur [:cache]) merge cache)
-              (>! c resolved-cj-item)))))
-      c))
+    (let [cache @(cur [:cache] {})
+          cached? (contains? cache href)]
+      (if cached?
+        (p/resolved (get cache href))
+        (->> (read this href)
+             (fmap (fn [resolved-cj-item-response]
+                    (let [resolved-cj-item (-> resolved-cj-item-response :body :hypercrud)
+                          cache (-> resolved-cj-item-response :body :cache)
+                          cache (assoc cache href resolved-cj-item)]
+                      (assert resolved-cj-item (str "bad href: " href))
+                      (swap! (cur [:cache]) merge cache)
+                      resolved-cj-item)))))))
 
   (enter [this comp]
-    (let [hc-node {:href entry-uri}
-          a (reagent/atom (resolve-sync this hc-node))]
-      (fn [this comp]
-        (if (loaded? this @a)
-          (comp @a)
-          (do
-            (go
-              (let [hc-node' (<! (resolve-async this hc-node))]
-                (reset! a hc-node')))
-            [:div "loading"])))))
+    (resolve this {:href entry-uri} comp))
   )
-
-
-(defn resolve
-  "This is a reagent component, can't use it as a function. Use it like this:
-      (defn comp [r] [:div r])
-      [resolve cj-item comp]"
-  [client cj-item comp & [loading-comp]] ;; or cj-collection, the are the same
-  (let [a (reagent/atom (resolve-sync client cj-item))]
-    (go
-      (let [resolved-cj-item (<! (resolve-async client cj-item))]
-        (reset! a resolved-cj-item)))
-    (fn [client cj-item comp & [loading-comp]]
-      (if (loaded? client @a)
-        (comp @a)
-        (if loading-comp ;for cases like :tbody that aren't allowed :div children
-          (loading-comp)
-          [:div "loading"])))))
