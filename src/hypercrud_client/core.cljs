@@ -9,6 +9,10 @@
             [reagent.core :as reagent]))
 
 
+
+(def ^:dynamic *is-ssr* false)
+
+
 (def content-type-transit "application/transit+json;charset=UTF-8")
 
 (def transit-encoding-opts {:handlers {goog.Uri (util/UriHandler.)}})
@@ -49,7 +53,7 @@
     (if (p/resolved? hc-node')
       (comp (p/extract hc-node'))
       (do
-        #_(p/then hc-node' #(reagent/force-update cmp))
+        (if (not *is-ssr*) (p/then hc-node' #(reagent/force-update cmp)))
         (if loading-comp (loading-comp) [:div "loading"])))))
 
 
