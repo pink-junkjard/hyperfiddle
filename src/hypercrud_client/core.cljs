@@ -43,14 +43,13 @@
       #_ .toString))
 
 
-(defn resolve
-  [client hc-node comp & [loading-comp]]
+(defn resolve [client hc-node comp & [loading-comp]]
   (let [hc-node' (resolve* client hc-node)
         cmp (reagent/current-component)]
     (if (p/resolved? hc-node')
       (comp (p/extract hc-node'))
       (do
-        (p/then hc-node' #(reagent/force-update cmp))
+        #_(p/then hc-node' #(reagent/force-update cmp))
         (if loading-comp (loading-comp) [:div "loading"])))))
 
 
@@ -99,17 +98,25 @@
     (assert (not (nil? cj-item)) "resolve*: cj-item is nil")
     (assert (not (nil? href)) "resolve*: cj-item :href is nil")
     (let [cache (get-in @state [:cache] {})
-          cached? (contains? cache href)]
-      (if cached?
+          loading (get-in @state [:loading] {})] ;; map of href -> promise
+      (if (contains? cache href)
         (p/resolved (get cache href))
-        (->> (read this href)
-             (fmap (fn [resolved-cj-item-response]
-                     (let [resolved-cj-item (-> resolved-cj-item-response :body :hypercrud)
-                           cache (-> resolved-cj-item-response :body :cache)
-                           cache (assoc cache href resolved-cj-item)]
-                       (assert resolved-cj-item (str "bad href: " href))
-                       (swap! state update-in [:cache] merge cache)
-                       resolved-cj-item)))))))
+        (if (contains? loading href)
+          (get loading href)
+          (let [hc-node' (->> (read this href)
+                              (fmap (fn [response]
+                                      (let [hc-node (-> response :body :hypercrud)
+                                            cache (-> response :body :cache)
+                                            cache (assoc cache href hc-node)]
+                                        (assert hc-node (str "bad href: " href))
+                                        (swap! state #(-> %
+                                                          (update-in [:cache] merge cache)
+                                                          (update-in [:loading] dissoc href)))
+
+                                        hc-node))))]
+            (swap! state update-in [:loading] assoc href hc-node')
+            hc-node'
+            )))))
 
   (enter [this comp]
     (resolve this {:href entry-uri} comp))
