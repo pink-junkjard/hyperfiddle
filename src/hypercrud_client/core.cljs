@@ -15,16 +15,13 @@
 
 (def content-type-transit "application/transit+json;charset=UTF-8")
 
-(def transit-encoding-opts {:handlers {goog.Uri (util/UriHandler.)}})
-(def transit-decoding-opts {:handlers {"r" (fn [v] (goog.Uri. v))}})
-
 
 (defmethod kvlt.middleware.params/coerce-form-params (keyword content-type-transit) [{:keys [form-params]}]
-  (util/transit-encode form-params :json-verbose transit-encoding-opts))
+  (util/transit-encode form-params))
 
 
 (defmethod kvlt.middleware/from-content-type (keyword content-type-transit) [resp]
-  (let [decoded-val (util/transit-decode (:body resp) :json-verbose transit-decoding-opts)]
+  (let [decoded-val (util/transit-decode (:body resp))]
     (assoc resp :body decoded-val)))
 
 
@@ -119,9 +116,8 @@
 
                                         hc-node))))]
             (swap! state update-in [:loading] assoc href hc-node')
-            hc-node'
-            )))))
+            hc-node')))))
+
 
   (enter [this comp]
-    (resolve this {:href entry-uri} comp))
-  )
+    (resolve this {:href entry-uri} comp)))

@@ -4,20 +4,6 @@
             [cognitect.transit :as t]))
 
 
-(defn transit-decode
-  "Transit decode an object from `s`."
-  [s type opts]
-  (let [rdr (t/reader type opts)]
-    (t/read rdr s)))
-
-
-(defn transit-encode
-  "Transit encode `x` into a String."
-  [x type opts]
-  (let [wrtr (t/writer type opts)]
-    (t/write wrtr x)))
-
-
 ;; transit uri encoder type
 (deftype UriHandler []
   Object
@@ -36,3 +22,23 @@
   (-equiv [this other]
     (and (instance? goog.Uri other)
          (= (hash this) (hash other))))) ;TODO find a better way to check equality
+
+
+(def transit-encoding-opts {:handlers {goog.Uri (UriHandler.)}})
+(def transit-decoding-opts {:handlers {"r" (fn [v] (goog.Uri. v))}})
+
+
+(defn transit-decode
+  "Transit decode an object from `s`."
+  [s & {:keys [type opts]
+        :or {type :json-verbose opts transit-decoding-opts}}]
+  (let [rdr (t/reader type opts)]
+    (t/read rdr s)))
+
+
+(defn transit-encode
+  "Transit encode `x` into a String."
+  [x & {:keys [type opts]
+        :or {type :json-verbose opts transit-encoding-opts}}]
+  (let [wrtr (t/writer type opts)]
+    (t/write wrtr x)))
