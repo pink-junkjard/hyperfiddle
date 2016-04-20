@@ -41,17 +41,18 @@
   ;; goog.Uri.parse("//api").resolve(goog.Uri.parse("/api/communities?tx=13194139534333")).toString()
   (-> (.clone entry-uri)
       (.resolve relative-uri)
-      #_ .toString))
+      #_.toString))
 
 
 (defn resolve [client hc-node comp & [loading-comp]]
   (let [hc-node' (resolve* client hc-node)
         cmp (reagent/current-component)]
-    (if (p/resolved? hc-node')
-      (comp (p/extract hc-node'))
-      (do
-        (if (not *is-ssr*) (p/then hc-node' #(reagent/force-update cmp)))
-        (if loading-comp (loading-comp) [:div "loading"])))))
+    (cond
+      (p/resolved? hc-node') (comp (p/extract hc-node'))
+      (p/rejected? hc-node') [:div (str (.-stack (p/extract hc-node')))]
+      :loading? (do
+                  (if (not *is-ssr*) (p/finally hc-node' #(reagent/force-update cmp)))
+                  (if loading-comp (loading-comp) [:div "loading"])))))
 
 
 (deftype HypercrudClient [^goog.Uri entry-uri state]
@@ -67,11 +68,14 @@
 
   (read [this ^goog.Uri relative-href]
     (assert (not (nil? relative-href)))
-    (kvlt/request!
-      {:url     (resolve-root-relative-uri entry-uri relative-href)
-       :accept  content-type-transit
-       :method  :get
-       :as      :auto}))
+    (let [start (.now js/Date)]
+      (-> (kvlt/request!
+            {:url    (resolve-root-relative-uri entry-uri relative-href)
+             :accept content-type-transit
+             :method :get
+             :as     :auto})
+          (p/finally #(do (println (str "Request took: " (- (.now js/Date) start) "ms")) %)))))
+
 
   (update [this ^goog.Uri relative-href form]
     (assert (not (nil? relative-href)))
@@ -99,22 +103,27 @@
     (assert (not (nil? cj-item)) "resolve*: cj-item is nil")
     (assert (not (nil? href)) "resolve*: cj-item :href is nil")
     (let [cache (get-in @state [:cache] {})
-          loading (get-in @state [:loading] {})] ;; map of href -> promise
+          loading (get-in @state [:loading] {})]            ;; map of href -> promise
       (if (contains? cache href)
         (p/resolved (get cache href))
         (if (contains? loading href)
           (get loading href)
-          (let [hc-node' (->> (read this href)
-                              (fmap (fn [response]
-                                      (let [hc-node (-> response :body :hypercrud)
-                                            cache (-> response :body :cache)
-                                            cache (assoc cache href hc-node)]
-                                        (assert hc-node (str "bad href: " href))
+          (let [hc-node' (-> (read this href)
+                             (p/then (fn [response]
+                                       (let [hc-node (-> response :body :hypercrud)
+                                             cache (-> response :body :cache)
+                                             cache (assoc cache href hc-node)]
+                                         (assert hc-node (str "bad href: " href))
+                                         (swap! state #(-> %
+                                                           (update-in [:cache] merge cache)
+                                                           (update-in [:loading] dissoc href)))
+                                         hc-node)))
+                             (p/catch (fn [error]
                                         (swap! state #(-> %
-                                                          (update-in [:cache] merge cache)
-                                                          (update-in [:loading] dissoc href)))
+                                                          (update-in [:loading] dissoc href)
+                                                          (update-in [:rejected] assoc href error)))
+                                        (p/rejected error))))]
 
-                                        hc-node))))]
             (swap! state update-in [:loading] assoc href hc-node')
             hc-node')))))
 
