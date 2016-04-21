@@ -1,15 +1,13 @@
 (ns hypercrud-client.core
   (:refer-clojure :exclude [update])
   (:require [hypercrud-client.util :as util]
+            [clojure.set :as set]
             [goog.Uri]
             [cats.core :refer [fmap]]
             [kvlt.middleware.params]
             [kvlt.core :as kvlt]
             [promesa.core :as p]
             [reagent.core :as reagent]))
-
-
-(def ^:dynamic *force-update* #(reagent/force-update %))
 
 
 (def content-type-transit "application/transit+json;charset=UTF-8")
@@ -32,6 +30,9 @@
   (delete [this ^goog.Uri href])
   (t [this])
   (loaded? [this hc-node])
+  (is-completed? [this])
+  (force-update [this cmp])
+  (html-ready! [this])
   (resolve* [this hc-node])
   (enter [this comp]))
 
@@ -50,11 +51,13 @@
       (p/resolved? hc-node') (comp (p/extract hc-node'))
       (p/rejected? hc-node') [:div (str (.-stack (p/extract hc-node')))]
       :pending? (do
-                  (p/finally hc-node' (fn [_] (*force-update* cmp)))
+                  (p/finally hc-node' (fn [_]
+                                        (force-update client cmp)
+                                        (if (is-completed? client) (html-ready! client))))
                   (if loading-comp (loading-comp) [:div "loading"])))))
 
 
-(deftype HypercrudClient [^goog.Uri entry-uri state on-request! on-resolve!]
+(deftype HypercrudClient [^goog.Uri entry-uri state user-hc-dependencies force-update* html-ready!*]
   Hypercrud
   (create [this ^goog.Uri relative-href form]
     (assert (not (nil? relative-href)))
@@ -98,15 +101,22 @@
   (loaded? [this {:keys [data] :as hc-node}]
     (not (nil? data)))
 
+  (is-completed? [this]
+    (set/subset? @user-hc-dependencies (into #{} (-> @state :resolved keys)))) ; todo rejected
+
+  (force-update [this cmp]
+    (force-update* cmp))
+
+  (html-ready! [this]
+    (html-ready!*))
+
   (resolve* [this {:keys [href] :as cj-item}]
     (assert (not (nil? cj-item)) "resolve*: cj-item is nil")
     (assert (not (nil? href)) "resolve*: cj-item :href is nil")
     (let [resolved (get-in @state [:resolved] {})
           loading (get-in @state [:pending] {})]            ;; map of href -> promise
       (if (contains? resolved href)
-        (do
-          (on-resolve! href)
-          (p/resolved (get resolved href)))
+        (p/resolved (get resolved href))
         (if (contains? loading href)
           (get loading href)
           (let [hc-node' (-> (read this href)
@@ -117,17 +127,15 @@
                                                            (update-in [:resolved] assoc href hc-node)
                                                            (update-in [:resolved] merge (-> response :body :cache))
                                                            (update-in [:pending] dissoc href)))
-                                         (on-resolve! href)
                                          hc-node)))
                              (p/catch (fn [error]
                                         (swap! state #(-> %
                                                           (update-in [:pending] dissoc href)
                                                           (update-in [:rejected] assoc href error)))
-                                        (on-resolve! href)
                                         (p/rejected error))))]
 
             (swap! state update-in [:pending] assoc href hc-node')
-            (on-request! href)
+            (swap! user-hc-dependencies conj href)
             hc-node')))))
 
 
