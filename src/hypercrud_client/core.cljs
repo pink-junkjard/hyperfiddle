@@ -31,7 +31,7 @@
   (t [this])
   (loaded? [this hc-node])
   (is-completed? [this])
-  (force-update [this cmp])
+  (force-update [this cmp comp])
   (html-ready! [this])
   (resolve* [this hc-node])
   (enter [this comp]))
@@ -51,8 +51,8 @@
       (p/resolved? hc-node') (comp (p/extract hc-node'))
       (p/rejected? hc-node') [:div (str (.-stack (p/extract hc-node')))]
       :pending? (do
-                  (p/finally hc-node' (fn [_]
-                                        (force-update client cmp)
+                  (p/finally hc-node' (fn []
+                                        (force-update client cmp (comp (p/extract hc-node')))
                                         (if (is-completed? client) (html-ready! client))))
                   (if loading-comp (loading-comp) [:div "loading"])))))
 
@@ -104,8 +104,8 @@
   (is-completed? [this]
     (set/subset? @user-hc-dependencies (into #{} (-> @state :resolved keys)))) ; todo rejected
 
-  (force-update [this cmp]
-    (force-update* cmp))
+  (force-update [this cmp comp]
+    (force-update* cmp comp))
 
   (html-ready! [this]
     (html-ready!*))
