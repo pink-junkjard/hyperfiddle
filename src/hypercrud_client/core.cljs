@@ -9,8 +9,7 @@
             [reagent.core :as reagent]))
 
 
-
-(def ^:dynamic *is-ssr* false)
+(def ^:dynamic *force-update* #(reagent/force-update %))
 
 
 (def content-type-transit "application/transit+json;charset=UTF-8")
@@ -50,12 +49,12 @@
     (cond
       (p/resolved? hc-node') (comp (p/extract hc-node'))
       (p/rejected? hc-node') [:div (str (.-stack (p/extract hc-node')))]
-      :loading? (do
-                  (if (not *is-ssr*) (p/finally hc-node' #(reagent/force-update cmp)))
+      :pending? (do
+                  (p/finally hc-node' (fn [_] (*force-update* cmp)))
                   (if loading-comp (loading-comp) [:div "loading"])))))
 
 
-(deftype HypercrudClient [^goog.Uri entry-uri state]
+(deftype HypercrudClient [^goog.Uri entry-uri state on-request! on-resolve!]
   Hypercrud
   (create [this ^goog.Uri relative-href form]
     (assert (not (nil? relative-href)))
@@ -102,29 +101,33 @@
   (resolve* [this {:keys [href] :as cj-item}]
     (assert (not (nil? cj-item)) "resolve*: cj-item is nil")
     (assert (not (nil? href)) "resolve*: cj-item :href is nil")
-    (let [cache (get-in @state [:cache] {})
-          loading (get-in @state [:loading] {})]            ;; map of href -> promise
-      (if (contains? cache href)
-        (p/resolved (get cache href))
+    (let [resolved (get-in @state [:resolved] {})
+          loading (get-in @state [:pending] {})]            ;; map of href -> promise
+      (if (contains? resolved href)
+        (do
+          (on-resolve! href)
+          (p/resolved (get resolved href)))
         (if (contains? loading href)
           (get loading href)
           (let [hc-node' (-> (read this href)
                              (p/then (fn [response]
-                                       (let [hc-node (-> response :body :hypercrud)
-                                             cache (-> response :body :cache)
-                                             cache (assoc cache href hc-node)]
+                                       (let [hc-node (-> response :body :hypercrud)]
                                          (assert hc-node (str "bad href: " href))
                                          (swap! state #(-> %
-                                                           (update-in [:cache] merge cache)
-                                                           (update-in [:loading] dissoc href)))
+                                                           (update-in [:resolved] assoc href hc-node)
+                                                           (update-in [:resolved] merge (-> response :body :cache))
+                                                           (update-in [:pending] dissoc href)))
+                                         (on-resolve! href)
                                          hc-node)))
                              (p/catch (fn [error]
                                         (swap! state #(-> %
-                                                          (update-in [:loading] dissoc href)
+                                                          (update-in [:pending] dissoc href)
                                                           (update-in [:rejected] assoc href error)))
+                                        (on-resolve! href)
                                         (p/rejected error))))]
 
-            (swap! state update-in [:loading] assoc href hc-node')
+            (swap! state update-in [:pending] assoc href hc-node')
+            (on-request! href)
             hc-node')))))
 
 
