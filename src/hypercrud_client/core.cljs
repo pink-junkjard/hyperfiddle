@@ -31,9 +31,7 @@
   (t [this])
   (loaded? [this hc-node])
   (is-completed? [this])
-  (force-update [this cmp comp])
-  (html-ready! [this])
-  (resolve* [this hc-node])
+  (resolve* [this hc-node cmp comp])
   (enter [this comp]))
 
 
@@ -45,20 +43,15 @@
 
 
 (defn resolve [client hc-node comp & [loading-comp]]
-  (let [hc-node' (resolve* client hc-node)
-        cmp (reagent/current-component)]
+  (let [cmp (reagent/current-component)
+        hc-node' (resolve* client hc-node cmp [resolve client hc-node comp loading-comp])]
     (cond
-      (p/resolved? hc-node') (do
-                               (.setTimeout js/global #(if (is-completed? client) (html-ready! client)) 0)
-                               (comp (p/extract hc-node')))
-
+      (p/resolved? hc-node') (comp (p/extract hc-node'))
       (p/rejected? hc-node') [:div (str (.-stack (p/extract hc-node')))]
-      :pending? (do
-                  (p/finally hc-node' #(force-update client cmp [resolve client hc-node comp loading-comp]))
-                  (if loading-comp (loading-comp) [:div "loading"])))))
+      :pending? (if loading-comp (loading-comp) [:div "loading"]))))
 
 
-(deftype HypercrudClient [^goog.Uri entry-uri state user-hc-dependencies force-update* html-ready!*]
+(deftype HypercrudClient [^goog.Uri entry-uri state user-hc-dependencies force-update!]
   Hypercrud
   (create [this ^goog.Uri relative-href form]
     (assert (not (nil? relative-href)))
@@ -102,16 +95,7 @@
   (loaded? [this {:keys [data] :as hc-node}]
     (not (nil? data)))
 
-  (is-completed? [this]
-    (set/subset? @user-hc-dependencies (into #{} (-> @state :resolved keys)))) ; todo rejected
-
-  (force-update [this cmp comp]
-    (force-update* cmp comp))
-
-  (html-ready! [this]
-    (html-ready!*))
-
-  (resolve* [this {:keys [href] :as cj-item}]
+  (resolve* [this {:keys [href] :as cj-item} cmp comp]
     (assert (not (nil? cj-item)) "resolve*: cj-item is nil")
     (assert (not (nil? href)) "resolve*: cj-item :href is nil")
     (let [resolved (get-in @state [:resolved] {})
@@ -128,11 +112,13 @@
                                                            (update-in [:resolved] assoc href hc-node)
                                                            (update-in [:resolved] merge (-> response :body :cache))
                                                            (update-in [:pending] dissoc href)))
+                                         (force-update! cmp comp)
                                          hc-node)))
                              (p/catch (fn [error]
                                         (swap! state #(-> %
                                                           (update-in [:pending] dissoc href)
                                                           (update-in [:rejected] assoc href error)))
+                                        (force-update! cmp comp)
                                         (p/rejected error))))]
 
             (swap! state update-in [:pending] assoc href hc-node')
