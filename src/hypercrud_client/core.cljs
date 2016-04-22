@@ -48,12 +48,13 @@
   (let [hc-node' (resolve* client hc-node)
         cmp (reagent/current-component)]
     (cond
-      (p/resolved? hc-node') (comp (p/extract hc-node'))
+      (p/resolved? hc-node') (do
+                               (.setTimeout js/global #(if (is-completed? client) (html-ready! client)) 0)
+                               (comp (p/extract hc-node')))
+
       (p/rejected? hc-node') [:div (str (.-stack (p/extract hc-node')))]
       :pending? (do
-                  (p/finally hc-node' (fn []
-                                        (force-update client cmp (comp (p/extract hc-node')))
-                                        (if (is-completed? client) (html-ready! client))))
+                  (p/finally hc-node' #(force-update client cmp [resolve client hc-node comp loading-comp]))
                   (if loading-comp (loading-comp) [:div "loading"])))))
 
 
