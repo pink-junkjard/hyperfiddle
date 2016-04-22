@@ -1,7 +1,6 @@
 (ns hypercrud-client.core
   (:refer-clojure :exclude [update])
   (:require [hypercrud-client.util :as util]
-            [clojure.set :as set]
             [goog.Uri]
             [cats.core :refer [fmap]]
             [kvlt.middleware.params]
