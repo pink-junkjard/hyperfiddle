@@ -102,7 +102,7 @@
       (if (contains? resolved href)
         (p/resolved (get resolved href))
         (if (contains? loading href)
-          (get loading href)
+          (-> (get loading href) (p/then #(force-update! cmp comp)))
           (let [hc-node' (-> (read this href)
                              (p/then (fn [response]
                                        (let [hc-node (-> response :body :hypercrud)]
