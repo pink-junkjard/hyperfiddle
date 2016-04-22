@@ -131,4 +131,4 @@
 
 
   (enter [this comp]
-    (resolve this {:href entry-uri} comp)))
+    (resolve this {:href (goog.Uri. "/api")} comp)))
