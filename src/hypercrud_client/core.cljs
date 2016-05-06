@@ -31,7 +31,8 @@
   (loaded? [this hc-node])
   (is-completed? [this])
   (resolve* [this hc-node cmp comp])
-  (enter [this comp]))
+  (enter [this comp])
+  (tempid [this]))
 
 
 (defn resolve-root-relative-uri [^goog.Uri entry-uri ^goog.Uri relative-uri]
@@ -94,41 +95,48 @@
   (loaded? [this {:keys [data] :as hc-node}]
     (not (nil? data)))
 
-  (resolve* [this {:keys [href] :as cj-item} cmp comp]
+  (resolve* [this {:keys [href rel] :as cj-item} cmp comp]
     (assert (not (nil? cj-item)) "resolve*: cj-item is nil")
-    (assert (not (nil? href)) "resolve*: cj-item :href is nil")
-    (let [resolved (get-in @state [:resolved] {})
-          loading (get-in @state [:pending] {})]            ;; map of href -> promise
-      (if (contains? resolved href)
-        (p/resolved (get resolved href))
-        (do
-          (swap! state update-in [:cmp-deps] #(if (nil? %) #{cmp} (conj % cmp)))
-          (if (contains? loading href)
-            (-> (get loading href) (p/then #(do
-                                             (swap! state update-in [:cmp-deps] disj cmp)
-                                             (force-update! cmp comp))))
-            (let [hc-node' (-> (read this href)
-                               (p/then (fn [response]
-                                         (let [hc-node (-> response :body :hypercrud)]
-                                           (assert hc-node (str "bad href: " href))
-                                           (swap! state #(-> %
-                                                             (update-in [:resolved] assoc href hc-node)
-                                                             (update-in [:resolved] merge (-> response :body :cache))
-                                                             (update-in [:pending] dissoc href)
-                                                             (update-in [:cmp-deps] disj cmp)))
-                                           (force-update! cmp comp)
-                                           hc-node)))
-                               (p/catch (fn [error]
-                                          (swap! state #(-> %
-                                                            (update-in [:pending] dissoc href)
-                                                            (update-in [:rejected] assoc href error)
-                                                            (update-in [:cmp-deps] disj cmp)))
-                                          (force-update! cmp comp)
-                                          (p/rejected error))))]
-              (swap! state update-in [:pending] assoc href hc-node')
-              (swap! user-hc-dependencies conj href)
-              hc-node'))))))
+    (if (nil? href)
+      (do
+        (assert (= rel "tempid") "resolve*: cj-item :href is nil")
+        (p/resolved cj-item))
+      (let [resolved (get-in @state [:resolved] {})
+            loading (get-in @state [:pending] {})]          ;; map of href -> promise
+        (if (contains? resolved href)
+          (p/resolved (get resolved href))
+          (do
+            (swap! state update-in [:cmp-deps] #(if (nil? %) #{cmp} (conj % cmp)))
+            (if (contains? loading href)
+              (-> (get loading href) (p/then #(do
+                                               (swap! state update-in [:cmp-deps] disj cmp)
+                                               (force-update! cmp comp))))
+              (let [hc-node' (-> (read this href)
+                                 (p/then (fn [response]
+                                           (let [hc-node (-> response :body :hypercrud)]
+                                             (assert hc-node (str "bad href: " href))
+                                             (swap! state #(-> %
+                                                               (update-in [:resolved] assoc href hc-node)
+                                                               (update-in [:resolved] merge (-> response :body :cache))
+                                                               (update-in [:pending] dissoc href)
+                                                               (update-in [:cmp-deps] disj cmp)))
+                                             (force-update! cmp comp)
+                                             hc-node)))
+                                 (p/catch (fn [error]
+                                            (swap! state #(-> %
+                                                              (update-in [:pending] dissoc href)
+                                                              (update-in [:rejected] assoc href error)
+                                                              (update-in [:cmp-deps] disj cmp)))
+                                            (force-update! cmp comp)
+                                            (p/rejected error))))]
+                (swap! state update-in [:pending] assoc href hc-node')
+                (swap! user-hc-dependencies conj href)
+                hc-node')))))))
 
 
   (enter [this comp]
-    (resolve this {:href (goog.Uri. "/api")} comp)))
+    (resolve this {:href (goog.Uri. "/api")} comp))
+
+
+  (tempid [this]
+    "tempid"))
