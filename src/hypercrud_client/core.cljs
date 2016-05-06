@@ -56,31 +56,30 @@
   (create [this ^goog.Uri relative-href form]
     (assert (not (nil? relative-href)))
     (kvlt/request!
-      {:url          (resolve-root-relative-uri entry-uri relative-href)
+      {:url (resolve-root-relative-uri entry-uri relative-href)
        :content-type content-type-transit
-       :accept       content-type-transit
-       :method       :post
-       :form         form}))
+       :accept content-type-transit
+       :method :post
+       :form form}))
 
   (read [this ^goog.Uri relative-href]
     (assert (not (nil? relative-href)))
     (let [start (.now js/Date)]
       (-> (kvlt/request!
-            {:url    (resolve-root-relative-uri entry-uri relative-href)
+            {:url (resolve-root-relative-uri entry-uri relative-href)
              :accept content-type-transit
              :method :get
-             :as     :auto})
+             :as :auto})
           (p/finally #(do (println (str "Request took: " (- (.now js/Date) start) "ms")) %)))))
 
 
   (update [this ^goog.Uri relative-href form]
     (assert (not (nil? relative-href)))
-    (js/alert (pr-str form))
-    (->> (kvlt/request! {:url          (resolve-root-relative-uri entry-uri relative-href)
+    (->> (kvlt/request! {:url (resolve-root-relative-uri entry-uri relative-href)
                          :content-type content-type-transit
-                         :accept       content-type-transit
-                         :method       :put
-                         :form         form})
+                         :accept content-type-transit
+                         :method :put
+                         :form form})
          (fmap (fn [resp]
                  (swap! state update-in [:t] (constantly (-> resp :body :t)))
                  resp))))
