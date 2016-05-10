@@ -141,4 +141,6 @@
 
 
   (tempid [this]
-    "tempid"))
+    (let [next (get-in @state [:next-tempid] -1)]
+      (swap! state assoc :next-tempid (dec next))
+      (keyword (str next)))))
