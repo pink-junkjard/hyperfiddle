@@ -97,7 +97,7 @@
   (resolve* [this {:keys [href rel] :as cj-item} cmp comp]
     (assert (not (nil? cj-item)) "resolve*: cj-item is nil")
     (assert (not (nil? rel)) "resolve*: cj-item :rel is nil")
-    (if (= rel "tempid")
+    (if (util/tempid? rel)
       (p/resolved cj-item)
       (do
         (assert (not (nil? href)) "no href")
@@ -141,6 +141,6 @@
 
 
   (tempid [this]
-    (let [next (get-in @state [:next-tempid] -1)]
-      (swap! state assoc :next-tempid (dec next))
-      (keyword (str next)))))
+    (let [next (get-in @state [:next-tempid] 0)]
+      (swap! state assoc :next-tempid (inc next))
+      (util/create-tempid next))))

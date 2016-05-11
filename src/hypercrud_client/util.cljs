@@ -42,3 +42,10 @@
         :or {type :json-verbose opts transit-encoding-opts}}]
   (let [wrtr (t/writer type opts)]
     (t/write wrtr x)))
+
+
+(defn create-tempid [n]
+  (keyword "tempid" (str n)))
+
+(defn tempid? [keyword]
+  (= (namespace keyword) "tempid"))
