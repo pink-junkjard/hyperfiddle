@@ -32,7 +32,8 @@
   (is-completed? [this])
   (resolve* [this hc-node cmp comp])
   (enter [this comp])
-  (tempid [this]))
+  (tempid [this])
+  (new [this template]))
 
 
 (defn resolve-root-relative-uri [^goog.Uri entry-uri ^goog.Uri relative-uri]
@@ -102,7 +103,7 @@
       (do
         (assert (not (nil? href)) "no href")
         (let [resolved (get-in @state [:resolved] {})
-              loading (get-in @state [:pending] {})]          ;; map of href -> promise
+              loading (get-in @state [:pending] {})]        ;; map of href -> promise
           (if (contains? resolved href)
             (p/resolved (get resolved href))
             (do
@@ -143,4 +144,8 @@
   (tempid [this]
     (let [next (get-in @state [:next-tempid] 0)]
       (swap! state assoc :next-tempid (inc next))
-      (util/create-tempid next))))
+      (util/create-tempid next)))
+
+  (new [this template]
+    (let [tempid (tempid this)]
+      {:rel tempid :href tempid :template template :data {}})))
