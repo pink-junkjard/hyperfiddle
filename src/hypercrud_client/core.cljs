@@ -6,7 +6,8 @@
             [kvlt.middleware.params]
             [kvlt.core :as kvlt]
             [promesa.core :as p]
-            [reagent.core :as reagent]))
+            [reagent.core :as reagent]
+            [datascript.core :as d]))
 
 
 (def content-type-transit "application/transit+json;charset=UTF-8")
@@ -32,6 +33,8 @@
   (is-completed? [this])
   (resolve* [this hc-node cmp comp])
   (enter [this comp])
+  (transact! [this entity])
+  (as-of [this local-datoms'])
   (tempid [this])
   (new [this template]))
 
@@ -47,12 +50,13 @@
   (let [cmp (reagent/current-component)
         hc-node' (resolve* client hc-node cmp [resolve client hc-node comp loading-comp])]
     (cond
-      (p/resolved? hc-node') (comp (p/extract hc-node'))
+      ;(p/resolved? hc-node') (let [{:keys [data template]} (p/extract hc-node')] [comp data template])
+      (p/resolved? hc-node') [comp (p/extract hc-node')]
       (p/rejected? hc-node') [:div (str (.-stack (p/extract hc-node')))]
       :pending? (if loading-comp (loading-comp) [:div "loading"]))))
 
 
-(deftype HypercrudClient [^goog.Uri entry-uri state user-hc-dependencies force-update!]
+(deftype HypercrudClient [^goog.Uri entry-uri state user-hc-dependencies force-update! local-datoms]
   Hypercrud
   (create [this ^goog.Uri relative-href form]
     (assert (not (nil? relative-href)))
@@ -98,50 +102,62 @@
   (resolve* [this {:keys [href rel] :as cj-item} cmp comp]
     (assert (not (nil? cj-item)) "resolve*: cj-item is nil")
     (assert (not (nil? rel)) "resolve*: cj-item :rel is nil")
-    (if (util/tempid? rel)
-      (p/resolved cj-item)
-      (do
-        (assert (not (nil? href)) "no href")
-        (let [resolved (get-in @state [:resolved] {})
-              loading (get-in @state [:pending] {})]        ;; map of href -> promise
-          (if (contains? resolved href)
-            (p/resolved (get resolved href))
-            (do
-              (swap! state update-in [:cmp-deps] #(if (nil? %) #{cmp} (conj % cmp)))
-              (if (contains? loading href)
-                (-> (get loading href) (p/then #(do
-                                                 (swap! state update-in [:cmp-deps] disj cmp)
-                                                 (force-update! cmp comp))))
-                (let [hc-node' (-> (read this href)
-                                   (p/then (fn [response]
-                                             (let [hc-node (-> response :body :hypercrud)]
-                                               (assert hc-node (str "bad href: " href))
-                                               (swap! state #(-> %
-                                                                 (update-in [:resolved] assoc href hc-node)
-                                                                 (update-in [:resolved] merge (-> response :body :cache))
-                                                                 (update-in [:pending] dissoc href)
-                                                                 (update-in [:cmp-deps] disj cmp)))
-                                               (force-update! cmp comp)
-                                               hc-node)))
-                                   (p/catch (fn [error]
-                                              (swap! state #(-> %
-                                                                (update-in [:pending] dissoc href)
-                                                                (update-in [:rejected] assoc href error)
-                                                                (update-in [:cmp-deps] disj cmp)))
-                                              (force-update! cmp comp)
-                                              (p/rejected error))))]
-                  (swap! state update-in [:pending] assoc href hc-node')
-                  (swap! user-hc-dependencies conj href)
-                  hc-node'))))))))
 
+    ;; if we are resolved and maybe have local edits
+    ;; tempids are in the local-datoms already, probably via a not-found
+    (if-let [resolved-ent (-> (d/empty-db)
+                              (d/db-with (keys (:resolved @state)))
+                              (d/db-with @local-datoms)
+                              (d/entity rel))]
+      (p/resolved resolved-ent)
+      (let [loading (get-in @state [:pending] {})]          ;; rel -> promise
+        (do
+          (assert (not (nil? href)) "no href")
+          (swap! state update-in [:cmp-deps] #(if (nil? %) #{cmp} (conj % cmp)))
+
+          (if (contains? loading rel)
+            (-> (get loading rel) (p/then #(do
+                                            (swap! state update-in [:cmp-deps] disj cmp)
+                                            (force-update! cmp comp))))
+            (let [hc-node' (-> (read this href)             ;(str "/entities/" rel "?tx=" tx)
+                               (p/then (fn [response]
+                                         (let [hc-node (-> response :body :hypercrud)]
+                                           (assert hc-node (str "bad rel: " rel))
+                                           (swap! state #(-> %
+                                                             (update-in [:resolved] assoc rel hc-node)
+                                                             (update-in [:resolved] merge (-> response :body :cache))
+                                                             (update-in [:pending] dissoc rel)
+                                                             (update-in [:cmp-deps] disj cmp)))
+                                           (force-update! cmp comp)
+                                           hc-node)))
+                               (p/catch (fn [error]
+                                          (swap! state #(-> %
+                                                            (update-in [:pending] dissoc rel)
+                                                            (update-in [:rejected] assoc rel error)
+                                                            (update-in [:cmp-deps] disj cmp)))
+                                          (force-update! cmp comp)
+                                          (p/rejected error))))]
+              (swap! state update-in [:pending] assoc rel hc-node')
+              (swap! user-hc-dependencies conj rel)
+              hc-node'))))))
 
   (enter [this comp]
     (resolve this {:href (goog.Uri. "/api")
                    :rel :index-get}
              comp))
 
+  (as-of [this local-datoms']
+    (HypercrudClient.
+      entry-uri state user-hc-dependencies force-update! (concat local-datoms local-datoms')))
+
+  (transact! [this tx-data]
+    (let [db (-> (d/empty-db)
+                 (d/db-with @local-datoms)
+                 (d/db-with tx-data))]
+      (reset! local-datoms @db)))
 
   (tempid [this]
+    ;; get the tempid from datascript
     (let [next (get-in @state [:next-tempid] 0)]
       (swap! state assoc :next-tempid (inc next))
       (util/create-tempid next)))
