@@ -44,8 +44,4 @@
     (t/write wrtr x)))
 
 
-(defn create-tempid [n]
-  (keyword "tempid" (str n)))
-
-(defn tempid? [keyword]
-  (= (namespace keyword) "tempid"))
+(defn tempid? [eid] (< 0 eid))

@@ -1,6 +1,7 @@
 (ns hypercrud-client.core
   (:refer-clojure :exclude [update])
   (:require [hypercrud-client.util :as util]
+            [hypercrud-client.hacks :as hacks]
             [goog.Uri]
             [cats.core :refer [fmap]]
             [kvlt.middleware.params]
@@ -28,14 +29,15 @@
   (read [this ^goog.Uri href])
   (update [this ^goog.Uri href form])
   (delete [this ^goog.Uri href])
-  (t [this])
+  (tx [this])
   (loaded? [this hc-node])
   (is-completed? [this])
   (resolve* [this hc-node cmp comp])
+  (resolve-query* [this hc-node cmp comp])
   (enter [this comp])
   (transact! [this entity])
-  (as-of [this local-datoms'])
-  (tempid [this])
+  (with [this local-datoms'])
+  (tempid [this typetag])
   (new [this template]))
 
 
@@ -46,13 +48,21 @@
       #_.toString))
 
 
-(defn resolve [client hc-node comp & [loading-comp]]
+(defn resolve [client eid comp & [loading-comp]]
   (let [cmp (reagent/current-component)
-        hc-node' (resolve* client hc-node cmp [resolve client hc-node comp loading-comp])]
+        hc-node (resolve* client eid cmp [resolve client eid comp loading-comp])]
     (cond
-      ;(p/resolved? hc-node') (let [{:keys [data template]} (p/extract hc-node')] [comp data template])
-      (p/resolved? hc-node') [comp (p/extract hc-node')]
-      (p/rejected? hc-node') [:div (str (.-stack (p/extract hc-node')))]
+      (p/resolved? hc-node) [comp (p/extract hc-node)]
+      (p/rejected? hc-node) [:div (str (.-stack (p/extract hc-node)))]
+      :pending? (if loading-comp (loading-comp) [:div "loading"]))))
+
+
+(defn resolve-query [client query comp & [loading-comp]]
+  (let [cmp (reagent/current-component)
+        hc-node (resolve-query* client query cmp [resolve-query client query comp loading-comp])]
+    (cond
+      (p/resolved? hc-node) [comp (p/extract hc-node)]
+      (p/rejected? hc-node) [:div (str (.-stack (p/extract hc-node)))]
       :pending? (if loading-comp (loading-comp) [:div "loading"]))))
 
 
@@ -86,82 +96,127 @@
                          :method :put
                          :form form})
          (fmap (fn [resp]
-                 (swap! state update-in [:t] (constantly (-> resp :body :t)))
+                 (swap! state update-in [:tx] (constantly (-> resp :body :tx)))
                  resp))))
 
   (delete [this ^goog.Uri relative-href]
     (assert (not (nil? relative-href)))
     nil)
 
-  (t [this]
-    (get-in @state [:t] 0))
+  (tx [this]
+    (get-in @state [:tx] 0))
 
   (loaded? [this {:keys [data] :as hc-node}]
     (not (nil? data)))
 
-  (resolve* [this {:keys [href rel] :as cj-item} cmp comp]
-    (assert (not (nil? cj-item)) "resolve*: cj-item is nil")
-    (assert (not (nil? rel)) "resolve*: cj-item :rel is nil")
-
+  (resolve* [this eid cmp comp]
     ;; if we are resolved and maybe have local edits
     ;; tempids are in the local-datoms already, probably via a not-found
-    (if-let [resolved-ent (-> (d/empty-db)
-                              (d/db-with (keys (:resolved @state)))
-                              (d/db-with @local-datoms)
-                              (d/entity rel))]
-      (p/resolved resolved-ent)
-      (let [loading (get-in @state [:pending] {})]          ;; rel -> promise
-        (do
-          (assert (not (nil? href)) "no href")
-          (swap! state update-in [:cmp-deps] #(if (nil? %) #{cmp} (conj % cmp)))
+    (let [tx (:tx @state)]
+      (if-let [server-datoms-for-tx (get-in @state [:server-datoms tx])]
+        (p/resolved (let [as-seen-on-server (get-in @state [:resolved [eid tx]])
+                          edited-entity (-> (d/empty-db)
+                                            (d/db-with server-datoms-for-tx)
+                                            (d/db-with local-datoms)
+                                            (d/entity eid))
+                          edited-hc-node (update-in as-seen-on-server [:data] merge edited-entity)]
+                      edited-hc-node))
+        (let [loading (get-in @state [:pending] {})]        ;; eid -> promise
+          (do
+            (swap! state update-in [:cmp-deps] #(if (nil? %) #{cmp} (conj % cmp)))
 
-          (if (contains? loading rel)
-            (-> (get loading rel) (p/then #(do
-                                            (swap! state update-in [:cmp-deps] disj cmp)
-                                            (force-update! cmp comp))))
-            (let [hc-node' (-> (read this href)             ;(str "/entities/" rel "?tx=" tx)
-                               (p/then (fn [response]
-                                         (let [hc-node (-> response :body :hypercrud)]
-                                           (assert hc-node (str "bad rel: " rel))
-                                           (swap! state #(-> %
-                                                             (update-in [:resolved] assoc rel hc-node)
-                                                             (update-in [:resolved] merge (-> response :body :cache))
-                                                             (update-in [:pending] dissoc rel)
-                                                             (update-in [:cmp-deps] disj cmp)))
-                                           (force-update! cmp comp)
-                                           hc-node)))
-                               (p/catch (fn [error]
-                                          (swap! state #(-> %
-                                                            (update-in [:pending] dissoc rel)
-                                                            (update-in [:rejected] assoc rel error)
-                                                            (update-in [:cmp-deps] disj cmp)))
-                                          (force-update! cmp comp)
-                                          (p/rejected error))))]
-              (swap! state update-in [:pending] assoc rel hc-node')
-              (swap! user-hc-dependencies conj rel)
-              hc-node'))))))
+            (if (contains? loading [eid tx])
+              (-> (get loading [eid tx]) (p/then #(do
+                                                   (swap! state update-in [:cmp-deps] disj cmp)
+                                                   (force-update! cmp comp))))
+              (let [entity-type (get-in @state [:entity-types [eid tx]])
+                    href (str "/api/" entity-type "/" eid "?tx=" tx)
+                    href (goog.Uri. href)
+                    hc-node' (-> (read this href)
+                                 (p/then (fn [response]
+                                           (let [hc-node (-> response :body :hypercrud)]
+                                             (swap! state #(-> %
+                                                               (update-in [:server-datoms tx] concat (hacks/hc-node->datoms hc-node))
+                                                               (update-in [:entity-types] assoc [eid tx] (hacks/hc-node->typetag hc-node))
+                                                               (update-in [:templates] assoc (hacks/hc-node->typetag hc-node) (:template hc-node))
+
+                                                               (update-in [:resolved] assoc [eid tx] hc-node)
+                                                               (update-in [:pending] dissoc [eid tx])
+                                                               (update-in [:cmp-deps] disj cmp)))
+                                             (force-update! cmp comp)
+                                             hc-node)))
+                                 (p/catch (fn [error]
+                                            (swap! state #(-> %
+                                                              (update-in [:pending] dissoc [eid tx])
+                                                              (update-in [:rejected] assoc [eid tx] error)
+                                                              (update-in [:cmp-deps] disj cmp)))
+                                            (force-update! cmp comp)
+                                            (p/rejected error))))]
+                (swap! state update-in [:pending] assoc [eid tx] hc-node')
+                (swap! user-hc-dependencies conj [eid tx])
+                hc-node')))))))
+
+  (resolve-query* [this query cmp comp]
+    {:pre [(not= nil (:tx @state))]}
+    (let [tx (:tx @state)]
+      (if-let [resolved-hc-query-node (get-in @state [:resolved [query tx]])]
+        (p/resolved resolved-hc-query-node)
+        ;; if we are resolved and maybe have local edits
+        ;; tempids are in the local-datoms already, probably via a not-found
+        (let [loading (get-in @state [:pending] {})]        ;; eid -> promise
+          (do
+            (swap! state update-in [:cmp-deps] #(if (nil? %) #{cmp} (conj % cmp)))
+            (if (contains? loading [query tx])
+              (-> (get loading [query tx]) (p/then #(do
+                                                     (swap! state update-in [:cmp-deps] disj cmp)
+                                                     (force-update! cmp comp))))
+              (let [href (if (= query :index-get)
+                           "/api"
+                           (str "/api/" (name query) "?tx=" tx))
+                    href (goog.Uri. href)
+                    hc-node' (-> (read this href)
+                                 (p/then (fn [response]
+                                           (let [hc-node (-> response :body :hypercrud)
+                                                 typetag (name query)]
+                                             (swap! state #(-> %
+                                                               (update-in [:entity-types] merge (map (fn [eid] [[eid tx] typetag]) (:data hc-node)))
+                                                               (update-in [:templates] assoc typetag (:template hc-node))
+                                                               (update-in [:resolved] assoc [query tx] hc-node) ;query-resultsets
+                                                               (update-in [:pending] dissoc [query tx])
+                                                               (update-in [:cmp-deps] disj cmp)))
+                                             (force-update! cmp comp)
+                                             hc-node)))
+                                 (p/catch (fn [error]
+                                            (swap! state #(-> %
+                                                              (update-in [:pending] dissoc [query tx])
+                                                              (update-in [:rejected] assoc [query tx] error)
+                                                              (update-in [:cmp-deps] disj cmp)))
+                                            (force-update! cmp comp)
+                                            (p/rejected error))))]
+                (swap! state update-in [:pending] assoc [query tx] hc-node')
+                (swap! user-hc-dependencies conj [query tx])
+                hc-node')))))))
 
   (enter [this comp]
-    (resolve this {:href (goog.Uri. "/api")
-                   :rel :index-get}
-             comp))
+    (resolve-query this :index-get (fn [hc-node]
+                                     (if (not= (:tx @state) (:tx hc-node))
+                                       (swap! state update-in [:tx] (constantly (:tx hc-node))))
+                                     (comp hc-node))))
 
-  (as-of [this local-datoms']
+  (with [this local-datoms']
     (HypercrudClient.
       entry-uri state user-hc-dependencies force-update! (concat local-datoms local-datoms')))
 
-  (transact! [this tx-data]
-    (let [db (-> (d/empty-db)
-                 (d/db-with @local-datoms)
-                 (d/db-with tx-data))]
-      (reset! local-datoms @db)))
 
-  (tempid [this]
+  (tempid [this typetag]
     ;; get the tempid from datascript
-    (let [next (get-in @state [:next-tempid] 0)]
-      (swap! state assoc :next-tempid (inc next))
-      (util/create-tempid next)))
+    (let [tx (:tx @state)
+          eid (get-in @state [:next-tempid] -1)]
+      (swap! state #(-> %
+                        (update-in [:next-tempid] dec)
+                        (update-in [:entity-types] [eid tx] typetag)))
+      eid))
 
   (new [this template]
-    (let [tempid (tempid this)]
-      {:rel tempid :href tempid :template template :data {}})))
+    (let [tempid (tempid this (hacks/hc-template->typetag template))]
+      {:tx (:tx @state) :rel tempid :template template :data {}})))
