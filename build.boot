@@ -6,8 +6,7 @@
                   [io.nervous/kvlt "0.1.1"]
                   [funcool/promesa "1.1.1"]
                   [funcool/cats "1.2.1"]
-                  [com.cognitect/transit-cljs "0.8.237"]
-                  [datascript "0.15.0"]]
+                  [com.cognitect/transit-cljs "0.8.237"]]
   :resource-paths #{"src"})
 
 (require '[adzerk.boot-cljs :refer :all]

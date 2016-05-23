@@ -17,9 +17,12 @@
        (into {})
        (mapcat (fn [[attr val]]
                  (cond
-                   (coll? val) (map (fn [v] [:db/add rel attr val]) val)
+                   (coll? val) (map (fn [v] [:db/add rel attr v]) val)
                    :else [[:db/add rel attr val]])))
        (into [])))
+
+
+(defmulti typetag->query (fn [typetag] :default))
 
 
 (comment
@@ -41,14 +44,5 @@
       [1 :community/category "news"]
       [1 :community/category "human interest"]
       [1 :community/url "http://blog.seattlepi.com/ballard/"]])
-
-  (hc-node->typetag hc-data)
   )
 
-
-(defn hc-node->typetag [{:keys [data] :as hc-node}]
-  (namespace (first (keys data))))
-
-
-(defn hc-template->typetag [{:keys [data] :as template}]
-  (-> data first :name namespace))
