@@ -44,4 +44,4 @@
     (t/write wrtr x)))
 
 
-(defn tempid? [eid] (< 0 eid))
+(defn tempid? [eid] (< eid 0))

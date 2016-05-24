@@ -108,12 +108,12 @@
     (not (nil? data)))
 
   (resolve* [this eid cmp comp]
+    (.log js/console (str "Resolving entity: " eid))
     ;; if we are resolved and maybe have local edits
     ;; tempids are in the local-datoms already, probably via a not-found
     (let [tx (:tx @state)]
-      (let [entity-server-datoms (get-in @state [:server-datoms [eid tx]])
-            tempid? (< eid 0)]
-        (if (or tempid? (not= nil entity-server-datoms))
+      (let [entity-server-datoms (get-in @state [:server-datoms [eid tx]])]
+        (if (or (util/tempid? eid) (not= nil entity-server-datoms))
           (p/resolved (let [entity-type (get-in @state [:entity-types [eid tx]])
                             template (get-in @state [:templates entity-type])
                             _ (assert template (str "No template found for " eid))
@@ -150,6 +150,7 @@
                                                      (swap! state update-in [:cmp-deps] disj cmp)
                                                      (force-update! cmp comp))))
                 (let [entity-type (get-in @state [:entity-types [eid tx]])
+                      _ (assert entity-type (str "No entity type found for " eid))
                       href (str "/api/" (hacks/typetag->query entity-type) "/" eid "?tx=" tx)
                       href (goog.Uri. href)
                       hc-node' (-> (read this href)
@@ -158,6 +159,22 @@
                                                (swap! state #(-> %
                                                                  (update-in [:server-datoms [eid tx]] concat (hacks/hc-node->datoms hc-node))
                                                                  (update-in [:entity-types] assoc [eid tx] (:typetag hc-node))
+                                                                 (update-in [:entity-types] merge
+                                                                            (->> (:template hc-node)
+                                                                                 (:data)
+                                                                                 (filter (fn [t] (= (:datatype t) :ref)))
+                                                                                 (map (fn [t] (:name t)))
+                                                                                 ;(into [])
+                                                                                 (select-keys (:data hc-node))
+                                                                                 (map (fn [[k v]]
+                                                                                        (let [typeinfo (first (filter (fn [t] (= k (:name t)))
+                                                                                                                      (get-in hc-node [:template :data])))]
+                                                                                          (if (:set typeinfo)
+                                                                                            (map (fn [v]
+                                                                                                   [[v tx] (:typetag typeinfo)])
+                                                                                                 v)
+                                                                                            [[[v tx] (:typetag typeinfo)]]))))
+                                                                                 (apply concat)))
                                                                  (update-in [:templates] assoc (:typetag hc-node) (:template hc-node))
 
                                                                  (update-in [:resolved] assoc [eid tx] hc-node)
@@ -178,6 +195,7 @@
 
   (resolve-query* [this query cmp comp]
     {:pre [(not= nil (:tx @state))]}
+    (.log js/console (str "Resolving query: " query))
     (let [tx (:tx @state)]
       (if-let [resolved-hc-query-node (get-in @state [:resolved [query tx]])]
         (p/resolved resolved-hc-query-node)
