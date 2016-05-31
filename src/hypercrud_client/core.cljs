@@ -35,7 +35,7 @@
   (resolve-query* [this hc-node cmp comp])
   (enter [this comp])
   (with [this local-datoms'])
-  (tempid [this typetag])
+  (tempid! [this typetag])
   (new [this template]))
 
 
@@ -50,7 +50,7 @@
   (let [cmp (reagent/current-component)
         hc-node (resolve* client eid cmp [resolve client eid comp loading-comp])]
     (cond
-      (p/resolved? hc-node) [comp (p/extract hc-node)]
+      (p/resolved? hc-node) (comp (p/extract hc-node))
       (p/rejected? hc-node) [:div (str (.-stack (p/extract hc-node)))]
       :pending? (if loading-comp (loading-comp) [:div "loading"]))))
 
@@ -59,7 +59,7 @@
   (let [cmp (reagent/current-component)
         hc-node (resolve-query* client query cmp [resolve-query client query comp loading-comp])]
     (cond
-      (p/resolved? hc-node) [comp (p/extract hc-node)]
+      (p/resolved? hc-node) (comp (p/extract hc-node))
       (p/rejected? hc-node) [:div (str (.-stack (p/extract hc-node)))]
       :pending? (if loading-comp (loading-comp) [:div "loading"]))))
 
@@ -244,7 +244,7 @@
       entry-uri state user-hc-dependencies force-update! (concat local-datoms local-datoms')))
 
 
-  (tempid [this typetag]
+  (tempid! [this typetag]
     ;; get the tempid from datascript
     (let [tx (:tx @state)
           eid (get-in @state [:next-tempid] -1)]
