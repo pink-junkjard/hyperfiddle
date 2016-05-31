@@ -164,7 +164,6 @@
                                                                                  (:data)
                                                                                  (filter (fn [t] (= (:datatype t) :ref)))
                                                                                  (map (fn [t] (:name t)))
-                                                                                 ;(into [])
                                                                                  (select-keys (:data hc-node))
                                                                                  (map (fn [[k v]]
                                                                                         (let [typeinfo (first (filter (fn [t] (= k (:name t)))
