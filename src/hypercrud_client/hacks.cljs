@@ -3,11 +3,9 @@
 
 (defn entity? [e] (boolean (:rel e)))
 
-
 (defn entity-coll? [os] (and (set? os) (every? :rel os)))
 
-
-(defn hc-node->datoms [{:keys [rel data] :as hc-node}]
+(defn entity->datoms [rel data]
   (->> data
        (map (fn [[attr val]]
               [attr (cond
@@ -22,21 +20,16 @@
        (into [])))
 
 
-(defmulti typetag->query (fn [typetag] :default))
-
-
 (comment
   (def hc-data
-    {:rel 1
-     :data
-     {:community/name "At Large in Ballard",
-      :community/url "http://blog.seattlepi.com/ballard/",
-      :community/neighborhood {:rel :17592186045456},
-      :community/category #{"news" "human interest"},
-      :community/orgtype {:rel :17592186045418},
-      :community/type #{{:rel :17592186045424}}}})
+    {:community/name "At Large in Ballard",
+     :community/url "http://blog.seattlepi.com/ballard/",
+     :community/neighborhood {:rel :17592186045456},
+     :community/category #{"news" "human interest"},
+     :community/orgtype {:rel :17592186045418},
+     :community/type #{{:rel :17592186045424}}})
 
-  (= (hc-node->datoms hc-data)
+  (= (entity->datoms 1 hc-data)
      [[1 :community/neighborhood :17592186045456]
       [1 :community/type :17592186045424]
       [1 :community/orgtype :17592186045418]
