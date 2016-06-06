@@ -36,6 +36,5 @@
       [1 :community/name "At Large in Ballard"]
       [1 :community/category "news"]
       [1 :community/category "human interest"]
-      [1 :community/url "http://blog.seattlepi.com/ballard/"]])
-  )
+      [1 :community/url "http://blog.seattlepi.com/ballard/"]]))
 

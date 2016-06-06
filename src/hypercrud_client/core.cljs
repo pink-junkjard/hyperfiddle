@@ -33,7 +33,8 @@
   (transact-effect! [this named-effect txs])
   (tx [this])
   (with [this local-datoms'])
-  (tempid! [this typetag]))
+  (tempid! [this typetag])
+  (resolve-and-cache [this cmp comp key relative-href update-cache]))
 
 
 (defn resolve-root-relative-uri [^goog.Uri entry-uri ^goog.Uri relative-uri]
@@ -95,20 +96,15 @@
     (.log js/console (str "Resolving entity: " eid))
     ;; if we are resolved and maybe have local edits
     ;; tempids are in the local-datoms already, probably via a not-found
-    (let [tx (:tx @state)]
-      (let [entity-server-datoms (get-in @state [:server-datoms [eid tx]])]
+    (let [tx (tx this)
+          cache-key [eid tx]
+          href (goog.Uri. (str "/api/entity/" eid "?tx=" tx))]
+      (let [entity-server-datoms (get-in @state [:server-datoms cache-key])]
         (if (or (util/tempid? eid) (not= nil entity-server-datoms))
           (p/resolved (let [datoms-for-eid (->> (concat entity-server-datoms local-datoms) ;accounts for tx already
                                                 (filter (fn [[op e a v]] (= e eid))))
-                            type ((:reflect-entity-type model)
-                                   (reduce (fn [acc [op e a v]]
-                                             (if (= op :db/add)
-                                               (assoc acc a v)
-                                               (dissoc acc a)))
-                                           {}
-                                           datoms-for-eid)) ; todo remove this hack
-                            #_(let [meta-datom (first (filter (fn [[op e a v]] (= a :meta/type)) datoms-for-eid))
-                                    [op e a v] meta-datom] v)
+                            type (let [meta-datom (first (filter (fn [[op e a v]] (= a :meta/type)) datoms-for-eid))
+                                       [op e a v] meta-datom] v)
                             form (get-in model [:forms type])
                             edited-entity (reduce (fn [acc [op e a v]]
                                                     (let [fieldinfo (first (filter #(= a (:name %)) form))]
@@ -122,74 +118,50 @@
                                                   {}
                                                   datoms-for-eid)]
                         edited-entity))
-          (let [loading (get-in @state [:pending] {})]      ;; eid -> promise
-            (do
-              (swap! state update-in [:cmp-deps] #(if (nil? %) #{cmp} (conj % cmp)))
-              (if (contains? loading [eid tx])
-                (-> (get loading [eid tx]) (p/then #(do
-                                                     (swap! state update-in [:cmp-deps] disj cmp)
-                                                     (force-update! cmp comp))))
-                (let [promise (-> (fetch! this (goog.Uri. (str "/api/entity/" eid "?tx=" tx)))
-                                  (p/then (fn [response]
-                                            (let [data (-> response :body :hypercrud)]
-                                              (swap! state #(-> %
-                                                                (update-in [:server-datoms [eid tx]] concat (hacks/entity->datoms eid data))
-                                                                (update-in [:pending] dissoc [eid tx])
-                                                                (update-in [:cmp-deps] disj cmp)))
-                                              (force-update! cmp comp)
-                                              data)))
-                                  (p/catch (fn [error]
-                                             (swap! state #(-> %
-                                                               (update-in [:pending] dissoc [eid tx])
-                                                               (update-in [:rejected] assoc [eid tx] error)
-                                                               (update-in [:cmp-deps] disj cmp)))
-                                             (force-update! cmp comp)
-                                             (p/rejected error))))]
-                  (swap! state update-in [:pending] assoc [eid tx] promise)
-                  (swap! user-hc-dependencies conj [eid tx])
-                  promise))))))))
+          (resolve-and-cache this cmp comp eid href (fn [atom data]
+                                                      (update-in atom [:server-datoms cache-key] concat (hacks/entity->datoms eid data))))))))
 
 
   (query* [this query cmp comp]
-    {:pre [(not= nil (:tx @state))]}
     (.log js/console (str "Resolving query: " query))
-    (let [tx (:tx @state)]
-      (if-let [resolved-hc-query-node (get-in @state [:resolved [query tx]])]
-        (p/resolved resolved-hc-query-node)
+    (let [tx (tx this)
+          cache-key [query tx]
+          href (goog.Uri. (str "/api/query/" (name query) "?tx=" tx))]
+      (if-let [query-results (get-in @state [:query-results cache-key])]
+        (p/resolved query-results)
         ;; if we are resolved and maybe have local edits
         ;; tempids are in the local-datoms already, probably via a not-found
-        (let [loading (get-in @state [:pending] {})]        ;; eid -> promise
-          (do
-            (swap! state update-in [:cmp-deps] #(if (nil? %) #{cmp} (conj % cmp)))
-            (if (contains? loading [query tx])
-              (-> (get loading [query tx]) (p/then #(do
-                                                     (swap! state update-in [:cmp-deps] disj cmp)
-                                                     (force-update! cmp comp))))
-              (let [href (if (= query :index-get)
-                           "/api"
-                           (str "/api/query/" (name query) "?tx=" tx))
-                    href (goog.Uri. href)
-                    hc-node' (-> (fetch! this href)
-                                 (p/then (fn [response]
-                                           (let [hc-node (-> response :body :hypercrud)]
-                                             (swap! state #(-> %
-                                                               (update-in [:entity-types] merge (map (fn [eid] [[eid tx] (:typetag hc-node)]) (:data hc-node)))
-                                                               (update-in [:templates] assoc (:typetag hc-node) (:template hc-node))
-                                                               (update-in [:resolved] assoc [query tx] hc-node) ;query-resultsets
-                                                               (update-in [:pending] dissoc [query tx])
-                                                               (update-in [:cmp-deps] disj cmp)))
-                                             (force-update! cmp comp)
-                                             hc-node)))
-                                 (p/catch (fn [error]
-                                            (swap! state #(-> %
-                                                              (update-in [:pending] dissoc [query tx])
-                                                              (update-in [:rejected] assoc [query tx] error)
-                                                              (update-in [:cmp-deps] disj cmp)))
-                                            (force-update! cmp comp)
-                                            (p/rejected error))))]
-                (swap! state update-in [:pending] assoc [query tx] hc-node')
-                (swap! user-hc-dependencies conj [query tx])
-                hc-node')))))))
+        (resolve-and-cache this cmp comp cache-key href (fn [atom data]
+                                                          (update-in atom [:query-results] assoc cache-key data))))))
+
+
+  (resolve-and-cache [this cmp comp cache-key relative-href update-cache]
+    (let [loading (get-in @state [:pending] {})]            ;; cache-key -> promise
+      (do
+        (swap! state update-in [:cmp-deps] #(if (nil? %) #{cmp} (conj % cmp)))
+        (if (contains? loading cache-key)
+          (-> (get loading cache-key) (p/then #(do
+                                                (swap! state update-in [:cmp-deps] disj cmp)
+                                                (force-update! cmp comp))))
+          (let [promise (-> (fetch! this relative-href)
+                            (p/then (fn [response]
+                                      (let [data (-> response :body :hypercrud)]
+                                        (swap! state #(-> %
+                                                          (update-cache data)
+                                                          (update-in [:pending] dissoc cache-key)
+                                                          (update-in [:cmp-deps] disj cmp)))
+                                        (force-update! cmp comp)
+                                        data)))
+                            (p/catch (fn [error]
+                                       (swap! state #(-> %
+                                                         (update-in [:pending] dissoc cache-key)
+                                                         (update-in [:rejected] assoc cache-key error)
+                                                         (update-in [:cmp-deps] disj cmp)))
+                                       (force-update! cmp comp)
+                                       (p/rejected error))))]
+            (swap! state update-in [:pending] assoc cache-key promise)
+            (swap! user-hc-dependencies conj cache-key)
+            promise)))))
 
 
   (transact-effect! [this named-effect txs] nil)
@@ -209,6 +181,6 @@
     (let [tx (:tx @state)
           eid (get-in @state [:next-tempid] -1)]
       (swap! state #(-> %
-                        (update-in [:next-tempid] (constantly (dec eid)))
-                        (update-in [:entity-types] assoc [eid tx] typetag)))
+                        ; todo update local-datoms with [:db/add eid :meta/type typetag]
+                        (update-in [:next-tempid] (constantly (dec eid)))))
       eid)))
