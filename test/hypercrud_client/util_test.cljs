@@ -1,7 +1,8 @@
 (ns hypercrud-client.util-test
   (:require-macros [cljs.test :refer [deftest testing is]])
   (:require [cljs.test]
-            [hypercrud-client.util :refer [normalize-tx]]))
+            [hypercrud-client.util :refer [normalize-tx]]
+            [clojure.set :refer [difference]]))
 
 
 
@@ -42,30 +43,63 @@
               :db/cardinality :db.cardinality/one}])
 
 
-(deftest test-simplify1 []
+(def cases
+  {
+   ;; :add :one
+   [[:db/add 1 :district/name "Southwest"]
+    [:db/add 1 :district/region 2]]
+   [[:db/add 1 :district/name "Southwest"]
+    [:db/add 1 :district/region 2]]
 
-  (= (into #{} (normalize-tx
-                 schema
-                 [[:db/add 1 :district/name "Southwest"]
-                  [:db/add 1 :district/region 2]]))
-     #{[:db/add 1 :district/name "Southwest"]
-       [:db/add 1 :district/region 2]}))
+   ;; :add :one override prior value of this attr
+   [[:db/add 1 :district/region 2]
+    [:db/add 1 :district/name "Southwest"]
+    [:db/add 1 :district/name ""]]
+   [[:db/add 1 :district/region 2]
+    [:db/add 1 :district/name ""]]
+
+   ;; :retract :one - cancel matching :add
+   [[:db/add 1 :district/name "Southwest"]
+    [:db/add 1 :district/region 2]
+    [:db/retract 1 :district/region 2]]
+   [[:db/add 1 :district/name "Southwest"]]
+
+   ;; :retract :one - remove when not exists = preserve :retract
+   [[:db/retract 1 :district/region 2]]
+   [[:db/retract 1 :district/region 2]]
+
+   ;; :add :many - add to set
+   [[:db/add 1 :community/type 20]
+    [:db/add 1 :community/type 21]]
+   [[:db/add 1 :community/type 20]
+    [:db/add 1 :community/type 21]]
+
+   ;; :retract :many - cancel matching :add
+   [[:db/add 1 :community/type 20]
+    [:db/add 1 :community/type 21]
+    [:db/retract 1 :community/type 21]]
+   [[:db/add 1 :community/type 20]]
+
+   ;; :retract :many - remove from empty set = preserve :retract
+   [[:retract 1 :community/type 20]]
+   [[:retract 1 :community/type 20]]
+
+   ;; :add :many - cancel matching :retract
+   [[:add :community/type 20]
+    [:retract :community/type 21]
+    [:add :community/type 21]]
+   [[:add :community/type 20]]
+
+   })
 
 
-;(deftest test-simpliy2 []
-;
-;
-;  (= (into #{} (normalize-tx
-;                 schema
-;                 [[:db/add 17592186045441 :district/name "Southwestaas"]
-;                  [:db/add 17592186045436 :db/ident :region/nw3]
-;                  [:db/add 17592186045441 :district/type "asdf"]
-;                  [:db/add 17592186045436 :db/ident :region/nw33]
-;                  [:db/add 17592186045436 :db/ident :region/nw333]
-;                  [:db/add 17592186045441 :district/name "Southwestaasa"]
-;                  [:db/add 17592186045441 :district/name "Southwestaasaa"]]))
-;     #{[:db/add 17592186045441 :district/name "Southwestaasaa"]
-;       [:db/add 17592186045436 :db/ident :region/nw333]})
-;
-;
-;  (is (= true false)))
+(deftest test-simplify []
+  (doall
+    (map (fn [[in out]]
+           (let [out' (normalize-tx schema in)]
+             (do (is (= (count out) (count out')))
+                 (let [out (set out)
+                       out' (set out')]
+                   (do (is (empty? (difference out' out)) "Unexpected datoms")
+                       (is (empty? (difference out out')) "Missing datoms"))))))
+         cases)))
