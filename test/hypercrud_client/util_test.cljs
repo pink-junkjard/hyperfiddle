@@ -35,7 +35,7 @@
 
 
 (defn check-normalize-tx [in expected-out]
-  (let [out (normalize-tx schema in)]
+  (let [out (normalize-tx schema [] in)]
     (do (is (= (count expected-out) (count out)))
         (let [expected-out (set expected-out)
               out (set out)]
@@ -116,7 +116,7 @@
      [:db/add 1 :community/type 21]]
     [[:db/add 1 :community/type 20]]))
 
-(deftest longer-test []
+(deftest longer-test-one []
   (check-normalize-tx
     [[:db/add 1 :district/region 2]
      [:db/add 1 :district/name "Southwest"]
@@ -127,3 +127,23 @@
      [:db/add 2 :community/name "Asdf"]
      [:db/add 2 :community/url "asdf.com"]
      [:db/add 1 :district/name ""]]))
+
+(deftest longer-test-many []
+  (check-normalize-tx
+    [[:db/add 1 :community/type 2]
+     [:db/add 1 :community/type 2]]
+    [[:db/add 1 :community/type 2]])
+  (check-normalize-tx
+    [[:db/add 1 :community/type 2]
+     [:db/add 1 :community/type 2]
+     [:db/retract 1 :community/type 2]]
+    [])
+  (check-normalize-tx
+    [[:db/retract 1 :community/type 2]
+     [:db/retract 1 :community/type 2]]
+    [[:db/retract 1 :community/type 2]])
+  (check-normalize-tx
+    [[:db/retract 1 :community/type 2]
+     [:db/retract 1 :community/type 2]
+     [:db/add 1 :community/type 2]]
+    []))
