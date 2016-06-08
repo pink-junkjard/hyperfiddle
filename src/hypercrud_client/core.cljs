@@ -2,6 +2,7 @@
   (:refer-clojure :exclude [update])
   (:require [cljs.core.match :refer-macros [match]]
             [goog.Uri]
+            [hypercrud-client.tx-util :as tx-util]
             [hypercrud-client.util :as util]
             [kvlt.middleware.params]
             [kvlt.core :as kvlt]
@@ -99,7 +100,7 @@
           cache-key [eid tx]
           relative-href (goog.Uri. (str "/api/entity/" eid "?tx=" tx))]
       (let [entity-server-datoms (get-in @state [:server-datoms cache-key])]
-        (if (or (util/tempid? eid) (not= nil entity-server-datoms))
+        (if (or (tx-util/tempid? eid) (not= nil entity-server-datoms))
           (p/resolved (let [datoms-for-eid (->> (concat entity-server-datoms local-datoms) ;accounts for tx already
                                                 (filter (fn [[op e a v]] (= e eid))))
                             edited-entity (reduce (fn [acc [op e a v]]
@@ -113,7 +114,7 @@
                                                   datoms-for-eid)]
                         edited-entity))
           (resolve-and-cache this cmp comp eid relative-href (fn [atom data]
-                                                               (update-in atom [:server-datoms cache-key] concat (util/entity->datoms eid data))))))))
+                                                               (update-in atom [:server-datoms cache-key] concat (tx-util/entity->datoms eid data))))))))
 
 
   (query* [this query cmp comp]

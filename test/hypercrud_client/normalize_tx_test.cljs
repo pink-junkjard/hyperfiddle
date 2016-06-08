@@ -1,8 +1,7 @@
-(ns hypercrud-client.util-test
-  (:require-macros [cljs.test :refer [deftest testing is]]
-                   [hypercrud-client.helper :refer [make-tests]])
+(ns hypercrud-client.normalize-tx-test
+  (:require-macros [cljs.test :refer [deftest is]])
   (:require [cljs.test]
-            [hypercrud-client.util :refer [normalize-tx]]
+            [hypercrud-client.tx-util :refer [normalize-tx]]
             [clojure.set :refer [difference]]))
 
 
