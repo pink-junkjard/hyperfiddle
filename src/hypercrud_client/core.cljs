@@ -1,9 +1,7 @@
 (ns hypercrud-client.core
   (:refer-clojure :exclude [update])
-  (:require [hypercrud-client.util :as util]
-            [hypercrud-client.hacks :as hacks]
-            [goog.Uri]
-            [cats.core :refer [fmap]]
+  (:require [goog.Uri]
+            [hypercrud-client.util :as util]
             [kvlt.middleware.params]
             [kvlt.core :as kvlt]
             [promesa.core :as p]
@@ -29,8 +27,8 @@
 (defprotocol Hypercrud
   (enter [this cmp comp])
   (entity* [this eid cmp comp])
-  (query* [this named-query cmp comp])
-  (transact-effect! [this named-effect txs])
+  (query* [this named-query cmp co88mp])
+  (transact! [this txs])
   (tx [this])
   (with [this local-datoms'])
   (tempid! [this typetag])
@@ -81,7 +79,7 @@
   (enter [this cmp comp]
     (if-let [tx (:tx @state)]
       (p/resolved tx)                                       ;return value tx unused?
-      (-> (fetch! this (goog.Uri. "/api"))
+      (-> (fetch! this entry-uri)
           (p/then (fn [response]
                     (let [tx (-> response :body :hypercrud :tx)]
                       (swap! state #(-> % (update-in [:tx] (constantly tx))))
@@ -98,7 +96,7 @@
     ;; tempids are in the local-datoms already, probably via a not-found
     (let [tx (tx this)
           cache-key [eid tx]
-          href (goog.Uri. (str "/api/entity/" eid "?tx=" tx))]
+          relative-href (goog.Uri. (str "/api/entity/" eid "?tx=" tx))]
       (let [entity-server-datoms (get-in @state [:server-datoms cache-key])]
         (if (or (util/tempid? eid) (not= nil entity-server-datoms))
           (p/resolved (let [datoms-for-eid (->> (concat entity-server-datoms local-datoms) ;accounts for tx already
@@ -118,21 +116,21 @@
                                                   {}
                                                   datoms-for-eid)]
                         edited-entity))
-          (resolve-and-cache this cmp comp eid href (fn [atom data]
-                                                      (update-in atom [:server-datoms cache-key] concat (hacks/entity->datoms eid data))))))))
+          (resolve-and-cache this cmp comp eid relative-href (fn [atom data]
+                                                               (update-in atom [:server-datoms cache-key] concat (util/entity->datoms eid data))))))))
 
 
   (query* [this query cmp comp]
     (.log js/console (str "Resolving query: " query))
     (let [tx (tx this)
           cache-key [query tx]
-          href (goog.Uri. (str "/api/query/" (name query) "?tx=" tx))]
+          relative-href (goog.Uri. (str "/api/query/" (name query) "?tx=" tx))]
       (if-let [query-results (get-in @state [:query-results cache-key])]
         (p/resolved query-results)
         ;; if we are resolved and maybe have local edits
         ;; tempids are in the local-datoms already, probably via a not-found
-        (resolve-and-cache this cmp comp cache-key href (fn [atom data]
-                                                          (update-in atom [:query-results] assoc cache-key data))))))
+        (resolve-and-cache this cmp comp cache-key relative-href (fn [atom data]
+                                                                   (update-in atom [:query-results] assoc cache-key data))))))
 
 
   (resolve-and-cache [this cmp comp cache-key relative-href update-cache]
@@ -143,7 +141,7 @@
           (-> (get loading cache-key) (p/then #(do
                                                 (swap! state update-in [:cmp-deps] disj cmp)
                                                 (force-update! cmp comp))))
-          (let [promise (-> (fetch! this relative-href)
+          (let [promise (-> (fetch! this (resolve-root-relative-uri entry-uri relative-href))
                             (p/then (fn [response]
                                       (let [data (-> response :body :hypercrud)]
                                         (swap! state #(-> %
@@ -164,7 +162,15 @@
             promise)))))
 
 
-  (transact-effect! [this named-effect txs] nil)
+  (transact! [this txs]
+    (-> (kvlt/request! {:url (resolve-root-relative-uri entry-uri (goog.Uri. "/api/transact"))
+                        :content-type content-type-transit
+                        :accept content-type-transit
+                        :method :post
+                        :form txs})
+        (p/then (fn [resp]
+                  (swap! state update-in [:tx] (constantly (-> resp :body :tx)))
+                  resp))))
 
 
   (tx [this]
