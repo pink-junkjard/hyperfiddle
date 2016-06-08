@@ -85,18 +85,21 @@
         g (group-by predicate simplified-datoms)
         [op' e' a' v'] (first (get g true))
         non-related (get g false)]
-    (match [op]
-           [:db/add] (if (= op' :db/retract)
-                         non-related                        ;we have a related previous datom that cancels us and it out
-                         (conj non-related next-datom))
+    (match [op cardinality]
+           [_ :db.cardinality/one] (conj non-related next-datom) ; :one is always override
 
-           [:db/retract] (if (= op' :db/add)
-                             non-related                    ;we have a related previous datom that cancels us and it out
-                             (conj non-related next-datom)))))
+           [:db/add :db.cardinality/many] (if (= op' :db/retract)
+                                            non-related     ;we have a related previous datom that cancels us and it out
+                                            (conj non-related next-datom))
+
+           [:db/retract :db.cardinality/many] (if (= op' :db/add)
+                                                non-related ;we have a related previous datom that cancels us and it out
+                                                (conj non-related next-datom)))))
 
 
 (defn normalize-tx [schema old-datoms new-datoms]
   (let [indexed-schema (group-by :db/ident schema)]
+    (.log js/console (pr-str new-datoms))
     (reduce (fn [acc datom]
               ; each step, need to simplify against all prior datoms
               (simplify indexed-schema acc datom))

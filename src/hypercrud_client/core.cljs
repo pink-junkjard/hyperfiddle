@@ -91,7 +91,7 @@
 
 
   (entity* [this eid cmp comp]
-    (.log js/console (str "Resolving entity: " eid))
+    ;(.log js/console (str "Resolving entity: " eid))
     ;; if we are resolved and maybe have local edits
     ;; tempids are in the local-datoms already, probably via a not-found
     (let [tx (tx this)
@@ -121,7 +121,7 @@
 
 
   (query* [this query cmp comp]
-    (.log js/console (str "Resolving query: " query))
+    ;(.log js/console (str "Resolving query: " query))
     (let [tx (tx this)
           cache-key [query tx]
           relative-href (goog.Uri. (str "/api/query/" (name query) "?tx=" tx))]

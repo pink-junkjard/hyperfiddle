@@ -67,15 +67,16 @@
     [[:db/add 1 :district/name "Southwest"]
      [:db/add 1 :district/region 2]
      [:db/retract 1 :district/region 2]]
-    [[:db/add 1 :district/name "Southwest"]])
+    [[:db/add 1 :district/name "Southwest"]
+     [:db/retract 1 :district/region 2]])
   (check-normalize-tx
     [[:db/add 1 :district/name "Southwest"]
      [:db/retract 1 :district/name "Southwest"]]
-    [])
+    [[:db/retract 1 :district/name "Southwest"]])
   (check-normalize-tx
     [[:db/retract 1 :district/name "Southwest"]
      [:db/add 1 :district/name "Southwest"]]
-    []))
+    [[:db/add 1 :district/name "Southwest"]]))
 
 (deftest retract-one-remove-when-not-exists-preserve-retract []
   (check-normalize-tx
