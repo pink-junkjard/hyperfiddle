@@ -31,7 +31,7 @@
   (transact! [this txs])
   (tx [this])
   (with [this local-datoms'])
-  (tempid! [this typetag])
+  (tempid! [this])
   (resolve-and-cache [this cmp comp key relative-href update-cache]))
 
 
@@ -181,12 +181,7 @@
     (HypercrudClient.
       entry-uri model state user-hc-dependencies force-update! (concat local-datoms local-datoms')))
 
-  (tempid! [this typetag]
-    ;; get the tempid from datascript
-    ;; Add the :meta/type as a local-datom immediately.
-    (let [tx (:tx @state)
-          eid (get-in @state [:next-tempid] -1)]
-      (swap! state #(-> %
-                        ; todo update local-datoms with [:db/add eid :meta/type typetag]
-                        (update-in [:next-tempid] (constantly (dec eid)))))
+  (tempid! [this]
+    (let [eid (get-in @state [:next-tempid] -1)]
+      (swap! state update-in [:next-tempid] (constantly (dec eid)))
       eid)))
