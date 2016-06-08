@@ -154,23 +154,3 @@
               (simplify2 indexed-schema acc datom))
             []
             datoms)))
-
-
-(comment
-  (def schema [])
-  (= (into #{} (normalize-tx
-                 schema
-                 [[:db/add 17592186045441 :district/name "Southwestaas"]
-                  [:db/add 17592186045436 :db/ident :region/nw3]
-
-
-
-                  [:db/add 17592186045441 :district/type "asdf"]
-
-
-                  [:db/add 17592186045436 :db/ident :region/nw33]
-                  [:db/add 17592186045436 :db/ident :region/nw333]
-                  [:db/add 17592186045441 :district/name "Southwestaasa"]
-                  [:db/add 17592186045441 :district/name "Southwestaasaa"]]))
-     #{[:db/add 17592186045441 :district/name "Southwestaasaa"]
-       [:db/add 17592186045436 :db/ident :region/nw333]}))
