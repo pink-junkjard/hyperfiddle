@@ -6,36 +6,8 @@
             [clojure.set :refer [difference]]))
 
 
-(def schema
-  [{:db/ident :community/name
-    :db/valueType :db.type/string
-    :db/cardinality :db.cardinality/one}
-   {:db/ident :community/url
-    :db/valueType :db.type/string
-    :db/cardinality :db.cardinality/one}
-   {:db/ident :community/neighborhood
-    :db/valueType :db.type/ref
-    :db/cardinality :db.cardinality/one}
-   {:db/ident :community/category
-    :db/valueType :db.type/string
-    :db/cardinality :db.cardinality/many}
-   {:db/ident :community/orgtype
-    :db/valueType :db.type/ref
-    :db/cardinality :db.cardinality/one}
-   {:db/ident :community/type
-    :db/valueType :db.type/ref
-    :db/cardinality :db.cardinality/many}
-   {:db/ident :district/name
-    :db/valueType :db.type/string
-    :db/cardinality :db.cardinality/one
-    :db/unique :db.unique/identity}
-   {:db/ident :district/region
-    :db/valueType :db.type/ref
-    :db/cardinality :db.cardinality/one}])
-
-
 (defn check-normalize-tx [in expected-out]
-  (let [out (normalize-tx schema [] in)]
+  (let [out (normalize-tx [] in)]
     (do (is (= (count expected-out) (count out)))
         (let [expected-out (set expected-out)
               out (set out)]
@@ -57,6 +29,7 @@
   (check-normalize-tx
     [[:db/add 1 :district/region 2]
      [:db/add 1 :district/name "Southwest"]
+     [:db/retract 1 :district/name "Southwest"]
      [:db/add 1 :district/name ""]]
     [[:db/add 1 :district/region 2]
      [:db/add 1 :district/name ""]]
@@ -67,16 +40,15 @@
     [[:db/add 1 :district/name "Southwest"]
      [:db/add 1 :district/region 2]
      [:db/retract 1 :district/region 2]]
-    [[:db/add 1 :district/name "Southwest"]
-     [:db/retract 1 :district/region 2]])
+    [[:db/add 1 :district/name "Southwest"]])
   (check-normalize-tx
     [[:db/add 1 :district/name "Southwest"]
      [:db/retract 1 :district/name "Southwest"]]
-    [[:db/retract 1 :district/name "Southwest"]])
+    [])
   (check-normalize-tx
     [[:db/retract 1 :district/name "Southwest"]
      [:db/add 1 :district/name "Southwest"]]
-    [[:db/add 1 :district/name "Southwest"]]))
+    []))
 
 (deftest retract-one-remove-when-not-exists-preserve-retract []
   (check-normalize-tx
@@ -123,6 +95,7 @@
      [:db/add 1 :district/name "Southwest"]
      [:db/add 2 :community/name "Asdf"]
      [:db/add 2 :community/url "asdf.com"]
+     [:db/retract 1 :district/name "Southwest"]
      [:db/add 1 :district/name ""]]
     [[:db/add 1 :district/region 2]
      [:db/add 2 :community/name "Asdf"]

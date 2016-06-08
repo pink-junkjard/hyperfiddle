@@ -76,32 +76,30 @@
       [:db/add 1 :community/url "http://blog.seattlepi.com/ballard/"]]))
 
 
-(defn simplify [indexed-schema simplified-datoms next-datom]
+(defn simplify [simplified-datoms next-datom]
   (let [[op e a v] next-datom
-        cardinality (get-in indexed-schema [a 0 :db/cardinality])
-        predicate (match [cardinality]
-                         [:db.cardinality/one] (fn [[op' e' a' v']] (and (= e' e) (= a' a)))
-                         [:db.cardinality/many] (fn [[op' e' a' v']] (and (= e' e) (= a' a) (= v' v))))
-        g (group-by predicate simplified-datoms)
-        [op' e' a' v'] (first (get g true))
+        g (group-by (fn [[op' e' a' v']] (and (= e' e) (= a' a) (= v' v)))
+                    simplified-datoms)
+        [op' e' a' v'] (first (get g true))                 ;if this count > 1, we have duplicate datoms, they are harmless and discard dups here.
         non-related (get g false)]
-    (match [op cardinality]
-           [_ :db.cardinality/one] (conj non-related next-datom) ; :one is always override
+    (match [op]
+           [:db/add] (if (= op' :db/retract)
+                       non-related                          ;we have a related previous datom that cancels us and it out
+                       (conj non-related next-datom))
 
-           [:db/add :db.cardinality/many] (if (= op' :db/retract)
-                                            non-related     ;we have a related previous datom that cancels us and it out
-                                            (conj non-related next-datom))
-
-           [:db/retract :db.cardinality/many] (if (= op' :db/add)
-                                                non-related ;we have a related previous datom that cancels us and it out
-                                                (conj non-related next-datom)))))
+           [:db/retract] (if (= op' :db/add)
+                           non-related                      ;we have a related previous datom that cancels us and it out
+                           (conj non-related next-datom)))))
 
 
-(defn normalize-tx [schema old-datoms new-datoms]
-  (let [indexed-schema (group-by :db/ident schema)]
-    (.log js/console (pr-str new-datoms))
-    (reduce (fn [acc datom]
-              ; each step, need to simplify against all prior datoms
-              (simplify indexed-schema acc datom))
-            old-datoms
-            new-datoms)))
+(defn normalize-tx [old-datoms new-datoms]
+  "We don't care about the cardinality (schema) because the UI code is always
+  retracting values before adding new value, even in cardinality one case. This is a very
+  convenient feature and makes the local datoms cancel out properly always to not cause
+  us to re-assert datoms needlessly in datomic"
+  (.log js/console (pr-str new-datoms))
+  (reduce (fn [acc datom]
+            ; each step, need to simplify against all prior datoms
+            (simplify acc datom))
+          old-datoms
+          new-datoms))
