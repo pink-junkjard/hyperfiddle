@@ -1,6 +1,7 @@
 (ns hypercrud-client.core
   (:refer-clojure :exclude [update])
-  (:require [goog.Uri]
+  (:require [cljs.core.match :refer-macros [match]]
+            [goog.Uri]
             [hypercrud-client.util :as util]
             [kvlt.middleware.params]
             [kvlt.core :as kvlt]
@@ -101,18 +102,13 @@
         (if (or (util/tempid? eid) (not= nil entity-server-datoms))
           (p/resolved (let [datoms-for-eid (->> (concat entity-server-datoms local-datoms) ;accounts for tx already
                                                 (filter (fn [[op e a v]] (= e eid))))
-                            type (let [meta-datom (first (filter (fn [[op e a v]] (= a :meta/type)) datoms-for-eid))
-                                       [op e a v] meta-datom] v)
-                            form (get-in model [:forms type])
                             edited-entity (reduce (fn [acc [op e a v]]
-                                                    (let [fieldinfo (first (filter #(= a (:name %)) form))]
-                                                      (if (:set fieldinfo)
-                                                        (if (= op :db/add)
-                                                          (update-in acc [a] (fn [oldv] (if oldv (conj oldv v) #{v})))
-                                                          (update-in acc [a] (fn [oldv] (if oldv (disj oldv v) #{}))))
-                                                        (if (= op :db/add)
-                                                          (assoc acc a v)
-                                                          (dissoc acc a)))))
+                                                    (let [cardinality (get-in model [:schema a :db/cardinality])]
+                                                      (match [op cardinality]
+                                                             [:db/add :db.cardinality/one] (assoc acc a v)
+                                                             [:db/retract :db.cardinality/one] (dissoc acc a)
+                                                             [:db/add :db.cardinality/many] (update-in acc [a] (fn [oldv] (if oldv (conj oldv v) #{v})))
+                                                             [:db/retract :db.cardinality/many] (update-in acc [a] (fn [oldv] (if oldv (disj oldv v) #{}))))))
                                                   {}
                                                   datoms-for-eid)]
                         edited-entity))
