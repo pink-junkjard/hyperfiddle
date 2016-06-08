@@ -96,12 +96,12 @@
      [:db/retract 1 :community/type 21]]
     [[:db/add 1 :community/type 20]])
   (check-normalize-tx
-    [[:db/add 1 :community-type 20]
-     [:db/retract 1 :community-type 20]]
+    [[:db/add 1 :community/type 20]
+     [:db/retract 1 :community/type 20]]
     [])
   (check-normalize-tx
-    [[:db/retract 1 :community-type 20]
-     [:db/add 1 :community-type 20]]
+    [[:db/retract 1 :community/type 20]
+     [:db/add 1 :community/type 20]]
     []))
 
 (deftest retract-many-empty-entity-preserve-retract []
@@ -111,10 +111,10 @@
 
 (deftest add-many-cancel-matching-retract []
   (check-normalize-tx
-    [[:db/add :community/type 20]
-     [:db/retract :community/type 21]
-     [:db/add :community/type 21]]
-    [[:db/add :community/type 20]]))
+    [[:db/add 1 :community/type 20]
+     [:db/retract 1 :community/type 21]
+     [:db/add 1 :community/type 21]]
+    [[:db/add 1 :community/type 20]]))
 
 (deftest longer-test []
   (check-normalize-tx

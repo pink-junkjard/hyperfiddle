@@ -142,8 +142,7 @@
            ; :retract cancels prior :add of matching value
            [:db/retract :db.cardinality/many] (if (and related-datom (= (first related-datom) :db/add)) ;(first related-datom) = op
                                                 non-related ;we have a related previous datom that cancels us and it out)
-                                                (conj non-related next-datom)))
-    (conj non-related next-datom)))
+                                                (conj non-related next-datom)))))
 
 
 
