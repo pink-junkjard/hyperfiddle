@@ -34,7 +34,7 @@
   (tx [this])
   (with [this local-datoms'])
   (tempid! [this])
-  (resolve-and-cache [this cmp comp key relative-href update-cache]))
+  (resolve-and-cache [this fetch! cmp comp key update-cache]))
 
 
 (defn resolve-root-relative-uri [^goog.Uri entry-uri ^goog.Uri relative-uri]
@@ -114,24 +114,34 @@
                                                   {}
                                                   datoms-for-eid)]
                         edited-entity))
-          (resolve-and-cache this cmp comp eid relative-href (fn [atom data]
-                                                               (update-in atom [:server-datoms cache-key] concat (tx-util/entity->datoms eid data))))))))
+          (resolve-and-cache this #(fetch! this relative-href)
+                             cmp comp eid
+                             (fn [atom data]
+                               (update-in atom [:server-datoms cache-key] concat (tx-util/entity->datoms eid data))))))))
 
 
   (query* [this query cmp comp]
     ;(.log js/console (str "Resolving query: " query))
     (let [tx (tx this)
           cache-key [query tx]
-          relative-href (goog.Uri. (str "/api/query/" (name query) "?tx=" tx))]
+          relative-href (goog.Uri. (str "/api/query?tx=" tx))]
       (if-let [query-results (get-in @state [:query-results cache-key])]
         (p/resolved query-results)
         ;; if we are resolved and maybe have local edits
         ;; tempids are in the local-datoms already, probably via a not-found
-        (resolve-and-cache this cmp comp cache-key relative-href (fn [atom data]
-                                                                   (update-in atom [:query-results] assoc cache-key data))))))
+        (resolve-and-cache this #(kvlt/request!
+                                  {:url (resolve-root-relative-uri entry-uri relative-href)
+                                   :content-type content-type-transit
+                                   :accept content-type-transit
+                                   :method :post
+                                   :form query
+                                   :as :auto})
+                           cmp comp cache-key
+                           (fn [atom data]
+                             (update-in atom [:query-results] assoc cache-key data))))))
 
 
-  (resolve-and-cache [this cmp comp cache-key relative-href update-cache]
+  (resolve-and-cache [this fetch! cmp comp cache-key update-cache]
     (let [loading (get-in @state [:pending] {})]            ;; cache-key -> promise
       (do
         (swap! state update-in [:cmp-deps] #(if (nil? %) #{cmp} (conj % cmp)))
@@ -139,7 +149,7 @@
           (-> (get loading cache-key) (p/then #(do
                                                 (swap! state update-in [:cmp-deps] disj cmp)
                                                 (force-update! cmp comp))))
-          (let [promise (-> (fetch! this (resolve-root-relative-uri entry-uri relative-href))
+          (let [promise (-> (fetch!)
                             (p/then (fn [response]
                                       (let [data (-> response :body :hypercrud)]
                                         (swap! state #(-> %
