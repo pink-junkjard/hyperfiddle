@@ -175,9 +175,10 @@
                         :content-type content-type-transit
                         :accept content-type-transit
                         :method :post
-                        :form txs})
+                        :form txs
+                        :as :auto})
         (p/then (fn [resp]
-                  (swap! state update-in [:tx] (constantly (-> resp :body :tx)))
+                  (swap! state update-in [:tx] (constantly (-> resp :body :hypercrud :tx)))
                   resp))))
 
 
