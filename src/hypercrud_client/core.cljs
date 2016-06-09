@@ -104,7 +104,8 @@
           (p/resolved (let [datoms-for-eid (->> (concat entity-server-datoms local-datoms) ;accounts for tx already
                                                 (filter (fn [[op e a v]] (= e eid))))
                             edited-entity (reduce (fn [acc [op e a v]]
-                                                    (let [cardinality (get-in model [:schema a :db/cardinality])]
+                                                    (let [cardinality (get-in model [:schema a :db/cardinality])
+                                                          _ (assert cardinality (str "schema attribute not found: " (pr-str a)))]
                                                       (match [op cardinality]
                                                              [:db/add :db.cardinality/one] (assoc acc a v)
                                                              [:db/retract :db.cardinality/one] (dissoc acc a)
