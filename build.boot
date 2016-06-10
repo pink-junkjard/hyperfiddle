@@ -6,10 +6,10 @@
                   [org.clojure/core.match "0.3.0-alpha4"]
                   [reagent "0.6.0-alpha"]
 
-                  [:scope "test" adzerk/boot-cljs "1.7.228-1"]
-                  [:scope "test" adzerk/bootlaces "0.1.13"]
-                  [:scope "test" adzerk/boot-test "1.0.6"]
-                  [:scope "test" crisptrutski/boot-cljs-test "0.2.2-SNAPSHOT"]]
+                  [adzerk/boot-cljs "1.7.228-1" :scope "test"]
+                  [adzerk/bootlaces "0.1.13" :scope "test"]
+                  [adzerk/boot-test "1.0.6" :scope "test"]
+                  [crisptrutski/boot-cljs-test "0.2.2-SNAPSHOT" :scope "test"]]
   :resource-paths #{"src"})
 
 (require '[adzerk.boot-cljs :refer :all]
