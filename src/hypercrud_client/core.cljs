@@ -64,7 +64,7 @@
   (loader (partial enter client) comp loading-comp))
 
 
-(deftype HypercrudClient [^goog.Uri entry-uri model state user-hc-dependencies force-update! local-datoms]
+(deftype HypercrudClient [^goog.Uri entry-uri schema state user-hc-dependencies force-update! local-datoms]
   HypercrudFetch
   (fetch! [this ^goog.Uri relative-href]
     (assert (not (nil? relative-href)))
@@ -104,7 +104,7 @@
           (p/resolved (let [datoms-for-eid (->> (concat entity-server-datoms local-datoms) ;accounts for tx already
                                                 (filter (fn [[op e a v]] (= e eid))))
                             edited-entity (reduce (fn [acc [op e a v]]
-                                                    (let [cardinality (get-in model [:schema a :db/cardinality])
+                                                    (let [cardinality (get-in schema [a :db/cardinality])
                                                           _ (assert cardinality (str "schema attribute not found: " (pr-str a)))]
                                                       (match [op cardinality]
                                                              [:db/add :db.cardinality/one] (assoc acc a v)
@@ -188,7 +188,7 @@
 
   (with [this local-datoms']
     (HypercrudClient.
-      entry-uri model state user-hc-dependencies force-update! (concat local-datoms local-datoms')))
+      entry-uri schema state user-hc-dependencies force-update! (concat local-datoms local-datoms')))
 
   (tempid! [this]
     (let [eid (get-in @state [:next-tempid] -1)]
