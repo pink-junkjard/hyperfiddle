@@ -1,7 +1,10 @@
 (set-env!
-  :dependencies '[[com.cognitect/transit-cljs "0.8.237"]
-                  [funcool/promesa "1.1.1"]
+  :dependencies '[[cljs-hash "0.0.2"]
+                  [com.cemerick/url "0.1.1"]
+                  [com.cognitect/transit-cljs "0.8.237"]
+                  [funcool/promesa "1.1.1-HYPERCRUD"]
                   [io.nervous/kvlt "0.1.1"]
+                  [org.clojure/core.async "0.2.374"]
                   [org.clojure/clojurescript "1.7.228"]
                   [org.clojure/core.match "0.3.0-alpha4"]
                   [reagent "0.6.0-alpha"]
@@ -21,7 +24,7 @@
 (bootlaces! +version+)
 
 (task-options!
-  pom {:project 'org.hypercrud/hypercrud-client
+  pom {:project 'org.hypercrud/hypercrud.client
        :version +version+}
   test-cljs {:js-env :node})
 

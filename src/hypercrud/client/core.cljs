@@ -1,9 +1,9 @@
-(ns hypercrud-client.core
+(ns hypercrud.client.core
   (:refer-clojure :exclude [update])
   (:require [cljs.core.match :refer-macros [match]]
             [goog.Uri]
-            [hypercrud-client.tx-util :as tx-util]
-            [hypercrud-client.util :as util]
+            [hypercrud.client.tx-util :as tx-util]
+            [hypercrud.client.util :as util]
             [kvlt.middleware.params]
             [kvlt.core :as kvlt]
             [promesa.core :as p]

@@ -1,0 +1,88 @@
+fieldset {
+    padding: 10px;
+    border-width: 1px;
+}
+
+.truncate {
+    max-width: 140px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+input[type="email"],
+input[type="number"],
+input[type="search"],
+input[type="text"],
+input[type="tel"],
+input[type="url"],
+input[type="password"],
+textarea,
+select {
+    width: 100%;
+}
+
+select {
+    vertical-align: text-bottom;
+}
+
+input[type="text"],
+input[type="password"] {
+    box-sizing : border-box;
+}
+
+.half-width {
+    width: 50%;
+    display: inline-block;
+}
+
+.cj-form {
+    border-left: 5px solid #428bca;
+    padding-left: 10px;
+}
+
+.cj-field > label {
+    display: inline-block;
+    width: 20%;
+    vertical-align: top;
+}
+
+.cj-field > input,
+.cj-field > textarea,
+.cj-field > .editable-select {
+    width: 80%;
+}
+
+.editable-select,
+.multi-select,
+.multi-select-comp {
+    width: 80%;
+    display: inline-block;
+}
+
+.editable-select > span {
+    display: block;
+    overflow: hidden;
+    padding-right: 10px;
+}
+.editable-select > button {
+    float: right;
+}
+
+.multi-select-group > .cj-form {
+    display: block;
+    overflow: hidden;
+    padding-right: 10px;
+}
+
+.multi-select-group > button {
+    display: block;
+    float: right;
+}
+
+.multi-select-group > .editable-select {
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    display: block;
+}

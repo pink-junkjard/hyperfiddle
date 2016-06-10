@@ -1,7 +1,7 @@
-(ns hypercrud-client.tx-util-test
+(ns hypercrud.client.tx-util-test
   (:require-macros [cljs.test :refer [deftest is]])
   (:require [cljs.test]
-            [hypercrud-client.tx-util :refer [entity->datoms]]))
+            [hypercrud.client.tx-util :refer [entity->datoms]]))
 
 (deftest entity-datoms []
   (let [hc-data {:community/name "At Large in Ballard",

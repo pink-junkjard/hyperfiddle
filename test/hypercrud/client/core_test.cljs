@@ -1,4 +1,4 @@
-(ns hypercrud-client.core-test
+(ns hypercrud.client.core-test
   (:require-macros [cljs.test :refer [deftest testing is]])
   (:require [cljs.test]))
 

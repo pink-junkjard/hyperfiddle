@@ -1,2 +1,2 @@
-# hypercrud-client
+# hypercrud.client
 

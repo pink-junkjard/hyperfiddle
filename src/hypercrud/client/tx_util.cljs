@@ -1,4 +1,4 @@
-(ns hypercrud-client.tx-util
+(ns hypercrud.client.tx-util
   (:require [cljs.core.match :refer-macros [match]]))
 
 
