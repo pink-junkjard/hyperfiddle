@@ -1,6 +1,5 @@
 (ns hypercrud.ui.collection
-  (:require [cljs-hash.md5 :refer [md5]]
-            [hypercrud.client.core :as hypercrud]
+  (:require [hypercrud.client.core :as hypercrud]
             [hypercrud.ui.table-cell :refer [render-table-cell]]))
 
 

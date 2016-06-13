@@ -1,17 +1,16 @@
 (set-env!
-  :dependencies '[[cljs-hash "0.0.2"]
-                  [com.cemerick/url "0.1.1"]
+  :dependencies '[[com.cemerick/url "0.1.1"]
                   [com.cognitect/transit-cljs "0.8.237"]
                   [funcool/promesa "1.1.1-HYPERCRUD"]
                   [io.nervous/kvlt "0.1.1"]
                   [org.clojure/core.async "0.2.374"]
-                  [org.clojure/clojurescript "1.7.228"]
+                  [org.clojure/clojurescript "1.9.36"]
                   [org.clojure/core.match "0.3.0-alpha4"]
-                  [reagent "0.6.0-alpha"]
+                  [reagent "0.6.0-rc" :exclusions [cljsjs/react cljsjs/react-dom cljsjs/react-dom-server]]
 
                   [adzerk/boot-cljs "1.7.228-1" :scope "test"]
                   [adzerk/bootlaces "0.1.13" :scope "test"]
-                  [adzerk/boot-test "1.0.6" :scope "test"]
+                  [adzerk/boot-test "1.1.1" :scope "test"]
                   [crisptrutski/boot-cljs-test "0.2.2-SNAPSHOT" :scope "test"]]
   :resource-paths #{"src"})
 
