@@ -1,7 +1,7 @@
 (set-env!
   :dependencies '[[com.cemerick/url "0.1.1"]
                   [com.cognitect/transit-cljs "0.8.237"]
-                  [funcool/promesa "1.1.1-HYPERCRUD"]
+                  ;[funcool/promesa "1.1.1"]
                   [io.nervous/kvlt "0.1.1"]
                   [org.clojure/core.async "0.2.374"]
                   [org.clojure/clojurescript "1.9.36"]
