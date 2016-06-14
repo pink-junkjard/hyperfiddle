@@ -37,3 +37,17 @@
   us to re-assert datoms needlessly in datomic"
   (.log js/console (pr-str new-datoms))
   (reduce simplify old-datoms new-datoms))
+
+
+(defn datoms->entity [schema eid datoms]
+  (->> datoms
+       (filter (fn [[op e a v]] (= e eid)))
+       (reduce (fn [acc [op e a v]]
+                 (let [cardinality (get-in schema [a :db/cardinality])
+                       _ (assert cardinality (str "schema attribute not found: " (pr-str a)))]
+                   (match [op cardinality]
+                          [:db/add :db.cardinality/one] (assoc acc a v)
+                          [:db/retract :db.cardinality/one] (dissoc acc a)
+                          [:db/add :db.cardinality/many] (update-in acc [a] (fn [oldv] (if oldv (conj oldv v) #{v})))
+                          [:db/retract :db.cardinality/many] (update-in acc [a] (fn [oldv] (if oldv (disj oldv v) #{}))))))
+               {})))

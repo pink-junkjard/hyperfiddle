@@ -1,6 +1,6 @@
 (ns hypercrud.ui.form
   (:require [hypercrud.ui.auto-control :refer [auto-control]]
-            [hypercrud.client.core :as hypercrud]))
+            [hypercrud.client.reagent :as hcr]))
 
 
 (defn cj-form-field [{:keys [name prompt] :as fieldinfo} client forms value change! transact!]
@@ -10,7 +10,7 @@
 
 
 (defn cj-form [client eid forms local-transact!]
-  [hypercrud/resolve client eid
+  [hcr/entity client eid
    (fn [entity]
      [:div.cj-form
       (doall

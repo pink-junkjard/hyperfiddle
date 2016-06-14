@@ -7,7 +7,8 @@
             [hypercrud.browser.pages.entity :as entity]
             [hypercrud.browser.pages.index :as index]
             [hypercrud.browser.pages.query :as query]
-            [hypercrud.client.core :as hypercrud]))
+            [hypercrud.client.core :as hypercrud]
+            [hypercrud.client.reagent :as hcr]))
 
 
 (defn browser [cur client forms index-queries page-rel-path]
@@ -24,7 +25,7 @@
       [:div
        ^{:key (str (hypercrud/tx client))}                  ;cachebust to get newer version of graph
        [:div.hc-node-view
-        [hypercrud/resolve-enter client
+        [hcr/enter client
          (fn [tx]
            (match (string/split page-rel-path "/")
                   ["query" q] (query/view q client forms)

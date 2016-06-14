@@ -1,5 +1,6 @@
 (ns hypercrud.ui.table-cell
-  (:require [hypercrud.client.core :as hypercrud]))
+  (:require [hypercrud.client.core :as hypercrud]
+            [hypercrud.client.reagent :as hcr]))
 
 (def ^:dynamic render-table-cell-dispatch
   (fn [val fieldinfo props]
@@ -43,7 +44,7 @@
   ^{:key [eid (hypercrud/tx client)]}
   ;; Href is the same as the value. We key off value for the recursive set case,
   ;; for symmetry with key off value in primitive-in-set cases
-  [hypercrud/resolve client eid
+  [hcr/entity client eid
    (fn [entity]
      [:a {:href (str "/entity/" eid)}
       (render-table-cell (get entity label-prop)

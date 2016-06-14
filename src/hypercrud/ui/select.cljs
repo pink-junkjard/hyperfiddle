@@ -1,5 +1,6 @@
 (ns hypercrud.ui.select
   (:require [hypercrud.client.core :as hypercrud]
+            [hypercrud.client.reagent :as hcr]
             [hypercrud.ui.form :as form]
             [reagent.core :as reagent]
             [hypercrud.client.tx-util :as tx-util]
@@ -12,7 +13,7 @@
   (if (keyword? eid)
     [:option {:key eid :value (util/transit-encode eid)} (name eid)]
     ^{:key [eid (hypercrud/tx client)]}
-    [hypercrud/resolve client eid
+    [hcr/entity client eid
      (fn [entity]
        [:option {:key eid :value (util/transit-encode eid)}
         (name (get entity label-prop))])
@@ -22,7 +23,7 @@
 (defn select* [client forms options value change! transact!]
   (let [updating? (reagent/atom false)]
     (fn [client forms {:keys [label-prop typetag query]} value change! transact!]
-      [hypercrud/resolve-query client query
+      [hcr/query client query
        (fn [eids]
          (let [option-form (:meta/type (first eids))
                kw-ref? (every? :readonly option-form)
