@@ -6,7 +6,7 @@ machine:
 
 test:
   override:
-    - echo hello
+    - boot test
 
 dependencies:
   cache_directories:
@@ -18,7 +18,7 @@ dependencies:
     - chmod +x ~/bin/boot
     - boot show -d
   override:
-    - boot pom jar cljs
+    - boot pom jar
 
 deployment:
   master:
