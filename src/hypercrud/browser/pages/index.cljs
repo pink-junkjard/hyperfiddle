@@ -6,7 +6,7 @@
   [:div
    [:ul.links
     (map (fn [[k v]]
-           [:li {:key k} [:a {:href (str "/query/" (url/url-encode v))} k]])
+           [:li {:key k} [:a {:href (str "query/" (url/url-encode v))} k]])
          index-queries)]])
 
 (def commands {})

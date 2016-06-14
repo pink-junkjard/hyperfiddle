@@ -28,7 +28,7 @@
                   ((:meta/type entity) forms))]
     [:tr {:key eid}
      [:td {:key "edit-td"}
-      [:a {:href (str "/entity/" eid)}
+      [:a {:href (str "../entity/" eid)}
        "Edit"]]
      cols]))
 

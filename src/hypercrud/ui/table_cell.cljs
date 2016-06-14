@@ -46,7 +46,7 @@
   ;; for symmetry with key off value in primitive-in-set cases
   [hcr/entity client eid
    (fn [entity]
-     [:a {:href (str "/entity/" eid)}
+     [:a {:href (str "../entity/" eid)}
       (render-table-cell (get entity label-prop)
                          (first
                            (filter #(= (:name %) label-prop)
