@@ -79,17 +79,16 @@
 
   Hypercrud
   (enter [this cmp comp]
-    (if-let [tx (:tx @state)]
-      (p/resolved tx)                                       ;return value tx unused?
-      (-> (fetch! this entry-uri)
-          (p/then (fn [response]
-                    (let [tx (-> response :body :hypercrud :tx)]
-                      (swap! state #(-> % (update-in [:tx] (constantly tx))))
-                      (force-update! cmp comp)
-                      tx)))                                 ;unused return value
-          (p/catch (fn [error]
-                     (force-update! cmp comp)
-                     (p/rejected error))))))
+    (let [tx (:tx @state)]
+      (if (not= nil tx)
+        (p/resolved tx)
+        (let [cache-key [:tx tx]
+              fetch! #(fetch! this entry-uri)
+              update-cache (fn [atom data]
+                             (-> atom
+                                 (update-in [:query-results] assoc cache-key data)
+                                 (update-in [:tx] (constantly (:tx data)))))]
+          (resolve-and-cache this fetch! cmp comp cache-key update-cache)))))
 
 
   (entity* [this eid cmp comp]
@@ -115,7 +114,7 @@
                                                   datoms-for-eid)]
                         edited-entity))
           (resolve-and-cache this #(fetch! this relative-href)
-                             cmp comp eid
+                             cmp comp cache-key
                              (fn [atom data]
                                (update-in atom [:server-datoms cache-key] concat (tx-util/entity->datoms eid data))))))))
 
