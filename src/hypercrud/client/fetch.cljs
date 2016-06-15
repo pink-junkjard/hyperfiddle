@@ -33,13 +33,13 @@
         (p/finally #(do (println (str "Request took: " (- (.now js/Date) start) "ms")) %)))))
 
 
-(defn query! [entry-uri relative-uri query]
+(defn query! [entry-uri relative-uri query params]
   (kvlt/request!
     {:url (resolve-root-relative-uri entry-uri relative-uri)
      :content-type content-type-transit
      :accept content-type-transit
      :method :post
-     :form query
+     :form [query params]
      :as :auto}))
 
 

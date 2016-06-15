@@ -10,7 +10,7 @@
 (defprotocol Hypercrud
   (enter* [this cmp comp])
   (entity* [this eid cmp comp])
-  (query* [this named-query cmp comp])
+  (query* [this query query-params cmp comp])
   (transact! [this txs])
   (tx [this])
   (with [this local-datoms'])
@@ -82,10 +82,10 @@
                                             (update-in old-state [:server-datoms cache-key] concat (tx-util/entity->datoms eid hc-response)))))))
 
 
-  (query* [this query cmp comp]
+  (query* [this query query-params cmp comp]
     ;(.log js/console (str "Resolving query: " query))
     (let [tx (tx this)
-          cache-key [query tx]
+          cache-key [query query-params tx]
           relative-uri (goog.Uri. (str "/api/query?tx=" tx))
           error (get-in @state [:rejected cache-key])
           query-results (get-in @state [:query-results cache-key])]
@@ -93,7 +93,7 @@
         (not= nil error) (p/rejected error)
         (not= nil query-results) (p/resolved query-results)
         :else-request (resolve-and-cache* state user-hc-dependencies force-update! cmp comp cache-key
-                                          #(fetch/query! entry-uri relative-uri query)
+                                          #(fetch/query! entry-uri relative-uri query query-params)
                                           (fn [old-state hc-response]
                                             (update-in old-state [:query-results] assoc cache-key hc-response))))))
 
