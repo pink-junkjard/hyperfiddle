@@ -9,7 +9,7 @@
         v' (f cmp [loader f comp loading-comp])]
     (cond
       (p/resolved? v') (comp (p/extract v'))
-      (p/rejected? v') [:div (str (.-stack (p/extract v')))]
+      (p/rejected? v') [:pre (p/extract v')]
       :pending? (if loading-comp (loading-comp) [:div "loading"]))))
 
 
