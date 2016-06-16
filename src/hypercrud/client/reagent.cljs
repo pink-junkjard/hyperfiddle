@@ -17,8 +17,11 @@
   (loader (partial hypercrud/entity* client eid) comp loading-comp))
 
 
-(defn query [client query comp & {:keys [loading-comp query-params]}]
-  (loader (partial hypercrud/query* client query query-params) comp loading-comp))
+(defn query
+  ([client q comp]
+   (query client q [] comp))
+  ([client q query-params comp & [loading-comp]]
+   (loader (partial hypercrud/query* client q query-params) comp loading-comp)))
 
 
 (defn enter [client comp & [loading-comp]]
