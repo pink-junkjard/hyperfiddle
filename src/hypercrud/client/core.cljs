@@ -17,7 +17,11 @@
   (tempid! [this]))
 
 
-(defn resolve-and-cache* [state user-hc-dependencies cache-key resolve! update-cache]
+(defprotocol HypercrudSSR
+  (ssr-context [this]))
+
+
+(defn resolve-and-cache* [state request-state cache-key resolve! update-cache]
   (let [loading (get-in @state [:pending] {})]              ;; cache-key -> promise
     (if (contains? loading cache-key)
       (get loading cache-key)
@@ -35,11 +39,11 @@
                                                        (update-in [:rejected] assoc cache-key error)))
                                      (p/rejected error)))))]
         (swap! state update-in [:pending] assoc cache-key promise)
-        (swap! user-hc-dependencies conj cache-key)
+        (swap! request-state update-in [:user-hc-deps] conj cache-key)
         promise))))
 
 
-(deftype HypercrudClient [entry-uri schema state user-hc-dependencies local-datoms]
+(deftype HypercrudClient [entry-uri schema state request-state local-datoms]
   Hypercrud
   (enter* [this]
     (let [tx (tx this)
@@ -49,7 +53,7 @@
       (cond
         (not= nil error) (p/rejected error)
         (not= nil query-results) (p/resolved query-results)
-        :else-request (resolve-and-cache* state user-hc-dependencies cache-key
+        :else-request (resolve-and-cache* state request-state cache-key
                                           #(fetch/fetch! entry-uri entry-uri)
                                           (fn [old-state hc-response]
                                             (-> old-state
@@ -68,7 +72,7 @@
       (cond
         (not= nil error) (p/rejected error)
         cached? (p/resolved (tx-util/datoms->entity schema eid (concat entity-server-datoms local-datoms)))
-        :else-request (resolve-and-cache* state user-hc-dependencies cache-key
+        :else-request (resolve-and-cache* state request-state cache-key
                                           #(fetch/fetch! entry-uri relative-href)
                                           (fn [old-state hc-response]
                                             (update-in old-state [:server-datoms cache-key] concat (tx-util/entity->datoms eid hc-response)))))))
@@ -84,7 +88,7 @@
       (cond
         (not= nil error) (p/rejected error)
         (not= nil query-results) (p/resolved query-results)
-        :else-request (resolve-and-cache* state user-hc-dependencies cache-key
+        :else-request (resolve-and-cache* state request-state cache-key
                                           #(fetch/query! entry-uri relative-uri query query-params)
                                           (fn [old-state hc-response]
                                             (update-in old-state [:query-results] assoc cache-key hc-response))))))
@@ -103,9 +107,12 @@
 
   (with [this local-datoms']
     (HypercrudClient.
-      entry-uri schema state user-hc-dependencies (concat local-datoms local-datoms')))
+      entry-uri schema state request-state (concat local-datoms local-datoms')))
 
   (tempid! [this]
     (let [eid (get-in @state [:next-tempid] -1)]
       (swap! state update-in [:next-tempid] (constantly (dec eid)))
-      eid)))
+      eid))
+
+  HypercrudSSR
+  (ssr-context [this] request-state))
