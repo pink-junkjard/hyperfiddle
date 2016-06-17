@@ -1,4 +1,4 @@
-(ns hypercrud.client.sort
+(ns hypercrud.client.hc-sort
   (:require [hypercrud.client.core :as hc]
             [promesa.core :as p]))
 
