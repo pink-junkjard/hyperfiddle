@@ -3,16 +3,33 @@
             [promesa.core :as p]))
 
 
+;; flatmap resolved promises in the same stack frame instead of next tick
+(defn immediate-then [promise promise-fn]
+  (if (p/resolved? promise)
+    (promise-fn (p/extract promise))
+    (p/then promise promise-fn)))
+
+
+(defn immediate-map [pf p]
+  (immediate-then p pf))
+
+
+(defn immediate-all [promises]
+  (if (every? p/resolved? promises)
+    (p/resolved (map p/extract promises))
+    (p/all promises)))
+
+
 (defn hc-sort-by [client eids keyfns]
   (->> eids
        (map (fn [eid]
               (->> keyfns
-                   (reduce p/then (hc/entity* client eid))
-                   (p/map (fn [sortval] [eid sortval])))))
-       (p/all)
-       (p/map (fn [pairs] (->> pairs
-                               (sort-by second)
-                               (map first))))))
+                   (reduce immediate-then (hc/entity* client eid))
+                   (immediate-map (fn [sortval] (p/resolved [eid sortval]))))))
+       (immediate-all)
+       (immediate-map (fn [pairs] (p/resolved (->> pairs
+                                                   (sort-by second)
+                                                   (map first)))))))
 
 (comment
   ;; scratch work for sort-by

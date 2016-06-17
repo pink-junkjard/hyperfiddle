@@ -40,7 +40,7 @@
                                                        (update-in [:rejected] assoc cache-key error)))
                                      (p/rejected error)))))]
         (swap! state update-in [:pending] assoc cache-key promise)
-        (swap! request-state update-in [:user-hc-deps] conj cache-key)
+        (swap! request-state update-in [:user-hc-deps] (fn [v] (conj (or v #{}) cache-key)))
         promise))))
 
 
