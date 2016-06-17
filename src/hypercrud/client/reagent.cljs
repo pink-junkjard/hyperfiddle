@@ -36,5 +36,4 @@
 
 
 (defn enter [client comp & [loading-comp]]
-  ^{:key (hc/tx' client)}
   [promised client (hc/enter* client) comp loading-comp])

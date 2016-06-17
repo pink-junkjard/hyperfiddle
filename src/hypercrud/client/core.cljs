@@ -13,7 +13,6 @@
   (query* [this query query-params])
   (transact! [this txs])
   (tx [this])
-  (tx' [this])
   (with [this local-datoms'])
   (tempid! [this]))
 
@@ -47,7 +46,9 @@
 (deftype HypercrudClient [entry-uri schema state request-state local-datoms]
   Hypercrud
   (enter* [this]
-    (let [tx (tx' this)
+    (let [tx (let [tx (get-in @state [:tx] 0)
+                   initial-tx (get-in @state [:initial-tx] 0)]
+               (if (= tx initial-tx) :initial-tx tx))
           cache-key [:tx tx]
           error (get-in @state [:rejected cache-key])
           query-results (get-in @state [:query-results cache-key])]
@@ -107,14 +108,6 @@
     (get-in @state [:tx]))
 
 
-  (tx' [this]
-    (let [tx (get-in @state [:tx] 0)
-          initial-tx (get-in @state [:initial-tx] 0)]
-      (if (= tx initial-tx)
-        :initial-tx
-        tx)))
-
-
   (with [this local-datoms']
     (HypercrudClient.
       entry-uri schema state request-state (concat local-datoms local-datoms')))
@@ -125,4 +118,12 @@
       eid))
 
   HypercrudSSR
-  (ssr-context [this] request-state))
+  (ssr-context [this] request-state)
+
+  IHash
+  (-hash [this]
+    (hash (map hash [entry-uri schema state request-state local-datoms])))
+
+  IEquiv
+  (-equiv [this other]
+    (= (hash this) (hash other))))
