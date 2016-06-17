@@ -7,7 +7,6 @@
             [hypercrud.browser.pages.entity :as entity]
             [hypercrud.browser.pages.index :as index]
             [hypercrud.browser.pages.query :as query]
-            [hypercrud.client.core :as hypercrud]
             [hypercrud.client.reagent :as hcr]))
 
 
@@ -23,13 +22,12 @@
           (apply cmd-fn cmd-args))))
     (fn [cur client forms index-queries page-rel-path]
       [:div
-       ^{:key (str (hypercrud/tx client))}                  ;cachebust to get newer version of graph
        [:div.hc-node-view
-        [hcr/enter client
-         (fn [tx]
-           (match (string/split page-rel-path "/")
-                  ["query" q] (query/view q client forms)
-                  ["entity" eid] (entity/view cur client forms cmd-chan eid)
-                  [& _] (index/view index-queries)))]]
+        (hcr/enter client
+          (fn [tx]
+            (match (string/split page-rel-path "/")
+                   ["query" q] (query/view q client forms)
+                   ["entity" eid] (entity/view cur client forms cmd-chan eid)
+                   [& _] (index/view index-queries))))]
        [:hr]
        [:pre (with-out-str (pprint/pprint @cur))]])))

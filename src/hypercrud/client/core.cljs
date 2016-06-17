@@ -13,6 +13,7 @@
   (query* [this query query-params])
   (transact! [this txs])
   (tx [this])
+  (tx' [this])
   (with [this local-datoms'])
   (tempid! [this]))
 
@@ -46,7 +47,7 @@
 (deftype HypercrudClient [entry-uri schema state request-state local-datoms]
   Hypercrud
   (enter* [this]
-    (let [tx (tx this)
+    (let [tx (tx' this)
           cache-key [:tx tx]
           error (get-in @state [:rejected cache-key])
           query-results (get-in @state [:query-results cache-key])]
@@ -57,6 +58,7 @@
                                           #(fetch/fetch! entry-uri entry-uri)
                                           (fn [old-state hc-response]
                                             (-> old-state
+                                                (update-in [:initial-tx] #(or % (:tx hc-response)))
                                                 (update-in [:query-results] assoc cache-key hc-response)
                                                 (update-in [:tx] (constantly (:tx hc-response)))))))))
 
@@ -102,7 +104,15 @@
 
 
   (tx [this]
-    (get-in @state [:tx] 0))
+    (get-in @state [:tx]))
+
+
+  (tx' [this]
+    (let [tx (get-in @state [:tx] 0)
+          initial-tx (get-in @state [:initial-tx] 0)]
+      (if (= tx initial-tx)
+        :initial-tx
+        tx)))
 
 
   (with [this local-datoms']
