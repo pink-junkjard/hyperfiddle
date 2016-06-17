@@ -1,7 +1,7 @@
 (ns hypercrud.browser.pages.entity
   (:require-macros [cljs.core.async.macros :refer [go]])
   (:require [cljs.core.async :refer [<! >! chan]]
-            [hypercrud.client.core :as hypercrud]
+            [hypercrud.client.core :as hc]
             [hypercrud.client.tx-util :as tx-util]
             [hypercrud.ui.form :refer [cj-form]]
             [promesa.core :as p]))
@@ -11,7 +11,7 @@
   "hypercrud values just get a form, with ::update and ::delete."
   (let [eid (js/parseInt eid 10)
         local-datoms (cur [:form] [])
-        client (hypercrud/with client @local-datoms)
+        client (hc/with client @local-datoms)
         local-transact! (fn [more-datoms]
                           (swap! local-datoms (fn [old-datoms]
                                                 (vec (tx-util/normalize-tx old-datoms more-datoms)))))]
@@ -35,7 +35,7 @@
 (def commands
   {::update-item
    (fn [client datoms]
-     (->> (hypercrud/transact! client datoms)
+     (->> (hc/transact! client datoms)
           (p/map (fn [resp]
                    (if (:success resp)
                      (js/alert "ok")

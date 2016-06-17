@@ -12,7 +12,6 @@
   (entity* [this eid])
   (query* [this query query-params])
   (transact! [this txs])
-  (tx [this])
   (with [this local-datoms'])
   (tempid! [this]))
 
@@ -66,7 +65,7 @@
 
   (entity* [this eid]
     ;(.log js/console (str "Resolving entity: " eid))
-    (let [tx (tx this)
+    (let [tx (get-in @state [:tx])
           cache-key [eid tx]
           relative-href (goog.Uri. (str "/api/entity/" eid "?tx=" tx))
           error (get-in @state [:rejected cache-key])
@@ -83,7 +82,7 @@
 
   (query* [this query query-params]
     ;(.log js/console (str "Resolving query: " query))
-    (let [tx (tx this)
+    (let [tx (get-in @state [:tx])
           cache-key [query query-params tx]
           relative-uri (goog.Uri. (str "/api/query?tx=" tx))
           error (get-in @state [:rejected cache-key])
@@ -102,10 +101,6 @@
         (p/then (fn [resp]
                   (swap! state update-in [:tx] (constantly (-> resp :body :hypercrud :tx)))
                   resp))))
-
-
-  (tx [this]
-    (get-in @state [:tx]))
 
 
   (with [this local-datoms']
