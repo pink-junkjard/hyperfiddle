@@ -20,7 +20,7 @@ Hypercrud has two layers of abstraction: a lower-level I/O runtime enabling sepa
 
 The lower layer is roughly analogous to a Datomic peer running in the browser. This is implemented as the Hypercrud protocol:
 
-![hypercrud protocol snippet](https://hypercrud-blog-assets.s3.amazonaws.com/2016-06-28/1467142296__731261949.png)
+![hypercrud protocol snippet](.readme-assets/defprotocol-hypercrud.png)
 
 This protocol may be implemented on top of HTTP, websockets or any other network layer, the implementation is responsible for answering queries out of cache as well as coordinating with the hypercrud service to populate caches. Implementations of this protocol are complicated, run in various contexts (e.g. browser or nodejs). It is provided as a library dependency.
 
@@ -32,11 +32,11 @@ The hypercrud runtime will run the UI expression on a web server to help decide 
 
 The basis of the hypermedia layer is the Hypercrud Browser, a general hypermedia client as a library. Hypercrud Browser is analogous to a HTML web browser, which is fully general and can interpret all possible HTML expressions. [Hypercrud Browser Demo](http://seattle.hypercrud.com/browser/). Hypercrud Browser is composed of several hypermedia data driven UI functions such as this hypermedia form:
 
-![data driven form](https://hypercrud-blog-assets.s3.amazonaws.com/2016-06-28/1467142412__589627332.png)
+![data driven form](.readme-assets/data-driven-form.png)
 
 Here is the full code for this form:
 
-![form source code snippet](https://hypercrud-blog-assets.s3.amazonaws.com/2016-06-28/1467142553__850341949.png)
+![form source code snippet](.readme-assets/form-source-code.png)
 
 - `form` is hypermedia metadata for rendering the form, 
 - `local-datoms` is ui state for uncommitted form updates - this is a timeseries
@@ -46,6 +46,6 @@ Here is the full code for this form:
 
 This hypermedia form is backed by the hypercrud graph, and can navigate recursively into the graph.
 
-![data driven form recursion](https://hypercrud-blog-assets.s3.amazonaws.com/2016-06-28/1467138261__45682191.png)
+![data driven form recursion](.readme-assets/data-driven-form-recursion.png)
 
 This hypermedia form function does have component local state but that is an implementation detail; hypercrud is currently built on React via Reagent so you can use whatever state model you like. We suggest avoiding local state for maximizing the utility of server side rendering, though the hypercrud runtime should be smart enough to discover and optimize data dependencies even in the presence of local state.
