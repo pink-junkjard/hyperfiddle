@@ -12,7 +12,7 @@ This protocol may be implemented on top of HTTP, websockets or any other network
 
 Here is a simple example of a UI expression - part of the code for our blog actually:
 
-![ui expression code snippet for blog index](https://hypercrud-blog-assets.s3.amazonaws.com/2016-06-28/1467141631__151525263.png)
+![ui expression code snippet for blog index](.readme-assets/blog-source-code.png)
 
 - `[hcr/query client '[:find [?e ...] :where [?e :post/title]] ...` is a query 
 - `[hcr/entity client eid ...` is also a query
