@@ -42,31 +42,24 @@
         promise))))
 
 
-(deftype HypercrudClient [entry-uri schema state request-state local-datoms]
+(deftype HypercrudClient [tx force-render! entry-uri schema state request-state local-datoms]
   Hypercrud
   (enter* [this]
-    (let [tx (let [tx (get-in @state [:tx] 0)
-                   initial-tx (get-in @state [:initial-tx] 0)]
-               (if (= tx initial-tx) :initial-tx tx))
-          cache-key [:tx tx]
-          error (get-in @state [:rejected cache-key])
-          query-results (get-in @state [:query-results cache-key])]
-      (cond
-        (not= nil error) (p/rejected error)
-        (not= nil query-results) (p/resolved query-results)
-        :else-request (resolve-and-cache* state request-state cache-key
-                                          #(fetch/fetch! entry-uri entry-uri)
-                                          (fn [old-state hc-response]
-                                            (-> old-state
-                                                (update-in [:initial-tx] #(or % (:tx hc-response)))
-                                                (update-in [:query-results] assoc cache-key hc-response)
-                                                (update-in [:tx] (constantly (:tx hc-response)))))))))
+    (if (nil? tx)
+      (let [cache-key [:tx tx]
+            error (get-in @state [:rejected cache-key])]
+        (if (not= nil error)
+          (p/rejected error)
+          (resolve-and-cache* state request-state cache-key
+                              #(fetch/fetch! entry-uri entry-uri)
+                              (fn [old-state hc-response]
+                                (force-render! (:tx hc-response))))))
+      (p/resolved tx)))
 
 
   (entity* [this eid]
     ;(.log js/console (str "Resolving entity: " eid))
-    (let [tx (get-in @state [:tx])
-          cache-key [eid tx]
+    (let [cache-key [eid tx]
           relative-href (goog.Uri. (str "/api/entity/" eid "?tx=" tx))
           error (get-in @state [:rejected cache-key])
           entity-server-datoms (get-in @state [:server-datoms cache-key])
@@ -82,8 +75,7 @@
 
   (query* [this query query-params]
     ;(.log js/console (str "Resolving query: " query))
-    (let [tx (get-in @state [:tx])
-          cache-key [query query-params tx]
+    (let [cache-key [query query-params tx]
           relative-uri (goog.Uri. (str "/api/query?tx=" tx))
           error (get-in @state [:rejected cache-key])
           query-results (get-in @state [:query-results cache-key])]
@@ -99,13 +91,13 @@
   (transact! [this txs]
     (-> (fetch/transact! entry-uri txs)
         (p/then (fn [resp]
-                  (swap! state update-in [:tx] (constantly (-> resp :body :hypercrud :tx)))
+                  (force-render! (-> resp :body :hypercrud :tx))
                   resp))))
 
 
   (with [this local-datoms']
     (HypercrudClient.
-      entry-uri schema state request-state (concat local-datoms local-datoms')))
+      tx force-render! entry-uri schema state request-state (concat local-datoms local-datoms')))
 
   (tempid! [this]
     (let [eid (get-in @state [:next-tempid] -1)]
