@@ -23,9 +23,10 @@
     (fn [cur client forms index-queries page-rel-path]
       [:div
        [:div.hc-node-view
-        (match (string/split page-rel-path "/")
-               ["query" q] (query/view q client forms)
-               ["entity" eid] (entity/view cur client forms cmd-chan eid)
-               [& _] (index/view index-queries))]
+        (match [(string/split page-rel-path "/")]
+               [["query" q]] (query/view q client forms)
+               [["entity" eid]] (entity/view cur client forms cmd-chan eid)
+               [[""]] (index/view index-queries)
+               :else [:div "no route for: " page-rel-path])]
        [:hr]
        [:pre (with-out-str (pprint/pprint @cur))]])))
