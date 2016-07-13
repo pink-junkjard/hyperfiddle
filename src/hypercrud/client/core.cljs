@@ -8,6 +8,8 @@
 
 
 (defprotocol Hypercrud
+  ;(authenticate!* [this username password])     ; sets a http cookie with a token
+  ;(whoami [this])             ; read the cookie
   (enter* [this])
   (entity* [this eid])
   (query* [this query query-params])
@@ -42,7 +44,7 @@
         promise))))
 
 
-(deftype HypercrudClient [tx force-render! entry-uri schema state request-state local-datoms]
+(deftype HypercrudClient [user-token tx force-render! entry-uri schema state request-state local-datoms]
   Hypercrud
   (enter* [this]
     (if (nil? tx)
@@ -51,7 +53,7 @@
         (if (not= nil error)
           (p/rejected error)
           (resolve-and-cache* state request-state cache-key
-                              #(fetch/fetch! entry-uri entry-uri)
+                              #(fetch/fetch! user-token entry-uri entry-uri)
                               (fn [old-state hc-response]
                                 (force-render! (:tx hc-response))))))
       (p/resolved tx)))
@@ -68,7 +70,7 @@
         (not= nil error) (p/rejected error)
         cached? (p/resolved (tx-util/datoms->entity schema eid (concat entity-server-datoms local-datoms)))
         :else-request (resolve-and-cache* state request-state cache-key
-                                          #(fetch/fetch! entry-uri relative-href)
+                                          #(fetch/fetch! user-token entry-uri relative-href)
                                           (fn [old-state hc-response]
                                             (update-in old-state [:server-datoms cache-key] concat (tx-util/entity->datoms eid hc-response)))))))
 
@@ -83,13 +85,13 @@
         (not= nil error) (p/rejected error)
         (not= nil query-results) (p/resolved query-results)
         :else-request (resolve-and-cache* state request-state cache-key
-                                          #(fetch/query! entry-uri relative-uri query query-params)
+                                          #(fetch/query! user-token entry-uri relative-uri query query-params)
                                           (fn [old-state hc-response]
                                             (update-in old-state [:query-results] assoc cache-key hc-response))))))
 
 
   (transact! [this txs]
-    (-> (fetch/transact! entry-uri txs)
+    (-> (fetch/transact! user-token entry-uri txs)
         (p/then (fn [resp]
                   (force-render! (-> resp :body :hypercrud :tx))
                   resp))))
@@ -97,7 +99,7 @@
 
   (with [this local-datoms']
     (HypercrudClient.
-      tx force-render! entry-uri schema state request-state (concat local-datoms local-datoms')))
+      user-token tx force-render! entry-uri schema state request-state (concat local-datoms local-datoms')))
 
   (tempid! [this]
     (let [eid (get-in @state [:next-tempid] -1)]

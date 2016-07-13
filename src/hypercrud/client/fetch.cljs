@@ -23,19 +23,21 @@
     (assoc resp :body decoded-val)))
 
 
-(defn fetch! [entry-uri relative-uri]
+(defn fetch! [user-token entry-uri relative-uri]
   (let [start (.now js/Date)]
     (-> (kvlt/request!
-          {:url (resolve-root-relative-uri entry-uri relative-uri)
+          {:url (-> (resolve-root-relative-uri entry-uri relative-uri)
+                    (.setParameterValue "user-token" user-token))
            :accept content-type-transit
            :method :get
            :as :auto})
         (p/finally #(do (println (str "Request took: " (- (.now js/Date) start) "ms")) %)))))
 
 
-(defn query! [entry-uri relative-uri query params]
+(defn query! [user-token entry-uri relative-uri query params]
   (kvlt/request!
-    {:url (resolve-root-relative-uri entry-uri relative-uri)
+    {:url (-> (resolve-root-relative-uri entry-uri relative-uri)
+              (.setParameterValue "user-token" user-token))
      :content-type content-type-transit
      :accept content-type-transit
      :method :post
@@ -43,9 +45,10 @@
      :as :auto}))
 
 
-(defn transact! [entry-uri txs]
+(defn transact! [user-token entry-uri txs]
   (kvlt/request!
-    {:url (resolve-root-relative-uri entry-uri (goog.Uri. "/api/transact"))
+    {:url (-> (resolve-root-relative-uri entry-uri (goog.Uri. "/api/transact"))
+              (.setParameterValue "user-token" user-token))
      :content-type content-type-transit
      :accept content-type-transit
      :method :post
