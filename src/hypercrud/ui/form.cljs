@@ -12,6 +12,7 @@
 (defn cj-form [client eid forms local-transact!]
   [hcr/entity client eid
    (fn [entity]
+     (assert (:meta/type entity) (str "Entity missing :meta/type " (pr-str entity)))
      [:div.cj-form
       (doall
         (map (fn [{:keys [name] :as fieldinfo}]
