@@ -1,5 +1,5 @@
 (ns hypercrud.ui.table-cell
-  (:require [hypercrud.client.reagent :as hcr]))
+  (:require [hypercrud.client.core :as hc]))
 
 (def ^:dynamic render-table-cell-dispatch
   (fn [val fieldinfo props]
@@ -41,14 +41,12 @@
   (assert (not (nil? label-prop)))
 
   ^{:key eid}                                               ;symmetric with primitive-in-set
-  [hcr/entity client eid
-   (fn [entity]
-     [:a {:href (str "../entity/" eid)}
-      (render-table-cell (get entity label-prop)
-                         (first
-                           (filter #(= (:name %) label-prop)
-                                   ((:meta/type entity) forms)))
-                         props)])])
+  [:a {:href (str "../entity/" eid)}
+   (render-table-cell (get (hc/entity client eid) label-prop)
+                      (first
+                        (filter #(= (:name %) label-prop)
+                                ((:meta/type (hc/entity client eid)) forms)))
+                      props)])
 
 (defmethod render-table-cell {:datatype :ref :set true}
   [val fieldinfo props]

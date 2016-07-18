@@ -7,10 +7,21 @@
             [hypercrud.browser.pages.entity :as entity]
             [hypercrud.browser.pages.index :as index]
             [hypercrud.browser.pages.query :as query]
-            [hypercrud.client.reagent :as hcr]))
+            [hypercrud.browser.base-64-url-safe :as base64]
+            [hypercrud.client.core :as hc]))
 
 
-(defn browser [cur client forms index-queries page-rel-path]
+;(defn query-query []
+;  (let [form ((:meta/type))]))
+
+
+(defn graph-dependencies [forms cur page-rel-path]
+  (match [(string/split page-rel-path "/")]
+         [["query" q]] {::query/query [(base64/decode q) [] '[*]]}
+         [["entity" eid]] {::query/query ['[:find [?e ...] :in $ ?eid :where [?e :db/id ?eid]] [(js/parseInt eid 10)] '[*]]}))
+
+
+(defn ui [cur client forms index-queries page-rel-path]
   (let [cmd-chan (chan)
         commands (merge index/commands entity/commands query/commands)]
     (go
@@ -25,7 +36,7 @@
        [:div.hc-node-view
         (match [(string/split page-rel-path "/")]
                [["query" q]] (query/view q client forms)
-               [["entity" eid]] (entity/view cur client forms cmd-chan eid)
+               [["entity" eid]] (entity/view cur client forms cmd-chan (js/parseInt eid 10))
                [[""]] (index/view index-queries)
                :else [:div "no route for: " page-rel-path])]
        [:hr]

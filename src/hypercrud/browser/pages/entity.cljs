@@ -2,19 +2,18 @@
   (:require-macros [cljs.core.async.macros :refer [go]])
   (:require [cljs.core.async :refer [<! >! chan]]
             [hypercrud.client.core :as hc]
-            [hypercrud.client.tx-util :as tx-util]
+            [hypercrud.client.tx :as tx-util]
             [hypercrud.ui.form :refer [cj-form]]
             [promesa.core :as p]))
 
 
 (defn view [cur client forms cmd-chan eid]
   "hypercrud values just get a form, with ::update and ::delete."
-  (let [eid (js/parseInt eid 10)
-        local-datoms (cur [:form] [])
+  (let [local-datoms (cur [:form] [])
         client (hc/with client @local-datoms)
         local-transact! (fn [more-datoms]
                           (swap! local-datoms (fn [old-datoms]
-                                                (vec (tx-util/normalize-tx old-datoms more-datoms)))))]
+                                                (vec (tx-util/into-tx old-datoms more-datoms)))))]
     [:div
      [cj-form client eid forms local-transact!]
      (if (tx-util/tempid? eid)

@@ -1,5 +1,5 @@
 (ns hypercrud.ui.collection
-  (:require [hypercrud.client.reagent :as hcr]
+  (:require [hypercrud.client.core :as hc]
             [hypercrud.ui.table-cell :refer [render-table-cell]]))
 
 
@@ -41,16 +41,9 @@
 (defn cj-grid [client forms eids]
   [:table.u-full-width
    [:colgroup [:col {:span "1" :style {:width "20px"}}]]
-
-   [hcr/entity client (first eids)
-    #(cj-table-thead ((:meta/type %) forms))
-    (fn [entity] [:thead [:tr]])]
-
+   (cj-table-thead ((:meta/type (hc/entity client (first eids))) forms))
    [:tbody
     (map (fn [eid]
-           ;; use the href as the radio name - hack
            ^{:key eid}
-           [hcr/entity client eid
-            #(cj-table-tr client forms eid %)
-            (fn [entity] [:tr])])
+           (cj-table-tr client forms eid (hc/entity client eid)))
          (take 10 eids))]])

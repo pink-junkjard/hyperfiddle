@@ -23,25 +23,14 @@
     (assoc resp :body decoded-val)))
 
 
-(defn fetch! [user-token entry-uri relative-uri]
-  (let [start (.now js/Date)]
-    (-> (kvlt/request!
-          {:url (-> (resolve-root-relative-uri entry-uri relative-uri)
-                    (.setParameterValue "user-token" user-token))
-           :accept content-type-transit
-           :method :get
-           :as :auto})
-        (p/finally #(do (println (str "Request took: " (- (.now js/Date) start) "ms")) %)))))
-
-
-(defn query! [user-token entry-uri relative-uri query params]
+(defn fetch! [user-token entry-uri relative-uri query]
   (kvlt/request!
     {:url (-> (resolve-root-relative-uri entry-uri relative-uri)
               (.setParameterValue "user-token" user-token))
      :content-type content-type-transit
      :accept content-type-transit
      :method :post
-     :form [query params]
+     :form query
      :as :auto}))
 
 
