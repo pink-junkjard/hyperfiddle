@@ -82,10 +82,8 @@
 
 
 (defn pulled-tree-to-statements [schema pulled-tree]
-  ;; branches are :ref (downgraph entities)
-  ;; which happens we can ducktype check as map? without looking at schema, but really we should look at schema earlier
-  ;; entity processor handles cardinality many
-  (->> (tree-seq (fn [v] (entity? v))
-                 #(entity-children schema %)
-                 pulled-tree)
-       (mapcat #(entity->statements schema %))))
+  ;; branch nodes are type entity. which right now is hashmap.
+  (let [traversal (tree-seq (fn [v] (entity? v))
+                    #(entity-children schema %)
+                    pulled-tree)]
+    (mapcat #(entity->statements schema %) traversal)))

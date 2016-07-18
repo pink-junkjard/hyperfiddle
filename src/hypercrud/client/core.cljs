@@ -3,9 +3,8 @@
   (:require [cljs.core.match :refer-macros [match]]
             [goog.Uri]
             [hypercrud.client.fetch :as fetch]
-            [promesa.core :as p]
             [hypercrud.client.tx :as tx]
-            [clojure.walk :as walk]))
+            [promesa.core :as p]))
 
 
 (defprotocol Graph
@@ -26,16 +25,23 @@
   (ssr-context [this]))
 
 
+(defn map-values [f m]
+  (->> m
+       (map (fn [[k v]]
+              [k (f v)]))
+       (into {})))
+
+
 (deftype HypercrudClient [user-token t force-render! entry-uri schema state request-state local-statements]
   Graph
   (select [this named-query]
-    (get-in @state [:enter t :resultsets named-query]))
+    (get-in @state [t :resultsets named-query]))
 
 
   (entity [this eid]
     (tx/apply-statements-to-entity
       schema
-      (concat (get-in @state [:enter t :statements]) local-statements)
+      (concat (get-in @state [t :statements]) local-statements)
       {:db/id eid}))
 
 
@@ -50,18 +56,15 @@
   ;; resultsets: set of eids
   ;; statements: local portions of the graph
   (enter! [this graph-dependencies]
-    (if-let [cached (get-in @state [:enter t])]
-      (p/resolved nil)
-      (-> (fetch/fetch! user-token entry-uri "/enter" graph-dependencies)
-          (p/then (fn [response]
-
-                    ;; rip apart the result into resultsets and statements
-                    (let [pulled-trees (-> response :body :hypercrud)
-                          statements (mapcat tx/pulled-tree-to-statements pulled-trees)
-                          resultsets (map :db/id pulled-trees)]
-
-                      (swap! state update-in [:enter t] merge {:statements statements
-                                                               :resultsets resultsets})))))))
+    (-> (fetch/fetch! user-token entry-uri (goog.Uri. "/api/enter") graph-dependencies)
+        (p/then (fn [response]
+                  ;; rip apart the result into resultsets and statements
+                  (let [pulled-trees-map (-> response :body :hypercrud)
+                        pulled-trees (apply concat (vals pulled-trees-map)) ;mash query results together
+                        statements (mapcat #(tx/pulled-tree-to-statements schema %) pulled-trees)
+                        resultsets (map-values #(map :db/id %) pulled-trees-map)]
+                    (swap! state update-in [t] merge {:statements statements
+                                                      :resultsets resultsets}))))))
 
 
   (transact! [this tx]
