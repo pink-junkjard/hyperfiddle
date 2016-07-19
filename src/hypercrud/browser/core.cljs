@@ -14,10 +14,12 @@
 ;  (let [form ((:meta/type))]))
 
 
-(defn graph-dependencies [forms cur page-rel-path]
+(defn graph-dependencies [forms state page-rel-path]
   (match [(string/split page-rel-path "/")]
          [["query" q]] {::query/query [(base64/decode q) [] '[*]]}
-         [["entity" eid]] {::query/query ['[:find [?e ...] :in $ ?eid :where [?e :db/id ?eid]] [(js/parseInt eid 10)] '[*]]}))
+         [["entity" eid]] {::query/query ['[:find [?eid ...] :in $ ?eid :where [?eid]] [(js/parseInt eid 10)] '[*]]}
+         [[""]] {}
+         :else {}))
 
 
 (defn ui [cur transact! graph forms index-queries page-rel-path]
