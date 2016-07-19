@@ -77,8 +77,8 @@
     (fetch/transact! user-token entry-uri tx)))
 
 
+(defn tempid!-factory []
+  (let [n (atom 0)]
+    (fn [] (swap! n dec) @n)))
 
-(let [state (atom 0)]
-  (defn tempid! []
-    (swap! state dec)
-    @state))
+

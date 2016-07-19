@@ -15,9 +15,9 @@
      (name (get (hc/entity graph eid) label-prop))]))
 
 
-(defn select* [graph forms options value change! transact!]
+(defn select* [graph forms options value change! transact! tempid!]
   (let [updating? (reagent/atom false)]
-    (fn [graph forms {:keys [label-prop form query]} value change! transact!]
+    (fn [graph forms {:keys [label-prop form query]} value change! transact! tempid!]
       (let [eids (hc/select graph [query])
             props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
                    :value (util/transit-encode
@@ -31,7 +31,7 @@
                                 (let [select-value (util/transit-decode (.-target.value %))
                                       eid (cond
                                             (nil? select-value) nil
-                                            (= "create-new" select-value) (hc/tempid!)
+                                            (= "create-new" select-value) (tempid!)
                                             :else-hc-select-option-node select-value)]
                                   (change! [:db/retract value]
                                            [:db/add eid])
@@ -56,4 +56,4 @@
                                [[:option {:key :blank :value (util/transit-encode nil)} "--"]]))]]
          (if show-form?
            ;; TODO branch the client and provide datom for :meta/type in create-new case
-           [form/cj-form graph value forms transact!])]))))
+           [form/cj-form graph value forms transact! tempid!])]))))
