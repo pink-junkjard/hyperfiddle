@@ -18,7 +18,7 @@
 (defn select* [graph forms options value change! transact! tempid!]
   (let [updating? (reagent/atom false)]
     (fn [graph forms {:keys [label-prop form query]} value change! transact! tempid!]
-      (let [eids (hc/select graph [query])
+      (let [option-eids (hc/select graph (hash query))
             props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
                    :value (util/transit-encode
                             (cond
@@ -41,14 +41,14 @@
             create-new? (some-> value tx-util/tempid?)
             show-form? (or @updating? create-new?)]
 
-        [:div.editable-select {:key (hash eids)}
+        [:div.editable-select {:key (hash option-eids)}
          (if form
            [:button {:on-click #(swap! updating? not) :disabled (= nil value)} (if show-form? "Discard" "Edit")])
          [:span
           [:select props (-> (doall (map (fn [eid]
                                            ^{:key eid}
-                                           (select-option graph label-prop eid))
-                                         eids))
+                                           [select-option graph label-prop eid])
+                                         option-eids))
                              (concat
                                (if (not form)
                                  []                         ;can't create-new

@@ -5,8 +5,8 @@
 (defn view [index-queries]
   [:div
    [:ul.links
-    (map (fn [[k v]]
-           [:li {:key k} [:a {:href (str "query/" (base64/encode v))} k]])
+    (map (fn [[k [metatype query]]]
+           [:li {:key k} [:a {:href (str (name metatype) "/query/" (base64/encode query))} k]])
          index-queries)]])
 
 (def commands {})

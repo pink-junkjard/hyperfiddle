@@ -3,20 +3,29 @@
             [hypercrud.client.core :as hc]))
 
 
-(defn cj-form-field [{:keys [name prompt] :as fieldinfo} graph forms value change! transact! tempid!]
+(defn cj-form-field [{:keys [name prompt] :as fieldinfo} graph metatype forms value change! transact! tempid!]
   [:div.cj-field
    [:label prompt]
-   [auto-control fieldinfo graph forms value change! transact! tempid!]])
+   [auto-control fieldinfo graph metatype forms value change! transact! tempid!]])
 
 
-(defn cj-form [graph eid forms local-transact! tempid!]
+(defn cj-form [graph eid metatype forms local-transact! tempid!]
   (let [entity (hc/entity graph eid)]
-    (assert (:meta/type entity) (str "Entity missing :meta/type " (pr-str entity)))
     [:div.cj-form
-     (doall
-       (map (fn [{:keys [name] :as fieldinfo}]
-              (let [value (get entity name)
-                    change! (fn [& op-vals] (local-transact! (mapv (fn [[op val]] [op eid name val]) op-vals)))]
-                ^{:key name}
-                [cj-form-field fieldinfo graph forms value change! local-transact! tempid!]))
-            ((:meta/type entity) forms)))]))
+     (map (fn [{:keys [name] :as fieldinfo}]
+            (let [value (get entity name)
+                  change! (fn [& op-vals] (local-transact! (mapv (fn [[op val]] [op eid name val]) op-vals)))]
+              ^{:key name}
+              [cj-form-field fieldinfo graph metatype forms value change! local-transact! tempid!]))
+          (metatype forms))]))
+
+
+(defn form-dependencies [eid form]
+  (->> form
+       (filter (fn [{:keys [datatype]}] (= datatype :ref)))
+       (map (fn [{{q :query} :options}]
+              (let [query-name (hash q)]
+                [query-name [q [] '[*]]])))
+       (into {::query ['[:find [?eid ...] :in $ ?eid :where [?eid]]
+                       [(js/parseInt eid 10)]
+                       (concat [:db/id] (map :name form))]})))

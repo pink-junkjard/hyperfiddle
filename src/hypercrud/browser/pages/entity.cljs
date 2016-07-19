@@ -7,14 +7,14 @@
             [promesa.core :as p]))
 
 
-(defn view [cur transact! graph forms cmd-chan eid]
+(defn view [cur transact! graph metatype forms cmd-chan eid]
   "hypercrud values just get a form, with ::update and ::delete."
   (let [local-datoms (cur [:form] [])
         graph (hc/with graph @local-datoms)
         local-transact! #(swap! local-datoms tx-util/into-tx %)
         tempid! (hc/tempid!-factory)]
     [:div
-     [cj-form graph eid forms local-transact! tempid!]
+     [cj-form graph eid metatype forms local-transact! tempid!]
      (if (tx-util/tempid? eid)
        ;[:button {:on-click #(go (>! cmd-chan [::create-item client href @form-cur]))} "Create"]
        nil
