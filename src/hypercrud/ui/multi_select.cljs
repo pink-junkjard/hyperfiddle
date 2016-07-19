@@ -5,10 +5,10 @@
 (defmulti multi-select-markup (fn [click-add! control-tuples] :default))
 
 
-(defn multi-select* [markupfn fieldinfo client forms value change! add-item! transact!]
+(defn multi-select* [markupfn fieldinfo graph forms value change! add-item! transact!]
   (let [control-tuples (map (fn [v]
                               (let [click-remove! #(change! [:db/retract v])
-                                    control [auto-control (assoc fieldinfo :set false) client forms
+                                    control [auto-control (assoc fieldinfo :set false) graph forms
                                              v
                                              change!
                                              transact!]]

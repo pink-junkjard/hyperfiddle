@@ -15,5 +15,5 @@
          :else widget/default))
 
 
-(defmethod auto-control/auto-control :default [fieldinfo client forms value change! transact!]
-  [(widget-for-fieldinfo fieldinfo) fieldinfo client forms value change! transact!])
+(defmethod auto-control/auto-control :default [fieldinfo graph forms value change! transact!]
+  [(widget-for-fieldinfo fieldinfo) fieldinfo graph forms value change! transact!])

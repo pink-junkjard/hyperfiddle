@@ -37,15 +37,15 @@
 (defmethod render-table-cell {:datatype :ref :set false}
   [eid
    {{:keys [label-prop]} :options}
-   {:keys [client forms] :as props}]
+   {:keys [graph forms] :as props}]
   (assert (not (nil? label-prop)))
 
   ^{:key eid}                                               ;symmetric with primitive-in-set
   [:a {:href (str "../entity/" eid)}
-   (render-table-cell (get (hc/entity client eid) label-prop)
+   (render-table-cell (get (hc/entity graph eid) label-prop)
                       (first
                         (filter #(= (:name %) label-prop)
-                                ((:meta/type (hc/entity client eid)) forms)))
+                                ((:meta/type (hc/entity graph eid)) forms)))
                       props)])
 
 (defmethod render-table-cell {:datatype :ref :set true}

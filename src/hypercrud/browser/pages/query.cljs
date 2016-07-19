@@ -3,8 +3,8 @@
             [hypercrud.ui.collection :refer [cj-grid]]))
 
 
-(defn view [query client forms]
-  [cj-grid client forms (hc/select client ::query)])
+(defn view [query graph forms]
+  [cj-grid graph forms (hc/select graph ::query)])
 
 
 (def commands {})

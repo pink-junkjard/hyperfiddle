@@ -7,8 +7,7 @@
             [hypercrud.browser.pages.entity :as entity]
             [hypercrud.browser.pages.index :as index]
             [hypercrud.browser.pages.query :as query]
-            [hypercrud.browser.base-64-url-safe :as base64]
-            [hypercrud.client.core :as hc]))
+            [hypercrud.browser.base-64-url-safe :as base64]))
 
 
 ;(defn query-query []
@@ -21,7 +20,7 @@
          [["entity" eid]] {::query/query ['[:find [?e ...] :in $ ?eid :where [?e :db/id ?eid]] [(js/parseInt eid 10)] '[*]]}))
 
 
-(defn ui [cur client forms index-queries page-rel-path]
+(defn ui [cur transact! graph forms index-queries page-rel-path]
   (let [cmd-chan (chan)
         commands (merge index/commands entity/commands query/commands)]
     (go
@@ -31,12 +30,12 @@
               cmd-args (rest cmd)]
           (println (str "Cmd: " (name (first cmd))))
           (apply cmd-fn cmd-args))))
-    (fn [cur client forms index-queries page-rel-path]
+    (fn [cur transact! graph forms index-queries page-rel-path]
       [:div
        [:div.hc-node-view
         (match [(string/split page-rel-path "/")]
-               [["query" q]] (query/view q client forms)
-               [["entity" eid]] (entity/view cur client forms cmd-chan (js/parseInt eid 10))
+               [["query" q]] (query/view q graph forms)
+               [["entity" eid]] (entity/view cur transact! graph forms cmd-chan (js/parseInt eid 10))
                [[""]] (index/view index-queries)
                :else [:div "no route for: " page-rel-path])]
        [:hr]

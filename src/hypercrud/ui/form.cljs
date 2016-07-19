@@ -3,14 +3,14 @@
             [hypercrud.client.core :as hc]))
 
 
-(defn cj-form-field [{:keys [name prompt] :as fieldinfo} client forms value change! transact!]
-  [:div.cj-field {:key (str name)}
+(defn cj-form-field [{:keys [name prompt] :as fieldinfo} graph forms value change! transact!]
+  [:div.cj-field
    [:label prompt]
-   [auto-control fieldinfo client forms value change! transact!]])
+   [auto-control fieldinfo graph forms value change! transact!]])
 
 
-(defn cj-form [client eid forms local-transact!]
-  (let [entity (hc/entity client eid)]
+(defn cj-form [graph eid forms local-transact!]
+  (let [entity (hc/entity graph eid)]
     (assert (:meta/type entity) (str "Entity missing :meta/type " (pr-str entity)))
     [:div.cj-form
      (doall
@@ -18,5 +18,5 @@
               (let [value (get entity name)
                     change! (fn [& op-vals] (local-transact! (mapv (fn [[op val]] [op eid name val]) op-vals)))]
                 ^{:key name}
-                [cj-form-field fieldinfo client forms value change! local-transact!]))
+                [cj-form-field fieldinfo graph forms value change! local-transact!]))
             ((:meta/type entity) forms)))]))
