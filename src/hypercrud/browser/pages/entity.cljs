@@ -22,6 +22,7 @@
   "Various strategies for cj-form local state and features, staging areas, recursive discard"
 
   {:community/neighborhood {:neighborhood/district {:district/region {}}}
+
    :community/x {}}
 
   {:community/neighborhood {}}

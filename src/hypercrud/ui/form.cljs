@@ -29,10 +29,11 @@
 (defn form->options-queries [form]
   (->> form
        (filter (fn [{:keys [datatype]}] (= datatype :ref)))
-       (map (fn [{{q :query} :options}]
-              (let [query-name (hash q)]
-                [query-name [q [] '[*]]])))
+       (map (fn [{{:keys [query label-prop]} :options}]
+              (let [query-name (hash query)]
+                [query-name [query [] '[*]]])))             ;:db/id label-prop
        (into {})))
+
 
 (defn fieldname->field [form fieldname]
   (find' #(= (:name %) fieldname) form))
@@ -42,7 +43,22 @@
   ((get-in field [:options :form]) forms))
 
 
-(defn expanded-form-queries "get the form options, recursively, for all expanded forms"
+(defn expanded-form-pull-exp "generate the pull expression recursively for all expanded forms"
+  [forms form expanded-forms]
+  (concat
+    [:db/id]
+
+    (->> (map :name form)
+         (filter #((complement contains?) expanded-forms %)))
+
+    (map (fn [[fieldname expanded-forms]]
+           (let [field (fieldname->field form fieldname)
+                 form (fieldref->form forms field)]
+             {fieldname (expanded-form-pull-exp forms form expanded-forms)}))
+         expanded-forms)))
+
+
+(defn expanded-form-queries "get the form options recursively for all expanded forms"
   [forms form expanded-forms]
   (merge
     (form->options-queries form)
@@ -63,5 +79,5 @@
   (merge
     {::query ['[:find [?eid ...] :in $ ?eid :where [?eid]]
               [(js/parseInt eid 10)]
-              (concat [:db/id] (map :name root-form))]}     ;; go deep based on expansions
+              (expanded-form-pull-exp forms root-form expanded-forms)]}
     (expanded-form-queries forms root-form expanded-forms)))
