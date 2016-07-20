@@ -21,6 +21,8 @@
 (comment
   "Various strategies for cj-form local state and features, staging areas, recursive discard"
 
+  {:community/neighborhood {:neighborhood/district {:district/region {}}}
+   :community/x {}}
 
   {:community/neighborhood {}}
   {:community/neighborhood nil}
@@ -29,7 +31,7 @@
    :community/neighborhood {:db/id 17592186045439
                             :neighborhood/district {:db/id 17592186045438
                                                     :district/name "asdf"}}
-   :community/orgtype #{{}  {:community-orgtpe/blog {}}}}
+   :community/orgtype #{{} {:community-orgtpe/blog {}}}}
 
 
   {:statements []

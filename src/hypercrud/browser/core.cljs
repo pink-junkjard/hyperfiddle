@@ -7,13 +7,13 @@
             [hypercrud.browser.pages.index :as index]
             [hypercrud.client.core :as hc]
             [hypercrud.ui.collection :as collection :refer [cj-grid cj-grid-graph-deps]]
-            [hypercrud.ui.form :refer [form-dependencies]]))
+            [hypercrud.ui.form :refer [cj-form-dependencies]]))
 
 
 (defn graph-dependencies [forms state page-rel-path]
   (match [(string/split page-rel-path "/")]
          [[metatype "query" q]] (cj-grid-graph-deps ((keyword metatype) forms) (base64/decode q))
-         [[metatype "entity" eid]] (form-dependencies eid ((keyword metatype) forms))
+         [[metatype "entity" eid]] (cj-form-dependencies eid (get state :expanded nil) ((keyword metatype) forms) forms)
          [[""]] {}
          :else {}))
 

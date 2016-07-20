@@ -22,12 +22,46 @@
           (metatype forms))]))
 
 
-(defn form-dependencies [eid form]
+(defn find' [pred coll]
+  (first (filter pred coll)))
+
+
+(defn form->options-queries [form]
   (->> form
        (filter (fn [{:keys [datatype]}] (= datatype :ref)))
        (map (fn [{{q :query} :options}]
               (let [query-name (hash q)]
                 [query-name [q [] '[*]]])))
-       (into {::query ['[:find [?eid ...] :in $ ?eid :where [?eid]]
-                       [(js/parseInt eid 10)]
-                       (concat [:db/id] (map :name form))]})))
+       (into {})))
+
+(defn fieldname->field [form fieldname]
+  (find' #(= (:name %) fieldname) form))
+
+
+(defn fieldref->form [forms field]
+  ((get-in field [:options :form]) forms))
+
+
+(defn expanded-form-queries "get the form options, recursively, for all expanded forms"
+  [forms form expanded-forms]
+  (merge
+    (form->options-queries form)
+    (apply merge (map (fn [[fieldname expanded-forms]]
+                        (let [field (fieldname->field form fieldname)
+                              form (fieldref->form forms field)]
+                          (expanded-form-queries forms form expanded-forms)))
+                      expanded-forms))))
+
+(comment
+  "scrap for expanded-form-queries"
+  (->> (tree-seq map? vals expanded-forms)
+       (map #(form->options-queries (fieldref->form forms (fieldname->field root-form %))))
+       (apply merge)))
+
+
+(defn cj-form-dependencies [eid expanded-forms root-form forms]
+  (merge
+    {::query ['[:find [?eid ...] :in $ ?eid :where [?eid]]
+              [(js/parseInt eid 10)]
+              (concat [:db/id] (map :name root-form))]}     ;; go deep based on expansions
+    (expanded-form-queries forms root-form expanded-forms)))
