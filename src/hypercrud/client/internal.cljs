@@ -1,4 +1,4 @@
-(ns hypercrud.client.util
+(ns hypercrud.client.internal
   (:require [goog.Uri]
             [goog.string]
             [cognitect.transit :as t]))

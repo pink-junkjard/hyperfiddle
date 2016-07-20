@@ -36,20 +36,20 @@ input[type="password"] {
     display: inline-block;
 }
 
-.cj-form {
+.form {
     border-left: 5px solid #428bca;
     padding-left: 10px;
 }
 
-.cj-field > label {
+.field > label {
     display: inline-block;
     width: 20%;
     vertical-align: top;
 }
 
-.cj-field > input,
-.cj-field > textarea,
-.cj-field > .editable-select {
+.field > input,
+.field > textarea,
+.field > .editable-select {
     width: 80%;
 }
 
@@ -69,7 +69,7 @@ input[type="password"] {
     float: right;
 }
 
-.multi-select-group > .cj-form {
+.multi-select-group > .form {
     display: block;
     overflow: hidden;
     padding-right: 10px;

@@ -84,6 +84,6 @@
 (defn pulled-tree-to-statements [schema pulled-tree]
   ;; branch nodes are type entity. which right now is hashmap.
   (let [traversal (tree-seq (fn [v] (entity? v))
-                    #(entity-children schema %)
-                    pulled-tree)]
+                            #(entity-children schema %)
+                            pulled-tree)]
     (mapcat #(entity->statements schema %) traversal)))

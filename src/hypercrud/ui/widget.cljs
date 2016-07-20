@@ -1,6 +1,6 @@
 (ns hypercrud.ui.widget
   (:require [hypercrud.ui.auto-control :refer [auto-control]]
-            [hypercrud.ui.form :refer [cj-form]]
+            [hypercrud.ui.form :refer [form]]
             [hypercrud.ui.input :refer [input*]]
             [hypercrud.ui.multi-select :refer [multi-select* multi-select-markup]]
             [hypercrud.ui.select :refer [select*]]))
@@ -18,7 +18,7 @@
 
 
 (defn select-ref-component [fieldinfo graph metatype forms value expanded-cur change! transact! tempid!]
-  (cj-form graph value metatype expanded-cur forms transact! tempid!))
+  (form graph value metatype expanded-cur forms transact! tempid!))
 
 
 (defn multi-select-ref [fieldinfo graph metatype forms value expanded-cur change! transact! tempid!]

@@ -1,10 +1,10 @@
 (ns hypercrud.browser.pages.entity
   (:require [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx-util]
-            [hypercrud.ui.form :refer [cj-form]]))
+            [hypercrud.ui.form :as form]))
 
 
-(defn view [cur transact! graph metatype forms eid]
+(defn ui [cur transact! graph metatype forms eid]
   "hypercrud values just get a form, with ::update and ::delete."
   (let [local-statements (cur [:statements] [])
         expanded-cur (cur [:expanded] {})                   ; {:community/neighborhood {:neighborhood/district {:district/region {}}}}
@@ -12,14 +12,18 @@
         local-transact! #(swap! local-statements tx-util/into-tx %)
         tempid! (hc/tempid!-factory)]
     [:div
-     [cj-form graph eid metatype forms expanded-cur local-transact! tempid!]
+     [form/form graph eid metatype forms expanded-cur local-transact! tempid!]
      [:button {:on-click #(transact! @local-statements)
                :disabled (empty? @local-statements)}
       (if (tx-util/tempid? eid) "Create" "Update")]]))
 
 
+(defn query [eid state metatype forms]
+  (form/query eid (get state :expanded nil) (metatype forms) forms))
+
+
 (comment
-  "Various strategies for cj-form local state and features, staging areas, recursive discard"
+  "Various strategies for form local state and features, staging areas, recursive discard"
 
   {:community/neighborhood {:neighborhood/district {:district/region {}}}
 

@@ -3,22 +3,22 @@
             [hypercrud.client.core :as hc]))
 
 
-(defn cj-form-field [{:keys [name prompt] :as fieldinfo}
+(defn field [{:keys [name prompt] :as fieldinfo}
                      graph metatype forms value expanded-cur
                      change! transact! tempid!]
-  [:div.cj-field
+  [:div.field
    [:label prompt]
    [auto-control fieldinfo graph metatype forms value expanded-cur change! transact! tempid!]])
 
 
-(defn cj-form [graph eid metatype forms expanded-cur local-transact! tempid!]
+(defn form [graph eid metatype forms expanded-cur local-transact! tempid!]
   (let [entity (hc/entity graph eid)]
-    [:div.cj-form
+    [:div.form
      (map (fn [{:keys [name] :as fieldinfo}]
             (let [value (get entity name)
                   change! (fn [& op-vals] (local-transact! (mapv (fn [[op val]] [op eid name val]) op-vals)))]
               ^{:key name}
-              [cj-form-field fieldinfo graph metatype forms value expanded-cur change! local-transact! tempid!]))
+              [field fieldinfo graph metatype forms value expanded-cur change! local-transact! tempid!]))
           (metatype forms))]))
 
 
@@ -75,9 +75,9 @@
        (apply merge)))
 
 
-(defn cj-form-dependencies [eid expanded-forms root-form forms]
+(defn query [eid expanded-forms root-form forms]
   (merge
     {::query ['[:find [?eid ...] :in $ ?eid :where [?eid]]
-              [(js/parseInt eid 10)]
+              [eid]
               (expanded-form-pull-exp forms root-form expanded-forms)]}
     (expanded-form-queries forms root-form expanded-forms)))

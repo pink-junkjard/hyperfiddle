@@ -1,9 +1,8 @@
 (ns hypercrud.ui.select
   (:require [hypercrud.client.core :as hc]
-            [hypercrud.ui.form :as form]
-            [reagent.core :as reagent]
             [hypercrud.client.tx :as tx-util]
-            [hypercrud.client.util :as util]))
+            [hypercrud.client.internal :as util]
+            [hypercrud.ui.form :as form]))
 
 
 (defn select-option
@@ -25,7 +24,7 @@
                           (tx-util/tempid? value) "create-new"
                           :else value))
 
-               ;; reconstruct the typed value (keyword or cj item ref)
+               ;; reconstruct the typed value
                :on-change #(do
                             (let [select-value (util/transit-decode (.-target.value %))
                                   eid (cond
@@ -56,4 +55,4 @@
                            [[:option {:key :blank :value (util/transit-encode nil)} "--"]]))]]
      (if show-form?
        ;; TODO branch the client and provide datom for :meta/type in create-new case
-       [form/cj-form graph value metatype forms expanded-cur transact! tempid!])]))
+       [form/form graph value metatype forms expanded-cur transact! tempid!])]))

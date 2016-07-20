@@ -1,6 +1,6 @@
 (ns hypercrud.client.fetch
   (:require [goog.Uri]
-            [hypercrud.client.util :as util]
+            [hypercrud.client.internal :as util]
             [kvlt.middleware.params]
             [kvlt.core :as kvlt]
             [promesa.core :as p]))

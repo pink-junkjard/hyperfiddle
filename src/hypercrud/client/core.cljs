@@ -4,6 +4,7 @@
             [goog.Uri]
             [hypercrud.client.fetch :as fetch]
             [hypercrud.client.tx :as tx]
+            [hypercrud.client.wut :as wut]
             [promesa.core :as p]))
 
 
@@ -19,13 +20,6 @@
   (graph [this])
   (enter! [this graph-dependencies])
   (transact! [this tx]))
-
-
-(defn map-values [f m]
-  (->> m
-       (map (fn [[k v]]
-              [k (f v)]))
-       (into {})))
 
 
 (deftype HypercrudGraph [schema statements resultsets local-statements]
@@ -57,7 +51,7 @@
 (defn build-hc-graph [schema pulled-trees-map]
   (let [pulled-trees (apply concat (vals pulled-trees-map)) ;mash query results together
         statements (mapcat #(tx/pulled-tree-to-statements schema %) pulled-trees)
-        resultsets (map-values #(map :db/id %) pulled-trees-map)]
+        resultsets (wut/map-values #(map :db/id %) pulled-trees-map)]
     (HypercrudGraph. schema statements resultsets [])))
 
 
@@ -80,5 +74,3 @@
 (defn tempid!-factory []
   (let [n (atom 0)]
     (fn [] (swap! n dec) @n)))
-
-

@@ -6,14 +6,13 @@
             [hypercrud.browser.pages.entity :as entity]
             [hypercrud.browser.pages.index :as index]
             [hypercrud.client.core :as hc]
-            [hypercrud.ui.collection :as collection :refer [cj-grid cj-grid-graph-deps]]
-            [hypercrud.ui.form :refer [cj-form-dependencies]]))
+            [hypercrud.ui.table :as table]))
 
 
-(defn graph-dependencies [forms state page-rel-path]
+(defn query [forms state page-rel-path]
   (match [(string/split page-rel-path "/")]
-         [[metatype "query" q]] (cj-grid-graph-deps ((keyword metatype) forms) (base64/decode q))
-         [[metatype "entity" eid]] (cj-form-dependencies eid (get state :expanded nil) ((keyword metatype) forms) forms)
+         [[metatype "query" q]] (table/query ((keyword metatype) forms) (base64/decode q))
+         [[metatype "entity" eid]] (entity/query (js/parseInt eid 10) state (keyword metatype) forms)
          [[""]] {}
          :else {}))
 
@@ -22,8 +21,8 @@
   [:div
    [:div.hc-node-view
     (match [(string/split page-rel-path "/")]
-           [[metatype "query" q]] [cj-grid graph forms (hc/select graph ::collection/query) (keyword metatype)]
-           [[metatype "entity" eid]] (entity/view cur transact! graph (keyword metatype) forms (js/parseInt eid 10))
+           [[metatype "query" q]] [table/table graph forms (hc/select graph ::table/query) (keyword metatype)]
+           [[metatype "entity" eid]] (entity/ui cur transact! graph (keyword metatype) forms (js/parseInt eid 10))
            [[""]] (index/view index-queries)
            :else [:div "no route for: " page-rel-path])]
    [:hr]
