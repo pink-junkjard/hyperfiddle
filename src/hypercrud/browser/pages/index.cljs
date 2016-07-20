@@ -8,5 +8,3 @@
     (map (fn [[k [metatype query]]]
            [:li {:key k} [:a {:href (str (name metatype) "/query/" (base64/encode query))} k]])
          index-queries)]])
-
-(def commands {})

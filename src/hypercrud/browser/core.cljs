@@ -1,7 +1,5 @@
 (ns hypercrud.browser.core
-  (:require-macros [cljs.core.async.macros :refer [go]])
-  (:require [cljs.core.async :refer [<! chan]]
-            [cljs.core.match :refer-macros [match]]
+  (:require [cljs.core.match :refer-macros [match]]
             [cljs.pprint :as pprint]
             [clojure.string :as string]
             [hypercrud.browser.base-64-url-safe :as base64]
@@ -21,22 +19,12 @@
 
 
 (defn ui [cur transact! graph forms index-queries page-rel-path]
-  (let [cmd-chan (chan)
-        commands (merge index/commands entity/commands)]
-    (go
-      (while true
-        (let [cmd (<! cmd-chan)
-              cmd-fn (get commands (first cmd))
-              cmd-args (rest cmd)]
-          (println (str "Cmd: " (name (first cmd))))
-          (apply cmd-fn cmd-args))))
-    (fn [cur transact! graph forms index-queries page-rel-path]
-      [:div
-       [:div.hc-node-view
-        (match [(string/split page-rel-path "/")]
-               [[metatype "query" q]]  [cj-grid graph forms (hc/select graph ::collection/query) (keyword metatype)]
-               [[metatype "entity" eid]] (entity/view cur transact! graph (keyword metatype) forms cmd-chan (js/parseInt eid 10))
-               [[""]] (index/view index-queries)
-               :else [:div "no route for: " page-rel-path])]
-       [:hr]
-       [:pre (with-out-str (pprint/pprint @cur))]])))
+  [:div
+   [:div.hc-node-view
+    (match [(string/split page-rel-path "/")]
+           [[metatype "query" q]] [cj-grid graph forms (hc/select graph ::collection/query) (keyword metatype)]
+           [[metatype "entity" eid]] (entity/view cur transact! graph (keyword metatype) forms (js/parseInt eid 10))
+           [[""]] (index/view index-queries)
+           :else [:div "no route for: " page-rel-path])]
+   [:hr]
+   [:pre (with-out-str (pprint/pprint @cur))]])
