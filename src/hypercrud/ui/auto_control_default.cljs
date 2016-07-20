@@ -15,5 +15,6 @@
          :else widget/default))
 
 
-(defmethod auto-control/auto-control :default [fieldinfo graph metatype forms value change! transact! tempid!]
-  [(widget-for-fieldinfo fieldinfo) fieldinfo graph metatype forms value change! transact! tempid!])
+(defmethod auto-control/auto-control :default
+  [fieldinfo graph metatype forms value expanded-cur change! transact! tempid!]
+  [(widget-for-fieldinfo fieldinfo) fieldinfo graph metatype forms value expanded-cur change! transact! tempid!])

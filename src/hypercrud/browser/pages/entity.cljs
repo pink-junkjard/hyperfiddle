@@ -6,12 +6,41 @@
 
 (defn view [cur transact! graph metatype forms eid]
   "hypercrud values just get a form, with ::update and ::delete."
-  (let [local-datoms (cur [:form] [])
-        graph (hc/with graph @local-datoms)
-        local-transact! #(swap! local-datoms tx-util/into-tx %)
+  (let [local-statements (cur [:statements] [])
+        expanded-cur (cur [:expanded] {})                   ; {:community/neighborhood {:neighborhood/district {:district/region {}}}}
+        graph (hc/with graph @local-statements)
+        local-transact! #(swap! local-statements tx-util/into-tx %)
         tempid! (hc/tempid!-factory)]
     [:div
-     [cj-form graph eid metatype forms local-transact! tempid!]
-     [:button {:on-click #(transact! @local-datoms)
-               :disabled (empty? @local-datoms)}
+     [cj-form graph eid metatype forms expanded-cur local-transact! tempid!]
+     [:button {:on-click #(transact! @local-statements)
+               :disabled (empty? @local-statements)}
       (if (tx-util/tempid? eid) "Create" "Update")]]))
+
+
+(comment
+  "Various strategies for cj-form local state and features, staging areas, recursive discard"
+
+
+  {:community/neighborhood {}}
+  {:community/neighborhood nil}
+
+  {:db/id 17592186045440
+   :community/neighborhood {:db/id 17592186045439
+                            :neighborhood/district {:db/id 17592186045438
+                                                    :district/name "asdf"}}
+   :community/orgtype #{{}  {:community-orgtpe/blog {}}}}
+
+
+  {:statements []
+   :form-state {:neighborhood/name {:statements []
+                                    :form-state {}}}}
+
+
+  {:statements []
+   :form-state {:neighborhood/name {:statements []
+                                    :form-state {}}
+                :community/category {:statements []
+                                     :form-state {}}}}
+
+  {:neighborhood/name {:form-state {:district/name {:editing true}}}})

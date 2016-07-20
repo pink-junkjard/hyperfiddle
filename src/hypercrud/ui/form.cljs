@@ -3,20 +3,22 @@
             [hypercrud.client.core :as hc]))
 
 
-(defn cj-form-field [{:keys [name prompt] :as fieldinfo} graph metatype forms value change! transact! tempid!]
+(defn cj-form-field [{:keys [name prompt] :as fieldinfo}
+                     graph metatype forms value expanded-cur
+                     change! transact! tempid!]
   [:div.cj-field
    [:label prompt]
-   [auto-control fieldinfo graph metatype forms value change! transact! tempid!]])
+   [auto-control fieldinfo graph metatype forms value expanded-cur change! transact! tempid!]])
 
 
-(defn cj-form [graph eid metatype forms local-transact! tempid!]
+(defn cj-form [graph eid metatype forms expanded-cur local-transact! tempid!]
   (let [entity (hc/entity graph eid)]
     [:div.cj-form
      (map (fn [{:keys [name] :as fieldinfo}]
             (let [value (get entity name)
                   change! (fn [& op-vals] (local-transact! (mapv (fn [[op val]] [op eid name val]) op-vals)))]
               ^{:key name}
-              [cj-form-field fieldinfo graph metatype forms value change! local-transact! tempid!]))
+              [cj-form-field fieldinfo graph metatype forms value expanded-cur change! local-transact! tempid!]))
           (metatype forms))]))
 
 

@@ -6,40 +6,40 @@
             [hypercrud.ui.select :refer [select*]]))
 
 
-(defn input [fieldinfo graph metatype forms value change! transact! tempid!]
+(defn input [fieldinfo graph metatype forms value expanded-cur change! transact! tempid!]
   [input* {:type "text"
            :value value
            :on-change change!}])
 
 
-(defn select-ref [{:keys [options] :as fieldinfo} graph metatype forms value change! transact! tempid!]
+(defn select-ref [{:keys [name options] :as fieldinfo} graph metatype forms value expanded-cur change! transact! tempid!]
   ;;select* has parameterized markup fn todo
-  [select* graph forms options value change! transact! tempid!])
+  [select* graph forms options value (expanded-cur [name]) change! transact! tempid!])
 
 
-(defn select-ref-component [fieldinfo graph metatype forms value change! transact! tempid!]
-  (cj-form graph value metatype forms transact! tempid!))
+(defn select-ref-component [fieldinfo graph metatype forms value expanded-cur change! transact! tempid!]
+  (cj-form graph value metatype expanded-cur forms transact! tempid!))
 
 
-(defn multi-select-ref [fieldinfo graph metatype forms value change! transact! tempid!]
+(defn multi-select-ref [fieldinfo graph metatype forms value expanded-cur change! transact! tempid!]
   (multi-select*
     multi-select-markup
-    fieldinfo graph metatype forms value change! #(change! [:db/add nil]) transact! tempid!)) ;add-item! is: add nil to set
+    fieldinfo graph metatype forms value expanded-cur change! #(change! [:db/add nil]) transact! tempid!)) ;add-item! is: add nil to set
 
 
-(defn multi-select-ref-component [{:keys [options] :as fieldinfo} graph metatype forms value change! transact! tempid!]
+(defn multi-select-ref-component [{:keys [options] :as fieldinfo} graph metatype forms value expanded-cur change! transact! tempid!]
   [multi-select*
    multi-select-markup
-   fieldinfo graph metatype forms value change! #(change! [:db/add :temp-tempid]) transact! tempid!]) ;add new entity to set
+   fieldinfo graph metatype forms value expanded-cur change! #(change! [:db/add :temp-tempid]) transact! tempid!]) ;add new entity to set
 
 
-(defn keyword-input [fieldinfo graph metatype forms value change! transact! tempid!]
+(defn keyword-input [fieldinfo graph metatype forms value expanded-cur change! transact! tempid!]
   [input* {:type "text"
            :value (str value)
            :on-change #(change! [:db/add (keyword (subs % 1))])}])
 
 
-(defn default [fieldinfo graph metatype forms value change! transact! tempid!]
+(defn default [fieldinfo graph metatype forms value expanded-cur change! transact! tempid!]
   [input* {:type "text"
            :value (str (select-keys fieldinfo [:datatype :set :component]))
            :read-only true}])
