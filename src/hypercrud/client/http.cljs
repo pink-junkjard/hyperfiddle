@@ -28,7 +28,8 @@
       (.resolve relative-uri)))
 
 
-(deftype Client [^:mutable user-token entry-uri schema ^:mutable graph ^:mutable t ssr-t ssr-pulled-trees-map]
+; graph is always assumed to be touched
+(deftype Client [^:mutable user-token entry-uri schema ^:mutable graph]
   hc/Client
   (authenticate! [this username password]
     (set! user-token "dustin"))
@@ -42,18 +43,13 @@
     graph)
 
 
-  (enter! [this named-queries t']
+  (enter! [this named-queries t]
     ;; compare our pre-loaded state with the graph dependencies
-    (let [preloaded? (and (= t' ssr-t)
-                          (= (keys ssr-pulled-trees-map)
-                             (vals named-queries)))]
-      (if preloaded?
-        (do
-          (set! graph (graph/graph schema named-queries ssr-pulled-trees-map))
-          (set! t t')
-          (p/resolved nil))
+    (let [graph-we-want (graph/Graph. schema named-queries t [] nil)]
+      (if (= graph graph-we-want)
+        (p/resolved graph)
         (-> (kvlt/request!
-              {:url (-> (resolve-root-relative-uri entry-uri (goog.Uri. "/api/enter?tx=" t'))
+              {:url (-> (resolve-root-relative-uri entry-uri (goog.Uri. "/api/enter?tx=" t))
                         (.setParameterValue "user-token" user-token))
                :content-type content-type-transit
                :accept content-type-transit
@@ -61,9 +57,9 @@
                :form (into [] (vals named-queries))
                :as :auto})
             (p/then #(do
-                      (let [pulled-trees-map (-> % :body :hypercrud)]
-                        (set! graph (graph/graph schema named-queries pulled-trees-map))
-                        (set! t t'))))))))
+                      (graph/touch! graph-we-want (-> % :body :hypercrud))
+                      (set! graph graph-we-want)
+                      graph))))))
 
 
   (transact! [this tx]
