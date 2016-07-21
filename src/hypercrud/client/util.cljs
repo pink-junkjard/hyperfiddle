@@ -1,4 +1,4 @@
-(ns hypercrud.client.wut)
+(ns hypercrud.client.util)
 
 
 (defn map-values [f m]

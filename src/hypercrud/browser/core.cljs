@@ -13,7 +13,7 @@
   (match [(string/split page-rel-path "/")]
          [[metatype "query" q]] (table/query ((keyword metatype) forms) (base64/decode q))
          [[metatype "entity" eid]] (entity/query (js/parseInt eid 10) state (keyword metatype) forms)
-         [[""]] {}
+         [[""]] (index/query)
          :else {}))
 
 
@@ -23,7 +23,7 @@
     (match [(string/split page-rel-path "/")]
            [[metatype "query" q]] [table/table graph forms (hc/select graph ::table/query) (keyword metatype)]
            [[metatype "entity" eid]] (entity/ui cur transact! graph (keyword metatype) forms (js/parseInt eid 10))
-           [[""]] (index/view index-queries)
+           [[""]] (index/ui index-queries)
            :else [:div "no route for: " page-rel-path])]
    [:hr]
    [:pre (with-out-str (pprint/pprint @cur))]])

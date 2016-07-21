@@ -15,17 +15,21 @@
   [val _ _]
   [:code {:key (pr-str val)} (pr-str val)])
 
+
 (defmethod render-table-cell {:datatype :string :set false}
   [val _ _]
   [:span {:key (pr-str val)} val])
+
 
 (defmethod render-table-cell {:datatype :keyword :set false}
   [val _ _]
   [:span {:key (pr-str val)} (name val)])
 
+
 (defmethod render-table-cell {:datatype :keyword :set true}
   [val _ _]
   [:span {:key (pr-str val)} (interpose ", " (map name val))])
+
 
 (defmethod render-table-cell {:datatype :string :set true}
   [val fieldinfo props]
@@ -33,6 +37,7 @@
    (let [rendered-set-items (map #(render-table-cell % (assoc fieldinfo :set false) props)
                                  val)]
      (interpose ", " rendered-set-items))])
+
 
 (defmethod render-table-cell {:datatype :ref :set false}
   [eid
@@ -47,6 +52,7 @@
                         (filter #(= (:name %) label-prop)
                                 (metatype forms)))
                       props)])
+
 
 (defmethod render-table-cell {:datatype :ref :set true}
   [val fieldinfo props]
