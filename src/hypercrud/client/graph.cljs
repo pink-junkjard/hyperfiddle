@@ -4,6 +4,11 @@
             [hypercrud.client.tx :as tx]))
 
 
+(defprotocol GraphPrivate
+  (statements* [this])
+  (resultsets* [this]))
+
+
 (deftype Graph [schema statements resultsets local-statements]
   hc/Graph
   (select [this named-query]
@@ -29,4 +34,8 @@
 
   IEquiv
   (-equiv [this other]
-    (= (hash this) (hash other))))
+    (= (hash this) (hash other)))
+
+  GraphPrivate
+  (statements* [this] statements)
+  (resultsets* [this] resultsets))
