@@ -1,18 +1,20 @@
 (ns hypercrud.client.graph
   (:require [goog.Uri]
             [hypercrud.client.core :as hc]
-            [hypercrud.client.tx :as tx]))
+            [hypercrud.client.tx :as tx]
+            [hypercrud.client.util :as util]))
 
 
 (defprotocol GraphPrivate
-  (statements* [this])
-  (resultsets* [this]))
+  (pulled-trees-map* [this]))
 
 
-(deftype Graph [schema statements resultsets local-statements]
+(deftype Graph [schema named-queries pulled-trees-map
+                statements resultsets                       ; precomputed for speed
+                local-statements]
   hc/Graph
   (select [this named-query]
-    (get resultsets named-query))
+    (get resultsets (get named-queries named-query)))
 
 
   (entity [this eid]
@@ -24,7 +26,7 @@
 
   (with [this more-statements]
     (Graph.
-      schema statements resultsets (concat local-statements more-statements)))
+      schema named-queries pulled-trees-map statements resultsets (concat local-statements more-statements)))
 
 
   IHash
@@ -37,5 +39,11 @@
     (= (hash this) (hash other)))
 
   GraphPrivate
-  (statements* [this] statements)
-  (resultsets* [this] resultsets))
+  (pulled-trees-map* [this] pulled-trees-map))
+
+
+(defn graph [schema named-queries pulled-trees-map]
+  (let [pulled-trees (apply concat (vals pulled-trees-map)) ;mash query results together
+        statements (mapcat #(tx/pulled-tree-to-statements schema %) pulled-trees)
+        resultsets (util/map-values #(map :db/id %) pulled-trees-map)]
+    (->Graph schema named-queries pulled-trees-map statements resultsets [])))

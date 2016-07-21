@@ -2,10 +2,10 @@
   (:require [cljs.core.match :refer-macros [match]]
             [goog.Uri]
             [hypercrud.client.core :as hc]
-            [hypercrud.client.graph :refer [Graph]]
-            [hypercrud.client.internal :as util]
+            [hypercrud.client.graph :as graph]
+            [hypercrud.client.internal :as internal]
             [hypercrud.client.tx :as tx]
-            [hypercrud.client.util :as wut]
+            [hypercrud.client.util :as util]
             [kvlt.core :as kvlt]
             [kvlt.middleware.params]
             [promesa.core :as p]))
@@ -15,19 +15,12 @@
 
 
 (defmethod kvlt.middleware.params/coerce-form-params (keyword content-type-transit) [{:keys [form-params]}]
-  (util/transit-encode form-params))
+  (internal/transit-encode form-params))
 
 
 (defmethod kvlt.middleware/from-content-type (keyword content-type-transit) [resp]
-  (let [decoded-val (util/transit-decode (:body resp))]
+  (let [decoded-val (internal/transit-decode (:body resp))]
     (assoc resp :body decoded-val)))
-
-
-(defn build-hc-graph [schema pulled-trees-map]
-  (let [pulled-trees (apply concat (vals pulled-trees-map)) ;mash query results together
-        statements (mapcat #(tx/pulled-tree-to-statements schema %) pulled-trees)
-        resultsets (wut/map-values #(map :db/id %) pulled-trees-map)]
-    (Graph. schema statements resultsets [])))
 
 
 (defn resolve-root-relative-uri [^goog.Uri entry-uri ^goog.Uri relative-uri]
@@ -35,7 +28,7 @@
       (.resolve relative-uri)))
 
 
-(deftype Client [^:mutable user-token entry-uri schema ^:mutable graph]
+(deftype Client [^:mutable user-token entry-uri schema ^:mutable graph ^:mutable t ssr-t ssr-pulled-trees-map]
   hc/Client
   (authenticate! [this username password]
     (set! user-token "dustin"))
@@ -49,16 +42,28 @@
     graph)
 
 
-  (enter! [this graph-dependencies]
-    (-> (kvlt/request!
-          {:url (-> (resolve-root-relative-uri entry-uri (goog.Uri. "/api/enter"))
-                    (.setParameterValue "user-token" user-token))
-           :content-type content-type-transit
-           :accept content-type-transit
-           :method :post
-           :form graph-dependencies
-           :as :auto})
-        (p/then #(set! graph (build-hc-graph schema (-> % :body :hypercrud))))))
+  (enter! [this named-queries t']
+    ;; compare our pre-loaded state with the graph dependencies
+    (let [preloaded? (and (= t' ssr-t)
+                          (= (keys ssr-pulled-trees-map)
+                             (vals named-queries)))]
+      (if preloaded?
+        (do
+          (set! graph (graph/graph schema named-queries ssr-pulled-trees-map))
+          (set! t t')
+          (p/resolved nil))
+        (-> (kvlt/request!
+              {:url (-> (resolve-root-relative-uri entry-uri (goog.Uri. "/api/enter?tx=" t'))
+                        (.setParameterValue "user-token" user-token))
+               :content-type content-type-transit
+               :accept content-type-transit
+               :method :post
+               :form (into [] (vals named-queries))
+               :as :auto})
+            (p/then #(do
+                      (let [pulled-trees-map (-> % :body :hypercrud)]
+                        (set! graph (graph/graph schema named-queries pulled-trees-map))
+                        (set! t t'))))))))
 
 
   (transact! [this tx]

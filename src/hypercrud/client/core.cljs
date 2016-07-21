@@ -11,7 +11,7 @@
   (authenticate! [this username password])                  ; sets a http cookie with a token
   (whoami [this])                                           ; read the cookie
   (graph [this])
-  (enter! [this graph-dependencies])
+  (enter! [this query t])
   (transact! [this tx]))
 
 
