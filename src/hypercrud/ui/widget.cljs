@@ -41,5 +41,5 @@
 
 (defn default [fieldinfo graph metatype forms value expanded-cur change! transact! tempid!]
   [input* {:type "text"
-           :value (str (select-keys fieldinfo [:datatype :set :component]))
+           :value (str (select-keys fieldinfo [:datatype :cardinality :component]))
            :read-only true}])

@@ -4,7 +4,7 @@
 (def ^:dynamic render-table-cell-dispatch
   (fn [val fieldinfo props]
     (if (not (nil? val))
-      (select-keys fieldinfo [:datatype :set])
+      (select-keys fieldinfo [:datatype :cardinality])
       :default)))
 
 
@@ -16,30 +16,30 @@
   [:code {:key (pr-str val)} (pr-str val)])
 
 
-(defmethod render-table-cell {:datatype :string :set false}
+(defmethod render-table-cell {:datatype :string :cardinality :one}
   [val _ _]
   [:span {:key (pr-str val)} val])
 
 
-(defmethod render-table-cell {:datatype :keyword :set false}
+(defmethod render-table-cell {:datatype :keyword :cardinality :one}
   [val _ _]
   [:span {:key (pr-str val)} (name val)])
 
 
-(defmethod render-table-cell {:datatype :keyword :set true}
+(defmethod render-table-cell {:datatype :keyword :cardinality :many}
   [val _ _]
   [:span {:key (pr-str val)} (interpose ", " (map name val))])
 
 
-(defmethod render-table-cell {:datatype :string :set true}
+(defmethod render-table-cell {:datatype :string :cardinality :many}
   [val fieldinfo props]
   [:span {:key (pr-str val)}
-   (let [rendered-set-items (map #(render-table-cell % (assoc fieldinfo :set false) props)
+   (let [rendered-set-items (map #(render-table-cell % (assoc fieldinfo :cardinality :one) props)
                                  val)]
      (interpose ", " rendered-set-items))])
 
 
-(defmethod render-table-cell {:datatype :ref :set false}
+(defmethod render-table-cell {:datatype :ref :cardinality :one}
   [eid
    {{:keys [label-prop metatype]} :options}
    {:keys [graph forms] :as props}]
@@ -54,11 +54,11 @@
                       props)])
 
 
-(defmethod render-table-cell {:datatype :ref :set true}
+(defmethod render-table-cell {:datatype :ref :cardinality :many}
   [val fieldinfo props]
   [:span {:key (pr-str val)}
    (->>
      (map (fn [{:keys [rel] :as val}]
-            (render-table-cell val (assoc fieldinfo :set false) props))
+            (render-table-cell val (assoc fieldinfo :cardinality :one) props))
           val)
      (interpose ", "))])

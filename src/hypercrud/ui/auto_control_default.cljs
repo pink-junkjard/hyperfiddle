@@ -6,12 +6,12 @@
 
 (defn widget-for-fieldinfo [fieldinfo]
   (match [fieldinfo]
-         [{:datatype :string :set false}] widget/input
+         [{:datatype :string :cardinality :one}] widget/input
 
-         [{:datatype :ref :set false :component true}] widget/select-ref-component
-         [{:datatype :ref :set true :component true}] widget/multi-select-ref-component
-         [{:datatype :ref :set false}] widget/select-ref
-         [{:datatype :ref :set true}] widget/multi-select-ref
+         [{:datatype :ref :cardinality :one :component true}] widget/select-ref-component
+         [{:datatype :ref :cardinality :many :component true}] widget/multi-select-ref-component
+         [{:datatype :ref :cardinality :one}] widget/select-ref
+         [{:datatype :ref :cardinality :many}] widget/multi-select-ref
          :else widget/default))
 
 
