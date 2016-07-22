@@ -4,8 +4,8 @@
 
 
 (defn field [{:keys [name prompt] :as fieldinfo}
-                     graph metatype forms value expanded-cur
-                     change! transact! tempid!]
+             graph metatype forms value expanded-cur
+             change! transact! tempid!]
   [:div.field
    [:label prompt]
    [auto-control fieldinfo graph metatype forms value expanded-cur change! transact! tempid!]])
@@ -75,7 +75,7 @@
        (apply merge)))
 
 
-(defn query [eid expanded-forms root-form forms]
+(defn query [eid expanded-forms root-form forms]            ;bad abstraction/not an abstraction
   (merge
     {::query ['[:find [?eid ...] :in $ ?eid :where [?eid]]
               [eid]
