@@ -15,32 +15,42 @@
   (pulled-trees-map* [this]))
 
 
-;; all must be memoizied
 (defn ->pulled-trees [pulled-trees-map]
   (apply concat (vals pulled-trees-map)))
 
+
 (defn ->statements [schema pulled-trees-map]
   (mapcat #(tx/pulled-tree-to-statements schema %) (->pulled-trees pulled-trees-map)))
+
 
 (defn ->resultsets [pulled-trees-map]
   (util/map-values #(map :db/id %) pulled-trees-map))
 
 
-(deftype Graph [schema named-queries t local-statements ^:mutable pulled-trees-map]
+(defrecord GraphData [pulled-trees-map resultsets statements])
+
+
+(defn ->graph-data [schema pulled-trees-map]
+  (GraphData. pulled-trees-map
+             (->resultsets pulled-trees-map)
+             (->statements schema pulled-trees-map)))
+
+
+(deftype Graph [schema named-queries t local-statements ^:mutable graph-data]
   hc/Graph
   (select [this named-query]
-    (get (->resultsets pulled-trees-map) (get named-queries named-query)))
+    (get (:resultsets graph-data) (get named-queries named-query)))
 
 
   (entity [this eid]
     (tx/apply-statements-to-entity
       schema
-      (concat (->statements schema pulled-trees-map) local-statements)
+      (concat (:statements graph-data) local-statements)
       {:db/id eid}))
 
 
   (with [this more-statements]
-    (Graph. schema named-queries t (concat local-statements more-statements) pulled-trees-map))
+    (Graph. schema named-queries t (concat local-statements more-statements) graph-data))
 
 
   IHash
@@ -54,9 +64,9 @@
 
 
   GraphPrivate
-  (touch! [this pulled-trees-map']
-    (set! pulled-trees-map pulled-trees-map'))
+  (touch! [this pulled-trees-map]
+    (set! graph-data (->graph-data schema pulled-trees-map)))
 
   GraphSSR
   (named-queries* [this] named-queries)
-  (pulled-trees-map* [this] pulled-trees-map))
+  (pulled-trees-map* [this] (:pulled-trees-map graph-data)))
