@@ -54,5 +54,5 @@
                              [[:option {:key :create-new :value (util/transit-encode "create-new")} "Create New"]])
                            [[:option {:key :blank :value (util/transit-encode nil)} "--"]]))]]
      (if show-form?
-       ;; TODO branch the client and provide datom for :meta/type in create-new case
+       ;; TODO branch the client in create-new case
        [form/form graph value metatype forms expanded-cur transact! tempid!])]))

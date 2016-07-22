@@ -7,8 +7,7 @@
 
 
 (def schema
-  [#_{:db/ident :meta/type :db/cardinality :db.cardinality/one}
-   #_{:db/ident :db/id :db/cardinality :db.cardinality/one}
+  [#_{:db/ident :db/id :db/cardinality :db.cardinality/one}
    #_{:db/ident :db/ident :db/cardinality :db.cardinality/one}
    {:db/ident :community/name :db/valueType :db.type/string :db/cardinality :db.cardinality/one}
    {:db/ident :community/url :db/valueType :db.type/string :db/cardinality :db.cardinality/one}
