@@ -6,7 +6,7 @@
 
 
 (defprotocol GraphPrivate
-  (touch! [this pulled-trees-map']))
+  (set-state! [this pulled-trees-map']))
 
 ;; Really we just want to be able to serialize graphs for the wire; this is a quick hack
 ;; because we aren't sure what we want to do about the schema which is part of the graph and the client
@@ -64,7 +64,7 @@
 
 
   GraphPrivate
-  (touch! [this pulled-trees-map]
+  (set-state! [this pulled-trees-map]
     (set! graph-data (->graph-data schema pulled-trees-map)))
 
   GraphSSR

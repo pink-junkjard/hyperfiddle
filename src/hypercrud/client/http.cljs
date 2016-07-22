@@ -43,7 +43,7 @@
     graph)
 
 
-  (enter! [this named-queries t]
+  (hydrate! [this named-queries t]
     ;; compare our pre-loaded state with the graph dependencies
     (let [graph-we-want (graph/Graph. schema named-queries t [] nil)]
       (if (= graph graph-we-want)
@@ -57,7 +57,7 @@
                :form (into [] (vals named-queries))
                :as :auto})
             (p/then #(do
-                      (graph/touch! graph-we-want (-> % :body :hypercrud))
+                      (graph/set-state! graph-we-want (-> % :body :hypercrud))
                       (set! graph graph-we-want)
                       graph))))))
 
