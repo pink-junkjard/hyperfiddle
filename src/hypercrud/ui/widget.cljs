@@ -3,13 +3,20 @@
             [hypercrud.ui.form :refer [form]]
             [hypercrud.ui.input :refer [input*]]
             [hypercrud.ui.multi-select :refer [multi-select* multi-select-markup]]
-            [hypercrud.ui.select :refer [select*]]))
+            [hypercrud.ui.select :refer [select*]]
+            [hypercrud.ui.textarea :refer [textarea*]]))
 
 
 (defn input [fieldinfo graph metatype forms value expanded-cur change! transact! tempid!]
   [input* {:type "text"
            :value value
            :on-change change!}])
+
+
+(defn textarea [fieldinfo graph metatype forms value expanded-cur change! transact! tempid!]
+  [textarea* {:type "text"
+              :value value
+              :on-change change!}])
 
 
 (defn select-ref [{:keys [name options] :as fieldinfo} graph metatype forms value expanded-cur change! transact! tempid!]
