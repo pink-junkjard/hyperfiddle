@@ -1,6 +1,5 @@
 (ns hypercrud.client.http
-  (:require [cljs.core.match :refer-macros [match]]
-            [goog.Uri]
+  (:require [goog.Uri]
             [hypercrud.client.core :as hc]
             [hypercrud.client.graph :as graph]
             [hypercrud.client.internal :as internal]

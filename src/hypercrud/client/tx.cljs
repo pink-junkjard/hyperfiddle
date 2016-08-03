@@ -1,6 +1,4 @@
-(ns hypercrud.client.tx
-  (:require [cljs.core.match :refer-macros [match]]
-            [clojure.walk :as walk]))
+(ns hypercrud.client.tx)
 
 
 (defn tempid? [eid] (< eid 0))
@@ -12,14 +10,14 @@
                     simplified-tx)
         [op' e' a' v'] (first (get g true))                 ;if this count > 1, we have duplicate stmts, they are harmless and discard dups here.
         non-related (get g false)]
-    (match [op]
-           [:db/add] (if (= op' :db/retract)
+    (cond
+      (= op :db/add) (if (= op' :db/retract)
                        non-related                          ;we have a related previous stmt that cancels us and it out
                        (conj non-related next-stmt))
-
-           [:db/retract] (if (= op' :db/add)
+      (= op :db/retract) (if (= op' :db/add)
                            non-related                      ;we have a related previous stmt that cancels us and it out
-                           (conj non-related next-stmt)))))
+                           (conj non-related next-stmt))
+      :else (throw "match error"))))
 
 
 (defn into-tx [tx more-statements]
@@ -36,21 +34,13 @@
        (reduce (fn [acc [op _ a v]]
                  (let [cardinality (get-in schema [a :db/cardinality])
                        _ (assert cardinality (str "schema attribute not found: " (pr-str a)))]
-                   (match [op cardinality]
-                          [:db/add :db.cardinality/one] (assoc acc a v)
-                          [:db/retract :db.cardinality/one] (dissoc acc a)
-                          [:db/add :db.cardinality/many] (update-in acc [a] (fnil #(conj % v) #{}))
-                          [:db/retract :db.cardinality/many] (update-in acc [a] (fnil #(disj % v) #{})))))
+                   (cond
+                     (and (= op :db/add) (= cardinality :db.cardinality/one)) (assoc acc a v)
+                     (and (= op :db/retract) (= cardinality :db.cardinality/one)) (dissoc acc a)
+                     (and (= op :db/add) (= cardinality :db.cardinality/many)) (update-in acc [a] (fnil #(conj % v) #{}))
+                     (and (= op :db/retract) (= cardinality :db.cardinality/many)) (update-in acc [a] (fnil #(disj % v) #{}))
+                     :else (throw "match error"))))
                entity)))
-
-
-(defn apply-statements-to-pulled-tree [schema statements pulled-tree]
-  (walk/postwalk
-    (fn [v]
-      (if (map? v)
-        (apply-statements-to-entity schema statements v)
-        v))
-    pulled-tree))
 
 
 (defn entity->statements [schema {eid :db/id :as entity}]   ; entity always has :db/id
@@ -59,12 +49,13 @@
                  (let [cardinality (get-in schema [attr :db/cardinality])
                        valueType (get-in schema [attr :db/valueType])
                        _ (assert cardinality (str "schema attribute not found: " (pr-str attr)))]
-
-                   (match [cardinality valueType]
-                          [:db.cardinality/one :db.type/ref] [[:db/add eid attr (:db/id val)]]
-                          [:db.cardinality/many :db.type/ref] (mapv (fn [val] [:db/add eid attr (:db/id val)]) val)
-                          [:db.cardinality/one _] [[:db/add eid attr val]]
-                          [:db.cardinality/many _] (mapv (fn [val] [:db/add eid attr val]) val)))))))
+                   (if (= valueType :db.type/ref)
+                     (cond
+                       (= cardinality :db.cardinality/one) [[:db/add eid attr (:db/id val)]]
+                       (= cardinality :db.cardinality/many) (mapv (fn [val] [:db/add eid attr (:db/id val)]) val))
+                     (cond
+                       (= cardinality :db.cardinality/one) [[:db/add eid attr val]]
+                       (= cardinality :db.cardinality/many) (mapv (fn [val] [:db/add eid attr val]) val))))))))
 
 
 (defn entity? [v]
@@ -74,10 +65,10 @@
   (mapcat (fn [[attr val]]
             (let [cardinality (get-in schema [attr :db/cardinality])
                   valueType (get-in schema [attr :db/valueType])]
-              (match [valueType cardinality]
-                     [:db.type/ref :db.cardinality/one] [val]
-                     [:db.type/ref :db.cardinality/many] (vec val)
-                     :else [])))
+              (cond
+                (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one)) [val]
+                (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) (vec val)
+                :else [])))
           entity))
 
 

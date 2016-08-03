@@ -1,18 +1,17 @@
 (ns hypercrud.ui.auto-control-default
-  (:require [cljs.core.match :refer-macros [match]]
-            [hypercrud.ui.auto-control :as auto-control]
+  (:require [hypercrud.ui.auto-control :as auto-control]
             [hypercrud.ui.widget :as widget]))
 
 
-(defn widget-for-fieldinfo [fieldinfo]
-  (match [fieldinfo]
-         [{:datatype :string :cardinality :one}] widget/input
+(defn widget-for-fieldinfo [{:keys [:datatype :cardinality :component]}]
+  (cond
+    (and (= datatype :string) (= cardinality :one)) widget/input
 
-         [{:datatype :ref :cardinality :one :component true}] widget/select-ref-component
-         [{:datatype :ref :cardinality :many :component true}] widget/multi-select-ref-component
-         [{:datatype :ref :cardinality :one}] widget/select-ref
-         [{:datatype :ref :cardinality :many}] widget/multi-select-ref
-         :else widget/default))
+    (and (= datatype :ref) (= cardinality :one) component) widget/select-ref-component
+    (and (= datatype :ref) (= cardinality :many) component) widget/multi-select-ref-component
+    (and (= datatype :ref) (= cardinality :one)) widget/select-ref
+    (and (= datatype :ref) (= cardinality :many)) widget/multi-select-ref
+    :else widget/default))
 
 
 (defmethod auto-control/auto-control :default
