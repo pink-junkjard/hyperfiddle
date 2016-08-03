@@ -1,5 +1,6 @@
 (ns hypercrud.ui.widget
   (:require [hypercrud.ui.auto-control :refer [auto-control]]
+            [hypercrud.ui.code-editor :refer [code-editor*]]
             [hypercrud.ui.form :refer [form]]
             [hypercrud.ui.input :refer [input*]]
             [hypercrud.ui.multi-select :refer [multi-select* multi-select-markup]]
@@ -44,6 +45,10 @@
   [input* {:type "text"
            :value (str value)
            :on-change #(change! [:db/add (keyword (subs % 1))])}])
+
+
+(defn code-editor [fieldinfo graph metatype forms value expanded-cur change! transact! tempid!]
+  [code-editor* value change!])
 
 
 (defn default [fieldinfo graph metatype forms value expanded-cur change! transact! tempid!]
