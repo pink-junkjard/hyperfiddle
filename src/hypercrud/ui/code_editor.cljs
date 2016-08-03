@@ -20,5 +20,3 @@
     {:render (fn []
                [:textarea {:default-value value :auto-complete "off" :class "text"}])
      :component-did-mount (did-mount! value change!)}))
-
-
