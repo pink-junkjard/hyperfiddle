@@ -12,8 +12,13 @@
                       :matchBrackets true
                       :autoCloseBrackets true
                       :viewportMargin js/Infinity})]
-      (.on pane "change" #(change! [:db/retract value]
-                                   [:db/add (.getValue %)])))))
+      (.on pane "change" (let [last-val (atom value)]
+                           (fn [e]
+                             (let [old @last-val
+                                   new (.getValue e)]
+                               (reset! last-val new)
+                               (change! [:db/retract old]
+                                        [:db/add new]))))))))
 
 (defn code-editor* [value change!]
   (reagent/create-class
