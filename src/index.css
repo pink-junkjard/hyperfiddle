@@ -36,15 +36,17 @@ input[type="password"] {
     display: inline-block;
 }
 
-.form {
-    border-left: 5px solid #428bca;
-    padding-left: 10px;
-}
-
 .field > label {
     display: inline-block;
     width: 20%;
     vertical-align: top;
+}
+
+.field {
+    margin-top: 5px;
+    padding-top: 5px;
+    padding-left: 10px;
+    border-left: 5px solid #428bca;
 }
 
 .field > input,
