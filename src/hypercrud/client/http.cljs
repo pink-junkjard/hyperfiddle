@@ -62,11 +62,15 @@
 
 
   (transact! [this tx]
-    (kvlt/request!
-      {:url (-> (resolve-root-relative-uri entry-uri (goog.Uri. "api/transact"))
-                (.setParameterValue "user-token" user-token))
-       :content-type content-type-transit
-       :accept content-type-transit
-       :method :post
-       :form tx
-       :as :auto})))
+    (-> (kvlt/request!
+          {:url (-> (resolve-root-relative-uri entry-uri (goog.Uri. "api/transact"))
+                    (.setParameterValue "user-token" user-token))
+           :content-type content-type-transit
+           :accept content-type-transit
+           :method :post
+           :form tx
+           :as :auto})
+        (p/then (fn [resp]
+                  (if (:success resp)
+                    (p/resolved (-> resp :body :hypercrud))
+                    (p/rejected resp)))))))
