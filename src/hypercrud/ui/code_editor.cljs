@@ -12,7 +12,7 @@
                       :matchBrackets true
                       :autoCloseBrackets true
                       :viewportMargin js/Infinity})]
-      (.on pane "change" (let [last-val (atom value)]
+      (.on pane "blur" (let [last-val (atom value)]
                            (fn [e]
                              (let [old @last-val
                                    new (.getValue e)]

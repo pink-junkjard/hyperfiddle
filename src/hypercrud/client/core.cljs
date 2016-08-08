@@ -4,7 +4,8 @@
 (defprotocol Graph
   (select [this named-query])
   (entity [this eid])
-  (with [this more-statements]))
+  (with [this more-statements])
+  (t [this]))
 
 
 (defprotocol Client

@@ -1,5 +1,6 @@
 (ns hypercrud.ui.auto-control-default
-  (:require [hypercrud.ui.auto-control :as auto-control]
+  (:require [hypercrud.client.core :as hc]
+            [hypercrud.ui.auto-control :as auto-control]
             [hypercrud.ui.code-editor :as code-editor]
             [hypercrud.ui.widget :as widget]))
 
@@ -7,7 +8,7 @@
 (defn code-iframe [fieldinfo graph metatype forms value expanded-cur change! transact! tempid!]
   [:div.code-iframe
    [code-editor/code-editor* value change!]
-   [:iframe {:src (:iframe-url fieldinfo)}]])
+   [:iframe {:key (hc/t graph) :src "http://www.hypercrud.com/" #_(:iframe-url fieldinfo)}]])
 
 
 (defn widget-for-fieldinfo [{:keys [datatype cardinality component name]}]

@@ -6,7 +6,7 @@
 
 
 (defprotocol GraphPrivate
-  (set-state! [this pulled-trees-map']))
+  (set-state! [this pulled-trees-map' t']))
 
 ;; Really we just want to be able to serialize graphs for the wire; this is a quick hack
 ;; because we aren't sure what we want to do about the schema which is part of the graph and the client
@@ -36,7 +36,7 @@
              (->statements schema pulled-trees-map)))
 
 
-(deftype Graph [schema named-queries t local-statements ^:mutable graph-data]
+(deftype Graph [schema named-queries ^:mutable t local-statements ^:mutable graph-data]
   hc/Graph
   (select [this named-query]
     (assert (contains? named-queries named-query) (str "Named-query: " named-query " not found"))
@@ -54,6 +54,9 @@
     (Graph. schema named-queries t (concat local-statements more-statements) graph-data))
 
 
+  (t [this] t)
+
+
   IHash
   (-hash [this]
     (hash (map hash [schema named-queries t local-statements])))
@@ -65,8 +68,9 @@
 
 
   GraphPrivate
-  (set-state! [this pulled-trees-map]
-    (set! graph-data (->graph-data schema pulled-trees-map)))
+  (set-state! [this pulled-trees-map t']
+    (set! graph-data (->graph-data schema pulled-trees-map))
+    (set! t t'))
 
   GraphSSR
   (named-queries* [this] named-queries)

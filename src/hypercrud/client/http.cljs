@@ -55,10 +55,11 @@
                :method :post
                :form (into [] (vals named-queries))
                :as :auto})
-            (p/then #(do
-                      (graph/set-state! graph-we-want (-> % :body :hypercrud))
-                      (set! graph graph-we-want)
-                      graph))))))
+            (p/then (fn [resp]
+                      (let [{:keys [t pulled-trees-map]} (-> resp :body :hypercrud)]
+                        (graph/set-state! graph-we-want pulled-trees-map t)
+                        (set! graph graph-we-want)
+                        graph)))))))
 
 
   (transact! [this tx]
