@@ -48,7 +48,8 @@
 
 
 (defn code-editor [fieldinfo graph metatype forms value expanded-cur change! transact! tempid!]
-  [code-editor* value change!])
+  [:div.code-parent
+   [code-editor* value change!]])
 
 
 (defn default [fieldinfo graph metatype forms value expanded-cur change! transact! tempid!]

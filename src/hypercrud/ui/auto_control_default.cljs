@@ -6,7 +6,7 @@
 
 
 (defn code-iframe [fieldinfo graph metatype forms value expanded-cur change! transact! tempid!]
-  [:div.code-iframe
+  [:div.code-parent.code-iframe
    [code-editor/code-editor* value change!]
    [:iframe {:key (hc/t graph) :src "http://www.hypercrud.com/" #_(:iframe-url fieldinfo)}]])
 
