@@ -7,7 +7,7 @@
              graph metatype forms value expanded-cur
              change! transact! tempid!]
   [:div.field
-   [:label prompt]
+   (if prompt [:label prompt])
    [auto-control fieldinfo graph metatype forms value expanded-cur change! transact! tempid!]])
 
 
