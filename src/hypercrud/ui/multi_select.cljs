@@ -5,11 +5,11 @@
 (defmulti multi-select-markup (fn [click-add! control-tuples] :default))
 
 
-(defn multi-select* [markupfn fieldinfo graph metatype forms value expanded-cur
+(defn multi-select* [markupfn fieldinfo graph forms value expanded-cur
                      change! add-item! transact! tempid!]
   (let [control-tuples (map (fn [v]
                               (let [click-remove! #(change! [:db/retract v])
-                                    control [auto-control (assoc fieldinfo :cardinality :one) graph metatype forms
+                                    control [auto-control (assoc fieldinfo :cardinality :one) graph forms
                                              v expanded-cur
                                              change! transact! tempid!]]
                                 [v click-remove! control]))

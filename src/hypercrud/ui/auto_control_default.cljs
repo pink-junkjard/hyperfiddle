@@ -5,7 +5,7 @@
             [hypercrud.ui.widget :as widget]))
 
 
-(defn code-iframe [fieldinfo graph metatype forms value expanded-cur change! transact! tempid!]
+(defn code-iframe [fieldinfo graph forms value expanded-cur change! transact! tempid!]
   [:div.code-parent.code-iframe
    [code-editor/code-editor* value change!]
    [:iframe {:key (hc/t graph) :src "http://www.hypercrud.com/" #_(:iframe-url fieldinfo)}]])
@@ -25,5 +25,5 @@
 
 
 (defmethod auto-control/auto-control :default
-  [fieldinfo graph metatype forms value expanded-cur change! transact! tempid!]
-  [(widget-for-fieldinfo fieldinfo) fieldinfo graph metatype forms value expanded-cur change! transact! tempid!])
+  [fieldinfo graph forms value expanded-cur change! transact! tempid!]
+  [(widget-for-fieldinfo fieldinfo) fieldinfo graph forms value expanded-cur change! transact! tempid!])
