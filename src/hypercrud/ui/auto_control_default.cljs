@@ -6,10 +6,10 @@
 
 
 (defn code-iframe [fieldinfo graph forms value expanded-cur change! transact! tempid!]
-  [:div.code-parent.code-iframe
+  [:div.code-iframe
    ^{:key (:name fieldinfo)}
    [code-editor/code-editor* value change!]
-   [:iframe {:key (hc/t graph) :src "http://www.hypercrud.com/" #_(:iframe-url fieldinfo)}]])
+   [:iframe {:key (hc/t graph) :src (:iframe-url fieldinfo)}]])
 
 
 (defn widget-for-fieldinfo [{:keys [datatype cardinality component name]}]

@@ -48,9 +48,8 @@
 
 
 (defn code-editor [fieldinfo graph forms value expanded-cur change! transact! tempid!]
-  [:div.code-parent
-   ^{:key (:name fieldinfo)}
-   [code-editor* value change!]])
+  ^{:key (:name fieldinfo)}
+  [code-editor* value change!])
 
 
 (defn default [fieldinfo graph forms value expanded-cur change! transact! tempid!]
