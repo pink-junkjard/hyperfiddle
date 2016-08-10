@@ -26,14 +26,24 @@
 
 
 (defn table [graph forms eids metatype]
-  [:table.u-full-width
-   [:colgroup [:col {:span "1" :style {:width "20px"}}]]
-   (thead (metatype forms))
-   [:tbody
-    (map (fn [eid]
-           ^{:key eid}
-           (tr graph metatype forms eid (hc/entity graph eid)))
-         (take 10 eids))]])
+  (let [form (metatype forms)]
+    [:table.u-full-width
+     [:colgroup [:col {:span "1" :style {:width "20px"}}]]
+     (thead form)
+     [:tbody
+      (let [entities (map #(hc/entity graph %) eids)
+            ; hack todo we need sortkeys in our form construct
+            sortkey (->> (map :name form)
+                         (filter #(-> % name (= "name")))
+                         (first))]
+        (->> (if sortkey
+               (sort-by sortkey entities)
+               entities)
+             (take 10)
+             (map (fn [entity]
+                    (let [eid (:db/id entity)]
+                      ^{:key eid}
+                      (tr graph metatype forms eid entity))))))]]))
 
 
 (defn table-pull [form]

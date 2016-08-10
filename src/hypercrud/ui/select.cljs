@@ -44,10 +44,12 @@
        [:button {:on-click #(swap! expanded-cur (constantly {}))
                  :disabled (= nil value)} "Edit"])
      [:span
-      [:select props (-> (doall (map (fn [eid]
-                                       ^{:key eid}
-                                       [select-option graph label-prop eid])
-                                     option-eids))
+      [:select props (-> (doall (->> (map #(hc/entity graph %) option-eids)
+                                     (sort-by #(get % label-prop))
+                                     (map (fn [entity]
+                                            (let [eid (:db/id entity)]
+                                              ^{:key eid}
+                                              [select-option graph label-prop eid])))))
                          (concat
                            (if (not form)
                              []                             ;can't create-new
