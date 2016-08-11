@@ -15,6 +15,7 @@
 (defn widget-for-fieldinfo [{:keys [datatype cardinality component name]}]
   (cond
     (= name :project/code) code-iframe
+    (= name :project/query-security) widget/radio-ref
 
     (and (= datatype :string) (= cardinality :one)) widget/input
     (and (= datatype :code) (= cardinality :one)) widget/code-editor

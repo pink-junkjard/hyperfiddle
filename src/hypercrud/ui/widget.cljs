@@ -4,6 +4,7 @@
             [hypercrud.ui.form :refer [form]]
             [hypercrud.ui.input :refer [input*]]
             [hypercrud.ui.multi-select :refer [multi-select* multi-select-markup]]
+            [hypercrud.ui.radio :refer [radio*]]
             [hypercrud.ui.select :refer [select*]]
             [hypercrud.ui.textarea :refer [textarea*]]))
 
@@ -18,6 +19,11 @@
   [textarea* {:type "text"
               :value value
               :on-change change!}])
+
+
+(defn radio-ref [{:keys [name options] :as fieldinfo} graph forms value expanded-cur change! transact! tempid!]
+  ;;radio* needs parameterized markup fn todo
+  [radio* graph forms options value (expanded-cur [name]) change! transact! tempid!])
 
 
 (defn select-ref [{:keys [name options] :as fieldinfo} graph forms value expanded-cur change! transact! tempid!]
