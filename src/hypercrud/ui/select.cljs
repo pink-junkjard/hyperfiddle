@@ -31,17 +31,19 @@
                                         (nil? select-value) nil
                                         (= "create-new" select-value) (tempid!)
                                         :else-hc-select-option-node select-value)]
+                              ;reset the cursor before change! otherwise npe when trying to render
+                              ;todo these both set the same cursor, and should be atomic
+                              (reset! expanded-cur (if (= "create-new" select-value) {} nil))
                               (change! [:db/retract value]
                                        [:db/add eid])
                               ;; and also add our new guy to the option list (for all combos)
-                              (reset! expanded-cur nil)))}
-
+                              ))}
         create-new? (some-> value tx-util/tempid?)
         show-form? (or (not= nil @expanded-cur) create-new?)]
 
     [:div.editable-select {:key (hash option-eids)}
      (if (and form (not show-form?))
-       [:button {:on-click #(swap! expanded-cur (constantly {}))
+       [:button {:on-click #(reset! expanded-cur {})
                  :disabled (= nil value)} "Edit"])
      [:span
       [:select props (-> (doall (->> (map #(hc/entity graph %) option-eids)
