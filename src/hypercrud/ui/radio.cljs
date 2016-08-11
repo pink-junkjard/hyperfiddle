@@ -7,7 +7,7 @@
 (defn radio-option [label name change! checked?]
   [:div.radio-group
    [:input {:type "radio"
-            :name (keyword name)
+            :name name
             :checked checked?
             :on-change change!}]
    [:label {:on-click change!} label]])
