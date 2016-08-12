@@ -48,9 +48,7 @@
       (if (= graph graph-we-want)
         (p/resolved graph)
         (-> (kvlt/request!
-              ;root http://localhost:8080/api/enter?tx
-              ;proj http://localhost:8080/api/project/XXXX/enter?tx
-              {:url (-> (resolve-relative-uri entry-uri (goog.Uri. "enter?tx=" t))
+              {:url (-> (resolve-relative-uri entry-uri (goog.Uri. "enter?t=" t))
                         (.setParameterValue "user-token" user-token))
                :content-type content-type-transit
                :accept content-type-transit
