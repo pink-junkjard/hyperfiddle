@@ -38,7 +38,7 @@
 
 
   (graph [this]
-    (assert (not= nil graph) "invariant - runtime must call enter! first")
+    (assert (not= nil graph) "invariant - runtime must call hydrate! first")
     graph)
 
 
@@ -48,7 +48,7 @@
       (if (= graph graph-we-want)
         (p/resolved graph)
         (-> (kvlt/request!
-              {:url (-> (resolve-relative-uri entry-uri (goog.Uri. "enter?t=" t))
+              {:url (-> (resolve-relative-uri entry-uri (goog.Uri. "hydrate?t=" t))
                         (.setParameterValue "user-token" user-token))
                :content-type content-type-transit
                :accept content-type-transit
