@@ -22,7 +22,7 @@
     (assoc resp :body decoded-val)))
 
 
-(defn resolve-root-relative-uri [^goog.Uri entry-uri ^goog.Uri relative-uri]
+(defn resolve-relative-uri [^goog.Uri entry-uri ^goog.Uri relative-uri]
   (-> (.clone entry-uri)
       (.resolve relative-uri)))
 
@@ -48,7 +48,9 @@
       (if (= graph graph-we-want)
         (p/resolved graph)
         (-> (kvlt/request!
-              {:url (-> (resolve-root-relative-uri entry-uri (goog.Uri. "api/enter?tx=" t))
+              ;root http://localhost:8080/api/enter?tx
+              ;proj http://localhost:8080/api/project/XXXX/enter?tx
+              {:url (-> (resolve-relative-uri entry-uri (goog.Uri. "enter?tx=" t))
                         (.setParameterValue "user-token" user-token))
                :content-type content-type-transit
                :accept content-type-transit
@@ -64,7 +66,7 @@
 
   (transact! [this tx]
     (-> (kvlt/request!
-          {:url (-> (resolve-root-relative-uri entry-uri (goog.Uri. "api/transact"))
+          {:url (-> (resolve-relative-uri entry-uri (goog.Uri. "transact"))
                     (.setParameterValue "user-token" user-token))
            :content-type content-type-transit
            :accept content-type-transit
