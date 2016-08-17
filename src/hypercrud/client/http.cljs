@@ -28,15 +28,8 @@
 
 
 ; graph is always assumed to be touched
-(deftype Client [^:mutable user-token entry-uri schema ^:mutable graph]
+(deftype Client [entry-uri schema ^:mutable graph]
   hc/Client
-  (authenticate! [this username password]
-    (set! user-token "dustin"))
-
-
-  (whoami [this] user-token)
-
-
   (graph [this]
     (assert (not= nil graph) "invariant - runtime must call hydrate! first")
     graph)
@@ -49,7 +42,7 @@
         (p/resolved graph)
         (-> (kvlt/request!
               {:url (-> (resolve-relative-uri entry-uri (goog.Uri. "hydrate?t=" t))
-                        (.setParameterValue "user-token" user-token))
+                        (.setParameterValue "user-token" "dustin"))
                :content-type content-type-transit
                :accept content-type-transit
                :method :post
@@ -65,7 +58,7 @@
   (transact! [this tx]
     (-> (kvlt/request!
           {:url (-> (resolve-relative-uri entry-uri (goog.Uri. "transact"))
-                    (.setParameterValue "user-token" user-token))
+                    (.setParameterValue "user-token" "dustin"))
            :content-type content-type-transit
            :accept content-type-transit
            :method :post

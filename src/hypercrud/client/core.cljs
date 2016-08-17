@@ -9,8 +9,6 @@
 
 
 (defprotocol Client
-  (authenticate! [this username password])                  ; sets a http cookie with a token
-  (whoami [this])                                           ; read the cookie
   (graph [this])
   (hydrate! [this named-queries t])
   (transact! [this tx]))
