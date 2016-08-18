@@ -41,7 +41,9 @@
       (if (= graph graph-we-want)
         (p/resolved graph)
         (-> (kvlt/request!
-              {:url (resolve-relative-uri entry-uri (goog.Uri. "hydrate?t=" t))
+              {:url (let [url (resolve-relative-uri entry-uri (goog.Uri. "hydrate"))]
+                      (if t (.setParameterValue url "t" t))
+                      url)
                :content-type content-type-transit
                :accept content-type-transit
                :method :post
