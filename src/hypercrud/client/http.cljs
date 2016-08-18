@@ -41,8 +41,7 @@
       (if (= graph graph-we-want)
         (p/resolved graph)
         (-> (kvlt/request!
-              {:url (-> (resolve-relative-uri entry-uri (goog.Uri. "hydrate?t=" t))
-                        (.setParameterValue "user-token" "dustin"))
+              {:url (resolve-relative-uri entry-uri (goog.Uri. "hydrate?t=" t))
                :content-type content-type-transit
                :accept content-type-transit
                :method :post
@@ -57,8 +56,7 @@
 
   (transact! [this tx]
     (-> (kvlt/request!
-          {:url (-> (resolve-relative-uri entry-uri (goog.Uri. "transact"))
-                    (.setParameterValue "user-token" "dustin"))
+          {:url (resolve-relative-uri entry-uri (goog.Uri. "transact"))
            :content-type content-type-transit
            :accept content-type-transit
            :method :post
