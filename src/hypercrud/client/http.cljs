@@ -37,7 +37,7 @@
 
   (hydrate! [this named-queries t]
     ;; compare our pre-loaded state with the graph dependencies
-    (let [graph-we-want (graph/Graph. schema named-queries t [] nil)]
+    (let [graph-we-want (graph/->Graph schema named-queries t [] nil)]
       (if (= graph graph-we-want)
         (p/resolved graph)
         (-> (kvlt/request!
