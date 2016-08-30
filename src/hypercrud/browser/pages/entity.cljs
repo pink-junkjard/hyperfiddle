@@ -1,10 +1,11 @@
 (ns hypercrud.browser.pages.entity
   (:require [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx-util]
-            [hypercrud.ui.form :as form]))
+            [hypercrud.ui.form :as form]
+            [promesa.core :as p]))
 
 
-(defn ui [cur transact! graph metatype forms eid]
+(defn ui [cur transact! graph metatype forms eid navigate!]
   "hypercrud values just get a form, with ::update and ::delete."
   (let [local-statements (cur [:statements] [])
         expanded-cur (cur [:expanded] {})                   ; {:community/neighborhood {:neighborhood/district {:district/region {}}}}
@@ -13,7 +14,10 @@
         tempid! (hc/tempid!-factory)]
     [:div
      [form/form graph eid metatype forms expanded-cur local-transact! tempid!]
-     [:button {:on-click #(transact! @local-statements)
+     [:button {:on-click #(-> (transact! @local-statements)
+                              (p/then (fn [{:keys [tempids]}]
+                                        (if (tx-util/tempid? eid)
+                                          (navigate! (str "./" (get tempids eid)))))))
                :disabled (empty? @local-statements)}
       (if (tx-util/tempid? eid) "Create" "Update")]]))
 
