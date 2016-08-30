@@ -19,7 +19,11 @@
                                         (if (tx-util/tempid? eid)
                                           (navigate! (str "./" (get tempids eid)))))))
                :disabled (empty? @local-statements)}
-      (if (tx-util/tempid? eid) "Create" "Update")]]))
+      (if (tx-util/tempid? eid) "Create" "Update")]
+     [:button {:on-click #(-> (transact! [[:db.fn/retractEntity eid]])
+                              (p/then (fn [_] (navigate! (str "../../../")))))
+               :disabled (tx-util/tempid? eid)}
+      "Delete"]]))
 
 
 (defn query [eid state metatype forms]
