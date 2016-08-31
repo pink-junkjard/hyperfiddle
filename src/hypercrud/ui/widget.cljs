@@ -6,7 +6,8 @@
             [hypercrud.ui.multi-select :refer [multi-select* multi-select-markup]]
             [hypercrud.ui.radio :refer [radio*]]
             [hypercrud.ui.select :refer [select*]]
-            [hypercrud.ui.textarea :refer [textarea*]]))
+            [hypercrud.ui.textarea :refer [textarea*]]
+            [reagent.core :as reagent]))
 
 
 (defn input [fieldinfo graph forms value expanded-cur change! transact! tempid!]
@@ -50,12 +51,31 @@
 (defn keyword-input [fieldinfo graph forms value expanded-cur change! transact! tempid!]
   [input* {:type "text"
            :value (str value)
-           :on-change #(change! [:db/add (keyword (subs % 1))])}])
+           :on-change #(change! [:db/add (keyword (subs % 1))])}]) ;this seems broken
 
 
 (defn code-editor [fieldinfo graph forms value expanded-cur change! transact! tempid!]
   ^{:key (:name fieldinfo)}
   [code-editor* value change!])
+
+
+(defn valid-date-str? [s]
+  (let [ms (.parse js/Date s)]                              ; NaN if not valid string
+    (integer? ms)))
+
+
+(defn instant [fieldinfo graph forms value expanded-cur change! transact! tempid!]
+  (let [intermediate-val (reagent/atom (.toISOString value))]
+    (fn [fieldinfo graph forms value expanded-cur change! transact! tempid!]
+      [:input {:type "text"
+               :class (if-not (valid-date-str? @intermediate-val) "invalid")
+               :value @intermediate-val
+               :on-change (fn [e]
+                            (let [input-str (.. e -target -value)]
+                              (reset! intermediate-val input-str) ;always save what they are typing
+                              (if (valid-date-str? input-str)
+                                (change! [:db/retract value]
+                                         [:db/add (let [ms (.parse js/Date input-str)] (js/Date. ms))]))))}])))
 
 
 (defn default [fieldinfo graph forms value expanded-cur change! transact! tempid!]

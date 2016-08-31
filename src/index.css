@@ -31,6 +31,10 @@ input[type="password"] {
     box-sizing : border-box;
 }
 
+input.invalid[type="text"] {
+    border-color: red;
+}
+
 .half-width {
     width: 50%;
     display: inline-block;

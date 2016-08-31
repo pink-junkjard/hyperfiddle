@@ -62,3 +62,7 @@
             (render-table-cell val (assoc fieldinfo :cardinality :one) props))
           val)
      (interpose ", "))])
+
+(defmethod render-table-cell {:datatype :instant :cardinality :one}
+  [val field props]
+  [:span {:key (pr-str val)} (.toUTCString val)])

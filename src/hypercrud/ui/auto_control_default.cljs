@@ -18,6 +18,7 @@
 
     (and (= datatype :string) (= cardinality :one)) widget/input
     (and (= datatype :code) (= cardinality :one)) widget/code-editor
+    (and (= datatype :instant) (= cardinality :one)) widget/instant
     (and (= datatype :ref) (= cardinality :one) component) widget/select-ref-component
     (and (= datatype :ref) (= cardinality :many) component) widget/multi-select-ref-component
     (and (= datatype :ref) (= cardinality :one)) widget/select-ref
