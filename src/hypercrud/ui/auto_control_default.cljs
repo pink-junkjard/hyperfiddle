@@ -1,21 +1,10 @@
 (ns hypercrud.ui.auto-control-default
-  (:require [hypercrud.client.core :as hc]
-            [hypercrud.ui.auto-control :as auto-control]
-            [hypercrud.ui.code-editor :as code-editor]
+  (:require [hypercrud.ui.auto-control :as auto-control]
             [hypercrud.ui.widget :as widget]))
 
 
-(defn code-iframe [fieldinfo graph forms value expanded-cur change! transact! tempid!]
-  [:div.code-iframe
-   ^{:key (:name fieldinfo)}
-   [code-editor/code-editor* value change!]
-   [:iframe {:key (hc/t graph) :src (:iframe-url fieldinfo)}]])
-
-
-(defn widget-for-fieldinfo [{:keys [datatype cardinality component name]}]
+(defn widget-for-fieldinfo [{:keys [datatype cardinality component]}]
   (cond
-    (= name :project/code) code-iframe
-
     (and (= datatype :string) (= cardinality :one)) widget/input
     (and (= datatype :code) (= cardinality :one)) widget/code-editor
     (and (= datatype :instant) (= cardinality :one)) widget/instant
