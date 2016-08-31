@@ -65,7 +65,7 @@
 
 
 (defn instant [fieldinfo graph forms value expanded-cur change! transact! tempid!]
-  (let [intermediate-val (reagent/atom (.toISOString value))]
+  (let [intermediate-val (reagent/atom (some-> value .toISOString))]
     (fn [fieldinfo graph forms value expanded-cur change! transact! tempid!]
       [:input {:type "text"
                :class (if-not (valid-date-str? @intermediate-val) "invalid")
