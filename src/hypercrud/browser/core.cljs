@@ -25,7 +25,7 @@
       )))
 
 
-(defn ui [cur transact! graph forms index-queries page-rel-path navigate!]
+(defn ui [cur transact! graph forms query->form queries page-rel-path navigate!]
   [:div
    [:div.hc-node-view
     (let [path-params (string/split page-rel-path "/")]
@@ -39,7 +39,7 @@
           (entity/ui cur transact! graph (keyword metatype) forms (js/parseInt eid 10) navigate!))
 
         (and (= (first path-params) "") (= 1 (count path-params)))
-        (index/ui index-queries)
+        (index/ui query->form queries)
         :else [:div "no route for: " page-rel-path]
         ))]
    [:hr]
