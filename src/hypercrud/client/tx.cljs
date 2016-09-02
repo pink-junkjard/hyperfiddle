@@ -43,6 +43,10 @@
                entity)))
 
 
+(defn ref->v [v]
+  (if (map? v) (:db/id v) v))
+
+
 (defn entity->statements [schema {eid :db/id :as entity}]   ; entity always has :db/id
   (->> (dissoc entity :db/id)
        (mapcat (fn [[attr val]]
@@ -51,8 +55,8 @@
                        _ (assert cardinality (str "schema attribute not found: " (pr-str attr)))]
                    (if (= valueType :db.type/ref)
                      (cond
-                       (= cardinality :db.cardinality/one) [[:db/add eid attr (:db/id val)]]
-                       (= cardinality :db.cardinality/many) (mapv (fn [val] [:db/add eid attr (:db/id val)]) val))
+                       (= cardinality :db.cardinality/one) [[:db/add eid attr (ref->v val)]]
+                       (= cardinality :db.cardinality/many) (mapv (fn [val] [:db/add eid attr (ref->v val)]) val))
                      (cond
                        (= cardinality :db.cardinality/one) [[:db/add eid attr val]]
                        (= cardinality :db.cardinality/many) (mapv (fn [val] [:db/add eid attr val]) val))))))))
