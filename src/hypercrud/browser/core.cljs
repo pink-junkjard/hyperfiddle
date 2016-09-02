@@ -7,24 +7,6 @@
             [hypercrud.browser.pages.query :as query]))
 
 
-(defn query [forms state page-rel-path]
-  (let [path-params (string/split page-rel-path "/")]
-    (cond
-      (and (= (second path-params) "query") (= 3 (count path-params)))
-      (let [[metatype _ q] path-params]
-        (query/query ((keyword metatype) forms) (base64/decode q)))
-
-      (and (= (second path-params) "entity") (= 3 (count path-params)))
-      (let [[metatype _ eid] path-params]
-        (entity/query (js/parseInt eid 10) state (keyword metatype) forms))
-
-      (and (= (first path-params) "") (= 1 (count path-params)))
-      (index/query)
-
-      :else {}
-      )))
-
-
 (defn ui [cur transact! graph forms query->form queries page-rel-path navigate!]
   [:div
    [:div.hc-node-view
@@ -44,3 +26,21 @@
         ))]
    [:hr]
    [:pre (with-out-str (pprint/pprint @cur))]])
+
+
+(defn query [forms state page-rel-path]
+  (let [path-params (string/split page-rel-path "/")]
+    (cond
+      (and (= (second path-params) "query") (= 3 (count path-params)))
+      (let [[metatype _ q] path-params]
+        (query/query ((keyword metatype) forms) (base64/decode q)))
+
+      (and (= (second path-params) "entity") (= 3 (count path-params)))
+      (let [[metatype _ eid] path-params]
+        (entity/query (js/parseInt eid 10) state (keyword metatype) forms))
+
+      (and (= (first path-params) "") (= 1 (count path-params)))
+      (index/query)
+
+      :else {}
+      )))
