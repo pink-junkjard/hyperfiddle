@@ -5,6 +5,7 @@
 
 (defn widget-for-fieldinfo [{:keys [datatype cardinality component]}]
   (cond
+    (and (= datatype :keyword) (= cardinality :one)) widget/input-keyword
     (and (= datatype :string) (= cardinality :one)) widget/input
     (and (= datatype :code) (= cardinality :one)) widget/code-editor
     (and (= datatype :instant) (= cardinality :one)) widget/instant

@@ -5,12 +5,15 @@
 
 
 (defn radio-option [label name change! checked?]
-  [:div.radio-group
-   [:input {:type "radio"
-            :name name
-            :checked checked?
-            :on-change change!}]
-   [:label {:on-click change!} label]])
+  ;; explicitly don't pass any arguments from react because the callsite
+  ;; should have the value in closure scope, and the radios are confusing
+  (let [change! #(change!)]
+    [:div.radio-group
+     [:input {:type "radio"
+              :name name
+              :checked checked?
+              :on-change change!}]
+     [:label {:on-click change!} label]]))
 
 
 (defn radio* [graph forms {:keys [label-prop metatype form query]} value expanded-cur

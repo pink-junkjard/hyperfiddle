@@ -1,5 +1,6 @@
 (ns hypercrud.ui.widget
-  (:require [hypercrud.ui.auto-control :refer [auto-control]]
+  (:require [cljs.reader :as reader]
+            [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.code-editor :refer [code-editor*]]
             [hypercrud.ui.form :refer [form]]
             [hypercrud.ui.input :refer [input*]]
@@ -9,6 +10,13 @@
             [hypercrud.ui.textarea :refer [textarea*]]
             [reagent.core :as reagent]))
 
+
+(defn input-keyword [fieldinfo graph forms value expanded-cur change! transact! tempid!]
+  [:input {:type "text"
+           :value (pr-str value)
+           :on-change #(let [newval (reader/read-string (.. % -target -value))]
+                        (change! [:db/retract value]
+                                 [:db/add newval]))}])
 
 (defn input [fieldinfo graph forms value expanded-cur change! transact! tempid!]
   [input* {:type "text"
@@ -32,8 +40,8 @@
   [select* graph forms options value (expanded-cur [name]) change! transact! tempid!])
 
 
-(defn select-ref-component [{:keys [name] :as fieldinfo} graph forms value expanded-cur change! transact! tempid!]
-  (form graph value (name forms) expanded-cur forms transact! tempid!))
+(defn select-ref-component [{:keys [name options] :as fieldinfo} graph forms value expanded-cur change! transact! tempid!]
+  (form graph value (:form options) forms expanded-cur transact! tempid!))
 
 
 (defn multi-select-ref [fieldinfo graph forms value expanded-cur change! transact! tempid!]
