@@ -41,16 +41,16 @@
 
 (defmethod render-table-cell {:datatype :ref :cardinality :one}
   [eid
-   {{:keys [label-prop metatype]} :options}
+   {{:keys [label-prop form-name]} :options}
    {:keys [graph forms] :as props}]
   (assert (not (nil? label-prop)))
 
   ^{:key eid}                                               ;symmetric with primitive-in-set
-  [:a {:href (str "../../" (name metatype) "/entity/" eid)}
+  [:a {:href (str "../../" (name form-name) "/entity/" eid)}
    (render-table-cell (get (hc/entity graph eid) label-prop)
                       (first
                         (filter #(= (:name %) label-prop)
-                                (metatype forms)))
+                                (form-name forms)))
                       props)])
 
 

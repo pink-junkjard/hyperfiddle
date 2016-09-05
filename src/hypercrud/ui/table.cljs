@@ -13,11 +13,11 @@
      [:tr all-cols]]))
 
 
-(defn tr [graph metatype forms eid entity]
+(defn tr [graph form-name forms eid entity]
   (let [cols (map (fn [{:keys [name] :as fieldinfo}]
                     [:td.truncate {:key name}
                      [render-table-cell (some-> entity (get name)) fieldinfo {:graph graph :forms forms}]])
-                  (metatype forms))]
+                  (get forms form-name))]
     [:tr {:key eid}
      [:td {:key "edit-td"}
       [:a {:href (str "../entity/" eid)}
@@ -25,8 +25,8 @@
      cols]))
 
 
-(defn table [graph forms eids metatype]
-  (let [form (metatype forms)]
+(defn table [graph forms eids form-name]
+  (let [form (get forms form-name)]
     [:table.u-full-width
      [:colgroup [:col {:span "1" :style {:width "20px"}}]]
      (thead form)
@@ -43,7 +43,7 @@
              (map (fn [entity]
                     (let [eid (:db/id entity)]
                       ^{:key eid}
-                      (tr graph metatype forms eid entity))))))]]))
+                      (tr graph form-name forms eid entity))))))]]))
 
 
 (defn table-pull [form]

@@ -14,7 +14,7 @@
      (name (get (hc/entity graph eid) label-prop))]))
 
 
-(defn select* [graph forms {:keys [label-prop metatype form query]} value expanded-cur
+(defn select* [graph forms {:keys [label-prop form-name query]} value expanded-cur
                change! transact! tempid!]
   (let [option-eids (hc/select graph (hash query))
         props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
@@ -42,7 +42,7 @@
         show-form? (or (not= nil @expanded-cur) create-new?)]
 
     [:div.editable-select {:key (hash option-eids)}
-     (if (and form (not show-form?))
+     (if (and form-name (not show-form?))
        [:button {:on-click #(reset! expanded-cur {})
                  :disabled (= nil value)} "Edit"])
      [:span
@@ -53,10 +53,10 @@
                                               ^{:key eid}
                                               [select-option graph label-prop eid])))))
                          (concat
-                           (if (not form)
+                           (if (not form-name)
                              []                             ;can't create-new
                              [[:option {:key :create-new :value (util/transit-encode "create-new")} "Create New"]])
                            [[:option {:key :blank :value (util/transit-encode nil)} "--"]]))]]
      (if show-form?
        ;; TODO branch the client in create-new case
-       [form/form graph value metatype forms expanded-cur transact! tempid!])]))
+       [form/form graph value form-name forms expanded-cur transact! tempid!])]))
