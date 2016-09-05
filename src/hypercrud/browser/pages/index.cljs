@@ -8,7 +8,7 @@
    [:ul.links
     (map (fn [[query-name form-name]]
            (let [[q args] (get queries query-name)]
-             [:li {:key query-name} [:a {:href (str (name form-name) "/query/" (base64/encode q))} query-name]]))
+             [:li {:key query-name} [:a {:href (str form-name "/query/" (base64/encode q))} query-name]]))
          query->form)]])
 
 (defn query [] {})

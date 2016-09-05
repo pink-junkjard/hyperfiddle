@@ -46,11 +46,11 @@
   (assert (not (nil? label-prop)))
 
   ^{:key eid}                                               ;symmetric with primitive-in-set
-  [:a {:href (str "../../" (name form-name) "/entity/" eid)}
+  [:a {:href (str "../../" form-name "/entity/" eid)}
    (render-table-cell (get (hc/entity graph eid) label-prop)
                       (first
                         (filter #(= (:name %) label-prop)
-                                (form-name forms)))
+                                (get forms form-name)))
                       props)])
 
 

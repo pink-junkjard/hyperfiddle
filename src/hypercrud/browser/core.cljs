@@ -14,11 +14,11 @@
       (cond
         (and (= (second path-params) "query") (= 3 (count path-params)))
         (let [[form-name _ q] path-params]
-          (query/ui graph forms (keyword form-name)))
+          (query/ui graph forms form-name))
 
         (and (= (second path-params) "entity") (= 3 (count path-params)))
         (let [[form-name _ eid] path-params]
-          (entity/ui cur transact! graph (keyword form-name) forms (js/parseInt eid 10) navigate!))
+          (entity/ui cur transact! graph form-name forms (js/parseInt eid 10) navigate!))
 
         (and (= (first path-params) "") (= 1 (count path-params)))
         (index/ui query->form queries)
@@ -33,11 +33,11 @@
     (cond
       (and (= (second path-params) "query") (= 3 (count path-params)))
       (let [[form-name _ q] path-params]
-        (query/query ((keyword form-name) forms) (base64/decode q)))
+        (query/query (get forms form-name) (base64/decode q)))
 
       (and (= (second path-params) "entity") (= 3 (count path-params)))
       (let [[form-name _ eid] path-params]
-        (entity/query (js/parseInt eid 10) state (keyword form-name) forms))
+        (entity/query (js/parseInt eid 10) state form-name forms))
 
       (and (= (first path-params) "") (= 1 (count path-params)))
       (index/query)

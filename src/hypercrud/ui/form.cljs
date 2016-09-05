@@ -39,7 +39,7 @@
 
 
 (defn fieldref->form [forms field]
-  ((get-in field [:options :form-name]) forms))
+  (get forms (get-in field [:options :form-name])))
 
 
 (defn expanded-form-pull-exp "generate the pull expression recursively for all expanded forms"
