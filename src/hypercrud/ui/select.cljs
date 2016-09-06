@@ -11,7 +11,7 @@
   (if (keyword? eid)
     [:option {:value (util/transit-encode eid)} (name eid)]
     [:option {:value (util/transit-encode eid)}
-     (name (get (hc/entity graph eid) label-prop))]))
+     (str (get (hc/entity graph eid) label-prop))]))
 
 
 (defn select* [graph forms {:keys [label-prop form-name query]} value expanded-cur

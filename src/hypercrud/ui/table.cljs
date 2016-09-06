@@ -4,8 +4,8 @@
 
 
 (defn thead [form]
-  (let [cols (map (fn [{:keys [name prompt]}]
-                    [:td {:key name} prompt])
+  (let [cols (map (fn [{:keys [:attribute/ident :field/prompt]}]
+                    [:td {:key ident} prompt])
                   form)
         select-col [:td {:key "select-col"}]
         all-cols (conj cols select-col)]
@@ -14,9 +14,9 @@
 
 
 (defn tr [graph form-name forms eid entity]
-  (let [cols (map (fn [{:keys [name] :as fieldinfo}]
-                    [:td.truncate {:key name}
-                     [render-table-cell (some-> entity (get name)) fieldinfo {:graph graph :forms forms}]])
+  (let [cols (map (fn [{:keys [:attribute/ident] :as fieldinfo}]
+                    [:td.truncate {:key ident}
+                     [render-table-cell (some-> entity (get ident)) fieldinfo {:graph graph :forms forms}]])
                   (get forms form-name))]
     [:tr {:key eid}
      [:td {:key "edit-td"}
@@ -33,7 +33,7 @@
      [:tbody
       (let [entities (map #(hc/entity graph %) eids)
             ; hack todo we need sortkeys in our form construct
-            sortkey (->> (map :name form)
+            sortkey (->> (map :attribute/ident form)
                          (filter #(-> % name (= "name")))
                          (first))]
         (->> (if sortkey
@@ -47,13 +47,13 @@
 
 
 (defn table-pull [form]
-  (let [{:keys [refs notrefs]} (group-by (fn [{:keys [datatype]}]
-                                           (if (= datatype :ref) :refs :notrefs))
+  (let [{:keys [refs notrefs]} (group-by (fn [{:keys [:attribute/valueType]}]
+                                           (if (= valueType :ref) :refs :notrefs))
                                          form)
         refpull (map (fn [field]
-                       {(:name field) [:db/id (-> field :options :label-prop)]})
+                       {(:attribute/ident field) [:db/id (-> field :field/options :label-prop)]})
                      refs)
-        non-refpull (map :name notrefs)]
+        non-refpull (map :attribute/ident notrefs)]
     (concat refpull non-refpull [:db/id])))
 
 

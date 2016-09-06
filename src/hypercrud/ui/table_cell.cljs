@@ -4,7 +4,7 @@
 (def ^:dynamic render-table-cell-dispatch
   (fn [val fieldinfo props]
     (if (not (nil? val))
-      (select-keys fieldinfo [:datatype :cardinality])
+      (select-keys fieldinfo [:attribute/valueType :attribute/cardinality])
       :default)))
 
 
@@ -16,32 +16,32 @@
   [:code {:key (pr-str val)} (pr-str val)])
 
 
-(defmethod render-table-cell {:datatype :string :cardinality :one}
+(defmethod render-table-cell {:attribute/valueType :string :attribute/cardinality :db.cardinality/one}
   [val _ _]
   [:span {:key (pr-str val)} val])
 
 
-(defmethod render-table-cell {:datatype :keyword :cardinality :one}
+(defmethod render-table-cell {:attribute/valueType :keyword :attribute/cardinality :db.cardinality/one}
   [val _ _]
   [:span {:key (pr-str val)} (name val)])
 
 
-(defmethod render-table-cell {:datatype :keyword :cardinality :many}
+(defmethod render-table-cell {:attribute/valueType :keyword :attribute/cardinality :db.cardinality/many}
   [val _ _]
   [:span {:key (pr-str val)} (interpose ", " (map name val))])
 
 
-(defmethod render-table-cell {:datatype :string :cardinality :many}
+(defmethod render-table-cell {:attribute/valueType :string :attribute/cardinality :db.cardinality/many}
   [val fieldinfo props]
   [:span {:key (pr-str val)}
-   (let [rendered-set-items (map #(render-table-cell % (assoc fieldinfo :cardinality :one) props)
+   (let [rendered-set-items (map #(render-table-cell % (assoc fieldinfo :attribute/cardinality :db.cardinality/one) props)
                                  val)]
      (interpose ", " rendered-set-items))])
 
 
-(defmethod render-table-cell {:datatype :ref :cardinality :one}
+(defmethod render-table-cell {:attribute/valueType :ref :attribute/cardinality :db.cardinality/one}
   [eid
-   {{:keys [label-prop form-name]} :options}
+   {{:keys [label-prop form-name]} :field/options}
    {:keys [graph forms] :as props}]
   (assert (not (nil? label-prop)))
 
@@ -54,15 +54,15 @@
                       props)])
 
 
-(defmethod render-table-cell {:datatype :ref :cardinality :many}
+(defmethod render-table-cell {:attribute/valueType :ref :attribute/cardinality :db.cardinality/many}
   [val fieldinfo props]
   [:span {:key (pr-str val)}
    (->>
      (map (fn [{:keys [rel] :as val}]
-            (render-table-cell val (assoc fieldinfo :cardinality :one) props))
+            (render-table-cell val (assoc fieldinfo :attribute/cardinality :db.cardinality/one) props))
           val)
      (interpose ", "))])
 
-(defmethod render-table-cell {:datatype :instant :cardinality :one}
+(defmethod render-table-cell {:attribute/valueType :instant :attribute/cardinality :db.cardinality/one}
   [val field props]
   [:span {:key (pr-str val)} (.toUTCString val)])

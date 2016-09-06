@@ -9,7 +9,7 @@
                      change! add-item! transact! tempid!]
   (let [control-tuples (map (fn [v]
                               (let [click-remove! #(change! [:db/retract v])
-                                    control [auto-control (assoc fieldinfo :cardinality :one) graph forms
+                                    control [auto-control (assoc fieldinfo :attribute/cardinality :db.cardinality/one) graph forms
                                              v expanded-cur
                                              change! transact! tempid!]]
                                 [v click-remove! control]))

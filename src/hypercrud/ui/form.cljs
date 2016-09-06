@@ -4,9 +4,9 @@
             [hypercrud.client.tx :as tx-util]))
 
 
-(defn field [{:keys [name prompt] :as fieldinfo} graph entity forms expanded-cur local-transact! tempid!]
-  (let [value (get entity name)
-        change! (fn [& op-vals] (local-transact! (mapv (fn [[op val]] [op (:db/id entity) name val]) op-vals)))]
+(defn field [{:keys [:attribute/ident :field/prompt] :as fieldinfo} graph entity forms expanded-cur local-transact! tempid!]
+  (let [value (get entity ident)
+        change! (fn [& op-vals] (local-transact! (mapv (fn [[op val]] [op (:db/id entity) ident val]) op-vals)))]
     [:div.field
      (if prompt [:label prompt])
      [auto-control fieldinfo graph forms value expanded-cur change! local-transact! tempid!]]))
@@ -15,8 +15,8 @@
 (defn form [graph eid form-name forms expanded-cur local-transact! tempid!]
   (let [entity (hc/entity graph eid)]
     [:div.form
-     (map (fn [{:keys [name] :as fieldinfo}]
-            ^{:key name}
+     (map (fn [{:keys [:attribute/ident] :as fieldinfo}]
+            ^{:key ident}
             [field fieldinfo graph entity forms expanded-cur local-transact! tempid!])
           (get forms form-name))]))
 
@@ -27,19 +27,19 @@
 
 (defn form->options-queries [form]
   (->> form
-       (filter (fn [{:keys [datatype]}] (= datatype :ref)))
-       (map (fn [{{:keys [query label-prop]} :options}]
+       (filter (fn [{:keys [:attribute/valueType]}] (= valueType :ref)))
+       (map (fn [{{:keys [query label-prop]} :field/options}]
               (let [query-name (hash query)]
                 [query-name [query [] '[*]]])))             ;:db/id label-prop
        (into {})))
 
 
 (defn fieldname->field [form fieldname]
-  (find' #(= (:name %) fieldname) form))
+  (find' #(= (:attribute/ident %) fieldname) form))
 
 
 (defn fieldref->form [forms field]
-  (get forms (get-in field [:options :form-name])))
+  (get forms (get-in field [:field/options :form-name])))
 
 
 (defn expanded-form-pull-exp "generate the pull expression recursively for all expanded forms"
@@ -47,7 +47,7 @@
   (concat
     [:db/id]
 
-    (->> (map :name form)
+    (->> (map :attribute/ident form)
          (filter #((complement contains?) expanded-forms %)))
 
     (map (fn [[fieldname expanded-forms]]

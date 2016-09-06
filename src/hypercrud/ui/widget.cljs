@@ -30,17 +30,17 @@
               :on-change change!}])
 
 
-(defn radio-ref [{:keys [name options] :as fieldinfo} graph forms value expanded-cur change! transact! tempid!]
+(defn radio-ref [{:keys [:attribute/ident :field/options] :as fieldinfo} graph forms value expanded-cur change! transact! tempid!]
   ;;radio* needs parameterized markup fn todo
-  [radio* graph forms options value (expanded-cur [name]) change! transact! tempid!])
+  [radio* graph forms options value (expanded-cur [ident]) change! transact! tempid!])
 
 
-(defn select-ref [{:keys [name options] :as fieldinfo} graph forms value expanded-cur change! transact! tempid!]
+(defn select-ref [{:keys [:attribute/ident :field/options] :as fieldinfo} graph forms value expanded-cur change! transact! tempid!]
   ;;select* has parameterized markup fn todo
-  [select* graph forms options value (expanded-cur [name]) change! transact! tempid!])
+  [select* graph forms options value (expanded-cur [ident]) change! transact! tempid!])
 
 
-(defn select-ref-component [{:keys [name options] :as fieldinfo} graph forms value expanded-cur change! transact! tempid!]
+(defn select-ref-component [{:keys [:field/options] :as fieldinfo} graph forms value expanded-cur change! transact! tempid!]
   (form graph value (:form-name options) forms expanded-cur transact! tempid!))
 
 
@@ -50,7 +50,7 @@
     fieldinfo graph forms value expanded-cur change! #(change! [:db/add nil]) transact! tempid!)) ;add-item! is: add nil to set
 
 
-(defn multi-select-ref-component [{:keys [options] :as fieldinfo} graph forms value expanded-cur change! transact! tempid!]
+(defn multi-select-ref-component [fieldinfo graph forms value expanded-cur change! transact! tempid!]
   [multi-select*
    multi-select-markup
    fieldinfo graph forms value expanded-cur change! #(change! [:db/add :temp-tempid]) transact! tempid!]) ;add new entity to set
@@ -63,7 +63,7 @@
 
 
 (defn code-editor [fieldinfo graph forms value expanded-cur change! transact! tempid!]
-  ^{:key (:name fieldinfo)}
+  ^{:key (:attribute/ident fieldinfo)}
   [code-editor* value change!])
 
 
@@ -88,5 +88,5 @@
 
 (defn default [fieldinfo graph forms value expanded-cur change! transact! tempid!]
   [input* {:type "text"
-           :value (str (select-keys fieldinfo [:datatype :cardinality :component]))
+           :value (str (select-keys fieldinfo [:attribute/valueType :attribute/cardinality :attribute/isComponent]))
            :read-only true}])
