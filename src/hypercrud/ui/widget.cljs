@@ -15,8 +15,7 @@
   [:input {:type "text"
            :value (pr-str value)
            :on-change #(let [newval (reader/read-string (.. % -target -value))]
-                        (change! [:db/retract value]
-                                 [:db/add newval]))}])
+                        (change! [value] [newval]))}])
 
 (defn input [fieldinfo graph forms value expanded-cur change! transact! tempid!]
   [input* {:type "text"
@@ -47,19 +46,19 @@
 (defn multi-select-ref [fieldinfo graph forms value expanded-cur change! transact! tempid!]
   (multi-select*
     multi-select-markup
-    fieldinfo graph forms value expanded-cur change! #(change! [:db/add nil]) transact! tempid!)) ;add-item! is: add nil to set
+    fieldinfo graph forms value expanded-cur change! #(change! [] [nil]) transact! tempid!)) ;add-item! is: add nil to set
 
 
 (defn multi-select-ref-component [fieldinfo graph forms value expanded-cur change! transact! tempid!]
   [multi-select*
    multi-select-markup
-   fieldinfo graph forms value expanded-cur change! #(change! [:db/add :temp-tempid]) transact! tempid!]) ;add new entity to set
+   fieldinfo graph forms value expanded-cur change! #(change! [] [:temp-tempid]) transact! tempid!]) ;add new entity to set
 
 
 (defn keyword-input [fieldinfo graph forms value expanded-cur change! transact! tempid!]
   [input* {:type "text"
            :value (str value)
-           :on-change #(change! [:db/add (keyword (subs % 1))])}]) ;this seems broken
+           :on-change #(change! [] [(keyword (subs % 1))])}]) ;this seems broken
 
 
 (defn code-editor [fieldinfo graph forms value expanded-cur change! transact! tempid!]
@@ -82,8 +81,8 @@
                             (let [input-str (.. e -target -value)]
                               (reset! intermediate-val input-str) ;always save what they are typing
                               (if (valid-date-str? input-str)
-                                (change! [:db/retract value]
-                                         [:db/add (let [ms (.parse js/Date input-str)] (js/Date. ms))]))))}])))
+                                (change! [value]
+                                         [(let [ms (.parse js/Date input-str)] (js/Date. ms))]))))}])))
 
 
 (defn default [fieldinfo graph forms value expanded-cur change! transact! tempid!]

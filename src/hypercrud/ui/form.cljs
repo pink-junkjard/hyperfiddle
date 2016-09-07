@@ -6,7 +6,10 @@
 
 (defn field [{:keys [:attribute/ident :field/prompt] :as fieldinfo} graph entity forms expanded-cur local-transact! tempid!]
   (let [value (get entity ident)
-        change! (fn [& op-vals] (local-transact! (mapv (fn [[op val]] [op (:db/id entity) ident val]) op-vals)))]
+        change! (fn [retracts adds]
+                  (local-transact!
+                    (vec (concat (map (fn [val] [:db/retract (:db/id entity) ident val]) retracts)
+                                 (map (fn [val] [:db/add (:db/id entity) ident val]) adds)))))]
     [:div.field
      (if prompt [:label prompt])
      [auto-control fieldinfo graph forms value expanded-cur change! local-transact! tempid!]]))

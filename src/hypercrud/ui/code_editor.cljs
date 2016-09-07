@@ -17,8 +17,7 @@
                           (let [old @last-val
                                 new (.getValue e)]
                             (reset! last-val new)
-                            (change! [:db/retract old]
-                                     [:db/add new]))))))))
+                            (change! [old] [new]))))))))
 
 
 (defn code-editor* [value change!]

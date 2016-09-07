@@ -34,8 +34,7 @@
                               ;reset the cursor before change! otherwise npe when trying to render
                               ;todo these both set the same cursor, and should be atomic
                               (reset! expanded-cur (if (= "create-new" select-value) {} nil))
-                              (change! [:db/retract value]
-                                       [:db/add eid])
+                              (change! [value] [eid])
                               ;; and also add our new guy to the option list (for all combos)
                               ))}
         create-new? (some-> value tx-util/tempid?)

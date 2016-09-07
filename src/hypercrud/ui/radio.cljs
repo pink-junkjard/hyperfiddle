@@ -26,8 +26,7 @@
                     ;reset the cursor before change! otherwise npe when trying to render
                     ;todo these both set the same cursor, and should be atomic
                     (reset! expanded-cur (if (= "create-new" eid) {} nil))
-                    (change! [:db/retract value]
-                             [:db/add eid])))
+                    (change! [value] [eid])))
         create-new? (some-> value tx-util/tempid?)
         show-form? (or (not= nil @expanded-cur) create-new?)]
     [:div.editable-radio {:key (hash option-eids)}
