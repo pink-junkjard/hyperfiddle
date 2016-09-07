@@ -44,6 +44,7 @@
 
 
   (entity [this eid]
+    (assert (not= nil eid) "Cannot request nil entity")
     (tx/apply-statements-to-entity
       schema
       (concat (:statements graph-data) local-statements)

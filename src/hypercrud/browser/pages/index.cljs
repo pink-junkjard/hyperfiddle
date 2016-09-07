@@ -2,13 +2,13 @@
   (:require [hypercrud.browser.base-64-url-safe :as base64]))
 
 
-(defn ui [query->form queries]
+(defn ui [queries]
   [:div
    ;form to populate holes
    [:ul.links
-    (map (fn [[query-name form-name]]
-           (let [[q args] (get queries query-name)]
-             [:li {:key query-name} [:a {:href (str form-name "/query/" (base64/encode q))} query-name]]))
-         query->form)]])
+    (map (fn [{:keys [:query/ident :query/value :query/form]}]
+           (let [[q args] value]
+             [:li {:key ident} [:a {:href (str form "/query/" (base64/encode q))} ident]]))
+         queries)]])
 
 (defn query [] {})

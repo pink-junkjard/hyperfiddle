@@ -13,11 +13,11 @@
      [:tr all-cols]]))
 
 
-(defn tr [graph form-name forms eid entity]
+(defn tr [graph form-id forms eid entity]
   (let [cols (map (fn [{:keys [:attribute/ident] :as fieldinfo}]
                     [:td.truncate {:key ident}
                      [render-table-cell (some-> entity (get ident)) fieldinfo {:graph graph :forms forms}]])
-                  (get forms form-name))]
+                  (get forms form-id))]
     [:tr {:key eid}
      [:td {:key "edit-td"}
       [:a {:href (str "../entity/" eid)}
@@ -25,8 +25,8 @@
      cols]))
 
 
-(defn table [graph forms eids form-name]
-  (let [form (get forms form-name)]
+(defn table [graph forms eids form-id]
+  (let [form (get forms form-id)]
     [:table.u-full-width
      [:colgroup [:col {:span "1" :style {:width "20px"}}]]
      (thead form)
@@ -43,7 +43,7 @@
              (map (fn [entity]
                     (let [eid (:db/id entity)]
                       ^{:key eid}
-                      (tr graph form-name forms eid entity))))))]]))
+                      (tr graph form-id forms eid entity))))))]]))
 
 
 (defn table-pull [form]
@@ -51,7 +51,7 @@
                                            (if (= valueType :ref) :refs :notrefs))
                                          form)
         refpull (map (fn [field]
-                       {(:attribute/ident field) [:db/id (-> field :field/options :label-prop)]})
+                       {(:attribute/ident field) [:db/id (-> field :field/options :option/label-prop)]})
                      refs)
         non-refpull (map :attribute/ident notrefs)]
     (concat refpull non-refpull [:db/id])))

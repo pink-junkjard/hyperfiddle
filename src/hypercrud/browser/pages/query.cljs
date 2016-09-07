@@ -3,9 +3,9 @@
             [hypercrud.client.core :as hc]))
 
 
-(defn ui [graph forms form-name]
+(defn ui [graph forms form-id]
   [:div
-   [table/table graph forms (hc/select graph ::table/query) form-name]
+   [table/table graph forms (hc/select graph ::table/query) form-id]
    [:a {:href (str "../entity/-1")} "Create"]])
 
 

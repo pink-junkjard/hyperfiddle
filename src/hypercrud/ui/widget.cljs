@@ -40,7 +40,7 @@
 
 
 (defn select-ref-component [{:keys [:field/options] :as fieldinfo} graph forms value expanded-cur change! transact! tempid!]
-  (form graph value (:form-name options) forms expanded-cur transact! tempid!))
+  (form graph value (:option/form options) forms expanded-cur transact! tempid!))
 
 
 (defn multi-select-ref [fieldinfo graph forms value expanded-cur change! transact! tempid!]

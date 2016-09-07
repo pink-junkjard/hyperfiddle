@@ -15,23 +15,23 @@
      [auto-control fieldinfo graph forms value expanded-cur change! local-transact! tempid!]]))
 
 
-(defn form [graph eid form-name forms expanded-cur local-transact! tempid!]
+(defn form [graph eid form-id forms expanded-cur local-transact! tempid!]
   (let [entity (hc/entity graph eid)]
     [:div.form
      (map (fn [{:keys [:attribute/ident] :as fieldinfo}]
             ^{:key ident}
             [field fieldinfo graph entity forms expanded-cur local-transact! tempid!])
-          (get forms form-name))]))
+          (get forms form-id))]))
 
 
 (defn find' [pred coll]
   (first (filter pred coll)))
 
 
-(defn form->options-queries [form]
+(defn form->options-queries [form]                          ; todo account for holes
   (->> form
        (filter (fn [{:keys [:attribute/valueType]}] (= valueType :ref)))
-       (map (fn [{{:keys [query label-prop]} :field/options}]
+       (map (fn [{{{[query args] :query/value} :option/query} :field/options}]
               (let [query-name (hash query)]
                 [query-name [query [] '[*]]])))             ;:db/id label-prop
        (into {})))
@@ -42,7 +42,7 @@
 
 
 (defn fieldref->form [forms field]
-  (get forms (get-in field [:field/options :form-name])))
+  (get forms (get-in field [:field/options :option/form])))
 
 
 (defn expanded-form-pull-exp "generate the pull expression recursively for all expanded forms"
