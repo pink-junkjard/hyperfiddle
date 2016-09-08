@@ -27,13 +27,15 @@
   (util/map-values #(map :db/id %) pulled-trees-map))
 
 
-(defrecord GraphData [pulled-trees-map resultsets statements])
+(defrecord GraphData [pulled-trees-map resultsets statements entity-lookup])
 
 
-(defn ->graph-data [schema pulled-trees-map]
-  (GraphData. pulled-trees-map
-             (->resultsets pulled-trees-map)
-             (->statements schema pulled-trees-map)))
+(defn ->graph-data [schema pulled-trees-map local-statements]
+  (let [statements (->statements schema pulled-trees-map)]
+    (GraphData. pulled-trees-map
+                (->resultsets pulled-trees-map)
+                statements
+                (tx/build-entity-lookup schema (concat statements local-statements)))))
 
 
 (deftype Graph [schema named-queries ^:mutable t local-statements ^:mutable graph-data]
@@ -45,14 +47,13 @@
 
   (entity [this eid]
     (assert (not= nil eid) "Cannot request nil entity")
-    (tx/apply-statements-to-entity
-      schema
-      (concat (:statements graph-data) local-statements)
-      {:db/id eid}))
+    (get (:entity-lookup graph-data) eid))
 
 
   (with [this more-statements]
-    (Graph. schema named-queries t (concat local-statements more-statements) graph-data))
+    (let [new-local-statements (concat local-statements more-statements)
+          new-graph-data (->graph-data schema (:pulled-trees-map graph-data) new-local-statements)]
+      (Graph. schema named-queries t new-local-statements new-graph-data)))
 
 
   (t [this] t)
@@ -70,7 +71,7 @@
 
   GraphPrivate
   (set-state! [this pulled-trees-map t']
-    (set! graph-data (->graph-data schema pulled-trees-map))
+    (set! graph-data (->graph-data schema pulled-trees-map local-statements))
     (set! t t'))
 
   GraphSSR
