@@ -27,14 +27,13 @@
   (util/map-values #(map :db/id %) pulled-trees-map))
 
 
-(defrecord GraphData [pulled-trees-map resultsets statements entity-lookup])
+(defrecord GraphData [pulled-trees-map resultsets entity-lookup])
 
 
 (defn ->graph-data [schema pulled-trees-map local-statements]
   (let [statements (->statements schema pulled-trees-map)]
     (GraphData. pulled-trees-map
                 (->resultsets pulled-trees-map)
-                statements
                 (tx/build-entity-lookup schema (concat statements local-statements)))))
 
 
@@ -52,7 +51,7 @@
 
   (with [this more-statements]
     (let [new-local-statements (concat local-statements more-statements)
-          new-graph-data (->graph-data schema (:pulled-trees-map graph-data) new-local-statements)]
+          new-graph-data (update graph-data :entity-lookup #(tx/build-entity-lookup schema more-statements %))]
       (Graph. schema named-queries t new-local-statements new-graph-data)))
 
 

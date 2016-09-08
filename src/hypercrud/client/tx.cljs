@@ -28,37 +28,26 @@
   (reduce simplify tx more-statements))
 
 
-(defn build-entity-lookup [schema statements]
-  (let [a (group-by (fn [[op e a v]] e) statements)
-        b (map (fn [[e entity-stmts]]
-                 [e (reduce (fn [acc [op _ a v]]
-                              (let [cardinality (get-in schema [a :db/cardinality])
-                                    _ (assert cardinality (str "schema attribute not found: " (pr-str a)))]
-                                (cond
-                                  (and (= op :db/add) (= cardinality :db.cardinality/one)) (assoc acc a v)
-                                  (and (= op :db/retract) (= cardinality :db.cardinality/one)) (dissoc acc a)
-                                  (and (= op :db/add) (= cardinality :db.cardinality/many)) (update-in acc [a] (fnil #(conj % v) #{}))
-                                  (and (= op :db/retract) (= cardinality :db.cardinality/many)) (update-in acc [a] (fnil #(disj % v) #{}))
-                                  :else (throw "match error"))))
-                            {:db/id e}
-                            entity-stmts)])
-               a)]
-    (into {} b)))
+(defn apply-stmt-to-entity [schema entity [op _ a v]]
+  (let [cardinality (get-in schema [a :db/cardinality])
+        _ (assert cardinality (str "schema attribute not found: " (pr-str a)))]
+    (cond
+      (and (= op :db/add) (= cardinality :db.cardinality/one)) (assoc entity a v)
+      (and (= op :db/retract) (= cardinality :db.cardinality/one)) (dissoc entity a)
+      (and (= op :db/add) (= cardinality :db.cardinality/many)) (update-in entity [a] (fnil #(conj % v) #{}))
+      (and (= op :db/retract) (= cardinality :db.cardinality/many)) (update-in entity [a] (fnil #(disj % v) #{}))
+      :else (throw "match error"))))
 
 
-(defn apply-statements-to-entity [schema statements {id :db/id :as entity}]
-  (->> statements
-       (filter (fn [[op e a v]] (= id e)))
-       (reduce (fn [acc [op _ a v]]
-                 (let [cardinality (get-in schema [a :db/cardinality])
-                       _ (assert cardinality (str "schema attribute not found: " (pr-str a)))]
-                   (cond
-                     (and (= op :db/add) (= cardinality :db.cardinality/one)) (assoc acc a v)
-                     (and (= op :db/retract) (= cardinality :db.cardinality/one)) (dissoc acc a)
-                     (and (= op :db/add) (= cardinality :db.cardinality/many)) (update-in acc [a] (fnil #(conj % v) #{}))
-                     (and (= op :db/retract) (= cardinality :db.cardinality/many)) (update-in acc [a] (fnil #(disj % v) #{}))
-                     :else (throw "match error"))))
-               entity)))
+(defn build-entity-lookup
+  ([schema statements] (build-entity-lookup schema statements {}))
+  ([schema statements lookup]
+   (reduce (fn [lookup [op e a v]]
+             (update lookup e (fn [entity]
+                                (let [entity (or entity {:db/id e})]
+                                  (apply-stmt-to-entity schema entity [op e a v])))))
+           lookup
+           statements)))
 
 
 (defn ref->v [v]
