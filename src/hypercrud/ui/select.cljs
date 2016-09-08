@@ -1,7 +1,6 @@
 (ns hypercrud.ui.select
   (:require [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx-util]
-            [hypercrud.client.internal :as util]
             [hypercrud.ui.form :as form]))
 
 
@@ -9,8 +8,8 @@
   ":option :value and :on-change is a string, since that's how the dom works"
   [graph label-prop eid]
   (if (keyword? eid)
-    [:option {:value (util/transit-encode eid)} (name eid)]
-    [:option {:value (util/transit-encode eid)}
+    [:option {:value (str eid)} (name eid)]
+    [:option {:value (str eid)}
      (str (get (hc/entity graph eid) label-prop))]))
 
 
@@ -18,19 +17,18 @@
                change! transact! tempid!]
   (let [option-eids (hc/select graph (hash query))
         props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
-               :value (util/transit-encode
-                        (cond
-                          (nil? value) nil
-                          (tx-util/tempid? value) "create-new"
-                          :else value))
+               :value (cond
+                        (nil? value) ""
+                        (tx-util/tempid? value) "create-new"
+                        :else (str value))
 
                ;; reconstruct the typed value
                :on-change #(do
-                            (let [select-value (util/transit-decode (.-target.value %))
+                            (let [select-value (.-target.value %)
                                   eid (cond
-                                        (nil? select-value) nil
+                                        (= "" select-value) nil
                                         (= "create-new" select-value) (tempid!)
-                                        :else-hc-select-option-node select-value)]
+                                        :else-hc-select-option-node (js/parseInt select-value 10))]
                               ;reset the cursor before change! otherwise npe when trying to render
                               ;todo these both set the same cursor, and should be atomic
                               (reset! expanded-cur (if (= "create-new" select-value) {} nil))
@@ -54,8 +52,8 @@
                          (concat
                            (if (not form)
                              []                             ;can't create-new
-                             [[:option {:key :create-new :value (util/transit-encode "create-new")} "Create New"]])
-                           [[:option {:key :blank :value (util/transit-encode nil)} "--"]]))]]
+                             [[:option {:key :create-new :value "create-new"} "Create New"]])
+                           [[:option {:key :blank :value ""} "--"]]))]]
      (if show-form?
        ;; TODO branch the client in create-new case
        [form/form graph value forms form expanded-cur transact! tempid!])]))
