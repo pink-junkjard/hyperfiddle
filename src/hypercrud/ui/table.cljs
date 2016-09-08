@@ -13,7 +13,7 @@
      [:tr all-cols]]))
 
 
-(defn tr [graph form-id forms eid entity]
+(defn tr [graph forms form-id eid entity]
   (let [cols (map (fn [{:keys [:attribute/ident] :as fieldinfo}]
                     [:td.truncate {:key ident}
                      [render-table-cell (some-> entity (get ident)) fieldinfo {:graph graph :forms forms}]])
@@ -25,7 +25,7 @@
      cols]))
 
 
-(defn table [graph forms eids form-id]
+(defn table [graph eids forms form-id]
   (let [form (get forms form-id)]
     [:table.u-full-width
      [:colgroup [:col {:span "1" :style {:width "20px"}}]]
@@ -43,7 +43,7 @@
              (map (fn [entity]
                     (let [eid (:db/id entity)]
                       ^{:key eid}
-                      (tr graph form-id forms eid entity))))))]]))
+                      (tr graph forms form-id eid entity))))))]]))
 
 
 (defn table-pull [form]

@@ -15,7 +15,7 @@
      [auto-control fieldinfo graph forms value expanded-cur change! local-transact! tempid!]]))
 
 
-(defn form [graph eid form-id forms expanded-cur local-transact! tempid!]
+(defn form [graph eid forms form-id expanded-cur local-transact! tempid!]
   (let [entity (hc/entity graph eid)]
     [:div.form
      (map (fn [{:keys [:attribute/ident] :as fieldinfo}]
@@ -77,10 +77,11 @@
        (apply merge)))
 
 
-(defn query [eid expanded-forms root-form forms]            ;bad abstraction/not an abstraction
-  (merge
-    (if-not (tx-util/tempid? eid)
-      {::query ['[:find [?eid ...] :in $ ?eid :where [?eid]]
-                [eid]
-                (expanded-form-pull-exp forms root-form expanded-forms)]})
-    (expanded-form-queries forms root-form expanded-forms)))
+(defn query [eid forms form-id expanded-forms]            ;bad abstraction/not an abstraction
+  (let [form (get forms form-id)]
+    (merge
+      (if-not (tx-util/tempid? eid)
+        {::query ['[:find [?eid ...] :in $ ?eid :where [?eid]]
+                  [eid]
+                  (expanded-form-pull-exp forms form expanded-forms)]})
+      (expanded-form-queries forms form expanded-forms))))

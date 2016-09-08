@@ -5,7 +5,7 @@
             [promesa.core :as p]))
 
 
-(defn ui [cur transact! graph form-id forms eid navigate!]
+(defn ui [cur transact! graph eid forms form-id navigate!]
   "hypercrud values just get a form, with ::update and ::delete."
   (let [local-statements (cur [:statements] [])
         expanded-cur (cur [:expanded] {})                   ; {:community/neighborhood {:neighborhood/district {:district/region {}}}}
@@ -13,7 +13,7 @@
         local-transact! #(swap! local-statements tx-util/into-tx %)
         tempid! (hc/tempid!-factory)]
     [:div
-     [form/form graph eid form-id forms expanded-cur local-transact! tempid!]
+     [form/form graph eid forms form-id expanded-cur local-transact! tempid!]
      [:button {:on-click #(-> (transact! @local-statements)
                               (p/then (fn [{:keys [tempids]}]
                                         (if (tx-util/tempid? eid)
@@ -26,8 +26,8 @@
       "Delete"]]))
 
 
-(defn query [eid state form-id forms]
-  (form/query eid (get state :expanded nil) (get forms form-id) forms))
+(defn query [state eid forms form-id]
+  (form/query eid forms form-id (get state :expanded nil)))
 
 
 (comment

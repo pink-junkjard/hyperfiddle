@@ -44,7 +44,7 @@
      [radio-option "--" form-name #(change! nil) (= nil value)]
      (if show-form?
        ;; TODO branch the client in create-new case
-       [form/form graph value form-name forms expanded-cur transact! tempid!])]
+       [form/form graph value forms form expanded-cur transact! tempid!])]
 
     ;todo how should editing existing entries work?
     #_[:div.editable-select {:key (hash option-eids)}

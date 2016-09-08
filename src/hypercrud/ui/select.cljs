@@ -58,4 +58,4 @@
                            [[:option {:key :blank :value (util/transit-encode nil)} "--"]]))]]
      (if show-form?
        ;; TODO branch the client in create-new case
-       [form/form graph value form forms expanded-cur transact! tempid!])]))
+       [form/form graph value forms form expanded-cur transact! tempid!])]))

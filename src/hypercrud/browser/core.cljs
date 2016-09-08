@@ -18,7 +18,7 @@
 
         (and (= (second path-params) "entity") (= 3 (count path-params)))
         (let [[form-id _ eid] path-params]
-          (entity/ui cur transact! graph (js/parseInt form-id 10) forms (js/parseInt eid 10) navigate!))
+          (entity/ui cur transact! graph (js/parseInt eid 10) forms (js/parseInt form-id 10) navigate!))
 
         (and (= (first path-params) "") (= 1 (count path-params)))
         (index/ui queries)
@@ -37,7 +37,7 @@
 
       (and (= (second path-params) "entity") (= 3 (count path-params)))
       (let [[form-id _ eid] path-params]
-        (entity/query (js/parseInt eid 10) state (js/parseInt form-id 10) forms))
+        (entity/query state (js/parseInt eid 10) forms (js/parseInt form-id 10)))
 
       (and (= (first path-params) "") (= 1 (count path-params)))
       (index/query)
