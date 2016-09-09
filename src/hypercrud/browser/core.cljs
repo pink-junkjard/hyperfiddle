@@ -33,7 +33,7 @@
     (cond
       (and (= (second path-params) "query") (= 3 (count path-params)))
       (let [[form-id _ q] path-params]
-        (query/query (get forms (js/parseInt form-id 10)) (base64/decode q)))
+        (query/query state (base64/decode q) forms (js/parseInt form-id 10)))
 
       (and (= (second path-params) "entity") (= 3 (count path-params)))
       (let [[form-id _ eid] path-params]

@@ -9,5 +9,5 @@
    [:a {:href (str "../entity/-1")} "Create"]])
 
 
-(defn query [form query]
-  (table/query form query))
+(defn query [state query forms form-id]
+  (table/query query forms form-id (get state :expanded nil)))

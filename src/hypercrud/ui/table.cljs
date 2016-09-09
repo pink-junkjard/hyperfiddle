@@ -1,5 +1,6 @@
 (ns hypercrud.ui.table
   (:require [hypercrud.client.core :as hc]
+            [hypercrud.ui.form-util :as form-util]
             [hypercrud.ui.table-cell :refer [render-table-cell]]))
 
 
@@ -46,16 +47,7 @@
                       (tr graph forms form-id eid entity))))))]]))
 
 
-(defn table-pull [form]
-  (let [{:keys [refs notrefs]} (group-by (fn [{:keys [:attribute/valueType]}]
-                                           (if (= valueType :ref) :refs :notrefs))
-                                         form)
-        refpull (map (fn [field]
-                       {(:attribute/ident field) [:db/id (-> field :field/options :option/label-prop)]})
-                     refs)
-        non-refpull (map :attribute/ident notrefs)]
-    (concat refpull non-refpull [:db/id])))
-
-
-(defn query [form q]
-  {::query [q [] (table-pull form)]})
+(defn query [q forms form-id expanded-forms]
+  (form-util/query forms form-id expanded-forms {:query-name ::query
+                                                 :query q
+                                                 :params []}))
