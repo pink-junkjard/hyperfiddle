@@ -1,5 +1,6 @@
 (ns hypercrud.client.graph
-  (:require [goog.Uri]
+  (:require [cljs.pprint :as pprint]
+            [goog.Uri]
             [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx]
             [hypercrud.client.util :as util]))
@@ -44,7 +45,7 @@
   (select [this named-query query-message]
     (assert (contains? named-queries named-query)
             (let [named-query (or query-message named-query)]
-              (str "Named-query: " named-query " not found in:\n" (pr-str named-queries))))
+              (str "Named-query: " named-query " not found in:\n" (with-out-str (pprint/pprint named-queries)))))
     (get (:resultsets graph-data) (get named-queries named-query)))
 
 
