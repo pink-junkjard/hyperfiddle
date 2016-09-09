@@ -41,7 +41,7 @@
 
 (defmethod render-table-cell {:attribute/valueType :ref :attribute/cardinality :db.cardinality/one}
   [eid
-   {{:keys [:option/label-prop :option/form]} :field/options}
+   {:keys [:field/label-prop :field/form]}
    {:keys [graph forms] :as props}]
   (assert (not (nil? label-prop)))
 

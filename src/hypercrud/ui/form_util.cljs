@@ -3,13 +3,13 @@
 
 (defn field->option-query [field]
   ; todo account for holes
-  (let [{{{[query args] :query/value} :option/query} :field/options} field
+  (let [{{[query args] :query/value} :field/query} field
         query-name (hash query)]
     {query-name [query [] '[*]]}))
 
 
 (defn fieldref->form [forms field]
-  (get forms (get-in field [:field/options :option/form])))
+  (get forms (get field :field/form)))
 
 
 (defn expanded-form-pull-exp "generate the pull expression recursively for all expanded forms"

@@ -13,7 +13,7 @@
      (str (get (hc/entity graph eid) label-prop))]))
 
 
-(defn select* [graph forms {:keys [:option/label-prop :option/form] {[query args] :query/value} :option/query} value expanded-cur
+(defn select* [graph forms {:keys [:field/label-prop :field/form] {[query args] :query/value} :field/query} value expanded-cur
                change! transact! tempid!]
   (let [option-eids (hc/select graph (hash query) query)
         props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid

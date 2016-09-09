@@ -2,7 +2,7 @@
   (:require [cljs.reader :as reader]
             [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.code-editor :refer [code-editor*]]
-            [hypercrud.ui.form :refer [form]]
+            [hypercrud.ui.form :as form]
             [hypercrud.ui.input :refer [input*]]
             [hypercrud.ui.multi-select :refer [multi-select* multi-select-markup]]
             [hypercrud.ui.radio :refer [radio*]]
@@ -29,18 +29,18 @@
               :on-change change!}])
 
 
-(defn radio-ref [{:keys [:attribute/ident :field/options] :as fieldinfo} graph forms value expanded-cur change! transact! tempid!]
+(defn radio-ref [{:keys [:attribute/ident] :as fieldinfo} graph forms value expanded-cur change! transact! tempid!]
   ;;radio* needs parameterized markup fn todo
-  [radio* graph forms options value (expanded-cur [ident]) change! transact! tempid!])
+  [radio* graph forms fieldinfo value (expanded-cur [ident]) change! transact! tempid!])
 
 
-(defn select-ref [{:keys [:attribute/ident :field/options] :as fieldinfo} graph forms value expanded-cur change! transact! tempid!]
+(defn select-ref [{:keys [:attribute/ident] :as fieldinfo} graph forms value expanded-cur change! transact! tempid!]
   ;;select* has parameterized markup fn todo
-  [select* graph forms options value (expanded-cur [ident]) change! transact! tempid!])
+  [select* graph forms fieldinfo value (expanded-cur [ident]) change! transact! tempid!])
 
 
-(defn select-ref-component [{:keys [:field/options] :as fieldinfo} graph forms value expanded-cur change! transact! tempid!]
-  (form graph value forms (:option/form options) expanded-cur transact! tempid!))
+(defn select-ref-component [fieldinfo graph forms value expanded-cur change! transact! tempid!]
+  (form/form graph value forms (:field/form fieldinfo) expanded-cur transact! tempid!))
 
 
 (defn multi-select-ref [fieldinfo graph forms value expanded-cur change! transact! tempid!]

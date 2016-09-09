@@ -16,7 +16,7 @@
      [:label {:on-click change!} label]]))
 
 
-(defn radio* [graph forms {:keys [:option/label-prop :option/form] {[query args] :query/value} :option/query} value expanded-cur
+(defn radio* [graph forms {:keys [:field/label-prop :field/form] {[query args] :query/value} :field/query} value expanded-cur
               change! transact! tempid!]
   ; TODO only one radio-group on the page until we get a unique form-name
   (let [form-name (or form "TODO")                          ;form-name in the HTML sense
