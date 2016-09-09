@@ -73,26 +73,6 @@
           form))
 
 
-(comment
-  (defn find' [pred coll]
-    (first (filter pred coll)))
-
-
-  (defn fieldname->field [form fieldname]
-    (find' #(= (:attribute/ident %) fieldname) form))
-
-  (defn form->options-queries [form]
-    (->> form
-         (filter (fn [{:keys [:attribute/valueType]}] (= valueType :ref)))
-         (map field->option-query)                          ;:db/id label-prop
-         (into {})))
-
-  "scrap for expanded-form-queries"
-  (->> (tree-seq map? vals expanded-forms)
-       (map #(form->options-queries (fieldref->form forms (fieldname->field root-form %))))
-       (apply merge)))
-
-
 (defn query [eid forms form-id expanded-forms]              ;bad abstraction/not an abstraction
   (let [form (get forms form-id)]
     (merge
