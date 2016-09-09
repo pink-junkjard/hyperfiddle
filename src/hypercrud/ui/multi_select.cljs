@@ -10,7 +10,7 @@
   (let [control-tuples (seq (mapv (fn [v]
                                     (let [click-remove! #(change! [v] nil)
                                           control [auto-control (assoc fieldinfo :attribute/cardinality :db.cardinality/one) graph forms
-                                                   v expanded-cur
+                                                   v (expanded-cur [(:attribute/ident fieldinfo)] {})
                                                    change! transact! tempid!]]
                                       [v click-remove! control]))
                                   value))]

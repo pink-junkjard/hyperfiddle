@@ -24,21 +24,11 @@
           (get forms form-id))]))
 
 
-(defn find' [pred coll]
-  (first (filter pred coll)))
-
-
-(defn form->options-queries [form]                          ; todo account for holes
-  (->> form
-       (filter (fn [{:keys [:attribute/valueType]}] (= valueType :ref)))
-       (map (fn [{{{[query args] :query/value} :option/query} :field/options}]
-              (let [query-name (hash query)]
-                [query-name [query [] '[*]]])))             ;:db/id label-prop
-       (into {})))
-
-
-(defn fieldname->field [form fieldname]
-  (find' #(= (:attribute/ident %) fieldname) form))
+(defn field->option-query [field]
+  ; todo account for holes
+  (let [{{{[query args] :query/value} :option/query} :field/options} field
+        query-name (hash query)]
+    {query-name [query [] '[*]]}))
 
 
 (defn fieldref->form [forms field]
@@ -49,35 +39,61 @@
   [forms form expanded-forms]
   (concat
     [:db/id]
+    (map (fn [{:keys [:attribute/ident :attribute/isComponent] :as field}]
+           (let [new-expanded-forms (get expanded-forms ident)]
+             (if (or new-expanded-forms isComponent)
+               ; components render expanded automatically
+               ; so if it is expanded or is a component, pull another level deeper
+               (let [form (fieldref->form forms field)]
+                 {ident (expanded-form-pull-exp forms form new-expanded-forms)})
 
-    (->> (map :attribute/ident form)
-         (filter #((complement contains?) expanded-forms %)))
-
-    (map (fn [[fieldname expanded-forms]]
-           (let [field (fieldname->field form fieldname)
-                 form (fieldref->form forms field)]
-             {fieldname (expanded-form-pull-exp forms form expanded-forms)}))
-         expanded-forms)))
+               ; otherwise just add the attribute to the list
+               ident)))
+         form)))
 
 
 (defn expanded-form-queries "get the form options recursively for all expanded forms"
   [forms form expanded-forms]
-  (merge
-    (form->options-queries form)
-    (apply merge (map (fn [[fieldname expanded-forms]]
-                        (let [field (fieldname->field form fieldname)
-                              form (fieldref->form forms field)]
-                          (expanded-form-queries forms form expanded-forms)))
-                      expanded-forms))))
+  (reduce (fn [acc {:keys [:attribute/ident :attribute/valueType :attribute/isComponent] :as field}]
+            (merge
+              acc
+
+              (let [is-ref (= valueType :ref)]
+                ; if we are a ref we ALWAYS need the query from the field options
+                ; EXCEPT when we are component, in which case no options are rendered, just a form, handled below
+                (if (and is-ref (not isComponent)) (field->option-query field)))
+
+              (let [new-expanded-forms (get expanded-forms ident)]
+                ; components render expanded automatically
+                ; so if it is expanded or is a component, get the queries for another level deeper
+                (if (or new-expanded-forms isComponent)
+                  (let [form (fieldref->form forms field)]
+                    (expanded-form-queries forms form new-expanded-forms))))))
+          {}
+          form))
+
 
 (comment
+  (defn find' [pred coll]
+    (first (filter pred coll)))
+
+
+  (defn fieldname->field [form fieldname]
+    (find' #(= (:attribute/ident %) fieldname) form))
+
+  (defn form->options-queries [form]
+    (->> form
+         (filter (fn [{:keys [:attribute/valueType]}] (= valueType :ref)))
+         (map field->option-query)                          ;:db/id label-prop
+         (into {})))
+
   "scrap for expanded-form-queries"
   (->> (tree-seq map? vals expanded-forms)
        (map #(form->options-queries (fieldref->form forms (fieldname->field root-form %))))
        (apply merge)))
 
 
-(defn query [eid forms form-id expanded-forms]            ;bad abstraction/not an abstraction
+(defn query [eid forms form-id expanded-forms]              ;bad abstraction/not an abstraction
   (let [form (get forms form-id)]
     (merge
       (if-not (tx-util/tempid? eid)
