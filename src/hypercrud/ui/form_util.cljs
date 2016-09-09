@@ -1,6 +1,13 @@
 (ns hypercrud.ui.form-util)
 
 
+(defn change-factory [transact! e a]
+  (fn [retracts adds]
+    (transact!
+      (vec (concat (map (fn [val] [:db/retract e a val]) retracts)
+                   (map (fn [val] [:db/add e a val]) adds))))))
+
+
 (defn field->option-query [field]
   ; todo account for holes
   (let [{{[query args] :query/value} :field/query} field
