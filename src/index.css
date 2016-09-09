@@ -46,9 +46,11 @@ input.invalid[type="text"] {
     vertical-align: top;
 }
 
+.form {
+    margin-bottom: 2px;
+}
+
 .field {
-    margin-top: 5px;
-    padding-top: 5px;
     padding-left: 10px;
     border-left: 5px solid #428bca;
 }
