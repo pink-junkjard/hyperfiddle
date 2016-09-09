@@ -27,7 +27,6 @@
 
 (defn query [eid forms form-id expanded-forms]              ;bad abstraction/not an abstraction
   (let [q-and-params (if (not (tx-util/tempid? eid))
-                       {:query-name ::query
-                        :query '[:find [?eid ...] :in $ ?eid :where [?eid]]
+                       {:query '[:find [?eid ...] :in $ ?eid :where [?eid]]
                         :params [eid]})]
     (form-util/query forms form-id expanded-forms q-and-params)))

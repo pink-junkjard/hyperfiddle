@@ -51,8 +51,9 @@
 
 
 (defn query [forms form-id expanded-forms {:keys [:query-name :query :params] :as q-and-params}]
-  (let [form (get forms form-id)]
-    (merge
-      (if q-and-params
-        {query-name [query params (expanded-form-pull-exp forms form expanded-forms)]})
-      (expanded-form-queries forms form expanded-forms))))
+  (let [form (get forms form-id)
+        queries-map (expanded-form-queries forms form expanded-forms)]
+    (if q-and-params
+      (let [value [query params (expanded-form-pull-exp forms form expanded-forms)]]
+        (assoc queries-map (or query-name (hash value)) value))
+      queries-map)))
