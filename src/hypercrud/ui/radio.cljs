@@ -20,7 +20,7 @@
               change! transact! tempid!]
   ; TODO only one radio-group on the page until we get a unique form-name
   (let [form-name (or form "TODO")                          ;form-name in the HTML sense
-        option-eids (hc/select graph (hash query))
+        option-eids (hc/select graph (hash query) query)
         change! (fn [eid]
                   (let [eid (if (= "create-new" eid) (tempid!) eid)]
                     ;reset the cursor before change! otherwise npe when trying to render

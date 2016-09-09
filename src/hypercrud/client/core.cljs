@@ -2,7 +2,8 @@
 
 
 (defprotocol Graph
-  (select [this named-query])
+  (select [this named-query]
+          [this named-query query-message])
   (entity [this eid])
   (with [this more-statements])
   (t [this]))

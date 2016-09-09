@@ -39,8 +39,12 @@
 
 (deftype Graph [schema named-queries ^:mutable t local-statements ^:mutable graph-data]
   hc/Graph
-  (select [this named-query]
-    (assert (contains? named-queries named-query) (str "Named-query: " named-query " not found"))
+  (select [this named-query] (hc/select this named-query nil))
+
+  (select [this named-query query-message]
+    (assert (contains? named-queries named-query)
+            (let [named-query (or query-message named-query)]
+              (str "Named-query: " named-query " not found in:\n" (pr-str named-queries))))
     (get (:resultsets graph-data) (get named-queries named-query)))
 
 
