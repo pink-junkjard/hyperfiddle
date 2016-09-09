@@ -51,7 +51,13 @@
 
   (entity [this eid]
     (assert (not= nil eid) "Cannot request nil entity")
-    (get (:entity-lookup graph-data) eid))
+    ; graph should track tempids provided, and only return entities for where the id has been allocated
+    ; otherwise we should throw
+    (or
+      (get (:entity-lookup graph-data) eid)
+      (do
+        (assert (tx/tempid? eid) (str "Entity not found locally: " eid))
+        {:db/id eid})))
 
 
   (with [this more-statements]

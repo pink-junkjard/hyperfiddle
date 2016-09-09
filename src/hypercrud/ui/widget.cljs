@@ -52,7 +52,7 @@
 (defn multi-select-ref-component [fieldinfo graph forms value expanded-cur change! transact! tempid!]
   [multi-select*
    multi-select-markup
-   fieldinfo graph forms value expanded-cur change! #(change! [] [:temp-tempid]) transact! tempid!]) ;add new entity to set
+   fieldinfo graph forms value expanded-cur change! #(change! [] [(tempid!)]) transact! tempid!]) ;add new entity to set
 
 
 (defn keyword-input [fieldinfo graph forms value expanded-cur change! transact! tempid!]
