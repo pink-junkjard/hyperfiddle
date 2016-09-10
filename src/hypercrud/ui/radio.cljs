@@ -16,10 +16,11 @@
      [:label {:on-click change!} label]]))
 
 
-(defn radio* [graph forms {:keys [:field/label-prop :field/form] {[query args] :query/value} :field/query} value expanded-cur
-              change! transact!]
+(defn radio* [value {:keys [change! expanded-cur forms graph local-transact!]
+                     {:keys [:field/label-prop :field/form :attribute/ident] {[query args] :query/value} :field/query} :field}]
   ; TODO only one radio-group on the page until we get a unique form-name
-  (let [form-name (or form "TODO")                          ;form-name in the HTML sense
+  (let [expanded-cur (expanded-cur [ident])
+        form-name (or form "TODO")                          ;form-name in the HTML sense
         option-eids (hc/select graph (hash query) query)
         change! (fn [eid]
                   (let [eid (if (= "create-new" eid) (hc/temp-id! graph) eid)]
@@ -44,7 +45,7 @@
      [radio-option "--" form-name #(change! nil) (= nil value)]
      (if show-form?
        ;; TODO branch the client in create-new case
-       [form/form graph value forms form expanded-cur transact!])]
+       [form/form graph value forms form expanded-cur local-transact!])]
 
     ;todo how should editing existing entries work?
     #_[:div.editable-select {:key (hash option-eids)}

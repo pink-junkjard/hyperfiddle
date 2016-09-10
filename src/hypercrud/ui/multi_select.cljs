@@ -5,13 +5,13 @@
 (defmulti multi-select-markup (fn [click-add! control-tuples] :default))
 
 
-(defn multi-select* [markupfn fieldinfo graph forms value expanded-cur
-                     change! add-item! transact!]
+(defn multi-select* [markupfn value add-item! {:keys [change! field] :as widget-args}]
   (let [control-tuples (seq (mapv (fn [v]
                                     (let [click-remove! #(change! [v] nil)
-                                          control [auto-control (assoc fieldinfo :attribute/cardinality :db.cardinality/one) graph forms
-                                                   v (expanded-cur [(:attribute/ident fieldinfo)] {})
-                                                   change! transact!]]
+                                          new-args (-> widget-args
+                                                       (assoc-in [:field :attribute/cardinality] :db.cardinality/one)
+                                                       (update :expanded-cur #(% [(:attribute/ident field)] {})))
+                                          control [auto-control v new-args]]
                                       [v click-remove! control]))
                                   value))]
     (markupfn add-item! control-tuples)))

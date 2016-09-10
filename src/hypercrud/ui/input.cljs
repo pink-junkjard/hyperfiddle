@@ -1,7 +1,7 @@
 (ns hypercrud.ui.input)
 
 
-(defn input* [{:keys [value on-change] :as props}]
-  (let [on-change #(let [newval (.. % -target -value)]
-                    (on-change [value] [newval]))]
-    [:input (assoc props :on-change on-change)]))
+(defn input* [props]
+  (let [props (update props :on-change (fn [on-change]
+                                         #(on-change (.. % -target -value))))]
+    [:input props]))

@@ -10,7 +10,12 @@
         change! (form-util/change-factory local-transact! (:db/id entity) ident)]
     [:div.field
      (if prompt [:label prompt])
-     [auto-control fieldinfo graph forms value expanded-cur change! local-transact!]]))
+     [auto-control value {:change! change!
+                          :expanded-cur expanded-cur
+                          :field fieldinfo
+                          :forms forms
+                          :graph graph
+                          :local-transact! local-transact!}]]))
 
 
 (defn form [graph eid forms form-id expanded-cur local-transact!]

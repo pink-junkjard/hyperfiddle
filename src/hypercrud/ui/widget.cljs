@@ -11,59 +11,47 @@
             [hypercrud.ui.textarea :refer [textarea*]]
             [reagent.core :as reagent]))
 
-
-(defn input-keyword [fieldinfo graph forms value expanded-cur change! transact!]
-  [:input {:type "text"
+(defn input-keyword [value change!]
+  [input* {:type "text"
            :value (pr-str value)
-           :on-change #(let [newval (reader/read-string (.. % -target -value))]
-                        (change! [value] [newval]))}])
+           :on-change #(change! [value] [(reader/read-string %)])}])
 
-(defn input [fieldinfo graph forms value expanded-cur change! transact!]
+(defn input [value change!]
   [input* {:type "text"
            :value value
-           :on-change change!}])
+           :on-change #(change! [value] [%])}])
 
 
-(defn textarea [fieldinfo graph forms value expanded-cur change! transact!]
+(defn textarea [value change!]
   [textarea* {:type "text"
               :value value
               :on-change change!}])
 
 
-(defn radio-ref [{:keys [:attribute/ident] :as fieldinfo} graph forms value expanded-cur change! transact!]
+(defn radio-ref [value widget-args]
   ;;radio* needs parameterized markup fn todo
-  [radio* graph forms fieldinfo value (expanded-cur [ident]) change! transact!])
+  [radio* value widget-args])
 
 
-(defn select-ref [{:keys [:attribute/ident] :as fieldinfo} graph forms value expanded-cur change! transact!]
+(defn select-ref [value widget-args]
   ;;select* has parameterized markup fn todo
-  [select* graph forms fieldinfo value (expanded-cur [ident]) change! transact!])
+  [select* value widget-args])
 
 
-(defn select-ref-component [fieldinfo graph forms value expanded-cur change! transact!]
-  (form/form graph value forms (:field/form fieldinfo) expanded-cur transact!))
+(defn select-ref-component [value {:keys [expanded-cur field forms graph local-transact!]}]
+  (form/form graph value forms (:field/form field) expanded-cur local-transact!))
 
 
-(defn multi-select-ref [fieldinfo graph forms value expanded-cur change! transact!]
-  (multi-select*
-    multi-select-markup
-    fieldinfo graph forms value expanded-cur change! #(change! [] [nil]) transact!)) ;add-item! is: add nil to set
+(defn multi-select-ref [value {:keys [change!] :as widget-args}]
+  (multi-select* multi-select-markup value #(change! [] [nil]) widget-args)) ;add-item! is: add nil to set
 
 
-(defn multi-select-ref-component [fieldinfo graph forms value expanded-cur change! transact!]
-  [multi-select*
-   multi-select-markup
-   fieldinfo graph forms value expanded-cur change! #(change! [] [(hc/temp-id! graph)]) transact!]) ;add new entity to set
+(defn multi-select-ref-component [value {:keys [change! graph] :as widget-args}]
+  [multi-select* multi-select-markup value #(change! [] [(hc/temp-id! graph)]) widget-args]) ;add new entity to set
 
 
-(defn keyword-input [fieldinfo graph forms value expanded-cur change! transact!]
-  [input* {:type "text"
-           :value (str value)
-           :on-change #(change! [] [(keyword (subs % 1))])}]) ;this seems broken
-
-
-(defn code-editor [fieldinfo graph forms value expanded-cur change! transact!]
-  ^{:key (:attribute/ident fieldinfo)}
+(defn code-editor [field value change!]
+  ^{:key (:attribute/ident field)}
   [code-editor* value change!])
 
 
@@ -72,9 +60,9 @@
     (integer? ms)))
 
 
-(defn instant [fieldinfo graph forms value expanded-cur change! transact!]
+(defn instant [value change!]
   (let [intermediate-val (reagent/atom (some-> value .toISOString))]
-    (fn [fieldinfo graph forms value expanded-cur change! transact!]
+    (fn [value change!]
       [:input {:type "text"
                :class (if-not (valid-date-str? @intermediate-val) "invalid")
                :value @intermediate-val
@@ -86,7 +74,7 @@
                                          [(let [ms (.parse js/Date input-str)] (js/Date. ms))]))))}])))
 
 
-(defn default [fieldinfo graph forms value expanded-cur change! transact!]
+(defn default [field]
   [input* {:type "text"
-           :value (str (select-keys fieldinfo [:attribute/valueType :attribute/cardinality :attribute/isComponent]))
+           :value (str (select-keys field [:attribute/valueType :attribute/cardinality :attribute/isComponent]))
            :read-only true}])
