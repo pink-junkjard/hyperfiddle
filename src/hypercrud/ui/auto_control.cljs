@@ -2,4 +2,4 @@
 
 
 (defmulti auto-control (fn [fieldinfo graph forms value expanded-cur
-                            change! transact! tempid!] :default))
+                            change! transact!] :default))

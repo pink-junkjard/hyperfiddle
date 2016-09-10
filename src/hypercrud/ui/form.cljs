@@ -5,20 +5,20 @@
             [hypercrud.ui.form-util :as form-util]))
 
 
-(defn field [{:keys [:attribute/ident :field/prompt] :as fieldinfo} graph entity forms expanded-cur local-transact! tempid!]
+(defn field [{:keys [:attribute/ident :field/prompt] :as fieldinfo} graph entity forms expanded-cur local-transact!]
   (let [value (get entity ident)
         change! (form-util/change-factory local-transact! (:db/id entity) ident)]
     [:div.field
      (if prompt [:label prompt])
-     [auto-control fieldinfo graph forms value expanded-cur change! local-transact! tempid!]]))
+     [auto-control fieldinfo graph forms value expanded-cur change! local-transact!]]))
 
 
-(defn form [graph eid forms form-id expanded-cur local-transact! tempid!]
+(defn form [graph eid forms form-id expanded-cur local-transact!]
   (let [entity (hc/entity graph eid)]
     [:div.form
      (map (fn [{:keys [:attribute/ident] :as fieldinfo}]
             ^{:key ident}
-            [field fieldinfo graph entity forms expanded-cur local-transact! tempid!])
+            [field fieldinfo graph entity forms expanded-cur local-transact!])
           (get forms form-id))]))
 
 

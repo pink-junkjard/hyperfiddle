@@ -10,10 +10,9 @@
   (let [local-statements (cur [:statements] [])
         expanded-cur (cur [:expanded] {})                   ; {:community/neighborhood {:neighborhood/district {:district/region {}}}}
         graph (hc/with graph @local-statements)
-        local-transact! #(swap! local-statements tx-util/into-tx %)
-        tempid! (hc/tempid!-factory)]
+        local-transact! #(swap! local-statements tx-util/into-tx %)]
     [:div
-     [form/form graph eid forms form-id expanded-cur local-transact! tempid!]
+     [form/form graph eid forms form-id expanded-cur local-transact!]
      [:button {:on-click #(-> (transact! @local-statements)
                               (p/then (fn [{:keys [tempids]}]
                                         (if (tx-util/tempid? eid)

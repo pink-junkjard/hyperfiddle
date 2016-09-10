@@ -38,7 +38,7 @@
                 (tx/build-entity-lookup schema (concat statements local-statements)))))
 
 
-(deftype Graph [schema named-queries ^:mutable t local-statements ^:mutable graph-data]
+(deftype Graph [schema named-queries ^:mutable t local-statements ^:mutable graph-data temp-id-atom]
   hc/Graph
   (select [this named-query] (hc/select this named-query nil))
 
@@ -63,10 +63,14 @@
   (with [this more-statements]
     (let [new-local-statements (concat local-statements more-statements)
           new-graph-data (update graph-data :entity-lookup #(tx/build-entity-lookup schema more-statements %))]
-      (Graph. schema named-queries t new-local-statements new-graph-data)))
+      (Graph. schema named-queries t new-local-statements new-graph-data temp-id-atom)))
 
 
   (t [this] t)
+
+
+  (temp-id! [this]
+    (swap! temp-id-atom dec))
 
 
   IHash

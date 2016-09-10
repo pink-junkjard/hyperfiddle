@@ -6,15 +6,11 @@
           [this named-query query-message])
   (entity [this eid])
   (with [this more-statements])
-  (t [this]))
+  (t [this])
+  (temp-id! [this]))
 
 
 (defprotocol Client
   (graph [this])
   (hydrate! [this named-queries t])
   (transact! [this tx]))
-
-
-(defn tempid!-factory []
-  (let [n (atom 0)]
-    (fn [] (swap! n dec) @n)))

@@ -17,5 +17,5 @@
 
 
 (defmethod auto-control/auto-control :default
-  [fieldinfo graph forms value expanded-cur change! transact! tempid!]
-  [(widget-for-fieldinfo fieldinfo) fieldinfo graph forms value expanded-cur change! transact! tempid!])
+  [fieldinfo graph forms value expanded-cur change! transact!]
+  [(widget-for-fieldinfo fieldinfo) fieldinfo graph forms value expanded-cur change! transact!])

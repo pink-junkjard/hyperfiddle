@@ -14,7 +14,7 @@
 
 
 (defn select* [graph forms {:keys [:field/label-prop :field/form] {[query args] :query/value} :field/query} value expanded-cur
-               change! transact! tempid!]
+               change! transact!]
   (let [option-eids (hc/select graph (hash query) query)
         props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
                :value (cond
@@ -27,7 +27,7 @@
                             (let [select-value (.-target.value %)
                                   eid (cond
                                         (= "" select-value) nil
-                                        (= "create-new" select-value) (tempid!)
+                                        (= "create-new" select-value) (hc/temp-id! graph)
                                         :else-hc-select-option-node (js/parseInt select-value 10))]
                               ;reset the cursor before change! otherwise npe when trying to render
                               ;todo these both set the same cursor, and should be atomic
@@ -56,4 +56,4 @@
                            [[:option {:key :blank :value ""} "--"]]))]]
      (if show-form?
        ;; TODO branch the client in create-new case
-       [form/form graph value forms form expanded-cur transact! tempid!])]))
+       [form/form graph value forms form expanded-cur transact!])]))

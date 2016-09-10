@@ -28,7 +28,7 @@
 
 
 ; graph is always assumed to be touched
-(deftype Client [entry-uri schema ^:mutable graph]
+(deftype Client [entry-uri schema ^:mutable graph tempid-atom]
   hc/Client
   (graph [this]
     (assert (not= nil graph) "invariant - runtime must call hydrate! first")
@@ -37,7 +37,7 @@
 
   (hydrate! [this named-queries t]
     ;; compare our pre-loaded state with the graph dependencies
-    (let [graph-we-want (graph/->Graph schema named-queries t [] nil)]
+    (let [graph-we-want (graph/->Graph schema named-queries t [] nil tempid-atom)]
       (if (= graph graph-we-want)
         (p/resolved graph)
         (-> (kvlt/request!

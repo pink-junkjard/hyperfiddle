@@ -6,12 +6,12 @@
 
 
 (defn multi-select* [markupfn fieldinfo graph forms value expanded-cur
-                     change! add-item! transact! tempid!]
+                     change! add-item! transact!]
   (let [control-tuples (seq (mapv (fn [v]
                                     (let [click-remove! #(change! [v] nil)
                                           control [auto-control (assoc fieldinfo :attribute/cardinality :db.cardinality/one) graph forms
                                                    v (expanded-cur [(:attribute/ident fieldinfo)] {})
-                                                   change! transact! tempid!]]
+                                                   change! transact!]]
                                       [v click-remove! control]))
                                   value))]
     (markupfn add-item! control-tuples)))
