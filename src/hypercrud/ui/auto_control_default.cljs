@@ -12,6 +12,6 @@
     (and (= valueType :instant) (= cardinality :db.cardinality/one)) (widget/instant value change!)
     (and (= valueType :ref) (= cardinality :db.cardinality/one) isComponent) (widget/select-ref-component value widget-args)
     (and (= valueType :ref) (= cardinality :db.cardinality/many) isComponent) (widget/multi-select-ref-component value widget-args)
-    (and (= valueType :ref) (= cardinality :db.cardinality/one)) (widget/select-ref field widget-args)
+    (and (= valueType :ref) (= cardinality :db.cardinality/one)) (widget/select-ref value widget-args)
     (and (= valueType :ref) (= cardinality :db.cardinality/many)) (widget/multi-select-ref field widget-args)
     :else (widget/default field)))
