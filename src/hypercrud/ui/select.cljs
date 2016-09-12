@@ -17,6 +17,7 @@
                       {:keys [:field/label-prop :field/form :attribute/ident] {[query args] :query/value} :field/query} :field}]
   (let [expanded-cur (expanded-cur [ident])
         option-eids (hc/select graph (hash query) query)
+        temp-id! hc/*temp-id!*
         props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
                :value (cond
                         (nil? value) ""
@@ -28,7 +29,7 @@
                             (let [select-value (.-target.value %)
                                   eid (cond
                                         (= "" select-value) nil
-                                        (= "create-new" select-value) (hc/temp-id! graph)
+                                        (= "create-new" select-value) (temp-id!)
                                         :else-hc-select-option-node (js/parseInt select-value 10))]
                               ;reset the cursor before change! otherwise npe when trying to render
                               ;todo these both set the same cursor, and should be atomic

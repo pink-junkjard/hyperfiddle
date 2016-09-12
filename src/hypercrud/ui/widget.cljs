@@ -46,8 +46,9 @@
   (multi-select* multi-select-markup value #(change! [] [nil]) widget-args)) ;add-item! is: add nil to set
 
 
-(defn multi-select-ref-component [value {:keys [change! graph] :as widget-args}]
-  [multi-select* multi-select-markup value #(change! [] [(hc/temp-id! graph)]) widget-args]) ;add new entity to set
+(defn multi-select-ref-component [value {:keys [change!] :as widget-args}]
+  (let [temp-id! hc/*temp-id!*]
+    [multi-select* multi-select-markup value #(change! [] [(temp-id!)]) widget-args])) ;add new entity to set
 
 
 (defn code-editor [field value change!]

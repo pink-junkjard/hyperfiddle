@@ -3,8 +3,6 @@
             [hypercrud.client.core :as hc]
             [hypercrud.client.graph :as graph]
             [hypercrud.client.internal :as internal]
-            [hypercrud.client.tx :as tx]
-            [hypercrud.client.util :as util]
             [kvlt.core :as kvlt]
             [kvlt.middleware.params]
             [promesa.core :as p]))
@@ -28,7 +26,7 @@
 
 
 ; graph is always assumed to be touched
-(deftype Client [entry-uri schema ^:mutable graph tempid-atom]
+(deftype Client [entry-uri schema ^:mutable graph temp-id-atom]
   hc/Client
   (graph [this]
     (assert (not= nil graph) "invariant - runtime must call hydrate! first")
@@ -37,7 +35,7 @@
 
   (hydrate! [this named-queries t]
     ;; compare our pre-loaded state with the graph dependencies
-    (let [graph-we-want (graph/->Graph schema named-queries t [] nil tempid-atom)]
+    (let [graph-we-want (graph/->Graph schema named-queries t [] nil)]
       (if (= graph graph-we-want)
         (p/resolved graph)
         (-> (kvlt/request!
@@ -54,6 +52,10 @@
                         (graph/set-state! graph-we-want pulled-trees-map t)
                         (set! graph graph-we-want)
                         graph)))))))
+
+
+  (temp-id! [this]
+    (swap! temp-id-atom dec))
 
 
   (transact! [this tx]

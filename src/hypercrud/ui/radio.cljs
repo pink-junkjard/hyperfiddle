@@ -22,8 +22,9 @@
   (let [expanded-cur (expanded-cur [ident])
         form-name (or form "TODO")                          ;form-name in the HTML sense
         option-eids (hc/select graph (hash query) query)
+        temp-id! hc/*temp-id!*
         change! (fn [eid]
-                  (let [eid (if (= "create-new" eid) (hc/temp-id! graph) eid)]
+                  (let [eid (if (= "create-new" eid) (temp-id!) eid)]
                     ;reset the cursor before change! otherwise npe when trying to render
                     ;todo these both set the same cursor, and should be atomic
                     (reset! expanded-cur (if (= "create-new" eid) {} nil))
