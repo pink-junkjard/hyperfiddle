@@ -33,9 +33,10 @@
   [radio* value widget-args])
 
 
-(defn select-ref [value widget-args]
+(defn select-ref [value {:keys [expanded-cur] :as widget-args}]
   ;;select* has parameterized markup fn todo
-  [select* value widget-args])
+  (let [ident (get-in widget-args [:field :attribute/ident])]
+    [select* value (assoc widget-args :expanded-cur (expanded-cur [ident]))]))
 
 
 (defn select-ref-component [value {:keys [expanded-cur field forms graph local-transact!]}]

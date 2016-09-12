@@ -14,9 +14,8 @@
 
 
 (defn select* [value {:keys [change! expanded-cur forms graph local-transact!]
-                      {:keys [:field/label-prop :field/form :attribute/ident] {[query args] :query/value} :field/query} :field}]
-  (let [expanded-cur (expanded-cur [ident])
-        option-eids (hc/select graph (hash query) query)
+                      {:keys [:field/label-prop :field/form] {[query args] :query/value} :field/query} :field}]
+  (let [option-eids (hc/select graph (hash query) query)
         temp-id! hc/*temp-id!*
         props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
                :value (cond

@@ -19,17 +19,25 @@
   (get forms (get field :field/form)))
 
 
+(defn- deep-merge "recursively merges maps. if vals are not maps, will throw (which is a very particular
+case that works for expanded-forms)"
+  [& vals]
+  (apply merge-with deep-merge vals))
+
+
 (declare form-pull-exp)
 (declare form-queries)
 
 
-(defn field-pull-exp-entry [forms expanded-forms {:keys [:attribute/ident :attribute/isComponent] :as field}]
+(defn field-pull-exp-entry [forms expanded-forms {:keys [:attribute/ident :attribute/cardinality :attribute/isComponent] :as field}]
   (let [new-expanded-forms (get expanded-forms ident)]
     (if (or new-expanded-forms isComponent)
       ; components render expanded automatically
       ; so if it is expanded or is a component, pull another level deeper
       (let [form (fieldref->form forms field)]
-        {ident (form-pull-exp forms form new-expanded-forms)})
+        {ident (form-pull-exp forms form (condp = cardinality
+                                           :db.cardinality/one new-expanded-forms
+                                           :db.cardinality/many (apply deep-merge (vals new-expanded-forms))))})
 
       ; otherwise just add the attribute to the list
       ident)))
@@ -42,7 +50,7 @@
     (map (partial field-pull-exp-entry forms expanded-forms) form)))
 
 
-(defn field-queries [forms expanded-forms {:keys [:attribute/ident :attribute/valueType :attribute/isComponent] :as field}]
+(defn field-queries [forms expanded-forms {:keys [:attribute/ident :attribute/cardinality :attribute/valueType :attribute/isComponent] :as field}]
   (merge
     (let [is-ref (= valueType :ref)]
       ; if we are a ref we ALWAYS need the query from the field options
@@ -54,7 +62,9 @@
       ; so if it is expanded or is a component, get the queries for another level deeper
       (if (or new-expanded-forms isComponent)
         (let [form (fieldref->form forms field)]
-          (form-queries forms form new-expanded-forms))))))
+          (form-queries forms form (condp = cardinality
+                                     :db.cardinality/one new-expanded-forms
+                                     :db.cardinality/many (apply deep-merge (vals new-expanded-forms)))))))))
 
 
 (defn form-queries "get the form options recursively for all expanded forms"
