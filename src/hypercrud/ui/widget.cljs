@@ -1,6 +1,5 @@
 (ns hypercrud.ui.widget
-  (:require [cljs.reader :as reader]
-            [hypercrud.client.core :as hc]
+  (:require [hypercrud.client.core :as hc]
             [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.code-editor :refer [code-editor*]]
             [hypercrud.ui.form :as form]
@@ -15,10 +14,11 @@
         to-string #(subs (str %) 1)
         valid? (fn [s]
                  (let [kw (keyword s)
-                       int? #(integer? (js/parseInt % 10))]
+                       int? #(integer? (js/parseInt % 10))
+                       safe-first (fn [s] (if (seq s) (subs s 0 1)))]
                    (and
-                     (not (int? (subs (name kw) 0 1)))
-                     (not (int? (subs (namespace kw) 0 1))))))]
+                     (not (int? (safe-first (name kw))))
+                     (not (int? (safe-first (namespace kw)))))))]
     [input/validated-input value change! parse-string to-string valid?]))
 
 
