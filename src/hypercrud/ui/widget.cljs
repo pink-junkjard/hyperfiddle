@@ -4,22 +4,28 @@
             [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.code-editor :refer [code-editor*]]
             [hypercrud.ui.form :as form]
-            [hypercrud.ui.input :refer [input*]]
+            [hypercrud.ui.input :as input]
             [hypercrud.ui.multi-select :refer [multi-select* multi-select-markup]]
             [hypercrud.ui.radio :refer [radio*]]
             [hypercrud.ui.select :refer [select*]]
-            [hypercrud.ui.textarea :refer [textarea*]]
-            [reagent.core :as reagent]))
+            [hypercrud.ui.textarea :refer [textarea*]]))
 
 (defn input-keyword [value change!]
-  [input* {:type "text"
-           :value (pr-str value)
-           :on-change #(change! [value] [(reader/read-string %)])}])
+  (let [parse-string keyword
+        to-string #(subs (str %) 1)
+        valid? (fn [s]
+                 (let [kw (keyword s)
+                       int? #(integer? (js/parseInt % 10))]
+                   (and
+                     (not (int? (subs (name kw) 0 1)))
+                     (not (int? (subs (namespace kw) 0 1))))))]
+    [input/validated-input value change! parse-string to-string valid?]))
+
 
 (defn input [value change!]
-  [input* {:type "text"
-           :value value
-           :on-change #(change! [value] [%])}])
+  [input/input* {:type "text"
+                 :value value
+                 :on-change #(change! [value] [%])}])
 
 
 (defn textarea [value change!]
@@ -63,20 +69,13 @@
 
 
 (defn instant [value change!]
-  (let [intermediate-val (reagent/atom (some-> value .toISOString))]
-    (fn [value change!]
-      [:input {:type "text"
-               :class (if-not (valid-date-str? @intermediate-val) "invalid")
-               :value @intermediate-val
-               :on-change (fn [e]
-                            (let [input-str (.. e -target -value)]
-                              (reset! intermediate-val input-str) ;always save what they are typing
-                              (if (valid-date-str? input-str)
-                                (change! [value]
-                                         [(let [ms (.parse js/Date input-str)] (js/Date. ms))]))))}])))
+  (let [parse-string #(let [ms (.parse js/Date %)]
+                       (js/Date. ms))
+        to-string #(some-> % .toISOString)]
+    [input/validated-input value change! parse-string to-string valid-date-str?]))
 
 
 (defn default [field]
-  [input* {:type "text"
-           :value (str (select-keys field [:attribute/valueType :attribute/cardinality :attribute/isComponent]))
-           :read-only true}])
+  [input/input* {:type "text"
+                 :value (str (select-keys field [:attribute/valueType :attribute/cardinality :attribute/isComponent]))
+                 :read-only true}])
