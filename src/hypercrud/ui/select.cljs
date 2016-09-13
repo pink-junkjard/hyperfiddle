@@ -12,7 +12,7 @@
     [:option {:value (str eid)}
      (str (get (hc/entity graph eid) label-prop))]))
 
-(defn select* [entity {:keys [expanded-cur forms graph local-transact!]
+(defn select* [entity {:keys [expanded-cur forms graph stage-tx!]
                        {:keys [:field/label-prop :field/form :attribute/ident]
                         {[query args] :query/value} :field/query} :field}]
   (let [value (get entity ident)
@@ -34,7 +34,7 @@
                               ;reset the cursor before change! otherwise npe when trying to render
                               ;todo these both set the same cursor, and should be atomic
                               (reset! expanded-cur (if (= "create-new" select-value) {} nil))
-                              (local-transact! (tx-util/update-entity-attr entity ident eid))
+                              (stage-tx! (tx-util/update-entity-attr entity ident eid))
                               ;; and also add our new guy to the option list (for all combos)
                               ))}
         create-new? (some-> value tx-util/tempid?)
@@ -58,4 +58,4 @@
                            [[:option {:key :blank :value ""} "--"]]))]]
      (if show-form?
        ;; TODO branch the client in create-new case
-       [form/form graph value forms form expanded-cur local-transact!])]))
+       [form/form graph value forms form expanded-cur stage-tx!])]))

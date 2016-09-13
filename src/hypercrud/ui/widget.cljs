@@ -11,9 +11,9 @@
             [hypercrud.ui.textarea :refer [textarea*]]))
 
 
-(defn input-keyword [entity {:keys [local-transact!] {:keys [:attribute/ident]} :field}]
+(defn input-keyword [entity {:keys [stage-tx!] {:keys [:attribute/ident]} :field}]
   (let [value (get entity ident)
-        set-attr! #(local-transact! (tx-util/update-entity-attr entity ident %))
+        set-attr! #(stage-tx! (tx-util/update-entity-attr entity ident %))
         parse-string keyword
         to-string #(subs (str %) 1)
         valid? (fn [s]
@@ -26,17 +26,17 @@
     [input/validated-input value set-attr! parse-string to-string valid?]))
 
 
-(defn input [entity {:keys [local-transact!] {:keys [:attribute/ident]} :field}]
+(defn input [entity {:keys [stage-tx!] {:keys [:attribute/ident]} :field}]
   (let [value (get entity ident)
-        set-attr! #(local-transact! (tx-util/update-entity-attr entity ident %))]
+        set-attr! #(stage-tx! (tx-util/update-entity-attr entity ident %))]
     [input/input* {:type "text"
                    :value value
                    :on-change set-attr!}]))
 
 
-(defn textarea [entity {:keys [local-transact!] {:keys [:attribute/ident]} :field}]
+(defn textarea [entity {:keys [stage-tx!] {:keys [:attribute/ident]} :field}]
   (let [value (get entity ident)
-        set-attr! #(local-transact! (tx-util/update-entity-attr entity ident %))]
+        set-attr! #(stage-tx! (tx-util/update-entity-attr entity ident %))]
     [textarea* {:type "text"
                 :value value
                 :on-change set-attr!}]))
@@ -52,26 +52,26 @@
   [select* entity (assoc widget-args :expanded-cur (expanded-cur [ident]))])
 
 
-(defn select-ref-component [entity {:keys [expanded-cur field forms graph local-transact!]
+(defn select-ref-component [entity {:keys [expanded-cur field forms graph stage-tx!]
                                     {:keys [:attribute/ident]} :field}]
   (let [value (get entity ident)]
-    (form/form graph value forms (:field/form field) expanded-cur local-transact!)))
+    (form/form graph value forms (:field/form field) expanded-cur stage-tx!)))
 
 
-(defn multi-select-ref [entity {:keys [local-transact!] {:keys [:attribute/ident]} :field :as widget-args}]
-  (let [add-item! #(local-transact! (tx-util/edit-entity (:db/id entity) ident [] [nil]))]
+(defn multi-select-ref [entity {:keys [stage-tx!] {:keys [:attribute/ident]} :field :as widget-args}]
+  (let [add-item! #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [] [nil]))]
     (multi-select* multi-select-markup entity add-item! widget-args))) ;add-item! is: add nil to set
 
 
-(defn multi-select-ref-component [entity {:keys [local-transact!] {:keys [:attribute/ident]} :field :as widget-args}]
+(defn multi-select-ref-component [entity {:keys [stage-tx!] {:keys [:attribute/ident]} :field :as widget-args}]
   (let [temp-id! hc/*temp-id!*                              ; bound to fix render bug
-        add-item! #(local-transact! (tx-util/edit-entity (:db/id entity) ident [] [(temp-id!)]))]
+        add-item! #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [] [(temp-id!)]))]
     [multi-select* multi-select-markup entity add-item! widget-args])) ;add new entity to set
 
 
-(defn code-editor [entity {:keys [local-transact!] {:keys [:attribute/ident]} :field :as widget-args}]
+(defn code-editor [entity {:keys [stage-tx!] {:keys [:attribute/ident]} :field :as widget-args}]
   (let [value (get entity ident)
-        change! #(local-transact! (tx-util/edit-entity (:db/id entity) ident %1 %2))]
+        change! #(stage-tx! (tx-util/edit-entity (:db/id entity) ident %1 %2))]
     ^{:key ident}
     [code-editor* value change!]))
 
@@ -81,10 +81,10 @@
     (integer? ms)))
 
 
-(defn instant [entity {:keys [local-transact!]
+(defn instant [entity {:keys [stage-tx!]
                        {:keys [:attribute/ident]} :field :as widget-args}]
   (let [value (get entity ident)
-        set-attr! #(local-transact! (tx-util/update-entity-attr entity ident %))
+        set-attr! #(stage-tx! (tx-util/update-entity-attr entity ident %))
         parse-string #(let [ms (.parse js/Date %)]
                        (js/Date. ms))
         to-string #(some-> % .toISOString)]

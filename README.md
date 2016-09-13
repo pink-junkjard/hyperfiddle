@@ -32,7 +32,7 @@ Here is the full code for this form:
 - `form` is hypermedia metadata for rendering the form, 
 - `local-datoms` is ui state for uncommitted form updates - this is a timeseries
 - `(hc/with client @local-datoms)` is how we make our local updates locally available to down-tree graph queries; this reference is rebuilt when a local-datoms atom change causes a render
-- `local-transact!` is how the form appends more updates for each user action
+- `stage-tx!` is how the form appends more updates for each user action
 - `server-transact!` is how we send our local-datoms to the server as a transaction
 
 This hypermedia form is backed by the hypercrud graph, and can navigate recursively into the graph.

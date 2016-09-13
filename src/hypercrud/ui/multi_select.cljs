@@ -6,11 +6,11 @@
 (defmulti multi-select-markup (fn [click-add! control-tuples] :default))
 
 
-(defn multi-select* [markupfn entity add-item! {:keys [local-transact!]
+(defn multi-select* [markupfn entity add-item! {:keys [stage-tx!]
                                                 {:keys [:attribute/ident]} :field :as widget-args}]
   (let [value (get entity ident)
         control-tuples (seq (mapv (fn [eid]
-                                    (let [click-remove! #(local-transact! (tx-util/edit-entity (:db/id entity) ident [eid] nil))
+                                    (let [click-remove! #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [eid] nil))
                                           new-args (-> widget-args
                                                        (assoc-in [:field :attribute/cardinality] :db.cardinality/one)
                                                        (update :expanded-cur #(% [eid ident] {})))

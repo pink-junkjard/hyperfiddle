@@ -15,9 +15,61 @@
               :on-change change!}]
      [:label {:on-click change!} label]]))
 
+;(defprotocol IOptions
+;  (key [this nil])
+;  (get-options [this graph record])
+;  (validdate-field?))
+;
+;(extend-type Keyword
+;  IOptions
+;  (key [this] nil)
+;  (get-options [this graph record] nil))
+;
+;(extend-type Vector
+;  IOptions
+;  (get-options [this graph record]
+;    (let [[q args] this]
+;      (->> (hc/select graph (hash q) q)
+;           (map #(hc/entity graph %))))))
+;
+;(extend-type IFn
+;  IOptions
+;  (get-options [this graph record] (this graph record)))
+;
+;
+;{:attribute/ident :attribute/isComponent
+; :field/prompt "Is Component?"
+; :attribute/valueType :boolean
+; :db/cardinality :db.cardinality/one
+;
+; :field/query {:options/query ['[:find [?e ...] :where [?e :form/name]] []]}
+;
+; :field/query {:options/inline (constantly [{:value true :label "true"}
+;                                            {:value false :label "false"}
+;                                            {:value nil :label "--"}])}
+;
+; :field/query {:options/self :studyitem/related-study-items}
+;
+;
+; :field/label-prop :label}
+;
+;
+;; value is a scalar, the choice of options which is set-scalar
+;; option is a set of scalar
+;(defn radio-scalar [value options {:keys [name prompt values]} change!]
+;  [:div.editable-radio {:key (hash options)}
+;   (map (fn [{:keys [label value]}]
+;          (let [change! nil
+;                checked? (= value @cur)]
+;            ^{:key (hash [label value])}
+;            [radio-option label name change! checked?]))
+;        options)
+;   #_(comment
+;       ^{:key :blank}
+;       [radio-option "--" form-name #(change! nil) (= nil value)])])
 
-(defn radio-ref* [entity {:keys [expanded-cur forms graph local-transact!]
-                         {:keys [:field/label-prop :field/form :attribute/ident] {[query args] :query/value} :field/query} :field}]
+(defn radio-ref* [entity {:keys [expanded-cur forms graph stage-tx!]
+                          {:keys [:field/label-prop :field/form :attribute/ident] {[query args] :query/value} :field/query} :field}]
   ; TODO only one radio-group on the page until we get a unique form-name
   (let [value (get entity ident)
         expanded-cur (expanded-cur [ident])
@@ -29,7 +81,7 @@
                     ;reset the cursor before change! otherwise npe when trying to render
                     ;todo these both set the same cursor, and should be atomic
                     (reset! expanded-cur (if (= "create-new" eid) {} nil))
-                    (local-transact! (tx-util/update-entity-attr entity ident eid))))
+                    (stage-tx! (tx-util/update-entity-attr entity ident eid))))
         create-new? (some-> value tx-util/tempid?)
         show-form? (or (not= nil @expanded-cur) create-new?)]
     [:div.editable-radio {:key (hash option-eids)}
@@ -47,7 +99,7 @@
      [radio-option "--" form-name #(change! nil) (= nil value)]
      (if show-form?
        ;; TODO branch the client in create-new case
-       [form/form graph value forms form expanded-cur local-transact!])]
+       [form/form graph value forms form expanded-cur stage-tx!])]
 
     ;todo how should editing existing entries work?
     #_[:div.editable-select {:key (hash option-eids)}
