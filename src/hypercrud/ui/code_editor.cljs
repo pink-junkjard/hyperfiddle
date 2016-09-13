@@ -26,4 +26,8 @@
                [:div.code-editor
                 [:textarea {:default-value value :auto-complete "off" :class "text"}]])
      :component-did-mount (did-mount! value change!)
-     :component-will-unmount (fn [this] (.toTextArea (aget this "codeMirrorRef")))}))
+     :component-will-unmount (fn [this] (.toTextArea (aget this "codeMirrorRef")))
+
+     ;:component-did-update #() ; use did-update to punch through the new change! handler,
+     ; so we can use tx/update-entity-attr as we would like
+     }))

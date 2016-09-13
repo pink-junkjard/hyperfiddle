@@ -4,6 +4,15 @@
 (defn tempid? [eid] (< eid 0))
 
 
+(defn edit-entity [id a rets adds]
+  (vec (concat (map (fn [val] [:db/retract id a val]) rets)
+               (map (fn [val] [:db/add id a val]) adds))))
+
+
+(defn update-entity-attr [{:keys [:db/id] :as entity} a new-val]
+  (edit-entity id a [(get entity a)] [new-val]))
+
+
 (defn simplify [simplified-tx next-stmt]
   (let [[op e a v] next-stmt
         g (group-by (fn [[op' e' a' v']] (and (= e' e) (= a' a) (= v' v)))

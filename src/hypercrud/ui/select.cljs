@@ -1,8 +1,7 @@
 (ns hypercrud.ui.select
   (:require [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx-util]
-            [hypercrud.ui.form :as form]
-            [hypercrud.ui.form-util :as form-util]))
+            [hypercrud.ui.form :as form]))
 
 
 (defn select-option
@@ -35,7 +34,7 @@
                               ;reset the cursor before change! otherwise npe when trying to render
                               ;todo these both set the same cursor, and should be atomic
                               (reset! expanded-cur (if (= "create-new" select-value) {} nil))
-                              (form-util/change! local-transact! (:db/id entity) ident [value] [eid])
+                              (local-transact! (tx-util/update-entity-attr entity ident eid))
                               ;; and also add our new guy to the option list (for all combos)
                               ))}
         create-new? (some-> value tx-util/tempid?)

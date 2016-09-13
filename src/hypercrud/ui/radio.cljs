@@ -1,8 +1,7 @@
 (ns hypercrud.ui.radio
   (:require [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx-util]
-            [hypercrud.ui.form :as form]
-            [hypercrud.ui.form-util :as form-util]))
+            [hypercrud.ui.form :as form]))
 
 
 (defn radio-option [label name change! checked?]
@@ -30,7 +29,7 @@
                     ;reset the cursor before change! otherwise npe when trying to render
                     ;todo these both set the same cursor, and should be atomic
                     (reset! expanded-cur (if (= "create-new" eid) {} nil))
-                    (form-util/change! local-transact! (:db/id entity) ident [value] [eid])))
+                    (local-transact! (tx-util/update-entity-attr entity ident eid))))
         create-new? (some-> value tx-util/tempid?)
         show-form? (or (not= nil @expanded-cur) create-new?)]
     [:div.editable-radio {:key (hash option-eids)}

@@ -8,9 +8,9 @@
     [:input props]))
 
 
-(defn validated-input [value change! parse-string to-string valid?]
+(defn validated-input [value set-attr! parse-string to-string valid?]
   (let [intermediate-val (reagent/atom (to-string value))]
-    (fn [value change! parse-string to-string valid?]
+    (fn [value set-attr! parse-string to-string valid?]
       [:input {:type "text"
                :class (if-not (valid? @intermediate-val) "invalid")
                :value @intermediate-val
@@ -18,4 +18,4 @@
                             (let [input-str (.. e -target -value)]
                               (reset! intermediate-val input-str) ;always save what they are typing
                               (if (valid? input-str)
-                                (change! [value] [(parse-string input-str)]))))}])))
+                                (set-attr! (parse-string input-str)))))}])))
