@@ -1,7 +1,8 @@
 (ns hypercrud.ui.select
   (:require [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx-util]
-            [hypercrud.ui.form :as form]))
+            [hypercrud.ui.form :as form]
+            [hypercrud.ui.form-util :as form-util]))
 
 
 (defn select-option
@@ -12,10 +13,11 @@
     [:option {:value (str eid)}
      (str (get (hc/entity graph eid) label-prop))]))
 
-
-(defn select* [value {:keys [change! expanded-cur forms graph local-transact!]
-                      {:keys [:field/label-prop :field/form] {[query args] :query/value} :field/query} :field}]
-  (let [option-eids (hc/select graph (hash query) query)
+(defn select* [entity {:keys [expanded-cur forms graph local-transact!]
+                       {:keys [:field/label-prop :field/form :attribute/ident]
+                        {[query args] :query/value} :field/query} :field}]
+  (let [value (get entity ident)
+        option-eids (hc/select graph (hash query) query)
         temp-id! hc/*temp-id!*
         props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
                :value (cond
@@ -33,7 +35,7 @@
                               ;reset the cursor before change! otherwise npe when trying to render
                               ;todo these both set the same cursor, and should be atomic
                               (reset! expanded-cur (if (= "create-new" select-value) {} nil))
-                              (change! [value] [eid])
+                              (form-util/change! local-transact! (:db/id entity) ident [value] [eid])
                               ;; and also add our new guy to the option list (for all combos)
                               ))}
         create-new? (some-> value tx-util/tempid?)

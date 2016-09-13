@@ -3,14 +3,18 @@
             [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.code-editor :refer [code-editor*]]
             [hypercrud.ui.form :as form]
+            [hypercrud.ui.form-util :as form-util]
             [hypercrud.ui.input :as input]
             [hypercrud.ui.multi-select :refer [multi-select* multi-select-markup]]
-            [hypercrud.ui.radio :refer [radio*]]
+            [hypercrud.ui.radio :as radio]
             [hypercrud.ui.select :refer [select*]]
             [hypercrud.ui.textarea :refer [textarea*]]))
 
-(defn input-keyword [value change!]
-  (let [parse-string keyword
+
+(defn input-keyword [entity {:keys [local-transact!] {:keys [:attribute/ident]} :field}]
+  (let [value (get entity ident)
+        change! (partial form-util/change! local-transact! (:db/id entity) ident)
+        parse-string keyword
         to-string #(subs (str %) 1)
         valid? (fn [s]
                  (let [kw (keyword s)
@@ -22,45 +26,54 @@
     [input/validated-input value change! parse-string to-string valid?]))
 
 
-(defn input [value change!]
-  [input/input* {:type "text"
-                 :value value
-                 :on-change #(change! [value] [%])}])
+(defn input [entity {:keys [local-transact!] {:keys [:attribute/ident]} :field}]
+  (let [value (get entity ident)
+        change! #(form-util/change! local-transact! (:db/id entity) ident [value] [%])]
+    [input/input* {:type "text"
+                   :value value
+                   :on-change change!}]))
 
 
-(defn textarea [value change!]
-  [textarea* {:type "text"
-              :value value
-              :on-change change!}])
+(defn textarea [entity {:keys [local-transact!] {:keys [:attribute/ident]} :field}]
+  (let [value (get entity ident)
+        change! #(form-util/change! local-transact! (:db/id entity) ident [value] [%])]
+    [textarea* {:type "text"
+                :value value
+                :on-change change!}]))
 
 
-(defn radio-ref [value widget-args]
+(defn radio-ref [entity widget-args]
   ;;radio* needs parameterized markup fn todo
-  [radio* value widget-args])
+  [radio/radio-ref* entity widget-args])
 
 
-(defn select-ref [value {:keys [expanded-cur] :as widget-args}]
+(defn select-ref [entity {:keys [expanded-cur] {:keys [:attribute/ident]} :field :as widget-args}]
   ;;select* has parameterized markup fn todo
-  (let [ident (get-in widget-args [:field :attribute/ident])]
-    [select* value (assoc widget-args :expanded-cur (expanded-cur [ident]))]))
+  [select* entity (assoc widget-args :expanded-cur (expanded-cur [ident]))])
 
 
-(defn select-ref-component [value {:keys [expanded-cur field forms graph local-transact!]}]
-  (form/form graph value forms (:field/form field) expanded-cur local-transact!))
+(defn select-ref-component [entity {:keys [expanded-cur field forms graph local-transact!]
+                                    {:keys [:attribute/ident]} :field}]
+  (let [value (get entity ident)]
+    (form/form graph value forms (:field/form field) expanded-cur local-transact!)))
 
 
-(defn multi-select-ref [value {:keys [change!] :as widget-args}]
-  (multi-select* multi-select-markup value #(change! [] [nil]) widget-args)) ;add-item! is: add nil to set
+(defn multi-select-ref [entity {:keys [local-transact!] {:keys [:attribute/ident]} :field :as widget-args}]
+  (let [add-item! #(form-util/change! local-transact! (:db/id entity) ident [] [nil])]
+    (multi-select* multi-select-markup entity add-item! widget-args))) ;add-item! is: add nil to set
 
 
-(defn multi-select-ref-component [value {:keys [change!] :as widget-args}]
-  (let [temp-id! hc/*temp-id!*]
-    [multi-select* multi-select-markup value #(change! [] [(temp-id!)]) widget-args])) ;add new entity to set
+(defn multi-select-ref-component [entity {:keys [local-transact!] {:keys [:attribute/ident]} :field :as widget-args}]
+  (let [temp-id! hc/*temp-id!*                              ; bound to fix render bug
+        add-item! #(form-util/change! local-transact! (:db/id entity) ident [] [(temp-id!)])]
+    [multi-select* multi-select-markup entity add-item! widget-args])) ;add new entity to set
 
 
-(defn code-editor [field value change!]
-  ^{:key (:attribute/ident field)}
-  [code-editor* value change!])
+(defn code-editor [entity {:keys [local-transact!] {:keys [:attribute/ident]} :field :as widget-args}]
+  (let [value (get entity ident)
+        change! (partial form-util/change! local-transact! (:db/id entity) ident)]
+    ^{:key ident}
+    [code-editor* value change!]))
 
 
 (defn valid-date-str? [s]
@@ -68,8 +81,11 @@
     (integer? ms)))
 
 
-(defn instant [value change!]
-  (let [parse-string #(let [ms (.parse js/Date %)]
+(defn instant [entity {:keys [local-transact!]
+                       {:keys [:attribute/ident]} :field :as widget-args}]
+  (let [value (get entity ident)
+        change! (partial form-util/change! local-transact! (:db/id entity) ident)
+        parse-string #(let [ms (.parse js/Date %)]
                        (js/Date. ms))
         to-string #(some-> % .toISOString)]
     [input/validated-input value change! parse-string to-string valid-date-str?]))

@@ -1,17 +1,20 @@
 (ns hypercrud.ui.multi-select
-  (:require [hypercrud.ui.auto-control :refer [auto-control]]))
+  (:require [hypercrud.ui.auto-control :refer [auto-control]]
+            [hypercrud.ui.form-util :as form-util]))
 
 
 (defmulti multi-select-markup (fn [click-add! control-tuples] :default))
 
 
-(defn multi-select* [markupfn value add-item! {:keys [change! field] :as widget-args}]
-  (let [control-tuples (seq (mapv (fn [eid]
-                                    (let [click-remove! #(change! [eid] nil)
+(defn multi-select* [markupfn entity add-item! {:keys [local-transact!]
+                                                {:keys [:attribute/ident]} :field :as widget-args}]
+  (let [value (get entity ident)
+        control-tuples (seq (mapv (fn [eid]
+                                    (let [click-remove! #(form-util/change! local-transact! (:db/id entity) ident [eid] nil)
                                           new-args (-> widget-args
                                                        (assoc-in [:field :attribute/cardinality] :db.cardinality/one)
-                                                       (update :expanded-cur #(% [eid (:attribute/ident field)] {})))
-                                          control [auto-control eid new-args]]
+                                                       (update :expanded-cur #(% [eid ident] {})))
+                                          control [auto-control (assoc entity ident eid) new-args]]
                                       [eid click-remove! control]))
                                   value))]
     (markupfn add-item! control-tuples)))

@@ -1,11 +1,10 @@
 (ns hypercrud.ui.form-util)
 
 
-(defn change-factory [transact! e a]
-  (fn [retracts adds]
-    (transact!
-      (vec (concat (map (fn [val] [:db/retract e a val]) retracts)
-                   (map (fn [val] [:db/add e a val]) adds))))))
+(defn change! [transact! e a rets adds]
+  (transact!
+    (vec (concat (map (fn [val] [:db/retract e a val]) rets)
+                 (map (fn [val] [:db/add e a val]) adds)))))
 
 
 (defn field->option-query [field]

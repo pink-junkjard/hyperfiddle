@@ -1,7 +1,8 @@
 (ns hypercrud.ui.radio
   (:require [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx-util]
-            [hypercrud.ui.form :as form]))
+            [hypercrud.ui.form :as form]
+            [hypercrud.ui.form-util :as form-util]))
 
 
 (defn radio-option [label name change! checked?]
@@ -16,10 +17,11 @@
      [:label {:on-click change!} label]]))
 
 
-(defn radio* [value {:keys [change! expanded-cur forms graph local-transact!]
-                     {:keys [:field/label-prop :field/form :attribute/ident] {[query args] :query/value} :field/query} :field}]
+(defn radio-ref* [entity {:keys [expanded-cur forms graph local-transact!]
+                         {:keys [:field/label-prop :field/form :attribute/ident] {[query args] :query/value} :field/query} :field}]
   ; TODO only one radio-group on the page until we get a unique form-name
-  (let [expanded-cur (expanded-cur [ident])
+  (let [value (get entity ident)
+        expanded-cur (expanded-cur [ident])
         form-name (or form "TODO")                          ;form-name in the HTML sense
         option-eids (hc/select graph (hash query) query)
         temp-id! hc/*temp-id!*
@@ -28,7 +30,7 @@
                     ;reset the cursor before change! otherwise npe when trying to render
                     ;todo these both set the same cursor, and should be atomic
                     (reset! expanded-cur (if (= "create-new" eid) {} nil))
-                    (change! [value] [eid])))
+                    (form-util/change! local-transact! (:db/id entity) ident [value] [eid])))
         create-new? (some-> value tx-util/tempid?)
         show-form? (or (not= nil @expanded-cur) create-new?)]
     [:div.editable-radio {:key (hash option-eids)}
