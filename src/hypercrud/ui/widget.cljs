@@ -1,6 +1,7 @@
 (ns hypercrud.ui.widget
   (:require [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx-util]
+            [hypercrud.form.option :as option]
             [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.code-editor :refer [code-editor*]]
             [hypercrud.ui.form :as form]
@@ -11,7 +12,7 @@
             [hypercrud.ui.textarea :refer [textarea*]]))
 
 
-(defn input-keyword [entity {:keys [stage-tx!] {:keys [:attribute/ident]} :field}]
+(defn input-keyword [entity {:keys [stage-tx!] {:keys [:ident]} :field}]
   (let [value (get entity ident)
         set-attr! #(stage-tx! (tx-util/update-entity-attr entity ident %))
         parse-string keyword
@@ -26,7 +27,7 @@
     [input/validated-input value set-attr! parse-string to-string valid?]))
 
 
-(defn input [entity {:keys [stage-tx!] {:keys [:attribute/ident]} :field}]
+(defn input [entity {:keys [stage-tx!] {:keys [:ident]} :field}]
   (let [value (get entity ident)
         set-attr! #(stage-tx! (tx-util/update-entity-attr entity ident %))]
     [input/input* {:type "text"
@@ -34,7 +35,7 @@
                    :on-change set-attr!}]))
 
 
-(defn textarea [entity {:keys [stage-tx!] {:keys [:attribute/ident]} :field}]
+(defn textarea [entity {:keys [stage-tx!] {:keys [:ident]} :field}]
   (let [value (get entity ident)
         set-attr! #(stage-tx! (tx-util/update-entity-attr entity ident %))]
     [textarea* {:type "text"
@@ -47,29 +48,29 @@
   [radio/radio-ref* entity widget-args])
 
 
-(defn select-ref [entity {:keys [expanded-cur] {:keys [:attribute/ident]} :field :as widget-args}]
+(defn select-ref [entity {:keys [expanded-cur] {:keys [:ident]} :field :as widget-args}]
   ;;select* has parameterized markup fn todo
   [select* entity (assoc widget-args :expanded-cur (expanded-cur [ident]))])
 
 
-(defn select-ref-component [entity {:keys [expanded-cur field forms graph stage-tx!]
-                                    {:keys [:attribute/ident]} :field}]
+(defn select-ref-component [entity {:keys [expanded-cur forms graph stage-tx!]
+                                    {:keys [:ident :options]} :field}]
   (let [value (get entity ident)]
-    (form/form graph value forms (:field/form field) expanded-cur stage-tx!)))
+    (form/form graph value forms (option/get-form-id options entity) expanded-cur stage-tx!)))
 
 
-(defn multi-select-ref [entity {:keys [stage-tx!] {:keys [:attribute/ident]} :field :as widget-args}]
+(defn multi-select-ref [entity {:keys [stage-tx!] {:keys [:ident]} :field :as widget-args}]
   (let [add-item! #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [] [nil]))]
     (multi-select* multi-select-markup entity add-item! widget-args))) ;add-item! is: add nil to set
 
 
-(defn multi-select-ref-component [entity {:keys [stage-tx!] {:keys [:attribute/ident]} :field :as widget-args}]
+(defn multi-select-ref-component [entity {:keys [stage-tx!] {:keys [:ident]} :field :as widget-args}]
   (let [temp-id! hc/*temp-id!*                              ; bound to fix render bug
         add-item! #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [] [(temp-id!)]))]
     [multi-select* multi-select-markup entity add-item! widget-args])) ;add new entity to set
 
 
-(defn code-editor [entity {:keys [stage-tx!] {:keys [:attribute/ident]} :field :as widget-args}]
+(defn code-editor [entity {:keys [stage-tx!] {:keys [:ident]} :field}]
   (let [value (get entity ident)
         change! #(stage-tx! (tx-util/edit-entity (:db/id entity) ident %1 %2))]
     ^{:key ident}
@@ -81,8 +82,7 @@
     (integer? ms)))
 
 
-(defn instant [entity {:keys [stage-tx!]
-                       {:keys [:attribute/ident]} :field :as widget-args}]
+(defn instant [entity {:keys [stage-tx!] {:keys [:ident]} :field}]
   (let [value (get entity ident)
         set-attr! #(stage-tx! (tx-util/update-entity-attr entity ident %))
         parse-string #(let [ms (.parse js/Date %)]
@@ -93,5 +93,5 @@
 
 (defn default [field]
   [input/input* {:type "text"
-                 :value (str (select-keys field [:attribute/valueType :attribute/cardinality :attribute/isComponent]))
+                 :value (str (select-keys field [:valueType :cardinality :isComponent]))
                  :read-only true}])

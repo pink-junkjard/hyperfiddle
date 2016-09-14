@@ -4,9 +4,9 @@
 
 
 (defmethod auto-control/auto-control :default
-  [entity {{:keys [:attribute/valueType :attribute/cardinality :attribute/isComponent] :as field} :field :as widget-args}]
+  [entity {{:keys [:valueType :cardinality isComponent] :as field} :field :as widget-args}]
   (cond
-    ;(and (= valueType :boolean) (= cardinality :db.cardinality/one)) (widget/radio-ref entity widget-args)
+    ;(and (= valueType :boolean) (= cardinality :db.cardinality/one)) (widget/select-ref entity widget-args)
     (and (= valueType :keyword) (= cardinality :db.cardinality/one)) (widget/input-keyword entity widget-args)
     (and (= valueType :string) (= cardinality :db.cardinality/one)) (widget/input entity widget-args)
     (and (= valueType :code) (= cardinality :db.cardinality/one)) (widget/code-editor entity widget-args)

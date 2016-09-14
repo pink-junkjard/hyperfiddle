@@ -1,11 +1,11 @@
 (ns hypercrud.ui.table
   (:require [hypercrud.client.core :as hc]
-            [hypercrud.ui.form-util :as form-util]
+            [hypercrud.form.util :as form-util]
             [hypercrud.ui.table-cell :refer [render-table-cell]]))
 
 
 (defn thead [form]
-  (let [cols (map (fn [{:keys [:attribute/ident :field/prompt]}]
+  (let [cols (map (fn [{:keys [:ident :prompt]}]
                     [:td {:key ident} prompt])
                   form)
         select-col [:td {:key "select-col"}]
@@ -15,9 +15,10 @@
 
 
 (defn tr [graph forms form-id eid entity]
-  (let [cols (map (fn [{:keys [:attribute/ident] :as fieldinfo}]
+  (let [cols (map (fn [{:keys [:ident] :as field}]
                     [:td.truncate {:key ident}
-                     [render-table-cell (some-> entity (get ident)) fieldinfo {:graph graph :forms forms}]])
+                     ; todo pass down entity
+                     [render-table-cell (some-> entity (get ident)) field {:graph graph :forms forms}]])
                   (get forms form-id))]
     [:tr {:key eid}
      [:td {:key "edit-td"}
@@ -34,7 +35,7 @@
      [:tbody
       (let [entities (map #(hc/entity graph %) eids)
             ; hack todo we need sortkeys in our form construct
-            sortkey (->> (map :attribute/ident form)
+            sortkey (->> (map :ident form)
                          (filter #(-> % name (= "name")))
                          (first))]
         (->> (if sortkey

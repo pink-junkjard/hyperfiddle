@@ -1,22 +1,13 @@
 (ns hypercrud.ui.select
   (:require [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx-util]
+            [hypercrud.form.option :as option]
             [hypercrud.ui.form :as form]))
 
 
-(defn select-option
-  ":option :value and :on-change is a string, since that's how the dom works"
-  [graph label-prop eid]
-  (if (keyword? eid)
-    [:option {:value (str eid)} (name eid)]
-    [:option {:value (str eid)}
-     (str (get (hc/entity graph eid) label-prop))]))
-
 (defn select* [entity {:keys [expanded-cur forms graph stage-tx!]
-                       {:keys [:field/label-prop :field/form :attribute/ident]
-                        {[query args] :query/value} :field/query} :field}]
+                       {:keys [:ident :options]} :field}]
   (let [value (get entity ident)
-        option-eids (hc/select graph (hash query) query)
         temp-id! hc/*temp-id!*
         props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
                :value (cond
@@ -30,7 +21,7 @@
                                   eid (cond
                                         (= "" select-value) nil
                                         (= "create-new" select-value) (temp-id!)
-                                        :else-hc-select-option-node (js/parseInt select-value 10))]
+                                        :else-hc-select-option-node (option/parse-string options select-value))]
                               ;reset the cursor before change! otherwise npe when trying to render
                               ;todo these both set the same cursor, and should be atomic
                               (reset! expanded-cur (if (= "create-new" select-value) {} nil))
@@ -40,22 +31,22 @@
         create-new? (some-> value tx-util/tempid?)
         show-form? (or (not= nil @expanded-cur) create-new?)]
 
-    [:div.editable-select {:key (hash option-eids)}
-     (if (and form (not show-form?))
+    [:div.editable-select {:key (option/get-key options)}
+     (if (and (option/editable? options entity) (not show-form?))
        [:button {:on-click #(reset! expanded-cur {})
                  :disabled (= nil value)} "Edit"])
      [:span
-      [:select props (-> (->> (mapv #(hc/entity graph %) option-eids)
-                              (sort-by #(get % label-prop))
+      [:select props (-> (->> (option/get-option-records options graph entity)
+                              (sort-by #(get % (option/label-prop options)))
                               (mapv (fn [entity]
                                       (let [eid (:db/id entity)]
                                         ^{:key eid}
-                                        [select-option graph label-prop eid]))))
+                                        [:option {:value (option/to-string options entity)} (str (get entity (option/label-prop options)))]))))
                          (concat
-                           (if (not form)
-                             []                             ;can't create-new
-                             [[:option {:key :create-new :value "create-new"} "Create New"]])
+                           (if (option/create-new? options entity)
+                             [[:option {:key :create-new :value "create-new"} "Create New"]]
+                             [])
                            [[:option {:key :blank :value ""} "--"]]))]]
      (if show-form?
        ;; TODO branch the client in create-new case
-       [form/form graph value forms form expanded-cur stage-tx!])]))
+       [form/form graph value forms (option/get-form-id options entity) expanded-cur stage-tx!])]))

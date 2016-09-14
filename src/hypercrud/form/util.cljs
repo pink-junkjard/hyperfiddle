@@ -1,15 +1,9 @@
-(ns hypercrud.ui.form-util)
+(ns hypercrud.form.util
+  (:require [hypercrud.form.option :as option]))
 
 
-(defn field->option-query [field]
-  ; todo account for holes
-  (let [{{[query args] :query/value} :field/query} field
-        query-name (hash query)]
-    {query-name [query [] '[*]]}))
-
-
-(defn fieldref->form [forms field]
-  (get forms (get field :field/form)))
+(defn options->form [forms field-options]
+  (get forms (option/get-form-id field-options "todo")))
 
 
 (defn- deep-merge "recursively merges maps. if vals are not maps, will throw (which is a very particular
@@ -22,12 +16,12 @@ case that works for expanded-forms)"
 (declare form-queries)
 
 
-(defn field-pull-exp-entry [forms expanded-forms {:keys [:attribute/ident :attribute/cardinality :attribute/isComponent] :as field}]
+(defn field-pull-exp-entry [forms expanded-forms {:keys [:ident :cardinality :isComponent :options] :as field}]
   (let [new-expanded-forms (get expanded-forms ident)]
     (if (or new-expanded-forms isComponent)
       ; components render expanded automatically
       ; so if it is expanded or is a component, pull another level deeper
-      (let [form (fieldref->form forms field)]
+      (let [form (options->form forms options)]
         {ident (form-pull-exp forms form (condp = cardinality
                                            :db.cardinality/one new-expanded-forms
                                            :db.cardinality/many (apply deep-merge (vals new-expanded-forms))))})
@@ -43,18 +37,18 @@ case that works for expanded-forms)"
     (map (partial field-pull-exp-entry forms expanded-forms) form)))
 
 
-(defn field-queries [forms expanded-forms {:keys [:attribute/ident :attribute/cardinality :attribute/valueType :attribute/isComponent] :as field}]
+(defn field-queries [forms expanded-forms {:keys [:ident :cardinality :valueType :isComponent :options] :as field}]
   (merge
     (let [is-ref (= valueType :ref)]
       ; if we are a ref we ALWAYS need the query from the field options
       ; EXCEPT when we are component, in which case no options are rendered, just a form, handled below
-      (if (and is-ref (not isComponent)) (field->option-query field)))
+      (if (and is-ref (not isComponent)) (option/get-query options)))
 
     (let [new-expanded-forms (get expanded-forms ident)]
       ; components render expanded automatically
       ; so if it is expanded or is a component, get the queries for another level deeper
       (if (or new-expanded-forms isComponent)
-        (let [form (fieldref->form forms field)]
+        (let [form (options->form forms options)]
           (form-queries forms form (condp = cardinality
                                      :db.cardinality/one new-expanded-forms
                                      :db.cardinality/many (apply deep-merge (vals new-expanded-forms)))))))))

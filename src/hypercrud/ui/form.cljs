@@ -2,10 +2,10 @@
   (:require [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx-util]
-            [hypercrud.ui.form-util :as form-util]))
+            [hypercrud.form.util :as form-util]))
 
 
-(defn field [{:keys [:field/prompt] :as fieldinfo} graph entity forms expanded-cur stage-tx!]
+(defn field [{:keys [:prompt] :as fieldinfo} graph entity forms expanded-cur stage-tx!]
   [:div.field
    (if prompt [:label prompt])
    [auto-control entity {:expanded-cur expanded-cur
@@ -18,7 +18,7 @@
 (defn form [graph eid forms form-id expanded-cur stage-tx!]
   (let [entity (hc/entity graph eid)]
     [:div.form
-     (map (fn [{:keys [:attribute/ident] :as fieldinfo}]
+     (map (fn [{:keys [:ident] :as fieldinfo}]
             ^{:key ident}
             [field fieldinfo graph entity forms expanded-cur stage-tx!])
           (get forms form-id))]))
