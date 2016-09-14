@@ -41,7 +41,6 @@
         (->> (if sortkey
                (sort-by sortkey entities)
                entities)
-             (take 10)
              (map (fn [entity]
                     (let [eid (:db/id entity)]
                       ^{:key eid}
