@@ -1,64 +1,44 @@
 (ns hypercrud.ui.table-cell
-  (:require [hypercrud.client.core :as hc]
-            [hypercrud.form.option :as option]))
-
-(def ^:dynamic render-table-cell-dispatch
-  (fn [val field props]
-    (if (not (nil? val))
-      (select-keys field [:valueType :cardinality])
-      :default)))
+  (:require [clojure.string :as string]
+            [hypercrud.browser.base-64-url-safe :as base64]
+            [hypercrud.client.core :as hc]
+            [hypercrud.form.option :as option]
+            [hypercrud.ui.widget :as widget]))
 
 
-(defmulti render-table-cell render-table-cell-dispatch)
+(defn ellipsis
+  ([s] (ellipsis s 25))
+  ([s c] (if (> c (count s))
+           s
+           (str (subs s 0 (- c 3)) "..."))))
 
 
-(defmethod render-table-cell :default
-  [val _ _]
-  [:code {:key (pr-str val)} (pr-str val)])
+(defn ref-one [entity form-id widget-args]
+  (widget/select-ref entity widget-args))
 
 
-(defmethod render-table-cell {:valueType :string :cardinality :db.cardinality/one}
-  [val _ _]
-  [:span {:key (pr-str val)} val])
-
-
-(defmethod render-table-cell {:valueType :keyword :cardinality :db.cardinality/one}
-  [val _ _]
-  [:span {:key (pr-str val)} (name val)])
-
-
-(defmethod render-table-cell {:valueType :keyword :cardinality :db.cardinality/many}
-  [val _ _]
-  [:span {:key (pr-str val)} (interpose ", " (map name val))])
-
-
-(defmethod render-table-cell {:valueType :string :cardinality :db.cardinality/many}
-  [val field props]
-  [:span {:key (pr-str val)}
-   (->> val
-        (map #(render-table-cell % (assoc field :cardinality :db.cardinality/one) props))
-        (interpose ", "))])
-
-
-(defmethod render-table-cell {:valueType :ref :cardinality :db.cardinality/one}
-  [eid {:keys [:options]} {:keys [graph forms] :as props}]
+(defn ref-one-component [entity form-id {:keys [:graph] {:keys [:ident :options]} :field}]
   (let [label-prop (option/label-prop options)
-        form (option/get-form-id options "todo")]
-    ^{:key eid}                                             ;symmetric with primitive-in-set
-    [:a {:href (str "../../" form "/entity/" eid)}
-     (render-table-cell (get (hc/entity graph eid) label-prop)
-                        (first
-                          (filter #(= (:name %) label-prop)
-                                  (get forms form)))
-                        props)]))
+        eid (get entity ident)]
+    [:a {:href (str "../../" form-id "/entity/" (:db/id entity) "/" (base64/encode ident))}
+     (if eid
+       (ellipsis (get (hc/entity graph eid) label-prop))
+       "nil")]))
 
-(defmethod render-table-cell {:valueType :ref :cardinality :db.cardinality/many}
-  [val field props]
-  [:span {:key (pr-str val)}
-   (->> val
-        (map #(render-table-cell % (assoc field :cardinality :db.cardinality/one) props))
-        (interpose ", "))])
 
-(defmethod render-table-cell {:valueType :instant :cardinality :db.cardinality/one}
-  [val field props]
-  [:span {:key (pr-str val)} (.toUTCString val)])
+(defn ref-many [entity form-id {:keys [:graph] {:keys [:ident :options]} :field}]
+  (let [label-prop (option/label-prop options)]
+    [:a {:href (str "../../" form-id "/entity/" (:db/id entity) "/" (base64/encode ident))}
+     (->> (get entity ident)
+          (map (fn [eid]
+                 (if eid
+                   (get (hc/entity graph eid) label-prop)
+                   "nil")))
+          (string/join ", "))]))
+
+
+(defn other-many [entity form-id {:keys [:graph :field] {:keys [:ident :options]} :field}]
+  [:a {:href (str "../../" form-id "/entity/" (:db/id entity) "/" (base64/encode ident))}
+   (->> (get entity ident)
+        (map pr-str)                                        ;todo account for many different types of values
+        (string/join ", "))])

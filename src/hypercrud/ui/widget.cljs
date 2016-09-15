@@ -1,6 +1,5 @@
 (ns hypercrud.ui.widget
-  (:require [clojure.string :as string]
-            [hypercrud.client.core :as hc]
+  (:require [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx-util]
             [hypercrud.form.option :as option]
             [hypercrud.ui.auto-control :refer [auto-control]]
@@ -63,16 +62,20 @@
     (form/form graph value forms (option/get-form-id options entity) expanded-cur stage-tx!)))
 
 
-(defn table-many-ref [entity {:keys [forms graph] {:keys [:ident :options]} :field}]
-  (let [value (get entity ident)]
-    ; todo create
-    [table/table graph value forms (option/get-form-id options entity)]))
+(defn table-many-ref [entity {:keys [forms graph expanded-cur stage-tx!]
+                              {:keys [:ident :options]} :field}]
+  (let [value (get entity ident)
+        expanded-cur expanded-cur                           ;todo refine
+        ]
+    [table/table graph value forms (option/get-form-id options entity) expanded-cur stage-tx!]))
 
 
-(defn table-many-ref-component [entity {:keys [forms graph] {:keys [:ident :options]} :field}]
-  (let [value (get entity ident)]
-    ; todo create
-    [table/table graph value forms (option/get-form-id options entity)]))
+(defn table-many-ref-component [entity {:keys [forms graph expanded-cur stage-tx!]
+                                        {:keys [:ident :options]} :field}]
+  (let [value (get entity ident)
+        expanded-cur expanded-cur                           ;todo refine
+        ]
+    [table/table graph value forms (option/get-form-id options entity) expanded-cur stage-tx!]))
 
 
 (defn multi-select-ref [entity {:keys [stage-tx!] {:keys [:ident]} :field :as widget-args}]

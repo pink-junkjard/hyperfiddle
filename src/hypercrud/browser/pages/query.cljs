@@ -1,12 +1,20 @@
 (ns hypercrud.browser.pages.query
   (:require [hypercrud.ui.table :as table]
-            [hypercrud.client.core :as hc]))
+            [hypercrud.client.core :as hc]
+            [hypercrud.client.tx :as tx-util]))
 
 
-(defn ui [graph forms form-id]
-  [:div
-   [table/table graph (hc/select graph ::table/query) forms form-id]
-   [:a {:href (str "../entity/-1")} "Create"]])
+(defn ui [cur transact! graph forms form-id]
+  (let [local-statements (cur [:statements] [])
+        expanded-cur (cur [:expanded] {})
+        graph (hc/with graph @local-statements)
+        stage-tx! #(swap! local-statements tx-util/into-tx %)]
+    [:div
+     [table/table graph (hc/select graph ::table/query) forms form-id expanded-cur stage-tx!]
+     [:button {:key 1 :on-click #(transact! @local-statements)} "Save"]
+
+     ;todo just add row at bottom
+     [:a {:href (str "../entity/-1")} "Create"]]))
 
 
 (defn query [state query forms form-id]

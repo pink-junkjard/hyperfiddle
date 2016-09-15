@@ -1,7 +1,7 @@
 (ns hypercrud.ui.table
   (:require [hypercrud.client.core :as hc]
             [hypercrud.form.util :as form-util]
-            [hypercrud.ui.table-cell :refer [render-table-cell]]))
+            [hypercrud.ui.auto-control :refer [auto-table-cell]]))
 
 
 (defn thead [form]
@@ -14,22 +14,25 @@
      [:tr all-cols]]))
 
 
-(defn tr [graph forms form-id eid entity]
+(defn tr [graph forms form-id eid entity expanded-cur stage-tx!]
   (let [cols (map (fn [{:keys [:ident] :as field}]
                     [:td.truncate {:key ident}
-                     ; todo pass down entity
-                     [render-table-cell (some-> entity (get ident)) field {:graph graph :forms forms}]])
+                     [auto-table-cell entity form-id {:expanded-cur expanded-cur
+                                                      :field field
+                                                      :forms forms
+                                                      :graph graph
+                                                      :stage-tx! stage-tx!}]])
                   (get forms form-id))]
     [:tr {:key eid}
      [:td {:key "edit-td"}
-      [:a {:href (str "../entity/" eid)}
+      [:a {:href (str "../../" form-id "/entity/" eid)}
        "Edit"]]
      cols]))
 
 
-(defn table [graph eids forms form-id]
+(defn table [graph eids forms form-id expanded-cur stage-tx!]
   (let [form (get forms form-id)]
-    [:table.u-full-width
+    [:table
      [:colgroup [:col {:span "1" :style {:width "20px"}}]]
      (thead form)
      [:tbody
@@ -44,7 +47,7 @@
              (map (fn [entity]
                     (let [eid (:db/id entity)]
                       ^{:key eid}
-                      (tr graph forms form-id eid entity))))))]]))
+                      (tr graph forms form-id eid entity expanded-cur stage-tx!))))))]]))
 
 
 (defn query [q forms form-id expanded-forms]

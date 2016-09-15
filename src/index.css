@@ -40,14 +40,14 @@ input.invalid[type="text"] {
     display: inline-block;
 }
 
+.form {
+    margin-bottom: 2px;
+}
+
 .field > label {
     display: inline-block;
     width: 20%;
     vertical-align: top;
-}
-
-.form {
-    margin-bottom: 2px;
 }
 
 .field {
@@ -56,15 +56,16 @@ input.invalid[type="text"] {
 }
 
 .field > input,
-.field > textarea,
-.field > .editable-select {
+.field > textarea{
     width: 80%;
 }
 
-.editable-select,
-.editable-radio,
-.multi-select,
-.multi-select-comp {
+.field > table,
+.field > .code-editor,
+.field > .editable-select,
+.field > .editable-radio,
+.field > .multi-select,
+.field > .multi-select-comp {
     width: 80%;
     display: inline-block;
 }
@@ -117,4 +118,8 @@ input.invalid[type="text"] {
 .master-detail > ul > li.selected {
     font-weight: bold;
     text-decoration: underline;
+}
+
+table {
+    border-collapse: collapse;
 }
