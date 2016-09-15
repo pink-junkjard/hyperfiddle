@@ -11,6 +11,7 @@
             [hypercrud.ui.multi-select :refer [multi-select* multi-select-markup]]
             [hypercrud.ui.radio :as radio]
             [hypercrud.ui.select :refer [select*]]
+            [hypercrud.ui.table :as table]
             [hypercrud.ui.textarea :refer [textarea*]]
             [reagent.core :as r]))
 
@@ -60,6 +61,18 @@
                                     {:keys [:ident :options]} :field}]
   (let [value (get entity ident)]
     (form/form graph value forms (option/get-form-id options entity) expanded-cur stage-tx!)))
+
+
+(defn table-many-ref [entity {:keys [forms graph] {:keys [:ident :options]} :field}]
+  (let [value (get entity ident)]
+    ; todo create
+    [table/table graph value forms (option/get-form-id options entity)]))
+
+
+(defn table-many-ref-component [entity {:keys [forms graph] {:keys [:ident :options]} :field}]
+  (let [value (get entity ident)]
+    ; todo create
+    [table/table graph value forms (option/get-form-id options entity)]))
 
 
 (defn multi-select-ref [entity {:keys [stage-tx!] {:keys [:ident]} :field :as widget-args}]
