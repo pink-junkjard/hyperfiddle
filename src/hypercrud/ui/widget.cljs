@@ -8,6 +8,7 @@
             [hypercrud.ui.code-editor :refer [code-editor*]]
             [hypercrud.ui.form :as form]
             [hypercrud.ui.input :as input]
+            [hypercrud.ui.master-detail :refer [master-detail*]]
             [hypercrud.ui.multi-select :refer [multi-select* multi-select-markup]]
             [hypercrud.ui.radio :as radio]
             [hypercrud.ui.select :refer [select*]]
@@ -79,37 +80,15 @@
     [code-editor* value change!]))
 
 
-(defn- master-detail [entity {:keys [graph] {:keys [:ident :options]} :field :as widget-args}
-                      selected-id build-child]
-  (let [li (fn [eid label]
-             [:li {:key eid :class (if (= eid selected-id) "selected")}
-              (build-child eid label)])]
-    [:div.master-detail
-     [:ul (-> (map (fn [eid]
-                     (let [entity (hc/entity graph eid)]
-                       (li eid (get entity (option/label-prop options)))))
-                   (get entity ident))
-              (concat (if (option/create-new? options entity)
-                        (let [eid (if (tx-util/tempid? selected-id) selected-id (hc/*temp-id!*))]
-                          [(li eid "Create New")])
-                        [])))]
-     (let [new-args (-> widget-args
-                        (assoc-in [:field :cardinality] :db.cardinality/one))]
-       (if (nil? selected-id)
-         [:div "Select the " (string/capitalize (name ident))]
-         [auto-control (assoc entity ident selected-id) new-args]))]))
-
-
-(defn master-detail-url [entity widget-args]
-  (let [last-path-param (last (string/split (-> js/document .-location .-pathname) "/"))
-        selected-id (type-util/string->int last-path-param)]
-    (master-detail entity widget-args selected-id (fn [id label] [:a {:href (str "./" id)} label]))))
-
-
-(defn master-detail-state [entity widget-args]
-  (master-detail entity widget-args "todo"
-                 (fn [id label]
-                   [:a {:on-click #(.log js/console "todo wire up a state change")} label])))
+(comment
+  {:expanded
+   {17592186045559 {:project/form {17592186045554 {:form/field {:field/attribute {}}}}}
+    17592186045561 {:project/query {:query/form {}}}}})
+; todo needs work with state
+(defn master-detail [entity {:keys [expanded-cur] :as widget-args}]
+  (master-detail* entity widget-args @(expanded-cur [:selected-detail])
+                  (fn [id label]
+                    [:a {:on-click #(.log js/console "todo wire up a state change")} label])))
 
 
 (defn valid-date-str? [s]
