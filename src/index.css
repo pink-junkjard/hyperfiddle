@@ -113,3 +113,8 @@ input.invalid[type="text"] {
     width: 80%;
     float: left;
 }
+
+.master-detail > ul > li.selected {
+    font-weight: bold;
+    text-decoration: underline;
+}
