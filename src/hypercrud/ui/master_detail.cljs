@@ -6,19 +6,24 @@
             [hypercrud.ui.auto-control :refer [auto-control]]))
 
 
-(defn master-detail* [entity {:keys [graph] {:keys [:ident :options]} :field :as widget-args} selected-cur]
-  (let [li (fn [eid label]
-             [:li {:key eid :class (if (= eid @selected-cur) "selected")}
-              [:a {:href "#" :on-click #(reset! selected-cur eid)} label]])]
+(defn master-detail* [entity {:keys [graph stage-tx!] {:keys [:ident :options]} :field :as widget-args} selected-cur]
+  (let [temp-id! hc/*temp-id!*
+        li (fn [key label is-selected? on-click]
+             [:li {:key key :class (if is-selected? "selected")}
+              [:a {:href "#" :on-click on-click} label]])]
     [:div.master-detail
      [:ul (doall (-> (map (fn [eid]
                             (let [entity (hc/entity graph eid)]
-                              (li eid (get entity (option/label-prop options)))))
+                              (li eid
+                                  (get entity (option/label-prop options))
+                                  (= eid @selected-cur)
+                                  #(reset! selected-cur eid))))
                           (get entity ident))
                      (concat (if (option/create-new? options entity)
-                               ; todo this tempid shouldn't be created until after clicked
-                               (let [eid (if (tx-util/tempid? @selected-cur) @selected-cur (hc/*temp-id!*))]
-                                 [(li eid "Create New")])
+                               [(li "create-new" "Create New" false
+                                    #(let [eid (temp-id!)]
+                                      (stage-tx! (tx-util/edit-entity (:db/id entity) ident [] [eid]))
+                                      (reset! selected-cur eid)))]
                                []))))]
      (let [new-args (-> widget-args
                         (assoc-in [:field :cardinality] :db.cardinality/one))]
