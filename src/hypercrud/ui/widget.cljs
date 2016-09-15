@@ -1,7 +1,9 @@
 (ns hypercrud.ui.widget
-  (:require [hypercrud.client.core :as hc]
+  (:require [clojure.string :as string]
+            [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx-util]
             [hypercrud.form.option :as option]
+            [hypercrud.js.type-util :as type-util]
             [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.code-editor :refer [code-editor*]]
             [hypercrud.ui.form :as form]
@@ -75,6 +77,33 @@
         change! #(stage-tx! (tx-util/edit-entity (:db/id entity) ident %1 %2))]
     ^{:key ident}
     [code-editor* value change!]))
+
+
+(defn- master-detail [entity {:keys [expanded-cur forms graph stage-tx!] {:keys [:ident :options]} :field :as widget-args}
+                      selected-id build-child]
+  (let [value (get entity ident)]
+    [:div.master-detail
+     [:ul (map (fn [eid]
+                 (let [entity (hc/entity graph eid)]
+                   [:li {:key eid :class (if (= eid selected-id) "selected")} (build-child entity)]))
+               value)]
+     (let [new-args (-> widget-args
+                        (assoc-in [:field :cardinality] :db.cardinality/one))]
+       [auto-control (assoc entity ident selected-id) new-args])]))
+
+
+(defn master-detail-url [entity {{:keys [:options]} :field :as widget-args}]
+  (let [last-path-param (last (string/split (-> js/document .-location .-pathname) "/"))
+        selected-id (type-util/string->int last-path-param -1)]
+    (master-detail entity widget-args selected-id
+                   (fn [entity]
+                     [:a {:href (str "./" (:db/id entity))} (get entity (option/label-prop options))]))))
+
+
+(defn master-detail-state [entity {{:keys [:options]} :field :as widget-args}]
+  (master-detail entity widget-args "todo"
+                 (fn [entity]
+                   [:a {:on-click #(.log js/console "todo wire up a state change")} (get entity (option/label-prop options))])))
 
 
 (defn valid-date-str? [s]

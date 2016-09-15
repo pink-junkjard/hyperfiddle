@@ -100,3 +100,16 @@ input.invalid[type="text"] {
     width: auto;
     display: inline-block;
 }
+
+.master-detail > ul {
+    width: 20%;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+    float: left;
+}
+
+.master-detail > div {
+    width: 80%;
+    float: left;
+}
