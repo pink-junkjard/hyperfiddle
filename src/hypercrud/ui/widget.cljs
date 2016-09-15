@@ -3,7 +3,6 @@
             [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx-util]
             [hypercrud.form.option :as option]
-            [hypercrud.js.type-util :as type-util]
             [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.code-editor :refer [code-editor*]]
             [hypercrud.ui.form :as form]
@@ -12,7 +11,8 @@
             [hypercrud.ui.multi-select :refer [multi-select* multi-select-markup]]
             [hypercrud.ui.radio :as radio]
             [hypercrud.ui.select :refer [select*]]
-            [hypercrud.ui.textarea :refer [textarea*]]))
+            [hypercrud.ui.textarea :refer [textarea*]]
+            [reagent.core :as r]))
 
 
 (defn input-keyword [entity {:keys [stage-tx!] {:keys [:ident]} :field}]
@@ -84,11 +84,11 @@
   {:expanded
    {17592186045559 {:project/form {17592186045554 {:form/field {:field/attribute {}}}}}
     17592186045561 {:project/query {:query/form {}}}}})
-; todo needs work with state
+; todo needs work with expanded-cur
 (defn master-detail [entity {:keys [expanded-cur] :as widget-args}]
-  (master-detail* entity widget-args @(expanded-cur [:selected-detail])
-                  (fn [id label]
-                    [:a {:on-click #(.log js/console "todo wire up a state change")} label])))
+  (let [selected-atom (r/atom nil)]
+    (fn [entity widget-args]
+      (master-detail* entity widget-args selected-atom))))
 
 
 (defn valid-date-str? [s]
