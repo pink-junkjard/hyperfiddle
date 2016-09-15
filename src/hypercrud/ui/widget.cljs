@@ -79,31 +79,37 @@
     [code-editor* value change!]))
 
 
-(defn- master-detail [entity {:keys [expanded-cur forms graph stage-tx!] {:keys [:ident :options]} :field :as widget-args}
+(defn- master-detail [entity {:keys [graph] {:keys [:ident :options]} :field :as widget-args}
                       selected-id build-child]
-  (let [value (get entity ident)]
+  (let [li (fn [eid label]
+             [:li {:key eid :class (if (= eid selected-id) "selected")}
+              (build-child eid label)])]
     [:div.master-detail
-     [:ul (map (fn [eid]
-                 (let [entity (hc/entity graph eid)]
-                   [:li {:key eid :class (if (= eid selected-id) "selected")} (build-child entity)]))
-               value)]
+     [:ul (-> (map (fn [eid]
+                     (let [entity (hc/entity graph eid)]
+                       (li eid (get entity (option/label-prop options)))))
+                   (get entity ident))
+              (concat (if (option/create-new? options entity)
+                        (let [eid (if (tx-util/tempid? selected-id) selected-id (hc/*temp-id!*))]
+                          [(li eid "Create New")])
+                        [])))]
      (let [new-args (-> widget-args
                         (assoc-in [:field :cardinality] :db.cardinality/one))]
-       [auto-control (assoc entity ident selected-id) new-args])]))
+       (if (nil? selected-id)
+         [:div "Select the " (string/capitalize (name ident))]
+         [auto-control (assoc entity ident selected-id) new-args]))]))
 
 
-(defn master-detail-url [entity {{:keys [:options]} :field :as widget-args}]
+(defn master-detail-url [entity widget-args]
   (let [last-path-param (last (string/split (-> js/document .-location .-pathname) "/"))
-        selected-id (type-util/string->int last-path-param -1)]
-    (master-detail entity widget-args selected-id
-                   (fn [entity]
-                     [:a {:href (str "./" (:db/id entity))} (get entity (option/label-prop options))]))))
+        selected-id (type-util/string->int last-path-param)]
+    (master-detail entity widget-args selected-id (fn [id label] [:a {:href (str "./" id)} label]))))
 
 
-(defn master-detail-state [entity {{:keys [:options]} :field :as widget-args}]
+(defn master-detail-state [entity widget-args]
   (master-detail entity widget-args "todo"
-                 (fn [entity]
-                   [:a {:on-click #(.log js/console "todo wire up a state change")} (get entity (option/label-prop options))])))
+                 (fn [id label]
+                   [:a {:on-click #(.log js/console "todo wire up a state change")} label])))
 
 
 (defn valid-date-str? [s]
