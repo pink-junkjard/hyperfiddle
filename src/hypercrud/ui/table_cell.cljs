@@ -3,7 +3,7 @@
             [hypercrud.browser.base-64-url-safe :as base64]
             [hypercrud.client.core :as hc]
             [hypercrud.form.option :as option]
-            [hypercrud.ui.widget :as widget]))
+            [hypercrud.ui.select :as select]))
 
 
 (defn ellipsis
@@ -13,8 +13,11 @@
            (str (subs s 0 (- c 3)) "..."))))
 
 
-(defn ref-one [entity form-id widget-args]
-  (widget/select-ref entity widget-args))
+(defn ref-one [entity form-id {:keys [expanded-cur] {:keys [:ident :options]} :field :as widget-args}]
+  (select/select*
+    entity (assoc widget-args :expanded-cur (expanded-cur [ident]))
+    (let [href (str "../../" (option/get-form-id options entity) "/entity/" (get entity ident))]
+      [:a {:href href} "Edit"])))
 
 
 (defn ref-one-component [entity form-id {:keys [:graph] {:keys [:ident :options]} :field}]

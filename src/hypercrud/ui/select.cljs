@@ -6,7 +6,7 @@
 
 
 (defn select* [entity {:keys [expanded-cur forms graph stage-tx!]
-                       {:keys [:ident :options]} :field}]
+                       {:keys [:ident :options]} :field} edit-element]
   (let [value (get entity ident)
         temp-id! hc/*temp-id!*
         props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
@@ -33,8 +33,7 @@
 
     [:div.editable-select {:key (option/get-key options)}
      (if (and (option/editable? options entity) (not show-form?))
-       [:button {:on-click #(reset! expanded-cur {})
-                 :disabled (= nil value)} "Edit"])
+       edit-element)
      [:span
       [:select props (-> (->> (option/get-option-records options graph entity)
                               (sort-by #(get % (option/label-prop options)))

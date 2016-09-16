@@ -28,8 +28,7 @@
                   eid (js/parseInt eid 10)
                   field-ident (keyword (subs (base64/decode field-ident) 1))
                   form (get forms form-id)
-                  field (first (filter #(= (:ident %) field-ident) form))
-                  _ (.log js/console (pr-str field-ident))]
+                  field (first (filter #(= (:ident %) field-ident) form))]
               (field/ui field cur transact! graph eid forms)))
 
         (and (= (first path-params) "") (= 1 (count path-params)))

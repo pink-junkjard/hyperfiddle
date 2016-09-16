@@ -53,7 +53,10 @@
 
 (defn select-ref [entity {:keys [expanded-cur] {:keys [:ident]} :field :as widget-args}]
   ;;select* has parameterized markup fn todo
-  [select* entity (assoc widget-args :expanded-cur (expanded-cur [ident]))])
+  (let [expanded-cur (expanded-cur [ident])]
+    [select* entity (assoc widget-args :expanded-cur expanded-cur)
+     [:button {:on-click #(reset! expanded-cur {})
+               :disabled (= nil (get entity ident))} "Edit"]]))
 
 
 (defn select-ref-component [entity {:keys [expanded-cur forms graph stage-tx!]

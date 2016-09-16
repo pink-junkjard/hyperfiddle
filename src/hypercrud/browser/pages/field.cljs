@@ -6,7 +6,6 @@
 
 
 (defn ui [field cur transact! graph eid forms]
-  (.log js/console (pr-str field))
   (let [local-statements (cur [:statements] [])
         expanded-cur (cur [:expanded] {})
         graph (hc/with graph @local-statements)
