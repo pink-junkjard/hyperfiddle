@@ -1,7 +1,8 @@
 (ns hypercrud.browser.pages.field
   (:require [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx-util]
-            [hypercrud.ui.form :as form]))
+            [hypercrud.ui.form :as form]
+            [hypercrud.ui.auto-control :refer [auto-control]]))
 
 
 (defn ui [field cur transact! graph eid forms]
@@ -11,7 +12,11 @@
         graph (hc/with graph @local-statements)
         stage-tx! #(swap! local-statements tx-util/into-tx %)]
     [:div
-     [form/field field graph (hc/entity graph eid) forms expanded-cur stage-tx!]
+     [auto-control (hc/entity graph eid) {:expanded-cur expanded-cur
+                                          :field field
+                                          :forms forms
+                                          :graph graph
+                                          :stage-tx! stage-tx!}]
      [:button {:on-click #(transact! @local-statements)
                :disabled (empty? @local-statements)}
       "Update"]]))

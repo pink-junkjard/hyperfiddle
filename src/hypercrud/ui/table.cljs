@@ -32,7 +32,7 @@
 
 (defn table [graph eids forms form-id expanded-cur stage-tx!]
   (let [form (get forms form-id)]
-    [:table
+    [:table.hc-table
      [:colgroup [:col {:span "1" :style {:width "20px"}}]]
      (thead form)
      [:tbody
