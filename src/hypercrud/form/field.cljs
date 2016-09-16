@@ -28,9 +28,8 @@
 (defn field
   ([{:keys [:field/prompt :field/label-prop :field/form :field/query] :as db-field}
     {:keys [:attribute/ident :attribute/valueType :attribute/cardinality :attribute/isComponent] :as db-attribute}]
-   (->Field prompt ident (convert-valueType valueType) cardinality isComponent {:label-prop label-prop
-                                                                                :form form
-                                                                                :query query}))
-
+   (->Field prompt ident (convert-valueType valueType) cardinality isComponent (option/gimme-useful-options {:label-prop label-prop
+                                                                                                             :form form
+                                                                                                             :query (:query/value query)})))
   ([{:keys [prompt ident valueType cardinality isComponent options]}]
    (->Field prompt ident valueType cardinality isComponent (option/gimme-useful-options options))))
