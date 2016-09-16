@@ -34,7 +34,7 @@
     [:div.editable-select {:key (option/get-key options)}
      (if (and (option/editable? options entity) (not show-form?))
        edit-element)
-     [:span
+     [:span.select
       [:select props (-> (->> (option/get-option-records options graph entity)
                               (sort-by #(get % (option/label-prop options)))
                               (mapv (fn [entity]

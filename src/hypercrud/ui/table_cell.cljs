@@ -17,7 +17,8 @@
   (select/select*
     entity (assoc widget-args :expanded-cur (expanded-cur [ident]))
     (let [href (str "../../" (option/get-form-id options entity) "/entity/" (get entity ident))]
-      [:a {:href href} "Edit"])))
+      (if (not (nil? (get entity ident)))
+        [:a.edit {:href href} "Edit"]))))
 
 
 (defn ref-one-component [entity form-id {:keys [:graph] {:keys [:ident :options]} :field}]

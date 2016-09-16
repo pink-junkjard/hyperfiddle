@@ -76,12 +76,12 @@ input.invalid[type="text"] {
     display: inline-block;
 }
 
-.editable-select > span {
+.editable-select > .select {
     display: block;
     overflow: hidden;
     padding-right: 10px;
 }
-.editable-select > button {
+.editable-select > .edit {
     float: right;
 }
 
