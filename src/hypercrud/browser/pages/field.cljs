@@ -10,7 +10,7 @@
         graph (hc/with graph @local-statements)
         stage-tx! #(swap! local-statements tx-util/into-tx %)]
     [:div
-     [auto-control (hc/entity graph eid) {:expanded-cur (cur [:expanded] {})
+     [auto-control (hc/entity graph eid) {:expanded-cur (cur [:expanded (:ident field)] {})
                                           :field field
                                           :forms forms
                                           :graph graph
