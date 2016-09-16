@@ -4,15 +4,10 @@
             [hypercrud.client.tx :as tx-util]
             [hypercrud.form.util :as form-util]))
 
-
-(defn field [{:keys [:prompt] :as fieldinfo} graph entity forms expanded-cur stage-tx!]
+(defn field [entity {{:keys [:prompt]} :field :as widget-args}]
   [:div.field
    (if prompt [:label prompt])
-   [auto-control entity {:expanded-cur expanded-cur
-                         :field fieldinfo
-                         :forms forms
-                         :graph graph
-                         :stage-tx! stage-tx!}]])
+   [auto-control entity widget-args]])
 
 
 (defn form [graph eid forms form-id expanded-cur stage-tx!]
@@ -20,7 +15,11 @@
     [:div.form
      (map (fn [{:keys [:ident] :as fieldinfo}]
             ^{:key ident}
-            [field fieldinfo graph entity forms expanded-cur stage-tx!])
+            [field entity {:expanded-cur expanded-cur
+                           :field fieldinfo
+                           :forms forms
+                           :graph graph
+                           :stage-tx! stage-tx!}])
           (get forms form-id))]))
 
 
