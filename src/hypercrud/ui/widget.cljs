@@ -53,24 +53,15 @@
 
 (defn select-ref [entity {:keys [expanded-cur] {:keys [:ident]} :field :as widget-args}]
   ;;select* has parameterized markup fn todo
-  (let [expanded-cur (expanded-cur [ident])]
-    [select* entity (assoc widget-args :expanded-cur expanded-cur)
-     [:button.edit {:on-click #(reset! expanded-cur {})
-                    :disabled (nil? (get entity ident))} "Edit"]]))
+  [select* entity (assoc widget-args :expanded-cur expanded-cur)
+   [:button.edit {:on-click #(reset! expanded-cur {})
+                  :disabled (nil? (get entity ident))} "Edit"]])
 
 
 (defn select-ref-component [entity {:keys [expanded-cur forms graph stage-tx!]
                                     {:keys [:ident :options]} :field}]
   (let [value (get entity ident)]
     (form/form graph value forms (option/get-form-id options entity) expanded-cur stage-tx!)))
-
-
-(defn table-many-ref [entity {:keys [forms graph expanded-cur stage-tx!]
-                              {:keys [:ident :options]} :field}]
-  (let [value (get entity ident)
-        expanded-cur expanded-cur                           ;todo refine
-        ]
-    [table/table graph value forms (option/get-form-id options entity) expanded-cur stage-tx!]))
 
 
 (defn table-many-ref-component [entity {:keys [forms graph expanded-cur stage-tx!]

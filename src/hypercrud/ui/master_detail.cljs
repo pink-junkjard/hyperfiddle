@@ -26,6 +26,7 @@
                                       (reset! selected-cur eid)))]
                                []))))]
      (let [new-args (-> widget-args
+                        (update :expanded-cur #(% [(:db/id entity)]))
                         (assoc-in [:field :cardinality] :db.cardinality/one))]
        (if (nil? @selected-cur)
          [:div "Select the " (string/capitalize (name ident))]

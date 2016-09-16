@@ -47,7 +47,7 @@
              (map (fn [entity]
                     (let [eid (:db/id entity)]
                       ^{:key eid}
-                      (tr graph forms form-id eid entity expanded-cur stage-tx!))))))]]))
+                      (tr graph forms form-id eid entity (expanded-cur [eid]) stage-tx!))))))]]))
 
 
 (defn query [q forms form-id expanded-forms]

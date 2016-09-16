@@ -15,7 +15,7 @@
     [:div.form
      (map (fn [{:keys [:ident] :as fieldinfo}]
             ^{:key ident}
-            [field entity {:expanded-cur expanded-cur
+            [field entity {:expanded-cur (expanded-cur [ident])
                            :field fieldinfo
                            :forms forms
                            :graph graph

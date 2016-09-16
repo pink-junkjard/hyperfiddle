@@ -12,7 +12,7 @@
                                     (let [click-remove! #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [eid] nil))
                                           new-args (-> widget-args
                                                        (assoc-in [:field :cardinality] :db.cardinality/one)
-                                                       (update :expanded-cur #(% [eid ident] {})))
+                                                       (update :expanded-cur #(% [eid])))
                                           control [auto-control (assoc entity ident eid) new-args]]
                                       [eid click-remove! control]))
                                   value))]
