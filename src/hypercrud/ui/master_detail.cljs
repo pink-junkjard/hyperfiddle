@@ -10,6 +10,7 @@
   (let [temp-id! hc/*temp-id!*
         li (fn [key label is-selected? on-click]
              [:li {:key key :class (if is-selected? "selected")}
+              ; todo should use navigate-cmp?
               [:a {:href "#" :on-click on-click} label]])]
     [:div.master-detail
      [:ul (doall (-> (map (fn [eid]

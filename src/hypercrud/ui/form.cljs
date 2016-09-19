@@ -10,7 +10,7 @@
    [auto-control entity widget-args]])
 
 
-(defn form [graph eid forms form-id expanded-cur stage-tx!]
+(defn form [graph eid forms form-id expanded-cur stage-tx! navigate-cmp]
   (let [entity (hc/entity graph eid)]
     [:div.form
      (map (fn [{:keys [:ident] :as fieldinfo}]
@@ -19,6 +19,7 @@
                            :field fieldinfo
                            :forms forms
                            :graph graph
+                           :navigate-cmp navigate-cmp
                            :stage-tx! stage-tx!}])
           (get forms form-id))]))
 

@@ -13,26 +13,26 @@
            (str (subs s 0 (- c 3)) "..."))))
 
 
-(defn ref-one [entity form-id {:keys [expanded-cur] {:keys [:ident :options]} :field :as widget-args}]
+(defn ref-one [entity form-id {:keys [expanded-cur navigate-cmp] {:keys [ident options]} :field :as widget-args}]
   (select/select*
     entity (assoc widget-args :expanded-cur (expanded-cur [ident]))
-    (let [href (str "../../" (option/get-form-id options entity) "/entity/" (get entity ident))]
+    (let [href (str (option/get-form-id options entity) "/entity/" (get entity ident))]
       (if (not (nil? (get entity ident)))
-        [:a.edit {:href href} "Edit"]))))
+        [navigate-cmp {:class "edit" :href href} "Edit"]))))
 
 
-(defn ref-one-component [entity form-id {:keys [:graph] {:keys [:ident :options]} :field}]
+(defn ref-one-component [entity form-id {:keys [graph navigate-cmp] {:keys [ident options]} :field}]
   (let [label-prop (option/label-prop options)
         eid (get entity ident)]
-    [:a {:href (str "../../" form-id "/entity/" (:db/id entity) "/" (base64/encode ident))}
+    [navigate-cmp {:href (str form-id "/entity/" (:db/id entity) "/" (base64/encode ident))}
      (if eid
        (ellipsis (get (hc/entity graph eid) label-prop))
        "nil")]))
 
 
-(defn ref-many [entity form-id {:keys [:graph] {:keys [:ident :options]} :field}]
+(defn ref-many [entity form-id {:keys [graph navigate-cmp] {:keys [ident options]} :field}]
   (let [label-prop (option/label-prop options)]
-    [:a {:href (str "../../" form-id "/entity/" (:db/id entity) "/" (base64/encode ident))}
+    [navigate-cmp {:href (str form-id "/entity/" (:db/id entity) "/" (base64/encode ident))}
      (->> (get entity ident)
           (map (fn [eid]
                  (if eid
@@ -41,8 +41,8 @@
           (string/join ", "))]))
 
 
-(defn other-many [entity form-id {:keys [:graph :field] {:keys [:ident :options]} :field}]
-  [:a {:href (str "../../" form-id "/entity/" (:db/id entity) "/" (base64/encode ident))}
+(defn other-many [entity form-id {:keys [navigate-cmp] {:keys [ident]} :field}]
+  [navigate-cmp {:href (str form-id "/entity/" (:db/id entity) "/" (base64/encode ident))}
    (->> (get entity ident)
         (map pr-str)                                        ;todo account for many different types of values
         (string/join ", "))])

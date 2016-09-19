@@ -5,7 +5,7 @@
             [hypercrud.ui.form :as form]))
 
 
-(defn select* [entity {:keys [expanded-cur forms graph stage-tx!]
+(defn select* [entity {:keys [expanded-cur forms graph navigate-cmp stage-tx!]
                        {:keys [:ident :options]} :field} edit-element]
   (let [value (get entity ident)
         temp-id! hc/*temp-id!*
@@ -48,4 +48,4 @@
                            [[:option {:key :blank :value ""} "--"]]))]]
      (if show-form?
        ;; TODO branch the client in create-new case
-       [form/form graph value forms (option/get-form-id options entity) expanded-cur stage-tx!])]))
+       [form/form graph value forms (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp])]))

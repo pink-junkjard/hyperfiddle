@@ -58,18 +58,18 @@
                   :disabled (nil? (get entity ident))} "Edit"]])
 
 
-(defn select-ref-component [entity {:keys [expanded-cur forms graph stage-tx!]
+(defn select-ref-component [entity {:keys [expanded-cur forms graph navigate-cmp stage-tx!]
                                     {:keys [:ident :options]} :field}]
   (let [value (get entity ident)]
-    (form/form graph value forms (option/get-form-id options entity) expanded-cur stage-tx!)))
+    (form/form graph value forms (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp)))
 
 
-(defn table-many-ref-component [entity {:keys [forms graph expanded-cur stage-tx!]
-                                        {:keys [:ident :options]} :field}]
+(defn table-many-ref-component [entity {:keys [forms graph expanded-cur navigate-cmp stage-tx!]
+                                        {:keys [ident options]} :field}]
   (let [value (get entity ident)
         expanded-cur expanded-cur                           ;todo refine
         ]
-    [table/table graph value forms (option/get-form-id options entity) expanded-cur stage-tx!]))
+    [table/table graph value forms (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp]))
 
 
 (defn multi-select-ref [entity {:keys [stage-tx!] {:keys [:ident]} :field :as widget-args}]

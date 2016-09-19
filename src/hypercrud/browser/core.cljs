@@ -8,31 +8,31 @@
             [hypercrud.browser.pages.query :as query]))
 
 
-(defn ui [cur transact! graph forms queries page-rel-path navigate!]
+(defn ui [cur transact! graph forms queries page-rel-path navigate! navigate-cmp]
   [:div
    [:div.hc-node-view
     (let [path-params (string/split page-rel-path "/")]
       (cond
         (and (= (second path-params) "query") (= 3 (count path-params)))
         (let [[form-id _ q] path-params]
-          (query/ui cur transact! graph forms (js/parseInt form-id 10)))
+          (query/ui cur transact! graph forms (js/parseInt form-id 10) navigate-cmp))
 
         (and (= (second path-params) "entity"))
         (condp = (count path-params)
           3 (let [[form-id _ eid] path-params
                   form-id (js/parseInt form-id 10)
                   eid (js/parseInt eid 10)]
-              (entity/ui cur transact! graph eid forms form-id navigate!))
+              (entity/ui cur transact! graph eid forms form-id navigate! navigate-cmp))
           4 (let [[form-id _ eid field-ident] path-params
                   form-id (js/parseInt form-id 10)
                   eid (js/parseInt eid 10)
                   field-ident (keyword (subs (base64/decode field-ident) 1))
                   form (get forms form-id)
                   field (first (filter #(= (:ident %) field-ident) form))]
-              (field/ui field cur transact! graph eid forms)))
+              (field/ui field cur transact! graph eid forms navigate-cmp)))
 
         (and (= (first path-params) "") (= 1 (count path-params)))
-        (index/ui queries)
+        (index/ui queries navigate-cmp)
         :else [:div "no route for: " page-rel-path]
         ))]
    [:hr]

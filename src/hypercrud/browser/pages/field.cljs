@@ -5,7 +5,7 @@
             [hypercrud.ui.auto-control :refer [auto-control]]))
 
 
-(defn ui [field cur transact! graph eid forms]
+(defn ui [field cur transact! graph eid forms navigate-cmp]
   (let [local-statements (cur [:statements] [])
         graph (hc/with graph @local-statements)
         stage-tx! #(swap! local-statements tx-util/into-tx %)]
@@ -14,6 +14,7 @@
                                           :field field
                                           :forms forms
                                           :graph graph
+                                          :navigate-cmp navigate-cmp
                                           :stage-tx! stage-tx!}]
      [:button {:on-click #(transact! @local-statements)
                :disabled (empty? @local-statements)}

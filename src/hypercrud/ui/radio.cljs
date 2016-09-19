@@ -32,7 +32,7 @@
 ;       [radio-option "--" form-name #(change! nil) (= nil value)])])
 
 
-(defn radio-ref* [entity {:keys [expanded-cur forms graph stage-tx!]
+(defn radio-ref* [entity {:keys [expanded-cur forms graph navigate-cmp stage-tx!]
                           {:keys [:options :ident]} :field}]
   ; TODO only one radio-group on the page until we get a unique form-name
   (let [value (get entity ident)
@@ -62,7 +62,7 @@
      [radio-option "--" form-name #(change! nil) (= nil value)]
      (if show-form?
        ;; TODO branch the client in create-new case
-       [form/form graph value forms form-id expanded-cur stage-tx!])]
+       [form/form graph value forms form-id expanded-cur stage-tx! navigate-cmp])]
 
     ;todo how should editing existing entries work?
     #_[:div.editable-select {:key (hash option-eids)}
