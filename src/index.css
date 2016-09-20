@@ -41,8 +41,15 @@ input.invalid[type="text"] {
 }
 
 .hc-table {
-    border-collapse: separate;
-    border-spacing: 0 2px;
+    border-collapse: collapse;
+}
+
+.hc-table thead td {
+    background-color: #dbdbdb;
+}
+
+.hc-table td {
+    border: 1px solid #a8a8a8;
 }
 
 .form {
@@ -50,9 +57,12 @@ input.invalid[type="text"] {
 }
 
 .field,
-.hc-table tbody td:first-child {
-    padding-left: 10px;
+.hc-table tbody td:first-child a {
     border-left: 5px solid #428bca;
+}
+
+.field {
+    padding-left: 10px;
 }
 
 .field > label {
