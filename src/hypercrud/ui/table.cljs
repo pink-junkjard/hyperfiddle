@@ -4,51 +4,49 @@
             [hypercrud.ui.auto-control :refer [auto-table-cell]]))
 
 
-(defn thead [form]
-  (let [cols (map (fn [{:keys [:ident :prompt]}]
-                    [:td {:key ident} prompt])
-                  form)
-        select-col [:td {:key "select-col"}]
-        all-cols (conj cols select-col)]
-    [:thead
-     [:tr all-cols]]))
+(defn build-col-heads [form]
+  (map (fn [{:keys [:ident :prompt]}]
+         [:td {:key ident} prompt])
+       form))
 
 
-(defn tr [graph forms form-id eid entity expanded-cur stage-tx! navigate-cmp row-num]
-  (let [cols (map (fn [{:keys [:ident] :as field}]
-                    [:td.truncate {:key ident}
-                     [auto-table-cell entity form-id {:expanded-cur expanded-cur
-                                                      :field field
-                                                      :forms forms
-                                                      :graph graph
-                                                      :navigate-cmp navigate-cmp
-                                                      :stage-tx! stage-tx!}]])
-                  (get forms form-id))]
-    [:tr {:key eid}
-     [:td {:key "edit-td"}
-      [navigate-cmp {:href (str form-id "/entity/" eid)}
-       row-num]]
-     cols]))
+(defn build-row-cells [form-id entity {:keys [forms] :as fieldless-widget-args}]
+  (map (fn [{:keys [ident] :as field}]
+         [:td.truncate {:key ident}
+          [auto-table-cell entity form-id (-> fieldless-widget-args
+                                              (update :expanded-cur #(% [ident]))
+                                              (assoc :field field))]])
+       (get forms form-id)))
 
 
-(defn table [graph eids forms form-id expanded-cur stage-tx! navigate-cmp]
+(defn table [graph eids forms form-id expanded-cur stage-tx! navigate-cmp retract-entity]
   (let [form (get forms form-id)]
-    [:table.hc-table
+    [:table.ui-table
      [:colgroup [:col {:span "1" :style {:width "20px"}}]]
-     (thead form)
+     [:thead
+      [:tr
+       (if retract-entity [:td.remove-row {:key "remove-col"}])
+       [:td {:key "select-col"}]
+       (build-col-heads form)]]
      [:tbody
       (let [entities (map #(hc/entity graph %) eids)
             ; hack todo we need sortkeys in our form construct
             sortkey (->> (map :ident form)
                          (filter #(-> % name (= "name")))
                          (first))]
-        (->> (if sortkey
-               (sort-by sortkey entities)
-               entities)
-             (map-indexed (fn [row-num entity]
-                            (let [eid (:db/id entity)]
-                              ^{:key eid}
-                              (tr graph forms form-id eid entity (expanded-cur [eid]) stage-tx! navigate-cmp (inc row-num)))))))]]))
+        (->> (if sortkey (sort-by sortkey entities) entities)
+             (map (fn [{:keys [:db/id] :as entity}]
+                    [:tr {:key id}
+                     (if retract-entity
+                       [:td.remove-row {:key "remove"}
+                        [:button {:on-click #(retract-entity id)} "⌦"]])
+                     [:td.id {:key "edit-td"}
+                      [navigate-cmp {:href (str form-id "/entity/" id)} (if (neg? id) id (mod id 100))]]
+                     (build-row-cells form-id entity {:expanded-cur (expanded-cur [id])
+                                                      :forms forms
+                                                      :graph graph
+                                                      :navigate-cmp navigate-cmp
+                                                      :stage-tx! stage-tx!})]))))]]))
 
 
 (defn query [q forms form-id expanded-forms]

@@ -36,19 +36,24 @@ input.invalid[type="text"] {
     display: inline-block;
 }
 
-.hc-table {
+.ui-table {
     border-collapse: collapse;
 }
 
-.hc-table thead td {
+.ui-table thead td {
     background-color: #dbdbdb;
 }
 
-.hc-table td {
+.ui-table td {
     border: 1px solid #a8a8a8;
 }
 
-.hc-table tbody td:first-child {
+.ui-table td.remove-row {
+    border: none;
+    background-color: inherit;
+}
+
+.ui-table tbody td.id {
     background-color: #dbdbdb;
     text-align: center;
 }
@@ -57,12 +62,8 @@ input.invalid[type="text"] {
     margin-bottom: 2px;
 }
 
-.field/*,
-.hc-table tbody td:first-child a */{
-    border-left: 5px solid #428bca;
-}
-
 .field {
+    border-left: 5px solid #428bca;
     padding-left: 10px;
 }
 

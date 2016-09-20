@@ -10,7 +10,7 @@
         graph (hc/with graph @local-statements)
         stage-tx! #(swap! local-statements tx-util/into-tx %)]
     [:div
-     [table/table graph (hc/select graph ::table/query) forms form-id expanded-cur stage-tx! navigate-cmp]
+     [table/table graph (hc/select graph ::table/query) forms form-id expanded-cur stage-tx! navigate-cmp nil]
      [:button {:key 1 :on-click #(transact! @local-statements)} "Save"]
 
      ;todo just add row at bottom
