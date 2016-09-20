@@ -14,7 +14,7 @@
      [:tr all-cols]]))
 
 
-(defn tr [graph forms form-id eid entity expanded-cur stage-tx! navigate-cmp]
+(defn tr [graph forms form-id eid entity expanded-cur stage-tx! navigate-cmp row-num]
   (let [cols (map (fn [{:keys [:ident] :as field}]
                     [:td.truncate {:key ident}
                      [auto-table-cell entity form-id {:expanded-cur expanded-cur
@@ -27,7 +27,7 @@
     [:tr {:key eid}
      [:td {:key "edit-td"}
       [navigate-cmp {:href (str form-id "/entity/" eid)}
-       "Edit"]]
+       row-num]]
      cols]))
 
 
@@ -45,10 +45,10 @@
         (->> (if sortkey
                (sort-by sortkey entities)
                entities)
-             (map (fn [entity]
-                    (let [eid (:db/id entity)]
-                      ^{:key eid}
-                      (tr graph forms form-id eid entity (expanded-cur [eid]) stage-tx! navigate-cmp))))))]]))
+             (map-indexed (fn [row-num entity]
+                            (let [eid (:db/id entity)]
+                              ^{:key eid}
+                              (tr graph forms form-id eid entity (expanded-cur [eid]) stage-tx! navigate-cmp (inc row-num)))))))]]))
 
 
 (defn query [q forms form-id expanded-forms]
