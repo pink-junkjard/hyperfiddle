@@ -108,6 +108,10 @@ input.invalid[type="text"] {
     display: inline-block;
 }
 
+td > .radio-boolean > .radio-group {
+    display: inline-block;
+}
+
 .master-detail > ul {
     width: 20%;
     padding: 0;

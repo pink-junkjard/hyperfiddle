@@ -5,6 +5,24 @@
             [hypercrud.ui.form :as form]))
 
 
+(defn select-boolean [entity {:keys [stage-tx!] {:keys [ident]} :field}]
+  (let [value (get entity ident)
+        props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
+               :value (if (nil? value) "" (str value))
+               ;; reconstruct the typed value
+               :on-change #(let [v (condp = (.-target.value %)
+                                     "" nil
+                                     "true" true
+                                     "false" false)]
+                            (stage-tx! (tx-util/update-entity-attr entity ident v)))}]
+    [:div.value.editable-select {:key ident}
+     [:span.select
+      [:select props
+       [:option {:key true :value "true"} "True"]
+       [:option {:key false :value "false"} "False"]
+       [:option {:key :nil :value ""} "--"]]]]))
+
+
 (defn select* [entity {:keys [expanded-cur forms graph navigate-cmp stage-tx!]
                        {:keys [ident options]} :field} edit-element]
   (let [value (get entity ident)

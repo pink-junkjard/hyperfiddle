@@ -32,13 +32,25 @@
 ;       [radio-option "--" form-name #(change! nil) (= nil value)])])
 
 
+(defn radio-boolean [entity {:keys [stage-tx!] {:keys [ident]} :field}]
+  (let [value (get entity ident)
+        form-name (str (:db/id entity) ident)
+        change! #(stage-tx! (tx-util/update-entity-attr entity ident %))]
+    [:div.value.radio-boolean {:key ident}
+     ^{:key :true}
+     [radio-option "True" form-name #(change! true) (= true value)]
+     ^{:key :false}
+     [radio-option "False" form-name #(change! false) (= false value)]
+     ^{:key :blank}
+     [radio-option "--" form-name #(change! nil) (= nil value)]]))
+
+
 (defn radio-ref* [entity {:keys [expanded-cur forms graph navigate-cmp stage-tx!]
-                          {:keys [:options :ident]} :field}]
+                          {:keys [options ident]} :field}]
   ; TODO only one radio-group on the page until we get a unique form-name
   (let [value (get entity ident)
-        expanded-cur (expanded-cur [ident])
         form-id (option/get-form-id options entity)
-        form-name (or form-id "TODO") ;form-name in the HTML sense
+        form-name (or form-id "TODO")                       ;form-name in the HTML sense
         temp-id! hc/*temp-id!*
         change! (fn [eid]
                   (let [eid (if (= "create-new" eid) (temp-id!) eid)]
