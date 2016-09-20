@@ -53,7 +53,7 @@
 
 (defn select-ref [entity {:keys [expanded-cur] {:keys [:ident]} :field :as widget-args}]
   ;;select* has parameterized markup fn todo
-  [select* entity (assoc widget-args :expanded-cur expanded-cur)
+  [select* entity widget-args
    [:button.edit {:on-click #(reset! expanded-cur {})
                   :disabled (nil? (get entity ident))} "Edit"]])
 
@@ -64,12 +64,27 @@
     (form/form graph value forms (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp)))
 
 
-(defn table-many-ref-component [entity {:keys [forms graph expanded-cur navigate-cmp stage-tx!]
-                                        {:keys [ident options]} :field}]
-  (let [value (get entity ident)
+(defn table-many-ref [entity {:keys [forms graph expanded-cur navigate-cmp stage-tx!]
+                              {:keys [ident options]} :field :as widget-args}]
+  (let [temp-id! hc/*temp-id!*
+        value (get entity ident)
         expanded-cur expanded-cur                           ;todo refine
         ]
-    [table/table graph value forms (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp]))
+    [:div
+     [table/table graph value forms (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp]
+     [:button {:on-click #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [] [(temp-id!)]))} "Create"]]))
+
+
+(defn table-many-ref-component [entity {:keys [forms graph expanded-cur navigate-cmp stage-tx!]
+                                        {:keys [ident options]} :field}]
+  (let [temp-id! hc/*temp-id!*
+        value (get entity ident)
+        expanded-cur expanded-cur                           ;todo refine
+        ]
+    [:div
+     [table/table graph value forms (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp]
+
+     [:button {:on-click #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [] [(temp-id!)]))} "Create"]]))
 
 
 (defn multi-select-ref [entity {:keys [stage-tx!] {:keys [:ident]} :field :as widget-args}]

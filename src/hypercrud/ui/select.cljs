@@ -6,7 +6,7 @@
 
 
 (defn select* [entity {:keys [expanded-cur forms graph navigate-cmp stage-tx!]
-                       {:keys [:ident :options]} :field} edit-element]
+                       {:keys [ident options]} :field} edit-element]
   (let [value (get entity ident)
         temp-id! hc/*temp-id!*
         props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
