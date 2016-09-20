@@ -48,7 +48,7 @@
                     (stage-tx! (tx-util/update-entity-attr entity ident eid))))
         create-new? (some-> value tx-util/tempid?)
         show-form? (or (not= nil @expanded-cur) create-new?)]
-    [:div.editable-radio {:key (option/get-key options)}
+    [:div.value {:key (option/get-key options)}
      (map (fn [{:keys [:db/id] :as entity}]
             (let [label (get entity (option/label-prop options))
                   checked? (= id value)]

@@ -67,10 +67,8 @@
 (defn table-many-ref [entity {:keys [forms graph expanded-cur navigate-cmp stage-tx!]
                               {:keys [ident options]} :field :as widget-args}]
   (let [temp-id! hc/*temp-id!*
-        value (get entity ident)
-        expanded-cur expanded-cur                           ;todo refine
-        ]
-    [:div
+        value (get entity ident)]
+    [:div.value
      [table/table graph value forms (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp]
      [:button {:on-click #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [] [(temp-id!)]))} "Create"]]))
 
@@ -78,12 +76,9 @@
 (defn table-many-ref-component [entity {:keys [forms graph expanded-cur navigate-cmp stage-tx!]
                                         {:keys [ident options]} :field}]
   (let [temp-id! hc/*temp-id!*
-        value (get entity ident)
-        expanded-cur expanded-cur                           ;todo refine
-        ]
-    [:div
+        value (get entity ident)]
+    [:div.value
      [table/table graph value forms (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp]
-
      [:button {:on-click #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [] [(temp-id!)]))} "Create"]]))
 
 

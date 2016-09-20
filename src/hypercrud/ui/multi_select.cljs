@@ -20,7 +20,7 @@
 
 
 (defmethod multi-select-markup :default [click-add! control-tuples & [css-class]]
-  [:div.multi-select {:class css-class}
+  [:div.value {:class css-class}
    (map (fn [[eid click-remove! control]]
           ^{:key (str eid)}                                 ;(str eid) so this works when eid is nil
           [:div.multi-select-group

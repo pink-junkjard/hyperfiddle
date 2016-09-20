@@ -31,7 +31,7 @@
         create-new? (some-> value tx-util/tempid?)
         show-form? (or (not= nil @expanded-cur) create-new?)]
 
-    [:div.editable-select {:key (option/get-key options)}
+    [:div.value.editable-select {:key (option/get-key options)}
      (if (and (option/editable? options entity) (not show-form?))
        edit-element)
      [:span.select

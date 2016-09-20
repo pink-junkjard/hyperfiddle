@@ -63,17 +63,17 @@ input.invalid[type="text"] {
 
 .field > input,
 .field > textarea{
+    /* todo merge this with .field > .value */
     width: 80%;
 }
 
-.field > table,
-.field > .code-editor,
-.field > .editable-select,
-.field > .editable-radio,
-.field > .multi-select,
-.field > .multi-select-comp {
+.field > .value {
     width: 80%;
     display: inline-block;
+}
+
+.value > table {
+    width: 100%;
 }
 
 .editable-select > .select {

@@ -23,7 +23,7 @@
 (defn code-editor* [value change!]
   (reagent/create-class
     {:render (fn [this]
-               [:div.code-editor
+               [:div.value
                 [:textarea {:default-value value :auto-complete "off" :class "text"}]])
      :component-did-mount (did-mount! value change!)
      :component-will-unmount (fn [this] (.toTextArea (aget this "codeMirrorRef")))
