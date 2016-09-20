@@ -22,10 +22,6 @@ select {
     width: 100%;
 }
 
-select {
-    vertical-align: text-bottom;
-}
-
 input[type="text"],
 input[type="password"] {
     box-sizing : border-box;
@@ -143,4 +139,8 @@ td > .radio-boolean > .radio-group {
 .master-detail > ul > li.selected {
     font-weight: bold;
     text-decoration: underline;
+}
+
+.table-controls > select {
+    width: auto;
 }
