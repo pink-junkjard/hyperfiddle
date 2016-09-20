@@ -24,7 +24,9 @@
 (defn ref-one-component [entity form-id {:keys [graph navigate-cmp] {:keys [ident options]} :field}]
   (let [label-prop (option/label-prop options)
         eid (get entity ident)]
-    [navigate-cmp {:href (str form-id "/entity/" (:db/id entity) "/" (base64/encode ident))}
+    [:div
+     [navigate-cmp {:href (str form-id "/entity/" (:db/id entity) "/" (base64/encode ident))} "Edit"]
+     " "
      (if eid
        (ellipsis (get (hc/entity graph eid) label-prop))
        "nil")]))
@@ -32,7 +34,9 @@
 
 (defn ref-many [entity form-id {:keys [graph navigate-cmp] {:keys [ident options]} :field}]
   (let [label-prop (option/label-prop options)]
-    [navigate-cmp {:href (str form-id "/entity/" (:db/id entity) "/" (base64/encode ident))}
+    [:div
+     [navigate-cmp {:href (str form-id "/entity/" (:db/id entity) "/" (base64/encode ident))} "Edit"]
+     " "
      (->> (get entity ident)
           (map (fn [eid]
                  (if eid
@@ -42,7 +46,9 @@
 
 
 (defn other-many [entity form-id {:keys [navigate-cmp] {:keys [ident]} :field}]
-  [navigate-cmp {:href (str form-id "/entity/" (:db/id entity) "/" (base64/encode ident))}
+  [:div
+   [navigate-cmp {:href (str form-id "/entity/" (:db/id entity) "/" (base64/encode ident))} "Edit"]
+   " "
    (->> (get entity ident)
         (map pr-str)                                        ;todo account for many different types of values
         (string/join ", "))])

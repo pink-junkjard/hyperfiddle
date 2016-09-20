@@ -101,7 +101,7 @@
         value (get entity ident)]
     [:div.value
      [table/table graph value forms (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp]
-     [:button {:on-click #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [] [(temp-id!)]))} "Create"]]))
+     [:button {:on-click #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [] [(temp-id!)]))} "Add"]]))
 
 
 (defn multi-select-ref [entity {:keys [stage-tx!] {:keys [:ident]} :field :as widget-args}]
