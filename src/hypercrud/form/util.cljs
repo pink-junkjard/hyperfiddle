@@ -47,7 +47,7 @@ case that works for expanded-forms)"
     (let [new-expanded-forms (get expanded-forms ident)]
       ; components render expanded automatically
       ; so if it is expanded or is a component, get the queries for another level deeper
-      (if (or new-expanded-forms isComponent)
+      (if (or new-expanded-forms (= cardinality :db.cardinality/many) isComponent)
         (let [form (options->form forms options)]
           (form-queries forms form (condp = cardinality
                                      :db.cardinality/one new-expanded-forms
