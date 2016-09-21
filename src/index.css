@@ -124,6 +124,15 @@ td > .radio-boolean > .radio-group {
     display: inline-block;
 }
 
+.table-controls > select {
+    width: auto;
+}
+
+.master-detail {
+    border: solid #428bca;
+    border-width: 1px 0 1px 0;
+}
+
 .master-detail > ul {
     width: 20%;
     padding: 0;
@@ -134,14 +143,41 @@ td > .radio-boolean > .radio-group {
 
 .master-detail > div {
     width: 80%;
+    margin-top: 0.5em;
     float: left;
 }
 
-.master-detail > ul > li.selected {
+.master-detail li.selected {
     font-weight: bold;
-    text-decoration: underline;
+    border-right-width: 0;
 }
 
-.table-controls > select {
-    width: auto;
+.master-detail li.selected:hover {
+    background-color: inherit;
+}
+
+.master-detail li:hover {
+    background-color: #dbdbdb;
+}
+
+.master-detail li {
+    display: block;
+    border: 1px solid #428bca;
+    border-bottom-width: 0;
+}
+
+.master-detail li a {
+    height: 1.5em;
+    display: block;
+    padding: 0.5em 1em;
+    text-decoration: none;
+}
+
+.master-detail .field {
+    border: none;
+}
+
+.master-detail .field > * {
+    display: block;
+    width: 100%;
 }
