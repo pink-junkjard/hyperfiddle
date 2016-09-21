@@ -149,14 +149,14 @@ td > .radio-boolean > .radio-group {
 
 .master-detail li.selected {
     font-weight: bold;
-    border-right-width: 0;
+    /*border-right-width: 0;*/
 }
-
-.master-detail li.selected:hover {
+/*
+.master-detail li.selected a:hover {
     background-color: inherit;
 }
 
-.master-detail li:hover {
+.master-detail li a:hover {
     background-color: #dbdbdb;
 }
 
@@ -172,7 +172,7 @@ td > .radio-boolean > .radio-group {
     padding: 0.5em 1em;
     text-decoration: none;
 }
-
+*/
 .master-detail .field {
     border: none;
 }
