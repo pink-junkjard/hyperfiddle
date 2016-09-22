@@ -2,20 +2,17 @@
   (:require [reagent.core :as reagent]))
 
 
-(defn input* [props]
-  (let [props (update props :on-change (fn [on-change]
-                                         #(on-change (.. % -target -value))))]
-    [:input props]))
-
-
-(defn validated-input [value set-attr! parse-string to-string valid?]
+; TODO bug - if value controlled from above, this will ignore it
+(defn validated-input [value on-change! parse-string to-string valid? & props]
   (let [intermediate-val (reagent/atom (to-string value))]
-    (fn [value set-attr! parse-string to-string valid?]
+    (fn [value on-change! parse-string to-string valid?]
       [:input {:type "text"
                :class (if-not (valid? @intermediate-val) "invalid")
                :value @intermediate-val
-               :on-change (fn [e]
-                            (let [input-str (.. e -target -value)]
-                              (reset! intermediate-val input-str) ;always save what they are typing
-                              (if (valid? input-str)
-                                (set-attr! (parse-string input-str)))))}])))
+               :on-change #(reset! intermediate-val (.. % -target -value))
+               :on-blur #(if (valid? @intermediate-val)
+                          (on-change! (parse-string @intermediate-val)))}])))
+
+
+(defn input* [value on-change! & props]
+  [validated-input value on-change! identity identity (constantly true) props])

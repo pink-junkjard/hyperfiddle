@@ -17,7 +17,7 @@
 
 (defn input-keyword [entity {:keys [stage-tx!] {:keys [:ident]} :field}]
   (let [value (get entity ident)
-        set-attr! #(stage-tx! (tx-util/update-entity-attr entity ident %))
+        on-change! #(stage-tx! (tx-util/update-entity-attr entity ident %))
         parse-string keyword
         to-string #(subs (str %) 1)
         valid? (fn [s]
@@ -27,15 +27,13 @@
                    (and
                      (not (int? (safe-first (name kw))))
                      (not (int? (safe-first (namespace kw)))))))]
-    [input/validated-input value set-attr! parse-string to-string valid?]))
+    [input/validated-input value on-change! parse-string to-string valid?]))
 
 
 (defn input [entity {:keys [stage-tx!] {:keys [:ident]} :field}]
   (let [value (get entity ident)
-        set-attr! #(stage-tx! (tx-util/update-entity-attr entity ident %))]
-    [input/input* {:type "text"
-                   :value value
-                   :on-change set-attr!}]))
+        on-change! #(stage-tx! (tx-util/update-entity-attr entity ident %))]
+    [input/input* value on-change!]))
 
 
 (defn textarea [entity {:keys [stage-tx!] {:keys [:ident]} :field}]
@@ -142,14 +140,15 @@
 
 (defn instant [entity {:keys [stage-tx!] {:keys [:ident]} :field}]
   (let [value (get entity ident)
-        set-attr! #(stage-tx! (tx-util/update-entity-attr entity ident %))
+        on-change! #(stage-tx! (tx-util/update-entity-attr entity ident %))
         parse-string #(let [ms (.parse js/Date %)]
                        (js/Date. ms))
         to-string #(some-> % .toISOString)]
-    [input/validated-input value set-attr! parse-string to-string valid-date-str?]))
+    [input/validated-input value on-change! parse-string to-string valid-date-str?]))
 
 
 (defn default [field]
-  [input/input* {:type "text"
-                 :value (str (select-keys field [:valueType :cardinality :isComponent]))
-                 :read-only true}])
+  [input/input*
+   (str (select-keys field [:valueType :cardinality :isComponent]))
+   #()
+   {:read-only true}])
