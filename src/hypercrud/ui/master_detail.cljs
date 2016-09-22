@@ -6,8 +6,9 @@
             [hypercrud.ui.auto-control :refer [auto-control]]))
 
 
-(defn master-detail* [entity {:keys [graph stage-tx!] {:keys [:ident :options]} :field :as widget-args} selected-cur]
-  (let [temp-id! hc/*temp-id!*
+(defn master-detail* [entity {:keys [graph stage-tx!] {:keys [ident options]} :field :as widget-args} selected-cur & [detail-renderer]]
+  (let [detail-renderer (or detail-renderer auto-control)
+        temp-id! hc/*temp-id!*
         li (fn [key label is-selected? on-click & retract]
              [:li {:key key :class (if is-selected? "selected")}
               retract
@@ -36,4 +37,4 @@
                         (assoc-in [:field :cardinality] :db.cardinality/one))]
        (if (nil? @selected-cur)
          [:div "Select the " (string/capitalize (name ident))]
-         [auto-control (assoc entity ident @selected-cur) new-args]))]))
+         [detail-renderer (assoc entity ident @selected-cur) new-args]))]))
