@@ -1,5 +1,6 @@
 (ns hypercrud.browser.core
   (:require [cljs.pprint :as pprint]
+            [cljs.reader :as reader]
             [clojure.string :as string]
             [hypercrud.browser.base-64-url-safe :as base64]
             [hypercrud.browser.pages.entity :as entity]
@@ -14,8 +15,10 @@
     (let [path-params (string/split page-rel-path "/")]
       (cond
         (and (= (second path-params) "query") (= 3 (count path-params)))
-        (let [[form-id _ q] path-params]
-          (query/ui cur transact! graph forms (js/parseInt form-id 10) navigate-cmp))
+        (let [[form-id _ query-blob] path-params
+              form-id (js/parseInt form-id 10)
+              query-blob (reader/read-string (base64/decode query-blob))]
+          (query/ui cur transact! graph forms form-id query-blob navigate-cmp))
 
         (and (= (second path-params) "entity"))
         (condp = (count path-params)
@@ -43,8 +46,9 @@
   (let [path-params (string/split page-rel-path "/")]
     (cond
       (and (= (second path-params) "query") (= 3 (count path-params)))
-      (let [[form-id _ q] path-params]
-        (query/query state (base64/decode q) forms (js/parseInt form-id 10)))
+      (let [[form-id _ query-blob] path-params
+            query-blob (reader/read-string (base64/decode query-blob))]
+        (query/query state query-blob forms (js/parseInt form-id 10)))
 
       (and (= (second path-params) "entity"))
       (condp = (count path-params)

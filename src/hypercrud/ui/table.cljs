@@ -49,7 +49,7 @@
                                                       :stage-tx! stage-tx!})]))))]]))
 
 
-(defn query [q forms form-id expanded-forms]
+(defn query [query-blob forms form-id expanded-forms]
   (form-util/query forms form-id expanded-forms {:query-name ::query
-                                                 :query q
-                                                 :params []}))
+                                                 :query (:q query-blob)
+                                                 :params (:p query-blob)}))
