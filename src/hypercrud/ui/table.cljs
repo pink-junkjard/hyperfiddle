@@ -1,8 +1,7 @@
 (ns hypercrud.ui.table
   (:require [hypercrud.client.core :as hc]
             [hypercrud.form.util :as form-util]
-            [hypercrud.ui.auto-control :refer [auto-table-cell]]
-            [clojure.set :as set]))
+            [hypercrud.ui.auto-control :refer [auto-table-cell]]))
 
 
 (defn build-col-heads [form]
@@ -50,13 +49,7 @@
                                                       :stage-tx! stage-tx!})]))))]]))
 
 
-(defn query [query-blob forms form-id expanded-forms]
-  (let [q (:q query-blob)
-        hp (:hp query-blob)
-        hole-names (form-util/parse-holes q)
-        _ (assert (set/subset? (set hole-names) (set (keys hp)))
-                  (str "Missing parameters: " (set/difference (set hole-names) (set (keys hp))) " for query: " q))
-        params (map #(get hp %) hole-names)]
-    (form-util/query forms form-id expanded-forms {:query-name ::query
-                                                   :query q
-                                                   :params params})))
+(defn query [q params forms form-id expanded-forms]
+  (form-util/query forms form-id expanded-forms {:query-name ::query
+                                                 :query q
+                                                 :params params}))

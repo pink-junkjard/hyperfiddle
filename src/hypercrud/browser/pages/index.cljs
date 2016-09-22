@@ -8,7 +8,7 @@
    [:ul.links
     (map (fn [{:keys [:query/ident :query/value :query/form :query/hole]}]
            (let [[q _] value
-                 hp (->> hole
+                 hp {} #_(->> hole
                          (map (juxt :hole/name (constantly nil)))
                          (into {}))]
              [:li {:key ident}
