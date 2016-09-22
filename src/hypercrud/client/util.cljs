@@ -1,4 +1,5 @@
-(ns hypercrud.client.util)
+(ns hypercrud.client.util
+  (:require [hypercrud.client.core :as hc]))
 
 
 (defn map-values [f m]
@@ -25,3 +26,10 @@
 
                 {:db/ident :fressian/tag :db/valueType :db.type/keyword :db/cardinality :db.cardinality/one}])
        (group-by-assume-unique :db/ident)))
+
+
+(defn update-id-with-ident [entity graph kw]
+  (let [attr-attr (get entity kw)]
+    (if attr-attr
+      (assoc entity kw (:db/ident (hc/entity graph attr-attr)))
+      entity)))

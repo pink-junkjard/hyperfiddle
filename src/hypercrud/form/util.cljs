@@ -10,7 +10,8 @@
     (->> (partition-by f datalog)
          (filter #(= :in (first %)))
          first
-         (drop 2))))
+         (drop 2)
+         (map str))))
 
 
 (defn options->form [forms field-options]
