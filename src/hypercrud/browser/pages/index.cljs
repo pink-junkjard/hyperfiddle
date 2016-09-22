@@ -6,11 +6,13 @@
   [:div
    ;form to populate holes
    [:ul.links
-    (map (fn [{:keys [:query/ident :query/value :query/form]}]
-           (let [[q holes] value
-                 evald-args holes]
+    (map (fn [{:keys [:query/ident :query/value :query/form :query/hole]}]
+           (let [[q _] value
+                 hp (->> hole
+                         (map (juxt :hole/name (constantly nil)))
+                         (into {}))]
              [:li {:key ident}
-              [navigate-cmp {:href (str form "/query/" (base64/encode {:q q :h holes :p evald-args}))} ident]]))
+              [navigate-cmp {:href (str form "/query/" (base64/encode {:q q :hp hp}))} ident]]))
          queries)]])
 
 (defn query [] {})

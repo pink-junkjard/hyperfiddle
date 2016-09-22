@@ -2,6 +2,17 @@
   (:require [hypercrud.form.option :as option]))
 
 
+(defn parse-holes [datalog]
+  (let [last-kw (atom nil)
+        f (fn [x]
+            (if (keyword? x) (reset! last-kw x))
+            @last-kw)]
+    (->> (partition-by f datalog)
+         (filter #(= :in (first %)))
+         first
+         (drop 2))))
+
+
 (defn options->form [forms field-options]
   (get forms (option/get-form-id field-options "todo")))
 

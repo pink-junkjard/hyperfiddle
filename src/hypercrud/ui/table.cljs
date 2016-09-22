@@ -50,6 +50,10 @@
 
 
 (defn query [query-blob forms form-id expanded-forms]
-  (form-util/query forms form-id expanded-forms {:query-name ::query
-                                                 :query (:q query-blob)
-                                                 :params (:p query-blob)}))
+  (let [q (:q query-blob)
+        hp (:hp query-blob)
+        params (->> (form-util/parse-holes q)
+                    (map #(get hp %)))]
+    (form-util/query forms form-id expanded-forms {:query-name ::query
+                                                   :query q
+                                                   :params params})))
