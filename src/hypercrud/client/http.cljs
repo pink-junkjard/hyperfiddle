@@ -3,6 +3,7 @@
             [hypercrud.client.core :as hc]
             [hypercrud.client.graph :as graph]
             [hypercrud.client.internal :as internal]
+            [hypercrud.form.util :as form-util]
             [kvlt.core :as kvlt]
             [kvlt.middleware.params]
             [promesa.core :as p]))
@@ -38,20 +39,25 @@
     (let [graph-we-want (graph/->Graph schema named-queries t [] nil)]
       (if (= graph graph-we-want)
         (p/resolved graph)
-        (-> (kvlt/request!
-              {:url (let [url (resolve-relative-uri entry-uri (goog.Uri. "hydrate"))]
-                      (if t (.setParameterValue url "t" t))
-                      url)
-               :content-type content-type-transit
-               :accept content-type-transit
-               :method :post
-               :form (into [] (vals named-queries))
-               :as :auto})
-            (p/then (fn [resp]
-                      (let [{:keys [t pulled-trees-map]} (-> resp :body :hypercrud)]
-                        (graph/set-state! graph-we-want pulled-trees-map t)
-                        (set! graph graph-we-want)
-                        graph)))))))
+        (do
+          (doseq [[q p _] (vals named-queries)]
+            (assert (= (count (form-util/parse-holes q))
+                       (count p))
+                    (str "Missing parameters for " q)))
+          (-> (kvlt/request!
+                {:url (let [url (resolve-relative-uri entry-uri (goog.Uri. "hydrate"))]
+                        (if t (.setParameterValue url "t" t))
+                        url)
+                 :content-type content-type-transit
+                 :accept content-type-transit
+                 :method :post
+                 :form (into [] (vals named-queries))
+                 :as :auto})
+              (p/then (fn [resp]
+                        (let [{:keys [t pulled-trees-map]} (-> resp :body :hypercrud)]
+                          (graph/set-state! graph-we-want pulled-trees-map t)
+                          (set! graph graph-we-want)
+                          graph))))))))
 
 
   (temp-id! [this]
