@@ -26,7 +26,6 @@
         entity @entity-cur
         graph (hc/with graph @local-statements)]
     [:div
-     [:pre (with-out-str (pprint/pprint entity))]
      (let [hole-fields-by-name (->> (:query/hole query)
                                     (map (juxt :ident identity))
                                     (into {}))
