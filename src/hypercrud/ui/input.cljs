@@ -6,12 +6,13 @@
 (defn validated-input [value on-change! parse-string to-string valid? & [props]]
   (let [intermediate-val (reagent/atom (to-string value))]
     (fn [value on-change! parse-string to-string valid?]
-      [:input (merge props {:type "text"
-                            :class (if-not (valid? @intermediate-val) "invalid")
-                            :value @intermediate-val
-                            :on-change #(reset! intermediate-val (.. % -target -value))
-                            :on-blur #(if (valid? @intermediate-val)
-                                       (on-change! (parse-string @intermediate-val)))})])))
+      (let [valid?' (valid? @intermediate-val)]
+        [:input (merge props {:type "text"
+                              :class (if-not valid?' "invalid")
+                              :value @intermediate-val
+                              :on-change #(reset! intermediate-val (.. % -target -value))
+                              :on-blur #(if valid?'
+                                         (on-change! (parse-string @intermediate-val)))})]))))
 
 
 (defn input* [value on-change! & [props]]

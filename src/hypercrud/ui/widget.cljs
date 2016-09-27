@@ -1,5 +1,6 @@
 (ns hypercrud.ui.widget
-  (:require [hypercrud.client.core :as hc]
+  (:require [cljs.reader :as reader]
+            [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx-util]
             [hypercrud.form.option :as option]
             [hypercrud.ui.auto-control :refer [auto-control]]
@@ -18,15 +19,11 @@
 (defn input-keyword [entity {:keys [stage-tx!] {:keys [:ident]} :field}]
   (let [value (get entity ident)
         on-change! #(stage-tx! (tx-util/update-entity-attr entity ident %))
-        parse-string keyword
-        to-string #(subs (str %) 1)
-        valid? (fn [s]
-                 (let [kw (keyword s)
-                       int? #(integer? (js/parseInt % 10))
-                       safe-first (fn [s] (if (seq s) (subs s 0 1)))]
-                   (and
-                     (not (int? (safe-first (name kw))))
-                     (not (int? (safe-first (namespace kw)))))))]
+        parse-string reader/read-string
+        to-string str
+        valid? #(try (let [code (reader/read-string %)]
+                       (or (nil? code) (keyword? code)))
+                     (catch :default e false))]
     [input/validated-input value on-change! parse-string to-string valid?]))
 
 
