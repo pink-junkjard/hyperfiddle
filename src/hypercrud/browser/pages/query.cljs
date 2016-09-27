@@ -27,25 +27,14 @@
         entity @entity-cur
         graph (hc/with graph @local-statements)
         stage-tx! #(swap! local-statements tx-util/into-tx %)
-        _ (.log js/console (pr-str query))
-        _ (.log js/console (pr-str (:query/hole query)))
-        holes-by-name (->> (:query/hole query)
-                           (map (juxt :hole/name identity))
-                           (into {}))]
+        hole-fields-by-name (->> (:query/hole query)
+                                 (map (juxt :ident identity))
+                                 (into {}))]
     [:div
-     [:pre (with-out-str (pprint/pprint entity))]
      (doall
        (map (fn [hole-name]
-              (let [hole (get holes-by-name hole-name)
-                    field (field/field {:prompt (:field/prompt hole)
-                                        :ident hole-name
-                                        :valueType (:attribute/valueType hole)
-                                        :cardinality (:attribute/cardinality hole)
-                                        :isComponent false
-                                        :options {:label-prop (:field/label-prop hole)
-                                                  :form nil
-                                                  :query (:field/query hole)}})
-                    schema {hole-name {:db/cardinality (:attribute/cardinality hole)}}
+              (let [field (get hole-fields-by-name hole-name)
+                    schema {hole-name {:db/cardinality (:cardinality field)}}
                     stage-tx! (fn [tx]
                                 (reset! entity-cur (reduce
                                                      #(tx-util/apply-stmt-to-entity schema %1 %2)
@@ -68,14 +57,18 @@
      [navigate-cmp {:href (str form-id "/entity/-1")} "Create"]]))
 
 
-(defn query [state query-blob forms form-id]
+(defn query [state query query-blob forms form-id]
   (let [q (:q query-blob)
         hp (-> (or (get state :holes)
                    (hp->entity q (:hp query-blob)))
                (dissoc :db/id))
-        _ (.log js/console (with-out-str (pprint/pprint hp)))
-        hole-names (form-util/parse-holes q)]
-    (if (show-table? hole-names hp)
-      #_(assert (set/subset? (set hole-names) (set (keys hp)))
-                (str "Missing parameters: " (set/difference (set hole-names) (set (keys hp))) " for query: " q))
-      (table/query q (map #(get hp %) hole-names) forms form-id (get state :expanded nil)) {})))
+        hole-names (form-util/parse-holes q)
+        form (vec (:query/hole query))]
+    (merge
+      ;no fields are isComponent true or expanded, so we don't need to pass in a forms map
+      (form-util/form-queries nil form nil)
+
+      (if (show-table? hole-names hp)
+        #_(assert (set/subset? (set hole-names) (set (keys hp)))
+                  (str "Missing parameters: " (set/difference (set hole-names) (set (keys hp))) " for query: " q))
+        (table/query q (map #(get hp %) hole-names) forms form-id (get state :expanded nil)) {}))))

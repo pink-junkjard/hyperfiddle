@@ -32,4 +32,12 @@
                                                                                                              :form form
                                                                                                              :query (:query/value query)})))
   ([{:keys [prompt ident valueType cardinality isComponent options]}]
-   (->Field prompt ident valueType cardinality isComponent (option/gimme-useful-options options))))
+   (->Field prompt ident valueType cardinality (or isComponent false) (option/gimme-useful-options options))))
+
+
+(defn hole->field
+  ([{:keys [:hole/name
+            :field/prompt :field/query :field/label-prop
+            :attribute/valueType :attribute/cardinality]}]
+   (->Field prompt name (convert-valueType valueType) cardinality false (option/gimme-useful-options {:label-prop label-prop
+                                                                                                      :query (:query/value query)}))))

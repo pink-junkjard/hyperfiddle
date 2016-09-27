@@ -47,13 +47,17 @@
    [:pre (with-out-str (pprint/pprint @cur))]])
 
 
-(defn query [forms state page-rel-path]
+(defn query [forms queries state page-rel-path]
   (let [path-params (string/split page-rel-path "/")]
     (cond
       (and (= (second path-params) "query") (= 3 (count path-params)))
       (let [[form-id _ query-blob] path-params
-            query-blob (reader/read-string (base64/decode query-blob))]
-        (query/query state query-blob forms (js/parseInt form-id 10)))
+            query-blob (reader/read-string (base64/decode query-blob))
+            query (first (filter (fn [query]
+                                   (.log js/console (with-out-str (pprint/pprint (:query/value query))))
+                                   (= (:q query-blob) (first (:query/value query))))
+                                 queries))]
+        (query/query state query query-blob forms (js/parseInt form-id 10)))
 
       (and (= (second path-params) "entity"))
       (condp = (count path-params)
