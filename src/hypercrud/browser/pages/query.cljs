@@ -3,9 +3,9 @@
             [clojure.set :as set]
             [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx-util]
-            [hypercrud.form.field :as field]
             [hypercrud.form.util :as form-util]
             [hypercrud.ui.auto-control :refer [auto-control]]
+            [hypercrud.ui.form :as form]
             [hypercrud.ui.table :as table]))
 
 (defn hp->entity [q hp]
@@ -25,32 +25,26 @@
         expanded-cur (cur [:expanded] {})
         entity-cur (cur [:holes] (hp->entity q (:hp query-blob)))
         entity @entity-cur
-        graph (hc/with graph @local-statements)
-        stage-tx! #(swap! local-statements tx-util/into-tx %)
-        hole-fields-by-name (->> (:query/hole query)
-                                 (map (juxt :ident identity))
-                                 (into {}))]
+        graph (hc/with graph @local-statements)]
     [:div
-     (doall
-       (map (fn [hole-name]
-              (let [field (get hole-fields-by-name hole-name)
-                    schema {hole-name {:db/cardinality (:cardinality field)}}
-                    stage-tx! (fn [tx]
-                                (reset! entity-cur (reduce
-                                                     #(tx-util/apply-stmt-to-entity schema %1 %2)
-                                                     entity
-                                                     tx)))]
-                [:div.field {:key hole-name}
-                 [:label hole-name]
-                 [auto-control entity {:expanded-cur (expanded-cur [(:ident field)])
-                                       :field field
-                                       :forms forms
-                                       :graph graph
-                                       :navigate-cmp navigate-cmp
-                                       :stage-tx! stage-tx!}]]))
-            hole-names))
+     [:pre (with-out-str (pprint/pprint entity))]
+     (let [hole-fields-by-name (->> (:query/hole query)
+                                    (map (juxt :ident identity))
+                                    (into {}))
+           schema (->> hole-fields-by-name
+                       (map (fn [[hole-name field]]
+                              [hole-name {:db/cardinality (:cardinality field)}]))
+                       (into {}))
+           stage-tx! (fn [tx]
+                       (reset! entity-cur (reduce
+                                            #(tx-util/apply-stmt-to-entity schema %1 %2)
+                                            entity
+                                            tx)))
+           form (map #(get hole-fields-by-name %) hole-names)]
+       [form/form2 graph entity forms form expanded-cur stage-tx! navigate-cmp])
      (if (show-table? hole-names entity)
-       [table/table graph (hc/select graph ::table/query) forms form-id expanded-cur stage-tx! navigate-cmp nil])
+       (let [stage-tx! #(swap! local-statements tx-util/into-tx %)]
+         [table/table graph (hc/select graph ::table/query) forms form-id expanded-cur stage-tx! navigate-cmp nil]))
      [:button {:key 1 :on-click #(transact! @local-statements)} "Save"]
 
      ;todo just add row at bottom

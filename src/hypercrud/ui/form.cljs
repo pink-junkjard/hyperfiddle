@@ -4,24 +4,29 @@
             [hypercrud.client.tx :as tx-util]
             [hypercrud.form.util :as form-util]))
 
+
 (defn field [entity {{:keys [:prompt]} :field :as widget-args}]
   [:div.field
    (if prompt [:label prompt])
    [auto-control entity widget-args]])
 
 
+; some people just want to watch the world burn
+(defn form2 [graph entity forms form expanded-cur stage-tx! navigate-cmp]
+  [:div.form
+   (map (fn [{:keys [:ident] :as fieldinfo}]
+          ^{:key ident}
+          [field entity {:expanded-cur (expanded-cur [ident])
+                         :field fieldinfo
+                         :forms forms
+                         :graph graph
+                         :navigate-cmp navigate-cmp
+                         :stage-tx! stage-tx!}])
+        form)])
+
+
 (defn form [graph eid forms form-id expanded-cur stage-tx! navigate-cmp]
-  (let [entity (hc/entity graph eid)]
-    [:div.form
-     (map (fn [{:keys [:ident] :as fieldinfo}]
-            ^{:key ident}
-            [field entity {:expanded-cur (expanded-cur [ident])
-                           :field fieldinfo
-                           :forms forms
-                           :graph graph
-                           :navigate-cmp navigate-cmp
-                           :stage-tx! stage-tx!}])
-          (get forms form-id))]))
+  [form2 graph (hc/entity graph eid) forms (get forms form-id) expanded-cur stage-tx! navigate-cmp])
 
 
 (defn query [eid forms form-id expanded-forms]
