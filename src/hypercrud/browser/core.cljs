@@ -19,10 +19,8 @@
               form-id (js/parseInt form-id 10)
               query-blob (reader/read-string (base64/decode query-blob))
               query (first (filter (fn [query]
-                                     (.log js/console (with-out-str (pprint/pprint (:query/value query))))
                                      (= (:q query-blob) (first (:query/value query))))
-                                   queries))
-              _ (.log js/console (with-out-str (pprint/pprint (:q query-blob))))]
+                                   queries))]
           (query/ui cur transact! graph forms form-id query query-blob navigate-cmp))
 
         (and (= (second path-params) "entity"))
@@ -54,7 +52,6 @@
       (let [[form-id _ query-blob] path-params
             query-blob (reader/read-string (base64/decode query-blob))
             query (first (filter (fn [query]
-                                   (.log js/console (with-out-str (pprint/pprint (:query/value query))))
                                    (= (:q query-blob) (first (:query/value query))))
                                  queries))]
         (query/query state query query-blob forms (js/parseInt form-id 10)))
