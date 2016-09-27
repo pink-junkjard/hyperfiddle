@@ -19,7 +19,7 @@
               form-id (js/parseInt form-id 10)
               query-blob (reader/read-string (base64/decode query-blob))
               query (first (filter (fn [query]
-                                     (= (:q query-blob) (first (:query/value query))))
+                                     (= (:q query-blob) (:query/value query)))
                                    queries))]
           (query/ui cur transact! graph forms form-id query query-blob navigate-cmp))
 
@@ -52,7 +52,7 @@
       (let [[form-id _ query-blob] path-params
             query-blob (reader/read-string (base64/decode query-blob))
             query (first (filter (fn [query]
-                                   (= (:q query-blob) (first (:query/value query))))
+                                   (= (:q query-blob) (:query/value query)))
                                  queries))]
         (query/query state query query-blob forms (js/parseInt form-id 10)))
 

@@ -19,11 +19,10 @@
 
 
 (defn ui [cur transact! graph forms form-id query query-blob navigate-cmp]
-  (let [q (first (:query/value query))
-        hole-names (form-util/parse-holes q)
+  (let [hole-names (form-util/parse-holes (:query/value query))
         local-statements (cur [:statements] [])
         expanded-cur (cur [:expanded] {})
-        entity-cur (cur [:holes] (hp->entity q (:hp query-blob)))
+        entity-cur (cur [:holes] (hp->entity (:query/value query) (:hp query-blob)))
         entity @entity-cur
         graph (hc/with graph @local-statements)]
     [:div

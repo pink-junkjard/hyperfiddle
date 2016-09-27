@@ -23,7 +23,7 @@
   (create-new? [this record]))
 
 
-(deftype QueryOptions [query args form-id label-prop]
+(deftype QueryOptions [query form-id label-prop]
   IFieldOptions
   (label-prop [this] label-prop)
 
@@ -99,8 +99,7 @@
 
 
 (defn gimme-useful-options [{:keys [:label-prop :form :query :inline] :as field}]
-  (let [[query args] query]
-    (->QueryOptions query args form label-prop)))
+  (->QueryOptions query form label-prop))
 
 
 (comment
