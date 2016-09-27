@@ -28,8 +28,11 @@
        (group-by-assume-unique :db/ident)))
 
 
-(defn update-id-with-ident [entity graph kw]
-  (let [attr-attr (get entity kw)]
-    (if attr-attr
-      (assoc entity kw (:db/ident (hc/entity graph attr-attr)))
-      entity)))
+(defn update-existing [m k f]
+  (if (get m k)
+    (update m k f)
+    m))
+
+
+(defn update-id-with-ident [entity graph attr]
+  (update-existing entity attr #(:db/ident (hc/entity graph %))))
