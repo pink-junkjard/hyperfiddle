@@ -9,60 +9,55 @@
             [hypercrud.browser.pages.query :as query]))
 
 
-(defn ui [cur transact! graph forms queries page-rel-path navigate! navigate-cmp]
-  [:div
-   [:div.hc-node-view
-    (let [path-params (string/split page-rel-path "/")]
-      (cond
-        (and (= (second path-params) "query") (= 3 (count path-params)))
-        (let [[form-id _ query-blob] path-params
-              form-id (js/parseInt form-id 10)
-              query-blob (reader/read-string (base64/decode query-blob))]
-          (query/ui cur transact! graph forms queries form-id query-blob navigate-cmp))
-
-        (and (= (second path-params) "entity"))
-        (condp = (count path-params)
-          3 (let [[form-id _ eid] path-params
-                  form-id (js/parseInt form-id 10)
-                  eid (js/parseInt eid 10)]
-              (entity/ui cur transact! graph eid forms queries form-id navigate! navigate-cmp))
-          4 (let [[form-id _ eid field-ident] path-params
-                  form-id (js/parseInt form-id 10)
-                  eid (js/parseInt eid 10)
-                  field-ident (keyword (subs (base64/decode field-ident) 1))]
-              (field/ui cur transact! graph eid forms queries form-id field-ident navigate-cmp)))
-
-        (and (= (first path-params) "") (= 1 (count path-params)))
-        (index/ui queries navigate-cmp)
-        :else [:div "no route for: " page-rel-path]
-        ))]
-   [:hr]
-   [:pre (with-out-str (pprint/pprint @cur))]])
-
-
-(defn query [forms queries state page-rel-path param-ctx]
+(defn route [page-rel-path {:keys [query-fn entity-fn field-fn index-fn else]}]
   (let [path-params (string/split page-rel-path "/")]
     (cond
       (and (= (second path-params) "query") (= 3 (count path-params)))
       (let [[form-id _ query-blob] path-params
             form-id (js/parseInt form-id 10)
             query-blob (reader/read-string (base64/decode query-blob))]
-        (query/query state forms queries query-blob form-id param-ctx))
+        (query-fn form-id query-blob))
 
       (and (= (second path-params) "entity"))
       (condp = (count path-params)
         3 (let [[form-id _ eid] path-params
                 form-id (js/parseInt form-id 10)
                 eid (js/parseInt eid 10)]
-            (entity/query state eid forms queries form-id param-ctx))
+            (entity-fn eid form-id))
         4 (let [[form-id _ eid field-ident] path-params
                 form-id (js/parseInt form-id 10)
                 eid (js/parseInt eid 10)
                 field-ident (keyword (subs (base64/decode field-ident) 1))]
-            (field/query state eid forms queries form-id field-ident param-ctx)))
+            (field-fn eid form-id field-ident)))
 
       (and (= (first path-params) "") (= 1 (count path-params)))
-      (index/query)
+      (index-fn)
+      :else (else))))
 
-      :else {}
-      )))
+
+(defn ui [cur transact! graph forms queries page-rel-path navigate! navigate-cmp]
+  [:div
+   [:div.hc-node-view
+    (route page-rel-path
+           {:query-fn (fn [form-id query-blob]
+                        (query/ui cur transact! graph forms queries form-id query-blob navigate-cmp))
+            :entity-fn (fn [eid form-id]
+                         (entity/ui cur transact! graph eid forms queries form-id navigate! navigate-cmp))
+            :field-fn (fn [eid form-id field-ident]
+                        (field/ui cur transact! graph eid forms queries form-id field-ident navigate-cmp))
+            :index-fn #(index/ui queries navigate-cmp)
+            :else (constantly [:div "no route for: " page-rel-path])})]
+   [:hr]
+   [:pre (with-out-str (pprint/pprint @cur))]])
+
+
+(defn query [forms queries state page-rel-path param-ctx]
+  (route page-rel-path
+         {:query-fn (fn [form-id query-blob]
+                      (query/query state forms queries query-blob form-id param-ctx))
+          :entity-fn (fn [eid form-id]
+                       (entity/query state eid forms queries form-id param-ctx))
+          :field-fn (fn [eid form-id field-ident]
+                      (field/query state eid forms queries form-id field-ident param-ctx))
+          :index-fn #(index/query)
+          :else (constantly {})}))
