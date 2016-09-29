@@ -17,25 +17,20 @@
         (and (= (second path-params) "query") (= 3 (count path-params)))
         (let [[form-id _ query-blob] path-params
               form-id (js/parseInt form-id 10)
-              query-blob (reader/read-string (base64/decode query-blob))
-              query (first (filter (fn [query]
-                                     (= (:q query-blob) (:query/value query)))
-                                   queries))]
-          (query/ui cur transact! graph forms form-id query query-blob navigate-cmp))
+              query-blob (reader/read-string (base64/decode query-blob))]
+          (query/ui cur transact! graph forms queries form-id query-blob navigate-cmp))
 
         (and (= (second path-params) "entity"))
         (condp = (count path-params)
           3 (let [[form-id _ eid] path-params
                   form-id (js/parseInt form-id 10)
                   eid (js/parseInt eid 10)]
-              (entity/ui cur transact! graph eid forms form-id navigate! navigate-cmp))
+              (entity/ui cur transact! graph eid forms queries form-id navigate! navigate-cmp))
           4 (let [[form-id _ eid field-ident] path-params
                   form-id (js/parseInt form-id 10)
                   eid (js/parseInt eid 10)
-                  field-ident (keyword (subs (base64/decode field-ident) 1))
-                  form (get forms form-id)
-                  field (first (filter #(= (:ident %) field-ident) form))]
-              (field/ui field cur transact! graph eid forms navigate-cmp)))
+                  field-ident (keyword (subs (base64/decode field-ident) 1))]
+              (field/ui cur transact! graph eid forms queries form-id field-ident navigate-cmp)))
 
         (and (= (first path-params) "") (= 1 (count path-params)))
         (index/ui queries navigate-cmp)
@@ -45,28 +40,26 @@
    [:pre (with-out-str (pprint/pprint @cur))]])
 
 
-(defn query [forms queries state page-rel-path]
+(defn query [forms queries state page-rel-path param-ctx]
   (let [path-params (string/split page-rel-path "/")]
     (cond
       (and (= (second path-params) "query") (= 3 (count path-params)))
       (let [[form-id _ query-blob] path-params
-            query-blob (reader/read-string (base64/decode query-blob))
-            query (first (filter (fn [query]
-                                   (= (:q query-blob) (:query/value query)))
-                                 queries))]
-        (query/query state query query-blob forms (js/parseInt form-id 10)))
+            form-id (js/parseInt form-id 10)
+            query-blob (reader/read-string (base64/decode query-blob))]
+        (query/query state forms queries query-blob form-id param-ctx))
 
       (and (= (second path-params) "entity"))
       (condp = (count path-params)
         3 (let [[form-id _ eid] path-params
                 form-id (js/parseInt form-id 10)
                 eid (js/parseInt eid 10)]
-            (entity/query state eid forms form-id))
+            (entity/query state eid forms queries form-id param-ctx))
         4 (let [[form-id _ eid field-ident] path-params
                 form-id (js/parseInt form-id 10)
                 eid (js/parseInt eid 10)
                 field-ident (keyword (subs (base64/decode field-ident) 1))]
-            (field/query state eid forms form-id)))
+            (field/query state eid forms queries form-id field-ident param-ctx)))
 
       (and (= (first path-params) "") (= 1 (count path-params)))
       (index/query)

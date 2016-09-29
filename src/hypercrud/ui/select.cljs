@@ -23,7 +23,7 @@
        [:option {:key :nil :value ""} "--"]]]]))
 
 
-(defn select* [entity {:keys [expanded-cur forms graph navigate-cmp stage-tx!]
+(defn select* [entity {:keys [expanded-cur forms graph navigate-cmp queries stage-tx!]
                        {:keys [ident options]} :field} edit-element]
   (let [value (get entity ident)
         temp-id! hc/*temp-id!*
@@ -49,11 +49,11 @@
         create-new? (some-> value tx-util/tempid?)
         show-form? (or (not= nil @expanded-cur) create-new?)]
 
-    [:div.value.editable-select {:key (option/get-key options)}
+    [:div.value.editable-select {:key (option/get-key options queries)}
      (if (and (option/editable? options entity) (not show-form?))
        edit-element)
      [:span.select
-      [:select props (-> (->> (option/get-option-records options graph entity)
+      [:select props (-> (->> (option/get-option-records options queries graph entity)
                               (sort-by #(get % (option/label-prop options)))
                               (mapv (fn [entity]
                                       (let [eid (:db/id entity)]
@@ -66,4 +66,4 @@
                            [[:option {:key :blank :value ""} "--"]]))]]
      (if show-form?
        ;; TODO branch the client in create-new case
-       [form/form graph value forms (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp])]))
+       [form/form graph value forms queries (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp])]))

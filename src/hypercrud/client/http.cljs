@@ -3,7 +3,7 @@
             [hypercrud.client.core :as hc]
             [hypercrud.client.graph :as graph]
             [hypercrud.client.internal :as internal]
-            [hypercrud.form.util :as form-util]
+            [hypercrud.form.q-util :as q-util]
             [kvlt.core :as kvlt]
             [kvlt.middleware.params]
             [promesa.core :as p]))
@@ -41,7 +41,7 @@
         (p/resolved graph)
         (do
           (doseq [[q p _] (vals named-queries)]
-            (assert (= (count (form-util/parse-holes q))
+            (assert (= (count (q-util/parse-holes q))
                        (count p))
                     (str "Missing parameters for " q)))
           (-> (kvlt/request!

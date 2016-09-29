@@ -13,12 +13,13 @@
            (str (subs s 0 (- c 3)) "..."))))
 
 
+; this can be used sometimes, on the entity page, but not the query page
 (defn ref-one [entity form-id {:keys [expanded-cur navigate-cmp] {:keys [ident options]} :field :as widget-args}]
   (select/select*
-    entity (assoc widget-args :expanded-cur (expanded-cur [ident]))
-    (let [href (str (option/get-form-id options entity) "/entity/" (get entity ident))]
-      (if (not (nil? (get entity ident)))
-        [navigate-cmp {:class "edit" :href href} "Edit"]))))
+      entity (assoc widget-args :expanded-cur (expanded-cur [ident]))
+      (let [href (str (option/get-form-id options entity) "/entity/" (get entity ident))]
+        (if (not (nil? (get entity ident)))
+          [navigate-cmp {:class "edit" :href href} "Edit"]))))
 
 
 (defn ref-one-component [entity form-id {:keys [graph navigate-cmp] {:keys [ident options]} :field}]
@@ -28,7 +29,10 @@
      [navigate-cmp {:href (str form-id "/entity/" (:db/id entity) "/" (base64/encode ident))} "Edit"]
      " "
      (if eid
-       (ellipsis (get (hc/entity graph eid) label-prop))
+       (-> (hc/entity graph eid)
+           (get label-prop)
+           str
+           ellipsis)
        "nil")]))
 
 

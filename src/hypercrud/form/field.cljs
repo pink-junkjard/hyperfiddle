@@ -30,7 +30,7 @@
     {:keys [:attribute/ident :attribute/valueType :attribute/cardinality :attribute/isComponent] :as db-attribute}]
    (->Field prompt ident (convert-valueType valueType) cardinality isComponent (option/gimme-useful-options {:label-prop label-prop
                                                                                                              :form form
-                                                                                                             :query (:query/value query)})))
+                                                                                                             :query query})))
   ([{:keys [prompt ident valueType cardinality isComponent options]}]
    (->Field prompt ident valueType cardinality (or isComponent false) (option/gimme-useful-options options))))
 
@@ -40,4 +40,4 @@
             :field/prompt :field/query :field/label-prop
             :attribute/valueType :attribute/cardinality]}]
    (->Field prompt name (convert-valueType valueType) cardinality false (option/gimme-useful-options {:label-prop label-prop
-                                                                                                      :query (:query/value query)}))))
+                                                                                                      :query query}))))

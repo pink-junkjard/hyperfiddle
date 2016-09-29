@@ -1,7 +1,8 @@
 (ns hypercrud.ui.table
   (:require [hypercrud.client.core :as hc]
             [hypercrud.form.util :as form-util]
-            [hypercrud.ui.auto-control :refer [auto-table-cell]]))
+            [hypercrud.ui.auto-control :refer [auto-table-cell]]
+            [hypercrud.form.q-util :as q-util]))
 
 
 (defn build-col-heads [form]
@@ -19,7 +20,7 @@
        (get forms form-id)))
 
 
-(defn table [graph eids forms form-id expanded-cur stage-tx! navigate-cmp retract-entity]
+(defn table [graph eids forms queries form-id expanded-cur stage-tx! navigate-cmp retract-entity]
   (let [form (get forms form-id)]
     [:table.ui-table
      [:colgroup [:col {:span "1" :style {:width "20px"}}]]
@@ -46,10 +47,25 @@
                                                       :forms forms
                                                       :graph graph
                                                       :navigate-cmp navigate-cmp
+                                                      :queries queries
                                                       :stage-tx! stage-tx!})]))))]]))
 
 
-(defn query [q params forms form-id expanded-forms]
-  (form-util/query forms form-id expanded-forms {:query-name ::query
-                                                 :query q
-                                                 :params params}))
+(defn table-pull-exp [forms form]
+  (concat
+    [:db/id]
+    (map (fn [{:keys [:ident :cardinality :isComponent :options] :as field}]
+           (if (or isComponent (= cardinality :db.cardinality/many))
+             ; components and selects render nested entities, so pull another level deeper
+             (let [form (form-util/options->form forms options)]
+               {ident (table-pull-exp forms form)})
+
+             ; otherwise just add the attribute to the list
+             ident))
+         form)))
+
+
+(defn query [q param-ctx forms form-id]
+  (let [form (get forms form-id)
+        pull-exp (table-pull-exp forms form)]
+    (q-util/build-query ::query q param-ctx pull-exp)))

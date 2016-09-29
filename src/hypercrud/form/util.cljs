@@ -1,17 +1,6 @@
 (ns hypercrud.form.util
-  (:require [hypercrud.form.option :as option]))
-
-
-(defn parse-holes [datalog]
-  (let [last-kw (atom nil)
-        f (fn [x]
-            (if (keyword? x) (reset! last-kw x))
-            @last-kw)]
-    (->> (partition-by f datalog)
-         (filter #(= :in (first %)))
-         first
-         (drop 2)
-         (map str))))
+  (:require [hypercrud.form.option :as option]
+            [hypercrud.form.q-util :as q-util]))
 
 
 (defn options->form [forms field-options]
@@ -25,7 +14,7 @@ case that works for expanded-forms)"
 
 
 (declare form-pull-exp)
-(declare form-queries)
+(declare form-option-queries)
 
 
 (defn field-pull-exp-entry [forms expanded-forms {:keys [:ident :cardinality :isComponent :options] :as field}]
@@ -46,37 +35,30 @@ case that works for expanded-forms)"
   [forms form expanded-forms]
   (concat
     [:db/id]
-    (map (partial field-pull-exp-entry forms expanded-forms) form)))
+    (map #(field-pull-exp-entry forms expanded-forms %) form)))
 
 
-(defn field-queries [forms expanded-forms {:keys [:ident :cardinality :valueType :isComponent :options] :as field}]
+(defn field-queries [forms queries expanded-forms param-ctx
+                     {:keys [:ident :cardinality :valueType :isComponent :options] :as field}]
   (merge
     (let [is-ref (= valueType :ref)]
       ; if we are a ref we ALWAYS need the query from the field options
       ; EXCEPT when we are component, in which case no options are rendered, just a form, handled below
-      (if (and is-ref (not isComponent)) (option/get-query options)))
+      (if (and is-ref (not isComponent)) (option/get-query options queries param-ctx)))
 
     (let [new-expanded-forms (get expanded-forms ident)]
       ; components render expanded automatically
       ; so if it is expanded or is a component, get the queries for another level deeper
       (if (or new-expanded-forms (= cardinality :db.cardinality/many) isComponent)
-        (let [form (options->form forms options)]
-          (form-queries forms form (condp = cardinality
-                                     :db.cardinality/one new-expanded-forms
-                                     :db.cardinality/many (apply deep-merge (vals new-expanded-forms)))))))))
+        (let [form (options->form forms options)
+              expanded-forms (condp = cardinality
+                               :db.cardinality/one new-expanded-forms
+                               :db.cardinality/many (apply deep-merge (vals new-expanded-forms)))]
+          (form-option-queries forms queries form expanded-forms param-ctx))))))
 
 
-(defn form-queries "get the form options recursively for all expanded forms"
-  [forms form expanded-forms]
+(defn form-option-queries "get the form options recursively for all expanded forms"
+  [forms queries form expanded-forms param-ctx]
   (apply merge
-         (map (partial field-queries forms expanded-forms)
-              form)))
-
-
-(defn query [forms form-id expanded-forms {:keys [:query-name :query :params] :as q-and-params}]
-  (let [form (get forms form-id)
-        queries-map (form-queries forms form expanded-forms)]
-    (if q-and-params
-      (let [value [query params (form-pull-exp forms form expanded-forms)]]
-        (assoc queries-map (or query-name (hash value)) value))
-      queries-map)))
+         (map #(field-queries forms queries expanded-forms param-ctx %)
+           form)))

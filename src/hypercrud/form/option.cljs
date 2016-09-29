@@ -1,14 +1,15 @@
 (ns hypercrud.form.option
-  (:require [hypercrud.client.core :as hc]))
+  (:require [hypercrud.client.core :as hc]
+            [hypercrud.form.q-util :as q-util]))
 
 
 (defprotocol IFieldOptions
   (label-prop [this])
-  (get-key [this])
-  (get-option-records [this graph record])
+  (get-key [this queries])
+  (get-option-records [this queries graph record])
 
   ;todo should be get-queries and we can delete hc.form.util/field-queries
-  (get-query [this])
+  (get-query [this queries params])
 
   (to-string [this entity])
   (parse-string [this s])
@@ -23,23 +24,25 @@
   (create-new? [this record]))
 
 
-(deftype QueryOptions [query form-id label-prop]
+(deftype QueryOptions [query-id form-id label-prop]
   IFieldOptions
   (label-prop [this] label-prop)
 
-  (get-key [this]
+  (get-key [this queries]
     ;memoizable
-    (hash query))
+    (hash (:query/value (get queries query-id))))
 
-  (get-option-records [this graph record]
+  (get-option-records [this queries graph record]
     ;memoizable
-    (->> (hc/select graph (hash query) query)
-         (mapv #(hc/entity graph %))))
+    (let [q (:query/value (get queries query-id))]
+      (->> (hc/select graph (hash q) q)
+           (mapv #(hc/entity graph %)))))
 
-  (get-query [this]
-    ; todo account for holes
-    (let [query-name (hash query)]
-      {query-name [query [] '[*]]}))
+  (get-query [this queries param-ctx]
+    (let [q (:query/value (get queries query-id))
+          query-name (hash q)
+          params (q-util/build-params q param-ctx)]
+      {query-name [q params '[*]]}))
 
   (to-string [this entity]
     (str (:db/id entity)))
@@ -58,16 +61,16 @@
   IFieldOptions
   (label-prop [this] label-prop)
 
-  (get-key [this]
+  (get-key [this queries]
     ;memoizable
     (hash fn))
 
-  (get-option-records [this graph record]
+  (get-option-records [this queries graph record]
     ;memoizable
     (->> (fn record)
          (map #(hc/entity graph %))))
 
-  (get-query [this] nil)
+  (get-query [this queries params] nil)
 
   (to-string [this entity]
     ;memoizable
@@ -87,9 +90,9 @@
 (deftype StaticOptions [static-options label-prop serialize deserialize]
   IFieldOptions
   (label-prop [this] label-prop)
-  (get-key [this] (hash static-options))
-  (get-option-records [this graph record] static-options)
-  (get-query [this] nil)
+  (get-key [this queries] (hash static-options))
+  (get-option-records [this queries graph record] static-options)
+  (get-query [this queries params] nil)
   (to-string [this entity] (serialize entity))
   (parse-string [this s] (deserialize s))
 
@@ -98,7 +101,7 @@
   (create-new? [this record] false))
 
 
-(defn gimme-useful-options [{:keys [:label-prop :form :query :inline] :as field}]
+(defn gimme-useful-options [{:keys [:label-prop :form :query :inline]}]
   (->QueryOptions query form label-prop))
 
 

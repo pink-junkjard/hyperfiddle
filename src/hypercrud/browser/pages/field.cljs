@@ -5,8 +5,10 @@
             [hypercrud.ui.auto-control :refer [auto-control]]))
 
 
-(defn ui [field cur transact! graph eid forms navigate-cmp]
-  (let [local-statements (cur [:statements] [])
+(defn ui [cur transact! graph eid forms queries form-id field-ident navigate-cmp]
+  (let [form (get forms form-id)
+        field (first (filter #(= (:ident %) field-ident) form))
+        local-statements (cur [:statements] [])
         graph (hc/with graph @local-statements)
         stage-tx! #(swap! local-statements tx-util/into-tx %)]
     [:div
@@ -15,6 +17,7 @@
                                           :forms forms
                                           :graph graph
                                           :navigate-cmp navigate-cmp
+                                          :queries queries
                                           :stage-tx! stage-tx!}]
      [:button {:on-click #(transact! @local-statements)
                :disabled (empty? @local-statements)}
@@ -22,5 +25,7 @@
 
 
 ;todo copied from entity
-(defn query [state eid forms form-id]
-  (form/query eid forms form-id (get state :expanded nil)))
+(defn query [state eid forms queries form-id field-ident param-ctx]
+  (let [form (->> (get forms form-id)
+                  (filter #(= field-ident (:ident %))))]
+    (form/query eid forms queries form (get state :expanded nil) param-ctx)))

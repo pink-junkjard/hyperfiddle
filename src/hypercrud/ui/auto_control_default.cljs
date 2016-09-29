@@ -30,7 +30,7 @@
     (and (= valueType :instant) (= cardinality :db.cardinality/one)) (widget/instant entity widget-args)
 
     (and (= valueType :ref) (= cardinality :db.cardinality/one) isComponent) (table-cell/ref-one-component entity form-id widget-args)
-    (and (= valueType :ref) (= cardinality :db.cardinality/one)) (table-cell/ref-one entity form-id widget-args)
+    (and (= valueType :ref) (= cardinality :db.cardinality/one)) (table-cell/ref-one-component entity form-id widget-args)
 
     (and (= valueType :ref) (= cardinality :db.cardinality/many)) (table-cell/ref-many entity form-id widget-args)
     (and (= cardinality :db.cardinality/many)) (table-cell/other-many entity form-id widget-args)

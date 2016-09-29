@@ -45,7 +45,7 @@
      [radio-option "--" form-name #(change! nil) (= nil value)]]))
 
 
-(defn radio-ref* [entity {:keys [expanded-cur forms graph navigate-cmp stage-tx!]
+(defn radio-ref* [entity {:keys [expanded-cur forms graph navigate-cmp queries stage-tx!]
                           {:keys [options ident]} :field}]
   ; TODO only one radio-group on the page until we get a unique form-name
   (let [value (get entity ident)
@@ -60,13 +60,13 @@
                     (stage-tx! (tx-util/update-entity-attr entity ident eid))))
         create-new? (some-> value tx-util/tempid?)
         show-form? (or (not= nil @expanded-cur) create-new?)]
-    [:div.value {:key (option/get-key options)}
+    [:div.value {:key (option/get-key options queries)}
      (map (fn [{:keys [:db/id] :as entity}]
             (let [label (get entity (option/label-prop options))
                   checked? (= id value)]
               ^{:key id}
               [radio-option label form-name #(change! id) checked?]))
-          (option/get-option-records options graph entity))
+          (option/get-option-records options queries graph entity))
      (if (option/create-new? options entity)
        ^{:key :create-new}
        [radio-option "Create New" form-name #(change! "create-new") create-new?])
@@ -74,7 +74,7 @@
      [radio-option "--" form-name #(change! nil) (= nil value)]
      (if show-form?
        ;; TODO branch the client in create-new case
-       [form/form graph value forms form-id expanded-cur stage-tx! navigate-cmp])]
+       [form/form graph value forms queries form-id expanded-cur stage-tx! navigate-cmp])]
 
     ;todo how should editing existing entries work?
     #_[:div.editable-select {:key (hash option-eids)}

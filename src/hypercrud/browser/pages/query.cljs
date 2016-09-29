@@ -3,13 +3,14 @@
             [clojure.set :as set]
             [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx-util]
+            [hypercrud.form.q-util :as q-util]
             [hypercrud.form.util :as form-util]
             [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.form :as form]
             [hypercrud.ui.table :as table]))
 
 (defn hp->entity [q hp]
-  (->> (form-util/parse-holes q)
+  (->> (q-util/parse-holes q)
        (map (juxt identity #(get hp %)))
        (into {:db/id -1})))
 
@@ -18,8 +19,15 @@
   (set/subset? (set hole-names) (set (keys (into {} (remove (comp nil? val) hp))))))
 
 
-(defn ui [cur transact! graph forms form-id query query-blob navigate-cmp]
-  (let [hole-names (form-util/parse-holes (:query/value query))
+(defn get-query [queries query-blob]
+  (->> (vals queries)
+       (filter (fn [query]
+                 (= (:q query-blob) (:query/value query))))
+       first))
+
+(defn ui [cur transact! graph forms queries form-id query-blob navigate-cmp]
+  (let [query (get-query queries query-blob)
+        hole-names (q-util/parse-holes (:query/value query))
         local-statements (cur [:statements] [])
         expanded-cur (cur [:expanded] {})
         entity-cur (cur [:holes] (hp->entity (:query/value query) (:hp query-blob)))
@@ -39,28 +47,27 @@
                                             entity
                                             tx)))
            form (map #(get hole-fields-by-name %) hole-names)]
-       [form/form2 graph entity forms form expanded-cur stage-tx! navigate-cmp])
-     (if (show-table? hole-names entity)
+       [form/form2 graph entity forms queries form expanded-cur stage-tx! navigate-cmp])
+     (if (show-table? hole-names entity)                    ;todo what if we have a user hole?
        (let [stage-tx! #(swap! local-statements tx-util/into-tx %)]
-         [table/table graph (hc/select graph ::table/query) forms form-id expanded-cur stage-tx! navigate-cmp nil]))
+         [table/table graph (hc/select graph ::table/query) forms queries form-id expanded-cur stage-tx! navigate-cmp nil]))
      [:button {:key 1 :on-click #(transact! @local-statements)} "Save"]
 
      ;todo just add row at bottom
      [navigate-cmp {:href (str form-id "/entity/-1")} "Create"]]))
 
 
-(defn query [state query query-blob forms form-id]
-  (let [q (:q query-blob)
-        hp (-> (or (get state :holes)
-                   (hp->entity q (:hp query-blob)))
-               (dissoc :db/id))
-        hole-names (form-util/parse-holes q)
-        form (vec (:query/hole query))]
+(defn query [state forms queries query-blob form-id param-ctx]
+  (let [query (get-query queries query-blob)
+        q (:q query-blob)
+        hole-names (q-util/parse-holes q)
+        form (vec (:query/hole query))
+        param-ctx (merge param-ctx (-> (or (get state :holes)
+                                           (hp->entity q (:hp query-blob)))
+                                       (dissoc :db/id)))]
     (merge
       ;no fields are isComponent true or expanded, so we don't need to pass in a forms map
-      (form-util/form-queries nil form nil)
+      (form-util/form-option-queries nil queries form nil param-ctx)
 
-      (if (show-table? hole-names hp)
-        #_(assert (set/subset? (set hole-names) (set (keys hp)))
-                  (str "Missing parameters: " (set/difference (set hole-names) (set (keys hp))) " for query: " q))
-        (table/query q (map #(get hp %) hole-names) forms form-id (get state :expanded nil)) {}))))
+      (if (show-table? hole-names param-ctx)
+        (table/query q param-ctx forms form-id)))))

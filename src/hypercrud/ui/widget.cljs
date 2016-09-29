@@ -53,21 +53,21 @@
                   :disabled (nil? (get entity ident))} "Edit"]])
 
 
-(defn select-ref-component [entity {:keys [expanded-cur forms graph navigate-cmp stage-tx!]
+(defn select-ref-component [entity {:keys [expanded-cur forms graph navigate-cmp queries stage-tx!]
                                     {:keys [:ident :options]} :field}]
   (let [value (get entity ident)]
-    (form/form graph value forms (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp)))
+    (form/form graph value forms queries (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp)))
 
 
 (defn table-many-ref [entity widget-args]
   (let [select-value-atom (r/atom nil)]
-    (fn [entity {:keys [forms graph expanded-cur navigate-cmp stage-tx!]
+    (fn [entity {:keys [forms graph expanded-cur navigate-cmp queries stage-tx!]
                  {:keys [ident options]} :field}]
       (let [temp-id! hc/*temp-id!*
             value (get entity ident)
             retract-entity #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [%] []))]
         [:div.value
-         [table/table graph value forms (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp retract-entity]
+         [table/table graph value forms queries (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp retract-entity]
          (let [props {:value (if (nil? @select-value-atom)
                                ""
                                (str @select-value-atom))
@@ -77,7 +77,7 @@
                                                 (js/parseInt select-value 10))]
                                    (reset! select-value-atom value))}
                select-options (concat
-                                (->> (option/get-option-records options graph entity)
+                                (->> (option/get-option-records options queries graph entity)
                                      (sort-by #(get % (option/label-prop options)))
                                      (mapv (fn [entity]
                                              [:option {:key (:db/id entity)
@@ -91,13 +91,13 @@
                                     (tx-util/edit-entity (:db/id entity) ident [] [new-v])))} "⬆"]])]))))
 
 
-(defn table-many-ref-component [entity {:keys [forms graph expanded-cur navigate-cmp stage-tx!]
+(defn table-many-ref-component [entity {:keys [forms graph expanded-cur navigate-cmp queries stage-tx!]
                                         {:keys [ident options]} :field}]
   (let [temp-id! hc/*temp-id!*
         value (get entity ident)
         retract-entity #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [%] []))]
     [:div.value
-     [table/table graph value forms (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp retract-entity]
+     [table/table graph value forms queries (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp retract-entity]
      [:button {:on-click #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [] [(temp-id!)]))} "Add"]]))
 
 
