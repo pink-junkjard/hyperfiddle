@@ -92,6 +92,27 @@
           entity))
 
 
+(defn pulled-entity->entity [schema {eid :db/id :as entity}]
+  (->> (dissoc entity :db/id)                               ; if we add :db/id to the schema this step should not be necessary
+       (map (fn [[attr val]]
+              [attr (let [{:keys [:db/cardinality :db/valueType]} (get schema attr)
+                          _ (assert cardinality (str "schema attribute not found: " (pr-str attr)))]
+                      (if (= valueType :db.type/ref)
+                        (cond
+                          (= cardinality :db.cardinality/one) (ref->v val)
+                          (= cardinality :db.cardinality/many) (set (mapv ref->v val)))
+                        val))]))
+       (into {:db/id eid})))
+
+
+(defn pulled-tree-to-entities [schema pulled-tree]
+  (->> (tree-seq (fn [v] (entity? v))
+                 #(entity-children schema %)
+                 pulled-tree)
+       (map (juxt :db/id #(pulled-entity->entity schema %)))
+       (into {})))
+
+
 (defn pulled-tree-to-statements [schema pulled-tree]
   ;; branch nodes are type entity. which right now is hashmap.
   (let [traversal (tree-seq (fn [v] (entity? v))

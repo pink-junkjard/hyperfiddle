@@ -20,10 +20,6 @@
   (apply concat (vals pulled-trees-map)))
 
 
-(defn ->statements [schema pulled-trees-map]
-  (mapcat #(tx/pulled-tree-to-statements schema %) (->pulled-trees pulled-trees-map)))
-
-
 (defn ->resultsets [pulled-trees-map]
   (util/map-values #(map :db/id %) pulled-trees-map))
 
@@ -32,10 +28,12 @@
 
 
 (defn ->graph-data [schema pulled-trees-map local-statements]
-  (let [statements (->statements schema pulled-trees-map)]
+  (let [lookup (->> (->pulled-trees pulled-trees-map)
+                    (map #(tx/pulled-tree-to-entities schema %))
+                    (apply merge-with merge))]
     (GraphData. pulled-trees-map
                 (->resultsets pulled-trees-map)
-                (tx/build-entity-lookup schema (concat statements local-statements)))))
+                (tx/build-entity-lookup schema local-statements lookup))))
 
 
 (deftype Graph [schema named-queries ^:mutable t local-statements ^:mutable graph-data]
