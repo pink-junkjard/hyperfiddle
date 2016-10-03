@@ -1,6 +1,5 @@
 (ns hypercrud.form.util
-  (:require [hypercrud.form.option :as option]
-            [hypercrud.form.q-util :as q-util]))
+  (:require [hypercrud.form.option :as option]))
 
 
 (defn options->form [forms field-options]

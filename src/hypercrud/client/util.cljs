@@ -1,14 +1,6 @@
 (ns hypercrud.client.util
-  (:require [hypercrud.client.core :as hc]))
-
-
-(defn map-values [f m]
-  (->> (map (fn [[k v]] [k (f v)]) m)
-       (into {})))
-
-
-(defn group-by-assume-unique [f xs]
-  (into {} (map (fn [x] [(f x) x]) xs)))
+  (:require [hypercrud.client.core :as hc]
+            [hypercrud.util :as util]))
 
 
 (defn build-indexed-schema [schema]
@@ -25,14 +17,8 @@
                 {:db/ident :db/noHistory :db/valueType :db.type/boolean :db/cardinality :db.cardinality/one}
 
                 {:db/ident :fressian/tag :db/valueType :db.type/keyword :db/cardinality :db.cardinality/one}])
-       (group-by-assume-unique :db/ident)))
-
-
-(defn update-existing [m k f]
-  (if (get m k)
-    (update m k f)
-    m))
+       (util/group-by-assume-unique :db/ident)))
 
 
 (defn update-id-with-ident [entity graph attr]
-  (update-existing entity attr #(:db/ident (hc/entity graph %))))
+  (util/update-existing entity attr #(:db/ident (hc/entity graph %))))

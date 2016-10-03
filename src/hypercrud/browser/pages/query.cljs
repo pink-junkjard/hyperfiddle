@@ -1,6 +1,5 @@
 (ns hypercrud.browser.pages.query
-  (:require [cljs.pprint :as pprint]
-            [clojure.set :as set]
+  (:require [clojure.set :as set]
             [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx-util]
             [hypercrud.form.q-util :as q-util]

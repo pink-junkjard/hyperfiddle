@@ -2,7 +2,8 @@
   (:require-macros [cljs.test :refer [deftest is]])
   (:require [cljs.test]
             [hypercrud.client.test-util :refer [check-tx]]
-            [hypercrud.client.tx :refer [entity->statements pulled-tree-to-statements]]))
+            [hypercrud.client.tx :refer [entity->statements pulled-tree-to-statements]]
+            [hypercrud.util :as util]))
 
 
 
@@ -23,10 +24,7 @@
    {:db/ident :district/region :db/valueType :db.type/ref :db/cardinality :db.cardinality/one}
    ])
 
-(defn group-by-assume-unique [f xs]
-  (into {} (map (fn [x] [(f x) x]) xs)))
-
-(def indexed-schema (group-by-assume-unique :db/ident schema))
+(def indexed-schema (util/group-by-assume-unique :db/ident schema))
 
 
 (deftest entity->statements-test []

@@ -3,7 +3,7 @@
             [goog.Uri]
             [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx]
-            [hypercrud.client.util :as util]))
+            [hypercrud.util :as util]))
 
 
 (defprotocol GraphPrivate
