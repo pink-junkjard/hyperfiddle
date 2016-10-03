@@ -10,9 +10,12 @@
         field (first (filter #(= (:ident %) field-ident) form))
         local-statements (cur [:statements] [])
         graph (hc/with graph @local-statements)
-        stage-tx! #(swap! local-statements tx-util/into-tx %)]
+        stage-tx! #(swap! local-statements tx-util/into-tx %)
+        expanded-cur (cur [:expanded (:ident field)]
+                          ; hacky but we currently only want expanded edit forms where we draw tables
+                          (if (= :db.cardinality/many (:cardinality field)) {} nil))]
     [:div
-     [auto-control (hc/entity graph eid) {:expanded-cur (cur [:expanded (:ident field)] {})
+     [auto-control (hc/entity graph eid) {:expanded-cur expanded-cur
                                           :field field
                                           :forms forms
                                           :graph graph
