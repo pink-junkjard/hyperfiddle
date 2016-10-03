@@ -66,4 +66,5 @@
                            [[:option {:key :blank :value ""} "--"]]))]]
      (if show-form?
        ;; TODO branch the client in create-new case
-       [form/form graph value forms queries (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp])]))
+       (if-let [form-id (option/get-form-id options entity)]
+         [form/form graph value forms queries (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp]))]))
