@@ -64,7 +64,6 @@
                              [[:option {:key :create-new :value "create-new"} "Create New"]]
                              [])
                            [[:option {:key :blank :value ""} "--"]]))]]
-     (if show-form?
+     (if (and (not= nil value) show-form?)
        ;; TODO branch the client in create-new case
-       (if-let [form-id (option/get-form-id options entity)]
-         [form/form graph value forms queries (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp]))]))
+       [form/form graph value forms queries (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp])]))
