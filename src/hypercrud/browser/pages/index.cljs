@@ -8,6 +8,7 @@
    [:ul.links
     (->> (vals queries)
          (filter #(not= nil (:query/form %)))
+         (sort-by :query/ident)
          (map (fn [{:keys [:query/ident :query/value :query/form :query/hole]}]
                 (let [hp {} #_(->> hole
                                    (map (juxt :hole/name (constantly nil)))
