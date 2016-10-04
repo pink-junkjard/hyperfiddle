@@ -1,8 +1,9 @@
 (ns hypercrud.ui.table
   (:require [hypercrud.client.core :as hc]
             [hypercrud.form.util :as form-util]
-            [hypercrud.ui.auto-control :refer [auto-table-cell]]
-            [hypercrud.form.q-util :as q-util]))
+            [hypercrud.form.option :as option]
+            [hypercrud.form.q-util :as q-util]
+            [hypercrud.ui.auto-control :refer [auto-table-cell]]))
 
 
 (defn build-col-heads [form]
@@ -54,11 +55,10 @@
 (defn table-pull-exp [forms form]
   (concat
     [:db/id]
-    (map (fn [{:keys [:ident :cardinality :isComponent :options] :as field}]
-           (if (or isComponent (= cardinality :db.cardinality/many))
-             ; components and selects render nested entities, so pull another level deeper
-             (let [form (form-util/options->form forms options)]
-               {ident (table-pull-exp forms form)})
+    (map (fn [{:keys [ident valueType isComponent options] :as field}]
+           (if (or isComponent (= valueType :ref))
+             ; components and refs render nested entities, so pull another level deeper
+             {ident [:db/id (option/label-prop options)]}
 
              ; otherwise just add the attribute to the list
              ident))
