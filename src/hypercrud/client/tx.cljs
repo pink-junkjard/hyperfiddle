@@ -109,8 +109,10 @@
   (->> (tree-seq (fn [v] (entity? v))
                  #(entity-children schema %)
                  pulled-tree)
-       (map (juxt :db/id #(pulled-entity->entity schema %)))
-       (into {})))
+       (map #(pulled-entity->entity schema %))
+       (reduce (fn [m {:keys [:db/id] :as entity}]
+                 (update m id merge entity))
+               {})))
 
 
 (defn pulled-tree-to-statements [schema pulled-tree]
