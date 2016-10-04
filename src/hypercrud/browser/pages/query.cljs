@@ -1,5 +1,6 @@
 (ns hypercrud.browser.pages.query
-  (:require [clojure.set :as set]
+  (:require [cljs.pprint :as pprint]
+            [clojure.set :as set]
             [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx-util]
             [hypercrud.form.q-util :as q-util]
@@ -33,6 +34,8 @@
         entity @entity-cur
         graph (hc/with graph @local-statements)]
     [:div
+     [:h2 (:query/ident query)]
+     [:pre (with-out-str (pprint/pprint (:query/value query)))]
      (let [hole-fields-by-name (->> (:query/hole query)
                                     (map (juxt :ident identity))
                                     (into {}))
