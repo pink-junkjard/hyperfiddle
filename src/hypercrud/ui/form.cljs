@@ -33,7 +33,7 @@
 
 (defn query [eid forms queries form expanded-forms param-ctx]
   (if (not (tx-util/tempid? eid))
-    (let [[query-name q] [:query '[:find [?e ...] :in $ ?e :where [?e]]]
+    (let [[query-name q] [eid '[:find [?e ...] :in $ ?e :where [?e]]]
           param-ctx (merge param-ctx {"?e" eid})
           pull-exp (form-util/form-pull-exp forms form expanded-forms)]
       (merge (form-util/form-option-queries forms queries form expanded-forms param-ctx)
