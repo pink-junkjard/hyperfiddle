@@ -53,17 +53,19 @@
      (if (and (option/editable? options entity) (not show-form?))
        edit-element)
      [:span.select
-      [:select props (-> (->> (option/get-option-records options queries graph entity)
-                              (sort-by #(get % (option/label-prop options)))
-                              (mapv (fn [entity]
-                                      (let [eid (:db/id entity)]
-                                        ^{:key eid}
-                                        [:option {:value (option/to-string options entity)} (str (get entity (option/label-prop options)))]))))
-                         (concat
-                           (if (option/create-new? options entity)
-                             [[:option {:key :create-new :value "create-new"} "Create New"]]
-                             [])
-                           [[:option {:key :blank :value ""} "--"]]))]]
+      (let [option-records (option/get-option-records options queries graph entity)]
+        (assert (or (nil? value) (contains? (set (map :db/id option-records)) value)) (str "Select options does not contain selected value: " (pr-str value)))
+        [:select props (-> (->> option-records
+                                (sort-by #(get % (option/label-prop options)))
+                                (mapv (fn [entity]
+                                        (let [eid (:db/id entity)]
+                                          ^{:key eid}
+                                          [:option {:value (option/to-string options entity)} (str (get entity (option/label-prop options)))]))))
+                           (concat
+                             (if (option/create-new? options entity)
+                               [[:option {:key :create-new :value "create-new"} "Create New"]]
+                               [])
+                             [[:option {:key :blank :value ""} "--"]]))])]
      (if (and (not= nil value) show-form?)
        ;; TODO branch the client in create-new case
        [form/form graph value forms queries (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp])]))
