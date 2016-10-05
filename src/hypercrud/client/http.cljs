@@ -1,5 +1,7 @@
 (ns hypercrud.client.http
-  (:require [goog.Uri]
+  (:require [cljs.pprint :as pprint]
+            [cljs.reader :as reader]
+            [goog.Uri]
             [hypercrud.client.core :as hc]
             [hypercrud.client.graph :as graph]
             [hypercrud.client.internal :as internal]
@@ -10,6 +12,7 @@
 
 
 (def content-type-transit "application/transit+json;charset=UTF-8")
+(def content-type-edn "application/edn;charset=UTF-8")
 
 
 (defmethod kvlt.middleware.params/coerce-form-params (keyword content-type-transit) [{:keys [form-params]}]
@@ -18,6 +21,17 @@
 
 (defmethod kvlt.middleware/from-content-type (keyword content-type-transit) [resp]
   (let [decoded-val (internal/transit-decode (:body resp))]
+    (assoc resp :body decoded-val)))
+
+
+(defmethod kvlt.middleware.params/coerce-form-params (keyword content-type-edn) [{:keys [form-params]}]
+  (binding [pprint/*print-miser-width* nil
+            pprint/*print-right-margin* 200]
+    (with-out-str (pprint/pprint form-params))))
+
+
+(defmethod kvlt.middleware/from-content-type (keyword content-type-edn) [resp]
+  (let [decoded-val (reader/read-string (:body resp))]
     (assoc resp :body decoded-val)))
 
 
@@ -48,8 +62,8 @@
                 {:url (let [url (resolve-relative-uri entry-uri (goog.Uri. "hydrate"))]
                         (if t (.setParameterValue url "t" t))
                         url)
-                 :content-type content-type-transit
-                 :accept content-type-transit
+                 :content-type content-type-edn
+                 :accept content-type-edn
                  :method :post
                  :form (into [] (vals named-queries))
                  :as :auto})
@@ -67,8 +81,8 @@
   (transact! [this tx]
     (-> (kvlt/request!
           {:url (resolve-relative-uri entry-uri (goog.Uri. "transact"))
-           :content-type content-type-transit
-           :accept content-type-transit
+           :content-type content-type-edn
+           :accept content-type-edn
            :method :post
            :form tx
            :as :auto})
