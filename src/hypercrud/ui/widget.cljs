@@ -59,36 +59,29 @@
     (form/form graph value forms queries (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp)))
 
 
-(defn table-many-ref [entity widget-args]
-  (let [select-value-atom (r/atom nil)]
+(defn table-many-ref [entity {:keys [graph queries] {:keys [options]} :field}]
+  (let [initial-select (first (option/get-option-records options queries graph entity))
+        select-value-atom (r/atom (:db/id initial-select))]
     (fn [entity {:keys [forms graph expanded-cur navigate-cmp queries stage-tx!]
                  {:keys [ident options]} :field}]
-      (let [temp-id! hc/*temp-id!*
-            value (get entity ident)
+      (let [value (get entity ident)
             retract-entity #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [%] []))]
         [:div.value
          [table/table graph value forms queries (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp retract-entity]
-         (let [props {:value (if (nil? @select-value-atom)
-                               ""
-                               (str @select-value-atom))
+         (let [props {:value (str @select-value-atom)
                       :on-change #(let [select-value (.-target.value %)
-                                        value (if (= "" select-value)
-                                                nil
-                                                (js/parseInt select-value 10))]
+                                        value (js/parseInt select-value 10)]
                                    (reset! select-value-atom value))}
-               select-options (concat
-                                (->> (option/get-option-records options queries graph entity)
-                                     (sort-by #(get % (option/label-prop options)))
-                                     (mapv (fn [entity]
-                                             [:option {:key (:db/id entity)
-                                                       :value (str (:db/id entity))}
-                                              (str (get entity (option/label-prop options)))])))
-                                [[:option {:key :create-new :value ""} "Create New"]])]
+               select-options (->> (option/get-option-records options queries graph entity)
+                                   (sort-by #(get % (option/label-prop options)))
+                                   (map (fn [entity]
+                                          [:option {:key (:db/id entity)
+                                                    :value (str (:db/id entity))}
+                                           (str (get entity (option/label-prop options)))])))]
            [:div.table-controls
             [:select props select-options]
             [:button {:on-click #(stage-tx!
-                                  (let [new-v (or @select-value-atom (temp-id!))]
-                                    (tx-util/edit-entity (:db/id entity) ident [] [new-v])))} "⬆"]])]))))
+                                  (tx-util/edit-entity (:db/id entity) ident [] [@select-value-atom]))} "⬆"]])]))))
 
 
 (defn table-many-ref-component [entity {:keys [forms graph expanded-cur navigate-cmp queries stage-tx!]
