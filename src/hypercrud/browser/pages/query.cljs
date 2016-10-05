@@ -72,4 +72,4 @@
       (form-util/form-option-queries nil queries form nil param-ctx)
 
       (if (show-table? hole-names param-ctx)
-        (table/query q param-ctx forms form-id)))))
+        (table/query q param-ctx forms queries form-id)))))

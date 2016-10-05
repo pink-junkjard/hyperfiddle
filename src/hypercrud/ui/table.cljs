@@ -65,7 +65,24 @@
          form)))
 
 
-(defn query [q param-ctx forms form-id]
+(defn field-queries [queries param-ctx
+                     {:keys [cardinality valueType isComponent options] :as field}]
+  (if (and (= valueType :ref)
+           (= cardinality :db.cardinality/one)
+           (not isComponent)
+           (not (option/has-holes? options queries)))
+    (option/get-query options queries param-ctx)))
+
+
+(defn table-option-queries [queries form param-ctx]
+  (apply merge
+         (map #(field-queries queries param-ctx %)
+              form)))
+
+
+(defn query [q param-ctx forms queries form-id]
   (let [form (get forms form-id)
         pull-exp (table-pull-exp forms form)]
-    (q-util/build-query ::query q param-ctx pull-exp)))
+    (merge
+      (table-option-queries queries form param-ctx)
+      (q-util/build-query ::query q param-ctx pull-exp))))

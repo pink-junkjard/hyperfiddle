@@ -60,4 +60,4 @@ case that works for expanded-forms)"
   [forms queries form expanded-forms param-ctx]
   (apply merge
          (map #(field-queries forms queries expanded-forms param-ctx %)
-           form)))
+              form)))

@@ -13,15 +13,6 @@
            (str (subs s 0 (- c 3)) "..."))))
 
 
-; this can be used sometimes, on the entity page, but not the query page
-(defn ref-one [entity form-id {:keys [expanded-cur navigate-cmp] {:keys [ident options]} :field :as widget-args}]
-  (select/select*
-      entity (assoc widget-args :expanded-cur (expanded-cur [ident]))
-      (let [href (str (option/get-form-id options entity) "/entity/" (get entity ident))]
-        (if (not (nil? (get entity ident)))
-          [navigate-cmp {:class "edit" :href href} "Edit"]))))
-
-
 (defn ref-one-component [entity form-id {:keys [graph navigate-cmp] {:keys [ident options]} :field}]
   (let [label-prop (option/label-prop options)
         eid (get entity ident)]
@@ -34,6 +25,17 @@
            str
            ellipsis)
        "nil")]))
+
+
+; this can be used sometimes, on the entity page, but not the query page
+(defn ref-one [entity form-id {:keys [expanded-cur navigate-cmp queries] {:keys [ident options]} :field :as widget-args}]
+  (if (option/has-holes? options queries)
+    (ref-one-component entity form-id widget-args)
+    (select/select*
+      entity (assoc widget-args :expanded-cur (expanded-cur [ident]))
+      (let [href (str (option/get-form-id options entity) "/entity/" (get entity ident))]
+        (if (not (nil? (get entity ident)))
+          [navigate-cmp {:class "edit" :href href} "Edit"])))))
 
 
 (defn ref-many [entity form-id {:keys [graph navigate-cmp] {:keys [ident options]} :field}]

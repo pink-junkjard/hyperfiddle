@@ -6,7 +6,7 @@
 
 
 (defmethod auto-control/auto-control :default
-  [entity {{:keys [:valueType :cardinality :isComponent] :as field} :field :as widget-args}]
+  [entity {{:keys [valueType cardinality isComponent] :as field} :field :as widget-args}]
   (cond
     (and (= valueType :boolean) (= cardinality :db.cardinality/one)) (select/select-boolean entity widget-args)
     (and (= valueType :keyword) (= cardinality :db.cardinality/one)) (widget/input-keyword entity widget-args)
@@ -21,7 +21,7 @@
 
 
 (defmethod auto-control/auto-table-cell :default
-  [entity form-id {{:keys [:valueType :cardinality :isComponent] :as field} :field :as widget-args}]
+  [entity form-id {{:keys [valueType cardinality isComponent] :as field} :field :as widget-args}]
   (cond
     (and (= valueType :boolean) (= cardinality :db.cardinality/one)) (select/select-boolean entity widget-args)
     (and (= valueType :keyword) (= cardinality :db.cardinality/one)) (widget/input-keyword entity widget-args)
@@ -30,7 +30,7 @@
     (and (= valueType :instant) (= cardinality :db.cardinality/one)) (widget/instant entity widget-args)
 
     (and (= valueType :ref) (= cardinality :db.cardinality/one) isComponent) (table-cell/ref-one-component entity form-id widget-args)
-    (and (= valueType :ref) (= cardinality :db.cardinality/one)) (table-cell/ref-one-component entity form-id widget-args)
+    (and (= valueType :ref) (= cardinality :db.cardinality/one)) (table-cell/ref-one entity form-id widget-args)
 
     (and (= valueType :ref) (= cardinality :db.cardinality/many)) (table-cell/ref-many entity form-id widget-args)
     (and (= cardinality :db.cardinality/many)) (table-cell/other-many entity form-id widget-args)
