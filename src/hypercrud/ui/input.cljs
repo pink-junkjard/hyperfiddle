@@ -11,7 +11,7 @@
                               :class (if-not valid?' "invalid")
                               :value @intermediate-val
                               :on-change #(reset! intermediate-val (.. % -target -value))
-                              :on-blur #(if valid?'
+                              :on-blur #(if (and valid?' (not= @intermediate-val value))
                                          (on-change! (parse-string @intermediate-val)))})]))))
 
 
