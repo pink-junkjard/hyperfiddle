@@ -86,12 +86,10 @@
 
 (defn table-many-ref-component [entity {:keys [forms graph expanded-cur navigate-cmp queries stage-tx!]
                                         {:keys [ident options]} :field}]
-  (let [temp-id! hc/*temp-id!*
-        value (get entity ident)
+  (let [value (get entity ident)
         retract-entity #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [%] []))]
     [:div.value
-     [table/table graph value forms queries (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp retract-entity]
-     [:button {:on-click #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [] [(temp-id!)]))} "Add"]]))
+     [table/table graph value forms queries (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp retract-entity]]))
 
 
 (defn multi-select-ref [entity {:keys [stage-tx!] {:keys [:ident]} :field :as widget-args}]
