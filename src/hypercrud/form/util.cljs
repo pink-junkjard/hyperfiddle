@@ -16,9 +16,9 @@ case that works for expanded-forms)"
 (declare form-option-queries)
 
 
-(defn field-pull-exp-entry [forms expanded-forms {:keys [:ident :cardinality :isComponent :options] :as field}]
+(defn field-pull-exp-entry [forms expanded-forms {:keys [ident valueType cardinality isComponent options] :as field}]
   (let [new-expanded-forms (get expanded-forms ident)]
-    (if (or new-expanded-forms isComponent)
+    (if (or new-expanded-forms isComponent (and (= valueType :ref) (= cardinality :db.cardinality/many)))
       ; components render expanded automatically
       ; so if it is expanded or is a component, pull another level deeper
       (let [form (options->form forms options)]
