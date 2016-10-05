@@ -53,10 +53,7 @@
      (if (show-table? hole-names entity)                    ;todo what if we have a user hole?
        (let [stage-tx! #(swap! local-statements tx-util/into-tx %)]
          [table/table graph (hc/select graph ::table/query) forms queries form-id expanded-cur stage-tx! navigate-cmp nil]))
-     [:button {:key 1 :on-click #(transact! @local-statements)} "Save"]
-
-     ;todo just add row at bottom
-     [navigate-cmp {:href (str form-id "/entity/-1")} "Create"]]))
+     [:button {:key 1 :on-click #(transact! @local-statements)} "Save"]]))
 
 
 (defn query [state forms queries query-blob form-id param-ctx]
