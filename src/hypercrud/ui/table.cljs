@@ -52,7 +52,7 @@
                                                       :stage-tx! stage-tx!})]))))]]))
 
 
-(defn table-pull-exp [forms form]
+(defn table-pull-exp [form]
   (concat
     [:db/id]
     (map (fn [{:keys [ident valueType isComponent options] :as field}]
@@ -82,7 +82,7 @@
 
 (defn query [q param-ctx forms queries form-id]
   (let [form (get forms form-id)
-        pull-exp (table-pull-exp forms form)]
+        pull-exp (table-pull-exp form)]
     (merge
       (table-option-queries queries form param-ctx)
       (q-util/build-query ::query q param-ctx pull-exp))))
