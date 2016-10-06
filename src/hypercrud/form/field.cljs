@@ -36,7 +36,7 @@
 
 
 (defn hole->field
-  ([{:keys [:hole/name
+  ([{:keys [:hole/name :hole/formula
             :field/prompt :field/query :field/label-prop
             :attribute/valueType :attribute/cardinality]}]
    (->Field prompt name (convert-valueType valueType) cardinality false (option/gimme-useful-options {:label-prop label-prop

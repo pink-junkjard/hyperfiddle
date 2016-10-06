@@ -3,15 +3,16 @@
             [clojure.set :as set]
             [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx-util]
+            [hypercrud.form.field :as field]
             [hypercrud.form.q-util :as q-util]
             [hypercrud.form.util :as form-util]
             [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.form :as form]
             [hypercrud.ui.table :as table]))
 
-(defn initial-entity [{:keys [:query/value] :as query}]
-  (->> (q-util/parse-holes value)
-       (map (juxt identity (constantly nil)))
+(defn initial-entity [q holes-by-name]
+  (->> (q-util/parse-holes q)
+       (map (juxt identity (constantly nil) #_ #(eval (:hole/formula (get holes-by-name %)))))
        (into {:db/id -1})))
 
 
@@ -30,25 +31,25 @@
         hole-names (q-util/parse-holes (:query/value query))
         local-statements (cur [:statements] [])
         expanded-cur (cur [:expanded] {})
-        entity-cur (cur [:holes] (initial-entity query))
+        holes-by-name (->> (:query/hole query)
+                           (map (juxt :hole/name identity))
+                           (into {}))
+        entity-cur (cur [:holes] (initial-entity query holes-by-name))
         entity @entity-cur
         graph (hc/with graph @local-statements)]
     [:div
      [:h2 (:query/ident query)]
      [:pre (with-out-str (pprint/pprint (:query/value query)))]
-     (let [hole-fields-by-name (->> (:query/hole query)
-                                    (map (juxt :ident identity))
-                                    (into {}))
-           schema (->> hole-fields-by-name
-                       (map (fn [[hole-name field]]
-                              [hole-name {:db/cardinality (:cardinality field)}]))
+     (let [schema (->> holes-by-name
+                       (map (fn [[hole-name hole]]
+                              [hole-name {:db/cardinality (:attribute/cardinality hole)}]))
                        (into {}))
            stage-tx! (fn [tx]
                        (reset! entity-cur (reduce
                                             #(tx-util/apply-stmt-to-entity schema %1 %2)
                                             entity
                                             tx)))
-           form (map #(get hole-fields-by-name %) hole-names)]
+           form (map #(field/hole->field (get holes-by-name %)) hole-names)]
        [form/form2 graph entity forms queries form expanded-cur stage-tx! navigate-cmp])
      (if (show-table? hole-names entity)                    ;todo what if we have a user hole?
        (let [stage-tx! #(swap! local-statements tx-util/into-tx %)]
@@ -58,10 +59,13 @@
 
 (defn query [state forms queries q form-id param-ctx]
   (let [query (get-query queries q)
+        holes-by-name (->> (:query/hole query)
+                           (map (juxt :hole/name identity))
+                           (into {}))
         hole-names (q-util/parse-holes q)
-        form (vec (:query/hole query))
+        form (vec (map field/hole->field (:query/hole query)))
         param-ctx (merge param-ctx (-> (or (get state :holes)
-                                           (initial-entity query))
+                                           (initial-entity query holes-by-name))
                                        (dissoc :db/id)))]
     (merge
       ;no fields are isComponent true or expanded, so we don't need to pass in a forms map
