@@ -65,13 +65,16 @@
     (fn [entity {:keys [forms graph expanded-cur navigate-cmp queries stage-tx!]
                  {:keys [ident options]} :field}]
       (let [value (get entity ident)
-            retract-entity #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [%] []))]
+            retract-entity! #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [%] []))
+            add-entity! #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [] [%]))]
         [:div.value
-         [table/table graph value forms queries (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp retract-entity]
+         [table/table-managed graph value forms queries (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]
          (let [props {:value (str @select-value-atom)
                       :on-change #(let [select-value (.-target.value %)
                                         value (js/parseInt select-value 10)]
                                    (reset! select-value-atom value))}
+               ; todo assert selected value is in record set
+               ; need lower level select component that can be reused here and in select.cljs
                select-options (->> (option/get-option-records options queries graph entity)
                                    (sort-by #(get % (option/label-prop options)))
                                    (map (fn [entity]
@@ -80,16 +83,16 @@
                                            (str (get entity (option/label-prop options)))])))]
            [:div.table-controls
             [:select props select-options]
-            [:button {:on-click #(stage-tx!
-                                  (tx-util/edit-entity (:db/id entity) ident [] [@select-value-atom]))} "⬆"]])]))))
+            [:button {:on-click #(add-entity! @select-value-atom)} "⬆"]])]))))
 
 
 (defn table-many-ref-component [entity {:keys [forms graph expanded-cur navigate-cmp queries stage-tx!]
                                         {:keys [ident options]} :field}]
   (let [value (get entity ident)
-        retract-entity #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [%] []))]
+        retract-entity! #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [%] []))
+        add-entity! #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [] [%]))]
     [:div.value
-     [table/table graph value forms queries (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp retract-entity]]))
+     [table/table-managed graph value forms queries (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]]))
 
 
 (defn multi-select-ref [entity {:keys [stage-tx!] {:keys [:ident]} :field :as widget-args}]
