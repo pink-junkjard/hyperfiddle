@@ -9,9 +9,9 @@
             [hypercrud.ui.form :as form]
             [hypercrud.ui.table :as table]))
 
-(defn hp->entity [q hp]
-  (->> (q-util/parse-holes q)
-       (map (juxt identity #(get hp %)))
+(defn initial-entity [{:keys [:query/value] :as query}]
+  (->> (q-util/parse-holes value)
+       (map (juxt identity (constantly nil)))
        (into {:db/id -1})))
 
 
@@ -19,18 +19,18 @@
   (set/subset? (set hole-names) (set (keys (into {} (remove (comp nil? val) hp))))))
 
 
-(defn get-query [queries query-blob]
+;get query metadata from query edn
+(defn get-query [queries q]
   (->> (vals queries)
-       (filter (fn [query]
-                 (= (:q query-blob) (:query/value query))))
+       (filter #(= q (:query/value %)))
        first))
 
-(defn ui [cur transact! graph forms queries form-id query-blob navigate-cmp]
-  (let [query (get-query queries query-blob)
+(defn ui [cur transact! graph forms queries form-id q navigate-cmp]
+  (let [query (get-query queries q)
         hole-names (q-util/parse-holes (:query/value query))
         local-statements (cur [:statements] [])
         expanded-cur (cur [:expanded] {})
-        entity-cur (cur [:holes] (hp->entity (:query/value query) (:hp query-blob)))
+        entity-cur (cur [:holes] (initial-entity query))
         entity @entity-cur
         graph (hc/with graph @local-statements)]
     [:div
@@ -56,13 +56,12 @@
      [:button {:key 1 :on-click #(transact! @local-statements)} "Save"]]))
 
 
-(defn query [state forms queries query-blob form-id param-ctx]
-  (let [query (get-query queries query-blob)
-        q (:q query-blob)
+(defn query [state forms queries q form-id param-ctx]
+  (let [query (get-query queries q)
         hole-names (q-util/parse-holes q)
         form (vec (:query/hole query))
         param-ctx (merge param-ctx (-> (or (get state :holes)
-                                           (hp->entity q (:hp query-blob)))
+                                           (initial-entity query))
                                        (dissoc :db/id)))]
     (merge
       ;no fields are isComponent true or expanded, so we don't need to pass in a forms map

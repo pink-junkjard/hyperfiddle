@@ -14,10 +14,10 @@
   (let [path-params (string/split page-rel-path "/")]
     (cond
       (and (= (second path-params) "query") (= 3 (count path-params)))
-      (let [[form-id _ query-blob] path-params
+      (let [[form-id _ q] path-params
             form-id (js/parseInt form-id 10)
-            query-blob (reader/read-string (base64/decode query-blob))]
-        (query-fn form-id query-blob))
+            q (reader/read-string (base64/decode q))]
+        (query-fn form-id q))
 
       (and (= (second path-params) "entity"))
       (condp = (count path-params)
@@ -44,8 +44,8 @@
   [:div
    [:div.hc-node-view
     (route page-rel-path
-           {:query-fn (fn [form-id query-blob]
-                        (query/ui cur transact! graph forms queries form-id query-blob navigate-cmp))
+           {:query-fn (fn [form-id q]
+                        (query/ui cur transact! graph forms queries form-id q navigate-cmp))
             :entity-fn (fn [eid form-id]
                          (entity/ui cur transact! graph eid forms queries form-id navigate! navigate-cmp))
             :field-fn (fn [eid form-id field-ident]
@@ -59,8 +59,8 @@
 
 (defn query [forms queries state page-rel-path param-ctx]
   (route page-rel-path
-         {:query-fn (fn [form-id query-blob]
-                      (query/query state forms queries query-blob form-id param-ctx))
+         {:query-fn (fn [form-id q]
+                      (query/query state forms queries q form-id param-ctx))
           :entity-fn (fn [eid form-id]
                        (entity/query state eid forms queries form-id param-ctx))
           :field-fn (fn [eid form-id field-ident]

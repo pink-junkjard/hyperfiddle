@@ -9,11 +9,8 @@
     (->> (vals queries)
          (filter #(not= nil (:query/form %)))
          (sort-by :query/ident)
-         (map (fn [{:keys [:query/ident :query/value :query/form :query/hole]}]
-                (let [hp {} #_(->> hole
-                                   (map (juxt :hole/name (constantly nil)))
-                                   (into {}))]
-                  [:li {:key ident}
-                   [navigate-cmp {:href (str form "/query/" (base64/encode {:q value :hp hp}))} ident]]))))]])
+         (map (fn [{:keys [:query/ident :query/value :query/form]}]
+                [:li {:key ident}
+                 [navigate-cmp {:href (str form "/query/" (base64/encode value))} ident]])))]])
 
 (defn query [] {})
