@@ -12,7 +12,10 @@
 
 (defn initial-entity [q holes-by-name]
   (->> (q-util/parse-holes q)
-       (map (juxt identity (constantly nil) #_ #(eval (:hole/formula (get holes-by-name %)))))
+       (map (juxt identity (fn [hole]
+                             (let [code (:hole/formula (get holes-by-name hole))
+                                   hole-filler-fn (js/eval code)]
+                               (hole-filler-fn)))))
        (into {:db/id -1})))
 
 
@@ -34,7 +37,7 @@
         holes-by-name (->> (:query/hole query)
                            (map (juxt :hole/name identity))
                            (into {}))
-        entity-cur (cur [:holes] (initial-entity query holes-by-name))
+        entity-cur (cur [:holes] (initial-entity q holes-by-name))
         entity @entity-cur
         graph (hc/with graph @local-statements)]
     [:div
@@ -65,7 +68,7 @@
         hole-names (q-util/parse-holes q)
         form (vec (map field/hole->field (:query/hole query)))
         param-ctx (merge param-ctx (-> (or (get state :holes)
-                                           (initial-entity query holes-by-name))
+                                           (initial-entity q holes-by-name))
                                        (dissoc :db/id)))]
     (merge
       ;no fields are isComponent true or expanded, so we don't need to pass in a forms map
