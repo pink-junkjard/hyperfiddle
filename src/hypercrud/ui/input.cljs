@@ -5,7 +5,7 @@
 ; TODO bug - if value controlled from above, this will ignore it
 (defn validated-input [value on-change! parse-string to-string valid? & [props]]
   (let [intermediate-val (reagent/atom (to-string value))]
-    (fn [value on-change! parse-string to-string valid?]
+    (fn [value on-change! parse-string to-string valid? & [props]]
       (let [valid?' (valid? @intermediate-val)]
         [:input (merge props {:type "text"
                               :class (if-not valid?' "invalid")
