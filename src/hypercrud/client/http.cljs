@@ -62,8 +62,8 @@
                 {:url (let [url (resolve-relative-uri entry-uri (goog.Uri. "hydrate"))]
                         (if t (.setParameterValue url "t" t))
                         url)
-                 :content-type content-type-edn
-                 :accept content-type-edn
+                 :content-type content-type-edn             ; helps debugging to view as edn
+                 :accept content-type-transit               ; needs to be fast so transit
                  :method :post
                  :form (into [] (vals named-queries))
                  :as :auto})
