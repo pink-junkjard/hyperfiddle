@@ -125,15 +125,19 @@
 
 
 (defn valid-date-str? [s]
-  (let [ms (.parse js/Date s)]                              ; NaN if not valid string
-    (integer? ms)))
+  (or (empty? s)
+      (let [ms (.parse js/Date s)]                          ; NaN if not valid string
+        (integer? ms))))
 
 
 (defn instant [entity {:keys [stage-tx!] {:keys [:ident]} :field}]
   (let [value (get entity ident)
         on-change! #(stage-tx! (tx-util/update-entity-attr entity ident %))
-        parse-string #(let [ms (.parse js/Date %)]
-                       (js/Date. ms))
+        parse-string (fn [s]
+                       (if (empty? s)
+                         nil
+                         (let [ms (.parse js/Date s)]
+                           (js/Date. ms))))
         to-string #(some-> % .toISOString)]
     [input/validated-input value on-change! parse-string to-string valid-date-str?]))
 
