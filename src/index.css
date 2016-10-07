@@ -128,11 +128,6 @@ td > .radio-boolean > .radio-group {
     width: auto;
 }
 
-.master-detail {
-    border: solid #428bca;
-    border-width: 1px 0 1px 0;
-}
-
 .master-detail > ul {
     width: 20%;
     padding: 0;
