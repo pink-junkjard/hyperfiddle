@@ -1,4 +1,5 @@
-(ns hypercrud.client.tx)
+(ns hypercrud.client.tx
+  (:require [hypercrud.client.core :as hc]))
 
 
 (defn tempid? [eid] (< eid 0))
@@ -70,12 +71,12 @@
                        valueType (get-in schema [attr :db/valueType])
                        _ (assert cardinality (str "schema attribute not found: " (pr-str attr)))]
                    (if (= valueType :db.type/ref)
-                     (cond
-                       (= cardinality :db.cardinality/one) [[:db/add eid attr (ref->v val)]]
-                       (= cardinality :db.cardinality/many) (mapv (fn [val] [:db/add eid attr (ref->v val)]) val))
-                     (cond
-                       (= cardinality :db.cardinality/one) [[:db/add eid attr val]]
-                       (= cardinality :db.cardinality/many) (mapv (fn [val] [:db/add eid attr val]) val))))))))
+                     (condp = cardinality
+                       :db.cardinality/one [[:db/add eid attr (ref->v val)]]
+                       :db.cardinality/many (mapv (fn [val] [:db/add eid attr (ref->v val)]) val))
+                     (condp = cardinality
+                       :db.cardinality/one [[:db/add eid attr val]]
+                       :db.cardinality/many (mapv (fn [val] [:db/add eid attr val]) val))))))))
 
 
 (defn entity? [v]
@@ -98,9 +99,9 @@
               [attr (let [{:keys [:db/cardinality :db/valueType]} (get schema attr)
                           _ (assert cardinality (str "schema attribute not found: " (pr-str attr)))]
                       (if (= valueType :db.type/ref)
-                        (cond
-                          (= cardinality :db.cardinality/one) (ref->v val)
-                          (= cardinality :db.cardinality/many) (set (mapv ref->v val)))
+                        (condp = cardinality
+                          :db.cardinality/one (ref->v val)
+                          :db.cardinality/many (set (mapv ref->v val)))
                         val))]))
        (into {:db/id eid})))
 
@@ -121,3 +122,44 @@
                             #(entity-children schema %)
                             pulled-tree)]
     (mapcat #(entity->statements schema %) traversal)))
+
+
+(defn replace-ids [schema skip? tx]
+  (let [id-map (atom {})
+        temp-id-atom (atom 0)
+        new-temp-id! #(swap! temp-id-atom dec)
+        replace-id! (fn [id]
+                      (let [new-id (get @id-map id)]
+                        (if (nil? new-id)
+                          (let [new-id (new-temp-id!)]
+                            (swap! id-map assoc id new-id)
+                            new-id)
+                          new-id)))]
+    (mapv (fn [[op e a v]]
+            (let [new-e (replace-id! e)
+                  valueType (get-in schema [a :db/valueType])
+                  new-v (if (and (not (skip? a)) (= valueType :db.type/ref))
+                          (replace-id! v)
+                          v)]
+              [op new-e a new-v]))
+          tx)))
+
+
+(defn recurse-entity->tx [schema graph skip? entity]
+  (->> (dissoc entity :db/id)
+       (mapcat (fn [[attr val]]
+                 (let [cardinality (get-in schema [attr :db/cardinality])
+                       valueType (get-in schema [attr :db/valueType])]
+                   (if (and (not (skip? attr)) (= valueType :db.type/ref))
+                     (condp = cardinality
+                       :db.cardinality/one (concat [[:db/add (:db/id entity) attr val]]
+                                                   (recurse-entity->tx schema graph skip? (hc/entity graph val)))
+                       :db.cardinality/many (mapcat (fn [val]
+                                                      (concat [[:db/add (:db/id entity) attr val]]
+                                                              (recurse-entity->tx schema graph skip? (hc/entity graph val))))
+                                                    val))
+                     (condp = cardinality
+                       :db.cardinality/one [[:db/add (:db/id entity) attr val]]
+                       :db.cardinality/many (mapv (fn [val]
+                                                    [:db/add (:db/id entity) attr val])
+                                                  val))))))))
