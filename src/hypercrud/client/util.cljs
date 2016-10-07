@@ -16,6 +16,8 @@
                 {:db/ident :db/isComponent :db/valueType :db.type/boolean :db/cardinality :db.cardinality/one}
                 {:db/ident :db/noHistory :db/valueType :db.type/boolean :db/cardinality :db.cardinality/one}
 
+                {:db/ident :db/txInstant :db/valueType :db.type/instant :db/cardinality :db.cardinality/one} ; tx entities
+
                 {:db/ident :fressian/tag :db/valueType :db.type/keyword :db/cardinality :db.cardinality/one}])
        (util/group-by-assume-unique :db/ident)))
 
