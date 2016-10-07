@@ -10,17 +10,17 @@
             [hypercrud.ui.form :as form]
             [hypercrud.ui.table :as table]))
 
-(defn initial-entity [q holes-by-name]
+(defn initial-entity [q holes-by-name param-ctx]
   (->> (q-util/parse-holes q)
        (map (juxt identity (fn [hole]
                              (let [code (:hole/formula (get holes-by-name hole))
                                    hole-filler-fn (js/eval code)]
-                               (hole-filler-fn)))))
+                               (hole-filler-fn (clj->js param-ctx))))))
        (into {:db/id -1})))
 
 
-(defn show-table? [hole-names hp]
-  (set/subset? (set hole-names) (set (keys (into {} (remove (comp nil? val) hp))))))
+(defn show-table? [hole-names param-values]
+  (set/subset? (set hole-names) (set (keys (into {} (remove (comp nil? val) param-values))))))
 
 
 ;get query metadata from query edn
@@ -37,7 +37,7 @@
         holes-by-name (->> (:query/hole query)
                            (map (juxt :hole/name identity))
                            (into {}))
-        entity-cur (cur [:holes] (initial-entity q holes-by-name))
+        entity-cur (cur [:holes] (initial-entity q holes-by-name {}))
         entity @entity-cur
         graph (hc/with graph @local-statements)]
     [:div
@@ -67,12 +67,16 @@
                            (into {}))
         hole-names (q-util/parse-holes q)
         form (vec (map field/hole->field (:query/hole query)))
-        param-ctx (merge param-ctx (-> (or (get state :holes)
-                                           (initial-entity q holes-by-name))
-                                       (dissoc :db/id)))]
+
+        ;; this is the new "param-ctx" - it is different - we already have the overridden
+        ;; values, there is no need to eval the formulas in a ctx to get the values.
+        param-values (-> (or (get state :holes)
+                             (initial-entity q holes-by-name param-ctx))
+                         (dissoc :db/id))]
     (merge
       ;no fields are isComponent true or expanded, so we don't need to pass in a forms map
-      (form-util/form-option-queries nil queries form nil param-ctx)
+      (form-util/form-option-queries nil queries form nil q-util/build-params-from-formula param-ctx)
 
-      (if (show-table? hole-names param-ctx)
-        (table/query q param-ctx forms queries form-id)))))
+      (if (show-table? hole-names param-values)
+        (let [p-filler (partial q-util/build-params #(get param-values %))]
+          (table/query query p-filler param-ctx forms queries form-id))))))

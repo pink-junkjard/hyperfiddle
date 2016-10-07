@@ -1,6 +1,7 @@
 (ns hypercrud.browser.pages.field
   (:require [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx-util]
+            [hypercrud.form.q-util :as q-util]
             [hypercrud.ui.form :as form]
             [hypercrud.ui.auto-control :refer [auto-control]]))
 
@@ -31,4 +32,4 @@
 (defn query [state eid forms queries form-id field-ident param-ctx]
   (let [form (->> (get forms form-id)
                   (filter #(= field-ident (:ident %))))]
-    (form/query eid forms queries form (get state :expanded nil) param-ctx)))
+    (form/query eid forms queries form (get state :expanded nil) q-util/build-params-from-formula param-ctx)))

@@ -43,14 +43,14 @@ case that works for expanded-forms)"
      (map #(field-pull-exp-entry forms expanded-forms % expand?) form))))
 
 
-(defn field-queries [forms queries expanded-forms param-ctx
+(defn field-queries [forms queries expanded-forms p-filler param-ctx
                      {:keys [ident cardinality valueType isComponent options] :as field}
                      recurse?]
   (merge
     (let [is-ref (= valueType :ref)]
       ; if we are a ref we ALWAYS need the query from the field options
       ; EXCEPT when we are component, in which case no options are rendered, just a form, handled below
-      (if (and is-ref (not isComponent)) (option/get-query options queries param-ctx)))
+      (if (and is-ref (not isComponent)) (option/get-query options queries p-filler param-ctx)))
 
     (let [new-expanded-forms (get expanded-forms ident)]
       ; components render expanded automatically
@@ -60,17 +60,17 @@ case that works for expanded-forms)"
               expanded-forms (condp = cardinality
                                :db.cardinality/one new-expanded-forms
                                :db.cardinality/many (apply deep-merge (vals new-expanded-forms)))]
-          (form-option-queries forms queries form expanded-forms param-ctx
+          (form-option-queries forms queries form expanded-forms p-filler param-ctx
                                (fn [expanded-forms {:keys [isComponent] :as field}]
                                  (or expanded-forms isComponent))))))))
 
 
 (defn form-option-queries "get the form options recursively for all expanded forms"
-  ([forms queries form expanded-forms param-ctx]
+  ([forms queries form expanded-forms p-filler param-ctx]
    (let [recurse? (fn [expanded-forms {:keys [cardinality isComponent] :as field}]
                     (or expanded-forms (= cardinality :db.cardinality/many) isComponent))]
-     (form-option-queries forms queries form expanded-forms param-ctx recurse?)))
-  ([forms queries form expanded-forms param-ctx recurse?]
+     (form-option-queries forms queries form expanded-forms p-filler param-ctx recurse?)))
+  ([forms queries form expanded-forms p-filler param-ctx recurse?]
    (apply merge
-          (map #(field-queries forms queries expanded-forms param-ctx % recurse?)
+          (map #(field-queries forms queries expanded-forms p-filler param-ctx % recurse?)
                form))))

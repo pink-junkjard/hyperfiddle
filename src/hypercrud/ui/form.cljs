@@ -31,11 +31,11 @@
   [form2 graph (hc/entity graph eid) forms queries (get forms form-id) expanded-cur stage-tx! navigate-cmp])
 
 
-(defn query [eid forms queries form expanded-forms param-ctx]
-  (let [param-ctx (merge param-ctx {"?e" eid})]             ;(eval "(:id *self*)")
+(defn query [eid forms queries form expanded-forms p-filler param-ctx]
+  (let [param-ctx (merge param-ctx {"id" eid})]
     (if (not (tx-util/tempid? eid))
-      (let [[query-name q] [eid '[:find [?e ...] :in $ ?e :where [?e]]]
-            pull-exp (form-util/form-pull-exp forms form expanded-forms)]
-        (merge (form-util/form-option-queries forms queries form expanded-forms param-ctx)
-               (q-util/build-query query-name q param-ctx pull-exp)))
-      (form-util/form-option-queries forms queries form expanded-forms param-ctx))))
+      (merge (form-util/form-option-queries forms queries form expanded-forms p-filler param-ctx)
+             (let [q '[:find [?e ...] :in $ ?e :where [?e]]
+                   pull-exp (form-util/form-pull-exp forms form expanded-forms)]
+               {eid [q [eid] pull-exp]}))
+      (form-util/form-option-queries forms queries form expanded-forms p-filler param-ctx))))

@@ -1,6 +1,5 @@
 (ns hypercrud.form.option
-  (:require [hypercrud.client.core :as hc]
-            [hypercrud.form.q-util :as q-util]))
+  (:require [hypercrud.client.core :as hc]))
 
 
 (defprotocol IFieldOptions
@@ -10,7 +9,7 @@
 
   (has-holes? [this queries])
   ;todo should be get-queries and we can delete hc.form.util/field-queries
-  (get-query [this queries params])
+  (get-query [this queries p-filler param-ctx])
 
   (to-string [this entity])
   (parse-string [this s])
@@ -42,10 +41,11 @@
   (has-holes? [this queries]
     (not (empty? (:query/hole (get queries query-id)))))
 
-  (get-query [this queries param-ctx]
-    (let [q (:query/value (get queries query-id))
+  (get-query [this queries p-filler param-ctx]
+    (let [query (get queries query-id)
+          q (:query/value query)
           query-name (hash q)
-          params (q-util/build-params q param-ctx)]
+          params (p-filler query param-ctx)]
       {query-name [q params '[*]]}))
 
   (to-string [this entity]

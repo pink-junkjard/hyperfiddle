@@ -98,24 +98,23 @@
          form)))
 
 
-(defn field-queries [queries param-ctx
+(defn field-queries [queries p-filler param-ctx
                      {:keys [cardinality valueType isComponent options] :as field}]
   (if (and (= valueType :ref)
            (= cardinality :db.cardinality/one)
            (not isComponent)
            (not (option/has-holes? options queries)))
-    (option/get-query options queries param-ctx)))
+    (option/get-query options queries p-filler param-ctx)))
 
 
-(defn table-option-queries [queries form param-ctx]
+(defn option-queries [queries form p-filler param-ctx]
   (apply merge
-         (map #(field-queries queries param-ctx %)
+         (map #(field-queries queries p-filler param-ctx %)
               form)))
 
 
-(defn query [q param-ctx forms queries form-id]
-  (let [form (get forms form-id)
-        pull-exp (table-pull-exp form)]
+(defn query [query p-filler param-ctx forms queries form-id]
+  (let [form (get forms form-id)]
     (merge
-      (table-option-queries queries form param-ctx)
-      (q-util/build-query ::query q param-ctx pull-exp))))
+      (option-queries queries form p-filler param-ctx)
+      {::query [(:query/value query) (p-filler query param-ctx) (table-pull-exp form)]})))

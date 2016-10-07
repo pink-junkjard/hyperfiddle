@@ -1,6 +1,7 @@
 (ns hypercrud.browser.pages.entity
   (:require [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx-util]
+            [hypercrud.form.q-util :as q-util]
             [hypercrud.ui.form :as form]
             [promesa.core :as p]))
 
@@ -26,7 +27,7 @@
 
 
 (defn query [state eid forms queries form-id param-ctx]
-  (form/query eid forms queries (get forms form-id) (get state :expanded nil) param-ctx))
+  (form/query eid forms queries (get forms form-id) (get state :expanded nil) q-util/build-params-from-formula param-ctx))
 
 
 (comment

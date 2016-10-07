@@ -1,7 +1,6 @@
 (ns hypercrud.browser.pages.dump
   (:require [cljs.pprint :as pprint]
-            [hypercrud.client.core :as hc]
-            [hypercrud.form.q-util :as q-util]))
+            [hypercrud.client.core :as hc]))
 
 
 (defn ui [graph id]
@@ -10,4 +9,4 @@
 
 
 (defn query [id]
-  (q-util/build-query :dump '[:find [?e ...] :in $ ?e :where [?e]] {"?e" id} '[*]))
+  {:dump ['[:find [?e ...] :in $ ?e :where [?e]] [id] '[*]]})
