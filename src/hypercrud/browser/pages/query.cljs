@@ -50,7 +50,7 @@
                                             #(tx-util/apply-stmt-to-entity schema %1 %2)
                                             entity
                                             tx)))
-           form (map #(field/hole->field (get holes-by-name %)) hole-names)]
+           form {:form/field (map #(field/hole->field (get holes-by-name %)) hole-names)}]
        [form/form2 graph entity forms queries form expanded-cur stage-tx! navigate-cmp])
      (if (show-table? hole-names entity)                    ;todo what if we have a user hole?
        (let [stage-tx! #(swap! local-statements tx-util/into-tx %)]
@@ -64,7 +64,7 @@
                            (map (juxt :hole/name identity))
                            (into {}))
         hole-names (q-util/parse-holes q)
-        form (vec (map field/hole->field (:query/hole query)))
+        form {:form/field (vec (map field/hole->field (:query/hole query)))}
 
         ;; this is the new "param-ctx" - it is different - we already have the overridden
         ;; values, there is no need to eval the formulas in a ctx to get the values.

@@ -24,7 +24,7 @@
                          :navigate-cmp navigate-cmp
                          :queries queries
                          :stage-tx! stage-tx!}])
-        form)])
+        (:form/field form))])
 
 
 (defn form [graph eid forms queries form-id expanded-cur stage-tx! navigate-cmp]

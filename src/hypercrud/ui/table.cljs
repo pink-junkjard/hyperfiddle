@@ -10,16 +10,17 @@
 (defn build-col-heads [form]
   (map (fn [{:keys [:ident :prompt]}]
          [:td {:key ident} prompt])
-       form))
+       (:form/field form)))
 
 
 (defn build-row-cells [form-id entity {:keys [forms] :as fieldless-widget-args}]
-  (map (fn [{:keys [ident] :as field}]
-         [:td.truncate {:key ident}
-          [auto-table-cell entity form-id (-> fieldless-widget-args
-                                              (update :expanded-cur #(% [ident]))
-                                              (assoc :field field))]])
-       (get forms form-id)))
+  (->> (get forms form-id)
+       :form/field
+       (map (fn [{:keys [ident] :as field}]
+              [:td.truncate {:key ident}
+               [auto-table-cell entity form-id (-> fieldless-widget-args
+                                                   (update :expanded-cur #(% [ident]))
+                                                   (assoc :field field))]]))))
 
 
 (defn body [graph eids forms queries form-id expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]
@@ -95,7 +96,7 @@
 
              ; otherwise just add the attribute to the list
              ident))
-         form)))
+         (:form/field form))))
 
 
 (defn field-queries [queries p-filler param-ctx
@@ -110,7 +111,7 @@
 (defn option-queries [queries form p-filler param-ctx]
   (apply merge
          (map #(field-queries queries p-filler param-ctx %)
-              form)))
+              (:form/field form))))
 
 
 (defn query [query p-filler param-ctx forms queries form-id]

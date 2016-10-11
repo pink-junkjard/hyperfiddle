@@ -3,7 +3,8 @@
             [hypercrud.client.tx :as tx-util]
             [hypercrud.form.q-util :as q-util]
             [hypercrud.ui.form :as form]
-            [hypercrud.ui.auto-control :refer [auto-control]]))
+            [hypercrud.ui.auto-control :refer [auto-control]]
+            [hypercrud.util :as util]))
 
 
 (defn ui [cur transact! graph eid forms queries form-id field-ident navigate-cmp]
@@ -30,6 +31,5 @@
 
 ;todo copied from entity
 (defn query [state eid forms queries form-id field-ident param-ctx]
-  (let [form (->> (get forms form-id)
-                  (filter #(= field-ident (:ident %))))]
+  (let [form (util/update-existing (get forms form-id) :form/field (filter #(= field-ident (:ident %))))]
     (form/query eid forms queries form (get state :expanded nil) q-util/build-params-from-formula param-ctx)))

@@ -40,7 +40,7 @@ case that works for expanded-forms)"
   ([forms form expanded-forms expand?]
    (concat
      [:db/id]
-     (map #(field-pull-exp-entry forms expanded-forms % expand?) form))))
+     (map #(field-pull-exp-entry forms expanded-forms % expand?) (:form/field form)))))
 
 
 (defn field-queries [forms queries expanded-forms p-filler param-ctx
@@ -73,4 +73,4 @@ case that works for expanded-forms)"
   ([forms queries form expanded-forms p-filler param-ctx recurse?]
    (apply merge
           (map #(field-queries forms queries expanded-forms p-filler param-ctx % recurse?)
-               form))))
+               (:form/field form)))))
