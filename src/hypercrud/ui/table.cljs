@@ -31,7 +31,7 @@
         [:button {:on-click #(retract-entity! id)} "⌦"])])
    [:td.id {:key "edit-col"}
     (if show-links?
-      [navigate-cmp {:href (str form-id "/entity/" id)} (if (neg? id) id (mod id 100))])]
+      [navigate-cmp {:href (links/entity-link form-id id)} (if (neg? id) id (mod id 100))])]
    (build-row-cells form-id entity widget-args)
    [:td {:key "link-col"}
     (if show-links?

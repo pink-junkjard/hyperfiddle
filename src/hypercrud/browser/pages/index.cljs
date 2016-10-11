@@ -1,5 +1,6 @@
 (ns hypercrud.browser.pages.index
-  (:require [hypercrud.browser.base-64-url-safe :as base64]))
+  (:require [hypercrud.browser.base-64-url-safe :as base64]
+            [hypercrud.browser.links :as links]))
 
 
 (defn ui [queries navigate-cmp]
@@ -11,6 +12,6 @@
          (sort-by :query/ident)
          (map (fn [{:keys [:query/ident :query/value :query/form]}]
                 [:li {:key ident}
-                 [navigate-cmp {:href (str form "/query/" (base64/encode value))} ident]])))]])
+                 [navigate-cmp {:href (links/query-link form value)} ident]])))]])
 
 (defn query [] {})
