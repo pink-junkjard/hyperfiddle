@@ -104,7 +104,7 @@
            (= cardinality :db.cardinality/one)
            (not isComponent)
            (not (option/has-holes? options queries)))
-    (option/get-query options queries p-filler param-ctx)))
+    (option/get-query options queries p-filler (option/label-prop options) param-ctx)))
 
 
 (defn option-queries [queries form p-filler param-ctx]

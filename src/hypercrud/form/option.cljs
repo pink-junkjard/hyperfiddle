@@ -9,7 +9,7 @@
 
   (has-holes? [this queries])
   ;todo should be get-queries and we can delete hc.form.util/field-queries
-  (get-query [this queries p-filler param-ctx])
+  (get-query [this queries p-filler label-prop param-ctx])
 
   (to-string [this entity])
   (parse-string [this s])
@@ -41,12 +41,13 @@
   (has-holes? [this queries]
     (not (empty? (:query/hole (get queries query-id)))))
 
-  (get-query [this queries p-filler param-ctx]
+  (get-query [this queries p-filler label-prop param-ctx]
     (let [query (get queries query-id)
           q (:query/value query)
           query-name (hash q)
-          params (p-filler query param-ctx)]
-      {query-name [q params '[*]]}))
+          params (p-filler query param-ctx)
+          pull-exp [:db/id label-prop]]
+      {query-name [q params pull-exp]}))
 
   (to-string [this entity]
     (str (:db/id entity)))

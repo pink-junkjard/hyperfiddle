@@ -50,7 +50,7 @@ case that works for expanded-forms)"
     (let [is-ref (= valueType :ref)]
       ; if we are a ref we ALWAYS need the query from the field options
       ; EXCEPT when we are component, in which case no options are rendered, just a form, handled below
-      (if (and is-ref (not isComponent)) (option/get-query options queries p-filler param-ctx)))
+      (if (and is-ref (not isComponent)) (option/get-query options queries p-filler (option/label-prop options) param-ctx)))
 
     (let [new-expanded-forms (get expanded-forms ident)]
       ; components render expanded automatically
