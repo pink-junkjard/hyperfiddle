@@ -1,8 +1,8 @@
 (ns hypercrud.ui.table
-  (:require [hypercrud.client.core :as hc]
+  (:require [hypercrud.browser.links :as links]
+            [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx]
             [hypercrud.form.option :as option]
-            [hypercrud.form.q-util :as q-util]
             [hypercrud.ui.auto-control :refer [auto-table-cell]]
             [reagent.core :as r]))
 
@@ -23,7 +23,7 @@
                                                    (assoc :field field))]]))))
 
 
-(defn table-row [{:keys [:db/id] :as entity} form-id retract-entity! show-links? {:keys [navigate-cmp] :as widget-args}]
+(defn table-row [{:keys [:db/id] :as entity} form-id retract-entity! show-links? {:keys [forms queries navigate-cmp] :as widget-args}]
   [:tr
    (if retract-entity!
      [:td.remove-row {:key "remove"}
@@ -35,7 +35,13 @@
    (build-row-cells form-id entity widget-args)
    [:td {:key "link-col"}
     (if show-links?
-      "todo")]])
+      (->> (get forms form-id)
+           :form/link
+           (map (fn [{:keys [:link/ident :link/prompt :link/query] :as link}]
+                  (let [query (get queries query)
+                        param-ctx {:entity entity}]
+                    [:span {:key ident}
+                     (navigate-cmp {:href (links/query-link query param-ctx)} prompt)])))))]])
 
 
 (defn body [graph eids forms queries form-id expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]

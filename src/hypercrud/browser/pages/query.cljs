@@ -1,5 +1,6 @@
 (ns hypercrud.browser.pages.query
-  (:require [clojure.set :as set]
+  (:require [cljs.pprint :as pprint]
+            [clojure.set :as set]
             [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx-util]
             [hypercrud.form.field :as field]
@@ -9,13 +10,10 @@
             [hypercrud.ui.form :as form]
             [hypercrud.ui.table :as table]))
 
-(defn initial-entity [q holes-by-name param-ctx]
-  (->> (q-util/parse-holes q)
-       (map (juxt identity (fn [hole]
-                             (let [code (:hole/formula (get holes-by-name hole))
-                                   hole-filler-fn (js/eval code)]
-                               (hole-filler-fn (clj->js param-ctx))))))
-       (into {:db/id -1})))
+
+(defn initial-entity [q params]
+  (-> (zipmap (q-util/parse-holes q) params)
+      (assoc :db/id -1)))
 
 
 (defn show-table? [hole-names param-values]
@@ -28,7 +26,8 @@
        (filter #(= q (:query/value %)))
        first))
 
-(defn ui [cur transact! graph forms queries form-id q navigate-cmp]
+
+(defn ui [cur transact! graph forms queries form-id {:keys [q params]} navigate-cmp]
   (let [query (get-query queries q)
         hole-names (q-util/parse-holes (:query/value query))
         local-statements (cur [:statements] [])
@@ -36,10 +35,11 @@
         holes-by-name (->> (:query/hole query)
                            (map (juxt :hole/name identity))
                            (into {}))
-        entity-cur (cur [:holes] (initial-entity q holes-by-name {}))
+        entity-cur (cur [:holes] (initial-entity q params))
         entity @entity-cur
         graph (hc/with graph @local-statements)]
     [:div
+     [:pre (with-out-str (pprint/pprint [q params]))]
      (let [schema (->> holes-by-name
                        (map (fn [[hole-name hole]]
                               [hole-name {:db/cardinality (:attribute/cardinality hole)}]))
@@ -57,18 +57,15 @@
      [:button {:key 1 :on-click #(transact! @local-statements)} "Save"]]))
 
 
-(defn query [state forms queries q form-id param-ctx]
+(defn query [state forms queries {:keys [q params]} form-id param-ctx]
   (let [query (get-query queries q)
-        holes-by-name (->> (:query/hole query)
-                           (map (juxt :hole/name identity))
-                           (into {}))
         hole-names (q-util/parse-holes q)
         form {:form/field (vec (map field/hole->field (:query/hole query)))}
 
         ;; this is the new "param-ctx" - it is different - we already have the overridden
         ;; values, there is no need to eval the formulas in a ctx to get the values.
         param-values (-> (or (get state :holes)
-                             (initial-entity q holes-by-name param-ctx))
+                             (initial-entity q params))
                          (dissoc :db/id))]
     (merge
       ;no fields are isComponent true or expanded, so we don't need to pass in a forms map
