@@ -2,8 +2,7 @@
   (:require [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx-util]
-            [hypercrud.form.util :as form-util]
-            [hypercrud.form.q-util :as q-util]))
+            [hypercrud.form.util :as form-util]))
 
 
 (defn field [entity {{:keys [:prompt]} :field :as widget-args}]
@@ -32,7 +31,7 @@
 
 
 (defn query [eid forms queries form expanded-forms p-filler param-ctx]
-  (let [param-ctx (merge param-ctx {"id" eid})]
+  (let [param-ctx (merge param-ctx {:id eid})]
     (if (not (tx-util/tempid? eid))
       (merge (form-util/form-option-queries forms queries form expanded-forms p-filler param-ctx)
              (let [q '[:find [?e ...] :in $ ?e :where [?e]]

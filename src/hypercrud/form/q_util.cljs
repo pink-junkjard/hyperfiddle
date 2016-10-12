@@ -1,4 +1,5 @@
-(ns hypercrud.form.q-util)
+(ns hypercrud.form.q-util
+  (:require [cljs.js :as cljs]))
 
 
 (defn parse-holes [q]
@@ -23,10 +24,13 @@
 
 
 (defn build-params-from-formula [query param-ctx]
-  (let [hole-formulas (->> (:query/hole query)
-                           (map (juxt :hole/name #(-> % :hole/formula js/eval)))
+  (let [eval #(cljs/eval-str (cljs/empty-state) (str "(identity " % ")") nil {:eval cljs/js-eval} identity)
+        hole-formulas (->> (:query/hole query)
+                           (map (juxt :hole/name #(-> % :hole/formula eval)))
                            (into {}))]
     (build-params (fn [hole-name param-ctx]
-                    (let [formula (get hole-formulas hole-name)]
-                      (formula (clj->js param-ctx))))
+                    (let [{formula :value error :error} (get hole-formulas hole-name)]
+                      (if error
+                        (throw error)                       ; first error, lose the rest of the errors
+                        (formula param-ctx))))    ; can also throw, lose the rest
                   query param-ctx)))
