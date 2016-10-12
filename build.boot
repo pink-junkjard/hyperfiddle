@@ -3,6 +3,7 @@
                   [com.cognitect/transit-cljs "0.8.237"]
                   ;[funcool/promesa "1.1.1"]
                   [io.nervous/kvlt "0.1.1"]
+                  [markdown-clj "0.9.88"]
                   [org.clojure/clojurescript "1.9.36"]
                   [reagent "0.6.0-rc" :exclusions [cljsjs/react cljsjs/react-dom cljsjs/react-dom-server]]
 
