@@ -1,5 +1,6 @@
 (ns hypercrud.browser.pages.query
-  (:require [cljs.pprint :as pprint]
+  (:require [cljs.js :as cljs]
+            [cljs.pprint :as pprint]
             [clojure.set :as set]
             [hypercrud.browser.links :as links]
             [hypercrud.client.core :as hc]
@@ -54,20 +55,28 @@
        [form/form2 graph entity forms queries form expanded-cur stage-tx! navigate-cmp])
      (if (show-table? hole-names entity)                    ;todo what if we have a user hole?
        (let [form (get forms (:query/form query))]
-         (if-let [row-renderer (:form/row-renderer form)]
-           [:ul
-            (->> (hc/select graph ::table/query)
-                 (map #(hc/entity graph %))
-                 (map (fn [entity]
-                        (let [link-fn (fn [ident label]
-                                        (let [query (->> (:form/link form)
-                                                         (filter #(= ident (:link/ident %)))
-                                                         first
-                                                         :link/query)
-                                              param-ctx {:entity entity}
-                                              href (links/query-link query param-ctx)]
-                                          [navigate-cmp {:href href} label]))]
-                          ((js/eval row-renderer) link-fn (clj->js entity))))))]
+         (if-let [row-renderer-code (:form/row-renderer form)]
+           (let [efn #(cljs/eval-str (cljs/empty-state) % nil {:eval cljs/js-eval} identity)
+                 result (efn (str "(identity " row-renderer-code ")"))
+                 {row-renderer :value error :error} result]
+             (if error
+               [:div (pr-str error)]
+               [:ul
+                (->> (hc/select graph ::table/query)
+                     (map #(hc/entity graph %))
+                     (map (fn [entity]
+                            (let [link-fn (fn [ident label]
+                                            (let [query (->> (:form/link form)
+                                                             (filter #(= ident (:link/ident %)))
+                                                             first
+                                                             :link/query)
+                                                  param-ctx {:entity entity}
+                                                  href (links/query-link query param-ctx)]
+                                              [navigate-cmp {:href href} label]))]
+                              [:li {:key (:db/id entity)}
+                               (try
+                                 (row-renderer link-fn entity)
+                                 (catch :default e (pr-str e)))]))))]))
            (let [stage-tx! #(swap! local-statements tx-util/into-tx %)]
              [table/table graph (hc/select graph ::table/query) forms queries form-id expanded-cur stage-tx! navigate-cmp nil]))))
      [:button {:key 1 :on-click #(transact! @local-statements)} "Save"]]))
