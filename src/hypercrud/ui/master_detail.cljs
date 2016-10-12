@@ -37,4 +37,5 @@
                         (assoc-in [:field :cardinality] :db.cardinality/one))]
        (if (nil? @selected-cur)
          [:div "Select the " (string/capitalize (name ident))]
+         ^{:key @selected-cur}
          [detail-renderer (assoc entity ident @selected-cur) new-args]))]))
