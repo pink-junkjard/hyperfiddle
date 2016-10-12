@@ -5,7 +5,7 @@
 (defrecord Field [prompt
                   ident valueType cardinality isComponent   ;attribute
                   ;valid? required? read-only? default-value ;these should be functions that consume a record
-                  options])
+                  renderer options])
 
 
 (defn convert-valueType [datomic-valueType]
@@ -26,18 +26,21 @@
 
 
 (defn field
-  ([{:keys [:field/prompt :field/label-prop :field/form :field/query] :as db-field}
+  ([{:keys [:field/prompt :field/label-prop :field/form :field/query :field/renderer] :as db-field}
     {:keys [:attribute/ident :attribute/valueType :attribute/cardinality :attribute/isComponent] :as db-attribute}]
-   (->Field prompt ident (convert-valueType valueType) cardinality isComponent (option/gimme-useful-options {:label-prop label-prop
-                                                                                                             :form form
-                                                                                                             :query query})))
-  ([{:keys [prompt ident valueType cardinality isComponent options]}]
-   (->Field prompt ident valueType cardinality (or isComponent false) (option/gimme-useful-options options))))
+   (->Field prompt ident (convert-valueType valueType) cardinality isComponent renderer
+            (option/gimme-useful-options {:label-prop label-prop
+                                          :form form
+                                          :query query})))
+  ([{:keys [prompt ident valueType cardinality isComponent renderer options]}]
+   (->Field prompt ident valueType cardinality (or isComponent false) renderer
+            (option/gimme-useful-options options))))
 
 
 (defn hole->field
   ([{:keys [:hole/name :hole/formula
             :field/prompt :field/query :field/label-prop
             :attribute/valueType :attribute/cardinality]}]
-   (->Field prompt name (convert-valueType valueType) cardinality false (option/gimme-useful-options {:label-prop label-prop
-                                                                                                      :query query}))))
+   (->Field prompt name (convert-valueType valueType) cardinality false nil
+            (option/gimme-useful-options {:label-prop label-prop
+                                          :query query}))))

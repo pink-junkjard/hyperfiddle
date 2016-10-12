@@ -2,13 +2,22 @@
   (:require [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx-util]
+            [hypercrud.compile.eval :as eval]
             [hypercrud.form.util :as form-util]))
 
 
-(defn field [entity {{:keys [:prompt]} :field :as widget-args}]
+(defn field [entity {{:keys [prompt renderer]} :field :as widget-args}]
   [:div.field
    (if prompt [:label prompt])
-   [auto-control entity widget-args]])
+   (if (empty? renderer)
+     [auto-control entity widget-args]
+     (let [{renderer :value error :error} (eval/uate (str "(identity " renderer ")"))]
+       [:div.value
+        (if error
+          (pr-str error)
+          (try
+            (renderer entity)
+            (catch :default e (pr-str e))))]))])
 
 
 ; some people just want to watch the world burn
