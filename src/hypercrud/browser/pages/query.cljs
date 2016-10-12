@@ -73,7 +73,8 @@
                                                 (let [query (->> (:form/link form)
                                                                  (filter #(= ident (:link/ident %)))
                                                                  first
-                                                                 :link/query)
+                                                                 :link/query
+                                                                 (get queries))
                                                       param-ctx {:entity entity}
                                                       href (links/query-link query param-ctx)]
                                                   [navigate-cmp {:href href} label]))]
