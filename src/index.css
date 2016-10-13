@@ -48,14 +48,9 @@ input.invalid[type="text"] {
     border: 1px solid #a8a8a8;
 }
 
-.ui-table td.remove-row {
+.ui-table td.link-cell {
     border: none;
     background-color: inherit;
-}
-
-.ui-table tbody td.id {
-    background-color: #dbdbdb;
-    text-align: center;
 }
 
 .form {
@@ -175,4 +170,21 @@ td > .radio-boolean > .radio-group {
 .master-detail .field > * {
     display: block;
     width: 100%;
+}
+
+.link-menu {
+    width: 80px;
+    border: 0 solid #a8a8a8;
+    border-bottom-width: 1px;
+}
+
+.link-menu > * {
+    display: block;
+    border-style: solid;
+    border-color: #a8a8a8;
+    border-width: 1px 0 0 1px;
+}
+
+.link-menu > *:hover {
+    background-color: #dbdbdb;
 }

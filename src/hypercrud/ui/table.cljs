@@ -22,27 +22,32 @@
                                                          (assoc :field field))]]))))
 
 
-(defn table-row [{:keys [:db/id] :as entity} form retract-entity! show-links? {:keys [queries navigate-cmp] :as fieldless-widget-args}]
+(defn links-cell [entity form retract-entity! show-links? queries navigate-cmp]
+  (let [open? (r/atom false)]
+    (fn [entity form retract-entity! show-links? queries navigate-cmp]
+      (if @open?
+        [:div.link-menu
+         (if show-links?
+           (conj
+             (->> (:form/link form)
+                  (map (fn [{:keys [:link/ident :link/prompt :link/query]}]
+                         (let [query (get queries query)
+                               param-ctx {:entity entity}]
+                           (navigate-cmp {:key ident
+                                          :href (links/query-link query param-ctx)} prompt)))))
+             (navigate-cmp {:key "view"
+                            :href (links/entity-link (:db/id form) (:db/id entity))} "Entity View")
+             (if retract-entity!
+               [:span {:key "delete" :on-click #(retract-entity! (:db/id entity))} "Delete Row"])))
+         [:span {:key "close" :on-click #(reset! open? false)} "Close"]]
+        [:div {:on-click #(reset! open? true)} "⚙"]))))
+
+
+(defn table-row [entity form retract-entity! show-links? {:keys [queries navigate-cmp] :as fieldless-widget-args}]
   [:tr
-   (if retract-entity!
-     [:td.remove-row {:key "remove"}
-      (if show-links?
-        [:button {:on-click #(retract-entity! id)} "⌦"])])
-   [:td.id {:key "edit-col"}
-    (if show-links?
-      [navigate-cmp {:href (links/entity-link (:db/id form) id)} (if (neg? id) id (mod id 100))])]
-   (build-row-cells form entity fieldless-widget-args)
-   (let [links (:form/link form)]
-     (if (not (empty? links))
-       [:td {:key "link-col"}
-        (if show-links?
-          (->> links
-               (map (fn [{:keys [:link/ident :link/prompt :link/query] :as link}]
-                      (let [query (get queries query)
-                            param-ctx {:entity entity}]
-                        [:span {:key ident}
-                         (navigate-cmp {:href (links/query-link query param-ctx)} prompt)])))
-               (interpose ", ")))]))])
+   [:td.link-cell {:key "links"}
+    [links-cell entity form retract-entity! show-links? queries navigate-cmp]]
+   (build-row-cells form entity fieldless-widget-args)])
 
 
 (defn body [graph eids forms queries form expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]
@@ -75,11 +80,8 @@
      [:colgroup [:col {:span "1" :style {:width "20px"}}]]
      [:thead
       [:tr
-       (if retract-entity! [:td.remove-row {:key "remove-col"}])
-       [:td {:key "edit-col"}]
-       (build-col-heads form)
-       (if (not (empty? (:form/link form)))
-         [:td {:key "link-col"} "Links"])]]
+       [:td.link-cell {:key "links"}]
+       (build-col-heads form)]]
      [body graph eids forms queries form expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]]))
 
 
