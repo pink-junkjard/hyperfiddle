@@ -13,17 +13,16 @@
        (:form/field form)))
 
 
-(defn build-row-cells [form-id entity {:keys [forms] :as fieldless-widget-args}]
-  (->> (get forms form-id)
-       :form/field
+(defn build-row-cells [form entity fieldless-widget-args]
+  (->> (:form/field form)
        (map (fn [{:keys [ident] :as field}]
               [:td.truncate {:key ident}
-               [auto-table-cell entity form-id (-> fieldless-widget-args
-                                                   (update :expanded-cur #(% [ident]))
-                                                   (assoc :field field))]]))))
+               [auto-table-cell entity (:db/id form) (-> fieldless-widget-args
+                                                         (update :expanded-cur #(% [ident]))
+                                                         (assoc :field field))]]))))
 
 
-(defn table-row [{:keys [:db/id] :as entity} form-id retract-entity! show-links? {:keys [forms queries navigate-cmp] :as widget-args}]
+(defn table-row [{:keys [:db/id] :as entity} form retract-entity! show-links? {:keys [queries navigate-cmp] :as fieldless-widget-args}]
   [:tr
    (if retract-entity!
      [:td.remove-row {:key "remove"}
@@ -31,9 +30,9 @@
         [:button {:on-click #(retract-entity! id)} "⌦"])])
    [:td.id {:key "edit-col"}
     (if show-links?
-      [navigate-cmp {:href (links/entity-link form-id id)} (if (neg? id) id (mod id 100))])]
-   (build-row-cells form-id entity widget-args)
-   (let [links (:form/link (get forms form-id))]
+      [navigate-cmp {:href (links/entity-link (:db/id form) id)} (if (neg? id) id (mod id 100))])]
+   (build-row-cells form entity fieldless-widget-args)
+   (let [links (:form/link form)]
      (if (not (empty? links))
        [:td {:key "link-col"}
         (if show-links?
@@ -46,28 +45,28 @@
                (interpose ", ")))]))])
 
 
-(defn body [graph eids forms queries form-id expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]
+(defn body [graph eids forms queries form expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]
   [:tbody
    (->> eids
         (map #(hc/entity graph %))
         (map (fn [entity]
                ^{:key (:db/id entity)}
-               [table-row entity form-id retract-entity! true {:expanded-cur (expanded-cur [(:db/id entity)])
-                                                               :forms forms
-                                                               :graph graph
-                                                               :navigate-cmp navigate-cmp
-                                                               :queries queries
-                                                               :stage-tx! stage-tx!}])))
+               [table-row entity form retract-entity! true {:expanded-cur (expanded-cur [(:db/id entity)])
+                                                            :forms forms
+                                                            :graph graph
+                                                            :navigate-cmp navigate-cmp
+                                                            :queries queries
+                                                            :stage-tx! stage-tx!}])))
    (let [id (hc/*temp-id!*)]
      ^{:key (hash eids)}
-     [table-row {:db/id id} form-id retract-entity! false {:expanded-cur (expanded-cur [id])
-                                                           :forms forms
-                                                           :graph graph
-                                                           :navigate-cmp navigate-cmp
-                                                           :queries queries
-                                                           :stage-tx! (fn [tx]
-                                                                        (add-entity! id)
-                                                                        (stage-tx! tx))}])])
+     [table-row {:db/id id} form retract-entity! false {:expanded-cur (expanded-cur [id])
+                                                        :forms forms
+                                                        :graph graph
+                                                        :navigate-cmp navigate-cmp
+                                                        :queries queries
+                                                        :stage-tx! (fn [tx]
+                                                                     (add-entity! id)
+                                                                     (stage-tx! tx))}])])
 
 
 (defn table-managed [graph eids forms queries form-id expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]
@@ -81,7 +80,7 @@
        (build-col-heads form)
        (if (not (empty? (:form/link form)))
          [:td {:key "link-col"} "Links"])]]
-     [body graph eids forms queries form-id expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]]))
+     [body graph eids forms queries form expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]]))
 
 
 (defn- table* [graph eids forms queries form-id expanded-cur stage-tx! navigate-cmp retract-entity!]
