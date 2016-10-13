@@ -83,7 +83,7 @@
                                                   [navigate-cmp {:href href} label]))]
                                   [:li {:key (:db/id entity)}
                                    (try
-                                     (row-renderer link-fn entity)
+                                     (row-renderer graph link-fn entity)
                                      (catch :default e (pr-str e)))]))))])))))))
      [:button {:key 1 :on-click #(transact! @local-statements)} "Save"]]))
 

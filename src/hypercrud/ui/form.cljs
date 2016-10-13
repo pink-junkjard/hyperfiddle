@@ -6,7 +6,7 @@
             [hypercrud.form.util :as form-util]))
 
 
-(defn field [entity {{:keys [prompt renderer]} :field :as widget-args}]
+(defn field [entity {:keys [graph] {:keys [prompt renderer]} :field :as widget-args}]
   [:div.field
    (if prompt [:label prompt])
    (if (empty? renderer)
@@ -16,7 +16,7 @@
         (if error
           (pr-str error)
           (try
-            (renderer entity)
+            (renderer graph entity)
             (catch :default e (pr-str e))))]))])
 
 
