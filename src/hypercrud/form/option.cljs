@@ -43,6 +43,7 @@
 
   (get-query [this queries p-filler label-prop param-ctx]
     (let [query (get queries query-id)
+          _ (assert (not= nil label-prop) (str "Missing label-prop for " (:query/ident query)))
           q (:query/value query)
           query-name (hash q)
           params (p-filler query param-ctx)
