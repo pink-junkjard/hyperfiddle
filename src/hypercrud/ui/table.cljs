@@ -93,14 +93,18 @@
     (fn [graph eids forms queries form-id expanded-cur stage-tx! navigate-cmp retract-entity!]
       (let [retract-entity! (fn [id]
                               (if (tx/tempid? id)
-                                (swap! new-entities remove id)
-                                (retract-entity! id)))]
+                                (swap! new-entities (fn [old]
+                                                      ; need to maintain same datastructure for conj
+                                                      (vec (remove #(= % id) old))))
+                                (if retract-entity!
+                                  (retract-entity! id)
+                                  (js/alert "todo"))))]
         [table-managed graph (concat eids @new-entities) forms queries form-id expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]))))
 
 
-(defn table [graph eids forms queries form-id expanded-cur stage-tx! navigate-cmp retract-entity]
+(defn table [graph eids forms queries form-id expanded-cur stage-tx! navigate-cmp retract-entity!]
   ^{:key (hc/t graph)}
-  [table* graph eids forms queries form-id expanded-cur stage-tx! navigate-cmp retract-entity])
+  [table* graph eids forms queries form-id expanded-cur stage-tx! navigate-cmp retract-entity!])
 
 
 (defn table-pull-exp [form]
