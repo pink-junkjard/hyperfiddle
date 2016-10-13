@@ -33,15 +33,17 @@
     (if show-links?
       [navigate-cmp {:href (links/entity-link form-id id)} (if (neg? id) id (mod id 100))])]
    (build-row-cells form-id entity widget-args)
-   [:td {:key "link-col"}
-    (if show-links?
-      (->> (get forms form-id)
-           :form/link
-           (map (fn [{:keys [:link/ident :link/prompt :link/query] :as link}]
-                  (let [query (get queries query)
-                        param-ctx {:entity entity}]
-                    [:span {:key ident}
-                     (navigate-cmp {:href (links/query-link query param-ctx)} prompt)])))))]])
+   (let [links (:form/link (get forms form-id))]
+     (if (not (empty? links))
+       [:td {:key "link-col"}
+        (if show-links?
+          (->> links
+               (map (fn [{:keys [:link/ident :link/prompt :link/query] :as link}]
+                      (let [query (get queries query)
+                            param-ctx {:entity entity}]
+                        [:span {:key ident}
+                         (navigate-cmp {:href (links/query-link query param-ctx)} prompt)])))
+               (interpose ", ")))]))])
 
 
 (defn body [graph eids forms queries form-id expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]
@@ -77,7 +79,8 @@
        (if retract-entity! [:td.remove-row {:key "remove-col"}])
        [:td {:key "edit-col"}]
        (build-col-heads form)
-       [:td {:key "link-col"} "Links"]]]
+       (if (not (empty? (:form/link form)))
+         [:td {:key "link-col"} "Links"])]]
      [body graph eids forms queries form-id expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]]))
 
 
