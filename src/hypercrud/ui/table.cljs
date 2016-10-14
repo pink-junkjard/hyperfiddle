@@ -7,10 +7,44 @@
             [reagent.core :as r]))
 
 
-(defn build-col-heads [form]
-  (map (fn [{:keys [:ident :prompt]}]
-         [:td {:key ident} prompt])
-       (:form/field form)))
+(defn sortable? [{:keys [valueType cardinality] :as field}]
+  (and
+    (= cardinality :db.cardinality/one)
+    ; ref requires more work (inspect label-prop)
+    (contains? #{:keyword
+                 :string
+                 :boolean
+                 :long
+                 :bigint
+                 :float
+                 :double
+                 :bigdec
+                 :instant
+                 :uuid
+                 :uri
+                 :bytes
+                 :code}
+               valueType)))
+
+
+(defn build-col-heads [form col-sort]
+  (let [[ident' direction] @col-sort]
+    (map (fn [{:keys [ident prompt] :as field}]
+           (let [with-sort-direction (fn [asc desc no-sort not-sortable]
+                                       (if (sortable? field)
+                                         (if (= ident' ident)
+                                           (condp = direction
+                                             :asc asc
+                                             :desc desc)
+                                           no-sort)
+                                         not-sortable))
+                 on-click (with-sort-direction #(reset! col-sort [ident :desc])
+                                               #(reset! col-sort nil)
+                                               #(reset! col-sort [ident :asc])
+                                               (constantly nil))
+                 arrow (with-sort-direction " ↓" " ↑" " ↕" nil)]
+             [:td {:key ident :on-click on-click} prompt arrow]))
+         (:form/field form))))
 
 
 (defn build-row-cells [form entity fieldless-widget-args]
@@ -50,18 +84,31 @@
    (build-row-cells form entity fieldless-widget-args)])
 
 
-(defn body [graph eids forms queries form expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]
+(defn body [graph eids forms queries form expanded-cur stage-tx! navigate-cmp retract-entity! add-entity! sort-col]
   [:tbody
-   (->> eids
-        (map #(hc/entity graph %))
-        (map (fn [entity]
-               ^{:key (:db/id entity)}
-               [table-row entity form retract-entity! true {:expanded-cur (expanded-cur [(:db/id entity)])
-                                                            :forms forms
-                                                            :graph graph
-                                                            :navigate-cmp navigate-cmp
-                                                            :queries queries
-                                                            :stage-tx! stage-tx!}])))
+   (let [[sort-key direction] @sort-col
+         sort-eids (fn [col]
+                     (let [field (->> (:form/field form)
+                                      (filter #(= sort-key (:ident %)))
+                                      first)]
+                       (if (and (not= nil field) (sortable? field))
+                         (sort-by sort-key
+                                  (condp = direction
+                                    :asc #(compare %1 %2)
+                                    :desc #(compare %2 %1))
+                                  col)
+                         col)))]
+     (->> eids
+          (map #(hc/entity graph %))
+          sort-eids
+          (map (fn [entity]
+                 ^{:key (:db/id entity)}
+                 [table-row entity form retract-entity! true {:expanded-cur (expanded-cur [(:db/id entity)])
+                                                              :forms forms
+                                                              :graph graph
+                                                              :navigate-cmp navigate-cmp
+                                                              :queries queries
+                                                              :stage-tx! stage-tx!}]))))
    (let [id (hc/*temp-id!*)]
      ^{:key (hash eids)}
      [table-row {:db/id id} form retract-entity! false {:expanded-cur (expanded-cur [id])
@@ -75,14 +122,16 @@
 
 
 (defn table-managed [graph eids forms queries form-id expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]
-  (let [form (get forms form-id)]
-    [:table.ui-table
-     [:colgroup [:col {:span "1" :style {:width "20px"}}]]
-     [:thead
-      [:tr
-       [:td.link-cell {:key "links"}]
-       (build-col-heads form)]]
-     [body graph eids forms queries form expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]]))
+  (let [sort-col (r/atom nil)]
+    (fn [graph eids forms queries form-id expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]
+      (let [form (get forms form-id)]
+        [:table.ui-table
+         [:colgroup [:col {:span "1" :style {:width "20px"}}]]
+         [:thead
+          [:tr
+           [:td.link-cell {:key "links"}]
+           (build-col-heads form sort-col)]]
+         [body graph eids forms queries form expanded-cur stage-tx! navigate-cmp retract-entity! add-entity! sort-col]]))))
 
 
 (defn- table* [graph eids forms queries form-id expanded-cur stage-tx! navigate-cmp retract-entity!]
