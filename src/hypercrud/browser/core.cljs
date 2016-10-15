@@ -6,11 +6,12 @@
             [hypercrud.browser.pages.dump :as dump]
             [hypercrud.browser.pages.entity :as entity]
             [hypercrud.browser.pages.field :as field]
+            [hypercrud.browser.pages.hydrate :as hydrate]
             [hypercrud.browser.pages.index :as index]
             [hypercrud.browser.pages.query :as query]))
 
 
-(defn route [page-rel-path {:keys [query-fn entity-fn field-fn index-fn dump-fn else]}]
+(defn route [page-rel-path {:keys [query-fn entity-fn field-fn index-fn dump-fn hydrate-fn else]}]
   (let [path-params (string/split page-rel-path "/")]
     (cond
       (and (= (second path-params) "query") (= 3 (count path-params)))
@@ -35,6 +36,9 @@
       (and (= (first path-params) "dump") (= 2 (count path-params)))
       (dump-fn (js/parseInt (second path-params) 10))
 
+      (and (= (first path-params) "hydrate") (= 1 (count path-params)))
+      (hydrate-fn)
+
       (and (= (first path-params) "") (= 1 (count path-params)))
       (index-fn)
       :else (else))))
@@ -52,6 +56,7 @@
                         (field/ui cur transact! graph eid forms queries form-id field-ident navigate-cmp))
             :index-fn #(index/ui queries navigate-cmp)
             :dump-fn (fn [id] (dump/ui graph id))
+            :hydrate-fn (fn [] (hydrate/ui cur graph))
             :else (constantly [:div "no route for: " page-rel-path])})]
    [:hr]
    [:pre (with-out-str (pprint/pprint @cur))]])
@@ -67,4 +72,5 @@
                       (field/query state eid forms queries form-id field-ident param-ctx))
           :index-fn #(index/query)
           :dump-fn (fn [id] (dump/query id))
+          :hydrate-fn (fn [] (hydrate/query state))
           :else (constantly {})}))
