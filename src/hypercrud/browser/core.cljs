@@ -7,11 +7,12 @@
             [hypercrud.browser.pages.entity :as entity]
             [hypercrud.browser.pages.field :as field]
             [hypercrud.browser.pages.hydrate :as hydrate]
+            [hypercrud.browser.pages.transact :as transact]
             [hypercrud.browser.pages.index :as index]
             [hypercrud.browser.pages.query :as query]))
 
 
-(defn route [page-rel-path {:keys [query-fn entity-fn field-fn index-fn dump-fn hydrate-fn else]}]
+(defn route [page-rel-path {:keys [query-fn entity-fn field-fn index-fn dump-fn hydrate-fn transact-fn else]}]
   (let [path-params (string/split page-rel-path "/")]
     (cond
       (and (= (second path-params) "query") (= 3 (count path-params)))
@@ -39,6 +40,9 @@
       (and (= (first path-params) "hydrate") (= 1 (count path-params)))
       (hydrate-fn)
 
+      (and (= (first path-params) "transact") (= 1 (count path-params)))
+      (transact-fn)
+
       (and (= (first path-params) "") (= 1 (count path-params)))
       (index-fn)
       :else (else))))
@@ -57,6 +61,7 @@
             :index-fn #(index/ui queries navigate-cmp)
             :dump-fn (fn [id] (dump/ui graph id))
             :hydrate-fn (fn [] (hydrate/ui cur graph))
+            :transact-fn (fn [] (transact/ui cur transact! graph))
             :else (constantly [:div "no route for: " page-rel-path])})]
    [:hr]
    [:pre (with-out-str (pprint/pprint @cur))]])
@@ -73,4 +78,5 @@
           :index-fn #(index/query)
           :dump-fn (fn [id] (dump/query id))
           :hydrate-fn (fn [] (hydrate/query state))
+          :transact-fn (fn [] (transact/query))
           :else (constantly {})}))
