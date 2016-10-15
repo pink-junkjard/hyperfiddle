@@ -14,9 +14,19 @@
             [hypercrud.ui.table :as table]))
 
 
-(defn initial-entity [q params]
-  (-> (zipmap (q-util/parse-holes q) params)
-      (assoc :db/id -1)))
+(defn initial-entity [q params query param-ctx]
+  (let [hole-names (q-util/parse-holes q)
+        fill-hole (q-util/fill-hole-from-formula query)]
+    (reduce (fn [acc hole-name]
+              (update acc hole-name (fn [old]
+                                      (if (nil? old)
+                                        (fill-hole hole-name param-ctx)
+
+                                        ;don't update if not nil, use the value from the request
+                                        old))))
+            (-> (zipmap hole-names params)                  ;leaving the initial acc the same as before, todo touch up how params are sent over the wire
+                (assoc :db/id -1))
+            hole-names)))
 
 
 (defn show-results? [hole-names param-values]
@@ -30,7 +40,7 @@
        first))
 
 
-(defn ui [cur transact! graph forms queries form-id {:keys [q params]} navigate! navigate-cmp]
+(defn ui [cur transact! graph forms queries form-id {:keys [q params]} navigate! navigate-cmp param-ctx]
   (let [query (get-query queries q)
         hole-names (q-util/parse-holes (:query/value query))
         local-statements (cur [:statements] [])
@@ -38,7 +48,7 @@
         holes-by-name (->> (:query/hole query)
                            (map (juxt :hole/name identity))
                            (into {}))
-        entity-cur (cur [:holes] (initial-entity q params))
+        entity-cur (cur [:holes] (initial-entity q params query param-ctx))
         entity @entity-cur
         graph (hc/with graph @local-statements)]
     [:div
@@ -98,7 +108,7 @@
         ;; this is the new "param-ctx" - it is different - we already have the overridden
         ;; values, there is no need to eval the formulas in a ctx to get the values.
         param-values (-> (or (get state :holes)
-                             (initial-entity q params))
+                             (initial-entity q params query param-ctx))
                          (dissoc :db/id))]
     (merge
       ;no fields are isComponent true or expanded, so we don't need to pass in a forms map

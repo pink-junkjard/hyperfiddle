@@ -23,13 +23,19 @@
                   value))))))
 
 
-(defn build-params-from-formula [query param-ctx]
+(defn fill-hole-from-formula [query]
   (let [hole-formulas (->> (:query/hole query)
                            (map (juxt :hole/name #(eval/uate (str "(identity " (:hole/formula %) ")"))))
                            (into {}))]
-    (build-params (fn [hole-name param-ctx]
-                    (let [{formula :value error :error} (get hole-formulas hole-name)]
-                      (if error
-                        (throw error)                       ; first error, lose the rest of the errors
-                        (formula param-ctx))))              ; can also throw, lose the rest
-                  query param-ctx)))
+    (fn [hole-name param-ctx]
+      (let [{formula :value error :error} (get hole-formulas hole-name)]
+        (if error
+          ; first error, lose the rest of the errors
+          (throw error)
+
+          ; can also throw, lose the rest
+          (formula param-ctx))))))
+
+
+(defn build-params-from-formula [query param-ctx]
+  (build-params (fill-hole-from-formula query) query param-ctx))

@@ -48,12 +48,12 @@
       :else (else))))
 
 
-(defn ui [cur transact! graph forms queries page-rel-path navigate! navigate-cmp]
+(defn ui [cur transact! graph forms queries page-rel-path navigate! navigate-cmp param-ctx]
   [:div
    [:div.hc-node-view
     (route page-rel-path
            {:query-fn (fn [form-id qp]
-                        (query/ui cur transact! graph forms queries form-id qp navigate! navigate-cmp))
+                        (query/ui cur transact! graph forms queries form-id qp navigate! navigate-cmp param-ctx))
             :entity-fn (fn [eid form-id]
                          (entity/ui cur transact! graph eid forms queries form-id navigate! navigate-cmp))
             :field-fn (fn [eid form-id field-ident]
