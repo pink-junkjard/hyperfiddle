@@ -20,7 +20,11 @@
     (reduce (fn [acc hole-name]
               (update acc hole-name (fn [old]
                                       (if (nil? old)
-                                        (fill-hole hole-name param-ctx)
+                                        (try (fill-hole hole-name param-ctx)
+                                             ;swallow errors, just don't fill the hole
+                                             (catch :default e
+                                               (.warn js/console "Unable to fill hole " hole-name " from formula\n" (pr-str e))
+                                               old))
 
                                         ;don't update if not nil, use the value from the request
                                         old))))
