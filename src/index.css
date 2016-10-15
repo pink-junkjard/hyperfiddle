@@ -115,6 +115,10 @@ input.invalid[type="text"] {
     display: inline-block;
 }
 
+.radio-group > label {
+    margin-left: 0.5em;
+}
+
 td > .radio-boolean > .radio-group {
     display: inline-block;
 }
