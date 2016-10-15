@@ -63,8 +63,8 @@
             :hydrate-fn (fn [] (hydrate/ui cur graph))
             :transact-fn (fn [] (transact/ui cur transact! graph))
             :else (constantly [:div "no route for: " page-rel-path])})]
-   [:hr]
-   [:pre (with-out-str (pprint/pprint @cur))]])
+   #_[:hr]
+   #_[:pre (with-out-str (pprint/pprint @cur))]])
 
 
 (defn query [forms queries state page-rel-path param-ctx]
