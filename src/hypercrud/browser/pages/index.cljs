@@ -7,6 +7,7 @@
    ;form to populate holes
    [:ul.links
     (->> (vals queries)
+         (filter #(= true (:query/root? %)))
          (filter #(not= nil (:query/form %)))
          (sort-by :query/ident)
          (map (fn [{:keys [:query/ident :query/value :query/form] :as query}]
