@@ -123,6 +123,11 @@ td > .radio-boolean > .radio-group {
     width: auto;
 }
 
+.master-detail {
+    flex: 1 1 auto;
+    display: flex;
+}
+
 .master-detail > ul {
     width: 20%;
     padding: 0;
@@ -132,9 +137,9 @@ td > .radio-boolean > .radio-group {
 }
 
 .master-detail > div {
-    width: 80%;
-    margin-top: 0.5em;
-    float: left;
+    flex: 1 1 auto;
+    display: flex;
+    flex-flow: column;
 }
 
 .master-detail li.selected {
