@@ -122,4 +122,11 @@
 
       (if (show-results? hole-names param-values)
         (let [p-filler (partial q-util/build-params #(get param-values %))]
-          (table/query query p-filler param-ctx forms queries form-id))))))
+          ; hacks so when result set is 1 we can display the entity view
+          #_(table/query query p-filler param-ctx forms queries form-id)
+          (let [expanded-forms (get state :expanded nil)
+                form (get forms form-id)]
+            (merge
+              (form-util/form-option-queries forms queries form expanded-forms p-filler param-ctx)
+              (table/option-queries queries form p-filler param-ctx)
+              {:hypercrud.ui.table/query [(:query/value query) (p-filler query param-ctx) (form-util/form-pull-exp forms form expanded-forms)]})))))))
