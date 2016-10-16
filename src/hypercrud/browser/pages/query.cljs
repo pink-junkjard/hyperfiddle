@@ -72,37 +72,38 @@
      [:hr]
      (if (show-results? hole-names entity)                  ;todo what if we have a user hole?
        (let [results (hc/select graph ::table/query)]
-         (if (= -1 (count results))
+         (if (= 1 (count results))
            [entity/ui cur transact! graph (first results) forms queries form-id navigate! navigate-cmp]
-           (let [form (get forms (:query/form query))
-                 row-renderer-code (:form/row-renderer form)]
-             (if (empty? row-renderer-code)
-               (let [stage-tx! #(swap! local-statements tx-util/into-tx %)]
-                 [table/table graph results forms queries form-id expanded-cur stage-tx! navigate-cmp nil])
-               (let [result (eval/uate (str "(identity " row-renderer-code ")"))
-                     {row-renderer :value error :error} result]
-                 (if error
-                   [:div (pr-str error)]
-                   [:ul
-                    (->> results
-                         (map #(hc/entity graph %))
-                         (map (fn [entity]
-                                (let [link-fn (fn [ident label & [param-ctx]]
-                                                (let [query (->> (:form/link form)
-                                                                 (filter #(= ident (:link/ident %)))
-                                                                 first
-                                                                 :link/query
-                                                                 (get queries))
-                                                      param-ctx (if (nil? param-ctx)
-                                                                  {:entity entity}
-                                                                  param-ctx)
-                                                      href (links/query-link query param-ctx)]
-                                                  [navigate-cmp {:href href} label]))]
-                                  [:li {:key (:db/id entity)}
-                                   (try
-                                     (row-renderer graph link-fn entity)
-                                     (catch :default e (pr-str e)))]))))])))))))
-     [:button {:key 1 :on-click #(transact! @local-statements)} "Save"]]))
+           [:div
+            (let [form (get forms (:query/form query))
+                  row-renderer-code (:form/row-renderer form)]
+              (if (empty? row-renderer-code)
+                (let [stage-tx! #(swap! local-statements tx-util/into-tx %)]
+                  [table/table graph results forms queries form-id expanded-cur stage-tx! navigate-cmp nil])
+                (let [result (eval/uate (str "(identity " row-renderer-code ")"))
+                      {row-renderer :value error :error} result]
+                  (if error
+                    [:div (pr-str error)]
+                    [:ul
+                     (->> results
+                          (map #(hc/entity graph %))
+                          (map (fn [entity]
+                                 (let [link-fn (fn [ident label & [param-ctx]]
+                                                 (let [query (->> (:form/link form)
+                                                                  (filter #(= ident (:link/ident %)))
+                                                                  first
+                                                                  :link/query
+                                                                  (get queries))
+                                                       param-ctx (if (nil? param-ctx)
+                                                                   {:entity entity}
+                                                                   param-ctx)
+                                                       href (links/query-link query param-ctx)]
+                                                   [navigate-cmp {:href href} label]))]
+                                   [:li {:key (:db/id entity)}
+                                    (try
+                                      (row-renderer graph link-fn entity)
+                                      (catch :default e (pr-str e)))]))))]))))
+            [:button {:key 1 :on-click #(transact! @local-statements)} "Save"]])))]))
 
 
 (defn query [state forms queries {:keys [q params]} form-id param-ctx]
