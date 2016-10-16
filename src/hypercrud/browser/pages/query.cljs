@@ -87,13 +87,15 @@
                     (->> results
                          (map #(hc/entity graph %))
                          (map (fn [entity]
-                                (let [link-fn (fn [ident label]
+                                (let [link-fn (fn [ident label & [param-ctx]]
                                                 (let [query (->> (:form/link form)
                                                                  (filter #(= ident (:link/ident %)))
                                                                  first
                                                                  :link/query
                                                                  (get queries))
-                                                      param-ctx {:entity entity}
+                                                      param-ctx (if (nil? param-ctx)
+                                                                  {:entity entity}
+                                                                  param-ctx)
                                                       href (links/query-link query param-ctx)]
                                                   [navigate-cmp {:href href} label]))]
                                   [:li {:key (:db/id entity)}
