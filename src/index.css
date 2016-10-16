@@ -38,6 +38,7 @@ input.invalid[type="text"] {
 
 .ui-table {
     border-collapse: collapse;
+    width: 100%;
 }
 
 .ui-table thead td {
