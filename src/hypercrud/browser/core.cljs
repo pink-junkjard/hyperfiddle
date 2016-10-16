@@ -5,6 +5,7 @@
             [hypercrud.browser.base-64-url-safe :as base64]
             [hypercrud.browser.pages.dump :as dump]
             [hypercrud.browser.pages.entity :as entity]
+            [hypercrud.browser.pages.export-datoms :as export-datoms]
             [hypercrud.browser.pages.field :as field]
             [hypercrud.browser.pages.hydrate :as hydrate]
             [hypercrud.browser.pages.transact :as transact]
@@ -12,7 +13,7 @@
             [hypercrud.browser.pages.query :as query]))
 
 
-(defn route [page-rel-path {:keys [query-fn entity-fn field-fn index-fn dump-fn hydrate-fn transact-fn else]}]
+(defn route [page-rel-path {:keys [query-fn entity-fn field-fn index-fn dump-fn export-fn hydrate-fn transact-fn else]}]
   (let [path-params (string/split page-rel-path "/")]
     (cond
       (and (= (second path-params) "query") (= 3 (count path-params)))
@@ -37,6 +38,9 @@
       (and (= (first path-params) "dump") (= 2 (count path-params)))
       (dump-fn (js/parseInt (second path-params) 10))
 
+      (and (= (first path-params) "export") (= 1 (count path-params)))
+      (export-fn)
+
       (and (= (first path-params) "hydrate") (= 1 (count path-params)))
       (hydrate-fn)
 
@@ -60,6 +64,7 @@
                         (field/ui cur transact! graph eid forms queries form-id field-ident navigate-cmp))
             :index-fn #(index/ui queries navigate-cmp)
             :dump-fn (fn [id] (dump/ui graph id))
+            :export-fn (fn [] (export-datoms/ui cur graph))
             :hydrate-fn (fn [] (hydrate/ui cur graph))
             :transact-fn (fn [] (transact/ui cur transact! graph))
             :else (constantly [:div "no route for: " page-rel-path])})]
@@ -67,7 +72,7 @@
    #_[:pre (with-out-str (pprint/pprint @cur))]])
 
 
-(defn query [forms queries state page-rel-path param-ctx]
+(defn query [schema forms queries state page-rel-path param-ctx]
   (route page-rel-path
          {:query-fn (fn [form-id qp]
                       (query/query state forms queries qp form-id param-ctx))
@@ -77,6 +82,7 @@
                       (field/query state eid forms queries form-id field-ident param-ctx))
           :index-fn #(index/query)
           :dump-fn (fn [id] (dump/query id))
+          :export-fn (fn [] (export-datoms/query state schema))
           :hydrate-fn (fn [] (hydrate/query state))
           :transact-fn (fn [] (transact/query))
           :else (constantly {})}))

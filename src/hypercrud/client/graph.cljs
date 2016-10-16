@@ -8,7 +8,8 @@
 
 (defprotocol GraphPrivate
   (set-state! [this pulled-trees-map' t'])
-  (graph-data [this]))
+  (graph-data [this])
+  (schema [this]))
 
 ;; Really we just want to be able to serialize graphs for the wire; this is a quick hack
 ;; because we aren't sure what we want to do about the schema which is part of the graph and the client
@@ -84,6 +85,7 @@
     (set! t t'))
 
   (graph-data [this] graph-data)
+  (schema [this] schema)
 
   GraphSSR
   (named-queries* [this] named-queries)
