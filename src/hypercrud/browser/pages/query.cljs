@@ -56,7 +56,7 @@
         entity @entity-cur
         graph (hc/with graph @local-statements)]
     [:div
-     [:pre (with-out-str (pprint/pprint [q params]))]
+     #_[:pre (with-out-str (pprint/pprint [q params]))]
      (let [schema (->> holes-by-name
                        (map (fn [[hole-name hole]]
                               [hole-name {:db/cardinality (:attribute/cardinality hole)}]))
