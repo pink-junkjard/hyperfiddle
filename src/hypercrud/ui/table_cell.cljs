@@ -29,13 +29,13 @@
 
 ; this can be used sometimes, on the entity page, but not the query page
 (defn ref-one [entity form-id {:keys [expanded-cur navigate-cmp queries] {:keys [ident options]} :field :as widget-args}]
-  (if (option/has-holes? options queries)
-    (ref-one-component entity form-id widget-args)
-    (select/select*
-      entity (assoc widget-args :expanded-cur (expanded-cur [ident]))
-      (let [href (links/entity-link (option/get-form-id options entity) (get entity ident))]
-        (if (not (nil? (get entity ident)))
-          [navigate-cmp {:class "edit" :href href} "Edit"])))))
+  #_(if (option/has-holes? options queries)
+    (ref-one-component entity form-id widget-args))
+  (select/select*
+    entity (assoc widget-args :expanded-cur (expanded-cur [ident]))
+    (let [href (links/entity-link (option/get-form-id options entity) (get entity ident))]
+      (if (not (nil? (get entity ident)))
+        [navigate-cmp {:class "edit" :href href} "Edit"]))))
 
 
 (defn ref-many [entity form-id {:keys [graph navigate-cmp] {:keys [ident options]} :field}]
