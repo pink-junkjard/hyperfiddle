@@ -76,33 +76,37 @@
            [entity/ui cur transact! graph (first results) forms queries form-id navigate! navigate-cmp]
            [:div
             (let [form (get forms (:query/form query))
-                  row-renderer-code (:form/row-renderer form)]
+                  row-renderer-code (:form/row-renderer form)
+                  stage-tx! #(swap! local-statements tx-util/into-tx %)]
               (if (empty? row-renderer-code)
-                (let [stage-tx! #(swap! local-statements tx-util/into-tx %)]
-                  [table/table graph results forms queries form-id expanded-cur stage-tx! navigate-cmp nil])
+                [table/table graph results forms queries form-id expanded-cur stage-tx! navigate-cmp nil param-ctx]
                 (let [result (eval/uate (str "(identity " row-renderer-code ")"))
                       {row-renderer :value error :error} result]
                   (if error
                     [:div (pr-str error)]
-                    [:ul
-                     (->> results
-                          (map #(hc/entity graph %))
-                          (map (fn [entity]
-                                 (let [link-fn (fn [ident label & [param-ctx]]
-                                                 (let [query (->> (:form/link form)
-                                                                  (filter #(= ident (:link/ident %)))
-                                                                  first
-                                                                  :link/query
-                                                                  (get queries))
-                                                       param-ctx (if (nil? param-ctx)
-                                                                   {:entity entity}
-                                                                   param-ctx)
-                                                       href (links/query-link query param-ctx)]
-                                                   [navigate-cmp {:href href} label]))]
-                                   [:li {:key (:db/id entity)}
-                                    (try
-                                      (row-renderer graph link-fn entity)
-                                      (catch :default e (pr-str e)))]))))]))))
+                    [:div
+                     [:ul
+                      (->> results
+                           (map #(hc/entity graph %))
+                           (map (fn [entity]
+                                  (let [link-fn (fn [ident label & [param-ctx']]
+                                                  (let [query (->> (:form/link form)
+                                                                   (filter #(= ident (:link/ident %)))
+                                                                   first
+                                                                   :link/query
+                                                                   (get queries))
+                                                        param-ctx (merge param-ctx
+                                                                         (if (nil? param-ctx')
+                                                                           {:entity entity}
+                                                                           param-ctx'))
+                                                        href (links/query-link query param-ctx)]
+                                                    [navigate-cmp {:href href} label]))]
+                                    [:li {:key (:db/id entity)}
+                                     (try
+                                       (row-renderer graph link-fn entity)
+                                       (catch :default e (pr-str e)))]))))]
+                     (if (= "Post Item" (:form/name form))
+                       [form/form graph -1 forms queries form-id expanded-cur stage-tx! navigate-cmp])]))))
             [:button {:key 1 :on-click #(transact! @local-statements)} "Save"]])))]))
 
 
