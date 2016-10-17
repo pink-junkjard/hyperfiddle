@@ -2,6 +2,7 @@
   (:require [hypercrud.browser.links :as links]
             [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx]
+            [hypercrud.compile.eval :as eval]
             [hypercrud.form.option :as option]
             [hypercrud.ui.auto-control :refer [auto-table-cell]]
             [reagent.core :as r]))
@@ -47,13 +48,21 @@
          (:form/field form))))
 
 
-(defn build-row-cells [form entity fieldless-widget-args]
+(defn build-row-cells [form entity {:keys [graph] :as fieldless-widget-args}]
   (->> (:form/field form)
-       (map (fn [{:keys [ident] :as field}]
+       (map (fn [{:keys [ident renderer] :as field}]
               [:td.truncate {:key ident}
-               [auto-table-cell entity (:db/id form) (-> fieldless-widget-args
-                                                         (update :expanded-cur #(% [ident]))
-                                                         (assoc :field field))]]))))
+               (if (empty? renderer)
+                 [auto-table-cell entity (:db/id form) (-> fieldless-widget-args
+                                                           (update :expanded-cur #(% [ident]))
+                                                           (assoc :field field))]
+                 (let [{renderer :value error :error} (eval/uate (str "(identity " renderer ")"))]
+                   [:div.value
+                    (if error
+                      (pr-str error)
+                      (try
+                        (renderer graph entity)
+                        (catch :default e (pr-str e))))]))]))))
 
 
 (defn links-cell [entity form retract-entity! show-links? queries navigate-cmp]
