@@ -2,6 +2,7 @@
 
 
 (def ^:dynamic *temp-id!*)
+(def ^:dynamic *user-profile*)
 
 
 (defprotocol Graph

@@ -75,7 +75,7 @@
              (->> (:form/link form)
                   (map (fn [{:keys [:link/ident :link/prompt :link/query]}]
                          (let [query (get queries query)
-                               param-ctx {:entity entity}]
+                               param-ctx (merge {:user-profile hc/*user-profile*} {:entity entity})]
                            (navigate-cmp {:key ident
                                           :href (links/query-link query param-ctx)} prompt)))))
              (navigate-cmp {:key "view"
