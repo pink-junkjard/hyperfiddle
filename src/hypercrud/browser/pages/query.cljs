@@ -72,7 +72,7 @@
      [:hr]
      (if (show-results? hole-names entity)                  ;todo what if we have a user hole?
        (let [results (hc/select graph ::table/query)]
-         (if (= 1 (count results))
+         (if (and (:query/single-result-as-entity? query) (= 1 (count results)))
            [entity/ui cur transact! graph (first results) forms queries form-id navigate! navigate-cmp]
            [:div
             (let [form (get forms (:query/form query))
