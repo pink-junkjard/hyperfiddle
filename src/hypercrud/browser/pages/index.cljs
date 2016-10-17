@@ -2,16 +2,14 @@
   (:require [hypercrud.browser.links :as links]))
 
 
-(defn ui [queries navigate-cmp]
+(defn ui [links queries navigate-cmp]
   [:div
    ;form to populate holes
    [:ul.links
-    (->> (vals queries)
-         (filter #(= true (:query/root? %)))
-         (filter #(not= nil (:query/form %)))
-         (sort-by :query/ident)
-         (map (fn [{:keys [:query/ident :query/value :query/form] :as query}]
+    (->> links
+         (sort-by :link/prompt)
+         (map (fn [{:keys [:link/prompt :link/ident :link/query :link/form] :as link}]
                 [:li {:key ident}
-                 [navigate-cmp {:href (links/query-link form value nil)} ident]])))]])
+                 [navigate-cmp {:href (links/query-link form (:query/value (get queries query)) nil)} prompt]])))]])
 
 (defn query [] {})

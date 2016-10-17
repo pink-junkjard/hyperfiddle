@@ -11,10 +11,11 @@
   (str (entity-link form-id entity-id) "/" (base64/encode field-ident)))
 
 
-(defn query-link
-  ([form-id q param]
-   (str form-id "/query/" (base64/encode {:q q :params param})))
-  ([query param-ctx]
-   (query-link (:query/form query)
-               (:query/value query)
-               (q-util/build-params-from-formula query param-ctx))))
+(defn query-link [form-id q param]
+  (str form-id "/query/" (base64/encode {:q q :params param})))
+
+
+(defn query-link2 [form-id query param-ctx]
+  (query-link form-id
+              (:query/value query)
+              (q-util/build-params-from-formula query param-ctx)))

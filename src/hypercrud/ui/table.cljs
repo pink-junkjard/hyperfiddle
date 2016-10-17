@@ -73,11 +73,11 @@
          (if show-links?
            (conj
              (->> (:form/link form)
-                  (map (fn [{:keys [:link/ident :link/prompt :link/query]}]
+                  (map (fn [{:keys [:link/ident :link/prompt :link/query :link/form]}]
                          (let [query (get queries query)
                                param-ctx (merge {:user-profile hc/*user-profile*} {:entity entity})]
                            (navigate-cmp {:key ident
-                                          :href (links/query-link query param-ctx)} prompt)))))
+                                          :href (links/query-link2 form query param-ctx)} prompt)))))
              (navigate-cmp {:key "view"
                             :href (links/entity-link (:db/id form) (:db/id entity))} "Entity View")
              (if retract-entity!

@@ -75,7 +75,7 @@
          (if (and (:query/single-result-as-entity? query) (= 1 (count results)))
            [entity/ui cur transact! graph (first results) forms queries form-id navigate! navigate-cmp]
            [:div
-            (let [form (get forms (:query/form query))
+            (let [form (get forms form-id)
                   row-renderer-code (:form/row-renderer form)
                   stage-tx! #(swap! local-statements tx-util/into-tx %)]
               (if (empty? row-renderer-code)
@@ -90,16 +90,15 @@
                            (map #(hc/entity graph %))
                            (map (fn [entity]
                                   (let [link-fn (fn [ident label & [param-ctx']]
-                                                  (let [query (->> (:form/link form)
+                                                  (let [link (->> (:form/link form)
                                                                    (filter #(= ident (:link/ident %)))
-                                                                   first
-                                                                   :link/query
-                                                                   (get queries))
+                                                                   first)
+                                                        query (get queries (:link/query link))
                                                         param-ctx (merge param-ctx
                                                                          (if (nil? param-ctx')
                                                                            {:entity entity}
                                                                            param-ctx'))
-                                                        href (links/query-link query param-ctx)]
+                                                        href (links/query-link2 (:link/form link) query param-ctx)]
                                                     [navigate-cmp {:href href} label]))]
                                     [:li {:key (:db/id entity)}
                                      (try

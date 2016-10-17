@@ -52,7 +52,7 @@
       :else (else))))
 
 
-(defn ui [cur transact! graph forms queries page-rel-path navigate! navigate-cmp param-ctx]
+(defn ui [cur transact! graph forms queries links page-rel-path navigate! navigate-cmp param-ctx]
   [:div
    [:div.hc-node-view
     (route page-rel-path
@@ -62,7 +62,7 @@
                          (entity/ui cur transact! graph eid forms queries form-id navigate! navigate-cmp param-ctx))
             :field-fn (fn [eid form-id field-ident]
                         (field/ui cur transact! graph eid forms queries form-id field-ident navigate-cmp))
-            :index-fn #(index/ui queries navigate-cmp)
+            :index-fn #(index/ui links queries navigate-cmp)
             :dump-fn (fn [id] (dump/ui graph id))
             :export-fn (fn [] (export-datoms/ui cur graph))
             :hydrate-fn (fn [] (hydrate/ui cur graph))
