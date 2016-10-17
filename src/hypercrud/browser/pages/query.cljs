@@ -131,7 +131,9 @@
           #_(table/query query p-filler param-ctx forms queries form-id)
           (let [expanded-forms (get state :expanded nil)
                 form (get forms form-id)]
-            (merge
-              (form-util/form-option-queries forms queries form expanded-forms p-filler param-ctx)
-              (table/option-queries queries form p-filler param-ctx)
-              {:hypercrud.ui.table/query [(:query/value query) (p-filler query param-ctx) (form-util/form-pull-exp forms form expanded-forms)]})))))))
+            (if (:query/single-result-as-entity? query)
+              (merge
+                (form-util/form-option-queries forms queries form expanded-forms p-filler param-ctx)
+                (table/option-queries queries form p-filler param-ctx)
+                {:hypercrud.ui.table/query [(:query/value query) (p-filler query param-ctx) (form-util/form-pull-exp forms form expanded-forms)]})
+              (table/query query p-filler param-ctx forms queries form-id))))))))
