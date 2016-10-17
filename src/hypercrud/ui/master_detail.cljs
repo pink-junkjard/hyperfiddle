@@ -6,7 +6,7 @@
             [hypercrud.ui.auto-control :refer [auto-control]]))
 
 
-(defn master-detail* [entity {:keys [graph stage-tx!] {:keys [ident options]} :field :as widget-args} selected-cur & [detail-renderer]]
+(defn master-detail* [entity {:keys [graph stage-tx!] {:keys [ident options]} :field :as widget-args} selected-cur & [filter-entities detail-renderer]]
   (let [detail-renderer (or detail-renderer auto-control)
         temp-id! hc/*temp-id!*
         li (fn [key label is-selected? on-click & retract]
@@ -15,17 +15,19 @@
               ; todo should use navigate-cmp?
               [:a {:href "#" :on-click on-click} label]])]
     [:div.master-detail
-     [:ul (doall (-> (map (fn [eid]
-                            (let [child-entity (hc/entity graph eid)]
-                              (li eid
-                                  (get child-entity (option/label-prop options))
-                                  (= eid @selected-cur)
-                                  #(reset! selected-cur eid)
-                                  [:button.retract-detail
-                                   {:key "retract"
-                                    :on-click #((stage-tx! (tx-util/edit-entity (:db/id entity) ident [eid] []))
-                                                (reset! selected-cur nil))} "⌦"])))
-                          (get entity ident))
+     [:ul (doall (-> (->> (get entity ident)
+                          (map #(hc/entity graph %))
+                          (filter (or filter-entities (constantly true)))
+                          (map (fn [child-entity]
+                                 (let [eid (:db/id child-entity)]
+                                   (li eid
+                                       (get child-entity (option/label-prop options))
+                                       (= eid @selected-cur)
+                                       #(reset! selected-cur eid)
+                                       [:button.retract-detail
+                                        {:key "retract"
+                                         :on-click #((stage-tx! (tx-util/edit-entity (:db/id entity) ident [eid] []))
+                                                     (reset! selected-cur nil))} "⌦"])))))
                      (concat (if (option/create-new? options entity)
                                [(li "create-new" "Create New" false
                                     #(let [eid (temp-id!)]
