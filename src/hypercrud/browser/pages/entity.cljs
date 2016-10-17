@@ -1,12 +1,13 @@
 (ns hypercrud.browser.pages.entity
-  (:require [hypercrud.client.core :as hc]
+  (:require [hypercrud.browser.links :as links]
+            [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx-util]
             [hypercrud.form.q-util :as q-util]
             [hypercrud.ui.form :as form]
             [promesa.core :as p]))
 
 
-(defn ui [cur transact! graph eid forms queries form-id navigate! navigate-cmp]
+(defn ui [cur transact! graph eid forms queries form-id navigate! navigate-cmp param-ctx]
   "hypercrud values just get a form, with ::update and ::delete."
   (let [local-statements (cur [:statements] [])
         expanded-cur (cur [:expanded] {})                   ; {:community/neighborhood {:neighborhood/district {:district/region {}}}}
@@ -23,7 +24,18 @@
      [:button {:on-click #(-> (transact! [[:db.fn/retractEntity eid]])
                               (p/then (fn [_] (navigate! (str "../../../")))))
                :disabled (tx-util/tempid? eid)}
-      "Delete"]]))
+      "Delete"]
+     [:div
+      [:span "Links: "]
+      (->> (:form/link (get forms form-id))
+           (map (fn [{:keys [:link/ident :link/prompt :link/query]}]
+                  (let [query (get queries query)
+                        param-ctx (merge param-ctx
+                                         {:entity (hc/entity graph eid)})
+                        href (links/query-link query param-ctx)]
+                    ^{:key ident}
+                    [navigate-cmp {:href href} prompt])))
+           (interpose " "))]]))
 
 
 (defn query [state eid forms queries form-id param-ctx]

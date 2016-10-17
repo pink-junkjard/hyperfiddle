@@ -59,7 +59,7 @@
            {:query-fn (fn [form-id qp]
                         (query/ui cur transact! graph forms queries form-id qp navigate! navigate-cmp param-ctx))
             :entity-fn (fn [eid form-id]
-                         (entity/ui cur transact! graph eid forms queries form-id navigate! navigate-cmp))
+                         (entity/ui cur transact! graph eid forms queries form-id navigate! navigate-cmp param-ctx))
             :field-fn (fn [eid form-id field-ident]
                         (field/ui cur transact! graph eid forms queries form-id field-ident navigate-cmp))
             :index-fn #(index/ui queries navigate-cmp)
