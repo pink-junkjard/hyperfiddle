@@ -1,5 +1,6 @@
 (ns hypercrud.form.field
-  (:require [hypercrud.form.option :as option]))
+  (:require [hypercrud.form.option :as option]
+            [hypercrud.util :as util]))
 
 
 (defrecord Field [prompt
@@ -26,15 +27,18 @@
 
 
 (defn field
-  ([{:keys [:field/prompt :field/label-prop :field/form :field/query :field/renderer] :as db-field}
+  ([{:keys [:field/prompt :field/label-prop :field/form :field/query :field/renderer :link/formula] :as db-field}
     {:keys [:attribute/ident :attribute/valueType :attribute/cardinality :attribute/isComponent] :as db-attribute}]
    (->Field prompt ident (convert-valueType valueType) cardinality isComponent renderer
             (option/gimme-useful-options {:label-prop label-prop
                                           :form form
-                                          :query query})))
+                                          :query query
+                                          :formula formula})))
   ([{:keys [prompt ident valueType cardinality isComponent renderer options]}]
    (->Field prompt ident valueType cardinality (or isComponent false) renderer
-            (option/gimme-useful-options options))))
+            (-> options
+                (util/update-existing :formula pr-str)
+                option/gimme-useful-options))))
 
 
 (defn hole->field
@@ -43,4 +47,5 @@
             :attribute/valueType :attribute/cardinality]}]
    (->Field prompt name (convert-valueType valueType) cardinality false nil
             (option/gimme-useful-options {:label-prop label-prop
-                                          :query query}))))
+                                          :query query
+                                          :formula formula}))))

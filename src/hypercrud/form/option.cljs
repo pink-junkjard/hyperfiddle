@@ -24,7 +24,7 @@
   (create-new? [this record]))
 
 
-(deftype QueryOptions [query-id form-id label-prop]
+(deftype QueryOptions [query-id form-id formulas label-prop]
   IFieldOptions
   (label-prop [this] label-prop)
 
@@ -46,7 +46,7 @@
           _ (assert (not= nil label-prop) (str "Missing label-prop for " (:query/ident query)))
           q (:query/value query)
           query-name (hash q)
-          params (p-filler query param-ctx)
+          params (p-filler query formulas param-ctx)
           pull-exp [:db/id label-prop]]
       {query-name [q params pull-exp]}))
 
@@ -60,7 +60,13 @@
 
   (get-form-id [this record] form-id)
   (editable? [this record] (not= nil form-id))
-  (create-new? [this record] (not= nil form-id)))
+  (create-new? [this record] (not= nil form-id))
+
+  Object
+  (toString [this] (pr-str {:query query-id
+                            :form form-id
+                            :formulas formulas
+                            :label-prop label-prop})))
 
 
 #_(deftype SetRecordOptions [fn label-prop]
@@ -109,8 +115,8 @@
     (create-new? [this record] false))
 
 
-(defn gimme-useful-options [{:keys [:label-prop :form :query :inline]}]
-  (->QueryOptions query form label-prop))
+(defn gimme-useful-options [{:keys [label-prop form query formula inline]}]
+  (->QueryOptions query form formula label-prop))
 
 
 (comment

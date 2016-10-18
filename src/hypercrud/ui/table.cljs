@@ -73,13 +73,12 @@
          (if show-links?
            (conj
              (->> (:form/link form)
-                  (map (fn [{:keys [:link/ident :link/prompt :link/query :link/form]}]
-                         (let [query (get queries query)
-                               param-ctx (merge {:user-profile hc/*user-profile*} {:entity entity})]
-                           (navigate-cmp {:key ident
-                                          :href (links/query-link2 form query param-ctx)} prompt)))))
-             (navigate-cmp {:key "view"
-                            :href (links/entity-link (:db/id form) (:db/id entity))} "Entity View")
+                  (map (fn [{:keys [:link/ident :link/prompt] :as link}]
+                         (let [param-ctx (merge {:user-profile hc/*user-profile*} {:entity entity})
+                               href (links/query-link link queries param-ctx)]
+                           (navigate-cmp {:key ident :href href} prompt)))))
+             (let [href (links/entity-link (:db/id form) (:db/id entity))]
+               (navigate-cmp {:key "view" :href href} "Entity View"))
              (if retract-entity!
                [:span {:key "delete" :on-click #(retract-entity! (:db/id entity))} "Delete Row"])))
          [:span {:key "close" :on-click #(reset! open? false)} "Close"]]
@@ -192,9 +191,9 @@
          (map #(field-queries queries p-filler param-ctx %)
               (:form/field form))))
 
-
-(defn query [query p-filler param-ctx forms queries form-id]
-  (let [form (get forms form-id)]
+(defn query [forms queries p-filler param-ctx {:keys [:link/query :link/form :link/formula] :as link}]
+  (let [form (get forms form)
+        query (get queries query)]
     (merge
       (option-queries queries form p-filler param-ctx)
-      {::query [(:query/value query) (p-filler query param-ctx) (table-pull-exp form)]})))
+      {::query [(:query/value query) (p-filler query formula param-ctx) (table-pull-exp form)]})))

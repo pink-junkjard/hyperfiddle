@@ -28,13 +28,12 @@
      [:div
       [:span "Links: "]
       (->> (:form/link (get forms form-id))
-           (map (fn [{:keys [:link/ident :link/prompt :link/query :link/form]}]
-                  (let [query (get queries query)
-                        param-ctx (merge param-ctx
+           (map (fn [link]
+                  (let [param-ctx (merge param-ctx
                                          {:entity (hc/entity graph eid)})
-                        href (links/query-link2 form query param-ctx)]
-                    ^{:key ident}
-                    [navigate-cmp {:href href} prompt])))
+                        href (links/query-link link queries param-ctx)]
+                    ^{:key (:link/ident link)}
+                    [navigate-cmp {:href href} (:link/prompt link)])))
            (interpose " "))]]))
 
 

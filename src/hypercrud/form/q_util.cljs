@@ -1,5 +1,6 @@
 (ns hypercrud.form.q-util
-  (:require [hypercrud.compile.eval :as eval]))
+  (:require [cljs.reader :as reader]
+            [hypercrud.compile.eval :as eval]))
 
 
 (defn parse-holes [q]
@@ -14,19 +15,25 @@
          (map str))))
 
 
+; type p-filler = fn [query formulas param-ctx] => vec
+; which is why we need this unused formulas param
 (defn build-params [fill-hole query param-ctx]
   (let [q (:query/value query)]
     (->> (parse-holes q)
          (map (fn [hole-name]
                 (let [value (fill-hole hole-name param-ctx)]
+                  ;; Are you at the root? Can't fill holes without a project client
                   (assert (not= nil value) (str "Empty parameter for " hole-name " in " q))
                   value))))))
 
 
-(defn fill-hole-from-formula [query]
-  (let [hole-formulas (->> (:query/hole query)
-                           (map (juxt :hole/name #(eval/uate (str "(identity " (:hole/formula %) ")"))))
-                           (into {}))]
+(defn fill-hole-from-formula [formulas]
+  (let [hole-formulas (if (empty? formulas)
+                        {}
+                        (->> formulas
+                             reader/read-string
+                             (map (juxt first #(eval/uate (str "(identity " (second %) ")"))))
+                             (into {})))]
     (fn [hole-name param-ctx]
       (let [{formula :value error :error} (get hole-formulas hole-name)]
         (if error
@@ -37,5 +44,5 @@
           (formula param-ctx))))))
 
 
-(defn build-params-from-formula [query param-ctx]
-  (build-params (fill-hole-from-formula query) query param-ctx))
+(defn build-params-from-formula [query formulas param-ctx]
+  (build-params (fill-hole-from-formula formulas) query param-ctx))

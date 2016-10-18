@@ -62,12 +62,13 @@
                          (entity/ui cur transact! graph eid forms queries form-id navigate! navigate-cmp param-ctx))
             :field-fn (fn [eid form-id field-ident]
                         (field/ui cur transact! graph eid forms queries form-id field-ident navigate-cmp))
-            :index-fn #(index/ui links queries navigate-cmp)
+            :index-fn #(index/ui links queries navigate-cmp param-ctx)
             :dump-fn (fn [id] (dump/ui graph id))
             :export-fn (fn [] (export-datoms/ui cur graph))
             :hydrate-fn (fn [] (hydrate/ui cur graph))
             :transact-fn (fn [] (transact/ui cur transact! graph))
             :else (constantly [:div "no route for: " page-rel-path])})]
+   #_[:pre (pr-str param-ctx)]
    #_[:hr]
    #_[:pre (with-out-str (pprint/pprint @cur))]])
 

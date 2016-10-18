@@ -1,6 +1,5 @@
 (ns hypercrud.browser.pages.query
-  (:require [cljs.pprint :as pprint]
-            [clojure.set :as set]
+  (:require [clojure.set :as set]
             [hypercrud.browser.links :as links]
             [hypercrud.browser.pages.entity :as entity]
             [hypercrud.client.core :as hc]
@@ -14,23 +13,10 @@
             [hypercrud.ui.table :as table]))
 
 
-(defn initial-entity [q params query param-ctx]
-  (let [hole-names (q-util/parse-holes q)
-        fill-hole (q-util/fill-hole-from-formula query)]
-    (reduce (fn [acc hole-name]
-              (update acc hole-name (fn [old]
-                                      (if (nil? old)
-                                        (try (fill-hole hole-name param-ctx)
-                                             ;swallow errors, just don't fill the hole
-                                             (catch :default e
-                                               (.warn js/console "Unable to fill hole " hole-name " from formula\n" (pr-str e))
-                                               old))
-
-                                        ;don't update if not nil, use the value from the request
-                                        old))))
-            (-> (zipmap hole-names params)                  ;leaving the initial acc the same as before, todo touch up how params are sent over the wire
-                (assoc :db/id -1))
-            hole-names)))
+(defn initial-entity [q params]
+  (let [hole-names (q-util/parse-holes q)]
+    (-> (zipmap hole-names params)                          ;todo touch up how params are sent over the wire
+        (assoc :db/id -1))))
 
 
 (defn show-results? [hole-names param-values]
@@ -52,11 +38,13 @@
         holes-by-name (->> (:query/hole query)
                            (map (juxt :hole/name identity))
                            (into {}))
-        entity-cur (cur [:holes] (initial-entity q params query param-ctx))
+        table-form (get forms form-id)
+        entity-cur (cur [:holes] (initial-entity q params))
         entity @entity-cur
         graph (hc/with graph @local-statements)]
     [:div
-     #_[:pre (with-out-str (pprint/pprint [q params]))]
+     [:pre (pr-str q)]
+     [:pre (pr-str params)]
      (let [schema (->> holes-by-name
                        (map (fn [[hole-name hole]]
                               [hole-name {:db/cardinality (:attribute/cardinality hole)}]))
@@ -66,17 +54,16 @@
                                             #(tx-util/apply-stmt-to-entity schema %1 %2)
                                             entity
                                             tx)))
-           form {:db/id -1
-                 :form/field (map #(field/hole->field (get holes-by-name %)) hole-names)}]
-       [form/form2 graph entity (assoc forms -1 form) queries form expanded-cur stage-tx! navigate-cmp])
+           holes-form {:db/id -1
+                       :form/field (map #(field/hole->field (get holes-by-name %)) hole-names)}]
+       [form/form2 graph entity (assoc forms -1 holes-form) queries holes-form expanded-cur stage-tx! navigate-cmp])
      [:hr]
      (if (show-results? hole-names entity)                  ;todo what if we have a user hole?
        (let [results (hc/select graph ::table/query)]
          (if (and (:query/single-result-as-entity? query) (= 1 (count results)))
            [entity/ui cur transact! graph (first results) forms queries form-id navigate! navigate-cmp]
            [:div
-            (let [form (get forms form-id)
-                  row-renderer-code (:form/row-renderer form)
+            (let [row-renderer-code (:form/row-renderer table-form)
                   stage-tx! #(swap! local-statements tx-util/into-tx %)]
               (if (empty? row-renderer-code)
                 [table/table graph results forms queries form-id expanded-cur stage-tx! navigate-cmp nil param-ctx]
@@ -89,22 +76,18 @@
                       (->> results
                            (map #(hc/entity graph %))
                            (map (fn [entity]
-                                  (let [link-fn (fn [ident label & [param-ctx']]
-                                                  (let [link (->> (:form/link form)
-                                                                   (filter #(= ident (:link/ident %)))
-                                                                   first)
-                                                        query (get queries (:link/query link))
-                                                        param-ctx (merge param-ctx
-                                                                         (if (nil? param-ctx')
-                                                                           {:entity entity}
-                                                                           param-ctx'))
-                                                        href (links/query-link2 (:link/form link) query param-ctx)]
+                                  (let [link-fn (fn [ident label]
+                                                  (let [link (->> (:form/link table-form)
+                                                                  (filter #(= ident (:link/ident %)))
+                                                                  first)
+                                                        param-ctx (merge param-ctx {:entity entity})
+                                                        href (links/query-link link queries param-ctx)]
                                                     [navigate-cmp {:href href} label]))]
                                     [:li {:key (:db/id entity)}
                                      (try
                                        (row-renderer graph link-fn entity)
                                        (catch :default e (pr-str e)))]))))]
-                     (if (= "Post Item" (:form/name form))
+                     (if (= "Post Item" (:form/name table-form))
                        [form/form graph -1 forms queries form-id expanded-cur stage-tx! navigate-cmp])]))))
             [:button {:key 1 :on-click #(transact! @local-statements)} "Save"]])))]))
 
@@ -112,27 +95,31 @@
 (defn query [state forms queries {:keys [q params]} form-id param-ctx]
   (let [query (get-query queries q)
         hole-names (q-util/parse-holes q)
-        form {:db/id -1
-              :form/field (vec (map field/hole->field (:query/hole query)))}
+        holes-form {:db/id -1
+                    :form/field (vec (map field/hole->field (:query/hole query)))}
+        table-form (get forms form-id)
 
         ;; this is the new "param-ctx" - it is different - we already have the overridden
         ;; values, there is no need to eval the formulas in a ctx to get the values.
         param-values (-> (or (get state :holes)
-                             (initial-entity q params query param-ctx))
+                             (initial-entity q params))
                          (dissoc :db/id))]
     (merge
       ;no fields are isComponent true or expanded, so we don't need to pass in a forms map
-      (form-util/form-option-queries nil queries form nil q-util/build-params-from-formula param-ctx)
+      (form-util/form-option-queries nil queries holes-form nil q-util/build-params-from-formula param-ctx)
 
       (if (show-results? hole-names param-values)
-        (let [p-filler (partial q-util/build-params #(get param-values %))]
+        (let [p-filler (fn [query formulas param-ctx]
+                         (q-util/build-params #(get param-values %) query param-ctx))]
           ; hacks so when result set is 1 we can display the entity view
-          #_(table/query query p-filler param-ctx forms queries form-id)
-          (let [expanded-forms (get state :expanded nil)
-                form (get forms form-id)]
+          #_(table/query forms queries p-filler param-ctx {:link/query (:db/id query)
+                                                           :link/form form-id})
+          (let [expanded-forms (get state :expanded nil)]
             (if (:query/single-result-as-entity? query)
+              ; we can use nil for :link/formula and formulas because we know our p-filler doesn't use it
               (merge
-                (form-util/form-option-queries forms queries form expanded-forms p-filler param-ctx)
-                (table/option-queries queries form p-filler param-ctx)
-                {:hypercrud.ui.table/query [(:query/value query) (p-filler query param-ctx) (form-util/form-pull-exp forms form expanded-forms)]})
-              (table/query query p-filler param-ctx forms queries form-id))))))))
+                (form-util/form-option-queries forms queries table-form expanded-forms p-filler param-ctx)
+                (table/option-queries queries table-form p-filler param-ctx)
+                {:hypercrud.ui.table/query [(:query/value query) (p-filler query nil param-ctx) (form-util/form-pull-exp forms table-form expanded-forms)]})
+              (table/query forms queries p-filler param-ctx {:link/query (:db/id query)
+                                                             :link/form form-id}))))))))
