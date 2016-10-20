@@ -20,7 +20,7 @@
      [navigate-cmp {:href (links/field-link form-id (:db/id entity) ident)} "Edit"]
      " "
      (if eid
-       (-> (hc/entity graph eid)
+       (-> (hc/entity graph (-> entity meta :dbval) eid)
            (get label-prop)
            str
            ellipsis)
@@ -46,7 +46,7 @@
      (->> (get entity ident)
           (map (fn [eid]
                  (if eid
-                   (get (hc/entity graph eid) label-prop)
+                   (get (hc/entity graph (-> entity meta :dbval) eid) label-prop)
                    "nil")))
           (string/join ", "))]))
 

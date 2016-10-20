@@ -51,7 +51,8 @@
   (let [value (get entity ident)
         form-id (option/get-form-id options entity)
         form-name (or form-id "TODO")                       ;form-name in the HTML sense
-        temp-id! hc/*temp-id!*
+        dbval (-> entity meta :dbval)
+        temp-id! (partial hc/*temp-id!* (:conn-id dbval))
         change! (fn [eid]
                   (let [eid (if (= "create-new" eid) (temp-id!) eid)]
                     ;reset the cursor before change! otherwise npe when trying to render
@@ -74,7 +75,7 @@
      [radio-option "--" form-name #(change! nil) (= nil value)]
      (if show-form?
        ;; TODO branch the client in create-new case
-       [form/form graph value forms queries form-id expanded-cur stage-tx! navigate-cmp])]
+       [form/form graph dbval value forms queries form-id expanded-cur stage-tx! navigate-cmp])]
 
     ;todo how should editing existing entries work?
     #_[:div.editable-select {:key (hash option-eids)}

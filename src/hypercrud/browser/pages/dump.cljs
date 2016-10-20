@@ -3,10 +3,10 @@
             [hypercrud.client.core :as hc]))
 
 
-(defn ui [graph id]
+(defn ui [graph dbval dbid]
   [:div
-   [:pre (with-out-str (pprint/pprint (hc/entity graph id)))]])
+   [:pre (with-out-str (pprint/pprint (hc/entity graph dbval dbid)))]])
 
 
-(defn query [id]
-  {:dump ['[:find [?e ...] :in $ ?e :where [?e]] [id] '[*]]})
+(defn query [dbval dbid]
+  {:dump ['[:find [?e ...] :in $ ?e :where [$ ?e]] [dbval (:id dbid)] [dbval '[*]]]})

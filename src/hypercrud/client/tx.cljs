@@ -2,7 +2,7 @@
   (:require [hypercrud.client.core :as hc]))
 
 
-(defn tempid? [eid] (< eid 0))
+(defn tempid? [dbid] (< (:id dbid) 0))
 
 
 (defn edit-entity [id a rets adds]
@@ -50,11 +50,11 @@
 
 
 (defn build-entity-lookup
-  ([schema statements] (build-entity-lookup schema statements {}))
-  ([schema statements lookup]
+  ([schema statements dbval] (build-entity-lookup schema statements dbval {}))
+  ([schema statements dbval lookup]
    (reduce (fn [lookup [op e a v]]
              (update lookup e (fn [entity]
-                                (let [entity (or entity {:db/id e})]
+                                (let [entity (or entity (with-meta {:db/id e} {:dbval dbval}))]
                                   (apply-stmt-to-entity schema entity [op e a v])))))
            lookup
            statements)))

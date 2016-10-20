@@ -8,6 +8,7 @@
             [hypercrud.form.field :as field]
             [hypercrud.form.q-util :as q-util]
             [hypercrud.form.util :as form-util]
+            [hypercrud.types :as types]
             [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.form :as form]
             [hypercrud.ui.table :as table]))
@@ -41,7 +42,8 @@
         table-form (get forms form-id)
         entity-cur (cur [:holes] (initial-entity q params))
         entity @entity-cur
-        graph (hc/with graph @local-statements)]
+        dbval (get param-ctx :dbval)
+        graph (hc/with graph dbval @local-statements)]
     [:div
      [:pre (pr-str q)]
      [:pre (pr-str params)]
@@ -61,12 +63,14 @@
      (if (show-results? hole-names entity)                  ;todo what if we have a user hole?
        (let [results (hc/select graph ::table/query)]
          (if (and (:query/single-result-as-entity? query) (= 1 (count results)))
-           [entity/ui cur transact! graph (first results) forms queries form-id navigate! navigate-cmp]
+           (let [dbval (:dbval param-ctx)
+                 dbid (types/->DbId (first results) (:conn-id dbval))]
+             [entity/ui cur transact! graph dbval dbid forms queries form-id navigate! navigate-cmp])
            [:div
             (let [row-renderer-code (:form/row-renderer table-form)
                   stage-tx! #(swap! local-statements tx-util/into-tx %)]
               (if (empty? row-renderer-code)
-                [table/table graph results forms queries form-id expanded-cur stage-tx! navigate-cmp nil param-ctx]
+                [table/table graph (:dbval param-ctx) results forms queries form-id expanded-cur stage-tx! navigate-cmp nil param-ctx]
                 (let [result (eval/uate (str "(identity " row-renderer-code ")"))
                       {row-renderer :value error :error} result]
                   (if error
@@ -74,7 +78,7 @@
                     [:div
                      [:ul
                       (->> results
-                           (map #(hc/entity graph %))
+                           (map #(hc/entity graph %1 %2))   ;feels fishy
                            (map (fn [entity]
                                   (let [link-fn (fn [ident label]
                                                   (let [link (->> (:form/link table-form)
@@ -86,9 +90,7 @@
                                     [:li {:key (:db/id entity)}
                                      (try
                                        (row-renderer graph link-fn entity)
-                                       (catch :default e (pr-str e)))]))))]
-                     (if (= "Post Item" (:form/name table-form))
-                       [form/form graph -1 forms queries form-id expanded-cur stage-tx! navigate-cmp])]))))
+                                       (catch :default e (pr-str e)))]))))]]))))
             [:button {:key 1 :on-click #(transact! @local-statements)} "Save"]])))]))
 
 
@@ -114,12 +116,13 @@
           ; hacks so when result set is 1 we can display the entity view
           #_(table/query forms queries p-filler param-ctx {:link/query (:db/id query)
                                                            :link/form form-id})
-          (let [expanded-forms (get state :expanded nil)]
+          (let [expanded-forms (get state :expanded nil)
+                dbval (get param-ctx :dbval)]
             (if (:query/single-result-as-entity? query)
               ; we can use nil for :link/formula and formulas because we know our p-filler doesn't use it
               (merge
                 (form-util/form-option-queries forms queries table-form expanded-forms p-filler param-ctx)
                 (table/option-queries queries table-form p-filler param-ctx)
-                {:hypercrud.ui.table/query [(:query/value query) (p-filler query nil param-ctx) (form-util/form-pull-exp forms table-form expanded-forms)]})
+                {:hypercrud.ui.table/query [(:query/value query) (p-filler query nil param-ctx) [dbval (form-util/form-pull-exp forms table-form expanded-forms)]]})
               (table/query forms queries p-filler param-ctx {:link/query (:db/id query)
                                                              :link/form form-id}))))))))

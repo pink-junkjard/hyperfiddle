@@ -24,7 +24,8 @@
                 (let [value (fill-hole hole-name param-ctx)]
                   ;; Are you at the root? Can't fill holes without a project client
                   (assert (not= nil value) (str "Empty parameter for " hole-name " in " q))
-                  value))))))
+                  value)))
+         (concat [(get param-ctx :dbval)]))))
 
 
 (defn fill-hole-from-formula [formulas]

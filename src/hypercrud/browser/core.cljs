@@ -10,7 +10,8 @@
             [hypercrud.browser.pages.hydrate :as hydrate]
             [hypercrud.browser.pages.transact :as transact]
             [hypercrud.browser.pages.index :as index]
-            [hypercrud.browser.pages.query :as query]))
+            [hypercrud.browser.pages.query :as query]
+            [hypercrud.types :as types]))
 
 
 (defn route [page-rel-path {:keys [query-fn entity-fn field-fn index-fn dump-fn export-fn hydrate-fn transact-fn else]}]
@@ -24,19 +25,26 @@
 
       (and (= (second path-params) "entity"))
       (condp = (count path-params)
-        3 (let [[form-id _ eid] path-params
+        ;todo this should accept a real entity type
+        4 (let [[form-id _ id conn-id] path-params
                 form-id (js/parseInt form-id 10)
-                eid (js/parseInt eid 10)]
-            (entity-fn eid form-id))
-        4 (let [[form-id _ eid field-ident] path-params
+                dbid (types/->DbId (js/parseInt id 10) conn-id)
+                dbval (types/->DbVal conn-id nil)]
+            (entity-fn dbval dbid form-id))
+        5 (let [[form-id _ id conn-id field-ident] path-params
                 form-id (js/parseInt form-id 10)
-                eid (js/parseInt eid 10)
+                dbid (types/->DbId (js/parseInt id 10) conn-id)
+                dbval (types/->DbVal conn-id nil)
                 field-ident (keyword (subs (base64/decode field-ident) 1))]
-            (field-fn eid form-id field-ident))
+            (field-fn dbval dbid form-id field-ident))
         :else (else))
 
-      (and (= (first path-params) "dump") (= 2 (count path-params)))
-      (dump-fn (js/parseInt (second path-params) 10))
+      (and (= (first path-params) "dump") (= 3 (count path-params)))
+      (let [[_ id conn-id] path-params
+            id (js/parseInt (second path-params) 10)
+            dbid (types/->DbId id conn-id)
+            dbval (types/->DbVal conn-id nil)]
+        (dump-fn dbid dbval))
 
       (and (= (first path-params) "export") (= 1 (count path-params)))
       (export-fn)
@@ -58,12 +66,12 @@
     (route page-rel-path
            {:query-fn (fn [form-id qp]
                         (query/ui cur transact! graph forms queries form-id qp navigate! navigate-cmp param-ctx))
-            :entity-fn (fn [eid form-id]
-                         (entity/ui cur transact! graph eid forms queries form-id navigate! navigate-cmp param-ctx))
-            :field-fn (fn [eid form-id field-ident]
-                        (field/ui cur transact! graph eid forms queries form-id field-ident navigate-cmp))
+            :entity-fn (fn [dbval dbid form-id]
+                         (entity/ui cur transact! graph dbval dbid forms queries form-id navigate! navigate-cmp param-ctx))
+            :field-fn (fn [dbval dbid form-id field-ident]
+                        (field/ui cur transact! graph dbval dbid forms queries form-id field-ident navigate-cmp))
             :index-fn #(index/ui links queries navigate-cmp param-ctx)
-            :dump-fn (fn [id] (dump/ui graph id))
+            :dump-fn (fn [dbid dbval] (dump/ui graph dbval dbid))
             :export-fn (fn [] (export-datoms/ui cur graph))
             :hydrate-fn (fn [] (hydrate/ui cur graph))
             :transact-fn (fn [] (transact/ui cur transact! graph))
@@ -77,13 +85,13 @@
   (route page-rel-path
          {:query-fn (fn [form-id qp]
                       (query/query state forms queries qp form-id param-ctx))
-          :entity-fn (fn [eid form-id]
-                       (entity/query state eid forms queries form-id param-ctx))
-          :field-fn (fn [eid form-id field-ident]
-                      (field/query state eid forms queries form-id field-ident param-ctx))
+          :entity-fn (fn [dbval dbid form-id]
+                       (entity/query state dbid forms queries form-id param-ctx))
+          :field-fn (fn [dbval dbid form-id field-ident]
+                      (field/query state dbid forms queries form-id field-ident param-ctx))
           :index-fn #(index/query)
-          :dump-fn (fn [id] (dump/query id))
-          :export-fn (fn [] (export-datoms/query state schema))
+          :dump-fn (fn [dbid dbval] (dump/query dbval dbid))
+          :export-fn (fn [] (export-datoms/query state schema param-ctx))
           :hydrate-fn (fn [] (hydrate/query state))
           :transact-fn (fn [] (transact/query))
           :else (constantly {})}))

@@ -5,7 +5,6 @@
             [hypercrud.client.core :as hc]
             [hypercrud.client.graph :as graph]
             [hypercrud.client.internal :as internal]
-            [hypercrud.form.q-util :as q-util]
             [kvlt.core :as kvlt]
             [kvlt.middleware.params]
             [promesa.core :as p]))
@@ -41,41 +40,39 @@
 
 
 ; graph is always assumed to be touched
-(deftype Client [entry-uri schema ^:mutable graph temp-id-atom]
+(deftype Client [entry-uri schemas ^:mutable super-graph temp-id-atom]
   hc/Client
-  (graph [this]
-    (assert (not= nil graph) "invariant - runtime must call hydrate! first")
-    graph)
+  (graphs [this]
+    #_(assert (not (empty? super-graph)) "invariant - runtime must call hydrate! first")
+    super-graph)
 
 
-  (hydrate! [this named-queries t]
+  (hydrate! [this named-queries]
     ;; compare our pre-loaded state with the graph dependencies
-    (let [graph-we-want (graph/->Graph schema named-queries t [] nil)]
-      (if (= graph graph-we-want)
-        (p/resolved graph)
-        (do
-          (doseq [[q p _] (vals named-queries)]
-            (assert (= (count (q-util/parse-holes q))
-                       (count p))
-                    (str "Missing parameters for " q)))
-          (-> (kvlt/request!
-                {:url (let [url (resolve-relative-uri entry-uri (goog.Uri. "hydrate"))]
-                        (if t (.setParameterValue url "t" t))
-                        url)
-                 :content-type content-type-edn             ; helps debugging to view as edn
-                 :accept content-type-transit               ; needs to be fast so transit
-                 :method :post
-                 :form (into [] (vals named-queries))
-                 :as :auto})
-              (p/then (fn [resp]
-                        (let [{:keys [t pulled-trees-map]} (-> resp :body :hypercrud)]
-                          (graph/set-state! graph-we-want pulled-trees-map t)
-                          (set! graph graph-we-want)
-                          graph))))))))
+    (let [graph-we-want (graph/superGraph schemas named-queries)]
+      (if (= super-graph graph-we-want)
+        (p/resolved super-graph)
+        #_(do
+            (doseq [[q p _] (vals named-queries)]
+              (assert (= (count (q-util/parse-holes q))
+                         (count p))
+                      (str "Missing parameters for " q))))
+        (-> (kvlt/request!
+              {:url (resolve-relative-uri entry-uri (goog.Uri. "hydrate"))
+               :content-type content-type-edn               ; helps debugging to view as edn
+               :accept content-type-edn                     ; needs to be fast so transit
+               :method :post
+               :form (into [] (vals named-queries))
+               :as :auto})
+            (p/then (fn [resp]
+                      (let [{:keys [t pulled-trees-map]} (-> resp :body :hypercrud)]
+                        (graph/set-state! graph-we-want pulled-trees-map t)
+                        (set! super-graph graph-we-want)
+                        super-graph)))))))
 
 
-  (temp-id! [this]
-    (swap! temp-id-atom dec))
+  (temp-id! [this conn-id]
+    (swap! temp-id-atom update conn-id dec))
 
 
   (transact! [this tx]

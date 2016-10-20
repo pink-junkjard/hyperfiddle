@@ -26,7 +26,8 @@
 (defn select* [entity {:keys [expanded-cur forms graph navigate-cmp queries stage-tx!]
                        {:keys [ident options]} :field} edit-element]
   (let [value (get entity ident)
-        temp-id! hc/*temp-id!*
+        dbval (-> entity meta :dbval)
+        temp-id! (partial hc/*temp-id!* (:conn-id dbval))
         props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
                :value (cond
                         (nil? value) ""
@@ -68,4 +69,4 @@
                              [[:option {:key :blank :value ""} "--"]]))])]
      (if (and (not= nil value) show-form?)
        ;; TODO branch the client in create-new case
-       [form/form graph value forms queries (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp])]))
+       [form/form graph dbval value forms queries (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp])]))

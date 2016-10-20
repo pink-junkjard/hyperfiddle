@@ -22,5 +22,5 @@
        (util/group-by-assume-unique :db/ident)))
 
 
-(defn update-id-with-ident [entity graph attr]
-  (util/update-existing entity attr #(:db/ident (hc/entity graph %))))
+(defn update-id-with-ident [entity graph dbval attr]           ;todo should not need to pass dbval here
+  (util/update-existing entity attr #(:db/ident (hc/entity graph dbval %))))

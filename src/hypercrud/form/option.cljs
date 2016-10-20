@@ -47,7 +47,8 @@
           q (:query/value query)
           query-name (hash q)
           params (p-filler query formulas param-ctx)
-          pull-exp [:db/id label-prop]]
+          pull-dbval (get param-ctx :dbval)
+          pull-exp [pull-dbval [:db/id label-prop]]]
       {query-name [q params pull-exp]}))
 
   (to-string [this entity]

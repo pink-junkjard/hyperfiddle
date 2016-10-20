@@ -1,7 +1,8 @@
 (ns hypercrud.client.internal
-  (:require [goog.Uri]
+  (:require [cognitect.transit :as t]
+            [goog.Uri]
             [goog.string]
-            [cognitect.transit :as t]))
+            [hypercrud.types :as types]))
 
 
 ;; transit uri encoder type
@@ -24,8 +25,10 @@
          (= (hash this) (hash other)))))                    ;TODO find a better way to check equality
 
 
-(def transit-encoding-opts {:handlers {goog.Uri (UriHandler.)}})
-(def transit-decoding-opts {:handlers {"r" (fn [v] (goog.Uri. v))}})
+(def transit-encoding-opts {:handlers {goog.Uri (UriHandler.)
+                                       types/DbVal (types/DbHandler.)}})
+(def transit-decoding-opts {:handlers {"r" (fn [v] (goog.Uri. v))
+                                       "db" types/DbReader}})
 
 
 (defn transit-decode

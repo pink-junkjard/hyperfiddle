@@ -5,16 +5,21 @@
 (def ^:dynamic *user-profile*)
 
 
-(defprotocol Graph
+(defprotocol SuperGraph
   (select [this named-query]
           [this named-query query-message])
-  (entity [this eid])
-  (with [this more-statements])
+  (entity [this dbval dbid])
+  (with [this dbval more-statements])
   (t [this]))
 
 
+(defprotocol DbGraph
+  (entity' [this eid])
+  (with' [this more-statements]))
+
+
 (defprotocol Client
-  (graph [this])
-  (hydrate! [this named-queries t])
-  (temp-id! [this])
+  (graphs [this])
+  (hydrate! [this named-queries])
+  (temp-id! [this conn-id])
   (transact! [this tx]))

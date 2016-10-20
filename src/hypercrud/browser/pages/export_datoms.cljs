@@ -63,9 +63,10 @@
           [:pre (with-out-str (pprint/pprint results))]])]))
 
 
-(defn query [state schema]
-  (->> (keys schema)
-       (remove #(contains? nope %))
-       (remove nil?)
-       (map (juxt identity (fn [ident] [[:find '[?e ...] :where ['?e ident]] [] [:db/id ident]])))
-       (into {})))
+(defn query [state schema param-ctx]
+  (let [dbval (get param-ctx :dbval)]
+    (->> (keys schema)
+         (remove #(contains? nope %))
+         (remove nil?)
+         (map (juxt identity (fn [ident] [[:find '[?e ...] :where ['?e ident]] [dbval] [dbval [:db/id ident]]])))
+         (into {}))))

@@ -35,15 +35,16 @@
         (:form/field form))])
 
 
-(defn form [graph eid forms queries form-id expanded-cur stage-tx! navigate-cmp]
-  [form2 graph (hc/entity graph eid) forms queries (get forms form-id) expanded-cur stage-tx! navigate-cmp])
+(defn form [graph dbval dbid forms queries form-id expanded-cur stage-tx! navigate-cmp]
+  [form2 graph (hc/entity graph dbval dbid) forms queries (get forms form-id) expanded-cur stage-tx! navigate-cmp])
 
 
-(defn query [eid forms queries form expanded-forms p-filler param-ctx]
-  (let [param-ctx (merge param-ctx {:id eid})]
-    (if (not (tx-util/tempid? eid))
+(defn query [dbid forms queries form expanded-forms p-filler param-ctx]
+  (let [param-ctx (merge param-ctx {:id (:id dbid)})
+        dbval (get param-ctx :dbval)]
+    (if (not (tx-util/tempid? dbid))
       (merge (form-util/form-option-queries forms queries form expanded-forms p-filler param-ctx)
              (let [q '[:find [?e ...] :in $ ?e :where [?e]]
                    pull-exp (form-util/form-pull-exp forms form expanded-forms)]
-               {eid [q [eid] pull-exp]}))
+               {dbid [q [dbval (:id dbid)] [dbval pull-exp]]}))
       (form-util/form-option-queries forms queries form expanded-forms p-filler param-ctx))))
