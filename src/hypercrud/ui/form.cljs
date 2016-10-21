@@ -40,11 +40,11 @@
 
 
 (defn query [dbid forms queries form expanded-forms p-filler param-ctx]
-  (let [param-ctx (merge param-ctx {:id (:id dbid)})
+  (let [param-ctx (merge param-ctx {:id (.-id dbid)})
         dbval (get param-ctx :dbval)]
     (if (not (tx-util/tempid? dbid))
       (merge (form-util/form-option-queries forms queries form expanded-forms p-filler param-ctx)
              (let [q '[:find [?e ...] :in $ ?e :where [?e]]
                    pull-exp (form-util/form-pull-exp forms form expanded-forms)]
-               {dbid [q [dbval (:id dbid)] [dbval pull-exp]]}))
+               {dbid [q [dbval (.-id dbid)] [dbval pull-exp]]}))
       (form-util/form-option-queries forms queries form expanded-forms p-filler param-ctx))))

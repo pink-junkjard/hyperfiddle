@@ -10,7 +10,7 @@
 (defn master-detail* [entity {:keys [graph stage-tx!] {:keys [ident options]} :field :as widget-args} selected-cur & [filter-entities detail-renderer]]
   (let [detail-renderer (or detail-renderer auto-control)
         dbval (-> entity meta :dbval)
-        temp-id! (partial hc/*temp-id!* (:conn-id dbval))
+        temp-id! (partial hc/*temp-id!* (.-conn-id dbval))
         li (fn [key label is-selected? on-click & retract]
              [:li {:key key :class (if is-selected? "selected")}
               retract

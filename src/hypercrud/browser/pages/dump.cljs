@@ -9,4 +9,4 @@
 
 
 (defn query [dbval dbid]
-  {:dump ['[:find [?e ...] :in $ ?e :where [$ ?e]] [dbval (:id dbid)] [dbval '[*]]]})
+  {:dump ['[:find [?e ...] :in $ ?e :where [$ ?e]] [dbval (.-id dbid)] [dbval '[*]]]})

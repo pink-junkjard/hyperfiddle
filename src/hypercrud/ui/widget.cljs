@@ -79,7 +79,7 @@
                                    (sort-by #(get % (option/label-prop options)))
                                    (map (fn [entity]
                                           [:option {:key (hash (:db/id entity))
-                                                    :value (str (:id (:db/id entity)))}
+                                                    :value (str (.-id (:db/id entity)))}
                                            (str (get entity (option/label-prop options)))])))]
            [:div.table-controls
             [:select props select-options]

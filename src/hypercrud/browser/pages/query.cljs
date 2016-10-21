@@ -64,7 +64,7 @@
        (let [results (hc/select graph ::table/query)]
          (if (and (:query/single-result-as-entity? query) (= 1 (count results)))
            (let [dbval (:dbval param-ctx)
-                 dbid (types/->DbId (first results) (:conn-id dbval))]
+                 dbid (types/->DbId (first results) (.-conn-id dbval))]
              [entity/ui cur transact! graph dbval dbid forms queries form-id navigate! navigate-cmp])
            [:div
             (let [row-renderer-code (:form/row-renderer table-form)

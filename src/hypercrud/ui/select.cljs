@@ -28,7 +28,7 @@
                        {:keys [ident options]} :field} edit-element]
   (let [value (get entity ident)
         dbval (-> entity meta :dbval)
-        temp-id! (partial hc/*temp-id!* (:conn-id dbval))
+        temp-id! (partial hc/*temp-id!* (.-conn-id dbval))
         props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
                :value (cond
                         (nil? value) ""
@@ -41,7 +41,7 @@
                                   eid (cond
                                         (= "" select-value) nil
                                         (= "create-new" select-value) (temp-id!)
-                                        :else-hc-select-option-node (types/->DbId (js/parseInt select-value 10) (:conn-id dbval)))]
+                                        :else-hc-select-option-node (types/->DbId (js/parseInt select-value 10) (.-conn-id dbval)))]
                               ;reset the cursor before change! otherwise npe when trying to render
                               ;todo these both set the same cursor, and should be atomic
                               (reset! expanded-cur (if (= "create-new" select-value) {} nil))
@@ -62,7 +62,7 @@
                                 (mapv (fn [entity]
                                         (let [dbid (:db/id entity)]
                                           ^{:key (hash dbid)}
-                                          [:option {:value (:id dbid)} (str (get entity (option/label-prop options)))]))))
+                                          [:option {:value (.-id dbid)} (str (get entity (option/label-prop options)))]))))
                            (concat
                              (if (option/create-new? options entity)
                                [[:option {:key :create-new :value "create-new"} "Create New"]]

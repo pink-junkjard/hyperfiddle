@@ -61,7 +61,7 @@
                       (map #(tx/pulled-tree-to-entities schema dbval %))
                       (apply merge-with merge))]
       (set! entity-lookup (tx/build-entity-lookup schema local-statements dbval lookup)))
-    (set! dbval (types/->DbVal (:conn-id dbval) t'))
+    (set! dbval (types/->DbVal (.-conn-id dbval) t'))
     nil)
   (schema [this] schema))
 
@@ -114,7 +114,7 @@
                            (map (fn [[query pulled-trees]]
                                   (let [[q params [dbval pull-exp]] query
                                         result-set (map (fn [pulled-tree]
-                                                          (types/->DbId (:db/id pulled-tree) (:conn-id dbval)))
+                                                          (types/->DbId (:db/id pulled-tree) (.-conn-id dbval)))
                                                         pulled-trees)]
                                     [query result-set])))
                            (into {}))]

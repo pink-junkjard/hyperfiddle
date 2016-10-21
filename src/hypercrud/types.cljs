@@ -4,7 +4,7 @@
 
 (deftype DbId [id conn-id]
   ;Object (toString [this] (str "#DbId" (pr-str [id conn-id])))
-  IComparable (-compare [x y] (compare (:id x) (:id y)))
+  IComparable (-compare [x y] (compare (.-id x) (.-id y)))
   IPrintWithWriter (-pr-writer [_ writer _]
                      (-write writer (str "#DbId" (pr-str [id conn-id]))))
   IHash (-hash [this] (hash [id conn-id]))

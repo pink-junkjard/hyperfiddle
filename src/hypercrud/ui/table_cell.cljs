@@ -33,8 +33,8 @@
     (ref-one-component entity form-id widget-args))
   (select/select*
     entity (assoc widget-args :expanded-cur (expanded-cur [ident]))
-    (let [href (links/entity-link (option/get-form-id options entity) (get entity ident))]
-      (if (not (nil? (get entity ident)))
+    (if (not (nil? (get entity ident)))
+      (let [href (links/entity-link (option/get-form-id options entity) (get entity ident))]
         [navigate-cmp {:class "edit" :href href} "Edit"]))))
 
 
