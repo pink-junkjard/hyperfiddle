@@ -1,10 +1,11 @@
 (ns hypercrud.browser.links
   (:require [hypercrud.browser.base-64-url-safe :as base64]
+            [hypercrud.client.internal :as internal]
             [hypercrud.form.q-util :as q-util]))
 
 
-(defn entity-link [form-id entity-id]
-  (str form-id "/entity/" entity-id))
+(defn entity-link [form-id {:keys [id conn-id]}]
+  (str form-id "/entity/" id "/" (base64/encode (internal/transit-encode conn-id))))
 
 
 (defn field-link [form-id entity-id field-ident]

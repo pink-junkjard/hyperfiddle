@@ -78,7 +78,7 @@
                     [:div
                      [:ul
                       (->> results
-                           (map #(hc/entity graph %1 %2))   ;feels fishy
+                           (map #(hc/entity graph dbval %))
                            (map (fn [entity]
                                   (let [link-fn (fn [ident label]
                                                   (let [link (->> (:form/link table-form)
@@ -87,7 +87,7 @@
                                                         param-ctx (merge param-ctx {:entity entity})
                                                         href (links/query-link link queries param-ctx)]
                                                     [navigate-cmp {:href href} label]))]
-                                    [:li {:key (:db/id entity)}
+                                    [:li {:key (hash (:db/id entity))}
                                      (try
                                        (row-renderer graph link-fn entity)
                                        (catch :default e (pr-str e)))]))))]]))))

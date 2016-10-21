@@ -11,6 +11,7 @@
             [hypercrud.browser.pages.transact :as transact]
             [hypercrud.browser.pages.index :as index]
             [hypercrud.browser.pages.query :as query]
+            [hypercrud.client.internal :as internal]
             [hypercrud.types :as types]))
 
 
@@ -24,20 +25,18 @@
         (query-fn form-id qp))
 
       (and (= (second path-params) "entity"))
-      (condp = (count path-params)
-        ;todo this should accept a real entity type
-        4 (let [[form-id _ id conn-id] path-params
-                form-id (js/parseInt form-id 10)
-                dbid (types/->DbId (js/parseInt id 10) conn-id)
-                dbval (types/->DbVal conn-id nil)]
-            (entity-fn dbval dbid form-id))
-        5 (let [[form-id _ id conn-id field-ident] path-params
-                form-id (js/parseInt form-id 10)
-                dbid (types/->DbId (js/parseInt id 10) conn-id)
-                dbval (types/->DbVal conn-id nil)
-                field-ident (keyword (subs (base64/decode field-ident) 1))]
-            (field-fn dbval dbid form-id field-ident))
-        :else (else))
+      (let [[form-id _ id conn-id & rest-params] path-params
+            form-id (js/parseInt form-id 10)
+            conn-id (internal/transit-decode (base64/decode conn-id))
+            dbid (types/->DbId (js/parseInt id 10) conn-id)
+            dbval (types/->DbVal conn-id nil)]
+        (condp = (count path-params)
+          ;todo this should accept a real entity type
+          4 (entity-fn dbval dbid form-id)
+          5 (let [[field-ident] rest-params
+                  field-ident (keyword (subs (base64/decode field-ident) 1))]
+              (field-fn dbval dbid form-id field-ident))
+          :else (else)))
 
       (and (= (first path-params) "dump") (= 3 (count path-params)))
       (let [[_ id conn-id] path-params

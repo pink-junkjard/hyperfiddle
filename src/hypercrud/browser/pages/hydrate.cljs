@@ -22,7 +22,7 @@
   (let [query (cur [:query])]
     [:div
      [builder query]
-     (if-let [results (:pulled-trees-map (hc-g/graph-data graph))]
+     (if-let [results (hc-g/pulled-trees-map* graph)]
        [:div
         [:hr]
         [:h2 "Results:"]

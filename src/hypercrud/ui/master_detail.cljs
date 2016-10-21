@@ -19,13 +19,10 @@
     [:div.master-detail
      [:ul (doall (-> (->> (get entity ident)
                           (map #(hc/entity graph dbval %))
-                          (map (fn [dbid]
-                                 (hc/entity graph (get graph (:conn-id dbid)) dbid)
-                                 (hc/entity graph (types/->DbVal (:conn-id dbid) (:db/t entity)) dbid)))
                           (filter (or filter-entities (constantly true)))
                           (map (fn [child-entity]
                                  (let [dbid (:db/id child-entity)]
-                                   (li dbid
+                                   (li (hash dbid)
                                        (get child-entity (option/label-prop options))
                                        (= dbid @selected-cur)
                                        #(reset! selected-cur dbid)
@@ -44,5 +41,5 @@
                         (assoc-in [:field :cardinality] :db.cardinality/one))]
        (if (nil? @selected-cur)
          [:span "Select the " (string/capitalize (name ident))]
-         ^{:key @selected-cur}
+         ^{:key (hash @selected-cur)}
          [detail-renderer (assoc entity ident @selected-cur) new-args]))]))

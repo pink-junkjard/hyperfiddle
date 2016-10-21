@@ -78,8 +78,8 @@
                select-options (->> (option/get-option-records options queries graph entity)
                                    (sort-by #(get % (option/label-prop options)))
                                    (map (fn [entity]
-                                          [:option {:key (:db/id entity)
-                                                    :value (str (:db/id entity))}
+                                          [:option {:key (hash (:db/id entity))
+                                                    :value (str (:id (:db/id entity)))}
                                            (str (get entity (option/label-prop options)))])))]
            [:div.table-controls
             [:select props select-options]

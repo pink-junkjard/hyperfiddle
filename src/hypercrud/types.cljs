@@ -3,7 +3,10 @@
 
 
 (defrecord DbVal [conn-id t])
-(defrecord DbId [id conn-id])
+(defrecord DbId [id conn-id]
+  Object (toString [this] (pr-str this))
+  IComparable (-compare [x y] (compare (:id x) (:id y)))
+  )
 
 (deftype DbHandler []
   Object
@@ -14,3 +17,6 @@
 
 
 (defn DbReader [v] (reader/read-string v))
+
+
+(reader/register-tag-parser! 'hypercrud.types.Db (fn [s] (map->DbVal (reader/read-string s))))

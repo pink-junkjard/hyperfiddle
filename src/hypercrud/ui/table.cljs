@@ -110,7 +110,7 @@
           (map #(hc/entity graph dbval %))
           sort-eids
           (map (fn [entity]
-                 ^{:key (:db/id entity)}
+                 ^{:key (hash (:db/id entity))}
                  [table-row entity form retract-entity! true {:expanded-cur (expanded-cur [(:db/id entity)])
                                                               :forms forms
                                                               :graph graph

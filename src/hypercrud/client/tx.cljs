@@ -1,5 +1,6 @@
 (ns hypercrud.client.tx
-  (:require [hypercrud.client.core :as hc]))
+  (:require [hypercrud.client.core :as hc]
+            [hypercrud.types :as types]))
 
 
 (defn tempid? [dbid] (< (:id dbid) 0))
@@ -52,10 +53,10 @@
 (defn build-entity-lookup
   ([schema statements dbval] (build-entity-lookup schema statements dbval {}))
   ([schema statements dbval lookup]
-   (reduce (fn [lookup [op e a v]]
-             (update lookup e (fn [entity]
-                                (let [entity (or entity (with-meta {:db/id e} {:dbval dbval}))]
-                                  (apply-stmt-to-entity schema entity [op e a v])))))
+   (reduce (fn [lookup [op dbid a v]]
+             (update lookup dbid (fn [entity]
+                                   (let [entity (or entity (with-meta {:db/id dbid} {:dbval dbval}))]
+                                     (apply-stmt-to-entity schema entity [op dbid a v])))))
            lookup
            statements)))
 
@@ -64,7 +65,7 @@
   (if (map? v) (:db/id v) v))
 
 
-(defn entity->statements [schema {eid :db/id :as entity}]   ; entity always has :db/id
+(defn entity->statements [schema {dbid :db/id :as entity}]   ; entity always has :db/id
   (->> (dissoc entity :db/id)
        (mapcat (fn [[attr val]]
                  (let [cardinality (get-in schema [attr :db/cardinality])
@@ -72,11 +73,11 @@
                        _ (assert cardinality (str "schema attribute not found: " (pr-str attr)))]
                    (if (= valueType :db.type/ref)
                      (condp = cardinality
-                       :db.cardinality/one [[:db/add eid attr (ref->v val)]]
-                       :db.cardinality/many (mapv (fn [val] [:db/add eid attr (ref->v val)]) val))
+                       :db.cardinality/one [[:db/add dbid attr (ref->v val)]]
+                       :db.cardinality/many (mapv (fn [val] [:db/add dbid attr (ref->v val)]) val))
                      (condp = cardinality
-                       :db.cardinality/one [[:db/add eid attr val]]
-                       :db.cardinality/many (mapv (fn [val] [:db/add eid attr val]) val))))))))
+                       :db.cardinality/one [[:db/add dbid attr val]]
+                       :db.cardinality/many (mapv (fn [val] [:db/add dbid attr val]) val))))))))
 
 
 (defn entity? [v]
@@ -93,26 +94,30 @@
           entity))
 
 
-(defn pulled-entity->entity [schema {eid :db/id :as entity}]
-  (->> (dissoc entity :db/id)                               ; if we add :db/id to the schema this step should not be necessary
-       (map (fn [[attr val]]
-              [attr (let [{:keys [:db/cardinality :db/valueType]} (get schema attr)
-                          _ (assert cardinality (str "schema attribute not found: " (pr-str attr)))]
-                      (if (= valueType :db.type/ref)
-                        (condp = cardinality
-                          :db.cardinality/one (ref->v val)
-                          :db.cardinality/many (set (mapv ref->v val)))
-                        val))]))
-       (into {:db/id eid})))
+(defn pulled-entity->entity [schema {:keys [conn-id] :as dbval} {id :db/id :as entity}]
+  (with-meta
+    (->> (dissoc entity :db/id)                             ; if we add :db/id to the schema this step should not be necessary
+         (map (fn [[attr val]]
+                [attr (let [{:keys [:db/cardinality :db/valueType]} (get schema attr)
+                            _ (assert cardinality (str "schema attribute not found: " (pr-str attr)))]
+                        (if (= valueType :db.type/ref)
+                          (let [build-DbId #(types/->DbId (ref->v %) conn-id)]
+                            (condp = cardinality
+                              :db.cardinality/one (build-DbId val)
+                              :db.cardinality/many (set (mapv build-DbId val))))
+                          val))]))
+         (into {:db/id (types/->DbId id conn-id)}))
+    {:dbval dbval}))
 
 
-(defn pulled-tree-to-entities [schema pulled-tree]
+(defn pulled-tree-to-entities [schema {:keys [conn-id] :as dbval} pulled-tree]
   (->> (tree-seq (fn [v] (entity? v))
                  #(entity-children schema %)
                  pulled-tree)
-       (map #(pulled-entity->entity schema %))
-       (reduce (fn [m {:keys [:db/id] :as entity}]
-                 (update m id merge entity))
+       (map #(pulled-entity->entity schema dbval %))
+       (reduce (fn [m {dbid :db/id :as entity}]
+                 ; order is important on this merge to preserve the meta data
+                 (update m dbid #(merge entity %)))
                {})))
 
 
@@ -146,20 +151,21 @@
 
 
 (defn recurse-entity->tx [schema graph skip? entity]
-  (->> (dissoc entity :db/id)
-       (mapcat (fn [[attr val]]
-                 (let [cardinality (get-in schema [attr :db/cardinality])
-                       valueType (get-in schema [attr :db/valueType])]
-                   (if (and (not (skip? attr)) (= valueType :db.type/ref))
-                     (condp = cardinality
-                       :db.cardinality/one (concat [[:db/add (:db/id entity) attr val]]
-                                                   (recurse-entity->tx schema graph skip? (hc/entity graph val)))
-                       :db.cardinality/many (mapcat (fn [val]
-                                                      (concat [[:db/add (:db/id entity) attr val]]
-                                                              (recurse-entity->tx schema graph skip? (hc/entity graph val))))
-                                                    val))
-                     (condp = cardinality
-                       :db.cardinality/one [[:db/add (:db/id entity) attr val]]
-                       :db.cardinality/many (mapv (fn [val]
-                                                    [:db/add (:db/id entity) attr val])
-                                                  val))))))))
+  (assert false "todo")
+  #_(->> (dissoc entity :db/id)
+         (mapcat (fn [[attr val]]
+                   (let [cardinality (get-in schema [attr :db/cardinality])
+                         valueType (get-in schema [attr :db/valueType])]
+                     (if (and (not (skip? attr)) (= valueType :db.type/ref))
+                       (condp = cardinality
+                         :db.cardinality/one (concat [[:db/add (:db/id entity) attr val]]
+                                                     (recurse-entity->tx schema graph skip? (hc/entity graph val)))
+                         :db.cardinality/many (mapcat (fn [val]
+                                                        (concat [[:db/add (:db/id entity) attr val]]
+                                                                (recurse-entity->tx schema graph skip? (hc/entity graph val))))
+                                                      val))
+                       (condp = cardinality
+                         :db.cardinality/one [[:db/add (:db/id entity) attr val]]
+                         :db.cardinality/many (mapv (fn [val]
+                                                      [:db/add (:db/id entity) attr val])
+                                                    val))))))))

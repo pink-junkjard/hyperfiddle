@@ -8,27 +8,18 @@
 
 
 (defprotocol DbGraphPrivate
-  (set-db-graph-state! [this pulled-trees-map t'])
+  (set-db-graph-state! [this pulled-trees t'])
   (schema [this]))
 
 
 (defprotocol SuperGraphPrivate
-  (set-state! [this pulled-trees-map' t'])
-  (graph-data [this]))
+  (set-state! [this pulled-trees-map' t']))
 
 ;; Really we just want to be able to serialize graphs for the wire; this is a quick hack
 ;; because we aren't sure what we want to do about the schema which is part of the graph and the client
 (defprotocol GraphSSR
   (named-queries* [this])
   (pulled-trees-map* [this]))
-
-
-(defn ->pulled-trees [pulled-trees-map]
-  (apply concat (vals pulled-trees-map)))
-
-
-(defn ->resultsets [pulled-trees-map]
-  (util/map-values #(map :db/id %) pulled-trees-map))
 
 
 (defrecord GraphData [pulled-trees-map resultsets])
@@ -57,6 +48,7 @@
 
   IHash
   (-hash [this]
+    ; todo equality when t is nil
     (hash (map hash [schema dbval local-statements])))
 
   IEquiv
@@ -64,12 +56,13 @@
     (= (hash this) (hash other)))
 
   DbGraphPrivate
-  (set-db-graph-state! [this pulled-trees-map t']
-    (let [lookup (->> (->pulled-trees pulled-trees-map)
-                      (map #(tx/pulled-tree-to-entities schema %))
+  (set-db-graph-state! [this pulled-trees t']
+    (let [lookup (->> pulled-trees
+                      (map #(tx/pulled-tree-to-entities schema dbval %))
                       (apply merge-with merge))]
       (set! entity-lookup (tx/build-entity-lookup schema local-statements dbval lookup)))
-    (set! dbval (types/->DbVal (:conn-id dbval) t')))
+    (set! dbval (types/->DbVal (:conn-id dbval) t'))
+    nil)
   (schema [this] schema))
 
 
@@ -112,14 +105,46 @@
 
   SuperGraphPrivate
   (set-state! [this pulled-trees-map t']
-    ;todo parse this map
-    (set! graph-data (GraphData. pulled-trees-map (->resultsets pulled-trees-map)))
-    (set! graphs (util/map-values (fn [graph]
-                                    ;todo
-                                    graph) graphs)))
+    ; pulled-trees-map :: Map[query Pulled-Trees]
+    ; (vec pulled-trees-map) :: List[[query Pulled-Trees]]
+    ; query :: [q params [dbval pull-exp]]
 
-  (graph-data [this] graph-data)
+    ; result-sets :: Map[query -> List[DbId]]
+    (let [pulled-trees-map (->> pulled-trees-map
+                                (map (fn [[query pulled-trees]]
+                                       (let [[q [param-dbval & param-rest] [pull-dbval pull-exp]] query
+                                             params (concat [(types/map->DbVal param-dbval)] param-rest)
+                                             query [q params [(types/map->DbVal pull-dbval) pull-exp]]]
+                                         [query pulled-trees])))
+                                (into {}))]
+      (let [result-sets (->> pulled-trees-map
+                             (map (fn [[query pulled-trees]]
+                                    (let [[q params [dbval pull-exp]] query
+                                          result-set (map (fn [pulled-tree]
+                                                            (types/->DbId (:db/id pulled-tree) (:conn-id dbval)))
+                                                          pulled-trees)]
+                                      [query result-set])))
+                             (into {}))]
+        (set! graph-data (GraphData. pulled-trees-map result-sets)))
 
+      ; grouped :: Map[DbVal -> PulledTrees]
+      (let [grouped (->> pulled-trees-map
+                         ; Map[DbVal -> List[[query pulled-trees]]]
+                         (group-by (fn [[[q params [dbval pull-exp]] pulled-trees]] dbval))
+                         ; Map[DbVal -> PulledTrees]
+                         (util/map-values (fn [pulled-trees-map]
+                                            #_(map (fn [[[q params [dbval pull-exp]] pulled-trees]]) pulled-trees-map)
+
+                                            ;; All of these pulled trees are from the same database value because of the
+                                            ;; group-by, so can drop the key.
+                                            (apply concat (vals pulled-trees-map)))))]
+
+        (doall (map (fn [[dbval graph]]
+                      (let [new-ptm (get grouped dbval)
+                            new-t nil]
+                        (set-db-graph-state! graph new-ptm new-t)))
+                    graphs))))
+    nil)
 
   GraphSSR
   (named-queries* [this] named-queries)

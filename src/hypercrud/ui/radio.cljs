@@ -65,7 +65,7 @@
      (map (fn [{:keys [:db/id] :as entity}]
             (let [label (get entity (option/label-prop options))
                   checked? (= id value)]
-              ^{:key id}
+              ^{:key (hash id)}
               [radio-option label form-name #(change! id) checked?]))
           (option/get-option-records options queries graph entity))
      (if (option/create-new? options entity)

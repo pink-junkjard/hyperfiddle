@@ -2,6 +2,7 @@
   (:require [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx-util]
             [hypercrud.form.option :as option]
+            [hypercrud.types :as types]
             [hypercrud.ui.form :as form]))
 
 
@@ -40,7 +41,7 @@
                                   eid (cond
                                         (= "" select-value) nil
                                         (= "create-new" select-value) (temp-id!)
-                                        :else-hc-select-option-node (option/parse-string options select-value))]
+                                        :else-hc-select-option-node (types/->DbId (js/parseInt select-value 10) (:conn-id dbval)))]
                               ;reset the cursor before change! otherwise npe when trying to render
                               ;todo these both set the same cursor, and should be atomic
                               (reset! expanded-cur (if (= "create-new" select-value) {} nil))
@@ -59,9 +60,9 @@
         [:select props (-> (->> option-records
                                 (sort-by #(get % (option/label-prop options)))
                                 (mapv (fn [entity]
-                                        (let [eid (:db/id entity)]
-                                          ^{:key eid}
-                                          [:option {:value (option/to-string options entity)} (str (get entity (option/label-prop options)))]))))
+                                        (let [dbid (:db/id entity)]
+                                          ^{:key (hash dbid)}
+                                          [:option {:value (:id dbid)} (str (get entity (option/label-prop options)))]))))
                            (concat
                              (if (option/create-new? options entity)
                                [[:option {:key :create-new :value "create-new"} "Create New"]]

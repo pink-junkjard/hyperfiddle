@@ -5,14 +5,11 @@
 (defprotocol IFieldOptions
   (label-prop [this])
   (get-key [this queries])
-  (get-option-records [this queries graph record])
+  (get-option-records [this queries graph entity])
 
   (has-holes? [this queries])
   ;todo should be get-queries and we can delete hc.form.util/field-queries
   (get-query [this queries p-filler label-prop param-ctx])
-
-  (to-string [this entity])
-  (parse-string [this s])
 
   ; todo
   ; cannot create-new if not editable
@@ -32,11 +29,11 @@
     ;memoizable
     (hash (:query/value (get queries query-id))))
 
-  (get-option-records [this queries graph record]
+  (get-option-records [this queries graph entity]
     ;memoizable
     (let [q (:query/value (get queries query-id))]
       (->> (hc/select graph (hash q) q)
-           (mapv #(hc/entity graph %)))))
+           (mapv #(hc/entity graph (-> entity meta :dbval) %)))))
 
   (has-holes? [this queries]
     (not (empty? (:query/hole (get queries query-id)))))
@@ -50,14 +47,6 @@
           pull-dbval (get param-ctx :dbval)
           pull-exp [pull-dbval [:db/id label-prop]]]
       {query-name [q params pull-exp]}))
-
-  (to-string [this entity]
-    (str (:db/id entity)))
-
-  (parse-string [this s]
-    ; seems like we might want to do more here
-    ; e.g. avoid NaN
-    (js/parseInt s 10))
 
   (get-form-id [this record] form-id)
   (editable? [this record] (not= nil form-id))
