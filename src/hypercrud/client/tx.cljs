@@ -94,23 +94,23 @@
           entity))
 
 
-(defn pulled-entity->entity [schema {:keys [conn-id] :as dbval} {id :db/id :as entity}]
+(defn pulled-entity->entity [schema dbval {id :db/id :as entity}]
   (with-meta
     (->> (dissoc entity :db/id)                             ; if we add :db/id to the schema this step should not be necessary
          (map (fn [[attr val]]
                 [attr (let [{:keys [:db/cardinality :db/valueType]} (get schema attr)
                             _ (assert cardinality (str "schema attribute not found: " (pr-str attr)))]
                         (if (= valueType :db.type/ref)
-                          (let [build-DbId #(types/->DbId (ref->v %) conn-id)]
+                          (let [build-DbId #(types/->DbId (ref->v %) (.conn-id dbval))]
                             (condp = cardinality
                               :db.cardinality/one (build-DbId val)
                               :db.cardinality/many (set (mapv build-DbId val))))
                           val))]))
-         (into {:db/id (types/->DbId id conn-id)}))
+         (into {:db/id (types/->DbId id (.conn-id dbval))}))
     {:dbval dbval}))
 
 
-(defn pulled-tree-to-entities [schema {:keys [conn-id] :as dbval} pulled-tree]
+(defn pulled-tree-to-entities [schema dbval pulled-tree]
   (->> (tree-seq (fn [v] (entity? v))
                  #(entity-children schema %)
                  pulled-tree)

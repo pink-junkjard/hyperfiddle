@@ -4,8 +4,8 @@
             [hypercrud.form.q-util :as q-util]))
 
 
-(defn entity-link [form-id {:keys [id conn-id]}]
-  (str form-id "/entity/" id "/" (base64/encode (internal/transit-encode conn-id))))
+(defn entity-link [form-id dbid]
+  (str form-id "/entity/" (.id dbid) "/" (base64/encode (internal/transit-encode (.conn-id dbid)))))
 
 
 (defn field-link [form-id entity-id field-ident]

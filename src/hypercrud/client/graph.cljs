@@ -110,40 +110,33 @@
     ; query :: [q params [dbval pull-exp]]
 
     ; result-sets :: Map[query -> List[DbId]]
-    (let [pulled-trees-map (->> pulled-trees-map
-                                (map (fn [[query pulled-trees]]
-                                       (let [[q [param-dbval & param-rest] [pull-dbval pull-exp]] query
-                                             params (concat [(types/map->DbVal param-dbval)] param-rest)
-                                             query [q params [(types/map->DbVal pull-dbval) pull-exp]]]
-                                         [query pulled-trees])))
-                                (into {}))]
-      (let [result-sets (->> pulled-trees-map
-                             (map (fn [[query pulled-trees]]
-                                    (let [[q params [dbval pull-exp]] query
-                                          result-set (map (fn [pulled-tree]
-                                                            (types/->DbId (:db/id pulled-tree) (:conn-id dbval)))
-                                                          pulled-trees)]
-                                      [query result-set])))
-                             (into {}))]
-        (set! graph-data (GraphData. pulled-trees-map result-sets)))
+    (let [result-sets (->> pulled-trees-map
+                           (map (fn [[query pulled-trees]]
+                                  (let [[q params [dbval pull-exp]] query
+                                        result-set (map (fn [pulled-tree]
+                                                          (types/->DbId (:db/id pulled-tree) (:conn-id dbval)))
+                                                        pulled-trees)]
+                                    [query result-set])))
+                           (into {}))]
+      (set! graph-data (GraphData. pulled-trees-map result-sets)))
 
-      ; grouped :: Map[DbVal -> PulledTrees]
-      (let [grouped (->> pulled-trees-map
-                         ; Map[DbVal -> List[[query pulled-trees]]]
-                         (group-by (fn [[[q params [dbval pull-exp]] pulled-trees]] dbval))
-                         ; Map[DbVal -> PulledTrees]
-                         (util/map-values (fn [pulled-trees-map]
-                                            #_(map (fn [[[q params [dbval pull-exp]] pulled-trees]]) pulled-trees-map)
+    ; grouped :: Map[DbVal -> PulledTrees]
+    (let [grouped (->> pulled-trees-map
+                       ; Map[DbVal -> List[[query pulled-trees]]]
+                       (group-by (fn [[[q params [dbval pull-exp]] pulled-trees]] dbval))
+                       ; Map[DbVal -> PulledTrees]
+                       (util/map-values (fn [pulled-trees-map]
+                                          #_(map (fn [[[q params [dbval pull-exp]] pulled-trees]]) pulled-trees-map)
 
-                                            ;; All of these pulled trees are from the same database value because of the
-                                            ;; group-by, so can drop the key.
-                                            (apply concat (vals pulled-trees-map)))))]
+                                          ;; All of these pulled trees are from the same database value because of the
+                                          ;; group-by, so can drop the key.
+                                          (apply concat (vals pulled-trees-map)))))]
 
-        (doall (map (fn [[dbval graph]]
-                      (let [new-ptm (get grouped dbval)
-                            new-t nil]
-                        (set-db-graph-state! graph new-ptm new-t)))
-                    graphs))))
+      (doall (map (fn [[dbval graph]]
+                    (let [new-ptm (get grouped dbval)
+                          new-t nil]
+                      (set-db-graph-state! graph new-ptm new-t)))
+                  graphs)))
     nil)
 
   GraphSSR
