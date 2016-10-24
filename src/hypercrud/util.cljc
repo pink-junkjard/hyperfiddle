@@ -2,7 +2,12 @@
 
 
 (defn map-values [f m]
-  (->> (map (fn [[k v]] [k (f v)]) m)
+  (->> (map (juxt key (comp f val)) m)
+       (into {})))
+
+
+(defn map-keys [f m]
+  (->> (map (juxt (comp f key) val) m)
        (into {})))
 
 
