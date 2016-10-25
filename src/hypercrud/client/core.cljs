@@ -8,13 +8,13 @@
 (defprotocol SuperGraph
   (select [this named-query]
           [this named-query query-message])
-  (entity [this dbval dbid])
+  (get-dbgraph [this dbval])
   (with [this dbval more-statements])
   (t [this]))
 
 
 (defprotocol DbGraph
-  (entity' [this eid])
+  (entity [this eid])
   (with' [this more-statements]))
 
 

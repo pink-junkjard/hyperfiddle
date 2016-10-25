@@ -5,6 +5,12 @@
             [hypercrud.ui.widget :as widget]))
 
 
+; Auto-control takes the parent entity as context
+; We think this is only used for the dbid, so we can create a tx
+; If the parent was someday needed for dispatching, there are better things to dispatch on,
+; for example the entire graph can be available in dynamic scope for specific queries, no
+; need to limit it to parent.
+
 (defmethod auto-control/auto-control :default
   [entity {{:keys [valueType cardinality isComponent] :as field} :field :as widget-args}]
   (cond

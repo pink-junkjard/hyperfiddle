@@ -20,8 +20,7 @@
             (catch :default e (pr-str e))))]))])
 
 
-; some people just want to watch the world burn
-(defn form2 [graph entity forms queries form expanded-cur stage-tx! navigate-cmp]
+(defn form [graph entity forms queries form expanded-cur stage-tx! navigate-cmp]
   [:div.form
    (map (fn [{:keys [:ident] :as fieldinfo}]
           ^{:key ident}
@@ -33,10 +32,6 @@
                          :queries queries
                          :stage-tx! stage-tx!}])
         (:form/field form))])
-
-
-(defn form [graph dbval dbid forms queries form-id expanded-cur stage-tx! navigate-cmp]
-  [form2 graph (hc/entity graph dbval dbid) forms queries (get forms form-id) expanded-cur stage-tx! navigate-cmp])
 
 
 (defn query [dbid forms queries form expanded-forms p-filler param-ctx]

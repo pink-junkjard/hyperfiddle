@@ -1,5 +1,6 @@
 (ns hypercrud.types
-  (:require [cljs.reader :as reader]))
+  (:require [cljs.reader :as reader]
+            [hypercrud.client.core :as hc]))
 
 
 (deftype DbId [id conn-id]
@@ -11,6 +12,29 @@
   IEquiv (-equiv [this other] (= (hash this) (hash other))))
 
 (def read-DbId #(apply ->DbId %))
+
+
+(deftype Entity [dbid dbval #_"dbgraph"]
+  ILookup
+  (-lookup [_ k]
+    (let [val (get (hc/entity dbval dbid) k)
+          {:keys [:db/cardinality :db/valueType]} (get (.-schema dbval) k)]
+      (if (not= nil val)
+        (condp = valueType
+          :db.type/ref (if (= :db.cardinality/many cardinality)
+                         (set (map #(Entity. % dbval) val))
+                         (Entity. val dbval))
+          val))))
+  (-lookup [_ k not-found] (assert false "not implemented"))
+
+  IHash (-hash [this] (hash [dbid dbval]))
+  IEquiv (-equiv [this other] (= (hash this) (hash other)))
+
+  IPrintWithWriter (-pr-writer [_ writer _]
+                     (-write writer (str "#Entity" (pr-str [dbid (hc/entity dbval dbid)])))))
+
+(comment
+  (-> (DbId. 123 :tinder) (Entity. facebook-db) :propfile/name :asdf :asdf))
 
 
 (deftype DbVal [conn-id t]

@@ -3,14 +3,12 @@
             [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx-util]
             [hypercrud.form.option :as option]
-            [hypercrud.ui.auto-control :refer [auto-control]]
-            [hypercrud.types :as types]))
+            [hypercrud.ui.auto-control :refer [auto-control]]))
 
 
 (defn master-detail* [entity {:keys [graph stage-tx!] {:keys [ident options]} :field :as widget-args} selected-cur & [filter-entities detail-renderer]]
   (let [detail-renderer (or detail-renderer auto-control)
-        dbval (-> entity meta :dbval)
-        temp-id! (partial hc/*temp-id!* (.-conn-id dbval))
+        temp-id! (partial hc/*temp-id!* (-> entity .-dbval .-dbval .-conn-id))
         li (fn [key label is-selected? on-click & retract]
              [:li {:key key :class (if is-selected? "selected")}
               retract
@@ -18,7 +16,6 @@
               [:a {:href "#" :on-click on-click} label]])]
     [:div.master-detail
      [:ul (doall (-> (->> (get entity ident)
-                          (map #(hc/entity graph dbval %))
                           (filter (or filter-entities (constantly true)))
                           (map (fn [child-entity]
                                  (let [dbid (:db/id child-entity)]
@@ -41,5 +38,6 @@
                         (assoc-in [:field :cardinality] :db.cardinality/one))]
        (if (nil? @selected-cur)
          [:span "Select the " (string/capitalize (name ident))]
-         ^{:key (hash @selected-cur)}
-         [detail-renderer (assoc entity ident @selected-cur) new-args]))]))
+         ;^{:key (hash @selected-cur)}
+         ;[detail-renderer (assoc entity ident @selected-cur) new-args]
+         ))]))

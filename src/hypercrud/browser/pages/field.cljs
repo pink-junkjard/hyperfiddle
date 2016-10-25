@@ -2,28 +2,30 @@
   (:require [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx-util]
             [hypercrud.form.q-util :as q-util]
+            [hypercrud.types :refer [->Entity]]
             [hypercrud.ui.form :as form]
             [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.util :as util]))
 
 
-(defn ui [cur transact! graph dbval dbid forms queries form-id field-ident navigate-cmp]
+(defn ui [cur transact! graph entity forms queries form-id field-ident navigate-cmp]
   (let [form (get forms form-id)
         field (first (filter #(= (:ident %) field-ident) (:form/field form)))
         local-statements (cur [:statements] [])
-        graph (hc/with graph dbval @local-statements)
+        graph (hc/with graph (-> entity .-dbval .-dbval) @local-statements)
+        entity (->Entity (.-dbid entity) (hc/get-dbgraph graph (-> entity .-dbval .-dbval)))
         stage-tx! #(swap! local-statements tx-util/into-tx %)
         expanded-cur (cur [:expanded (:ident field)]
                           ; hacky but we currently only want expanded edit forms where we draw tables
                           (if (= :db.cardinality/many (:cardinality field)) {} nil))]
     [:div
-     [auto-control (hc/entity graph dbval dbid) {:expanded-cur expanded-cur
-                                                 :field field
-                                                 :forms forms
-                                                 :graph graph
-                                                 :navigate-cmp navigate-cmp
-                                                 :queries queries
-                                                 :stage-tx! stage-tx!}]
+     [auto-control entity {:expanded-cur expanded-cur
+                           :field field
+                           :forms forms
+                           :graph graph
+                           :navigate-cmp navigate-cmp
+                           :queries queries
+                           :stage-tx! stage-tx!}]
      [:button {:on-click #(transact! @local-statements)
                :disabled (empty? @local-statements)}
       "Update"]]))

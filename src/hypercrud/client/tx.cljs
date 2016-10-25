@@ -6,9 +6,9 @@
 (defn tempid? [dbid] (< (.-id dbid) 0))
 
 
-(defn edit-entity [id a rets adds]
-  (vec (concat (map (fn [val] [:db/retract id a val]) rets)
-               (map (fn [val] [:db/add id a val]) adds))))
+(defn edit-entity [dbid a rets adds]
+  (vec (concat (map (fn [val] [:db/retract dbid a val]) rets)
+               (map (fn [val] [:db/add dbid a val]) adds))))
 
 
 (defn update-entity-attr [{:keys [:db/id] :as entity} a new-val]

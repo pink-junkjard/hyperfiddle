@@ -1,6 +1,5 @@
 (ns hypercrud.client.util
-  (:require [hypercrud.client.core :as hc]
-            [hypercrud.util :as util]))
+  (:require [hypercrud.util :as util]))
 
 
 (defn build-indexed-schema [schema]
@@ -21,6 +20,3 @@
                 {:db/ident :fressian/tag :db/valueType :db.type/keyword :db/cardinality :db.cardinality/one}])
        (util/group-by-assume-unique :db/ident)))
 
-
-(defn update-id-with-ident [entity graph dbval attr]           ;todo should not need to pass dbval here
-  (util/update-existing entity attr #(:db/ident (hc/entity graph dbval %))))

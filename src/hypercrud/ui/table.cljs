@@ -92,7 +92,7 @@
    (build-row-cells form entity fieldless-widget-args)])
 
 
-(defn body [graph dbval eids forms queries form expanded-cur stage-tx! navigate-cmp retract-entity! add-entity! sort-col]
+(defn body [graph entities forms queries form expanded-cur stage-tx! navigate-cmp retract-entity! add-entity! sort-col]
   [:tbody
    (let [[sort-key direction] @sort-col
          sort-eids (fn [col]
@@ -106,9 +106,8 @@
                                     :desc #(compare %2 %1))
                                   col)
                          col)))]
-     (->> eids
-          (map #(hc/entity graph dbval %))
-          sort-eids
+     (->> entities
+          #_sort-eids
           (map (fn [entity]
                  ^{:key (hash (:db/id entity))}
                  [table-row entity form retract-entity! true {:expanded-cur (expanded-cur [(:db/id entity)])
@@ -117,7 +116,7 @@
                                                               :navigate-cmp navigate-cmp
                                                               :queries queries
                                                               :stage-tx! stage-tx!}]))))
-   (let [dbid (hc/*temp-id!*)
+   #_(let [dbid (hc/*temp-id!*)
          entity (with-meta {:db/id dbid}
                            {:dbval dbval})]
      ^{:key (hash eids)}
@@ -131,9 +130,9 @@
                                                                 (stage-tx! tx))}])])
 
 
-(defn table-managed [graph dbval eids forms queries form-id expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]
+(defn table-managed [graph entities forms queries form-id expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]
   (let [sort-col (r/atom nil)]
-    (fn [graph dbval eids forms queries form-id expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]
+    (fn [graph entities forms queries form-id expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]
       (let [form (get forms form-id)]
         [:table.ui-table
          [:colgroup [:col {:span "1" :style {:width "20px"}}]]
@@ -141,15 +140,15 @@
           [:tr
            [:td.link-cell {:key "links"}]
            (build-col-heads form sort-col)]]
-         [body graph dbval eids forms queries form expanded-cur stage-tx! navigate-cmp retract-entity! add-entity! sort-col]]))))
+         [body graph entities forms queries form expanded-cur stage-tx! navigate-cmp retract-entity! add-entity! sort-col]]))))
 
 
-(defn- table* [graph dbval eids forms queries form-id expanded-cur stage-tx! navigate-cmp retract-entity!]
+(defn- table* [graph entities forms queries form-id expanded-cur stage-tx! navigate-cmp retract-entity!]
   ;; resultset tables don't appear managed from the call site, but we need to provide a fake add-entity!
   ;; so we can create-new inline like a spreadsheet, which means we internally use the managed table
   (let [new-entities (r/atom [])
         add-entity! #(swap! new-entities conj %)]
-    (fn [graph dbval eids forms queries form-id expanded-cur stage-tx! navigate-cmp retract-entity!]
+    (fn [graph entities forms queries form-id expanded-cur stage-tx! navigate-cmp retract-entity!]
       (let [retract-entity! (fn [dbid]
                               (if (tx/tempid? dbid)
                                 (swap! new-entities (fn [old]
@@ -158,12 +157,12 @@
                                 (if retract-entity!
                                   (retract-entity! dbid)
                                   (js/alert "todo"))))]
-        [table-managed graph dbval (concat eids @new-entities) forms queries form-id expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]))))
+        [table-managed graph entities #_(concat eids @new-entities) forms queries form-id expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]))))
 
 
-(defn table [graph dbval eids forms queries form-id expanded-cur stage-tx! navigate-cmp retract-entity!]
-  ^{:key (:t dbval)}
-  [table* graph dbval eids forms queries form-id expanded-cur stage-tx! navigate-cmp retract-entity!])
+(defn table [graph entities forms queries form-id expanded-cur stage-tx! navigate-cmp retract-entity!]
+  ^{:key (hc/t graph)}
+  [table* graph entities forms queries form-id expanded-cur stage-tx! navigate-cmp retract-entity!])
 
 
 (defn table-pull-exp [form]

@@ -11,8 +11,9 @@
             [hypercrud.browser.pages.transact :as transact]
             [hypercrud.browser.pages.index :as index]
             [hypercrud.browser.pages.query :as query]
+            [hypercrud.client.core :as hc]
             [hypercrud.client.internal :as internal]
-            [hypercrud.types :as types]))
+            [hypercrud.types :as types :refer [->Entity]]))
 
 
 (defn route [page-rel-path {:keys [query-fn entity-fn field-fn index-fn dump-fn export-fn hydrate-fn transact-fn else]}]
@@ -66,11 +67,15 @@
            {:query-fn (fn [form-id qp]
                         (query/ui cur transact! graph forms queries form-id qp navigate! navigate-cmp param-ctx))
             :entity-fn (fn [dbval dbid form-id]
-                         (entity/ui cur transact! graph dbval dbid forms queries form-id navigate! navigate-cmp param-ctx))
+                         (let [entity (->Entity dbid (hc/get-dbgraph graph dbval))]
+                           (entity/ui cur transact! graph entity forms queries form-id navigate! navigate-cmp param-ctx)))
             :field-fn (fn [dbval dbid form-id field-ident]
-                        (field/ui cur transact! graph dbval dbid forms queries form-id field-ident navigate-cmp))
+                        (let [entity (->Entity dbid (hc/get-dbgraph graph dbval))]
+                          (field/ui cur transact! graph entity forms queries form-id field-ident navigate-cmp)))
             :index-fn #(index/ui links queries navigate-cmp param-ctx)
-            :dump-fn (fn [dbid dbval] (dump/ui graph dbval dbid))
+            :dump-fn (fn [dbid dbval]
+                       (let [entity (->Entity dbid (hc/get-dbgraph graph dbval))]
+                         (dump/ui entity)))
             :export-fn (fn [] (export-datoms/ui cur graph))
             :hydrate-fn (fn [] (hydrate/ui cur graph))
             :transact-fn (fn [] (transact/ui cur transact! graph))

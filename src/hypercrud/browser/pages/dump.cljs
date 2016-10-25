@@ -1,11 +1,10 @@
 (ns hypercrud.browser.pages.dump
-  (:require [cljs.pprint :as pprint]
-            [hypercrud.client.core :as hc]))
+  (:require [cljs.pprint :as pprint]))
 
 
-(defn ui [graph dbval dbid]
+(defn ui [entity]
   [:div
-   [:pre (with-out-str (pprint/pprint (hc/entity graph dbval dbid)))]])
+   [:pre (with-out-str (pprint/pprint entity))]])
 
 
 (defn query [dbval dbid]

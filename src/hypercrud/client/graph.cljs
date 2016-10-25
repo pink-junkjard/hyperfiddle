@@ -28,7 +28,7 @@
 ;; DbTouched
 (deftype DbGraph [schema ^:mutable dbval local-statements ^:mutable entity-lookup]
   hc/DbGraph
-  (entity' [this dbid]
+  (entity [this dbid]
     (assert (not= nil dbid) "Cannot request nil entity")
     ; graph should track tempids provided, and only return entities for where the id has been allocated
     ; otherwise we should throw
@@ -76,12 +76,10 @@
               (str "Named-query: " named-query " not found in:\n" (with-out-str (pprint/pprint named-queries)))))
     (get (:resultsets graph-data) (get named-queries named-query)))
 
-
-  (entity [this dbval dbid]
+  ; todo this goes away if dbval === dbgraph
+  (get-dbgraph [this dbval]
     (assert (not= nil dbval) "dbval cannot be nil")
-    (assert (not= nil dbid) "Cannot request nil entity")
-    (hc/entity' (get graphs dbval) dbid))
-
+    (get graphs dbval))
 
   (with [this dbval more-statements]
     (assert (not= nil dbval) "dbval cannot be nil")

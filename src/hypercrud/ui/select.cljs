@@ -27,8 +27,8 @@
 (defn select* [entity {:keys [expanded-cur forms graph navigate-cmp queries stage-tx!]
                        {:keys [ident options]} :field} edit-element]
   (let [value (get entity ident)
-        dbval (-> entity meta :dbval)
-        temp-id! (partial hc/*temp-id!* (.-conn-id dbval))
+        conn-id (-> entity .-dbval .-dbval .-conn-id)
+        temp-id! (partial hc/*temp-id!* conn-id)
         props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
                :value (cond
                         (nil? value) ""
@@ -41,7 +41,7 @@
                                   eid (cond
                                         (= "" select-value) nil
                                         (= "create-new" select-value) (temp-id!)
-                                        :else-hc-select-option-node (types/->DbId (js/parseInt select-value 10) (.-conn-id dbval)))]
+                                        :else-hc-select-option-node (types/->DbId (js/parseInt select-value 10) conn-id))]
                               ;reset the cursor before change! otherwise npe when trying to render
                               ;todo these both set the same cursor, and should be atomic
                               (reset! expanded-cur (if (= "create-new" select-value) {} nil))
@@ -56,7 +56,7 @@
        edit-element)
      [:span.select
       (let [option-records (option/get-option-records options queries graph entity)]
-        (assert (or (nil? value) (contains? (set (map :db/id option-records)) value)) (str "Select options does not contain selected value: " (pr-str value)))
+        (assert (or (nil? value) (contains? (set option-records) value)) (str "Select options does not contain selected value: " (pr-str value)))
         [:select props (-> (->> option-records
                                 (sort-by #(get % (option/label-prop options)))
                                 (mapv (fn [entity]
@@ -70,4 +70,4 @@
                              [[:option {:key :blank :value ""} "--"]]))])]
      (if (and (not= nil value) show-form?)
        ;; TODO branch the client in create-new case
-       [form/form graph dbval value forms queries (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp])]))
+       [form/form graph value forms queries (get forms (option/get-form-id options entity)) expanded-cur stage-tx! navigate-cmp])]))

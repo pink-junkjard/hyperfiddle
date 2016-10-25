@@ -56,7 +56,7 @@
 (defn select-ref-component [entity {:keys [expanded-cur forms graph navigate-cmp queries stage-tx!]
                                     {:keys [:ident :options]} :field}]
   (let [value (get entity ident)]
-    (form/form graph (-> entity meta :dbval) value forms queries (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp)))
+    (form/form graph value forms queries (get forms (option/get-form-id options entity)) expanded-cur stage-tx! navigate-cmp)))
 
 
 (defn table-many-ref [entity {:keys [graph queries] {:keys [options]} :field}]
@@ -64,11 +64,11 @@
         select-value-atom (r/atom (:db/id initial-select))]
     (fn [entity {:keys [forms graph expanded-cur navigate-cmp queries stage-tx!]
                  {:keys [ident options]} :field}]
-      (let [value (get entity ident)
+      (let [entities (get entity ident)
             retract-entity! #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [%] []))
             add-entity! #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [] [%]))]
         [:div.value
-         [table/table-managed graph (-> entity meta :dbval) value forms queries (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]
+         [table/table-managed graph entities forms queries (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]
          (let [props {:value (str @select-value-atom)
                       :on-change #(let [select-value (.-target.value %)
                                         value (js/parseInt select-value 10)]
@@ -88,11 +88,11 @@
 
 (defn table-many-ref-component [entity {:keys [forms graph expanded-cur navigate-cmp queries stage-tx!]
                                         {:keys [ident options]} :field}]
-  (let [value (get entity ident)
+  (let [entities (get entity ident)
         retract-entity! #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [%] []))
         add-entity! #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [] [%]))]
     [:div.value
-     [table/table-managed graph (-> entity meta :dbval) value forms queries (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]]))
+     [table/table-managed graph entities forms queries (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]]))
 
 
 (defn multi-select-ref [entity {:keys [stage-tx!] {:keys [:ident]} :field :as widget-args}]
@@ -101,7 +101,7 @@
 
 
 (defn multi-select-ref-component [entity {:keys [stage-tx!] {:keys [:ident]} :field :as widget-args}]
-  (let [temp-id! (partial hc/*temp-id!* (-> entity meta :dbval :conn-id)) ; bound to fix render bug
+  (let [temp-id! (partial hc/*temp-id!* (-> entity .-dbval .-dbval :conn-id)) ; bound to fix render bug
         add-item! #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [] [(temp-id!)]))]
     [multi-select* multi-select-markup entity add-item! widget-args])) ;add new entity to set
 

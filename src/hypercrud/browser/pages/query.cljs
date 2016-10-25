@@ -8,7 +8,7 @@
             [hypercrud.form.field :as field]
             [hypercrud.form.q-util :as q-util]
             [hypercrud.form.util :as form-util]
-            [hypercrud.types :as types]
+            [hypercrud.types :refer [->Entity]]
             [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.form :as form]
             [hypercrud.ui.table :as table]))
@@ -58,27 +58,25 @@
                                             tx)))
            holes-form {:db/id -1
                        :form/field (map #(field/hole->field (get holes-by-name %)) hole-names)}]
-       [form/form2 graph entity (assoc forms -1 holes-form) queries holes-form expanded-cur stage-tx! navigate-cmp])
+       [form/form graph entity (assoc forms -1 holes-form) queries holes-form expanded-cur stage-tx! navigate-cmp])
      [:hr]
      (if (show-results? hole-names entity)                  ;todo what if we have a user hole?
-       (let [results (hc/select graph ::table/query)]
-         (if (and (:query/single-result-as-entity? query) (= 1 (count results)))
-           (let [dbval (:dbval param-ctx)
-                 dbid (types/->DbId (first results) (.-conn-id dbval))]
-             [entity/ui cur transact! graph dbval dbid forms queries form-id navigate! navigate-cmp])
+       (let [entities (->> (hc/select graph ::table/query)
+                           (map #(->Entity % (hc/get-dbgraph graph dbval))))]
+         (if (and (:query/single-result-as-entity? query) (= 1 (count entities)))
+           [entity/ui cur transact! graph (first entities) forms queries form-id navigate! navigate-cmp]
            [:div
             (let [row-renderer-code (:form/row-renderer table-form)
                   stage-tx! #(swap! local-statements tx-util/into-tx %)]
               (if (empty? row-renderer-code)
-                [table/table graph (:dbval param-ctx) results forms queries form-id expanded-cur stage-tx! navigate-cmp nil param-ctx]
+                [table/table graph entities forms queries form-id expanded-cur stage-tx! navigate-cmp nil param-ctx]
                 (let [result (eval/uate (str "(identity " row-renderer-code ")"))
                       {row-renderer :value error :error} result]
                   (if error
                     [:div (pr-str error)]
                     [:div
                      [:ul
-                      (->> results
-                           (map #(hc/entity graph dbval %))
+                      (->> entities
                            (map (fn [entity]
                                   (let [link-fn (fn [ident label]
                                                   (let [link (->> (:form/link table-form)

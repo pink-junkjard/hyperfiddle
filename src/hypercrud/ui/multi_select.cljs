@@ -7,6 +7,7 @@
 
 
 (defn multi-select* [markupfn entity add-item! {:keys [stage-tx!] {:keys [:ident]} :field :as widget-args}]
+  (assert false "assoc entity no longer works; and entities in expanded-cur dont make sense. todo")
   (let [value (get entity ident)
         control-tuples (seq (mapv (fn [eid]
                                     (let [click-remove! #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [eid] nil))

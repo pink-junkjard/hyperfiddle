@@ -1,5 +1,6 @@
 (ns hypercrud.form.option
-  (:require [hypercrud.client.core :as hc]))
+  (:require [hypercrud.client.core :as hc]
+            [hypercrud.types :refer [->Entity]]))
 
 
 (defprotocol IFieldOptions
@@ -33,7 +34,7 @@
     ;memoizable
     (let [q (:query/value (get queries query-id))]
       (->> (hc/select graph (hash q) q)
-           (mapv #(hc/entity graph (-> entity meta :dbval) %)))))
+           (mapv #(->Entity % (.-dbval entity))))))
 
   (has-holes? [this queries]
     (not (empty? (:query/hole (get queries query-id)))))
