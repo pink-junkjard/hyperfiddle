@@ -3,11 +3,13 @@
             [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx-util]
             [hypercrud.form.option :as option]
-            [hypercrud.ui.auto-control :refer [auto-control]]))
+            [hypercrud.types :refer [->Entity]]
+            [hypercrud.ui.auto-control :refer [auto-control]]
+            [hypercrud.ui.form :as form]))
 
 
 (defn master-detail* [entity {:keys [graph stage-tx!] {:keys [ident options]} :field :as widget-args} selected-cur & [filter-entities detail-renderer]]
-  (let [detail-renderer (or detail-renderer auto-control)
+  (let [detail-renderer (or detail-renderer form/form)
         temp-id! (partial hc/*temp-id!* (-> entity .-dbval .-dbval .-conn-id))
         li (fn [key label is-selected? on-click & retract]
              [:li {:key key :class (if is-selected? "selected")}
@@ -33,11 +35,14 @@
                                       (stage-tx! (tx-util/edit-entity (:db/id entity) ident [] [dbid]))
                                       (reset! selected-cur dbid)))]
                                []))))]
-     (let [new-args (-> widget-args
-                        (update :expanded-cur #(% [(:db/id entity)]))
-                        (assoc-in [:field :cardinality] :db.cardinality/one))]
-       (if (nil? @selected-cur)
-         [:span "Select the " (string/capitalize (name ident))]
-         ;^{:key (hash @selected-cur)}
-         ;[detail-renderer (assoc entity ident @selected-cur) new-args]
-         ))]))
+     (if (nil? @selected-cur)
+       [:span "Select the " (string/capitalize (name ident))]
+       (let [selected-entity (->Entity @selected-cur (.-dbval entity))]
+         ^{:key (hash @selected-cur)}
+         [detail-renderer graph selected-entity
+          (:forms widget-args)
+          (:queries widget-args)
+          (get (:forms widget-args) (option/get-form-id options entity))
+          ((:expanded-cur widget-args) [(:db/id entity)])
+          (:stage-tx! widget-args)
+          (:navigate-cmp widget-args)]))]))
