@@ -4,7 +4,7 @@
             [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx]
             [hypercrud.util :as util]
-            [hypercrud.types :as types :refer [->DbId ->Entity ->DbVal]]))
+            [hypercrud.types :refer [->DbId ->Entity ->DbVal]]))
 
 
 (defprotocol DbGraphPrivate
@@ -61,7 +61,7 @@
                       (map #(tx/pulled-tree-to-entities schema dbval %))
                       (apply merge-with merge))]
       (set! entity-lookup (tx/build-entity-lookup schema local-statements dbval lookup)))
-    (set! dbval (types/->DbVal (.-conn-id dbval) t'))
+    (set! dbval (->DbVal (.-conn-id dbval) t'))
     nil)
   (schema [this] schema))
 

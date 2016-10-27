@@ -13,7 +13,7 @@
             [hypercrud.browser.pages.query :as query]
             [hypercrud.client.core :as hc]
             [hypercrud.client.internal :as internal]
-            [hypercrud.types :as types :refer [->DbId ->Entity]]))
+            [hypercrud.types :refer [->DbId ->DbVal ->Entity]]))
 
 
 (defn route [page-rel-path {:keys [query-fn entity-fn field-fn index-fn dump-fn export-fn hydrate-fn transact-fn else]}]
@@ -30,8 +30,8 @@
       (let [[form-id _ id conn-id] path-params
             form-id (js/parseInt form-id 10)
             conn-id (internal/transit-decode (base64/decode conn-id))
-            dbid (types/->DbId (js/parseInt id 10) conn-id)
-            dbval (types/->DbVal conn-id nil)]
+            dbid (->DbId (js/parseInt id 10) conn-id)
+            dbval (->DbVal conn-id nil)]
         ;todo this should accept a real entity type
         (entity-fn dbval dbid form-id))
 
@@ -39,16 +39,16 @@
       (let [[field-id _ id conn-id] path-params
             field-id (js/parseInt field-id)
             conn-id (internal/transit-decode (base64/decode conn-id))
-            dbid (types/->DbId (js/parseInt id 10) conn-id)
-            dbval (types/->DbVal conn-id nil)]
+            dbid (->DbId (js/parseInt id 10) conn-id)
+            dbval (->DbVal conn-id nil)]
         ;todo this should accept a real entity type
         (field-fn dbval dbid field-id))
 
       (and (= (first path-params) "dump") (= 3 (count path-params)))
       (let [[_ id conn-id] path-params
             id (js/parseInt (second path-params) 10)
-            dbid (types/->DbId id conn-id)
-            dbval (types/->DbVal conn-id nil)]
+            dbid (->DbId id conn-id)
+            dbval (->DbVal conn-id nil)]
         (dump-fn dbid dbval))
 
       (and (= (first path-params) "export") (= 1 (count path-params)))
