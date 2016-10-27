@@ -55,10 +55,10 @@
         holes-by-name (->> (:query/hole query)
                            (map (juxt :hole/name identity))
                            (into {}))
-        entity-cur (cur [:holes] (initial-entity q params))
+        entity-cur (cur [:holes] (initial-entity q params)) ;todo this needs to be hc/with
         entity @entity-cur
         dbval (get param-ctx :dbval)
-        graph (hc/with graph dbval @local-statements)]
+        graph (hc/with graph @local-statements)]
     [:div
      [:pre (pr-str q)]
      [:pre (pr-str params)]
@@ -85,7 +85,7 @@
             (let [row-renderer-code (:form/row-renderer table-form)
                   stage-tx! #(swap! local-statements tx-util/into-tx %)]
               (if (empty? row-renderer-code)
-                [table/table graph entities table-form expanded-cur stage-tx! navigate-cmp nil param-ctx]
+                [table/table graph entities nil table-form expanded-cur stage-tx! navigate-cmp nil param-ctx]
                 (let [result (eval/uate (str "(identity " row-renderer-code ")"))
                       {row-renderer :value error :error} result]
                   (if error

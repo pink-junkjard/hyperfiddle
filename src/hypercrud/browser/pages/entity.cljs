@@ -13,7 +13,7 @@
   (let [local-statements (cur [:statements] [])
         expanded-cur (cur [:expanded] {})                   ; {:community/neighborhood {:neighborhood/district {:district/region {}}}}
         dbval (-> entity .-dbval .-dbval)
-        graph (hc/with graph dbval @local-statements)
+        graph (hc/with graph @local-statements)
         entity (->Entity (.-dbid entity) (hc/get-dbgraph graph dbval))
         stage-tx! #(swap! local-statements tx-util/into-tx %)]
     [:div

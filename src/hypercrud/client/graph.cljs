@@ -4,7 +4,7 @@
             [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx]
             [hypercrud.util :as util]
-            [hypercrud.types :as types]))
+            [hypercrud.types :as types :refer [->DbId ->Entity ->DbVal]]))
 
 
 (defprotocol DbGraphPrivate
@@ -66,7 +66,7 @@
   (schema [this] schema))
 
 
-(deftype SuperGraph [named-queries ^:mutable graphs ^:mutable graph-data]
+(deftype SuperGraph [named-queries graphs ^:mutable graph-data]
   hc/SuperGraph
   (select [this named-query] (hc/select this named-query nil))
 
@@ -81,11 +81,16 @@
     (assert (not= nil dbval) "dbval cannot be nil")
     (get graphs dbval))
 
-  (with [this dbval more-statements]
-    (assert (not= nil dbval) "dbval cannot be nil")
-    (SuperGraph. named-queries
-                 (update graphs dbval #(hc/with' % more-statements))
-                 graph-data))
+  (with [this more-statements]
+    ;currently not supporting time
+    (let [grouped-stmts (group-by #(-> % second .-conn-id) more-statements)
+          new-graphs (util/map-values (fn [graph]
+                                        (let [conn-id (-> graph .-dbval .-conn-id)]
+                                          (if-let [stmts (get grouped-stmts conn-id)]
+                                            (hc/with' graph stmts)
+                                            graph)))
+                                      graphs)]
+      (SuperGraph. named-queries new-graphs graph-data)))
 
 
   (t [this]
@@ -112,7 +117,7 @@
                            (map (fn [[query pulled-trees]]
                                   (let [[q params [dbval pull-exp]] query
                                         result-set (map (fn [pulled-tree]
-                                                          (types/->DbId (:db/id pulled-tree) (.-conn-id dbval)))
+                                                          (->DbId (:db/id pulled-tree) (.-conn-id dbval)))
                                                         pulled-trees)]
                                     [query result-set])))
                            (into {}))]

@@ -2,7 +2,7 @@
   (:require [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx-util]
             [hypercrud.form.option :as option]
-            [hypercrud.types :as types]
+            [hypercrud.types :refer [->DbId]]
             [hypercrud.ui.form :as form]))
 
 
@@ -40,14 +40,14 @@
                ;; reconstruct the typed value
                :on-change #(do
                             (let [select-value (.-target.value %)
-                                  eid (cond
-                                        (= "" select-value) nil
-                                        (= "create-new" select-value) (temp-id!)
-                                        :else-hc-select-option-node (types/->DbId (js/parseInt select-value 10) conn-id))]
+                                  dbid (cond
+                                         (= "" select-value) nil
+                                         (= "create-new" select-value) (temp-id!)
+                                         :else-hc-select-option-node (->DbId (js/parseInt select-value 10) conn-id))]
                               ;reset the cursor before change! otherwise npe when trying to render
                               ;todo these both set the same cursor, and should be atomic
                               (reset! expanded-cur (if (= "create-new" select-value) {} nil))
-                              (stage-tx! (tx-util/update-entity-attr entity ident eid))
+                              (stage-tx! (tx-util/update-entity-attr entity ident dbid))
                               ;; and also add our new guy to the option list (for all combos)
                               ))}
         create-new? (some-> value tx-util/tempid?)

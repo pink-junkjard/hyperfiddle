@@ -54,12 +54,12 @@
         form (option/get-form options entity)
         form-name (or (-> form :db/id .-id) "TODO")         ;form-name in the HTML sense
         temp-id! (partial hc/*temp-id!* (-> entity .-dbval .-dbval .-conn-id))
-        change! (fn [eid]
-                  (let [eid (if (= "create-new" eid) (temp-id!) eid)]
+        change! (fn [dbid]
+                  (let [dbid (if (= "create-new" dbid) (temp-id!) dbid)]
                     ;reset the cursor before change! otherwise npe when trying to render
                     ;todo these both set the same cursor, and should be atomic
-                    (reset! expanded-cur (if (= "create-new" eid) {} nil))
-                    (stage-tx! (tx-util/update-entity-attr entity ident eid))))
+                    (reset! expanded-cur (if (= "create-new" dbid) {} nil))
+                    (stage-tx! (tx-util/update-entity-attr entity ident dbid))))
         create-new? (some-> value tx-util/tempid?)
         show-form? (or (not= nil @expanded-cur) create-new?)]
     [:div.value {:key (option/get-key options)}

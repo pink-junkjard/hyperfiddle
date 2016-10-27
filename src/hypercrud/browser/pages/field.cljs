@@ -9,7 +9,7 @@
 
 (defn ui [cur transact! graph entity field navigate-cmp]
   (let [local-statements (cur [:statements] [])
-        graph (hc/with graph (-> entity .-dbval .-dbval) @local-statements)
+        graph (hc/with graph @local-statements)
         entity (->Entity (.-dbid entity) (hc/get-dbgraph graph (-> entity .-dbval .-dbval)))
         stage-tx! #(swap! local-statements tx-util/into-tx %)
         expanded-cur (cur [:expanded (-> field :field/attribute :attribute/ident)]

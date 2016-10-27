@@ -1,6 +1,5 @@
 (ns hypercrud.client.tx
-  (:require [hypercrud.client.core :as hc]
-            [hypercrud.types :as types]))
+  (:require [hypercrud.types :refer [->DbId]]))
 
 
 (defn tempid? [dbid] (< (.-id dbid) 0))
@@ -101,12 +100,12 @@
                 [attr (let [{:keys [:db/cardinality :db/valueType]} (get schema attr)
                             _ (assert cardinality (str "schema attribute not found: " (pr-str attr)))]
                         (if (= valueType :db.type/ref)
-                          (let [build-DbId #(types/->DbId (ref->v %) (.-conn-id dbval))]
+                          (let [build-DbId #(->DbId (ref->v %) (.-conn-id dbval))]
                             (condp = cardinality
                               :db.cardinality/one (build-DbId val)
                               :db.cardinality/many (set (mapv build-DbId val))))
                           val))]))
-         (into {:db/id (types/->DbId id (.-conn-id dbval))}))
+         (into {:db/id (->DbId id (.-conn-id dbval))}))
     {:dbval dbval}))
 
 

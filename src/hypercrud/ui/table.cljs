@@ -97,7 +97,7 @@
    (build-row-cells form entity fieldless-widget-args)])
 
 
-(defn body [graph entities form expanded-cur stage-tx! navigate-cmp retract-entity! add-entity! sort-col]
+(defn body [graph entities new-entity-dbval form expanded-cur stage-tx! navigate-cmp retract-entity! add-entity! sort-col]
   [:tbody
    (let [[sort-key direction] @sort-col
          sort-eids (fn [col]
@@ -119,36 +119,36 @@
                                                               :graph graph
                                                               :navigate-cmp navigate-cmp
                                                               :stage-tx! stage-tx!}]))))
-   #_(let [dbid (hc/*temp-id!*)
-           entity (with-meta {:db/id dbid}
-                             {:dbval dbval})]
-       ^{:key (hash eids)}
-       [table-row entity form retract-entity! false {:expanded-cur (expanded-cur [dbid])
+   (if (not= nil new-entity-dbval)
+     (let [entity (->Entity (hc/*temp-id!* (.-conn-id new-entity-dbval))
+                            (hc/get-dbgraph graph new-entity-dbval))]
+       ^{:key (hash entities)}
+       [table-row entity form retract-entity! false {:expanded-cur (expanded-cur [(.-dbid entity)])
                                                      :graph graph
                                                      :navigate-cmp navigate-cmp
                                                      :stage-tx! (fn [tx]
-                                                                  (add-entity! dbid)
-                                                                  (stage-tx! tx))}])])
+                                                                  (add-entity! (.-dbid entity))
+                                                                  (stage-tx! tx))}]))])
 
 
-(defn table-managed [graph entities form expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]
+(defn table-managed [graph entities new-entity-dbval form expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]
   (let [sort-col (r/atom nil)]
-    (fn [graph entities form expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]
+    (fn [graph entities new-entity-dbval form expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]
       [:table.ui-table
        [:colgroup [:col {:span "1" :style {:width "20px"}}]]
        [:thead
         [:tr
          [:td.link-cell {:key "links"}]
          (build-col-heads form sort-col)]]
-       [body graph entities form expanded-cur stage-tx! navigate-cmp retract-entity! add-entity! sort-col]])))
+       [body graph entities new-entity-dbval form expanded-cur stage-tx! navigate-cmp retract-entity! add-entity! sort-col]])))
 
 
-(defn- table* [graph entities form expanded-cur stage-tx! navigate-cmp retract-entity!]
+(defn- table* [graph entities new-entity-dbval form expanded-cur stage-tx! navigate-cmp retract-entity!]
   ;; resultset tables don't appear managed from the call site, but we need to provide a fake add-entity!
   ;; so we can create-new inline like a spreadsheet, which means we internally use the managed table
   (let [new-entities (r/atom [])
         add-entity! #(swap! new-entities conj %)]
-    (fn [graph entities form expanded-cur stage-tx! navigate-cmp retract-entity!]
+    (fn [graph entities new-entity-dbval form expanded-cur stage-tx! navigate-cmp retract-entity!]
       (let [retract-entity! (fn [dbid]
                               (if (tx/tempid? dbid)
                                 (swap! new-entities (fn [old]
@@ -157,16 +157,13 @@
                                 (if retract-entity!
                                   (retract-entity! dbid)
                                   (js/alert "todo"))))
-            #_entities #_(concat entities
-                                 (map (fn [dbid]
-                                        (->Entity dbid (hc/get-dbgraph graph (->DbVal (.-conn-id dbid) (hc/t)))))
-                                      @new-entities))]
-        [table-managed graph entities form expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]))))
+            entities (concat entities (map #(->Entity % new-entity-dbval) @new-entities))]
+        [table-managed graph entities new-entity-dbval form expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]))))
 
 
-(defn table [graph entities form expanded-cur stage-tx! navigate-cmp retract-entity!]
+(defn table [graph entities form new-entity-dbval expanded-cur stage-tx! navigate-cmp retract-entity!]
   ^{:key (hc/t graph)}
-  [table* graph entities form expanded-cur stage-tx! navigate-cmp retract-entity!])
+  [table* graph entities new-entity-dbval form expanded-cur stage-tx! navigate-cmp retract-entity!])
 
 
 (defn table-pull-exp [form]

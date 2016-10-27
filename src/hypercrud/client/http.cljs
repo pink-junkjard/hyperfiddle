@@ -5,6 +5,7 @@
             [hypercrud.client.core :as hc]
             [hypercrud.client.graph :as graph]
             [hypercrud.client.internal :as internal]
+            [hypercrud.types :refer [->DbId]]
             [kvlt.core :as kvlt]
             [kvlt.middleware.params]
             [promesa.core :as p]))
@@ -72,7 +73,9 @@
 
 
   (temp-id! [this conn-id]
-    (swap! temp-id-atom update conn-id dec))
+    (let [updated-value (swap! temp-id-atom update conn-id dec)
+          id (get updated-value conn-id)]
+      (->DbId id conn-id)))
 
 
   (transact! [this tx]

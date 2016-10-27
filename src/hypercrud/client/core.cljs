@@ -9,7 +9,7 @@
   (select [this named-query]
           [this named-query query-message])
   (get-dbgraph [this dbval])
-  (with [this dbval more-statements])
+  (with [this more-statements])
   (t [this]))
 
 
