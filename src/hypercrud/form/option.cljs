@@ -1,61 +1,61 @@
 (ns hypercrud.form.option
-  (:require [hypercrud.client.core :as hc]
+  (:require [cljs.reader :as reader]
+            [hypercrud.client.core :as hc]
             [hypercrud.types :refer [->Entity]]))
 
 
 (defprotocol IFieldOptions
   (label-prop [this])
-  (get-key [this queries])
-  (get-option-records [this queries graph entity])
+  (get-key [this])
+  (get-option-records [this graph entity])
 
-  (has-holes? [this queries])
+  (has-holes? [this])
   ;todo should be get-queries and we can delete hc.form.util/field-queries
-  (get-query [this queries p-filler label-prop param-ctx])
+  (get-query [this p-filler label-prop param-ctx])
 
   ; todo
   ; cannot create-new if not editable
   ; sometimes might want create-new?=false when editable?=true
   ; we probably want get-create-form and get-edit-form
   ; and then these editable?/create-new? drop out
-  (get-form-id [this record])
+  (get-form [this record])
   (editable? [this record])
   (create-new? [this record]))
 
 
-(deftype QueryOptions [query-id form-id formulas label-prop]
+(deftype QueryOptions [query form formulas label-prop]
   IFieldOptions
   (label-prop [this] label-prop)
 
-  (get-key [this queries]
+  (get-key [this]
     ;memoizable
-    (hash (:query/value (get queries query-id))))
+    (hash (:query/value query)))
 
-  (get-option-records [this queries graph entity]
+  (get-option-records [this graph entity]
     ;memoizable
-    (let [q (:query/value (get queries query-id))]
+    (let [q (reader/read-string (:query/value query))]
       (->> (hc/select graph (hash q) q)
            (mapv #(->Entity % (.-dbval entity))))))
 
-  (has-holes? [this queries]
-    (not (empty? (:query/hole (get queries query-id)))))
+  (has-holes? [this]
+    (not (empty? (:query/hole query))))
 
-  (get-query [this queries p-filler label-prop param-ctx]
-    (let [query (get queries query-id)
-          _ (assert (not= nil label-prop) (str "Missing label-prop for " (:query/ident query)))
-          q (:query/value query)
+  (get-query [this p-filler label-prop param-ctx]
+    (let [_ (assert (not= nil label-prop) (str "Missing label-prop for " (:query/ident query)))
+          q (reader/read-string (:query/value query))
           query-name (hash q)
           params (p-filler query formulas param-ctx)
           pull-dbval (get param-ctx :dbval)
           pull-exp [pull-dbval [:db/id label-prop]]]
       {query-name [q params pull-exp]}))
 
-  (get-form-id [this record] form-id)
-  (editable? [this record] (not= nil form-id))
-  (create-new? [this record] (not= nil form-id))
+  (get-form [this record] form)
+  (editable? [this record] (not= nil form))
+  (create-new? [this record] (not= nil form))
 
   Object
-  (toString [this] (pr-str {:query query-id
-                            :form form-id
+  (toString [this] (pr-str {:query query
+                            :form form
                             :formulas formulas
                             :label-prop label-prop})))
 
@@ -85,7 +85,7 @@
       ; e.g. avoid NaN
       (js/parseInt s 10))
 
-    (get-form-id [this record] nil)                         ;todo what should this be
+    (get-form [this record] nil)                            ;todo what should this be
     (editable? [this record] false)                         ;todo what should this be
     (create-new? [this record] false)                       ;todo what should this be
     )
@@ -101,12 +101,12 @@
     (to-string [this entity] (serialize entity))
     (parse-string [this s] (deserialize s))
 
-    (get-form-id [this record] nil)
+    (get-form [this record] nil)
     (editable? [this record] false)
     (create-new? [this record] false))
 
 
-(defn gimme-useful-options [{:keys [label-prop form query formula inline]}]
+(defn gimme-useful-options [{:keys [:field/label-prop :field/form :field/query :link/formula] :as field}]
   (->QueryOptions query form formula label-prop))
 
 

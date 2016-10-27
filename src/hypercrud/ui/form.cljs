@@ -1,12 +1,11 @@
 (ns hypercrud.ui.form
-  (:require [hypercrud.ui.auto-control :refer [auto-control]]
-            [hypercrud.client.core :as hc]
-            [hypercrud.client.tx :as tx-util]
+  (:require [hypercrud.client.tx :as tx-util]
             [hypercrud.compile.eval :as eval]
-            [hypercrud.form.util :as form-util]))
+            [hypercrud.form.util :as form-util]
+            [hypercrud.ui.auto-control :refer [auto-control]]))
 
 
-(defn field [entity {:keys [graph] {:keys [prompt renderer]} :field :as widget-args}]
+(defn field [entity {:keys [graph] {:keys [:field/prompt :field/renderer]} :field :as widget-args}]
   [:div.field
    (if prompt [:label prompt])
    (if (empty? renderer)
@@ -20,26 +19,26 @@
             (catch :default e (pr-str e))))]))])
 
 
-(defn form [graph entity forms queries form expanded-cur stage-tx! navigate-cmp]
+(defn form [graph entity form expanded-cur stage-tx! navigate-cmp]
   [:div.form
-   (map (fn [{:keys [:ident] :as fieldinfo}]
-          ^{:key ident}
-          [field entity {:expanded-cur (expanded-cur [ident])
-                         :field fieldinfo
-                         :forms forms
-                         :graph graph
-                         :navigate-cmp navigate-cmp
-                         :queries queries
-                         :stage-tx! stage-tx!}])
+   (map (fn [fieldinfo]
+          (let [ident (-> fieldinfo :field/attribute :attribute/ident)]
+            ^{:key ident}
+            [field entity {:expanded-cur (expanded-cur [ident])
+                           :field fieldinfo
+                           :graph graph
+                           :navigate-cmp navigate-cmp
+                           :stage-tx! stage-tx!}]))
         (:form/field form))])
 
 
-(defn query [dbid forms queries form expanded-forms p-filler param-ctx]
+(defn query [dbid form expanded-forms p-filler param-ctx]
   (let [param-ctx (merge param-ctx {:id (.-id dbid)})
-        dbval (get param-ctx :dbval)]
+        dbval (get param-ctx :dbval)
+        option-queries (form-util/form-option-queries form expanded-forms p-filler param-ctx)]
     (if (not (tx-util/tempid? dbid))
-      (merge (form-util/form-option-queries forms queries form expanded-forms p-filler param-ctx)
+      (merge option-queries
              (let [q '[:find [?e ...] :in $ ?e :where [?e]]
-                   pull-exp (form-util/form-pull-exp forms form expanded-forms)]
+                   pull-exp (form-util/form-pull-exp form expanded-forms)]
                {dbid [q [dbval (.-id dbid)] [dbval pull-exp]]}))
-      (form-util/form-option-queries forms queries form expanded-forms p-filler param-ctx))))
+      option-queries)))

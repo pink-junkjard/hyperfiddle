@@ -6,12 +6,14 @@
 (defmulti multi-select-markup (fn [click-add! control-tuples] :default))
 
 
-(defn multi-select* [markupfn entity add-item! {:keys [stage-tx!] {:keys [:ident]} :field :as widget-args}]
+(defn multi-select* [markupfn entity add-item! {:keys [field stage-tx!] :as widget-args}]
   (assert false "assoc entity no longer works; and entities in expanded-cur dont make sense. todo")
-  (let [value (get entity ident)
+  (let [ident (-> field :field/attribute :attribute/ident)
+        value (get entity ident)
         control-tuples (seq (mapv (fn [eid]
                                     (let [click-remove! #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [eid] nil))
                                           new-args (-> widget-args
+                                                       ; todo this should be hc/with
                                                        (assoc-in [:field :cardinality] :db.cardinality/one)
                                                        (update :expanded-cur #(% [eid])))
                                           control [auto-control (assoc entity ident eid) new-args]]

@@ -12,33 +12,39 @@
 ; need to limit it to parent.
 
 (defmethod auto-control/auto-control :default
-  [entity {{:keys [valueType cardinality isComponent] :as field} :field :as widget-args}]
-  (cond
-    (and (= valueType :boolean) (= cardinality :db.cardinality/one)) (select/select-boolean entity widget-args)
-    (and (= valueType :keyword) (= cardinality :db.cardinality/one)) (widget/input-keyword entity widget-args)
-    (and (= valueType :string) (= cardinality :db.cardinality/one)) (widget/input entity widget-args)
-    (and (= valueType :code) (= cardinality :db.cardinality/one)) (widget/code-editor entity widget-args)
-    (and (= valueType :instant) (= cardinality :db.cardinality/one)) (widget/instant entity widget-args)
-    (and (= valueType :ref) (= cardinality :db.cardinality/one) isComponent) (widget/select-ref-component entity widget-args)
-    (and (= valueType :ref) (= cardinality :db.cardinality/many) isComponent) (widget/table-many-ref-component entity widget-args)
-    (and (= valueType :ref) (= cardinality :db.cardinality/one)) (widget/select-ref entity widget-args)
-    (and (= valueType :ref) (= cardinality :db.cardinality/many)) [widget/table-many-ref entity widget-args]
-    :else (widget/default field)))
+  [entity {:keys [field] :as widget-args}]
+  (let [{:keys [:attribute/valueType :attribute/cardinality :attribute/isComponent]} (:field/attribute field)
+        valueType (:db/ident valueType)
+        cardinality (:db/ident cardinality)]
+    (cond
+      (and (= valueType :db.type/boolean) (= cardinality :db.cardinality/one)) (select/select-boolean entity widget-args)
+      (and (= valueType :db.type/keyword) (= cardinality :db.cardinality/one)) (widget/input-keyword entity widget-args)
+      (and (= valueType :db.type/string) (= cardinality :db.cardinality/one)) (widget/input entity widget-args)
+      (and (= valueType :db.type/code) (= cardinality :db.cardinality/one)) (widget/code-editor entity widget-args)
+      (and (= valueType :db.type/instant) (= cardinality :db.cardinality/one)) (widget/instant entity widget-args)
+      (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one) isComponent) (widget/select-ref-component entity widget-args)
+      (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many) isComponent) (widget/table-many-ref-component entity widget-args)
+      (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one)) (widget/select-ref entity widget-args)
+      (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) [widget/table-many-ref entity widget-args]
+      :else (widget/default field))))
 
 
 (defmethod auto-control/auto-table-cell :default
-  [entity form-id {{:keys [valueType cardinality isComponent] :as field} :field :as widget-args}]
-  (cond
-    (and (= valueType :boolean) (= cardinality :db.cardinality/one)) (select/select-boolean entity widget-args)
-    (and (= valueType :keyword) (= cardinality :db.cardinality/one)) (widget/input-keyword entity widget-args)
-    (and (= valueType :string) (= cardinality :db.cardinality/one)) (widget/input entity widget-args)
-    ;(and (= valueType :code) (= cardinality :db.cardinality/one)) (widget/code-editor entity widget-args) todo
-    (and (= valueType :instant) (= cardinality :db.cardinality/one)) (widget/instant entity widget-args)
+  [entity {:keys [field] :as widget-args}]
+  (let [{:keys [:attribute/valueType :attribute/cardinality :attribute/isComponent]} (:field/attribute field)
+        valueType (:db/ident valueType)
+        cardinality (:db/ident cardinality)]
+    (cond
+      (and (= valueType :db.type/boolean) (= cardinality :db.cardinality/one)) (select/select-boolean entity widget-args)
+      (and (= valueType :db.type/keyword) (= cardinality :db.cardinality/one)) (widget/input-keyword entity widget-args)
+      (and (= valueType :db.type/string) (= cardinality :db.cardinality/one)) (widget/input entity widget-args)
+      ;(and (= valueType :db.type/code) (= cardinality :db.cardinality/one)) (widget/code-editor entity widget-args) todo
+      (and (= valueType :db.type/instant) (= cardinality :db.cardinality/one)) (widget/instant entity widget-args)
 
-    (and (= valueType :ref) (= cardinality :db.cardinality/one) isComponent) (table-cell/ref-one-component entity form-id widget-args)
-    (and (= valueType :ref) (= cardinality :db.cardinality/one)) (table-cell/ref-one entity form-id widget-args)
+      (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one) isComponent) (table-cell/ref-one-component entity widget-args)
+      (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one)) (table-cell/ref-one entity widget-args)
 
-    (and (= valueType :ref) (= cardinality :db.cardinality/many)) (table-cell/ref-many entity form-id widget-args)
-    (and (= cardinality :db.cardinality/many)) (table-cell/other-many entity form-id widget-args)
+      (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) (table-cell/ref-many entity widget-args)
+      (and (= cardinality :db.cardinality/many)) (table-cell/other-many entity widget-args)
 
-    :else (widget/default field)))
+      :else (widget/default field))))

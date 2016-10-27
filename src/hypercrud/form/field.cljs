@@ -39,13 +39,3 @@
             (-> options
                 (util/update-existing :formula pr-str)
                 option/gimme-useful-options))))
-
-
-(defn hole->field
-  ([{:keys [:hole/name :hole/formula
-            :field/prompt :field/query :field/label-prop
-            :attribute/valueType :attribute/cardinality]}]
-   (->Field prompt name (convert-valueType valueType) cardinality false nil
-            (option/gimme-useful-options {:label-prop label-prop
-                                          :query query
-                                          :formula formula}))))

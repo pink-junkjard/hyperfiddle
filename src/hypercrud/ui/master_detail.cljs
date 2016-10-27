@@ -8,8 +8,10 @@
             [hypercrud.ui.form :as form]))
 
 
-(defn master-detail* [entity {:keys [graph stage-tx!] {:keys [ident options]} :field :as widget-args} selected-cur & [filter-entities detail-renderer]]
-  (let [detail-renderer (or detail-renderer form/form)
+(defn master-detail* [entity {:keys [field graph stage-tx!] :as widget-args} selected-cur & [filter-entities detail-renderer]]
+  (let [ident (-> field :field/attribute :attribute/ident)
+        options (option/gimme-useful-options field)
+        detail-renderer (or detail-renderer form/form)
         temp-id! (partial hc/*temp-id!* (-> entity .-dbval .-dbval .-conn-id))
         li (fn [key label is-selected? on-click & retract]
              [:li {:key key :class (if is-selected? "selected")}
@@ -40,9 +42,7 @@
        (let [selected-entity (->Entity @selected-cur (.-dbval entity))]
          ^{:key (hash @selected-cur)}
          [detail-renderer graph selected-entity
-          (:forms widget-args)
-          (:queries widget-args)
-          (get (:forms widget-args) (option/get-form-id options entity))
+          (option/get-form options entity)
           ((:expanded-cur widget-args) [(:db/id entity)])
           (:stage-tx! widget-args)
           (:navigate-cmp widget-args)]))]))

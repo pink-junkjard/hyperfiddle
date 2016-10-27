@@ -18,7 +18,7 @@
 ; type p-filler = fn [query formulas param-ctx] => vec
 ; which is why we need this unused formulas param
 (defn build-params [fill-hole query param-ctx]
-  (let [q (:query/value query)]
+  (let [q (reader/read-string (:query/value query))]
     (->> (parse-holes q)
          (map (fn [hole-name]
                 (let [value (fill-hole hole-name param-ctx)]

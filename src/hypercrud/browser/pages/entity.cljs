@@ -8,7 +8,7 @@
             [promesa.core :as p]))
 
 
-(defn ui [cur transact! graph entity forms queries form-id navigate! navigate-cmp param-ctx]
+(defn ui [cur transact! graph entity form navigate! navigate-cmp param-ctx]
   "hypercrud values just get a form, with ::update and ::delete."
   (let [local-statements (cur [:statements] [])
         expanded-cur (cur [:expanded] {})                   ; {:community/neighborhood {:neighborhood/district {:district/region {}}}}
@@ -17,7 +17,7 @@
         entity (->Entity (.-dbid entity) (hc/get-dbgraph graph dbval))
         stage-tx! #(swap! local-statements tx-util/into-tx %)]
     [:div
-     [form/form graph entity forms queries (get forms form-id) expanded-cur stage-tx! navigate-cmp]
+     [form/form graph entity form expanded-cur stage-tx! navigate-cmp]
      [:button {:on-click #(-> (transact! @local-statements)
                               (p/then (fn [{:keys [tempids]}]
                                         (if (tx-util/tempid? (.-dbid entity))
@@ -30,18 +30,18 @@
       "Delete"]
      [:div
       [:span "Links: "]
-      (->> (:form/link (get forms form-id))
+      (->> (:form/link form)
            (map (fn [link]
                   (let [param-ctx (merge param-ctx
                                          {:entity entity})
-                        href (links/query-link link queries param-ctx)]
+                        href (links/query-link link param-ctx)]
                     ^{:key (:link/ident link)}
                     [navigate-cmp {:href href} (:link/prompt link)])))
            (interpose " "))]]))
 
 
-(defn query [state dbid forms queries form-id param-ctx]
-  (form/query dbid forms queries (get forms form-id) (get state :expanded nil) q-util/build-params-from-formula param-ctx))
+(defn query [state dbid form param-ctx]
+  (form/query dbid form (get state :expanded nil) q-util/build-params-from-formula param-ctx))
 
 
 (comment

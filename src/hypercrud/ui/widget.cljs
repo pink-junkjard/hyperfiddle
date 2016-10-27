@@ -16,8 +16,9 @@
             [reagent.core :as r]))
 
 
-(defn input-keyword [entity {:keys [stage-tx!] {:keys [:ident]} :field}]
-  (let [value (get entity ident)
+(defn input-keyword [entity {:keys [field stage-tx!]}]
+  (let [ident (-> field :field/attribute :attribute/ident)
+        value (get entity ident)
         on-change! #(stage-tx! (tx-util/update-entity-attr entity ident %))
         parse-string reader/read-string
         to-string str
@@ -27,14 +28,16 @@
     [input/validated-input value on-change! parse-string to-string valid?]))
 
 
-(defn input [entity {:keys [stage-tx!] {:keys [:ident]} :field}]
-  (let [value (get entity ident)
+(defn input [entity {:keys [field stage-tx!]}]
+  (let [ident (-> field :field/attribute :attribute/ident)
+        value (get entity ident)
         on-change! #(stage-tx! (tx-util/update-entity-attr entity ident %))]
     [input/input* value on-change!]))
 
 
-(defn textarea [entity {:keys [stage-tx!] {:keys [:ident]} :field}]
-  (let [value (get entity ident)
+(defn textarea [entity {:keys [field stage-tx!]}]
+  (let [ident (-> field :field/attribute :attribute/ident)
+        value (get entity ident)
         set-attr! #(stage-tx! (tx-util/update-entity-attr entity ident %))]
     [textarea* {:type "text"
                 :value value
@@ -46,68 +49,72 @@
   [radio/radio-ref* entity widget-args])
 
 
-(defn select-ref [entity {:keys [expanded-cur] {:keys [:ident]} :field :as widget-args}]
+(defn select-ref [entity {:keys [expanded-cur field] :as widget-args}]
   ;;select* has parameterized markup fn todo
   [select* entity widget-args
    [:button.edit {:on-click #(reset! expanded-cur {})
-                  :disabled (nil? (get entity ident))} "Edit"]])
+                  :disabled (nil? (get entity (-> field :field/attribute :attribute/ident)))} "Edit"]])
 
 
-(defn select-ref-component [entity {:keys [expanded-cur forms graph navigate-cmp queries stage-tx!]
-                                    {:keys [:ident :options]} :field}]
-  (let [value (get entity ident)]
-    (form/form graph value forms queries (get forms (option/get-form-id options entity)) expanded-cur stage-tx! navigate-cmp)))
+(defn select-ref-component [entity {:keys [expanded-cur field graph navigate-cmp stage-tx!]}]
+  (let [value (get entity (-> field :field/attribute :attribute/ident))
+        options (option/gimme-useful-options field)]
+    (form/form graph value (option/get-form options entity) expanded-cur stage-tx! navigate-cmp)))
 
 
-(defn table-many-ref [entity {:keys [graph queries] {:keys [options]} :field}]
-  (let [initial-select (first (option/get-option-records options queries graph entity))
+(defn table-many-ref [entity {:keys [field graph]}]
+  (let [options (option/gimme-useful-options field)
+        initial-select (first (option/get-option-records options graph entity))
         select-value-atom (r/atom (:db/id initial-select))]
-    (fn [entity {:keys [forms graph expanded-cur navigate-cmp queries stage-tx!]
-                 {:keys [ident options]} :field}]
-      (let [entities (get entity ident)
+    (fn [entity {:keys [field graph expanded-cur navigate-cmp stage-tx!]}]
+      (let [options (option/gimme-useful-options field)
+            ident (-> field :field/attribute :attribute/ident)
+            entities (get entity ident)
             retract-entity! #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [%] []))
             add-entity! #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [] [%]))]
         [:div.value
-         [table/table-managed graph entities forms queries (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]
+         [table/table-managed graph entities (option/get-form options entity) expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]
          (let [props {:value (str @select-value-atom)
                       :on-change #(let [select-value (.-target.value %)
                                         value (js/parseInt select-value 10)]
                                    (reset! select-value-atom value))}
                ; todo assert selected value is in record set
                ; need lower level select component that can be reused here and in select.cljs
-               select-options (->> (option/get-option-records options queries graph entity)
+               select-options (->> (option/get-option-records options graph entity)
                                    (sort-by #(get % (option/label-prop options)))
                                    (map (fn [entity]
                                           [:option {:key (hash (:db/id entity))
                                                     :value (str (.-id (:db/id entity)))}
-                                           (str (get entity (option/label-prop options)))])))]
+                                           (get entity (option/label-prop options))])))]
            [:div.table-controls
             [:select props select-options]
             [:button {:on-click #(add-entity! @select-value-atom)} "⬆"]])]))))
 
 
-(defn table-many-ref-component [entity {:keys [forms graph expanded-cur navigate-cmp queries stage-tx!]
-                                        {:keys [ident options]} :field}]
-  (let [entities (get entity ident)
+(defn table-many-ref-component [entity {:keys [field graph expanded-cur navigate-cmp stage-tx!]}]
+  (let [ident (-> field :field/attribute :attribute/ident)
+        options (option/gimme-useful-options field)
+        entities (get entity ident)
         retract-entity! #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [%] []))
         add-entity! #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [] [%]))]
     [:div.value
-     [table/table-managed graph entities forms queries (option/get-form-id options entity) expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]]))
+     [table/table-managed graph entities (option/get-form options entity) expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]]))
 
 
-(defn multi-select-ref [entity {:keys [stage-tx!] {:keys [:ident]} :field :as widget-args}]
-  (let [add-item! #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [] [nil]))]
+(defn multi-select-ref [entity {:keys [field stage-tx!] :as widget-args}]
+  (let [add-item! #(stage-tx! (tx-util/edit-entity (:db/id entity) (-> field :field/attribute :attribute/ident) [] [nil]))]
     (multi-select* multi-select-markup entity add-item! widget-args))) ;add-item! is: add nil to set
 
 
-(defn multi-select-ref-component [entity {:keys [stage-tx!] {:keys [:ident]} :field :as widget-args}]
+(defn multi-select-ref-component [entity {:keys [field stage-tx!] :as widget-args}]
   (let [temp-id! (partial hc/*temp-id!* (-> entity .-dbval .-dbval :conn-id)) ; bound to fix render bug
-        add-item! #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [] [(temp-id!)]))]
+        add-item! #(stage-tx! (tx-util/edit-entity (:db/id entity) (-> field :field/attribute :attribute/ident) [] [(temp-id!)]))]
     [multi-select* multi-select-markup entity add-item! widget-args])) ;add new entity to set
 
 
-(defn code-editor [entity {:keys [stage-tx!] {:keys [:ident]} :field}]
-  (let [value (get entity ident)
+(defn code-editor [entity {:keys [field stage-tx!]}]
+  (let [ident (-> field :field/attribute :attribute/ident)
+        value (get entity ident)
         change! #(stage-tx! (tx-util/edit-entity (:db/id entity) ident %1 %2))]
     ^{:key ident}
     [code-editor* value change!]))
@@ -130,8 +137,9 @@
         (integer? ms))))
 
 
-(defn instant [entity {:keys [stage-tx!] {:keys [:ident]} :field}]
-  (let [value (get entity ident)
+(defn instant [entity {:keys [field stage-tx!]}]
+  (let [ident (-> field :field/attribute :attribute/ident)
+        value (get entity ident)
         on-change! #(stage-tx! (tx-util/update-entity-attr entity ident %))
         parse-string (fn [s]
                        (if (empty? s)

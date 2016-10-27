@@ -6,8 +6,9 @@
             [hypercrud.ui.form :as form]))
 
 
-(defn select-boolean [entity {:keys [stage-tx!] {:keys [ident]} :field}]
-  (let [value (get entity ident)
+(defn select-boolean [entity {:keys [field stage-tx!]}]
+  (let [ident (-> field :field/attribute :attribute/ident)
+        value (get entity ident)
         props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
                :value (if (nil? value) "" (str value))
                ;; reconstruct the typed value
@@ -24,9 +25,10 @@
        [:option {:key :nil :value ""} "--"]]]]))
 
 
-(defn select* [entity {:keys [expanded-cur forms graph navigate-cmp queries stage-tx!]
-                       {:keys [ident options]} :field} edit-element]
-  (let [value (get entity ident)
+(defn select* [entity {:keys [expanded-cur field graph navigate-cmp stage-tx!]} edit-element]
+  (let [ident (-> field :field/attribute :attribute/ident)
+        options (option/gimme-useful-options field)
+        value (get entity ident)
         conn-id (-> entity .-dbval .-dbval .-conn-id)
         temp-id! (partial hc/*temp-id!* conn-id)
         props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
@@ -51,11 +53,11 @@
         create-new? (some-> value tx-util/tempid?)
         show-form? (or (not= nil @expanded-cur) create-new?)]
 
-    [:div.value.editable-select {:key (option/get-key options queries)}
+    [:div.value.editable-select {:key (option/get-key options)}
      (if (and (option/editable? options entity) (not show-form?))
        edit-element)
      [:span.select
-      (let [option-records (option/get-option-records options queries graph entity)]
+      (let [option-records (option/get-option-records options graph entity)]
         (assert (or (nil? value) (contains? (set option-records) value)) (str "Select options does not contain selected value: " (pr-str value)))
         [:select props (-> (->> option-records
                                 (sort-by #(get % (option/label-prop options)))
@@ -70,4 +72,4 @@
                              [[:option {:key :blank :value ""} "--"]]))])]
      (if (and (not= nil value) show-form?)
        ;; TODO branch the client in create-new case
-       [form/form graph value forms queries (get forms (option/get-form-id options entity)) expanded-cur stage-tx! navigate-cmp])]))
+       [form/form graph value (option/get-form options entity) expanded-cur stage-tx! navigate-cmp])]))

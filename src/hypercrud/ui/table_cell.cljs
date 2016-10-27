@@ -12,10 +12,11 @@
            (str (subs s 0 (- c 3)) "..."))))
 
 
-(defn ref-one-component [entity form-id {:keys [navigate-cmp] {:keys [ident options]} :field}]
-  (let [label-prop (option/label-prop options)]
+(defn ref-one-component [entity {:keys [field navigate-cmp]}]
+  (let [ident (-> field :field/attribute :attribute/ident)
+        label-prop (option/label-prop (option/gimme-useful-options field))]
     [:div
-     [navigate-cmp {:href (links/field-link form-id (:db/id entity) ident)} "Edit"]
+     [navigate-cmp {:href (links/field-link (.-dbid field) (.-dbid entity))} "Edit"]
      " "
      (if-let [entity (get entity ident)]
        (-> entity
@@ -26,20 +27,23 @@
 
 
 ; this can be used sometimes, on the entity page, but not the query page
-(defn ref-one [entity form-id {:keys [expanded-cur navigate-cmp queries] {:keys [ident options]} :field :as widget-args}]
-  #_(if (option/has-holes? options queries)
+(defn ref-one [entity {:keys [expanded-cur field navigate-cmp] :as widget-args}]
+  #_(if (option/has-holes? options)
       (ref-one-component entity form-id widget-args))
-  (select/select*
-    entity (assoc widget-args :expanded-cur (expanded-cur [ident]))
-    (if (not (nil? (get entity ident)))
-      (let [href (links/entity-link (option/get-form-id options entity) (:db/id (get entity ident)))]
-        [navigate-cmp {:class "edit" :href href} "Edit"]))))
+  (let [ident (-> field :field/attribute :attribute/ident)]
+    (select/select*
+      entity (assoc widget-args :expanded-cur (expanded-cur [ident]))
+      (if (not (nil? (get entity ident)))
+        (let [options (option/gimme-useful-options field)
+              href (links/entity-link (.-dbid (option/get-form options entity)) (:db/id (get entity ident)))]
+          [navigate-cmp {:class "edit" :href href} "Edit"])))))
 
 
-(defn ref-many [entity form-id {:keys [graph navigate-cmp] {:keys [ident options]} :field}]
-  (let [label-prop (option/label-prop options)]
+(defn ref-many [entity {:keys [field navigate-cmp]}]
+  (let [ident (-> field :field/attribute :attribute/ident)
+        label-prop (option/label-prop (option/gimme-useful-options field))]
     [:div
-     [navigate-cmp {:href (links/field-link form-id (:db/id entity) ident)} "Edit"]
+     [navigate-cmp {:href (links/field-link (.-dbid field) (.-dbid entity))} "Edit"]
      " "
      (->> (get entity ident)
           (map (fn [entity]
@@ -49,10 +53,11 @@
           (string/join ", "))]))
 
 
-(defn other-many [entity form-id {:keys [navigate-cmp] {:keys [ident]} :field}]
-  [:div
-   [navigate-cmp {:href (links/field-link form-id (:db/id entity) ident)} "Edit"]
-   " "
-   (->> (get entity ident)
-        (map pr-str)                                        ;todo account for many different types of values
-        (string/join ", "))])
+(defn other-many [entity {:keys [field navigate-cmp]}]
+  (let [ident (-> field :field/attribute :attribute/ident)]
+    [:div
+     [navigate-cmp {:href (links/field-link (.-dbid field) (.-dbid entity))} "Edit"]
+     " "
+     (->> (get entity ident)
+          (map pr-str)                                      ;todo account for many different types of values
+          (string/join ", "))]))

@@ -2,7 +2,7 @@
   (:require [hypercrud.browser.links :as links]))
 
 
-(defn ui [links queries navigate-cmp param-ctx]
+(defn ui [links navigate-cmp param-ctx]
   [:div
    ;form to populate holes
    [:ul.links
@@ -10,6 +10,6 @@
          (sort-by :link/prompt)
          (map (fn [{:keys [:link/prompt :link/ident] :as link}]
                 [:li {:key ident}
-                 [navigate-cmp {:href (links/query-link link queries param-ctx)} prompt]])))]])
+                 [navigate-cmp {:href (links/query-link link param-ctx)} prompt]])))]])
 
 (defn query [] {})
