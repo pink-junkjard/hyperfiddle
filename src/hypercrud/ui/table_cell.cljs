@@ -34,9 +34,10 @@
     (select/select*
       entity (assoc widget-args :expanded-cur (expanded-cur [ident]))
       (if (not (nil? (get entity ident)))
-        (let [options (option/gimme-useful-options field)
-              href (links/entity-link (.-dbid (option/get-form options entity)) (:db/id (get entity ident)))]
-          [navigate-cmp {:class "edit" :href href} "Edit"])))))
+        (let [options (option/gimme-useful-options field)]
+          (if-let [form (option/get-form options entity)]
+            (let [href (links/entity-link (.-dbid form) (:db/id (get entity ident)))]
+              [navigate-cmp {:class "edit" :href href} "Edit"])))))))
 
 
 (defn ref-many [entity {:keys [field navigate-cmp]}]
