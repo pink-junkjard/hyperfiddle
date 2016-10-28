@@ -151,7 +151,10 @@
 
 
 (defn default [field]
-  [input/input*
-   (str (select-keys field [:valueType :cardinality :isComponent]))
-   #()
-   {:read-only true}])
+  (let [{:keys [:attribute/valueType :attribute/cardinality :attribute/isComponent]} (:field/attribute field)]
+    [input/input*
+     (str {:valueType (:db/ident valueType)
+           :cardinality (:db/ident cardinality)
+           :isComponent isComponent})
+     #()
+     {:read-only true}]))
