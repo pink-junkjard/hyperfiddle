@@ -6,7 +6,6 @@
             [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx-util]
             [hypercrud.compile.eval :as eval]
-            [hypercrud.form.field :as field]
             [hypercrud.form.q-util :as q-util]
             [hypercrud.form.util :as form-util]
             [hypercrud.types :refer [->DbId ->Entity]]

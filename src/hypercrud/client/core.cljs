@@ -19,7 +19,6 @@
 
 
 (defprotocol Client
-  (graphs [this])
-  (hydrate! [this named-queries])
+  (hydrate! [this schemas named-queries])
   (temp-id! [this conn-id])
   (transact! [this tx]))

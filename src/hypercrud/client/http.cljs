@@ -41,14 +41,9 @@
 
 
 ; graph is always assumed to be touched
-(deftype Client [entry-uri schemas ^:mutable super-graph temp-id-atom]
+(deftype Client [entry-uri ^:mutable super-graph temp-id-atom]
   hc/Client
-  (graphs [this]
-    #_(assert (not (empty? super-graph)) "invariant - runtime must call hydrate! first")
-    super-graph)
-
-
-  (hydrate! [this named-queries]
+  (hydrate! [this schemas named-queries]
     ;; compare our pre-loaded state with the graph dependencies
     (let [graph-we-want (graph/superGraph schemas named-queries)]
       (if (= super-graph graph-we-want)
