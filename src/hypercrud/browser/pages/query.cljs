@@ -84,7 +84,7 @@
             (let [row-renderer-code (:form/row-renderer table-form)
                   stage-tx! #(swap! local-statements tx-util/into-tx %)]
               (if (empty? row-renderer-code)
-                [table/table graph entities nil table-form expanded-cur stage-tx! navigate-cmp nil param-ctx]
+                [table/table graph entities table-form nil expanded-cur stage-tx! navigate-cmp nil]
                 (let [result (eval/uate (str "(identity " row-renderer-code ")"))
                       {row-renderer :value error :error} result]
                   (if error
