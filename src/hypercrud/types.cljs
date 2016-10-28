@@ -51,13 +51,23 @@
 (reader/register-tag-parser! 'DbVal read-DbVal)
 
 
-
-(deftype DbHandler []
+(deftype DbIdTransitHandler []
   Object
-  (tag [_ v] "db")
-  #_(rep [_ v] #js [(:conn-id v) (:t v)])
-  (rep [_ v] (pr-str v))
-  (stringRep [this v] (pr-str v)))
+  (tag [_ v] "DbId")
+  (rep [_ v] [(.-id v) (.-conn-id v)])
+  (stringRep [_ v] nil)
+  (getVerboseHandler [_] nil))
 
 
-(defn DbReader [v] (reader/read-string v))
+(defn DbIdTransitReader [v] (apply ->DbId v))
+
+
+(deftype DbValTransitHandler []
+  Object
+  (tag [_ v] "DbVal")
+  (rep [_ v] [(.-conn-id v) (.-t v)])
+  (stringRep [_ v] nil)
+  (getVerboseHandler [_] nil))
+
+
+(defn DbValTransitReader [v] (apply ->DbVal v))

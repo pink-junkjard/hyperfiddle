@@ -26,9 +26,11 @@
 
 
 (def transit-encoding-opts {:handlers {goog.Uri (UriHandler.)
-                                       types/DbVal (types/DbHandler.)}})
+                                       types/DbId (types/DbIdTransitHandler.)
+                                       types/DbVal (types/DbValTransitHandler.)}})
 (def transit-decoding-opts {:handlers {"r" (fn [v] (goog.Uri. v))
-                                       "db" types/DbReader}})
+                                       "DbId" types/DbIdTransitReader
+                                       "DbVal" types/DbValTransitReader}})
 
 
 (defn transit-decode
