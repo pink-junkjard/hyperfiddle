@@ -197,8 +197,8 @@
               (:form/field form))))
 
 (defn query
-  ([p-filler param-ctx {:keys [:link/query :link/form :link/formula] :as link}]
-   (query p-filler param-ctx query form formula))
+  ([p-filler param-ctx link]
+   (query p-filler param-ctx (:link/query link) (:link/form link) (:link/formula link)))
   ([p-filler param-ctx query form formula]
    (let [app-dbval (get param-ctx :dbval)]
      (merge
