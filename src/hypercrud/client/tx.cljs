@@ -10,8 +10,22 @@
                (map (fn [val] [:db/add dbid a val]) adds))))
 
 
-(defn update-entity-card-one-attr [{:keys [:db/id] :as entity} a new-val]
-  (edit-entity id a [(get entity a)] [new-val]))
+(defn update-entity-attr [{:keys [:db/id] :as entity}
+                          {:keys [:attribute/ident :attribute/cardinality :attribute/valueType] :as attribute}
+                          new-val]
+  (let [{:keys [old new]} (let [old-val (get entity ident)]
+                            (if (= (:db/ident valueType) :db.type/ref)
+                              (condp = (:db/ident cardinality)
+                                :db.cardinality/one {:old [(some-> old-val .-dbid)]
+                                                     :new [new-val]}
+                                :db.cardinality/many {:old (map #(.-dbid %) old-val)
+                                                      :new new-val})
+                              (condp = (:db/ident cardinality)
+                                :db.cardinality/one {:old [old-val]
+                                                     :new [new-val]}
+                                :db.cardinality/many {:old old-val
+                                                      :new new-val})))]
+    (edit-entity id ident old new)))
 
 
 (defn simplify [simplified-tx next-stmt]
@@ -54,6 +68,7 @@
   ([schema statements dbval lookup]
    (reduce (fn [lookup [op dbid a v]]
              (update lookup dbid (fn [entity]
+                                   ; problem
                                    (let [entity (or entity (with-meta {:db/id dbid} {:dbval dbval}))]
                                      (apply-stmt-to-entity schema entity [op dbid a v])))))
            lookup
@@ -64,7 +79,7 @@
   (if (map? v) (:db/id v) v))
 
 
-(defn entity->statements [schema {dbid :db/id :as entity}]   ; entity always has :db/id
+(defn entity->statements [schema {dbid :db/id :as entity}]  ; entity always has :db/id
   (->> (dissoc entity :db/id)
        (mapcat (fn [[attr val]]
                  (let [cardinality (get-in schema [attr :db/cardinality])
@@ -81,6 +96,7 @@
 
 (defn entity? [v]
   (map? v))
+
 
 (defn entity-children [schema entity]
   (mapcat (fn [[attr val]]

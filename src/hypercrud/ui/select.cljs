@@ -7,7 +7,7 @@
 
 
 (defn select-boolean [entity {:keys [field stage-tx!]}]
-  (let [ident (-> field :field/attribute :attribute/ident)
+  (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         value (get entity ident)
         props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
                :value (if (nil? value) "" (str value))
@@ -16,7 +16,7 @@
                                      "" nil
                                      "true" true
                                      "false" false)]
-                            (stage-tx! (tx-util/update-entity-card-one-attr entity ident v)))}]
+                            (stage-tx! (tx-util/update-entity-attr entity attribute v)))}]
     [:div.value.editable-select {:key ident}
      [:span.select
       [:select props
@@ -26,7 +26,7 @@
 
 
 (defn select* [entity {:keys [expanded-cur field graph navigate-cmp stage-tx!]} edit-element]
-  (let [ident (-> field :field/attribute :attribute/ident)
+  (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         options (option/gimme-useful-options field)
         value (get entity ident)
         conn-id (-> entity .-dbval .-dbval .-conn-id)
@@ -35,7 +35,7 @@
                :value (cond
                         (nil? value) ""
                         (tx-util/tempid? value) "create-new"
-                        :else (str value))
+                        :else (-> value .-dbid .-id str))
 
                ;; reconstruct the typed value
                :on-change #(do
@@ -47,7 +47,7 @@
                               ;reset the cursor before change! otherwise npe when trying to render
                               ;todo these both set the same cursor, and should be atomic
                               (reset! expanded-cur (if (= "create-new" select-value) {} nil))
-                              (stage-tx! (tx-util/update-entity-card-one-attr entity ident dbid))
+                              (stage-tx! (tx-util/update-entity-attr entity attribute dbid))
                               ;; and also add our new guy to the option list (for all combos)
                               ))}
         create-new? (some-> value tx-util/tempid?)

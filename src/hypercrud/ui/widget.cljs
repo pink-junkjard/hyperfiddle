@@ -17,9 +17,9 @@
 
 
 (defn input-keyword [entity {:keys [field stage-tx!]}]
-  (let [ident (-> field :field/attribute :attribute/ident)
+  (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         value (get entity ident)
-        on-change! #(stage-tx! (tx-util/update-entity-card-one-attr entity ident %))
+        on-change! #(stage-tx! (tx-util/update-entity-attr entity attribute %))
         parse-string reader/read-string
         to-string str
         valid? #(try (let [code (reader/read-string %)]
@@ -29,16 +29,16 @@
 
 
 (defn input [entity {:keys [field stage-tx!]}]
-  (let [ident (-> field :field/attribute :attribute/ident)
+  (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         value (get entity ident)
-        on-change! #(stage-tx! (tx-util/update-entity-card-one-attr entity ident %))]
+        on-change! #(stage-tx! (tx-util/update-entity-attr entity attribute %))]
     [input/input* value on-change!]))
 
 
 (defn textarea [entity {:keys [field stage-tx!]}]
-  (let [ident (-> field :field/attribute :attribute/ident)
+  (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         value (get entity ident)
-        set-attr! #(stage-tx! (tx-util/update-entity-card-one-attr entity ident %))]
+        set-attr! #(stage-tx! (tx-util/update-entity-attr entity attribute %))]
     [textarea* {:type "text"
                 :value value
                 :on-change set-attr!}]))
@@ -138,9 +138,9 @@
 
 
 (defn instant [entity {:keys [field stage-tx!]}]
-  (let [ident (-> field :field/attribute :attribute/ident)
+  (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         value (get entity ident)
-        on-change! #(stage-tx! (tx-util/update-entity-card-one-attr entity ident %))
+        on-change! #(stage-tx! (tx-util/update-entity-attr entity attribute %))
         parse-string (fn [s]
                        (if (empty? s)
                          nil
