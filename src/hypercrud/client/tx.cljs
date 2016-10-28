@@ -10,7 +10,7 @@
                (map (fn [val] [:db/add dbid a val]) adds))))
 
 
-(defn update-entity-attr [{:keys [:db/id] :as entity} a new-val]
+(defn update-entity-card-one-attr [{:keys [:db/id] :as entity} a new-val]
   (edit-entity id a [(get entity a)] [new-val]))
 
 

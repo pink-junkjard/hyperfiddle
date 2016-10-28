@@ -36,7 +36,7 @@
   (let [ident (-> field :field/attribute :attribute/ident)
         value (get entity ident)
         form-name (str (:db/id entity) ident)
-        change! #(stage-tx! (tx-util/update-entity-attr entity ident %))]
+        change! #(stage-tx! (tx-util/update-entity-card-one-attr entity ident %))]
     [:div.value.radio-boolean {:key ident}
      ^{:key :true}
      [radio-option "True" form-name #(change! true) (= true value)]
@@ -59,7 +59,7 @@
                     ;reset the cursor before change! otherwise npe when trying to render
                     ;todo these both set the same cursor, and should be atomic
                     (reset! expanded-cur (if (= "create-new" dbid) {} nil))
-                    (stage-tx! (tx-util/update-entity-attr entity ident dbid))))
+                    (stage-tx! (tx-util/update-entity-card-one-attr entity ident dbid))))
         create-new? (some-> value tx-util/tempid?)
         show-form? (or (not= nil @expanded-cur) create-new?)]
     [:div.value {:key (option/get-key options)}

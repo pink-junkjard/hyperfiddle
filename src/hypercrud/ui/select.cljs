@@ -16,7 +16,7 @@
                                      "" nil
                                      "true" true
                                      "false" false)]
-                            (stage-tx! (tx-util/update-entity-attr entity ident v)))}]
+                            (stage-tx! (tx-util/update-entity-card-one-attr entity ident v)))}]
     [:div.value.editable-select {:key ident}
      [:span.select
       [:select props
@@ -47,7 +47,7 @@
                               ;reset the cursor before change! otherwise npe when trying to render
                               ;todo these both set the same cursor, and should be atomic
                               (reset! expanded-cur (if (= "create-new" select-value) {} nil))
-                              (stage-tx! (tx-util/update-entity-attr entity ident dbid))
+                              (stage-tx! (tx-util/update-entity-card-one-attr entity ident dbid))
                               ;; and also add our new guy to the option list (for all combos)
                               ))}
         create-new? (some-> value tx-util/tempid?)
