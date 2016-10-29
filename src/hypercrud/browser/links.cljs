@@ -1,6 +1,5 @@
 (ns hypercrud.browser.links
-  (:require [cljs.reader :as reader]
-            [hypercrud.browser.base-64-url-safe :as base64]
+  (:require [hypercrud.browser.base-64-url-safe :as base64]
             [hypercrud.client.internal :as internal]
             [hypercrud.form.q-util :as q-util]))
 
@@ -16,12 +15,7 @@
   (str (.-id field-dbid) "/field/" (.-id dbid) "/" (base64/encode (internal/transit-encode (.-conn-id dbid)))))
 
 
-(defn raw-query-link [form-id query-id params]
-  (str form-id "/query/" query-id "/" (base64/encode params)))
-
-
 (defn query-link [{:keys [:link/query :link/form :link/formula]} param-ctx]
   ;; form-dbid and query-dbid is assumed to be the editor-graph connection
   ;; the query results can be across any db, so no conn-id here
-  (raw-query-link (-> form :db/id .-id) (-> query :db/id .-id)
-                  (q-util/build-params-from-formula query formula param-ctx)))
+  (str (-> form -.dbid .-id) "/query/" (-> query .-dbid .-id) "/" (base64/encode (q-util/build-params-from-formula query formula param-ctx))))
