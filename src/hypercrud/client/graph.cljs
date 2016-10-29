@@ -36,8 +36,7 @@
       (get entity-lookup dbid)
       (do
         (assert (tx/tempid? dbid) (str "Entity not found locally: " dbid))
-        (with-meta {:db/id dbid}
-                   {:dbval dbval}))))
+        {:db/id dbid})))
 
 
   (with' [this more-statements]

@@ -69,7 +69,7 @@
    (reduce (fn [lookup [op dbid a v]]
              (update lookup dbid (fn [entity]
                                    ; problem
-                                   (let [entity (or entity (with-meta {:db/id dbid} {:dbval dbval}))]
+                                   (let [entity (or entity {:db/id dbid})]
                                      (apply-stmt-to-entity schema entity [op dbid a v])))))
            lookup
            statements)))
@@ -110,19 +110,17 @@
 
 
 (defn pulled-entity->entity [schema dbval {id :db/id :as entity}]
-  (with-meta
-    (->> (dissoc entity :db/id)                             ; if we add :db/id to the schema this step should not be necessary
-         (map (fn [[attr val]]
-                [attr (let [{:keys [:db/cardinality :db/valueType]} (get schema attr)
-                            _ (assert cardinality (str "schema attribute not found: " (pr-str attr)))]
-                        (if (= valueType :db.type/ref)
-                          (let [build-DbId #(->DbId (ref->v %) (.-conn-id dbval))]
-                            (condp = cardinality
-                              :db.cardinality/one (build-DbId val)
-                              :db.cardinality/many (set (mapv build-DbId val))))
-                          val))]))
-         (into {:db/id (->DbId id (.-conn-id dbval))}))
-    {:dbval dbval}))
+  (->> (dissoc entity :db/id)                               ; if we add :db/id to the schema this step should not be necessary
+       (map (fn [[attr val]]
+              [attr (let [{:keys [:db/cardinality :db/valueType]} (get schema attr)
+                          _ (assert cardinality (str "schema attribute not found: " (pr-str attr)))]
+                      (if (= valueType :db.type/ref)
+                        (let [build-DbId #(->DbId (ref->v %) (.-conn-id dbval))]
+                          (condp = cardinality
+                            :db.cardinality/one (build-DbId val)
+                            :db.cardinality/many (set (mapv build-DbId val))))
+                        val))]))
+       (into {:db/id (->DbId id (.-conn-id dbval))})))
 
 
 (defn pulled-tree-to-entities [schema dbval pulled-tree]
@@ -131,8 +129,7 @@
                  pulled-tree)
        (map #(pulled-entity->entity schema dbval %))
        (reduce (fn [m {dbid :db/id :as entity}]
-                 ; order is important on this merge to preserve the meta data
-                 (update m dbid #(merge entity %)))
+                 (update m dbid merge entity))
                {})))
 
 
