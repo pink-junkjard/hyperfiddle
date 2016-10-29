@@ -64,8 +64,8 @@
 
 
 (defn build-entity-lookup
-  ([schema statements dbval] (build-entity-lookup schema statements dbval {}))
-  ([schema statements dbval lookup]
+  ([schema statements] (build-entity-lookup schema statements {}))
+  ([schema statements lookup]
    (reduce (fn [lookup [op dbid a v]]
              (update lookup dbid (fn [entity]
                                    ; problem

@@ -41,7 +41,7 @@
 
   (with' [this more-statements]
     (let [new-local-statements (concat local-statements more-statements)
-          new-graph-data (tx/build-entity-lookup schema more-statements dbval entity-lookup)]
+          new-graph-data (tx/build-entity-lookup schema more-statements entity-lookup)]
       (DbGraph. schema dbval new-local-statements new-graph-data)))
 
 
@@ -59,7 +59,7 @@
     (let [lookup (->> pulled-trees
                       (map #(tx/pulled-tree-to-entities schema dbval %))
                       (apply merge-with merge))]
-      (set! entity-lookup (tx/build-entity-lookup schema local-statements dbval lookup)))
+      (set! entity-lookup (tx/build-entity-lookup schema local-statements lookup)))
     (set! dbval (->DbVal (.-conn-id dbval) t'))
     nil)
   (schema [this] schema))
