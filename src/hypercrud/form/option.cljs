@@ -117,10 +117,6 @@
    :db/cardinality :db.cardinality/one
 
    :field/query1 {:options/query ['[:find [?e ...] :where [?e :form/name]] []]}
-   ;dont say my generation
-   ;flesh out example in writing with boss pr brand mentions manipulation
-   ;maybe explain basic creation of app a bit more, made jump from facebook graph to forking models pretty quickly
-   ;use noun 'marketplace' not 'app-store'
    :field/query2 {:options/inline [{:value true :label "true"}
                                    {:value false :label "false"}
                                    {:value nil :label "--"}]}
