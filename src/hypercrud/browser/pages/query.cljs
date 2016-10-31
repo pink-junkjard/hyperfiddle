@@ -59,8 +59,7 @@
         dbval (get param-ctx :dbval)
         graph (hc/with graph @local-statements)]
     [:div
-     [:pre (pr-str q)]
-     [:pre (pr-str params)]
+     #_ [:pre (pr-str params)]                              ;; params are same information as the filled holes in this form below
      (let [schema (->> holes-by-name
                        (map (fn [[hole-name hole]]
                               [hole-name {:db/cardinality (:attribute/cardinality hole)}]))
