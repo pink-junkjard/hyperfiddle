@@ -14,7 +14,7 @@
 
 
 (defprotocol DbGraph
-  (entity [this eid])
+  (entity [this dbid])
   (with' [this more-statements]))
 
 

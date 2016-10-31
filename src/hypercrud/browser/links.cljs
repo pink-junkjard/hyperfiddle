@@ -18,4 +18,4 @@
 (defn query-link [{:keys [:link/query :link/form :link/formula]} param-ctx]
   ;; form-dbid and query-dbid is assumed to be the editor-graph connection
   ;; the query results can be across any db, so no conn-id here
-  (str (-> form -.dbid .-id) "/query/" (-> query .-dbid .-id) "/" (base64/encode (q-util/build-params-from-formula query formula param-ctx))))
+  (str (-> form .-dbid .-id) "/query/" (-> query .-dbid .-id) "/" (base64/encode (q-util/build-params-from-formula query formula param-ctx))))
