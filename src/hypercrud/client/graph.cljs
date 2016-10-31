@@ -41,8 +41,8 @@
 
   (with' [this more-statements]
     (let [new-local-statements (concat local-statements more-statements)
-          new-graph-data (tx/build-entity-lookup schema more-statements entity-lookup)]
-      (DbGraph. schema dbval new-local-statements new-graph-data)))
+          new-entity-lookup (tx/build-entity-lookup schema more-statements entity-lookup)]
+      (DbGraph. schema dbval new-local-statements new-entity-lookup)))
 
 
   IHash
