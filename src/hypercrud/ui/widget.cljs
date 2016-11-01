@@ -125,7 +125,7 @@
    {17592186045559 {:project/form {17592186045554 {:form/field {:field/attribute {}}}}}
     17592186045561 {:project/query {}}}})
 ; todo needs work with expanded-cur
-(defn master-detail [entity {:keys [expanded-cur] :as widget-args}]
+#_(defn master-detail [entity {:keys [expanded-cur] :as widget-args}]
   (let [selected-atom (r/atom nil)]
     (fn [entity widget-args]
       (master-detail* entity widget-args selected-atom))))
