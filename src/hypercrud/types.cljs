@@ -25,10 +25,6 @@
   IPrintWithWriter (-pr-writer [o writer _] (-write writer (.toString o))))
 
 
-(comment
-  (-> (DbId. 123 :tinder) (Entity. facebook-db) :propfile/name :asdf :asdf))
-
-
 (deftype DbVal [conn-id t]
   Object (toString [_] (str "#DbVal" (pr-str [conn-id t])))
   IPrintWithWriter (-pr-writer [o writer _] (-write writer (.toString o)))
