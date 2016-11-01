@@ -48,7 +48,7 @@
   (let [schema (hc-g/schema graph)
         datoms (->> (hc-g/pulled-trees-map* graph)
                     (->statements schema)
-                    (tx/replace-ids schema #(contains? nope %)))]
+                    (tx/replace-ids schema (assert "todo") #(contains? nope %)))]
     [:div
      [:h2 "Project Datoms"]
      [:pre (with-out-str (pprint/pprint datoms))]])

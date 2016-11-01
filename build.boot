@@ -5,6 +5,7 @@
                   [io.nervous/kvlt "0.1.1"]
                   [markdown-clj "0.9.88"]
                   [org.clojure/clojurescript "1.9.36"]
+                  [org.clojure/core.match "0.3.0-alpha4"]
                   [reagent "0.6.0-rc" :exclusions [cljsjs/react cljsjs/react-dom cljsjs/react-dom-server]]
 
                   [adzerk/boot-cljs "1.7.228-1" :scope "test"]
