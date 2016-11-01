@@ -29,7 +29,7 @@
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         options (option/gimme-useful-options field)
         value (get entity ident)
-        conn-id (-> entity .-dbval .-dbval .-conn-id)
+        conn-id (-> entity .-dbgraph .-dbval .-conn-id)
         temp-id! (partial hc/*temp-id!* conn-id)
         props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
                :value (cond

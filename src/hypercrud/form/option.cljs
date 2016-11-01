@@ -1,7 +1,6 @@
 (ns hypercrud.form.option
   (:require [cljs.reader :as reader]
-            [hypercrud.client.core :as hc]
-            [hypercrud.types :refer [->Entity]]))
+            [hypercrud.client.core :as hc]))
 
 
 (defprotocol IFieldOptions
@@ -35,7 +34,7 @@
     ;memoizable
     (let [q (reader/read-string (:query/value query))]
       (->> (hc/select graph (hash q) q)
-           (mapv #(->Entity % (.-dbval entity))))))
+           (mapv #(hc/entity (.-dbgraph entity) %)))))
 
   (has-holes? [this]
     (not (empty? (:query/hole query))))

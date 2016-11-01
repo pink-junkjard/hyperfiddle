@@ -53,7 +53,7 @@
         value (get entity ident)
         form (option/get-form options entity)
         form-name (or (-> form :db/id .-id) "TODO")         ;form-name in the HTML sense
-        temp-id! (partial hc/*temp-id!* (-> entity .-dbval .-dbval .-conn-id))
+        temp-id! (partial hc/*temp-id!* (-> entity .-dbgraph .-dbval .-conn-id))
         change! (fn [dbid]
                   (let [dbid (if (= "create-new" dbid) (temp-id!) dbid)]
                     ;reset the cursor before change! otherwise npe when trying to render

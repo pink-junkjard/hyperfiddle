@@ -13,7 +13,7 @@
             [hypercrud.browser.pages.query :as query]
             [hypercrud.client.core :as hc]
             [hypercrud.client.internal :as internal]
-            [hypercrud.types :refer [->DbId ->DbVal ->Entity]]))
+            [hypercrud.types :refer [->DbId ->DbVal]]))
 
 
 (defn route [page-rel-path {:keys [query-fn entity-fn field-fn index-fn dump-fn export-fn hydrate-fn transact-fn else]}]
@@ -70,22 +70,22 @@
    [:div.hc-node-view
     (route page-rel-path
            {:query-fn (fn [form-id query-id params]
-                        (let [form (->Entity (->DbId form-id (-> editor-graph .-dbval .-conn-id)) editor-graph)
-                              query (->Entity (->DbId query-id (-> editor-graph .-dbval .-conn-id)) editor-graph)]
+                        (let [form (hc/entity editor-graph (->DbId form-id (-> editor-graph .-dbval .-conn-id)))
+                              query (hc/entity editor-graph (->DbId query-id (-> editor-graph .-dbval .-conn-id)))]
                           (query/ui cur editor-graph transact! graph form query params navigate! navigate-cmp param-ctx)))
             :entity-fn (fn [dbval dbid form-id]
-                         (let [entity (->Entity dbid (hc/get-dbgraph graph dbval))
-                               form (->Entity (->DbId form-id (-> editor-graph .-dbval .-conn-id)) editor-graph)]
+                         (let [entity (hc/entity (hc/get-dbgraph graph dbval) dbid)
+                               form (hc/entity editor-graph (->DbId form-id (-> editor-graph .-dbval .-conn-id)))]
                            (entity/ui cur transact! graph entity form navigate! navigate-cmp param-ctx)))
             :field-fn (fn [dbval dbid field-id]
-                        (let [entity (->Entity dbid (hc/get-dbgraph graph dbval))
-                              field (->Entity (->DbId field-id (-> editor-graph .-dbval .-conn-id)) editor-graph)]
+                        (let [entity (hc/entity (hc/get-dbgraph graph dbval) dbid)
+                              field (hc/entity editor-graph (->DbId field-id (-> editor-graph .-dbval .-conn-id)))]
                           (field/ui cur transact! graph entity field navigate-cmp)))
             :index-fn (fn []
-                        (let [links (map #(->Entity % editor-graph) links)]
+                        (let [links (map #(hc/entity editor-graph %) links)]
                           (index/ui links navigate-cmp param-ctx)))
             :dump-fn (fn [dbid dbval]
-                       (let [entity (->Entity dbid (hc/get-dbgraph graph dbval))]
+                       (let [entity (hc/entity (hc/get-dbgraph graph dbval) dbid)]
                          (dump/ui entity)))
             :export-fn (fn [] (export-datoms/ui cur graph))
             :hydrate-fn (fn [] (hydrate/ui cur graph))
@@ -99,14 +99,14 @@
 (defn query [state editor-graph page-rel-path param-ctx]
   (route page-rel-path
          {:query-fn (fn [form-id query-id params]
-                      (let [form (->Entity (->DbId form-id (-> editor-graph .-dbval .-conn-id)) editor-graph)
-                            query (->Entity (->DbId query-id (-> editor-graph .-dbval .-conn-id)) editor-graph)]
+                      (let [form (hc/entity editor-graph (->DbId form-id (-> editor-graph .-dbval .-conn-id)))
+                            query (hc/entity editor-graph (->DbId query-id (-> editor-graph .-dbval .-conn-id)))]
                         (query/query state editor-graph query params form param-ctx)))
           :entity-fn (fn [dbval dbid form-id]
-                       (let [form (->Entity (->DbId form-id (-> editor-graph .-dbval .-conn-id)) editor-graph)]
+                       (let [form (hc/entity editor-graph (->DbId form-id (-> editor-graph .-dbval .-conn-id)))]
                          (entity/query state dbid form param-ctx)))
           :field-fn (fn [dbval dbid field-id]
-                      (let [field (->Entity (->DbId field-id (-> editor-graph .-dbval .-conn-id)) editor-graph)]
+                      (let [field (hc/entity editor-graph (->DbId field-id (-> editor-graph .-dbval .-conn-id)))]
                         (field/query state dbid field param-ctx)))
           :index-fn #(index/query)
           :dump-fn (fn [dbid dbval] (dump/query dbval dbid))

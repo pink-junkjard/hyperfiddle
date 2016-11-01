@@ -5,7 +5,7 @@
             [hypercrud.client.tx :as tx]
             [hypercrud.compile.eval :as eval]
             [hypercrud.form.option :as option]
-            [hypercrud.types :refer [->DbId ->DbVal ->Entity]]
+            [hypercrud.types :refer [->DbId ->DbVal]]
             [hypercrud.ui.auto-control :refer [auto-table-cell]]
             [reagent.core :as r]))
 
@@ -120,8 +120,8 @@
                                                               :navigate-cmp navigate-cmp
                                                               :stage-tx! stage-tx!}]))))
    (if (not= nil new-entity-dbval)
-     (let [entity (->Entity (hc/*temp-id!* (.-conn-id new-entity-dbval))
-                            (hc/get-dbgraph graph new-entity-dbval))]
+     (let [entity (hc/entity (hc/get-dbgraph graph new-entity-dbval)
+                             (hc/*temp-id!* (.-conn-id new-entity-dbval)))]
        ^{:key (hash entities)}
        [table-row entity form retract-entity! false {:expanded-cur (expanded-cur [(.-dbid entity)])
                                                      :graph graph
@@ -157,7 +157,7 @@
                                 (if retract-entity!
                                   (retract-entity! dbid)
                                   (js/alert "todo"))))
-            entities (concat entities (map #(->Entity % new-entity-dbval) @new-entities))]
+            entities (concat entities (map #(hc/entity new-entity-dbval %) @new-entities))]
         [table-managed graph entities new-entity-dbval form expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]))))
 
 

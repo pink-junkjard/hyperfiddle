@@ -73,7 +73,7 @@
             retract-entity! #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [%] []))
             add-entity! #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [] [%]))]
         [:div.value
-         [table/table-managed graph entities (-> entity .-dbval .-dbval) (option/get-form options entity) expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]
+         [table/table-managed graph entities (-> entity .-dbgraph .-dbval) (option/get-form options entity) expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]
          (let [props {:value (str @select-value-atom)
                       :on-change #(let [select-value (.-target.value %)
                                         value (js/parseInt select-value 10)]
@@ -98,7 +98,7 @@
         retract-entity! #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [%] []))
         add-entity! #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [] [%]))]
     [:div.value
-     [table/table-managed graph entities (-> entity .-dbval .-dbval) (option/get-form options entity) expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]]))
+     [table/table-managed graph entities (-> entity .-dbgraph .-dbval) (option/get-form options entity) expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]]))
 
 
 (defn multi-select-ref [entity {:keys [field stage-tx!] :as widget-args}]
@@ -107,7 +107,7 @@
 
 
 (defn multi-select-ref-component [entity {:keys [field stage-tx!] :as widget-args}]
-  (let [temp-id! (partial hc/*temp-id!* (-> entity .-dbval .-dbval :conn-id)) ; bound to fix render bug
+  (let [temp-id! (partial hc/*temp-id!* (-> entity .-dbgraph .-dbval :conn-id)) ; bound to fix render bug
         add-item! #(stage-tx! (tx-util/edit-entity (:db/id entity) (-> field :field/attribute :attribute/ident) [] [(temp-id!)]))]
     [multi-select* multi-select-markup entity add-item! widget-args])) ;add new entity to set
 

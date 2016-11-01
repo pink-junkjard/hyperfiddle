@@ -3,7 +3,6 @@
             [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx-util]
             [hypercrud.form.option :as option]
-            [hypercrud.types :refer [->Entity]]
             [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.form :as form]))
 
@@ -12,7 +11,7 @@
   (let [ident (-> field :field/attribute :attribute/ident)
         options (option/gimme-useful-options field)
         detail-renderer (or detail-renderer form/form)
-        temp-id! (partial hc/*temp-id!* (-> entity .-dbval .-dbval .-conn-id))
+        temp-id! (partial hc/*temp-id!* (-> entity .-dbgraph .-dbval .-conn-id))
         li (fn [key label is-selected? on-click & retract]
              [:li {:key key :class (if is-selected? "selected")}
               retract
@@ -39,7 +38,7 @@
                                []))))]
      (if (nil? @selected-cur)
        [:span "Select the " (string/capitalize (name ident))]
-       (let [selected-entity (->Entity @selected-cur (.-dbval entity))]
+       (let [selected-entity (hc/entity (.-dbgraph entity) @selected-cur)]
          ^{:key (hash @selected-cur)}
          [detail-renderer graph selected-entity
           (option/get-form options entity)

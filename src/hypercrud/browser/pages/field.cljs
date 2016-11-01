@@ -3,14 +3,13 @@
             [hypercrud.client.tx :as tx-util]
             [hypercrud.form.q-util :as q-util]
             [hypercrud.form.util :as form-util]
-            [hypercrud.types :refer [->Entity]]
             [hypercrud.ui.auto-control :refer [auto-control]]))
 
 
 (defn ui [cur transact! graph entity field navigate-cmp]
   (let [local-statements (cur [:statements] [])
         graph (hc/with graph @local-statements)
-        entity (->Entity (.-dbid entity) (hc/get-dbgraph graph (-> entity .-dbval .-dbval)))
+        entity (hc/entity (hc/get-dbgraph graph (-> entity .-dbgraph .-dbval)) (.-dbid entity))
         stage-tx! #(swap! local-statements tx-util/into-tx %)
         expanded-cur (cur [:expanded (-> field :field/attribute :attribute/ident)]
                           ; hacky but we currently only want expanded edit forms where we draw tables

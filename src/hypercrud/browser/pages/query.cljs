@@ -8,23 +8,32 @@
             [hypercrud.compile.eval :as eval]
             [hypercrud.form.q-util :as q-util]
             [hypercrud.form.util :as form-util]
-            [hypercrud.types :refer [->DbId ->Entity]]
+            [hypercrud.types :refer [->DbId ->DbVal ->Entity]]
             [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.form :as form]
-            [hypercrud.ui.table :as table]))
+            [hypercrud.ui.table :as table]
+            [hypercrud.client.graph :as hc-g]
+            [hypercrud.client.tx :as tx]))
 
 
-(defn initial-entity [q params]
-  (let [hole-names (q-util/parse-holes q)]
-    (-> (zipmap hole-names params)                          ;todo touch up how params are sent over the wire
-        (assoc :db/id -1))))
+(defn initial-entity [q holes-by-name params]
+  (let [schema (->> holes-by-name
+                    (map (fn [[hole-name hole]]
+                           [hole-name {:db/cardinality (:attribute/cardinality hole)}]))
+                    (into {}))
+        hole-names (q-util/parse-holes q)
+        dbid (->DbId -1 :query-hole-form)
+        dbval (->DbVal :query-hole-form nil)
+        data (-> (zipmap hole-names params)
+                 (assoc :db/id dbid))]
+    (->Entity (hc-g/->DbGraph schema dbval nil nil) dbid data)))
 
 
 (defn show-results? [hole-names param-values]
   (set/subset? (set hole-names) (set (keys (into {} (remove (comp nil? val) param-values))))))
 
 
-;; Why is this a hc/with - a fake entityt?
+;; Why is this a hc/with - a fake entity?
 ;; Because we're faking a dynamic formfield entity, which needs to be attached to the real editor graph
 (defn holes->field-tx [editor-graph form-dbid hole-names holes-by-name]
   ;todo these ids are scary
@@ -54,29 +63,22 @@
         holes-by-name (->> (:query/hole query)
                            (map (juxt :hole/name identity))
                            (into {}))
-        entity-cur (cur [:holes] (initial-entity q params)) ;todo this needs to be hc/with
+        entity-cur (cur [:holes] (initial-entity q hole-names params)) ;todo this needs to be hc/with
         entity @entity-cur
         dbval (get param-ctx :dbval)
         graph (hc/with graph @local-statements)]
     [:div
-     #_ [:pre (pr-str params)]                              ;; params are same information as the filled holes in this form below
-     (let [schema (->> holes-by-name
-                       (map (fn [[hole-name hole]]
-                              [hole-name {:db/cardinality (:attribute/cardinality hole)}]))
-                       (into {}))
-           stage-tx! (fn [tx]
-                       (reset! entity-cur (reduce
-                                            #(tx-util/apply-stmt-to-entity schema %1 %2)
-                                            entity
-                                            tx)))]
-       (let [holes-form-dbid (->DbId -1 (-> editor-graph .-dbval .-conn-id))
-             editor-graph (hc/with' editor-graph (holes->field-tx editor-graph holes-form-dbid hole-names holes-by-name))
-             holes-form (->Entity holes-form-dbid editor-graph)]
-         [form/form graph entity holes-form expanded-cur stage-tx! navigate-cmp]))
+     #_[:pre (pr-str params)]                               ;; params are same information as the filled holes in this form below
+     (let [stage-tx! (fn [tx]
+                       (reset! entity-cur (reduce tx/merge-entity-and-stmt entity tx)))
+           holes-form-dbid (->DbId -1 (-> editor-graph .-dbval .-conn-id))
+           editor-graph (hc/with' editor-graph (holes->field-tx editor-graph holes-form-dbid hole-names holes-by-name))
+           holes-form (hc/entity editor-graph holes-form-dbid)]
+       [form/form graph entity holes-form expanded-cur stage-tx! navigate-cmp])
      [:hr]
-     (if (show-results? hole-names entity)                  ;todo what if we have a user hole?
+     (if (show-results? hole-names (-> entity .-data (dissoc :db/id))) ;todo what if we have a user hole?
        (let [entities (->> (hc/select graph ::table/query)
-                           (map #(->Entity % (hc/get-dbgraph graph dbval))))]
+                           (map #(hc/entity (hc/get-dbgraph graph dbval) %)))]
          (if (and (:query/single-result-as-entity? query) (= 1 (count entities)))
            [entity/ui cur transact! graph (first entities) table-form navigate! navigate-cmp]
            [:div
@@ -112,7 +114,8 @@
         ;; this is the new "param-ctx" - it is different - we already have the overridden
         ;; values, there is no need to eval the formulas in a ctx to get the values.
         param-values (-> (or (get state :holes)
-                             (initial-entity q params))
+                             (initial-entity q hole-names params))
+                         .-data
                          (dissoc :db/id))]
     (merge
       ;no fields are isComponent true or expanded, so we don't need to pass in a forms map
@@ -121,7 +124,7 @@
                                (into {}))
             holes-form-dbid (->DbId -1 (-> editor-graph .-dbval .-conn-id))
             editor-graph (hc/with' editor-graph (holes->field-tx editor-graph holes-form-dbid hole-names holes-by-name))
-            holes-form (->Entity holes-form-dbid editor-graph)]
+            holes-form (hc/entity editor-graph holes-form-dbid)]
         (form-util/form-option-queries holes-form nil q-util/build-params-from-formula param-ctx))
 
       (if (show-results? hole-names param-values)

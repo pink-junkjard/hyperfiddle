@@ -4,7 +4,6 @@
             [hypercrud.client.tx :as tx-util]
             [hypercrud.form.q-util :as q-util]
             [hypercrud.ui.form :as form]
-            [hypercrud.types :refer [->Entity]]
             [promesa.core :as p]))
 
 
@@ -12,9 +11,9 @@
   "hypercrud values just get a form, with ::update and ::delete."
   (let [local-statements (cur [:statements] [])
         expanded-cur (cur [:expanded] {})                   ; {:community/neighborhood {:neighborhood/district {:district/region {}}}}
-        dbval (-> entity .-dbval .-dbval)
+        dbval (-> entity .-dbgraph .-dbval)
         graph (hc/with graph @local-statements)
-        entity (->Entity (.-dbid entity) (hc/get-dbgraph graph dbval))
+        entity (hc/entity (hc/get-dbgraph graph dbval) (.-dbid entity))
         stage-tx! #(swap! local-statements tx-util/into-tx %)]
     [:div
      [form/form graph entity form expanded-cur stage-tx! navigate-cmp]

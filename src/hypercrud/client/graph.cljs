@@ -4,7 +4,7 @@
             [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx]
             [hypercrud.util :as util]
-            [hypercrud.types :refer [->DbId ->Entity ->DbVal]]))
+            [hypercrud.types :refer [->DbId ->DbVal ->Entity]]))
 
 
 (defprotocol DbGraphPrivate
@@ -36,12 +36,12 @@
       (get entity-lookup dbid)
       (do
         (assert (tx/tempid? dbid) (str "Entity not found locally: " dbid))
-        {:db/id dbid})))
+        (->Entity this dbid {:db/id dbid}))))
 
 
   (with' [this more-statements]
     (let [new-local-statements (concat local-statements more-statements)
-          new-entity-lookup (tx/build-entity-lookup schema more-statements entity-lookup)]
+          new-entity-lookup (tx/build-entity-lookup this more-statements entity-lookup)]
       (DbGraph. schema dbval new-local-statements new-entity-lookup)))
 
 
@@ -56,10 +56,8 @@
 
   DbGraphPrivate
   (set-db-graph-state! [this pulled-trees t']
-    (let [lookup (->> pulled-trees
-                      (map #(tx/pulled-tree-to-entities schema dbval %))
-                      (apply merge-with merge))]
-      (set! entity-lookup (tx/build-entity-lookup schema local-statements lookup)))
+    (let [lookup (tx/pulled-tree-to-entity-lookup this (.-conn-id dbval) pulled-trees)]
+      (set! entity-lookup (tx/build-entity-lookup this local-statements lookup)))
     (set! dbval (->DbVal (.-conn-id dbval) t'))
     nil)
   (schema [this] schema))
