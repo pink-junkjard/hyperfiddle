@@ -4,10 +4,9 @@
 
 
 (deftype DbId [id conn-id]
-  ;Object (toString [this] (str "#DbId" (pr-str [id conn-id])))
+  Object (toString [_] (str "#DbId" (pr-str [id conn-id])))
+  IPrintWithWriter (-pr-writer [o writer _] (-write writer (.toString o)))
   IComparable (-compare [x y] (compare (.-id x) (.-id y)))
-  IPrintWithWriter (-pr-writer [_ writer _]
-                     (-write writer (str "#DbId" (pr-str [id conn-id]))))
   IHash (-hash [this] (hash [id conn-id]))
   IEquiv (-equiv [this other] (= (hash this) (hash other))))
 
@@ -21,14 +20,9 @@
 
   IHash (-hash [this] (hash [dbid dbgraph]))
   IEquiv (-equiv [this other] (= (hash this) (hash other)))
-
-  IPrintWithWriter (-pr-writer [_ writer _]
-                     (let [data (util/map-values (fn [v]
-                                                   (if (instance? Entity v)
-                                                     (.-dbid v)
-                                                     v))
-                                                 data)]
-                       (-write writer (str "#Entity" (pr-str [dbid data]))))))
+  Object (toString [_] (let [data' (util/map-values (fn [v] (if (instance? Entity v) (.-dbid v) v)) data)]
+                         (str "#Entity" (pr-str [dbid data']))))
+  IPrintWithWriter (-pr-writer [o writer _] (-write writer (.toString o))))
 
 
 (comment
@@ -36,9 +30,8 @@
 
 
 (deftype DbVal [conn-id t]
-  ;Object (toString [this] (str "#DbVal" (pr-str [conn-id t])))
-  IPrintWithWriter (-pr-writer [_ writer _]
-                     (-write writer (str "#DbVal" (pr-str [conn-id t]))))
+  Object (toString [_] (str "#DbVal" (pr-str [conn-id t])))
+  IPrintWithWriter (-pr-writer [o writer _] (-write writer (.toString o)))
   IHash (-hash [this] (hash [conn-id t]))
   IEquiv (-equiv [this other] (= (hash this) (hash other))))
 
