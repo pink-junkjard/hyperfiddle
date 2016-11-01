@@ -19,7 +19,7 @@
              [:li {:key (hash dbid) :class (if is-selected? "selected")}
               retract
               ; todo do we need to support entities across databases?
-              [navigate-cmp {:href (.-id dbid)} label]])]
+              [navigate-cmp {:href (str (.-id dbid) "/")} label]])]
     [:div.master-detail
      [:ul (doall (-> (->> (get entity ident)
                           (filter (or filter-entities (constantly true)))
