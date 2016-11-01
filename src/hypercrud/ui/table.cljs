@@ -157,7 +157,7 @@
                                 (if retract-entity!
                                   (retract-entity! dbid)
                                   (js/alert "todo"))))
-            entities (concat entities (map #(hc/entity new-entity-dbval %) @new-entities))]
+            entities (concat entities (map #(hc/entity (hc/get-dbgraph graph new-entity-dbval) %) @new-entities))]
         [table-managed graph entities new-entity-dbval form expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]))))
 
 
