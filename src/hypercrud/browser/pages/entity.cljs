@@ -7,23 +7,20 @@
             [promesa.core :as p]))
 
 
-(defn ui [cur transact! graph entity form navigate! navigate-cmp param-ctx]
+(defn ui [cur stage-tx! graph entity form navigate! navigate-cmp param-ctx]
   "hypercrud values just get a form, with ::update and ::delete."
-  (let [local-statements (cur [:statements] [])
-        expanded-cur (cur [:expanded] {})                   ; {:community/neighborhood {:neighborhood/district {:district/region {}}}}
+  (let [expanded-cur (cur [:expanded] {})                   ; {:community/neighborhood {:neighborhood/district {:district/region {}}}}
         dbval (-> entity .-dbgraph .-dbval)
-        graph (hc/with graph @local-statements)
-        entity (hc/entity (hc/get-dbgraph graph dbval) (.-dbid entity))
-        stage-tx! #(swap! local-statements tx-util/into-tx %)]
+        entity (hc/entity (hc/get-dbgraph graph dbval) (.-dbid entity))]
     [:div
      [form/form graph entity form expanded-cur stage-tx! navigate-cmp]
-     [:button {:on-click #(-> (transact! @local-statements)
-                              (p/then (fn [{:keys [tempids]}]
-                                        (if (tx-util/tempid? (.-dbid entity))
-                                          (navigate! (str "./" (get tempids (.-dbid entity))))))))
-               :disabled (empty? @local-statements)}
+     #_[:button {:on-click #(-> (transact! @local-statements)
+                                (p/then (fn [{:keys [tempids]}]
+                                          (if (tx-util/tempid? (.-dbid entity))
+                                            (navigate! (str "./" (get tempids (.-dbid entity))))))))
+                 :disabled (empty? @local-statements)}
       (if (tx-util/tempid? (.-dbid entity)) "Create" "Update")]
-     [:button {:on-click #(-> (transact! [[:db.fn/retractEntity (.-dbid entity)]])
+     #_[:button {:on-click #(-> (transact! [[:db.fn/retractEntity (.-dbid entity)]])
                               (p/then (fn [_] (navigate! (str "../../../")))))
                :disabled (tx-util/tempid? (.-dbid entity))}
       "Delete"]

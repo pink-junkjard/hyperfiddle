@@ -57,30 +57,30 @@
       (and (= (first path-params) "hydrate") (= 1 (count path-params)))
       (hydrate-fn)
 
-      (and (= (first path-params) "transact") (= 1 (count path-params)))
-      (transact-fn)
+      #_(and (= (first path-params) "transact") (= 1 (count path-params)))
+      #_(transact-fn)
 
       (and (= (first path-params) "") (= 1 (count path-params)))
       (index-fn)
       :else (else))))
 
 
-(defn ui [cur editor-graph links transact! graph page-rel-path navigate! navigate-cmp param-ctx]
+(defn ui [cur editor-graph links stage-tx! graph page-rel-path navigate! navigate-cmp param-ctx]
   [:div
    [:div.hc-node-view
     (route page-rel-path
            {:query-fn (fn [form-id query-id params]
                         (let [form (hc/entity editor-graph (->DbId form-id (-> editor-graph .-dbval .-conn-id)))
                               query (hc/entity editor-graph (->DbId query-id (-> editor-graph .-dbval .-conn-id)))]
-                          (query/ui cur editor-graph transact! graph form query params navigate! navigate-cmp param-ctx)))
+                          (query/ui cur editor-graph stage-tx! graph form query params navigate! navigate-cmp param-ctx)))
             :entity-fn (fn [dbval dbid form-id]
                          (let [entity (hc/entity (hc/get-dbgraph graph dbval) dbid)
                                form (hc/entity editor-graph (->DbId form-id (-> editor-graph .-dbval .-conn-id)))]
-                           (entity/ui cur transact! graph entity form navigate! navigate-cmp param-ctx)))
+                           (entity/ui cur stage-tx! graph entity form navigate! navigate-cmp param-ctx)))
             :field-fn (fn [dbval dbid field-id]
                         (let [entity (hc/entity (hc/get-dbgraph graph dbval) dbid)
                               field (hc/entity editor-graph (->DbId field-id (-> editor-graph .-dbval .-conn-id)))]
-                          (field/ui cur transact! graph entity field navigate-cmp)))
+                          (field/ui cur stage-tx! graph entity field navigate-cmp)))
             :index-fn (fn []
                         (let [links (map #(hc/entity editor-graph %) links)]
                           (index/ui links navigate-cmp param-ctx)))
@@ -89,7 +89,7 @@
                          (dump/ui entity)))
             :export-fn (fn [] (export-datoms/ui cur graph))
             :hydrate-fn (fn [] (hydrate/ui cur graph))
-            :transact-fn (fn [] (transact/ui cur transact! graph))
+            ;:transact-fn (fn [] (transact/ui cur transact! graph))
             :else (constantly [:div "no route for: " page-rel-path])})]
    #_[:pre (pr-str param-ctx)]
    #_[:hr]
@@ -112,5 +112,5 @@
           :dump-fn (fn [dbid dbval] (dump/query dbval dbid))
           :export-fn (fn [] (export-datoms/query state (.-schema editor-graph) param-ctx))
           :hydrate-fn (fn [] (hydrate/query state))
-          :transact-fn (fn [] (transact/query))
+          ;:transact-fn (fn [] (transact/query))
           :else (constantly {})}))

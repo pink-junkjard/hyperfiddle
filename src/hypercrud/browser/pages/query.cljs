@@ -13,7 +13,8 @@
             [hypercrud.ui.form :as form]
             [hypercrud.ui.table :as table]
             [hypercrud.client.graph :as hc-g]
-            [hypercrud.client.tx :as tx]))
+            [hypercrud.client.tx :as tx]
+            [cljs.pprint :as pprint]))
 
 
 (defn initial-entity [q holes-by-name params]
@@ -55,18 +56,16 @@
                     [:db/add form-dbid :form/field field-dbid]])))))
 
 
-(defn ui [cur editor-graph transact! graph table-form query params navigate! navigate-cmp param-ctx]
+(defn ui [cur editor-graph stage-tx! graph table-form query params navigate! navigate-cmp param-ctx]
   (let [q (reader/read-string (:query/value query))
         hole-names (q-util/parse-holes q)
-        local-statements (cur [:statements] [])
         expanded-cur (cur [:expanded] {})
         holes-by-name (->> (:query/hole query)
                            (map (juxt :hole/name identity))
                            (into {}))
         entity-cur (cur [:holes] (initial-entity q hole-names params)) ;todo this needs to be hc/with
         entity @entity-cur
-        dbval (get param-ctx :dbval)
-        graph (hc/with graph @local-statements)]
+        dbval (get param-ctx :dbval)]
     [:div
      #_[:pre (pr-str params)]                               ;; params are same information as the filled holes in this form below
      (let [stage-tx! (fn [tx]
@@ -80,10 +79,9 @@
        (let [entities (->> (hc/select graph ::table/query)
                            (map #(hc/entity (hc/get-dbgraph graph dbval) %)))]
          (if (and (:query/single-result-as-entity? query) (= 1 (count entities)))
-           [entity/ui cur transact! graph (first entities) table-form navigate! navigate-cmp]
+           [entity/ui cur stage-tx! graph (first entities) table-form navigate! navigate-cmp]
            [:div
-            (let [row-renderer-code (:form/row-renderer table-form)
-                  stage-tx! #(swap! local-statements tx-util/into-tx %)]
+            (let [row-renderer-code (:form/row-renderer table-form)]
               (if (empty? row-renderer-code)
                 [table/table graph entities table-form nil expanded-cur stage-tx! navigate-cmp nil]
                 (let [result (eval/uate (str "(identity " row-renderer-code ")"))
@@ -104,8 +102,7 @@
                                     [:li {:key (hash (:db/id entity))}
                                      (try
                                        (row-renderer graph link-fn entity)
-                                       (catch :default e (pr-str e)))]))))]]))))
-            [:button {:key 1 :on-click #(transact! @local-statements)} "Save"]])))]))
+                                       (catch :default e (pr-str e)))]))))]]))))])))]))
 
 
 (defn query [state editor-graph query params table-form param-ctx]

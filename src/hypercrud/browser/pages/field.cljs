@@ -6,11 +6,8 @@
             [hypercrud.ui.auto-control :refer [auto-control]]))
 
 
-(defn ui [cur transact! graph entity field navigate-cmp]
-  (let [local-statements (cur [:statements] [])
-        graph (hc/with graph @local-statements)
-        entity (hc/entity (hc/get-dbgraph graph (-> entity .-dbgraph .-dbval)) (.-dbid entity))
-        stage-tx! #(swap! local-statements tx-util/into-tx %)
+(defn ui [cur stage-tx! graph entity field navigate-cmp]
+  (let [entity (hc/entity (hc/get-dbgraph graph (-> entity .-dbgraph .-dbval)) (.-dbid entity))
         expanded-cur (cur [:expanded (-> field :field/attribute :attribute/ident)]
                           ; hacky but we currently only want expanded edit forms where we draw tables
                           (if (= :db.cardinality/many (:cardinality field)) {} nil))]
@@ -19,10 +16,7 @@
                            :field field
                            :graph graph
                            :navigate-cmp navigate-cmp
-                           :stage-tx! stage-tx!}]
-     [:button {:on-click #(transact! @local-statements)
-               :disabled (empty? @local-statements)}
-      "Update"]]))
+                           :stage-tx! stage-tx!}]]))
 
 
 (defn query [state dbid field param-ctx]
