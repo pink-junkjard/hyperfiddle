@@ -17,12 +17,13 @@
   (let [{:keys [old new]} (let [old-val (get entity ident)]
                             (if (= (:db/ident valueType) :db.type/ref)
                               (condp = (:db/ident cardinality)
-                                :db.cardinality/one {:old [(some-> old-val .-dbid)]
+                                :db.cardinality/one {:old (let [old-val (some-> old-val .-dbid)]
+                                                            (if (nil? old-val) [] [old-val]))
                                                      :new [new-val]}
                                 :db.cardinality/many {:old (map #(.-dbid %) old-val)
                                                       :new new-val})
                               (condp = (:db/ident cardinality)
-                                :db.cardinality/one {:old [old-val]
+                                :db.cardinality/one {:old (if (nil? old-val) [] [old-val])
                                                      :new [new-val]}
                                 :db.cardinality/many {:old old-val
                                                       :new new-val})))]
@@ -56,7 +57,7 @@
 (defn get-stable-entity-reference! [dbgraph lookup-transient dbid]
   (if-let [entity (get lookup-transient dbid)]
     [lookup-transient entity]
-    (let [entity (->Entity dbgraph dbid {:db/id dbid})]
+    (let [entity (->Entity dbgraph dbid {:db/id dbid} {})]
       [(assoc! lookup-transient dbid entity) entity])))
 
 
@@ -79,14 +80,14 @@
                            (assert (not= nil ent-v) (str "Unable to find entity " (pr-str v)))
                            ent-v)
             v)]
-    (->Entity (.-dbgraph entity) (.-dbid entity) (apply-stmt-to-data attribute (.-data entity) [op e a v]))))
+    (->Entity (.-dbgraph entity) (.-dbid entity) (apply-stmt-to-data attribute (.-data entity) [op e a v]) {})))
 
 
 (defn apply-stmt-to-entity! [dbgraph lookup-transient entity [op e a v]]
   (let [attribute (get (.-schema dbgraph) a)
-        [lookup-transient v] (condp = (:db/valueType attribute)
-                               :db.type/ref (get-stable-entity-reference! dbgraph lookup-transient v)
-                               [lookup-transient v])
+        lookup-transient (condp = (:db/valueType attribute)
+                           :db.type/ref (first (get-stable-entity-reference! dbgraph lookup-transient v))
+                           lookup-transient)
         data (apply-stmt-to-data attribute (.-data entity) [op e a v])]
     (aset entity "data" data)
     lookup-transient))

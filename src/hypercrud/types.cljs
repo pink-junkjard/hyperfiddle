@@ -1,5 +1,7 @@
 (ns hypercrud.types
-  (:require [cljs.reader :as reader]
+  (:require [cljs.core.match :refer-macros [match]]
+            [cljs.reader :as reader]
+            [hypercrud.client.core :as hc]
             [hypercrud.util :as util]))
 
 
@@ -13,12 +15,34 @@
 (def read-DbId #(apply ->DbId %))
 
 
-(deftype Entity [dbgraph dbid ^:mutable data]
-  ILookup
-  (-lookup [_ k] (get data k))
-  (-lookup [_ k not-found] (get data k not-found))
+(defprotocol IEntity
+  (clear! [o dbgraph]))
 
-  IHash (-hash [this] (hash [dbid dbgraph]))
+
+(deftype Entity [^:mutable dbgraph dbid ^:mutable data ^:mutable memoize-thing]
+  IEntity
+  (clear! [o dbgraph']
+    (set! dbgraph dbgraph')
+    (set! memoize-thing {})
+    o)
+
+
+  ILookup
+  (-lookup [_ k]
+    (if-let [v (get memoize-thing k)]
+      v
+      (let [v (get data k)
+            {:keys [:db/valueType :db/cardinality]} (-> dbgraph .-schema (get k))
+            v (if (and (not= nil v) (= :db.type/ref valueType))
+                (condp = cardinality
+                  :db.cardinality/one (hc/entity dbgraph v)
+                  :db.cardinality/many (set (map #(hc/entity dbgraph %) v)))
+                v)]
+        (set! memoize-thing (assoc memoize-thing k v))
+        v)))
+  (-lookup [_ k not-found] (assert false "todo") #_(get data k not-found))
+
+  IHash (-hash [this] (hash [dbid data]))
   IEquiv (-equiv [this other] (= (hash this) (hash other)))
   Object (toString [_] (let [data' (util/map-values (fn [v] (if (instance? Entity v) (.-dbid v) v)) data)]
                          (str "#Entity" (pr-str [dbid data']))))

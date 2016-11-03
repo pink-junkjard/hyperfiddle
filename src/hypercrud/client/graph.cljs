@@ -3,8 +3,8 @@
             [goog.Uri]
             [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx]
-            [hypercrud.util :as util]
-            [hypercrud.types :refer [->DbId ->DbVal ->Entity]]))
+            [hypercrud.types :as types :refer [->DbId ->DbVal ->Entity]]
+            [hypercrud.util :as util]))
 
 
 (defprotocol DbGraphPrivate
@@ -36,13 +36,17 @@
       (get entity-lookup dbid)
       (do
         (assert (tx/tempid? dbid) (str "Entity not found locally: " dbid))
-        (->Entity this dbid {:db/id dbid}))))
+        (->Entity this dbid {:db/id dbid} {}))))
 
 
   (with' [this more-statements]
     (let [new-local-statements (concat local-statements more-statements)
-          new-entity-lookup (tx/build-entity-lookup this more-statements entity-lookup)]
-      (DbGraph. schema dbval new-local-statements new-entity-lookup)))
+          new-graph (DbGraph. schema dbval new-local-statements nil)
+          new-entity-lookup (->> entity-lookup
+                                 (util/map-values #(types/clear! % new-graph))
+                                 (tx/build-entity-lookup new-graph more-statements))]
+      (aset new-graph "entity_lookup" new-entity-lookup)
+      new-graph))
 
 
   IHash
