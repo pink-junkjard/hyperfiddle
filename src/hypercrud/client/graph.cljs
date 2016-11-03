@@ -8,8 +8,7 @@
 
 
 (defprotocol DbGraphPrivate
-  (set-db-graph-state! [this pulled-trees t'])
-  (schema [this]))
+  (set-db-graph-state! [this pulled-trees t']))
 
 
 (defprotocol SuperGraphPrivate
@@ -63,8 +62,7 @@
     (let [lookup (tx/pulled-tree-to-entity-lookup this (.-conn-id dbval) pulled-trees)]
       (set! entity-lookup (tx/build-entity-lookup this local-statements lookup)))
     (set! dbval (->DbVal (.-conn-id dbval) t'))
-    nil)
-  (schema [this] schema))
+    nil))
 
 
 (deftype SuperGraph [named-queries graphs ^:mutable graph-data]
