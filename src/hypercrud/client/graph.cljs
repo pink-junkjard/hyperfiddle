@@ -147,6 +147,6 @@
 (defn superGraph [schemas named-queries]
   (let [graphs (->> schemas
                     (map (fn [[dbval schema]]
-                           [dbval (->DbGraph schema dbval nil nil)]))
+                           [dbval (->DbGraph schema dbval nil {})]))
                     (into {}))]
     (->SuperGraph named-queries graphs nil)))

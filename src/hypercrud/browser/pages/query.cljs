@@ -27,7 +27,7 @@
         dbval (->DbVal :query-hole-form nil)
         data (-> (zipmap hole-names params)
                  (assoc :db/id dbid))]
-    (->Entity (hc-g/->DbGraph schema dbval nil nil) dbid data)))
+    (->Entity (hc-g/->DbGraph schema dbval nil {}) dbid data)))
 
 
 (defn show-results? [hole-names param-values]
