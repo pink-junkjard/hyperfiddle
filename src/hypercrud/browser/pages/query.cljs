@@ -38,7 +38,7 @@
   ;todo these ids are scary
   (->> hole-names
        (map #(get holes-by-name %))
-       (mapcat (fn [{:keys [:hole/name :hole/formula
+       (mapcat (fn [{:keys [:hole/name
                             :field/prompt :field/query :field/label-prop
                             :attribute/valueType :attribute/cardinality] :as hole}]
                  (let [field-dbid (->DbId (+ 5555555 (-> hole :db/id .-id)) (-> editor-graph .-dbval .-conn-id))
@@ -50,7 +50,6 @@
                     [:db/add field-dbid :field/query (.-dbid query)]
                     [:db/add field-dbid :field/label-prop label-prop]
                     [:db/add field-dbid :field/attribute attr-dbid]
-                    [:db/add field-dbid :link/formula formula]
                     [:db/add form-dbid :form/field field-dbid]])))))
 
 
