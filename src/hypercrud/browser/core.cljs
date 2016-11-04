@@ -42,22 +42,20 @@
 
 
 (defn ui [cur editor-graph stage-tx! graph page-rel-path navigate! navigate-cmp param-ctx]
-  [:div
-   [:div.hc-node-view
-    (route page-rel-path
-           {:query-fn (fn [form-id query-id params]
-                        (let [form (hc/entity editor-graph (->DbId form-id (-> editor-graph .-dbval .-conn-id)))
-                              query (hc/entity editor-graph (->DbId query-id (-> editor-graph .-dbval .-conn-id)))]
-                          (query/ui cur editor-graph stage-tx! graph form query params navigate! navigate-cmp param-ctx)))
-            :entity-fn (fn [dbval dbid form-id]
-                         (let [entity (hc/entity (hc/get-dbgraph graph dbval) dbid)
-                               form (hc/entity editor-graph (->DbId form-id (-> editor-graph .-dbval .-conn-id)))]
-                           (entity/ui cur stage-tx! graph entity form navigate! navigate-cmp param-ctx)))
-            :field-fn (fn [dbval dbid field-id]
-                        (let [entity (hc/entity (hc/get-dbgraph graph dbval) dbid)
-                              field (hc/entity editor-graph (->DbId field-id (-> editor-graph .-dbval .-conn-id)))]
-                          (field/ui cur stage-tx! graph entity field navigate-cmp)))
-            :else (constantly [:div "no route for: " page-rel-path])})]])
+  (route page-rel-path
+         {:query-fn (fn [form-id query-id params]
+                      (let [form (hc/entity editor-graph (->DbId form-id (-> editor-graph .-dbval .-conn-id)))
+                            query (hc/entity editor-graph (->DbId query-id (-> editor-graph .-dbval .-conn-id)))]
+                        (query/ui cur editor-graph stage-tx! graph form query params navigate! navigate-cmp param-ctx)))
+          :entity-fn (fn [dbval dbid form-id]
+                       (let [entity (hc/entity (hc/get-dbgraph graph dbval) dbid)
+                             form (hc/entity editor-graph (->DbId form-id (-> editor-graph .-dbval .-conn-id)))]
+                         (entity/ui cur stage-tx! graph entity form navigate! navigate-cmp param-ctx)))
+          :field-fn (fn [dbval dbid field-id]
+                      (let [entity (hc/entity (hc/get-dbgraph graph dbval) dbid)
+                            field (hc/entity editor-graph (->DbId field-id (-> editor-graph .-dbval .-conn-id)))]
+                        (field/ui cur stage-tx! graph entity field navigate-cmp)))
+          :else (constantly [:div "no route for: " page-rel-path])}))
 
 
 (defn query [state editor-graph page-rel-path param-ctx]

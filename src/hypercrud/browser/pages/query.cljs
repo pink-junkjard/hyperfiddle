@@ -4,17 +4,15 @@
             [hypercrud.browser.links :as links]
             [hypercrud.browser.pages.entity :as entity]
             [hypercrud.client.core :as hc]
-            [hypercrud.client.tx :as tx-util]
+            [hypercrud.client.graph :as hc-g]
+            [hypercrud.client.tx :as tx]
             [hypercrud.compile.eval :as eval]
             [hypercrud.form.q-util :as q-util]
             [hypercrud.form.util :as form-util]
             [hypercrud.types :refer [->DbId ->DbVal ->Entity]]
             [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.form :as form]
-            [hypercrud.ui.table :as table]
-            [hypercrud.client.graph :as hc-g]
-            [hypercrud.client.tx :as tx]
-            [cljs.pprint :as pprint]))
+            [hypercrud.ui.table :as table]))
 
 
 (defn initial-entity [q holes-by-name params]
