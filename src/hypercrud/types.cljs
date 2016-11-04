@@ -15,18 +15,7 @@
 (def read-DbId #(apply ->DbId %))
 
 
-(defprotocol IEntity
-  (clear! [o dbgraph]))
-
-
-(deftype Entity [^:mutable dbgraph dbid ^:mutable data ^:mutable memoize-thing]
-  IEntity
-  (clear! [o dbgraph']
-    (set! dbgraph dbgraph')
-    (set! memoize-thing {})
-    o)
-
-
+(deftype Entity [dbgraph dbid data ^:mutable memoize-thing]
   ILookup
   (-lookup [_ k]
     (if-let [v (get memoize-thing k)]
@@ -44,8 +33,7 @@
 
   IHash (-hash [this] (hash [dbid data]))
   IEquiv (-equiv [this other] (= (hash this) (hash other)))
-  Object (toString [_] (let [data' (util/map-values (fn [v] (if (instance? Entity v) (.-dbid v) v)) data)]
-                         (str "#Entity" (pr-str [dbid data']))))
+  Object (toString [_] (str "#Entity" (pr-str [dbid data])))
   IPrintWithWriter (-pr-writer [o writer _] (-write writer (.toString o))))
 
 

@@ -25,27 +25,27 @@
 
 
 ;; DbTouched
-(deftype DbGraph [schema ^:mutable dbval local-statements ^:mutable entity-lookup]
+(deftype DbGraph [schema ^:mutable dbval local-statements ^:mutable data-lookup ^:mutable entity-lookup]
   hc/DbGraph
   (entity [this dbid]
     (assert (not= nil dbid) "Cannot request nil entity")
-    ; graph should track tempids provided, and only return entities for where the id has been allocated
-    ; otherwise we should throw
-    (or
-      (get entity-lookup dbid)
-      (do
-        (assert (tx/tempid? dbid) (str "Entity not found locally: " dbid))
-        (->Entity this dbid {:db/id dbid} {}))))
+    (if-let [entity (get entity-lookup dbid)]
+      entity
+      (let [data (or (get data-lookup dbid)
+                     ; graph should track tempids provided, and only return entities for where the id has been allocated
+                     ; otherwise we should throw
+                     (do
+                       (assert (tx/tempid? dbid) (str "Entity not found locally: " dbid))
+                       {:db/id dbid}))
+            entity (->Entity this dbid data {})]
+        (set! entity-lookup (assoc entity-lookup dbid entity))
+        entity)))
 
 
   (with' [this more-statements]
     (let [new-local-statements (concat local-statements more-statements)
-          new-graph (DbGraph. schema dbval new-local-statements nil)
-          new-entity-lookup (->> entity-lookup
-                                 (util/map-values #(types/clear! % new-graph))
-                                 (tx/build-entity-lookup new-graph more-statements))]
-      (aset new-graph "entity_lookup" new-entity-lookup)
-      new-graph))
+          new-data-lookup (tx/build-data-lookup schema more-statements data-lookup)]
+      (DbGraph. schema dbval new-local-statements new-data-lookup {})))
 
 
   IHash
@@ -59,8 +59,9 @@
 
   DbGraphPrivate
   (set-db-graph-state! [this pulled-trees t']
-    (let [lookup (tx/pulled-tree-to-entity-lookup this (.-conn-id dbval) pulled-trees)]
-      (set! entity-lookup (tx/build-entity-lookup this local-statements lookup)))
+    (let [lookup (tx/pulled-tree-to-data-lookup schema (.-conn-id dbval) pulled-trees)]
+      (set! data-lookup (tx/build-data-lookup schema local-statements lookup))
+      (set! entity-lookup {}))
     (set! dbval (->DbVal (.-conn-id dbval) t'))
     nil))
 
@@ -149,6 +150,6 @@
 (defn superGraph [schemas named-queries]
   (let [graphs (->> schemas
                     (map (fn [[dbval schema]]
-                           [dbval (->DbGraph schema dbval nil {})]))
+                           [dbval (->DbGraph schema dbval nil {} {})]))
                     (into {}))]
     (->SuperGraph named-queries graphs nil)))
