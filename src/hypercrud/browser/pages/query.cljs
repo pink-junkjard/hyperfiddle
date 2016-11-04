@@ -25,7 +25,7 @@
         hole-names (q-util/parse-holes q)
         dbid (->DbId -1 :query-hole-form)
         dbval (->DbVal :query-hole-form nil)
-        data (-> (zipmap hole-names params)
+        data (-> (zipmap hole-names (drop 1 params))
                  (assoc :db/id dbid))]
     (->Entity (hc-g/->DbGraph schema dbval nil {}) dbid data {})))
 
@@ -49,7 +49,7 @@
                     [:db/add attr-dbid :attribute/valueType (.-dbid valueType)]
                     [:db/add attr-dbid :attribute/cardinality (.-dbid cardinality)]
                     [:db/add field-dbid :field/prompt prompt]
-                    [:db/add field-dbid :field/query query]
+                    [:db/add field-dbid :field/query (.-dbid query)]
                     [:db/add field-dbid :field/label-prop label-prop]
                     [:db/add field-dbid :field/attribute attr-dbid]
                     [:db/add field-dbid :link/formula formula]
@@ -120,7 +120,8 @@
                                (map (juxt :hole/name identity))
                                (into {}))
             holes-form-dbid (->DbId -1 (-> editor-graph .-dbval .-conn-id))
-            editor-graph (hc/with' editor-graph (holes->field-tx editor-graph holes-form-dbid hole-names holes-by-name))
+            tx (holes->field-tx editor-graph holes-form-dbid hole-names holes-by-name)
+            editor-graph (hc/with' editor-graph tx)
             holes-form (hc/entity editor-graph holes-form-dbid)]
         (form-util/form-option-queries holes-form nil q-util/build-params-from-formula param-ctx))
 
