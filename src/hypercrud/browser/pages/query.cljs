@@ -49,7 +49,7 @@
                     [:db/add attr-dbid :attribute/valueType (.-dbid valueType)]
                     [:db/add attr-dbid :attribute/cardinality (.-dbid cardinality)]
                     [:db/add field-dbid :field/prompt prompt]
-                    [:db/add field-dbid :field/query (.-dbid query)]
+                    [:db/add field-dbid :field/query (some-> query .-dbid)]
                     [:db/add field-dbid :field/label-prop label-prop]
                     [:db/add field-dbid :field/attribute attr-dbid]
                     [:db/add form-dbid :form/field field-dbid]])))))
