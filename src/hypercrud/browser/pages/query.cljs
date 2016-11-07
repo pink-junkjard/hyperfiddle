@@ -55,7 +55,7 @@
                     [:db/add form-dbid :form/field field-dbid]])))))
 
 
-(defn ui [cur editor-graph stage-tx! graph table-form query params navigate! navigate-cmp param-ctx]
+(defn ui [cur editor-graph stage-tx! graph {:keys [:link/form :link/query]} params navigate! navigate-cmp param-ctx]
   (let [q (reader/read-string (:query/value query))
         hole-names (q-util/parse-holes q)
         expanded-cur (cur [:expanded] {})
@@ -80,11 +80,11 @@
        (let [entities (->> (hc/select graph ::table/query)
                            (map #(hc/entity (hc/get-dbgraph graph dbval) %)))]
          (if (and (:query/single-result-as-entity? query) (= 1 (count entities)))
-           [entity/ui cur stage-tx! graph (first entities) table-form navigate! navigate-cmp]
+           [entity/ui cur stage-tx! graph (first entities) form navigate! navigate-cmp]
            [:div
-            (let [row-renderer-code (:form/row-renderer table-form)]
+            (let [row-renderer-code (:form/row-renderer form)]
               (if (empty? row-renderer-code)
-                [table/table graph entities table-form nil expanded-cur stage-tx! navigate-cmp nil]
+                [table/table graph entities form nil expanded-cur stage-tx! navigate-cmp nil]
                 (let [result (eval/uate (str "(identity " row-renderer-code ")"))
                       {row-renderer :value error :error} result]
                   (if error
@@ -94,7 +94,7 @@
                       (->> entities
                            (map (fn [entity]
                                   (let [link-fn (fn [ident label]
-                                                  (let [link (->> (:form/link table-form)
+                                                  (let [link (->> (:form/link form)
                                                                   (filter #(= ident (:link/ident %)))
                                                                   first)
                                                         param-ctx (merge param-ctx {:entity entity})
@@ -106,7 +106,7 @@
                                        (catch :default e (pr-str e)))]))))]]))))])))]))
 
 
-(defn query [state editor-graph query params table-form param-ctx]
+(defn query [state editor-graph {:keys [:link/form :link/query]} params param-ctx]
   (let [q (reader/read-string (:query/value query))
         hole-names (q-util/parse-holes q)
         holes-by-name (->> (:query/hole query)
@@ -142,7 +142,7 @@
             (if (:query/single-result-as-entity? query)
               ; we can use nil for :link/formula and formulas because we know our p-filler doesn't use it
               (merge
-                (form-util/form-option-queries table-form expanded-forms p-filler param-ctx)
-                (table/option-queries table-form p-filler param-ctx)
-                {:hypercrud.ui.table/query [q (p-filler query nil param-ctx) [dbval (form-util/form-pull-exp table-form expanded-forms)]]})
-              (table/query p-filler param-ctx query table-form nil))))))))
+                (form-util/form-option-queries form expanded-forms p-filler param-ctx)
+                (table/option-queries form p-filler param-ctx)
+                {:hypercrud.ui.table/query [q (p-filler query nil param-ctx) [dbval (form-util/form-pull-exp form expanded-forms)]]})
+              (table/query p-filler param-ctx query form nil))))))))
