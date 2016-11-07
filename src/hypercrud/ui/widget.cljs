@@ -35,6 +35,14 @@
     [input/input* value on-change!]))
 
 
+(defn input-long [entity {:keys [field stage-tx!]}]
+  (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)]
+    [input/validated-input
+     (get entity ident) #(stage-tx! (tx-util/update-entity-attr entity attribute %))
+     #(js/parseInt % 10) pr-str
+     #(integer? (js/parseInt % 10))]))
+
+
 (defn textarea [entity {:keys [field stage-tx!]}]
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         value (get entity ident)
