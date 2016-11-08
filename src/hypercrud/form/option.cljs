@@ -11,7 +11,7 @@
 
   (has-holes? [this])
   ;todo should be get-queries and we can delete hc.form.util/field-queries
-  (get-query [this p-filler label-prop param-ctx])
+  (get-query [this p-filler param-ctx])
 
   ; todo
   ; cannot create-new if not editable
@@ -27,29 +27,30 @@
   IFieldOptions
   (label-prop [this] label-prop)
 
-  (get-key [this]
+  (get-key [this]                                           ; for remounting the whole select
     ;memoizable
-    (hash (:query/value query)))
+    (hash [(:query/value query) label-prop]))
 
   (get-option-records [this graph entity]
     ;memoizable
-    (let [q (reader/read-string (:query/value query))
-          dbgraph (.-dbgraph entity)                        ;todo this is wrong
-          ]
-      (->> (hc/select graph (hash q) q)
-           (mapv #(hc/entity dbgraph %)))))
+    (if-let [q (:query/value query)]
+      (let [q (reader/read-string q)
+            dbgraph (.-dbgraph entity)                      ;todo this is wrong
+            ]
+        (->> (hc/select graph (hash q) q)
+             (mapv #(hc/entity dbgraph %))))))
 
   (has-holes? [this]
     (not (empty? (:query/hole query))))
 
-  (get-query [this p-filler label-prop param-ctx]
-    (let [_ (assert (not= nil label-prop) (str "Missing label-prop for " (:query/ident query)))
-          q (reader/read-string (:query/value query))
-          query-name (hash q)
-          params (p-filler query formulas param-ctx)
-          pull-dbval (get param-ctx :dbval)
-          pull-exp [pull-dbval [:db/id label-prop]]]
-      {query-name [q params pull-exp]}))
+  (get-query [this p-filler param-ctx]
+    (if-let [q (:query/value query)]
+      (let [q (reader/read-string q)
+            query-name (hash q)
+            params (p-filler query formulas param-ctx)
+            pull-dbval (get param-ctx :dbval)
+            pull-exp [pull-dbval (if label-prop [:db/id label-prop] [:db/id])]] ; (concat [:dbid] (if label-prop [label-prop] []))
+        {query-name [q params pull-exp]})))
 
   (get-form [this record] form)
   (editable? [this record] (not= nil form))

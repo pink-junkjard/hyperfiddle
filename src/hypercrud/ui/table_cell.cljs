@@ -14,7 +14,7 @@
 
 (defn ref-one-component [entity {:keys [field navigate-cmp]}]
   (let [ident (-> field :field/attribute :attribute/ident)
-        label-prop (option/label-prop (option/gimme-useful-options field))]
+        label-prop (:field/label-prop field)]
     [:div
      [navigate-cmp {:href (links/field-link (.-dbid field) (.-dbid entity))} "Edit"]
      " "
@@ -42,7 +42,7 @@
 
 (defn ref-many [entity {:keys [field navigate-cmp]}]
   (let [ident (-> field :field/attribute :attribute/ident)
-        label-prop (option/label-prop (option/gimme-useful-options field))]
+        label-prop (:field/label-prop field)]
     [:div
      [navigate-cmp {:href (links/field-link (.-dbid field) (.-dbid entity))} "Edit"]
      " "

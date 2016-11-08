@@ -170,11 +170,12 @@
   (concat
     [:db/id]
     (map (fn [field]
-           (let [{:keys [:attribute/ident :attribute/valueType :attribute/isComponent]} (:field/attribute field)
-                 options (option/gimme-useful-options field)]
+           (let [{:keys [:attribute/ident :attribute/valueType :attribute/isComponent]} (:field/attribute field)]
              (if (or isComponent (= (:db/ident valueType) :db.type/ref))
                ; components and refs render nested entities, so pull another level deeper
-               {ident [:db/id (option/label-prop options)]}
+               {ident (if-let [label-prop (:field/label-prop field)]
+                        [:db/id label-prop]
+                        [:db/id])}
 
                ; otherwise just add the attribute to the list
                ident)))
@@ -188,7 +189,7 @@
              (= (:db/ident cardinality) :db.cardinality/one)
              (not isComponent)
              (not (option/has-holes? options)))
-      (option/get-query options p-filler (option/label-prop options) param-ctx))))
+      (option/get-query options p-filler param-ctx))))
 
 
 (defn option-queries [form p-filler param-ctx]

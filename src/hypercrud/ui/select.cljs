@@ -1,6 +1,6 @@
 (ns hypercrud.ui.select
   (:require [hypercrud.client.core :as hc]
-            [hypercrud.client.tx :as tx-util]
+            [hypercrud.client.tx :as tx]
             [hypercrud.form.option :as option]
             [hypercrud.types :refer [->DbId]]
             [hypercrud.ui.form :as form]))
@@ -16,7 +16,7 @@
                                      "" nil
                                      "true" true
                                      "false" false)]
-                            (stage-tx! (tx-util/update-entity-attr entity attribute v)))}]
+                            (stage-tx! (tx/update-entity-attr entity attribute v)))}]
     [:div.value.editable-select {:key ident}
      [:span.select
       [:select props
@@ -34,7 +34,7 @@
         props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
                :value (cond
                         (nil? value) ""
-                        (tx-util/tempid? value) "create-new"
+                        (tx/tempid? value) "create-new"
                         :else (-> value .-dbid .-id str))
 
                ;; reconstruct the typed value
@@ -47,17 +47,20 @@
                               ;reset the cursor before change! otherwise npe when trying to render
                               ;todo these both set the same cursor, and should be atomic
                               (reset! expanded-cur (if (= "create-new" select-value) {} nil))
-                              (stage-tx! (tx-util/update-entity-attr entity attribute dbid))
+                              (stage-tx! (tx/update-entity-attr entity attribute dbid))
                               ;; and also add our new guy to the option list (for all combos)
                               ))}
-        create-new? (some-> value tx-util/tempid?)
+        create-new? (some-> value tx/tempid?)
         show-form? (or (not= nil @expanded-cur) create-new?)]
 
     [:div.value.editable-select {:key (option/get-key options)}
      (if (and (option/editable? options entity) (not show-form?))
        edit-element)
      (let [option-records (option/get-option-records options graph entity)]
-       (assert (or (nil? value) (contains? (set option-records) value)) (str "Select options does not contain selected value: " (pr-str value)))
+       #_(assert (or (nil? value)
+                   (tx/tempid? (.-dbid value))
+                   (nil? option-records)                    ; user hasn't picked the query yet but may be about to
+                   (contains? (set option-records) value)) (str "Select options does not contain selected value: " (pr-str value)))
        [:select.select props (-> (->> option-records
                                       (sort-by #(get % (option/label-prop options)))
                                       (mapv (fn [entity]
