@@ -1,13 +1,11 @@
 (ns hypercrud.browser.pages.entity
   (:require [hypercrud.browser.links :as links]
             [hypercrud.client.core :as hc]
-            [hypercrud.client.tx :as tx-util]
             [hypercrud.form.q-util :as q-util]
-            [hypercrud.ui.form :as form]
-            [promesa.core :as p]))
+            [hypercrud.ui.form :as form]))
 
 
-(defn ui [cur stage-tx! graph entity form navigate! navigate-cmp param-ctx]
+(defn ui [cur stage-tx! graph entity form navigate-cmp param-ctx]
   "hypercrud values just get a form, with ::update and ::delete."
   (let [expanded-cur (cur [:expanded] {})                   ; {:community/neighborhood {:neighborhood/district {:district/region {}}}}
         dbval (-> entity .-dbgraph .-dbval)

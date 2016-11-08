@@ -44,15 +44,15 @@
       :else (else))))
 
 
-(defn ui [cur links editor-graph stage-tx! graph page-rel-path navigate! navigate-cmp param-ctx]
+(defn ui [cur links editor-graph stage-tx! graph page-rel-path navigate-cmp param-ctx]
   (route page-rel-path
          {:query-fn (fn [link-id params]
                       (let [link (hc/entity editor-graph (->DbId link-id (-> editor-graph .-dbval .-conn-id)))]
-                        (query/ui cur editor-graph stage-tx! graph link params navigate! navigate-cmp param-ctx)))
+                        (query/ui cur editor-graph stage-tx! graph link params navigate-cmp param-ctx)))
           :entity-fn (fn [dbval dbid form-id]
                        (let [entity (hc/entity (hc/get-dbgraph graph dbval) dbid)
                              form (hc/entity editor-graph (->DbId form-id (-> editor-graph .-dbval .-conn-id)))]
-                         (entity/ui cur stage-tx! graph entity form navigate! navigate-cmp param-ctx)))
+                         (entity/ui cur stage-tx! graph entity form navigate-cmp param-ctx)))
           :field-fn (fn [dbval dbid field-id]
                       (let [entity (hc/entity (hc/get-dbgraph graph dbval) dbid)
                             field (hc/entity editor-graph (->DbId field-id (-> editor-graph .-dbval .-conn-id)))]

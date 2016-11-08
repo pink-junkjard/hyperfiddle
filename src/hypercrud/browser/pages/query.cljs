@@ -55,7 +55,7 @@
                     [:db/add form-dbid :form/field field-dbid]])))))
 
 
-(defn ui [cur editor-graph stage-tx! graph {:keys [:link/form :link/query]} params navigate! navigate-cmp param-ctx]
+(defn ui [cur editor-graph stage-tx! graph {:keys [:link/form :link/query]} params navigate-cmp param-ctx]
   (let [q (reader/read-string (:query/value query))
         hole-names (q-util/parse-holes q)
         expanded-cur (cur [:expanded] {})
@@ -79,7 +79,7 @@
        (let [entities (->> (hc/select graph ::table/query)
                            (map #(hc/entity (hc/get-dbgraph graph dbval) %)))]
          (if (and (:query/single-result-as-entity? query) (= 1 (count entities)))
-           [entity/ui cur stage-tx! graph (first entities) form navigate! navigate-cmp]
+           [entity/ui cur stage-tx! graph (first entities) form navigate-cmp]
            [:div
             (let [row-renderer-code (:form/row-renderer form)]
               (if (empty? row-renderer-code)
