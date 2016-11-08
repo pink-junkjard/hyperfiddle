@@ -1,5 +1,6 @@
 (ns hypercrud.ui.widget
   (:require [cljs.reader :as reader]
+            [hypercrud.browser.links :as links]
             [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx-util]
             [hypercrud.form.option :as option]
@@ -57,11 +58,25 @@
   [radio/radio-ref* entity widget-args])
 
 
-(defn select-ref [entity {:keys [expanded-cur field] :as widget-args}]
+(defn select-ref-expanded-cur [entity {:keys [expanded-cur field] :as widget-args}]
   ;;select* has parameterized markup fn todo
   [select* entity widget-args
    [:button.edit {:on-click #(reset! expanded-cur {})
                   :disabled (nil? (get entity (-> field :field/attribute :attribute/ident)))} "Edit"]])
+
+
+; this can be used sometimes, on the entity page, but not the query page
+(defn select-ref-navigate [entity {:keys [expanded-cur field navigate-cmp] :as widget-args}]
+  #_(if (option/has-holes? options)
+      (ref-one-component entity form-id widget-args))
+  (let [ident (-> field :field/attribute :attribute/ident)]
+    (select*
+      entity (assoc widget-args :expanded-cur (expanded-cur [ident]))
+      (if (not (nil? (get entity ident)))
+        (let [options (option/gimme-useful-options field)]
+          (if-let [form (option/get-form options entity)]
+            (let [href (links/entity-link (.-dbid form) (:db/id (get entity ident)))]
+              [navigate-cmp {:class "edit" :href href} "Edit"])))))))
 
 
 (defn select-ref-component [entity {:keys [expanded-cur field graph navigate-cmp stage-tx!]}]
