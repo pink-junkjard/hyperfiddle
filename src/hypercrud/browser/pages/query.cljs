@@ -75,7 +75,6 @@
            editor-graph (hc/with' editor-graph (holes->field-tx editor-graph holes-form-dbid hole-names holes-by-name))
            holes-form (hc/entity editor-graph holes-form-dbid)]
        [form/form graph entity holes-form expanded-cur stage-tx! navigate-cmp])
-     [:hr]
      (if (show-results? hole-names hole-lookup)             ;todo what if we have a user hole?
        (let [entities (->> (hc/select graph ::table/query)
                            (map #(hc/entity (hc/get-dbgraph graph dbval) %)))]
