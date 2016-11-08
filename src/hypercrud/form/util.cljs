@@ -47,6 +47,16 @@ case that works for expanded-forms)"
      (map #(field-pull-exp-entry expanded-forms % expand?) (:form/field form)))))
 
 
+(defn dont-go-deeper-except-components? [expanded-forms field]
+  (or expanded-forms (-> field :field/attribute :attribute/isComponent)))
+
+(defn recurse? [expanded-forms field]
+  (or expanded-forms
+      (let [{:keys [:attribute/cardinality :attribute/isComponent]} (:field/attribute field)]
+        (or (= (:db/ident cardinality) :db.cardinality/many)
+            isComponent))))
+
+
 (defn field-queries [expanded-forms p-filler param-ctx field recurse?]
   (let [{:keys [:attribute/ident :attribute/cardinality :attribute/valueType :attribute/isComponent]} (:field/attribute field)
         options (option/gimme-useful-options field)]
@@ -67,15 +77,12 @@ case that works for expanded-forms)"
                                  :db.cardinality/one new-expanded-forms
                                  :db.cardinality/many (apply deep-merge (vals new-expanded-forms)))]
             (form-option-queries form expanded-forms p-filler param-ctx
-                                 (fn [expanded-forms field]
-                                   (or expanded-forms (-> field :field/attribute :attribute/isComponent))))))))))
+                                 (condp = (:db/ident cardinality)
+                                   ;; if this form is expanded, recurse like normal, we dont know how deep to go yet
+                                   :db.cardinality/one recurse?
+                                   ;; this is a table renderer, only so deep you can go - prevent infinite expansions/nested forms
+                                   :db.cardinality/many dont-go-deeper-except-components?))))))))
 
-
-(defn recurse? [expanded-forms field]
-  (or expanded-forms
-      (let [{:keys [:attribute/cardinality :attribute/isComponent]} (:field/attribute field)]
-        (or (= (:db/ident cardinality) :db.cardinality/many)
-            isComponent))))
 
 (defn form-option-queries "get the form options recursively for all expanded forms"
   ([form expanded-forms p-filler param-ctx]
