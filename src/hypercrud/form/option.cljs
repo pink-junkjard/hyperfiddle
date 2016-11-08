@@ -34,9 +34,8 @@
   (get-option-records [this graph entity]
     ;memoizable
     (let [q (reader/read-string (:query/value query))
-          dbgraph (if (= q '[:find [?e ...] :in $ :where [?e :post/title]])
-                    (hc/get-dbgraph graph (->DbVal 17592186045439 nil))
-                    (.-dbgraph entity))]
+          dbgraph (.-dbgraph entity)                        ;todo this is wrong
+          ]
       (->> (hc/select graph (hash q) q)
            (mapv #(hc/entity dbgraph %)))))
 
