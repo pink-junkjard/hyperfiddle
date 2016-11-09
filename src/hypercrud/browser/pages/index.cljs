@@ -7,11 +7,12 @@
   [:div
    ;form to populate holes
    [:ul.links
-    (->> links
+    (->> links                                              ;todo this should be a select
          (sort-by :link/prompt)
          (map (fn [{:keys [:link/prompt :link/ident] :as link}]
                 [:li {:key ident}
                  [navigate-cmp {:href (links/query-link link param-ctx)} prompt]])))]])
 
 
+;todo we should query the links
 (defn query [] {})

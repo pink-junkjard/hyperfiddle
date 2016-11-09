@@ -15,6 +15,6 @@
   (str (.-id field-dbid) "/field/" (.-id dbid) "/" (base64/encode (internal/transit-encode (.-conn-id dbid)))))
 
 
-(defn query-link [{:keys [:link/formula :link/query] :as link} param-ctx]
+(defn query-link [link param-ctx]
   ;; link-dbid is assumed to be the editor-graph connection
-  (str (-> link .-dbid .-id) "/" (base64/encode (q-util/build-params-from-formula query formula param-ctx))))
+  (str (-> link .-dbid .-id) "/" (base64/encode (q-util/build-params-from-formula link param-ctx))))

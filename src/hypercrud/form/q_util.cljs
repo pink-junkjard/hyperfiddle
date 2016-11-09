@@ -27,8 +27,8 @@
 ; type p-filler = fn [query formulas param-ctx] => vec
 ; which is why we need this unused formulas param
 (defn build-params [fill-hole query param-ctx]
-  (let [q (reader/read-string (:query/value query))]
-    (->> (parse-holes q)
+  (let [q (some-> (:query/value query) reader/read-string)]
+    (->> (parse-holes q)                                    ; nil means '() and does the right thing
          (mapv (fn [hole-name]
                  (let [value (fill-hole hole-name param-ctx)]
                    ;; Are you at the root? Can't fill holes without a project client
@@ -56,5 +56,7 @@
             (formula param-ctx)))))))
 
 
-(defn build-params-from-formula [query formulas param-ctx]
-  (build-params (fill-hole-from-formula query formulas) query param-ctx))
+(defn build-params-from-formula
+  ([query formulas param-ctx] (build-params (fill-hole-from-formula query formulas) query param-ctx))
+  ([{:keys [:link/formula :link/query] :as link} param-ctx]
+   (build-params-from-formula query formula param-ctx)))
