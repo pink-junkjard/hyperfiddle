@@ -56,22 +56,23 @@
     [:div.value.editable-select {:key (option/get-key options)}
      (if (and (option/editable? options entity) (not show-form?))
        edit-element)
-     (let [option-records (option/get-option-records options graph entity)]
-       #_(assert (or (nil? value)
-                   (tx/tempid? (.-dbid value))
-                   (nil? option-records)                    ; user hasn't picked the query yet but may be about to
-                   (contains? (set option-records) value)) (str "Select options does not contain selected value: " (pr-str value)))
-       [:select.select props (-> (->> option-records
-                                      (sort-by #(get % (option/label-prop options)))
-                                      (mapv (fn [entity]
-                                              (let [dbid (:db/id entity)]
-                                                ^{:key (hash dbid)}
-                                                [:option {:value (.-id dbid)} (str (get entity (option/label-prop options)))]))))
-                                 (concat
-                                   (if (option/create-new? options entity)
-                                     [[:option {:key :create-new :value "create-new"} "Create New"]]
-                                     [])
-                                   [[:option {:key :blank :value ""} "--"]]))])
+     [:span.select
+      (let [option-records (option/get-option-records options graph entity)]
+        #_(assert (or (nil? value)
+                      (tx/tempid? (.-dbid value))
+                      (nil? option-records)                 ; user hasn't picked the query yet but may be about to
+                      (contains? (set option-records) value)) (str "Select options does not contain selected value: " (pr-str value)))
+        [:select.select props (-> (->> option-records
+                                       (sort-by #(get % (option/label-prop options)))
+                                       (mapv (fn [entity]
+                                               (let [dbid (:db/id entity)]
+                                                 ^{:key (hash dbid)}
+                                                 [:option {:value (.-id dbid)} (str (get entity (option/label-prop options)))]))))
+                                  (concat
+                                    (if (option/create-new? options entity)
+                                      [[:option {:key :create-new :value "create-new"} "Create New"]]
+                                      [])
+                                    [[:option {:key :blank :value ""} "--"]]))])]
      (if (and (not= nil value) show-form?)
        ;; TODO branch the client in create-new case
        [form/form graph value (option/get-form options entity) expanded-cur stage-tx! navigate-cmp])]))

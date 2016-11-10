@@ -87,10 +87,10 @@ input.invalid[type="text"] {
 .editable-select > .select {
     display: block;
     overflow: hidden;
-    padding-right: 10px;
 }
 .editable-select > .edit {
     float: right;
+    padding-left: 3px;
 }
 
 .multi-select-group > .form {
