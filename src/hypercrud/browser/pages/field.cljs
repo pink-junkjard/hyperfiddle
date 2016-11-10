@@ -1,6 +1,6 @@
 (ns hypercrud.browser.pages.field
   (:require [hypercrud.client.core :as hc]
-            [hypercrud.client.tx :as tx-util]
+            [hypercrud.client.tx :as tx]
             [hypercrud.form.q-util :as q-util]
             [hypercrud.form.util :as form-util]
             [hypercrud.ui.auto-control :refer [auto-control]]))
@@ -25,7 +25,7 @@
         expanded-forms (get state :expanded nil)
         p-filler q-util/build-params-from-formula
         option-queries (form-util/field-queries expanded-forms p-filler param-ctx field form-util/recurse?)]
-    (if (not (tx-util/tempid? dbid))
+    (if (not (tx/tempid? dbid))
       (merge option-queries
              (let [q '[:find [?e ...] :in $ ?e :where [?e]]
                    pull-exp [:db/id (form-util/field-pull-exp-entry expanded-forms field form-util/expand?)]]

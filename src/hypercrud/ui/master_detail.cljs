@@ -1,7 +1,7 @@
 (ns hypercrud.ui.master-detail
   (:require [clojure.string :as string]
             [hypercrud.client.core :as hc]
-            [hypercrud.client.tx :as tx-util]
+            [hypercrud.client.tx :as tx]
             [hypercrud.form.option :as option]
             [hypercrud.types :refer [->DbId]]
             [hypercrud.ui.auto-control :refer [auto-control]]
@@ -31,7 +31,7 @@
                                        [:button.retract-detail
                                         {:key "retract"
                                          ; todo if im selected what do
-                                         :on-click #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [dbid] []))} "⌦"])))))
+                                         :on-click #(stage-tx! (tx/edit-entity (:db/id entity) ident [dbid] []))} "⌦"])))))
                      (concat (if (option/create-new? options entity)
                                (let [dbid (temp-id!)]
                                  [(li dbid "Create New" false)])

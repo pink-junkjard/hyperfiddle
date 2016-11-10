@@ -2,7 +2,7 @@
   (:require [cljs.reader :as reader]
             [hypercrud.browser.links :as links]
             [hypercrud.client.core :as hc]
-            [hypercrud.client.tx :as tx-util]
+            [hypercrud.client.tx :as tx]
             [hypercrud.form.option :as option]
             [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.code-editor :refer [code-editor*]]
@@ -20,7 +20,7 @@
 (defn input-keyword [entity {:keys [field stage-tx!]}]
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         value (get entity ident)
-        on-change! #(stage-tx! (tx-util/update-entity-attr entity attribute %))
+        on-change! #(stage-tx! (tx/update-entity-attr entity attribute %))
         parse-string reader/read-string
         to-string str
         valid? #(try (let [code (reader/read-string %)]
@@ -32,14 +32,14 @@
 (defn input [entity {:keys [field stage-tx!]}]
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         value (get entity ident)
-        on-change! #(stage-tx! (tx-util/update-entity-attr entity attribute %))]
+        on-change! #(stage-tx! (tx/update-entity-attr entity attribute %))]
     [input/input* value on-change!]))
 
 
 (defn input-long [entity {:keys [field stage-tx!]}]
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)]
     [input/validated-input
-     (get entity ident) #(stage-tx! (tx-util/update-entity-attr entity attribute %))
+     (get entity ident) #(stage-tx! (tx/update-entity-attr entity attribute %))
      #(js/parseInt % 10) pr-str
      #(integer? (js/parseInt % 10))]))
 
@@ -47,7 +47,7 @@
 (defn textarea [entity {:keys [field stage-tx!]}]
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         value (get entity ident)
-        set-attr! #(stage-tx! (tx-util/update-entity-attr entity attribute %))]
+        set-attr! #(stage-tx! (tx/update-entity-attr entity attribute %))]
     [textarea* {:type "text"
                 :value value
                 :on-change set-attr!}]))
@@ -93,8 +93,8 @@
       (let [options (option/gimme-useful-options field)
             ident (-> field :field/attribute :attribute/ident)
             entities (get entity ident)
-            retract-entity! #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [%] []))
-            add-entity! #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [] [%]))]
+            retract-entity! #(stage-tx! (tx/edit-entity (:db/id entity) ident [%] []))
+            add-entity! #(stage-tx! (tx/edit-entity (:db/id entity) ident [] [%]))]
         [:div.value
          [table/table-managed graph entities (-> entity .-dbgraph .-dbval) (option/get-form options entity) expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]
          (let [props {:value (str @select-value-atom)
@@ -118,27 +118,27 @@
   (let [ident (-> field :field/attribute :attribute/ident)
         options (option/gimme-useful-options field)
         entities (get entity ident)
-        retract-entity! #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [%] []))
-        add-entity! #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [] [%]))]
+        retract-entity! #(stage-tx! (tx/edit-entity (:db/id entity) ident [%] []))
+        add-entity! #(stage-tx! (tx/edit-entity (:db/id entity) ident [] [%]))]
     [:div.value
      [table/table-managed graph entities (-> entity .-dbgraph .-dbval) (option/get-form options entity) expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]]))
 
 
 (defn multi-select-ref [entity {:keys [field stage-tx!] :as widget-args}]
-  (let [add-item! #(stage-tx! (tx-util/edit-entity (:db/id entity) (-> field :field/attribute :attribute/ident) [] [nil]))]
+  (let [add-item! #(stage-tx! (tx/edit-entity (:db/id entity) (-> field :field/attribute :attribute/ident) [] [nil]))]
     (multi-select* multi-select-markup entity add-item! widget-args))) ;add-item! is: add nil to set
 
 
 (defn multi-select-ref-component [entity {:keys [field stage-tx!] :as widget-args}]
   (let [temp-id! (partial hc/*temp-id!* (-> entity .-dbgraph .-dbval :conn-id)) ; bound to fix render bug
-        add-item! #(stage-tx! (tx-util/edit-entity (:db/id entity) (-> field :field/attribute :attribute/ident) [] [(temp-id!)]))]
+        add-item! #(stage-tx! (tx/edit-entity (:db/id entity) (-> field :field/attribute :attribute/ident) [] [(temp-id!)]))]
     [multi-select* multi-select-markup entity add-item! widget-args])) ;add new entity to set
 
 
 (defn code-editor [entity {:keys [field stage-tx!]}]
   (let [ident (-> field :field/attribute :attribute/ident)
         value (get entity ident)
-        change! #(stage-tx! (tx-util/edit-entity (:db/id entity) ident %1 %2))]
+        change! #(stage-tx! (tx/edit-entity (:db/id entity) ident %1 %2))]
     ^{:key ident}
     [code-editor* value change!]))
 
@@ -163,7 +163,7 @@
 (defn instant [entity {:keys [field stage-tx!]}]
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         value (get entity ident)
-        on-change! #(stage-tx! (tx-util/update-entity-attr entity attribute %))
+        on-change! #(stage-tx! (tx/update-entity-attr entity attribute %))
         parse-string (fn [s]
                        (if (empty? s)
                          nil

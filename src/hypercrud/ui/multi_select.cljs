@@ -1,5 +1,5 @@
 (ns hypercrud.ui.multi-select
-  (:require [hypercrud.client.tx :as tx-util]
+  (:require [hypercrud.client.tx :as tx]
             [hypercrud.ui.auto-control :refer [auto-control]]))
 
 
@@ -11,7 +11,7 @@
   (let [ident (-> field :field/attribute :attribute/ident)
         value (get entity ident)
         control-tuples (seq (mapv (fn [eid]
-                                    (let [click-remove! #(stage-tx! (tx-util/edit-entity (:db/id entity) ident [eid] nil))
+                                    (let [click-remove! #(stage-tx! (tx/edit-entity (:db/id entity) ident [eid] nil))
                                           new-args (-> widget-args
                                                        ; todo this should be hc/with
                                                        (assoc-in [:field :cardinality] :db.cardinality/one)

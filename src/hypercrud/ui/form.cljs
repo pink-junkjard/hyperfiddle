@@ -1,5 +1,5 @@
 (ns hypercrud.ui.form
-  (:require [hypercrud.client.tx :as tx-util]
+  (:require [hypercrud.client.tx :as tx]
             [hypercrud.compile.eval :as eval]
             [hypercrud.form.util :as form-util]
             [hypercrud.ui.auto-control :refer [auto-control]]))
@@ -36,7 +36,7 @@
   (let [param-ctx (merge param-ctx {:id (.-id dbid)})
         dbval (get param-ctx :dbval)
         option-queries (form-util/form-option-queries form expanded-forms p-filler param-ctx)]
-    (if (not (tx-util/tempid? dbid))
+    (if (not (tx/tempid? dbid))
       (merge option-queries
              (let [q '[:find [?e ...] :in $ ?e :where [?e]]
                    pull-exp (form-util/form-pull-exp form expanded-forms)]
