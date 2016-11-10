@@ -145,8 +145,8 @@
 
 (comment
   {:expanded
-   {17592186045559 {:project/form {17592186045554 {:form/field {:field/attribute {}}}}}
-    17592186045561 {:project/query {}}}})
+   {17592186045559 {:link/form {17592186045554 {:form/field {:field/attribute {}}}}}
+    17592186045561 {:link/query {}}}})
 ; todo needs work with expanded-cur
 #_(defn master-detail [entity {:keys [expanded-cur] :as widget-args}]
   (let [selected-atom (r/atom nil)]
