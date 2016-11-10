@@ -32,7 +32,7 @@
          (mapv (fn [hole-name]
                  (let [value (fill-hole hole-name param-ctx)]
                    ;; Are you at the root? Can't fill holes without a project client
-                   (assert (not= nil value) (str "Empty parameter for " hole-name " in " q))
+                   #_(assert (not= nil value) (str "Empty parameter for " hole-name " in " q))
                    value))))))
 
 
@@ -53,7 +53,8 @@
             (throw error)
 
             ; can also throw, lose the rest
-            (formula param-ctx)))))))
+            (if formula
+              (formula param-ctx))))))))
 
 
 (defn build-params-from-formula
