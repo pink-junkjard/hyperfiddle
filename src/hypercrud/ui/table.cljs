@@ -83,9 +83,9 @@
                                href (links/query-link link param-ctx)]
                            (navigate-cmp {:key ident :href href} prompt)))))
              (let [href (links/entity-link (:db/id form) (:db/id entity))]
-               (navigate-cmp {:key "view" :href href} "Entity View"))
+               (navigate-cmp {:key "hypercrud-entity-view" :href href} "Entity View"))
              (if retract-entity!
-               [:span {:key "delete" :on-click #(retract-entity! (:db/id entity))} "Delete Row"])))
+               [:span {:key "hypercrud-delete-row" :on-click #(retract-entity! (:db/id entity))} "Delete Row"])))
          [:span {:key "close" :on-click #(reset! open? false)} "Close"]]
         [:div {:on-click #(reset! open? true)} "⚙"]))))
 
