@@ -9,8 +9,8 @@
    [:ul.links
     (->> links                                              ;todo this should be a select
          (sort-by :link/prompt)
-         (map (fn [{:keys [:link/prompt :link/ident] :as link}]
-                [:li {:key ident}
+         (map (fn [{:keys [:db/id :link/prompt :link/ident] :as link}]
+                [:li {:key id}
                  [navigate-cmp {:href (links/query-link link param-ctx)} prompt]])))]])
 
 
