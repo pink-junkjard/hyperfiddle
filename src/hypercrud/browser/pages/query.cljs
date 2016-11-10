@@ -83,12 +83,12 @@
         #_[entity/ui cur stage-tx! graph (first entities) form navigate-cmp]
         [:div
          #_[:pre (pr-str params)]                           ;; params are same information as the filled holes in this form below
-         (let [stage-tx! (fn [tx]
-                           (reset! entity-cur (reduce tx/merge-entity-and-stmt entity tx)))
-               holes-form-dbid (->DbId -1 (-> editor-graph .-dbval .-conn-id))
-               editor-graph (hc/with' editor-graph (holes->field-tx editor-graph holes-form-dbid hole-names holes-by-name))
-               holes-form (hc/entity editor-graph holes-form-dbid)]
-           [form/form graph entity holes-form expanded-cur stage-tx! navigate-cmp])
+         #_(let [stage-tx! (fn [tx]
+                             (reset! entity-cur (reduce tx/merge-entity-and-stmt entity tx)))
+                 holes-form-dbid (->DbId -1 (-> editor-graph .-dbval .-conn-id))
+                 editor-graph (hc/with' editor-graph (holes->field-tx editor-graph holes-form-dbid hole-names holes-by-name))
+                 holes-form (hc/entity editor-graph holes-form-dbid)]
+             [form/form graph entity holes-form expanded-cur stage-tx! navigate-cmp])
          (if (show-results? hole-names hole-lookup)         ;todo what if we have a user hole?
            (let [entities (->> (hc/select graph ::table/query)
                                (map #(hc/entity (hc/get-dbgraph graph dbval) %)))]
