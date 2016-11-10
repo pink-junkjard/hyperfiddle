@@ -116,7 +116,15 @@
                                         [:li {:key (hash (:db/id entity))}
                                          (try
                                            (row-renderer graph link-fn entity)
-                                           (catch :default e (pr-str e)))]))))]]))))])))])
+                                           (catch :default e (pr-str e)))]))))]]))))])))
+         [:div
+          [:span "Query Links: "]
+          (->> (:query/link query)
+               (map (fn [link]
+                      (let [href (links/query-link link param-ctx)]
+                        ^{:key (:link/ident link)}
+                        [navigate-cmp {:href href} (:link/prompt link)])))
+               (interpose " "))]])
       [:div "Query record is incomplete"])))
 
 

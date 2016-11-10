@@ -23,7 +23,7 @@
                :disabled (tx-util/tempid? (.-dbid entity))}
       "Delete"]
      [:div
-      [:span "Links: "]
+      [:span "Form Links: "]
       (->> (:form/link form)
            (map (fn [link]
                   (let [param-ctx (merge param-ctx
