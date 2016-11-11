@@ -34,7 +34,7 @@
         props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
                :value (cond
                         (nil? value) ""
-                        (tx/tempid? value) "create-new"
+                        (tx/tempid? (.-dbid value)) "create-new"
                         :else (-> value .-dbid .-id str))
 
                ;; reconstruct the typed value
