@@ -52,6 +52,8 @@ input.invalid[type="text"] {
 .ui-table td.link-cell {
     border: none;
     background-color: inherit;
+    width: 40px;
+    overflow-x: hidden;
 }
 
 .form {

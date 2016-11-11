@@ -92,8 +92,17 @@
 
 (defn table-row [entity form retract-entity! show-links? {:keys [navigate-cmp] :as fieldless-widget-args}]
   [:tr
-   [:td.link-cell {:key "links"}
-    [links-cell entity form retract-entity! show-links? navigate-cmp]]
+   (conj
+     (->> (:form/link form)
+          (map (fn [{:keys [:db/id :link/ident :link/prompt] :as link}]
+                 (let [param-ctx (merge {:user-profile hc/*user-profile*} {:entity entity})
+                       href (links/query-link link param-ctx)]
+                   [:td.link-cell {:key id}
+                    (navigate-cmp {:key ident :href href} prompt)]))))
+     (let [href (links/entity-link (:db/id form) (:db/id entity))]
+       [:td.link-cell {:key "hypercrud-entity-view"} (navigate-cmp {:href href} "row")])
+     [:td.link-cell {:key "hypercrud-delete-row"}
+      (if retract-entity! [:button {:on-click #(retract-entity! (:db/id entity))} "X"])])
    (build-row-cells form entity fieldless-widget-args)])
 
 
@@ -138,7 +147,11 @@
        [:colgroup [:col {:span "1" :style {:width "20px"}}]]
        [:thead
         [:tr
-         [:td.link-cell {:key "links"}]
+         (->> (:form/link form)
+              (map (fn [{:keys [:db/id] :as link}]
+                     [:td.link-cell {:key id}])))
+         [:td.link-cell {:key "hypercrud-entity-view-link"}]
+         [:td.link-cell {:key "hypercrud-delete-row-link"}]
          (build-col-heads form sort-col)]]
        [body graph entities new-entity-dbval form expanded-cur stage-tx! navigate-cmp retract-entity! add-entity! sort-col]])))
 
