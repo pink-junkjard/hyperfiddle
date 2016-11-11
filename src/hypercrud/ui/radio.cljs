@@ -84,3 +84,32 @@
          [:button {:on-click #(swap! expanded-cur (constantly {}))
                    :disabled (= nil value)} "Edit"])
        ]))
+
+(comment
+  ; todo factor out aggregation into widget lib
+  #_(defn radio-aggregate [fieldinfo eid stage-tx!]
+      (let [selected-value (atom blog-value)]
+        (fn [{:keys [name prompt values]} eid stage-tx!]
+          [:div.field
+           [:label prompt]
+           (map (fn [{:keys [label value]}]
+                  (let [change! #(let [rets (map (fn [[name val]] [:db/retract eid name val]) @selected-value)
+                                       adds (map (fn [[name val]] [:db/add eid name val]) value)]
+                                  (reset! selected-value value)
+                                  (stage-tx! (vec (concat rets adds))))
+                        checked? (= value @selected-value)]
+                    ^{:key (hash [label value])}
+                    [radio/radio-option label name change! checked?]))
+                values)])))
+
+
+
+  (defn radio-group [{:keys [name prompt values]} cur]
+    [:div.field
+     (if (not= nil prompt)
+       [:label prompt])
+     (map (fn [{:keys [label value]}]
+            (let [checked? (= value @cur)]
+              ^{:key (hash [label value])}
+              [radio/radio-option label name #(reset! cur value) checked?]))
+          values)]))
