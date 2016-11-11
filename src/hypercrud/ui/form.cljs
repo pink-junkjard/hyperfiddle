@@ -7,7 +7,7 @@
 
 (defn field [entity {:keys [graph] {:keys [:field/prompt :field/renderer]} :field :as widget-args}]
   [:div.field
-   (if prompt [:label prompt])
+   [:label prompt]
    (if (empty? renderer)
      [auto-control entity widget-args]
      (let [{renderer :value error :error} (eval/uate (str "(identity " renderer ")"))]
