@@ -19,8 +19,9 @@
 (defn build-dbhole-lookup [query]
   (->> (:query/dbhole query)
        (map (fn [{:keys [:dbhole/name :dbhole/value]}]
-              ; transform project-id into conn-id
-              [name (->DbVal (-> value .-dbid .-id) nil)]))
+              (if-not (or (empty? name) (nil? value))
+                ; transform project-id into conn-id
+                [name (->DbVal (-> value .-dbid .-id) nil)])))
        (into {})))
 
 
