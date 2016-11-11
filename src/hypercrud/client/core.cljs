@@ -19,6 +19,6 @@
 
 
 (defprotocol Client
-  (hydrate! [this schemas named-queries])
+  (hydrate! [this schemas named-queries force?])
   (temp-id! [this conn-id])
   (transact! [this tx]))
