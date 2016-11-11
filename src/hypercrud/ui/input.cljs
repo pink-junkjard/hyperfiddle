@@ -10,8 +10,9 @@
                               :class (if-not valid?' "invalid")
                               :value @intermediate-val
                               :on-change #(reset! intermediate-val (.. % -target -value))
-                              :on-blur #(if (and valid?' (not= @intermediate-val value))
-                                         (on-change! (parse-string @intermediate-val)))})]))))
+                              :on-blur #(let [parsed (parse-string @intermediate-val)]
+                                         (if (and valid?' (not= parsed value))
+                                           (on-change! parsed)))})]))))
 
 
 (defn validated-input [value on-change! parse-string to-string valid? & [props]]
