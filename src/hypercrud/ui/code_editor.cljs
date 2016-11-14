@@ -2,7 +2,7 @@
   (:require [reagent.core :as reagent]))
 
 
-(defn did-mount! [value change!]
+(defn did-mount! [change!]
   (fn [this]
     (let [div (.querySelector (reagent/dom-node this) "textarea")
           ref (.fromTextArea js/CodeMirror div
@@ -12,12 +12,7 @@
                                   :autoCloseBrackets true
                                   :viewportMargin js/Infinity})]
       (aset this "codeMirrorRef" ref)
-      (.on ref "blur" (let [last-val (atom value)]
-                        (fn [e]
-                          (let [old @last-val
-                                new (.getValue e)]
-                            (reset! last-val new)
-                            (change! [old] [new]))))))))
+      (.on ref "blur" #(change! (.getValue %))))))
 
 
 (defn code-editor* [value change!]
@@ -25,9 +20,9 @@
     {:render (fn [this]
                [:div.value
                 [:textarea {:default-value value :auto-complete "off" :class "text"}]])
-     :component-did-mount (did-mount! value change!)
+     :component-did-mount (did-mount! change!)
      :component-will-unmount (fn [this] (.toTextArea (aget this "codeMirrorRef")))
 
-     ;:component-did-update #() ; use did-update to punch through the new change! handler,
-     ; so we can use tx/update-entity-attr as we would like
-     }))
+     :component-did-update (fn [this props]
+                             (let [[_ value change!] (aget this "props" "argv")] ; wtf reagent
+                               (.setValue (aget this "codeMirrorRef") value)))}))

@@ -138,7 +138,7 @@
 (defn code-editor [entity {:keys [field stage-tx!]}]
   (let [ident (-> field :field/attribute :attribute/ident)
         value (get entity ident)
-        change! #(stage-tx! (tx/edit-entity (:db/id entity) ident %1 %2))]
+        change! #(stage-tx! (tx/edit-entity (:db/id entity) ident [value] [%]))]
     ^{:key ident}
     [code-editor* value change!]))
 
