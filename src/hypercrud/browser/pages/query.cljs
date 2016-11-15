@@ -110,9 +110,8 @@
                                                       (let [link (->> (:form/link form)
                                                                       (filter #(= ident (:link/ident %)))
                                                                       first)
-                                                            param-ctx (merge param-ctx {:entity entity})
-                                                            href (links/query-link link param-ctx)]
-                                                        [navigate-cmp {:href href} label]))]
+                                                            param-ctx (merge param-ctx {:entity entity})]
+                                                        (links/query-link link param-ctx (fn [href] [navigate-cmp {:href href} label]))))]
                                         [:li {:key (hash (:db/id entity))}
                                          (try
                                            (row-renderer graph link-fn entity)
@@ -121,9 +120,10 @@
           [:span "Query Links: "]
           (->> (:query/link query)
                (map (fn [link]
-                      (let [href (links/query-link link param-ctx)]
-                        ^{:key (:link/ident link)}
-                        [navigate-cmp {:href href} (:link/prompt link)])))
+                      (links/query-link link param-ctx
+                                        (fn [href]
+                                          ^{:key (:link/ident link)}
+                                          [navigate-cmp {:href href} (:link/prompt link)]))))
                (interpose " "))]])
       [:div "Query record is incomplete"])))
 

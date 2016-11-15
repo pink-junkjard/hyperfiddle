@@ -75,8 +75,8 @@
       (if (not (nil? (get entity ident)))
         (let [options (option/gimme-useful-options field)]
           (if-let [form (option/get-form options entity)]
-            (let [href (links/entity-link (.-dbid form) (:db/id (get entity ident)))]
-              [navigate-cmp {:class "edit" :href href} "Edit"])))))))
+            (links/entity-link (.-dbid form) (:db/id (get entity ident))
+                               (fn [href] [navigate-cmp {:class "edit" :href href} "Edit"]))))))))
 
 
 (defn select-ref-component [entity {:keys [expanded-cur field graph navigate-cmp stage-tx!]}]

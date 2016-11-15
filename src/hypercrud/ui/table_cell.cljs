@@ -14,7 +14,7 @@
   (let [ident (-> field :field/attribute :attribute/ident)
         label-prop (:field/label-prop field)]
     [:div
-     [navigate-cmp {:href (links/field-link (.-dbid field) (.-dbid entity))} "Edit"]
+     (links/field-link (.-dbid field) (.-dbid entity) (fn [href] [navigate-cmp {:href href} "Edit"]))
      " "
      (if-let [entity (get entity ident)]
        (-> entity
@@ -28,7 +28,7 @@
   (let [ident (-> field :field/attribute :attribute/ident)
         label-prop (:field/label-prop field)]
     [:div
-     [navigate-cmp {:href (links/field-link (.-dbid field) (.-dbid entity))} "Edit"]
+     (links/field-link (.-dbid field) (.-dbid entity) (fn [href] [navigate-cmp {:href href} "Edit"]))
      " "
      (->> (get entity ident)
           (map (fn [entity]
@@ -41,7 +41,7 @@
 (defn other-many [entity {:keys [field navigate-cmp]}]
   (let [ident (-> field :field/attribute :attribute/ident)]
     [:div
-     [navigate-cmp {:href (links/field-link (.-dbid field) (.-dbid entity))} "Edit"]
+     (links/field-link (.-dbid field) (.-dbid entity) (fn [href] [navigate-cmp {:href href} "Edit"]))
      " "
      (->> (get entity ident)
           (map pr-str)                                      ;todo account for many different types of values

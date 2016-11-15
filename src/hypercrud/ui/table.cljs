@@ -79,11 +79,9 @@
            (conj
              (->> (:form/link form)
                   (map (fn [{:keys [:link/ident :link/prompt] :as link}]
-                         (let [param-ctx (merge {:user-profile hc/*user-profile*} {:entity entity})
-                               href (links/query-link link param-ctx)]
-                           (navigate-cmp {:key ident :href href} prompt)))))
-             (let [href (links/entity-link (:db/id form) (:db/id entity))]
-               (navigate-cmp {:key "hypercrud-entity-view" :href href} "Entity View"))
+                         (let [param-ctx (merge {:user-profile hc/*user-profile*} {:entity entity})]
+                           (links/query-link link param-ctx #(navigate-cmp {:key ident :href %} prompt))))))
+             (links/entity-link (:db/id form) (:db/id entity) #(navigate-cmp {:key "hypercrud-entity-view" :href %} "Entity View"))
              (if retract-entity!
                [:span {:key "hypercrud-delete-row" :on-click #(retract-entity! (:db/id entity))} "Delete Row"])))
          [:span {:key "close" :on-click #(reset! open? false)} "Close"]]
@@ -95,12 +93,11 @@
    (conj
      (->> (:form/link form)
           (map (fn [{:keys [:db/id :link/ident :link/prompt] :as link}]
-                 (let [param-ctx (merge {:user-profile hc/*user-profile*} {:entity entity})
-                       href (links/query-link link param-ctx)]
+                 (let [param-ctx (merge {:user-profile hc/*user-profile*} {:entity entity})]
                    [:td.link-cell {:key id}
-                    (navigate-cmp {:key ident :href href} prompt)]))))
-     (let [href (links/entity-link (:db/id form) (:db/id entity))]
-       [:td.link-cell {:key "hypercrud-entity-view"} (navigate-cmp {:href href} "row")])
+                    (links/query-link link param-ctx #(navigate-cmp {:key ident :href %} prompt))]))))
+     [:td.link-cell {:key "hypercrud-entity-view"}
+      (links/entity-link (:db/id form) (:db/id entity) #(navigate-cmp {:href %} "row"))]
      [:td.link-cell {:key "hypercrud-delete-row"}
       (if retract-entity! [:button {:on-click #(retract-entity! (:db/id entity))} "X"])])
    (build-row-cells form entity fieldless-widget-args)])

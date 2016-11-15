@@ -27,10 +27,11 @@
       (->> (:form/link form)
            (map (fn [link]
                   (let [param-ctx (merge param-ctx
-                                         {:entity entity})
-                        href (links/query-link link param-ctx)]
-                    ^{:key (:link/ident link)}
-                    [navigate-cmp {:href href} (:link/prompt link)])))
+                                         {:entity entity})]
+                    (links/query-link link param-ctx
+                                      (fn [href]
+                                        ^{:key (:link/ident link)}
+                                        [navigate-cmp {:href href} (:link/prompt link)])))))
            (interpose " "))]]))
 
 
