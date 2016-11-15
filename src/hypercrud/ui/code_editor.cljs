@@ -4,11 +4,15 @@
 
 
 (def code-editor*
+
+  ;; all usages of value (from react lifecycle) need to be (str value), because
+  ;; codemirror throws NPE if value is nil
+
   (reagent/create-class
     {:reagent-render
      (fn [value change!]
        [:div.value
-        [:textarea {:default-value value :auto-complete "off" :class "text"}]])
+        [:textarea {:default-value (str value) :auto-complete "off" :class "text"}]])
 
      :component-did-mount
      (fn [this]
@@ -30,4 +34,4 @@
      :component-did-update
      (fn [this]
        (let [[_ value change!] (r-comp/get-argv this)]      ;[value change!] (reagent/props this)
-         (.setValue (aget this "codeMirrorRef") value)))}))
+         (.setValue (aget this "codeMirrorRef") (str value))))}))
