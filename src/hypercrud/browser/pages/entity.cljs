@@ -17,11 +17,11 @@
                                           (if (tx/tempid? (.-dbid entity))
                                             (navigate! (str "./" (get tempids (.-dbid entity))))))))
                  :disabled (empty? @local-statements)}
-      (if (tx/tempid? (.-dbid entity)) "Create" "Update")]
+        (if (tx/tempid? (.-dbid entity)) "Create" "Update")]
      #_[:button {:on-click #(-> (transact! [[:db.fn/retractEntity (.-dbid entity)]])
-                              (p/then (fn [_] (navigate! (str "../../../")))))
-               :disabled (tx/tempid? (.-dbid entity))}
-      "Delete"]
+                                (p/then (fn [_] (navigate! (str "../../../")))))
+                 :disabled (tx/tempid? (.-dbid entity))}
+        "Delete"]
      [:div
       [:span "Form Links: "]
       (->> (:form/link form)
