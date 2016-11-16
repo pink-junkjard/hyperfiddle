@@ -81,7 +81,7 @@
                   (map (fn [{:keys [:link/ident :link/prompt] :as link}]
                          (let [param-ctx (merge {:user-profile hc/*user-profile*} {:entity entity})]
                            (links/query-link link param-ctx #(navigate-cmp {:key ident :href %} prompt))))))
-             (links/entity-link (:db/id form) (:db/id entity) #(navigate-cmp {:key "hypercrud-entity-view" :href %} "Entity View"))
+             #_(links/entity-link (:db/id form) (:db/id entity) #(navigate-cmp {:key "hypercrud-entity-view" :href %} "Entity View"))
              (if retract-entity!
                [:span {:key "hypercrud-delete-row" :on-click #(retract-entity! (:db/id entity))} "Delete Row"])))
          [:span {:key "close" :on-click #(reset! open? false)} "Close"]]

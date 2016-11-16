@@ -72,7 +72,8 @@
   (let [ident (-> field :field/attribute :attribute/ident)]
     (select*
       entity (assoc widget-args :expanded-cur (expanded-cur [ident]))
-      (if (not (nil? (get entity ident)))
+      nil
+      #_(if (not (nil? (get entity ident)))
         (let [options (option/gimme-useful-options field)]
           (if-let [form (option/get-form options entity)]
             (links/entity-link (.-dbid form) (:db/id (get entity ident))

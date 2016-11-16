@@ -12,7 +12,8 @@
             [hypercrud.types :refer [->DbId ->DbVal ->Entity]]
             [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.form :as form]
-            [hypercrud.ui.table :as table]))
+            [hypercrud.ui.table :as table]
+            [hypercrud.util :as util]))
 
 
 (defn initial-entity [q holes-by-name params]
@@ -93,14 +94,16 @@
          (if (show-results? hole-names hole-lookup)         ;todo what if we have a user hole?
            (let [resultset (->> (hc/select graph ::table/query)
                                 (map (fn [result]
-                                       (map #(hc/entity (hc/get-dbgraph graph dbval) %) result))))]
+                                       (map #(hc/entity (hc/get-dbgraph graph dbval) %) result))))
+                 form-lookup (->> (map (juxt :find-element/name :find-element/form) find-elements)
+                                  (into {}))
+                 ordered-forms (->> (util/parse-query-element q :find)
+                                    (map str)
+                                    (mapv #(get form-lookup %)))]
              (if (:query/single-result-as-entity? query)
-               [entity/ui cur stage-tx! graph (first resultset) find-elements navigate-cmp]
+               [entity/ui cur stage-tx! graph (first resultset) ordered-forms navigate-cmp]
                [:div
-                (let [row-renderer-code nil                 ;(:form/row-renderer form)
-                      ; parse the :find, use it to order the forms, so the resultset can be interpreted
-                      ordered-forms (mapv :find-element/form find-elements)
-                      ]
+                (let [row-renderer-code nil]                ;(:form/row-renderer form)
                   [table/table graph resultset ordered-forms nil expanded-cur stage-tx! navigate-cmp nil]
                   #_(if (empty? row-renderer-code)
 

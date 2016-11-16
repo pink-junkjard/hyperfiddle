@@ -140,18 +140,7 @@
 
       ;; group by dbval, and give each list of hydrated-entities to the proper DbGraph so it can do datom stuff
 
-      (let [                                                ;grouped
-            #_(->> pulled-trees-map
-                         ; Map[DbVal -> List[[query pulled-trees]]]
-                         (group-by (fn [[[q params [dbval pull-exp]] pulled-trees]] dbval))
-                         ; Map[DbVal -> PulledTrees]
-                         (util/map-values (fn [pulled-trees-map]
-                                            #_(map (fn [[[q params [dbval pull-exp]] pulled-trees]]) pulled-trees-map)
-
-                                            ;; All of these pulled trees are from the same database value because of the
-                                            ;; group-by, so can drop the key.
-                                            (apply concat (vals pulled-trees-map)))))
-            grouped (->> pulled-trees-map
+      (let [grouped (->> pulled-trees-map
                          (mapcat (fn [[[q params pull-exps] resultset-hydrated]]
                                    (let [transposed-resultset (util/transpose resultset-hydrated)]
                                      (->> (q->dbvals q pull-exps)
