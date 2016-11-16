@@ -1,7 +1,8 @@
 (ns hypercrud.form.option
   (:require [cljs.reader :as reader]
             [hypercrud.client.core :as hc]
-            [hypercrud.types :refer [->DbVal]]))
+            [hypercrud.types :refer [->DbVal]]
+            [hypercrud.util :as util]))
 
 
 (defprotocol IFieldOptions
@@ -38,7 +39,7 @@
             dbgraph (.-dbgraph entity)                      ;todo this is wrong
             ]
         (->> (hc/select graph (hash q) q)
-             (mapv #(hc/entity dbgraph %))))))
+             (mapv #(hc/entity dbgraph (first %)))))))      ;todo first is a hack
 
   (has-holes? [this]
     (not (empty? (:query/hole query))))
@@ -49,7 +50,8 @@
             query-name (hash q)
             params (p-filler query formulas param-ctx)
             pull-dbval (get param-ctx :dbval)
-            pull-exp [pull-dbval (if label-prop [:db/id label-prop] [:db/id])]] ; (concat [:dbid] (if label-prop [label-prop] []))
+            find-element (str (first (util/parse-query-element q :find))) ;todo this is a hack
+            pull-exp {find-element [pull-dbval (if label-prop [:db/id label-prop] [:db/id])]}]
         {query-name [q params pull-exp]})))
 
   (get-form [this record] form)

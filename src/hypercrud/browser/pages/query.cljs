@@ -55,19 +55,20 @@
                     [:db/add form-dbid :form/field field-dbid]])))))
 
 
-(defn new-entity [cur stage-tx! graph form navigate-cmp param-ctx]
+(defn new-entity [cur stage-tx! graph find-elements navigate-cmp param-ctx]
   (let [new-dbid (hc/*temp-id!* (-> param-ctx :dbval .-conn-id))]
-    (fn [cur stage-tx! graph form navigate-cmp param-ctx]
+    (fn [cur stage-tx! graph find-elements navigate-cmp param-ctx]
       (let [dbval (get param-ctx :dbval)
             db-graph (hc/get-dbgraph graph dbval)
             new-entity (hc/entity db-graph new-dbid)]
-        [entity/ui cur stage-tx! graph new-entity form navigate-cmp]))))
+        [entity/ui cur stage-tx! graph new-entity find-elements navigate-cmp]))))
 
 
-(defn ui [cur editor-graph stage-tx! graph {:keys [:link/form :link/query] :as link} params navigate-cmp param-ctx]
-  (if (nil? query)
+(defn ui [cur editor-graph stage-tx! graph {find-elements :link/find-element query :link/query
+                                            :as link} params navigate-cmp param-ctx]
+  (if (nil? query)                                          ; abuse query=nil to mean a create-new form
     ^{:key (.-dbid link)}
-    [new-entity cur stage-tx! graph form navigate-cmp param-ctx]
+    [new-entity cur stage-tx! graph find-elements navigate-cmp param-ctx]
     (if-let [q (some-> (:query/value query) reader/read-string)]
       (let [hole-names (q-util/parse-holes q)
             expanded-cur (cur [:expanded] {})
@@ -90,32 +91,37 @@
                  holes-form (hc/entity editor-graph holes-form-dbid)]
              [form/form graph entity holes-form expanded-cur stage-tx! navigate-cmp])
          (if (show-results? hole-names hole-lookup)         ;todo what if we have a user hole?
-           (let [entities (->> (hc/select graph ::table/query)
-                               (map #(hc/entity (hc/get-dbgraph graph dbval) %)))]
+           (let [resultset (->> (hc/select graph ::table/query)
+                                (map (fn [result]
+                                       (map #(hc/entity (hc/get-dbgraph graph dbval) %) result))))]
              (if (:query/single-result-as-entity? query)
-               [entity/ui cur stage-tx! graph (first entities) form navigate-cmp]
+               [entity/ui cur stage-tx! graph (first resultset) find-elements navigate-cmp]
                [:div
-                (let [row-renderer-code (:form/row-renderer form)]
-                  (if (empty? row-renderer-code)
-                    [table/table graph entities form nil expanded-cur stage-tx! navigate-cmp nil]
-                    (let [result (eval/uate (str "(identity " row-renderer-code ")"))
-                          {row-renderer :value error :error} result]
-                      (if error
-                        [:div (pr-str error)]
-                        [:div
-                         [:ul
-                          (->> entities
-                               (map (fn [entity]
-                                      (let [link-fn (fn [ident label]
-                                                      (let [link (->> (:form/link form)
-                                                                      (filter #(= ident (:link/ident %)))
-                                                                      first)
-                                                            param-ctx (merge param-ctx {:entity entity})]
-                                                        (links/query-link link param-ctx (fn [href] [navigate-cmp {:href href} label]))))]
-                                        [:li {:key (hash (:db/id entity))}
-                                         (try
-                                           (row-renderer graph link-fn entity)
-                                           (catch :default e (pr-str e)))]))))]]))))])))
+                (let [row-renderer-code nil                 ;(:form/row-renderer form)
+                      ; parse the :find, use it to order the forms, so the resultset can be interpreted
+                      ordered-forms (mapv :find-element/form find-elements)
+                      ]
+                  [table/table graph resultset ordered-forms nil expanded-cur stage-tx! navigate-cmp nil]
+                  #_(if (empty? row-renderer-code)
+
+                      (let [result (eval/uate (str "(identity " row-renderer-code ")"))
+                            {row-renderer :value error :error} result]
+                        (if error
+                          [:div (pr-str error)]
+                          [:div
+                           [:ul
+                            (->> entities
+                                 (map (fn [entity]
+                                        (let [link-fn (fn [ident label]
+                                                        (let [link (->> (:form/link form)
+                                                                        (filter #(= ident (:link/ident %)))
+                                                                        first)
+                                                              param-ctx (merge param-ctx {:entity entity})]
+                                                          (links/query-link link param-ctx (fn [href] [navigate-cmp {:href href} label]))))]
+                                          [:li {:key (hash (:db/id entity))}
+                                           (try
+                                             (row-renderer graph link-fn entity)
+                                             (catch :default e (pr-str e)))]))))]]))))])))
          [:div
           [:span "Query Links: "]
           (->> (:query/link query)
@@ -128,12 +134,13 @@
       [:div "Query record is incomplete"])))
 
 
-(defn query [state editor-graph {:keys [:link/form :link/query]} params param-ctx]
+(defn query [state editor-graph {find-elements :link/find-element query :link/query} params param-ctx]
   (let [expanded-forms (get state :expanded nil)]
     (if (nil? query)
       ; we don't have a dbid for the entity/query because it will be a tempid assigned on render
       ; so just query for the form options because there isn't any entity to query for
-      (form-util/form-option-queries form expanded-forms q-util/build-params-from-formula param-ctx)
+      (apply merge (->> find-elements
+                        (map (fn [form] (form-util/form-option-queries form expanded-forms q-util/build-params-from-formula param-ctx)))))
       (if-let [q (some-> (:query/value query) reader/read-string)]
         (let [hole-names (q-util/parse-holes q)
               holes-by-name (->> (:query/hole query)
@@ -160,15 +167,15 @@
                                (q-util/build-params (fn [hole-name]
                                                       (let [v (get hole-lookup hole-name)]
                                                         (if (instance? hypercrud.types.DbId v) (.-id v) v)))
-                                                    query param-ctx))]
-                ; hacks so when result set is 1 we can display the entity view
-                #_(table/query p-filler param-ctx {:link/query (:db/id query)
-                                                   :link/form form-id})
-                (let [dbval (get param-ctx :dbval)]
-                  (if (:query/single-result-as-entity? query)
-                    ; we can use nil for :link/formula and formulas because we know our p-filler doesn't use it
-                    (merge
-                      (form-util/form-option-queries form expanded-forms p-filler param-ctx)
-                      (table/option-queries form p-filler param-ctx)
-                      {:hypercrud.ui.table/query [q (p-filler query nil param-ctx) [dbval (form-util/form-pull-exp form expanded-forms)]]})
-                    (table/query p-filler param-ctx query form nil)))))))))))
+                                                    query param-ctx))
+                    dbval (get param-ctx :dbval)
+                    query-for-form (fn [{find-name :find-element/name form :find-element/form :as find-element}]
+                                     (merge
+                                       (form-util/form-option-queries form expanded-forms p-filler param-ctx)
+                                       (table/option-queries form p-filler param-ctx)
+                                       {:hypercrud.ui.table/query [q (p-filler query nil param-ctx)
+                                                                   {find-name [dbval (form-util/form-pull-exp form expanded-forms)]}]}))]
+                (if (:query/single-result-as-entity? query)
+                  ; we can use nil for :link/formula and formulas because we know our p-filler doesn't use it
+                  (apply merge (map query-for-form find-elements))
+                  (table/query p-filler param-ctx query find-elements nil))))))))))

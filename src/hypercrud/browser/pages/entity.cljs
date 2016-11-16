@@ -5,13 +5,17 @@
             [hypercrud.ui.form :as form]))
 
 
-(defn ui [cur stage-tx! graph entity form navigate-cmp param-ctx]
+(defn ui [cur stage-tx! graph entity                        ;todo this is a set of entities, a result
+          find-elements navigate-cmp param-ctx
+          ]
   "hypercrud values just get a form, with ::update and ::delete."
   (let [expanded-cur (cur [:expanded] {})                   ; {:community/neighborhood {:neighborhood/district {:district/region {}}}}
         dbval (-> entity .-dbgraph .-dbval)
         entity (hc/entity (hc/get-dbgraph graph dbval) (.-dbid entity))]
     [:div
-     [form/form graph entity form expanded-cur stage-tx! navigate-cmp]
+     (map (fn [{:keys [:find-element/form :find-element/connection] :as find-element}]
+            [form/form graph entity form expanded-cur stage-tx! navigate-cmp])
+          find-elements)
      #_[:button {:on-click #(-> (transact! @local-statements)
                                 (p/then (fn [{:keys [tempids]}]
                                           (if (tx/tempid? (.-dbid entity))
@@ -24,14 +28,14 @@
         "Delete"]
      [:div
       [:span "Form Links: "]
-      (->> (:form/link form)
-           (map (fn [link]
-                  (let [param-ctx (merge param-ctx
-                                         {:entity entity})]
-                    (links/query-link link param-ctx
-                                      (fn [href]
-                                        ^{:key (:link/ident link)}
-                                        [navigate-cmp {:href href} (:link/prompt link)])))))
+      (->> (map :find-element/form find-elements)
+           (mapcat (fn [{link :form/link}]
+                     (let [param-ctx (merge param-ctx
+                                            {:entity entity})]
+                       (links/query-link link param-ctx
+                                         (fn [href]
+                                           ^{:key (:link/ident link)}
+                                           [navigate-cmp {:href href} (:link/prompt link)])))))
            (interpose " "))]]))
 
 

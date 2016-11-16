@@ -3,7 +3,7 @@
             [goog.Uri]
             [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx]
-            [hypercrud.types :as types :refer [->DbId ->DbVal ->Entity]]
+            [hypercrud.types :refer [->DbId ->DbVal ->Entity]]
             [hypercrud.util :as util]))
 
 
@@ -108,38 +108,64 @@
 
   SuperGraphPrivate
   (set-state! [this pulled-trees-map t']
-    ; pulled-trees-map :: Map[query Pulled-Trees]
+    ; pulled-trees-map :: Map[query List[List[Pulled-Tree]]]
+    ;                               List[ResultHydrated]
+    ; ResultHydrated :: Tuple[EntityHydrated]
     ; (vec pulled-trees-map) :: List[[query Pulled-Trees]]
     ; query :: [q params [dbval pull-exp]]
 
-    ; result-sets :: Map[query -> List[DbId]]
-    (let [result-sets (->> pulled-trees-map
-                           (map (fn [[query pulled-trees]]
-                                  (let [[q params [dbval pull-exp]] query
-                                        result-set (map (fn [pulled-tree]
-                                                          (->DbId (:db/id pulled-tree) (.-conn-id dbval)))
-                                                        pulled-trees)]
-                                    [query result-set])))
-                           (into {}))]
-      (set! graph-data (GraphData. pulled-trees-map result-sets)))
+    ; result-sets :: Map[query -> List[List[DbId]]]
+    (let [q->dbvals (fn [q pull-exps]
+                      (->> (util/parse-query-element q :find)
+                           (mapv str)
+                           (mapv (fn [find-element]
+                                   (let [[dbval _] (get pull-exps find-element)]
+                                     dbval)))))]
+      (let [resultset-by-query
+            (->> pulled-trees-map
+                 (map (fn [[query resultset-hydrated]]
+                        (let [[q params pull-exps] query
+                              ordered-dbvals (q->dbvals q pull-exps)
+                              resultset-ids (map (fn [result-hydrated]
+                                                   (->> (map vector result-hydrated ordered-dbvals)
+                                                        (map (fn [[entity-hydrated dbval]]
+                                                               (->DbId (:db/id entity-hydrated) (.-conn-id dbval))))))
+                                                 resultset-hydrated)]
+                          [query resultset-ids])))
+                 (into {}))]
+        (set! graph-data (GraphData. pulled-trees-map resultset-by-query)))
 
-    ; grouped :: Map[DbVal -> PulledTrees]
-    (let [grouped (->> pulled-trees-map
-                       ; Map[DbVal -> List[[query pulled-trees]]]
-                       (group-by (fn [[[q params [dbval pull-exp]] pulled-trees]] dbval))
-                       ; Map[DbVal -> PulledTrees]
-                       (util/map-values (fn [pulled-trees-map]
-                                          #_(map (fn [[[q params [dbval pull-exp]] pulled-trees]]) pulled-trees-map)
+      ; grouped :: Map[DbVal -> PulledTrees]
 
-                                          ;; All of these pulled trees are from the same database value because of the
-                                          ;; group-by, so can drop the key.
-                                          (apply concat (vals pulled-trees-map)))))]
 
-      (doall (map (fn [[dbval graph]]
-                    (let [new-ptm (get grouped dbval)
-                          new-t nil]
-                      (set-db-graph-state! graph new-ptm new-t)))
-                  graphs)))
+      ;; group by dbval, and give each list of hydrated-entities to the proper DbGraph so it can do datom stuff
+
+      (let [                                                ;grouped
+            #_(->> pulled-trees-map
+                         ; Map[DbVal -> List[[query pulled-trees]]]
+                         (group-by (fn [[[q params [dbval pull-exp]] pulled-trees]] dbval))
+                         ; Map[DbVal -> PulledTrees]
+                         (util/map-values (fn [pulled-trees-map]
+                                            #_(map (fn [[[q params [dbval pull-exp]] pulled-trees]]) pulled-trees-map)
+
+                                            ;; All of these pulled trees are from the same database value because of the
+                                            ;; group-by, so can drop the key.
+                                            (apply concat (vals pulled-trees-map)))))
+            grouped (->> pulled-trees-map
+                         (mapcat (fn [[[q params pull-exps] resultset-hydrated]]
+                                   (let [transposed-resultset (util/transpose resultset-hydrated)]
+                                     (->> (q->dbvals q pull-exps)
+                                          (map vector transposed-resultset)))))
+                         (group-by (fn [[pulled-trees dbval]] dbval))
+                         (util/map-values (fn [things]      ;things :: List[[List[EntityHydrated] dbval]]
+                                            ;; All of these pulled trees are from the same database value
+                                            (mapcat (fn [[entities-hydrated dbval]] entities-hydrated) things))))]
+
+        (doall (map (fn [[dbval graph]]
+                      (let [new-ptm (get grouped dbval)
+                            new-t nil]
+                        (set-db-graph-state! graph new-ptm new-t)))
+                    graphs))))
     nil)
 
   GraphSSR

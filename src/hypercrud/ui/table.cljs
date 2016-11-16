@@ -31,25 +31,25 @@
                  (:db/ident valueType)))))
 
 
-(defn build-col-heads [form col-sort]
+(defn build-col-heads [forms col-sort]
   (let [[ident' direction] @col-sort]
-    (map (fn [{:keys [:field/prompt] :as field}]
-           (let [ident (-> field :field/attribute :attribute/ident)
-                 with-sort-direction (fn [asc desc no-sort not-sortable]
-                                       (if (sortable? field)
-                                         (if (= ident' ident)
-                                           (condp = direction
-                                             :asc asc
-                                             :desc desc)
-                                           no-sort)
-                                         not-sortable))
-                 on-click (with-sort-direction #(reset! col-sort [ident :desc])
-                                               #(reset! col-sort nil)
-                                               #(reset! col-sort [ident :asc])
-                                               (constantly nil))
-                 arrow (with-sort-direction " ↓" " ↑" " ↕" nil)]
-             [:td {:key ident :on-click on-click} prompt arrow]))
-         (:form/field form))))
+    (->> (mapcat :form/field forms)
+         (map (fn [{:keys [:field/prompt] :as field}]
+                (let [ident (-> field :field/attribute :attribute/ident)
+                      with-sort-direction (fn [asc desc no-sort not-sortable]
+                                            (if (sortable? field)
+                                              (if (= ident' ident)
+                                                (condp = direction
+                                                  :asc asc
+                                                  :desc desc)
+                                                no-sort)
+                                              not-sortable))
+                      on-click (with-sort-direction #(reset! col-sort [ident :desc])
+                                                    #(reset! col-sort nil)
+                                                    #(reset! col-sort [ident :asc])
+                                                    (constantly nil))
+                      arrow (with-sort-direction " ↓" " ↑" " ↕" nil)]
+                  [:td {:key ident :on-click on-click} prompt arrow]))))))
 
 
 (defn build-row-cells [form entity {:keys [graph] :as fieldless-widget-args}]
@@ -88,77 +88,79 @@
         [:div {:on-click #(reset! open? true)} "⚙"]))))
 
 
-(defn table-row [entity form retract-entity! show-links? {:keys [navigate-cmp] :as fieldless-widget-args}]
+(defn table-row [result forms retract-entity! show-links? {:keys [navigate-cmp] :as fieldless-widget-args}]
   [:tr
    (conj
-     (->> (:form/link form)
+     (->> (mapcat :form/link forms)
           (map (fn [{:keys [:db/id :link/ident :link/prompt] :as link}]
-                 (let [param-ctx (merge {:user-profile hc/*user-profile*} {:entity entity})]
+                 (let [param-ctx {:user-profile hc/*user-profile*
+                                  :result result}]
                    [:td.link-cell {:key id}
                     (links/query-link link param-ctx #(navigate-cmp {:key ident :href %} prompt))]))))
      [:td.link-cell {:key "hypercrud-entity-view"}
-      (links/entity-link (:db/id form) (:db/id entity) #(navigate-cmp {:href %} "row"))]
+        #_(links/entity-link (:db/id form) (:db/id entity) #(navigate-cmp {:href %} "row"))]
      [:td.link-cell {:key "hypercrud-delete-row"}
-      (if retract-entity! [:button {:on-click #(retract-entity! (:db/id entity))} "X"])])
-   (build-row-cells form entity fieldless-widget-args)])
+        #_(if retract-entity! [:button {:on-click #(retract-entity! (:db/id entity))} "X"])])
+   (mapcat #(build-row-cells %1 %2 fieldless-widget-args) forms result)])
 
 
-(defn body [graph entities new-entity-dbval form expanded-cur stage-tx! navigate-cmp retract-entity! add-entity! sort-col]
+(defn body [graph resultset new-entity-dbval forms expanded-cur stage-tx! navigate-cmp retract-entity! add-entity! sort-col]
   [:tbody
    (let [[sort-key direction] @sort-col
-         sort-eids (fn [col]
-                     (let [field (->> (:form/field form)
-                                      (filter #(= sort-key (-> % :field/attribute :attribute/ident)))
-                                      first)]
-                       (if (and (not= nil field) (sortable? field))
-                         (sort-by sort-key
-                                  (condp = direction
-                                    :asc #(compare %1 %2)
-                                    :desc #(compare %2 %1))
-                                  col)
-                         col)))]
-     (->> entities
-          sort-eids
-          (map (fn [entity]
+         ;sort-eids
+         #_(fn [col]
+             (let [field (->> (:form/field form)
+                              (filter #(= sort-key (-> % :field/attribute :attribute/ident)))
+                              first)]
+               (if (and (not= nil field) (sortable? field))
+                 (sort-by sort-key
+                          (condp = direction
+                            :asc #(compare %1 %2)
+                            :desc #(compare %2 %1))
+                          col)
+                 col)))]
+     (->> resultset
+          ;sort-eids
+          (map (fn [[entity :as result]]
                  ^{:key (hash (:db/id entity))}
-                 [table-row entity form retract-entity! true {:expanded-cur (expanded-cur [(:db/id entity)])
-                                                              :graph graph
-                                                              :navigate-cmp navigate-cmp
-                                                              :stage-tx! stage-tx!}]))))
-   (if (not= nil new-entity-dbval)
-     (let [entity (hc/entity (hc/get-dbgraph graph new-entity-dbval)
-                             (hc/*temp-id!* (.-conn-id new-entity-dbval)))]
-       ^{:key (hash entities)}
-       [table-row entity form retract-entity! false {:expanded-cur (expanded-cur [(.-dbid entity)])
-                                                     :graph graph
-                                                     :navigate-cmp navigate-cmp
-                                                     :stage-tx! (fn [tx]
-                                                                  (add-entity! (.-dbid entity))
-                                                                  (stage-tx! tx))}]))])
+                 [table-row result forms retract-entity! true {:expanded-cur (expanded-cur [(:db/id entity)])
+                                                               :graph graph
+                                                               :navigate-cmp navigate-cmp
+                                                               :stage-tx! stage-tx!}]))))
+   #_(if (not= nil new-entity-dbval)
+       (let [entity (hc/entity (hc/get-dbgraph graph new-entity-dbval)
+                               (hc/*temp-id!* (.-conn-id new-entity-dbval)))]
+         ^{:key (hash entities)}
+         [table-row entity form retract-entity! false {:expanded-cur (expanded-cur [(.-dbid entity)])
+                                                       :graph graph
+                                                       :navigate-cmp navigate-cmp
+                                                       :stage-tx! (fn [tx]
+                                                                    (add-entity! (.-dbid entity))
+                                                                    (stage-tx! tx))}]))])
 
 
-(defn table-managed [graph entities new-entity-dbval form expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]
+(defn table-managed [graph resultset new-entity-dbval forms expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]
   (let [sort-col (r/atom nil)]
-    (fn [graph entities new-entity-dbval form expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]
+    (fn [graph resultset new-entity-dbval forms expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]
       [:table.ui-table
        [:colgroup [:col {:span "1" :style {:width "20px"}}]]
        [:thead
         [:tr
-         (->> (:form/link form)
+         (->> (mapcat :form/link forms)
               (map (fn [{:keys [:db/id] :as link}]
                      [:td.link-cell {:key id}])))
          [:td.link-cell {:key "hypercrud-entity-view-link"}]
          [:td.link-cell {:key "hypercrud-delete-row-link"}]
-         (build-col-heads form sort-col)]]
-       [body graph entities new-entity-dbval form expanded-cur stage-tx! navigate-cmp retract-entity! add-entity! sort-col]])))
+         (build-col-heads forms sort-col)]]
+       [body graph resultset new-entity-dbval forms expanded-cur stage-tx! navigate-cmp retract-entity! add-entity! sort-col]])))
 
 
-(defn- table* [graph entities new-entity-dbval form expanded-cur stage-tx! navigate-cmp retract-entity!]
+(defn- table* [graph resultset new-entity-dbval forms expanded-cur stage-tx! navigate-cmp retract-entity!]
   ;; resultset tables don't appear managed from the call site, but we need to provide a fake add-entity!
   ;; so we can create-new inline like a spreadsheet, which means we internally use the managed table
   (let [new-entities (r/atom [])
         add-entity! #(swap! new-entities conj %)]
-    (fn [graph entities new-entity-dbval form expanded-cur stage-tx! navigate-cmp retract-entity!]
+    (fn [graph resultset new-entity-dbval forms expanded-cur stage-tx! navigate-cmp retract-entity!]
       (let [retract-entity! (fn [dbid]
                               (if (tx/tempid? dbid)
                                 (swap! new-entities (fn [old]
@@ -167,13 +169,14 @@
                                 (if retract-entity!
                                   (retract-entity! dbid)
                                   (js/alert "todo"))))
-            entities (concat entities (map #(hc/entity (hc/get-dbgraph graph new-entity-dbval) %) @new-entities))]
-        [table-managed graph entities new-entity-dbval form expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]))))
+            ;entities (concat entities (map #(hc/entity (hc/get-dbgraph graph new-entity-dbval) %) @new-entities))
+            ]
+        [table-managed graph resultset new-entity-dbval forms expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]))))
 
 
-(defn table [graph entities form new-entity-dbval expanded-cur stage-tx! navigate-cmp retract-entity!]
+(defn table [graph resultset forms new-entity-dbval expanded-cur stage-tx! navigate-cmp retract-entity!]
   ^{:key (hc/t graph)}
-  [table* graph entities new-entity-dbval form expanded-cur stage-tx! navigate-cmp retract-entity!])
+  [table* graph resultset new-entity-dbval forms expanded-cur stage-tx! navigate-cmp retract-entity!])
 
 
 (defn table-pull-exp [form]
@@ -209,9 +212,14 @@
 
 (defn query
   ([p-filler param-ctx link]
-   (query p-filler param-ctx (:link/query link) (:link/form link) (:link/formula link)))
-  ([p-filler param-ctx query form formula]
+   (query p-filler param-ctx (:link/query link) (:link/find-element link) (:link/formula link)))
+  ([p-filler param-ctx query find-elements formula]
    (let [app-dbval (get param-ctx :dbval)]
-     (merge
-       (option-queries form p-filler param-ctx)
-       {::query [(reader/read-string (:query/value query)) (p-filler query formula param-ctx) [app-dbval (table-pull-exp form)]]}))))
+     (->> find-elements
+          (map (fn [{find-name :find-element/name form :find-element/form :as find-element}]
+                 (merge
+                   (option-queries form p-filler param-ctx)
+                   {::query [(reader/read-string (:query/value query))
+                             (p-filler query formula param-ctx)
+                             {find-name [app-dbval (table-pull-exp form)]}]})))
+          (apply merge)))))

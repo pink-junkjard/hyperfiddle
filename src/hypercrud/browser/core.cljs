@@ -21,13 +21,13 @@
         (query-fn link-id params))
 
       (and (= (second path-params) "entity") (= 4 (count path-params)))
-      (let [[form-id _ id conn-id] path-params
-            form-id (js/parseInt form-id 10)
+      (let [[link-id _ id conn-id] path-params
+            link-id (js/parseInt link-id 10)
             conn-id (internal/transit-decode (base64/decode conn-id))
             dbid (->DbId (js/parseInt id 10) conn-id)
             dbval (->DbVal conn-id nil)]
         ;todo this should accept a real entity type
-        (entity-fn dbval dbid form-id))
+        (entity-fn dbval dbid link-id))
 
       (and (= (second path-params) "field") (= 4 (count path-params)))
       (let [[field-id _ id conn-id] path-params
@@ -49,10 +49,10 @@
          {:query-fn (fn [link-id params]
                       (let [link (hc/entity editor-graph (->DbId link-id (-> editor-graph .-dbval .-conn-id)))]
                         (query/ui cur editor-graph stage-tx! graph link params navigate-cmp param-ctx)))
-          :entity-fn (fn [dbval dbid form-id]
+          :entity-fn (fn [dbval dbid link-id]
                        (let [entity (hc/entity (hc/get-dbgraph graph dbval) dbid)
-                             form (hc/entity editor-graph (->DbId form-id (-> editor-graph .-dbval .-conn-id)))]
-                         (entity/ui cur stage-tx! graph entity form navigate-cmp param-ctx)))
+                             link (hc/entity editor-graph (->DbId link-id (-> editor-graph .-dbval .-conn-id)))]
+                         (entity/ui cur stage-tx! graph entity link navigate-cmp param-ctx)))
           :field-fn (fn [dbval dbid field-id]
                       (let [entity (hc/entity (hc/get-dbgraph graph dbval) dbid)
                             field (hc/entity editor-graph (->DbId field-id (-> editor-graph .-dbval .-conn-id)))]
@@ -66,9 +66,9 @@
          {:query-fn (fn [link-id params]
                       (let [link (hc/entity editor-graph (->DbId link-id (-> editor-graph .-dbval .-conn-id)))]
                         (query/query state editor-graph link params param-ctx)))
-          :entity-fn (fn [dbval dbid form-id]
-                       (let [form (hc/entity editor-graph (->DbId form-id (-> editor-graph .-dbval .-conn-id)))]
-                         (entity/query state dbid form param-ctx)))
+          :entity-fn (fn [dbval dbid link-id]
+                       (let [link (hc/entity editor-graph (->DbId link-id (-> editor-graph .-dbval .-conn-id)))]
+                         (entity/query state dbid link param-ctx)))
           :field-fn (fn [dbval dbid field-id]
                       (let [field (hc/entity editor-graph (->DbId field-id (-> editor-graph .-dbval .-conn-id)))]
                         (field/query state dbid field param-ctx)))

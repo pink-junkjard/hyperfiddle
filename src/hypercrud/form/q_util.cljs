@@ -1,19 +1,14 @@
 (ns hypercrud.form.q-util
   (:require [cljs.reader :as reader]
             [hypercrud.compile.eval :as eval]
-            [hypercrud.types :refer [->DbVal]]))
+            [hypercrud.types :refer [->DbVal]]
+            [hypercrud.util :as util]))
 
 
 (defn parse-holes [q]
-  (let [last-kw (atom nil)
-        f (fn [x]
-            (if (keyword? x) (reset! last-kw x))
-            @last-kw)]
-    (->> (partition-by f q)
-         (filter #(= :in (first %)))
-         first
-         (drop 1)
-         (map str))))
+  (->> (util/parse-query-element q :in)
+       ;; the string conversion should happen at the other side imo
+       (map str)))
 
 
 (defn build-dbhole-lookup [query]
