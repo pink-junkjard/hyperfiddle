@@ -1,6 +1,5 @@
 (ns hypercrud.browser.pages.entity
   (:require [hypercrud.browser.links :as links]
-            [hypercrud.client.core :as hc]
             [hypercrud.form.q-util :as q-util]
             [hypercrud.ui.form :as form]))
 
@@ -37,6 +36,7 @@
 
 
 (defn query [state dbid form param-ctx]
+  (assert false "todo")                         ; this fn should be fixed and used, currently dead code
   (form/query dbid form (get state :expanded nil) q-util/build-params-from-formula param-ctx))
 
 
