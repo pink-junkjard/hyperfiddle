@@ -144,6 +144,7 @@
       ; we don't have a dbid for the entity/query because it will be a tempid assigned on render
       ; so just query for the form options because there isn't any entity to query for
       (apply merge (->> find-elements
+                        (map :find-element/form)
                         (map (fn [form] (form-util/form-option-queries form expanded-forms q-util/build-params-from-formula param-ctx)))))
       (if-let [q (some-> (:query/value query) reader/read-string)]
         (let [hole-names (q-util/parse-holes q)
