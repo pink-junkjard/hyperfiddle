@@ -123,15 +123,15 @@
                                      dbval)))))]
       (let [resultset-by-query
             (->> pulled-trees-map
-                 (map (fn [[query resultset-hydrated]]
-                        (let [[q params pull-exps] query
-                              ordered-dbvals (q->dbvals q pull-exps)
-                              resultset-ids (map (fn [result-hydrated]
-                                                   (->> (map vector result-hydrated ordered-dbvals)
-                                                        (map (fn [[entity-hydrated dbval]]
-                                                               (->DbId (:db/id entity-hydrated) (.-conn-id dbval))))))
-                                                 resultset-hydrated)]
-                          [query resultset-ids])))
+                 (mapv (fn [[query resultset-hydrated]]
+                         (let [[q params pull-exps] query
+                               ordered-dbvals (q->dbvals q pull-exps)
+                               resultset-ids (mapv (fn [result-hydrated]
+                                                     (->> (mapv vector result-hydrated ordered-dbvals)
+                                                          (mapv (fn [[entity-hydrated dbval]]
+                                                                  (->DbId (:db/id entity-hydrated) (.-conn-id dbval))))))
+                                                   resultset-hydrated)]
+                           [query resultset-ids])))
                  (into {}))]
         (set! graph-data (GraphData. pulled-trees-map resultset-by-query)))
 

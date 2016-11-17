@@ -98,9 +98,9 @@
                    [:td.link-cell {:key id}
                     (links/query-link link param-ctx #(navigate-cmp {:key ident :href %} prompt))]))))
      [:td.link-cell {:key "hypercrud-entity-view"}
-        #_(links/entity-link (:db/id form) (:db/id entity) #(navigate-cmp {:href %} "row"))]
+      #_(links/entity-link (:db/id form) (:db/id entity) #(navigate-cmp {:href %} "row"))]
      [:td.link-cell {:key "hypercrud-delete-row"}
-        #_(if retract-entity! [:button {:on-click #(retract-entity! (:db/id entity))} "X"])])
+      #_(if retract-entity! [:button {:on-click #(retract-entity! (:db/id entity))} "X"])])
    (mapcat #(build-row-cells %1 %2 fieldless-widget-args) forms result)])
 
 
@@ -219,7 +219,7 @@
           (map (fn [{find-name :find-element/name form :find-element/form :as find-element}]
                  (merge
                    (option-queries form p-filler param-ctx)
-                   {::query [(reader/read-string (:query/value query))
-                             (p-filler query formula param-ctx)
-                             {find-name [app-dbval (table-pull-exp form)]}]})))
+                   {(.-dbid query) [(reader/read-string (:query/value query))
+                                    (p-filler query formula param-ctx)
+                                    {find-name [app-dbval (table-pull-exp form)]}]})))
           (apply merge)))))
