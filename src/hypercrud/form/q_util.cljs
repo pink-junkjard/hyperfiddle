@@ -23,34 +23,36 @@
 ; type p-filler = fn [query formulas param-ctx] => vec
 ; which is why we need this unused formulas param
 (defn build-params [fill-hole query param-ctx]
-  (let [q (some-> (:query/value query) reader/read-string)]
-    (->> (parse-holes q)                                    ; nil means '() and does the right thing
-         (mapv (fn [hole-name]
-                 (let [value (fill-hole hole-name param-ctx)]
-                   ;; Are you at the root? Can't fill holes without a project client
-                   #_(assert (not= nil value) (str "Empty parameter for " hole-name " in " q))
-                   value))))))
+  (->> (some-> (:query/value query) reader/read-string)
+       (parse-holes)                                        ; nil means '() and does the right thing
+       (mapv (juxt identity #(fill-hole % param-ctx)))
+       (into {})))
+
+
+(defn read-eval-formulas [formulas]
+  (->> (if-not (empty? formulas) (reader/read-string formulas))
+       (util/map-values #(eval/uate (str "(identity " % ")")))))
+
+
+(defn run-formula [{formula :value error :error} param-ctx]
+  (if error
+    (throw error)                                           ; first error, lose the rest of the errors
+    (if formula (formula param-ctx))                        ; can also throw, lose the rest
+    ))
+
+
+(defn build-params-map [{formulas :link/formula :as link} param-ctx]
+  (->> (read-eval-formulas formulas)
+       (util/map-values #(run-formula % param-ctx))))
 
 
 (defn fill-hole-from-formula [query formulas]
-  (let [hole-formulas (if (empty? formulas)
-                        {}
-                        (->> formulas
-                             reader/read-string
-                             (map (juxt first #(eval/uate (str "(identity " (second %) ")"))))
-                             (into {})))
+  (let [hole-formulas (read-eval-formulas formulas)
         dbhole-values (build-dbhole-lookup query)]
     (fn [hole-name param-ctx]
       (if-let [v (get dbhole-values hole-name)]
         v
-        (let [{formula :value error :error} (get hole-formulas hole-name)]
-          (if error
-            ; first error, lose the rest of the errors
-            (throw error)
-
-            ; can also throw, lose the rest
-            (if formula
-              (formula param-ctx))))))))
+        (run-formula (get hole-formulas hole-name) param-ctx)))))
 
 
 (defn build-params-from-formula

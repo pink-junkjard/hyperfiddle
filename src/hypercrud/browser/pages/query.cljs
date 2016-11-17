@@ -17,16 +17,15 @@
 
 
 (defn initial-entity [q holes-by-name params]
-  (let [schema (->> holes-by-name
-                    (map (fn [[hole-name hole]]
-                           [hole-name {:db/valueType (-> hole :attribute/valueType :db/ident)
-                                       :db/cardinality (-> hole :attribute/cardinality :db/ident)}]))
-                    (into {}))
-        hole-names (q-util/parse-holes q)
+  (let [schema (util/map-values (fn [hole]
+                                  {:db/valueType (-> hole :attribute/valueType :db/ident)
+                                   :db/cardinality (-> hole :attribute/cardinality :db/ident)})
+                                holes-by-name)
         dbid (->DbId -1 :query-hole-form)
         dbval (->DbVal :query-hole-form nil)
-        data (-> (zipmap hole-names params)
-                 (assoc :db/id dbid))]
+        data (->> (q-util/parse-holes q)
+                  (map (juxt identity #(get params %)))
+                  (into {:db/id dbid}))]
     (->Entity (hc-g/->DbGraph schema dbval nil {} {}) dbid data {})))
 
 

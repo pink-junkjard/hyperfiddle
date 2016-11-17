@@ -12,4 +12,4 @@
 
 (defn query-link [link param-ctx f]
   ;; link-dbid is assumed to be the editor-graph connection
-  (f (str (-> link .-dbid .-id) "/" (base64/encode (q-util/build-params-from-formula link param-ctx)))))
+  (f (str (-> link .-dbid .-id) "/" (base64/encode (pr-str (q-util/build-params-map link param-ctx))))))

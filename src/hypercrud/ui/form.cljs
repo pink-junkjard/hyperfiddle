@@ -38,7 +38,7 @@
         option-queries (form-util/form-option-queries form expanded-forms p-filler param-ctx)]
     (if (not (tx/tempid? dbid))
       (merge option-queries
-             (let [q '[:find ?e :in $ ?e :where [?e]]
-                   pull-exp (form-util/form-pull-exp form expanded-forms)]
-               {dbid [q [dbval (.-id dbid)] {"?e" [dbval pull-exp]}]}))
+             {dbid ['[:find ?e :in $ ?e :where [?e]]
+                    {"$" dbval "?e" (.-id dbid)}
+                    {"?e" [dbval (form-util/form-pull-exp form expanded-forms)]}]})
       option-queries)))
