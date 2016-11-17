@@ -93,11 +93,11 @@
     (fn [entity {:keys [field graph expanded-cur navigate-cmp stage-tx!]}]
       (let [options (option/gimme-useful-options field)
             ident (-> field :field/attribute :attribute/ident)
-            entities (map vector (get entity ident))
+            resultset (mapv vector (get entity ident))
             retract-entity! #(stage-tx! (tx/edit-entity (:db/id entity) ident [%] []))
             add-entity! #(stage-tx! (tx/edit-entity (:db/id entity) ident [] [%]))]
         [:div.value
-         [table/table-managed graph entities (-> entity .-dbgraph .-dbval) (vector (option/get-form options entity)) expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]
+         [table/table-managed graph resultset (-> entity .-dbgraph .-dbval) (vector (option/get-form options entity)) expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]
          (let [props {:value (str @select-value-atom)
                       :on-change #(let [select-value (.-target.value %)
                                         value (reader/read-string select-value)]
@@ -118,11 +118,11 @@
 (defn table-many-ref-component [entity {:keys [field graph expanded-cur navigate-cmp stage-tx!]}]
   (let [ident (-> field :field/attribute :attribute/ident)
         options (option/gimme-useful-options field)
-        entities (map vector (get entity ident))
+        resultset (map vector (get entity ident))
         retract-entity! #(stage-tx! (tx/edit-entity (:db/id entity) ident [%] []))
         add-entity! #(stage-tx! (tx/edit-entity (:db/id entity) ident [] [%]))]
     [:div.value
-     [table/table-managed graph entities (-> entity .-dbgraph .-dbval) (vector (option/get-form options entity)) expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]]))
+     [table/table-managed graph resultset (-> entity .-dbgraph .-dbval) (vector (option/get-form options entity)) expanded-cur stage-tx! navigate-cmp retract-entity! add-entity!]]))
 
 
 (defn multi-select-ref [entity {:keys [field stage-tx!] :as widget-args}]

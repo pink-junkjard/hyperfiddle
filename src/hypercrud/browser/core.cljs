@@ -2,7 +2,6 @@
   (:require [cljs.reader :as reader]
             [clojure.string :as string]
             [hypercrud.browser.base-64-url-safe :as base64]
-            [hypercrud.browser.pages.entity :as entity]
             [hypercrud.browser.pages.field :as field]
             [hypercrud.browser.pages.index :as index]
             [hypercrud.browser.pages.query :as query]
@@ -35,11 +34,11 @@
       :else (else))))
 
 
-(defn ui [cur links editor-graph stage-tx! graph page-rel-path navigate-cmp param-ctx]
+(defn ui [cur links editor-graph stage-tx! graph page-rel-path navigate-cmp param-ctx debug]
   (route page-rel-path
          {:query-fn (fn [link-id params]
                       (let [link (hc/entity editor-graph (->DbId link-id (-> editor-graph .-dbval .-conn-id)))]
-                        (query/ui cur editor-graph stage-tx! graph link params navigate-cmp param-ctx)))
+                        (query/ui cur editor-graph stage-tx! graph link params navigate-cmp param-ctx debug)))
           :field-fn (fn [dbval dbid field-id]
                       (let [entity (hc/entity (hc/get-dbgraph graph dbval) dbid)
                             field (hc/entity editor-graph (->DbId field-id (-> editor-graph .-dbval .-conn-id)))]
