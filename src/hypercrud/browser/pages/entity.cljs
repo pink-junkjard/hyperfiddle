@@ -9,6 +9,7 @@
   (let [expanded-cur (cur [:expanded] {})]                  ; {:community/neighborhood {:neighborhood/district {:district/region {}}}}
     [:div
      (map (fn [entity form]
+            ^{:key (hash [(.-dbid entity) (.-dbid form)])}
             [form/form graph entity form expanded-cur stage-tx! navigate-cmp])
           result ordered-forms)
      #_[:button {:on-click #(-> (transact! @local-statements)
@@ -24,13 +25,14 @@
      [:div
       [:span "Form Links: "]
       (->> ordered-forms
-           (mapcat (fn [{link :form/link}]
-                     (let [param-ctx (merge param-ctx
-                                            {:result result})]
-                       (links/query-link link param-ctx
-                                         (fn [href]
-                                           ^{:key (:link/ident link)}
-                                           [navigate-cmp {:href href} (:link/prompt link)])))))
+           (mapcat :form/link)
+           (mapv (fn [link]
+                   (let [param-ctx (merge param-ctx
+                                          {:result result})]
+                     (links/query-link link param-ctx
+                                       (fn [href]
+                                         ^{:key (:link/ident link)}
+                                         [navigate-cmp {:href href} (:link/prompt link)])))))
            (interpose " "))]]))
 
 
