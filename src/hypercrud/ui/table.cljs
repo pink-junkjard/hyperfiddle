@@ -98,7 +98,7 @@
                    [:td.link-cell {:key id}
                     (links/query-link link param-ctx #(navigate-cmp {:key ident :href %} prompt))]))))
      [:td.link-cell {:key "hypercrud-delete-row"}
-      (if retract-result! [:button {:on-click #(retract-result! result)} "X"])])
+      (if retract-result! [:button {:on-click #(retract-result! (mapv :db/id result))} "X"])])
    (mapcat (fn [form entity]
              (let [fieldless-widget-args (update fieldless-widget-args :expanded-cur (fn [cur] (cur [(.-dbid entity)])))]
                (build-row-cells form entity fieldless-widget-args)))
