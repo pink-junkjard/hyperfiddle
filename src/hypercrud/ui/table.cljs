@@ -137,7 +137,7 @@
                                         :graph graph
                                         :navigate-cmp navigate-cmp
                                         :stage-tx! (fn [tx]
-                                                     (let [tx (concat tx (add-result new-result))]
+                                                     (let [tx (concat tx (add-result (mapv :db/id new-result)))]
                                                        (stage-tx! tx)))}]))])
 
 

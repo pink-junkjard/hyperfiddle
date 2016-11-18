@@ -88,7 +88,7 @@
                holes-form (hc/entity editor-graph holes-form-dbid)]
            [form/form graph entity holes-form expanded-cur stage-tx! navigate-cmp])
        (if-not (show-results? hole-names hole-lookup)       ;todo what if we have a user hole?
-         [:div "Unfilled query holes"]
+         [:div (str "Unfilled query holes" (pr-str hole-lookup))]
          (let [resultset (->> (let [resultset (hc/select graph (.-dbid query))]
                                 (if (and (:query/single-result-as-entity? query) (= 0 (count resultset)))
                                   (let [local-result (mapv #(get create-new-find-elements (:find-element/name %))

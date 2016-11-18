@@ -94,8 +94,8 @@
       (let [options (option/gimme-useful-options field)
             ident (-> field :field/attribute :attribute/ident)
             resultset (mapv vector (get entity ident))
-            retract-result! #(stage-tx! (tx/edit-entity (:db/id entity) ident [(-> % first .-dbid)] []))
-            add-result #(tx/edit-entity (:db/id entity) ident [] [(-> % first .-dbid)])]
+            retract-result! #(stage-tx! (tx/edit-entity (:db/id entity) ident [(first %)] []))
+            add-result #(tx/edit-entity (:db/id entity) ident [] [(first %)])]
         [:div.value
          [table/table-managed graph resultset [(-> entity .-dbgraph .-dbval)] (vector (option/get-form options entity)) expanded-cur stage-tx! navigate-cmp retract-result! add-result]
          (let [props {:value (str @select-value-atom)
@@ -112,15 +112,15 @@
                                            (get entity (option/label-prop options))])))]
            [:div.table-controls
             [:select props select-options]
-            [:button {:on-click #(stage-tx! (add-result @select-value-atom))} "⬆"]])]))))
+            [:button {:on-click #(stage-tx! (add-result [@select-value-atom]))} "⬆"]])]))))
 
 
 (defn table-many-ref-component [entity {:keys [field graph expanded-cur navigate-cmp stage-tx!]}]
   (let [ident (-> field :field/attribute :attribute/ident)
         options (option/gimme-useful-options field)
         resultset (map vector (get entity ident))
-        retract-result! #(stage-tx! (tx/edit-entity (:db/id entity) ident [(-> % first .-dbid)] []))
-        add-result #(tx/edit-entity (:db/id entity) ident [] [(-> % first .-dbid)])]
+        retract-result! #(stage-tx! (tx/edit-entity (:db/id entity) ident [(first %)] []))
+        add-result #(tx/edit-entity (:db/id entity) ident [] [(first %)])]
     [:div.value
      [table/table-managed graph resultset [(-> entity .-dbgraph .-dbval)] (vector (option/get-form options entity)) expanded-cur stage-tx! navigate-cmp retract-result! add-result]]))
 
