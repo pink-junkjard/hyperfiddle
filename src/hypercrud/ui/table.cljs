@@ -2,7 +2,6 @@
   (:require [cljs.reader :as reader]
             [hypercrud.browser.links :as links]
             [hypercrud.client.core :as hc]
-            [hypercrud.client.tx :as tx]
             [hypercrud.compile.eval :as eval]
             [hypercrud.form.option :as option]
             [hypercrud.types :refer [->DbId ->DbVal]]
@@ -79,7 +78,8 @@
            (conj
              (->> (:form/link form)
                   (map (fn [{:keys [:link/ident :link/prompt] :as link}]
-                         (let [param-ctx (merge {:user-profile hc/*user-profile*} {:entity entity})]
+                         (let [param-ctx {:user-profile hc/*user-profile*
+                                          :entity entity}]
                            (links/query-link link param-ctx #(navigate-cmp {:key ident :href %} prompt))))))
              (if retract-entity!
                [:span {:key "hypercrud-delete-row" :on-click #(retract-entity! (:db/id entity))} "Delete Row"])))
@@ -92,7 +92,8 @@
    (conj
      (->> (mapcat :form/link forms)
           (map (fn [{:keys [:db/id :link/ident :link/prompt] :as link}]
-                 (let [param-ctx {:user-profile hc/*user-profile*
+                 (let [param-ctx {:dbval (-> (first result) .-dbgraph .-dbval) ;todo remove this hack
+                                  :user-profile hc/*user-profile*
                                   :result result}]
                    [:td.link-cell {:key id}
                     (links/query-link link param-ctx #(navigate-cmp {:key ident :href %} prompt))]))))

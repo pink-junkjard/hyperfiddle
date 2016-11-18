@@ -5,13 +5,10 @@
             [hypercrud.browser.pages.entity :as entity]
             [hypercrud.client.core :as hc]
             [hypercrud.client.graph :as hc-g]
-            [hypercrud.client.tx :as tx]
-            [hypercrud.compile.eval :as eval]
             [hypercrud.form.q-util :as q-util]
             [hypercrud.form.util :as form-util]
             [hypercrud.types :refer [->DbId ->DbVal ->Entity]]
             [hypercrud.ui.auto-control :refer [auto-control]]
-            [hypercrud.ui.form :as form]
             [hypercrud.ui.table :as table]
             [hypercrud.util :as util]))
 
@@ -67,9 +64,10 @@
 
 
 (defn ui [cur editor-graph stage-tx! graph {find-elements :link/find-element query :link/query
-                                            :as link} params navigate-cmp param-ctx debug]
+                                            :as link} params-map navigate-cmp param-ctx debug]
   (if-let [q (some-> (:query/value query) reader/read-string)]
-    (let [hole-names (q-util/parse-holes q)
+    (let [{params :query-params create-new-find-elements :create-new-find-elements} params-map
+          hole-names (q-util/parse-holes q)
           expanded-cur (cur [:expanded] {})
           holes-by-name (->> (:query/hole query)
                              (map (juxt :hole/name identity))
@@ -89,8 +87,14 @@
                editor-graph (hc/with' editor-graph (holes->field-tx editor-graph holes-form-dbid hole-names holes-by-name))
                holes-form (hc/entity editor-graph holes-form-dbid)]
            [form/form graph entity holes-form expanded-cur stage-tx! navigate-cmp])
-       (if (show-results? hole-names hole-lookup)           ;todo what if we have a user hole?
-         (let [resultset (->> (hc/select graph (.-dbid query))
+       (if-not (show-results? hole-names hole-lookup)       ;todo what if we have a user hole?
+         [:div "Unfilled query holes"]
+         (let [resultset (->> (let [resultset (hc/select graph (.-dbid query))]
+                                (if (and (:query/single-result-as-entity? query) (= 0 (count resultset)))
+                                  (let [local-result (mapv #(get create-new-find-elements (:find-element/name %))
+                                                           find-elements)]
+                                    [local-result])
+                                  resultset))
                               (mapv (fn [result]
                                       (mapv #(hc/entity (hc/get-dbgraph graph dbval) %) result))))
                form-lookup (->> (mapv (juxt :find-element/name :find-element/form) find-elements)
@@ -99,10 +103,8 @@
                                   (mapv str)
                                   (mapv #(get form-lookup %)))]
            (if (:query/single-result-as-entity? query)
-             (if (= 0 (count resultset))
-               ^{:key (.-dbid link)}
-               [new-entity cur stage-tx! graph find-elements params navigate-cmp param-ctx]
-               [entity/ui cur stage-tx! graph (first resultset) ordered-forms navigate-cmp])
+             (let [result (first resultset)]
+               [entity/ui cur stage-tx! graph result ordered-forms navigate-cmp param-ctx])
              [:div
               (let [row-renderer-code nil]                  ;(:form/row-renderer form)
                 [table/table graph resultset ordered-forms expanded-cur stage-tx! navigate-cmp]
@@ -132,14 +134,15 @@
              (map (fn [link]
                     (links/query-link link param-ctx
                                       (fn [href]
-                                        ^{:key (:link/ident link)}
+                                        ^{:key (:db/id link)}
                                         [navigate-cmp {:href href} (:link/prompt link)]))))
              (interpose " "))]])
     [:div "Query record is incomplete"]))
 
 
-(defn query [state editor-graph {find-elements :link/find-element query :link/query} params param-ctx]
-  (let [expanded-forms (get state :expanded nil)]
+(defn query [state editor-graph {find-elements :link/find-element query :link/query} params-map param-ctx]
+  (let [{params :query-params create-new-find-elements :create-new-find-elements} params-map
+        expanded-forms (get state :expanded nil)]
     (if-let [q (some-> (:query/value query) reader/read-string)]
       (let [hole-names (q-util/parse-holes q)
             holes-by-name (->> (:query/hole query)

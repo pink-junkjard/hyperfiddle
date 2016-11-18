@@ -16,8 +16,8 @@
       (= 2 (count path-params))
       (let [[link-id params] path-params
             link-id (js/parseInt link-id 10)                ;todo dbid
-            params (reader/read-string (base64/decode params))]
-        (query-fn link-id params))
+            params-map (reader/read-string (base64/decode params))]
+        (query-fn link-id params-map))
 
       (and (= (second path-params) "field") (= 4 (count path-params)))
       (let [[field-id _ id conn-id] path-params
@@ -36,9 +36,9 @@
 
 (defn ui [cur links editor-graph stage-tx! graph page-rel-path navigate-cmp param-ctx debug]
   (route page-rel-path
-         {:query-fn (fn [link-id params]
+         {:query-fn (fn [link-id params-map]
                       (let [link (hc/entity editor-graph (->DbId link-id (-> editor-graph .-dbval .-conn-id)))]
-                        (query/ui cur editor-graph stage-tx! graph link params navigate-cmp param-ctx debug)))
+                        (query/ui cur editor-graph stage-tx! graph link params-map navigate-cmp param-ctx debug)))
           :field-fn (fn [dbval dbid field-id]
                       (let [entity (hc/entity (hc/get-dbgraph graph dbval) dbid)
                             field (hc/entity editor-graph (->DbId field-id (-> editor-graph .-dbval .-conn-id)))]
@@ -49,9 +49,9 @@
 
 (defn query [state editor-graph page-rel-path param-ctx]
   (route page-rel-path
-         {:query-fn (fn [link-id params]
+         {:query-fn (fn [link-id params-map]
                       (let [link (hc/entity editor-graph (->DbId link-id (-> editor-graph .-dbval .-conn-id)))]
-                        (query/query state editor-graph link params param-ctx)))
+                        (query/query state editor-graph link params-map param-ctx)))
           :field-fn (fn [dbval dbid field-id]
                       (let [field (hc/entity editor-graph (->DbId field-id (-> editor-graph .-dbval .-conn-id)))]
                         (field/query state dbid field param-ctx)))
