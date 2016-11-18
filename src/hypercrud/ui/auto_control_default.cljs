@@ -40,7 +40,7 @@
       (and (= valueType :db.type/keyword) (= cardinality :db.cardinality/one)) (widget/input-keyword entity widget-args)
       (and (= valueType :db.type/string) (= cardinality :db.cardinality/one)) (widget/input entity widget-args)
       (and (= valueType :db.type/long) (= cardinality :db.cardinality/one)) (widget/input-long entity widget-args)
-      ;(and (= valueType :db.type/code) (= cardinality :db.cardinality/one)) (widget/code-editor entity widget-args) todo
+      (and (= valueType :db.type/code) (= cardinality :db.cardinality/one)) (widget/input entity widget-args)
       (and (= valueType :db.type/instant) (= cardinality :db.cardinality/one)) (widget/instant entity widget-args)
 
       (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one) isComponent) (table-cell/ref-one-component entity widget-args)
