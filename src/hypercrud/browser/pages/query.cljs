@@ -105,7 +105,7 @@
                [entity/ui cur stage-tx! graph (first resultset) ordered-forms navigate-cmp])
              [:div
               (let [row-renderer-code nil]                  ;(:form/row-renderer form)
-                [table/table graph resultset ordered-forms nil expanded-cur stage-tx! navigate-cmp nil]
+                [table/table graph resultset ordered-forms expanded-cur stage-tx! navigate-cmp]
                 #_(if (empty? row-renderer-code)
 
                     (let [result (eval/uate (str "(identity " row-renderer-code ")"))
