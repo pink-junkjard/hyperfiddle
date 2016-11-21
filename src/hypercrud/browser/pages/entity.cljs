@@ -1,10 +1,9 @@
 (ns hypercrud.browser.pages.entity
-  (:require [hypercrud.browser.links :as links]
-            [hypercrud.form.q-util :as q-util]
+  (:require [hypercrud.form.q-util :as q-util]
             [hypercrud.ui.form :as form]))
 
 
-(defn ui [cur stage-tx! graph result ordered-forms navigate-cmp param-ctx]
+(defn ui [cur stage-tx! graph result ordered-forms navigate-cmp]
   (let [expanded-cur (cur [:expanded] {})]                  ; {:community/neighborhood {:neighborhood/district {:district/region {}}}}
     [:div
      (map (fn [entity form]
@@ -20,19 +19,7 @@
      #_[:button {:on-click #(-> (transact! [[:db.fn/retractEntity (.-dbid entity)]])
                                 (p/then (fn [_] (navigate! (str "../../../")))))
                  :disabled (tx/tempid? (.-dbid entity))}
-        "Delete"]
-     [:div
-      [:span "Form Links: "]
-      (->> ordered-forms
-           (mapcat :form/link)
-           (mapv (fn [link]
-                   (let [param-ctx (merge param-ctx
-                                          {:result result})]
-                     (links/query-link link param-ctx
-                                       (fn [href]
-                                         ^{:key (:link/ident link)}
-                                         [navigate-cmp {:href href} (:link/prompt link)])))))
-           (interpose " "))]]))
+        "Delete"]]))
 
 
 (defn query [state dbid form param-ctx]

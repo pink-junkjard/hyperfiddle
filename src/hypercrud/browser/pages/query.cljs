@@ -52,6 +52,27 @@
                     [:db/add form-dbid :form/field field-dbid]])))))
 
 
+(defn repeating-links [link result navigate-cmp param-ctx]
+  (->> (:link/link link)
+       (filter :link/repeating?)
+       (mapv (fn [link]
+               (let [param-ctx (merge param-ctx {:result result})]
+                 (links/query-link link param-ctx
+                                   (fn [href]
+                                     ^{:key (:link/ident link)}
+                                     [navigate-cmp {:href href} (:link/prompt link)])))))))
+
+
+(defn non-repeating-links [link navigate-cmp param-ctx]
+  (->> (:link/link link)
+       (remove :link/repeating?)
+       (map (fn [link]
+              (links/query-link link param-ctx
+                                (fn [href]
+                                  ^{:key (:db/id link)}
+                                  [navigate-cmp {:href href} (:link/prompt link)]))))))
+
+
 (defn ui [cur editor-graph stage-tx! graph {find-elements :link/find-element query :link/query
                                             :as link} params-map navigate-cmp param-ctx debug]
   (if-let [q (some-> (:query/value query) reader/read-string)]
@@ -93,7 +114,11 @@
                                   (mapv #(get form-lookup %)))]
            (if (:query/single-result-as-entity? query)
              (let [result (first resultset)]
-               [entity/ui cur stage-tx! graph result ordered-forms navigate-cmp param-ctx])
+               [:div
+                [entity/ui cur stage-tx! graph result ordered-forms navigate-cmp]
+                (->> (concat (repeating-links link result navigate-cmp param-ctx)
+                             (non-repeating-links link navigate-cmp param-ctx))
+                     (interpose " "))])
              [:div
               (let [row-renderer-code nil]                  ;(:form/row-renderer form)
                 [table/table graph resultset ordered-forms expanded-cur stage-tx! navigate-cmp]
@@ -116,16 +141,8 @@
                                         [:li {:key (hash (:db/id entity))}
                                          (try
                                            (row-renderer graph link-fn entity)
-                                           (catch :default e (pr-str e)))]))))]]))))])))
-       [:div
-        [:span "Query Links: "]
-        (->> (:query/link query)
-             (map (fn [link]
-                    (links/query-link link param-ctx
-                                      (fn [href]
-                                        ^{:key (:db/id link)}
-                                        [navigate-cmp {:href href} (:link/prompt link)]))))
-             (interpose " "))]])
+                                           (catch :default e (pr-str e)))]))))]]))))
+              (interpose " " (non-repeating-links link navigate-cmp param-ctx))])))])
     [:div "Query record is incomplete"]))
 
 
