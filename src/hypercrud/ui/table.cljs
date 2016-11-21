@@ -201,11 +201,13 @@ entity fields are just entities"
    (query p-filler param-ctx (:link/query link) (:link/find-element link) (:link/formula link)))
   ([p-filler param-ctx query find-elements formula]
    (let [app-dbval (get param-ctx :dbval)]
-     (->> find-elements
-          (map (fn [{find-name :find-element/name form :find-element/form :as find-element}]
-                 (merge
-                   (option-queries form p-filler param-ctx)
-                   {(.-dbid query) [(reader/read-string (:query/value query))
-                                    (p-filler query formula param-ctx)
-                                    {find-name [app-dbval (table-pull-exp form)]}]})))
-          (apply merge)))))
+     (merge
+       {(.-dbid query) [(reader/read-string (:query/value query))
+                        (p-filler query formula param-ctx)
+                        (->> find-elements
+                             (mapv (juxt :find-element/name (fn [find-element]
+                                                              [app-dbval (table-pull-exp (:find-element/form find-element))])))
+                             (into {}))]}
+       (->> find-elements
+            (mapv #(option-queries (:find-element/form %) p-filler param-ctx))
+            (apply merge))))))
