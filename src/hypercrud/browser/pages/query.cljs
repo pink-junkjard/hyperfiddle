@@ -52,17 +52,6 @@
                     [:db/add form-dbid :form/field field-dbid]])))))
 
 
-(defn new-entity [cur stage-tx! graph find-elements params navigate-cmp param-ctx]
-  (let [dbval (get param-ctx :dbval)
-        db-graph (hc/get-dbgraph graph dbval)
-        ordered-stuff (map (fn [{:keys [:find-element/name :find-element/form]}]
-                             [form (hc/entity db-graph (get params name))])
-                           find-elements)
-        ordered-forms (map first ordered-stuff)
-        result (mapv second ordered-stuff)]
-    [entity/ui cur stage-tx! graph result ordered-forms navigate-cmp param-ctx]))
-
-
 (defn ui [cur editor-graph stage-tx! graph {find-elements :link/find-element query :link/query
                                             :as link} params-map navigate-cmp param-ctx debug]
   (if-let [q (some-> (:query/value query) reader/read-string)]
