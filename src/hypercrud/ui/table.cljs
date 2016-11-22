@@ -168,27 +168,27 @@ entity fields are just entities"
 (defn table-pull-exp [form]
   (concat
     [:db/id]
-    (map (fn [field]
-           (let [{:keys [:attribute/ident :attribute/valueType :attribute/isComponent]} (:field/attribute field)]
-             (if (or isComponent (= (:db/ident valueType) :db.type/ref))
-               ; components and refs render nested entities, so pull another level deeper
-               {ident (if-let [label-prop (:field/label-prop field)]
-                        [:db/id label-prop]
-                        [:db/id])}
+    (map (fn [{{:keys [:attribute/ident :attribute/valueType :attribute/isComponent]} :field/attribute
+               {find-elements :link/find-element} :field/options-link
+               :as field}]
+           (if (or isComponent (= (:db/ident valueType) :db.type/ref))
+             ; components and refs render nested entities, so pull another level deeper
+             {ident (conj (->> find-elements
+                               (mapcat #(-> % :find-element/form :form/field))
+                               (mapv #(-> % :field/attribute :attribute/ident)))
+                          :db/id)}
 
-               ; otherwise just add the attribute to the list
-               ident)))
+             ; otherwise just add the attribute to the list
+             ident))
          (:form/field form))))
 
 
 (defn field-queries [p-filler param-ctx field]
-  (let [{:keys [:attribute/cardinality :attribute/valueType :attribute/isComponent]} (:field/attribute field)
-        options (option/gimme-useful-options field)]
+  (let [{:keys [:attribute/cardinality :attribute/valueType :attribute/isComponent]} (:field/attribute field)]
     (if (and (= (:db/ident valueType) :db.type/ref)
              (= (:db/ident cardinality) :db.cardinality/one)
-             (not isComponent)
-             (not (option/has-holes? options)))
-      (option/get-query options p-filler param-ctx))))
+             (not isComponent))
+      (option/get-query field p-filler param-ctx))))
 
 
 (defn option-queries [form p-filler param-ctx]

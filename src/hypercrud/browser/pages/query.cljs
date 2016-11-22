@@ -38,7 +38,7 @@
        (map #(get holes-by-name %))
        (remove nil?)
        (mapcat (fn [{:keys [:hole/name
-                            :field/prompt :field/query :field/label-prop
+                            :field/prompt                   ;:field/query :field/label-prop
                             :attribute/valueType :attribute/cardinality] :as hole}]
                  (let [field-dbid (->DbId (+ 5555555 (-> hole :db/id .-id)) (-> editor-graph .-dbval .-conn-id))
                        attr-dbid (->DbId (+ 6555555 (-> hole :db/id .-id)) (-> editor-graph .-dbval .-conn-id))]
@@ -46,8 +46,8 @@
                     [:db/add attr-dbid :attribute/valueType (.-dbid valueType)]
                     [:db/add attr-dbid :attribute/cardinality (.-dbid cardinality)]
                     [:db/add field-dbid :field/prompt prompt]
-                    [:db/add field-dbid :field/query (some-> query .-dbid)]
-                    [:db/add field-dbid :field/label-prop label-prop]
+                    ;[:db/add field-dbid :field/query (some-> query .-dbid)]
+                    ;[:db/add field-dbid :field/label-prop label-prop]
                     [:db/add field-dbid :field/attribute attr-dbid]
                     [:db/add form-dbid :form/field field-dbid]])))))
 

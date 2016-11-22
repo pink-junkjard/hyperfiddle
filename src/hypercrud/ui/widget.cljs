@@ -67,49 +67,47 @@
 
 ; this can be used sometimes, on the entity page, but not the query page
 (defn select-ref-navigate [entity {:keys [expanded-cur field navigate-cmp] :as widget-args}]
-  #_(if (option/has-holes? options)
-      (ref-one-component entity form-id widget-args))
   (let [ident (-> field :field/attribute :attribute/ident)]
     (select*
       entity (assoc widget-args :expanded-cur (expanded-cur [ident]))
       nil
       #_(if (not (nil? (get entity ident)))
-        (let [options (option/gimme-useful-options field)]
-          (if-let [form (option/get-form options entity)]
+          (if-let [form (:field/form field)]
             (links/entity-link (.-dbid form) (:db/id (get entity ident))
-                               (fn [href] [navigate-cmp {:class "edit" :href href} "Edit"]))))))))
+                               (fn [href] [navigate-cmp {:class "edit" :href href} "Edit"])))))))
 
 
 (defn select-ref-component [entity {:keys [expanded-cur field graph navigate-cmp stage-tx!]}]
-  (let [value (get entity (-> field :field/attribute :attribute/ident))
-        options (option/gimme-useful-options field)]
-    (form/form graph value (option/get-form options entity) expanded-cur stage-tx! navigate-cmp)))
+  (let [value (get entity (-> field :field/attribute :attribute/ident))]
+    (form/form graph value (:field/form field) expanded-cur stage-tx! navigate-cmp)))
 
 
 (defn table-many-ref [entity {:keys [field graph]}]
-  (let [options (option/gimme-useful-options field)
-        initial-select (first (option/get-option-records options graph entity))
+  (let [initial-select (let [result (first (option/get-option-records field graph entity))]
+                         (assert (= 1 (count result)) "Cannot use multiple find-elements for an options-link")
+                         (first result))
         select-value-atom (r/atom (:db/id initial-select))]
     (fn [entity {:keys [field graph expanded-cur navigate-cmp stage-tx!]}]
-      (let [options (option/gimme-useful-options field)
-            ident (-> field :field/attribute :attribute/ident)
+      (let [ident (-> field :field/attribute :attribute/ident)
             resultset (mapv vector (get entity ident))
             retract-result! #(stage-tx! (tx/edit-entity (:db/id entity) ident [(first %)] []))
             add-result #(tx/edit-entity (:db/id entity) ident [] [(first %)])]
         [:div.value
-         [table/table-managed graph resultset [(-> entity .-dbgraph .-dbval)] (vector (option/get-form options entity)) expanded-cur stage-tx! navigate-cmp retract-result! add-result]
+         [table/table-managed graph resultset [(-> entity .-dbgraph .-dbval)] (vector (:field/form field)) expanded-cur stage-tx! navigate-cmp retract-result! add-result]
          (let [props {:value (str @select-value-atom)
                       :on-change #(let [select-value (.-target.value %)
                                         value (reader/read-string select-value)]
                                    (reset! select-value-atom value))}
                ; todo assert selected value is in record set
                ; need lower level select component that can be reused here and in select.cljs
-               select-options (->> (option/get-option-records options graph entity)
-                                   (sort-by #(get % (option/label-prop options)))
-                                   (map (fn [entity]
-                                          [:option {:key (hash (:db/id entity))
-                                                    :value (pr-str (:db/id entity))}
-                                           (get entity (option/label-prop options))])))]
+               select-options (->> (option/get-option-records field graph entity)
+                                   (mapv (fn [result]
+                                           (assert (= 1 (count result)) "Cannot use multiple find-elements for an options-link")
+                                           (let [entity (first result)]
+                                             [(:db/id entity) (option/label-prop field result)])))
+                                   (sort-by second)
+                                   (map (fn [[dbid label-prop]]
+                                          [:option {:key (hash dbid) :value (pr-str dbid)} label-prop])))]
            [:div.table-controls
             [:select props select-options]
             [:button {:on-click #(stage-tx! (add-result [@select-value-atom]))} "⬆"]])]))))
@@ -117,12 +115,11 @@
 
 (defn table-many-ref-component [entity {:keys [field graph expanded-cur navigate-cmp stage-tx!]}]
   (let [ident (-> field :field/attribute :attribute/ident)
-        options (option/gimme-useful-options field)
         resultset (map vector (get entity ident))
         retract-result! #(stage-tx! (tx/edit-entity (:db/id entity) ident [(first %)] []))
         add-result #(tx/edit-entity (:db/id entity) ident [] [(first %)])]
     [:div.value
-     [table/table-managed graph resultset [(-> entity .-dbgraph .-dbval)] (vector (option/get-form options entity)) expanded-cur stage-tx! navigate-cmp retract-result! add-result]]))
+     [table/table-managed graph resultset [(-> entity .-dbgraph .-dbval)] (vector (:field/form field)) expanded-cur stage-tx! navigate-cmp retract-result! add-result]]))
 
 
 (defn multi-select-ref [entity {:keys [field stage-tx!] :as widget-args}]
@@ -150,9 +147,9 @@
     17592186045561 {:link/query {}}}})
 ; todo needs work with expanded-cur
 #_(defn master-detail [entity {:keys [expanded-cur] :as widget-args}]
-  (let [selected-atom (r/atom nil)]
-    (fn [entity widget-args]
-      (master-detail* entity widget-args selected-atom))))
+    (let [selected-atom (r/atom nil)]
+      (fn [entity widget-args]
+        (master-detail* entity widget-args selected-atom))))
 
 
 (defn valid-date-str? [s]

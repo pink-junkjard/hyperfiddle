@@ -18,8 +18,7 @@ case that works for expanded-forms)"
     (if (expand? new-expanded-forms (:field/attribute field))
       ; components render expanded automatically
       ; so if it is expanded or is a component, pull another level deeper
-      (let [form (-> (option/gimme-useful-options field)
-                     (option/get-form "todo"))]
+      (let [form (:field/form field)]
         {ident (form-pull-exp form (condp = (:db/ident cardinality)
                                      :db.cardinality/one new-expanded-forms
                                      :db.cardinality/many (apply deep-merge (vals new-expanded-forms)))
@@ -58,21 +57,19 @@ case that works for expanded-forms)"
 
 
 (defn field-queries [expanded-forms p-filler param-ctx field recurse?]
-  (let [{:keys [:attribute/ident :attribute/cardinality :attribute/valueType :attribute/isComponent]} (:field/attribute field)
-        options (option/gimme-useful-options field)]
+  (let [{:keys [:attribute/ident :attribute/cardinality :attribute/valueType :attribute/isComponent]} (:field/attribute field)]
     (merge
       (let [is-ref (= (:db/ident valueType) :db.type/ref)]
         ; if we are a ref we ALWAYS need the query from the field options
         ; EXCEPT when we are component, in which case no options are rendered, just a form, handled below
         (if (and is-ref (not isComponent))
-          (option/get-query options p-filler param-ctx)))
+          (option/get-query field p-filler param-ctx)))
 
       (let [new-expanded-forms (get expanded-forms ident)]
         ; components render expanded automatically
         ; so if it is expanded or is a component, get the queries for another level deeper
         (if (recurse? new-expanded-forms field)
-          (let [form (-> (option/gimme-useful-options field)
-                         (option/get-form "todo"))
+          (let [form (:field/form field)
                 expanded-forms (condp = (:db/ident cardinality)
                                  :db.cardinality/one new-expanded-forms
                                  :db.cardinality/many (apply deep-merge (vals new-expanded-forms)))]

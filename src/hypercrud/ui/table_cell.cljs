@@ -1,6 +1,7 @@
 (ns hypercrud.ui.table-cell
   (:require [clojure.string :as string]
-            [hypercrud.browser.links :as links]))
+            [hypercrud.browser.links :as links]
+            [hypercrud.form.option :as option]))
 
 
 (defn ellipsis
@@ -11,29 +12,27 @@
 
 
 (defn ref-one-component [entity {:keys [field navigate-cmp]}]
-  (let [ident (-> field :field/attribute :attribute/ident)
-        label-prop (:field/label-prop field)]
-    [:div
-     (links/field-link (.-dbid field) (.-dbid entity) (fn [href] [navigate-cmp {:href href} "Edit"]))
-     " "
-     (if-let [entity (get entity ident)]
-       (-> entity
-           (get label-prop)
+  (let [ident (-> field :field/attribute :attribute/ident)]
+    (if-let [child-entity (get entity ident)]
+      [:div
+       (links/field-link (.-dbid field) (.-dbid entity) (fn [href] [navigate-cmp {:href href} "Edit"]))
+       " "
+       (-> (option/label-prop field [child-entity])
            str
-           ellipsis)
-       "nil")]))
+           ellipsis)]
+      [:div
+       [:a {:href "#" :on-click #(js/alert "todo")} "Create"]])))
 
 
 (defn ref-many [entity {:keys [field navigate-cmp]}]
-  (let [ident (-> field :field/attribute :attribute/ident)
-        label-prop (:field/label-prop field)]
+  (let [ident (-> field :field/attribute :attribute/ident)]
     [:div
      (links/field-link (.-dbid field) (.-dbid entity) (fn [href] [navigate-cmp {:href href} "Edit"]))
      " "
      (->> (get entity ident)
           (map (fn [entity]
                  (if (not= nil entity)
-                   (pr-str (get entity label-prop))
+                   (option/label-prop field [entity])
                    "nil")))
           (string/join ", "))]))
 

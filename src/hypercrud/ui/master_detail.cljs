@@ -12,7 +12,6 @@
                       {:keys [field graph navigate-cmp stage-tx!] :as widget-args}
                       & [filter-entities detail-renderer]]
   (let [ident (-> field :field/attribute :attribute/ident)
-        options (option/gimme-useful-options field)
         detail-renderer (or detail-renderer form/form)
         temp-id! (partial hc/*temp-id!* (-> entity .-dbgraph .-dbval .-conn-id))
         li (fn [dbid label is-selected? & retract]
@@ -26,13 +25,13 @@
                           (map (fn [child-entity]
                                  (let [dbid (:db/id child-entity)]
                                    (li dbid
-                                       (get child-entity (option/label-prop options))
+                                       (option/label-prop field [child-entity])
                                        (= dbid selected-dbid)
                                        [:button.retract-detail
                                         {:key "retract"
                                          ; todo if im selected what do
                                          :on-click #(stage-tx! (tx/edit-entity (:db/id entity) ident [dbid] []))} "⌦"])))))
-                     (concat (if (option/create-new? options entity)
+                     (concat (if (option/create-new? field)
                                (let [dbid (temp-id!)]
                                  [(li dbid "Create New" false)])
                                []))))]
@@ -41,7 +40,7 @@
        (let [selected-entity (hc/entity (.-dbgraph entity) selected-dbid)]
          ^{:key (hash selected-dbid)}
          [detail-renderer graph selected-entity
-          (option/get-form options entity)
+          (:field/form field)
           ((:expanded-cur widget-args) [(:db/id entity)])
           (:stage-tx! widget-args)
           (:navigate-cmp widget-args)]))]))

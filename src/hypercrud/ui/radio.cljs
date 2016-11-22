@@ -49,9 +49,8 @@
 (defn radio-ref* [entity {:keys [expanded-cur field graph navigate-cmp stage-tx!]}]
   ; TODO only one radio-group on the page until we get a unique form-name
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
-        options (option/gimme-useful-options field)
         value (get entity ident)
-        form (option/get-form options entity)
+        form (:field/form field)
         form-name (or (-> form :db/id .-id) "TODO")         ;form-name in the HTML sense
         temp-id! (partial hc/*temp-id!* (-> entity .-dbgraph .-dbval .-conn-id))
         change! (fn [dbid]
@@ -62,14 +61,16 @@
                     (stage-tx! (tx/update-entity-attr entity attribute dbid))))
         create-new? (some-> value tx/tempid?)
         show-form? (or (not= nil @expanded-cur) create-new?)]
-    [:div.value {:key (option/get-key options)}
-     (map (fn [{:keys [:db/id] :as entity}]
-            (let [label (get entity (option/label-prop options))
+    [:div.value {:key (option/get-key field)}
+     (map (fn [result]
+            (assert (= 1 (count result)) "Cannot use multiple find-elements for an options-link")
+            (let [{:keys [:db/id] :as entity} (first result)
+                  label (option/label-prop field result)
                   checked? (= id value)]
               ^{:key (hash id)}
               [radio-option label form-name #(change! id) checked?]))
-          (option/get-option-records options graph entity))
-     (if (option/create-new? options entity)
+          (option/get-option-records field graph entity))
+     (if (option/create-new? field)
        ^{:key :create-new}
        [radio-option "Create New" form-name #(change! "create-new") create-new?])
      ^{:key :blank}
