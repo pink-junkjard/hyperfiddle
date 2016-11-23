@@ -52,25 +52,25 @@
                     [:db/add form-dbid :form/field field-dbid]])))))
 
 
-(defn repeating-links [link result navigate-cmp param-ctx]
+(defn repeating-links [stage-tx! link result navigate-cmp param-ctx]
   (->> (:link/link link)
        (filter :link/repeating?)
        (mapv (fn [link]
                (let [param-ctx (merge param-ctx {:result result})]
-                 (links/query-link link param-ctx
-                                   (fn [href]
+                 (links/query-link stage-tx! link param-ctx
+                                   (fn [props]
                                      ^{:key (:link/ident link)}
-                                     [navigate-cmp {:href href} (:link/prompt link)])))))))
+                                     [navigate-cmp props (:link/prompt link)])))))))
 
 
-(defn non-repeating-links [link navigate-cmp param-ctx]
+(defn non-repeating-links [stage-tx! link navigate-cmp param-ctx]
   (->> (:link/link link)
        (remove :link/repeating?)
        (map (fn [link]
-              (links/query-link link param-ctx
-                                (fn [href]
+              (links/query-link stage-tx! link param-ctx
+                                (fn [props]
                                   ^{:key (:db/id link)}
-                                  [navigate-cmp {:href href} (:link/prompt link)]))))))
+                                  [navigate-cmp props (:link/prompt link)]))))))
 
 
 (defn ui [cur editor-graph stage-tx! graph {find-elements :link/find-element query :link/query
@@ -116,8 +116,8 @@
              (let [result (first resultset)]
                [:div
                 [entity/ui cur stage-tx! graph result ordered-forms navigate-cmp]
-                (->> (concat (repeating-links link result navigate-cmp param-ctx)
-                             (non-repeating-links link navigate-cmp param-ctx))
+                (->> (concat (repeating-links stage-tx! link result navigate-cmp param-ctx)
+                             (non-repeating-links stage-tx! link navigate-cmp param-ctx))
                      (interpose " "))])
              [:div
               (let [row-renderer-code nil]                  ;(:form/row-renderer form)
@@ -142,7 +142,7 @@
                                          (try
                                            (row-renderer graph link-fn entity)
                                            (catch :default e (pr-str e)))]))))]]))))
-              (interpose " " (non-repeating-links link navigate-cmp param-ctx))])))])
+              (interpose " " (non-repeating-links stage-tx! link navigate-cmp param-ctx))])))])
     [:div "Query record is incomplete"]))
 
 

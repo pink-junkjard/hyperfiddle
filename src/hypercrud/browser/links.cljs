@@ -2,16 +2,17 @@
   (:require [cljs.reader :as reader]
             [hypercrud.browser.base-64-url-safe :as base64]
             [hypercrud.client.internal :as internal]
+            [hypercrud.compile.eval :refer [eval]]
             [hypercrud.form.q-util :as q-util]
             [hypercrud.client.core :as hc]))
 
 
 (defn field-link [field-dbid dbid f]
   ;; field-dbid is assumed to be the editor-graph connection
-  (f (str (.-id field-dbid) "/field/" (.-id dbid) "/" (base64/encode (internal/transit-encode (.-conn-id dbid))))))
+  (f {:href (str (.-id field-dbid) "/field/" (.-id dbid) "/" (base64/encode (internal/transit-encode (.-conn-id dbid))))}))
 
 
-(defn query-link [link param-ctx f]
+(defn query-link [stage-tx! link param-ctx f]
   (let [empty-result-lookup (let [lookup (:link/if-empty-result link)]
                               (if-not (empty? lookup)
                                 (reader/read-string lookup)))
@@ -28,6 +29,15 @@
                                                                                 provided-val
                                                                                 ; todo use the find-element connection's dbval
                                                                                 (hc/*temp-id!* (.-conn-id (get param-ctx :dbval)))))))
-                                             (into {}))}]
+                                             (into {}))}
+        tx-fn (if-let [tx-fn (:link/tx-fn link)]
+                (let [{value :value error :error} (eval tx-fn)]
+                  ;; non-fatal error, report it here so user can fix it
+                  (if error (js/alert (str "cljs eval error: " error)))
+                  value))]
     ;; link-dbid is assumed to be the editor-graph connection
-    (f (str (-> link .-dbid .-id) "/" (base64/encode (pr-str data))))))
+
+    ;; add-result #(tx/edit-entity (:db/id entity) ident [] [(first %)])
+
+    (f {:href (if-not tx-fn (str (-> link .-dbid .-id) "/" (base64/encode (pr-str data))))
+        :on-click (if tx-fn #(stage-tx! (tx-fn param-ctx)))})))

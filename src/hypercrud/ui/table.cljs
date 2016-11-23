@@ -2,7 +2,7 @@
   (:require [cljs.reader :as reader]
             [hypercrud.browser.links :as links]
             [hypercrud.client.core :as hc]
-            [hypercrud.compile.eval :as eval]
+            [hypercrud.compile.eval :refer [eval]]
             [hypercrud.form.option :as option]
             [hypercrud.types :refer [->DbId ->DbVal]]
             [hypercrud.ui.auto-control :refer [auto-table-cell]]
@@ -65,7 +65,7 @@
                    [auto-table-cell entity (-> fieldless-widget-args
                                                (update :expanded-cur #(% [ident]))
                                                (assoc :field field))]
-                   (let [{renderer :value error :error} (eval/uate (str "(identity " renderer ")"))]
+                   (let [{renderer :value error :error} (eval renderer)]
                      [:div.value
                       (if error
                         (pr-str error)
@@ -74,25 +74,25 @@
                           (catch :default e (pr-str e))))]))])))))
 
 
-(defn links-cell [entity form retract-entity! show-links? navigate-cmp]
-  (let [open? (r/atom false)]
-    (fn [entity form retract-entity! show-links? navigate-cmp]
-      (if @open?
-        [:div.link-menu
-         (if show-links?
-           (conj
-             (->> (:form/link form)
-                  (map (fn [{:keys [:link/ident :link/prompt] :as link}]
-                         (let [param-ctx {:user-profile hc/*user-profile*
-                                          :entity entity}]
-                           (links/query-link link param-ctx #(navigate-cmp {:key ident :href %} prompt))))))
-             (if retract-entity!
-               [:span {:key "hypercrud-delete-row" :on-click #(retract-entity! (:db/id entity))} "Delete Row"])))
-         [:span {:key "close" :on-click #(reset! open? false)} "Close"]]
-        [:div {:on-click #(reset! open? true)} "⚙"]))))
+;(defn links-cell [entity form retract-entity! show-links? navigate-cmp]
+;  (let [open? (r/atom false)]
+;    (fn [entity form retract-entity! show-links? navigate-cmp]
+;      (if @open?
+;        [:div.link-menu
+;         (if show-links?
+;           (conj
+;             (->> (:form/link form)
+;                  (map (fn [{:keys [:link/ident :link/prompt] :as link}]
+;                         (let [param-ctx {:user-profile hc/*user-profile*
+;                                          :entity entity}]
+;                           (links/query-link link param-ctx #(navigate-cmp {:key ident :href %} prompt))))))
+;             (if retract-entity!
+;               [:span {:key "hypercrud-delete-row" :on-click #(retract-entity! (:db/id entity))} "Delete Row"])))
+;         [:span {:key "close" :on-click #(reset! open? false)} "Close"]]
+;        [:div {:on-click #(reset! open? true)} "⚙"]))))
 
 
-(defn table-row [result forms retract-result! {:keys [navigate-cmp] :as fieldless-widget-args}]
+(defn table-row [result forms retract-result! {:keys [navigate-cmp stage-tx!] :as fieldless-widget-args}]
   [:tr
    (conj
      (->> (mapcat :form/link forms)
@@ -101,7 +101,7 @@
                                   :user-profile hc/*user-profile*
                                   :result result}]
                    [:td.link-cell {:key id}
-                    (links/query-link link param-ctx #(navigate-cmp {:key ident :href %} prompt))]))))
+                    (links/query-link stage-tx! link param-ctx #(navigate-cmp (assoc % :key ident) prompt))]))))
      [:td.link-cell {:key "hypercrud-delete-row"}
       (if retract-result! [:button {:on-click #(retract-result! (mapv :db/id result))} "X"])])
    (mapcat (fn [form entity]
@@ -136,7 +136,7 @@
                                                           :graph graph
                                                           :navigate-cmp navigate-cmp
                                                           :stage-tx! stage-tx!}]))))
-   (if (not= nil new-entity-dbvals)
+   #_(if (not= nil new-entity-dbvals)
      (let [new-result (mapv (fn [dbval]
                               (hc/entity (hc/get-dbgraph graph dbval) (hc/*temp-id!* (.-conn-id dbval))))
                             new-entity-dbvals)]

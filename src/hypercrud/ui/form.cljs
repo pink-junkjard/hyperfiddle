@@ -1,6 +1,6 @@
 (ns hypercrud.ui.form
   (:require [hypercrud.client.tx :as tx]
-            [hypercrud.compile.eval :as eval]
+            [hypercrud.compile.eval :refer [eval]]
             [hypercrud.form.util :as form-util]
             [hypercrud.ui.auto-control :refer [auto-control]]))
 
@@ -10,7 +10,7 @@
    [:label prompt]
    (if (empty? renderer)
      [auto-control entity widget-args]
-     (let [{renderer :value error :error} (eval/uate (str "(identity " renderer ")"))]
+     (let [{renderer :value error :error} (eval renderer)]
        [:div.value
         (if error
           (pr-str error)

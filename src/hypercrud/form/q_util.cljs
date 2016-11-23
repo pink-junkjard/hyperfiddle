@@ -1,6 +1,6 @@
 (ns hypercrud.form.q-util
   (:require [cljs.reader :as reader]
-            [hypercrud.compile.eval :as eval]
+            [hypercrud.compile.eval :refer [eval]]
             [hypercrud.types :refer [->DbVal]]
             [hypercrud.util :as util]))
 
@@ -31,7 +31,7 @@
 
 (defn read-eval-formulas [formulas]
   (->> (if-not (empty? formulas) (reader/read-string formulas))
-       (util/map-values #(eval/uate (str "(identity " % ")")))))
+       (util/map-values eval)))
 
 
 (defn run-formula [{formula :value error :error} param-ctx]

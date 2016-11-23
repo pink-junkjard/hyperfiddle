@@ -11,7 +11,7 @@
          (sort-by :link/prompt)
          (map (fn [{:keys [:db/id :link/prompt :link/ident] :as link}]
                 [:li {:key id}
-                 (links/query-link link param-ctx (fn [href] [navigate-cmp {:href href} prompt]))])))]])
+                 (links/query-link #() link param-ctx (fn [props] [navigate-cmp props prompt]))])))]])
 
 
 ;todo we should query the links
