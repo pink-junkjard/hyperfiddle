@@ -31,22 +31,25 @@
 
 
 (defn build-col-heads [forms col-sort]
-  (let [[ident' direction] @col-sort]
-    (->> (mapv :form/field forms)
-         (mapcat #(sort-by :field/order %))
-         (map (fn [{:keys [:field/prompt] :as field}]
+  (let [[form-dbid' ident' direction] @col-sort]
+    (->> (mapcat (fn [{form-dbid :db/id fields :form/field :as form}]
+                   (->> fields
+                        (sort-by :field/order)
+                        (mapv (juxt (constantly form-dbid) identity))))
+                 forms)
+         (map (fn [[form-dbid {:keys [:field/prompt] :as field}]]
                 (let [ident (-> field :field/attribute :attribute/ident)
                       with-sort-direction (fn [asc desc no-sort not-sortable]
                                             (if (sortable? field)
-                                              (if (= ident' ident)
+                                              (if (and (= form-dbid' form-dbid) (= ident' ident))
                                                 (condp = direction
                                                   :asc asc
                                                   :desc desc)
                                                 no-sort)
                                               not-sortable))
-                      on-click (with-sort-direction #(reset! col-sort [ident :desc])
+                      on-click (with-sort-direction #(reset! col-sort [form-dbid ident :desc])
                                                     #(reset! col-sort nil)
-                                                    #(reset! col-sort [ident :asc])
+                                                    #(reset! col-sort [form-dbid ident :asc])
                                                     (constantly nil))
                       arrow (with-sort-direction " ↓" " ↑" " ↕" nil)]
                   [:td {:key ident :on-click on-click} prompt arrow]))))))
@@ -109,21 +112,24 @@
 
 (defn body [graph resultset new-entity-dbvals forms expanded-cur stage-tx! navigate-cmp retract-result! add-result sort-col]
   [:tbody
-   (let [[sort-key direction] @sort-col
-         ;sort-eids
-         #_(fn [col]
-             (let [field (->> (:form/field form)
-                              (filter #(= sort-key (-> % :field/attribute :attribute/ident)))
-                              first)]
-               (if (and (not= nil field) (sortable? field))
-                 (sort-by sort-key
-                          (condp = direction
-                            :asc #(compare %1 %2)
-                            :desc #(compare %2 %1))
-                          col)
-                 col)))]
+   (let [[form-dbid sort-key direction] @sort-col
+         sort-eids (fn [resultset]
+                     (let [[index form] (->> forms
+                                             (map-indexed vector)
+                                             (filter #(= form-dbid (-> % second :db/id)))
+                                             first)
+                           field (->> (:form/field form)
+                                      (filter #(= sort-key (-> % :field/attribute :attribute/ident)))
+                                      first)]
+                       (if (and (not= nil field) (sortable? field))
+                         (sort-by #(get-in % [index sort-key])
+                                  (condp = direction
+                                    :asc #(compare %1 %2)
+                                    :desc #(compare %2 %1))
+                                  resultset)
+                         resultset)))]
      (->> resultset
-          ;sort-eids
+          sort-eids
           (map (fn [result]
                  ^{:key (hash (mapv :db/id result))}
                  [table-row result forms retract-result! {:expanded-cur expanded-cur
