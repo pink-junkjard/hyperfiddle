@@ -59,7 +59,7 @@
                (let [param-ctx (merge param-ctx {:result result})]
                  (links/query-link stage-tx! link param-ctx
                                    (fn [props]
-                                     ^{:key (:link/ident link)}
+                                     ^{:key (:db/id link)}
                                      [navigate-cmp props (:link/prompt link)])))))))
 
 
