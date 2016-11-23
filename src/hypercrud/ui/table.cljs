@@ -32,7 +32,8 @@
 
 (defn build-col-heads [forms col-sort]
   (let [[ident' direction] @col-sort]
-    (->> (mapcat :form/field forms)
+    (->> (mapv :form/field forms)
+         (mapcat #(sort-by :field/order %))
          (map (fn [{:keys [:field/prompt] :as field}]
                 (let [ident (-> field :field/attribute :attribute/ident)
                       with-sort-direction (fn [asc desc no-sort not-sortable]
@@ -53,6 +54,7 @@
 
 (defn build-row-cells [form entity {:keys [graph] :as fieldless-widget-args}]
   (->> (:form/field form)
+       (sort-by :field/order)
        (map (fn [{:keys [:field/renderer] :as field}]
               (let [ident (-> field :field/attribute :attribute/ident)]
                 [:td.truncate {:key ident}

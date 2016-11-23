@@ -21,15 +21,16 @@
 
 (defn form [graph entity form expanded-cur stage-tx! navigate-cmp]
   [:div.form
-   (map (fn [fieldinfo]
-          (let [ident (-> fieldinfo :field/attribute :attribute/ident)]
-            ^{:key ident}
-            [field entity {:expanded-cur (expanded-cur [ident])
-                           :field fieldinfo
-                           :graph graph
-                           :navigate-cmp navigate-cmp
-                           :stage-tx! stage-tx!}]))
-        (:form/field form))])
+   (->> (:form/field form)
+        (sort-by :field/order)
+        (map (fn [fieldinfo]
+               (let [ident (-> fieldinfo :field/attribute :attribute/ident)]
+                 ^{:key ident}
+                 [field entity {:expanded-cur (expanded-cur [ident])
+                                :field fieldinfo
+                                :graph graph
+                                :navigate-cmp navigate-cmp
+                                :stage-tx! stage-tx!}]))))])
 
 
 (defn query [dbid form expanded-forms p-filler param-ctx]
