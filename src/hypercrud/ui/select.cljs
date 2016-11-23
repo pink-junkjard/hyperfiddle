@@ -29,11 +29,9 @@
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         value (get entity ident)
         conn-id (-> entity .-dbgraph .-dbval .-conn-id)
-        temp-id! (partial hc/*temp-id!* conn-id)
         props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
                :value (cond
                         (nil? value) ""
-                        (tx/tempid? (.-dbid value)) "create-new"
                         :else (-> value .-dbid .-id str))
 
                ;; reconstruct the typed value
@@ -41,11 +39,10 @@
                             (let [select-value (.-target.value %)
                                   dbid (cond
                                          (= "" select-value) nil
-                                         (= "create-new" select-value) (temp-id!)
                                          :else-hc-select-option-node (->DbId (js/parseInt select-value 10) conn-id))]
                               ;reset the cursor before change! otherwise npe when trying to render
                               ;todo these both set the same cursor, and should be atomic
-                              (reset! expanded-cur (if (= "create-new" select-value) {} nil))
+                              (reset! expanded-cur nil)
                               (stage-tx! (tx/update-entity-attr entity attribute dbid))
                               ;; and also add our new guy to the option list (for all combos)
                               ))}
@@ -73,9 +70,6 @@
                                                ^{:key (hash dbid)}
                                                [:option {:value (.-id dbid)} label-prop])))
                                   (concat
-                                    (if (option/create-new? field)
-                                      [[:option {:key :create-new :value "create-new"} "Create New"]]
-                                      [])
                                     [[:option {:key :blank :value ""} "--"]]))])]
      (if (and (not= nil value) show-form?)
        ;; TODO branch the client in create-new case
