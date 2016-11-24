@@ -54,6 +54,7 @@ input.invalid[type="text"] {
     background-color: inherit;
     width: 40px;
     overflow-x: hidden;
+    white-space: nowrap;
 }
 
 .form {
