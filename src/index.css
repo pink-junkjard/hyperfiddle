@@ -49,6 +49,10 @@ input.invalid[type="text"] {
     border: 1px solid #a8a8a8;
 }
 
+.ui-table input {
+    border: none;
+}
+
 .ui-table td.link-cell {
     border: none;
     background-color: inherit;
