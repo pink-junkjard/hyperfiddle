@@ -99,9 +99,10 @@
           (map (fn [{:keys [:db/id :link/ident :link/prompt] :as link}]
                  (let [param-ctx {:dbval (-> (first result) .-dbgraph .-dbval) ;todo remove this hack
                                   :user-profile hc/*user-profile*
-                                  :result result}]
+                                  :result result}
+                       props (assoc (links/query-link stage-tx! link param-ctx) :key ident)]
                    [:td.link-cell {:key id}
-                    (links/query-link stage-tx! link param-ctx #(navigate-cmp (assoc % :key ident) prompt))]))))
+                    (navigate-cmp props prompt)]))))
      [:td.link-cell {:key "hypercrud-delete-row"}
       (if retract-result! [:button {:on-click #(retract-result! (mapv :db/id result))} "X"])])
    (mapcat (fn [form entity]

@@ -7,12 +7,12 @@
             [hypercrud.client.core :as hc]))
 
 
-(defn field-link [field-dbid dbid f]
+(defn field-link [field-dbid dbid]
   ;; field-dbid is assumed to be the editor-graph connection
-  (f {:href (str (.-id field-dbid) "/field/" (.-id dbid) "/" (base64/encode (internal/transit-encode (.-conn-id dbid))))}))
+  {:href (str (.-id field-dbid) "/field/" (.-id dbid) "/" (base64/encode (internal/transit-encode (.-conn-id dbid))))})
 
 
-(defn query-link [stage-tx! link param-ctx f]
+(defn query-link [stage-tx! link param-ctx]
   (let [empty-result-lookup (let [lookup (:link/if-empty-result link)]
                               (if-not (empty? lookup)
                                 (reader/read-string lookup)))
@@ -38,8 +38,6 @@
     ;; link-dbid is assumed to be the editor-graph connection
 
     ;; add-result #(tx/edit-entity (:db/id entity) ident [] [(first %)])
-
-    (let [props (if tx-fn
-                  {:on-click #(stage-tx! (tx-fn param-ctx))}
-                  {:href (str (-> link .-dbid .-id) "/" (base64/encode (pr-str data)))})]
-      (f props))))
+    (if tx-fn
+      {:on-click #(stage-tx! (tx-fn param-ctx))}
+      {:href (str (-> link .-dbid .-id) "/" (base64/encode (pr-str data)))})))

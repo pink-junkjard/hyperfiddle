@@ -57,21 +57,19 @@
   (->> (:link/link link)
        (filter :link/repeating?)
        (mapv (fn [link]
-               (let [param-ctx (merge param-ctx {:result result})]
-                 (links/query-link stage-tx! link param-ctx
-                                   (fn [props]
-                                     ^{:key (:db/id link)}
-                                     [navigate-cmp props (:link/prompt link)])))))))
+               (let [param-ctx (merge param-ctx {:result result})
+                     props (links/query-link stage-tx! link param-ctx)]
+                 ^{:key (:db/id link)}
+                 [navigate-cmp props (:link/prompt link)])))))
 
 
 (defn non-repeating-links [stage-tx! link navigate-cmp param-ctx]
   (->> (:link/link link)
        (remove :link/repeating?)
        (map (fn [link]
-              (links/query-link stage-tx! link param-ctx
-                                (fn [props]
-                                  ^{:key (:db/id link)}
-                                  [navigate-cmp props (:link/prompt link)]))))))
+              (let [props (links/query-link stage-tx! link param-ctx)]
+                ^{:key (:db/id link)}
+                [navigate-cmp props (:link/prompt link)])))))
 
 
 (defn ui [cur editor-graph stage-tx! graph {find-elements :link/find-element query :link/query
@@ -136,8 +134,9 @@
                                                     (let [link (->> (:form/link (first ordered-forms)) ; 2 of 2 hacks left in row-renderer
                                                                     (filter #(= ident (:link/ident %)))
                                                                     first)
-                                                          param-ctx (merge param-ctx {:result result})]
-                                                      (links/query-link stage-tx! link param-ctx (fn [props] [navigate-cmp props label]))))]
+                                                          param-ctx (merge param-ctx {:result result})
+                                                          props (links/query-link stage-tx! link param-ctx)]
+                                                      [navigate-cmp props label]))]
                                       [:li {:key (hash result)}
                                        (try
                                          (row-renderer graph link-fn result)
