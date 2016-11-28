@@ -74,14 +74,14 @@
                           (catch :default e (pr-str e))))]))])))))
 
 
-;(defn links-cell [entity form retract-entity! show-links? navigate-cmp]
+;(defn links-cell [entity form repeating-links retract-entity! show-links? navigate-cmp]
 ;  (let [open? (r/atom false)]
 ;    (fn [entity form retract-entity! show-links? navigate-cmp]
 ;      (if @open?
 ;        [:div.link-menu
 ;         (if show-links?
 ;           (conj
-;             (->> (:form/link form)
+;             (->> repeating-links
 ;                  (map (fn [{:keys [:link/ident :link/prompt] :as link}]
 ;                         (let [param-ctx {:user-profile hc/*user-profile*
 ;                                          :entity entity}]
@@ -92,26 +92,26 @@
 ;        [:div {:on-click #(reset! open? true)} "⚙"]))))
 
 
-(defn table-row [result forms retract-result! {:keys [navigate-cmp stage-tx!] :as fieldless-widget-args}]
+(defn table-row [result forms repeating-links retract-result! {:keys [navigate-cmp stage-tx!] :as fieldless-widget-args}]
   [:tr
-   (conj
-     (->> (mapcat :form/link forms)
-          (map (fn [{:keys [:db/id :link/ident :link/prompt] :as link}]
-                 (let [param-ctx {:dbval (-> (first result) .-dbgraph .-dbval) ;todo remove this hack
-                                  :user-profile hc/*user-profile*
-                                  :result result}
-                       props (assoc (links/query-link stage-tx! link param-ctx) :key ident)]
-                   [:td.link-cell {:key id}
-                    (navigate-cmp props prompt)]))))
-     [:td.link-cell {:key "hypercrud-delete-row"}
-      (if retract-result! [:button {:on-click #(retract-result! (mapv :db/id result))} "X"])])
+   [:td.link-cell {:key "hypercrud-delete-row"}
+    (if retract-result! [:button {:on-click #(retract-result! (mapv :db/id result))} "X"])]
+   (->> repeating-links
+        (map (fn [{:keys [:db/id :link/ident :link/prompt] :as link}]
+               (let [param-ctx {:dbval (-> (first result) .-dbgraph .-dbval) ;todo remove this hack
+                                :user-profile hc/*user-profile*
+                                :result result}
+                     props (assoc (links/query-link stage-tx! link param-ctx) :key ident)]
+                 [:td.link-cell {:key id}
+                  (navigate-cmp props prompt)])))
+        doall)
    (mapcat (fn [form entity]
              (let [fieldless-widget-args (update fieldless-widget-args :expanded-cur (fn [cur] (cur [(.-dbid entity)])))]
                (build-row-cells form entity fieldless-widget-args)))
            forms result)])
 
 
-(defn body [graph resultset forms expanded-cur stage-tx! navigate-cmp retract-result! sort-col]
+(defn body [graph resultset forms repeating-links expanded-cur stage-tx! navigate-cmp retract-result! sort-col]
   [:tbody
    (let [[form-dbid sort-key direction] @sort-col
          sort-eids (fn [resultset]
@@ -133,25 +133,25 @@
           sort-eids
           (map (fn [result]
                  ^{:key (hash (mapv :db/id result))}
-                 [table-row result forms retract-result! {:expanded-cur expanded-cur
-                                                          :graph graph
-                                                          :navigate-cmp navigate-cmp
-                                                          :stage-tx! stage-tx!}]))))])
+                 [table-row result forms repeating-links retract-result! {:expanded-cur expanded-cur
+                                                                          :graph graph
+                                                                          :navigate-cmp navigate-cmp
+                                                                          :stage-tx! stage-tx!}]))))])
 
 
-(defn table [graph resultset forms expanded-cur stage-tx! navigate-cmp retract-result!]
+(defn table [graph resultset forms repeating-links expanded-cur stage-tx! navigate-cmp retract-result!]
   (let [sort-col (r/atom nil)]
-    (fn [graph resultset forms expanded-cur stage-tx! navigate-cmp retract-result!]
+    (fn [graph resultset forms repeating-links expanded-cur stage-tx! navigate-cmp retract-result!]
       [:table.ui-table
        [:colgroup [:col {:span "1" :style {:width "20px"}}]]
        [:thead
         [:tr
-         (->> (mapcat :form/link forms)
+         (->> repeating-links
               (map (fn [{:keys [:db/id] :as link}]
                      [:td.link-cell {:key id}])))
          [:td.link-cell {:key "hypercrud-delete-row-link"}]
          (build-col-heads forms sort-col)]]
-       [body graph resultset forms expanded-cur stage-tx! navigate-cmp retract-result! sort-col]])))
+       [body graph resultset forms repeating-links expanded-cur stage-tx! navigate-cmp retract-result! sort-col]])))
 
 
 (defn table-pull-exp [form]

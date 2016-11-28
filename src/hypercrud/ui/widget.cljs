@@ -88,7 +88,8 @@
                          (first result))
         select-value-atom (r/atom (:db/id initial-select))]
     (fn [entity {:keys [field graph expanded-cur navigate-cmp stage-tx!]}]
-      (let [ident (-> field :field/attribute :attribute/ident)
+      [:div.value "todo"]
+      #_(let [ident (-> field :field/attribute :attribute/ident)
             resultset (mapv vector (get entity ident))
             retract-result! #(stage-tx! (tx/edit-entity (:db/id entity) ident [(first %)] []))]
         [:div.value
@@ -117,7 +118,8 @@
         resultset (map vector (get entity ident))
         retract-result! #(stage-tx! (tx/edit-entity (:db/id entity) ident [(first %)] []))]
     [:div.value
-     [table/table graph resultset (vector (:field/form field)) expanded-cur stage-tx! navigate-cmp retract-result!]]))
+     "todo"
+     #_[table/table graph resultset (vector (:field/form field)) expanded-cur stage-tx! navigate-cmp retract-result!]]))
 
 
 (defn multi-select-ref [entity {:keys [field stage-tx!] :as widget-args}]
