@@ -72,7 +72,7 @@
                 [navigate-cmp props (:link/prompt link)])))))
 
 
-(defn ui [cur editor-graph stage-tx! graph {find-elements :link/find-element query :link/query
+(defn ui [cur editor-graph stage-tx! graph {find-elements :link/find-element query :link/query result-renderer-code :link/result-renderer
                                             :as link} params-map navigate-cmp param-ctx debug]
   (if-let [q (some-> (:query/value query) reader/read-string)]
     (let [{params :query-params create-new-find-elements :create-new-find-elements} params-map
@@ -119,28 +119,27 @@
                              (non-repeating-links stage-tx! link navigate-cmp param-ctx))
                      (interpose " "))])
              [:div
-              (let [row-renderer-code (:form/row-renderer (first ordered-forms))] ; 1 of 2 hacks left in row-renderer
-                (if (empty? row-renderer-code)
-                  ^{:key (hc/t graph)}
-                  [table/table graph resultset ordered-forms expanded-cur stage-tx! navigate-cmp nil]
-                  (let [{row-renderer :value error :error} (eval row-renderer-code)]
-                    (if error
-                      [:div (pr-str error)]
-                      [:div
-                       [:ul
-                        (->> resultset
-                             (map (fn [result]
-                                    (let [link-fn (fn [ident label]
-                                                    (let [link (->> (:form/link (first ordered-forms)) ; 2 of 2 hacks left in row-renderer
-                                                                    (filter #(= ident (:link/ident %)))
-                                                                    first)
-                                                          param-ctx (merge param-ctx {:result result})
-                                                          props (links/query-link stage-tx! link param-ctx)]
-                                                      [navigate-cmp props label]))]
-                                      [:li {:key (hash result)}
-                                       (try
-                                         (row-renderer graph link-fn result)
-                                         (catch :default e (pr-str e)))]))))]]))))
+              (if (empty? result-renderer-code)
+                ^{:key (hc/t graph)}
+                [table/table graph resultset ordered-forms expanded-cur stage-tx! navigate-cmp nil]
+                (let [{result-renderer :value error :error} (eval result-renderer-code)]
+                  (if error
+                    [:div (pr-str error)]
+                    [:div
+                     [:ul
+                      (->> resultset
+                           (map (fn [result]
+                                  (let [link-fn (fn [ident label]
+                                                  (let [link (->> (:form/link (first ordered-forms)) ; only hack left in row-renderer
+                                                                  (filter #(= ident (:link/ident %)))
+                                                                  first)
+                                                        param-ctx (merge param-ctx {:result result})
+                                                        props (links/query-link stage-tx! link param-ctx)]
+                                                    [navigate-cmp props label]))]
+                                    [:li {:key (hash result)}
+                                     (try
+                                       (result-renderer graph link-fn result)
+                                       (catch :default e (pr-str e)))]))))]])))
               (interpose " " (non-repeating-links stage-tx! link navigate-cmp param-ctx))])))])
     [:div "Query record is incomplete"]))
 
