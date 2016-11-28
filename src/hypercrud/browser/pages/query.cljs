@@ -123,7 +123,8 @@
              [:div
               (let [row-renderer-code (:form/row-renderer (first ordered-forms))] ; 1 of 2 hacks left in row-renderer
                 (if (empty? row-renderer-code)
-                  [table/table graph resultset ordered-forms expanded-cur stage-tx! navigate-cmp]
+                  ^{:key (hc/t graph)}
+                  [table/table graph resultset ordered-forms expanded-cur stage-tx! navigate-cmp nil]
                   (let [{row-renderer :value error :error} (eval row-renderer-code)]
                     (if error
                       [:div (pr-str error)]

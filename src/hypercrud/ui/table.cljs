@@ -110,7 +110,7 @@
            forms result)])
 
 
-(defn body [graph resultset new-entity-dbvals forms expanded-cur stage-tx! navigate-cmp retract-result! add-result sort-col]
+(defn body [graph resultset forms expanded-cur stage-tx! navigate-cmp retract-result! sort-col]
   [:tbody
    (let [[form-dbid sort-key direction] @sort-col
          sort-eids (fn [resultset]
@@ -135,27 +135,12 @@
                  [table-row result forms retract-result! {:expanded-cur expanded-cur
                                                           :graph graph
                                                           :navigate-cmp navigate-cmp
-                                                          :stage-tx! stage-tx!}]))))
-   #_(if (not= nil new-entity-dbvals)
-     (let [new-result (mapv (fn [dbval]
-                              (hc/entity (hc/get-dbgraph graph dbval) (hc/*temp-id!* (.-conn-id dbval))))
-                            new-entity-dbvals)]
-       ^{:key (hash resultset)}
-       [table-row new-result forms nil {:expanded-cur expanded-cur
-                                        :graph graph
-                                        :navigate-cmp navigate-cmp
-                                        :stage-tx! (fn [tx]
-                                                     (let [tx (concat tx (add-result (mapv :db/id new-result)))]
-                                                       (stage-tx! tx)))}]))])
+                                                          :stage-tx! stage-tx!}]))))])
 
 
-(defn table-managed "a managed table can add/remove rows, a regular table can't. We thought
-the managed table was more general, but now dustin thinks maybe they are two different ideas and cant be
-combined. you can see the tension in how we have to adapt between them -- query results are resutls, managed
-entity fields are just entities"
-  [graph resultset new-entity-dbval forms expanded-cur stage-tx! navigate-cmp retract-result! add-result]
+(defn table [graph resultset forms expanded-cur stage-tx! navigate-cmp retract-result!]
   (let [sort-col (r/atom nil)]
-    (fn [graph resultset new-entity-dbval forms expanded-cur stage-tx! navigate-cmp retract-result! add-result]
+    (fn [graph resultset forms expanded-cur stage-tx! navigate-cmp retract-result!]
       [:table.ui-table
        [:colgroup [:col {:span "1" :style {:width "20px"}}]]
        [:thead
@@ -165,12 +150,7 @@ entity fields are just entities"
                      [:td.link-cell {:key id}])))
          [:td.link-cell {:key "hypercrud-delete-row-link"}]
          (build-col-heads forms sort-col)]]
-       [body graph resultset new-entity-dbval forms expanded-cur stage-tx! navigate-cmp retract-result! add-result sort-col]])))
-
-
-(defn table [graph resultset forms expanded-cur stage-tx! navigate-cmp]
-  ^{:key (hc/t graph)}
-  [table-managed graph resultset nil forms expanded-cur stage-tx! navigate-cmp nil nil])
+       [body graph resultset forms expanded-cur stage-tx! navigate-cmp retract-result! sort-col]])))
 
 
 (defn table-pull-exp [form]

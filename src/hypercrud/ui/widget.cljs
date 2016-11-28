@@ -90,10 +90,9 @@
     (fn [entity {:keys [field graph expanded-cur navigate-cmp stage-tx!]}]
       (let [ident (-> field :field/attribute :attribute/ident)
             resultset (mapv vector (get entity ident))
-            retract-result! #(stage-tx! (tx/edit-entity (:db/id entity) ident [(first %)] []))
-            add-result #(tx/edit-entity (:db/id entity) ident [] [(first %)])]
+            retract-result! #(stage-tx! (tx/edit-entity (:db/id entity) ident [(first %)] []))]
         [:div.value
-         [table/table-managed graph resultset [(-> entity .-dbgraph .-dbval)] (vector (:field/form field)) expanded-cur stage-tx! navigate-cmp retract-result! add-result]
+         [table/table graph resultset (vector (:field/form field)) expanded-cur stage-tx! navigate-cmp retract-result!]
          (let [props {:value (str @select-value-atom)
                       :on-change #(let [select-value (.-target.value %)
                                         value (reader/read-string select-value)]
@@ -110,16 +109,15 @@
                                           [:option {:key (hash dbid) :value (pr-str dbid)} label-prop])))]
            [:div.table-controls
             [:select props select-options]
-            [:button {:on-click #(stage-tx! (add-result [@select-value-atom]))} "⬆"]])]))))
+            [:button {:on-click #(stage-tx! (tx/edit-entity (:db/id entity) ident [] [@select-value-atom]))} "⬆"]])]))))
 
 
 (defn table-many-ref-component [entity {:keys [field graph expanded-cur navigate-cmp stage-tx!]}]
   (let [ident (-> field :field/attribute :attribute/ident)
         resultset (map vector (get entity ident))
-        retract-result! #(stage-tx! (tx/edit-entity (:db/id entity) ident [(first %)] []))
-        add-result #(tx/edit-entity (:db/id entity) ident [] [(first %)])]
+        retract-result! #(stage-tx! (tx/edit-entity (:db/id entity) ident [(first %)] []))]
     [:div.value
-     [table/table-managed graph resultset [(-> entity .-dbgraph .-dbval)] (vector (:field/form field)) expanded-cur stage-tx! navigate-cmp retract-result! add-result]]))
+     [table/table graph resultset (vector (:field/form field)) expanded-cur stage-tx! navigate-cmp retract-result!]]))
 
 
 (defn multi-select-ref [entity {:keys [field stage-tx!] :as widget-args}]
