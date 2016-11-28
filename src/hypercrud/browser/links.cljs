@@ -39,5 +39,7 @@
 
     ;; add-result #(tx/edit-entity (:db/id entity) ident [] [(first %)])
 
-    (f {:href (if-not tx-fn (str (-> link .-dbid .-id) "/" (base64/encode (pr-str data))))
-        :on-click (if tx-fn #(stage-tx! (tx-fn param-ctx)))})))
+    (let [props (if tx-fn
+                  {:on-click #(stage-tx! (tx-fn param-ctx))}
+                  {:href (str (-> link .-dbid .-id) "/" (base64/encode (pr-str data)))})]
+      (f props))))
