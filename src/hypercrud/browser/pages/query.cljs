@@ -5,6 +5,7 @@
             [hypercrud.browser.pages.entity :as entity]
             [hypercrud.client.core :as hc]
             [hypercrud.client.graph :as hc-g]
+            [hypercrud.compile.eval :refer [eval]]
             [hypercrud.form.q-util :as q-util]
             [hypercrud.form.util :as form-util]
             [hypercrud.types :refer [->DbId ->DbVal ->Entity]]
@@ -120,28 +121,26 @@
                              (non-repeating-links stage-tx! link navigate-cmp param-ctx))
                      (interpose " "))])
              [:div
-              (let [row-renderer-code nil]                  ;(:form/row-renderer form)
-                [table/table graph resultset ordered-forms expanded-cur stage-tx! navigate-cmp]
-                #_(if (empty? row-renderer-code)
-
-                    (let [result (eval/uate (str "(identity " row-renderer-code ")"))
-                          {row-renderer :value error :error} result]
-                      (if error
-                        [:div (pr-str error)]
-                        [:div
-                         [:ul
-                          (->> entities
-                               (map (fn [entity]
-                                      (let [link-fn (fn [ident label]
-                                                      (let [link (->> (:form/link form)
-                                                                      (filter #(= ident (:link/ident %)))
-                                                                      first)
-                                                            param-ctx (merge param-ctx {:entity entity})]
-                                                        (links/query-link link param-ctx (fn [href] [navigate-cmp {:href href} label]))))]
-                                        [:li {:key (hash (:db/id entity))}
-                                         (try
-                                           (row-renderer graph link-fn entity)
-                                           (catch :default e (pr-str e)))]))))]]))))
+              (let [row-renderer-code (:form/row-renderer (first ordered-forms))] ; 1 of 2 hacks left in row-renderer
+                (if (empty? row-renderer-code)
+                  [table/table graph resultset ordered-forms expanded-cur stage-tx! navigate-cmp]
+                  (let [{row-renderer :value error :error} (eval row-renderer-code)]
+                    (if error
+                      [:div (pr-str error)]
+                      [:div
+                       [:ul
+                        (->> resultset
+                             (map (fn [result]
+                                    (let [link-fn (fn [ident label]
+                                                    (let [link (->> (:form/link (first ordered-forms)) ; 2 of 2 hacks left in row-renderer
+                                                                    (filter #(= ident (:link/ident %)))
+                                                                    first)
+                                                          param-ctx (merge param-ctx {:result result})]
+                                                      (links/query-link stage-tx! link param-ctx (fn [props] [navigate-cmp props label]))))]
+                                      [:li {:key (hash result)}
+                                       (try
+                                         (row-renderer graph link-fn result)
+                                         (catch :default e (pr-str e)))]))))]]))))
               (interpose " " (non-repeating-links stage-tx! link navigate-cmp param-ctx))])))])
     [:div "Query record is incomplete"]))
 
