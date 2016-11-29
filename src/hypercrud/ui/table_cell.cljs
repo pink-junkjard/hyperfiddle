@@ -11,26 +11,18 @@
            (str (subs s 0 (- c 3)) "..."))))
 
 
-(defn ref-one-component [entity {:keys [field navigate-cmp]}]
-  (let [ident (-> field :field/attribute :attribute/ident)]
-    (if-let [child-entity (get entity ident)]
-      [:div
-       (let [{:keys [href]} (links/field-link (.-dbid field) (.-dbid entity))]
-         [navigate-cmp {:href href} "Edit"])
-       " "
-       (-> (option/label-prop field [child-entity])
-           str
-           ellipsis)]
-      [:div
-       [:a {:href "#" :on-click #(js/alert "todo")} "Create"]])))
+(defn ref-one-component [entity {:keys [field]}]
+  (let [ident (-> field :field/attribute :attribute/ident)
+        child-entity (get entity ident)]
+    [:div
+     (-> (option/label-prop field [child-entity])
+         str
+         ellipsis)]))
 
 
-(defn ref-many [entity {:keys [field navigate-cmp]}]
+(defn ref-many [entity {:keys [field]}]
   (let [ident (-> field :field/attribute :attribute/ident)]
     [:div
-     (let [{:keys [href]} (links/field-link (.-dbid field) (.-dbid entity))]
-       [navigate-cmp {:href href} "Edit"])
-     " "
      (->> (get entity ident)
           (map (fn [entity]
                  (if (not= nil entity)
