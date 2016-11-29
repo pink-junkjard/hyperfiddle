@@ -7,9 +7,9 @@
             [hypercrud.client.graph :as hc-g]
             [hypercrud.compile.eval :refer [eval]]
             [hypercrud.form.q-util :as q-util]
-            [hypercrud.form.util :as form-util]
             [hypercrud.types :refer [->DbId ->DbVal ->Entity]]
             [hypercrud.ui.auto-control :refer [auto-control]]
+            [hypercrud.ui.form :as form]
             [hypercrud.ui.table :as table]
             [hypercrud.util :as util]))
 
@@ -77,7 +77,6 @@
   (if-let [q (some-> (:query/value query) reader/read-string)]
     (let [{params :query-params create-new-find-elements :create-new-find-elements} params-map
           hole-names (q-util/parse-holes q)
-          expanded-cur (cur [:expanded] {})
           holes-by-name (->> (:query/hole query)
                              (map (juxt :hole/name identity))
                              (into {}))
@@ -95,7 +94,7 @@
                holes-form-dbid (->DbId -1 (-> editor-graph .-dbval .-conn-id))
                editor-graph (hc/with' editor-graph (holes->field-tx editor-graph holes-form-dbid hole-names holes-by-name))
                holes-form (hc/entity editor-graph holes-form-dbid)]
-           [form/form graph entity holes-form expanded-cur stage-tx! navigate-cmp])
+           [form/form graph entity holes-form stage-tx! navigate-cmp])
        (if-not (show-results? hole-names hole-lookup)       ;todo what if we have a user hole?
          [:div (str "Unfilled query holes" (pr-str hole-lookup))]
          (let [resultset (->> (let [resultset (hc/select graph (.-dbid query))]
@@ -123,7 +122,7 @@
                                          (filter :link/repeating?))]
                 (if (empty? result-renderer-code)
                   ^{:key (hc/t graph)}
-                  [table/table graph resultset ordered-forms repeating-links expanded-cur stage-tx! navigate-cmp nil]
+                  [table/table graph resultset ordered-forms repeating-links stage-tx! navigate-cmp nil]
                   (let [{result-renderer :value error :error} (eval result-renderer-code)]
                     (if error
                       [:div (pr-str error)]
@@ -147,8 +146,7 @@
 
 
 (defn query [state editor-graph {find-elements :link/find-element query :link/query} params-map param-ctx]
-  (let [{params :query-params create-new-find-elements :create-new-find-elements} params-map
-        expanded-forms (get state :expanded nil)]
+  (let [{params :query-params create-new-find-elements :create-new-find-elements} params-map]
     (if-let [q (some-> (:query/value query) reader/read-string)]
       (let [hole-names (q-util/parse-holes q)
             holes-by-name (->> (:query/hole query)
@@ -168,7 +166,7 @@
                 tx (holes->field-tx editor-graph holes-form-dbid hole-names holes-by-name)
                 editor-graph (hc/with' editor-graph tx)
                 holes-form (hc/entity editor-graph holes-form-dbid)]
-            (form-util/form-option-queries holes-form nil q-util/build-params-from-formula param-ctx))
+            (form/form-option-queries holes-form q-util/build-params-from-formula param-ctx))
 
           (if (show-results? hole-names hole-lookup)
             (let [p-filler (fn [query formulas param-ctx]
@@ -179,10 +177,10 @@
                   dbval (get param-ctx :dbval)
                   query-for-form (fn [{find-name :find-element/name form :find-element/form :as find-element}]
                                    (merge
-                                     (form-util/form-option-queries form expanded-forms p-filler param-ctx)
+                                     (form/form-option-queries form p-filler param-ctx)
                                      (table/option-queries form p-filler param-ctx)
                                      {(.-dbid query) [q (p-filler query nil param-ctx)
-                                                      {find-name [dbval (form-util/form-pull-exp form expanded-forms)]}]}))]
+                                                      {find-name [dbval (form/form-pull-exp form)]}]}))]
               (if (:query/single-result-as-entity? query)
                 ; we can use nil for :link/formula and formulas because we know our p-filler doesn't use it
                 (apply merge (map query-for-form find-elements))

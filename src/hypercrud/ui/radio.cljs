@@ -1,8 +1,6 @@
 (ns hypercrud.ui.radio
-  (:require [hypercrud.client.core :as hc]
-            [hypercrud.client.tx :as tx]
-            [hypercrud.form.option :as option]
-            [hypercrud.ui.form :as form]))
+  (:require [hypercrud.client.tx :as tx]
+            [hypercrud.form.option :as option]))
 
 
 (defn radio-option [label name change! checked?]
@@ -46,20 +44,12 @@
      [radio-option "--" form-name #(change! nil) (= nil value)]]))
 
 
-(defn radio-ref* [entity {:keys [expanded-cur field graph navigate-cmp stage-tx!]}]
+(defn radio-ref* [entity {:keys [field graph stage-tx!]}]
   ; TODO only one radio-group on the page until we get a unique form-name
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         value (get entity ident)
         form-name "TODO"                                    ;form-name in the HTML sense
-        temp-id! (partial hc/*temp-id!* (-> entity .-dbgraph .-dbval .-conn-id))
-        change! (fn [dbid]
-                  (let [dbid (if (= "create-new" dbid) (temp-id!) dbid)]
-                    ;reset the cursor before change! otherwise npe when trying to render
-                    ;todo these both set the same cursor, and should be atomic
-                    (reset! expanded-cur (if (= "create-new" dbid) {} nil))
-                    (stage-tx! (tx/update-entity-attr entity attribute dbid))))
-        create-new? (some-> value tx/tempid?)
-        show-form? (or (not= nil @expanded-cur) create-new?)]
+        change! #(stage-tx! (tx/update-entity-attr entity attribute %))]
     [:div.value {:key (option/get-key field)}
      (map (fn [result]
             (assert (= 1 (count result)) "Cannot use multiple find-elements for an options-link")

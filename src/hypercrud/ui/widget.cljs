@@ -5,7 +5,6 @@
             [hypercrud.form.option :as option]
             [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.code-editor :refer [code-editor*]]
-            [hypercrud.ui.form :as form]
             [hypercrud.ui.input :as input]
             [hypercrud.ui.multi-select :refer [multi-select* multi-select-markup]]
             [hypercrud.ui.radio :as radio]
@@ -55,35 +54,29 @@
   [radio/radio-ref* entity widget-args])
 
 
-(defn select-ref-expanded-cur [entity widget-args]
-  ;;select* has parameterized markup fn todo
-  [select* entity widget-args])
-
-
 ; this can be used sometimes, on the entity page, but not the query page
-(defn select-ref-navigate [entity {:keys [expanded-cur field navigate-cmp] :as widget-args}]
-  (let [ident (-> field :field/attribute :attribute/ident)]
-    (select* entity (assoc widget-args :expanded-cur (expanded-cur [ident])))))
+(defn select-ref-navigate [entity widget-args]
+  (select* entity widget-args))
 
 
-(defn select-ref-component [entity {:keys [expanded-cur field graph navigate-cmp stage-tx!]}]
+(defn select-ref-component [entity {:keys [field graph navigate-cmp stage-tx!]}]
   [:div "todo"]
   #_(let [value (get entity (-> field :field/attribute :attribute/ident))]
-    (form/form graph value (:field/form field) expanded-cur stage-tx! navigate-cmp)))
+    (form/form graph value (:field/form field) stage-tx! navigate-cmp)))
 
 
 (defn table-many-ref [entity {:keys [field graph]}]
-  (let [initial-select (let [result (first (option/get-option-records field graph entity))]
+  [:div.value "todo"]
+  #_(let [initial-select (let [result (first (option/get-option-records field graph entity))]
                          (assert (= 1 (count result)) "Cannot use multiple find-elements for an options-link")
                          (first result))
         select-value-atom (r/atom (:db/id initial-select))]
-    (fn [entity {:keys [field graph expanded-cur navigate-cmp stage-tx!]}]
-      [:div.value "todo"]
-      #_(let [ident (-> field :field/attribute :attribute/ident)
+    (fn [entity {:keys [field graph navigate-cmp stage-tx!]}]
+      (let [ident (-> field :field/attribute :attribute/ident)
             resultset (mapv vector (get entity ident))
             retract-result! #(stage-tx! (tx/edit-entity (:db/id entity) ident [(first %)] []))]
         [:div.value
-         [table/table graph resultset (vector (:field/form field)) expanded-cur stage-tx! navigate-cmp retract-result!]
+         [table/table graph resultset (vector (:field/form field)) stage-tx! navigate-cmp retract-result!]
          (let [props {:value (str @select-value-atom)
                       :on-change #(let [select-value (.-target.value %)
                                         value (reader/read-string select-value)]
@@ -103,13 +96,13 @@
             [:button {:on-click #(stage-tx! (tx/edit-entity (:db/id entity) ident [] [@select-value-atom]))} "⬆"]])]))))
 
 
-(defn table-many-ref-component [entity {:keys [field graph expanded-cur navigate-cmp stage-tx!]}]
-  (let [ident (-> field :field/attribute :attribute/ident)
+(defn table-many-ref-component [entity {:keys [field graph navigate-cmp stage-tx!]}]
+  [:div "todo"]
+  #_(let [ident (-> field :field/attribute :attribute/ident)
         resultset (map vector (get entity ident))
         retract-result! #(stage-tx! (tx/edit-entity (:db/id entity) ident [(first %)] []))]
     [:div.value
-     "todo"
-     #_[table/table graph resultset (vector (:field/form field)) expanded-cur stage-tx! navigate-cmp retract-result!]]))
+     [table/table graph resultset (vector (:field/form field)) stage-tx! navigate-cmp retract-result!]]))
 
 
 (defn multi-select-ref [entity {:keys [field stage-tx!] :as widget-args}]

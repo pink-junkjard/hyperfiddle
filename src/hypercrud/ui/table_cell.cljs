@@ -12,12 +12,13 @@
 
 
 (defn ref-one-component [entity {:keys [field]}]
-  (let [ident (-> field :field/attribute :attribute/ident)
-        child-entity (get entity ident)]
-    [:div
-     (-> (option/label-prop field [child-entity])
-         str
-         ellipsis)]))
+  [:div "todo"]
+  #_(let [ident (-> field :field/attribute :attribute/ident)
+          child-entity (get entity ident)]
+      [:div
+       (-> (option/label-prop field [child-entity])
+           str
+           ellipsis)]))
 
 
 (defn ref-many [entity {:keys [field]}]

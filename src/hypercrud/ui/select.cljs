@@ -1,9 +1,7 @@
 (ns hypercrud.ui.select
-  (:require [hypercrud.client.core :as hc]
-            [hypercrud.client.tx :as tx]
+  (:require [hypercrud.client.tx :as tx]
             [hypercrud.form.option :as option]
-            [hypercrud.types :refer [->DbId]]
-            [hypercrud.ui.form :as form]))
+            [hypercrud.types :refer [->DbId]]))
 
 
 (defn select-boolean [entity {:keys [field stage-tx!]}]
@@ -25,7 +23,7 @@
        [:option {:key :nil :value ""} "--"]]]]))
 
 
-(defn select* [entity {:keys [expanded-cur field graph stage-tx!]}]
+(defn select* [entity {:keys [field graph stage-tx!]}]
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         value (get entity ident)
         conn-id (-> entity .-dbgraph .-dbval .-conn-id)
@@ -40,13 +38,7 @@
                                   dbid (cond
                                          (= "" select-value) nil
                                          :else-hc-select-option-node (->DbId (js/parseInt select-value 10) conn-id))]
-                              ;reset the cursor before change! otherwise npe when trying to render
-                              ;todo these both set the same cursor, and should be atomic
-                              (reset! expanded-cur nil)
-                              (stage-tx! (tx/update-entity-attr entity attribute dbid))
-                              ;; and also add our new guy to the option list (for all combos)
-                              ))}]
-
+                              (stage-tx! (tx/update-entity-attr entity attribute dbid))))}]
     [:div.value.editable-select {:key (option/get-key field)}
      [:span.select
       (let [option-records (option/get-option-records field graph entity)]

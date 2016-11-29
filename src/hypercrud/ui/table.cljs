@@ -63,7 +63,6 @@
                 [:td.truncate {:key ident}
                  (if (empty? renderer)
                    [auto-table-cell entity (-> fieldless-widget-args
-                                               (update :expanded-cur #(% [ident]))
                                                (assoc :field field))]
                    (let [{renderer :value error :error} (eval renderer)]
                      [:div.value
@@ -106,12 +105,11 @@
                   (navigate-cmp props prompt)])))
         doall)
    (mapcat (fn [form entity]
-             (let [fieldless-widget-args (update fieldless-widget-args :expanded-cur (fn [cur] (cur [(.-dbid entity)])))]
-               (build-row-cells form entity fieldless-widget-args)))
+             (build-row-cells form entity fieldless-widget-args))
            forms result)])
 
 
-(defn body [graph resultset forms repeating-links expanded-cur stage-tx! navigate-cmp retract-result! sort-col]
+(defn body [graph resultset forms repeating-links stage-tx! navigate-cmp retract-result! sort-col]
   [:tbody
    (let [[form-dbid sort-key direction] @sort-col
          sort-eids (fn [resultset]
@@ -133,15 +131,14 @@
           sort-eids
           (map (fn [result]
                  ^{:key (hash (mapv :db/id result))}
-                 [table-row result forms repeating-links retract-result! {:expanded-cur expanded-cur
-                                                                          :graph graph
+                 [table-row result forms repeating-links retract-result! {:graph graph
                                                                           :navigate-cmp navigate-cmp
                                                                           :stage-tx! stage-tx!}]))))])
 
 
-(defn table [graph resultset forms repeating-links expanded-cur stage-tx! navigate-cmp retract-result!]
+(defn table [graph resultset forms repeating-links stage-tx! navigate-cmp retract-result!]
   (let [sort-col (r/atom nil)]
-    (fn [graph resultset forms repeating-links expanded-cur stage-tx! navigate-cmp retract-result!]
+    (fn [graph resultset forms repeating-links stage-tx! navigate-cmp retract-result!]
       [:table.ui-table
        [:colgroup [:col {:span "1" :style {:width "20px"}}]]
        [:thead
@@ -151,25 +148,13 @@
                      [:td.link-cell {:key id}])))
          [:td.link-cell {:key "hypercrud-delete-row-link"}]
          (build-col-heads forms sort-col)]]
-       [body graph resultset forms repeating-links expanded-cur stage-tx! navigate-cmp retract-result! sort-col]])))
+       [body graph resultset forms repeating-links stage-tx! navigate-cmp retract-result! sort-col]])))
 
 
 (defn table-pull-exp [form]
   (concat
     [:db/id]
-    (map (fn [{{:keys [:attribute/ident :attribute/valueType :attribute/isComponent]} :field/attribute
-               {find-elements :link/find-element} :field/options-link
-               :as field}]
-           (if (or isComponent (= (:db/ident valueType) :db.type/ref))
-             ; components and refs render nested entities, so pull another level deeper
-             {ident (conj (->> find-elements
-                               (mapcat #(-> % :find-element/form :form/field))
-                               (mapv #(-> % :field/attribute :attribute/ident)))
-                          :db/id)}
-
-             ; otherwise just add the attribute to the list
-             ident))
-         (:form/field form))))
+    (mapv #(-> % :field/attribute :attribute/ident) (:form/field form))))
 
 
 (defn field-queries [p-filler param-ctx field]
@@ -182,8 +167,7 @@
 
 (defn option-queries [form p-filler param-ctx]
   (apply merge
-         (map #(field-queries p-filler param-ctx %)
-              (:form/field form))))
+         (mapv #(field-queries p-filler param-ctx %) (:form/field form))))
 
 (defn query
   ([p-filler param-ctx link]

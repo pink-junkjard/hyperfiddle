@@ -1,7 +1,7 @@
 (ns hypercrud.ui.form
   (:require [hypercrud.client.tx :as tx]
             [hypercrud.compile.eval :refer [eval]]
-            [hypercrud.form.util :as form-util]
+            [hypercrud.form.option :as option]
             [hypercrud.ui.auto-control :refer [auto-control]]))
 
 
@@ -19,27 +19,47 @@
             (catch :default e (pr-str e))))]))])
 
 
-(defn form [graph entity form expanded-cur stage-tx! navigate-cmp]
+(defn form [graph entity form stage-tx! navigate-cmp]
   [:div.form
    (->> (:form/field form)
         (sort-by :field/order)
         (map (fn [fieldinfo]
                (let [ident (-> fieldinfo :field/attribute :attribute/ident)]
                  ^{:key ident}
-                 [field entity {:expanded-cur (expanded-cur [ident])
-                                :field fieldinfo
+                 [field entity {:field fieldinfo
                                 :graph graph
                                 :navigate-cmp navigate-cmp
                                 :stage-tx! stage-tx!}]))))])
 
 
-(defn query [dbid form expanded-forms p-filler param-ctx]
+(defn form-pull-exp [form]
+  (concat
+    [:db/id]
+    (mapv #(-> % :field/attribute :attribute/ident) (:form/field form))))
+
+
+(defn field-queries [p-filler param-ctx field]
+  (let [{:keys [:attribute/valueType :attribute/isComponent]} (:field/attribute field)
+        is-ref (= (:db/ident valueType) :db.type/ref)]
+    ; if we are a ref we ALWAYS need the query from the field options
+    ; EXCEPT when we are component, in which case no options are rendered, just a form, handled below
+    (if (and is-ref (not isComponent))
+      (option/get-query field p-filler param-ctx))))
+
+
+(defn form-option-queries "get the form options recursively for all expanded forms"
+  [form p-filler param-ctx]
+  (apply merge
+         (mapv #(field-queries p-filler param-ctx %) (:form/field form))))
+
+
+(defn query [dbid form p-filler param-ctx]
   (let [param-ctx (merge param-ctx {:id (.-id dbid)})
         dbval (get param-ctx :dbval)
-        option-queries (form-util/form-option-queries form expanded-forms p-filler param-ctx)]
+        option-queries (form-option-queries form p-filler param-ctx)]
     (if (not (tx/tempid? dbid))
       (merge option-queries
              {dbid ['[:find ?e :in $ ?e :where [?e]]
                     {"$" dbval "?e" (.-id dbid)}
-                    {"?e" [dbval (form-util/form-pull-exp form expanded-forms)]}]})
+                    {"?e" [dbval (form-pull-exp form)]}]})
       option-queries)))

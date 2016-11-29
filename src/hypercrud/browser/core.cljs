@@ -54,6 +54,6 @@
                         (query/query state editor-graph link params-map param-ctx)))
           :field-fn (fn [dbval dbid field-id]
                       (let [field (hc/entity editor-graph (->DbId field-id (-> editor-graph .-dbval .-conn-id)))]
-                        (field/query state dbid field param-ctx)))
+                        (field/query dbid field param-ctx)))
           :index-fn #(index/query)
           :else (constantly {})}))

@@ -38,6 +38,5 @@
          ^{:key (hash selected-dbid)}
          [detail-renderer graph selected-entity
           (:field/form field)
-          ((:expanded-cur widget-args) [(:db/id entity)])
           (:stage-tx! widget-args)
           (:navigate-cmp widget-args)]))]))
