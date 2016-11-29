@@ -60,7 +60,7 @@
 
 
 (defn select-ref-component [entity {:keys [field graph navigate-cmp stage-tx!]}]
-  [:div "todo"]
+  [:div.value "todo"]
   #_(let [value (get entity (-> field :field/attribute :attribute/ident))]
     (form/form graph value (:field/form field) stage-tx! navigate-cmp)))
 
@@ -97,7 +97,7 @@
 
 
 (defn table-many-ref-component [entity {:keys [field graph navigate-cmp stage-tx!]}]
-  [:div "todo"]
+  [:div.value "todo"]
   #_(let [ident (-> field :field/attribute :attribute/ident)
         resultset (map vector (get entity ident))
         retract-result! #(stage-tx! (tx/edit-entity (:db/id entity) ident [(first %)] []))]

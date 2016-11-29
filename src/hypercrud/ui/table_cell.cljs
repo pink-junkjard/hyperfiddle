@@ -22,14 +22,15 @@
 
 
 (defn ref-many [entity {:keys [field]}]
-  (let [ident (-> field :field/attribute :attribute/ident)]
-    [:div
-     (->> (get entity ident)
-          (map (fn [entity]
-                 (if (not= nil entity)
-                   (option/label-prop field [entity])
-                   "nil")))
-          (string/join ", "))]))
+  [:div "todo"]
+  #_(let [ident (-> field :field/attribute :attribute/ident)]
+      [:div
+       (->> (get entity ident)
+            (map (fn [entity]
+                   (if (not= nil entity)
+                     (option/label-prop field [entity])
+                     "nil")))
+            (string/join ", "))]))
 
 
 (defn other-many [entity {:keys [field navigate-cmp]}]
