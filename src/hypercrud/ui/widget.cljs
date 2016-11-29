@@ -73,10 +73,9 @@
         select-value-atom (r/atom (:db/id initial-select))]
     (fn [entity {:keys [field graph navigate-cmp stage-tx!]}]
       (let [ident (-> field :field/attribute :attribute/ident)
-            resultset (mapv vector (get entity ident))
-            retract-result! #(stage-tx! (tx/edit-entity (:db/id entity) ident [(first %)] []))]
+            resultset (mapv vector (get entity ident))]
         [:div.value
-         [table/table graph resultset (vector (:field/form field)) stage-tx! navigate-cmp retract-result!]
+         [table/table graph resultset (vector (:field/form field)) stage-tx! navigate-cmp]
          (let [props {:value (str @select-value-atom)
                       :on-change #(let [select-value (.-target.value %)
                                         value (reader/read-string select-value)]
@@ -99,10 +98,9 @@
 (defn table-many-ref-component [entity {:keys [field graph navigate-cmp stage-tx!]}]
   [:div.value "todo"]
   #_(let [ident (-> field :field/attribute :attribute/ident)
-        resultset (map vector (get entity ident))
-        retract-result! #(stage-tx! (tx/edit-entity (:db/id entity) ident [(first %)] []))]
+        resultset (map vector (get entity ident))]
     [:div.value
-     [table/table graph resultset (vector (:field/form field)) stage-tx! navigate-cmp retract-result!]]))
+     [table/table graph resultset (vector (:field/form field)) stage-tx! navigate-cmp]]))
 
 
 (defn multi-select-ref [entity {:keys [field stage-tx!] :as widget-args}]

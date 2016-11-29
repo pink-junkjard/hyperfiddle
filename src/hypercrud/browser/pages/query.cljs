@@ -84,7 +84,8 @@
           entity @entity-cur
           dbhole-values (q-util/build-dbhole-lookup query)
           hole-lookup (merge (-> entity .-data (dissoc :db/id)) dbhole-values)
-          dbval (get param-ctx :dbval)]
+          dbval (get param-ctx :dbval)
+          param-ctx (assoc param-ctx :query-params params)]
       #_(if-not (:link/query link))
       #_[entity/ui cur stage-tx! graph (first entities) form navigate-cmp]
       [:div
@@ -122,7 +123,7 @@
                                          (filter :link/repeating?))]
                 (if (empty? result-renderer-code)
                   ^{:key (hc/t graph)}
-                  [table/table graph resultset ordered-forms repeating-links stage-tx! navigate-cmp nil]
+                  [table/table graph resultset ordered-forms repeating-links stage-tx! navigate-cmp param-ctx]
                   (let [{result-renderer :value error :error} (eval result-renderer-code)]
                     (if error
                       [:div (pr-str error)]
