@@ -117,7 +117,7 @@
                 [entity/ui cur stage-tx! graph result ordered-forms navigate-cmp]
                 (->> (concat (repeating-links stage-tx! link result navigate-cmp param-ctx)
                              (non-repeating-links stage-tx! link navigate-cmp param-ctx))
-                     (interpose " "))])
+                     (interpose " · "))])
              [:div
               (let [repeating-links (->> (:link/link link)
                                          (filter :link/repeating?))]
@@ -142,7 +142,7 @@
                                        (try
                                          (result-renderer graph link-fn result)
                                          (catch :default e (pr-str e)))]))))]]))))
-              (interpose " " (non-repeating-links stage-tx! link navigate-cmp param-ctx))])))])
+              (interpose " · " (non-repeating-links stage-tx! link navigate-cmp param-ctx))])))])
     [:div "Query record is incomplete"]))
 
 
