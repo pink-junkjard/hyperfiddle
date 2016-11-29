@@ -25,7 +25,7 @@
        [:option {:key :nil :value ""} "--"]]]]))
 
 
-(defn select* [entity {:keys [expanded-cur field graph navigate-cmp stage-tx!]} edit-element]
+(defn select* [entity {:keys [expanded-cur field graph stage-tx!]}]
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         value (get entity ident)
         conn-id (-> entity .-dbgraph .-dbval .-conn-id)
@@ -45,13 +45,9 @@
                               (reset! expanded-cur nil)
                               (stage-tx! (tx/update-entity-attr entity attribute dbid))
                               ;; and also add our new guy to the option list (for all combos)
-                              ))}
-        create-new? (some-> value tx/tempid?)
-        show-form? (or (not= nil @expanded-cur) create-new?)]
+                              ))}]
 
     [:div.value.editable-select {:key (option/get-key field)}
-     (if (and (option/editable? field) (not show-form?))
-       edit-element)
      [:span.select
       (let [option-records (option/get-option-records field graph entity)]
         #_(assert (or (nil? value)
@@ -70,7 +66,4 @@
                                                ^{:key (hash dbid)}
                                                [:option {:value (.-id dbid)} label-prop])))
                                   (concat
-                                    [[:option {:key :blank :value ""} "--"]]))])]
-     (if (and (not= nil value) show-form?)
-       ;; TODO branch the client in create-new case
-       [form/form graph value (:field/form field) expanded-cur stage-tx! navigate-cmp])]))
+                                    [[:option {:key :blank :value ""} "--"]]))])]]))

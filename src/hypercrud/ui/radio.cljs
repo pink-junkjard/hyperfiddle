@@ -50,8 +50,7 @@
   ; TODO only one radio-group on the page until we get a unique form-name
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         value (get entity ident)
-        form (:field/form field)
-        form-name (or (-> form :db/id .-id) "TODO")         ;form-name in the HTML sense
+        form-name "TODO"                                    ;form-name in the HTML sense
         temp-id! (partial hc/*temp-id!* (-> entity .-dbgraph .-dbval .-conn-id))
         change! (fn [dbid]
                   (let [dbid (if (= "create-new" dbid) (temp-id!) dbid)]
@@ -70,21 +69,8 @@
               ^{:key (hash id)}
               [radio-option label form-name #(change! id) checked?]))
           (option/get-option-records field graph entity))
-     (if (option/create-new? field)
-       ^{:key :create-new}
-       [radio-option "Create New" form-name #(change! "create-new") create-new?])
      ^{:key :blank}
-     [radio-option "--" form-name #(change! nil) (= nil value)]
-     (if show-form?
-       ;; TODO branch the client in create-new case
-       [form/form graph value form expanded-cur stage-tx! navigate-cmp])]
-
-    ;todo how should editing existing entries work?
-    #_[:div.editable-select {:key (hash option-eids)}
-       (if (and form (not show-form?))
-         [:button {:on-click #(swap! expanded-cur (constantly {}))
-                   :disabled (= nil value)} "Edit"])
-       ]))
+     [radio-option "--" form-name #(change! nil) (= nil value)]]))
 
 (comment
   ; todo factor out aggregation into widget lib

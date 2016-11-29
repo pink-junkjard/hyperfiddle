@@ -12,7 +12,7 @@ case that works for expanded-forms)"
 (declare form-option-queries)
 
 
-(defn field-pull-exp-entry [expanded-forms field expand?]
+#_(defn field-pull-exp-entry [expanded-forms field expand?]
   (let [{:keys [:attribute/ident :attribute/cardinality]} (:field/attribute field)
         new-expanded-forms (get expanded-forms ident)]
     (if (expand? new-expanded-forms (:field/attribute field))
@@ -43,7 +43,7 @@ case that works for expanded-forms)"
   ([form expanded-forms expand?]
    (concat
      [:db/id]
-     (map #(field-pull-exp-entry expanded-forms % expand?) (:form/field form)))))
+     (mapv #(-> % :field/attribute :attribute/ident) (:form/field form)))))
 
 
 (defn dont-go-deeper-except-components? [expanded-forms field]
@@ -65,7 +65,7 @@ case that works for expanded-forms)"
         (if (and is-ref (not isComponent))
           (option/get-query field p-filler param-ctx)))
 
-      (let [new-expanded-forms (get expanded-forms ident)]
+      #_(let [new-expanded-forms (get expanded-forms ident)]
         ; components render expanded automatically
         ; so if it is expanded or is a component, get the queries for another level deeper
         (if (recurse? new-expanded-forms field)

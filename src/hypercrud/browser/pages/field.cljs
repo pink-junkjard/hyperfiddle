@@ -29,5 +29,5 @@
       (merge option-queries
              {dbid ['[:find ?e :in $ ?e :where [?e]]
                     {"$" dbval "?e" (.-id dbid)}
-                    {"?e" [dbval [:db/id (form-util/field-pull-exp-entry expanded-forms field form-util/expand?)]]}]})
+                    {"?e" [dbval [:db/id (-> field :field/attribute :attribute/ident)]]}]})
       option-queries)))

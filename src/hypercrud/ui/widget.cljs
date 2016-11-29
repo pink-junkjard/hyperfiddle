@@ -1,6 +1,5 @@
 (ns hypercrud.ui.widget
   (:require [cljs.reader :as reader]
-            [hypercrud.browser.links :as links]
             [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx]
             [hypercrud.form.option :as option]
@@ -8,11 +7,9 @@
             [hypercrud.ui.code-editor :refer [code-editor*]]
             [hypercrud.ui.form :as form]
             [hypercrud.ui.input :as input]
-            [hypercrud.ui.master-detail :refer [master-detail*]]
             [hypercrud.ui.multi-select :refer [multi-select* multi-select-markup]]
             [hypercrud.ui.radio :as radio]
             [hypercrud.ui.select :refer [select*]]
-            [hypercrud.ui.table :as table]
             [hypercrud.ui.textarea :refer [textarea*]]
             [reagent.core :as r]))
 
@@ -58,27 +55,20 @@
   [radio/radio-ref* entity widget-args])
 
 
-(defn select-ref-expanded-cur [entity {:keys [expanded-cur field] :as widget-args}]
+(defn select-ref-expanded-cur [entity widget-args]
   ;;select* has parameterized markup fn todo
-  [select* entity widget-args
-   [:button.edit {:on-click #(reset! expanded-cur {})
-                  :disabled (nil? (get entity (-> field :field/attribute :attribute/ident)))} "Edit"]])
+  [select* entity widget-args])
 
 
 ; this can be used sometimes, on the entity page, but not the query page
 (defn select-ref-navigate [entity {:keys [expanded-cur field navigate-cmp] :as widget-args}]
   (let [ident (-> field :field/attribute :attribute/ident)]
-    (select*
-      entity (assoc widget-args :expanded-cur (expanded-cur [ident]))
-      nil
-      #_(if (not (nil? (get entity ident)))
-          (if-let [form (:field/form field)]
-            (links/entity-link (.-dbid form) (:db/id (get entity ident))
-                               (fn [href] [navigate-cmp {:class "edit" :href href} "Edit"])))))))
+    (select* entity (assoc widget-args :expanded-cur (expanded-cur [ident])))))
 
 
 (defn select-ref-component [entity {:keys [expanded-cur field graph navigate-cmp stage-tx!]}]
-  (let [value (get entity (-> field :field/attribute :attribute/ident))]
+  [:div "todo"]
+  #_(let [value (get entity (-> field :field/attribute :attribute/ident))]
     (form/form graph value (:field/form field) expanded-cur stage-tx! navigate-cmp)))
 
 
@@ -139,17 +129,6 @@
         change! #(stage-tx! (tx/edit-entity (:db/id entity) ident [value] [%]))]
     ^{:key ident}
     [code-editor* value change!]))
-
-
-(comment
-  {:expanded
-   {17592186045559 {:link/form {17592186045554 {:form/field {:field/attribute {}}}}}
-    17592186045561 {:link/query {}}}})
-; todo needs work with expanded-cur
-#_(defn master-detail [entity {:keys [expanded-cur] :as widget-args}]
-    (let [selected-atom (r/atom nil)]
-      (fn [entity widget-args]
-        (master-detail* entity widget-args selected-atom))))
 
 
 (defn valid-date-str? [s]

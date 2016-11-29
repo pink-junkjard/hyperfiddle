@@ -47,12 +47,3 @@
                               find-elements)
                         (into {}))]
       {query-name [q params pull-exp]})))
-
-
-; todo
-; cannot create-new if not editable
-; sometimes might want create-new?=false when editable?=true
-; we probably want get-create-form and get-edit-form
-; and then these editable?/create-new? drop out
-(defn create-new? [field] (not= nil (:field/form field)))
-(defn editable? [field] (not= nil (:field/form field)))
