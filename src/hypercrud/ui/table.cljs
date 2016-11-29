@@ -93,13 +93,13 @@
 
 (defn table-row [result forms repeating-links param-ctx {:keys [navigate-cmp stage-tx!] :as fieldless-widget-args}]
   [:tr
-   (let [param-ctx (assoc param-ctx :result result)]
-     (->> repeating-links
-          (map (fn [{:keys [:db/id :link/ident :link/prompt] :as link}]
-                  (let [props (assoc (links/query-link stage-tx! link param-ctx) :key ident)]
-                    [:td.link-cell {:key id}
-                     (navigate-cmp props prompt)])))
-          doall))
+   [:td.link-cell {:key :link-cell}
+    (let [param-ctx (assoc param-ctx :result result)]
+      (->> repeating-links
+           (map (fn [{:keys [:db/id :link/ident :link/prompt] :as link}]
+                  (let [props (assoc (links/query-link stage-tx! link param-ctx) :key id)]
+                    (navigate-cmp props prompt))))
+           (interpose " · ")))]
    (mapcat (fn [form entity]
              (build-row-cells form entity fieldless-widget-args))
            forms result)])
@@ -139,9 +139,7 @@
        [:colgroup [:col {:span "1" :style {:width "20px"}}]]
        [:thead
         [:tr
-         (->> repeating-links
-              (map (fn [{:keys [:db/id] :as link}]
-                     [:td.link-cell {:key id}])))
+         [:td.link-cell {:key :link-cell}]
          (build-col-heads forms sort-col)]]
        [body graph resultset forms repeating-links stage-tx! navigate-cmp sort-col param-ctx]])))
 
