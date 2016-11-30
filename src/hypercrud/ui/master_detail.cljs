@@ -14,12 +14,14 @@
   (assert false "masterdetail must be redesigned")
   (let [ident (-> field :field/attribute :attribute/ident)
         detail-renderer (or detail-renderer form/form)
-        temp-id! (partial hc/*temp-id!* (-> entity .-dbgraph .-dbval .-conn-id))
         li (fn [dbid label is-selected? & retract]
              [:li {:key (hash dbid) :class (if is-selected? "selected")}
               retract
               ; todo do we need to support entities across databases?
-              [navigate-cmp {:href (str (.-id dbid) "/")} label]])]
+              [navigate-cmp {:href (str (.-id dbid) "/")} label]])
+        links (assert false "todo")
+        param-ctx (assert false "todo")
+        ]
     [:div.master-detail
      [:ul (doall (->> (get entity ident)
                       (filter (or filter-entities (constantly true)))
@@ -38,5 +40,7 @@
          ^{:key (hash selected-dbid)}
          [detail-renderer graph selected-entity
           (:field/form field)
+          links
           (:stage-tx! widget-args)
-          (:navigate-cmp widget-args)]))]))
+          (:navigate-cmp widget-args)
+          param-ctx]))]))

@@ -1,5 +1,6 @@
 (ns hypercrud.ui.widget
   (:require [cljs.reader :as reader]
+            [hypercrud.browser.links :as links]
             [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx]
             [hypercrud.form.option :as option]
@@ -11,6 +12,19 @@
             [hypercrud.ui.select :refer [select*]]
             [hypercrud.ui.textarea :refer [textarea*]]
             [reagent.core :as r]))
+
+
+(defn link-thing [{:keys [field links navigate-cmp param-ctx stage-tx!] :as widget-args}]
+  (let [field-dbid (.-dbid field)]
+    [:div.links
+     (->> links
+          ; we are assuming link/repeating? true
+          ; should we? do we need buz logic to prevent that?
+          (filter #(= field-dbid (some-> % :link/field .-dbid)))
+          (map (fn [{:keys [:db/id :link/prompt] :as link}]
+                 ^{:key id}
+                 [navigate-cmp (links/query-link stage-tx! link param-ctx) prompt]))
+          (interpose " · "))]))
 
 
 (defn input-keyword [entity {:keys [field stage-tx!]}]
@@ -59,14 +73,16 @@
   (select* entity widget-args))
 
 
-(defn select-ref-component [entity {:keys [field graph navigate-cmp stage-tx!]}]
-  [:div.value "todo"]
+(defn select-ref-component [entity {:keys [field graph navigate-cmp stage-tx!] :as widget-args}]
+  [:div.value
+   (link-thing widget-args)]
   #_(let [value (get entity (-> field :field/attribute :attribute/ident))]
     (form/form graph value (:field/form field) stage-tx! navigate-cmp)))
 
 
-(defn table-many-ref [entity {:keys [field graph]}]
-  [:div.value "todo"]
+(defn table-many-ref [entity {:keys [field graph] :as widget-args}]
+  [:div.value
+   (link-thing widget-args)]
   #_(let [initial-select (let [result (first (option/get-option-records field graph entity))]
                          (assert (= 1 (count result)) "Cannot use multiple find-elements for an options-link")
                          (first result))
@@ -95,8 +111,9 @@
             [:button {:on-click #(stage-tx! (tx/edit-entity (:db/id entity) ident [] [@select-value-atom]))} "⬆"]])]))))
 
 
-(defn table-many-ref-component [entity {:keys [field graph navigate-cmp stage-tx!]}]
-  [:div.value "todo"]
+(defn table-many-ref-component [entity {:keys [field graph navigate-cmp stage-tx!] :as widget-args}]
+  [:div.value
+   (link-thing widget-args)]
   #_(let [ident (-> field :field/attribute :attribute/ident)
         resultset (map vector (get entity ident))]
     [:div.value

@@ -1,7 +1,8 @@
 (ns hypercrud.ui.table-cell
   (:require [clojure.string :as string]
             [hypercrud.browser.links :as links]
-            [hypercrud.form.option :as option]))
+            [hypercrud.form.option :as option]
+            [hypercrud.ui.widget :as widget]))
 
 
 (defn ellipsis
@@ -11,8 +12,8 @@
            (str (subs s 0 (- c 3)) "..."))))
 
 
-(defn ref-one-component [entity {:keys [field]}]
-  [:div "todo"]
+(defn ref-one-component [entity {:keys [field] :as widget-args}]
+  (widget/link-thing widget-args)
   #_(let [ident (-> field :field/attribute :attribute/ident)
           child-entity (get entity ident)]
       [:div

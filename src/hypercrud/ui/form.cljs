@@ -19,7 +19,7 @@
             (catch :default e (pr-str e))))]))])
 
 
-(defn form [graph entity form stage-tx! navigate-cmp]
+(defn form [graph entity form links stage-tx! navigate-cmp param-ctx]
   [:div.form
    (->> (:form/field form)
         (sort-by :field/order)
@@ -28,7 +28,9 @@
                  ^{:key ident}
                  [field entity {:field fieldinfo
                                 :graph graph
+                                :links links
                                 :navigate-cmp navigate-cmp
+                                :param-ctx param-ctx
                                 :stage-tx! stage-tx!}]))))])
 
 

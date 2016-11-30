@@ -56,6 +56,7 @@
 (defn repeating-links [stage-tx! link result navigate-cmp param-ctx]
   (->> (:link/link link)
        (filter :link/repeating?)
+       (filter #(nil? (:link/field %)))
        (mapv (fn [link]
                (let [param-ctx (merge param-ctx {:result result})
                      props (links/query-link stage-tx! link param-ctx)]
@@ -66,6 +67,7 @@
 (defn non-repeating-links [stage-tx! link navigate-cmp param-ctx]
   (->> (:link/link link)
        (remove :link/repeating?)
+       (filter #(nil? (:link/field %)))
        (map (fn [link]
               (let [props (links/query-link stage-tx! link param-ctx)]
                 ^{:key (:db/id link)}
@@ -94,8 +96,10 @@
                            (reset! entity-cur (reduce tx/merge-entity-and-stmt entity tx)))
                holes-form-dbid (->DbId -1 (-> editor-graph .-dbval .-conn-id))
                editor-graph (hc/with' editor-graph (holes->field-tx editor-graph holes-form-dbid hole-names holes-by-name))
-               holes-form (hc/entity editor-graph holes-form-dbid)]
-           [form/form graph entity holes-form stage-tx! navigate-cmp])
+               holes-form (hc/entity editor-graph holes-form-dbid)
+               links (assert false "todo")
+               param-ctx (assert false "todo")]
+           [form/form graph entity holes-form links stage-tx! navigate-cmp param-ctx])
        (if-not (show-results? hole-names hole-lookup)       ;todo what if we have a user hole?
          [:div (str "Unfilled query holes" (pr-str hole-lookup))]
          (let [resultset (->> (let [resultset (hc/select graph (.-dbid query))]
@@ -114,7 +118,7 @@
            (if (:query/single-result-as-entity? query)
              (let [result (first resultset)]
                [:div
-                [entity/ui cur stage-tx! graph result ordered-forms navigate-cmp]
+                [entity/ui cur stage-tx! graph result ordered-forms (:link/link link) navigate-cmp param-ctx]
                 (->> (concat (repeating-links stage-tx! link result navigate-cmp param-ctx)
                              (non-repeating-links stage-tx! link navigate-cmp param-ctx))
                      (interpose " · "))])

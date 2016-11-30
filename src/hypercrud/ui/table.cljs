@@ -91,18 +91,19 @@
 ;        [:div {:on-click #(reset! open? true)} "⚙"]))))
 
 
-(defn table-row [result forms repeating-links param-ctx {:keys [navigate-cmp stage-tx!] :as fieldless-widget-args}]
-  [:tr
-   [:td.link-cell {:key :link-cell}
-    (let [param-ctx (assoc param-ctx :result result)]
-      (->> repeating-links
-           (map (fn [{:keys [:db/id :link/ident :link/prompt] :as link}]
+(defn table-row [result forms {:keys [links navigate-cmp stage-tx!] :as fieldless-widget-args}]
+  (let [{:keys [param-ctx] :as fieldless-widget-args} (assoc-in fieldless-widget-args [:param-ctx :result] result)]
+    [:tr
+     [:td.link-cell {:key :link-cell}
+      (->> links
+           (filter #(nil? (:link/field %)))
+           (map (fn [{:keys [:db/id :link/prompt] :as link}]
                   (let [props (assoc (links/query-link stage-tx! link param-ctx) :key id)]
                     (navigate-cmp props prompt))))
-           (interpose " · ")))]
-   (mapcat (fn [form entity]
-             (build-row-cells form entity fieldless-widget-args))
-           forms result)])
+           (interpose " · "))]
+     (mapcat (fn [form entity]
+               (build-row-cells form entity fieldless-widget-args))
+             forms result)]))
 
 
 (defn body [graph resultset forms repeating-links stage-tx! navigate-cmp sort-col param-ctx]
@@ -127,9 +128,11 @@
           sort-eids
           (map (fn [result]
                  ^{:key (hash (mapv :db/id result))}
-                 [table-row result forms repeating-links param-ctx {:graph graph
-                                                                    :navigate-cmp navigate-cmp
-                                                                    :stage-tx! stage-tx!}]))))])
+                 [table-row result forms {:graph graph
+                                          :links repeating-links
+                                          :navigate-cmp navigate-cmp
+                                          :param-ctx param-ctx
+                                          :stage-tx! stage-tx!}]))))])
 
 
 (defn table [graph resultset forms repeating-links stage-tx! navigate-cmp param-ctx]
