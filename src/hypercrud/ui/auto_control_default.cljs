@@ -25,7 +25,7 @@
       (and (= valueType :db.type/instant) (= cardinality :db.cardinality/one)) (widget/instant entity widget-args)
       (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one) isComponent) (widget/select-ref-component entity widget-args)
       (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many) isComponent) (widget/table-many-ref-component entity widget-args)
-      (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one)) (widget/select-ref-navigate entity widget-args)
+      (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one)) (widget/select-ref entity widget-args)
       (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) [widget/table-many-ref entity widget-args]
       :else (widget/default field))))
 
@@ -44,7 +44,7 @@
       (and (= valueType :db.type/instant) (= cardinality :db.cardinality/one)) (widget/instant entity widget-args)
 
       (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one) isComponent) (table-cell/ref-one-component entity widget-args)
-      (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one)) (widget/select-ref-navigate entity widget-args)
+      (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one)) (widget/select-ref entity widget-args)
 
       (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) (table-cell/ref-many entity widget-args)
       (and (= cardinality :db.cardinality/many)) (table-cell/other-many entity widget-args)
