@@ -35,16 +35,17 @@
 
 
 (defn ui [links editor-graph stage-tx! graph page-rel-path navigate-cmp param-ctx debug]
-  (route page-rel-path
-         {:query-fn (fn [link-id params-map]
-                      (let [link (hc/entity editor-graph (->DbId link-id (-> editor-graph .-dbval .-conn-id)))]
-                        (query/ui stage-tx! graph link params-map navigate-cmp param-ctx debug)))
-          :field-fn (fn [dbval dbid field-id]
-                      (let [entity (hc/entity (hc/get-dbgraph graph dbval) dbid)
-                            field (hc/entity editor-graph (->DbId field-id (-> editor-graph .-dbval .-conn-id)))]
-                        (field/ui stage-tx! graph entity field navigate-cmp)))
-          :index-fn #(index/ui links navigate-cmp param-ctx)
-          :else (constantly [:div "no route for: " page-rel-path])}))
+  [:div {:class debug}
+   (route page-rel-path
+          {:query-fn (fn [link-id params-map]
+                       (let [link (hc/entity editor-graph (->DbId link-id (-> editor-graph .-dbval .-conn-id)))]
+                         (query/ui stage-tx! graph link params-map navigate-cmp param-ctx debug)))
+           :field-fn (fn [dbval dbid field-id]
+                       (let [entity (hc/entity (hc/get-dbgraph graph dbval) dbid)
+                             field (hc/entity editor-graph (->DbId field-id (-> editor-graph .-dbval .-conn-id)))]
+                         (field/ui stage-tx! graph entity field navigate-cmp)))
+           :index-fn #(index/ui links navigate-cmp param-ctx)
+           :else (constantly [:div "no route for: " page-rel-path])})])
 
 
 (defn query [state editor-graph page-rel-path param-ctx]

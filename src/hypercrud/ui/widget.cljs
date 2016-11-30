@@ -139,7 +139,8 @@
         value (get entity ident)
         change! #(stage-tx! (tx/edit-entity (:db/id entity) ident [value] [%]))]
     ^{:key ident}
-    [code-editor* value change!]))
+    [:div.value
+     [code-editor* value change!]]))
 
 
 (defn valid-date-str? [s]

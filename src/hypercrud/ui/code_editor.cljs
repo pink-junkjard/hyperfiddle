@@ -11,7 +11,7 @@
   (reagent/create-class
     {:reagent-render
      (fn [value change!]
-       [:div.value
+       [:div.code-editor-wrapper
         [:textarea {:default-value (str value) :auto-complete "off" :class "text"}]])
 
      :component-did-mount
