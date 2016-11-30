@@ -71,9 +71,9 @@
 ; this can be used sometimes, on the entity page, but not the query page
 (defn select-ref [entity {:keys [field] :as widget-args}]
   [:div.value.editable-select {:key (option/get-key field)}
+   (link-thing widget-args)
    [:span.select
-    (select* entity widget-args)
-    (link-thing widget-args)]])
+    (select* entity widget-args)]])
 
 
 (defn select-ref-component [entity {:keys [field graph navigate-cmp stage-tx!] :as widget-args}]

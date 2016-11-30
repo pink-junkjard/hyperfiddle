@@ -95,7 +95,7 @@ input.invalid[type="text"] {
     display: block;
     overflow: hidden;
 }
-.editable-select > .edit {
+.editable-select > .links {
     float: right;
     padding-left: 3px;
 }
