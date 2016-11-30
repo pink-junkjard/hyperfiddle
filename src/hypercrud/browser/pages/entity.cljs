@@ -3,7 +3,7 @@
             [hypercrud.ui.form :as form]))
 
 
-(defn ui [cur stage-tx! graph result ordered-forms links navigate-cmp param-ctx]
+(defn ui [stage-tx! graph result ordered-forms links navigate-cmp param-ctx]
   (let [param-ctx (assoc param-ctx :result result)]
     [:div
      (map (fn [entity form]

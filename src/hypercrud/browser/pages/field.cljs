@@ -6,7 +6,7 @@
             [hypercrud.ui.form :as form]))
 
 
-(defn ui [cur stage-tx! graph entity field navigate-cmp]
+(defn ui [stage-tx! graph entity field navigate-cmp]
   (let [entity (hc/entity (hc/get-dbgraph graph (-> entity .-dbgraph .-dbval)) (.-dbid entity))]
     [:div
      [auto-control entity {:field field

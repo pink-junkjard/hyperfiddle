@@ -12,7 +12,7 @@
   {:href (str (.-id field-dbid) "/field/" (.-id dbid) "/" (base64/encode (internal/transit-encode (.-conn-id dbid))))})
 
 
-(defn query-link [stage-tx! link param-ctx]
+(defn build-query-params [link param-ctx]
   (let [empty-result-lookup (let [lookup (:link/if-empty-result link)]
                               (if-not (empty? lookup)
                                 (reader/read-string lookup)))
@@ -25,13 +25,16 @@
                       (if-let [provided-val (get query-params (get empty-result-lookup name))]
                         provided-val
                         ; todo use the find-element connection's dbval
-                        (hc/*temp-id!* (.-conn-id (get param-ctx :dbval)))))
-        data {:query-params query-params
-              ;; Create a result of shape [?e ?f] with new entities colored
-              :create-new-find-elements (->> (:link/find-element link)
-                                             (mapv (juxt :find-element/name tempid-hack))
-                                             (into {}))}
-        tx-fn (if-let [tx-fn (:link/tx-fn link)]
+                        (hc/*temp-id!* (.-conn-id (get param-ctx :dbval)))))]
+    {:query-params query-params
+     ;; Create a result of shape [?e ?f] with new entities colored
+     :create-new-find-elements (->> (:link/find-element link)
+                                    (mapv (juxt :find-element/name tempid-hack))
+                                    (into {}))}))
+
+
+(defn query-link [stage-tx! link param-ctx]
+  (let [tx-fn (if-let [tx-fn (:link/tx-fn link)]
                 (let [{value :value error :error} (eval tx-fn)]
                   ;; non-fatal error, report it here so user can fix it
                   (if error (js/alert (str "cljs eval error: " error)))
@@ -41,4 +44,4 @@
     ;; add-result #(tx/edit-entity (:db/id entity) ident [] [(first %)])
     (if tx-fn
       {:on-click #(stage-tx! (tx-fn param-ctx))}
-      {:href (str (-> link .-dbid .-id) "/" (base64/encode (pr-str data)))})))
+      {:href (str (-> link .-dbid .-id) "/" (base64/encode (pr-str (build-query-params link param-ctx))))})))

@@ -74,16 +74,17 @@
                 [navigate-cmp props (:link/prompt link)])))))
 
 
-(defn ui [cur editor-graph stage-tx! graph {find-elements :link/find-element query :link/query result-renderer-code :link/result-renderer
-                                            :as link} params-map navigate-cmp param-ctx debug]
+(defn ui [stage-tx! graph {find-elements :link/find-element query :link/query result-renderer-code :link/result-renderer
+                           :as link} params-map navigate-cmp param-ctx debug]
   (if-let [q (some-> (:query/value query) reader/read-string)]
     (let [{params :query-params create-new-find-elements :create-new-find-elements} params-map
           hole-names (q-util/parse-holes q)
           holes-by-name (->> (:query/hole query)
                              (map (juxt :hole/name identity))
                              (into {}))
-          entity-cur (cur [:holes] (initial-entity q holes-by-name params)) ;todo this needs to be hc/with
-          entity @entity-cur
+          initial-entity' (initial-entity q holes-by-name params)
+          ;entity-cur (cur [:holes] initial-entity') ;todo this needs to be hc/with
+          entity initial-entity'                            ;@entity-cur
           dbhole-values (q-util/build-dbhole-lookup query)
           hole-lookup (merge (-> entity .-data (dissoc :db/id)) dbhole-values)
           dbval (get param-ctx :dbval)
@@ -118,7 +119,7 @@
            (if (:query/single-result-as-entity? query)
              (let [result (first resultset)]
                [:div
-                [entity/ui cur stage-tx! graph result ordered-forms (:link/link link) navigate-cmp param-ctx]
+                [entity/ui stage-tx! graph result ordered-forms (:link/link link) navigate-cmp param-ctx]
                 (->> (concat (repeating-links stage-tx! link result navigate-cmp param-ctx)
                              (non-repeating-links stage-tx! link navigate-cmp param-ctx))
                      (interpose " · "))])
@@ -150,11 +151,11 @@
     [:div "Query record is incomplete"]))
 
 
-(defn query [state editor-graph {find-elements :link/find-element query :link/query} params-map param-ctx]
+(defn query [state editor-graph {find-elements :link/find-element :as link} params-map param-ctx]
   (let [{params :query-params create-new-find-elements :create-new-find-elements} params-map]
-    (if-let [q (some-> (:query/value query) reader/read-string)]
+    (if-let [q (some-> link :link/query :query/value reader/read-string)]
       (let [hole-names (q-util/parse-holes q)
-            holes-by-name (->> (:query/hole query)
+            holes-by-name (->> (-> link :link/query :query/hole)
                                (map (juxt :hole/name identity))
                                (into {}))
             ;; this is the new "param-ctx" - it is different - we already have the overridden
@@ -163,7 +164,7 @@
                                  (initial-entity q holes-by-name params))
                              .-data
                              (dissoc :db/id))
-            dbhole-values (q-util/build-dbhole-lookup query)
+            dbhole-values (q-util/build-dbhole-lookup (:link/query link))
             hole-lookup (merge param-values dbhole-values)]
         (merge
           ;no fields are isComponent true or expanded, so we don't need to pass in a forms map
@@ -184,9 +185,9 @@
                                    (merge
                                      (form/form-option-queries form p-filler param-ctx)
                                      (table/option-queries form p-filler param-ctx)
-                                     {(.-dbid query) [q (p-filler query nil param-ctx)
+                                     {(-> link :link/query .-dbid) [q (p-filler (:link/query link) nil param-ctx)
                                                       {find-name [dbval (form/form-pull-exp form)]}]}))]
-              (if (:query/single-result-as-entity? query)
+              (if (-> link :link/query :query/single-result-as-entity?)
                 ; we can use nil for :link/formula and formulas because we know our p-filler doesn't use it
                 (apply merge (map query-for-form find-elements))
-                (table/query p-filler param-ctx query find-elements nil)))))))))
+                (table/query p-filler param-ctx (:link/query link) find-elements nil)))))))))
