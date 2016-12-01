@@ -1,5 +1,6 @@
 (ns hypercrud.browser.pages.query
   (:require [cljs.reader :as reader]
+            [cljs.pprint :as pprint]
             [clojure.set :as set]
             [hypercrud.browser.links :as links]
             [hypercrud.browser.pages.entity :as entity]
@@ -101,7 +102,10 @@
               param-ctx (assert false "todo")]
           [form/form graph entity holes-form links stage-tx! navigate-cmp param-ctx])
       (if-not (show-results? hole-names hole-lookup)        ;todo what if we have a user hole?
-        [:div (str "Unfilled query holes" (pr-str hole-lookup))]
+        [:div [:div "Unfilled query holes"]
+         [:pre (doall (with-out-str
+                        (binding [pprint/*print-miser-width* 1] ; not working
+                          (pprint/pprint hole-lookup))))]]
         (let [resultset (->> (let [resultset (hc/select graph (.-dbid query))]
                                (if (and (:query/single-result-as-entity? query) (= 0 (count resultset)))
                                  (let [local-result (mapv #(get create-new-find-elements (:find-element/name %))
@@ -185,7 +189,7 @@
                                      (form/form-option-queries form p-filler param-ctx)
                                      (table/option-queries form p-filler param-ctx)
                                      {(-> link :link/query .-dbid) [q (p-filler (:link/query link) nil param-ctx)
-                                                      {find-name [dbval (form/form-pull-exp form)]}]}))]
+                                                                    {find-name [dbval (form/form-pull-exp form)]}]}))]
               (if (-> link :link/query :query/single-result-as-entity?)
                 ; we can use nil for :link/formula and formulas because we know our p-filler doesn't use it
                 (apply merge (map query-for-form find-elements))
