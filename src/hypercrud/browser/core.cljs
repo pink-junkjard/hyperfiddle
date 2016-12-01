@@ -35,7 +35,7 @@
 
 
 (defn ui [links editor-graph stage-tx! graph page-rel-path navigate-cmp param-ctx debug]
-  [:div {:class debug}
+  [:div.browser {:class debug}
    (route page-rel-path
           {:query-fn (fn [link-id params-map]
                        (let [link (hc/entity editor-graph (->DbId link-id (-> editor-graph .-dbval .-conn-id)))]

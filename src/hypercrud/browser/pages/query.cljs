@@ -91,63 +91,62 @@
           param-ctx (assoc param-ctx :query-params params)]
       #_(if-not (:link/query link))
       #_[entity/ui cur stage-tx! graph (first entities) form navigate-cmp]
-      [:div
-       #_[:pre (pr-str params)]                             ;; params are same information as the filled holes in this form below
-       #_(let [stage-tx! (fn [tx]
-                           (reset! entity-cur (reduce tx/merge-entity-and-stmt entity tx)))
-               holes-form-dbid (->DbId -1 (-> editor-graph .-dbval .-conn-id))
-               editor-graph (hc/with' editor-graph (holes->field-tx editor-graph holes-form-dbid hole-names holes-by-name))
-               holes-form (hc/entity editor-graph holes-form-dbid)
-               links (assert false "todo")
-               param-ctx (assert false "todo")]
-           [form/form graph entity holes-form links stage-tx! navigate-cmp param-ctx])
-       (if-not (show-results? hole-names hole-lookup)       ;todo what if we have a user hole?
-         [:div (str "Unfilled query holes" (pr-str hole-lookup))]
-         (let [resultset (->> (let [resultset (hc/select graph (.-dbid query))]
-                                (if (and (:query/single-result-as-entity? query) (= 0 (count resultset)))
-                                  (let [local-result (mapv #(get create-new-find-elements (:find-element/name %))
-                                                           find-elements)]
-                                    [local-result])
-                                  resultset))
-                              (mapv (fn [result]
-                                      (mapv #(hc/entity (hc/get-dbgraph graph dbval) %) result))))
-               form-lookup (->> (mapv (juxt :find-element/name :find-element/form) find-elements)
-                                (into {}))
-               ordered-forms (->> (util/parse-query-element q :find)
-                                  (mapv str)
-                                  (mapv #(get form-lookup %)))]
-           (if (:query/single-result-as-entity? query)
-             (let [result (first resultset)]
-               [:div
-                [entity/ui stage-tx! graph result ordered-forms (:link/link link) navigate-cmp param-ctx]
-                (->> (concat (repeating-links stage-tx! link result navigate-cmp param-ctx)
-                             (non-repeating-links stage-tx! link navigate-cmp param-ctx))
-                     (interpose " · "))])
-             [:div
-              (let [repeating-links (->> (:link/link link)
-                                         (filter :link/repeating?))]
-                (if (empty? result-renderer-code)
-                  ^{:key (hc/t graph)}
-                  [table/table graph resultset ordered-forms repeating-links stage-tx! navigate-cmp param-ctx]
-                  (let [{result-renderer :value error :error} (eval result-renderer-code)]
-                    (if error
-                      [:div (pr-str error)]
-                      [:div
-                       [:ul
-                        (->> resultset
-                             (map (fn [result]
-                                    (let [link-fn (fn [ident label]
-                                                    (let [link (->> repeating-links
-                                                                    (filter #(= ident (:link/ident %)))
-                                                                    first)
-                                                          param-ctx (merge param-ctx {:result result})
-                                                          props (links/query-link stage-tx! link param-ctx)]
-                                                      [navigate-cmp props label]))]
-                                      [:li {:key (hash result)}
-                                       (try
-                                         (result-renderer graph link-fn result)
-                                         (catch :default e (pr-str e)))]))))]]))))
-              (interpose " · " (non-repeating-links stage-tx! link navigate-cmp param-ctx))])))])
+      #_[:pre (pr-str params)]                              ;; params are same information as the filled holes in this form below
+      #_(let [stage-tx! (fn [tx]
+                          (reset! entity-cur (reduce tx/merge-entity-and-stmt entity tx)))
+              holes-form-dbid (->DbId -1 (-> editor-graph .-dbval .-conn-id))
+              editor-graph (hc/with' editor-graph (holes->field-tx editor-graph holes-form-dbid hole-names holes-by-name))
+              holes-form (hc/entity editor-graph holes-form-dbid)
+              links (assert false "todo")
+              param-ctx (assert false "todo")]
+          [form/form graph entity holes-form links stage-tx! navigate-cmp param-ctx])
+      (if-not (show-results? hole-names hole-lookup)        ;todo what if we have a user hole?
+        [:div (str "Unfilled query holes" (pr-str hole-lookup))]
+        (let [resultset (->> (let [resultset (hc/select graph (.-dbid query))]
+                               (if (and (:query/single-result-as-entity? query) (= 0 (count resultset)))
+                                 (let [local-result (mapv #(get create-new-find-elements (:find-element/name %))
+                                                          find-elements)]
+                                   [local-result])
+                                 resultset))
+                             (mapv (fn [result]
+                                     (mapv #(hc/entity (hc/get-dbgraph graph dbval) %) result))))
+              form-lookup (->> (mapv (juxt :find-element/name :find-element/form) find-elements)
+                               (into {}))
+              ordered-forms (->> (util/parse-query-element q :find)
+                                 (mapv str)
+                                 (mapv #(get form-lookup %)))]
+          (if (:query/single-result-as-entity? query)
+            (let [result (first resultset)]
+              [:div
+               [entity/ui stage-tx! graph result ordered-forms (:link/link link) navigate-cmp param-ctx]
+               (->> (concat (repeating-links stage-tx! link result navigate-cmp param-ctx)
+                            (non-repeating-links stage-tx! link navigate-cmp param-ctx))
+                    (interpose " · "))])
+            [:div
+             (let [repeating-links (->> (:link/link link)
+                                        (filter :link/repeating?))]
+               (if (empty? result-renderer-code)
+                 ^{:key (hc/t graph)}
+                 [table/table graph resultset ordered-forms repeating-links stage-tx! navigate-cmp param-ctx]
+                 (let [{result-renderer :value error :error} (eval result-renderer-code)]
+                   (if error
+                     [:div (pr-str error)]
+                     [:div
+                      [:ul
+                       (->> resultset
+                            (map (fn [result]
+                                   (let [link-fn (fn [ident label]
+                                                   (let [link (->> repeating-links
+                                                                   (filter #(= ident (:link/ident %)))
+                                                                   first)
+                                                         param-ctx (merge param-ctx {:result result})
+                                                         props (links/query-link stage-tx! link param-ctx)]
+                                                     [navigate-cmp props label]))]
+                                     [:li {:key (hash result)}
+                                      (try
+                                        (result-renderer graph link-fn result)
+                                        (catch :default e (pr-str e)))]))))]]))))
+             (interpose " · " (non-repeating-links stage-tx! link navigate-cmp param-ctx))]))))
     [:div "Query record is incomplete"]))
 
 
