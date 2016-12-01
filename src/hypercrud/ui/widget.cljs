@@ -78,6 +78,7 @@
 
 (defn select-ref-component [entity {:keys [field graph navigate-cmp stage-tx!] :as widget-args}]
   [:div.value
+   (pr-str (get-in entity [(-> field :field/attribute :attribute/ident) :db/id]))
    (link-thing widget-args)]
   #_(let [value (get entity (-> field :field/attribute :attribute/ident))]
     (form/form graph value (:field/form field) stage-tx! navigate-cmp)))
@@ -85,6 +86,9 @@
 
 (defn table-many-ref [entity {:keys [field graph] :as widget-args}]
   [:div.value
+   (->> (get entity (-> field :field/attribute :attribute/ident))
+        (mapv :db/id)
+        (pr-str))
    (link-thing widget-args)]
   #_(let [initial-select (let [result (first (option/get-option-records field graph entity))]
                          (assert (= 1 (count result)) "Cannot use multiple find-elements for an options-link")
@@ -116,6 +120,9 @@
 
 (defn table-many-ref-component [entity {:keys [field graph navigate-cmp stage-tx!] :as widget-args}]
   [:div.value
+   (->> (get entity (-> field :field/attribute :attribute/ident))
+        (mapv :db/id)
+        (pr-str))
    (link-thing widget-args)]
   #_(let [ident (-> field :field/attribute :attribute/ident)
         resultset (map vector (get entity ident))]

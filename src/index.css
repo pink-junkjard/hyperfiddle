@@ -92,6 +92,10 @@ input.invalid[type="text"] {
     width: 100%;
 }
 
+.links {
+    float: right;
+}
+
 .editable-select > .select {
     display: block;
     overflow: hidden;

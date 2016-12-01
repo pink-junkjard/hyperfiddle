@@ -6,14 +6,17 @@
 
 
 (defn ellipsis
-  ([s] (ellipsis s 25))
-  ([s c] (if (> c (count s))
+  ([s] (ellipsis 25 s))
+  ([c s] (if (> c (count s))
            s
            (str (subs s 0 (- c 3)) "..."))))
 
 
 (defn ref-one-component [entity {:keys [field] :as widget-args}]
-  (widget/link-thing widget-args)
+  [:div
+   (->> (get-in entity [(-> field :field/attribute :attribute/ident) :db/id])
+        (pr-str))
+   (widget/link-thing widget-args)]
   #_(let [ident (-> field :field/attribute :attribute/ident)
           child-entity (get entity ident)]
       [:div
@@ -22,8 +25,13 @@
            ellipsis)]))
 
 
-(defn ref-many [entity {:keys [field]}]
-  [:div "todo"]
+(defn ref-many [entity {:keys [field] :as widget-args}]
+  [:div
+   (->> (get entity (-> field :field/attribute :attribute/ident))
+        (mapv :db/id)
+        (pr-str)
+        (ellipsis 15))
+   (widget/link-thing widget-args)]
   #_(let [ident (-> field :field/attribute :attribute/ident)]
       [:div
        (->> (get entity ident)
