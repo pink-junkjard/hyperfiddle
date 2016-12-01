@@ -5,6 +5,15 @@
             [hypercrud.util :as util]))
 
 
+(defn safe-read-string [code-str]
+  (try
+    (reader/read-string code-str)
+    (catch js/Error e
+      ;; Nothing to be done at this point -
+      ;; this error must be caught by the widget before it is in the graph.
+      nil)))
+
+
 (defn parse-holes [q]
   (->> (util/parse-query-element q :in)
        ;; the string conversion should happen at the other side imo
@@ -23,14 +32,14 @@
 ; type p-filler = fn [query formulas param-ctx] => vec
 ; which is why we need this unused formulas param
 (defn build-params [fill-hole query param-ctx]
-  (->> (some-> (:query/value query) reader/read-string)
+  (->> (some-> (:query/value query) safe-read-string)
        (parse-holes)                                        ; nil means '() and does the right thing
        (mapv (juxt identity #(fill-hole % param-ctx)))
        (into {})))
 
 
 (defn read-eval-formulas [formulas]
-  (->> (if-not (empty? formulas) (reader/read-string formulas))
+  (->> (if-not (empty? formulas) (safe-read-string formulas))
        (util/map-values eval)))
 
 
