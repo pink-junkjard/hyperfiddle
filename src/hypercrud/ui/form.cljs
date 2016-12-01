@@ -37,7 +37,7 @@
 (defn form-pull-exp [form]
   (concat
     [:db/id]
-    (mapv #(-> % :field/attribute :attribute/ident) (:form/field form))))
+    (remove nil? (mapv #(-> % :field/attribute :attribute/ident) (:form/field form)))))
 
 
 (defn field-queries [p-filler param-ctx field]

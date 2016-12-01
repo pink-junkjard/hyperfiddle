@@ -1,11 +1,11 @@
 (ns hypercrud.ui.table
   (:require [cljs.reader :as reader]
             [hypercrud.browser.links :as links]
-            [hypercrud.client.core :as hc]
             [hypercrud.compile.eval :refer [eval]]
             [hypercrud.form.option :as option]
             [hypercrud.types :refer [->DbId ->DbVal]]
             [hypercrud.ui.auto-control :refer [auto-table-cell]]
+            [hypercrud.ui.form :as form]
             [reagent.core :as r]))
 
 
@@ -52,25 +52,24 @@
                                                     #(reset! col-sort [form-dbid ident :asc])
                                                     (constantly nil))
                       arrow (with-sort-direction " ↓" " ↑" " ↕" nil)]
-                  [:td {:key ident :on-click on-click} prompt arrow]))))))
+                  [:td {:key (:db/id field) :on-click on-click} prompt arrow]))))))
 
 
 (defn build-row-cells [form entity {:keys [graph] :as fieldless-widget-args}]
   (->> (:form/field form)
        (sort-by :field/order)
        (map (fn [{:keys [:field/renderer] :as field}]
-              (let [ident (-> field :field/attribute :attribute/ident)]
-                [:td.truncate {:key ident}
-                 (if (empty? renderer)
-                   [auto-table-cell entity (-> fieldless-widget-args
-                                               (assoc :field field))]
-                   (let [{renderer :value error :error} (eval renderer)]
-                     [:div.value
-                      (if error
-                        (pr-str error)
-                        (try
-                          (renderer graph entity)
-                          (catch :default e (pr-str e))))]))])))))
+              [:td.truncate {:key (:db/id field)}
+               (if (empty? renderer)
+                 [auto-table-cell entity (-> fieldless-widget-args
+                                             (assoc :field field))]
+                 (let [{renderer :value error :error} (eval renderer)]
+                   [:div.value
+                    (if error
+                      (pr-str error)
+                      (try
+                        (renderer graph entity)
+                        (catch :default e (pr-str e))))]))]))))
 
 
 ;(defn links-cell [entity form repeating-links retract-entity! show-links? navigate-cmp]
@@ -148,9 +147,7 @@
 
 
 (defn table-pull-exp [form]
-  (concat
-    [:db/id]
-    (mapv #(-> % :field/attribute :attribute/ident) (:form/field form))))
+  (form/form-pull-exp form))
 
 
 (defn field-queries [p-filler param-ctx field]
