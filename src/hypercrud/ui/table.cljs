@@ -3,6 +3,7 @@
             [hypercrud.browser.links :as links]
             [hypercrud.compile.eval :refer [eval]]
             [hypercrud.form.option :as option]
+            [hypercrud.form.q-util :as q-util]
             [hypercrud.types :refer [->DbId ->DbVal]]
             [hypercrud.ui.auto-control :refer [auto-table-cell]]
             [hypercrud.ui.form :as form]
@@ -175,5 +176,5 @@
                                                               [app-dbval (table-pull-exp (:find-element/form find-element))])))
                              (into {}))]}
        (->> find-elements
-            (mapv #(option-queries (:find-element/form %) p-filler param-ctx))
+            (mapv #(option-queries (:find-element/form %) q-util/build-params-from-formula param-ctx))
             (apply merge))))))

@@ -58,7 +58,8 @@
 (defn query [dbid form p-filler param-ctx]
   (let [param-ctx (merge param-ctx {:id (.-id dbid)})
         dbval (get param-ctx :dbval)
-        option-queries (form-option-queries form p-filler param-ctx)]
+        option-queries (form-option-queries form p-filler param-ctx) ; smelly, probably should not be using the same p-filler
+        ]
     (if (not (tx/tempid? dbid))
       (merge option-queries
              {dbid ['[:find ?e :in $ ?e :where [?e]]
