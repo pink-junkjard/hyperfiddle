@@ -90,6 +90,7 @@
 ;         [:span {:key "close" :on-click #(reset! open? false)} "Close"]]
 ;        [:div {:on-click #(reset! open? true)} "⚙"]))))
 
+(def unicode-nbsp "\u00a0")
 
 (defn table-row [result forms {:keys [links navigate-cmp stage-tx!] :as fieldless-widget-args}]
   (let [{:keys [param-ctx] :as fieldless-widget-args} (assoc-in fieldless-widget-args [:param-ctx :result] result)]
@@ -100,7 +101,8 @@
            (map (fn [{:keys [:db/id :link/prompt] :as link}]
                   (let [props (assoc (links/query-link stage-tx! link param-ctx) :key id)]
                     (navigate-cmp props prompt))))
-           (interpose " · "))]
+           (interpose " · "))
+      unicode-nbsp]
      (mapcat (fn [form entity]
                (build-row-cells form entity fieldless-widget-args))
              forms result)]))
