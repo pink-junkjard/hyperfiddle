@@ -33,9 +33,10 @@
 
 ;todo should be get-queries and we can delete hc.form.util/field-queries
 (defn get-query [{{formulas :link/formula query :link/query find-elements :link/find-element} :field/options-link :as field} p-filler param-ctx]
-  (if-let [q (:query/value query)]
-    (let [q (reader/read-string q)
-          query-name (hash q)
+  (if-let [q (let [q (:query/value query)]
+               (if-not (empty? q)
+                 (reader/read-string q)))]
+    (let [query-name (hash q)
           params (p-filler query formulas param-ctx)
           pull-dbval (get param-ctx :dbval)
           pull-exp (->> (mapv (juxt :find-element/name
