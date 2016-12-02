@@ -1,7 +1,7 @@
 (ns hypercrud.client.tx
   (:require [cljs.core.match :refer-macros [match]]
             [clojure.set :as set]
-            [hypercrud.types :refer [->DbId ->Entity]]))
+            [hypercrud.types :refer [->DbId ->Entity] :as types]))
 
 
 (defn tempid? [dbid] (< (.-id dbid) 0))
@@ -99,11 +99,16 @@
 
 
 (defn ref->v [v]
-  (if (map? v) (:db/id v) v))
+  (cond (map? v) (:db/id v)
+        (instance? types/Entity v) (.-dbid v)
+        :else v))
 
 
 (defn entity->statements [schema {dbid :db/id :as entity}]  ; entity always has :db/id
-  (->> (dissoc entity :db/id)
+  ;; dissoc :db/id, it is done as a seq/filter for compatibility with #Entity
+  (->> (seq entity)
+       (filter (fn [[k v]] (not= :db/id k)))
+
        (mapcat (fn [[attr val]]
                  (let [{:keys [:db/cardinality :db/valueType]} (get schema attr)
                        _ (assert cardinality (str "schema attribute not found: " (pr-str attr)))]
