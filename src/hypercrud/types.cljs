@@ -10,7 +10,13 @@
   IPrintWithWriter (-pr-writer [o writer _] (-write writer (.toString o)))
   IComparable (-compare [x y] (compare (.-id x) (.-id y)))
   IHash (-hash [this] (hash [id conn-id]))
-  IEquiv (-equiv [this other] (= (hash this) (hash other))))
+  IEquiv (-equiv [this other] (= (hash this) (hash other)))
+  ILookup
+  (-lookup [o k] (get o k nil))
+  (-lookup [o k not-found] (condp = k
+                             :id (.-id o)
+                             :conn-id (.-conn-id o)
+                             not-found)))
 
 (def read-DbId #(apply ->DbId %))
 
@@ -41,7 +47,13 @@
   Object (toString [_] (str "#DbVal" (pr-str [conn-id t])))
   IPrintWithWriter (-pr-writer [o writer _] (-write writer (.toString o)))
   IHash (-hash [this] (hash [conn-id t]))
-  IEquiv (-equiv [this other] (= (hash this) (hash other))))
+  IEquiv (-equiv [this other] (= (hash this) (hash other)))
+  ILookup
+  (-lookup [o k] (get o k nil))
+  (-lookup [o k not-found] (condp = k
+                             :conn-id (.-conn-id o)
+                             :t (.-t o)
+                             not-found)))
 
 (def read-DbVal #(apply ->DbVal %))
 
