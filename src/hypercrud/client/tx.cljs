@@ -132,13 +132,15 @@
 
 ; applies an attribute and value pair to an entity-data-map
 ; THIS DOES NOT ASSOC the new entity-data-map into the lookup-transient (would be unncessary thrash)
-(defn- apply-av-to-entity-map [schema conn-id [lookup-transient entity-data] [attr val]]
+(defn- apply-av-to-entity-map [schema conn-id tempids [lookup-transient entity-data] [attr val]]
   (let [{:keys [:db/cardinality :db/valueType]} (get schema attr)
         _ (assert cardinality (str "schema attribute not found: " (pr-str attr)))
         build-DbId! (fn [lookup-transient ref]
-                     (let [dbid (->DbId (ref->v ref) conn-id)
-                           [lookup-transient _] (get-data! lookup-transient dbid)]
-                       [lookup-transient dbid]))]
+                      (let [id (ref->v ref)
+                            id (or (get tempids id) id)     ; if a tempid was sent up on the wire we need to convert it back now for value position
+                            dbid (->DbId id conn-id)
+                            [lookup-transient _] (get-data! lookup-transient dbid)]
+                        [lookup-transient dbid]))]
     (if (= valueType :db.type/ref)
       (condp = cardinality
         :db.cardinality/one (let [[lookup-transient dbid] (build-DbId! lookup-transient val)]
@@ -156,21 +158,23 @@
         [lookup-transient new-entity-data]))))
 
 
-(defn process-entity-data-map! [schema conn-id lookup-transient entity-map]
-  (let [dbid (->DbId (:db/id entity-map) conn-id)
-        [lookup-transient new-entity-map] (reduce (partial apply-av-to-entity-map schema conn-id)
+(defn process-entity-data-map! [schema conn-id tempids lookup-transient entity-map]
+  (let [id (:db/id entity-map)
+        id (or (get tempids id) id)     ; if a tempid was sent up on the wire we need to convert it back now for entity position
+        dbid (->DbId id conn-id)
+        [lookup-transient new-entity-map] (reduce (partial apply-av-to-entity-map schema conn-id tempids)
                                                   (get-data! lookup-transient dbid)
                                                   (dissoc entity-map :db/id))]
     (assoc! lookup-transient dbid new-entity-map)))
 
 
-(defn pulled-tree-to-data-lookup [schema conn-id pulled-trees]
+(defn pulled-tree-to-data-lookup [schema conn-id pulled-trees tempids]
   (->> pulled-trees
        (reduce (fn [lookup-transient pulled-tree]
                  (->> (tree-seq (fn [v] (entity? v))
                                 #(entity-children schema %)
                                 pulled-tree)
-                      (reduce (partial process-entity-data-map! schema conn-id)
+                      (reduce (partial process-entity-data-map! schema conn-id tempids)
                               lookup-transient)))
                (transient {}))
        persistent!))

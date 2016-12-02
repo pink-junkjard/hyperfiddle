@@ -8,11 +8,11 @@
 
 
 (defprotocol DbGraphPrivate
-  (set-db-graph-state! [this pulled-trees t']))
+  (set-db-graph-state! [this pulled-trees tempids t']))
 
 
 (defprotocol SuperGraphPrivate
-  (set-state! [this pulled-trees-map' t']))
+  (set-state! [this pulled-trees-map tempids t']))
 
 ;; Really we just want to be able to serialize graphs for the wire; this is a quick hack
 ;; because we aren't sure what we want to do about the schema which is part of the graph and the client
@@ -58,8 +58,8 @@
     (= (hash this) (hash other)))
 
   DbGraphPrivate
-  (set-db-graph-state! [this pulled-trees t']
-    (let [lookup (tx/pulled-tree-to-data-lookup schema (.-conn-id dbval) pulled-trees)]
+  (set-db-graph-state! [this pulled-trees tempids t']
+    (let [lookup (tx/pulled-tree-to-data-lookup schema (.-conn-id dbval) pulled-trees tempids)]
       (set! data-lookup (tx/build-data-lookup schema local-statements lookup))
       (set! entity-lookup {}))
     (set! dbval (->DbVal (.-conn-id dbval) t'))
@@ -107,7 +107,7 @@
 
 
   SuperGraphPrivate
-  (set-state! [this pulled-trees-map t']
+  (set-state! [this pulled-trees-map tempids t']
     ; pulled-trees-map :: Map[query List[List[Pulled-Tree]]]
     ;                               List[ResultHydrated]
     ; ResultHydrated :: Tuple[EntityHydrated]
@@ -127,9 +127,11 @@
                          (let [[q params pull-exps] query
                                ordered-dbvals (q->dbvals q pull-exps)
                                resultset-ids (mapv (fn [result-hydrated]
-                                                     (->> (mapv vector result-hydrated ordered-dbvals)
-                                                          (mapv (fn [[entity-hydrated dbval]]
-                                                                  (->DbId (:db/id entity-hydrated) (.-conn-id dbval))))))
+                                                     (mapv (fn [entity-hydrated dbval]
+                                                             (let [id (:db/id entity-hydrated)
+                                                                   id (or (get-in tempids [(.-conn-id dbval) id]) id)]
+                                                               (->DbId id (.-conn-id dbval))))
+                                                           result-hydrated ordered-dbvals))
                                                    resultset-hydrated)]
                            [query resultset-ids])))
                  (into {}))]
@@ -153,13 +155,15 @@
         (doall (map (fn [[dbval graph]]
                       (let [new-ptm (get grouped dbval)
                             new-t nil]
-                        (set-db-graph-state! graph new-ptm new-t)))
+                        (set-db-graph-state! graph new-ptm (get tempids (.-conn-id dbval)) new-t)))
                     graphs))))
     nil)
 
   GraphSSR
   (named-queries* [this] named-queries)
-  (pulled-trees-map* [this] (:pulled-trees-map graph-data)))
+  (pulled-trees-map* [this]
+    (assert false "deprecated. this does not have tempids replaced")
+    (:pulled-trees-map graph-data)))
 
 
 (defn superGraph [schemas named-queries]

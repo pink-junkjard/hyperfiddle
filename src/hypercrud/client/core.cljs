@@ -18,6 +18,6 @@
 
 
 (defprotocol Client
-  (hydrate! [this schemas named-queries force?])
+  (hydrate! [this schemas named-queries force? staged-tx])
   (temp-id! [this conn-id])
   (transact! [this tx]))

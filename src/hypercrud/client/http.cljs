@@ -43,7 +43,7 @@
 ; graph is always assumed to be touched
 (deftype Client [entry-uri ^:mutable super-graph temp-id-atom]
   hc/Client
-  (hydrate! [this schemas named-queries force?]
+  (hydrate! [this schemas named-queries force? staged-tx]
     ;; compare our pre-loaded state with the graph dependencies
     (let [graph-we-want (graph/superGraph schemas named-queries)]
       (if (and (not force?) (= super-graph graph-we-want))
@@ -58,11 +58,12 @@
                :content-type content-type-edn               ; helps debugging to view as edn
                :accept content-type-transit                 ; needs to be fast so transit
                :method :post
-               :form (into [] (vals named-queries))
+               :form {:staged-tx staged-tx
+                      :queries (into [] (vals named-queries))}
                :as :auto})
             (p/then (fn [resp]
-                      (let [{:keys [t pulled-trees-map]} (-> resp :body :hypercrud)]
-                        (graph/set-state! graph-we-want pulled-trees-map t)
+                      (let [{:keys [t pulled-trees-map tempids]} (-> resp :body :hypercrud)]
+                        (graph/set-state! graph-we-want pulled-trees-map tempids t)
                         (set! super-graph graph-we-want)
                         super-graph)))))))
 
