@@ -179,10 +179,7 @@
 
           (if (show-results? hole-names hole-lookup)
             (let [p-filler (fn [query formulas param-ctx]
-                             (q-util/build-params (fn [hole-name]
-                                                    (let [v (get hole-lookup hole-name)]
-                                                      (if (instance? hypercrud.types.DbId v) (.-id v) v)))
-                                                  query param-ctx))
+                             (q-util/build-params #(get hole-lookup %) query param-ctx))
                   dbval (get param-ctx :dbval)
                   query-for-form (fn [{find-name :find-element/name form :find-element/form :as find-element}]
                                    (merge

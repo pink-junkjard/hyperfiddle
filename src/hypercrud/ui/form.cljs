@@ -63,6 +63,6 @@
     (if (not (tx/tempid? dbid))
       (merge option-queries
              {dbid ['[:find ?e :in $ ?e :where [?e]]
-                    {"$" dbval "?e" (.-id dbid)}
+                    {"$" dbval "?e" dbid}
                     {"?e" [dbval (form-pull-exp form)]}]})
       option-queries)))
