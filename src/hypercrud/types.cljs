@@ -37,6 +37,12 @@
         v)))
   (-lookup [_ k not-found] (assert false "todo") #_(get data k not-found))
 
+  ISeqable
+  (-seq [this]
+    (let [vals' (map #(get this %) (keys data))]
+      (map vector (keys data) vals')))
+
+
   IHash (-hash [this] (hash [dbid data]))
   IEquiv (-equiv [this other] (= (hash this) (hash other)))
   Object (toString [_] (str "#Entity" (pr-str [dbid data])))
