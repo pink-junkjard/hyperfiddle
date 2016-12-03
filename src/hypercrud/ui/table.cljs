@@ -58,11 +58,12 @@
                                                         (.log js/console "clicked outer")
                                                         (on-click))}
                    prompt
-                   (if-let [docstring (-> field :field/attribute :attribute/doc)]
-                     [native-listener {:on-click (fn [e]
-                                                   (js/alert docstring)
-                                                   (.stopPropagation e))}
-                      [:span.help "ⓘ"]])
+                   (let [docstring (-> field :field/attribute :attribute/doc)]
+                     (if-not (empty? docstring)
+                       [native-listener {:on-click (fn [e]
+                                                     (js/alert docstring)
+                                                     (.stopPropagation e))}
+                        [:span.help "ⓘ"]]))
                    [:span.sort-arrow arrow]]))))))
 
 

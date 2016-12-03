@@ -8,8 +8,9 @@
 (defn field [entity {:keys [graph] {:keys [:field/prompt :field/renderer] :as field} :field :as widget-args}]
   [:div.field
    [:label
-    (if-let [docstring (-> field :field/attribute :attribute/doc)]
-      [:span.help {:on-click #(js/alert docstring)} prompt]
+    (let [docstring (-> field :field/attribute :attribute/doc)]
+      (if-not (empty? docstring)
+        [:span.help {:on-click #(js/alert docstring)} prompt])
       prompt)]
    (if (empty? renderer)
      [auto-control entity widget-args]
