@@ -5,9 +5,12 @@
             [hypercrud.ui.auto-control :refer [auto-control]]))
 
 
-(defn field [entity {:keys [graph] {:keys [:field/prompt :field/renderer]} :field :as widget-args}]
+(defn field [entity {:keys [graph] {:keys [:field/prompt :field/renderer] :as field} :field :as widget-args}]
   [:div.field
-   [:label prompt]
+   [:label
+    (if-let [docstring (-> field :field/attribute :attribute/doc)]
+      [:span.help {:on-click #(js/alert docstring)} prompt]
+      prompt)]
    (if (empty? renderer)
      [auto-control entity widget-args]
      (let [{renderer :value error :error} (eval renderer)]

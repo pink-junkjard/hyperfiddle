@@ -4,6 +4,7 @@
             [hypercrud.compile.eval :refer [eval]]
             [hypercrud.form.option :as option]
             [hypercrud.form.q-util :as q-util]
+            [hypercrud.platform.native-event-listener :refer [native-listener]] ;provided dependency
             [hypercrud.types :refer [->DbId ->DbVal]]
             [hypercrud.ui.auto-control :refer [auto-table-cell]]
             [hypercrud.ui.form :as form]
@@ -53,7 +54,16 @@
                                                     #(reset! col-sort [form-dbid ident :asc])
                                                     (constantly nil))
                       arrow (with-sort-direction " ↓" " ↑" " ↕" nil)]
-                  [:td {:key (:db/id field) :on-click on-click} prompt arrow]))))))
+                  [:td {:key (:db/id field) :on-click (fn []
+                                                        (.log js/console "clicked outer")
+                                                        (on-click))}
+                   prompt
+                   (if-let [docstring (-> field :field/attribute :attribute/doc)]
+                     [native-listener {:on-click (fn [e]
+                                                   (js/alert docstring)
+                                                   (.stopPropagation e))}
+                      [:span.help "ⓘ"]])
+                   [:span.sort-arrow arrow]]))))))
 
 
 (defn build-row-cells [form entity {:keys [graph] :as fieldless-widget-args}]
