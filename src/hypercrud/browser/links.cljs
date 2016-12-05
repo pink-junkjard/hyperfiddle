@@ -1,6 +1,5 @@
 (ns hypercrud.browser.links
-  (:require [cljs.reader :as reader]
-            [hypercrud.browser.base-64-url-safe :as base64]
+  (:require [hypercrud.browser.base-64-url-safe :as base64]
             [hypercrud.client.internal :as internal]
             [hypercrud.compile.eval :refer [eval]]
             [hypercrud.form.q-util :as q-util]

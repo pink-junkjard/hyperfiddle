@@ -9,17 +9,7 @@
      (map (fn [entity form]
             ^{:key (hash [(.-dbid entity) (.-dbid form)])}
             [form/form graph entity form links stage-tx! navigate-cmp param-ctx])
-          result ordered-forms)
-     #_[:button {:on-click #(-> (transact! @local-statements)
-                                (p/then (fn [{:keys [tempids]}]
-                                          (if (tx/tempid? (.-dbid entity))
-                                            (navigate! (str "./" (get tempids (.-dbid entity))))))))
-                 :disabled (empty? @local-statements)}
-        (if (tx/tempid? (.-dbid entity)) "Create" "Update")]
-     #_[:button {:on-click #(-> (transact! [[:db.fn/retractEntity (.-dbid entity)]])
-                                (p/then (fn [_] (navigate! (str "../../../")))))
-                 :disabled (tx/tempid? (.-dbid entity))}
-        "Delete"]]))
+          result ordered-forms)]))
 
 
 (defn query [dbid form param-ctx]
