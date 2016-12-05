@@ -48,11 +48,11 @@
            :else (constantly [:div "no route for: " page-rel-path])})])
 
 
-(defn query [state editor-graph page-rel-path param-ctx]
+(defn query [editor-graph page-rel-path param-ctx]
   (route page-rel-path
          {:query-fn (fn [link-id params-map]
                       (let [link (hc/entity editor-graph (->DbId link-id (-> editor-graph .-dbval .-conn-id)))]
-                        (query/query state editor-graph link params-map param-ctx)))
+                        (query/query editor-graph link params-map param-ctx)))
           :field-fn (fn [dbval dbid field-id]
                       (let [field (hc/entity editor-graph (->DbId field-id (-> editor-graph .-dbval .-conn-id)))]
                         (field/query dbid field param-ctx)))

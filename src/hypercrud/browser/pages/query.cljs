@@ -154,7 +154,7 @@
     [:div "Query record is incomplete"]))
 
 
-(defn query [state editor-graph {find-elements :link/find-element :as link} params-map param-ctx]
+(defn query [editor-graph {find-elements :link/find-element :as link} params-map param-ctx]
   (let [{params :query-params create-new-find-elements :create-new-find-elements} params-map]
     (if-let [q (some-> link :link/query :query/value reader/read-string)]
       (let [hole-names (q-util/parse-holes q)
@@ -163,8 +163,8 @@
                                (into {}))
             ;; this is the new "param-ctx" - it is different - we already have the overridden
             ;; values, there is no need to eval the formulas in a ctx to get the values.
-            param-values (-> (or (get state :holes)
-                                 (initial-entity q holes-by-name params))
+            param-values (-> (initial-entity q holes-by-name params)
+                           #_(or (get state :holes))
                              .-data
                              (dissoc :db/id))
             dbhole-values (q-util/build-dbhole-lookup (:link/query link))
