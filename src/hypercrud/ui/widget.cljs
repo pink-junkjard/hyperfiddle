@@ -1,6 +1,7 @@
 (ns hypercrud.ui.widget
   (:require [cljs.reader :as reader]
             [hypercrud.browser.links :as links]
+            [hypercrud.browser.pages.query :as query]
             [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx]
             [hypercrud.form.option :as option]
@@ -21,6 +22,7 @@
           ; we are assuming link/repeating? true
           ; should we? do we need buz logic to prevent that?
           (filter #(= field-dbid (some-> % :link/field .-dbid)))
+          (remove :link/render-inline?)
           (map (fn [{:keys [:db/id :link/prompt] :as link}]
                  ^{:key id}
                  [navigate-cmp (links/query-link stage-tx! link param-ctx) prompt]))
@@ -84,13 +86,27 @@
     (form/form graph value (:field/form field) stage-tx! navigate-cmp)))
 
 
-(defn table-many-ref [entity {:keys [field graph] :as widget-args}]
+(defn table-many-ref [entity {:keys [field graph links navigate-cmp param-ctx stage-tx!] :as widget-args}]
   [:div.value
-   (->> (get entity (-> field :field/attribute :attribute/ident))
+   #_(->> (get entity (-> field :field/attribute :attribute/ident))
         (mapv :db/id)
         (pr-str))
-   (link-thing widget-args)]
-  #_(let [initial-select (let [result (first (option/get-option-records field graph entity))]
+   (let [field-dbid (.-dbid field)]
+     (->> links
+          (filter #(= field-dbid (some-> % :link/field .-dbid)))
+          (filter :link/render-inline?)
+          (map (fn [link]
+                 (let [params-map (links/build-query-params link param-ctx)
+                       debug (str "table-many-ref:" field-dbid ":" (:field/prompt field))
+                       ; todo do we need a different param-ctx for rendering the ui?
+                       param-ctx param-ctx]
+                   ^{:key (.-dbid link)}
+                   [query/ui stage-tx! graph link params-map navigate-cmp param-ctx debug])))))
+   (link-thing widget-args)])
+
+
+(comment
+  (let [initial-select (let [result (first (option/get-option-records field graph entity))]
                          (assert (= 1 (count result)) "Cannot use multiple find-elements for an options-link")
                          (first result))
         select-value-atom (r/atom (:db/id initial-select))]

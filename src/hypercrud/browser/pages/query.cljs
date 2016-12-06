@@ -46,6 +46,15 @@
                 [navigate-cmp props (:link/prompt link)])))))
 
 
+(defn pull-resultset [super-graph dbval {find-elements :link/find-element :as link} create-new-find-elements resultset]
+  (->> (if (and (:query/single-result-as-entity? (:link/query link)) (= 0 (count resultset)))
+         (let [local-result (mapv #(get create-new-find-elements (:find-element/name %)) find-elements)]
+           [local-result])
+         resultset)
+       (mapv (fn [result]
+               (mapv #(hc/entity (hc/get-dbgraph super-graph dbval) %) result)))))
+
+
 (defn ui [stage-tx! super-graph
           {find-elements :link/find-element result-renderer-code :link/result-renderer :as link}
           {query-params :query-params create-new-find-elements :create-new-find-elements :as params-map}
@@ -60,14 +69,8 @@
                         (binding [pprint/*print-miser-width* 1] ; not working
                           (pprint/pprint params))))]]
         (let [dbval (get param-ctx :dbval)
-              resultset (->> (let [resultset (hc/select super-graph (.-dbid (:link/query link)))]
-                               (if (and (:query/single-result-as-entity? (:link/query link)) (= 0 (count resultset)))
-                                 (let [local-result (mapv #(get create-new-find-elements (:find-element/name %))
-                                                          find-elements)]
-                                   [local-result])
-                                 resultset))
-                             (mapv (fn [result]
-                                     (mapv #(hc/entity (hc/get-dbgraph super-graph dbval) %) result))))
+              resultset (pull-resultset super-graph dbval link create-new-find-elements
+                                        (hc/select super-graph (.-dbid (:link/query link))))
               form-lookup (->> (mapv (juxt :find-element/name :find-element/form) find-elements)
                                (into {}))
               ordered-forms (->> (util/parse-query-element q :find)
@@ -126,5 +129,14 @@
                                                                 {find-name [dbval (form/form-pull-exp form)]}]}))]
           (if (-> link :link/query :query/single-result-as-entity?)
             ; we can use nil for :link/formula and formulas because we know our p-filler doesn't use it
-            (apply merge (map query-for-form find-elements))
+            (apply merge (concat (map query-for-form find-elements)
+                                 (->> (:link/link link)
+                                      (filter :link/render-inline?)
+                                      (mapv (fn [inner-link]
+                                              (if-let [maybe-resultset (hc/select super-graph (-> link :link/query :db/id))]
+                                                (let [resultset (pull-resultset super-graph dbval link create-new-find-elements maybe-resultset)
+                                                      param-ctx (assoc param-ctx :result (first resultset)
+                                                                                 :query-params query-params)
+                                                      params-map (links/build-query-params inner-link param-ctx)]
+                                                  (query super-graph inner-link params-map param-ctx))))))))
             (table/query p-filler param-ctx (:link/query link) find-elements nil)))))))
