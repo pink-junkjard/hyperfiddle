@@ -174,18 +174,23 @@
   (apply merge
          (mapv #(field-queries p-filler param-ctx %) (:form/field form))))
 
+
+(defn table-query-pull-exp [find-elements dbval]
+  (->> find-elements
+       (mapv (juxt :find-element/name (fn [find-element]
+                                        [dbval (table-pull-exp (:find-element/form find-element))])))
+       (into {})))
+
+
 (defn query
   ([p-filler param-ctx link]
    (query p-filler param-ctx (:link/query link) (:link/find-element link) (:link/formula link)))
   ([p-filler param-ctx query find-elements formula]
-   (let [app-dbval (get param-ctx :dbval)]
-     (merge
-       {(.-dbid query) [(reader/read-string (:query/value query))
+   (merge
+     (let [query-value [(reader/read-string (:query/value query))
                         (p-filler query formula param-ctx)
-                        (->> find-elements
-                             (mapv (juxt :find-element/name (fn [find-element]
-                                                              [app-dbval (table-pull-exp (:find-element/form find-element))])))
-                             (into {}))]}
-       (->> find-elements
-            (mapv #(option-queries (:find-element/form %) q-util/build-params-from-formula param-ctx))
-            (apply merge))))))
+                        (table-query-pull-exp find-elements (get param-ctx :dbval))]]
+       {(hash query-value) query-value})
+     (->> find-elements
+          (mapv #(option-queries (:find-element/form %) q-util/build-params-from-formula param-ctx))
+          (apply merge)))))

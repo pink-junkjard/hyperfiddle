@@ -70,7 +70,12 @@
                           (pprint/pprint params))))]]
         (let [dbval (get param-ctx :dbval)
               resultset (pull-resultset super-graph dbval link create-new-find-elements
-                                        (hc/select super-graph (.-dbid (:link/query link))))
+                                        (let [params (q-util/build-params (fn [hole-name param-ctx]
+                                                                            (get params hole-name))
+                                                                          (:link/query link) param-ctx)
+                                              pull-exp (table/table-query-pull-exp find-elements dbval)
+                                              query-value [q params pull-exp]]
+                                          (hc/select super-graph (hash query-value))))
               form-lookup (->> (mapv (juxt :find-element/name :find-element/form) find-elements)
                                (into {}))
               ordered-forms (->> (util/parse-query-element q :find)
@@ -113,30 +118,37 @@
 
 (defn query [super-graph {find-elements :link/find-element :as link}
              {query-params :query-params create-new-find-elements :create-new-find-elements :as params-map}
-             param-ctx]
+             param-ctx debug]
   (if-let [q (some-> link :link/query :query/value reader/read-string)]
     (let [params (merge (initial-params-map q query-params)
                         (q-util/build-dbhole-lookup (:link/query link)))]
       (if (holes-filled? (q-util/parse-holes q) params)
         (let [p-filler (fn [query formulas param-ctx]
                          (q-util/build-params #(get params %) query param-ctx))
-              dbval (get param-ctx :dbval)
-              query-for-form (fn [{find-name :find-element/name form :find-element/form :as find-element}]
-                               (merge
-                                 (form/form-option-queries form p-filler param-ctx)
-                                 (table/option-queries form p-filler param-ctx)
-                                 {(-> link :link/query .-dbid) [q (p-filler (:link/query link) nil param-ctx)
-                                                                {find-name [dbval (form/form-pull-exp form)]}]}))]
+              dbval (get param-ctx :dbval)]
           (if (-> link :link/query :query/single-result-as-entity?)
             ; we can use nil for :link/formula and formulas because we know our p-filler doesn't use it
-            (apply merge (concat (map query-for-form find-elements)
-                                 (->> (:link/link link)
+            (let [result-query [q
+                                (p-filler (:link/query link) nil param-ctx)
+                                (->> find-elements
+                                     (mapv (juxt :find-element/name (fn [find-element]
+                                                                      [dbval (form/form-pull-exp (:find-element/form find-element))])))
+                                     (into {}))]
+                  form-queries (->> find-elements
+                                    (mapv (fn [{form :find-element/form :as find-element}]
+                                            (merge
+                                              (form/form-option-queries form p-filler param-ctx)
+                                              (table/option-queries form p-filler param-ctx)))))
+                  inline-link-query-value (hash result-query)
+                  inline-queries (->> (:link/link link)
                                       (filter :link/render-inline?)
                                       (mapv (fn [inner-link]
-                                              (if-let [maybe-resultset (hc/select super-graph (-> link :link/query :db/id))]
+                                              (if-let [maybe-resultset (hc/select super-graph inline-link-query-value)]
                                                 (let [resultset (pull-resultset super-graph dbval link create-new-find-elements maybe-resultset)
                                                       param-ctx (assoc param-ctx :result (first resultset)
                                                                                  :query-params query-params)
-                                                      params-map (links/build-query-params inner-link param-ctx)]
-                                                  (query super-graph inner-link params-map param-ctx))))))))
+                                                      params-map (links/build-query-params inner-link param-ctx)
+                                                      debug (str "inline-query:" (.-dbid inner-link))]
+                                                  (query super-graph inner-link params-map param-ctx debug))))))]
+              (apply merge (concat [{(hash result-query) result-query}] form-queries inline-queries)))
             (table/query p-filler param-ctx (:link/query link) find-elements nil)))))))
