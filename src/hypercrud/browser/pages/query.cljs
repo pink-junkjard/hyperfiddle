@@ -46,7 +46,7 @@
                 [navigate-cmp props (:link/prompt link)])))))
 
 
-(defn ui [stage-tx! graph
+(defn ui [stage-tx! super-graph
           {find-elements :link/find-element result-renderer-code :link/result-renderer :as link}
           {query-params :query-params create-new-find-elements :create-new-find-elements :as params-map}
           navigate-cmp param-ctx debug]
@@ -60,14 +60,14 @@
                         (binding [pprint/*print-miser-width* 1] ; not working
                           (pprint/pprint params))))]]
         (let [dbval (get param-ctx :dbval)
-              resultset (->> (let [resultset (hc/select graph (.-dbid (:link/query link)))]
+              resultset (->> (let [resultset (hc/select super-graph (.-dbid (:link/query link)))]
                                (if (and (:query/single-result-as-entity? (:link/query link)) (= 0 (count resultset)))
                                  (let [local-result (mapv #(get create-new-find-elements (:find-element/name %))
                                                           find-elements)]
                                    [local-result])
                                  resultset))
                              (mapv (fn [result]
-                                     (mapv #(hc/entity (hc/get-dbgraph graph dbval) %) result))))
+                                     (mapv #(hc/entity (hc/get-dbgraph super-graph dbval) %) result))))
               form-lookup (->> (mapv (juxt :find-element/name :find-element/form) find-elements)
                                (into {}))
               ordered-forms (->> (util/parse-query-element q :find)
@@ -76,7 +76,7 @@
           (if (-> link :link/query :query/single-result-as-entity?)
             (let [result (first resultset)]
               [:div
-               [entity/ui stage-tx! graph result ordered-forms (:link/link link) navigate-cmp param-ctx]
+               [entity/ui stage-tx! super-graph result ordered-forms (:link/link link) navigate-cmp param-ctx]
                (->> (concat (repeating-links stage-tx! link result navigate-cmp param-ctx)
                             (non-repeating-links stage-tx! link navigate-cmp param-ctx))
                     (interpose " · "))])
@@ -84,8 +84,8 @@
              (let [repeating-links (->> (:link/link link)
                                         (filter :link/repeating?))]
                (if (empty? result-renderer-code)
-                 ^{:key (hc/t graph)}
-                 [table/table graph resultset ordered-forms repeating-links stage-tx! navigate-cmp param-ctx]
+                 ^{:key (hc/t super-graph)}
+                 [table/table super-graph resultset ordered-forms repeating-links stage-tx! navigate-cmp param-ctx]
                  (let [{result-renderer :value error :error} (eval result-renderer-code)]
                    (if error
                      [:div (pr-str error)]
@@ -102,13 +102,13 @@
                                                      [navigate-cmp props label]))]
                                      [:li {:key (hash result)}
                                       (try
-                                        (result-renderer graph link-fn result)
+                                        (result-renderer super-graph link-fn result)
                                         (catch :default e (pr-str e)))]))))]]))))
              (interpose " · " (non-repeating-links stage-tx! link navigate-cmp param-ctx))]))))
     [:div "Query record is incomplete"]))
 
 
-(defn query [editor-graph {find-elements :link/find-element :as link}
+(defn query [super-graph {find-elements :link/find-element :as link}
              {query-params :query-params create-new-find-elements :create-new-find-elements :as params-map}
              param-ctx]
   (if-let [q (some-> link :link/query :query/value reader/read-string)]
