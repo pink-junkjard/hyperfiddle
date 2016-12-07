@@ -1,11 +1,10 @@
 (ns hypercrud.browser.pages.query
-  (:require [cljs.reader :as reader]
-            [cljs.pprint :as pprint]
+  (:require [cljs.pprint :as pprint]
+            [cljs.reader :as reader]
             [clojure.set :as set]
             [hypercrud.browser.links :as links]
             [hypercrud.browser.pages.entity :as entity]
             [hypercrud.client.core :as hc]
-            [hypercrud.client.graph :as hc-g]
             [hypercrud.compile.eval :refer [eval]]
             [hypercrud.form.q-util :as q-util]
             [hypercrud.types :refer [->DbId ->DbVal ->Entity]]
