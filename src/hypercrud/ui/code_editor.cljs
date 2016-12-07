@@ -25,7 +25,9 @@
                                      :autoCloseBrackets true
                                      :viewportMargin js/Infinity})]
          (aset this "codeMirrorRef" ref)
-         (.on ref "blur" #(change! (.getValue %)))))
+         (.on ref "blur" (fn [e]
+                           (let [[_ value change!] (r-comp/get-argv this)]
+                             (change! (.getValue e)))))))
 
 
      :component-will-unmount
@@ -33,5 +35,5 @@
 
      :component-did-update
      (fn [this]
-       (let [[_ value change!] (r-comp/get-argv this)]      ;[value change!] (reagent/props this)
+       (let [[_ value change!] (r-comp/get-argv this)]  
          (.setValue (aget this "codeMirrorRef") (str value))))}))
