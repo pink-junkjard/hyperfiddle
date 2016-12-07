@@ -8,7 +8,7 @@
 
 (defn field-link [field-dbid dbid]
   ;; field-dbid is assumed to be the editor-graph connection
-  {:href (str (.-id field-dbid) "/field/" (.-id dbid) "/" (base64/encode (internal/transit-encode (.-conn-id dbid))))})
+  {:href (str (base64/encode (pr-str field-dbid)) "/field/" (base64/encode (pr-str dbid)))})
 
 
 (defn build-query-params [link param-ctx]
