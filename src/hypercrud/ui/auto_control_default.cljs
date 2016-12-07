@@ -24,7 +24,7 @@
       (and (= valueType :db.type/code) (= cardinality :db.cardinality/one)) (widget/code-editor entity widget-args)
       (and (= valueType :db.type/instant) (= cardinality :db.cardinality/one)) (widget/instant entity widget-args)
       (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one) isComponent) (widget/select-ref-component entity widget-args)
-      (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many) isComponent) (widget/table-many-ref entity widget-args)
+      (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many) isComponent) (widget/table-many-ref-component entity widget-args)
       (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one)) (widget/select-ref entity widget-args)
       (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) [widget/table-many-ref entity widget-args]
       :else (widget/default field))))

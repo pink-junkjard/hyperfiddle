@@ -29,6 +29,20 @@
           (interpose " · "))]))
 
 
+(defn render-inline-links [{:keys [field graph links navigate-cmp param-ctx stage-tx!] :as widget-args}]
+  (let [field-dbid (.-dbid field)]
+    (->> links
+         (filter #(= field-dbid (some-> % :link/field .-dbid)))
+         (filter :link/render-inline?)
+         (map (fn [link]
+                (let [params-map (links/build-query-params link param-ctx)
+                      debug (str "table-many-ref:" field-dbid ":" (:field/prompt field))
+                      ; todo do we need a different param-ctx for rendering the ui?
+                      param-ctx param-ctx]
+                  ^{:key (.-dbid link)}
+                  [query/ui stage-tx! graph link params-map navigate-cmp param-ctx debug]))))))
+
+
 (defn input-keyword [entity {:keys [field stage-tx!]}]
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         value (get entity ident)
@@ -72,36 +86,27 @@
 
 ; this can be used sometimes, on the entity page, but not the query page
 (defn select-ref [entity {:keys [field] :as widget-args}]
-  [:div.value.editable-select {:key (option/get-key field)}
-   (link-thing widget-args)
-   [:span.select
-    (select* entity widget-args)]])
+  [:div.value
+   [:div.editable-select {:key (option/get-key field)}
+    (link-thing widget-args)
+    [:span.select
+     (select* entity widget-args)]]
+   (render-inline-links widget-args)])
 
 
 (defn select-ref-component [entity {:keys [field graph navigate-cmp stage-tx!] :as widget-args}]
   [:div.value
-   (pr-str (get-in entity [(-> field :field/attribute :attribute/ident) :db/id]))
-   (link-thing widget-args)]
-  #_(let [value (get entity (-> field :field/attribute :attribute/ident))]
-    (form/form graph value (:field/form field) stage-tx! navigate-cmp)))
+   #_(pr-str (get-in entity [(-> field :field/attribute :attribute/ident) :db/id]))
+   (render-inline-links widget-args)
+   (link-thing widget-args)])
 
 
-(defn table-many-ref [entity {:keys [field graph links navigate-cmp param-ctx stage-tx!] :as widget-args}]
+(defn table-many-ref [entity {:keys [field] :as widget-args}]
   [:div.value
    #_(->> (get entity (-> field :field/attribute :attribute/ident))
         (mapv :db/id)
         (pr-str))
-   (let [field-dbid (.-dbid field)]
-     (->> links
-          (filter #(= field-dbid (some-> % :link/field .-dbid)))
-          (filter :link/render-inline?)
-          (map (fn [link]
-                 (let [params-map (links/build-query-params link param-ctx)
-                       debug (str "table-many-ref:" field-dbid ":" (:field/prompt field))
-                       ; todo do we need a different param-ctx for rendering the ui?
-                       param-ctx param-ctx]
-                   ^{:key (.-dbid link)}
-                   [query/ui stage-tx! graph link params-map navigate-cmp param-ctx debug])))))
+   (render-inline-links widget-args)
    (link-thing widget-args)])
 
 
@@ -134,16 +139,13 @@
             [:button {:on-click #(stage-tx! (tx/edit-entity (:db/id entity) ident [] [@select-value-atom]))} "⬆"]])]))))
 
 
-(defn table-many-ref-component [entity {:keys [field graph navigate-cmp stage-tx!] :as widget-args}]
+(defn table-many-ref-component [entity {:keys [field] :as widget-args}]
   [:div.value
-   (->> (get entity (-> field :field/attribute :attribute/ident))
+   #_(->> (get entity (-> field :field/attribute :attribute/ident))
         (mapv :db/id)
         (pr-str))
-   (link-thing widget-args)]
-  #_(let [ident (-> field :field/attribute :attribute/ident)
-        resultset (map vector (get entity ident))]
-    [:div.value
-     [table/table graph resultset (vector (:field/form field)) stage-tx! navigate-cmp]]))
+   (render-inline-links widget-args)
+   (link-thing widget-args)])
 
 
 (defn multi-select-ref [entity {:keys [field stage-tx!] :as widget-args}]
