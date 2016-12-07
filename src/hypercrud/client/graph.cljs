@@ -3,7 +3,7 @@
             [goog.Uri]
             [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx]
-            [hypercrud.types :refer [->DbId ->DbVal ->Entity]]
+            [hypercrud.types :as types :refer [->DbId ->DbVal ->Entity ->DbError]]
             [hypercrud.util :as util]))
 
 
@@ -126,14 +126,17 @@
                  (mapv (fn [[query resultset-hydrated]]
                          (let [[q params pull-exps] query
                                ordered-dbvals (q->dbvals q pull-exps)
-                               resultset-ids (mapv (fn [result-hydrated]
-                                                     (mapv (fn [entity-hydrated dbval]
-                                                             (let [id (:db/id entity-hydrated)
-                                                                   id (or (get-in tempids [(.-conn-id dbval) id]) id)]
-                                                               (->DbId id (.-conn-id dbval))))
-                                                           result-hydrated ordered-dbvals))
-                                                   resultset-hydrated)]
-                           [query resultset-ids])))
+                               resultset (if (instance? types/DbError resultset-hydrated)
+                                           []  ; just ignore the error and show no results
+                                           (mapv (fn [result-hydrated]
+                                                   (mapv (fn [entity-hydrated dbval]
+                                                           (let [id (:db/id entity-hydrated)
+                                                                 id (or (get-in tempids [(.-conn-id dbval) id]) id)]
+                                                             (->DbId id (.-conn-id dbval))))
+                                                         result-hydrated ordered-dbvals))
+                                                 resultset-hydrated))]
+                           ;; resultset comes out of hc/select
+                           [query resultset])))
                  (into {}))]
         (set! graph-data (GraphData. pulled-trees-map resultset-by-query)))
 
@@ -143,10 +146,13 @@
       ;; group by dbval, and give each list of hydrated-entities to the proper DbGraph so it can do datom stuff
 
       (let [grouped (->> pulled-trees-map
-                         (mapcat (fn [[[q params pull-exps] resultset-hydrated]]
-                                   (let [transposed-resultset (util/transpose resultset-hydrated)]
-                                     (->> (q->dbvals q pull-exps)
-                                          (map vector transposed-resultset)))))
+                         (mapcat (fn [[[q params pull-exps] hydrated-resultset-or-error]]
+                                   (let [hydrated-resultset-or-error (if (instance? types/DbError hydrated-resultset-or-error)
+                                                                       [] ; ignore error, show no results
+                                                                       hydrated-resultset-or-error)]
+                                     (let [transposed-resultset (util/transpose hydrated-resultset-or-error)]
+                                       (->> (q->dbvals q pull-exps)
+                                            (map vector transposed-resultset))))))
                          (group-by (fn [[pulled-trees dbval]] dbval))
                          (util/map-values (fn [things]      ;things :: List[[List[EntityHydrated] dbval]]
                                             ;; All of these pulled trees are from the same database value

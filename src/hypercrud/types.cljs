@@ -88,3 +88,15 @@
 
 
 (defn DbValTransitReader [v] (apply ->DbVal v))
+
+(deftype DbError [msg])
+
+(deftype DbErrorTransitHandler []
+  Object
+  (tag [_ v] "DbError")
+  (rep [_ v] (.-msg v))
+  (stringRep [_ v] nil)
+  (getVerboseHandler [_] nil))
+
+(defn DbErrorTransitReader [v] (apply ->DbError v))
+

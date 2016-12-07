@@ -25,12 +25,20 @@
          (= (hash this) (hash other)))))                    ;TODO find a better way to check equality
 
 
-(def transit-encoding-opts {:handlers {goog.Uri (UriHandler.)
-                                       types/DbId (types/DbIdTransitHandler.)
-                                       types/DbVal (types/DbValTransitHandler.)}})
-(def transit-decoding-opts {:handlers {"r" (fn [v] (goog.Uri. v))
-                                       "DbId" types/DbIdTransitReader
-                                       "DbVal" types/DbValTransitReader}})
+(def transit-read-handlers
+  {"r" (fn [v] (goog.Uri. v))
+   "DbId" types/DbIdTransitReader
+   "DbVal" types/DbValTransitReader
+   "DbError" types/DbErrorTransitReader})
+
+(def transit-write-handlers
+  {goog.Uri (UriHandler.)
+   types/DbId (types/DbIdTransitHandler.)
+   types/DbVal (types/DbValTransitHandler.)})
+
+
+(def transit-encoding-opts {:handlers transit-write-handlers})
+(def transit-decoding-opts {:handlers transit-read-handlers})
 
 
 (defn transit-decode
