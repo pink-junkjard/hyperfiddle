@@ -13,11 +13,11 @@
 (defn route [page-rel-path {:keys [query-fn field-fn index-fn else]}]
   (let [path-params (string/split page-rel-path "/")]
     (cond
-      (= 2 (count path-params))
-      (let [[link-id params] path-params
-            link-id (js/parseInt link-id 10)                ;todo dbid
-            params-map (reader/read-string (base64/decode params))]
-        (query-fn link-id params-map))
+      (and (= 1 (count path-params)) (= (first path-params) ""))
+      (index-fn)
+
+      (and (= 1 (count path-params)) (not (empty? (first path-params))))
+      (query-fn (reader/read-string (base64/decode (first path-params))))
 
       (and (= (second path-params) "field") (= 4 (count path-params)))
       (let [[field-id _ id conn-id] path-params
@@ -28,17 +28,14 @@
         ;todo this should accept a real entity type
         (field-fn dbval dbid field-id))
 
-      (and (= (first path-params) "") (= 1 (count path-params)))
-      (index-fn)
-
       :else (else))))
 
 
 (defn ui [links editor-graph stage-tx! graph page-rel-path navigate-cmp param-ctx debug]
   [:div.browser {:class debug}
    (route page-rel-path
-          {:query-fn (fn [link-id params-map]
-                       (let [link (hc/entity editor-graph (->DbId link-id (-> editor-graph .-dbval .-conn-id)))]
+          {:query-fn (fn [{:keys [link-dbid] :as params-map}]
+                       (let [link (hc/entity editor-graph link-dbid)]
                          (query/ui stage-tx! graph link params-map navigate-cmp param-ctx debug)))
            :field-fn (fn [dbval dbid field-id]
                        (let [entity (hc/entity (hc/get-dbgraph graph dbval) dbid)
@@ -50,8 +47,8 @@
 
 (defn query [super-graph editor-graph page-rel-path param-ctx debug]
   (route page-rel-path
-         {:query-fn (fn [link-id params-map]
-                      (let [link (hc/entity editor-graph (->DbId link-id (-> editor-graph .-dbval .-conn-id)))]
+         {:query-fn (fn [{:keys [link-dbid] :as params-map}]
+                      (let [link (hc/entity editor-graph link-dbid)]
                         (query/query super-graph link params-map param-ctx debug)))
           :field-fn (fn [dbval dbid field-id]
                       (let [field (hc/entity editor-graph (->DbId field-id (-> editor-graph .-dbval .-conn-id)))]

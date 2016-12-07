@@ -1,9 +1,9 @@
 (ns hypercrud.browser.links
   (:require [hypercrud.browser.base-64-url-safe :as base64]
+            [hypercrud.client.core :as hc]
             [hypercrud.client.internal :as internal]
             [hypercrud.compile.eval :refer [eval]]
-            [hypercrud.form.q-util :as q-util]
-            [hypercrud.client.core :as hc]))
+            [hypercrud.form.q-util :as q-util]))
 
 
 (defn field-link [field-dbid dbid]
@@ -13,10 +13,11 @@
 
 (defn build-query-params [link param-ctx]
   (let [query-params (q-util/build-params-map link param-ctx)
-        tempid-hack (fn [{:keys [:find-element/connection :find-element/name]}]
+        tempid-hack (fn [{:keys [:find-element/connection]}]
                       ; todo use the find-element connection's dbval
                       (hc/*temp-id!* (.-conn-id (get param-ctx :dbval))))]
-    {:query-params query-params
+    {:link-dbid (.-dbid link)
+     :query-params query-params
      ;; Create a result of shape [?e ?f] with new entities colored
      :create-new-find-elements (->> (:link/find-element link)
                                     (mapv (juxt :find-element/name tempid-hack))
@@ -34,4 +35,4 @@
     ;; add-result #(tx/edit-entity (:db/id entity) ident [] [(first %)])
     (if tx-fn
       {:on-click #(stage-tx! (tx-fn param-ctx))}
-      {:href (str (-> link .-dbid .-id) "/" (base64/encode (pr-str (build-query-params link param-ctx))))})))
+      {:href (base64/encode (pr-str (build-query-params link param-ctx)))})))
