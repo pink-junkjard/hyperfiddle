@@ -122,7 +122,7 @@
                          (let [[q params pull-exps] query
                                ordered-dbvals (q->dbvals q pull-exps)
                                resultset (if (instance? types/DbError resultset-hydrated)
-                                           []  ; just ignore the error and show no results
+                                           []               ; just ignore the error and show no results
                                            (mapv (fn [result-hydrated]
                                                    (mapv (fn [entity-hydrated dbval]
                                                            (let [id (:db/id entity-hydrated)
@@ -153,18 +153,18 @@
                                             ;; All of these pulled trees are from the same database value
                                             (mapcat (fn [[entities-hydrated dbval]] entities-hydrated) things))))
             editor-graph (let [ptm (get grouped editor-dbval)
-                             tempids (get tempids (.-conn-id editor-dbval))]
-                         (dbGraph editor-schema editor-dbval nil ptm tempids))
-            graphs' (->> named-queries
-                         (filter (fn [[query-name query-value]]
-                                   (instance? types/DbVal query-name)))
-                         (mapv (juxt first (fn [[dbval query-value]]
-                                             (let [attributes (->> (hc/select this dbval)
-                                                                   (mapv (fn [[attr-dbid]] (hc/entity editor-graph attr-dbid))))
-                                                   schema (schema-util/build-schema attributes)
-                                                   new-ptm (get grouped dbval)
-                                                   tempids (get tempids (.-conn-id dbval))]
-                                               (dbGraph schema dbval nil new-ptm tempids)))))
+                               tempids (get tempids (.-conn-id editor-dbval))]
+                           (dbGraph editor-schema editor-dbval nil ptm tempids))
+            graphs' (->> (mapv first named-queries)
+                         (filter #(instance? types/DbVal %))
+                         (remove #(= % editor-dbval))
+                         (mapv (juxt identity (fn [dbval]
+                                                (let [attributes (->> (hc/select this dbval)
+                                                                      (mapv (fn [[attr-dbid]] (hc/entity editor-graph attr-dbid))))
+                                                      schema (schema-util/build-schema attributes)
+                                                      new-ptm (get grouped dbval)
+                                                      tempids (get tempids (.-conn-id dbval))]
+                                                  (dbGraph schema dbval nil new-ptm tempids)))))
                          (into {editor-dbval editor-graph}))]
         (set! graphs graphs')))
     nil)
