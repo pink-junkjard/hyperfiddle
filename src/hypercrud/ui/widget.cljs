@@ -14,6 +14,8 @@
             [hypercrud.ui.textarea :refer [textarea*]]
             [reagent.core :as r]))
 
+(def unicode-nbsp "\u00a0")
+
 
 (defn link-thing [{:keys [field links navigate-cmp param-ctx stage-tx!] :as widget-args}]
   (let [field-dbid (.-dbid field)]
@@ -26,7 +28,8 @@
           (map (fn [{:keys [:db/id :link/prompt] :as link}]
                  ^{:key id}
                  [navigate-cmp (links/query-link stage-tx! link param-ctx) prompt]))
-          (interpose " · "))]))
+          (interpose " · "))
+     unicode-nbsp]))
 
 
 (defn render-inline-links [{:keys [field graph links navigate-cmp param-ctx stage-tx!] :as widget-args}]

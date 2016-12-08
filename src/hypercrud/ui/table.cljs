@@ -104,17 +104,17 @@
 (defn table-row [result forms {:keys [links navigate-cmp stage-tx!] :as fieldless-widget-args}]
   (let [{:keys [param-ctx] :as fieldless-widget-args} (assoc-in fieldless-widget-args [:param-ctx :result] result)]
     [:tr
+     (mapcat (fn [form entity]
+               (build-row-cells form entity fieldless-widget-args))
+             forms result)
      [:td.link-cell {:key :link-cell}
+      unicode-nbsp
       (->> links
            (filter #(nil? (:link/field %)))
            (map (fn [{:keys [:db/id :link/prompt] :as link}]
                   (let [props (assoc (links/query-link stage-tx! link param-ctx) :key id)]
                     (navigate-cmp props prompt))))
-           (interpose " · "))
-      unicode-nbsp]
-     (mapcat (fn [form entity]
-               (build-row-cells form entity fieldless-widget-args))
-             forms result)]))
+           (interpose " · "))]]))
 
 
 (defn body [graph resultset forms repeating-links stage-tx! navigate-cmp sort-col param-ctx]
@@ -150,11 +150,10 @@
   (let [sort-col (r/atom nil)]
     (fn [graph resultset forms repeating-links stage-tx! navigate-cmp param-ctx]
       [:table.ui-table
-       [:colgroup [:col {:span "1" :style {:width "20px"}}]]
        [:thead
         [:tr
-         [:td.link-cell {:key :link-cell}]
-         (build-col-heads forms sort-col)]]
+         (build-col-heads forms sort-col)
+         [:td.link-cell {:key :link-cell}]]]
        [body graph resultset forms repeating-links stage-tx! navigate-cmp sort-col param-ctx]])))
 
 

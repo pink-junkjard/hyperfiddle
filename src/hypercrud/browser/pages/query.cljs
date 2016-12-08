@@ -111,7 +111,7 @@
                                       (try
                                         (result-renderer super-graph link-fn result)
                                         (catch :default e (pr-str e)))]))))]]))))
-             (interpose " · " (non-repeating-links stage-tx! link navigate-cmp param-ctx))]))))
+             [:div.links (interpose " · " (non-repeating-links stage-tx! link navigate-cmp param-ctx))]]))))
     [:div "Query record is incomplete"]))
 
 
