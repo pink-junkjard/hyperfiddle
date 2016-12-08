@@ -48,11 +48,6 @@
     (let [graph-we-want (graph/->SuperGraph named-queries {} nil)]
       (if (and (not force?) (= super-graph graph-we-want))
         (p/resolved super-graph)
-        #_(do
-            (doseq [[q p _] (vals named-queries)]
-              (assert (= (count (q-util/parse-holes q))
-                         (count p))
-                      (str "Missing parameters for " q))))
         (-> (kvlt/request!
               {:url (resolve-relative-uri entry-uri (goog.Uri. "hydrate"))
                :content-type content-type-edn               ; helps debugging to view as edn
