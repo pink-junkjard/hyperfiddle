@@ -2,6 +2,7 @@
   (:require [cljs.pprint :as pprint]
             [goog.Uri]
             [hypercrud.client.core :as hc]
+            [hypercrud.client.schema :as schema-util]
             [hypercrud.client.tx :as tx]
             [hypercrud.types :as types :refer [->DbId ->DbVal ->Entity ->DbError]]
             [hypercrud.util :as util]))
@@ -51,7 +52,7 @@
   IHash
   (-hash [this]
     ; todo equality when t is nil
-    (hash (map hash [schema dbval local-statements])))
+    (hash (map hash [dbval local-statements])))
 
   IEquiv
   (-equiv [this other]
@@ -66,7 +67,7 @@
     nil))
 
 
-(deftype SuperGraph [named-queries graphs ^:mutable graph-data]
+(deftype SuperGraph [named-queries ^:mutable graphs ^:mutable graph-data]
   hc/SuperGraph
   (select [this named-query] (hc/select this named-query nil))
 
@@ -98,7 +99,7 @@
 
   IHash
   (-hash [this]
-    (hash (map hash [(vals graphs) named-queries])))
+    (hash named-queries))
 
 
   IEquiv
@@ -156,13 +157,25 @@
                          (group-by (fn [[pulled-trees dbval]] dbval))
                          (util/map-values (fn [things]      ;things :: List[[List[EntityHydrated] dbval]]
                                             ;; All of these pulled trees are from the same database value
-                                            (mapcat (fn [[entities-hydrated dbval]] entities-hydrated) things))))]
-
-        (doall (map (fn [[dbval graph]]
-                      (let [new-ptm (get grouped dbval)
-                            new-t nil]
-                        (set-db-graph-state! graph new-ptm (get tempids (.-conn-id dbval)) new-t)))
-                    graphs))))
+                                            (mapcat (fn [[entities-hydrated dbval]] entities-hydrated) things))))
+            root-dbval (->DbVal :root nil)                  ;todo thread this through and maybe construct dbgraph here
+            root-graph (let [root-graph (hc/get-dbgraph this root-dbval)]
+                         (set-db-graph-state! root-graph (get grouped root-dbval) (get tempids (.-conn-id root-dbval)) nil)
+                         root-graph)
+            graphs' (->> named-queries
+                         (filter (fn [[query-name query-value]]
+                                   (instance? types/DbVal query-name)))
+                         (mapv (juxt first (fn [[dbval query-value]]
+                                             (let [attributes (->> (hc/select this dbval)
+                                                                   (mapv (fn [[attr-dbid]] (hc/entity root-graph attr-dbid))))
+                                                   schema (schema-util/build-schema attributes)
+                                                   graph (->DbGraph schema dbval nil {} {})
+                                                   new-ptm (get grouped dbval)
+                                                   new-t nil]
+                                               (set-db-graph-state! graph new-ptm (get tempids (.-conn-id dbval)) new-t)
+                                               graph))))
+                         (into {root-dbval root-graph}))]
+        (set! graphs graphs')))
     nil)
 
   GraphSSR
@@ -172,9 +185,7 @@
     (:pulled-trees-map graph-data)))
 
 
-(defn superGraph [schemas named-queries]
-  (let [graphs (->> schemas
-                    (map (fn [[dbval schema]]
-                           [dbval (->DbGraph schema dbval nil {} {})]))
-                    (into {}))]
+(defn superGraph [root-dbval root-schema named-queries]
+  (let [root-dbgraph (->DbGraph root-schema root-dbval nil {} {})
+        graphs {root-dbval root-dbgraph}]
     (->SuperGraph named-queries graphs nil)))

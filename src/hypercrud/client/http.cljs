@@ -41,11 +41,11 @@
 
 
 ; graph is always assumed to be touched
-(deftype Client [entry-uri ^:mutable super-graph temp-id-atom]
+(deftype Client [entry-uri ^:mutable super-graph temp-id-atom root-schema]
   hc/Client
-  (hydrate! [this schemas named-queries force? staged-tx]
+  (hydrate! [this named-queries force? staged-tx root-dbval]
     ;; compare our pre-loaded state with the graph dependencies
-    (let [graph-we-want (graph/superGraph schemas named-queries)]
+    (let [graph-we-want (graph/superGraph root-dbval root-schema named-queries)]
       (if (and (not force?) (= super-graph graph-we-want))
         (p/resolved super-graph)
         #_(do

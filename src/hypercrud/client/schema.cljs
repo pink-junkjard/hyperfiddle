@@ -1,5 +1,6 @@
-(ns hypercrud.client.util
-  (:require [hypercrud.util :as util]))
+(ns hypercrud.client.schema
+  (:require [hypercrud.types :refer [->DbVal]]
+            [hypercrud.util :as util]))
 
 
 (defn build-indexed-schema [schema]
@@ -24,3 +25,52 @@
                 ;todo 52-55 :db/fn etc
                 {:db/id 62 :db/ident :db/doc :db/valueType :db.type/string :db/cardinality :db.cardinality/one}])
        (util/group-by-assume-unique :db/ident)))
+
+
+(defn fixup-attribute [attribute]
+  (reduce (fn [acc [attr-key v]]
+            (if v (assoc acc (keyword "db" (name attr-key)) v)
+                  acc))
+          {}
+          attribute))
+
+
+(defn build-schema [attributes]
+  (->> attributes
+       (map (fn [attr]
+              (let [attr #_(select-keys attr [:attribute/ident
+                                              :attribute/valueType
+                                              :attribute/cardinality
+                                              :attribute/doc
+                                              :attribute/unique
+                                              :attribute/index
+                                              :attribute/fulltext
+                                              :attribute/isComponent
+                                              :attribute/noHistory])
+                    (->> (map (juxt identity #(get attr %))
+                              [:attribute/ident
+                               :attribute/valueType
+                               :attribute/cardinality
+                               :attribute/doc
+                               :attribute/unique
+                               :attribute/index
+                               :attribute/fulltext
+                               :attribute/isComponent
+                               :attribute/noHistory])
+                         (into {}))]
+                (-> attr
+                    (util/update-existing :attribute/valueType :db/ident)
+                    (util/update-existing :attribute/cardinality :db/ident)
+                    (util/update-existing :attribute/unique :db/ident)))))
+       set
+       (map fixup-attribute)
+       build-indexed-schema))
+
+
+(defn query-schema [root-dbval project-dbval]
+  {project-dbval ['[:find ?attr :in $ :where [?attr :attribute/ident]]
+                  {"$" root-dbval}
+                  {"?attr" [root-dbval ['*
+                                        {:attribute/valueType [:db/id :db/ident]}
+                                        {:attribute/cardinality [:db/id :db/ident]}
+                                        {:attribute/unique [:db/id :db/ident]}]]}]})
