@@ -44,6 +44,13 @@
     (remove nil? (mapv #(-> % :field/attribute :attribute/ident) (:form/field form)))))
 
 
+(defn query-pull-exp [find-elements dbval]
+  (->> find-elements
+       (mapv (juxt :find-element/name (fn [find-element]
+                                        [dbval (form-pull-exp (:find-element/form find-element))])))
+       (into {})))
+
+
 (defn field-queries [p-filler param-ctx field]
   (let [{:keys [:attribute/valueType :attribute/isComponent]} (:field/attribute field)
         is-ref (= (:db/ident valueType) :db.type/ref)]

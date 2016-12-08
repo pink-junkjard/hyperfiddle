@@ -1,13 +1,9 @@
 (ns hypercrud.ui.table
-  (:require [cljs.reader :as reader]
-            [hypercrud.browser.links :as links]
+  (:require [hypercrud.browser.links :as links]
             [hypercrud.compile.eval :refer [eval]]
-            [hypercrud.form.option :as option]
-            [hypercrud.form.q-util :as q-util]
             [hypercrud.platform.native-event-listener :refer [native-listener]] ;provided dependency
             [hypercrud.types :refer [->DbId ->DbVal]]
             [hypercrud.ui.auto-control :refer [auto-table-cell]]
-            [hypercrud.ui.form :as form]
             [reagent.core :as r]))
 
 
@@ -155,41 +151,3 @@
          (build-col-heads forms sort-col)
          [:td.link-cell {:key :link-cell}]]]
        [body graph resultset forms repeating-links stage-tx! navigate-cmp sort-col param-ctx]])))
-
-
-(defn table-pull-exp [form]
-  (form/form-pull-exp form))
-
-
-(defn field-queries [p-filler param-ctx field]
-  (let [{:keys [:attribute/cardinality :attribute/valueType :attribute/isComponent]} (:field/attribute field)]
-    (if (and (= (:db/ident valueType) :db.type/ref)
-             (= (:db/ident cardinality) :db.cardinality/one)
-             (not isComponent))
-      (option/get-query field p-filler param-ctx))))
-
-
-(defn option-queries [form p-filler param-ctx]
-  (apply merge
-         (mapv #(field-queries p-filler param-ctx %) (:form/field form))))
-
-
-(defn table-query-pull-exp [find-elements dbval]
-  (->> find-elements
-       (mapv (juxt :find-element/name (fn [find-element]
-                                        [dbval (table-pull-exp (:find-element/form find-element))])))
-       (into {})))
-
-
-(defn query
-  ([p-filler param-ctx link]
-   (query p-filler param-ctx (:link/query link) (:link/find-element link) (:link/formula link)))
-  ([p-filler param-ctx query find-elements formula]
-   (merge
-     (let [query-value [(reader/read-string (:query/value query))
-                        (p-filler query formula param-ctx)
-                        (table-query-pull-exp find-elements (get param-ctx :dbval))]]
-       {(hash query-value) query-value})
-     (->> find-elements
-          (mapv #(option-queries (:find-element/form %) q-util/build-params-from-formula param-ctx))
-          (apply merge)))))
