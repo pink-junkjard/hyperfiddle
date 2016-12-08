@@ -11,12 +11,6 @@
 (defprotocol SuperGraphPrivate
   (set-state! [this editor-dbval editor-schema pulled-trees-map tempids t']))
 
-;; Really we just want to be able to serialize graphs for the wire; this is a quick hack
-;; because we aren't sure what we want to do about the schema which is part of the graph and the client
-(defprotocol GraphSSR
-  (named-queries* [this])
-  (pulled-trees-map* [this]))
-
 
 (defrecord GraphData [pulled-trees-map resultsets])
 
@@ -167,10 +161,4 @@
                                                   (dbGraph schema dbval nil new-ptm tempids)))))
                          (into {editor-dbval editor-graph}))]
         (set! graphs graphs')))
-    nil)
-
-  GraphSSR
-  (named-queries* [this] named-queries)
-  (pulled-trees-map* [this]
-    (assert false "deprecated. this does not have tempids replaced")
-    (:pulled-trees-map graph-data)))
+    nil))
