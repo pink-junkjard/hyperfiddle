@@ -41,11 +41,11 @@
 
 
 ; graph is always assumed to be touched
-(deftype Client [entry-uri ^:mutable super-graph temp-id-atom root-schema]
+(deftype Client [entry-uri ^:mutable super-graph temp-id-atom]
   hc/Client
-  (hydrate! [this named-queries force? staged-tx root-dbval]
+  (hydrate! [this named-queries force? staged-tx editor-dbval editor-schema]
     ;; compare our pre-loaded state with the graph dependencies
-    (let [graph-we-want (graph/superGraph root-dbval root-schema named-queries)]
+    (let [graph-we-want (graph/->SuperGraph named-queries {} nil)]
       (if (and (not force?) (= super-graph graph-we-want))
         (p/resolved super-graph)
         #_(do
@@ -63,7 +63,7 @@
                :as :auto})
             (p/then (fn [resp]
                       (let [{:keys [t pulled-trees-map tempids]} (-> resp :body :hypercrud)]
-                        (graph/set-state! graph-we-want pulled-trees-map tempids t)
+                        (graph/set-state! graph-we-want editor-dbval editor-schema pulled-trees-map tempids t)
                         (set! super-graph graph-we-want)
                         super-graph)))))))
 

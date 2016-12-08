@@ -18,6 +18,6 @@
 
 
 (defprotocol Client
-  (hydrate! [this named-queries force? staged-tx root-dbval])
+  (hydrate! [this named-queries force? staged-tx editor-dbval editor-schema])
   (temp-id! [this conn-id])
   (transact! [this tx]))

@@ -8,12 +8,8 @@
             [hypercrud.util :as util]))
 
 
-(defprotocol DbGraphPrivate
-  (set-db-graph-state! [this pulled-trees tempids t']))
-
-
 (defprotocol SuperGraphPrivate
-  (set-state! [this pulled-trees-map tempids t']))
+  (set-state! [this editor-dbval editor-schema pulled-trees-map tempids t']))
 
 ;; Really we just want to be able to serialize graphs for the wire; this is a quick hack
 ;; because we aren't sure what we want to do about the schema which is part of the graph and the client
@@ -26,7 +22,7 @@
 
 
 ;; DbTouched
-(deftype DbGraph [schema ^:mutable dbval local-statements ^:mutable data-lookup ^:mutable entity-lookup]
+(deftype DbGraph [schema dbval local-statements data-lookup ^:mutable entity-lookup]
   hc/DbGraph
   (entity [this dbid]
     (assert (not= nil dbid) "Cannot request nil entity")
@@ -56,15 +52,13 @@
 
   IEquiv
   (-equiv [this other]
-    (= (hash this) (hash other)))
+    (= (hash this) (hash other))))
 
-  DbGraphPrivate
-  (set-db-graph-state! [this pulled-trees tempids t']
-    (let [lookup (tx/pulled-tree-to-data-lookup schema (.-conn-id dbval) pulled-trees tempids)]
-      (set! data-lookup (tx/build-data-lookup schema local-statements lookup))
-      (set! entity-lookup {}))
-    (set! dbval (->DbVal (.-conn-id dbval) t'))
-    nil))
+
+(defn dbGraph [schema dbval local-statements pulled-trees tempids]
+  (let [lookup (tx/pulled-tree-to-data-lookup schema (.-conn-id dbval) pulled-trees tempids)
+        data-lookup (tx/build-data-lookup schema local-statements lookup)]
+    (->DbGraph schema dbval local-statements data-lookup {})))
 
 
 (deftype SuperGraph [named-queries ^:mutable graphs ^:mutable graph-data]
@@ -108,7 +102,7 @@
 
 
   SuperGraphPrivate
-  (set-state! [this pulled-trees-map tempids t']
+  (set-state! [this editor-dbval editor-schema pulled-trees-map tempids t']
     ; pulled-trees-map :: Map[query List[List[Pulled-Tree]]]
     ;                               List[ResultHydrated]
     ; ResultHydrated :: Tuple[EntityHydrated]
@@ -158,23 +152,20 @@
                          (util/map-values (fn [things]      ;things :: List[[List[EntityHydrated] dbval]]
                                             ;; All of these pulled trees are from the same database value
                                             (mapcat (fn [[entities-hydrated dbval]] entities-hydrated) things))))
-            root-dbval (->DbVal :root nil)                  ;todo thread this through and maybe construct dbgraph here
-            root-graph (let [root-graph (hc/get-dbgraph this root-dbval)]
-                         (set-db-graph-state! root-graph (get grouped root-dbval) (get tempids (.-conn-id root-dbval)) nil)
-                         root-graph)
+            editor-graph (let [ptm (get grouped editor-dbval)
+                             tempids (get tempids (.-conn-id editor-dbval))]
+                         (dbGraph editor-schema editor-dbval nil ptm tempids))
             graphs' (->> named-queries
                          (filter (fn [[query-name query-value]]
                                    (instance? types/DbVal query-name)))
                          (mapv (juxt first (fn [[dbval query-value]]
                                              (let [attributes (->> (hc/select this dbval)
-                                                                   (mapv (fn [[attr-dbid]] (hc/entity root-graph attr-dbid))))
+                                                                   (mapv (fn [[attr-dbid]] (hc/entity editor-graph attr-dbid))))
                                                    schema (schema-util/build-schema attributes)
-                                                   graph (->DbGraph schema dbval nil {} {})
                                                    new-ptm (get grouped dbval)
-                                                   new-t nil]
-                                               (set-db-graph-state! graph new-ptm (get tempids (.-conn-id dbval)) new-t)
-                                               graph))))
-                         (into {root-dbval root-graph}))]
+                                                   tempids (get tempids (.-conn-id dbval))]
+                                               (dbGraph schema dbval nil new-ptm tempids)))))
+                         (into {editor-dbval editor-graph}))]
         (set! graphs graphs')))
     nil)
 
@@ -183,9 +174,3 @@
   (pulled-trees-map* [this]
     (assert false "deprecated. this does not have tempids replaced")
     (:pulled-trees-map graph-data)))
-
-
-(defn superGraph [root-dbval root-schema named-queries]
-  (let [root-dbgraph (->DbGraph root-schema root-dbval nil {} {})
-        graphs {root-dbval root-dbgraph}]
-    (->SuperGraph named-queries graphs nil)))
