@@ -7,7 +7,8 @@
             [hypercrud.browser.pages.query :as query]
             [hypercrud.client.core :as hc]
             [hypercrud.client.internal :as internal]
-            [hypercrud.types :refer [->DbId ->DbVal]]))
+            [hypercrud.types :refer [->DbId ->DbVal]]
+            [hypercrud.util :as util]))
 
 
 (defn route [page-rel-path {:keys [query-fn field-fn index-fn else]}]
@@ -54,3 +55,27 @@
                         (field/query dbid field param-ctx)))
           :index-fn #(index/query)
           :else (constantly {})}))
+
+
+(defn replace-tempids-in-path [page-rel-path tempid-lookup]
+  (let [replace-tempid #(or (get tempid-lookup %) %)
+        process-query-url (fn [params-map]
+                            (-> params-map
+                                (update :link-dbid replace-tempid)
+                                (update :query-params #(util/map-values replace-tempid %))
+                                (update :create-new-find-elements (fn [old-map]
+                                                                    ; generate a new tempid for each existing tempid
+                                                                    ; we don't want to replace here
+                                                                    (util/map-values
+                                                                      #(hc/*temp-id!* (:conn-id %))
+                                                                      old-map)))
+                                pr-str
+                                base64/encode))
+        process-field-url (fn [dbid field-dbid]
+                            (str (base64/encode (pr-str (replace-tempid field-dbid)))
+                                 "/field/"
+                                 (base64/encode (pr-str (replace-tempid dbid)))))]
+    (route page-rel-path {:query-fn process-query-url
+                          :field-fn process-field-url
+                          :index-fn (constantly page-rel-path)
+                          :else (constantly page-rel-path)})))
