@@ -50,7 +50,7 @@
                                                     #(reset! col-sort [form-dbid ident :asc])
                                                     (constantly nil))
                       arrow (with-sort-direction " ↓" " ↑" " ↕" nil)]
-                  [:td {:key (:db/id field) :on-click on-click}
+                  [:td {:class (str "field-" (get-in field [:db/id :id])) :key (:db/id field) :on-click on-click}
                    prompt
                    (let [docstring (-> field :field/attribute :attribute/doc)]
                      (if-not (empty? docstring)
