@@ -142,12 +142,20 @@
                                           :stage-tx! stage-tx!}]))))])
 
 
-(defn table [graph resultset forms repeating-links stage-tx! navigate-cmp param-ctx]
+(defn table [graph resultset forms links stage-tx! navigate-cmp param-ctx]
   (let [sort-col (r/atom nil)]
-    (fn [graph resultset forms repeating-links stage-tx! navigate-cmp param-ctx]
-      [:table.ui-table
-       [:thead
-        [:tr
-         (build-col-heads forms sort-col)
-         [:td.link-cell {:key :link-cell}]]]
-       [body graph resultset forms repeating-links stage-tx! navigate-cmp sort-col param-ctx]])))
+    (fn [graph resultset forms links stage-tx! navigate-cmp param-ctx]
+      (let [repeating-links (filter :link/repeating? links)]
+        [:table.ui-table
+         [:thead
+          [:tr
+           (build-col-heads forms sort-col)
+           [:td.link-cell {:key :link-cell}
+            (->> (remove :link/repeating? links)
+                 (filter #(nil? (:link/field %)))
+                 (map (fn [link]
+                        (let [props (links/query-link stage-tx! link param-ctx)]
+                          ^{:key (:db/id link)}
+                          [navigate-cmp props (:link/prompt link)])))
+                 (interpose " · "))]]]
+         [body graph resultset forms repeating-links stage-tx! navigate-cmp sort-col param-ctx]]))))
