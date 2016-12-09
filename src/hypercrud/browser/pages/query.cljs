@@ -45,15 +45,22 @@
                 [navigate-cmp props (:link/prompt link)])))))
 
 
-(defn pull-resultset [super-graph dbval {find-elements :link/find-element :as link} create-new-find-elements resultset]
-  (->> (if (and (:link/single-result-as-entity? link) (= 0 (count resultset)))
-         (let [local-result (->> find-elements
-                                 (mapv (juxt :find-element/name #(get create-new-find-elements (:find-element/name %))))
+(defn pull-resultset [super-graph {find-elements :link/find-element :as link} create-new-find-elements resultset]
+  (let [find-element-lookup (->> (mapv (juxt :find-element/name identity) find-elements)
                                  (into {}))]
-           [local-result])
-         resultset)
-       (mapv (fn [result]
-               (util/map-values #(hc/entity (hc/get-dbgraph super-graph dbval) %) result)))))
+    (->> (if (and (:link/single-result-as-entity? link) (= 0 (count resultset)))
+           (let [local-result (->> find-elements
+                                   (mapv (juxt :find-element/name #(get create-new-find-elements (:find-element/name %))))
+                                   (into {}))]
+             [local-result])
+           resultset)
+         (mapv (fn [result]
+                 (->> result
+                      (mapv (fn [[find-element-symbol entity-dbid]]
+                              (let [connection (get-in find-element-lookup [find-element-symbol :find-element/connection :db/id :id])
+                                    dbval (->DbVal connection nil)]
+                                [find-element-symbol (hc/entity (hc/get-dbgraph super-graph dbval) entity-dbid)])))
+                      (into {})))))))
 
 
 (defn ui [stage-tx! super-graph
@@ -71,12 +78,11 @@
            [:pre (doall (with-out-str
                           (binding [pprint/*print-miser-width* 1] ; not working
                             (pprint/pprint params))))]])
-        (let [dbval (get param-ctx :dbval)
-              resultset (pull-resultset super-graph dbval link create-new-find-elements
+        (let [resultset (pull-resultset super-graph link create-new-find-elements
                                         (let [params (q-util/build-params (fn [hole-name param-ctx]
                                                                             (get params hole-name))
                                                                           link param-ctx)
-                                              pull-exp (form/query-pull-exp find-elements dbval)
+                                              pull-exp (form/query-pull-exp find-elements)
                                               query-value [q params pull-exp]]
                                           (hc/select super-graph (hash query-value))))
               ordered-find-elements (find-elements-util/order-find-elements find-elements q)]
@@ -131,16 +137,15 @@
       (if (holes-filled? (q-util/parse-holes q) params)
         (let [p-filler (fn [link formulas param-ctx]
                          (q-util/build-params #(get params %) link param-ctx))
-              dbval (get param-ctx :dbval)
               ; we can use nil for :link/formula and formulas because we know our p-filler doesn't use it
               result-query [q
                             (p-filler link nil param-ctx)
-                            (form/query-pull-exp find-elements dbval)]
+                            (form/query-pull-exp find-elements)]
               inline-queries (if-let [maybe-resultset (hc/select super-graph (hash result-query))]
                                (->> (:link/link link)
                                     (filter :link/render-inline?)
                                     (mapv (fn [inner-link]
-                                            (let [resultset (pull-resultset super-graph dbval link create-new-find-elements maybe-resultset)
+                                            (let [resultset (pull-resultset super-graph link create-new-find-elements maybe-resultset)
                                                   param-ctx (assoc param-ctx :result (first resultset) ; why first?
                                                                              :query-params query-params)
                                                   params-map (links/build-query-params inner-link param-ctx)

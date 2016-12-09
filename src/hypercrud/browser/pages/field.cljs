@@ -3,7 +3,8 @@
             [hypercrud.client.tx :as tx]
             [hypercrud.form.q-util :as q-util]
             [hypercrud.ui.auto-control :refer [auto-control]]
-            [hypercrud.ui.form :as form]))
+            [hypercrud.ui.form :as form]
+            [hypercrud.types :refer [->DbVal]]))
 
 
 (defn ui [stage-tx! graph entity field navigate-cmp]
@@ -17,7 +18,7 @@
 
 (defn query [dbid field param-ctx]
   (let [param-ctx (merge param-ctx {:id (.-id dbid)})
-        dbval (get param-ctx :dbval)
+        dbval (->DbVal (.-conn-id dbid) nil)
         p-filler q-util/build-params-from-formula
         option-queries (form/field-queries p-filler param-ctx field)]
     (if (not (tx/tempid? dbid))

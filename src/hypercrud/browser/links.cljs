@@ -12,15 +12,12 @@
 
 
 (defn build-query-params [link param-ctx]
-  (let [query-params (q-util/build-params-map link param-ctx)
-        tempid-hack (fn [{:keys [:find-element/connection]}]
-                      ; todo use the find-element connection's dbval
-                      (hc/*temp-id!* (.-conn-id (get param-ctx :dbval))))]
+  (let [query-params (q-util/build-params-map link param-ctx)]
     {:link-dbid (.-dbid link)
      :query-params query-params
      ;; Create a result of shape [?e ?f] with new entities colored
      :create-new-find-elements (->> (:link/find-element link)
-                                    (mapv (juxt :find-element/name tempid-hack))
+                                    (mapv (juxt :find-element/name #(hc/*temp-id!* (-> % :find-element/connection :db/id :id))))
                                     (into {}))}))
 
 

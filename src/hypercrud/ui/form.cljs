@@ -2,6 +2,7 @@
   (:require [hypercrud.client.tx :as tx]
             [hypercrud.compile.eval :refer [eval]]
             [hypercrud.form.option :as option]
+            [hypercrud.types :refer [->DbVal]]
             [hypercrud.ui.auto-control :refer [auto-control]]))
 
 
@@ -44,10 +45,10 @@
     (remove nil? (mapv #(-> % :field/attribute :attribute/ident) (:form/field form)))))
 
 
-(defn query-pull-exp [find-elements dbval]
+(defn query-pull-exp [find-elements]
   (->> find-elements
-       (mapv (juxt :find-element/name (fn [find-element]
-                                        [dbval (form-pull-exp (:find-element/form find-element))])))
+       (mapv (juxt :find-element/name (fn [{:keys [:find-element/connection :find-element/form]}]
+                                        [(->DbVal (-> connection :db/id :id) nil) (form-pull-exp form)])))
        (into {})))
 
 
@@ -64,16 +65,3 @@
   [form p-filler param-ctx]
   (apply merge
          (mapv #(field-queries p-filler param-ctx %) (:form/field form))))
-
-
-(defn query [dbid form p-filler param-ctx]
-  (let [param-ctx (merge param-ctx {:id (.-id dbid)})
-        dbval (get param-ctx :dbval)
-        option-queries (form-option-queries form p-filler param-ctx) ; smelly, probably should not be using the same p-filler
-        ]
-    (if (not (tx/tempid? dbid))
-      (merge option-queries
-             {dbid ['[:find ?e :in $ ?e :where [?e]]
-                    {"$" dbval "?e" dbid}
-                    {"?e" [dbval (form-pull-exp form)]}]})
-      option-queries)))

@@ -21,16 +21,17 @@
                                  (mapv #(-> % :field/attribute :attribute/ident)))]))
 
 
-(defn get-option-records [{{find-elements :link/find-element q :link/query} :field/options-link :as field} graph entity]
+(defn get-option-records [{{find-elements :link/find-element q :link/query} :field/options-link :as field} super-graph entity]
+
   (if-let [q (if-not (empty? q)
                (reader/read-string q))]
-    (let [dbgraph (.-dbgraph entity)
-          ordered-find-elements (find-elements-util/order-find-elements find-elements q)]
-      (->> (hc/select graph (hash q) q)
+    (let [ordered-find-elements (find-elements-util/order-find-elements find-elements q)]
+      (->> (hc/select super-graph (hash q) q)
            (mapv (fn [result]
                    (mapv (fn [find-element]
-                           (let [dbid (get result (:find-element/name find-element))]
-                             ;todo use :find-element/connection
+                           (let [dbid (get result (:find-element/name find-element))
+                                 dbval (->DbVal (-> find-element :find-element/connection :db/id :id) nil)
+                                 dbgraph (hc/get-dbgraph super-graph dbval)]
                              (hc/entity dbgraph dbid)))
                          ordered-find-elements)))))))
 
@@ -42,13 +43,12 @@
                  (reader/read-string q)))]
     (let [query-name (hash q)
           params (p-filler link formulas param-ctx)
-          pull-dbval (get param-ctx :dbval)
           pull-exp (->> (mapv (juxt :find-element/name
-                                    (fn [{:keys [:find-element/form] :as find-element}]
-                                      ; todo use :find-element/connection
-                                      [pull-dbval (conj (mapv #(-> % :field/attribute :attribute/ident)
-                                                              (:form/field form))
-                                                        :db/id)]))
+                                    (fn [{:keys [:find-element/connection :find-element/form] :as find-element}]
+                                      [(->DbVal (-> connection :db/id :id) nil)
+                                       (conj (mapv #(-> % :field/attribute :attribute/ident)
+                                                   (:form/field form))
+                                             :db/id)]))
                               find-elements)
                         (into {}))]
       {query-name [q params pull-exp]})))
