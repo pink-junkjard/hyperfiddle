@@ -14,16 +14,15 @@
        (apply str)))
 
 
-(defn get-key [{{find-elements :link/find-element query :link/query} :field/options-link :as field}]
-  (hash [(:query/value query) (->> find-elements
-                                   (mapcat #(-> % :find-element/form :form/field))
-                                   (mapv #(-> % :field/attribute :attribute/ident)))]))
+(defn get-key [{{find-elements :link/find-element :as link} :field/options-link :as field}]
+  (hash [(:link/query link) (->> find-elements
+                                 (mapcat #(-> % :find-element/form :form/field))
+                                 (mapv #(-> % :field/attribute :attribute/ident)))]))
 
 
-(defn get-option-records [{{find-elements :link/find-element query :link/query} :field/options-link :as field} graph entity]
-  (if-let [q (let [q (:query/value query)]
-               (if-not (empty? q)
-                 (reader/read-string q)))]
+(defn get-option-records [{{find-elements :link/find-element q :link/query} :field/options-link :as field} graph entity]
+  (if-let [q (if-not (empty? q)
+               (reader/read-string q))]
     (let [dbgraph (.-dbgraph entity)]
       (->> (hc/select graph (hash q) q)
            (mapv (fn [result]
@@ -32,12 +31,12 @@
 
 
 ;todo should be get-queries and we can delete hc.form.util/field-queries
-(defn get-query [{{formulas :link/formula query :link/query find-elements :link/find-element} :field/options-link :as field} p-filler param-ctx]
-  (if-let [q (let [q (:query/value query)]
+(defn get-query [{{formulas :link/formula find-elements :link/find-element :as link} :field/options-link :as field} p-filler param-ctx]
+  (if-let [q (let [q (:link/query link)]
                (if-not (empty? q)
                  (reader/read-string q)))]
     (let [query-name (hash q)
-          params (p-filler query formulas param-ctx)
+          params (p-filler link formulas param-ctx)
           pull-dbval (get param-ctx :dbval)
           pull-exp (->> (mapv (juxt :find-element/name
                                     (fn [{:keys [:find-element/form] :as find-element}]

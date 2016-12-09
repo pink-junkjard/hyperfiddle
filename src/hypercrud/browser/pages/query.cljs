@@ -46,7 +46,7 @@
 
 
 (defn pull-resultset [super-graph dbval {find-elements :link/find-element :as link} create-new-find-elements resultset]
-  (->> (if (and (:query/single-result-as-entity? (:link/query link)) (= 0 (count resultset)))
+  (->> (if (and (:link/single-result-as-entity? link) (= 0 (count resultset)))
          (let [local-result (mapv #(get create-new-find-elements (:find-element/name %)) find-elements)]
            [local-result])
          resultset)
@@ -58,9 +58,9 @@
           {find-elements :link/find-element result-renderer-code :link/result-renderer :as link}
           {query-params :query-params create-new-find-elements :create-new-find-elements :as params-map}
           navigate-cmp param-ctx debug]
-  (if-let [q (some-> link :link/query :query/value reader/read-string)]
+  (if-let [q (some-> link :link/query reader/read-string)]
     (let [params (merge (initial-params-map q query-params)
-                        (q-util/build-dbhole-lookup (:link/query link)))
+                        (q-util/build-dbhole-lookup link))
           param-ctx (assoc param-ctx :query-params query-params)]
       (if-not (holes-filled? (q-util/parse-holes q) params) ;todo what if we have a user hole?
         [:div [:div "Unfilled query holes"]
@@ -71,7 +71,7 @@
               resultset (pull-resultset super-graph dbval link create-new-find-elements
                                         (let [params (q-util/build-params (fn [hole-name param-ctx]
                                                                             (get params hole-name))
-                                                                          (:link/query link) param-ctx)
+                                                                          link param-ctx)
                                               pull-exp (form/query-pull-exp find-elements dbval)
                                               query-value [q params pull-exp]]
                                           (hc/select super-graph (hash query-value))))
@@ -80,7 +80,7 @@
               ordered-forms (->> (util/parse-query-element q :find)
                                  (mapv str)
                                  (mapv #(get form-lookup %)))]
-          (if (-> link :link/query :query/single-result-as-entity?)
+          (if (:link/single-result-as-entity? link)
             (let [result (first resultset)]
               [:div
                [entity/ui stage-tx! super-graph result ordered-forms (:link/link link) navigate-cmp param-ctx]
@@ -118,16 +118,16 @@
 (defn query [super-graph {find-elements :link/find-element :as link}
              {query-params :query-params create-new-find-elements :create-new-find-elements :as params-map}
              param-ctx debug]
-  (if-let [q (some-> link :link/query :query/value reader/read-string)]
+  (if-let [q (some-> link :link/query reader/read-string)]
     (let [params (merge (initial-params-map q query-params)
-                        (q-util/build-dbhole-lookup (:link/query link)))]
+                        (q-util/build-dbhole-lookup link))]
       (if (holes-filled? (q-util/parse-holes q) params)
-        (let [p-filler (fn [query formulas param-ctx]
-                         (q-util/build-params #(get params %) query param-ctx))
+        (let [p-filler (fn [link formulas param-ctx]
+                         (q-util/build-params #(get params %) link param-ctx))
               dbval (get param-ctx :dbval)
               ; we can use nil for :link/formula and formulas because we know our p-filler doesn't use it
               result-query [q
-                            (p-filler (:link/query link) nil param-ctx)
+                            (p-filler link nil param-ctx)
                             (form/query-pull-exp find-elements dbval)]
               inline-queries (if-let [maybe-resultset (hc/select super-graph (hash result-query))]
                                (->> (:link/link link)
@@ -143,7 +143,7 @@
           (merge
             {(hash result-query) result-query}
             inline-queries
-            (let [p-filler (if (-> link :link/query :query/single-result-as-entity?)
+            (let [p-filler (if (:link/single-result-as-entity? link)
                              p-filler                       ; todo - why different?
                              q-util/build-params-from-formula)]
               (->> find-elements

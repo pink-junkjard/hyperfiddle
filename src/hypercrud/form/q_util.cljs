@@ -20,8 +20,8 @@
        (map str)))
 
 
-(defn build-dbhole-lookup [query]
-  (->> (:query/dbhole query)
+(defn build-dbhole-lookup [link]
+  (->> (:link/dbhole link)
        (map (fn [{:keys [:dbhole/name :dbhole/value]}]
               (if-not (or (empty? name) (nil? value))
                 ; transform project-id into conn-id
@@ -29,10 +29,10 @@
        (into {})))
 
 
-; type p-filler = fn [query formulas param-ctx] => vec
+; type p-filler = fn [link formulas param-ctx] => vec
 ; which is why we need this unused formulas param
-(defn build-params [fill-hole query param-ctx]
-  (->> (some-> (:query/value query) safe-read-string)
+(defn build-params [fill-hole link param-ctx]
+  (->> (some-> (:link/query link) safe-read-string)
        (parse-holes)                                        ; nil means '() and does the right thing
        (mapv (juxt identity #(fill-hole % param-ctx)))
        (into {})))
@@ -55,9 +55,9 @@
        (util/map-values #(run-formula % param-ctx))))
 
 
-(defn fill-hole-from-formula [query formulas]
+(defn fill-hole-from-formula [link formulas]
   (let [hole-formulas (read-eval-formulas formulas)
-        dbhole-values (build-dbhole-lookup query)]
+        dbhole-values (build-dbhole-lookup link)]
     (fn [hole-name param-ctx]
       (if-let [v (get dbhole-values hole-name)]
         v
@@ -65,6 +65,6 @@
 
 
 (defn build-params-from-formula
-  ([query formulas param-ctx] (build-params (fill-hole-from-formula query formulas) query param-ctx))
-  ([{:keys [:link/formula :link/query] :as link} param-ctx]
-   (build-params-from-formula query formula param-ctx)))
+  ([link formulas param-ctx] (build-params (fill-hole-from-formula link formulas) link param-ctx))
+  ([{:keys [:link/formula] :as link} param-ctx]
+   (build-params-from-formula link formula param-ctx)))
