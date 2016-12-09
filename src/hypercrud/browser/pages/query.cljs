@@ -63,10 +63,12 @@
                         (q-util/build-dbhole-lookup link))
           param-ctx (assoc param-ctx :query-params query-params)]
       (if-not (holes-filled? (q-util/parse-holes q) params) ;todo what if we have a user hole?
-        [:div [:div "Unfilled query holes"]
-         [:pre (doall (with-out-str
-                        (binding [pprint/*print-miser-width* 1] ; not working
-                          (pprint/pprint params))))]]
+        (if-not (:link/render-inline? link)
+          [:div
+           [:div "Unfilled query holes"]
+           [:pre (doall (with-out-str
+                          (binding [pprint/*print-miser-width* 1] ; not working
+                            (pprint/pprint params))))]])
         (let [dbval (get param-ctx :dbval)
               resultset (pull-resultset super-graph dbval link create-new-find-elements
                                         (let [params (q-util/build-params (fn [hole-name param-ctx]
