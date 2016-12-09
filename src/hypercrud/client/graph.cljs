@@ -99,66 +99,63 @@
   (set-state! [this editor-dbval editor-schema pulled-trees-map tempids t']
     ; pulled-trees-map :: Map[query List[List[Pulled-Tree]]]
     ;                               List[ResultHydrated]
-    ; ResultHydrated :: Tuple[EntityHydrated]
+    ; ResultHydrated :: Map[find-element EntityHydrated]
     ; (vec pulled-trees-map) :: List[[query Pulled-Trees]]
     ; query :: [q params [dbval pull-exp]]
 
     ; result-sets :: Map[query -> List[List[DbId]]]
-    (let [q->dbvals (fn [q pull-exps]
-                      (->> (util/parse-query-element q :find)
-                           (mapv str)
-                           (mapv (fn [find-element]
-                                   (let [[dbval _] (get pull-exps find-element)]
-                                     dbval)))))]
-      (let [resultset-by-query
-            (->> pulled-trees-map
-                 (mapv (fn [[query resultset-hydrated]]
-                         (let [[q params pull-exps] query
-                               ordered-dbvals (q->dbvals q pull-exps)
-                               resultset (if (instance? types/DbError resultset-hydrated)
-                                           []               ; just ignore the error and show no results
-                                           (mapv (fn [result-hydrated]
-                                                   (mapv (fn [entity-hydrated dbval]
-                                                           (let [id (:db/id entity-hydrated)
-                                                                 id (or (get-in tempids [(.-conn-id dbval) id]) id)]
-                                                             (->DbId id (.-conn-id dbval))))
-                                                         result-hydrated ordered-dbvals))
-                                                 resultset-hydrated))]
-                           ;; resultset comes out of hc/select
-                           [query resultset])))
-                 (into {}))]
-        (set! graph-data (GraphData. pulled-trees-map resultset-by-query)))
+    (let [resultset-by-query
+          (->> pulled-trees-map
+               (mapv (fn [[[q params pull-exps :as query] hydrated-resultset-or-error]]
+                       (let [resultset (if (instance? types/DbError hydrated-resultset-or-error)
+                                         []                 ; just ignore the error and show no results
+                                         (mapv (fn [result-hydrated]
+                                                 (->> result-hydrated
+                                                      (mapv (fn [[find-element entity-hydrated]]
+                                                              (let [find-element (str find-element)
+                                                                    [dbval _] (get pull-exps find-element)
+                                                                    id (:db/id entity-hydrated)
+                                                                    id (or (get-in tempids [(.-conn-id dbval) id]) id)]
+                                                                [find-element (->DbId id (.-conn-id dbval))])))
+                                                      (into {})))
+                                               hydrated-resultset-or-error))]
+                         ;; resultset comes out of hc/select
+                         [query resultset])))
+               (into {}))]
+      (set! graph-data (GraphData. pulled-trees-map resultset-by-query)))
 
-      ; grouped :: Map[DbVal -> PulledTrees]
+    ; grouped :: Map[DbVal -> PulledTrees]
 
 
-      ;; group by dbval, and give each list of hydrated-entities to the proper DbGraph so it can do datom stuff
+    ;; group by dbval, and give each list of hydrated-entities to the proper DbGraph so it can do datom stuff
 
-      (let [grouped (->> pulled-trees-map
-                         (mapcat (fn [[[q params pull-exps] hydrated-resultset-or-error]]
-                                   (let [hydrated-resultset-or-error (if (instance? types/DbError hydrated-resultset-or-error)
-                                                                       [] ; ignore error, show no results
-                                                                       hydrated-resultset-or-error)]
-                                     (let [transposed-resultset (util/transpose hydrated-resultset-or-error)]
-                                       (->> (q->dbvals q pull-exps)
-                                            (map vector transposed-resultset))))))
-                         (group-by (fn [[pulled-trees dbval]] dbval))
-                         (util/map-values (fn [things]      ;things :: List[[List[EntityHydrated] dbval]]
-                                            ;; All of these pulled trees are from the same database value
-                                            (mapcat (fn [[entities-hydrated dbval]] entities-hydrated) things))))
-            editor-graph (let [ptm (get grouped editor-dbval)
-                               tempids (get tempids (.-conn-id editor-dbval))]
-                           (dbGraph editor-schema editor-dbval nil ptm tempids))
-            graphs' (->> (mapv first named-queries)
-                         (filter #(instance? types/DbVal %))
-                         (remove #(= % editor-dbval))
-                         (mapv (juxt identity (fn [dbval]
-                                                (let [attributes (->> (hc/select this dbval)
-                                                                      (mapv (fn [[attr-dbid]] (hc/entity editor-graph attr-dbid))))
-                                                      schema (schema-util/build-schema attributes)
-                                                      new-ptm (get grouped dbval)
-                                                      tempids (get tempids (.-conn-id dbval))]
-                                                  (dbGraph schema dbval nil new-ptm tempids)))))
-                         (into {editor-dbval editor-graph}))]
-        (set! graphs graphs')))
+    (let [grouped (->> pulled-trees-map
+                       (mapv (fn [[[q params pull-exps] hydrated-resultset-or-error]]
+                               (let [hydrated-resultset-or-error (if (instance? types/DbError hydrated-resultset-or-error)
+                                                                   [] ; ignore error, show no results
+                                                                   hydrated-resultset-or-error)]
+                                 ; build a Map[dbval List[EntityHydrated]]
+                                 (->> pull-exps
+                                      (mapv (fn [[find-element [dbval _]]]
+                                              [dbval (mapv #(get % (symbol find-element))
+                                                           hydrated-resultset-or-error)]))
+                                      (into {})))))
+                       (apply merge-with concat))
+          editor-graph (let [ptm (get grouped editor-dbval)
+                             tempids (get tempids (.-conn-id editor-dbval))]
+                         (dbGraph editor-schema editor-dbval nil ptm tempids))
+          graphs' (->> (mapv first named-queries)
+                       (filter #(instance? types/DbVal %))
+                       (remove #(= % editor-dbval))
+                       (mapv (juxt identity (fn [dbval]
+                                              (let [attributes (->> (hc/select this dbval)
+                                                                    (mapv (fn [result]
+                                                                            (let [attr-dbid (get result "?attr")]
+                                                                              (hc/entity editor-graph attr-dbid)))))
+                                                    schema (schema-util/build-schema attributes)
+                                                    new-ptm (get grouped dbval)
+                                                    tempids (get tempids (.-conn-id dbval))]
+                                                (dbGraph schema dbval nil new-ptm tempids)))))
+                       (into {editor-dbval editor-graph}))]
+      (set! graphs graphs'))
     nil))

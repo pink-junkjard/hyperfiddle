@@ -3,9 +3,9 @@
             [cljs.reader :as reader]
             [clojure.set :as set]
             [hypercrud.browser.links :as links]
-            [hypercrud.browser.pages.entity :as entity]
             [hypercrud.client.core :as hc]
             [hypercrud.compile.eval :refer [eval]]
+            [hypercrud.form.find-elements :as find-elements-util]
             [hypercrud.form.q-util :as q-util]
             [hypercrud.types :refer [->DbId ->DbVal ->Entity]]
             [hypercrud.ui.auto-control :refer [auto-control]]
@@ -47,11 +47,13 @@
 
 (defn pull-resultset [super-graph dbval {find-elements :link/find-element :as link} create-new-find-elements resultset]
   (->> (if (and (:link/single-result-as-entity? link) (= 0 (count resultset)))
-         (let [local-result (mapv #(get create-new-find-elements (:find-element/name %)) find-elements)]
+         (let [local-result (->> find-elements
+                                 (mapv (juxt :find-element/name #(get create-new-find-elements (:find-element/name %))))
+                                 (into {}))]
            [local-result])
          resultset)
        (mapv (fn [result]
-               (mapv #(hc/entity (hc/get-dbgraph super-graph dbval) %) result)))))
+               (util/map-values #(hc/entity (hc/get-dbgraph super-graph dbval) %) result)))))
 
 
 (defn ui [stage-tx! super-graph
@@ -77,22 +79,24 @@
                                               pull-exp (form/query-pull-exp find-elements dbval)
                                               query-value [q params pull-exp]]
                                           (hc/select super-graph (hash query-value))))
-              form-lookup (->> (mapv (juxt :find-element/name :find-element/form) find-elements)
-                               (into {}))
-              ordered-forms (->> (util/parse-query-element q :find)
-                                 (mapv str)
-                                 (mapv #(get form-lookup %)))]
+              ordered-find-elements (find-elements-util/order-find-elements find-elements q)]
           (if (:link/single-result-as-entity? link)
             (let [result (first resultset)]
               [:div
-               [entity/ui stage-tx! super-graph result ordered-forms (:link/link link) navigate-cmp param-ctx]
+               (let [param-ctx (assoc param-ctx :result result)]
+                 [:div
+                  (map (fn [{:keys [:find-element/form] :as find-element}]
+                         (let [entity (get result (:find-element/name find-element))]
+                           ^{:key (hash [(.-dbid entity) (.-dbid form)])}
+                           [form/form super-graph entity form (:link/link link) stage-tx! navigate-cmp param-ctx]))
+                       ordered-find-elements)])
                (->> (concat (repeating-links stage-tx! link result navigate-cmp param-ctx)
                             (non-repeating-links stage-tx! link navigate-cmp param-ctx))
                     (interpose " · "))])
             [:div
              (if (empty? result-renderer-code)
                ^{:key (hc/t super-graph)}
-               [table/table super-graph resultset ordered-forms (:link/link link) stage-tx! navigate-cmp param-ctx]
+               [table/table super-graph resultset ordered-find-elements (:link/link link) stage-tx! navigate-cmp param-ctx]
                (let [{result-renderer :value error :error} (eval result-renderer-code)]
                  [:div
                   (if error
@@ -137,7 +141,7 @@
                                     (filter :link/render-inline?)
                                     (mapv (fn [inner-link]
                                             (let [resultset (pull-resultset super-graph dbval link create-new-find-elements maybe-resultset)
-                                                  param-ctx (assoc param-ctx :result (first resultset)
+                                                  param-ctx (assoc param-ctx :result (first resultset) ; why first?
                                                                              :query-params query-params)
                                                   params-map (links/build-query-params inner-link param-ctx)
                                                   debug (str "inline-query:" (.-dbid inner-link))]

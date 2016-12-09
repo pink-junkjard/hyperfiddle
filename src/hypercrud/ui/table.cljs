@@ -4,6 +4,7 @@
             [hypercrud.platform.native-event-listener :refer [native-listener]] ;provided dependency
             [hypercrud.types :refer [->DbId ->DbVal]]
             [hypercrud.ui.auto-control :refer [auto-table-cell]]
+            [hypercrud.util :as util]
             [reagent.core :as r]))
 
 
@@ -28,13 +29,14 @@
                  (:db/ident valueType)))))
 
 
-(defn build-col-heads [forms col-sort]
+(defn build-col-heads [ordered-find-elements col-sort]
   (let [[form-dbid' ident' direction] @col-sort]
-    (->> (mapcat (fn [{form-dbid :db/id fields :form/field :as form}]
+    (->> ordered-find-elements
+         (mapv :find-element/form)
+         (mapcat (fn [{form-dbid :db/id fields :form/field :as form}]
                    (->> fields
                         (sort-by :field/order)
-                        (mapv (juxt (constantly form-dbid) identity))))
-                 forms)
+                        (mapv (juxt (constantly form-dbid) identity)))))
          (map (fn [[form-dbid {:keys [:field/prompt] :as field}]]
                 (let [ident (-> field :field/attribute :attribute/ident)
                       with-sort-direction (fn [asc desc no-sort not-sortable]
@@ -97,12 +99,14 @@
 
 (def unicode-nbsp "\u00a0")
 
-(defn table-row [result forms {:keys [links navigate-cmp stage-tx!] :as fieldless-widget-args}]
+(defn table-row [result ordered-find-elements {:keys [links navigate-cmp stage-tx!] :as fieldless-widget-args}]
   (let [{:keys [param-ctx] :as fieldless-widget-args} (assoc-in fieldless-widget-args [:param-ctx :result] result)]
     [:tr
-     (mapcat (fn [form entity]
-               (build-row-cells form entity fieldless-widget-args))
-             forms result)
+     (mapcat (fn [find-element]
+               (let [form (:find-element/form find-element)
+                     entity (get result (:find-element/name find-element))]
+                 (build-row-cells form entity fieldless-widget-args)))
+             ordered-find-elements)
      [:td.link-cell {:key :link-cell}
       unicode-nbsp
       (->> links
@@ -113,19 +117,19 @@
            (interpose " · "))]]))
 
 
-(defn body [graph resultset forms repeating-links stage-tx! navigate-cmp sort-col param-ctx]
+(defn body [graph resultset ordered-find-elements repeating-links stage-tx! navigate-cmp sort-col param-ctx]
   [:tbody
    (let [[form-dbid sort-key direction] @sort-col
          sort-eids (fn [resultset]
-                     (let [[index form] (->> forms
-                                             (map-indexed vector)
-                                             (filter #(= form-dbid (-> % second :db/id)))
-                                             first)
+                     (let [{form :find-element/form find-element-name :find-element/name}
+                           (->> ordered-find-elements
+                                (filter #(= form-dbid (-> % :find-element/form :db/id)))
+                                first)
                            field (->> (:form/field form)
                                       (filter #(= sort-key (-> % :field/attribute :attribute/ident)))
                                       first)]
                        (if (and (not= nil field) (sortable? field))
-                         (sort-by #(get-in % [index sort-key])
+                         (sort-by #(get-in % [find-element-name sort-key])
                                   (condp = direction
                                     :asc #(compare %1 %2)
                                     :desc #(compare %2 %1))
@@ -134,22 +138,22 @@
      (->> resultset
           sort-eids
           (map (fn [result]
-                 ^{:key (hash (mapv :db/id result))}
-                 [table-row result forms {:graph graph
-                                          :links repeating-links
-                                          :navigate-cmp navigate-cmp
-                                          :param-ctx param-ctx
-                                          :stage-tx! stage-tx!}]))))])
+                 ^{:key (hash (util/map-values :db/id result))}
+                 [table-row result ordered-find-elements {:graph graph
+                                                          :links repeating-links
+                                                          :navigate-cmp navigate-cmp
+                                                          :param-ctx param-ctx
+                                                          :stage-tx! stage-tx!}]))))])
 
 
-(defn table [graph resultset forms links stage-tx! navigate-cmp param-ctx]
+(defn table [graph resultset ordered-find-elements links stage-tx! navigate-cmp param-ctx]
   (let [sort-col (r/atom nil)]
-    (fn [graph resultset forms links stage-tx! navigate-cmp param-ctx]
+    (fn [graph resultset ordered-find-elements links stage-tx! navigate-cmp param-ctx]
       (let [repeating-links (filter :link/repeating? links)]
         [:table.ui-table
          [:thead
           [:tr
-           (build-col-heads forms sort-col)
+           (build-col-heads ordered-find-elements sort-col)
            [:td.link-cell {:key :link-cell}
             (->> (remove :link/repeating? links)
                  (filter #(nil? (:link/field %)))
@@ -158,4 +162,4 @@
                           ^{:key (:db/id link)}
                           [navigate-cmp props (:link/prompt link)])))
                  (interpose " · "))]]]
-         [body graph resultset forms repeating-links stage-tx! navigate-cmp sort-col param-ctx]]))))
+         [body graph resultset ordered-find-elements repeating-links stage-tx! navigate-cmp sort-col param-ctx]]))))

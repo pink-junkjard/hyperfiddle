@@ -1,6 +1,7 @@
 (ns hypercrud.form.option
   (:require [cljs.reader :as reader]
             [hypercrud.client.core :as hc]
+            [hypercrud.form.find-elements :as find-elements-util]
             [hypercrud.types :refer [->DbVal]]))
 
 
@@ -23,11 +24,15 @@
 (defn get-option-records [{{find-elements :link/find-element q :link/query} :field/options-link :as field} graph entity]
   (if-let [q (if-not (empty? q)
                (reader/read-string q))]
-    (let [dbgraph (.-dbgraph entity)]
+    (let [dbgraph (.-dbgraph entity)
+          ordered-find-elements (find-elements-util/order-find-elements find-elements q)]
       (->> (hc/select graph (hash q) q)
            (mapv (fn [result]
-                   ;todo zip result with find-elements and use :find-element/connection
-                   (mapv #(hc/entity dbgraph %) result)))))))
+                   (mapv (fn [find-element]
+                           (let [dbid (get result (:find-element/name find-element))]
+                             ;todo use :find-element/connection
+                             (hc/entity dbgraph dbid)))
+                         ordered-find-elements)))))))
 
 
 ;todo should be get-queries and we can delete hc.form.util/field-queries
