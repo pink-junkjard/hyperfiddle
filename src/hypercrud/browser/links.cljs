@@ -6,11 +6,6 @@
             [hypercrud.form.q-util :as q-util]))
 
 
-(defn field-link [field-dbid dbid]
-  ;; field-dbid is assumed to be the editor-graph connection
-  {:href (str (base64/encode (pr-str field-dbid)) "/field/" (base64/encode (pr-str dbid)))})
-
-
 (defn build-query-params [link param-ctx]
   (let [query-params (q-util/build-params-map link param-ctx)]
     {:link-dbid (.-dbid link)

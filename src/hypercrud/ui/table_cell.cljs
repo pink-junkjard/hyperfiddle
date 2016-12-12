@@ -49,7 +49,8 @@
 (defn other-many [entity {:keys [field navigate-cmp]}]
   (let [ident (-> field :field/attribute :attribute/ident)]
     [:div
-     (let [{:keys [href]} (links/field-link (.-dbid field) (.-dbid entity))]
+     [:button {:on-click #(js/alert "todo")} "Edit"]
+     #_(let [{:keys [href]} (links/field-link (.-dbid field) (.-dbid entity))]
        [navigate-cmp {:href href} "Edit"])
      " "
      (->> (get entity ident)
