@@ -2,7 +2,7 @@
   (:require [cljs.reader :as reader]
             [clojure.string :as string]
             [hypercrud.browser.base-64-url-safe :as base64]
-            [hypercrud.browser.pages.query :as query]
+            [hypercrud.browser.query :as query]
             [hypercrud.client.core :as hc]
             [hypercrud.client.internal :as internal]
             [hypercrud.types :refer [->DbId ->DbVal]]

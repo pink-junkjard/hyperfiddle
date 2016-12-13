@@ -1,4 +1,4 @@
-(ns hypercrud.browser.pages.query
+(ns hypercrud.browser.query
   (:require [cljs.pprint :as pprint]
             [cljs.reader :as reader]
             [clojure.set :as set]
@@ -10,8 +10,7 @@
             [hypercrud.types :refer [->DbId ->DbVal ->Entity]]
             [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.form :as form]
-            [hypercrud.ui.table :as table]
-            [hypercrud.util :as util]))
+            [hypercrud.ui.table :as table]))
 
 
 (defn initial-params-map [q params]
