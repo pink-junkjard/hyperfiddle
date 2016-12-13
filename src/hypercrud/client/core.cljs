@@ -5,8 +5,7 @@
 
 
 (defprotocol SuperGraph
-  (select [this named-query]
-          [this named-query query-message])
+  (select [this named-query])
   (get-dbgraph [this dbval])
   (with [this more-statements])
   (t [this]))

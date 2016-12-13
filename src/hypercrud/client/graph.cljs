@@ -57,12 +57,7 @@
 
 (deftype SuperGraph [named-queries ^:mutable graphs ^:mutable graph-data]
   hc/SuperGraph
-  (select [this named-query] (hc/select this named-query nil))
-
-  (select [this named-query query-message]
-    #_(assert (contains? named-queries named-query)
-              (let [named-query (or query-message named-query)]
-                (str "Named-query: " named-query " not found in:\n" (with-out-str (pprint/pprint named-queries)))))
+  (select [this named-query]
     (get (:resultsets graph-data) (get named-queries named-query)))
 
   ; todo this goes away if dbval === dbgraph

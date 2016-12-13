@@ -49,7 +49,7 @@
           ordered-find-elements (find-elements-util/order-find-elements find-elements q)]
       (->> (hc/select super-graph (-> (get-query field p-filler nil)
                                       keys
-                                      first) q)
+                                      first))
            (mapv (fn [result]
                    (mapv (fn [find-element]
                            (let [dbid (get result (:find-element/name find-element))
