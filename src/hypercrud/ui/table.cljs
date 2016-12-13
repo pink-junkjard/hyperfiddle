@@ -63,21 +63,29 @@
                    [:span.sort-arrow arrow]]))))))
 
 
-(defn build-row-cells [form entity {:keys [graph] :as fieldless-widget-args}]
-  (->> (:form/field form)
-       (sort-by :field/order)
-       (map (fn [{:keys [:field/renderer] :as field}]
-              [:td.truncate {:key (:db/id field)}
-               (if (empty? renderer)
-                 [auto-table-cell entity (-> fieldless-widget-args
-                                             (assoc :field field))]
-                 (let [{renderer :value error :error} (eval renderer)]
-                   [:div.value
-                    (if error
-                      (pr-str error)
-                      (try
-                        (renderer graph entity)
-                        (catch :default e (pr-str e))))]))]))))
+(defn build-row-cells [form entity {:keys [graph links navigate-cmp stage-tx! param-ctx] :as fieldless-widget-args}]
+  (let [repeating-links (->> links
+                             (filter :link/repeating?)
+                             (mapv (juxt :link/ident identity))
+                             (into {}))
+        link-fn (fn [ident label]
+                  (let [link (get repeating-links ident)
+                        props (links/query-link stage-tx! link param-ctx)]
+                    [navigate-cmp props label]))]
+    (->> (:form/field form)
+         (sort-by :field/order)
+         (map (fn [{:keys [:field/renderer] :as field}]
+                [:td.truncate {:key (:db/id field)}
+                 (if (empty? renderer)
+                   [auto-table-cell entity (-> fieldless-widget-args
+                                               (assoc :field field))]
+                   (let [{renderer :value error :error} (eval renderer)]
+                     [:div.value
+                      (if error
+                        (pr-str error)
+                        (try
+                          (renderer graph link-fn entity)
+                          (catch :default e (pr-str e))))]))])))))
 
 
 ;(defn links-cell [entity form repeating-links retract-entity! show-links? navigate-cmp]

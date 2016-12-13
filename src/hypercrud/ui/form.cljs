@@ -1,12 +1,13 @@
 (ns hypercrud.ui.form
-  (:require [hypercrud.client.tx :as tx]
+  (:require [hypercrud.browser.links :as links]
             [hypercrud.compile.eval :refer [eval]]
             [hypercrud.form.option :as option]
             [hypercrud.types :refer [->DbVal]]
             [hypercrud.ui.auto-control :refer [auto-control]]))
 
 
-(defn field [entity {:keys [graph] {:keys [:field/prompt :field/renderer] :as field} :field :as widget-args}]
+(defn field [entity {:keys [graph links navigate-cmp stage-tx! param-ctx]
+                     {:keys [:field/prompt :field/renderer] :as field} :field :as widget-args}]
   [:div.field
    [:label
     (let [docstring (-> field :field/attribute :attribute/doc)]
@@ -15,12 +16,20 @@
       prompt)]
    (if (empty? renderer)
      [auto-control entity widget-args]
-     (let [{renderer :value error :error} (eval renderer)]
+     (let [{renderer :value error :error} (eval renderer)
+           repeating-links (->> links
+                                (filter :link/repeating?)
+                                (mapv (juxt :link/ident identity))
+                                (into {}))
+           link-fn (fn [ident label]
+                     (let [link (get repeating-links ident)
+                           props (links/query-link stage-tx! link param-ctx)]
+                       [navigate-cmp props label]))]
        [:div.value
         (if error
           (pr-str error)
           (try
-            (renderer graph entity)
+            (renderer graph link-fn entity)
             (catch :default e (pr-str e))))]))])
 
 
