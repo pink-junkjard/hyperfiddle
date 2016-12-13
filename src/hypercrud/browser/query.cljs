@@ -14,9 +14,7 @@
 
 
 (defn initial-params-map [q params]
-  (->> (q-util/parse-holes q)
-       (mapv (juxt identity #(get params %)))
-       (into {})))
+  (select-keys params (q-util/parse-holes q)))
 
 
 (defn holes-filled? [hole-names param-values]
@@ -132,7 +130,8 @@
              param-ctx debug]
   (if-let [q (some-> link :link/query reader/read-string)]
     (let [params (merge (initial-params-map q query-params)
-                        (q-util/build-dbhole-lookup link))]
+                        (q-util/build-dbhole-lookup link))
+          param-ctx (assoc param-ctx :query-params query-params)]
       (if (holes-filled? (q-util/parse-holes q) params)
         (let [p-filler (fn [link formulas param-ctx]
                          (q-util/build-params #(get params %) link param-ctx))
@@ -140,17 +139,20 @@
               result-query [q
                             (p-filler link nil param-ctx)
                             (form/query-pull-exp find-elements)]
-              inline-queries (if-let [maybe-resultset (hc/select super-graph (hash result-query))]
-                               (->> (:link/link link)
-                                    (filter :link/render-inline?)
-                                    (mapv (fn [inner-link]
-                                            (let [resultset (pull-resultset super-graph link create-new-find-elements maybe-resultset)
-                                                  param-ctx (assoc param-ctx :result (first resultset) ; why first?
-                                                                             :query-params query-params)
-                                                  params-map (links/build-query-params inner-link param-ctx)
-                                                  debug (str "inline-query:" (.-dbid inner-link))]
-                                              (query super-graph inner-link params-map param-ctx debug))))
-                                    (apply merge)))]
+              inline-queries (let [inline-links (->> (:link/link link)
+                                                     (filter :link/render-inline?))]
+                               (some->> (hc/select super-graph (hash result-query))
+                                        (pull-resultset super-graph link create-new-find-elements)
+                                        (mapcat (fn [result]
+                                                  (mapv (fn [inline-link]
+                                                          (let [param-ctx (assoc param-ctx :result result
+                                                                                           ;:query-params query-params
+                                                                                           )
+                                                                params-map (links/build-query-params inline-link param-ctx)
+                                                                debug (str "inline-query:" (.-dbid inline-link))]
+                                                            (query super-graph inline-link params-map param-ctx debug)))
+                                                        inline-links)))
+                                        (apply merge)))]
           (merge
             {(hash result-query) result-query}
             inline-queries

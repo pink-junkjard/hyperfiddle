@@ -44,7 +44,7 @@
      [radio-option "--" form-name #(change! nil) (= nil value)]]))
 
 
-(defn radio-ref* [entity {:keys [field graph stage-tx!]}]
+(defn radio-ref* [entity {:keys [field graph stage-tx! param-ctx]}]
   ; TODO only one radio-group on the page until we get a unique form-name
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         value (get entity ident)
@@ -58,7 +58,7 @@
                   checked? (= id value)]
               ^{:key (hash id)}
               [radio-option label form-name #(change! id) checked?]))
-          (option/get-option-records field graph entity))
+          (option/get-option-records field graph (:query-params param-ctx)))
      ^{:key :blank}
      [radio-option "--" form-name #(change! nil) (= nil value)]]))
 

@@ -23,7 +23,7 @@
        [:option {:key :nil :value ""} "--"]]]]))
 
 
-(defn select* [entity {:keys [field graph stage-tx!]}]
+(defn select* [entity {:keys [field graph stage-tx! param-ctx]}]
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         value (get entity ident)
         conn-id (-> entity .-dbgraph .-dbval .-conn-id)
@@ -39,7 +39,7 @@
                                          (= "" select-value) nil
                                          :else-hc-select-option-node (->DbId (js/parseInt select-value 10) conn-id))]
                               (stage-tx! (tx/update-entity-attr entity attribute dbid))))}]
-    (let [option-records (option/get-option-records field graph entity)]
+    (let [option-records (option/get-option-records field graph (:query-params param-ctx))]
       #_(assert (or (nil? value)
                     (tx/tempid? (.-dbid value))
                     (nil? option-records)                   ; user hasn't picked the query yet but may be about to
