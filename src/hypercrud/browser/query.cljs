@@ -69,7 +69,7 @@
                         (q-util/build-dbhole-lookup link))
           param-ctx (assoc param-ctx :query-params query-params)]
       (if-not (holes-filled? (q-util/parse-holes q) params) ;todo what if we have a user hole?
-        (if-not (:link/render-inline? link)
+        (if-not (:link/render-inline? link)                 ; don't show this error when we are nested
           [:div
            [:div "Unfilled query holes"]
            [:pre (doall (with-out-str
@@ -83,44 +83,47 @@
                                               query-value [q params pull-exp]]
                                           (hc/select super-graph (hash query-value))))
               ordered-find-elements (find-elements-util/order-find-elements find-elements q)]
-          (if (:link/single-result-as-entity? link)
-            (let [result (first resultset)]
-              [:div
-               (let [param-ctx (assoc param-ctx :result result)]
-                 [:div
-                  (map (fn [{:keys [:find-element/form] :as find-element}]
-                         (let [entity (get result (:find-element/name find-element))]
-                           ^{:key (hash [(.-dbid entity) (.-dbid form)])}
-                           [form/form super-graph entity form (:link/link link) stage-tx! navigate-cmp param-ctx]))
-                       ordered-find-elements)])
-               (->> (concat (repeating-links stage-tx! link result navigate-cmp param-ctx)
-                            (non-repeating-links stage-tx! link navigate-cmp param-ctx))
-                    (interpose " · "))])
-            (if (empty? result-renderer-code)
-              ^{:key (hc/t super-graph)}
-              [table/table super-graph resultset ordered-find-elements (:link/link link) stage-tx! navigate-cmp param-ctx]
-              (let [{result-renderer :value error :error} (eval result-renderer-code)]
+          (if (empty? result-renderer-code)
+            (if (:link/single-result-as-entity? link)
+              (let [result (first resultset)]
                 [:div
-                 (if error
-                   [:div (pr-str error)]
+                 (let [param-ctx (assoc param-ctx :result result)]
                    [:div
-                    [:ul
-                     (let [repeating-links (->> (:link/link link)
-                                                (filter :link/repeating?))]
-                       (->> resultset
-                            (map (fn [result]
-                                   (let [link-fn (fn [ident label]
-                                                   (let [link (->> repeating-links
-                                                                   (filter #(= ident (:link/ident %)))
-                                                                   first)
-                                                         param-ctx (merge param-ctx {:result result})
-                                                         props (links/query-link stage-tx! link param-ctx)]
-                                                     [navigate-cmp props label]))]
-                                     [:li {:key (hash result)}
-                                      (try
-                                        (result-renderer super-graph link-fn result)
-                                        (catch :default e (pr-str e)))])))))]])
-                 [:div.links (interpose " · " (non-repeating-links stage-tx! link navigate-cmp param-ctx))]]))))))
+                    (map (fn [{:keys [:find-element/form] :as find-element}]
+                           (let [entity (get result (:find-element/name find-element))]
+                             ^{:key (hash [(.-dbid entity) (.-dbid form)])}
+                             [form/form super-graph entity form (:link/link link) stage-tx! navigate-cmp param-ctx]))
+                         ordered-find-elements)])
+                 (->> (concat (repeating-links stage-tx! link result navigate-cmp param-ctx)
+                              (non-repeating-links stage-tx! link navigate-cmp param-ctx))
+                      (interpose " · "))])
+              ^{:key (hc/t super-graph)}
+              [table/table super-graph resultset ordered-find-elements (:link/link link) stage-tx! navigate-cmp param-ctx])
+            (let [{result-renderer :value error :error} (eval result-renderer-code)
+                  repeating-links (->> (:link/link link)
+                                       (filter :link/repeating?)
+                                       (mapv (juxt :link/ident identity))
+                                       (into {}))
+                  render-result (fn [result]
+                                  (let [link-fn (fn [ident label]
+                                                  (let [link (get repeating-links ident)
+                                                        param-ctx (merge param-ctx {:result result})
+                                                        props (links/query-link stage-tx! link param-ctx)]
+                                                    [navigate-cmp props label]))]
+                                    (try
+                                      (result-renderer super-graph link-fn result)
+                                      (catch :default e (pr-str e)))))]
+              [:div
+               (if error
+                 [:pre (pprint/pprint error)]
+                 (if (:link/single-result-as-entity? link)
+                   (render-result (first resultset))
+                   [:ul
+                    (->> resultset
+                         (map (fn [result]
+                                [:li {:key (hash result)}
+                                 (render-result result)])))]))
+               [:div.links (interpose " · " (non-repeating-links stage-tx! link navigate-cmp param-ctx))]])))))
     [:div "Query record is incomplete"]))
 
 
