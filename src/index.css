@@ -140,61 +140,6 @@ td > .radio-boolean > .radio-group {
     width: auto;
 }
 
-.master-detail {
-    flex: 1 1 auto;
-    display: flex;
-    flex-flow: row;
-}
-
-.master-detail > ul {
-    flex: 0 0 175px;
-    padding: 0;
-    margin: 0;
-    list-style: none;
-    float: left;
-}
-
-.master-detail > div {
-    flex: 1 1 auto;
-    display: flex;
-    flex-flow: column;
-}
-
-.master-detail li.selected {
-    font-weight: bold;
-    /*border-right-width: 0;*/
-}
-/*
-.master-detail li.selected a:hover {
-    background-color: inherit;
-}
-
-.master-detail li a:hover {
-    background-color: #dbdbdb;
-}
-
-.master-detail li {
-    display: block;
-    border: 1px solid #428bca;
-    border-bottom-width: 0;
-}
-
-.master-detail li a {
-    height: 1.5em;
-    display: block;
-    padding: 0.5em 1em;
-    text-decoration: none;
-}
-*/
-.master-detail .field {
-    border: none;
-}
-
-.master-detail .field > * {
-    display: block;
-    width: 100%;
-}
-
 .link-menu {
     width: 80px;
     border: 0 solid #a8a8a8;
