@@ -105,7 +105,6 @@
 ;         [:span {:key "close" :on-click #(reset! open? false)} "Close"]]
 ;        [:div {:on-click #(reset! open? true)} "⚙"]))))
 
-(def unicode-nbsp "\u00a0")
 
 (defn table-row [result ordered-find-elements {:keys [links navigate-cmp stage-tx!] :as fieldless-widget-args}]
   (let [{:keys [param-ctx] :as fieldless-widget-args} (assoc-in fieldless-widget-args [:param-ctx :result] result)]
@@ -116,7 +115,6 @@
                  (build-row-cells form entity fieldless-widget-args)))
              ordered-find-elements)
      [:td.link-cell {:key :link-cell}
-      unicode-nbsp
       (->> links
            (filter #(nil? (:link/field %)))
            (map (fn [{:keys [:db/id :link/prompt] :as link}]
