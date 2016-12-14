@@ -111,7 +111,7 @@
 
 
 (comment
-  (let [initial-select (let [result (first (option/get-option-records field graph query-params))]
+  (let [initial-select (let [result (first (option/get-option-records field graph param-ctx))]
                          (assert (= 1 (count result)) "Cannot use multiple find-elements for an options-link")
                          (first result))
         select-value-atom (r/atom (:db/id initial-select))]
@@ -126,7 +126,7 @@
                                    (reset! select-value-atom value))}
                ; todo assert selected value is in record set
                ; need lower level select component that can be reused here and in select.cljs
-               select-options (->> (option/get-option-records field graph query-params)
+               select-options (->> (option/get-option-records field graph param-ctx)
                                    (mapv (fn [result]
                                            (assert (= 1 (count result)) "Cannot use multiple find-elements for an options-link")
                                            (let [entity (first result)]

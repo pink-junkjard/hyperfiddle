@@ -58,7 +58,7 @@
                   checked? (= id value)]
               ^{:key (hash id)}
               [radio-option label form-name #(change! id) checked?]))
-          (option/get-option-records field graph (:query-params param-ctx)))
+          (option/get-option-records field graph param-ctx))
      ^{:key :blank}
      [radio-option "--" form-name #(change! nil) (= nil value)]]))
 

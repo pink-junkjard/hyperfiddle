@@ -1,7 +1,6 @@
 (ns hypercrud.ui.form
   (:require [hypercrud.browser.links :as links]
             [hypercrud.compile.eval :refer [eval]]
-            [hypercrud.form.option :as option]
             [hypercrud.types :refer [->DbVal]]
             [hypercrud.ui.auto-control :refer [auto-control]]))
 
@@ -59,18 +58,3 @@
        (mapv (juxt :find-element/name (fn [{:keys [:find-element/connection :find-element/form]}]
                                         [(->DbVal (-> connection :db/id :id) nil) (form-pull-exp form)])))
        (into {})))
-
-
-(defn field-queries [p-filler param-ctx field]
-  (let [{:keys [:attribute/valueType :attribute/isComponent]} (:field/attribute field)
-        is-ref (= (:db/ident valueType) :db.type/ref)]
-    ; if we are a ref we ALWAYS need the query from the field options
-    ; EXCEPT when we are component, in which case no options are rendered, just a form, handled below
-    (if (and is-ref (not isComponent))
-      (option/get-query field p-filler param-ctx))))
-
-
-(defn form-option-queries "get the form options recursively for all expanded forms"
-  [form p-filler param-ctx]
-  (apply merge
-         (mapv #(field-queries p-filler param-ctx %) (:form/field form))))

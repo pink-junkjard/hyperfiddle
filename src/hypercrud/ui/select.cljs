@@ -39,7 +39,7 @@
                                          (= "" select-value) nil
                                          :else-hc-select-option-node (->DbId (js/parseInt select-value 10) conn-id))]
                               (stage-tx! (tx/update-entity-attr entity attribute dbid))))}]
-    (let [option-records (option/get-option-records field graph (:query-params param-ctx))]
+    (let [option-records (option/get-option-records field graph param-ctx)]
       #_(assert (or (nil? value)
                     (tx/tempid? (.-dbid value))
                     (nil? option-records)                   ; user hasn't picked the query yet but may be about to

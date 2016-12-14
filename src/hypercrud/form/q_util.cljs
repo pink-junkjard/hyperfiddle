@@ -29,7 +29,6 @@
        (into {})))
 
 
-; type p-filler = fn [link param-ctx] => vec
 ; type fill-hole = fn [hole-name param-ctx] => param
 (defn build-params [fill-hole link param-ctx]
   (->> (some-> (:link/query link) safe-read-string)
@@ -51,14 +50,10 @@
 
 
 ; returns type fill-hole (for threading into build-params)
-(defn fill-hole-from-formula [link formulas]
+(defn fill-hole-from-formula [{formulas :link/formula :as link}]
   (let [hole-formulas (read-eval-formulas formulas)
         dbhole-values (build-dbhole-lookup link)]
     (fn [hole-name param-ctx]
       (if-let [v (get dbhole-values hole-name)]
         v
         (run-formula (get hole-formulas hole-name) param-ctx)))))
-
-
-(defn build-params-from-formula [{formulas :link/formula :as link} param-ctx]
-  (build-params (fill-hole-from-formula link formulas) link param-ctx))
