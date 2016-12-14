@@ -3,7 +3,7 @@
             [hypercrud.compile.eval :refer [eval]]
             [hypercrud.platform.native-event-listener :refer [native-listener]] ;provided dependency
             [hypercrud.types :refer [->DbId ->DbVal]]
-            [hypercrud.ui.auto-control :refer [auto-table-cell]]
+            [hypercrud.ui.auto-control :refer [auto-table-cell *connection-color*]]
             [hypercrud.util :as util]
             [reagent.core :as r]))
 
@@ -75,7 +75,8 @@
     (->> (:form/field form)
          (sort-by :field/order)
          (map (fn [{:keys [:field/renderer] :as field}]
-                [:td.truncate {:key (:db/id field)}
+                [:td.truncate {:key (:db/id field)
+                               :style {:border-color (*connection-color* (-> entity :db/id :conn-id))}}
                  (if (empty? renderer)
                    [auto-table-cell entity (-> fieldless-widget-args
                                                (assoc :field field))]

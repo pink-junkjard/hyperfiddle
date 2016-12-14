@@ -2,7 +2,7 @@
   (:require [hypercrud.browser.links :as links]
             [hypercrud.compile.eval :refer [eval]]
             [hypercrud.types :refer [->DbVal]]
-            [hypercrud.ui.auto-control :refer [auto-control]]))
+            [hypercrud.ui.auto-control :refer [auto-control *connection-color*]]))
 
 
 (defn field [entity {:keys [graph links navigate-cmp stage-tx! param-ctx]
@@ -33,7 +33,7 @@
 
 
 (defn form [graph entity form links stage-tx! navigate-cmp param-ctx]
-  [:div.form
+  [:div.form {:style {:border-color (*connection-color* (-> entity :db/id :conn-id))}}
    (->> (:form/field form)
         (sort-by :field/order)
         (map (fn [fieldinfo]
