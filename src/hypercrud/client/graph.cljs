@@ -126,15 +126,16 @@
 
     (let [grouped (->> pulled-trees-map
                        (mapv (fn [[[q params pull-exps] hydrated-resultset-or-error]]
-                               (let [hydrated-resultset-or-error (if (instance? types/DbError hydrated-resultset-or-error)
+                               (let [hydrated-resultset (if (instance? types/DbError hydrated-resultset-or-error)
                                                                    [] ; ignore error, show no results
                                                                    hydrated-resultset-or-error)]
                                  ; build a Map[dbval List[EntityHydrated]]
                                  (->> pull-exps
                                       (mapv (fn [[find-element [dbval _]]]
-                                              [dbval (mapv #(get % (symbol find-element))
-                                                           hydrated-resultset-or-error)]))
-                                      (into {})))))
+                                              {dbval (mapv (fn [result]
+                                                             (get result (symbol find-element)))
+                                                           hydrated-resultset)}))
+                                      (apply merge-with concat)))))
                        (apply merge-with concat))
           editor-graph (let [ptm (get grouped editor-dbval)
                              tempids (get tempids (.-conn-id editor-dbval))]
