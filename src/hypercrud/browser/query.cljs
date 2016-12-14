@@ -135,11 +135,10 @@
                         (q-util/build-dbhole-lookup link))
           param-ctx (assoc param-ctx :query-params query-params)]
       (if (holes-filled? (q-util/parse-holes q) params)
-        (let [p-filler (fn [link formulas param-ctx]
+        (let [p-filler (fn [link param-ctx]
                          (q-util/build-params #(get params %) link param-ctx))
-              ; we can use nil for :link/formula and formulas because we know our p-filler doesn't use it
               result-query [q
-                            (p-filler link nil param-ctx)
+                            (p-filler link param-ctx)
                             (form/query-pull-exp find-elements)]
               inline-queries (let [inline-links (->> (:link/link link)
                                                      (filter :link/render-inline?))]

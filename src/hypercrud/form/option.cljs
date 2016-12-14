@@ -23,11 +23,11 @@
 
 
 ;todo should be get-queries and we can delete hc.form.util/field-queries
-(defn get-query [{{formulas :link/formula find-elements :link/find-element :as link} :field/options-link :as field} p-filler param-ctx]
+(defn get-query [{{find-elements :link/find-element :as link} :field/options-link :as field} p-filler param-ctx]
   (if-let [q (let [q (:link/query link)]
                (if-not (empty? q)
                  (reader/read-string q)))]
-    (let [params (p-filler link formulas param-ctx)
+    (let [params (p-filler link param-ctx)
           pull-exp (->> (mapv (juxt :find-element/name
                                     (fn [{:keys [:find-element/connection :find-element/form] :as find-element}]
                                       [(->DbVal (-> connection :db/id :id) nil)
@@ -44,7 +44,7 @@
   (if-let [q (if-not (empty? q)
                (reader/read-string q))]
     (let [params (merge query-params (q-util/build-dbhole-lookup link))
-          p-filler (fn [link formulas param-ctx]
+          p-filler (fn [link param-ctx]
                      (q-util/build-params #(get params %) link param-ctx))
           ordered-find-elements (find-elements-util/order-find-elements find-elements q)]
       (->> (hc/select super-graph (-> (get-query field p-filler nil)

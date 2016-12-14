@@ -29,8 +29,8 @@
        (into {})))
 
 
-; type p-filler = fn [link formulas param-ctx] => vec
-; which is why we need this unused formulas param
+; type p-filler = fn [link param-ctx] => vec
+; type fill-hole = fn [hole-name param-ctx] => param
 (defn build-params [fill-hole link param-ctx]
   (->> (some-> (:link/query link) safe-read-string)
        (parse-holes)                                        ; nil means '() and does the right thing
@@ -55,6 +55,7 @@
        (util/map-values #(run-formula % param-ctx))))
 
 
+; returns type fill-hole (for threading into build-params)
 (defn fill-hole-from-formula [link formulas]
   (let [hole-formulas (read-eval-formulas formulas)
         dbhole-values (build-dbhole-lookup link)]
@@ -64,7 +65,5 @@
         (run-formula (get hole-formulas hole-name) param-ctx)))))
 
 
-(defn build-params-from-formula
-  ([link formulas param-ctx] (build-params (fill-hole-from-formula link formulas) link param-ctx))
-  ([{:keys [:link/formula] :as link} param-ctx]
-   (build-params-from-formula link formula param-ctx)))
+(defn build-params-from-formula [{formulas :link/formula :as link} param-ctx]
+  (build-params (fill-hole-from-formula link formulas) link param-ctx))
