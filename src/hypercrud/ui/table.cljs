@@ -98,7 +98,7 @@
 ;             (->> repeating-links
 ;                  (map (fn [{:keys [:link/ident :link/prompt] :as link}]
 ;                         (let [param-ctx {:user-profile hc/*user-profile*
-;                                          :entity entity}]
+;                                          :result ???}]
 ;                           (links/query-link link param-ctx #(navigate-cmp {:key ident :href %} prompt))))))
 ;             (if retract-entity!
 ;               [:span {:key "hypercrud-delete-row" :on-click #(retract-entity! (:db/id entity))} "Delete Row"])))
