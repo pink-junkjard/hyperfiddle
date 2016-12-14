@@ -149,7 +149,7 @@
                                                           (let [param-ctx (assoc param-ctx :result result
                                                                                            ;:query-params query-params
                                                                                            )
-                                                                params-map (links/build-query-params inline-link param-ctx)
+                                                                params-map (links/build-params-map inline-link param-ctx)
                                                                 debug (str "inline-query:" (.-dbid inline-link))]
                                                             (query super-graph inline-link params-map param-ctx debug)))
                                                         inline-links)))

@@ -35,7 +35,7 @@
          (filter #(= field-dbid (some-> % :link/field .-dbid)))
          (filter :link/render-inline?)
          (map (fn [link]
-                (let [params-map (links/build-query-params link param-ctx)
+                (let [params-map (links/build-params-map link param-ctx)
                       debug (str "table-many-ref:" field-dbid ":" (:field/prompt field))
                       ; todo do we need a different param-ctx for rendering the ui?
                       param-ctx param-ctx]

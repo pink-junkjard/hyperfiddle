@@ -50,11 +50,6 @@
     ))
 
 
-(defn build-params-map [{formulas :link/formula :as link} param-ctx]
-  (->> (read-eval-formulas formulas)
-       (util/map-values #(run-formula % param-ctx))))
-
-
 ; returns type fill-hole (for threading into build-params)
 (defn fill-hole-from-formula [link formulas]
   (let [hole-formulas (read-eval-formulas formulas)
