@@ -5,7 +5,7 @@
             [hypercrud.ui.auto-control :refer [auto-control connection-color]]))
 
 
-(defn field [entity {:keys [graph links navigate-cmp stage-tx! param-ctx]
+(defn field [entity {:keys [graph links navigate-cmp user-swap! param-ctx]
                      {:keys [:field/prompt :field/renderer] :as field} :field :as widget-args}]
   [:div.field
    [:label
@@ -22,7 +22,7 @@
                                 (into {}))
            link-fn (fn [ident label]
                      (let [link (get repeating-links ident)
-                           props (links/query-link stage-tx! link param-ctx)]
+                           props (links/query-link graph user-swap! link param-ctx)]
                        [navigate-cmp props label]))]
        [:div.value
         (if error
@@ -32,7 +32,7 @@
             (catch :default e (pr-str e))))]))])
 
 
-(defn form [graph entity form links stage-tx! navigate-cmp param-ctx]
+(defn form [graph entity form links user-swap! navigate-cmp param-ctx]
   (let [param-ctx (assoc param-ctx :color ((:color-fn param-ctx) entity param-ctx))
         style {:border-color (connection-color (:color param-ctx))}]
     [:div.form {:style style}
@@ -46,7 +46,7 @@
                                   :links links
                                   :navigate-cmp navigate-cmp
                                   :param-ctx param-ctx
-                                  :stage-tx! stage-tx!}]))))]))
+                                  :user-swap! user-swap!}]))))]))
 
 
 (defn form-pull-exp [form]

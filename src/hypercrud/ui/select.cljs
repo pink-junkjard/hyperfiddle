@@ -4,7 +4,7 @@
             [hypercrud.types :refer [->DbId]]))
 
 
-(defn select-boolean [entity {:keys [field stage-tx!]}]
+(defn select-boolean [entity {:keys [field user-swap!]}]
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         value (get entity ident)
         props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
@@ -14,7 +14,7 @@
                                      "" nil
                                      "true" true
                                      "false" false)]
-                            (stage-tx! (tx/update-entity-attr entity attribute v)))}]
+                             (user-swap! {:tx (tx/update-entity-attr entity attribute v)}))}]
     [:div.value.editable-select {:key ident}
      [:span.select
       [:select props
@@ -23,7 +23,7 @@
        [:option {:key :nil :value ""} "--"]]]]))
 
 
-(defn select* [entity {:keys [field graph stage-tx! param-ctx]}]
+(defn select* [entity {:keys [field graph user-swap! param-ctx]}]
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         value (get entity ident)
         conn-id (-> entity .-dbgraph .-dbval .-conn-id)
@@ -34,11 +34,11 @@
 
                ;; reconstruct the typed value
                :on-change #(do
-                            (let [select-value (.-target.value %)
-                                  dbid (cond
-                                         (= "" select-value) nil
-                                         :else-hc-select-option-node (->DbId (js/parseInt select-value 10) conn-id))]
-                              (stage-tx! (tx/update-entity-attr entity attribute dbid))))}]
+                             (let [select-value (.-target.value %)
+                                   dbid (cond
+                                          (= "" select-value) nil
+                                          :else-hc-select-option-node (->DbId (js/parseInt select-value 10) conn-id))]
+                               (user-swap! {:tx (tx/update-entity-attr entity attribute dbid)})))}]
     (let [option-records (option/get-option-records field graph param-ctx)]
       #_(assert (or (nil? value)
                     (tx/tempid? (.-dbid value))

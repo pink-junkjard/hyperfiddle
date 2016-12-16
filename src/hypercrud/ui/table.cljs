@@ -63,14 +63,14 @@
                    [:span.sort-arrow arrow]]))))))
 
 
-(defn build-row-cells [form entity {:keys [graph links navigate-cmp stage-tx! param-ctx] :as fieldless-widget-args}]
+(defn build-row-cells [form entity {:keys [graph links navigate-cmp user-swap! param-ctx] :as fieldless-widget-args}]
   (let [repeating-links (->> links
                              (filter :link/repeating?)
                              (mapv (juxt :link/ident identity))
                              (into {}))
         link-fn (fn [ident label]
                   (let [link (get repeating-links ident)
-                        props (links/query-link stage-tx! link param-ctx)]
+                        props (links/query-link graph user-swap! link param-ctx)]
                     [navigate-cmp props label]))
         param-ctx (assoc param-ctx :color ((:color-fn param-ctx) entity param-ctx))
         style {:border-color (connection-color (:color param-ctx))}]
@@ -108,7 +108,7 @@
 ;        [:div {:on-click #(reset! open? true)} "⚙"]))))
 
 
-(defn table-row [result ordered-find-elements {:keys [links navigate-cmp stage-tx!] :as fieldless-widget-args}]
+(defn table-row [result ordered-find-elements {:keys [graph links navigate-cmp user-swap!] :as fieldless-widget-args}]
   (let [{:keys [param-ctx] :as fieldless-widget-args} (assoc-in fieldless-widget-args [:param-ctx :result] result)]
     [:tr
      (mapcat (fn [find-element]
@@ -120,12 +120,12 @@
       (->> links
            (filter #(nil? (:link/field %)))
            (map (fn [{:keys [:db/id :link/prompt] :as link}]
-                  (let [props (assoc (links/query-link stage-tx! link param-ctx) :key id)]
+                  (let [props (assoc (links/query-link graph user-swap! link param-ctx) :key id)]
                     (navigate-cmp props prompt))))
            (interpose " · "))]]))
 
 
-(defn body [graph resultset ordered-find-elements repeating-links stage-tx! navigate-cmp sort-col param-ctx]
+(defn body [super-graph resultset ordered-find-elements repeating-links user-swap! navigate-cmp sort-col param-ctx]
   [:tbody
    (let [[form-dbid sort-key direction] @sort-col
          sort-eids (fn [resultset]
@@ -147,16 +147,16 @@
           sort-eids
           (map (fn [result]
                  ^{:key (hash (util/map-values :db/id result))}
-                 [table-row result ordered-find-elements {:graph graph
+                 [table-row result ordered-find-elements {:graph super-graph
                                                           :links repeating-links
                                                           :navigate-cmp navigate-cmp
                                                           :param-ctx param-ctx
-                                                          :stage-tx! stage-tx!}]))))])
+                                                          :user-swap! user-swap!}]))))])
 
 
-(defn table [graph resultset ordered-find-elements links stage-tx! navigate-cmp param-ctx]
+(defn table [super-graph resultset ordered-find-elements links user-swap! navigate-cmp param-ctx]
   (let [sort-col (r/atom nil)]
-    (fn [graph resultset ordered-find-elements links stage-tx! navigate-cmp param-ctx]
+    (fn [super-graph resultset ordered-find-elements links user-swap! navigate-cmp param-ctx]
       (let [repeating-links (filter :link/repeating? links)]
         [:table.ui-table
          [:thead
@@ -166,8 +166,8 @@
             (->> (remove :link/repeating? links)
                  (filter #(nil? (:link/field %)))
                  (map (fn [link]
-                        (let [props (links/query-link stage-tx! link param-ctx)]
+                        (let [props (links/query-link super-graph user-swap! link param-ctx)]
                           ^{:key (:db/id link)}
                           [navigate-cmp props (:link/prompt link)])))
                  (interpose " · "))]]]
-         [body graph resultset ordered-find-elements repeating-links stage-tx! navigate-cmp sort-col param-ctx]]))))
+         [body super-graph resultset ordered-find-elements repeating-links user-swap! navigate-cmp sort-col param-ctx]]))))

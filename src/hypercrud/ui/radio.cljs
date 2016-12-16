@@ -30,11 +30,11 @@
 ;       [radio-option "--" form-name #(change! nil) (= nil value)])])
 
 
-(defn radio-boolean [entity {:keys [field stage-tx!]}]
+(defn radio-boolean [entity {:keys [field user-swap!]}]
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         value (get entity ident)
         form-name (str (:db/id entity) ident)
-        change! #(stage-tx! (tx/update-entity-attr entity attribute %))]
+        change! #(user-swap! {:tx (tx/update-entity-attr entity attribute %)})]
     [:div.value.radio-boolean {:key ident}
      ^{:key :true}
      [radio-option "True" form-name #(change! true) (= true value)]
@@ -44,12 +44,12 @@
      [radio-option "--" form-name #(change! nil) (= nil value)]]))
 
 
-(defn radio-ref* [entity {:keys [field graph stage-tx! param-ctx]}]
+(defn radio-ref* [entity {:keys [field graph user-swap! param-ctx]}]
   ; TODO only one radio-group on the page until we get a unique form-name
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         value (get entity ident)
         form-name "TODO"                                    ;form-name in the HTML sense
-        change! #(stage-tx! (tx/update-entity-attr entity attribute %))]
+        change! #(user-swap! {:tx (tx/update-entity-attr entity attribute %)})]
     [:div.value {:key (option/get-key field)}
      (map (fn [result]
             (assert (= 1 (count result)) "Cannot use multiple find-elements for an options-link")
@@ -64,16 +64,16 @@
 
 (comment
   ; todo factor out aggregation into widget lib
-  #_(defn radio-aggregate [fieldinfo eid stage-tx!]
+  #_(defn radio-aggregate [fieldinfo eid user-swap!]
       (let [selected-value (atom blog-value)]
-        (fn [{:keys [name prompt values]} eid stage-tx!]
+        (fn [{:keys [name prompt values]} eid user-swap!]
           [:div.field
            [:label prompt]
            (map (fn [{:keys [label value]}]
                   (let [change! #(let [rets (map (fn [[name val]] [:db/retract eid name val]) @selected-value)
                                        adds (map (fn [[name val]] [:db/add eid name val]) value)]
                                   (reset! selected-value value)
-                                  (stage-tx! (vec (concat rets adds))))
+                                  (user-swap! {:tx (vec (concat rets adds))}))
                         checked? (= value @selected-value)]
                     ^{:key (hash [label value])}
                     [radio/radio-option label name change! checked?]))

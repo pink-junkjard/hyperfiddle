@@ -15,7 +15,7 @@
             [reagent.core :as r]))
 
 
-(defn link-thing [{:keys [field links navigate-cmp param-ctx stage-tx!] :as widget-args}]
+(defn link-thing [{:keys [field graph links navigate-cmp param-ctx user-swap!] :as widget-args}]
   (let [field-dbid (.-dbid field)]
     [:div.links
      (->> links
@@ -25,11 +25,11 @@
           (remove :link/render-inline?)
           (map (fn [{:keys [:db/id :link/prompt] :as link}]
                  ^{:key id}
-                 [navigate-cmp (links/query-link stage-tx! link param-ctx) prompt]))
+                 [navigate-cmp (links/query-link graph user-swap! link param-ctx) prompt]))
           (interpose " · "))]))
 
 
-(defn render-inline-links [{:keys [field graph links navigate-cmp param-ctx stage-tx!] :as widget-args}]
+(defn render-inline-links [{:keys [field graph links navigate-cmp param-ctx user-swap!] :as widget-args}]
   (let [field-dbid (.-dbid field)]
     (->> links
          (filter #(= field-dbid (some-> % :link/field .-dbid)))
@@ -40,13 +40,13 @@
                       ; todo do we need a different param-ctx for rendering the ui?
                       param-ctx param-ctx]
                   ^{:key (.-dbid link)}
-                  [query/ui stage-tx! graph link params-map navigate-cmp param-ctx debug]))))))
+                  [query/ui user-swap! graph link params-map navigate-cmp param-ctx debug]))))))
 
 
-(defn input-keyword [entity {:keys [field stage-tx!]}]
+(defn input-keyword [entity {:keys [field user-swap!]}]
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         value (get entity ident)
-        on-change! #(stage-tx! (tx/update-entity-attr entity attribute %))
+        on-change! #(user-swap! {:tx (tx/update-entity-attr entity attribute %)})
         parse-string reader/read-string
         to-string str
         valid? #(try (let [code (reader/read-string %)]
@@ -55,25 +55,25 @@
     [input/validated-input value on-change! parse-string to-string valid?]))
 
 
-(defn input [entity {:keys [field stage-tx!]}]
+(defn input [entity {:keys [field user-swap!]}]
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         value (get entity ident)
-        on-change! #(stage-tx! (tx/update-entity-attr entity attribute %))]
+        on-change! #(user-swap! {:tx (tx/update-entity-attr entity attribute %)})]
     [input/input* value on-change!]))
 
 
-(defn input-long [entity {:keys [field stage-tx!]}]
+(defn input-long [entity {:keys [field user-swap!]}]
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)]
     [input/validated-input
-     (get entity ident) #(stage-tx! (tx/update-entity-attr entity attribute %))
+     (get entity ident) #(user-swap! {:tx (tx/update-entity-attr entity attribute %)})
      #(js/parseInt % 10) pr-str
      #(integer? (js/parseInt % 10))]))
 
 
-(defn textarea [entity {:keys [field stage-tx!]}]
+(defn textarea [entity {:keys [field user-swap!]}]
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         value (get entity ident)
-        set-attr! #(stage-tx! (tx/update-entity-attr entity attribute %))]
+        set-attr! #(user-swap! {:tx (tx/update-entity-attr entity attribute %)})]
     [textarea* {:type "text"
                 :value value
                 :on-change set-attr!}]))
@@ -94,14 +94,14 @@
    (render-inline-links widget-args)])
 
 
-(defn select-ref-component [entity {:keys [field graph navigate-cmp stage-tx!] :as widget-args}]
+(defn select-ref-component [entity widget-args]
   [:div.value
    #_(pr-str (get-in entity [(-> field :field/attribute :attribute/ident) :db/id]))
    (render-inline-links widget-args)
    (link-thing widget-args)])
 
 
-(defn table-many-ref [entity {:keys [field] :as widget-args}]
+(defn table-many-ref [entity widget-args]
   [:div.value
    #_(->> (get entity (-> field :field/attribute :attribute/ident))
         (mapv :db/id)
@@ -115,11 +115,11 @@
                          (assert (= 1 (count result)) "Cannot use multiple find-elements for an options-link")
                          (first result))
         select-value-atom (r/atom (:db/id initial-select))]
-    (fn [entity {:keys [field graph navigate-cmp stage-tx!]}]
+    (fn [entity {:keys [field graph navigate-cmp user-swap!]}]
       (let [ident (-> field :field/attribute :attribute/ident)
             resultset (mapv vector (get entity ident))]
         [:div.value
-         [table/table graph resultset (vector (:field/form field)) stage-tx! navigate-cmp]
+         [table/table graph resultset (vector (:field/form field)) user-swap! navigate-cmp]
          (let [props {:value (str @select-value-atom)
                       :on-change #(let [select-value (.-target.value %)
                                         value (reader/read-string select-value)]
@@ -136,7 +136,7 @@
                                           [:option {:key (hash dbid) :value (pr-str dbid)} label-prop])))]
            [:div.table-controls
             [:select props select-options]
-            [:button {:on-click #(stage-tx! (tx/edit-entity (:db/id entity) ident [] [@select-value-atom]))} "⬆"]])]))))
+            [:button {:on-click #(user-swap! {:tx (tx/edit-entity (:db/id entity) ident [] [@select-value-atom])})} "⬆"]])]))))
 
 
 (defn table-many-ref-component [entity {:keys [field] :as widget-args}]
@@ -148,21 +148,21 @@
    (link-thing widget-args)])
 
 
-(defn multi-select-ref [entity {:keys [field stage-tx!] :as widget-args}]
-  (let [add-item! #(stage-tx! (tx/edit-entity (:db/id entity) (-> field :field/attribute :attribute/ident) [] [nil]))]
+(defn multi-select-ref [entity {:keys [field user-swap!] :as widget-args}]
+  (let [add-item! #(user-swap! {:tx (tx/edit-entity (:db/id entity) (-> field :field/attribute :attribute/ident) [] [nil])})]
     (multi-select* multi-select-markup entity add-item! widget-args))) ;add-item! is: add nil to set
 
 
-(defn multi-select-ref-component [entity {:keys [field stage-tx!] :as widget-args}]
+(defn multi-select-ref-component [entity {:keys [field user-swap!] :as widget-args}]
   (let [temp-id! (partial hc/*temp-id!* (-> entity .-dbgraph .-dbval :conn-id)) ; bound to fix render bug
-        add-item! #(stage-tx! (tx/edit-entity (:db/id entity) (-> field :field/attribute :attribute/ident) [] [(temp-id!)]))]
+        add-item! #(user-swap! {:tx (tx/edit-entity (:db/id entity) (-> field :field/attribute :attribute/ident) [] [(temp-id!)])})]
     [multi-select* multi-select-markup entity add-item! widget-args])) ;add new entity to set
 
 
-(defn code-editor [entity {:keys [field stage-tx!]}]
+(defn code-editor [entity {:keys [field user-swap!]}]
   (let [ident (-> field :field/attribute :attribute/ident)
         value (get entity ident)
-        change! #(stage-tx! (tx/edit-entity (:db/id entity) ident [value] [%]))]
+        change! #(user-swap! {:tx (tx/edit-entity (:db/id entity) ident [value] [%])})]
     ^{:key ident}
     [:div.value
      [code-editor* value change!]]))
@@ -174,10 +174,10 @@
         (integer? ms))))
 
 
-(defn instant [entity {:keys [field stage-tx!]}]
+(defn instant [entity {:keys [field user-swap!]}]
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         value (get entity ident)
-        on-change! #(stage-tx! (tx/update-entity-attr entity attribute %))
+        on-change! #(user-swap! {:tx (tx/update-entity-attr entity attribute %)})
         parse-string (fn [s]
                        (if (empty? s)
                          nil
