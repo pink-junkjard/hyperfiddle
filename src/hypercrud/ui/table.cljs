@@ -3,7 +3,7 @@
             [hypercrud.compile.eval :refer [eval]]
             [hypercrud.platform.native-event-listener :refer [native-listener]] ;provided dependency
             [hypercrud.types :refer [->DbId ->DbVal]]
-            [hypercrud.ui.auto-control :refer [auto-table-cell *connection-color*]]
+            [hypercrud.ui.auto-control :refer [auto-table-cell connection-color]]
             [hypercrud.util :as util]
             [reagent.core :as r]))
 
@@ -71,12 +71,13 @@
         link-fn (fn [ident label]
                   (let [link (get repeating-links ident)
                         props (links/query-link stage-tx! link param-ctx)]
-                    [navigate-cmp props label]))]
+                    [navigate-cmp props label]))
+        param-ctx (assoc param-ctx :color ((:color-fn param-ctx) entity param-ctx))
+        style {:border-color (connection-color (:color param-ctx))}]
     (->> (:form/field form)
          (sort-by :field/order)
          (map (fn [{:keys [:field/renderer] :as field}]
-                [:td.truncate {:key (:db/id field)
-                               :style {:border-color (*connection-color* (-> entity :db/id :conn-id))}}
+                [:td.truncate {:key (:db/id field) :style style}
                  (if (empty? renderer)
                    [auto-table-cell entity (-> fieldless-widget-args
                                                (assoc :field field))]

@@ -6,7 +6,7 @@
 
 (defmulti auto-table-cell (fn [] :default))
 
-(def ^:dynamic *connection-color*
+(def connection-color
   (memoize
     (fn [conn-id]
       (if (= conn-id :root) "#777" (random-color)))))
