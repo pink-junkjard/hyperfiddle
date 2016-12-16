@@ -58,7 +58,7 @@
 
 (defn ui [{find-elements :link/find-element result-renderer-code :link/result-renderer :as link}
           {query-params :query-params create-new-find-elements :create-new-find-elements :as params-map}
-          {:keys [navigate-cmp super-graph] :as param-ctx} debug]
+          {:keys [navigate-cmp super-graph] :as param-ctx}]
   (if-let [q (some-> link :link/query reader/read-string)]
     (let [params-map (merge query-params (q-util/build-dbhole-lookup link))
           param-ctx (assoc param-ctx :query-params query-params)
@@ -123,44 +123,45 @@
 (declare query)
 
 
-(defn field-queries [super-graph param-ctx field]
+(defn field-queries [param-ctx field]
   (let [{:keys [:attribute/valueType :attribute/isComponent]} (:field/attribute field)
         is-ref (= (:db/ident valueType) :db.type/ref)]
     ; if we are a ref we ALWAYS need the query from the field options
     ; EXCEPT when we are component, in which case no options are rendered, just a form, handled below
     (if (and is-ref (not isComponent))
       (if-let [options-link (:field/options-link field)]
-        (let [params-map (links/build-params-map options-link param-ctx)]
-          (query super-graph options-link params-map param-ctx (str "field-options:" (:db/id field))))))))
+        (let [params-map (links/build-params-map options-link param-ctx)
+              param-ctx (assoc param-ctx :debug (str "field-options:" (:db/id field)))]
+          (query options-link params-map param-ctx))))))
 
 
 (defn form-option-queries "get the form options recursively for all expanded forms"
-  [super-graph form param-ctx]
+  [form param-ctx]
   (apply merge
-         (mapv #(field-queries super-graph param-ctx %) (:form/field form))))
+         (mapv #(field-queries param-ctx %) (:form/field form))))
 
 
-(defn dependent-queries [super-graph {find-elements :link/find-element :as link} resultset param-ctx]
+(defn dependent-queries [{find-elements :link/find-element :as link} resultset param-ctx]
   (let [inline-links (->> (:link/link link)
                           (filter :link/render-inline?))]
     (->> resultset
          (mapcat (fn [result]
                    (let [param-ctx (assoc param-ctx :result result)
                          option-queries (mapv (fn [{form :find-element/form :as find-element}]
-                                                (form-option-queries super-graph form param-ctx))
+                                                (form-option-queries form param-ctx))
                                               find-elements)
                          inline-queries (mapv (fn [inline-link]
                                                 (let [params-map (links/build-params-map inline-link param-ctx)
-                                                      debug (str "inline-query:" (.-dbid inline-link))]
-                                                  (query super-graph inline-link params-map param-ctx debug)))
+                                                      param-ctx (assoc param-ctx :debug (str "inline-query:" (.-dbid inline-link)))]
+                                                  (query inline-link params-map param-ctx)))
                                               inline-links)]
                      (concat option-queries inline-queries))))
          (apply merge))))
 
 
-(defn query [super-graph {find-elements :link/find-element :as link}
+(defn query [{find-elements :link/find-element :as link}
              {query-params :query-params create-new-find-elements :create-new-find-elements :as params-map}
-             param-ctx debug]
+             {:keys [super-graph] :as param-ctx}]
   (if-let [q (some-> link :link/query reader/read-string)]
     (let [params-map (merge query-params (q-util/build-dbhole-lookup link))
           param-ctx (assoc param-ctx :query-params query-params)]
@@ -172,4 +173,4 @@
             {(hash result-query) result-query}
             (if-let [resultset (some->> (hc/select super-graph (hash result-query))
                                         (pull-resultset super-graph link create-new-find-elements))]
-              (dependent-queries super-graph link resultset param-ctx))))))))
+              (dependent-queries link resultset param-ctx))))))))

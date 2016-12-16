@@ -36,11 +36,11 @@
          (filter :link/render-inline?)
          (map (fn [link]
                 (let [params-map (links/build-params-map link param-ctx)
-                      debug (str "table-many-ref:" field-dbid ":" (:field/prompt field))
                       ; todo do we need a different param-ctx for rendering the ui?
-                      param-ctx param-ctx]
+                      param-ctx (assoc param-ctx
+                                  :debug (str "table-many-ref:" field-dbid ":" (:field/prompt field)))]
                   ^{:key (.-dbid link)}
-                  [query/ui link params-map param-ctx debug]))))))
+                  [query/ui link params-map param-ctx]))))))
 
 
 (defn input-keyword [entity field links {:keys [user-swap!] :as param-ctx}]
