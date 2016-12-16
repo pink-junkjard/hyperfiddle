@@ -18,10 +18,10 @@
       :else (else))))
 
 
-(defn ui [editor-graph page-rel-path param-ctx debug]
+(defn ui [page-rel-path {:keys [meta-graph] :as param-ctx} debug]
   (route page-rel-path
          {:query-fn (fn [{:keys [link-dbid] :as params-map}]
-                      (let [link (hc/entity editor-graph link-dbid)]
+                      (let [link (hc/entity meta-graph link-dbid)]
                         (query/ui link params-map param-ctx debug)))
           :else (constantly [:div "no route for: " page-rel-path])}))
 
