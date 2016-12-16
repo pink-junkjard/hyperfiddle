@@ -63,14 +63,14 @@
                    [:span.sort-arrow arrow]]))))))
 
 
-(defn build-row-cells [form entity {:keys [graph links navigate-cmp] :as fieldless-widget-args} param-ctx]
+(defn build-row-cells [form entity links {:keys [super-graph navigate-cmp] :as param-ctx}]
   (let [repeating-links (->> links
                              (filter :link/repeating?)
                              (mapv (juxt :link/ident identity))
                              (into {}))
         link-fn (fn [ident label]
                   (let [link (get repeating-links ident)
-                        props (links/query-link graph link param-ctx)]
+                        props (links/query-link link param-ctx)]
                     [navigate-cmp props label]))
         param-ctx (assoc param-ctx :color ((:color-fn param-ctx) entity param-ctx))
         style {:border-color (connection-color (:color param-ctx))}]
@@ -79,14 +79,13 @@
          (map (fn [{:keys [:field/renderer] :as field}]
                 [:td.truncate {:key (:db/id field) :style style}
                  (if (empty? renderer)
-                   [auto-table-cell entity (-> fieldless-widget-args
-                                               (assoc :field field)) param-ctx]
+                   [auto-table-cell entity field links param-ctx]
                    (let [{renderer :value error :error} (eval renderer)]
                      [:div.value
                       (if error
                         (pr-str error)
                         (try
-                          (renderer graph link-fn entity)
+                          (renderer super-graph link-fn entity)
                           (catch :default e (pr-str e))))]))])))))
 
 
@@ -108,24 +107,24 @@
 ;        [:div {:on-click #(reset! open? true)} "⚙"]))))
 
 
-(defn table-row [result ordered-find-elements {:keys [graph links navigate-cmp] :as fieldless-widget-args} param-ctx]
+(defn table-row [result ordered-find-elements links {:keys [navigate-cmp] :as param-ctx}]
   (let [param-ctx (assoc param-ctx :result result)]
     [:tr
      (mapcat (fn [find-element]
                (let [form (:find-element/form find-element)
                      entity (get result (:find-element/name find-element))]
-                 (build-row-cells form entity fieldless-widget-args param-ctx)))
+                 (build-row-cells form entity links param-ctx)))
              ordered-find-elements)
      [:td.link-cell {:key :link-cell}
       (->> links
            (filter #(nil? (:link/field %)))
            (map (fn [{:keys [:db/id :link/prompt] :as link}]
-                  (let [props (assoc (links/query-link graph link param-ctx) :key id)]
+                  (let [props (assoc (links/query-link link param-ctx) :key id)]
                     (navigate-cmp props prompt))))
            (interpose " · "))]]))
 
 
-(defn body [super-graph resultset ordered-find-elements repeating-links navigate-cmp sort-col param-ctx]
+(defn body [resultset ordered-find-elements repeating-links sort-col param-ctx]
   [:tbody
    (let [[form-dbid sort-key direction] @sort-col
          sort-eids (fn [resultset]
@@ -147,14 +146,12 @@
           sort-eids
           (map (fn [result]
                  ^{:key (hash (util/map-values :db/id result))}
-                 [table-row result ordered-find-elements {:graph super-graph
-                                                          :links repeating-links
-                                                          :navigate-cmp navigate-cmp} param-ctx]))))])
+                 [table-row result ordered-find-elements repeating-links param-ctx]))))])
 
 
-(defn table [super-graph resultset ordered-find-elements links navigate-cmp param-ctx]
+(defn table [resultset ordered-find-elements links param-ctx]
   (let [sort-col (r/atom nil)]
-    (fn [super-graph resultset ordered-find-elements links navigate-cmp param-ctx]
+    (fn [resultset ordered-find-elements links {:keys [navigate-cmp] :as param-ctx}]
       (let [repeating-links (filter :link/repeating? links)]
         [:table.ui-table
          [:thead
@@ -164,8 +161,8 @@
             (->> (remove :link/repeating? links)
                  (filter #(nil? (:link/field %)))
                  (map (fn [link]
-                        (let [props (links/query-link super-graph link param-ctx)]
+                        (let [props (links/query-link link param-ctx)]
                           ^{:key (:db/id link)}
                           [navigate-cmp props (:link/prompt link)])))
                  (interpose " · "))]]]
-         [body super-graph resultset ordered-find-elements repeating-links navigate-cmp sort-col param-ctx]]))))
+         [body resultset ordered-find-elements repeating-links sort-col param-ctx]]))))

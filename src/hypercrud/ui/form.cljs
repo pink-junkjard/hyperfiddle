@@ -5,9 +5,7 @@
             [hypercrud.ui.auto-control :refer [auto-control connection-color]]))
 
 
-(defn field [entity {:keys [graph links navigate-cmp]
-                     {:keys [:field/prompt :field/renderer] :as field} :field :as widget-args}
-             param-ctx]
+(defn field [entity {:keys [:field/prompt :field/renderer] :as field} links {:keys [super-graph navigate-cmp] :as param-ctx}]
   [:div.field
    [:label
     (let [docstring (-> field :field/attribute :attribute/doc)]
@@ -15,7 +13,7 @@
         [:span.help {:on-click #(js/alert docstring)} prompt])
       prompt)]
    (if (empty? renderer)
-     [auto-control entity widget-args param-ctx]
+     [auto-control entity field links param-ctx]
      (let [{renderer :value error :error} (eval renderer)
            repeating-links (->> links
                                 (filter :link/repeating?)
@@ -23,17 +21,17 @@
                                 (into {}))
            link-fn (fn [ident label]
                      (let [link (get repeating-links ident)
-                           props (links/query-link graph link param-ctx)]
+                           props (links/query-link link param-ctx)]
                        [navigate-cmp props label]))]
        [:div.value
         (if error
           (pr-str error)
           (try
-            (renderer graph link-fn entity)
+            (renderer super-graph link-fn entity)
             (catch :default e (pr-str e))))]))])
 
 
-(defn form [super-graph entity form links navigate-cmp param-ctx]
+(defn form [entity form links param-ctx]
   (let [param-ctx (assoc param-ctx :color ((:color-fn param-ctx) entity param-ctx))
         style {:border-color (connection-color (:color param-ctx))}]
     [:div.form {:style style}
@@ -42,10 +40,7 @@
           (map (fn [fieldinfo]
                  (let [ident (-> fieldinfo :field/attribute :attribute/ident)]
                    ^{:key ident}
-                   [field entity {:field fieldinfo
-                                  :graph super-graph
-                                  :links links
-                                  :navigate-cmp navigate-cmp} param-ctx]))))]))
+                   [field entity fieldinfo links param-ctx]))))]))
 
 
 (defn form-pull-exp [form]

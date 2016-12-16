@@ -17,23 +17,23 @@
   (set/subset? (set hole-names) (set (keys (into {} (remove (comp nil? val) params-map))))))
 
 
-(defn repeating-links [super-graph link result navigate-cmp param-ctx]
+(defn repeating-links [link result {:keys [navigate-cmp] :as param-ctx}]
   (->> (:link/link link)
        (filter :link/repeating?)
        (filter #(nil? (:link/field %)))
        (mapv (fn [link]
                (let [param-ctx (merge param-ctx {:result result})
-                     props (links/query-link super-graph link param-ctx)]
+                     props (links/query-link link param-ctx)]
                  ^{:key (:db/id link)}
                  [navigate-cmp props (:link/prompt link)])))))
 
 
-(defn non-repeating-links [super-graph link navigate-cmp param-ctx]
+(defn non-repeating-links [link {:keys [navigate-cmp] :as param-ctx}]
   (->> (:link/link link)
        (remove :link/repeating?)
        (filter #(nil? (:link/field %)))
        (map (fn [link]
-              (let [props (links/query-link super-graph link param-ctx)]
+              (let [props (links/query-link link param-ctx)]
                 ^{:key (:db/id link)}
                 [navigate-cmp props (:link/prompt link)])))))
 
@@ -56,10 +56,9 @@
                       (into {})))))))
 
 
-(defn ui [super-graph
-          {find-elements :link/find-element result-renderer-code :link/result-renderer :as link}
+(defn ui [{find-elements :link/find-element result-renderer-code :link/result-renderer :as link}
           {query-params :query-params create-new-find-elements :create-new-find-elements :as params-map}
-          navigate-cmp param-ctx debug]
+          {:keys [navigate-cmp super-graph] :as param-ctx} debug]
   (if-let [q (some-> link :link/query reader/read-string)]
     (let [params-map (merge query-params (q-util/build-dbhole-lookup link))
           param-ctx (assoc param-ctx :query-params query-params)
@@ -86,13 +85,13 @@
                     (map (fn [{:keys [:find-element/form] :as find-element}]
                            (let [entity (get result (:find-element/name find-element))]
                              ^{:key (hash [(.-dbid entity) (.-dbid form)])}
-                             [form/form super-graph entity form (:link/link link) navigate-cmp param-ctx]))
+                             [form/form entity form (:link/link link) param-ctx]))
                          ordered-find-elements)])
-                 (->> (concat (repeating-links super-graph link result navigate-cmp param-ctx)
-                              (non-repeating-links super-graph link navigate-cmp param-ctx))
+                 (->> (concat (repeating-links link result param-ctx)
+                              (non-repeating-links link param-ctx))
                       (interpose " · "))])
               ^{:key (hc/t super-graph)}
-              [table/table super-graph resultset ordered-find-elements (:link/link link) navigate-cmp param-ctx])
+              [table/table resultset ordered-find-elements (:link/link link) param-ctx])
             (let [{result-renderer :value error :error} (eval result-renderer-code)
                   repeating-links (->> (:link/link link)
                                        (filter :link/repeating?)
@@ -102,7 +101,7 @@
                                   (let [link-fn (fn [ident label]
                                                   (let [link (get repeating-links ident)
                                                         param-ctx (merge param-ctx {:result result})
-                                                        props (links/query-link super-graph link param-ctx)]
+                                                        props (links/query-link link param-ctx)]
                                                     [navigate-cmp props label]))]
                                     (try
                                       (result-renderer super-graph link-fn result)
@@ -117,7 +116,7 @@
                          (map (fn [result]
                                 [:li {:key (hash result)}
                                  (render-result result)])))]))
-               [:div.links (interpose " · " (non-repeating-links super-graph link navigate-cmp param-ctx))]])))))
+               [:div.links (interpose " · " (non-repeating-links link param-ctx))]])))))
     [:div "Query record is incomplete"]))
 
 

@@ -15,7 +15,7 @@
             [reagent.core :as r]))
 
 
-(defn link-thing [{:keys [field graph links navigate-cmp] :as widget-args} param-ctx]
+(defn link-thing [field links {:keys [navigate-cmp] :as param-ctx}]
   (let [field-dbid (.-dbid field)]
     [:div.links
      (->> links
@@ -25,11 +25,11 @@
           (remove :link/render-inline?)
           (map (fn [{:keys [:db/id :link/prompt] :as link}]
                  ^{:key id}
-                 [navigate-cmp (links/query-link graph link param-ctx) prompt]))
+                 [navigate-cmp (links/query-link link param-ctx) prompt]))
           (interpose " · "))]))
 
 
-(defn render-inline-links [{:keys [field graph links navigate-cmp] :as widget-args} {:keys [user-swap!] :as param-ctx}]
+(defn render-inline-links [field links param-ctx]
   (let [field-dbid (.-dbid field)]
     (->> links
          (filter #(= field-dbid (some-> % :link/field .-dbid)))
@@ -40,10 +40,10 @@
                       ; todo do we need a different param-ctx for rendering the ui?
                       param-ctx param-ctx]
                   ^{:key (.-dbid link)}
-                  [query/ui graph link params-map navigate-cmp param-ctx debug]))))))
+                  [query/ui link params-map param-ctx debug]))))))
 
 
-(defn input-keyword [entity {:keys [field]} {:keys [user-swap!] :as param-ctx}]
+(defn input-keyword [entity field links {:keys [user-swap!] :as param-ctx}]
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         value (get entity ident)
         on-change! #(user-swap! {:tx (tx/update-entity-attr entity attribute %)})
@@ -55,14 +55,14 @@
     [input/validated-input value on-change! parse-string to-string valid?]))
 
 
-(defn input [entity {:keys [field]} {:keys [user-swap!] :as param-ctx}]
+(defn input [entity field links {:keys [user-swap!] :as param-ctx}]
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         value (get entity ident)
         on-change! #(user-swap! {:tx (tx/update-entity-attr entity attribute %)})]
     [input/input* value on-change!]))
 
 
-(defn input-long [entity {:keys [field]} {:keys [user-swap!] :as param-ctx}]
+(defn input-long [entity field links {:keys [user-swap!] :as param-ctx}]
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)]
     [input/validated-input
      (get entity ident) #(user-swap! {:tx (tx/update-entity-attr entity attribute %)})
@@ -70,7 +70,7 @@
      #(integer? (js/parseInt % 10))]))
 
 
-(defn textarea [entity {:keys [field]} {:keys [user-swap!] :as param-ctx}]
+(defn textarea [entity field links {:keys [user-swap!] :as param-ctx}]
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         value (get entity ident)
         set-attr! #(user-swap! {:tx (tx/update-entity-attr entity attribute %)})]
@@ -79,35 +79,35 @@
                 :on-change set-attr!}]))
 
 
-(defn radio-ref [entity widget-args param-ctx]
+(defn radio-ref [entity field links param-ctx]
   ;;radio* needs parameterized markup fn todo
-  [radio/radio-ref* entity widget-args param-ctx])
+  [radio/radio-ref* entity field param-ctx])
 
 
 ; this can be used sometimes, on the entity page, but not the query page
-(defn select-ref [entity {:keys [field] :as widget-args} param-ctx]
+(defn select-ref [entity field links param-ctx]
   [:div.value
    [:div.editable-select {:key (option/get-key field)}
-    (link-thing widget-args param-ctx)
+    (link-thing field links param-ctx)
     [:span.select
-     (select* entity widget-args param-ctx)]]
-   (render-inline-links widget-args param-ctx)])
+     (select* entity field param-ctx)]]
+   (render-inline-links field links param-ctx)])
 
 
-(defn select-ref-component [entity widget-args param-ctx]
+(defn select-ref-component [entity field links param-ctx]
   [:div.value
    #_(pr-str (get-in entity [(-> field :field/attribute :attribute/ident) :db/id]))
-   (render-inline-links widget-args param-ctx)
-   (link-thing widget-args param-ctx)])
+   (render-inline-links field links param-ctx)
+   (link-thing field links param-ctx)])
 
 
-(defn table-many-ref [entity widget-args param-ctx]
+(defn table-many-ref [entity field links param-ctx]
   [:div.value
    #_(->> (get entity (-> field :field/attribute :attribute/ident))
         (mapv :db/id)
         (pr-str))
-   (render-inline-links widget-args param-ctx)
-   (link-thing widget-args param-ctx)])
+   (render-inline-links field links param-ctx)
+   (link-thing field links param-ctx)])
 
 
 (comment
@@ -139,27 +139,27 @@
             [:button {:on-click #(user-swap! {:tx (tx/edit-entity (:db/id entity) ident [] [@select-value-atom])})} "⬆"]])]))))
 
 
-(defn table-many-ref-component [entity {:keys [field] :as widget-args} param-ctx]
+(defn table-many-ref-component [entity field links param-ctx]
   [:div.value
    #_(->> (get entity (-> field :field/attribute :attribute/ident))
         (mapv :db/id)
         (pr-str))
-   (render-inline-links widget-args param-ctx)
-   (link-thing widget-args param-ctx)])
+   (render-inline-links field links param-ctx)
+   (link-thing field links param-ctx)])
 
 
-(defn multi-select-ref [entity {:keys [field] :as widget-args} {:keys [user-swap!] :as param-ctx}]
+(defn multi-select-ref [entity field links {:keys [user-swap!] :as param-ctx}]
   (let [add-item! #(user-swap! {:tx (tx/edit-entity (:db/id entity) (-> field :field/attribute :attribute/ident) [] [nil])})]
-    (multi-select* multi-select-markup entity add-item! widget-args param-ctx))) ;add-item! is: add nil to set
+    (multi-select* multi-select-markup entity add-item! field links param-ctx))) ;add-item! is: add nil to set
 
 
-(defn multi-select-ref-component [entity {:keys [field] :as widget-args} {:keys [user-swap!] :as param-ctx}]
+(defn multi-select-ref-component [entity field links {:keys [user-swap!] :as param-ctx}]
   (let [temp-id! (partial hc/*temp-id!* (-> entity .-dbgraph .-dbval :conn-id)) ; bound to fix render bug
         add-item! #(user-swap! {:tx (tx/edit-entity (:db/id entity) (-> field :field/attribute :attribute/ident) [] [(temp-id!)])})]
-    [multi-select* multi-select-markup entity add-item! widget-args param-ctx])) ;add new entity to set
+    [multi-select* multi-select-markup entity add-item! field links param-ctx])) ;add new entity to set
 
 
-(defn code-editor [entity {:keys [field]} {:keys [user-swap!] :as param-ctx}]
+(defn code-editor [entity field links {:keys [user-swap!] :as param-ctx}]
   (let [ident (-> field :field/attribute :attribute/ident)
         value (get entity ident)
         change! #(user-swap! {:tx (tx/edit-entity (:db/id entity) ident [value] [%])})]
@@ -174,7 +174,7 @@
         (integer? ms))))
 
 
-(defn instant [entity {:keys [field]} {:keys [user-swap!] :as param-ctx}]
+(defn instant [entity field links {:keys [user-swap!] :as param-ctx}]
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         value (get entity ident)
         on-change! #(user-swap! {:tx (tx/update-entity-attr entity attribute %)})
