@@ -125,6 +125,17 @@
   (map? v))
 
 
+(defn entity-components [schema entity]
+  (mapcat (fn [[attr val]]
+            (let [{:keys [:db/cardinality :db/valueType :db/isComponent]} (get schema attr)]
+              (if isComponent
+                (cond
+                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one)) [val]
+                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) (vec val)
+                  :else []))))
+          entity))
+
+
 (defn entity-children [schema entity]
   (mapcat (fn [[attr val]]
             (let [{:keys [:db/cardinality :db/valueType]} (get schema attr)]
@@ -165,7 +176,7 @@
 
 (defn process-entity-data-map! [schema conn-id tempids lookup-transient entity-map]
   (let [id (:db/id entity-map)
-        id (or (get tempids id) id)     ; if a tempid was sent up on the wire we need to convert it back now for entity position
+        id (or (get tempids id) id)                         ; if a tempid was sent up on the wire we need to convert it back now for entity position
         dbid (->DbId id conn-id)
         [lookup-transient new-entity-map] (reduce (partial apply-av-to-entity-map schema conn-id tempids)
                                                   (get-data! lookup-transient dbid)
@@ -193,14 +204,12 @@
     (mapcat #(entity->statements schema %) traversal)))
 
 
-(defn replace-ids [schema conn-id skip? tx]
+(defn replace-ids [schema conn-id skip? temp-id! tx]
   (let [id-map (atom {})
-        temp-id-atom (atom 0)
-        new-temp-id! #(swap! temp-id-atom dec)
         replace-id! (fn [dbid]
                       (let [new-dbid (get @id-map dbid)]
                         (if (nil? new-dbid)
-                          (let [new-dbid (->DbId (new-temp-id!) conn-id)]
+                          (let [new-dbid (temp-id! conn-id)]
                             (swap! id-map assoc dbid new-dbid)
                             new-dbid)
                           new-dbid)))]
@@ -235,3 +244,13 @@
                        :db.cardinality/many (mapv (fn [val]
                                                     [:db/add (:db/id entity) attr val])
                                                   val))))))))
+
+(defn clone-entity [e tempid!]
+  (let [schema (-> e .-dbgraph .-schema)]
+    (->> (tree-seq (fn [v] (instance? types/Entity v))
+                   #(entity-components schema %)
+                   e)
+         (mapcat #(entity->statements schema %))
+         (replace-ids schema (-> e :db/id :conn-id)
+                      (fn [a] (not (get-in schema [a :db/isComponent])))
+                      tempid!))))
