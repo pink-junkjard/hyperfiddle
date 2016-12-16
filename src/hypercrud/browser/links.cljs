@@ -17,7 +17,7 @@
                                   (into {}))})
 
 
-(defn query-link [super-graph user-swap! link param-ctx]
+(defn query-link [super-graph link param-ctx]
   (let [tx-fn (if-let [tx-fn (:link/tx-fn link)]
                 (let [{value :value error :error} (eval tx-fn)]
                   ;; non-fatal error, report it here so user can fix it
@@ -27,5 +27,5 @@
 
     ;; add-result #(tx/edit-entity (:db/id entity) ident [] [(first %)])
     (if tx-fn
-      {:on-click #(user-swap! (tx-fn super-graph param-ctx))}
+      {:on-click #((:user-swap! param-ctx) (tx-fn super-graph param-ctx))}
       {:href (base64/encode (pr-str (build-params-map link param-ctx)))})))

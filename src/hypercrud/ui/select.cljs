@@ -4,7 +4,7 @@
             [hypercrud.types :refer [->DbId]]))
 
 
-(defn select-boolean [entity {:keys [field user-swap!]}]
+(defn select-boolean [entity {:keys [field]} {:keys [user-swap!] :as param-ctx}]
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         value (get entity ident)
         props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
@@ -23,7 +23,7 @@
        [:option {:key :nil :value ""} "--"]]]]))
 
 
-(defn select* [entity {:keys [field graph user-swap! param-ctx]}]
+(defn select* [entity {:keys [field graph]} {:keys [user-swap!] :as param-ctx}]
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         value (get entity ident)
         conn-id (-> entity .-dbgraph .-dbval .-conn-id)

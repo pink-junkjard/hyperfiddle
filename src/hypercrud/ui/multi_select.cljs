@@ -6,7 +6,7 @@
 (defmulti multi-select-markup (fn [click-add! control-tuples] :default))
 
 
-(defn multi-select* [markupfn entity add-item! {:keys [field user-swap!] :as widget-args}]
+(defn multi-select* [markupfn entity add-item! {:keys [field] :as widget-args} {:keys [user-swap!] :as param-ctx}]
   (assert false "assoc entity no longer works. todo")
   (let [ident (-> field :field/attribute :attribute/ident)
         value (get entity ident)

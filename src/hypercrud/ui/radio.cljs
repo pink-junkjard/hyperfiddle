@@ -30,7 +30,7 @@
 ;       [radio-option "--" form-name #(change! nil) (= nil value)])])
 
 
-(defn radio-boolean [entity {:keys [field user-swap!]}]
+(defn radio-boolean [entity {:keys [field]} {:keys [user-swap!] :as param-ctx}]
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         value (get entity ident)
         form-name (str (:db/id entity) ident)
@@ -44,7 +44,7 @@
      [radio-option "--" form-name #(change! nil) (= nil value)]]))
 
 
-(defn radio-ref* [entity {:keys [field graph user-swap! param-ctx]}]
+(defn radio-ref* [entity {:keys [field graph]} {:keys [user-swap!] :as param-ctx}]
   ; TODO only one radio-group on the page until we get a unique form-name
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         value (get entity ident)
