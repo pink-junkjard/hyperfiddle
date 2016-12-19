@@ -10,8 +10,8 @@
    [:label
     (let [docstring (-> field :field/attribute :attribute/doc)]
       (if-not (empty? docstring)
-        [:span.help {:on-click #(js/alert docstring)} prompt])
-      prompt)]
+        [:span.help {:on-click #(js/alert docstring)} prompt]
+        prompt))]
    (if (empty? renderer)
      [auto-control entity field links param-ctx]
      (let [{renderer :value error :error} (eval renderer)
