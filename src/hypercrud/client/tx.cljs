@@ -1,6 +1,7 @@
 (ns hypercrud.client.tx
   (:require [cljs.core.match :refer-macros [match]]
             [clojure.set :as set]
+            [loom.alg-generic :as loom]
             [hypercrud.types :refer [->DbId ->Entity] :as types]))
 
 
@@ -247,10 +248,26 @@
 
 (defn clone-entity [e tempid!]
   (let [schema (-> e .-dbgraph .-schema)]
+    ; tree-seq lets us get component entities too
     (->> (tree-seq (fn [v] (instance? types/Entity v))
                    #(entity-components schema %)
                    e)
          (mapcat #(entity->statements schema %))
          (replace-ids schema (-> e :db/id :conn-id)
-                      (fn [a] (not (get-in schema [a :db/isComponent])))
+                      (fn [a] (not (get-in schema [a :db/isComponent]))) ; preserve links to existing entities
                       tempid!))))
+
+
+(defn export-link [link tempid!]
+  (let [schema (-> link .-dbgraph .-schema)
+        successors (fn [node]
+                     (entity-children schema node))
+        filter-pred (fn [node predecessor depth]
+                      ;  also may need (not (:db/ident node)) - attrs ref datomic built-ins
+                      (not (:attribute/ident node)))]
+    (->> (loom/bf-traverse successors link :when filter-pred)
+         (mapcat #(entity->statements schema %))
+         (replace-ids schema (-> link :db/id :conn-id)
+                      #(contains? #{:field/attribute} %)    ; preserve refs to attributes
+                      tempid!))))
+
