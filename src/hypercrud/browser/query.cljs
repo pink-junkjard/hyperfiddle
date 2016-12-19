@@ -80,16 +80,16 @@
             (if (:link/single-result-as-entity? link)
               (let [result (first resultset)]
                 [:div
+                 (->> (concat (repeating-links link result param-ctx)
+                              (non-repeating-links link param-ctx))
+                      (interpose " · "))
                  (let [param-ctx (assoc param-ctx :result result)]
                    [:div
                     (map (fn [{:keys [:find-element/form] :as find-element}]
                            (let [entity (get result (:find-element/name find-element))]
                              ^{:key (hash [(.-dbid entity) (.-dbid form)])}
                              [form/form entity form (:link/link link) param-ctx]))
-                         ordered-find-elements)])
-                 (->> (concat (repeating-links link result param-ctx)
-                              (non-repeating-links link param-ctx))
-                      (interpose " · "))])
+                         ordered-find-elements)])])
               ^{:key (hc/t super-graph)}
               [table/table resultset ordered-find-elements (:link/link link) param-ctx])
             (let [{result-renderer :value error :error} (eval result-renderer-code)
