@@ -69,7 +69,9 @@
          [:div "Unfilled query holes"]
          [:pre (doall (with-out-str
                         (binding [pprint/*print-miser-width* 1] ; not working
-                          (pprint/pprint (select-keys query-params query-hole-names)))))]])
+                          (pprint/pprint (->> query-hole-names
+                                              (mapv (juxt identity #(get params-map %)))
+                                              (into {}))))))]])
       (let [resultset (pull-resultset super-graph link create-new-find-elements
                                       (let [params (q-util/build-params #(get params-map %) link param-ctx)
                                             pull-exp (form/query-pull-exp find-elements)
