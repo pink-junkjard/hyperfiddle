@@ -266,7 +266,16 @@
                       ;  also may need (not (:db/ident node)) - attrs ref datomic built-ins
                       (not (:attribute/ident node)))]
     (->> (loom/bf-traverse successors link :when filter-pred)
-         (mapcat #(entity->statements schema %))
+         (mapcat (fn [entity]
+                   (entity->statements schema entity)
+                   #_(if-let [attr (:field/attribute entity)]
+                     (let [entity (-> (into {} (seq entity))
+                                      (dissoc :field/attribute))
+                           ; we don't necessarily have the attribute ident pulled down?
+                           attr-lookup (->DbId [:attribute/ident (-> attr :attribute/ident)] (-> attr :db/id :conn-id))]
+                       (conj (entity->statements schema entity)
+                             [:db/add (:db/id entity) :field/attribute attr-lookup]))
+                     (entity->statements schema entity))))
          (replace-ids schema (-> link :db/id :conn-id)
                       #(contains? #{:field/attribute} %)    ; preserve refs to attributes
                       tempid!))))
