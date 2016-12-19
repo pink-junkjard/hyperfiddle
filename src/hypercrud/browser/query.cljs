@@ -59,65 +59,64 @@
 (defn ui [{find-elements :link/find-element result-renderer-code :link/result-renderer :as link}
           {query-params :query-params create-new-find-elements :create-new-find-elements :as params-map}
           {:keys [navigate-cmp super-graph] :as param-ctx}]
-  (if-let [q (some-> link :link/query reader/read-string)]
-    (let [params-map (merge query-params (q-util/build-dbhole-lookup link))
-          param-ctx (assoc param-ctx :query-params query-params)
-          query-hole-names (q-util/parse-holes q)]
-      (if-not (holes-filled? query-hole-names params-map)   ;todo what if we have a user hole?
-        (if-not (:link/render-inline? link)                 ; don't show this error when we are nested
-          [:div
-           [:div "Unfilled query holes"]
-           [:pre (doall (with-out-str
-                          (binding [pprint/*print-miser-width* 1] ; not working
-                            (pprint/pprint (select-keys query-params query-hole-names)))))]])
-        (let [resultset (pull-resultset super-graph link create-new-find-elements
-                                        (let [params (q-util/build-params #(get params-map %) link param-ctx)
-                                              pull-exp (form/query-pull-exp find-elements)
-                                              query-value [q params pull-exp]]
-                                          (hc/select super-graph (hash query-value))))
-              ordered-find-elements (find-elements-util/order-find-elements find-elements q)]
-          (if (empty? result-renderer-code)
-            (if (:link/single-result-as-entity? link)
-              (let [result (first resultset)]
-                [:div
-                 (->> (concat (repeating-links link result param-ctx)
-                              (non-repeating-links link param-ctx))
-                      (interpose " · "))
-                 (let [param-ctx (assoc param-ctx :result result)]
-                   [:div
-                    (map (fn [{:keys [:find-element/form] :as find-element}]
-                           (let [entity (get result (:find-element/name find-element))]
-                             ^{:key (hash [(.-dbid entity) (.-dbid form)])}
-                             [form/form entity form (:link/link link) param-ctx]))
-                         ordered-find-elements)])])
-              ^{:key (hc/t super-graph)}
-              [table/table resultset ordered-find-elements (:link/link link) param-ctx])
-            (let [{result-renderer :value error :error} (eval result-renderer-code)
-                  repeating-links (->> (:link/link link)
-                                       (filter :link/repeating?)
-                                       (mapv (juxt :link/ident identity))
-                                       (into {}))
-                  render-result (fn [result]
-                                  (let [link-fn (fn [ident label]
-                                                  (let [link (get repeating-links ident)
-                                                        param-ctx (merge param-ctx {:result result})
-                                                        props (links/query-link link param-ctx)]
-                                                    [navigate-cmp props label]))]
-                                    (try
-                                      (result-renderer super-graph link-fn result)
-                                      (catch :default e (pr-str e)))))]
+  (let [q (some-> link :link/query reader/read-string)
+        params-map (merge query-params (q-util/build-dbhole-lookup link))
+        param-ctx (assoc param-ctx :query-params query-params)
+        query-hole-names (q-util/parse-holes q)]
+    (if-not (holes-filled? query-hole-names params-map)     ;todo what if we have a user hole?
+      (if-not (:link/render-inline? link)                   ; don't show this error when we are nested
+        [:div
+         [:div "Unfilled query holes"]
+         [:pre (doall (with-out-str
+                        (binding [pprint/*print-miser-width* 1] ; not working
+                          (pprint/pprint (select-keys query-params query-hole-names)))))]])
+      (let [resultset (pull-resultset super-graph link create-new-find-elements
+                                      (let [params (q-util/build-params #(get params-map %) link param-ctx)
+                                            pull-exp (form/query-pull-exp find-elements)
+                                            query-value [q params pull-exp]]
+                                        (hc/select super-graph (hash query-value))))
+            ordered-find-elements (find-elements-util/order-find-elements find-elements q)]
+        (if (empty? result-renderer-code)
+          (if (:link/single-result-as-entity? link)
+            (let [result (first resultset)]
               [:div
-               (if error
-                 [:pre (pprint/pprint error)]
-                 (if (:link/single-result-as-entity? link)
-                   (render-result (first resultset))
-                   [:ul
-                    (->> resultset
-                         (map (fn [result]
-                                [:li {:key (hash result)}
-                                 (render-result result)])))]))
-               [:div.links (interpose " · " (non-repeating-links link param-ctx))]])))))
-    [:div "Query record is incomplete"]))
+               (->> (concat (repeating-links link result param-ctx)
+                            (non-repeating-links link param-ctx))
+                    (interpose " · "))
+               (let [param-ctx (assoc param-ctx :result result)]
+                 [:div
+                  (map (fn [{:keys [:find-element/form] :as find-element}]
+                         (let [entity (get result (:find-element/name find-element))]
+                           ^{:key (hash [(.-dbid entity) (.-dbid form)])}
+                           [form/form entity form (:link/link link) param-ctx]))
+                       ordered-find-elements)])])
+            ^{:key (hc/t super-graph)}
+            [table/table resultset ordered-find-elements (:link/link link) param-ctx])
+          (let [{result-renderer :value error :error} (eval result-renderer-code)
+                repeating-links (->> (:link/link link)
+                                     (filter :link/repeating?)
+                                     (mapv (juxt :link/ident identity))
+                                     (into {}))
+                render-result (fn [result]
+                                (let [link-fn (fn [ident label]
+                                                (let [link (get repeating-links ident)
+                                                      param-ctx (merge param-ctx {:result result})
+                                                      props (links/query-link link param-ctx)]
+                                                  [navigate-cmp props label]))]
+                                  (try
+                                    (result-renderer super-graph link-fn result)
+                                    (catch :default e (pr-str e)))))]
+            [:div
+             (if error
+               [:pre (pprint/pprint error)]
+               (if (:link/single-result-as-entity? link)
+                 (render-result (first resultset))
+                 [:ul
+                  (->> resultset
+                       (map (fn [result]
+                              [:li {:key (hash result)}
+                               (render-result result)])))]))
+             [:div.links (interpose " · " (non-repeating-links link param-ctx))]]))))))
 
 
 (declare query)
@@ -162,15 +161,15 @@
 (defn query [{find-elements :link/find-element :as link}
              {query-params :query-params create-new-find-elements :create-new-find-elements :as params-map}
              {:keys [super-graph] :as param-ctx}]
-  (if-let [q (some-> link :link/query reader/read-string)]
-    (let [params-map (merge query-params (q-util/build-dbhole-lookup link))
-          param-ctx (assoc param-ctx :query-params query-params)]
-      (if (holes-filled? (q-util/parse-holes q) params-map)
-        (let [result-query [q
-                            (q-util/build-params #(get params-map %) link param-ctx)
-                            (form/query-pull-exp find-elements)]]
-          (merge
-            {(hash result-query) result-query}
-            (if-let [resultset (some->> (hc/select super-graph (hash result-query))
-                                        (pull-resultset super-graph link create-new-find-elements))]
-              (dependent-queries link resultset param-ctx))))))))
+  (let [q (some-> link :link/query reader/read-string)
+        params-map (merge query-params (q-util/build-dbhole-lookup link))
+        param-ctx (assoc param-ctx :query-params query-params)]
+    (if (holes-filled? (q-util/parse-holes q) params-map)
+      (let [result-query [q
+                          (q-util/build-params #(get params-map %) link param-ctx)
+                          (form/query-pull-exp find-elements)]]
+        (merge
+          {(hash result-query) result-query}
+          (if-let [resultset (some->> (hc/select super-graph (hash result-query))
+                                      (pull-resultset super-graph link create-new-find-elements))]
+            (dependent-queries link resultset param-ctx)))))))
