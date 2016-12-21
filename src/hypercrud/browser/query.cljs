@@ -34,9 +34,8 @@
 
 
 (defn resultset-custom [resultset link param-ctx]
-  (let [{resultset-renderer :value error :error} (eval (:link/result-renderer link))
+  (let [{resultset-renderer :value error :error} (eval (:link/renderer link))
         repeating-links (->> (:link/link link)
-                             #_ (filter :link/repeating?)
                              (mapv (juxt :link/ident identity))
                              (into {}))
         param-ctx (assoc param-ctx
@@ -73,7 +72,7 @@
                                             pull-exp (form/query-pull-exp find-elements)
                                             query-value [q params pull-exp]]
                                         (hc/select super-graph (hash query-value))))]
-        (if (empty? (:link/result-renderer link))
+        (if (empty? (:link/renderer link))
           (auto-control/resultset resultset link param-ctx)
           (resultset-custom resultset link param-ctx))))))
 
