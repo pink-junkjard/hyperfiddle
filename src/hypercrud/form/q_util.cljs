@@ -50,9 +50,9 @@
 
 
 ; returns type fill-hole (for threading into build-params)
-(defn fill-hole-from-formula [{formulas :link/formula :as link}]
-  (let [hole-formulas (read-eval-formulas formulas)
-        dbhole-values (build-dbhole-lookup link)]
+(defn fill-hole-from-formula [link-ctx]
+  (let [hole-formulas (read-eval-formulas (:link-ctx/formula link-ctx) )
+        dbhole-values (build-dbhole-lookup (:link/link link-ctx))]
     (fn [hole-name param-ctx]
       (if-let [v (get dbhole-values hole-name)]
         v

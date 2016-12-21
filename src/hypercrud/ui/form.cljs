@@ -5,7 +5,7 @@
             [hypercrud.ui.auto-control :refer [auto-control connection-color]]))
 
 
-(defn field [entity {:keys [:field/prompt :field/renderer] :as field} links {:keys [super-graph] :as param-ctx}]
+(defn field [entity {:keys [:field/prompt :field/renderer] :as field} link-ctxs {:keys [super-graph] :as param-ctx}]
   [:div.field
    [:label
     (let [docstring (-> field :field/attribute :attribute/doc)]
@@ -13,15 +13,15 @@
         [:span.help {:on-click #(js/alert docstring)} prompt]
         prompt))]
    (if (empty? renderer)
-     [auto-control entity field links param-ctx]
+     [auto-control entity field link-ctxs param-ctx]
      (let [{renderer :value error :error} (eval renderer)
-           repeating-links (->> links
-                                (filter :link/repeating?)
-                                (mapv (juxt :link/ident identity))
-                                (into {}))
+           repeating-link-ctxs (->> link-ctxs
+                                    (filter :link-ctx/repeating?)
+                                    (mapv (juxt #(-> % :link-ctx/link :link/ident) identity))
+                                    (into {}))
            link-fn (fn [ident label]
-                     (let [link (get repeating-links ident)
-                           props (links/query-link link param-ctx)]
+                     (let [link-ctx (get repeating-link-ctxs ident)
+                           props (links/query-link link-ctx param-ctx)]
                        [(:navigate-cmp param-ctx) props label param-ctx]))]
        [:div.value
         (if error
@@ -31,7 +31,7 @@
             (catch :default e (pr-str e))))]))])
 
 
-(defn form [entity form links param-ctx]
+(defn form [entity form link-ctxs param-ctx]
   (let [param-ctx (assoc param-ctx :color ((:color-fn param-ctx) entity param-ctx)
                                    :owner ((:owner-fn param-ctx) entity param-ctx))
         style {:border-color (connection-color (:color param-ctx))}]
@@ -41,7 +41,7 @@
           (map (fn [fieldinfo]
                  (let [ident (-> fieldinfo :field/attribute :attribute/ident)]
                    ^{:key ident}
-                   [field entity fieldinfo links param-ctx]))))]))
+                   [field entity fieldinfo link-ctxs param-ctx]))))]))
 
 
 (defn form-pull-exp [form]

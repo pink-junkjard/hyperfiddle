@@ -35,13 +35,13 @@
 
 (defn resultset-custom [resultset link param-ctx]
   (let [{resultset-renderer :value error :error} (eval (:link/renderer link))
-        repeating-links (->> (:link/link link)
-                             (mapv (juxt :link/ident identity))
-                             (into {}))
+        repeating-link-ctxs (->> (:link/link-ctx link)
+                                 (mapv (juxt #(-> % :link-ctx/link :link/ident) identity))
+                                 (into {}))
         param-ctx (assoc param-ctx
                     :link-fn (fn [ident label param-ctx]
-                               (let [link (get repeating-links ident)
-                                     props (links/query-link link param-ctx)]
+                               (let [link-ctx (get repeating-link-ctxs ident)
+                                     props (links/query-link link-ctx param-ctx)]
                                  [(:navigate-cmp param-ctx) props label param-ctx])))]
     [:div
      (if error
@@ -59,14 +59,15 @@
         param-ctx (assoc param-ctx :query-params query-params)
         query-hole-names (q-util/parse-holes q)]
     (if-not (holes-filled? query-hole-names params-map)     ;todo what if we have a user hole?
-      (if-not (:link/render-inline? link)                   ; don't show this error when we are nested
-        [:div
-         [:div "Unfilled query holes"]
-         [:pre (doall (with-out-str
-                        (binding [pprint/*print-miser-width* 1] ; not working
-                          (pprint/pprint (->> query-hole-names
-                                              (mapv (juxt identity #(get params-map %)))
-                                              (into {}))))))]])
+      [:div "todo"]
+      #_(if-not (:link/render-inline? link)                 ; don't show this error when we are nested
+          [:div
+           [:div "Unfilled query holes"]
+           [:pre (doall (with-out-str
+                          (binding [pprint/*print-miser-width* 1] ; not working
+                            (pprint/pprint (->> query-hole-names
+                                                (mapv (juxt identity #(get params-map %)))
+                                                (into {}))))))]])
       (let [resultset (pull-resultset super-graph link create-new-find-elements
                                       (let [params (q-util/build-params #(get params-map %) link param-ctx)
                                             pull-exp (form/query-pull-exp find-elements)
@@ -86,10 +87,10 @@
     ; if we are a ref we ALWAYS need the query from the field options
     ; EXCEPT when we are component, in which case no options are rendered, just a form, handled below
     (if (and is-ref (not isComponent))
-      (if-let [options-link (:field/options-link field)]
-        (let [params-map (links/build-params-map options-link param-ctx)
+      (if-let [options-link-ctx (:field/options-link-ctx field)]
+        (let [params-map (links/build-params-map options-link-ctx param-ctx)
               param-ctx (assoc param-ctx :debug (str "field-options:" (:db/id field)))]
-          (query options-link params-map param-ctx))))))
+          (query (:link-ctx/link options-link-ctx) params-map param-ctx))))))
 
 
 (defn form-option-queries "get the form options recursively for all expanded forms"
@@ -99,26 +100,28 @@
 
 
 (defn dependent-queries [{find-elements :link/find-element :as link} resultset param-ctx]
-  (let [inline-links (->> (:link/link link)
-                          (filter :link/render-inline?))]
+  (let [inline-link-ctxs (->> (:link/link-ctx link)
+                              (mapv :link-ctx/link)
+                              (filter :link-ctx/render-inline?))]
     (->> resultset
          (mapcat (fn [result]
                    (let [param-ctx (assoc param-ctx :result result)
                          option-queries (mapv (fn [{form :find-element/form :as find-element}]
                                                 (form-option-queries form param-ctx))
                                               find-elements)
-                         inline-queries (mapv (fn [inline-link]
-                                                (let [params-map (links/build-params-map inline-link param-ctx)
-                                                      param-ctx (assoc param-ctx :debug (str "inline-query:" (.-dbid inline-link)))]
-                                                  (query inline-link params-map param-ctx)))
-                                              inline-links)]
+                         inline-queries (mapv (fn [inline-link-ctx]
+                                                (let [params-map (links/build-params-map inline-link-ctx param-ctx)
+                                                      param-ctx (assoc param-ctx :debug (str "inline-query:" (.-dbid inline-link-ctx)))]
+                                                  (query (:link-ctx/link inline-link-ctx) params-map param-ctx)))
+                                              inline-link-ctxs)]
                      (concat option-queries inline-queries))))
          (apply merge))))
 
 
-(defn query [{find-elements :link/find-element :as link}
-             {query-params :query-params create-new-find-elements :create-new-find-elements :as params-map}
-             {:keys [super-graph] :as param-ctx}]
+(defn query "No need for link-ctx anymore by the time we are here, it is in the url as query params and stuff"
+  [{find-elements :link/find-element :as link}
+   {query-params :query-params create-new-find-elements :create-new-find-elements :as params-map}
+   {:keys [super-graph] :as param-ctx}]
   (let [q (some-> link :link/query reader/read-string)
         params-map (merge query-params (q-util/build-dbhole-lookup link))
         param-ctx (assoc param-ctx :query-params query-params)]

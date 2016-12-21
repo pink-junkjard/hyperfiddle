@@ -10,25 +10,25 @@
            (str (subs s 0 (- c 3)) "..."))))
 
 
-(defn ref-one-component [entity field links param-ctx]
+(defn ref-one-component [entity field link-ctxs param-ctx]
   [:div
    #_(->> (get-in entity [(-> field :field/attribute :attribute/ident) :db/id])
         (pr-str))
-   (widget/link-thing field links param-ctx)
-   (widget/render-inline-links field links param-ctx)])
+   (widget/link-thing field link-ctxs param-ctx)
+   (widget/render-inline-links field link-ctxs param-ctx)])
 
 
-(defn ref-many [entity field links param-ctx]
+(defn ref-many [entity field link-ctxs param-ctx]
   [:div
    #_(->> (get entity (-> field :field/attribute :attribute/ident))
         (mapv :db/id)
         (pr-str)
         (ellipsis 15))
-   (widget/link-thing field links param-ctx)
-   (widget/render-inline-links field links param-ctx)])
+   (widget/link-thing field link-ctxs param-ctx)
+   (widget/render-inline-links field link-ctxs param-ctx)])
 
 
-(defn other-many [entity field links param-ctx]
+(defn other-many [entity field link-ctxs param-ctx]
   (let [ident (-> field :field/attribute :attribute/ident)]
     [:div
      [:button {:on-click #(js/alert "todo")} "Edit"]

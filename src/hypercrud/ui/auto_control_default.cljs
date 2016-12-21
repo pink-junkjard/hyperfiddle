@@ -18,16 +18,16 @@
 ; need to limit it to parent.
 
 
-(defn build-props [entity field links param-ctx]
+(defn build-props [entity field link-ctxs param-ctx]
   {:read-only (if-let [read-only (:read-only param-ctx)] (read-only param-ctx))})
 
 
 (defmethod auto-control/auto-control :default
-  [entity field links param-ctx]
+  [entity field link-ctxs param-ctx]
   (let [{:keys [:attribute/valueType :attribute/cardinality :attribute/isComponent]} (:field/attribute field)
         valueType (:db/ident valueType)
         cardinality (:db/ident cardinality)
-        props (build-props entity field links param-ctx)
+        props (build-props entity field link-ctxs param-ctx)
         widget (cond
                  (if-let [read-only (:read-only param-ctx)] (read-only param-ctx)) widget/text
                  (and (= valueType :db.type/boolean) (= cardinality :db.cardinality/one)) select/select-boolean
@@ -41,15 +41,15 @@
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one)) widget/select-ref
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) widget/table-many-ref
                  :else widget/default)]
-    (widget entity field links props param-ctx)))
+    (widget entity field link-ctxs props param-ctx)))
 
 
 (defmethod auto-control/auto-table-cell :default
-  [entity field links param-ctx]
+  [entity field link-ctxs param-ctx]
   (let [{:keys [:attribute/valueType :attribute/cardinality :attribute/isComponent]} (:field/attribute field)
         valueType (:db/ident valueType)
         cardinality (:db/ident cardinality)
-        props (build-props entity field links param-ctx)
+        props (build-props entity field link-ctxs param-ctx)
         widget (cond
                  (if-let [read-only (:read-only param-ctx)] (read-only param-ctx)) widget/text
                  (and (= valueType :db.type/boolean) (= cardinality :db.cardinality/one)) select/select-boolean
@@ -66,26 +66,26 @@
                  (and (= cardinality :db.cardinality/many)) table-cell/other-many
 
                  :else widget/default)]
-    (widget entity field links props param-ctx)))
+    (widget entity field link-ctxs props param-ctx)))
 
 
 (defn repeating-links [link result param-ctx]
-  (->> (:link/link link)
-       (filter :link/repeating?)
-       (filter #(nil? (:link/field %)))
-       (mapv (fn [link]
+  (->> (:link/link-ctx link)
+       (filter :link-ctx/repeating?)
+       (filter #(nil? (:link-ctx/field %)))
+       (mapv (fn [{:keys [:link-ctx/link] :as link-ctx}]
                (let [param-ctx (merge param-ctx {:result result})
-                     props (links/query-link link param-ctx)]
+                     props (links/query-link link-ctx param-ctx)]
                  ^{:key (:db/id link)}
                  [(:navigate-cmp param-ctx) props (:link/prompt link) param-ctx])))))
 
 
 (defn non-repeating-links [link param-ctx]
-  (->> (:link/link link)
-       (remove :link/repeating?)
-       (filter #(nil? (:link/field %)))
-       (map (fn [link]
-              (let [props (links/query-link link param-ctx)]
+  (->> (:link/link-ctx link)
+       (remove :link-ctx/repeating?)
+       (filter #(nil? (:link-ctx/field %)))
+       (map (fn [{:keys [:link-ctx/link] :as link-ctx}]
+              (let [props (links/query-link link-ctx param-ctx)]
                 ^{:key (:db/id link)}
                 [(:navigate-cmp param-ctx) props (:link/prompt link) param-ctx])))))
 
@@ -104,7 +104,7 @@
             (map (fn [{:keys [:find-element/form] :as find-element}]
                    (let [entity (get result (:find-element/name find-element))]
                      ^{:key (hash [(.-dbid entity) (.-dbid form)])}
-                     [form/form entity form (:link/link link) param-ctx]))
+                     [form/form entity form (:link/link-ctx link) param-ctx]))
                  ordered-find-elements)])])
       ^{:key (hc/t (:super-graph param-ctx))}
-      [table/table resultset ordered-find-elements (:link/link link) param-ctx])))
+      [table/table resultset ordered-find-elements (:link/link-ctx link) param-ctx])))
