@@ -63,7 +63,7 @@
                    [:span.sort-arrow arrow]]))))))
 
 
-(defn build-row-cells [form entity links {:keys [super-graph navigate-cmp] :as param-ctx}]
+(defn build-row-cells [form entity links {:keys [super-graph] :as param-ctx}]
   (let [repeating-links (->> links
                              (filter :link/repeating?)
                              (mapv (juxt :link/ident identity))
@@ -71,7 +71,7 @@
         link-fn (fn [ident label]
                   (let [link (get repeating-links ident)
                         props (links/query-link link param-ctx)]
-                    [navigate-cmp props label]))
+                    [(:navigate-cmp param-ctx) props label param-ctx]))
         param-ctx (assoc param-ctx :color ((:color-fn param-ctx) entity param-ctx)
                                    :owner ((:owner-fn param-ctx) entity param-ctx))
         style {:border-color (connection-color (:color param-ctx))}]
@@ -108,7 +108,7 @@
 ;        [:div {:on-click #(reset! open? true)} "⚙"]))))
 
 
-(defn table-row [result ordered-find-elements links {:keys [navigate-cmp] :as param-ctx}]
+(defn table-row [result ordered-find-elements links param-ctx]
   (let [param-ctx (assoc param-ctx :result result)]
     [:tr
      (mapcat (fn [find-element]
@@ -121,7 +121,7 @@
            (filter #(nil? (:link/field %)))
            (map (fn [{:keys [:db/id :link/prompt] :as link}]
                   (let [props (assoc (links/query-link link param-ctx) :key id)]
-                    (navigate-cmp props prompt))))
+                    ((:navigate-cmp param-ctx) props prompt param-ctx))))
            (interpose " · "))]]))
 
 
@@ -152,7 +152,7 @@
 
 (defn table [resultset ordered-find-elements links param-ctx]
   (let [sort-col (r/atom nil)]
-    (fn [resultset ordered-find-elements links {:keys [navigate-cmp] :as param-ctx}]
+    (fn [resultset ordered-find-elements links param-ctx]
       (let [repeating-links (filter :link/repeating? links)]
         [:table.ui-table
          [:thead
@@ -164,6 +164,6 @@
                  (map (fn [link]
                         (let [props (links/query-link link param-ctx)]
                           ^{:key (:db/id link)}
-                          [navigate-cmp props (:link/prompt link)])))
+                          [(:navigate-cmp param-ctx) props (:link/prompt link) param-ctx])))
                  (interpose " · "))]]]
          [body resultset ordered-find-elements repeating-links sort-col param-ctx]]))))

@@ -25,7 +25,7 @@
           (remove :link/render-inline?)
           (map (fn [{:keys [:db/id :link/prompt] :as link}]
                  ^{:key id}
-                 [(:navigate-cmp param-ctx) (links/query-link link param-ctx) prompt]))
+                 [(:navigate-cmp param-ctx) (links/query-link link param-ctx) prompt param-ctx]))
           (interpose " · "))]))
 
 
@@ -104,8 +104,8 @@
 (defn table-many-ref [entity field links props param-ctx]
   [:div.value
    #_(->> (get entity (-> field :field/attribute :attribute/ident))
-        (mapv :db/id)
-        (pr-str))
+          (mapv :db/id)
+          (pr-str))
    (render-inline-links field links param-ctx)
    (link-thing field links param-ctx)])
 
@@ -119,11 +119,11 @@
       (let [ident (-> field :field/attribute :attribute/ident)
             resultset (mapv vector (get entity ident))]
         [:div.value
-         [table/table graph resultset (vector (:field/form field)) user-swap! navigate-cmp]
+         [table/table graph resultset (vector (:field/form field)) user-swap! navigate-cmp] ; busto
          (let [props {:value (str @select-value-atom)
                       :on-change #(let [select-value (.-target.value %)
                                         value (reader/read-string select-value)]
-                                   (reset! select-value-atom value))}
+                                    (reset! select-value-atom value))}
                ; todo assert selected value is in record set
                ; need lower level select component that can be reused here and in select.cljs
                select-options (->> (option/get-option-records field graph param-ctx)
@@ -142,8 +142,8 @@
 (defn table-many-ref-component [entity field links props param-ctx]
   [:div.value
    #_(->> (get entity (-> field :field/attribute :attribute/ident))
-        (mapv :db/id)
-        (pr-str))
+          (mapv :db/id)
+          (pr-str))
    (render-inline-links field links param-ctx)
    (link-thing field links param-ctx)])
 
@@ -185,6 +185,16 @@
                            (js/Date. ms))))
         to-string #(some-> % .toISOString)]
     [input/validated-input value on-change! parse-string to-string valid-date-str?]))
+
+
+(defn text [entity field links props param-ctx]
+  [:div.value
+   (let [value (get entity (-> field :field/attribute :attribute/ident))]
+     (condp = (-> field :field/attribute :attribute/cardinality :db/ident)
+       :db.cardinality/one (pr-str value)
+       :db.cardinality/many (map pr-str value)))
+   (render-inline-links field links param-ctx)
+   (link-thing field links param-ctx)])
 
 
 (defn default [entity field links props param-ctx]

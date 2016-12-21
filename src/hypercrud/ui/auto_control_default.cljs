@@ -19,8 +19,7 @@
 
 
 (defn build-props [entity field links param-ctx]
-  {:read-only (if-let [read-only (:read-only param-ctx)]
-                (read-only param-ctx))})
+  {:read-only (if-let [read-only (:read-only param-ctx)] (read-only param-ctx))})
 
 
 (defmethod auto-control/auto-control :default
@@ -30,6 +29,7 @@
         cardinality (:db/ident cardinality)
         props (build-props entity field links param-ctx)
         widget (cond
+                 (if-let [read-only (:read-only param-ctx)] (read-only param-ctx)) widget/text
                  (and (= valueType :db.type/boolean) (= cardinality :db.cardinality/one)) select/select-boolean
                  (and (= valueType :db.type/keyword) (= cardinality :db.cardinality/one)) widget/input-keyword
                  (and (= valueType :db.type/string) (= cardinality :db.cardinality/one)) widget/input
@@ -51,6 +51,7 @@
         cardinality (:db/ident cardinality)
         props (build-props entity field links param-ctx)
         widget (cond
+                 (if-let [read-only (:read-only param-ctx)] (read-only param-ctx)) widget/text
                  (and (= valueType :db.type/boolean) (= cardinality :db.cardinality/one)) select/select-boolean
                  (and (= valueType :db.type/keyword) (= cardinality :db.cardinality/one)) widget/input-keyword
                  (and (= valueType :db.type/string) (= cardinality :db.cardinality/one)) widget/input
@@ -68,7 +69,7 @@
     (widget entity field links props param-ctx)))
 
 
-(defn repeating-links [link result {:keys [navigate-cmp] :as param-ctx}]
+(defn repeating-links [link result param-ctx]
   (->> (:link/link link)
        (filter :link/repeating?)
        (filter #(nil? (:link/field %)))
@@ -76,17 +77,17 @@
                (let [param-ctx (merge param-ctx {:result result})
                      props (links/query-link link param-ctx)]
                  ^{:key (:db/id link)}
-                 [navigate-cmp props (:link/prompt link)])))))
+                 [(:navigate-cmp param-ctx) props (:link/prompt link) param-ctx])))))
 
 
-(defn non-repeating-links [link {:keys [navigate-cmp] :as param-ctx}]
+(defn non-repeating-links [link param-ctx]
   (->> (:link/link link)
        (remove :link/repeating?)
        (filter #(nil? (:link/field %)))
        (map (fn [link]
               (let [props (links/query-link link param-ctx)]
                 ^{:key (:db/id link)}
-                [navigate-cmp props (:link/prompt link)])))))
+                [(:navigate-cmp param-ctx) props (:link/prompt link) param-ctx])))))
 
 
 (defmethod auto-control/resultset :default [resultset link param-ctx]

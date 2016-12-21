@@ -5,7 +5,7 @@
             [hypercrud.ui.auto-control :refer [auto-control connection-color]]))
 
 
-(defn field [entity {:keys [:field/prompt :field/renderer] :as field} links {:keys [super-graph navigate-cmp] :as param-ctx}]
+(defn field [entity {:keys [:field/prompt :field/renderer] :as field} links {:keys [super-graph] :as param-ctx}]
   [:div.field
    [:label
     (let [docstring (-> field :field/attribute :attribute/doc)]
@@ -22,7 +22,7 @@
            link-fn (fn [ident label]
                      (let [link (get repeating-links ident)
                            props (links/query-link link param-ctx)]
-                       [navigate-cmp props label]))]
+                       [(:navigate-cmp param-ctx) props label param-ctx]))]
        [:div.value
         (if error
           (pr-str error)

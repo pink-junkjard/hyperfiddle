@@ -42,7 +42,7 @@
                     :link-fn (fn [ident label param-ctx]
                                (let [link (get repeating-links ident)
                                      props (links/query-link link param-ctx)]
-                                 [(:navigate-cmp param-ctx) props label])))]
+                                 [(:navigate-cmp param-ctx) props label param-ctx])))]
     [:div
      (if error
        [:pre (pprint/pprint error)]
