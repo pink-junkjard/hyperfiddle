@@ -72,7 +72,8 @@
                   (let [link (get repeating-links ident)
                         props (links/query-link link param-ctx)]
                     [navigate-cmp props label]))
-        param-ctx (assoc param-ctx :color ((:color-fn param-ctx) entity param-ctx))
+        param-ctx (assoc param-ctx :color ((:color-fn param-ctx) entity param-ctx)
+                                   :owner ((:owner-fn param-ctx) entity param-ctx))
         style {:border-color (connection-color (:color param-ctx))}]
     (->> (:form/field form)
          (sort-by :field/order)

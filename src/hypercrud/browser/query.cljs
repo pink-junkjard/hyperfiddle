@@ -5,37 +5,14 @@
             [hypercrud.browser.links :as links]
             [hypercrud.client.core :as hc]
             [hypercrud.compile.eval :refer [eval]]
-            [hypercrud.form.find-elements :as find-elements-util]
             [hypercrud.form.q-util :as q-util]
             [hypercrud.types :refer [->DbId ->DbVal ->Entity]]
-            [hypercrud.ui.auto-control :refer [auto-control]]
-            [hypercrud.ui.form :as form]
-            [hypercrud.ui.table :as table]))
+            [hypercrud.ui.auto-control :as auto-control]
+            [hypercrud.ui.form :as form]))
 
 
 (defn holes-filled? [hole-names params-map]
   (set/subset? (set hole-names) (set (keys (into {} (remove (comp nil? val) params-map))))))
-
-
-(defn repeating-links [link result {:keys [navigate-cmp] :as param-ctx}]
-  (->> (:link/link link)
-       (filter :link/repeating?)
-       (filter #(nil? (:link/field %)))
-       (mapv (fn [link]
-               (let [param-ctx (merge param-ctx {:result result})
-                     props (links/query-link link param-ctx)]
-                 ^{:key (:db/id link)}
-                 [navigate-cmp props (:link/prompt link)])))))
-
-
-(defn non-repeating-links [link {:keys [navigate-cmp] :as param-ctx}]
-  (->> (:link/link link)
-       (remove :link/repeating?)
-       (filter #(nil? (:link/field %)))
-       (map (fn [link]
-              (let [props (links/query-link link param-ctx)]
-                ^{:key (:db/id link)}
-                [navigate-cmp props (:link/prompt link)])))))
 
 
 (defn pull-resultset [super-graph {find-elements :link/find-element :as link} create-new-find-elements resultset]
@@ -56,9 +33,28 @@
                       (into {})))))))
 
 
-(defn ui [{find-elements :link/find-element result-renderer-code :link/result-renderer :as link}
+(defn resultset-custom [resultset link param-ctx]
+  (let [{resultset-renderer :value error :error} (eval (:link/result-renderer link))
+        repeating-links (->> (:link/link link)
+                             #_ (filter :link/repeating?)
+                             (mapv (juxt :link/ident identity))
+                             (into {}))
+        param-ctx (assoc param-ctx
+                    :link-fn (fn [ident label param-ctx]
+                               (let [link (get repeating-links ident)
+                                     props (links/query-link link param-ctx)]
+                                 [(:navigate-cmp param-ctx) props label])))]
+    [:div
+     (if error
+       [:pre (pprint/pprint error)]
+       (try
+         (resultset-renderer resultset link param-ctx)
+         (catch :default e (pr-str e))))]))
+
+
+(defn ui [{find-elements :link/find-element :as link}
           {query-params :query-params create-new-find-elements :create-new-find-elements :as params-map}
-          {:keys [navigate-cmp super-graph] :as param-ctx}]
+          {:keys [super-graph] :as param-ctx}]
   (let [q (some-> link :link/query reader/read-string)
         params-map (merge query-params (q-util/build-dbhole-lookup link))
         param-ctx (assoc param-ctx :query-params query-params)
@@ -76,49 +72,10 @@
                                       (let [params (q-util/build-params #(get params-map %) link param-ctx)
                                             pull-exp (form/query-pull-exp find-elements)
                                             query-value [q params pull-exp]]
-                                        (hc/select super-graph (hash query-value))))
-            ordered-find-elements (find-elements-util/order-find-elements find-elements q)]
-        (if (empty? result-renderer-code)
-          (if (:link/single-result-as-entity? link)
-            (let [result (first resultset)]
-              [:div
-               (->> (concat (repeating-links link result param-ctx)
-                            (non-repeating-links link param-ctx))
-                    (interpose " · "))
-               (let [param-ctx (assoc param-ctx :result result)]
-                 [:div
-                  (map (fn [{:keys [:find-element/form] :as find-element}]
-                         (let [entity (get result (:find-element/name find-element))]
-                           ^{:key (hash [(.-dbid entity) (.-dbid form)])}
-                           [form/form entity form (:link/link link) param-ctx]))
-                       ordered-find-elements)])])
-            ^{:key (hc/t super-graph)}
-            [table/table resultset ordered-find-elements (:link/link link) param-ctx])
-          (let [{result-renderer :value error :error} (eval result-renderer-code)
-                repeating-links (->> (:link/link link)
-                                     (filter :link/repeating?)
-                                     (mapv (juxt :link/ident identity))
-                                     (into {}))
-                render-result (fn [result]
-                                (let [link-fn (fn [ident label]
-                                                (let [link (get repeating-links ident)
-                                                      param-ctx (merge param-ctx {:result result})
-                                                      props (links/query-link link param-ctx)]
-                                                  [navigate-cmp props label]))]
-                                  (try
-                                    (result-renderer super-graph link-fn result)
-                                    (catch :default e (pr-str e)))))]
-            [:div
-             (if error
-               [:pre (pprint/pprint error)]
-               (if (:link/single-result-as-entity? link)
-                 (render-result (first resultset))
-                 [:ul
-                  (->> resultset
-                       (map (fn [result]
-                              [:li {:key (hash result)}
-                               (render-result result)])))]))
-             [:div.links (interpose " · " (non-repeating-links link param-ctx))]]))))))
+                                        (hc/select super-graph (hash query-value))))]
+        (if (empty? (:link/result-renderer link))
+          (auto-control/resultset resultset link param-ctx)
+          (resultset-custom resultset link param-ctx))))))
 
 
 (declare query)

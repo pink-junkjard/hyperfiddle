@@ -32,7 +32,8 @@
 
 
 (defn form [entity form links param-ctx]
-  (let [param-ctx (assoc param-ctx :color ((:color-fn param-ctx) entity param-ctx))
+  (let [param-ctx (assoc param-ctx :color ((:color-fn param-ctx) entity param-ctx)
+                                   :owner ((:owner-fn param-ctx) entity param-ctx))
         style {:border-color (connection-color (:color param-ctx))}]
     [:div.form {:style style}
      (->> (:form/field form)

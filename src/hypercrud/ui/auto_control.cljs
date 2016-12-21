@@ -6,6 +6,9 @@
 
 (defmulti auto-table-cell (fn [] :default))
 
+(defmulti resultset (fn [] :default))
+
+
 (def connection-color
   (memoize
     (fn [conn-id]
