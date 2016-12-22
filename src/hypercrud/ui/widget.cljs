@@ -35,7 +35,7 @@
     (->> link-ctxs
          (filter #(= field-dbid (some-> % :link-ctx/field .-dbid)))
          (filter :link-ctx/render-inline?)
-         (map (fn [{:keys [:link-ctx/link]} link-ctx]
+         (map (fn [{:keys [:link-ctx/link] :as link-ctx}]
                 (let [params-map (links/build-params-map link-ctx param-ctx)
                       ; todo do we need a different param-ctx for rendering the ui?
                       param-ctx (assoc param-ctx
