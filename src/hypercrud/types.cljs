@@ -1,8 +1,6 @@
 (ns hypercrud.types
-  (:require [cljs.core.match :refer-macros [match]]
-            [cljs.reader :as reader]
-            [hypercrud.client.core :as hc]
-            [hypercrud.util :as util]))
+  (:require [cljs.reader :as reader]
+            [hypercrud.client.core :as hc]))
 
 
 (deftype DbId [id conn-id]
