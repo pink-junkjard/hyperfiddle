@@ -51,31 +51,33 @@
          (catch :default e (pr-str e))))]))
 
 
-(defn ui [{find-elements :link/find-element :as link}
-          {query-params :query-params create-new-find-elements :create-new-find-elements :as params-map}
-          {:keys [super-graph] :as param-ctx}]
-  (let [q (some-> link :link/query reader/read-string)
-        params-map (merge query-params (q-util/build-dbhole-lookup link))
-        param-ctx (assoc param-ctx :query-params query-params)
-        query-hole-names (q-util/parse-holes q)]
-    (if-not (holes-filled? query-hole-names params-map)     ;todo what if we have a user hole?
-      [:div "todo"]
-      #_(if-not (:link/render-inline? link)                 ; don't show this error when we are nested
-          [:div
-           [:div "Unfilled query holes"]
-           [:pre (doall (with-out-str
-                          (binding [pprint/*print-miser-width* 1] ; not working
-                            (pprint/pprint (->> query-hole-names
-                                                (mapv (juxt identity #(get params-map %)))
-                                                (into {}))))))]])
-      (let [resultset (pull-resultset super-graph link create-new-find-elements
-                                      (let [params (q-util/build-params #(get params-map %) link param-ctx)
-                                            pull-exp (form/query-pull-exp find-elements)
-                                            query-value [q params pull-exp]]
-                                        (hc/select super-graph (hash query-value))))]
-        (if (empty? (:link/renderer link))
-          (auto-control/resultset resultset link param-ctx)
-          (resultset-custom resultset link param-ctx))))))
+(defn ui
+  ([link-ctx param-ctx]
+   (let [params-map (links/build-params-map link-ctx param-ctx)]
+     [ui (:link-ctx/link link-ctx) params-map param-ctx]))
+  ([{find-elements :link/find-element :as link}
+    {query-params :query-params create-new-find-elements :create-new-find-elements :as params-map}
+    {:keys [super-graph] :as param-ctx}]
+   (let [q (some-> link :link/query reader/read-string)
+         params-map (merge query-params (q-util/build-dbhole-lookup link))
+         param-ctx (assoc param-ctx :query-params query-params)
+         query-hole-names (q-util/parse-holes q)]
+     (if-not (holes-filled? query-hole-names params-map)    ;todo what if we have a user hole?
+       [:div
+        [:div "Unfilled query holes"]
+        [:pre (doall (with-out-str
+                       (binding [pprint/*print-miser-width* 1] ; not working
+                         (pprint/pprint (->> query-hole-names
+                                             (mapv (juxt identity #(get params-map %)))
+                                             (into {}))))))]]
+       (let [resultset (pull-resultset super-graph link create-new-find-elements
+                                       (let [params (q-util/build-params #(get params-map %) link param-ctx)
+                                             pull-exp (form/query-pull-exp find-elements)
+                                             query-value [q params pull-exp]]
+                                         (hc/select super-graph (hash query-value))))]
+         (if (empty? (:link/renderer link))
+           (auto-control/resultset resultset link param-ctx)
+           (resultset-custom resultset link param-ctx)))))))
 
 
 (declare query)
@@ -88,9 +90,8 @@
     ; EXCEPT when we are component, in which case no options are rendered, just a form, handled below
     (if (and is-ref (not isComponent))
       (if-let [options-link-ctx (:field/options-link-ctx field)]
-        (let [params-map (links/build-params-map options-link-ctx param-ctx)
-              param-ctx (assoc param-ctx :debug (str "field-options:" (:db/id field)))]
-          (query (:link-ctx/link options-link-ctx) params-map param-ctx))))))
+        (let [param-ctx (assoc param-ctx :debug (str "field-options:" (:db/id field)))]
+          (query options-link-ctx param-ctx false))))))
 
 
 (defn form-option-queries "get the form options recursively for all expanded forms"
@@ -109,27 +110,32 @@
                                                 (form-option-queries form param-ctx))
                                               find-elements)
                          inline-queries (mapv (fn [inline-link-ctx]
-                                                (let [params-map (links/build-params-map inline-link-ctx param-ctx)
-                                                      param-ctx (assoc param-ctx :debug (str "inline-query:" (.-dbid inline-link-ctx)))]
-                                                  (query (:link-ctx/link inline-link-ctx) params-map param-ctx)))
+                                                (let [param-ctx (assoc param-ctx :debug (str "inline-query:" (.-dbid inline-link-ctx)))]
+                                                  (query inline-link-ctx param-ctx true)))
                                               inline-link-ctxs)]
                      (concat option-queries inline-queries))))
          (apply merge))))
 
 
-(defn query "No need for link-ctx anymore by the time we are here, it is in the url as query params and stuff"
-  [{find-elements :link/find-element :as link}
-   {query-params :query-params create-new-find-elements :create-new-find-elements :as params-map}
-   {:keys [super-graph] :as param-ctx}]
-  (let [q (some-> link :link/query reader/read-string)
-        params-map (merge query-params (q-util/build-dbhole-lookup link))
-        param-ctx (assoc param-ctx :query-params query-params)]
-    (if (holes-filled? (q-util/parse-holes q) params-map)
-      (let [result-query [q
-                          (q-util/build-params #(get params-map %) link param-ctx)
-                          (form/query-pull-exp find-elements)]]
-        (merge
-          {(hash result-query) result-query}
-          (if-let [resultset (some->> (hc/select super-graph (hash result-query))
-                                      (pull-resultset super-graph link create-new-find-elements))]
-            (dependent-queries link resultset param-ctx)))))))
+(defn query
+  ([link-ctx param-ctx skip-recurse?]
+   (let [params-map (links/build-params-map link-ctx param-ctx)]
+     (query (:link-ctx/link link-ctx) params-map param-ctx skip-recurse?)))
+  ([{find-elements :link/find-element :as link}
+    {query-params :query-params create-new-find-elements :create-new-find-elements :as params-map}
+    {:keys [super-graph] :as param-ctx}
+    recurse?]
+    ;"No need for link-ctx anymore by the time we are here, it is in the url as query params and stuff"
+   (let [q (some-> link :link/query reader/read-string)
+         params-map (merge query-params (q-util/build-dbhole-lookup link))
+         param-ctx (assoc param-ctx :query-params query-params)]
+     (if (holes-filled? (q-util/parse-holes q) params-map)
+       (let [result-query [q
+                           (q-util/build-params #(get params-map %) link param-ctx)
+                           (form/query-pull-exp find-elements)]]
+         (merge
+           {(hash result-query) result-query}
+           (if recurse?
+             (if-let [resultset (some->> (hc/select super-graph (hash result-query))
+                                         (pull-resultset super-graph link create-new-find-elements))]
+               (dependent-queries link resultset param-ctx)))))))))

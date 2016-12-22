@@ -30,7 +30,7 @@
   (route page-rel-path
          {:query-fn (fn [{:keys [link-dbid] :as params-map}]
                       (let [link (hc/entity meta-graph link-dbid)]
-                        (query/query link params-map param-ctx)))
+                        (query/query link params-map param-ctx true)))
           :else (constantly {})}))
 
 
