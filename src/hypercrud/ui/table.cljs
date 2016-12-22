@@ -120,9 +120,8 @@
       (->> link-ctxs
            (filter #(nil? (:link-ctx/field %)))
            (map (fn [link-ctx]
-                  (let [{:keys [:db/id :link/prompt]} (:link-ctx/link link-ctx)
-                        props (assoc (links/query-link link-ctx param-ctx) :key id)]
-                    ((:navigate-cmp param-ctx) props prompt param-ctx))))
+                  (let [props (assoc (links/query-link link-ctx param-ctx) :key (:db/id link-ctx))]
+                    ((:navigate-cmp param-ctx) props (-> link-ctx :link-ctx/link :link/prompt) param-ctx))))
            (interpose " · "))]]))
 
 
@@ -164,7 +163,7 @@
                  (filter #(nil? (:link-ctx/field %)))
                  (map (fn [{:keys [:link-ctx/link] :as link-ctx}]
                         (let [props (links/query-link link-ctx param-ctx)]
-                          ^{:key (:db/id link)}
+                          ^{:key (:db/id link-ctx)}
                           [(:navigate-cmp param-ctx) props (:link/prompt link) param-ctx])))
                  (interpose " · "))]]]
          [body resultset ordered-find-elements repeating-link-ctxs sort-col param-ctx]]))))

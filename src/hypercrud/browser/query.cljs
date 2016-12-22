@@ -101,7 +101,6 @@
 
 (defn dependent-queries [{find-elements :link/find-element :as link} resultset param-ctx]
   (let [inline-link-ctxs (->> (:link/link-ctx link)
-                              (mapv :link-ctx/link)
                               (filter :link-ctx/render-inline?))]
     (->> resultset
          (mapcat (fn [result]

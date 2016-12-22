@@ -76,7 +76,7 @@
        (mapv (fn [{:keys [:link-ctx/link] :as link-ctx}]
                (let [param-ctx (merge param-ctx {:result result})
                      props (links/query-link link-ctx param-ctx)]
-                 ^{:key (:db/id link)}
+                 ^{:key (:db/id link-ctx)}
                  [(:navigate-cmp param-ctx) props (:link/prompt link) param-ctx])))))
 
 
@@ -86,7 +86,7 @@
        (filter #(nil? (:link-ctx/field %)))
        (map (fn [{:keys [:link-ctx/link] :as link-ctx}]
               (let [props (links/query-link link-ctx param-ctx)]
-                ^{:key (:db/id link)}
+                ^{:key (:db/id link-ctx)}
                 [(:navigate-cmp param-ctx) props (:link/prompt link) param-ctx])))))
 
 
