@@ -179,9 +179,10 @@
   (let [id (:db/id entity-map)
         id (or (get tempids id) id)                         ; if a tempid was sent up on the wire we need to convert it back now for entity position
         dbid (->DbId id conn-id)
-        [lookup-transient new-entity-map] (reduce (partial apply-av-to-entity-map schema conn-id tempids)
-                                                  (get-data! lookup-transient dbid)
-                                                  (dissoc entity-map :db/id))]
+        [lookup-transient new-entity-map] (->> (dissoc entity-map :db/id)
+                                               (remove (comp nil? val))
+                                               (reduce (partial apply-av-to-entity-map schema conn-id tempids)
+                                                       (get-data! lookup-transient dbid)))]
     (assoc! lookup-transient dbid new-entity-map)))
 
 
