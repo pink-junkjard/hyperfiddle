@@ -1,7 +1,6 @@
 (ns hypercrud.browser.query
   (:require [cljs.pprint :as pprint]
             [cljs.reader :as reader]
-            [clojure.set :as set]
             [hypercrud.browser.links :as links]
             [hypercrud.client.core :as hc]
             [hypercrud.compile.eval :refer [eval]]
@@ -9,10 +8,6 @@
             [hypercrud.types :refer [->DbId ->DbVal ->Entity]]
             [hypercrud.ui.auto-control :as auto-control]
             [hypercrud.ui.form :as form]))
-
-
-(defn holes-filled? [hole-names params-map]
-  (set/subset? (set hole-names) (set (keys (into {} (remove (comp nil? val) params-map))))))
 
 
 (defn pull-resultset [super-graph {find-elements :link/find-element :as link} create-new-find-elements resultset]
@@ -62,7 +57,7 @@
          params-map (merge query-params (q-util/build-dbhole-lookup link))
          param-ctx (assoc param-ctx :query-params query-params)
          query-hole-names (q-util/parse-holes q)]
-     (if-not (holes-filled? query-hole-names params-map)    ;todo what if we have a user hole?
+     (if-not (links/holes-filled? query-hole-names params-map)    ;todo what if we have a user hole?
        [:div
         [:div "Unfilled query holes"]
         [:pre (doall (with-out-str
@@ -129,7 +124,7 @@
    (let [q (some-> link :link/query reader/read-string)
          params-map (merge query-params (q-util/build-dbhole-lookup link))
          param-ctx (assoc param-ctx :query-params query-params)]
-     (if (holes-filled? (q-util/parse-holes q) params-map)
+     (if (links/holes-filled? (q-util/parse-holes q) params-map)
        (let [result-query [q
                            (q-util/build-params #(get params-map %) link param-ctx)
                            (form/query-pull-exp find-elements)]]
