@@ -30,12 +30,12 @@
 
 (defn resultset-custom [resultset link param-ctx]
   (let [{resultset-renderer :value error :error} (eval (:link/renderer link))
-        repeating-link-ctxs (->> (:link/link-ctx link)
-                                 (mapv (juxt #(-> % :link-ctx/ident) identity))
-                                 (into {}))
+        link-ctxs (->> (:link/link-ctx link)
+                       (mapv (juxt #(-> % :link-ctx/ident) identity))
+                       (into {}))
         param-ctx (assoc param-ctx
                     :link-fn (fn [ident label param-ctx]
-                               (let [link-ctx (get repeating-link-ctxs ident)
+                               (let [link-ctx (get link-ctxs ident)
                                      props (links/query-link link-ctx param-ctx)]
                                  [(:navigate-cmp param-ctx) props label param-ctx])))]
     [:div
@@ -57,7 +57,7 @@
          params-map (merge query-params (q-util/build-dbhole-lookup link))
          param-ctx (assoc param-ctx :query-params query-params)
          query-hole-names (q-util/parse-holes q)]
-     (if-not (links/holes-filled? query-hole-names params-map)    ;todo what if we have a user hole?
+     (if-not (links/holes-filled? query-hole-names params-map) ;todo what if we have a user hole?
        [:div
         [:div "Unfilled query holes"]
         [:pre (doall (with-out-str

@@ -45,3 +45,13 @@
         {:href (base64/encode (pr-str params-map))
          :class (if-not (renderable-link? (:link-ctx/link link-ctx) params-map)
                   "invalid")}))))
+
+
+(defn link-visible? [link-ctx param-ctx]
+  (let [visible-src (:link-ctx/visible? link-ctx)
+        visible-fn (if-not (empty? visible-src)
+                     (let [{:keys [value error]} (eval visible-src)]
+                       (if error (js/alert (str "cljs eval error: " error)))
+                       value)
+                     (constantly true))]
+    (visible-fn param-ctx)))

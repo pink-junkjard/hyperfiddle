@@ -69,13 +69,13 @@
     (widget entity field link-ctxs props param-ctx)))
 
 
-(defn repeating-links [link result param-ctx]
+(defn repeating-links [link param-ctx]
   (->> (:link/link-ctx link)
        (filter :link-ctx/repeating?)
        (filter #(nil? (:link-ctx/field %)))
+       (filter #(links/link-visible? % param-ctx))
        (mapv (fn [{:keys [:link-ctx/link] :as link-ctx}]
-               (let [param-ctx (merge param-ctx {:result result})
-                     props (links/query-link link-ctx param-ctx)]
+               (let [props (links/query-link link-ctx param-ctx)]
                  ^{:key (:db/id link-ctx)}
                  [(:navigate-cmp param-ctx) props (:link/prompt link) param-ctx])))))
 
@@ -84,6 +84,7 @@
   (->> (:link/link-ctx link)
        (remove :link-ctx/repeating?)
        (filter #(nil? (:link-ctx/field %)))
+       (filter #(links/link-visible? % param-ctx))
        (map (fn [{:keys [:link-ctx/link] :as link-ctx}]
               (let [props (links/query-link link-ctx param-ctx)]
                 ^{:key (:db/id link-ctx)}
@@ -94,17 +95,17 @@
   (let [q (some-> link :link/query reader/read-string)
         ordered-find-elements (find-elements-util/order-find-elements (:link/find-element link) q)]
     (if (:link/single-result-as-entity? link)
-      (let [result (first resultset)]
+      (let [result (first resultset)
+            param-ctx (assoc param-ctx :result result)]
         [:div
-         (->> (concat (repeating-links link result param-ctx)
-                      (non-repeating-links link param-ctx))
+         (->> (concat (repeating-links link param-ctx)
+                      (non-repeating-links link (dissoc param-ctx :result)))
               (interpose " · "))
-         (let [param-ctx (assoc param-ctx :result result)]
-           [:div
-            (map (fn [{:keys [:find-element/form] :as find-element}]
-                   (let [entity (get result (:find-element/name find-element))]
-                     ^{:key (hash [(.-dbid entity) (.-dbid form)])}
-                     [form/form entity form (:link/link-ctx link) param-ctx]))
-                 ordered-find-elements)])])
+         [:div
+          (map (fn [{:keys [:find-element/form] :as find-element}]
+                 (let [entity (get result (:find-element/name find-element))]
+                   ^{:key (hash [(.-dbid entity) (.-dbid form)])}
+                   [form/form entity form (:link/link-ctx link) param-ctx]))
+               ordered-find-elements)]])
       ^{:key (hc/t (:super-graph param-ctx))}
       [table/table resultset ordered-find-elements (:link/link-ctx link) param-ctx])))

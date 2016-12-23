@@ -119,6 +119,7 @@
      [:td.link-cell {:key :link-cell}
       (->> link-ctxs
            (filter #(nil? (:link-ctx/field %)))
+           (filter #(links/link-visible? % param-ctx))
            (map (fn [link-ctx]
                   (let [props (assoc (links/query-link link-ctx param-ctx) :key (:db/id link-ctx))]
                     ((:navigate-cmp param-ctx) props (-> link-ctx :link-ctx/link :link/prompt) param-ctx))))
@@ -161,6 +162,7 @@
            [:td.link-cell {:key :link-cell}
             (->> (remove :link-ctx/repeating? link-ctxs)
                  (filter #(nil? (:link-ctx/field %)))
+                 (filter #(links/link-visible? % param-ctx))
                  (map (fn [{:keys [:link-ctx/link] :as link-ctx}]
                         (let [props (links/query-link link-ctx param-ctx)]
                           ^{:key (:db/id link-ctx)}
