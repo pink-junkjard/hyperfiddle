@@ -23,10 +23,9 @@
           ; should we? do we need buz logic to prevent that?
           (filter #(= field-dbid (some-> % :link-ctx/field .-dbid)))
           (remove :link-ctx/render-inline?)
-          (map (fn [link-ctx]
-                 (let [{:keys [:db/id :link/prompt]} (:link-ctx/link link-ctx)]
-                   ^{:key id}
-                   [(:navigate-cmp param-ctx) (links/query-link link-ctx param-ctx) prompt param-ctx])))
+          (map (fn [{:keys [:link-ctx/link] :as link-ctx}]
+                 ^{:key (:db/id link-ctx)}
+                 [(:navigate-cmp param-ctx) (links/query-link link-ctx param-ctx) (:link/prompt link) param-ctx]))
           (interpose " · "))]))
 
 
@@ -123,7 +122,7 @@
          (let [props {:value (str @select-value-atom)
                       :on-change #(let [select-value (.-target.value %)
                                         value (reader/read-string select-value)]
-                                    (reset! select-value-atom value))}
+                                   (reset! select-value-atom value))}
                ; todo assert selected value is in record set
                ; need lower level select component that can be reused here and in select.cljs
                select-options (->> (option/get-option-records field param-ctx)
