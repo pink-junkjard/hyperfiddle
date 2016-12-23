@@ -33,6 +33,7 @@
   (let [field-dbid (.-dbid field)
         ; todo do we need a different param-ctx for rendering the ui?
         param-ctx (assoc param-ctx
+                    :isComponent (-> field :field/attribute :attribute/isComponent)
                     :debug (str "table-many-ref:" field-dbid ":" (:field/prompt field)))]
     (->> link-ctxs
          (filter #(= field-dbid (some-> % :link-ctx/field .-dbid)))

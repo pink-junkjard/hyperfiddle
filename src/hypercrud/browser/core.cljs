@@ -21,7 +21,8 @@
 (defn ui [page-rel-path {:keys [meta-graph] :as param-ctx}]
   (route page-rel-path
          {:query-fn (fn [{:keys [link-dbid] :as params-map}]
-                      (let [link (hc/entity meta-graph link-dbid)]
+                      (let [link (hc/entity meta-graph link-dbid)
+                            param-ctx (assoc param-ctx :isComponent false)]
                         (query/ui link params-map param-ctx)))
           :else (constantly [:div "no route for: " page-rel-path])}))
 
