@@ -124,7 +124,10 @@
    (let [q (some-> link :link/query reader/read-string)
          params-map (merge query-params (q-util/build-dbhole-lookup link))
          param-ctx (assoc param-ctx :query-params query-params)]
-     (if (links/holes-filled? (q-util/parse-holes q) params-map)
+     (if-not (links/holes-filled? (q-util/parse-holes q) params-map)
+       (.log js/console (pr-str (->> (q-util/parse-holes q)
+                                     (mapv (juxt identity #(get params-map %)))
+                                     (into {}))))
        (let [result-query [q
                            (q-util/build-params #(get params-map %) link param-ctx)
                            (form/query-pull-exp find-elements)]]
