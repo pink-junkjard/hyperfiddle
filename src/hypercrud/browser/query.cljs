@@ -31,7 +31,7 @@
 (defn resultset-custom [resultset link param-ctx]
   (let [{resultset-renderer :value error :error} (eval (:link/renderer link))
         repeating-link-ctxs (->> (:link/link-ctx link)
-                                 (mapv (juxt #(-> % :link-ctx/link :link/ident) identity))
+                                 (mapv (juxt #(-> % :link-ctx/ident) identity))
                                  (into {}))
         param-ctx (assoc param-ctx
                     :link-fn (fn [ident label param-ctx]

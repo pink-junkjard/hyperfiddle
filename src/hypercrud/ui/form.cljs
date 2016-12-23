@@ -17,7 +17,7 @@
      (let [{renderer :value error :error} (eval renderer)
            repeating-link-ctxs (->> link-ctxs
                                     (filter :link-ctx/repeating?)
-                                    (mapv (juxt #(-> % :link-ctx/link :link/ident) identity))
+                                    (mapv (juxt #(-> % :link-ctx/ident) identity))
                                     (into {}))
            link-fn (fn [ident label]
                      (let [link-ctx (get repeating-link-ctxs ident)
