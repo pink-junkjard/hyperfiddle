@@ -19,7 +19,7 @@
                                     (filter :link-ctx/repeating?)
                                     (mapv (juxt #(-> % :link-ctx/ident) identity))
                                     (into {}))
-           link-fn (fn [ident label]
+           link-fn (fn [ident label param-ctx]
                      (let [link-ctx (get repeating-link-ctxs ident)
                            props (links/query-link link-ctx param-ctx)]
                        [(:navigate-cmp param-ctx) props label param-ctx]))]
