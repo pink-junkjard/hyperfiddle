@@ -4,6 +4,7 @@
 
 
 (defn build-indexed-schema [schema]
+  ;'[:find ?db-part :in $ :where [?db-part :db/ident :db.part/db]]
   ;add system schema here
   (->> schema
        (concat [{:db/id 10 :db/ident :db/ident :db/valueType :db.type/keyword :db/cardinality :db.cardinality/one :db/unique :db.unique/identity :db/doc "Attribute used to uniquely name an entity."}
@@ -19,8 +20,11 @@
                 {:db/id 43 :db/ident :db/isComponent :db/valueType :db.type/boolean :db/cardinality :db.cardinality/one}
                 {:db/id 44 :db/ident :db/index :db/valueType :db.type/boolean :db/cardinality :db.cardinality/one}
                 {:db/id 45 :db/ident :db/noHistory :db/valueType :db.type/boolean :db/cardinality :db.cardinality/one}
-                ;todo 46-49 :db/lang etc
-                {:db/id 50 :db/ident :db/txInstant :db/valueType :db.type/instant :db/cardinality :db.cardinality/one} ; tx entities
+                {:db/id 46 :db/ident :db/lang :db/valueType :db.type/ref :db/cardinality :db.cardinality/one :db/doc "Attribute of a data function. Value is a keyword naming the implementation language of the function. Legal values are :db.lang/java and :db.lang/clojure"}
+                {:db/id 47 :db/ident :db/code :db/valueType :db.type/string :db/cardinality :db.cardinality/one :db/fulltext true :db/doc "String-valued attribute of a data function that contains the function's source code."}
+                {:db/id 48 :db/ident :db.lang/clojure :db/doc "Value of :db/lang attribute, specifying that a data function is implemented in Clojure."}
+                {:db/id 49 :db/ident :db.lang/java :db/doc "Value of :db/lang attribute, specifying that a data function is implemented in Java."}
+                {:db/id 50 :db/ident :db/txInstant :db/valueType :db.type/instant :db/cardinality :db.cardinality/one}
                 {:db/id 51 :db/ident :db/fulltext :db/valueType :db.type/boolean :db/cardinality :db.cardinality/one}
                 ;todo 52-55 :db/fn etc
                 {:db/id 62 :db/ident :db/doc :db/valueType :db.type/string :db/cardinality :db.cardinality/one}])
