@@ -15,19 +15,15 @@
             [reagent.core :as r]))
 
 
-(defn link-thing [field link-ctxs param-ctx]
-  (let [field-dbid (.-dbid field)]
-    [:div.links
-     (->> link-ctxs
-          ; we are assuming link/repeating? true
-          ; should we? do we need buz logic to prevent that?
-          (filter #(= field-dbid (some-> % :link-ctx/field .-dbid)))
-          (remove :link-ctx/render-inline?)
-          (filter #(links/link-visible? % param-ctx))
-          (map (fn [{:keys [:link-ctx/link] :as link-ctx}]
-                 ^{:key (:db/id link-ctx)}
-                 [(:navigate-cmp param-ctx) (links/query-link link-ctx param-ctx) (:link/prompt link) param-ctx]))
-          (interpose " · "))]))
+(defn link-thing [link-ctxs param-ctx]
+  [:div.links
+   (->> link-ctxs
+        (remove :link-ctx/render-inline?)
+        (filter #(links/link-visible? % param-ctx))
+        (map (fn [{:keys [:link-ctx/link] :as link-ctx}]
+               ^{:key (:db/id link-ctx)}
+               [(:navigate-cmp param-ctx) (links/query-link link-ctx param-ctx) (:link/prompt link) param-ctx]))
+        (interpose " · "))])
 
 
 (defn render-inline-links [field link-ctxs param-ctx]
@@ -37,7 +33,6 @@
                     :isComponent (-> field :field/attribute :attribute/isComponent)
                     :debug (str "table-many-ref:" field-dbid ":" (:field/prompt field)))]
     (->> link-ctxs
-         (filter #(= field-dbid (some-> % :link-ctx/field .-dbid)))
          (filter :link-ctx/render-inline?)
          (filter #(links/link-visible? % param-ctx))
          (map (fn [link-ctx]
@@ -90,7 +85,7 @@
 (defn select-ref [entity field link-ctxs props param-ctx]
   [:div.value
    [:div.editable-select {:key (option/get-key field)}
-    (link-thing field link-ctxs param-ctx)
+    (link-thing link-ctxs param-ctx)
     [:span.select
      (select* entity field param-ctx)]]
    (render-inline-links field link-ctxs param-ctx)])
@@ -100,7 +95,7 @@
   [:div.value
    #_(pr-str (get-in entity [(-> field :field/attribute :attribute/ident) :db/id]))
    (render-inline-links field link-ctxs param-ctx)
-   (link-thing field link-ctxs param-ctx)])
+   (link-thing link-ctxs param-ctx)])
 
 
 (defn table-many-ref [entity field link-ctxs props param-ctx]
@@ -109,7 +104,7 @@
           (mapv :db/id)
           (pr-str))
    (render-inline-links field link-ctxs param-ctx)
-   (link-thing field link-ctxs param-ctx)])
+   (link-thing link-ctxs param-ctx)])
 
 
 (comment
@@ -147,7 +142,7 @@
           (mapv :db/id)
           (pr-str))
    (render-inline-links field link-ctxs param-ctx)
-   (link-thing field link-ctxs param-ctx)])
+   (link-thing link-ctxs param-ctx)])
 
 
 (defn multi-select-ref [entity field link-ctxs props {:keys [user-swap!] :as param-ctx}]
@@ -196,7 +191,7 @@
        :db.cardinality/one (pr-str value)
        :db.cardinality/many (map pr-str value)))
    (render-inline-links field link-ctxs param-ctx)
-   (link-thing field link-ctxs param-ctx)])
+   (link-thing link-ctxs param-ctx)])
 
 
 (defn default [entity field link-ctxs props param-ctx]

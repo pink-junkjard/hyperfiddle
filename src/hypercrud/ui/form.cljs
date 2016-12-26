@@ -13,7 +13,8 @@
         [:span.help {:on-click #(js/alert docstring)} prompt]
         prompt))]
    (if (empty? renderer)
-     [auto-control entity field link-ctxs param-ctx]
+     (let [link-ctxs (filter #(= (.-dbid field) (some-> % :link-ctx/field :db/id)) link-ctxs)]
+       [auto-control entity field link-ctxs param-ctx])
      (let [{renderer :value error :error} (eval renderer)
            repeating-link-ctxs (->> link-ctxs
                                     (filter :link-ctx/repeating?)

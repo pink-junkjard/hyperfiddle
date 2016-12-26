@@ -14,7 +14,7 @@
   [:div
    #_(->> (get-in entity [(-> field :field/attribute :attribute/ident) :db/id])
         (pr-str))
-   (widget/link-thing field link-ctxs param-ctx)
+   (widget/link-thing link-ctxs param-ctx)
    (widget/render-inline-links field link-ctxs param-ctx)])
 
 
@@ -24,7 +24,7 @@
         (mapv :db/id)
         (pr-str)
         (ellipsis 15))
-   (widget/link-thing field link-ctxs param-ctx)
+   (widget/link-thing link-ctxs param-ctx)
    (widget/render-inline-links field link-ctxs param-ctx)])
 
 

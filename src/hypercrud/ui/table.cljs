@@ -63,9 +63,8 @@
                    [:span.sort-arrow arrow]]))))))
 
 
-(defn build-row-cells [form entity link-ctxs {:keys [super-graph] :as param-ctx}]
-  (let [repeating-link-ctxs (->> link-ctxs
-                                 (filter :link-ctx/repeating?)
+(defn build-row-cells [form entity repeating-link-ctxs {:keys [super-graph] :as param-ctx}]
+  (let [repeating-link-ctxs (->> repeating-link-ctxs
                                  (mapv (juxt #(-> % :link-ctx/ident) identity))
                                  (into {}))
         link-fn (fn [ident label param-ctx]
@@ -80,7 +79,8 @@
          (map (fn [{:keys [:field/renderer] :as field}]
                 [:td.truncate {:key (:db/id field) :style style}
                  (if (empty? renderer)
-                   [auto-table-cell entity field link-ctxs param-ctx]
+                   (let [link-ctxs (filter #(= (.-dbid field) (some-> % :link-ctx/field :db/id)) repeating-link-ctxs)]
+                     [auto-table-cell entity field link-ctxs param-ctx])
                    (let [{renderer :value error :error} (eval renderer)]
                      [:div.value
                       (if error
@@ -108,16 +108,16 @@
 ;        [:div {:on-click #(reset! open? true)} "⚙"]))))
 
 
-(defn table-row [result ordered-find-elements link-ctxs param-ctx]
+(defn table-row [result ordered-find-elements repeating-link-ctxs param-ctx]
   (let [param-ctx (assoc param-ctx :result result)]
     [:tr
      (mapcat (fn [find-element]
                (let [form (:find-element/form find-element)
                      entity (get result (:find-element/name find-element))]
-                 (build-row-cells form entity link-ctxs param-ctx)))
+                 (build-row-cells form entity repeating-link-ctxs param-ctx)))
              ordered-find-elements)
      [:td.link-cell {:key :link-cell}
-      (->> link-ctxs
+      (->> repeating-link-ctxs
            (filter #(nil? (:link-ctx/field %)))
            (filter #(links/link-visible? % param-ctx))
            (map (fn [link-ctx]
