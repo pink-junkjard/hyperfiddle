@@ -16,8 +16,8 @@
                         :value @intermediate-val
                         :on-change #(reset! intermediate-val (.. % -target -value))
                         :on-blur #(let [parsed (parse-string @intermediate-val)]
-                                    (if (and valid?' (not= parsed value))
-                                      (on-change! parsed)))})]))))
+                                   (if (and valid?' (not= parsed value))
+                                     (on-change! parsed)))})]))))
 
 
 (defn validated-input [value on-change! parse-string to-string valid? & [props]]
