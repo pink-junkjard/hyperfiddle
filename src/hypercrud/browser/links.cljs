@@ -1,7 +1,6 @@
 (ns hypercrud.browser.links
   (:require [cljs.reader :as reader]
             [clojure.set :as set]
-            [hypercrud.browser.base-64-url-safe :as base64]
             [hypercrud.client.core :as hc]
             [hypercrud.client.internal :as internal]
             [hypercrud.compile.eval :refer [eval]]
@@ -30,7 +29,7 @@
           (holes-filled? params-map)))
 
 
-(defn query-link [link-ctx param-ctx]
+(defn build-link-props [link-ctx param-ctx]
   (let [tx-fn (if-let [tx-fn (-> link-ctx :link-ctx/link :link/tx-fn)]
                 (let [{value :value error :error} (eval tx-fn)]
                   ;; non-fatal error, report it here so user can fix it
@@ -42,7 +41,7 @@
     (if tx-fn
       {:on-click #((:user-swap! param-ctx) (tx-fn param-ctx))}
       (let [params-map (build-params-map link-ctx param-ctx)]
-        {:href (base64/encode (pr-str params-map))
+        {:route params-map
          :class (if-not (renderable-link? (:link-ctx/link link-ctx) params-map)
                   "invalid")}))))
 

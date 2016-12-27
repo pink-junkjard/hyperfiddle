@@ -1,7 +1,7 @@
 (ns hypercrud.ui.widget
   (:require [cljs.reader :as reader]
             [hypercrud.browser.links :as links]
-            [hypercrud.browser.query :as query]
+            [hypercrud.browser.core :as browser]
             [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx]
             [hypercrud.form.option :as option]
@@ -22,7 +22,7 @@
         (filter #(links/link-visible? % param-ctx))
         (map (fn [{:keys [:link-ctx/link] :as link-ctx}]
                ^{:key (:db/id link-ctx)}
-               [(:navigate-cmp param-ctx) (links/query-link link-ctx param-ctx) (:link/prompt link) param-ctx]))
+               [(:navigate-cmp param-ctx) (links/build-link-props link-ctx param-ctx) (:link/prompt link) param-ctx]))
         (interpose " · "))])
 
 
@@ -37,7 +37,7 @@
          (filter #(links/link-visible? % param-ctx))
          (map (fn [link-ctx]
                 ^{:key (-> link-ctx :db/id)}
-                [query/ui link-ctx param-ctx])))))
+                [browser/ui (links/build-params-map link-ctx param-ctx) param-ctx])))))
 
 
 (defn input-keyword [entity field link-ctxs props {:keys [user-swap!] :as param-ctx}]

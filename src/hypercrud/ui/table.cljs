@@ -69,7 +69,7 @@
                                              (into {}))]
                   (fn [ident label param-ctx]
                     (let [link-ctx (get link-ctx-by-ident ident)
-                          props (links/query-link link-ctx param-ctx)]
+                          props (links/build-link-props link-ctx param-ctx)]
                       [(:navigate-cmp param-ctx) props label param-ctx])))
         param-ctx (assoc param-ctx :color ((:color-fn param-ctx) entity param-ctx)
                                    :owner ((:owner-fn param-ctx) entity param-ctx))
@@ -121,7 +121,7 @@
            (filter #(nil? (:link-ctx/field %)))
            (filter #(links/link-visible? % param-ctx))
            (map (fn [link-ctx]
-                  (let [props (assoc (links/query-link link-ctx param-ctx) :key (:db/id link-ctx))]
+                  (let [props (assoc (links/build-link-props link-ctx param-ctx) :key (:db/id link-ctx))]
                     ((:navigate-cmp param-ctx) props (-> link-ctx :link-ctx/link :link/prompt) param-ctx))))
            (interpose " · "))]]))
 
@@ -164,7 +164,7 @@
                  (filter #(nil? (:link-ctx/field %)))
                  (filter #(links/link-visible? % param-ctx))
                  (map (fn [{:keys [:link-ctx/link] :as link-ctx}]
-                        (let [props (links/query-link link-ctx param-ctx)]
+                        (let [props (links/build-link-props link-ctx param-ctx)]
                           ^{:key (:db/id link-ctx)}
                           [(:navigate-cmp param-ctx) props (:link/prompt link) param-ctx])))
                  (interpose " · "))]]]

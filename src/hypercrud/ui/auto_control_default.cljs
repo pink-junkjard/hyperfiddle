@@ -75,7 +75,7 @@
        (filter #(nil? (:link-ctx/field %)))
        (filter #(links/link-visible? % param-ctx))
        (mapv (fn [{:keys [:link-ctx/link] :as link-ctx}]
-               (let [props (links/query-link link-ctx param-ctx)]
+               (let [props (links/build-link-props link-ctx param-ctx)]
                  ^{:key (:db/id link-ctx)}
                  [(:navigate-cmp param-ctx) props (:link/prompt link) param-ctx])))))
 
@@ -86,7 +86,7 @@
        (filter #(nil? (:link-ctx/field %)))
        (filter #(links/link-visible? % param-ctx))
        (map (fn [{:keys [:link-ctx/link] :as link-ctx}]
-              (let [props (links/query-link link-ctx param-ctx)]
+              (let [props (links/build-link-props link-ctx param-ctx)]
                 ^{:key (:db/id link-ctx)}
                 [(:navigate-cmp param-ctx) props (:link/prompt link) param-ctx])))))
 
