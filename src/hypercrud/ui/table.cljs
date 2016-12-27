@@ -64,13 +64,13 @@
 
 
 (defn build-row-cells [form entity repeating-link-ctxs {:keys [super-graph] :as param-ctx}]
-  (let [repeating-link-ctxs (->> repeating-link-ctxs
-                                 (mapv (juxt #(-> % :link-ctx/ident) identity))
-                                 (into {}))
-        link-fn (fn [ident label param-ctx]
-                  (let [link-ctx (get repeating-link-ctxs ident)
-                        props (links/query-link link-ctx param-ctx)]
-                    [(:navigate-cmp param-ctx) props label param-ctx]))
+  (let [link-fn (let [link-ctx-by-ident (->> repeating-link-ctxs
+                                             (mapv (juxt #(-> % :link-ctx/ident) identity))
+                                             (into {}))]
+                  (fn [ident label param-ctx]
+                    (let [link-ctx (get link-ctx-by-ident ident)
+                          props (links/query-link link-ctx param-ctx)]
+                      [(:navigate-cmp param-ctx) props label param-ctx])))
         param-ctx (assoc param-ctx :color ((:color-fn param-ctx) entity param-ctx)
                                    :owner ((:owner-fn param-ctx) entity param-ctx))
         style {:border-color (connection-color (:color param-ctx))}]
