@@ -93,20 +93,19 @@
 
 
 (defn dependent-queries [{find-elements :link/find-element :as link} resultset param-ctx]
-  (let [inline-link-ctxs (->> (:link/link-ctx link)
-                              (filter :link-ctx/render-inline?))]
-    (->> resultset
-         (mapcat (fn [result]
-                   (let [param-ctx (assoc param-ctx :result result)
-                         option-queries (mapv (fn [{form :find-element/form :as find-element}]
-                                                (form-option-queries form param-ctx))
-                                              find-elements)
-                         inline-queries (mapv (fn [inline-link-ctx]
-                                                (let [param-ctx (assoc param-ctx :debug (str "inline-query:" (.-dbid inline-link-ctx)))]
-                                                  (query (links/build-params-map inline-link-ctx param-ctx) param-ctx true)))
-                                              inline-link-ctxs)]
-                     (concat option-queries inline-queries))))
-         (apply merge))))
+  (->> resultset
+       (mapcat (fn [result]
+                 (let [param-ctx (assoc param-ctx :result result)
+                       option-queries (mapv (fn [{form :find-element/form :as find-element}]
+                                              (form-option-queries form param-ctx))
+                                            find-elements)
+                       inline-queries (->> (:link/link-ctx link)
+                                           (filter :link-ctx/render-inline?)
+                                           (mapv (fn [inline-link-ctx]
+                                                   (let [param-ctx (assoc param-ctx :debug (str "inline-query:" (.-dbid inline-link-ctx)))]
+                                                     (query (links/build-params-map inline-link-ctx param-ctx) param-ctx true)))))]
+                   (concat option-queries inline-queries))))
+       (apply merge)))
 
 
 (defn query [{query-params :query-params create-new-find-elements :create-new-find-elements :as params-map}
