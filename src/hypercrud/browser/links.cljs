@@ -30,7 +30,8 @@
 
 
 (defn build-link-props [link-ctx param-ctx]
-  (let [tx-fn (if-let [tx-fn (-> link-ctx :link-ctx/link :link/tx-fn)]
+  (let [param-ctx (assoc param-ctx :link-owner (-> link-ctx :link-ctx/link :hypercrud/owner)) ; tx-fn may need this
+        tx-fn (if-let [tx-fn (-> link-ctx :link-ctx/link :link/tx-fn)]
                 (let [{value :value error :error} (eval tx-fn)]
                   ;; non-fatal error, report it here so user can fix it
                   (if error (js/alert (str "cljs eval error: " error)))
