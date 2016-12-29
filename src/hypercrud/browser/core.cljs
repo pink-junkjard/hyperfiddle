@@ -7,7 +7,6 @@
             [hypercrud.form.q-util :as q-util]
             [hypercrud.types :refer [->DbId ->DbVal ->Entity]]
             [hypercrud.ui.auto-control :as auto-control]
-            [hypercrud.ui.form :as form]
             [hypercrud.util :as util]))
 
 
@@ -49,7 +48,7 @@
 
 (defn ui [{query-params :query-params create-new-find-elements :create-new-find-elements :as params-map}
           {:keys [super-graph] :as param-ctx}]
-  (let [{find-elements :link/find-element :as link} (hc/entity (:meta-graph param-ctx) (:link-dbid params-map))
+  (let [link (hc/entity (:meta-graph param-ctx) (:link-dbid params-map))
         q (some-> link :link/query reader/read-string)
         params-map (merge query-params (q-util/build-dbhole-lookup link))
         param-ctx (assoc param-ctx :query-params query-params)
@@ -63,10 +62,7 @@
                                             (mapv (juxt identity #(get params-map %)))
                                             (into {}))))))]]
       (let [resultset (pull-resultset super-graph link create-new-find-elements
-                                      (let [params (q-util/build-params #(get params-map %) link param-ctx)
-                                            pull-exp (form/query-pull-exp find-elements)
-                                            query-value [q params pull-exp]]
-                                        (hc/select super-graph (hash query-value))))]
+                                      (hc/select super-graph (hash (q-util/query-value q link params-map param-ctx))))]
         (if (empty? (:link/renderer link))
           (auto-control/resultset resultset link param-ctx)
           (resultset-custom resultset link param-ctx))))))
@@ -120,9 +116,7 @@
       (.log js/console (pr-str (->> (q-util/parse-holes q)
                                     (mapv (juxt identity #(get params-map %)))
                                     (into {}))))
-      (let [result-query [q
-                          (q-util/build-params #(get params-map %) link param-ctx)
-                          (form/query-pull-exp find-elements)]]
+      (let [result-query (q-util/query-value q link params-map param-ctx)]
         (merge
           {(hash result-query) result-query}
           (if recurse?

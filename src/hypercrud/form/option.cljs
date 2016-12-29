@@ -4,8 +4,7 @@
             [hypercrud.client.core :as hc]
             [hypercrud.form.find-elements :as find-elements-util]
             [hypercrud.form.q-util :as q-util]
-            [hypercrud.types :refer [->DbVal]]
-            [hypercrud.ui.form :as form]))
+            [hypercrud.types :refer [->DbVal]]))
 
 
 (defn label-prop [field result]
@@ -32,10 +31,8 @@
                  (reader/read-string q))]
       (let [ordered-find-elements (find-elements-util/order-find-elements find-elements q)
             result-query (let [params-map (merge (:query-params (links/build-params-map (:field/options-link-ctx field) param-ctx))
-                                                 (q-util/build-dbhole-lookup link))
-                               params (q-util/build-params #(get params-map %) link param-ctx)
-                               pull-exp (form/query-pull-exp find-elements)]
-                           [q params pull-exp])]
+                                                 (q-util/build-dbhole-lookup link))]
+                           (q-util/query-value q link params-map param-ctx))]
         (->> (hc/select (:super-graph param-ctx) (hash result-query))
              (mapv (fn [result]
                      (mapv (fn [find-element]

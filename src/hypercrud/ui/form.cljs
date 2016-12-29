@@ -43,16 +43,3 @@
                  (let [ident (-> fieldinfo :field/attribute :attribute/ident)]
                    ^{:key ident}
                    [field entity fieldinfo link-ctxs param-ctx]))))]))
-
-
-(defn form-pull-exp [form]
-  (concat
-    [:db/id]
-    (remove nil? (mapv #(-> % :field/attribute :attribute/ident) (:form/field form)))))
-
-
-(defn query-pull-exp [find-elements]
-  (->> find-elements
-       (mapv (juxt :find-element/name (fn [{:keys [:find-element/connection :find-element/form]}]
-                                        [(->DbVal (-> connection :db/id :id) nil) (form-pull-exp form)])))
-       (into {})))

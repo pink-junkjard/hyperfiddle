@@ -57,3 +57,18 @@
       (if-let [v (get dbhole-values hole-name)]
         v
         (run-formula (get hole-formulas hole-name) param-ctx)))))
+
+
+(defn form-pull-exp [form]
+  (concat
+    [:db/id]
+    (remove nil? (mapv #(-> % :field/attribute :attribute/ident) (:form/field form)))))
+
+
+(defn query-value [q link params-map param-ctx]
+  (let [params (build-params #(get params-map %) link param-ctx)
+        pull-exp (->> (:link/find-element link)
+                      (mapv (juxt :find-element/name (fn [{:keys [:find-element/connection :find-element/form]}]
+                                                       [(->DbVal (-> connection :db/id :id) nil) (form-pull-exp form)])))
+                      (into {}))]
+    [q params pull-exp]))
