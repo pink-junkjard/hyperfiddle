@@ -37,7 +37,17 @@
                     :link-fn (fn [ident label param-ctx]
                                (let [link-ctx (get link-ctxs ident)
                                      props (links/build-link-props link-ctx param-ctx)]
-                                 [(:navigate-cmp param-ctx) props label param-ctx])))]
+                                 [(:navigate-cmp param-ctx) props label param-ctx]))
+                    :inline-resultset (fn [ident param-ctx]
+                                        (let [link-ctx (get link-ctxs ident)
+                                              link (:link-ctx/link link-ctx)
+                                              params-map (links/build-params-map link-ctx param-ctx)
+                                              query-value (let [q (some-> link :link/query reader/read-string)
+                                                                params-map (merge (:query-params params-map)
+                                                                                  (q-util/build-dbhole-lookup link))]
+                                                            (q-util/query-value q link params-map param-ctx))]
+                                          (pull-resultset (:super-graph param-ctx) link (:create-new-find-elements params-map)
+                                                          (hc/select (:super-graph param-ctx) (hash query-value))))))]
     [:div
      (if error
        [:pre (pprint/pprint error)]
