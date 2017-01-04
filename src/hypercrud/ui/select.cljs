@@ -4,7 +4,7 @@
             [hypercrud.types :refer [->DbId]]))
 
 
-(defn select-boolean [entity field links {:keys [user-swap!] :as param-ctx}]
+(defn select-boolean [entity field link-ctxs props {:keys [user-swap!] :as param-ctx}]
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         value (get entity ident)
         props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
@@ -33,12 +33,11 @@
                         :else (-> value .-dbid .-id str))
 
                ;; reconstruct the typed value
-               :on-change #(do
-                             (let [select-value (.-target.value %)
-                                   dbid (cond
-                                          (= "" select-value) nil
-                                          :else-hc-select-option-node (->DbId (js/parseInt select-value 10) conn-id))]
-                               (user-swap! {:tx (tx/update-entity-attr entity attribute dbid)})))}]
+               :on-change #(let [select-value (.-target.value %)
+                                 dbid (cond
+                                        (= "" select-value) nil
+                                        :else-hc-select-option-node (->DbId (js/parseInt select-value 10) conn-id))]
+                             (user-swap! {:tx (tx/update-entity-attr entity attribute dbid)}))}]
     (let [option-records (option/get-option-records field param-ctx)]
       #_(assert (or (nil? value)
                     (tx/tempid? (.-dbid value))
