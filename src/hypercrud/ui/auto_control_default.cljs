@@ -29,7 +29,7 @@
         cardinality (:db/ident cardinality)
         props (build-props entity field link-ctxs param-ctx)
         widget (cond
-                 (if-let [read-only (:read-only param-ctx)] (read-only param-ctx)) widget/text
+                 (:read-only props) widget/text
                  (and (= valueType :db.type/boolean) (= cardinality :db.cardinality/one)) select/select-boolean
                  (and (= valueType :db.type/keyword) (= cardinality :db.cardinality/one)) widget/input-keyword
                  (and (= valueType :db.type/string) (= cardinality :db.cardinality/one)) widget/input
@@ -51,7 +51,7 @@
         cardinality (:db/ident cardinality)
         props (build-props entity field link-ctxs param-ctx)
         widget (cond
-                 (if-let [read-only (:read-only param-ctx)] (read-only param-ctx)) widget/text
+                 (:read-only props) widget/text
                  (and (= valueType :db.type/boolean) (= cardinality :db.cardinality/one)) select/select-boolean
                  (and (= valueType :db.type/keyword) (= cardinality :db.cardinality/one)) widget/input-keyword
                  (and (= valueType :db.type/string) (= cardinality :db.cardinality/one)) widget/input
