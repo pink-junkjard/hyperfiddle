@@ -2,6 +2,7 @@
 
 
 (def ^:dynamic *temp-id!*)
+(def ^:dynamic *root-conn-id* nil)
 
 
 (defprotocol SuperGraph

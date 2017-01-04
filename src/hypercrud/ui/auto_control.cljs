@@ -1,5 +1,6 @@
 (ns hypercrud.ui.auto-control
-  (:require [hypercrud.random-color :refer [random-color]]))
+  (:require [hypercrud.client.core :as hc]
+            [hypercrud.random-color :refer [random-color]]))
 
 
 (defmulti auto-control (fn [] :default))
@@ -12,4 +13,4 @@
 (def connection-color
   (memoize
     (fn [conn-id]
-      (if (= conn-id :root) "#777" (random-color)))))
+      (if (= conn-id hc/*root-conn-id*) "#777" (random-color)))))
