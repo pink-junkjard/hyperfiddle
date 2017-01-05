@@ -1,5 +1,6 @@
 (ns hypercrud.ui.table
-  (:require [hypercrud.browser.links :as links]
+  (:require [clojure.string :as string]
+            [hypercrud.browser.links :as links]
             [hypercrud.compile.eval :refer [eval]]
             [hypercrud.platform.native-event-listener :refer [native-listener]] ;provided dependency
             [hypercrud.types :refer [->DbId ->DbVal]]
@@ -51,8 +52,22 @@
                                                     #(reset! col-sort nil)
                                                     #(reset! col-sort [form-dbid ident :asc])
                                                     (constantly nil))
-                      arrow (with-sort-direction " ↓" " ↑" " ↕" nil)]
-                  [:td {:class (str "field-" (get-in field [:db/id :id])) :key (:db/id field) :on-click on-click}
+                      arrow (with-sort-direction " ↓" " ↑" " ↕" nil)
+                      css-encode (fn [s]
+                                   ;todo flesh this out
+                                   ; http://stackoverflow.com/a/449000/959627
+                                   (-> s
+                                       (string/replace ":" "_co_")
+                                       (string/replace "/" "_bs_")
+                                       (string/replace " " "_sp_")))
+                      css-class (->> [(str "field-id-" (get-in field [:db/id :id]))
+                                      (some->> (:field/prompt field) (str "field-prompt-"))
+                                      (some->> field :field/attribute :attribute/ident (str "field-attr-"))]
+                                     (map css-encode)
+                                     (interpose " ")
+                                     (remove nil?)
+                                     (apply str))]
+                  [:td {:class css-class :key (:db/id field) :on-click on-click}
                    prompt
                    (let [docstring (-> field :field/attribute :attribute/doc)]
                      (if-not (empty? docstring)
