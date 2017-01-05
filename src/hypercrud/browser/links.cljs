@@ -9,11 +9,12 @@
 
 
 (defn build-params-map [link-ctx param-ctx]
+  (assert (not (empty? (-> link-ctx :link-ctx/link :link/find-element))) "dependent query insanity check")
   {:link-dbid (-> link-ctx :link-ctx/link :db/id)
    :query-params (->> (q-util/read-eval-formulas (:link-ctx/formula link-ctx))
                       (util/map-values #(q-util/run-formula % param-ctx)))
    ;; Create a result of shape [?e ?f] with new entities colored
-   :create-new-find-elements (->> (:link/find-element (:link-ctx/link link-ctx))
+   :create-new-find-elements (->> (-> link-ctx :link-ctx/link :link/find-element)
                                   (mapv (juxt :find-element/name #(hc/*temp-id!* (-> % :find-element/connection :db/id :id))))
                                   (into {}))})
 
