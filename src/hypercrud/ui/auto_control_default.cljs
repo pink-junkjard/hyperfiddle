@@ -22,10 +22,22 @@
   {:read-only (if-let [read-only (:read-only param-ctx)] (read-only param-ctx))})
 
 
+(defn ascertain-valueType [attribute]
+  ; todo this should be included in :hyperfiddle/edit-link's :link/renderer
+  (if (contains? #{:database/enums
+                   :link/renderer
+                   :link-ctx/formula
+                   :link-ctx/visible?
+                   :link/tx-fn
+                   :link/query} (-> attribute :attribute/ident))
+    :db.type/code
+    (-> attribute :attribute/valueType :db/ident)))
+
+
 (defmethod auto-control/auto-control :default
   [entity field link-ctxs param-ctx]
-  (let [{:keys [:attribute/valueType :attribute/cardinality :attribute/isComponent]} (:field/attribute field)
-        valueType (:db/ident valueType)
+  (let [{:keys [:attribute/cardinality :attribute/isComponent]} (:field/attribute field)
+        valueType (ascertain-valueType (:field/attribute field))
         cardinality (:db/ident cardinality)
         props (build-props entity field link-ctxs param-ctx)
         widget (cond
@@ -46,8 +58,8 @@
 
 (defmethod auto-control/auto-table-cell :default
   [entity field link-ctxs param-ctx]
-  (let [{:keys [:attribute/valueType :attribute/cardinality :attribute/isComponent]} (:field/attribute field)
-        valueType (:db/ident valueType)
+  (let [{:keys [:attribute/cardinality :attribute/isComponent]} (:field/attribute field)
+        valueType (ascertain-valueType (:field/attribute field))
         cardinality (:db/ident cardinality)
         props (build-props entity field link-ctxs param-ctx)
         widget (cond
