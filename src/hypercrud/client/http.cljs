@@ -50,7 +50,7 @@
         (p/resolved super-graph)
         (-> (kvlt/request!
               {:url (resolve-relative-uri entry-uri (goog.Uri. "hydrate"))
-               :content-type content-type-edn               ; helps debugging to view as edn
+               :content-type content-type-transit           ; helps debugging to view as edn
                :accept content-type-transit                 ; needs to be fast so transit
                :method :post
                :form {:staged-tx staged-tx
