@@ -1,6 +1,5 @@
 (ns hypercrud.client.graph
-  (:require [cljs.pprint :as pprint]
-            [goog.Uri]
+  (:require [goog.Uri]
             [hypercrud.client.core :as hc]
             [hypercrud.client.schema :as schema-util]
             [hypercrud.client.tx :as tx]
