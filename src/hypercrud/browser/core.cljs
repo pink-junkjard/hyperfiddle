@@ -58,7 +58,8 @@
 
 (defn ui [{query-params :query-params create-new-find-elements :create-new-find-elements :as params-map}
           {:keys [super-graph] :as param-ctx}]
-  (let [link (hc/entity (:meta-graph param-ctx) (:link-dbid params-map))
+  (let [root-dbgraph (hc/get-dbgraph (:super-graph param-ctx) (->DbVal hc/*root-conn-id* nil))
+        link (hc/entity root-dbgraph (:link-dbid params-map))
         q (some-> link :link/query reader/read-string)
         params-map (merge query-params (q-util/build-dbhole-lookup link))
         param-ctx (assoc param-ctx :query-params query-params)
@@ -118,7 +119,8 @@
              {:keys [super-graph] :as param-ctx}
              recurse?]
   ;"No need for link-ctx anymore by the time we are here, it is in the url as query params and stuff"
-  (let [{find-elements :link/find-element :as link} (hc/entity (:meta-graph param-ctx) (:link-dbid params-map))
+  (let [root-dbgraph (hc/get-dbgraph (:super-graph param-ctx) (->DbVal hc/*root-conn-id* nil))
+        {find-elements :link/find-element :as link} (hc/entity root-dbgraph (:link-dbid params-map))
         q (some-> link :link/query reader/read-string)
         params-map (merge query-params (q-util/build-dbhole-lookup link))
         param-ctx (assoc param-ctx :query-params query-params)]
