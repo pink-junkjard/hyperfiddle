@@ -58,7 +58,7 @@
                :as :auto})
             (p/then (fn [resp]
                       (let [{:keys [t pulled-trees-map tempids]} (-> resp :body :hypercrud)]
-                        (graph/set-state! graph-we-want editor-dbval editor-schema pulled-trees-map tempids t)
+                        (graph/set-state! graph-we-want editor-dbval editor-schema pulled-trees-map tempids)
                         (set! super-graph graph-we-want)
                         super-graph)))))))
 

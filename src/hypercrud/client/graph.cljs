@@ -8,7 +8,7 @@
 
 
 (defprotocol SuperGraphPrivate
-  (set-state! [this editor-dbval editor-schema pulled-trees-map tempids t']))
+  (set-state! [this editor-dbval editor-schema pulled-trees-map tempids]))
 
 
 (defrecord GraphData [pulled-trees-map resultsets])
@@ -90,7 +90,7 @@
 
 
   SuperGraphPrivate
-  (set-state! [this editor-dbval editor-schema pulled-trees-map tempids t']
+  (set-state! [this editor-dbval editor-schema pulled-trees-map tempids]
     ; pulled-trees-map :: Map[query List[List[Pulled-Tree]]]
     ;                               List[ResultHydrated]
     ; ResultHydrated :: Map[find-element EntityHydrated]
