@@ -10,23 +10,24 @@
 
   (reagent/create-class
     {:reagent-render
-     (fn [value change!]
+     (fn [value change! props]
        [:div.code-editor-wrapper
         [:textarea {:default-value (str value) :auto-complete "off" :class "text"}]])
 
      :component-did-mount
      (fn [this]
-       (let [[_ value change!] (r-comp/get-argv this)       ;[value change!] (reagent/props this)
+       (let [[_ value change! props] (r-comp/get-argv this) ;[value change! props] (reagent/props this)
              div (.querySelector (reagent/dom-node this) "textarea")
              ref (.fromTextArea js/CodeMirror div
-                                #js {:mode "clojure"
-                                     :lineNumbers true
-                                     :matchBrackets true
-                                     :autoCloseBrackets true
-                                     :viewportMargin js/Infinity})]
+                                (clj->js (merge {:mode "clojure"
+                                                 :lineNumbers true
+                                                 :matchBrackets true
+                                                 :autoCloseBrackets true
+                                                 :viewportMargin js/Infinity}
+                                                props)))]
          (aset this "codeMirrorRef" ref)
          (.on ref "blur" (fn [e]
-                           (let [[_ value change!] (r-comp/get-argv this)]
+                           (let [[_ value change! props] (r-comp/get-argv this)]
                              (change! (.getValue e)))))))
 
 
@@ -35,5 +36,5 @@
 
      :component-did-update
      (fn [this]
-       (let [[_ value change!] (r-comp/get-argv this)]  
+       (let [[_ value change! props] (r-comp/get-argv this)]
          (.setValue (aget this "codeMirrorRef") (str value))))}))

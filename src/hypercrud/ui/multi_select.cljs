@@ -8,6 +8,7 @@
 
 (defn multi-select* [markupfn entity add-item! field link-ctxs props {:keys [user-swap!] :as param-ctx}]
   (assert false "assoc entity no longer works. todo")
+  (assert false "todo readonly")
   (let [ident (-> field :field/attribute :attribute/ident)
         value (get entity ident)
         control-tuples (seq (mapv (fn [eid]

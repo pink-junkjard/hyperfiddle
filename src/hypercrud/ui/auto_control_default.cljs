@@ -41,17 +41,17 @@
         cardinality (:db/ident cardinality)
         props (build-props entity field link-ctxs param-ctx)
         widget (cond
-                 (:read-only props) widget/text
-                 (and (= valueType :db.type/boolean) (= cardinality :db.cardinality/one)) select/select-boolean
-                 (and (= valueType :db.type/keyword) (= cardinality :db.cardinality/one)) widget/input-keyword
-                 (and (= valueType :db.type/string) (= cardinality :db.cardinality/one)) widget/input
-                 (and (= valueType :db.type/long) (= cardinality :db.cardinality/one)) widget/input-long
+                 (and (= valueType :db.type/boolean) (= cardinality :db.cardinality/one)) widget/select-boolean
+                 (and (= valueType :db.type/keyword) (= cardinality :db.cardinality/one) (not (:read-only props))) widget/input-keyword
+                 (and (= valueType :db.type/string) (= cardinality :db.cardinality/one) (not (:read-only props))) widget/input
+                 (and (= valueType :db.type/long) (= cardinality :db.cardinality/one) (not (:read-only props))) widget/input-long
                  (and (= valueType :db.type/code) (= cardinality :db.cardinality/one)) widget/code-editor
-                 (and (= valueType :db.type/instant) (= cardinality :db.cardinality/one)) widget/instant
+                 (and (= valueType :db.type/instant) (= cardinality :db.cardinality/one) (not (:read-only props))) widget/instant
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one) isComponent) widget/select-ref-component
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many) isComponent) widget/table-many-ref-component
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one)) widget/select-ref
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) widget/table-many-ref
+                 (:read-only props) widget/text
                  :else widget/default)]
     (widget entity field link-ctxs props param-ctx)))
 
@@ -63,20 +63,19 @@
         cardinality (:db/ident cardinality)
         props (build-props entity field link-ctxs param-ctx)
         widget (cond
-                 (:read-only props) widget/text
-                 (and (= valueType :db.type/boolean) (= cardinality :db.cardinality/one)) select/select-boolean
-                 (and (= valueType :db.type/keyword) (= cardinality :db.cardinality/one)) widget/input-keyword
-                 (and (= valueType :db.type/string) (= cardinality :db.cardinality/one)) widget/input
-                 (and (= valueType :db.type/long) (= cardinality :db.cardinality/one)) widget/input-long
-                 (and (= valueType :db.type/code) (= cardinality :db.cardinality/one)) widget/input
-                 (and (= valueType :db.type/instant) (= cardinality :db.cardinality/one)) widget/instant
+                 (and (= valueType :db.type/boolean) (= cardinality :db.cardinality/one)) widget/select-boolean
+                 (and (= valueType :db.type/keyword) (= cardinality :db.cardinality/one) (not (:read-only props))) widget/input-keyword
+                 (and (= valueType :db.type/string) (= cardinality :db.cardinality/one) (not (:read-only props))) widget/input
+                 (and (= valueType :db.type/long) (= cardinality :db.cardinality/one) (not (:read-only props))) widget/input-long
+                 (and (= valueType :db.type/code) (= cardinality :db.cardinality/one) (not (:read-only props))) widget/input
+                 (and (= valueType :db.type/instant) (= cardinality :db.cardinality/one) (not (:read-only props))) widget/instant
 
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one) isComponent) table-cell/ref-one-component
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one)) widget/select-ref
 
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) table-cell/ref-many
                  (and (= cardinality :db.cardinality/many)) table-cell/other-many
-
+                 (:read-only props) widget/text
                  :else widget/default)]
     (widget entity field link-ctxs props param-ctx)))
 

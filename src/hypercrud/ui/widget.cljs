@@ -10,7 +10,7 @@
             [hypercrud.ui.input :as input]
             [hypercrud.ui.multi-select :refer [multi-select* multi-select-markup]]
             [hypercrud.ui.radio :as radio]
-            [hypercrud.ui.select :refer [select*]]
+            [hypercrud.ui.select :refer [select* select-boolean*]]
             [hypercrud.ui.textarea :refer [textarea*]]
             [reagent.core :as r]))
 
@@ -49,7 +49,7 @@
         valid? #(try (let [code (reader/read-string %)]
                        (or (nil? code) (keyword? code)))
                      (catch :default e false))]
-    [input/validated-input value on-change! parse-string to-string valid?]))
+    [input/validated-input value on-change! parse-string to-string valid? props]))
 
 
 (defn input [entity field link-ctxs props {:keys [user-swap!] :as param-ctx}]
@@ -64,21 +64,37 @@
     [input/validated-input
      (get entity ident) #(user-swap! {:tx (tx/update-entity-attr entity attribute %)})
      #(js/parseInt % 10) pr-str
-     #(integer? (js/parseInt % 10))]))
+     #(integer? (js/parseInt % 10))
+     props]))
 
 
 (defn textarea [entity field link-ctxs props {:keys [user-swap!] :as param-ctx}]
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         value (get entity ident)
         set-attr! #(user-swap! {:tx (tx/update-entity-attr entity attribute %)})]
-    [textarea* {:type "text"
-                :value value
-                :on-change set-attr!}]))
+    [textarea* (merge {:type "text"
+                       :value value
+                       :on-change set-attr!}
+                      props)]))
 
 
 (defn radio-ref [entity field link-ctxs props param-ctx]
   ;;radio* needs parameterized markup fn todo
-  [radio/radio-ref* entity field param-ctx])
+  [radio/radio-ref* entity field props param-ctx])
+
+
+(defn select-boolean [entity field link-ctxs props param-ctx]
+  (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)]
+    [:div.value
+     [:div.editable-select {:key ident}
+      (link-thing link-ctxs param-ctx)
+      (if (:read-only props)
+        [:span.text (condp = (get entity ident)
+                      true "True"
+                      false "False"
+                      "--")]
+        (select-boolean* entity field param-ctx))]
+     (render-inline-links field link-ctxs param-ctx)]))
 
 
 ; this can be used sometimes, on the entity page, but not the query page
@@ -86,8 +102,16 @@
   [:div.value
    [:div.editable-select {:key (option/get-key field)}
     (link-thing link-ctxs param-ctx)
-    [:span.select
-     (select* entity field param-ctx)]]
+    (if (:read-only props)
+      [:span.text
+       (-> entity
+           (get (-> field :field/attribute :attribute/ident))
+           (get (-> field
+                    :field/options-link-ctx :link-ctx/link :link/find-element first
+                    :find-element/form :form/field first
+                    :field/attribute :attribute/ident)))]
+      [:span.select
+       (select* entity field param-ctx)])]
    (render-inline-links field link-ctxs param-ctx)])
 
 
@@ -120,7 +144,7 @@
          (let [props {:value (str @select-value-atom)
                       :on-change #(let [select-value (.-target.value %)
                                         value (reader/read-string select-value)]
-                                    (reset! select-value-atom value))}
+                                   (reset! select-value-atom value))}
                ; todo assert selected value is in record set
                ; need lower level select component that can be reused here and in select.cljs
                select-options (->> (option/get-option-records field param-ctx)
@@ -162,7 +186,14 @@
         change! #(user-swap! {:tx (tx/edit-entity (:db/id entity) ident [value] [%])})]
     ^{:key ident}
     [:div.value
-     [code-editor* value change!]]))
+     (let [props (if-not (nil? (:read-only props))
+                   (-> props
+                       (dissoc :read-only)
+                       (assoc :readOnly (if (:read-only props)
+                                          "nocursor"
+                                          false)))
+                   props)]
+       [code-editor* value change! props])]))
 
 
 (defn valid-date-str? [s]
@@ -181,15 +212,16 @@
                          (let [ms (.parse js/Date s)]
                            (js/Date. ms))))
         to-string #(some-> % .toISOString)]
-    [input/validated-input value on-change! parse-string to-string valid-date-str?]))
+    [input/validated-input value on-change! parse-string to-string valid-date-str? props]))
 
 
 (defn text [entity field link-ctxs props param-ctx]
   [:div.value
-   (let [value (get entity (-> field :field/attribute :attribute/ident))]
-     (condp = (-> field :field/attribute :attribute/cardinality :db/ident)
-       :db.cardinality/one (pr-str value)
-       :db.cardinality/many (map pr-str value)))
+   [:span.text
+    (let [value (get entity (-> field :field/attribute :attribute/ident))]
+      (condp = (-> field :field/attribute :attribute/cardinality :db/ident)
+        :db.cardinality/one (pr-str value)
+        :db.cardinality/many (map pr-str value)))]
    (render-inline-links field link-ctxs param-ctx)
    (link-thing link-ctxs param-ctx)])
 

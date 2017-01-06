@@ -30,7 +30,8 @@
 ;       [radio-option "--" form-name #(change! nil) (= nil value)])])
 
 
-(defn radio-boolean [entity field {:keys [user-swap!] :as param-ctx}]
+(defn radio-boolean [entity field props {:keys [user-swap!] :as param-ctx}]
+  (assert false "todo readonly")
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         value (get entity ident)
         form-name (str (:db/id entity) ident)
@@ -44,7 +45,8 @@
      [radio-option "--" form-name #(change! nil) (= nil value)]]))
 
 
-(defn radio-ref* [entity field {:keys [user-swap!] :as param-ctx}]
+(defn radio-ref* [entity field props {:keys [user-swap!] :as param-ctx}]
+  (assert false "todo readonly")
   ; TODO only one radio-group on the page until we get a unique form-name
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         value (get entity ident)
