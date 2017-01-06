@@ -3,6 +3,7 @@
             [cljs.reader :as reader]
             [hypercrud.browser.links :as links]
             [hypercrud.client.core :as hc]
+            [hypercrud.client.schema :as schema-util]
             [hypercrud.compile.eval :refer [eval]]
             [hypercrud.form.q-util :as q-util]
             [hypercrud.types :refer [->DbId ->DbVal ->Entity]]
@@ -118,23 +119,43 @@
 (defn query [{query-params :query-params create-new-find-elements :create-new-find-elements :as params-map}
              {:keys [super-graph] :as param-ctx}
              recurse?]
-  ;"No need for link-ctx anymore by the time we are here, it is in the url as query params and stuff"
-  (let [root-dbgraph (hc/get-dbgraph (:super-graph param-ctx) (->DbVal hc/*root-conn-id* nil))
-        {find-elements :link/find-element :as link} (hc/entity root-dbgraph (:link-dbid params-map))
-        q (some-> link :link/query reader/read-string)
-        params-map (merge query-params (q-util/build-dbhole-lookup link))
-        param-ctx (assoc param-ctx :query-params query-params)]
-    (if-not (links/holes-filled? (q-util/parse-holes q) params-map)
-      (.log js/console (pr-str (->> (q-util/parse-holes q)
-                                    (mapv (juxt identity #(get params-map %)))
-                                    (into {}))))
-      (let [result-query (q-util/query-value q link params-map param-ctx)]
-        (merge
-          {(hash result-query) result-query}
-          (if recurse?
-            (if-let [resultset (some->> (hc/select super-graph (hash result-query))
-                                        (pull-resultset super-graph link create-new-find-elements))]
-              (dependent-queries link resultset param-ctx))))))))
+  (let [root-dbval (->DbVal hc/*root-conn-id* nil)
+        root-dbgraph (hc/get-dbgraph (:super-graph param-ctx) root-dbval)
+        link-query ['[:find ?link :in $ ?link :where [?link]]
+                    {"$" root-dbval "?link" (:link-dbid params-map)}
+                    {"?link" [root-dbval '[* {:link/dbhole [* {:dbhole/value [*]}]
+                                              ; get all our forms for this link
+                                              :link/find-element [* {:find-element/form
+                                                                     [* {:form/field
+                                                                         ; we don't have to recurse for options-link-ctxs
+                                                                         ; because we know these links don't have additional links
+                                                                         [* {:field/options-link-ctx [* {:link-ctx/link [*]}]}]}]}]
+                                              ; get links one layer deep; todo not sure if we need this
+                                              :link/link-ctx [* {:link-ctx/link [*]}]}
+                                           {:hypercrud/owner [*]}]]}]]
+    (merge {(hash link-query) link-query}
+           (if-let [{find-elements :link/find-element :as link} (some->> (-> (hc/select super-graph (hash link-query))
+                                                                             first
+                                                                             (get "?link"))
+                                                                         (hc/entity root-dbgraph))]
+             (let [q (some-> link :link/query reader/read-string)
+                   params-map (merge query-params (q-util/build-dbhole-lookup link))
+                   param-ctx (assoc param-ctx :query-params query-params)]
+               (if-not (links/holes-filled? (q-util/parse-holes q) params-map)
+                 (.log js/console (pr-str (->> (q-util/parse-holes q)
+                                               (mapv (juxt identity #(get params-map %)))
+                                               (into {}))))
+                 (let [result-query (q-util/query-value q link params-map param-ctx)]
+                   (merge
+                     (->> find-elements
+                          (mapv #(->DbVal (-> % :find-element/connection :db/id :id) nil))
+                          (mapv #(schema-util/query-schema root-dbval %))
+                          (apply merge))
+                     {(hash result-query) result-query}
+                     (if recurse?
+                       (if-let [resultset (some->> (hc/select super-graph (hash result-query))
+                                                   (pull-resultset super-graph link create-new-find-elements))]
+                         (dependent-queries link resultset param-ctx)))))))))))
 
 
 (defn replace-tempids-in-params-map [tempid-lookup params-map]
