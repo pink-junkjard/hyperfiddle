@@ -41,7 +41,7 @@
 
 
 ; graph is always assumed to be touched
-(deftype Client [entry-uri ^:mutable super-graph temp-id-atom]
+(deftype Client [entry-uri ^:mutable super-graph]
   hc/Client
   (hydrate! [this named-queries force? staged-tx editor-dbval editor-schema]
     ;; compare our pre-loaded state with the graph dependencies
@@ -61,12 +61,6 @@
                         (graph/set-state! graph-we-want editor-dbval editor-schema pulled-trees-map tempids)
                         (set! super-graph graph-we-want)
                         super-graph)))))))
-
-
-  (temp-id! [this conn-id]
-    (let [updated-value (swap! temp-id-atom update conn-id dec)
-          id (get updated-value conn-id)]
-      (->DbId id conn-id)))
 
 
   (transact! [this tx]
