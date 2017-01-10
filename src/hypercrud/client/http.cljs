@@ -47,7 +47,7 @@
   (hydrate! [this named-queries force? staged-tx editor-dbval editor-schema]
     ;; compare our pre-loaded state with the graph dependencies
     (let [graph-we-want (graph/->SuperGraph named-queries {} nil)]
-      (if (and (not force?) (set/subset? named-queries (.-named-queries super-graph)))
+      (if (and (not force?) (set/subset? (set named-queries) (some-> super-graph .-named-queries set)))
         (p/resolved super-graph)
         (-> (kvlt/request!
               {:url (resolve-relative-uri entry-uri (goog.Uri. "hydrate"))
