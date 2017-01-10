@@ -1,6 +1,7 @@
 (ns hypercrud.client.http
   (:require [cljs.pprint :as pprint]
             [cljs.reader :as reader]
+            [clojure.set :as set]
             [goog.Uri]
             [hypercrud.client.core :as hc]
             [hypercrud.client.graph :as graph]
@@ -46,7 +47,7 @@
   (hydrate! [this named-queries force? staged-tx editor-dbval editor-schema]
     ;; compare our pre-loaded state with the graph dependencies
     (let [graph-we-want (graph/->SuperGraph named-queries {} nil)]
-      (if (and (not force?) (= super-graph graph-we-want))
+      (if (and (not force?) (set/subset? named-queries (.-named-queries super-graph)))
         (p/resolved super-graph)
         (-> (kvlt/request!
               {:url (resolve-relative-uri entry-uri (goog.Uri. "hydrate"))
