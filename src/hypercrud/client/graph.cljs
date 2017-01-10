@@ -154,3 +154,11 @@
                        (into {editor-dbval editor-graph}))]
       (set! graphs graphs'))
     nil))
+
+
+(defn ->super-graph [editor-schema named-queries pulled-trees-map]
+  (let [super-graph (->SuperGraph named-queries {} nil)
+        init-root-dbval (->DbVal hc/*root-conn-id* nil)
+        tempids nil]
+    (set-state! super-graph init-root-dbval editor-schema pulled-trees-map tempids)
+    super-graph))
