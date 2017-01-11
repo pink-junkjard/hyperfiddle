@@ -7,7 +7,8 @@
             [hypercrud.form.q-util :as q-util]
             [hypercrud.util :as util]))
 
-
+; todo we shouldn't depend on an actual link-ctx/link, just that link-ctx/link's dbid
+; the types for this function are too broad
 (defn build-params-map [link-ctx param-ctx]
   #_ (assert (not (empty? (-> link-ctx :link-ctx/link :link/find-element))) "dependent query insanity check")
   {:link-dbid (-> link-ctx :link-ctx/link :db/id)
