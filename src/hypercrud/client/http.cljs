@@ -45,23 +45,27 @@
 (deftype Client [entry-uri ^:mutable super-graph]
   hc/Client
   (hydrate! [this named-queries force? staged-tx editor-dbval editor-schema]
-    ;; compare our pre-loaded state with the graph dependencies
-    (let [graph-we-want (graph/->SuperGraph named-queries {} nil)]
-      (if (and (not force?) (set/subset? (set named-queries) (some-> super-graph .-named-queries set)))
-        (p/resolved super-graph)
-        (-> (kvlt/request!
-              {:url (resolve-relative-uri entry-uri (goog.Uri. "hydrate"))
-               :content-type content-type-transit           ; helps debugging to view as edn
-               :accept content-type-transit                 ; needs to be fast so transit
-               :method :post
-               :form {:staged-tx staged-tx
-                      :queries (into [] (vals named-queries))}
-               :as :auto})
-            (p/then (fn [resp]
-                      (let [{:keys [t pulled-trees-map tempids]} (-> resp :body :hypercrud)]
-                        (graph/set-state! graph-we-want editor-dbval editor-schema pulled-trees-map tempids)
-                        (set! super-graph graph-we-want)
-                        super-graph)))))))
+    (if (and (not force?) (hc/hydrated? this named-queries))
+      (p/resolved super-graph)
+      (-> (kvlt/request!
+            {:url (resolve-relative-uri entry-uri (goog.Uri. "hydrate"))
+             :content-type content-type-transit             ; helps debugging to view as edn
+             :accept content-type-transit                   ; needs to be fast so transit
+             :method :post
+             :form {:staged-tx staged-tx
+                    :queries (into [] (vals named-queries))}
+             :as :auto})
+          (p/then (fn [resp]
+                    (let [new-graph (graph/->SuperGraph named-queries {} nil)
+                          {:keys [t pulled-trees-map tempids]} (-> resp :body :hypercrud)]
+                      (graph/set-state! new-graph editor-dbval editor-schema pulled-trees-map tempids)
+                      (set! super-graph new-graph)
+                      super-graph))))))
+
+
+  (hydrated? [this named-queries]
+    ; compare our pre-loaded state with the graph dependencies
+    (set/subset? (set named-queries) (some-> super-graph .-named-queries set)))
 
 
   (transact! [this tx]
