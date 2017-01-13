@@ -62,9 +62,16 @@
 (def read-DbVal #(apply ->DbVal %))
 
 
+(deftype DbError [msg]
+  Object (toString [_] (str "#DbError" (pr-str msg)))
+  IPrintWithWriter (-pr-writer [o writer _] (-write writer (.toString o))))
+
+(def read-DbError #(->DbError %))
+
+
 (reader/register-tag-parser! 'DbId read-DbId)
 (reader/register-tag-parser! 'DbVal read-DbVal)
-
+(reader/register-tag-parser! 'DbError read-DbError)
 
 (deftype DbIdTransitHandler []
   Object
@@ -87,7 +94,6 @@
 
 (defn DbValTransitReader [v] (apply ->DbVal v))
 
-(deftype DbError [msg])
 
 (deftype DbErrorTransitHandler []
   Object
@@ -96,5 +102,5 @@
   (stringRep [_ v] nil)
   (getVerboseHandler [_] nil))
 
-(defn DbErrorTransitReader [v] (apply ->DbError v))
+(defn DbErrorTransitReader [v] (->DbError v))
 

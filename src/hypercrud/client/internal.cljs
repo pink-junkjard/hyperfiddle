@@ -34,7 +34,8 @@
 (def transit-write-handlers
   {goog.Uri (UriHandler.)
    types/DbId (types/DbIdTransitHandler.)
-   types/DbVal (types/DbValTransitHandler.)})
+   types/DbVal (types/DbValTransitHandler.)
+   types/DbError (types/DbErrorTransitHandler.)})
 
 
 (def transit-encoding-opts {:handlers transit-write-handlers})
