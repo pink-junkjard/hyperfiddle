@@ -63,9 +63,9 @@
                       css-class (->> [(str "field-id-" (get-in field [:db/id :id]))
                                       (some->> (:field/prompt field) (str "field-prompt-"))
                                       (some->> field :field/attribute :attribute/ident (str "field-attr-"))]
+                                     (remove nil?)
                                      (map css-encode)
                                      (interpose " ")
-                                     (remove nil?)
                                      (apply str))]
                   [:td {:class css-class :key (:db/id field) :on-click on-click}
                    prompt
