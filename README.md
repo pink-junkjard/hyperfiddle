@@ -1,6 +1,13 @@
 # hypercrud.client
 
-Hypercrud has two layers of abstraction: a lower-level I/O runtime enabling separation of UI from I/O; and a higher-level data-driven hypermedia layer built on top of UI expressions.
+> Browser UI <=> service data sync backed by Datomic
+
+For a blog post intro, see this transcript of a talk: [Composable UI, May 2016](https://docs.google.com/document/d/1hb9qB_d9jlDUpgTSBcFELGhKuWVecVzgGCcOeR9UueE/edit?usp=sharing)
+
+## Overview
+
+Hypercrud has two layers of abstraction: a lower-level I/O runtime which abstracts over client/server data sync, and a 
+higher-level data-driven hypermedia layer built on top of UI expressions.
 
 The lower layer is roughly analogous to a Datomic peer running in the browser. The capabilities are described by the Hypercrud protocol:
 
