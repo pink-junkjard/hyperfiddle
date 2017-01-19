@@ -1,5 +1,6 @@
 (ns hypercrud.browser.core
-  (:require [cljs.pprint :as pprint]
+  (:require [cljs.core.match :refer-macros [match]]
+            [cljs.pprint :as pprint]
             [cljs.reader :as reader]
             [hypercrud.browser.links :as links]
             [hypercrud.client.core :as hc]
@@ -75,9 +76,11 @@
                                             (into {}))))))]]
       (let [resultset (pull-resultset super-graph link create-new-find-elements
                                       (hc/select super-graph (hash (q-util/query-value q link params-map param-ctx))))]
-        (if (empty? (:link/renderer link))
-          (auto-control/resultset resultset link param-ctx)
-          (resultset-custom resultset link param-ctx))))))
+        (condp = (get param-ctx :display-mode :dressed)
+          :undressed (auto-control/resultset resultset link param-ctx)
+          :dressed (if (empty? (:link/renderer link))
+                     (auto-control/resultset resultset link param-ctx)
+                     (resultset-custom resultset link param-ctx)))))))
 
 
 (declare query)
