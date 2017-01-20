@@ -96,10 +96,10 @@
 
         ; you still want the param-ctx; just bypass the :link/bindings
 
-        (condp = (get param-ctx :display-mode :dressy)
-          :dressy (user-resultset resultset link (user-bindings link param-ctx))
-          :casual (auto-control/resultset resultset link (user-bindings link param-ctx))
-          :naked (auto-control/resultset resultset link param-ctx))))))
+        (condp = (get param-ctx :display-mode :dressed)
+          :dressed (user-resultset resultset link (user-bindings link param-ctx))
+          :undressed (auto-control/resultset resultset link (user-bindings link param-ctx))
+          :raw (auto-control/resultset resultset link param-ctx))))))
 
 
 (declare query)
