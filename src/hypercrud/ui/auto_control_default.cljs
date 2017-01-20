@@ -29,6 +29,7 @@
                    :link-ctx/formula
                    :link-ctx/visible?
                    :link/tx-fn
+                   :link/bindings
                    :link/query} (-> attribute :attribute/ident))
     :db.type/code
     (-> attribute :attribute/valueType :db/ident)))

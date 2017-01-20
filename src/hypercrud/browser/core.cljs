@@ -30,8 +30,28 @@
                       (into {})))))))
 
 
-(defn resultset-custom [resultset link param-ctx]
-  (let [{resultset-renderer :value error :error} (eval (:link/renderer link))
+(defn user-bindings [link param-ctx]
+  (let [bindings-fn (if (empty? (:link/bindings link))
+                      identity
+                      (let [{f :value error :error} (eval (:link/bindings link))]
+                        (if error
+                          (fn [_] (throw error))
+                          f)))]
+    (try
+      (bindings-fn param-ctx)
+      (catch :default error
+        (js/alert (str "error in user-bindings:\n" (pr-str error)))
+        param-ctx))))
+
+
+(defn user-resultset [resultset link param-ctx]
+  (let [render-fn (if (empty? (:link/renderer link))
+                    auto-control/resultset
+                    (let [{f :value error :error} (eval (:link/renderer link))]
+                      (if error
+                        (fn [resultset link param-ctx]
+                          [:pre (pprint/pprint error)])
+                        f)))
         link-ctxs (->> (:link/link-ctx link)
                        (mapv (juxt #(-> % :link-ctx/ident) identity))
                        (into {}))
@@ -50,12 +70,9 @@
                                                             (q-util/query-value q link params-map param-ctx))]
                                           (pull-resultset (:super-graph param-ctx) link (:create-new-find-elements params-map)
                                                           (hc/select (:super-graph param-ctx) (hash query-value))))))]
-    [:div
-     (if error
-       [:pre (pprint/pprint error)]
-       (try
-         (resultset-renderer resultset link param-ctx)
-         (catch :default e (pr-str e))))]))
+    (try
+      (render-fn resultset link param-ctx)
+      (catch :default e (pr-str e)))))
 
 
 (defn ui [{query-params :query-params create-new-find-elements :create-new-find-elements :as params-map}
@@ -76,11 +93,13 @@
                                             (into {}))))))]]
       (let [resultset (pull-resultset super-graph link create-new-find-elements
                                       (hc/select super-graph (hash (q-util/query-value q link params-map param-ctx))))]
-        (condp = (get param-ctx :display-mode :dressed)
-          :undressed (auto-control/resultset resultset link param-ctx)
-          :dressed (if (empty? (:link/renderer link))
-                     (auto-control/resultset resultset link param-ctx)
-                     (resultset-custom resultset link param-ctx)))))))
+
+        ; you still want the param-ctx; just bypass the :link/bindings
+
+        (condp = (get param-ctx :display-mode :dressy)
+          :dressy (user-resultset resultset link (user-bindings link param-ctx))
+          :casual (auto-control/resultset resultset link (user-bindings link param-ctx))
+          :naked (auto-control/resultset resultset link param-ctx))))))
 
 
 (declare query)
