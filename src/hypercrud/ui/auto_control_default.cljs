@@ -19,7 +19,7 @@
 
 
 (defn build-props [entity field link-ctxs param-ctx]
-  {:read-only (if-let [read-only (:read-only param-ctx)] (read-only param-ctx))})
+  {:read-only ((get param-ctx :read-only (constantly false)) param-ctx)})
 
 
 (defn ascertain-valueType [attribute]
