@@ -35,8 +35,8 @@
                  :community/category #{"news" "human interest"},
                  :community/orgtype {:db/id 17592186045418},
                  :community/type #{{:db/id 17592186045424}}}]
-    (is (= (set (entity->statements indexed-schema hc-data))
-           #{[:db/add 1 :community/neighborhood 17592186045456]
+    (is (= (set (entity->statements hc-data))
+           #{[:db/add 1 :community/neighborhood 17592186045456] ; busted - need to be #DbId
              [:db/add 1 :community/type 17592186045424]
              [:db/add 1 :community/orgtype 17592186045418]
              [:db/add 1 :community/name "At Large in Ballard"]

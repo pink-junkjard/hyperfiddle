@@ -9,8 +9,8 @@
 
 ; todo we shouldn't depend on an actual link-ctx/link, just that link-ctx/link's dbid
 ; the types for this function are too broad
-(defn build-params-map [link-ctx param-ctx]
-  #_ (assert (not (empty? (-> link-ctx :link-ctx/link :link/find-element))) "dependent query insanity check")
+(defn build-url-params-map [link-ctx param-ctx]
+  #_(assert (not (empty? (-> link-ctx :link-ctx/link :link/find-element))) "dependent query insanity check")
   {:link-dbid (-> link-ctx :link-ctx/link :db/id)
    :query-params (->> (q-util/read-eval-formulas (:link-ctx/formula link-ctx))
                       (util/map-values #(q-util/run-formula % param-ctx)))
@@ -43,7 +43,7 @@
     ;; add-result #(tx/edit-entity (:db/id entity) ident [] [(first %)])
     (if tx-fn
       {:on-click #((:user-swap! param-ctx) (tx-fn param-ctx))}
-      (let [params-map (build-params-map link-ctx param-ctx)]
+      (let [params-map (build-url-params-map link-ctx param-ctx)]
         {:route params-map
          :class (if-not (renderable-link? (:link-ctx/link link-ctx) params-map)
                   "invalid")}))))

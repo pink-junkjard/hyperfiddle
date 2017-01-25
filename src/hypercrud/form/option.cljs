@@ -30,7 +30,7 @@
     (if-let [q (if-not (empty? q)
                  (reader/read-string q))]
       (let [ordered-find-elements (find-elements-util/order-find-elements find-elements q)
-            result-query (let [params-map (merge (:query-params (links/build-params-map (:field/options-link-ctx field) param-ctx))
+            result-query (let [params-map (merge (:query-params (links/build-url-params-map (:field/options-link-ctx field) param-ctx))
                                                  (q-util/build-dbhole-lookup link))]
                            (q-util/query-value q link params-map param-ctx))]
         (->> (hc/select (:super-graph param-ctx) (hash result-query))

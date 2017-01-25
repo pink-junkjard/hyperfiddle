@@ -8,9 +8,15 @@
 (defn tempid? [dbid] (< (.-id dbid) 0))
 
 
+(defn retract [dbid a dbids]
+  (map (fn [val] [:db/retract dbid a val]) dbids))
+
+(defn add [dbid a dbids]
+  (map (fn [val] [:db/add dbid a val]) dbids))
+
 (defn edit-entity [dbid a rets adds]
-  (vec (concat (map (fn [val] [:db/retract dbid a val]) rets)
-               (map (fn [val] [:db/add dbid a val]) adds))))
+  (vec (concat (retract dbid a rets)
+               (add dbid a adds))))
 
 
 (defn update-entity-attr [{:keys [:db/id] :as entity}
@@ -99,27 +105,29 @@
         persistent!)))
 
 
-(defn ref->v [v]
+(defn any-ref->dbid
+  "Safe for ref and primitive vals"
+  [v]
   (cond (map? v) (:db/id v)
         (instance? types/Entity v) (.-dbid v)
+        ; #DbId will just work, its already right
         :else v))
 
 
-(defn entity->statements [schema {dbid :db/id :as entity}]  ; entity always has :db/id
+(defn entity->statements
+  "Only need schema to recurse into component entities. valueType and cardinality is determined dynamically.
+  If schema is omitted, don't recurse refs."
+  [{dbid :db/id :as entity} & [schema]]
   ;; dissoc :db/id, it is done as a seq/filter for compatibility with #Entity
+  (assert (nil? schema) "todo component recursion")
   (->> (seq entity)
        (filter (fn [[k v]] (not= :db/id k)))
 
        (mapcat (fn [[attr val]]
-                 (let [{:keys [:db/cardinality :db/valueType]} (get schema attr)
-                       _ (assert cardinality (str "schema attribute not found: " (pr-str attr)))]
-                   (if (= valueType :db.type/ref)
-                     (condp = cardinality
-                       :db.cardinality/one [[:db/add dbid attr (ref->v val)]]
-                       :db.cardinality/many (mapv (fn [val] [:db/add dbid attr (ref->v val)]) val))
-                     (condp = cardinality
-                       :db.cardinality/one [[:db/add dbid attr val]]
-                       :db.cardinality/many (mapv (fn [val] [:db/add dbid attr val]) val))))))))
+                 ; dont care about refs - just pass them through blindly, they are #DbId and will just work
+                 (if (set? val)
+                   (mapv (fn [val] [:db/add dbid attr (any-ref->dbid val)]) val)
+                   [[:db/add dbid attr (any-ref->dbid val)]])))))
 
 
 (defn entity? [v]
@@ -153,7 +161,7 @@
   (let [{:keys [:db/cardinality :db/valueType]} (get schema attr)
         _ (assert cardinality (str "schema attribute not found: " (pr-str attr)))
         build-DbId! (fn [lookup-transient ref]
-                      (let [id (ref->v ref)
+                      (let [id (any-ref->dbid ref)
                             id (or (get tempids id) id)     ; if a tempid was sent up on the wire we need to convert it back now for value position
                             dbid (->DbId id conn-id)
                             [lookup-transient _] (get-data! lookup-transient dbid)]
@@ -203,7 +211,7 @@
   (let [traversal (tree-seq (fn [v] (entity? v))
                             #(entity-children schema %)
                             pulled-tree)]
-    (mapcat #(entity->statements schema %) traversal)))
+    (mapcat entity->statements traversal)))
 
 
 (defn replace-ids [schema conn-id skip? temp-id! tx]
@@ -253,7 +261,7 @@
     (->> (tree-seq (fn [v] (instance? types/Entity v))
                    #(entity-components schema %)
                    e)
-         (mapcat #(entity->statements schema %))
+         (mapcat entity->statements)
          (replace-ids schema (-> e :db/id :conn-id)
                       (fn [a] (not (get-in schema [a :db/isComponent]))) ; preserve links to existing entities
                       tempid!))))
@@ -273,9 +281,9 @@
                                  (dissoc :field/attribute))
                            ; we don't necessarily have the attribute ident pulled down?
                            attr-lookup (->DbId [:attribute/ident (-> attr :attribute/ident)] (-> attr :db/id :conn-id))]
-                       (conj (entity->statements schema e)
+                       (conj (entity->statements e)
                              [:db/add (:db/id e) :field/attribute attr-lookup]))
-                     (entity->statements schema entity))))
+                     (entity->statements entity))))
          (replace-ids schema (-> link :db/id :conn-id)
                       #(contains? #{:field/attribute} %)    ; preserve refs to attributes
                       tempid!))))
