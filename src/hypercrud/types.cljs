@@ -19,6 +19,9 @@
 (def read-DbId #(apply ->DbId %))
 
 
+; This doesn't have assoc and dissoc since it's a view of a graph. You need to do graph-level
+; operations to update the graph, since using a tree interface would break consistency.
+; The entity view (tree) must be read-only.
 (deftype Entity [dbgraph dbid data ^:mutable memoize-thing]
   ILookup
   (-lookup [_ k]
