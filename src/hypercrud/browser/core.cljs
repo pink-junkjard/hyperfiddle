@@ -1,5 +1,7 @@
 (ns hypercrud.browser.core
-  (:require [cljs.pprint :as pprint]
+  (:require [cats.core :as cats]
+            [cats.monad.exception :as exception]
+            [cljs.pprint :as pprint]
             [cljs.reader :as reader]
             [hypercrud.browser.links :as links]
             [hypercrud.browser.system-links :as system-links]
@@ -63,7 +65,8 @@
                                                                 params-map (merge (:query-params params-map)
                                                                                   (q-util/build-dbhole-lookup link))]
                                                             (q-util/query-value q link params-map param-ctx))]
-                                          (pull-resultset (:super-graph param-ctx) link (hc/select (:super-graph param-ctx) (hash query-value))))))]
+                                          (->> (hc/select (:super-graph param-ctx) (hash query-value))
+                                               (cats/fmap #(pull-resultset (:super-graph param-ctx) link %))))))]
     (try
       (render-fn resultset link param-ctx)
       (catch :default e (pr-str e)))))
@@ -112,8 +115,9 @@
                         (pprint/pprint (->> query-hole-names
                                             (mapv (juxt identity #(get params-map %)))
                                             (into {}))))))]]
-      (let [resultset (pull-resultset super-graph link (hc/select super-graph (hash (q-util/query-value q link params-map param-ctx))))]
-
+      (let [resultset (->> (hc/select super-graph (hash (q-util/query-value q link params-map param-ctx)))
+                           (exception/extract)
+                           (pull-resultset super-graph link))]
         ; you still want the param-ctx; just bypass the :link/bindings
 
         (condp = (get param-ctx :display-mode :dressed)
@@ -197,7 +201,7 @@
                (apply merge))
           {(hash result-query) result-query}
           (if recurse?
-            (if-let [resultset (some->> (hc/select super-graph (hash result-query))
+            (if-let [resultset (some->> (exception/extract (hc/select super-graph (hash result-query)) nil)
                                         (pull-resultset super-graph link))]
               (dependent-queries link resultset param-ctx))))))))
 
@@ -211,6 +215,7 @@
           parent-link-query (q-for-link parent-link-dbid)]
       (merge {(hash parent-link-query) parent-link-query}
              (if-let [parent-link (some->> (-> (hc/select (:super-graph param-ctx) (hash parent-link-query))
+                                               (exception/extract nil)
                                                first
                                                (get "?link"))
                                            (hc/entity root-dbgraph))]
@@ -231,6 +236,7 @@
           link-query (q-for-link (:link-dbid params-map))]
       (merge {(hash link-query) link-query}
              (if-let [link (some->> (-> (hc/select (:super-graph param-ctx) (hash link-query))
+                                        (exception/extract nil)
                                         first
                                         (get "?link"))
                                     (hc/entity root-dbgraph))]

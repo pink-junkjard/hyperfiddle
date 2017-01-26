@@ -1,5 +1,6 @@
 (ns hypercrud.client.graph
-  (:require [goog.Uri]
+  (:require [cats.monad.exception :as exception]
+            [goog.Uri]
             [hypercrud.client.core :as hc]
             [hypercrud.client.schema :as schema-util]
             [hypercrud.client.tx :as tx]
@@ -57,7 +58,10 @@
 (deftype SuperGraph [named-queries ^:mutable graphs ^:mutable graph-data]
   hc/SuperGraph
   (select [this named-query]
-    (get (:resultsets graph-data) (get named-queries named-query)))
+    (let [resultset-or-error (get (:resultsets graph-data) (get named-queries named-query))]
+      (if (instance? types/DbError resultset-or-error)
+        (exception/failure (js/Error. (.-msg resultset-or-error))) ;build a stack trace
+        (exception/success resultset-or-error))))
 
   ; todo this goes away if dbval === dbgraph
   (get-dbgraph [this dbval]
@@ -102,7 +106,7 @@
           (->> pulled-trees-map
                (mapv (fn [[[q params pull-exps :as query] hydrated-resultset-or-error]]
                        (let [resultset (if (instance? types/DbError hydrated-resultset-or-error)
-                                         []                 ; just ignore the error and show no results
+                                         hydrated-resultset-or-error
                                          (mapv (fn [result-hydrated]
                                                  (->> result-hydrated
                                                       (mapv (fn [[find-element entity-hydrated]]
@@ -126,8 +130,8 @@
     (let [grouped (->> pulled-trees-map
                        (mapv (fn [[[q params pull-exps] hydrated-resultset-or-error]]
                                (let [hydrated-resultset (if (instance? types/DbError hydrated-resultset-or-error)
-                                                                   [] ; ignore error, show no results
-                                                                   hydrated-resultset-or-error)]
+                                                          [] ; no datoms to fill graph on errors
+                                                          hydrated-resultset-or-error)]
                                  ; build a Map[dbval List[EntityHydrated]]
                                  (->> pull-exps
                                       (mapv (fn [[find-element [dbval _]]]
@@ -144,6 +148,7 @@
                        (remove #(= % editor-dbval))
                        (mapv (juxt identity (fn [dbval]
                                               (let [attributes (->> (hc/select this dbval)
+                                                                    (exception/extract)
                                                                     (mapv (fn [result]
                                                                             (let [attr-dbid (get result "?attr")]
                                                                               (hc/entity editor-graph attr-dbid)))))

@@ -1,5 +1,6 @@
 (ns hypercrud.form.option
-  (:require [cljs.reader :as reader]
+  (:require [cats.monad.exception :as exception]
+            [cljs.reader :as reader]
             [hypercrud.browser.links :as links]
             [hypercrud.client.core :as hc]
             [hypercrud.form.find-elements :as find-elements-util]
@@ -34,6 +35,7 @@
                                                  (q-util/build-dbhole-lookup link))]
                            (q-util/query-value q link params-map param-ctx))]
         (->> (hc/select (:super-graph param-ctx) (hash result-query))
+             (exception/extract)
              (mapv (fn [result]
                      (mapv (fn [find-element]
                              (let [dbid (get result (:find-element/name find-element))
