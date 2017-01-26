@@ -106,17 +106,18 @@
   (let [q (some-> link :link/query reader/read-string)
         ordered-find-elements (find-elements-util/order-find-elements (:link/find-element link) q)]
     (if (:link/single-result-as-entity? link)
-      (let [result (first resultset)
-            param-ctx (assoc param-ctx :result result)]
-        [:div
-         (->> (concat (repeating-links link param-ctx)
-                      (non-repeating-links link (dissoc param-ctx :result)))
-              (interpose " · "))
-         [:div
-          (map (fn [{:keys [:find-element/form] :as find-element}]
-                 (let [entity (get result (:find-element/name find-element))]
-                   ^{:key (hash [(.-dbid entity) (.-dbid form)])}
-                   [form/form entity form (:link/link-ctx link) param-ctx]))
-               ordered-find-elements)]])
+      (if-let [result (first resultset)]
+        (let [param-ctx (assoc param-ctx :result result)]
+          [:div
+           (->> (concat (repeating-links link param-ctx)
+                        (non-repeating-links link (dissoc param-ctx :result)))
+                (interpose " · "))
+           [:div
+            (map (fn [{:keys [:find-element/form] :as find-element}]
+                   (let [entity (get result (:find-element/name find-element))]
+                     ^{:key (hash [(.-dbid entity) (.-dbid form)])}
+                     [form/form entity form (:link/link-ctx link) param-ctx]))
+                 ordered-find-elements)]])
+        [:div "No results"])
       ^{:key (hc/t (:super-graph param-ctx))}
       [table/table resultset ordered-find-elements (:link/link-ctx link) param-ctx])))
