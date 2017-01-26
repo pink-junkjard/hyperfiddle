@@ -1,7 +1,6 @@
 (ns hypercrud.browser.links
   (:require [cljs.reader :as reader]
             [clojure.set :as set]
-            [hypercrud.client.core :as hc]
             [hypercrud.client.internal :as internal]
             [hypercrud.compile.eval :refer [eval]]
             [hypercrud.form.q-util :as q-util]
