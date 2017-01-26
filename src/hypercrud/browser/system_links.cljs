@@ -62,9 +62,9 @@
                              :db.type/float 0.0
                              :db.type/double 0.0
                              :db.type/bigdec 0
-                             :db.type/ref (->DbId nil nil)
-                             :db.type/instant (js/Date nil)
-                             :db.type/uuid (random-uuid)
+                             :db.type/ref '(hypercrud.types/->DbId nil nil)
+                             :db.type/instant '(js/Date nil)
+                             :db.type/uuid '(random-uuid)
                              :db.type/uri ""
                              :db.type/bytes [])
                          conn-id (-> find-element :find-element/connection :db/id :id)]
