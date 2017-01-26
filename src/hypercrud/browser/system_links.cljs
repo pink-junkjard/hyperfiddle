@@ -45,24 +45,32 @@
 
 
 (defn manufacture-system-create-tx [find-element parent-link-dbid]
-  (let [new-find-element-dbid (hc/*temp-id!* hc/*root-conn-id*)
-        new-dbhole-dbid (hc/*temp-id!* hc/*root-conn-id*)]
-    (concat
-      (tx/entity->statements
-        {:db/id (system-create-link-dbid (-> find-element :db/id :id) parent-link-dbid)
-         :link/prompt (str "create " (:find-element/name find-element))
-         :hypercrud/owner system-link-owner
-         :link/query (pr-str '[:find ?e :in $ ?e :where [?e]])
-         :link/single-result-as-entity? true
-         :link/dbhole #{new-dbhole-dbid}
-         :link/find-element #{new-find-element-dbid}})
-      (tx/entity->statements {:db/id new-find-element-dbid
-                              :find-element/name "?e"
-                              :find-element/connection (:find-element/connection find-element)
-                              :find-element/form (:find-element/form find-element)})
-      (tx/entity->statements {:db/id new-dbhole-dbid
-                              :dbhole/name "$"
-                              :dbhole/value (:find-element/connection find-element)}))))
+  (concat
+    (tx/entity->statements
+      {:db/id (system-create-link-dbid (-> find-element :db/id :id) parent-link-dbid)
+       :link/prompt (str "create " (:find-element/name find-element))
+       :hypercrud/owner system-link-owner
+       :link/tx-fn (let [hc-a (-> find-element :find-element/form :form/field first :field/attribute)
+                         a (-> hc-a :attribute/ident)
+                         valueType (-> hc-a :attribute/valueType :db/ident)
+                         v (condp = valueType
+                             :db.type/keyword :nil
+                             :db.type/string ""
+                             :db.type/boolean false
+                             :db.type/long 0
+                             :db.type/bigint 0
+                             :db.type/float 0.0
+                             :db.type/double 0.0
+                             :db.type/bigdec 0
+                             :db.type/ref (->DbId nil nil)
+                             :db.type/instant (js/Date nil)
+                             :db.type/uuid (random-uuid)
+                             :db.type/uri ""
+                             :db.type/bytes [])
+                         conn-id (-> find-element :find-element/connection :db/id :id)]
+                     (pr-str `(fn [~'ctx]
+                                (let [~'e (hypercrud.client.core/*temp-id!* ~conn-id)]
+                                  {:tx [[:db/add ~'e ~a ~v]]}))))})))
 
 
 (defn overlay-system-links-tx
@@ -87,8 +95,7 @@
                                               {:db/id create-link-ctx-dbid
                                                :link-ctx/ident :create
                                                :link-ctx/link create-link-dbid
-                                               :link-ctx/repeating? false
-                                               :link-ctx/formula (pr-str {"?e" (pr-str '(constantly nil))})}))]
+                                               :link-ctx/repeating? false}))]
                              [[edit-link-ctx-dbid create-link-ctx-dbid] tx]))
                          (:link/find-element parent-link))]
     (concat
