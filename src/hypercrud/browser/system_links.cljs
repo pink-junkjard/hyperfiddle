@@ -50,7 +50,16 @@
       {:db/id (system-create-link-dbid (-> find-element :db/id :id) parent-link-dbid)
        :link/prompt (str "create " (:find-element/name find-element))
        :hypercrud/owner system-link-owner
-       :link/tx-fn (let [hc-a (-> find-element :find-element/form :form/field first :field/attribute)
+       :link/tx-fn (let [hc-a (let [fields (-> find-element :find-element/form :form/field)
+                                    ; attempt to use a string or keyword field
+                                    ; todo unnecessary once valid nil cases are created/tested for all types
+                                    field (or (->> fields
+                                                   (filter (fn [field]
+                                                             (contains? #{:db.type/string :db.type/keyword}
+                                                                        (-> field :field/attribute :attribute/valueType :db/ident))))
+                                                   first)
+                                              (first fields))]
+                                (:field/attribute field))
                          a (-> hc-a :attribute/ident)
                          valueType (-> hc-a :attribute/valueType :db/ident)
                          v (condp = valueType
@@ -62,7 +71,7 @@
                              :db.type/float 0.0
                              :db.type/double 0.0
                              :db.type/bigdec 0
-                             :db.type/ref '(hypercrud.types/->DbId nil nil)
+                             :db.type/ref '(hypercrud.types/->DbId nil nil) ;todo
                              :db.type/instant '(js/Date nil)
                              :db.type/uuid '(random-uuid)
                              :db.type/uri ""
