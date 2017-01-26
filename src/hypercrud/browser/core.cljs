@@ -2,9 +2,9 @@
   (:require [cljs.pprint :as pprint]
             [cljs.reader :as reader]
             [hypercrud.browser.links :as links]
+            [hypercrud.browser.system-links :as system-links]
             [hypercrud.client.core :as hc]
             [hypercrud.client.schema :as schema-util]
-            [hypercrud.client.tx :as tx]
             [hypercrud.compile.eval :refer [eval]]
             [hypercrud.form.q-util :as q-util]
             [hypercrud.types :refer [->DbId ->DbVal ->Entity]]
@@ -75,63 +75,6 @@
       (catch :default e (pr-str e)))))
 
 
-(defn system-edit-link-dbid [find-element-id parent-link]
-  (->DbId [(-> parent-link :db/id :id)
-           (-> parent-link :db/id :conn-id)
-           :system-edit
-           find-element-id]
-          (-> parent-link :db/id :conn-id)))
-
-
-(def system-edit-link-owner nil)
-
-
-(defn manufacture-system-edit-tx [find-element parent-link]
-  (let [new-find-element-dbid (hc/*temp-id!* hc/*root-conn-id*)
-        new-dbhole-dbid (hc/*temp-id!* hc/*root-conn-id*)]
-    (concat
-      (tx/entity->statements
-        {:db/id (system-edit-link-dbid (-> find-element :db/id :id) parent-link)
-         :link/prompt (str "sysedit " (:find-element/name find-element))
-         :hypercrud/owner system-edit-link-owner
-         :link/query (pr-str '[:find ?e :in $ ?e :where [?e]])
-         :link/single-result-as-entity? true
-         :link/dbhole #{new-dbhole-dbid}
-         :link/find-element #{new-find-element-dbid}})
-      (tx/entity->statements {:db/id new-find-element-dbid
-                              :find-element/name "?e"
-                              :find-element/connection (:find-element/connection find-element)
-                              :find-element/form (:find-element/form find-element)})
-      (tx/entity->statements {:db/id new-dbhole-dbid
-                              :dbhole/name "$"
-                              :dbhole/value (:find-element/connection find-element)}))))
-
-
-(defn overlay-system-links-tx
-  "remove the user links and provide the system links (edit, new, remove). For now just does edit"
-  [link]
-  (let [link-stuff (mapv (fn [find-element]
-                           (let [edit-link-dbid (system-edit-link-dbid (-> find-element :db/id :id) link)
-                                 edit-link-ctx-dbid (hc/*temp-id!* (-> link :db/id :conn-id))
-                                 tx (concat (manufacture-system-edit-tx find-element link)
-                                            ; need to recurse components here
-                                            (tx/entity->statements
-                                              {:db/id edit-link-ctx-dbid
-                                               :link-ctx/ident :edit
-                                               :link-ctx/link edit-link-dbid
-                                               :link-ctx/repeating? true
-                                               :link-ctx/formula (pr-str {"?e" (pr-str `(fn [~'ctx]
-                                                                                          (get-in ~'ctx [:result ~(:find-element/name find-element) :db/id])))})}))]
-                             [edit-link-ctx-dbid tx]))
-                         (:link/find-element link))]
-    (concat
-      (mapcat second link-stuff)
-      ; remove user links and add system links
-      (tx/retract (:db/id link) :link/link-ctx (mapv :db/id (-> link :link/link-ctx)))
-      (tx/add (:db/id link) :link/link-ctx (-> (mapv first link-stuff)
-                                               (into #{}))))))
-
-
 (defn with-parent-link [params-map param-ctx fn]
   (let [[parent-link-id parent-link-conn-id] (-> params-map :link-dbid :id)
         parent-link (hc/entity (hc/get-dbgraph (:super-graph param-ctx) (->DbVal hc/*root-conn-id* nil))
@@ -143,18 +86,24 @@
           {:keys [super-graph] :as param-ctx}]
   (let [system-link? (vector? (-> params-map :link-dbid :id))
         param-ctx (if system-link?
-                    (let [[_ _ _ find-element-id] (-> params-map :link-dbid :id)]
+                    (let [[_ _ system-link-name find-element-id] (-> params-map :link-dbid :id)]
                       (with-parent-link params-map param-ctx
                                         (fn [parent-link]
                                           (let [find-element (->> (:link/find-element parent-link)
                                                                   (filter #(= find-element-id (-> % :db/id :id)))
-                                                                  first)]
-                                            (update param-ctx :super-graph #(hc/with % (manufacture-system-edit-tx find-element parent-link)))))))
+                                                                  first)
+                                                tx (condp = system-link-name
+                                                     :system-edit (system-links/manufacture-system-edit-tx find-element (:db/id parent-link))
+                                                     :system-create (system-links/manufacture-system-create-tx find-element (:db/id parent-link)))]
+                                            (update param-ctx :super-graph #(hc/with % tx))))))
                     param-ctx)
         root-dbgraph (hc/get-dbgraph (:super-graph param-ctx) (->DbVal hc/*root-conn-id* nil))
         link-dbid (if system-link?
-                    (let [[_ _ _ find-element-id] (-> params-map :link-dbid :id)]
-                      (with-parent-link params-map param-ctx (partial system-edit-link-dbid find-element-id)))
+                    (let [[_ _ system-link-name find-element-id] (-> params-map :link-dbid :id)]
+                      (with-parent-link params-map param-ctx (fn [parent-link]
+                                                               (condp = system-link-name
+                                                                 :system-edit (system-links/system-edit-link-dbid find-element-id (:db/id parent-link))
+                                                                 :system-create (system-links/system-create-link-dbid find-element-id (:db/id parent-link))))))
                     (:link-dbid params-map))
         link (hc/entity root-dbgraph link-dbid)
         q (some-> link :link/query reader/read-string)
@@ -179,7 +128,7 @@
           :undressed (auto-control/resultset resultset link (user-bindings link param-ctx))
 
           ; raw ignores user links and gets free system links
-          :raw (let [overlay-tx (overlay-system-links-tx link)
+          :raw (let [overlay-tx (system-links/overlay-system-links-tx link)
                      link' (hc/entity (hc/with' root-dbgraph overlay-tx) (:db/id link))
                      ; sub-queries (e.g. combo boxes) will get the old supergraph
                      ; Since we only changed root graph, this is only interesting for the hc-in-hc case
@@ -262,7 +211,7 @@
 
 (defn query [params-map param-ctx recurse?]
   (if (vector? (-> params-map :link-dbid :id))
-    (let [[parent-link-id parent-link-conn-id _ find-element-id] (-> params-map :link-dbid :id)
+    (let [[parent-link-id parent-link-conn-id system-link-name find-element-id] (-> params-map :link-dbid :id)
           parent-link-dbid (->DbId parent-link-id parent-link-conn-id)
           root-dbval (->DbVal hc/*root-conn-id* nil)
           root-dbgraph (hc/get-dbgraph (:super-graph param-ctx) root-dbval)
@@ -275,9 +224,14 @@
                (let [find-element (->> (:link/find-element parent-link)
                                        (filter #(= find-element-id (-> % :db/id :id)))
                                        first)
-                     link (let [tx (manufacture-system-edit-tx find-element parent-link)]
+                     link (let [tx (condp = system-link-name
+                                     :system-edit (system-links/manufacture-system-edit-tx find-element parent-link-dbid)
+                                     :system-create (system-links/manufacture-system-create-tx find-element parent-link-dbid))
+                                link-dbid (condp = system-link-name
+                                            :system-edit (system-links/system-edit-link-dbid find-element-id parent-link-dbid)
+                                            :system-create (system-links/system-create-link-dbid find-element-id parent-link-dbid))]
                             (-> (hc/with' root-dbgraph tx)
-                                (hc/entity (system-edit-link-dbid find-element-id parent-link))))]
+                                (hc/entity link-dbid)))]
                  (query-for-link link (:query-params params-map) (:create-new-find-elements params-map) param-ctx recurse?)))))
     (let [root-dbval (->DbVal hc/*root-conn-id* nil)
           root-dbgraph (hc/get-dbgraph (:super-graph param-ctx) root-dbval)
