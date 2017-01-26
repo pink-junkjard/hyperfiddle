@@ -5,6 +5,7 @@
             [hypercrud.platform.native-event-listener :refer [native-listener]] ;provided dependency
             [hypercrud.types :refer [->DbId ->DbVal]]
             [hypercrud.ui.auto-control :refer [auto-table-cell connection-color]]
+            [hypercrud.ui.renderer :as renderer]
             [hypercrud.util :as util]
             [reagent.core :as r]))
 
@@ -91,18 +92,18 @@
         style {:border-color (connection-color (:color param-ctx))}]
     (->> (:form/field form)
          (sort-by :field/order)
-         (map (fn [{:keys [:field/renderer] :as field}]
+         (map (fn [field]
                 [:td.truncate {:key (:db/id field) :style style}
-                 (if (empty? renderer)
-                   (let [link-ctxs (filter #(= (.-dbid field) (some-> % :link-ctx/field :db/id)) repeating-link-ctxs)]
-                     [auto-table-cell entity field link-ctxs param-ctx])
+                 (if-let [renderer (renderer/renderer-for-attribute (:field/attribute field))]
                    (let [{renderer :value error :error} (eval renderer)]
                      [:div.value
                       (if error
                         (pr-str error)
                         (try
                           (renderer super-graph link-fn entity)
-                          (catch :default e (pr-str e))))]))])))))
+                          (catch :default e (pr-str e))))])
+                   (let [link-ctxs (filter #(= (.-dbid field) (some-> % :link-ctx/field :db/id)) repeating-link-ctxs)]
+                     [auto-table-cell entity field link-ctxs param-ctx]))])))))
 
 
 ;(defn links-cell [entity form repeating-links retract-entity! show-links? navigate-cmp]
