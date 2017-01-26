@@ -12,15 +12,10 @@
             [hypercrud.util :as util]))
 
 
-(defn pull-resultset [super-graph {find-elements :link/find-element :as link} create-new-find-elements resultset]
+(defn pull-resultset [super-graph {find-elements :link/find-element :as link} resultset]
   (let [find-element-lookup (->> (mapv (juxt :find-element/name identity) find-elements)
                                  (into {}))]
-    (->> (if (and (:link/single-result-as-entity? link) (= 0 (count resultset)))
-           (let [local-result (->> find-elements
-                                   (mapv (juxt :find-element/name #(get create-new-find-elements (:find-element/name %))))
-                                   (into {}))]
-             [local-result])
-           resultset)
+    (->> resultset
          (mapv (fn [result]
                  (->> result
                       (mapv (fn [[find-element-symbol entity-dbid]]
@@ -68,8 +63,7 @@
                                                                 params-map (merge (:query-params params-map)
                                                                                   (q-util/build-dbhole-lookup link))]
                                                             (q-util/query-value q link params-map param-ctx))]
-                                          (pull-resultset (:super-graph param-ctx) link (:create-new-find-elements params-map)
-                                                          (hc/select (:super-graph param-ctx) (hash query-value))))))]
+                                          (pull-resultset (:super-graph param-ctx) link (hc/select (:super-graph param-ctx) (hash query-value))))))]
     (try
       (render-fn resultset link param-ctx)
       (catch :default e (pr-str e)))))
@@ -82,7 +76,7 @@
     (fn parent-link)))
 
 
-(defn ui [{query-params :query-params create-new-find-elements :create-new-find-elements :as params-map}
+(defn ui [{query-params :query-params :as params-map}
           {:keys [super-graph] :as param-ctx}]
   (let [system-link? (vector? (-> params-map :link-dbid :id))
         param-ctx (if system-link?
@@ -118,8 +112,7 @@
                         (pprint/pprint (->> query-hole-names
                                             (mapv (juxt identity #(get params-map %)))
                                             (into {}))))))]]
-      (let [resultset (pull-resultset super-graph link create-new-find-elements
-                                      (hc/select super-graph (hash (q-util/query-value q link params-map param-ctx))))]
+      (let [resultset (pull-resultset super-graph link (hc/select super-graph (hash (q-util/query-value q link params-map param-ctx))))]
 
         ; you still want the param-ctx; just bypass the :link/bindings
 
@@ -187,7 +180,7 @@
                                                {:hypercrud/owner [*]}]]}])
 
 
-(defn query-for-link [{find-elements :link/find-element :as link} query-params create-new-find-elements
+(defn query-for-link [{find-elements :link/find-element :as link} query-params
                       {:keys [super-graph] :as param-ctx} recurse?]
   (let [q (some-> link :link/query reader/read-string)
         params-map (merge query-params (q-util/build-dbhole-lookup link))
@@ -205,7 +198,7 @@
           {(hash result-query) result-query}
           (if recurse?
             (if-let [resultset (some->> (hc/select super-graph (hash result-query))
-                                        (pull-resultset super-graph link create-new-find-elements))]
+                                        (pull-resultset super-graph link))]
               (dependent-queries link resultset param-ctx))))))))
 
 
@@ -232,7 +225,7 @@
                                             :system-create (system-links/system-create-link-dbid find-element-id parent-link-dbid))]
                             (-> (hc/with' root-dbgraph tx)
                                 (hc/entity link-dbid)))]
-                 (query-for-link link (:query-params params-map) (:create-new-find-elements params-map) param-ctx recurse?)))))
+                 (query-for-link link (:query-params params-map) param-ctx recurse?)))))
     (let [root-dbval (->DbVal hc/*root-conn-id* nil)
           root-dbgraph (hc/get-dbgraph (:super-graph param-ctx) root-dbval)
           link-query (q-for-link (:link-dbid params-map))]
@@ -241,17 +234,11 @@
                                         first
                                         (get "?link"))
                                     (hc/entity root-dbgraph))]
-               (query-for-link link (:query-params params-map) (:create-new-find-elements params-map) param-ctx recurse?))))))
+               (query-for-link link (:query-params params-map) param-ctx recurse?))))))
 
 
 (defn replace-tempids-in-params-map [tempid-lookup params-map]
   (let [replace-tempid #(or (get tempid-lookup %) %)]
     (-> params-map
         (update :link-dbid replace-tempid)
-        (update :query-params #(util/map-values replace-tempid %))
-        (update :create-new-find-elements (fn [old-map]
-                                            ; generate a new tempid for each existing tempid
-                                            ; we don't want to replace here
-                                            (util/map-values
-                                              #(hc/*temp-id!* (:conn-id %))
-                                              old-map))))))
+        (update :query-params #(util/map-values replace-tempid %)))))
