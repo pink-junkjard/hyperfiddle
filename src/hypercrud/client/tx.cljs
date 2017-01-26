@@ -1,8 +1,8 @@
 (ns hypercrud.client.tx
   (:require [cljs.core.match :refer-macros [match]]
             [clojure.set :as set]
-            [loom.alg-generic :as loom]
-            [hypercrud.types :refer [->DbId ->Entity] :as types]))
+            [hypercrud.types :refer [->DbId ->Entity] :as types]
+            [loom.alg-generic :as loom]))
 
 
 (defn tempid? [dbid] (< (.-id dbid) 0))

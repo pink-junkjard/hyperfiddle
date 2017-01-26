@@ -4,11 +4,10 @@
             [hypercrud.client.core :as hc]
             [hypercrud.form.find-elements :as find-elements-util]
             [hypercrud.ui.auto-control :as auto-control]
-            [hypercrud.ui.table-cell :as table-cell]
-            [hypercrud.ui.select :as select]
-            [hypercrud.ui.widget :as widget]
             [hypercrud.ui.form :as form]
-            [hypercrud.ui.table :as table]))
+            [hypercrud.ui.table :as table]
+            [hypercrud.ui.table-cell :as table-cell]
+            [hypercrud.ui.widget :as widget]))
 
 
 ; Auto-control takes the parent entity as context

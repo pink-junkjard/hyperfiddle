@@ -1,6 +1,6 @@
 (ns hypercrud.compile.eval
-  (:require [cljs.js :as cljs]
-            [cljs.analyzer :as analyzer]
+  (:require [cljs.analyzer :as analyzer]
+            [cljs.js :as cljs]
             [markdown.core]))
 
 

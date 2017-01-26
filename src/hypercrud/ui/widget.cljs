@@ -1,7 +1,7 @@
 (ns hypercrud.ui.widget
   (:require [cljs.reader :as reader]
-            [hypercrud.browser.links :as links]
             [hypercrud.browser.core :as browser]
+            [hypercrud.browser.links :as links]
             [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx]
             [hypercrud.form.option :as option]
