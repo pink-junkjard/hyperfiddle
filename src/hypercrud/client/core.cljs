@@ -6,7 +6,7 @@
 
 
 (defprotocol SuperGraph
-  (select [this named-query])
+  (select [this query-request])
   (get-dbgraph [this dbval])
   (with [this more-statements])
   (t [this]))
@@ -18,6 +18,6 @@
 
 
 (defprotocol Client
-  (hydrate! [this named-queries force? staged-tx editor-dbval editor-schema])
-  (hydrated? [this named-queries])
+  (hydrate! [this request force? staged-tx editor-dbval editor-schema])
+  (hydrated? [this request])
   (transact! [this tx]))

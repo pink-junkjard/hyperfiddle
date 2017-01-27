@@ -44,8 +44,8 @@
 ; graph is always assumed to be touched
 (deftype Client [entry-uri ^:mutable super-graph]
   hc/Client
-  (hydrate! [this named-queries force? staged-tx editor-dbval editor-schema]
-    (if (and (not force?) (hc/hydrated? this named-queries))
+  (hydrate! [this request force? staged-tx editor-dbval editor-schema]
+    (if (and (not force?) (hc/hydrated? this request))
       (p/resolved super-graph)
       (-> (kvlt/request!
             {:url (resolve-relative-uri entry-uri (goog.Uri. "hydrate"))
@@ -53,19 +53,19 @@
              :accept content-type-transit                   ; needs to be fast so transit
              :method :post
              :form {:staged-tx staged-tx
-                    :queries (into [] (vals named-queries))}
+                    :request (into #{} request)}
              :as :auto})
           (p/then (fn [resp]
-                    (let [new-graph (graph/->SuperGraph named-queries {} nil)
+                    (let [new-graph (graph/->SuperGraph (into #{} request) {} nil)
                           {:keys [t pulled-trees-map tempids]} (-> resp :body :hypercrud)]
                       (graph/set-state! new-graph editor-dbval editor-schema pulled-trees-map tempids)
                       (set! super-graph new-graph)
                       super-graph))))))
 
 
-  (hydrated? [this named-queries]
+  (hydrated? [this request]
     ; compare our pre-loaded state with the graph dependencies
-    (set/subset? (set named-queries) (some-> super-graph .-named-queries set)))
+    (set/subset? (set request) (some-> super-graph .-request)))
 
 
   (transact! [this tx]

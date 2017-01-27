@@ -29,13 +29,17 @@
   {"r" (fn [v] (goog.Uri. v))
    "DbId" types/DbIdTransitReader
    "DbVal" types/DbValTransitReader
-   "DbError" types/DbErrorTransitReader})
+   "DbError" types/DbErrorTransitReader
+   "QReq" types/QueryRequestTransitReader
+   "EReq" types/EntityRequestTransitReader})
 
 (def transit-write-handlers
   {goog.Uri (UriHandler.)
    types/DbId (types/DbIdTransitHandler.)
    types/DbVal (types/DbValTransitHandler.)
-   types/DbError (types/DbErrorTransitHandler.)})
+   types/DbError (types/DbErrorTransitHandler.)
+   types/QueryRequest (types/QueryRequestTransitHandler.)
+   types/EntityRequest (types/EntityRequestTransitHandler.)})
 
 
 (def transit-encoding-opts {:handlers transit-write-handlers})

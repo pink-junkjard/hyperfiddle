@@ -107,3 +107,21 @@
 
 (defn DbErrorTransitReader [v] (->DbError v))
 
+
+(defrecord QueryRequest [query params pull-exps])
+(defrecord EntityRequest [dbid dbval pull-exp])
+
+(deftype QueryRequestTransitHandler []
+  Object
+  (tag [this v] "QReq")
+  (rep [this v] [(.-query v) (.-params v) (.-pull-exps v)])
+  (stringRep [this v] nil))
+
+(deftype EntityRequestTransitHandler []
+  Object
+  (tag [this v] "EReq")
+  (rep [this v] [(.-dbid v) (.-dbval v) (.-pull-exp v)])
+  (stringRep [this v] nil))
+
+(defn QueryRequestTransitReader [v] (apply ->QueryRequest v))
+(defn EntityRequestTransitReader [v] (apply ->EntityRequest v))

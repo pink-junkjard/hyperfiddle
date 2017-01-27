@@ -55,10 +55,10 @@
     (->DbGraph schema dbval local-statements data-lookup {})))
 
 
-(deftype SuperGraph [named-queries ^:mutable graphs ^:mutable graph-data]
+(deftype SuperGraph [request ^:mutable graphs ^:mutable graph-data]
   hc/SuperGraph
-  (select [this named-query]
-    (let [resultset-or-error (get (:resultsets graph-data) (get named-queries named-query))]
+  (select [this query-request]
+    (let [resultset-or-error (get (:resultsets graph-data) query-request)]
       (if (instance? types/DbError resultset-or-error)
         (exception/failure (js/Error. (.-msg resultset-or-error))) ;build a stack trace
         (exception/success resultset-or-error))))
@@ -77,7 +77,7 @@
                                             (hc/with' graph stmts)
                                             graph)))
                                       graphs)]
-      (SuperGraph. named-queries new-graphs graph-data)))
+      (SuperGraph. request new-graphs graph-data)))
 
 
   (t [this]
@@ -85,7 +85,7 @@
 
   IHash
   (-hash [this]
-    (hash named-queries))
+    (hash request))
 
 
   IEquiv
@@ -104,21 +104,25 @@
     ; result-sets :: Map[query -> List[List[DbId]]]
     (let [resultset-by-query
           (->> pulled-trees-map
-               (mapv (fn [[[q params pull-exps :as query] hydrated-resultset-or-error]]
+               (mapv (fn [[request hydrated-resultset-or-error]]
                        (let [resultset (if (instance? types/DbError hydrated-resultset-or-error)
                                          hydrated-resultset-or-error
-                                         (mapv (fn [result-hydrated]
-                                                 (->> result-hydrated
-                                                      (mapv (fn [[find-element entity-hydrated]]
-                                                              (let [find-element (str find-element)
-                                                                    [dbval _] (get pull-exps find-element)
-                                                                    id (:db/id entity-hydrated)
-                                                                    id (or (get-in tempids [(.-conn-id dbval) id]) id)]
-                                                                [find-element (->DbId id (.-conn-id dbval))])))
-                                                      (into {})))
-                                               hydrated-resultset-or-error))]
+                                         (condp = (type request)
+                                           types/EntityRequest nil
+
+                                           types/QueryRequest
+                                           (mapv (fn [result-hydrated]
+                                                   (->> result-hydrated
+                                                        (mapv (fn [[find-element entity-hydrated]]
+                                                                (let [find-element (str find-element)
+                                                                      [dbval _] (get-in request [:pull-exps find-element])
+                                                                      id (:db/id entity-hydrated)
+                                                                      id (or (get-in tempids [(.-conn-id dbval) id]) id)]
+                                                                  [find-element (->DbId id (.-conn-id dbval))])))
+                                                        (into {})))
+                                                 hydrated-resultset-or-error)))]
                          ;; resultset comes out of hc/select
-                         [query resultset])))
+                         [request resultset])))
                (into {}))]
       (set! graph-data (GraphData. pulled-trees-map resultset-by-query)))
 
@@ -128,22 +132,26 @@
     ;; group by dbval, and give each list of hydrated-entities to the proper DbGraph so it can do datom stuff
 
     (let [grouped (->> pulled-trees-map
-                       (mapv (fn [[[q params pull-exps] hydrated-resultset-or-error]]
+                       (mapv (fn [[request hydrated-resultset-or-error]]
                                (let [hydrated-resultset (if (instance? types/DbError hydrated-resultset-or-error)
                                                           [] ; no datoms to fill graph on errors
                                                           hydrated-resultset-or-error)]
-                                 ; build a Map[dbval List[EntityHydrated]]
-                                 (->> pull-exps
-                                      (mapv (fn [[find-element [dbval _]]]
-                                              {dbval (mapv (fn [result]
-                                                             (get result (symbol find-element)))
-                                                           hydrated-resultset)}))
-                                      (apply merge-with concat)))))
+                                 (condp = (type request)
+                                   types/EntityRequest nil
+
+                                   types/QueryRequest
+                                   ; build a Map[dbval List[EntityHydrated]]
+                                   (->> (:pull-exps request)
+                                        (mapv (fn [[find-element [dbval _]]]
+                                                {dbval (mapv (fn [result]
+                                                               (get result (symbol find-element)))
+                                                             hydrated-resultset)}))
+                                        (apply merge-with concat))))))
                        (apply merge-with concat))
           editor-graph (let [ptm (get grouped editor-dbval)
                              tempids (get tempids (.-conn-id editor-dbval))]
                          (dbGraph editor-schema editor-dbval nil ptm tempids))
-          graphs' (->> (mapv first named-queries)
+          graphs' (->> request
                        (filter #(instance? types/DbVal %))
                        (remove #(= % editor-dbval))
                        (mapv (juxt identity (fn [dbval]
@@ -161,8 +169,8 @@
     nil))
 
 
-(defn ->super-graph [editor-schema named-queries pulled-trees-map]
-  (let [super-graph (->SuperGraph named-queries {} nil)
+(defn ->super-graph [editor-schema request pulled-trees-map]
+  (let [super-graph (->SuperGraph request {} nil)
         init-root-dbval (->DbVal hc/*root-conn-id* nil)
         tempids nil]
     (set-state! super-graph init-root-dbval editor-schema pulled-trees-map tempids)
