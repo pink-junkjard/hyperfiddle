@@ -108,8 +108,33 @@
 (defn DbErrorTransitReader [v] (->DbError v))
 
 
-(defrecord QueryRequest [query params pull-exps])
-(defrecord EntityRequest [dbid dbval pull-exp])
+(deftype QueryRequest [query params pull-exps]
+  Object (toString [_] (str "#QReq" (pr-str [query params pull-exps])))
+  IPrintWithWriter (-pr-writer [o writer _] (-write writer (.toString o)))
+  IHash (-hash [this] (hash [query params pull-exps]))
+  IEquiv (-equiv [this other] (= (hash this) (hash other)))
+  ILookup
+  (-lookup [o k] (get o k nil))
+  (-lookup [o k not-found] (condp = k
+                             :query query
+                             :params params
+                             :pull-exps pull-exps
+                             not-found)))
+
+
+(deftype EntityRequest [dbid dbval pull-exp]
+  Object (toString [_] (str "#EReq" (pr-str [dbid dbval pull-exp])))
+  IPrintWithWriter (-pr-writer [o writer _] (-write writer (.toString o)))
+  IHash (-hash [this] (hash [dbid dbval pull-exp]))
+  IEquiv (-equiv [this other] (= (hash this) (hash other)))
+  ILookup
+  (-lookup [o k] (get o k nil))
+  (-lookup [o k not-found] (condp = k
+                             :dbid dbid
+                             :dbval dbval
+                             :pull-exp pull-exp
+                             not-found)))
+
 
 (deftype QueryRequestTransitHandler []
   Object
@@ -125,3 +150,9 @@
 
 (defn QueryRequestTransitReader [v] (apply ->QueryRequest v))
 (defn EntityRequestTransitReader [v] (apply ->EntityRequest v))
+
+(def read-QueryRequest #(apply ->QueryRequest %))
+(def read-EntityRequest #(apply ->EntityRequest %))
+
+(reader/register-tag-parser! 'QReq read-QueryRequest)
+(reader/register-tag-parser! 'EReq read-EntityRequest)

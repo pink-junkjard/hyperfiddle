@@ -1,7 +1,7 @@
 (ns hypercrud.form.q-util
   (:require [cljs.reader :as reader]
             [hypercrud.compile.eval :refer [eval]]
-            [hypercrud.types :refer [->DbVal]]
+            [hypercrud.types :refer [->DbVal ->QueryRequest]]
             [hypercrud.util :as util]))
 
 
@@ -65,10 +65,11 @@
     (remove nil? (mapv #(-> % :field/attribute :attribute/ident) (:form/field form)))))
 
 
+;todo rename and move? ->queryRequest
 (defn query-value [q link params-map param-ctx]
   (let [params (build-params #(get params-map %) link param-ctx)
         pull-exp (->> (:link/find-element link)
                       (mapv (juxt :find-element/name (fn [{:keys [:find-element/connection :find-element/form]}]
                                                        [(->DbVal (-> connection :db/id :id) nil) (form-pull-exp form)])))
                       (into {}))]
-    [q params pull-exp]))
+    (->QueryRequest q params pull-exp)))

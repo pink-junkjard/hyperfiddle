@@ -6,7 +6,8 @@
             [hypercrud.client.core :as hc]
             [hypercrud.client.graph :as graph]
             [hypercrud.client.internal :as internal]
-            [hypercrud.types :refer [->DbId]]
+            [hypercrud.client.schema :as schema-util]
+            [hypercrud.types :as types :refer [->DbId ->DbVal]]
             [kvlt.core :as kvlt]
             [kvlt.middleware.params]
             [promesa.core :as p]))
@@ -53,7 +54,12 @@
              :accept content-type-transit                   ; needs to be fast so transit
              :method :post
              :form {:staged-tx staged-tx
-                    :request (into #{} request)}
+                    :request (->> request
+                                  (mapv (fn [req-or-dbval]
+                                          (if (instance? types/DbVal req-or-dbval)
+                                            (schema-util/schema-request editor-dbval req-or-dbval)
+                                            req-or-dbval)))
+                                  (into #{}))}
              :as :auto})
           (p/then (fn [resp]
                     (let [new-graph (graph/->SuperGraph (into #{} request) {} nil)

@@ -34,7 +34,7 @@
             result-query (let [params-map (merge (:query-params (links/build-url-params-map (:field/options-link-ctx field) param-ctx))
                                                  (q-util/build-dbhole-lookup link))]
                            (q-util/query-value q link params-map param-ctx))]
-        (->> (hc/select (:super-graph param-ctx) (hash result-query))
+        (->> (hc/select (:super-graph param-ctx) result-query)
              (exception/extract)
              (mapv (fn [result]
                      (mapv (fn [find-element]

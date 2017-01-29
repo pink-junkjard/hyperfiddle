@@ -102,7 +102,11 @@
     ; query :: [q params [dbval pull-exp]]
 
     ; result-sets :: Map[query -> List[List[DbId]]]
-    (let [resultset-by-query
+    (let [schema-request-lookup (->> request
+                                     (filter #(instance? types/DbVal %))
+                                     (mapv (juxt #(schema-util/schema-request editor-dbval %) identity))
+                                     (into {}))
+          resultset-by-query
           (->> pulled-trees-map
                (mapv (fn [[request hydrated-resultset-or-error]]
                        (let [resultset (if (instance? types/DbError hydrated-resultset-or-error)
@@ -121,9 +125,10 @@
                                                                   [find-element (->DbId id (.-conn-id dbval))])))
                                                         (into {})))
                                                  hydrated-resultset-or-error)))]
-                         ;; resultset comes out of hc/select
-                         [request resultset])))
-               (into {}))]
+                         (merge {request resultset}
+                                (if-let [schema-dbval (get schema-request-lookup request)]
+                                  {schema-dbval resultset})))))
+               (apply merge))]
       (set! graph-data (GraphData. pulled-trees-map resultset-by-query)))
 
     ; grouped :: Map[DbVal -> PulledTrees]

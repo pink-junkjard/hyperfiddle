@@ -1,5 +1,5 @@
 (ns hypercrud.client.schema
-  (:require [hypercrud.types :refer [->DbVal]]
+  (:require [hypercrud.types :refer [->DbVal ->QueryRequest]]
             [hypercrud.util :as util]))
 
 
@@ -71,10 +71,10 @@
        build-indexed-schema))
 
 
-(defn query-schema [root-dbval project-dbval]
-  {project-dbval ['[:find ?attr :in $ :where [?attr :attribute/ident]]
+(defn schema-request [root-dbval project-dbval]
+  (->QueryRequest '[:find ?attr :in $ :where [?attr :attribute/ident]]
                   {"$" root-dbval}
                   {"?attr" [root-dbval ['*
                                         {:attribute/valueType [:db/id :db/ident]}
                                         {:attribute/cardinality [:db/id :db/ident]}
-                                        {:attribute/unique [:db/id :db/ident]}]]}]})
+                                        {:attribute/unique [:db/id :db/ident]}]]}))
