@@ -142,7 +142,7 @@
                                                           [] ; no datoms to fill graph on errors
                                                           hydrated-resultset-or-error)]
                                  (condp = (type request)
-                                   types/EntityRequest nil
+                                   types/EntityRequest {(:dbval request) [hydrated-resultset]}
 
                                    types/QueryRequest
                                    ; build a Map[dbval List[EntityHydrated]]
