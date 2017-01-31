@@ -1,6 +1,5 @@
 (ns hypercrud.client.tx
   (:require [cljs.core.match :refer-macros [match]]
-            [clojure.set :as set]
             [hypercrud.types :refer [->DbId]]
             [loom.alg-generic :as loom]))
 
@@ -62,44 +61,6 @@
   (reduce simplify tx more-statements))
 
 
-(defn apply-stmt-to-data [attribute data [op _ a v]]
-  (let [cardinality (:db/cardinality attribute)
-        _ (assert cardinality (str "schema attribute not found: " (pr-str a)))]
-    (cond
-      (and (= op :db/add) (= cardinality :db.cardinality/one)) (assoc data a v)
-      (and (= op :db/retract) (= cardinality :db.cardinality/one)) (dissoc data a)
-      (and (= op :db/add) (= cardinality :db.cardinality/many)) (update-in data [a] (fnil #(conj % v) #{}))
-      (and (= op :db/retract) (= cardinality :db.cardinality/many)) (update-in data [a] (fnil #(disj % v) #{}))
-      :else (throw "match error"))))
-
-
-(defn get-data! [lookup-transient dbid]
-  (if-let [entity-data (get lookup-transient dbid)]
-    [lookup-transient entity-data]
-    (let [entity-data {:db/id dbid}]
-      [(assoc! lookup-transient dbid entity-data) entity-data])))
-
-
-(defn apply-stmt-to-entity-data! [schema lookup-transient entity-data [op dbid a v]]
-  (let [attribute (get schema a)
-        lookup-transient (condp = (:db/valueType attribute)
-                           :db.type/ref (first (get-data! lookup-transient v))
-                           lookup-transient)
-        data (apply-stmt-to-data attribute entity-data [op dbid a v])]
-    (assoc! lookup-transient dbid data)))
-
-
-(defn build-data-lookup
-  ([schema statements] (build-data-lookup schema statements {}))
-  ([schema statements lookup]
-   (->> statements
-        (reduce (fn [lookup-transient [op dbid a v]]
-                  (let [[lookup-transient entity-data] (get-data! lookup-transient dbid)]
-                    (apply-stmt-to-entity-data! schema lookup-transient entity-data [op dbid a v])))
-                (transient lookup))
-        persistent!)))
-
-
 (defn any-ref->dbid
   "Safe for ref and primitive vals"
   [v]
@@ -124,10 +85,6 @@
                    [[:db/add dbid attr (any-ref->dbid val)]])))))
 
 
-(defn entity? [v]
-  (map? v))
-
-
 (defn entity-components [schema entity]
   (mapcat (fn [[attr val]]
             (let [{:keys [:db/cardinality :db/valueType :db/isComponent]} (get schema attr)]
@@ -149,65 +106,6 @@
           entity))
 
 
-; applies an attribute and value pair to an entity-data-map
-; THIS DOES NOT ASSOC the new entity-data-map into the lookup-transient (would be unncessary thrash)
-(defn- apply-av-to-entity-map [schema conn-id tempids [lookup-transient entity-data] [attr val]]
-  (let [{:keys [:db/cardinality :db/valueType]} (get schema attr)
-        _ (assert cardinality (str "schema attribute not found: " (pr-str attr)))
-        build-DbId! (fn [lookup-transient ref]
-                      (let [id (any-ref->dbid ref)
-                            id (or (get tempids id) id)     ; if a tempid was sent up on the wire we need to convert it back now for value position
-                            dbid (->DbId id conn-id)
-                            [lookup-transient _] (get-data! lookup-transient dbid)]
-                        [lookup-transient dbid]))]
-    (if (= valueType :db.type/ref)
-      (condp = cardinality
-        :db.cardinality/one (let [[lookup-transient dbid] (build-DbId! lookup-transient val)]
-                              [lookup-transient (assoc entity-data attr dbid)])
-        :db.cardinality/many (let [[lookup-transient dbids] (reduce (fn [[lookup-transient dbids] v]
-                                                                      (let [[lookup-transient dbid] (build-DbId! lookup-transient v)]
-                                                                        [lookup-transient (conj dbids dbid)]))
-                                                                    [lookup-transient #{}]
-                                                                    val)]
-                               [lookup-transient (update entity-data attr (fnil #(set/union % dbids) #{}))]))
-      (let [new-entity-data (condp = cardinality
-                              :db.cardinality/one (assoc entity-data attr val)
-                              :db.cardinality/many (update entity-data attr (fnil #(set/union % (set val)) #{})))]
-        ; non-ref types don't manipulate the lookup-transient at all
-        [lookup-transient new-entity-data]))))
-
-
-(defn process-entity-data-map! [schema conn-id tempids lookup-transient entity-map]
-  (let [id (:db/id entity-map)
-        id (or (get tempids id) id)                         ; if a tempid was sent up on the wire we need to convert it back now for entity position
-        dbid (->DbId id conn-id)
-        [lookup-transient new-entity-map] (->> (dissoc entity-map :db/id)
-                                               (remove (comp nil? val))
-                                               (reduce (partial apply-av-to-entity-map schema conn-id tempids)
-                                                       (get-data! lookup-transient dbid)))]
-    (assoc! lookup-transient dbid new-entity-map)))
-
-
-(defn pulled-tree-to-data-lookup [schema conn-id pulled-trees tempids]
-  (->> pulled-trees
-       (reduce (fn [lookup-transient pulled-tree]
-                 (->> (tree-seq (fn [v] (entity? v))
-                                #(entity-children schema %)
-                                pulled-tree)
-                      (reduce (partial process-entity-data-map! schema conn-id tempids)
-                              lookup-transient)))
-               (transient {}))
-       persistent!))
-
-
-(defn pulled-tree-to-statements [schema pulled-tree]
-  ;; branch nodes are type entity. which right now is hashmap.
-  (let [traversal (tree-seq (fn [v] (entity? v))
-                            #(entity-children schema %)
-                            pulled-tree)]
-    (mapcat entity->statements traversal)))
-
-
 (defn replace-ids [schema conn-id skip? temp-id! tx]
   (let [id-map (atom {})
         replace-id! (fn [dbid]
@@ -226,28 +124,6 @@
               [op new-e a new-v]))
           tx)))
 
-
-(defn recurse-entity->tx [schema graph skip? entity]
-  (->> (dissoc (.-data entity) :db/id)
-       (mapcat (fn [[attr val]]
-                 (let [{:keys [:db/cardinality :db/valueType]} (get schema attr)]
-                   (if (= valueType :db.type/ref)
-                     (match [cardinality (skip? attr)]
-                            [:db.cardinality/one true] [[:db/add (:db/id entity) attr (:db/id val)]]
-                            [:db.cardinality/one false] (concat [[:db/add (:db/id entity) attr (:db/id val)]]
-                                                                (recurse-entity->tx schema graph skip? val))
-                            [:db.cardinality/many true] (mapv (fn [val]
-                                                                [:db/add (:db/id entity) attr (:db/id val)])
-                                                              val)
-                            [:db.cardinality/many false] (mapcat (fn [val]
-                                                                   (concat [[:db/add (:db/id entity) attr (:db/id val)]]
-                                                                           (recurse-entity->tx schema graph skip? val)))
-                                                                 val))
-                     (condp = cardinality
-                       :db.cardinality/one [[:db/add (:db/id entity) attr val]]
-                       :db.cardinality/many (mapv (fn [val]
-                                                    [:db/add (:db/id entity) attr val])
-                                                  val))))))))
 
 (defn clone-entity [schema e tempid!]
   ; tree-seq lets us get component entities too
@@ -279,4 +155,3 @@
          (replace-ids schema (-> link :db/id :conn-id)
                       #(contains? #{:field/attribute} %)    ; preserve refs to attributes
                       tempid!))))
-
