@@ -61,10 +61,8 @@
                                   (into #{}))}
              :as :auto})
           (p/then (fn [resp]
-                    (let [new-peer (peer/->Peer (into #{} requests) {} nil nil)
-                          {:keys [t pulled-trees-map tempids]} (-> resp :body :hypercrud)]
-                      (peer/set-state! new-peer editor-dbval editor-schema pulled-trees-map tempids)
-                      (set! peer new-peer)
+                    (let [{:keys [t pulled-trees-map tempids]} (-> resp :body :hypercrud)]
+                      (set! peer (peer/->peer editor-schema (into #{} requests) pulled-trees-map tempids))
                       peer))))))
 
 

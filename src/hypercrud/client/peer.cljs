@@ -12,9 +12,6 @@
   (set-state! [this editor-dbval editor-schema pulled-trees-map tempids]))
 
 
-(defrecord GraphData [pulled-trees-map resultsets])
-
-
 (defn recursively-replace-ids [pulled-tree conn-id tempid-lookup]
   (let [replace-tempid (fn [id]
                          (let [id (or (get tempid-lookup id) id)]
@@ -26,10 +23,10 @@
                    pulled-tree)))
 
 
-(deftype Peer [requests ^:mutable dbval->schema ^:mutable data-cache local-statements]
+(deftype Peer [requests ^:mutable dbval->schema ^:mutable pulled-trees-map ^:mutable resultsets local-statements]
   hc/Peer
   (hydrate [this request]
-    (let [resultset-or-error (get (:resultsets data-cache) request)]
+    (let [resultset-or-error (get resultsets request)]
       (if (instance? types/DbError resultset-or-error)
         (exception/failure (js/Error. (.-msg resultset-or-error))) ;build a stack trace
         (exception/success resultset-or-error))))
@@ -50,7 +47,8 @@
 
 
   PeerPrivate
-  (set-state! [this editor-dbval editor-schema pulled-trees-map tempids]
+  (set-state! [this editor-dbval editor-schema pulled-trees-map' tempids]
+    (set! pulled-trees-map pulled-trees-map')
     ; pulled-trees-map :: Map[query List[List[Pulled-Tree]]]
     ;                               List[ResultHydrated]
     ; ResultHydrated :: Map[find-element EntityHydrated]
@@ -88,7 +86,7 @@
                                            (util/map-keys #(get schema-request-lookup %))
                                            (remove (comp nil? first))
                                            (into {})))]
-      (set! data-cache (GraphData. pulled-trees-map resultset-by-request)))
+      (set! resultsets resultset-by-request))
 
     (set! dbval->schema (->> requests
                              (filter #(instance? types/DbVal %))
@@ -101,9 +99,8 @@
     nil))
 
 
-(defn ->peer [editor-schema requests pulled-trees-map]
-  (let [peer (->Peer requests {} nil nil)
-        init-root-dbval (->DbVal hc/*root-conn-id* nil)
-        tempids nil]
+(defn ->peer [editor-schema requests pulled-trees-map & [tempids]]
+  (let [peer (->Peer requests {} nil nil nil)
+        init-root-dbval (->DbVal hc/*root-conn-id* nil)]
     (set-state! peer init-root-dbval editor-schema pulled-trees-map tempids)
     peer))
