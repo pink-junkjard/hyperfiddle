@@ -32,7 +32,7 @@
   (let [ident (-> field :field/attribute :attribute/ident)]
     [:div
      [:button {:on-click #(js/alert "todo")} "Edit"]
-     #_(let [{:keys [href]} (links/field-link (.-dbid field) (.-dbid entity))]
+     #_(let [{:keys [href]} (links/field-link (:db/id field) (:db/id entity))]
        [(:navigate-cmp param-ctx) {:href href} "Edit" param-ctx])
      " "
      (->> (get entity ident)

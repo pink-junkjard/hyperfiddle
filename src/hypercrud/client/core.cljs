@@ -7,14 +7,10 @@
 
 (defprotocol SuperGraph
   (select [this query-request])
-  (get-dbgraph [this dbval])
+  (entity [this entity-request])
+  (request [this request])
   (with [this more-statements])
   (t [this]))
-
-
-(defprotocol DbGraph
-  (entity [this dbid])
-  (with' [this more-statements]))
 
 
 (defprotocol Client

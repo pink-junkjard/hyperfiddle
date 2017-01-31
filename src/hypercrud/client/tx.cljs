@@ -1,7 +1,7 @@
 (ns hypercrud.client.tx
   (:require [cljs.core.match :refer-macros [match]]
             [clojure.set :as set]
-            [hypercrud.types :refer [->DbId ->Entity] :as types]
+            [hypercrud.types :refer [->DbId]]
             [loom.alg-generic :as loom]))
 
 
@@ -25,10 +25,10 @@
   (let [{:keys [old new]} (let [old-val (get entity ident)]
                             (if (= (:db/ident valueType) :db.type/ref)
                               (condp = (:db/ident cardinality)
-                                :db.cardinality/one {:old (let [old-val (some-> old-val .-dbid)]
+                                :db.cardinality/one {:old (let [old-val (:db/id old-val)]
                                                             (if (nil? old-val) [] [old-val]))
                                                      :new [new-val]}
-                                :db.cardinality/many {:old (map #(.-dbid %) old-val)
+                                :db.cardinality/many {:old (map #(:db/id %) old-val)
                                                       :new new-val})
                               (condp = (:db/ident cardinality)
                                 :db.cardinality/one {:old (if (nil? old-val) [] [old-val])
@@ -73,11 +73,6 @@
       :else (throw "match error"))))
 
 
-(defn merge-entity-and-stmt [entity [op e a v]]
-  (let [attribute (get (-> entity .-dbgraph .-schema) a)]
-    (->Entity (.-dbgraph entity) (.-dbid entity) (apply-stmt-to-data attribute (.-data entity) [op e a v]) {})))
-
-
 (defn get-data! [lookup-transient dbid]
   (if-let [entity-data (get lookup-transient dbid)]
     [lookup-transient entity-data]
@@ -109,7 +104,6 @@
   "Safe for ref and primitive vals"
   [v]
   (cond (map? v) (:db/id v)
-        (instance? types/Entity v) (.-dbid v)
         ; #DbId will just work, its already right
         :else v))
 
@@ -125,7 +119,7 @@
 
        (mapcat (fn [[attr val]]
                  ; dont care about refs - just pass them through blindly, they are #DbId and will just work
-                 (if (set? val)
+                 (if (vector? val)
                    (mapv (fn [val] [:db/add dbid attr (any-ref->dbid val)]) val)
                    [[:db/add dbid attr (any-ref->dbid val)]])))))
 
@@ -239,14 +233,14 @@
                  (let [{:keys [:db/cardinality :db/valueType]} (get schema attr)]
                    (if (= valueType :db.type/ref)
                      (match [cardinality (skip? attr)]
-                            [:db.cardinality/one true] [[:db/add (:db/id entity) attr (.-dbid val)]]
-                            [:db.cardinality/one false] (concat [[:db/add (:db/id entity) attr (.-dbid val)]]
+                            [:db.cardinality/one true] [[:db/add (:db/id entity) attr (:db/id val)]]
+                            [:db.cardinality/one false] (concat [[:db/add (:db/id entity) attr (:db/id val)]]
                                                                 (recurse-entity->tx schema graph skip? val))
                             [:db.cardinality/many true] (mapv (fn [val]
-                                                                [:db/add (:db/id entity) attr (.-dbid val)])
+                                                                [:db/add (:db/id entity) attr (:db/id val)])
                                                               val)
                             [:db.cardinality/many false] (mapcat (fn [val]
-                                                                   (concat [[:db/add (:db/id entity) attr (.-dbid val)]]
+                                                                   (concat [[:db/add (:db/id entity) attr (:db/id val)]]
                                                                            (recurse-entity->tx schema graph skip? val)))
                                                                  val))
                      (condp = cardinality
@@ -255,21 +249,19 @@
                                                     [:db/add (:db/id entity) attr val])
                                                   val))))))))
 
-(defn clone-entity [e tempid!]
-  (let [schema (-> e .-dbgraph .-schema)]
-    ; tree-seq lets us get component entities too
-    (->> (tree-seq (fn [v] (instance? types/Entity v))
-                   #(entity-components schema %)
-                   e)
-         (mapcat entity->statements)
-         (replace-ids schema (-> e :db/id :conn-id)
-                      (fn [a] (not (get-in schema [a :db/isComponent]))) ; preserve links to existing entities
-                      tempid!))))
+(defn clone-entity [schema e tempid!]
+  ; tree-seq lets us get component entities too
+  (->> (tree-seq map?
+                 #(entity-components schema %)
+                 e)
+       (mapcat entity->statements)
+       (replace-ids schema (-> e :db/id :conn-id)
+                    (fn [a] (not (get-in schema [a :db/isComponent]))) ; preserve links to existing entities
+                    tempid!)))
 
 
-(defn export-link [link tempid!]
-  (let [schema (-> link .-dbgraph .-schema)
-        successors (fn [node]
+(defn export-link [schema link tempid!]
+  (let [successors (fn [node]
                      (entity-children schema node))
         filter-pred (fn [node predecessor depth]
                       ;  also may need (not (:db/ident node)) - attrs ref datomic built-ins

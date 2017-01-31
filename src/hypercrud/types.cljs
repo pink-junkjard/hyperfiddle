@@ -1,6 +1,5 @@
 (ns hypercrud.types
-  (:require [cljs.reader :as reader]
-            [hypercrud.client.core :as hc]))
+  (:require [cljs.reader :as reader]))
 
 
 (deftype DbId [id conn-id]
@@ -17,37 +16,6 @@
                              not-found)))
 
 (def read-DbId #(apply ->DbId %))
-
-
-; This doesn't have assoc and dissoc since it's a view of a graph. You need to do graph-level
-; operations to update the graph, since using a tree interface would break consistency.
-; The entity view (tree) must be read-only.
-(deftype Entity [dbgraph dbid data ^:mutable memoize-thing]
-  ILookup
-  (-lookup [_ k]
-    (if-let [v (get memoize-thing k)]
-      v
-      (let [v (get data k)
-            {:keys [:db/valueType :db/cardinality]} (-> dbgraph .-schema (get k))
-            v (if (and (not= nil v) (= :db.type/ref valueType))
-                (condp = cardinality
-                  :db.cardinality/one (hc/entity dbgraph v)
-                  :db.cardinality/many (set (map #(hc/entity dbgraph %) v)))
-                v)]
-        (set! memoize-thing (assoc memoize-thing k v))
-        v)))
-  (-lookup [_ k not-found] (assert false "todo") #_(get data k not-found))
-
-  ISeqable
-  (-seq [this]
-    (let [vals' (map #(get this %) (keys data))]
-      (map vector (keys data) vals')))
-
-
-  IHash (-hash [this] (hash [dbid data]))
-  IEquiv (-equiv [this other] (= (hash this) (hash other)))
-  Object (toString [_] (str "#Entity" (pr-str [dbid data])))
-  IPrintWithWriter (-pr-writer [o writer _] (-write writer (.toString o))))
 
 
 (deftype DbVal [conn-id t]

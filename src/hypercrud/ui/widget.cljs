@@ -27,11 +27,11 @@
 
 
 (defn render-inline-links [field link-ctxs param-ctx]
-  (let [field-dbid (.-dbid field)
+  (let [
         ; todo do we need a different param-ctx for rendering the ui?
         param-ctx (assoc param-ctx
                     :isComponent (-> field :field/attribute :attribute/isComponent)
-                    :debug (str "table-many-ref:" field-dbid ":" (:field/prompt field)))]
+                    :debug (str "table-many-ref:" (:db/id field) ":" (:field/prompt field)))]
     (->> link-ctxs
          (filter :link-ctx/render-inline?)
          (filter #(links/link-visible? % param-ctx))
@@ -175,7 +175,7 @@
 
 
 (defn multi-select-ref-component [entity field link-ctxs props {:keys [user-swap!] :as param-ctx}]
-  (let [temp-id! (partial hc/*temp-id!* (-> entity .-dbgraph .-dbval :conn-id)) ; bound to fix render bug
+  (let [temp-id! (partial hc/*temp-id!* (-> entity :db/id :conn-id)) ; bound to fix render bug
         add-item! #(user-swap! {:tx (tx/edit-entity (:db/id entity) (-> field :field/attribute :attribute/ident) [] [(temp-id!)])})]
     [multi-select* multi-select-markup entity add-item! field link-ctxs props param-ctx])) ;add new entity to set
 

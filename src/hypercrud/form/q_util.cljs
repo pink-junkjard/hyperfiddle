@@ -25,7 +25,7 @@
        (map (fn [{:keys [:dbhole/name :dbhole/value]}]
               (if-not (or (empty? name) (nil? value))
                 ; transform project-id into conn-id
-                [name (->DbVal (-> value .-dbid .-id) nil)])))
+                [name (->DbVal (-> value :db/id :id) nil)])))
        (into {})))
 
 

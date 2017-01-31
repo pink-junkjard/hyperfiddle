@@ -29,7 +29,7 @@
           (try
             (renderer super-graph link-fn entity)
             (catch :default e (pr-str e))))])
-     (let [link-ctxs (filter #(= (.-dbid field) (some-> % :link-ctx/field :db/id)) link-ctxs)]
+     (let [link-ctxs (filter #(= (:db/id field) (some-> % :link-ctx/field :db/id)) link-ctxs)]
        [auto-control entity field link-ctxs param-ctx]))])
 
 

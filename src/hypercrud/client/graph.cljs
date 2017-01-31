@@ -1,10 +1,10 @@
 (ns hypercrud.client.graph
   (:require [cats.monad.exception :as exception]
+            [clojure.walk :as walk]
             [goog.Uri]
             [hypercrud.client.core :as hc]
             [hypercrud.client.schema :as schema-util]
-            [hypercrud.client.tx :as tx]
-            [hypercrud.types :as types :refer [->DbId ->DbVal ->Entity ->DbError]]
+            [hypercrud.types :as types :refer [->DbId ->DbVal ->DbError]]
             [hypercrud.util :as util]))
 
 
@@ -15,73 +15,67 @@
 (defrecord GraphData [pulled-trees-map resultsets])
 
 
-;; DbTouched
-(deftype DbGraph [schema dbval local-statements data-lookup ^:mutable entity-lookup]
-  hc/DbGraph
-  (entity [this dbid]
-    (assert (not= nil dbid) "Cannot request nil entity")
-    (if-let [entity (get entity-lookup dbid)]
-      entity
-      (let [data (or (get data-lookup dbid)
-                     ; graph should track tempids provided, and only return entities for where the id has been allocated
-                     ; otherwise we should throw
-                     (do
-                       (assert (tx/tempid? dbid) (str "Entity not found locally: " dbid))
-                       {:db/id dbid}))
-            entity (->Entity this dbid data {})]
-        (set! entity-lookup (assoc entity-lookup dbid entity))
-        entity)))
+(defn recursively-apply-stmt [pulled-tree stmt]
+  pulled-tree)
 
 
-  (with' [this more-statements]
-    (let [new-local-statements (concat local-statements more-statements)
-          new-data-lookup (tx/build-data-lookup schema more-statements data-lookup)]
-      (DbGraph. schema dbval new-local-statements new-data-lookup {})))
+(defn recursively-replace-ids [pulled-tree conn-id tempid-lookup]
+  (let [replace-tempid (fn [id]
+                         (let [id (or (get tempid-lookup id) id)]
+                           (->DbId id conn-id)))]
+    (walk/postwalk (fn [o]
+                     (if (map? o)
+                       (util/update-existing o :db/id replace-tempid)
+                       o))
+                   pulled-tree)))
 
 
-  IHash
-  (-hash [this]
-    ; todo equality when t is nil
-    (hash (map hash [dbval local-statements])))
-
-  IEquiv
-  (-equiv [this other]
-    (= (hash this) (hash other))))
-
-
-(defn dbGraph [schema dbval local-statements pulled-trees tempids]
-  (let [lookup (tx/pulled-tree-to-data-lookup schema (.-conn-id dbval) pulled-trees tempids)
-        data-lookup (tx/build-data-lookup schema local-statements lookup)]
-    (->DbGraph schema dbval local-statements data-lookup {})))
-
-
-(deftype SuperGraph [request ^:mutable graphs ^:mutable graph-data]
+(deftype SuperGraph [request ^:mutable dbval->schema ^:mutable graph-data local-statements]
   hc/SuperGraph
   (select [this query-request]
-    (let [resultset-or-error (get (:resultsets graph-data) query-request)]
+    (hc/request this query-request))
+
+
+  (entity [this entity-request]
+    (hc/request this entity-request))
+
+
+  (request [this request']
+    (let [resultset-or-error (get (:resultsets graph-data) request')]
       (if (instance? types/DbError resultset-or-error)
         (exception/failure (js/Error. (.-msg resultset-or-error))) ;build a stack trace
         (exception/success resultset-or-error))))
 
-  ; todo this goes away if dbval === dbgraph
-  (get-dbgraph [this dbval]
-    (assert (not= nil dbval) "dbval cannot be nil")
-    (get graphs dbval))
 
   (with [this more-statements]
-    ;currently not supporting time
-    (let [grouped-stmts (group-by #(-> % second .-conn-id) more-statements)
-          new-graphs (util/map-values (fn [graph]
-                                        (let [conn-id (-> graph .-dbval .-conn-id)]
-                                          (if-let [stmts (get grouped-stmts conn-id)]
-                                            (hc/with' graph stmts)
-                                            graph)))
-                                      graphs)]
-      (SuperGraph. request new-graphs graph-data)))
+    (let [conn-id->stmts (group-by (fn [[op e a v]] (:conn-id e)) more-statements)
+          graph-data (update graph-data :resultset-by-request
+                             (fn [resultset-by-request]
+                               (->> resultset-by-request
+                                    (mapv (fn [[request resultset-or-error]]
+                                            (if (instance? types/DbError resultset-or-error)
+                                              resultset-or-error
+                                              (condp = (type request)
+                                                types/->EntityRequest
+                                                (->> (get conn-id->stmts (get-in request :dbval :conn-id))
+                                                     (reduce recursively-apply-stmt resultset-or-error))
+
+                                                types/->QueryRequest
+                                                (->> resultset-or-error
+                                                     (mapv (fn [result]
+                                                             (->> (:pull-exps request)
+                                                                  (mapv (fn [[find-element [dbval _]]]
+                                                                          [find-element (->> (get conn-id->stmts (:conn-id dbval))
+                                                                                             (reduce recursively-apply-stmt
+                                                                                                     (get result find-element)))]))
+                                                                  (into {}))))))))))))]
+      ; todo why aren't the schemas updated here?
+      (SuperGraph. request dbval->schema graph-data (concat local-statements more-statements))))
 
 
   (t [this]
-    (hash (map :dbval graphs)))
+    (hash (keys dbval->schema)))
+
 
   IHash
   (-hash [this]
@@ -102,80 +96,51 @@
     ; query :: [q params [dbval pull-exp]]
 
     ; result-sets :: Map[query -> List[List[DbId]]]
-    (let [schema-request-lookup (->> request
+    (let [resultset-by-request (->> pulled-trees-map
+                                    ; todo this fix ids could happen on the server
+                                    (mapv (fn [[request hydrated-resultset-or-error]]
+                                            (let [resultset (if (instance? types/DbError hydrated-resultset-or-error)
+                                                              hydrated-resultset-or-error
+                                                              (condp = (type request)
+                                                                types/EntityRequest
+                                                                (recursively-replace-ids hydrated-resultset-or-error (get-in request [:dbval :conn-id]) (get tempids (get-in request [:dbval :conn-id])))
+
+                                                                types/QueryRequest
+                                                                (->> hydrated-resultset-or-error
+                                                                     (mapv (fn [result]
+                                                                             (->> result
+                                                                                  (mapv (fn [[find-element pulled-tree]]
+                                                                                          (let [find-element (str find-element)
+                                                                                                [dbval pull-exp] (get-in request [:pull-exps find-element])
+                                                                                                pulled-tree (recursively-replace-ids pulled-tree (:conn-id dbval) (get tempids (:conn-id dbval)))]
+                                                                                            [find-element pulled-tree])))
+                                                                                  (into {})))))))]
+                                              [request resultset])))
+                                    (into {}))
+          schema-request-lookup (->> request
                                      (filter #(instance? types/DbVal %))
                                      (mapv (juxt #(schema-util/schema-request editor-dbval %) identity))
                                      (into {}))
-          resultset-by-query
-          (->> pulled-trees-map
-               (mapv (fn [[request hydrated-resultset-or-error]]
-                       (let [resultset (if (instance? types/DbError hydrated-resultset-or-error)
-                                         hydrated-resultset-or-error
-                                         (condp = (type request)
-                                           types/EntityRequest nil
+          resultset-by-request (merge resultset-by-request
+                                      (->> resultset-by-request
+                                           (util/map-keys #(get schema-request-lookup %))
+                                           (remove (comp nil? first))
+                                           (into {})))]
+      (set! graph-data (GraphData. pulled-trees-map resultset-by-request)))
 
-                                           types/QueryRequest
-                                           (mapv (fn [result-hydrated]
-                                                   (->> result-hydrated
-                                                        (mapv (fn [[find-element entity-hydrated]]
-                                                                (let [find-element (str find-element)
-                                                                      [dbval _] (get-in request [:pull-exps find-element])
-                                                                      id (:db/id entity-hydrated)
-                                                                      id (or (get-in tempids [(.-conn-id dbval) id]) id)]
-                                                                  [find-element (->DbId id (.-conn-id dbval))])))
-                                                        (into {})))
-                                                 hydrated-resultset-or-error)))]
-                         (merge {request resultset}
-                                (if-let [schema-dbval (get schema-request-lookup request)]
-                                  {schema-dbval resultset})))))
-               (apply merge))]
-      (set! graph-data (GraphData. pulled-trees-map resultset-by-query)))
-
-    ; grouped :: Map[DbVal -> PulledTrees]
-
-
-    ;; group by dbval, and give each list of hydrated-entities to the proper DbGraph so it can do datom stuff
-
-    (let [grouped (->> pulled-trees-map
-                       (mapv (fn [[request hydrated-resultset-or-error]]
-                               (let [hydrated-resultset (if (instance? types/DbError hydrated-resultset-or-error)
-                                                          [] ; no datoms to fill graph on errors
-                                                          hydrated-resultset-or-error)]
-                                 (condp = (type request)
-                                   types/EntityRequest {(:dbval request) [hydrated-resultset]}
-
-                                   types/QueryRequest
-                                   ; build a Map[dbval List[EntityHydrated]]
-                                   (->> (:pull-exps request)
-                                        (mapv (fn [[find-element [dbval _]]]
-                                                {dbval (mapv (fn [result]
-                                                               (get result (symbol find-element)))
-                                                             hydrated-resultset)}))
-                                        (apply merge-with concat))))))
-                       (apply merge-with concat))
-          editor-graph (let [ptm (get grouped editor-dbval)
-                             tempids (get tempids (.-conn-id editor-dbval))]
-                         (dbGraph editor-schema editor-dbval nil ptm tempids))
-          graphs' (->> request
-                       (filter #(instance? types/DbVal %))
-                       (remove #(= % editor-dbval))
-                       (mapv (juxt identity (fn [dbval]
-                                              (let [attributes (->> (hc/select this dbval)
-                                                                    (exception/extract)
-                                                                    (mapv (fn [result]
-                                                                            (let [attr-dbid (get result "?attr")]
-                                                                              (hc/entity editor-graph attr-dbid)))))
-                                                    schema (schema-util/build-schema attributes)
-                                                    new-ptm (get grouped dbval)
-                                                    tempids (get tempids (.-conn-id dbval))]
-                                                (dbGraph schema dbval nil new-ptm tempids)))))
-                       (into {editor-dbval editor-graph}))]
-      (set! graphs graphs'))
+    (set! dbval->schema (->> request
+                             (filter #(instance? types/DbVal %))
+                             (remove #(= % editor-dbval))
+                             (mapv (juxt identity #(->> (hc/select this %)
+                                                        (exception/extract)
+                                                        (mapv (fn [result] (get result "?attr")))
+                                                        (schema-util/build-schema))))
+                             (into {editor-dbval editor-schema})))
     nil))
 
 
 (defn ->super-graph [editor-schema request pulled-trees-map]
-  (let [super-graph (->SuperGraph request {} nil)
+  (let [super-graph (->SuperGraph request {} nil nil)
         init-root-dbval (->DbVal hc/*root-conn-id* nil)
         tempids nil]
     (set-state! super-graph init-root-dbval editor-schema pulled-trees-map tempids)

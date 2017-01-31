@@ -13,7 +13,6 @@
         value (get entity ident)
         control-tuples (seq (mapv (fn [eid]
                                     (let [click-remove! #(user-swap! {:tx (tx/edit-entity (:db/id entity) ident [eid] nil)})
-                                          ; todo this should be hc/with
                                           new-field (assoc field :cardinality :db.cardinality/one)
                                           control [auto-control (assoc entity ident eid) new-field link-ctxs param-ctx]]
                                       [eid click-remove! control]))

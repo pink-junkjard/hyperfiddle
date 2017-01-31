@@ -38,8 +38,5 @@
              (exception/extract)
              (mapv (fn [result]
                      (mapv (fn [find-element]
-                             (let [dbid (get result (:find-element/name find-element))
-                                   dbval (->DbVal (-> find-element :find-element/connection :db/id :id) nil)
-                                   dbgraph (hc/get-dbgraph (:super-graph param-ctx) dbval)]
-                               (hc/entity dbgraph dbid)))
+                             (get result (:find-element/name find-element)))
                            ordered-find-elements))))))))

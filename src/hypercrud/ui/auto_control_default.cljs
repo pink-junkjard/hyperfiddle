@@ -115,7 +115,7 @@
            [:div
             (map (fn [{:keys [:find-element/form] :as find-element}]
                    (let [entity (get result (:find-element/name find-element))]
-                     ^{:key (hash [(.-dbid entity) (.-dbid form)])}
+                     ^{:key (hash [(:db/id entity) (:db/id form)])}
                      [form/form entity form (:link/link-ctx link) param-ctx]))
                  ordered-find-elements)]])
         [:div "No results"])

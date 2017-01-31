@@ -62,7 +62,7 @@
                                   (into #{}))}
              :as :auto})
           (p/then (fn [resp]
-                    (let [new-graph (graph/->SuperGraph (into #{} request) {} nil)
+                    (let [new-graph (graph/->SuperGraph (into #{} request) {} nil nil)
                           {:keys [t pulled-trees-map tempids]} (-> resp :body :hypercrud)]
                       (graph/set-state! new-graph editor-dbval editor-schema pulled-trees-map tempids)
                       (set! super-graph new-graph)

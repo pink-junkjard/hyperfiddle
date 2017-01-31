@@ -24,11 +24,11 @@
 (defn select* [entity field {:keys [user-swap!] :as param-ctx}]
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
         value (get entity ident)
-        conn-id (-> entity .-dbgraph .-dbval .-conn-id)
+        conn-id (get-in entity [:db/id :conn-id])
         props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
                :value (cond
                         (nil? value) ""
-                        :else (-> value .-dbid .-id str))
+                        :else (-> value :db/id :id str))
 
                ;; reconstruct the typed value
                :on-change #(let [select-value (.-target.value %)
@@ -38,7 +38,7 @@
                             (user-swap! {:tx (tx/update-entity-attr entity attribute dbid)}))}]
     (let [option-records (option/get-option-records field param-ctx)]
       #_(assert (or (nil? value)
-                    (tx/tempid? (.-dbid value))
+                    (tx/tempid? (:db/id value))
                     (nil? option-records)                   ; user hasn't picked the query yet but may be about to
                     (contains? (set option-records) value)) (str "Select options does not contain selected value: " (pr-str value)))
       [:select.select props (-> (->> option-records

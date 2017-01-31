@@ -1,6 +1,5 @@
 (ns hypercrud.browser.core
-  (:require [cats.core :as cats]
-            [cats.monad.exception :as exception]
+  (:require [cats.monad.exception :as exception]
             [cljs.pprint :as pprint]
             [cljs.reader :as reader]
             [hypercrud.browser.links :as links]
@@ -8,22 +7,9 @@
             [hypercrud.client.core :as hc]
             [hypercrud.compile.eval :refer [eval]]
             [hypercrud.form.q-util :as q-util]
-            [hypercrud.types :refer [->DbId ->DbVal ->Entity ->QueryRequest]]
+            [hypercrud.types :refer [->DbId ->DbVal ->EntityRequest]]
             [hypercrud.ui.auto-control :as auto-control]
             [hypercrud.util :as util]))
-
-
-(defn pull-resultset [super-graph {find-elements :link/find-element :as link} resultset]
-  (let [find-element-lookup (->> (mapv (juxt :find-element/name identity) find-elements)
-                                 (into {}))]
-    (->> resultset
-         (mapv (fn [result]
-                 (->> result
-                      (mapv (fn [[find-element-symbol entity-dbid]]
-                              (let [connection (get-in find-element-lookup [find-element-symbol :find-element/connection :db/id :id])
-                                    dbval (->DbVal connection nil)]
-                                [find-element-symbol (hc/entity (hc/get-dbgraph super-graph dbval) entity-dbid)])))
-                      (into {})))))))
 
 
 (defn user-bindings [link param-ctx]
@@ -64,44 +50,63 @@
                                                                 params-map (merge (:query-params params-map)
                                                                                   (q-util/build-dbhole-lookup link))]
                                                             (q-util/query-value q link params-map param-ctx))]
-                                          (->> (hc/select (:super-graph param-ctx) query-value)
-                                               (cats/fmap #(pull-resultset (:super-graph param-ctx) link %))))))]
+                                          (hc/select (:super-graph param-ctx) query-value))))]
     (try
       (render-fn resultset link param-ctx)
       (catch :default e (pr-str e)))))
 
 
-(defn with-parent-link [params-map param-ctx fn]
-  (let [[parent-link-id parent-link-conn-id] (-> params-map :link-dbid :id)
-        parent-link (hc/entity (hc/get-dbgraph (:super-graph param-ctx) (->DbVal hc/*root-conn-id* nil))
-                               (->DbId parent-link-id parent-link-conn-id))]
-    (fn parent-link)))
+(defn request-for-link [link-dbid]
+  (->EntityRequest link-dbid (->DbVal hc/*root-conn-id* nil)
+                   '[* {:link/dbhole [* {:dbhole/value [*]}]
+                        ; get all our forms for this link
+                        :link/find-element
+                        [* {:find-element/form
+                            [* {:form/field
+                                [*
+                                 {:field/attribute [*
+                                                    {:attribute/valueType [:db/id :db/ident]}
+                                                    {:attribute/cardinality [:db/id :db/ident]}
+                                                    {:attribute/unique [:db/id :db/ident]}]}
+                                 ; we don't have to recurse for options-link-ctxs
+                                 ; because we know these links don't have additional links
+                                 {:field/options-link-ctx [* {:link-ctx/link
+                                                              [* {:link/find-element
+                                                                  [* {:find-element/form
+                                                                      [* {:form/field
+                                                                          [*
+                                                                           {:field/attribute [*
+                                                                                              {:attribute/valueType [:db/id :db/ident]}
+                                                                                              {:attribute/cardinality [:db/id :db/ident]}
+                                                                                              {:attribute/unique [:db/id :db/ident]}]}]}]}]}]}]}]}]}]
+                        ; get links one layer deep; todo not sure if we need this
+                        :link/link-ctx [* {:link-ctx/link [*]}]}
+                     {:hypercrud/owner [*]}]))
 
 
 (defn ui [{query-params :query-params :as params-map}
           {:keys [super-graph] :as param-ctx}]
   (let [system-link? (vector? (-> params-map :link-dbid :id))
-        param-ctx (if system-link?
-                    (let [[_ _ system-link-name find-element-id] (-> params-map :link-dbid :id)]
-                      (with-parent-link params-map param-ctx
-                                        (fn [parent-link]
-                                          (let [find-element (->> (:link/find-element parent-link)
-                                                                  (filter #(= find-element-id (-> % :db/id :id)))
-                                                                  first)
-                                                tx (condp = system-link-name
-                                                     :system-edit (system-links/manufacture-system-edit-tx find-element (:db/id parent-link))
-                                                     :system-create (system-links/manufacture-system-create-tx find-element (:db/id parent-link)))]
-                                            (update param-ctx :super-graph #(hc/with % tx))))))
-                    param-ctx)
-        root-dbgraph (hc/get-dbgraph (:super-graph param-ctx) (->DbVal hc/*root-conn-id* nil))
-        link-dbid (if system-link?
-                    (let [[_ _ system-link-name find-element-id] (-> params-map :link-dbid :id)]
-                      (with-parent-link params-map param-ctx (fn [parent-link]
-                                                               (condp = system-link-name
-                                                                 :system-edit (system-links/system-edit-link-dbid find-element-id (:db/id parent-link))
-                                                                 :system-create (system-links/system-create-link-dbid find-element-id (:db/id parent-link))))))
-                    (:link-dbid params-map))
-        link (hc/entity root-dbgraph link-dbid)
+        ;param-ctx
+        #_(if system-link?
+            (let [[_ _ system-link-name find-element-id] (-> params-map :link-dbid :id)]
+              (with-parent-link params-map param-ctx
+                                (fn [parent-link]
+                                  (let [find-element (->> (:link/find-element parent-link)
+                                                          (filter #(= find-element-id (-> % :db/id :id)))
+                                                          first)
+                                        tx (condp = system-link-name
+                                             :system-edit (system-links/manufacture-system-edit-tx find-element (:db/id parent-link))
+                                             :system-create (system-links/manufacture-system-create-tx find-element (:db/id parent-link)))]
+                                    (update param-ctx :super-graph #(hc/with % tx))))))
+            param-ctx)
+        link (if system-link?
+               (let [[_ _ system-link-name find-element-id] (-> params-map :link-dbid :id)
+                     parent-link-dbid (:link-dbid params-map)]
+                 (condp = system-link-name
+                   :system-edit (system-links/system-edit-link find-element-id parent-link-dbid)
+                   :system-create (system-links/system-create-link find-element-id parent-link-dbid)))
+               (exception/extract (hc/request super-graph (request-for-link (:link-dbid params-map)))))
         q (some-> link :link/query reader/read-string)
         params-map (merge query-params (q-util/build-dbhole-lookup link))
         param-ctx (assoc param-ctx :query-params query-params)
@@ -115,8 +120,7 @@
                                             (mapv (juxt identity #(get params-map %)))
                                             (into {}))))))]]
       (let [resultset (->> (hc/select super-graph (q-util/query-value q link params-map param-ctx))
-                           (exception/extract)
-                           (pull-resultset super-graph link))]
+                           (exception/extract))]
         ; you still want the param-ctx; just bypass the :link/bindings
 
         (condp = (get param-ctx :display-mode :dressed)
@@ -124,12 +128,11 @@
           :undressed (auto-control/resultset resultset link (user-bindings link param-ctx))
 
           ; raw ignores user links and gets free system links
-          :raw (let [overlay-tx (system-links/overlay-system-links-tx link)
-                     link' (hc/entity (hc/with' root-dbgraph overlay-tx) (:db/id link))
+          :raw (let [link (system-links/overlay-system-links-tx link)
                      ; sub-queries (e.g. combo boxes) will get the old supergraph
                      ; Since we only changed root graph, this is only interesting for the hc-in-hc case
                      ]
-                 (auto-control/resultset resultset link' param-ctx)))))))
+                 (auto-control/resultset resultset link param-ctx)))))))
 
 
 (declare request)
@@ -161,25 +164,9 @@
                        inline-requests (->> (:link/link-ctx link)
                                             (filter :link-ctx/render-inline?)
                                             (mapcat (fn [inline-link-ctx]
-                                                      (let [param-ctx (assoc param-ctx :debug (str "inline-query:" (.-dbid inline-link-ctx)))]
+                                                      (let [param-ctx (assoc param-ctx :debug (str "inline-query:" (:db/id inline-link-ctx)))]
                                                         (request (links/build-url-params-map inline-link-ctx param-ctx) param-ctx true)))))]
                    (concat option-requests inline-requests))))))
-
-
-(defn request-for-link [link-dbid]
-  (->QueryRequest
-    '[:find ?link :in $ ?link :where [?link]]
-    {"$" (->DbVal hc/*root-conn-id* nil) "?link" link-dbid}
-    {"?link" [(->DbVal hc/*root-conn-id* nil) '[* {:link/dbhole [* {:dbhole/value [*]}]
-                                                   ; get all our forms for this link
-                                                   :link/find-element [* {:find-element/form
-                                                                          [* {:form/field
-                                                                              ; we don't have to recurse for options-link-ctxs
-                                                                              ; because we know these links don't have additional links
-                                                                              [* {:field/options-link-ctx [* {:link-ctx/link [*]}]}]}]}]
-                                                   ; get links one layer deep; todo not sure if we need this
-                                                   :link/link-ctx [* {:link-ctx/link [*]}]}
-                                                {:hypercrud/owner [*]}]]}))
 
 
 (defn requests-for-link [{find-elements :link/find-element :as link} query-params
@@ -197,8 +184,7 @@
                (mapv #(->DbVal (-> % :find-element/connection :db/id :id) nil)))
           [request]
           (if recurse?
-            (if-let [resultset (some->> (exception/extract (hc/select super-graph request) nil)
-                                        (pull-resultset super-graph link))]
+            (if-let [resultset (exception/extract (hc/select super-graph request) nil)]
               (dependent-requests link resultset param-ctx))))))))
 
 
@@ -206,37 +192,22 @@
   (if (vector? (-> params-map :link-dbid :id))
     (let [[parent-link-id parent-link-conn-id system-link-name find-element-id] (-> params-map :link-dbid :id)
           parent-link-dbid (->DbId parent-link-id parent-link-conn-id)
-          root-dbval (->DbVal hc/*root-conn-id* nil)
-          root-dbgraph (hc/get-dbgraph (:super-graph param-ctx) root-dbval)
           parent-link-request (request-for-link parent-link-dbid)]
       (concat
         [parent-link-request]
-        (if-let [parent-link (some->> (-> (hc/select (:super-graph param-ctx) parent-link-request)
-                                          (exception/extract nil)
-                                          first
-                                          (get "?link"))
-                                      (hc/entity root-dbgraph))]
+        (if-let [parent-link (-> (hc/request (:super-graph param-ctx) parent-link-request)
+                                 (exception/extract nil))]
           (let [find-element (->> (:link/find-element parent-link)
                                   (filter #(= find-element-id (-> % :db/id :id)))
                                   first)
-                link (let [tx (condp = system-link-name
-                                :system-edit (system-links/manufacture-system-edit-tx find-element parent-link-dbid)
-                                :system-create (system-links/manufacture-system-create-tx find-element parent-link-dbid))
-                           link-dbid (condp = system-link-name
-                                       :system-edit (system-links/system-edit-link-dbid find-element-id parent-link-dbid)
-                                       :system-create (system-links/system-create-link-dbid find-element-id parent-link-dbid))]
-                       (-> (hc/with' root-dbgraph tx)
-                           (hc/entity link-dbid)))]
+                link (condp = system-link-name
+                       :system-edit (system-links/system-edit-link find-element parent-link-dbid)
+                       :system-create (system-links/system-create-link find-element parent-link-dbid))]
             (requests-for-link link (:query-params params-map) param-ctx recurse?)))))
-    (let [root-dbval (->DbVal hc/*root-conn-id* nil)
-          root-dbgraph (hc/get-dbgraph (:super-graph param-ctx) root-dbval)
-          link-request (request-for-link (:link-dbid params-map))]
+    (let [link-request (request-for-link (:link-dbid params-map))]
       (concat [link-request]
-              (if-let [link (some->> (-> (hc/select (:super-graph param-ctx) link-request)
-                                         (exception/extract nil)
-                                         first
-                                         (get "?link"))
-                                     (hc/entity root-dbgraph))]
+              (if-let [link (-> (hc/request (:super-graph param-ctx) link-request)
+                                (exception/extract nil))]
                 (requests-for-link link (:query-params params-map) param-ctx recurse?))))))
 
 
