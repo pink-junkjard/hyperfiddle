@@ -26,36 +26,6 @@
         param-ctx))))
 
 
-(defn user-resultset [resultset link param-ctx]
-  (let [render-fn (if (empty? (:link/renderer link))
-                    auto-control/resultset
-                    (let [{f :value error :error} (eval (:link/renderer link))]
-                      (if error
-                        (fn [resultset link param-ctx]
-                          [:pre (pprint/pprint error)])
-                        f)))
-        link-ctxs (->> (:link/link-ctx link)
-                       (mapv (juxt #(-> % :link-ctx/ident) identity))
-                       (into {}))
-        param-ctx (assoc param-ctx
-                    :link-fn (fn [ident label param-ctx]
-                               (let [link-ctx (get link-ctxs ident)
-                                     props (links/build-link-props link-ctx param-ctx)]
-                                 [(:navigate-cmp param-ctx) props label param-ctx]))
-                    :inline-resultset (fn [ident param-ctx]
-                                        (let [link-ctx (get link-ctxs ident)
-                                              link (:link-ctx/link link-ctx)
-                                              params-map (links/build-url-params-map link-ctx param-ctx)
-                                              query-value (let [q (some-> link :link/query reader/read-string)
-                                                                params-map (merge (:query-params params-map)
-                                                                                  (q-util/build-dbhole-lookup link))]
-                                                            (q-util/query-value q link params-map param-ctx))]
-                                          (hc/hydrate (:peer param-ctx) query-value))))]
-    (try
-      (render-fn resultset link param-ctx)
-      (catch :default e (pr-str e)))))
-
-
 (defn request-for-link [link-dbid]
   (->EntityRequest link-dbid (->DbVal hc/*root-conn-id* nil)
                    '[* {:link/dbhole [* {:dbhole/value [*]}]
@@ -82,6 +52,39 @@
                         ; get links one layer deep; todo not sure if we need this
                         :link/link-ctx [* {:link-ctx/link [*]}]}
                      {:hypercrud/owner [*]}]))
+
+
+(defn user-resultset [resultset link param-ctx]
+  (let [render-fn (if (empty? (:link/renderer link))
+                    auto-control/resultset
+                    (let [{f :value error :error} (eval (:link/renderer link))]
+                      (if error
+                        (fn [resultset link param-ctx]
+                          [:pre (pprint/pprint error)])
+                        f)))
+        link-ctxs (->> (:link/link-ctx link)
+                       (mapv (juxt #(-> % :link-ctx/ident) identity))
+                       (into {}))
+        param-ctx (assoc param-ctx
+                    :link-fn (fn [ident label param-ctx]
+                               (let [link-ctx (get link-ctxs ident)
+                                     props (links/build-link-props link-ctx param-ctx)]
+                                 [(:navigate-cmp param-ctx) props label param-ctx]))
+                    :inline-resultset (fn [ident param-ctx]
+                                        (let [link-ctx (get link-ctxs ident)
+                                              link (->> (request-for-link (-> link-ctx :link-ctx/link :db/id))
+                                                        (hc/hydrate (:peer param-ctx))
+                                                        ; todo should we be fmaping this and let the users handle any exception?
+                                                        (exception/extract))
+                                              params-map (links/build-url-params-map link-ctx param-ctx)
+                                              query-value (let [q (some-> link :link/query reader/read-string)
+                                                                params-map (merge (:query-params params-map)
+                                                                                  (q-util/build-dbhole-lookup link))]
+                                                            (q-util/query-value q link params-map param-ctx))]
+                                          (hc/hydrate (:peer param-ctx) query-value))))]
+    (try
+      (render-fn resultset link param-ctx)
+      (catch :default e (pr-str e)))))
 
 
 (defn ui [{query-params :query-params :as params-map}
