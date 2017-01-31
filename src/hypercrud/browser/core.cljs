@@ -87,19 +87,6 @@
 (defn ui [{query-params :query-params :as params-map}
           {:keys [super-graph] :as param-ctx}]
   (let [system-link? (vector? (-> params-map :link-dbid :id))
-        ;param-ctx
-        #_(if system-link?
-            (let [[_ _ system-link-name find-element-id] (-> params-map :link-dbid :id)]
-              (with-parent-link params-map param-ctx
-                                (fn [parent-link]
-                                  (let [find-element (->> (:link/find-element parent-link)
-                                                          (filter #(= find-element-id (-> % :db/id :id)))
-                                                          first)
-                                        tx (condp = system-link-name
-                                             :system-edit (system-links/manufacture-system-edit-tx find-element (:db/id parent-link))
-                                             :system-create (system-links/manufacture-system-create-tx find-element (:db/id parent-link)))]
-                                    (update param-ctx :super-graph #(hc/with % tx))))))
-            param-ctx)
         link (if system-link?
                (let [[_ _ system-link-name find-element-id] (-> params-map :link-dbid :id)
                      parent-link-dbid (:link-dbid params-map)]
