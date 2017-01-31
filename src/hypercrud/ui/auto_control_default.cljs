@@ -119,5 +119,5 @@
                      [form/form entity form (:link/link-ctx link) param-ctx]))
                  ordered-find-elements)]])
         [:div "No results"])
-      ^{:key (hc/t (:super-graph param-ctx))}
+      ^{:key (hc/t (:peer param-ctx))}
       [table/table resultset ordered-find-elements (:link/link-ctx link) param-ctx])))

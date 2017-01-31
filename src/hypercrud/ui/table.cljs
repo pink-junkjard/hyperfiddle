@@ -79,7 +79,7 @@
                    [:span.sort-arrow arrow]]))))))
 
 
-(defn build-row-cells [form entity repeating-link-ctxs {:keys [super-graph] :as param-ctx}]
+(defn build-row-cells [form entity repeating-link-ctxs {:keys [peer] :as param-ctx}]
   (let [link-fn (let [link-ctx-by-ident (->> repeating-link-ctxs
                                              (mapv (juxt #(-> % :link-ctx/ident) identity))
                                              (into {}))]
@@ -100,7 +100,7 @@
                       (if error
                         (pr-str error)
                         (try
-                          (renderer super-graph link-fn entity)
+                          (renderer peer link-fn entity)
                           (catch :default e (pr-str e))))])
                    (let [link-ctxs (filter #(= (:db/id field) (some-> % :link-ctx/field :db/id)) repeating-link-ctxs)]
                      [auto-table-cell entity field link-ctxs param-ctx]))])))))

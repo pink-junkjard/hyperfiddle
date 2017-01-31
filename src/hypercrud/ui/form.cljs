@@ -6,7 +6,7 @@
             [hypercrud.ui.renderer :as renderer]))
 
 
-(defn field [entity {:keys [:field/prompt] :as field} link-ctxs {:keys [super-graph] :as param-ctx}]
+(defn field [entity {:keys [:field/prompt] :as field} link-ctxs {:keys [peer] :as param-ctx}]
   [:div.field
    [:label
     (let [docstring (-> field :field/attribute :attribute/doc)]
@@ -27,7 +27,7 @@
         (if error
           (pr-str error)
           (try
-            (renderer super-graph link-fn entity)
+            (renderer peer link-fn entity)
             (catch :default e (pr-str e))))])
      (let [link-ctxs (filter #(= (:db/id field) (some-> % :link-ctx/field :db/id)) link-ctxs)]
        [auto-control entity field link-ctxs param-ctx]))])

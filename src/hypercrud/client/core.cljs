@@ -5,15 +5,12 @@
 (def ^:dynamic *root-conn-id* nil)
 
 
-(defprotocol SuperGraph
-  (select [this query-request])
-  (entity [this entity-request])
-  (request [this request])
-  (with [this more-statements])
+(defprotocol Peer
+  (hydrate [this request])
   (t [this]))
 
 
-(defprotocol Client
-  (hydrate! [this request force? staged-tx editor-dbval editor-schema])
-  (hydrated? [this request])
+(defprotocol Connection
+  (hydrate! [this requests staged-tx force? editor-dbval editor-schema])
+  (hydrated? [this requests])
   (transact! [this tx]))

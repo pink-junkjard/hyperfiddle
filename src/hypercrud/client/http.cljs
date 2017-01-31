@@ -4,8 +4,8 @@
             [clojure.set :as set]
             [goog.Uri]
             [hypercrud.client.core :as hc]
-            [hypercrud.client.graph :as graph]
             [hypercrud.client.internal :as internal]
+            [hypercrud.client.peer :as peer]
             [hypercrud.client.schema :as schema-util]
             [hypercrud.types :as types :refer [->DbId ->DbVal]]
             [kvlt.core :as kvlt]
@@ -42,19 +42,18 @@
       (.resolve relative-uri)))
 
 
-; graph is always assumed to be touched
-(deftype Client [entry-uri ^:mutable super-graph]
-  hc/Client
-  (hydrate! [this request force? staged-tx editor-dbval editor-schema]
-    (if (and (not force?) (hc/hydrated? this request))
-      (p/resolved super-graph)
+(deftype HttpConnection [entry-uri ^:mutable peer]
+  hc/Connection
+  (hydrate! [this requests staged-tx force? editor-dbval editor-schema]
+    (if (and (not force?) (hc/hydrated? this requests))
+      (p/resolved peer)
       (-> (kvlt/request!
             {:url (resolve-relative-uri entry-uri (goog.Uri. "hydrate"))
              :content-type content-type-transit             ; helps debugging to view as edn
              :accept content-type-transit                   ; needs to be fast so transit
              :method :post
              :form {:staged-tx staged-tx
-                    :request (->> request
+                    :request (->> requests
                                   (mapv (fn [req-or-dbval]
                                           (if (instance? types/DbVal req-or-dbval)
                                             (schema-util/schema-request editor-dbval req-or-dbval)
@@ -62,16 +61,16 @@
                                   (into #{}))}
              :as :auto})
           (p/then (fn [resp]
-                    (let [new-graph (graph/->SuperGraph (into #{} request) {} nil nil)
+                    (let [new-peer (peer/->Peer (into #{} requests) {} nil nil)
                           {:keys [t pulled-trees-map tempids]} (-> resp :body :hypercrud)]
-                      (graph/set-state! new-graph editor-dbval editor-schema pulled-trees-map tempids)
-                      (set! super-graph new-graph)
-                      super-graph))))))
+                      (peer/set-state! new-peer editor-dbval editor-schema pulled-trees-map tempids)
+                      (set! peer new-peer)
+                      peer))))))
 
 
-  (hydrated? [this request]
-    ; compare our pre-loaded state with the graph dependencies
-    (set/subset? (set request) (some-> super-graph .-request)))
+  (hydrated? [this requests]
+    ; compare our pre-loaded state with the peer dependencies
+    (set/subset? (set requests) (some-> peer .-requests)))
 
 
   (transact! [this tx]

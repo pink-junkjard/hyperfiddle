@@ -33,7 +33,6 @@
                   ;; non-fatal error, report it here so user can fix it
                   (if error (js/alert (str "cljs eval error: " error)))
                   value))]
-    ;; link-dbid is assumed to be the editor-graph connection
 
     ;; add-result #(tx/edit-entity (:db/id entity) ident [] [(first %)])
     (if tx-fn

@@ -10,7 +10,7 @@
     (reader/read-string code-str)
     (catch js/Error e
       ;; Nothing to be done at this point -
-      ;; this error must be caught by the widget before it is in the graph.
+      ;; this error must be caught by the widget before it is staged.
       nil)))
 
 

@@ -50,7 +50,7 @@
                                                                 params-map (merge (:query-params params-map)
                                                                                   (q-util/build-dbhole-lookup link))]
                                                             (q-util/query-value q link params-map param-ctx))]
-                                          (hc/select (:super-graph param-ctx) query-value))))]
+                                          (hc/hydrate (:peer param-ctx) query-value))))]
     (try
       (render-fn resultset link param-ctx)
       (catch :default e (pr-str e)))))
@@ -85,7 +85,7 @@
 
 
 (defn ui [{query-params :query-params :as params-map}
-          {:keys [super-graph] :as param-ctx}]
+          {:keys [peer] :as param-ctx}]
   (let [system-link? (vector? (-> params-map :link-dbid :id))
         link (if system-link?
                (let [[_ _ system-link-name find-element-id] (-> params-map :link-dbid :id)
@@ -93,7 +93,7 @@
                  (condp = system-link-name
                    :system-edit (system-links/system-edit-link find-element-id parent-link-dbid)
                    :system-create (system-links/system-create-link find-element-id parent-link-dbid)))
-               (exception/extract (hc/request super-graph (request-for-link (:link-dbid params-map)))))
+               (exception/extract (hc/hydrate peer (request-for-link (:link-dbid params-map)))))
         q (some-> link :link/query reader/read-string)
         params-map (merge query-params (q-util/build-dbhole-lookup link))
         param-ctx (assoc param-ctx :query-params query-params)
@@ -106,7 +106,7 @@
                         (pprint/pprint (->> query-hole-names
                                             (mapv (juxt identity #(get params-map %)))
                                             (into {}))))))]]
-      (let [resultset (->> (hc/select super-graph (q-util/query-value q link params-map param-ctx))
+      (let [resultset (->> (hc/hydrate peer (q-util/query-value q link params-map param-ctx))
                            (exception/extract))]
         ; you still want the param-ctx; just bypass the :link/bindings
 
@@ -116,8 +116,8 @@
 
           ; raw ignores user links and gets free system links
           :raw (let [link (system-links/overlay-system-links-tx link)
-                     ; sub-queries (e.g. combo boxes) will get the old supergraph
-                     ; Since we only changed root graph, this is only interesting for the hc-in-hc case
+                     ; sub-queries (e.g. combo boxes) will get the old pulled-tree
+                     ; Since we only changed link, this is only interesting for the hc-in-hc case
                      ]
                  (auto-control/resultset resultset link param-ctx)))))))
 
@@ -157,7 +157,7 @@
 
 
 (defn requests-for-link [{find-elements :link/find-element :as link} query-params
-                         {:keys [super-graph] :as param-ctx} recurse?]
+                         {:keys [peer] :as param-ctx} recurse?]
   (let [q (some-> link :link/query reader/read-string)
         params-map (merge query-params (q-util/build-dbhole-lookup link))
         param-ctx (assoc param-ctx :query-params query-params)]
@@ -171,7 +171,7 @@
                (mapv #(->DbVal (-> % :find-element/connection :db/id :id) nil)))
           [request]
           (if recurse?
-            (if-let [resultset (exception/extract (hc/select super-graph request) nil)]
+            (if-let [resultset (exception/extract (hc/hydrate peer request) nil)]
               (dependent-requests link resultset param-ctx))))))))
 
 
@@ -182,7 +182,7 @@
           parent-link-request (request-for-link parent-link-dbid)]
       (concat
         [parent-link-request]
-        (if-let [parent-link (-> (hc/request (:super-graph param-ctx) parent-link-request)
+        (if-let [parent-link (-> (hc/hydrate (:peer param-ctx) parent-link-request)
                                  (exception/extract nil))]
           (let [find-element (->> (:link/find-element parent-link)
                                   (filter #(= find-element-id (-> % :db/id :id)))
@@ -193,7 +193,7 @@
             (requests-for-link link (:query-params params-map) param-ctx recurse?)))))
     (let [link-request (request-for-link (:link-dbid params-map))]
       (concat [link-request]
-              (if-let [link (-> (hc/request (:super-graph param-ctx) link-request)
+              (if-let [link (-> (hc/hydrate (:peer param-ctx) link-request)
                                 (exception/extract nil))]
                 (requests-for-link link (:query-params params-map) param-ctx recurse?))))))
 
