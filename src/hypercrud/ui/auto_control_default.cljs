@@ -104,7 +104,17 @@
 
 (defmethod auto-control/resultset :default [resultset link param-ctx]
   (let [q (some-> link :link/query reader/read-string)
-        ordered-find-elements (find-elements-util/order-find-elements (:link/find-element link) q)]
+        ordered-find-elements (->> (find-elements-util/order-find-elements (:link/find-element link) q)
+                                   (mapv (fn [find-element]
+                                           (update-in find-element [:find-element/form :form/field]
+                                                      (fn [old-fields]
+                                                        (filter
+                                                          (fn [fieldinfo]
+                                                            (let [attr (-> fieldinfo :field/attribute :attribute/ident)
+                                                                  visible-fn (get-in param-ctx [:fields attr :visible?] (constantly true))]
+                                                              (visible-fn param-ctx)))
+                                                          old-fields)))))
+                                   (remove #(empty? (get-in % [:find-element/form :form/field]))))]
     (if (:link/single-result-as-entity? link)
       (if-let [result (first resultset)]
         (let [param-ctx (assoc param-ctx :result result)]
