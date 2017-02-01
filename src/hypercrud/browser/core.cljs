@@ -27,31 +27,36 @@
 
 
 (defn request-for-link [link-dbid]
-  (->EntityRequest link-dbid (->DbVal hc/*root-conn-id* nil)
-                   '[* {:link/dbhole [* {:dbhole/value [*]}]
-                        ; get all our forms for this link
-                        :link/find-element
-                        [* {:find-element/form
-                            [* {:form/field
-                                [*
-                                 {:field/attribute [*
-                                                    {:attribute/valueType [:db/id :db/ident]}
-                                                    {:attribute/cardinality [:db/id :db/ident]}
-                                                    {:attribute/unique [:db/id :db/ident]}]}
-                                 ; we don't have to recurse for options-link-ctxs
-                                 ; because we know these links don't have additional links
-                                 {:field/options-link-ctx [* {:link-ctx/link
-                                                              [* {:link/find-element
-                                                                  [* {:find-element/form
-                                                                      [* {:form/field
-                                                                          [*
-                                                                           {:field/attribute [*
-                                                                                              {:attribute/valueType [:db/id :db/ident]}
-                                                                                              {:attribute/cardinality [:db/id :db/ident]}
-                                                                                              {:attribute/unique [:db/id :db/ident]}]}]}]}]}]}]}]}]}]
-                        ; get links one layer deep; todo not sure if we need this
-                        :link/link-ctx [* {:link-ctx/link [*]}]}
-                     {:hypercrud/owner [*]}]))
+  (let [inner-form-pull-exp ['* {:form/field
+                                 ['*
+                                  {:field/attribute ['*
+                                                     {:attribute/valueType [:db/id :db/ident]}
+                                                     {:attribute/cardinality [:db/id :db/ident]}
+                                                     {:attribute/unique [:db/id :db/ident]}]}]}]
+        form-pull-exp ['* {:form/field
+                           ['*
+                            {:field/attribute ['*
+                                               {:attribute/valueType [:db/id :db/ident]}
+                                               {:attribute/cardinality [:db/id :db/ident]}
+                                               {:attribute/unique [:db/id :db/ident]}]}
+                            ; we don't have to recurse for options-link-ctxs
+                            ; because we know these links don't have additional links
+                            {:field/options-link-ctx ['* {:link-ctx/link
+                                                          ['* {:link/request ['*
+                                                                              {:link-entity/form inner-form-pull-exp}
+                                                                              {:link-query/find-element ['* {:find-element/form inner-form-pull-exp}]}]}]}]}]}]]
+    (->EntityRequest link-dbid (->DbVal hc/*root-conn-id* nil)
+                     ['* {:link/request ['*
+                                         :link-entity/connection
+                                         {:link-entity/form form-pull-exp}
+                                         :link-query/value
+                                         :link-query/single-result-as-entity?
+                                         {:link-query/dbhole ['* {:dbhole/value ['*]}]}
+                                         ; get all our forms for this link
+                                         {:link-query/find-element ['* {:find-element/form form-pull-exp}]}]
+                          ; get links one layer deep; todo not sure if we need this
+                          :link/link-ctx ['* {:link-ctx/link ['*]}]}
+                      {:hypercrud/owner ['*]}])))
 
 
 (defn user-resultset [resultset link param-ctx]
@@ -77,10 +82,15 @@
                                                         ; todo should we be fmaping this and let the users handle any exception?
                                                         (exception/extract))
                                               params-map (links/build-url-params-map link-ctx param-ctx)
-                                              query-value (let [q (some-> link :link/query reader/read-string)
-                                                                params-map (merge (:query-params params-map)
-                                                                                  (q-util/build-dbhole-lookup link))]
-                                                            (q-util/query-value q link params-map param-ctx))]
+                                              query-params (:query-params params-map)
+                                              query-value
+                                              (condp = (links/link-type link)
+                                                :link-query (let [q (some-> link :link/request :link-query/value reader/read-string)
+                                                                  params-map (merge query-params
+                                                                                    (q-util/build-dbhole-lookup (:link/request link)))]
+                                                              (q-util/query-value q (:link/request link) params-map param-ctx))
+
+                                                :link-entity (q-util/->entityRequest (:link/request link) query-params))]
                                           (hc/hydrate (:peer param-ctx) query-value))))]
     (try
       (render-fn resultset link param-ctx)
@@ -89,40 +99,32 @@
 
 (defn ui [{query-params :query-params :as params-map}
           {:keys [peer] :as param-ctx}]
-  (let [system-link? (vector? (-> params-map :link-dbid :id))
-        link (if system-link?
-               (let [[_ _ system-link-name find-element-id] (-> params-map :link-dbid :id)
-                     parent-link-dbid (:link-dbid params-map)]
-                 (condp = system-link-name
-                   :system-edit (system-links/system-edit-link find-element-id parent-link-dbid)
-                   :system-create (system-links/system-create-link find-element-id parent-link-dbid)))
+  (let [link (if (vector? (-> params-map :link-dbid :id))
+               (let [system-link-dbid (-> params-map :link-dbid :id)]
+                 (->> (system-links/request-for-system-link system-link-dbid)
+                      (hc/hydrate peer)
+                      exception/extract
+                      (system-links/generate-system-link system-link-dbid)))
                (exception/extract (hc/hydrate peer (request-for-link (:link-dbid params-map)))))
-        q (some-> link :link/query reader/read-string)
-        params-map (merge query-params (q-util/build-dbhole-lookup link))
         param-ctx (assoc param-ctx :query-params query-params)
-        query-hole-names (q-util/parse-holes q)]
-    (if-not (links/holes-filled? query-hole-names params-map) ;todo what if we have a user hole?
-      [:div
-       [:div "Unfilled query holes"]
-       [:pre (doall (with-out-str
-                      (binding [pprint/*print-miser-width* 1] ; not working
-                        (pprint/pprint (->> query-hole-names
-                                            (mapv (juxt identity #(get params-map %)))
-                                            (into {}))))))]]
-      (let [resultset (->> (hc/hydrate peer (q-util/query-value q link params-map param-ctx))
-                           (exception/extract))]
-        ; you still want the param-ctx; just bypass the :link/bindings
+        request (condp = (links/link-type link)
+                  :link-query (let [link-query (:link/request link)
+                                    q (some-> link-query :link-query/value reader/read-string)
+                                    params-map (merge query-params (q-util/build-dbhole-lookup link-query))]
+                                (q-util/query-value q link-query params-map param-ctx))
+                  :link-entity (q-util/->entityRequest (:link/request link) params-map))]
+    (let [resultset (->> (hc/hydrate peer request)
+                         (exception/extract))]
+      (condp = (get param-ctx :display-mode :dressed)
+        :dressed (user-resultset resultset link (user-bindings link param-ctx))
+        :undressed (auto-control/resultset resultset link (user-bindings link param-ctx))
 
-        (condp = (get param-ctx :display-mode :dressed)
-          :dressed (user-resultset resultset link (user-bindings link param-ctx))
-          :undressed (auto-control/resultset resultset link (user-bindings link param-ctx))
-
-          ; raw ignores user links and gets free system links
-          :raw (let [link (system-links/overlay-system-links-tx link)
-                     ; sub-queries (e.g. combo boxes) will get the old pulled-tree
-                     ; Since we only changed link, this is only interesting for the hc-in-hc case
-                     ]
-                 (auto-control/resultset resultset link param-ctx)))))))
+        ; raw ignores user links and gets free system links
+        :raw (let [link (system-links/overlay-system-links-tx link) ;todo don't overlay system links on system links
+                   ; sub-queries (e.g. combo boxes) will get the old pulled-tree
+                   ; Since we only changed link, this is only interesting for the hc-in-hc case
+                   ]
+               (auto-control/resultset resultset link param-ctx))))))
 
 
 (declare request)
@@ -144,55 +146,63 @@
   (mapcat #(field-requests param-ctx %) (:form/field form)))
 
 
-(defn dependent-requests [{find-elements :link/find-element :as link} resultset param-ctx]
-  (->> resultset
-       (mapcat (fn [result]
-                 (let [param-ctx (assoc param-ctx :result result)
-                       option-requests (mapcat (fn [{form :find-element/form :as find-element}]
-                                                 (form-option-requests form param-ctx))
-                                               find-elements)
-                       inline-requests (->> (:link/link-ctx link)
-                                            (filter :link-ctx/render-inline?)
-                                            (mapcat (fn [inline-link-ctx]
-                                                      (let [param-ctx (assoc param-ctx :debug (str "inline-query:" (:db/id inline-link-ctx)))]
-                                                        (request (links/build-url-params-map inline-link-ctx param-ctx) param-ctx true)))))]
-                   (concat option-requests inline-requests))))))
+
+(defn dependent-requests [link-ctxs forms result param-ctx]
+  (let [param-ctx (assoc param-ctx :result result)
+        option-requests (mapcat #(form-option-requests % param-ctx) forms)
+        inline-requests (->> link-ctxs
+                             (filter :link-ctx/render-inline?)
+                             (mapcat (fn [inline-link-ctx]
+                                       (let [param-ctx (assoc param-ctx :debug (str "inline-query:" (:db/id inline-link-ctx)))]
+                                         (request (links/build-url-params-map inline-link-ctx param-ctx) param-ctx true)))))]
+    (concat option-requests inline-requests)))
 
 
-(defn requests-for-link [{find-elements :link/find-element :as link} query-params
-                         {:keys [peer] :as param-ctx} recurse?]
-  (let [q (some-> link :link/query reader/read-string)
-        params-map (merge query-params (q-util/build-dbhole-lookup link))
+(defn requests-for-link-query [link query-params {:keys [peer] :as param-ctx} recurse?]
+  (let [link-query (:link/request link)
+        q (some-> link-query :link-query/value reader/read-string)
+        params-map (merge query-params (q-util/build-dbhole-lookup link-query))
         param-ctx (assoc param-ctx :query-params query-params)]
-    (if-not (links/holes-filled? (q-util/parse-holes q) params-map)
-      (.log js/console (pr-str (->> (q-util/parse-holes q)
-                                    (mapv (juxt identity #(get params-map %)))
-                                    (into {}))))
-      (let [request (q-util/query-value q link params-map param-ctx)]
-        (concat
-          (->> find-elements
-               (mapv #(->DbVal (-> % :find-element/connection :db/id :id) nil)))
-          [request]
-          (if recurse?
-            (if-let [resultset (exception/extract (hc/hydrate peer request) nil)]
-              (dependent-requests link resultset param-ctx))))))))
+    (let [request (q-util/query-value q link-query params-map param-ctx)]
+      (concat
+        (->> (:link-query/find-element link-query)
+             (mapv #(->DbVal (-> % :find-element/connection :db/id :id) nil)))
+        [request]
+        (if recurse?
+          (if-let [resultset (exception/extract (hc/hydrate peer request) nil)]
+            (->> resultset
+                 (mapcat (fn [result]
+                           (let [forms (mapv :find-element/form (:link-query/find-element link-query))]
+                             (dependent-requests (:link/link-ctx link) forms result param-ctx)))))))))))
+
+
+(defn requests-for-link-entity [link query-params {:keys [peer] :as param-ctx} recurse?]
+  (let [request (q-util/->entityRequest (:link/request link) query-params)]
+    (concat
+      [(->DbVal (get-in link [:link/request :link-entity/connection :db/id :id]) nil)
+       request]
+      (if recurse?
+        (if-let [result (exception/extract (hc/hydrate peer request) nil)]
+          (let [forms [(get-in link [:link/request :link-entity/form])]]
+            (dependent-requests (:link/link-ctx link) forms result param-ctx)))))))
+
+
+(defn requests-for-link [link query-params param-ctx recurse?]
+  (let [param-ctx (assoc param-ctx :query-params query-params)]
+    (condp = (links/link-type link)
+      :link-query (requests-for-link-query link query-params param-ctx recurse?)
+      :link-entity (requests-for-link-entity link query-params param-ctx recurse?))))
 
 
 (defn request [params-map param-ctx recurse?]
   (if (vector? (-> params-map :link-dbid :id))
-    (let [[parent-link-id parent-link-conn-id system-link-name find-element-id] (-> params-map :link-dbid :id)
-          parent-link-dbid (->DbId parent-link-id parent-link-conn-id)
-          parent-link-request (request-for-link parent-link-dbid)]
+    (let [system-link-dbid (-> params-map :link-dbid :id)
+          sytem-link-request (system-links/request-for-system-link system-link-dbid)]
       (concat
-        [parent-link-request]
-        (if-let [parent-link (-> (hc/hydrate (:peer param-ctx) parent-link-request)
-                                 (exception/extract nil))]
-          (let [find-element (->> (:link/find-element parent-link)
-                                  (filter #(= find-element-id (-> % :db/id :id)))
-                                  first)
-                link (condp = system-link-name
-                       :system-edit (system-links/system-edit-link find-element parent-link-dbid)
-                       :system-create (system-links/system-create-link find-element parent-link-dbid))]
+        [sytem-link-request]
+        (if-let [system-link-deps (-> (hc/hydrate (:peer param-ctx) sytem-link-request)
+                                      (exception/extract nil))]
+          (let [link (system-links/generate-system-link system-link-dbid system-link-deps)]
             (requests-for-link link (:query-params params-map) param-ctx recurse?)))))
     (let [link-request (request-for-link (:link-dbid params-map))]
       (concat [link-request]

@@ -9,7 +9,8 @@
 
 
 (defn label-prop [field result]
-  (let [find-elements (-> field :field/options-link-ctx :link-ctx/link :link/find-element)]
+  ; we are assuming we have a query link here
+  (let [find-elements (-> field :field/options-link-ctx :link-ctx/link :link/request :link-query/find-element)]
     (->> (mapcat (fn [{{fields :form/field} :find-element/form} entity]
                    (->> fields
                         (mapv #(-> % :field/attribute :attribute/ident))
@@ -20,20 +21,18 @@
 
 
 (defn get-key [field]
-  (let [link (-> field :field/options-link-ctx :link-ctx/link)]
-    (hash [(:link/query link) (->> (:link/find-element link)
-                                   (mapcat #(-> % :find-element/form :form/field))
-                                   (mapv #(-> % :field/attribute :attribute/ident)))])))
+  (hash (-> field :field/options-link-ctx :link-ctx/link :link/request)))
 
 
 (defn get-option-records [field param-ctx]
-  (let [{find-elements :link/find-element q :link/query :as link} (-> field :field/options-link-ctx :link-ctx/link)]
+  ; we are assuming we have a query link here
+  (let [{find-elements :link-query/find-element q :link-query/value :as link-query} (-> field :field/options-link-ctx :link-ctx/link :link/request)]
     (if-let [q (if-not (empty? q)
                  (reader/read-string q))]
       (let [ordered-find-elements (find-elements-util/order-find-elements find-elements q)
             result-query (let [params-map (merge (:query-params (links/build-url-params-map (:field/options-link-ctx field) param-ctx))
-                                                 (q-util/build-dbhole-lookup link))]
-                           (q-util/query-value q link params-map param-ctx))]
+                                                 (q-util/build-dbhole-lookup link-query))]
+                           (q-util/query-value q link-query params-map param-ctx))]
         (->> (hc/hydrate (:peer param-ctx) result-query)
              (exception/extract)
              (mapv (fn [result]

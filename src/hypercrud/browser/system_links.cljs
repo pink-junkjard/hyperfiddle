@@ -1,7 +1,7 @@
 (ns hypercrud.browser.system-links
-  (:require [hypercrud.client.core :as hc]
-            [hypercrud.client.tx :as tx]
-            [hypercrud.types :refer [->DbId]]))
+  (:require [hypercrud.browser.links :as links]
+            [hypercrud.client.core :as hc]
+            [hypercrud.types :refer [->DbId ->DbVal ->EntityRequest]]))
 
 
 (defn system-edit-link-dbid [find-element-id parent-link-dbid]
@@ -25,20 +25,13 @@
 
 (defn system-edit-link [find-element parent-link-dbid]
   ; todo we can remove temp-id!
-  (let [new-find-element-dbid (hc/*temp-id!* hc/*root-conn-id*)
-        new-dbhole-dbid (hc/*temp-id!* hc/*root-conn-id*)]
+  (let [new-link-entity-dbid (hc/*temp-id!* hc/*root-conn-id*)]
     {:db/id (system-edit-link-dbid (-> find-element :db/id :id) parent-link-dbid)
      :link/prompt (str "edit " (:find-element/name find-element))
      :hypercrud/owner system-link-owner
-     :link/query (pr-str '[:find ?e :in $ ?e :where [?e]])
-     :link/single-result-as-entity? true
-     :link/dbhole #{{:db/id new-dbhole-dbid
-                     :dbhole/name "$"
-                     :dbhole/value (:find-element/connection find-element)}}
-     :link/find-element #{{:db/id new-find-element-dbid
-                           :find-element/name "?e"
-                           :find-element/connection (:find-element/connection find-element)
-                           :find-element/form (:find-element/form find-element)}}}))
+     :link/request {:db/id new-link-entity-dbid
+                    :link-entity/connection (:find-element/connection find-element)
+                    :link-entity/form (:find-element/form find-element)}}))
 
 
 (defn system-create-link [find-element parent-link-dbid]
@@ -80,19 +73,56 @@
 (defn overlay-system-links-tx
   "remove the user links and provide the system links (edit, new, remove)"
   [parent-link]
-  (let [link-ctxs (->> (:link/find-element parent-link)
-                       (mapcat (fn [find-element]
-                                 (let [edit-link-ctx-dbid (hc/*temp-id!* (-> parent-link :db/id :conn-id))
-                                       create-link-ctx-dbid (hc/*temp-id!* (-> parent-link :db/id :conn-id))]
-                                   [{:db/id edit-link-ctx-dbid
-                                     :link-ctx/ident :edit
-                                     :link-ctx/link (system-edit-link find-element (:db/id parent-link))
-                                     :link-ctx/repeating? true
-                                     :link-ctx/formula (pr-str {"?e" (pr-str `(fn [~'ctx]
-                                                                                (get-in ~'ctx [:result ~(:find-element/name find-element) :db/id])))})}
-                                    {:db/id create-link-ctx-dbid
-                                     :link-ctx/ident :create
-                                     :link-ctx/link (system-create-link find-element (:db/id parent-link))
-                                     :link-ctx/repeating? false}])))
-                       (into #{}))]
-    (assoc parent-link :link/link-ctx link-ctxs)))
+  (condp = (links/link-type parent-link)
+    :link-query
+    (let [link-ctxs (->> (get-in parent-link [:link/request :link-query/find-element])
+                         (mapcat (fn [find-element]
+                                   (let [edit-link-ctx-dbid (hc/*temp-id!* (-> parent-link :db/id :conn-id))
+                                         create-link-ctx-dbid (hc/*temp-id!* (-> parent-link :db/id :conn-id))]
+                                     [{:db/id edit-link-ctx-dbid
+                                       :link-ctx/ident :edit
+                                       :link-ctx/link (system-edit-link find-element (:db/id parent-link))
+                                       :link-ctx/repeating? true
+                                       :link-ctx/formula (pr-str {"?e" (pr-str `(fn [~'ctx]
+                                                                                  (get-in ~'ctx [:result ~(:find-element/name find-element) :db/id])))})}
+                                      {:db/id create-link-ctx-dbid
+                                       :link-ctx/ident :create
+                                       :link-ctx/link (system-create-link find-element (:db/id parent-link))
+                                       :link-ctx/repeating? false}])))
+                         (into #{}))]
+      (assoc parent-link :link/link-ctx link-ctxs))
+
+    :link-entity
+    (dissoc parent-link :link/link-ctx)))
+
+
+(defn request-for-system-link [system-link-dbid]
+  (let [[parent-link-id parent-link-conn-id] system-link-dbid
+        parent-link-dbid (->DbId parent-link-id parent-link-conn-id)]
+    (->EntityRequest parent-link-dbid
+                     (->DbVal hc/*root-conn-id* nil)
+                     (let [form-pull-exp ['* {:form/field
+                                              ['*
+                                               {:field/attribute ['*
+                                                                  {:attribute/valueType [:db/id :db/ident]}
+                                                                  {:attribute/cardinality [:db/id :db/ident]}
+                                                                  {:attribute/unique [:db/id :db/ident]}]}]}]]
+                       [:db/id
+                        {:link/request
+                         [:db/id
+                          {:link-query/find-element [:db/id
+                                                     :find-element/name
+                                                     :find-element/connection
+                                                     {:find-element/form form-pull-exp}]}]}]))))
+
+
+(defn generate-system-link [system-link-dbid system-link-deps]
+  (let [[_ _ system-link-name find-element-id] system-link-dbid
+        parent-link system-link-deps
+        ; system links are only generated on QueryRequests, so we don't need to determine the type of the parent link
+        find-element (->> (get-in parent-link [:link/request :link-query/find-element])
+                          (filter #(= find-element-id (-> % :db/id :id)))
+                          first)]
+    (condp = system-link-name
+      :system-edit (system-edit-link find-element (:db/id parent-link))
+      :system-create (system-create-link find-element (:db/id parent-link)))))

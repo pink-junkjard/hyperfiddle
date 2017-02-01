@@ -1,7 +1,7 @@
 (ns hypercrud.form.q-util
   (:require [cljs.reader :as reader]
             [hypercrud.compile.eval :refer [eval]]
-            [hypercrud.types :refer [->DbVal ->QueryRequest]]
+            [hypercrud.types :refer [->DbVal ->EntityRequest ->QueryRequest]]
             [hypercrud.util :as util]))
 
 
@@ -20,8 +20,8 @@
        (map str)))
 
 
-(defn build-dbhole-lookup [link]
-  (->> (:link/dbhole link)
+(defn build-dbhole-lookup [link-query]
+  (->> (:link-query/dbhole link-query)
        (map (fn [{:keys [:dbhole/name :dbhole/value]}]
               (if-not (or (empty? name) (nil? value))
                 ; transform project-id into conn-id
@@ -30,8 +30,8 @@
 
 
 ; type fill-hole = fn [hole-name param-ctx] => param
-(defn build-params [fill-hole link param-ctx]
-  (->> (some-> (:link/query link) safe-read-string)
+(defn build-params [fill-hole link-query param-ctx]
+  (->> (some-> link-query :link-query/value safe-read-string)
        (parse-holes)                                        ; nil means '() and does the right thing
        (mapv (juxt identity #(fill-hole % param-ctx)))
        (into {})))
@@ -49,16 +49,6 @@
     ))
 
 
-; returns type fill-hole (for threading into build-params)
-(defn fill-hole-from-formula [link-ctx]
-  (let [hole-formulas (read-eval-formulas (:link-ctx/formula link-ctx) )
-        dbhole-values (build-dbhole-lookup (:link/link link-ctx))]
-    (fn [hole-name param-ctx]
-      (if-let [v (get dbhole-values hole-name)]
-        v
-        (run-formula (get hole-formulas hole-name) param-ctx)))))
-
-
 (defn form-pull-exp [form]
   (concat
     [:db/id]
@@ -66,10 +56,17 @@
 
 
 ;todo rename and move? ->queryRequest
-(defn query-value [q link params-map param-ctx]
-  (let [params (build-params #(get params-map %) link param-ctx)
-        pull-exp (->> (:link/find-element link)
+(defn query-value [q link-query params-map param-ctx]
+  (let [params (build-params #(get params-map %) link-query param-ctx)
+        pull-exp (->> (:link-query/find-element link-query)
                       (mapv (juxt :find-element/name (fn [{:keys [:find-element/connection :find-element/form]}]
                                                        [(->DbVal (-> connection :db/id :id) nil) (form-pull-exp form)])))
                       (into {}))]
     (->QueryRequest q params pull-exp)))
+
+
+(defn ->entityRequest [link-entity params-map]
+  (let [dbid (assert false "todo")                          ;(:db/id params-map)
+        dbval (->DbVal (-> link-entity :link-entity/connection :db/id :id) nil)
+        pull-exp (form-pull-exp (:link-entity/form link-entity))]
+    (->EntityRequest dbid dbval pull-exp)))

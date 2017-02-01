@@ -29,7 +29,7 @@
                    :link-ctx/visible?
                    :link/tx-fn
                    :link/bindings
-                   :link/query} (-> attribute :attribute/ident))
+                   :link-query/value} (-> attribute :attribute/ident))
     :db.type/code
     (-> attribute :attribute/valueType :db/ident)))
 
@@ -103,31 +103,41 @@
 
 
 (defmethod auto-control/resultset :default [resultset link param-ctx]
-  (let [q (some-> link :link/query reader/read-string)
-        ordered-find-elements (->> (find-elements-util/order-find-elements (:link/find-element link) q)
-                                   (mapv (fn [find-element]
-                                           (update-in find-element [:find-element/form :form/field]
-                                                      (fn [old-fields]
-                                                        (filter
-                                                          (fn [fieldinfo]
-                                                            (let [attr (-> fieldinfo :field/attribute :attribute/ident)
-                                                                  visible-fn (get-in param-ctx [:fields attr :visible?] (constantly true))]
-                                                              (visible-fn param-ctx)))
-                                                          old-fields)))))
-                                   (remove #(empty? (get-in % [:find-element/form :form/field]))))]
-    (if (:link/single-result-as-entity? link)
-      (if-let [result (first resultset)]
-        (let [param-ctx (assoc param-ctx :result result)]
-          [:div
-           (->> (concat (repeating-links link param-ctx)
-                        (non-repeating-links link (dissoc param-ctx :result)))
-                (interpose " · "))
-           [:div
-            (map (fn [{:keys [:find-element/form] :as find-element}]
-                   (let [entity (get result (:find-element/name find-element))]
-                     ^{:key (hash [(:db/id entity) (:db/id form)])}
-                     [form/form entity form (:link/link-ctx link) param-ctx]))
-                 ordered-find-elements)]])
-        [:div "No results"])
-      ^{:key (hc/t (:peer param-ctx))}
-      [table/table resultset ordered-find-elements (:link/link-ctx link) param-ctx])))
+  (condp = (links/link-type link)
+    :link-query
+    (let [link-query (:link/request link)
+          q (some-> link-query :link-query/value reader/read-string)
+          ordered-find-elements (->> (find-elements-util/order-find-elements (:link-query/find-element link-query) q)
+                                     (mapv (fn [find-element]
+                                             (update-in find-element [:find-element/form :form/field]
+                                                        (fn [old-fields]
+                                                          (filter
+                                                            (fn [fieldinfo]
+                                                              (let [attr (-> fieldinfo :field/attribute :attribute/ident)
+                                                                    visible-fn (get-in param-ctx [:fields attr :visible?] (constantly true))]
+                                                                (visible-fn param-ctx)))
+                                                            old-fields)))))
+                                     (remove #(empty? (get-in % [:find-element/form :form/field]))))]
+      (if (:link-query/single-result-as-entity? link-query)
+        (if-let [result (first resultset)]
+          (let [param-ctx (assoc param-ctx :result result)]
+            [:div
+             (->> (concat (repeating-links link param-ctx)
+                          (non-repeating-links link (dissoc param-ctx :result)))
+                  (interpose " · "))
+             [:div
+              (map (fn [{:keys [:find-element/form] :as find-element}]
+                     (let [entity (get result (:find-element/name find-element))]
+                       ^{:key (hash [(:db/id entity) (:db/id form)])}
+                       [form/form entity form (:link/link-ctx link) param-ctx]))
+                   ordered-find-elements)]])
+          [:div "No results"])
+        ^{:key (hc/t (:peer param-ctx))}
+        [table/table resultset ordered-find-elements (:link/link-ctx link) param-ctx]))
+
+    :link-entity
+    (let [entity resultset
+          form (get-in link [:link/request :link-entity/form])]
+      ^{:key (hash [(:db/id entity) (:db/id form)])}
+      [form/form entity form (:link/link-ctx link) param-ctx]))
+  )

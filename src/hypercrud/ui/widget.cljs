@@ -107,7 +107,8 @@
        (-> entity
            (get (-> field :field/attribute :attribute/ident))
            (get (-> field
-                    :field/options-link-ctx :link-ctx/link :link/find-element first
+                    ; we are assuming we have a query link here
+                    :field/options-link-ctx :link-ctx/link :link/request :link-query/find-element first
                     :find-element/form :form/field first
                     :field/attribute :attribute/ident)))]
       [:span.select

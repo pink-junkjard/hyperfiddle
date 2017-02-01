@@ -6,10 +6,17 @@
             [hypercrud.form.q-util :as q-util]
             [hypercrud.util :as util]))
 
+
+(defn link-type [link]
+  (condp #(contains? %2 %1) (->> (keys (:link/request link)) (mapv namespace) set)
+    "link-query" :link-query
+    "link-entity" :link-entity))
+
+
 ; todo we shouldn't depend on an actual link-ctx/link, just that link-ctx/link's dbid
 ; the types for this function are too broad
 (defn build-url-params-map [link-ctx param-ctx]
-  #_(assert (not (empty? (-> link-ctx :link-ctx/link :link/find-element))) "dependent query insanity check")
+  #_(assert (not (empty? (-> link-ctx :link-ctx/link :link/request :link-query/find-element))) "dependent query insanity check")
   {:link-dbid (-> link-ctx :link-ctx/link :db/id)
    :query-params (->> (q-util/read-eval-formulas (:link-ctx/formula link-ctx))
                       (util/map-values #(q-util/run-formula % param-ctx)))})
@@ -20,10 +27,12 @@
 
 
 (defn renderable-link? [link params-map]
-  (some-> link :link/query
-          reader/read-string
-          q-util/parse-holes
-          (holes-filled? params-map)))
+  (condp = (link-type link)
+    :link-query (some-> link :link/request :link-query/value
+                        reader/read-string
+                        q-util/parse-holes
+                        (holes-filled? params-map))
+    :link-entity true))
 
 
 (defn build-link-props [link-ctx param-ctx]
