@@ -102,6 +102,15 @@
                 [(:navigate-cmp param-ctx) props (:link/prompt link) param-ctx])))))
 
 
+(defn filter-visible-fields [old-fields param-ctx]
+  (filter
+    (fn [fieldinfo]
+      (let [attr (-> fieldinfo :field/attribute :attribute/ident)
+            visible-fn (get-in param-ctx [:fields attr :visible?] (constantly true))]
+        (visible-fn param-ctx)))
+    old-fields))
+
+
 (defmethod auto-control/resultset :default [resultset link param-ctx]
   (condp = (links/link-type link)
     :link-query
@@ -109,14 +118,7 @@
           q (some-> link-query :link-query/value reader/read-string)
           ordered-find-elements (->> (find-elements-util/order-find-elements (:link-query/find-element link-query) q)
                                      (mapv (fn [find-element]
-                                             (update-in find-element [:find-element/form :form/field]
-                                                        (fn [old-fields]
-                                                          (filter
-                                                            (fn [fieldinfo]
-                                                              (let [attr (-> fieldinfo :field/attribute :attribute/ident)
-                                                                    visible-fn (get-in param-ctx [:fields attr :visible?] (constantly true))]
-                                                                (visible-fn param-ctx)))
-                                                            old-fields)))))
+                                             (update-in find-element [:find-element/form :form/field] #(filter-visible-fields % param-ctx))))
                                      (remove #(empty? (get-in % [:find-element/form :form/field]))))]
       (if (:link-query/single-result-as-entity? link-query)
         (if-let [result (first resultset)]
@@ -137,6 +139,7 @@
 
     :link-entity
     (let [entity resultset
-          form (get-in link [:link/request :link-entity/form])]
+          form (-> (get-in link [:link/request :link-entity/form])
+                   (update :form/field #(filter-visible-fields % param-ctx)))]
       ^{:key (hash [(:db/id entity) (:db/id form)])}
       [form/form entity form (:link/link-ctx link) param-ctx])))
