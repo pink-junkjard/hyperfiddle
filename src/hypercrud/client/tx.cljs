@@ -9,10 +9,10 @@
 
 
 (defn retract [dbid a dbids]
-  (map (fn [val] [:db/retract dbid a val]) dbids))
+  (map (fn [v] [:db/retract dbid a v]) dbids))
 
 (defn add [dbid a dbids]
-  (map (fn [val] [:db/add dbid a val]) dbids))
+  (map (fn [v] [:db/add dbid a v]) dbids))
 
 (defn edit-entity [dbid a rets adds]
   (vec (concat (retract dbid a rets)
@@ -79,20 +79,20 @@
   (->> (seq entity)
        (filter (fn [[k v]] (not= :db/id k)))
 
-       (mapcat (fn [[attr val]]
+       (mapcat (fn [[attr v]]
                  ; dont care about refs - just pass them through blindly, they are #DbId and will just work
-                 (if (vector? val)
-                   (mapv (fn [val] [:db/add dbid attr (any-ref->dbid val)]) val)
-                   [[:db/add dbid attr (any-ref->dbid val)]])))))
+                 (if (vector? v)
+                   (mapv (fn [v] [:db/add dbid attr (any-ref->dbid v)]) v)
+                   [[:db/add dbid attr (any-ref->dbid v)]])))))
 
 
 (defn entity-components [schema entity]
-  (mapcat (fn [[attr val]]
+  (mapcat (fn [[attr v]]
             (let [{:keys [:db/cardinality :db/valueType :db/isComponent]} (get schema attr)]
               (if isComponent
                 (cond
-                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one)) [val]
-                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) (vec val)
+                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one)) [v]
+                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) (vec v)
                   :else []))))
           entity))
 
@@ -104,11 +104,12 @@
 
 
 (defn entity-children [schema entity]
-  (mapcat (fn [[attr val]]
+  (mapcat (fn [[attr v]]
             (let [{:keys [:db/cardinality :db/valueType]} (get schema attr)]
+              ; todo can we just check if val is map? or coll? to remove dep on schema?
               (cond
-                (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one)) [val]
-                (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) (vec val)
+                (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one)) [v]
+                (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) (vec v)
                 :else [])))
           entity))
 
