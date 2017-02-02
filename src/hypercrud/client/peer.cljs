@@ -10,10 +10,11 @@
 (deftype Peer [requests dbval->schema pulled-trees-map resultsets]
   hc/Peer
   (hydrate [this request]
-    (let [resultset-or-error (get resultsets request)]
+    (if-let [resultset-or-error (get resultsets request)]
       (if (instance? types/DbError resultset-or-error)
         (exception/failure (js/Error. (.-msg resultset-or-error))) ;build a stack trace
-        (exception/success resultset-or-error))))
+        (exception/success resultset-or-error))
+      (exception/failure (js/Error. (str "Unhydrated request:\n" (pr-str request))))))
 
 
   (t [this]
