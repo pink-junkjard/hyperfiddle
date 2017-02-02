@@ -1,6 +1,7 @@
 (ns hypercrud.client.tx
   (:require [cljs.core.match :refer-macros [match]]
             [hypercrud.types :refer [->DbId]]
+            [hypercrud.util :as util]
             [loom.alg-generic :as loom]))
 
 
@@ -96,6 +97,12 @@
           entity))
 
 
+(defn entity-and-components->statements [schema e]
+  ; tree-seq lets us get component entities too
+  (->> (tree-seq map? #(entity-components schema %) e)
+       (mapcat entity->statements)))
+
+
 (defn entity-children [schema entity]
   (mapcat (fn [[attr val]]
             (let [{:keys [:db/cardinality :db/valueType]} (get schema attr)]
@@ -106,15 +113,24 @@
           entity))
 
 
-(defn replace-ids [schema conn-id skip? temp-id! tx]
-  (let [id-map (atom {})
-        replace-id! (fn [dbid]
-                      (let [new-dbid (get @id-map dbid)]
-                        (if (nil? new-dbid)
-                          (let [new-dbid (temp-id! conn-id)]
-                            (swap! id-map assoc dbid new-dbid)
-                            new-dbid)
-                          new-dbid)))]
+(defn pulled-tree->statements [schema pulled-tree]
+  (->> (tree-seq map? #(entity-children schema %) pulled-tree)
+       (mapcat entity->statements)))
+
+
+(defn replace-id-builder [conn-id tempid!]
+  (let [id-map (atom {})]
+    (fn [dbid]
+      (let [new-dbid (get @id-map dbid)]
+        (if (nil? new-dbid)
+          (let [new-dbid (tempid! conn-id)]
+            (swap! id-map assoc dbid new-dbid)
+            new-dbid)
+          new-dbid)))))
+
+
+(defn replace-ids-in-tx [schema conn-id skip? temp-id! tx]
+  (let [replace-id! (replace-id-builder conn-id temp-id!)]
     (mapv (fn [[op e a v]]
             (let [new-e (replace-id! e)
                   valueType (get-in schema [a :db/valueType])
@@ -125,15 +141,24 @@
           tx)))
 
 
-(defn clone-entity [schema e tempid!]
-  ; tree-seq lets us get component entities too
-  (->> (tree-seq map?
-                 #(entity-components schema %)
-                 e)
-       (mapcat entity->statements)
-       (replace-ids schema (-> e :db/id :conn-id)
-                    (fn [a] (not (get-in schema [a :db/isComponent]))) ; preserve links to existing entities
-                    tempid!)))
+(defn clone-entity [schema entity tempid!]
+  (let [replace-id! (replace-id-builder (-> entity :db/id :conn-id) tempid!)
+        recursive-clone (fn [e]
+                          (->> (util/update-existing e :db/id replace-id!)
+                               (mapv (fn [[a v]]
+                                       (let [{:keys [:db/cardinality :db/valueType :db/isComponent]} (get schema a)
+                                             v (if-not (= valueType :db.type/ref)
+                                                 v
+                                                 (if isComponent
+                                                   (condp = cardinality
+                                                     :db.cardinality/one (util/update-existing v :db/id replace-id!)
+                                                     :db.cardinality/many (mapv #(util/update-existing % :db/id replace-id!) v))
+                                                   (condp = cardinality
+                                                     :db.cardinality/one (select-keys v [:db/id])
+                                                     :db.cardinality/many (mapv #(select-keys % [:db/id]) v))))]
+                                         [a v])))
+                               (into {})))]
+    (recursive-clone entity)))
 
 
 (defn export-link [schema link tempid!]
@@ -152,6 +177,6 @@
                        (conj (entity->statements e)
                              [:db/add (:db/id e) :field/attribute attr-lookup]))
                      (entity->statements entity))))
-         (replace-ids schema (-> link :db/id :conn-id)
-                      #(contains? #{:field/attribute} %)    ; preserve refs to attributes
-                      tempid!))))
+         (replace-ids-in-tx schema (-> link :db/id :conn-id)
+                            #(contains? #{:field/attribute} %) ; preserve refs to attributes
+                            tempid!))))
