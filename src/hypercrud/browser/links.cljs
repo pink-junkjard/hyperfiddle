@@ -17,9 +17,16 @@
 ; the types for this function are too broad
 (defn build-url-params-map [link-ctx param-ctx]
   #_(assert (not (empty? (-> link-ctx :link-ctx/link :link/request :link-query/find-element))) "dependent query insanity check")
-  {:link-dbid (-> link-ctx :link-ctx/link :db/id)
-   :query-params (->> (q-util/read-eval-formulas (:link-ctx/formula link-ctx))
-                      (util/map-values #(q-util/run-formula % param-ctx)))})
+  (condp = (link-type (:link-ctx/link link-ctx))
+    :link-query {:link-dbid (-> link-ctx :link-ctx/link :db/id)
+                 :query-params (->> (q-util/read-eval-formulas (:link-ctx/formula link-ctx))
+                                    (util/map-values #(q-util/run-formula % param-ctx)))}
+    :link-entity {:link-dbid (-> link-ctx :link-ctx/link :db/id)
+                  :query-params (->> (q-util/read-eval-formulas (:link-ctx/formula link-ctx))
+                                     (util/map-values #(q-util/run-formula % param-ctx)))
+                  #_(let [find-element-name nil
+                          attr (-> link-ctx :link-ctx/field :field/attribute :attribute/ident)]
+                      (get-in param-ctx [:result find-element-name attr :db/id]))}))
 
 
 (defn holes-filled? [hole-names params-map]

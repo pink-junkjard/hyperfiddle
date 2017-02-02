@@ -83,8 +83,8 @@
                                        :link-ctx/ident :edit
                                        :link-ctx/link (system-edit-link find-element (:db/id parent-link))
                                        :link-ctx/repeating? true
-                                       :link-ctx/formula (pr-str {"?e" (pr-str `(fn [~'ctx]
-                                                                                  (get-in ~'ctx [:result ~(:find-element/name find-element) :db/id])))})}
+                                       :link-ctx/formula (pr-str {:entity-dbid (pr-str `(fn [~'ctx]
+                                                                                          (get-in ~'ctx [:result ~(:find-element/name find-element) :db/id])))})}
                                       {:db/id create-link-ctx-dbid
                                        :link-ctx/ident :create
                                        :link-ctx/link (system-create-link find-element (:db/id parent-link))
