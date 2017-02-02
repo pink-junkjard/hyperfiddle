@@ -113,18 +113,22 @@
                                     params-map (merge query-params (q-util/build-dbhole-lookup link-query))]
                                 (q-util/query-value q link-query params-map param-ctx))
                   :link-entity (q-util/->entityRequest (:link/request link) (:query-params params-map)))]
-    (let [resultset (->> (hc/hydrate peer request)
-                         (exception/extract))]
-      (condp = (get param-ctx :display-mode :dressed)
-        :dressed (user-resultset resultset link (user-bindings link param-ctx))
-        :undressed (auto-control/resultset resultset link (user-bindings link param-ctx))
+    (let [resultset (hc/hydrate peer request)]
+      (if (exception/failure? resultset)
+        [:div
+         [:div "Failed hydrate"]
+         [:pre (with-out-str (pprint/pprint (.-e resultset)))]]
+        (let [resultset (.-v resultset)]
+          (condp = (get param-ctx :display-mode :dressed)
+            :dressed (user-resultset resultset link (user-bindings link param-ctx))
+            :undressed (auto-control/resultset resultset link (user-bindings link param-ctx))
 
-        ; raw ignores user links and gets free system links
-        :raw (let [link (system-links/overlay-system-links-tx link) ;todo don't overlay system links on system links
-                   ; sub-queries (e.g. combo boxes) will get the old pulled-tree
-                   ; Since we only changed link, this is only interesting for the hc-in-hc case
-                   ]
-               (auto-control/resultset resultset link param-ctx))))))
+            ; raw ignores user links and gets free system links
+            :raw (let [link (system-links/overlay-system-links-tx link) ;todo don't overlay system links on system links
+                       ; sub-queries (e.g. combo boxes) will get the old pulled-tree
+                       ; Since we only changed link, this is only interesting for the hc-in-hc case
+                       ]
+                   (auto-control/resultset resultset link param-ctx))))))))
 
 
 (declare request)
