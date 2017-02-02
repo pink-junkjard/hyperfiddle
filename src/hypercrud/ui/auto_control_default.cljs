@@ -139,5 +139,4 @@
     (let [entity resultset
           form (get-in link [:link/request :link-entity/form])]
       ^{:key (hash [(:db/id entity) (:db/id form)])}
-      [form/form entity form (:link/link-ctx link) param-ctx]))
-  )
+      [form/form entity form (:link/link-ctx link) param-ctx])))

@@ -17,7 +17,10 @@
 ; the types for this function are too broad
 (defn build-url-params-map [link-ctx param-ctx]
   #_(assert (not (empty? (-> link-ctx :link-ctx/link :link/request :link-query/find-element))) "dependent query insanity check")
-  (condp = (link-type (:link-ctx/link link-ctx))
+  {:link-dbid (-> link-ctx :link-ctx/link :db/id)
+   :query-params (->> (q-util/read-eval-formulas (:link-ctx/formula link-ctx))
+                      (util/map-values #(q-util/run-formula % param-ctx)))}
+  #_(condp = (link-type (:link-ctx/link link-ctx))
     :link-query {:link-dbid (-> link-ctx :link-ctx/link :db/id)
                  :query-params (->> (q-util/read-eval-formulas (:link-ctx/formula link-ctx))
                                     (util/map-values #(q-util/run-formula % param-ctx)))}

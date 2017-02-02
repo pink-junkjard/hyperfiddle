@@ -112,7 +112,7 @@
                                     q (some-> link-query :link-query/value reader/read-string)
                                     params-map (merge query-params (q-util/build-dbhole-lookup link-query))]
                                 (q-util/query-value q link-query params-map param-ctx))
-                  :link-entity (q-util/->entityRequest (:link/request link) params-map))]
+                  :link-entity (q-util/->entityRequest (:link/request link) (:query-params params-map)))]
     (let [resultset (->> (hc/hydrate peer request)
                          (exception/extract))]
       (condp = (get param-ctx :display-mode :dressed)
@@ -147,9 +147,8 @@
 
 
 
-(defn dependent-requests [link-ctxs forms result param-ctx]
-  (let [param-ctx (assoc param-ctx :result result)
-        option-requests (mapcat #(form-option-requests % param-ctx) forms)
+(defn dependent-requests [link-ctxs forms param-ctx]
+  (let [option-requests (mapcat #(form-option-requests % param-ctx) forms)
         inline-requests (->> link-ctxs
                              (filter :link-ctx/render-inline?)
                              (mapcat (fn [inline-link-ctx]
@@ -172,8 +171,9 @@
           (if-let [resultset (exception/extract (hc/hydrate peer request) nil)]
             (->> resultset
                  (mapcat (fn [result]
-                           (let [forms (mapv :find-element/form (:link-query/find-element link-query))]
-                             (dependent-requests (:link/link-ctx link) forms result param-ctx)))))))))))
+                           (let [forms (mapv :find-element/form (:link-query/find-element link-query))
+                                 param-ctx (assoc param-ctx :result result)]
+                             (dependent-requests (:link/link-ctx link) forms param-ctx)))))))))))
 
 
 (defn requests-for-link-entity [link query-params {:keys [peer] :as param-ctx} recurse?]
@@ -182,9 +182,10 @@
       [(->DbVal (get-in link [:link/request :link-entity/connection :db/id :id]) nil)
        request]
       (if recurse?
-        (if-let [result (exception/extract (hc/hydrate peer request) nil)]
-          (let [forms [(get-in link [:link/request :link-entity/form])]]
-            (dependent-requests (:link/link-ctx link) forms result param-ctx)))))))
+        (if-let [entity (exception/extract (hc/hydrate peer request) nil)]
+          (let [form (get-in link [:link/request :link-entity/form])
+                param-ctx (assoc param-ctx :entity entity)]
+            (dependent-requests (:link/link-ctx link) [form] param-ctx)))))))
 
 
 (defn requests-for-link [link query-params param-ctx recurse?]
