@@ -88,7 +88,8 @@
                           props (links/build-link-props anchor param-ctx)]
                       [(:navigate-cmp param-ctx) props label param-ctx])))
         param-ctx (assoc param-ctx :color ((:color-fn param-ctx) entity param-ctx)
-                                   :owner ((:owner-fn param-ctx) entity param-ctx))
+                                   :owner ((:owner-fn param-ctx) entity param-ctx)
+                                   :entity entity)
         style {:border-color (connection-color (:color param-ctx))}]
     (->> (:form/field form)
          (sort-by :field/order)

@@ -37,7 +37,7 @@
          (filter #(links/link-visible? % param-ctx))
          (map (fn [anchor]
                 ^{:key (-> anchor :db/id)}
-                [browser/ui (links/build-url-params-map anchor param-ctx) param-ctx])))))
+                [browser/ui (links/build-url-params-map anchor param-ctx) (dissoc param-ctx :result :entity)])))))
 
 
 (defn input-keyword [entity field anchors props {:keys [user-swap!] :as param-ctx}]
