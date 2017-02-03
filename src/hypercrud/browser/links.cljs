@@ -37,12 +37,13 @@
 
 
 (defn renderable-link? [link params-map]
-  (condp = (link-type link)
-    :link-query (some-> link :link/request :link-query/value
-                        reader/read-string
-                        q-util/parse-holes
-                        (holes-filled? params-map))
-    :link-entity true))
+  (if link
+    (condp = (link-type link)
+      :link-query (some-> link :link/request :link-query/value
+                          reader/read-string
+                          q-util/parse-holes
+                          (holes-filled? params-map))
+      :link-entity true)))
 
 
 (defn build-link-props [anchor param-ctx]
