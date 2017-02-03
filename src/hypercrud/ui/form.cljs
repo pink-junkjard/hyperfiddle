@@ -42,6 +42,5 @@
      (->> (:form/field form)
           (sort-by :field/order)
           (map (fn [fieldinfo]
-                 (let [ident (-> fieldinfo :field/attribute :attribute/ident)]
-                   ^{:key ident}
-                   [field entity fieldinfo anchors param-ctx]))))]))
+                 ^{:key (:db/id fieldinfo)}
+                 [field entity fieldinfo anchors param-ctx])))]))

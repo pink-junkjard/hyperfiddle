@@ -222,7 +222,8 @@
     (let [value (get entity (-> field :field/attribute :attribute/ident))]
       (condp = (-> field :field/attribute :attribute/cardinality :db/ident)
         :db.cardinality/one (pr-str value)
-        :db.cardinality/many (map pr-str value)))]
+        :db.cardinality/many (map pr-str value)
+        "Incomplete attribute for field"))]
    (render-inline-links field anchors param-ctx)
    (link-thing anchors param-ctx)])
 
