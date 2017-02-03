@@ -27,17 +27,17 @@
 
 
 (defn render-inline-links [field anchors param-ctx]
-  (let [
-        ; todo do we need a different param-ctx for rendering the ui?
-        param-ctx (assoc param-ctx
-                    :isComponent (-> field :field/attribute :attribute/isComponent)
-                    :debug (str "table-many-ref:" (:db/id field) ":" (:field/prompt field)))]
-    (->> anchors
-         (filter :anchor/render-inline?)
-         (filter #(links/link-visible? % param-ctx))
-         (map (fn [anchor]
+  (->> anchors
+       (filter :anchor/render-inline?)
+       (filter #(links/link-visible? % param-ctx))
+       (map (fn [anchor]
+              (let [params-map (links/build-url-params-map anchor param-ctx)
+                    param-ctx (-> param-ctx
+                                  (assoc :isComponent (-> field :field/attribute :attribute/isComponent)
+                                         :debug (str "table-many-ref:" (:db/id field) ":" (:field/prompt field)))
+                                  (dissoc :result :entity))]
                 ^{:key (-> anchor :db/id)}
-                [browser/ui (links/build-url-params-map anchor param-ctx) (dissoc param-ctx :result :entity)])))))
+                [browser/ui params-map param-ctx])))))
 
 
 (defn input-keyword [entity field anchors props {:keys [user-swap!] :as param-ctx}]

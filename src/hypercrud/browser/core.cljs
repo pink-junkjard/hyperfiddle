@@ -139,8 +139,11 @@
     ; EXCEPT when we are component, in which case no options are rendered, just a form, handled below
     (if (and is-ref (not isComponent))
       (if-let [options-anchor (:field/options-anchor field)]
-        (let [param-ctx (assoc param-ctx :debug (str "field-options:" (:db/id field)))]
-          (request (links/build-url-params-map options-anchor param-ctx) param-ctx false))))))
+        (let [params-map (links/build-url-params-map options-anchor param-ctx)
+              param-ctx (-> param-ctx
+                            (assoc :debug (str "field-options:" (:db/id field)))
+                            (dissoc :entity :request))]
+          (request params-map param-ctx false))))))
 
 
 (defn form-option-requests "get the form options recursively for all expanded forms"
@@ -153,8 +156,11 @@
         inline-requests (->> anchors
                              (filter :anchor/render-inline?)
                              (mapcat (fn [inline-anchor]
-                                       (let [param-ctx (assoc param-ctx :debug (str "inline-query:" (:db/id inline-anchor)))]
-                                         (request (links/build-url-params-map inline-anchor param-ctx) param-ctx true)))))]
+                                       (let [params-map (links/build-url-params-map inline-anchor param-ctx)
+                                             param-ctx (-> param-ctx
+                                                           (assoc :debug (str "inline-query:" (:db/id inline-anchor)))
+                                                           (dissoc :entity :request))]
+                                         (request params-map param-ctx true)))))]
     (concat option-requests inline-requests)))
 
 
