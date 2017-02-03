@@ -10,7 +10,8 @@
 (defn link-type [link]
   (condp #(contains? %2 %1) (->> (keys (:link/request link)) (mapv namespace) set)
     "link-query" :link-query
-    "link-entity" :link-entity))
+    "link-entity" :link-entity
+    nil))
 
 
 ; todo we shouldn't depend on an actual anchor/link, just that anchor/link's dbid
@@ -37,13 +38,13 @@
 
 
 (defn renderable-link? [link params-map]
-  (if link
-    (condp = (link-type link)
-      :link-query (some-> link :link/request :link-query/value
-                          reader/read-string
-                          q-util/parse-holes
-                          (holes-filled? params-map))
-      :link-entity true)))
+  (condp = (link-type link)
+    :link-query (some-> link :link/request :link-query/value
+                        reader/read-string
+                        q-util/parse-holes
+                        (holes-filled? params-map))
+    :link-entity true
+    false))
 
 
 (defn build-link-props [anchor param-ctx]

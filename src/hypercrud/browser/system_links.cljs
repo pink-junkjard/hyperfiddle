@@ -80,6 +80,9 @@
       (assoc parent-link :link/anchor anchors))
 
     :link-entity
+    (dissoc parent-link :link/anchor)
+
+    ; else
     (dissoc parent-link :link/anchor)))
 
 

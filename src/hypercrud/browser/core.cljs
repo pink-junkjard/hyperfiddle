@@ -1,5 +1,6 @@
 (ns hypercrud.browser.core
-  (:require [cats.monad.exception :as exception]
+  (:require [cats.core :as cats :refer-macros [mlet]]
+            [cats.monad.exception :as exception :refer-macros [try-on]]
             [cljs.pprint :as pprint]
             [cljs.reader :as reader]
             [hypercrud.browser.links :as links]
@@ -70,26 +71,28 @@
         anchors (->> (:link/anchor link)
                      (mapv (juxt #(-> % :anchor/ident) identity))
                      (into {}))
+        inline-resultset (fn [ident param-ctx]
+                           (let [anchor (get anchors ident)
+                                 params-map (links/build-url-params-map anchor param-ctx)
+                                 query-params (:query-params params-map)]
+                             (mlet [link (hc/hydrate (:peer param-ctx) (request-for-link (-> anchor :anchor/link :db/id)))
+                                    query-value (try-on
+                                                  (condp = (links/link-type link)
+                                                    :link-query (let [q (some-> link :link/request :link-query/value reader/read-string)
+                                                                      params-map (merge query-params
+                                                                                        (q-util/build-dbhole-lookup (:link/request link)))]
+                                                                  (q-util/query-value q (:link/request link) params-map param-ctx))
+
+                                                    :link-entity (q-util/->entityRequest (:link/request link) query-params)
+                                                    (js/Error. "Missing link request")))
+                                    resultset (hc/hydrate (:peer param-ctx) query-value)]
+                                   (cats/return resultset))))
         param-ctx (assoc param-ctx
                     :link-fn (fn [ident label param-ctx]
                                (let [anchor (get anchors ident)
                                      props (links/build-link-props anchor param-ctx)]
                                  [(:navigate-cmp param-ctx) props label param-ctx]))
-                    :inline-resultset (fn [ident param-ctx]
-                                        (let [anchor (get anchors ident)
-                                              ; todo should we be fmaping this and let the users handle any exception?
-                                              link @(hc/hydrate (:peer param-ctx) (request-for-link (-> anchor :anchor/link :db/id)))
-                                              params-map (links/build-url-params-map anchor param-ctx)
-                                              query-params (:query-params params-map)
-                                              query-value
-                                              (condp = (links/link-type link)
-                                                :link-query (let [q (some-> link :link/request :link-query/value reader/read-string)
-                                                                  params-map (merge query-params
-                                                                                    (q-util/build-dbhole-lookup (:link/request link)))]
-                                                              (q-util/query-value q (:link/request link) params-map param-ctx))
-
-                                                :link-entity (q-util/->entityRequest (:link/request link) query-params))]
-                                          (hc/hydrate (:peer param-ctx) query-value))))]
+                    :inline-resultset inline-resultset)]
     (try
       (render-fn resultset link param-ctx)
       (catch :default e (pr-str e)))))
@@ -97,36 +100,37 @@
 
 (defn ui [{query-params :query-params :as params-map}
           {:keys [peer] :as param-ctx}]
-  (let [link (if (vector? (-> params-map :link-dbid :id))
-               (let [system-link-dbid (-> params-map :link-dbid :id)]
-                 (->> (system-links/request-for-system-link system-link-dbid)
-                      (hc/hydrate peer)
-                      exception/extract
-                      (system-links/generate-system-link system-link-dbid)))
-               @(hc/hydrate peer (request-for-link (:link-dbid params-map))))
-        param-ctx (assoc param-ctx :query-params query-params)
-        request (condp = (links/link-type link)
-                  :link-query (let [link-query (:link/request link)
-                                    q (some-> link-query :link-query/value reader/read-string)
-                                    params-map (merge query-params (q-util/build-dbhole-lookup link-query))]
-                                (q-util/query-value q link-query params-map param-ctx))
-                  :link-entity (q-util/->entityRequest (:link/request link) (:query-params params-map)))]
-    (let [resultset (hc/hydrate peer request)]
-      (if (exception/failure? resultset)
-        [:div
-         [:div "Failed hydrate"]
-         [:pre (with-out-str (pprint/pprint (.-e resultset)))]]
-        (let [resultset (.-v resultset)]
-          (condp = (get param-ctx :display-mode :dressed)
-            :dressed (user-resultset resultset link (user-bindings link param-ctx))
-            :undressed (auto-control/resultset resultset link (user-bindings link param-ctx))
+  (let [param-ctx (assoc param-ctx :query-params query-params)
+        dom-or-e (mlet [link (if (vector? (-> params-map :link-dbid :id))
+                               (let [system-link-dbid (-> params-map :link-dbid :id)]
+                                 (->> (system-links/request-for-system-link system-link-dbid)
+                                      (hc/hydrate peer)
+                                      (cats/fmap #(system-links/generate-system-link system-link-dbid %))))
+                               (hc/hydrate peer (request-for-link (:link-dbid params-map))))
+                        request (try-on
+                                  (condp = (links/link-type link)
+                                    :link-query (let [link-query (:link/request link)
+                                                      q (some-> link-query :link-query/value reader/read-string)
+                                                      params-map (merge query-params (q-util/build-dbhole-lookup link-query))]
+                                                  (q-util/query-value q link-query params-map param-ctx))
+                                    :link-entity (q-util/->entityRequest (:link/request link) (:query-params params-map))
+                                    (js/Error. "Missing link request")))
+                        resultset (hc/hydrate peer request)]
+                       (cats/return (condp = (get param-ctx :display-mode :dressed)
+                                      :dressed (user-resultset resultset link (user-bindings link param-ctx))
+                                      :undressed (auto-control/resultset resultset link (user-bindings link param-ctx))
 
-            ; raw ignores user links and gets free system links
-            :raw (let [link (system-links/overlay-system-links-tx link) ;todo don't overlay system links on system links
-                       ; sub-queries (e.g. combo boxes) will get the old pulled-tree
-                       ; Since we only changed link, this is only interesting for the hc-in-hc case
-                       ]
-                   (auto-control/resultset resultset link param-ctx))))))))
+                                      ; raw ignores user links and gets free system links
+                                      :raw (let [link (system-links/overlay-system-links-tx link) ;todo don't overlay system links on system links
+                                                 ; sub-queries (e.g. combo boxes) will get the old pulled-tree
+                                                 ; Since we only changed link, this is only interesting for the hc-in-hc case
+                                                 ]
+                                             (auto-control/resultset resultset link param-ctx)))))]
+    (if (exception/failure? dom-or-e)
+      [:div
+       [:span (-> dom-or-e .-e .-msg)]
+       [:pre (-> dom-or-e .-e .-stack)]]
+      (.-v dom-or-e))))
 
 
 (declare request)
@@ -204,7 +208,8 @@
   (let [param-ctx (assoc param-ctx :query-params query-params)]
     (condp = (links/link-type link)
       :link-query (requests-for-link-query link query-params param-ctx recurse?)
-      :link-entity (requests-for-link-entity link query-params param-ctx recurse?))))
+      :link-entity (requests-for-link-entity link query-params param-ctx recurse?)
+      nil)))
 
 
 (defn request [params-map param-ctx recurse?]

@@ -147,4 +147,6 @@
                                                            (update :form/field #(filter-visible-fields % param-ctx)))}]
             resultset (->> (if single-result-as-entity? [resultset] resultset)
                            (mapv #(assoc {} :entity %)))]
-        (ui-for-resultset single-result-as-entity? ordered-find-elements resultset link param-ctx)))))
+        (ui-for-resultset single-result-as-entity? ordered-find-elements resultset link param-ctx))
+
+      [:div "Unable to render unknown link type"])))
