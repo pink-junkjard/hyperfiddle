@@ -27,7 +27,7 @@
                    :link/renderer
                    :link-ctx/formula
                    :link-ctx/visible?
-                   :link/tx-fn
+                   :link-ctx/tx-fn
                    :link/bindings
                    :link-query/value} (-> attribute :attribute/ident))
     :db.type/code
@@ -88,7 +88,7 @@
        (mapv (fn [{:keys [:link-ctx/link] :as link-ctx}]
                (let [props (links/build-link-props link-ctx param-ctx)]
                  ^{:key (:db/id link-ctx)}
-                 [(:navigate-cmp param-ctx) props (:link/prompt link) param-ctx])))))
+                 [(:navigate-cmp param-ctx) props (:link-ctx/prompt link-ctx) param-ctx])))))
 
 
 (defn non-repeating-links [link param-ctx]
@@ -99,7 +99,7 @@
        (map (fn [{:keys [:link-ctx/link] :as link-ctx}]
               (let [props (links/build-link-props link-ctx param-ctx)]
                 ^{:key (:db/id link-ctx)}
-                [(:navigate-cmp param-ctx) props (:link/prompt link) param-ctx])))))
+                [(:navigate-cmp param-ctx) props (:link-ctx/prompt link-ctx) param-ctx])))))
 
 
 (defn filter-visible-fields [old-fields param-ctx]

@@ -22,7 +22,7 @@
         (filter #(links/link-visible? % param-ctx))
         (map (fn [{:keys [:link-ctx/link] :as link-ctx}]
                ^{:key (:db/id link-ctx)}
-               [(:navigate-cmp param-ctx) (links/build-link-props link-ctx param-ctx) (:link/prompt link) param-ctx]))
+               [(:navigate-cmp param-ctx) (links/build-link-props link-ctx param-ctx) (:link-ctx/prompt link-ctx) param-ctx]))
         (interpose " · "))])
 
 

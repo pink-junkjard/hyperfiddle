@@ -138,7 +138,7 @@
            (filter #(links/link-visible? % param-ctx))
            (map (fn [link-ctx]
                   (let [props (assoc (links/build-link-props link-ctx param-ctx) :key (:db/id link-ctx))]
-                    ((:navigate-cmp param-ctx) props (-> link-ctx :link-ctx/link :link/prompt) param-ctx))))
+                    ((:navigate-cmp param-ctx) props (-> link-ctx :link-ctx/prompt) param-ctx))))
            (interpose " · "))]]))
 
 
@@ -182,6 +182,6 @@
                  (map (fn [{:keys [:link-ctx/link] :as link-ctx}]
                         (let [props (links/build-link-props link-ctx param-ctx)]
                           ^{:key (:db/id link-ctx)}
-                          [(:navigate-cmp param-ctx) props (:link/prompt link) param-ctx])))
+                          [(:navigate-cmp param-ctx) props (:link-ctx/prompt link-ctx) param-ctx])))
                  (interpose " · "))]]]
          [body resultset ordered-find-elements repeating-link-ctxs sort-col param-ctx]]))))
