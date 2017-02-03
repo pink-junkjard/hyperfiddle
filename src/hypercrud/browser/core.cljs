@@ -77,10 +77,8 @@
                                  [(:navigate-cmp param-ctx) props label param-ctx]))
                     :inline-resultset (fn [ident param-ctx]
                                         (let [anchor (get anchors ident)
-                                              link (->> (request-for-link (-> anchor :anchor/link :db/id))
-                                                        (hc/hydrate (:peer param-ctx))
-                                                        ; todo should we be fmaping this and let the users handle any exception?
-                                                        (exception/extract))
+                                              ; todo should we be fmaping this and let the users handle any exception?
+                                              link @(hc/hydrate (:peer param-ctx) (request-for-link (-> anchor :anchor/link :db/id)))
                                               params-map (links/build-url-params-map anchor param-ctx)
                                               query-params (:query-params params-map)
                                               query-value
@@ -105,7 +103,7 @@
                       (hc/hydrate peer)
                       exception/extract
                       (system-links/generate-system-link system-link-dbid)))
-               (exception/extract (hc/hydrate peer (request-for-link (:link-dbid params-map)))))
+               @(hc/hydrate peer (request-for-link (:link-dbid params-map))))
         param-ctx (assoc param-ctx :query-params query-params)
         request (condp = (links/link-type link)
                   :link-query (let [link-query (:link/request link)
