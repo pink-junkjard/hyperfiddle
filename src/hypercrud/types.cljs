@@ -89,16 +89,15 @@
                              :pull-exps pull-exps
                              not-found)))
 
-
-(deftype EntityRequest [dbid dbval pull-exp]
-  Object (toString [_] (str "#EReq" (pr-str [dbid dbval pull-exp])))
+(deftype EntityRequest [dbid-s dbval pull-exp]
+  Object (toString [_] (str "#EReq" (pr-str [dbid-s dbval pull-exp])))
   IPrintWithWriter (-pr-writer [o writer _] (-write writer (.toString o)))
-  IHash (-hash [this] (hash [dbid dbval pull-exp]))
+  IHash (-hash [this] (hash [dbid-s dbval pull-exp]))
   IEquiv (-equiv [this other] (= (hash this) (hash other)))
   ILookup
   (-lookup [o k] (get o k nil))
   (-lookup [o k not-found] (condp = k
-                             :dbid dbid
+                             :dbid-s dbid-s
                              :dbval dbval
                              :pull-exp pull-exp
                              not-found)))
@@ -113,7 +112,7 @@
 (deftype EntityRequestTransitHandler []
   Object
   (tag [this v] "EReq")
-  (rep [this v] [(.-dbid v) (.-dbval v) (.-pull-exp v)])
+  (rep [this v] [(.-dbid-s v) (.-dbval v) (.-pull-exp v)])
   (stringRep [this v] nil))
 
 (defn QueryRequestTransitReader [v] (apply ->QueryRequest v))

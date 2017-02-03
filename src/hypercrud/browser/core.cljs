@@ -7,7 +7,7 @@
             [hypercrud.client.core :as hc]
             [hypercrud.compile.eval :refer [eval]]
             [hypercrud.form.q-util :as q-util]
-            [hypercrud.types :refer [->DbId ->DbVal ->EntityRequest]]
+            [hypercrud.types :as types :refer [->DbId ->DbVal ->EntityRequest]]
             [hypercrud.ui.auto-control :as auto-control]
             [hypercrud.util :as util]))
 
@@ -185,10 +185,15 @@
       [(->DbVal (get-in link [:link/request :link-entity/connection :db/id :id]) nil)
        request]
       (if recurse?
-        (if-let [entity (exception/extract (hc/hydrate peer request) nil)]
-          (let [form (get-in link [:link/request :link-entity/form])
-                param-ctx (assoc param-ctx :entity entity)]
-            (dependent-requests (:link/anchor link) [form] param-ctx)))))))
+        (if-let [response (exception/extract (hc/hydrate peer request) nil)]
+          (let [form (get-in link [:link/request :link-entity/form])]
+            (if (instance? types/DbId (:dbid-s request))
+              (let [param-ctx (assoc param-ctx :entity response)]
+                (dependent-requests (:link/anchor link) [form] param-ctx))
+              (->> response
+                   (mapcat (fn [entity]
+                             (let [param-ctx (assoc param-ctx :entity entity)]
+                               (dependent-requests (:link/anchor link) [form] param-ctx))))))))))))
 
 
 (defn requests-for-link [link query-params param-ctx recurse?]

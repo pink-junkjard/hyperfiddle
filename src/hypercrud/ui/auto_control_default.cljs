@@ -112,34 +112,39 @@
 
 
 (defmethod auto-control/resultset :default [resultset link param-ctx]
-  (condp = (links/link-type link)
-    :link-query
-    (let [link-query (:link/request link)
-          q (some-> link-query :link-query/value reader/read-string)
-          ordered-find-elements (->> (find-elements-util/order-find-elements (:link-query/find-element link-query) q)
-                                     (mapv (fn [find-element]
-                                             (update-in find-element [:find-element/form :form/field] #(filter-visible-fields % param-ctx))))
-                                     (remove #(empty? (get-in % [:find-element/form :form/field]))))]
-      (if (:link-query/single-result-as-entity? link-query)
-        (if-let [result (first resultset)]
-          (let [param-ctx (assoc param-ctx :result result)]
-            [:div
-             (->> (concat (repeating-links link param-ctx)
-                          (non-repeating-links link (dissoc param-ctx :result)))
-                  (interpose " · "))
-             [:div
-              (map (fn [{:keys [:find-element/form] :as find-element}]
-                     (let [entity (get result (:find-element/name find-element))]
-                       ^{:key (hash [(:db/id entity) (:db/id form)])}
-                       [form/form entity form (:link/anchor link) param-ctx]))
-                   ordered-find-elements)]])
-          [:div "No results"])
-        ^{:key (hc/t (:peer param-ctx))}
-        [table/table resultset ordered-find-elements (:link/anchor link) param-ctx]))
+  (let [ui-for-resultset (fn [single-result-as-entity? ordered-find-elements resultset link param-ctx]
+                           (if single-result-as-entity?
+                             (if-let [result (first resultset)]
+                               (let [param-ctx (assoc param-ctx :result result)]
+                                 [:div
+                                  (->> (concat (repeating-links link param-ctx)
+                                               (non-repeating-links link (dissoc param-ctx :result)))
+                                       (interpose " · "))
+                                  [:div
+                                   (map (fn [{:keys [:find-element/form] :as find-element}]
+                                          (let [entity (get result (:find-element/name find-element))]
+                                            ^{:key (hash [(:db/id entity) (:db/id form)])}
+                                            [form/form entity form (:link/anchor link) param-ctx]))
+                                        ordered-find-elements)]])
+                               [:div "No results"])
+                             ^{:key (hc/t (:peer param-ctx))}
+                             [table/table resultset ordered-find-elements (:link/anchor link) param-ctx]))]
+    (condp = (links/link-type link)
+      :link-query
+      (let [link-query (:link/request link)
+            q (some-> link-query :link-query/value reader/read-string)
+            single-result-as-entity? (:link-query/single-result-as-entity? link-query)
+            ordered-find-elements (->> (find-elements-util/order-find-elements (:link-query/find-element link-query) q)
+                                       (mapv (fn [find-element]
+                                               (update-in find-element [:find-element/form :form/field] #(filter-visible-fields % param-ctx))))
+                                       (remove #(empty? (get-in % [:find-element/form :form/field]))))]
+        (ui-for-resultset single-result-as-entity? ordered-find-elements resultset link param-ctx))
 
-    :link-entity
-    (let [entity resultset
-          form (-> (get-in link [:link/request :link-entity/form])
-                   (update :form/field #(filter-visible-fields % param-ctx)))]
-      ^{:key (hash [(:db/id entity) (:db/id form)])}
-      [form/form entity form (:link/anchor link) param-ctx])))
+      :link-entity
+      (let [single-result-as-entity? (map? resultset)
+            ordered-find-elements [{:find-element/name :entity
+                                    :find-element/form (-> (get-in link [:link/request :link-entity/form])
+                                                           (update :form/field #(filter-visible-fields % param-ctx)))}]
+            resultset (->> (if single-result-as-entity? [resultset] resultset)
+                           (mapv #(assoc {} :entity %)))]
+        (ui-for-resultset single-result-as-entity? ordered-find-elements resultset link param-ctx)))))

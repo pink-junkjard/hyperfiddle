@@ -40,8 +40,8 @@
                                      :anchor/prompt (str "edit " (:find-element/name find-element))
                                      :anchor/link (system-edit-link find-element (:db/id parent-link))
                                      :anchor/repeating? true
-                                     :anchor/formula (pr-str {:entity-dbid (pr-str `(fn [~'ctx]
-                                                                                      (get-in ~'ctx [:result ~(:find-element/name find-element) :db/id])))})}
+                                     :anchor/formula (pr-str {:entity-dbid-s (pr-str `(fn [~'ctx]
+                                                                                        (get-in ~'ctx [:result ~(:find-element/name find-element) :db/id])))})}
                                     {:db/id create-anchor-dbid
                                      :anchor/ident :create
                                      :anchor/prompt (str "create " (:find-element/name find-element))
