@@ -42,40 +42,14 @@
                                      :anchor/repeating? true
                                      :anchor/formula (pr-str {:entity-dbid-s (pr-str `(fn [~'ctx]
                                                                                         (get-in ~'ctx [:result ~(:find-element/name find-element) :db/id])))})}
+
                                     {:db/id create-anchor-dbid
                                      :anchor/ident :create
                                      :anchor/prompt (str "create " (:find-element/name find-element))
-                                     :anchor/tx-fn (let [hc-a (let [fields (-> find-element :find-element/form :form/field)
-                                                                    ; attempt to use a string or keyword field
-                                                                    ; todo unnecessary once valid nil cases are created/tested for all types
-                                                                    field (or (->> fields
-                                                                                   (filter (fn [field]
-                                                                                             (contains? #{:db.type/string :db.type/keyword}
-                                                                                                        (-> field :field/attribute :attribute/valueType :db/ident))))
-                                                                                   first)
-                                                                              (first fields))]
-                                                                (:field/attribute field))
-                                                         a (-> hc-a :attribute/ident)
-                                                         valueType (-> hc-a :attribute/valueType :db/ident)
-                                                         v (condp = valueType
-                                                             :db.type/keyword :nil
-                                                             :db.type/string ""
-                                                             :db.type/boolean false
-                                                             :db.type/long 0
-                                                             :db.type/bigint 0
-                                                             :db.type/float 0.0
-                                                             :db.type/double 0.0
-                                                             :db.type/bigdec 0
-                                                             :db.type/ref '(hypercrud.types/->DbId nil nil) ;todo
-                                                             :db.type/instant '(js/Date nil)
-                                                             :db.type/uuid '(random-uuid)
-                                                             :db.type/uri ""
-                                                             :db.type/bytes [])
-                                                         conn-id (-> find-element :find-element/connection :db/id :id)]
-                                                     (pr-str `(fn [~'ctx]
-                                                                (let [~'e (hypercrud.client.core/*temp-id!* ~conn-id)]
-                                                                  {:tx [[:db/add ~'e ~a ~v]]}))))
-                                     :anchor/repeating? false}])))
+                                     :anchor/link (system-edit-link find-element (:db/id parent-link))
+                                     :anchor/repeating? false
+                                     :anchor/formula (pr-str {:entity-dbid-s (pr-str `(fn [~'ctx]
+                                                                                        (hc/*temp-id!* ~(get-in find-element [:find-element/connection :db/id :id]))))})}])))
                        (into #{}))]
       (assoc parent-link :link/anchor anchors))
 
