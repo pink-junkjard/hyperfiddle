@@ -6,7 +6,7 @@
 (defmulti multi-select-markup (fn [click-add! control-tuples] :default))
 
 
-(defn multi-select* [markupfn entity add-item! field link-ctxs props {:keys [user-swap!] :as param-ctx}]
+(defn multi-select* [markupfn entity add-item! field anchors props {:keys [user-swap!] :as param-ctx}]
   (assert false "assoc entity no longer works. todo")
   (assert false "todo readonly")
   (let [ident (-> field :field/attribute :attribute/ident)
@@ -14,7 +14,7 @@
         control-tuples (seq (mapv (fn [eid]
                                     (let [click-remove! #(user-swap! {:tx (tx/edit-entity (:db/id entity) ident [eid] nil)})
                                           new-field (assoc field :cardinality :db.cardinality/one)
-                                          control [auto-control (assoc entity ident eid) new-field link-ctxs param-ctx]]
+                                          control [auto-control (assoc entity ident eid) new-field anchors param-ctx]]
                                       [eid click-remove! control]))
                                   value))]
     (markupfn add-item! control-tuples)))

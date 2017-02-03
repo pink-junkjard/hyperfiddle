@@ -39,12 +39,12 @@
                                                {:attribute/valueType [:db/id :db/ident]}
                                                {:attribute/cardinality [:db/id :db/ident]}
                                                {:attribute/unique [:db/id :db/ident]}]}
-                            ; we don't have to recurse for options-link-ctxs
+                            ; we don't have to recurse for options-anchors
                             ; because we know these links don't have additional links
-                            {:field/options-link-ctx ['* {:link-ctx/link
-                                                          ['* {:link/request ['*
-                                                                              {:link-entity/form inner-form-pull-exp}
-                                                                              {:link-query/find-element ['* {:find-element/form inner-form-pull-exp}]}]}]}]}]}]]
+                            {:field/options-anchor ['* {:anchor/link
+                                                        ['* {:link/request ['*
+                                                                            {:link-entity/form inner-form-pull-exp}
+                                                                            {:link-query/find-element ['* {:find-element/form inner-form-pull-exp}]}]}]}]}]}]]
     (->EntityRequest link-dbid (->DbVal hc/*root-conn-id* nil)
                      ['* {:link/request ['*
                                          :link-entity/connection
@@ -55,7 +55,7 @@
                                          ; get all our forms for this link
                                          {:link-query/find-element ['* {:find-element/form form-pull-exp}]}]
                           ; get links one layer deep; todo not sure if we need this
-                          :link/link-ctx ['* {:link-ctx/link ['*]}]}
+                          :link/anchor ['* {:anchor/link ['*]}]}
                       {:hypercrud/owner ['*]}])))
 
 
@@ -67,21 +67,21 @@
                         (fn [resultset link param-ctx]
                           [:pre (pprint/pprint error)])
                         f)))
-        link-ctxs (->> (:link/link-ctx link)
-                       (mapv (juxt #(-> % :link-ctx/ident) identity))
-                       (into {}))
+        anchors (->> (:link/anchor link)
+                     (mapv (juxt #(-> % :anchor/ident) identity))
+                     (into {}))
         param-ctx (assoc param-ctx
                     :link-fn (fn [ident label param-ctx]
-                               (let [link-ctx (get link-ctxs ident)
-                                     props (links/build-link-props link-ctx param-ctx)]
+                               (let [anchor (get anchors ident)
+                                     props (links/build-link-props anchor param-ctx)]
                                  [(:navigate-cmp param-ctx) props label param-ctx]))
                     :inline-resultset (fn [ident param-ctx]
-                                        (let [link-ctx (get link-ctxs ident)
-                                              link (->> (request-for-link (-> link-ctx :link-ctx/link :db/id))
+                                        (let [anchor (get anchors ident)
+                                              link (->> (request-for-link (-> anchor :anchor/link :db/id))
                                                         (hc/hydrate (:peer param-ctx))
                                                         ; todo should we be fmaping this and let the users handle any exception?
                                                         (exception/extract))
-                                              params-map (links/build-url-params-map link-ctx param-ctx)
+                                              params-map (links/build-url-params-map anchor param-ctx)
                                               query-params (:query-params params-map)
                                               query-value
                                               (condp = (links/link-type link)
@@ -140,9 +140,9 @@
     ; if we are a ref we ALWAYS need the query from the field options
     ; EXCEPT when we are component, in which case no options are rendered, just a form, handled below
     (if (and is-ref (not isComponent))
-      (if-let [options-link-ctx (:field/options-link-ctx field)]
+      (if-let [options-anchor (:field/options-anchor field)]
         (let [param-ctx (assoc param-ctx :debug (str "field-options:" (:db/id field)))]
-          (request (links/build-url-params-map options-link-ctx param-ctx) param-ctx false))))))
+          (request (links/build-url-params-map options-anchor param-ctx) param-ctx false))))))
 
 
 (defn form-option-requests "get the form options recursively for all expanded forms"
@@ -150,13 +150,13 @@
   (mapcat #(field-requests param-ctx %) (:form/field form)))
 
 
-(defn dependent-requests [link-ctxs forms param-ctx]
+(defn dependent-requests [anchors forms param-ctx]
   (let [option-requests (mapcat #(form-option-requests % param-ctx) forms)
-        inline-requests (->> link-ctxs
-                             (filter :link-ctx/render-inline?)
-                             (mapcat (fn [inline-link-ctx]
-                                       (let [param-ctx (assoc param-ctx :debug (str "inline-query:" (:db/id inline-link-ctx)))]
-                                         (request (links/build-url-params-map inline-link-ctx param-ctx) param-ctx true)))))]
+        inline-requests (->> anchors
+                             (filter :anchor/render-inline?)
+                             (mapcat (fn [inline-anchor]
+                                       (let [param-ctx (assoc param-ctx :debug (str "inline-query:" (:db/id inline-anchor)))]
+                                         (request (links/build-url-params-map inline-anchor param-ctx) param-ctx true)))))]
     (concat option-requests inline-requests)))
 
 
@@ -176,7 +176,7 @@
                  (mapcat (fn [result]
                            (let [forms (mapv :find-element/form (:link-query/find-element link-query))
                                  param-ctx (assoc param-ctx :result result)]
-                             (dependent-requests (:link/link-ctx link) forms param-ctx)))))))))))
+                             (dependent-requests (:link/anchor link) forms param-ctx)))))))))))
 
 
 (defn requests-for-link-entity [link query-params {:keys [peer] :as param-ctx} recurse?]
@@ -188,7 +188,7 @@
         (if-let [entity (exception/extract (hc/hydrate peer request) nil)]
           (let [form (get-in link [:link/request :link-entity/form])
                 param-ctx (assoc param-ctx :entity entity)]
-            (dependent-requests (:link/link-ctx link) [form] param-ctx)))))))
+            (dependent-requests (:link/anchor link) [form] param-ctx)))))))
 
 
 (defn requests-for-link [link query-params param-ctx recurse?]

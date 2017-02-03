@@ -79,13 +79,13 @@
                    [:span.sort-arrow arrow]]))))))
 
 
-(defn build-row-cells [form entity repeating-link-ctxs {:keys [peer] :as param-ctx}]
-  (let [link-fn (let [link-ctx-by-ident (->> repeating-link-ctxs
-                                             (mapv (juxt #(-> % :link-ctx/ident) identity))
-                                             (into {}))]
+(defn build-row-cells [form entity repeating-anchors {:keys [peer] :as param-ctx}]
+  (let [link-fn (let [anchor-by-ident (->> repeating-anchors
+                                           (mapv (juxt #(-> % :anchor/ident) identity))
+                                           (into {}))]
                   (fn [ident label param-ctx]
-                    (let [link-ctx (get link-ctx-by-ident ident)
-                          props (links/build-link-props link-ctx param-ctx)]
+                    (let [anchor (get anchor-by-ident ident)
+                          props (links/build-link-props anchor param-ctx)]
                       [(:navigate-cmp param-ctx) props label param-ctx])))
         param-ctx (assoc param-ctx :color ((:color-fn param-ctx) entity param-ctx)
                                    :owner ((:owner-fn param-ctx) entity param-ctx))
@@ -102,8 +102,8 @@
                         (try
                           (renderer peer link-fn entity)
                           (catch :default e (pr-str e))))])
-                   (let [link-ctxs (filter #(= (:db/id field) (some-> % :link-ctx/field :db/id)) repeating-link-ctxs)]
-                     [auto-table-cell entity field link-ctxs param-ctx]))])))))
+                   (let [anchors (filter #(= (:db/id field) (some-> % :anchor/field :db/id)) repeating-anchors)]
+                     [auto-table-cell entity field anchors param-ctx]))])))))
 
 
 ;(defn links-cell [entity form repeating-links retract-entity! show-links? navigate-cmp]
@@ -124,25 +124,25 @@
 ;        [:div {:on-click #(reset! open? true)} "⚙"]))))
 
 
-(defn table-row [result ordered-find-elements repeating-link-ctxs param-ctx]
+(defn table-row [result ordered-find-elements repeating-anchors param-ctx]
   (let [param-ctx (assoc param-ctx :result result)]
     [:tr
      (mapcat (fn [find-element]
                (let [form (:find-element/form find-element)
                      entity (get result (:find-element/name find-element))]
-                 (build-row-cells form entity repeating-link-ctxs param-ctx)))
+                 (build-row-cells form entity repeating-anchors param-ctx)))
              ordered-find-elements)
      [:td.link-cell {:key :link-cell}
-      (->> repeating-link-ctxs
-           (filter #(nil? (:link-ctx/field %)))
+      (->> repeating-anchors
+           (filter #(nil? (:anchor/field %)))
            (filter #(links/link-visible? % param-ctx))
-           (map (fn [link-ctx]
-                  (let [props (assoc (links/build-link-props link-ctx param-ctx) :key (:db/id link-ctx))]
-                    ((:navigate-cmp param-ctx) props (-> link-ctx :link-ctx/prompt) param-ctx))))
+           (map (fn [anchor]
+                  (let [props (assoc (links/build-link-props anchor param-ctx) :key (:db/id anchor))]
+                    ((:navigate-cmp param-ctx) props (-> anchor :anchor/prompt) param-ctx))))
            (interpose " · "))]]))
 
 
-(defn body [resultset ordered-find-elements repeating-link-ctxs sort-col param-ctx]
+(defn body [resultset ordered-find-elements repeating-anchors sort-col param-ctx]
   [:tbody
    (let [[form-dbid sort-key direction] @sort-col
          sort-eids (fn [resultset]
@@ -164,24 +164,24 @@
           sort-eids
           (map (fn [result]
                  ^{:key (hash (util/map-values :db/id result))}
-                 [table-row result ordered-find-elements repeating-link-ctxs param-ctx]))))])
+                 [table-row result ordered-find-elements repeating-anchors param-ctx]))))])
 
 
-(defn table [resultset ordered-find-elements link-ctxs param-ctx]
+(defn table [resultset ordered-find-elements anchors param-ctx]
   (let [sort-col (r/atom nil)]
-    (fn [resultset ordered-find-elements link-ctxs param-ctx]
-      (let [repeating-link-ctxs (filter :link-ctx/repeating? link-ctxs)]
+    (fn [resultset ordered-find-elements anchors param-ctx]
+      (let [repeating-anchors (filter :anchor/repeating? anchors)]
         [:table.ui-table
          [:thead
           [:tr
            (build-col-heads ordered-find-elements sort-col)
            [:td.link-cell {:key :link-cell}
-            (->> (remove :link-ctx/repeating? link-ctxs)
-                 (filter #(nil? (:link-ctx/field %)))
+            (->> (remove :anchor/repeating? anchors)
+                 (filter #(nil? (:anchor/field %)))
                  (filter #(links/link-visible? % param-ctx))
-                 (map (fn [{:keys [:link-ctx/link] :as link-ctx}]
-                        (let [props (links/build-link-props link-ctx param-ctx)]
-                          ^{:key (:db/id link-ctx)}
-                          [(:navigate-cmp param-ctx) props (:link-ctx/prompt link-ctx) param-ctx])))
+                 (map (fn [{:keys [:anchor/link] :as anchor}]
+                        (let [props (links/build-link-props anchor param-ctx)]
+                          ^{:key (:db/id anchor)}
+                          [(:navigate-cmp param-ctx) props (:anchor/prompt anchor) param-ctx])))
                  (interpose " · "))]]]
-         [body resultset ordered-find-elements repeating-link-ctxs sort-col param-ctx]]))))
+         [body resultset ordered-find-elements repeating-anchors sort-col param-ctx]]))))

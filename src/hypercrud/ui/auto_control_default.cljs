@@ -17,7 +17,7 @@
 ; need to limit it to parent.
 
 
-(defn build-props [entity field link-ctxs param-ctx]
+(defn build-props [entity field anchors param-ctx]
   {:read-only ((get param-ctx :read-only (constantly false)) param-ctx)})
 
 
@@ -25,9 +25,9 @@
   ; todo this should be included in :hyperfiddle/edit-link's :link/renderer
   (if (contains? #{:database/enums
                    :link/renderer
-                   :link-ctx/formula
-                   :link-ctx/visible?
-                   :link-ctx/tx-fn
+                   :anchor/formula
+                   :anchor/visible?
+                   :anchor/tx-fn
                    :link/bindings
                    :link-query/value} (-> attribute :attribute/ident))
     :db.type/code
@@ -35,11 +35,11 @@
 
 
 (defmethod auto-control/auto-control :default
-  [entity field link-ctxs param-ctx]
+  [entity field anchors param-ctx]
   (let [{:keys [:attribute/cardinality :attribute/isComponent]} (:field/attribute field)
         valueType (ascertain-valueType (:field/attribute field))
         cardinality (:db/ident cardinality)
-        props (build-props entity field link-ctxs param-ctx)
+        props (build-props entity field anchors param-ctx)
         widget (cond
                  (and (= valueType :db.type/boolean) (= cardinality :db.cardinality/one)) widget/select-boolean
                  (and (= valueType :db.type/keyword) (= cardinality :db.cardinality/one) (not (:read-only props))) widget/input-keyword
@@ -53,15 +53,15 @@
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) widget/table-many-ref
                  (:read-only props) widget/text
                  :else widget/default)]
-    (widget entity field link-ctxs props param-ctx)))
+    (widget entity field anchors props param-ctx)))
 
 
 (defmethod auto-control/auto-table-cell :default
-  [entity field link-ctxs param-ctx]
+  [entity field anchors param-ctx]
   (let [{:keys [:attribute/cardinality :attribute/isComponent]} (:field/attribute field)
         valueType (ascertain-valueType (:field/attribute field))
         cardinality (:db/ident cardinality)
-        props (build-props entity field link-ctxs param-ctx)
+        props (build-props entity field anchors param-ctx)
         widget (cond
                  (and (= valueType :db.type/boolean) (= cardinality :db.cardinality/one)) widget/select-boolean
                  (and (= valueType :db.type/keyword) (= cardinality :db.cardinality/one) (not (:read-only props))) widget/input-keyword
@@ -77,29 +77,29 @@
                  (and (= cardinality :db.cardinality/many)) table-cell/other-many
                  (:read-only props) widget/text
                  :else widget/default)]
-    (widget entity field link-ctxs props param-ctx)))
+    (widget entity field anchors props param-ctx)))
 
 
 (defn repeating-links [link param-ctx]
-  (->> (:link/link-ctx link)
-       (filter :link-ctx/repeating?)
-       (filter #(nil? (:link-ctx/field %)))
+  (->> (:link/anchor link)
+       (filter :anchor/repeating?)
+       (filter #(nil? (:anchor/field %)))
        (filter #(links/link-visible? % param-ctx))
-       (mapv (fn [{:keys [:link-ctx/link] :as link-ctx}]
-               (let [props (links/build-link-props link-ctx param-ctx)]
-                 ^{:key (:db/id link-ctx)}
-                 [(:navigate-cmp param-ctx) props (:link-ctx/prompt link-ctx) param-ctx])))))
+       (mapv (fn [{:keys [:anchor/link] :as anchor}]
+               (let [props (links/build-link-props anchor param-ctx)]
+                 ^{:key (:db/id anchor)}
+                 [(:navigate-cmp param-ctx) props (:anchor/prompt anchor) param-ctx])))))
 
 
 (defn non-repeating-links [link param-ctx]
-  (->> (:link/link-ctx link)
-       (remove :link-ctx/repeating?)
-       (filter #(nil? (:link-ctx/field %)))
+  (->> (:link/anchor link)
+       (remove :anchor/repeating?)
+       (filter #(nil? (:anchor/field %)))
        (filter #(links/link-visible? % param-ctx))
-       (map (fn [{:keys [:link-ctx/link] :as link-ctx}]
-              (let [props (links/build-link-props link-ctx param-ctx)]
-                ^{:key (:db/id link-ctx)}
-                [(:navigate-cmp param-ctx) props (:link-ctx/prompt link-ctx) param-ctx])))))
+       (map (fn [{:keys [:anchor/link] :as anchor}]
+              (let [props (links/build-link-props anchor param-ctx)]
+                ^{:key (:db/id anchor)}
+                [(:navigate-cmp param-ctx) props (:anchor/prompt anchor) param-ctx])))))
 
 
 (defn filter-visible-fields [old-fields param-ctx]
@@ -131,15 +131,15 @@
               (map (fn [{:keys [:find-element/form] :as find-element}]
                      (let [entity (get result (:find-element/name find-element))]
                        ^{:key (hash [(:db/id entity) (:db/id form)])}
-                       [form/form entity form (:link/link-ctx link) param-ctx]))
+                       [form/form entity form (:link/anchor link) param-ctx]))
                    ordered-find-elements)]])
           [:div "No results"])
         ^{:key (hc/t (:peer param-ctx))}
-        [table/table resultset ordered-find-elements (:link/link-ctx link) param-ctx]))
+        [table/table resultset ordered-find-elements (:link/anchor link) param-ctx]))
 
     :link-entity
     (let [entity resultset
           form (-> (get-in link [:link/request :link-entity/form])
                    (update :form/field #(filter-visible-fields % param-ctx)))]
       ^{:key (hash [(:db/id entity) (:db/id form)])}
-      [form/form entity form (:link/link-ctx link) param-ctx])))
+      [form/form entity form (:link/anchor link) param-ctx])))

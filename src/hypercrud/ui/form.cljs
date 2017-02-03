@@ -6,7 +6,7 @@
             [hypercrud.ui.renderer :as renderer]))
 
 
-(defn field [entity {:keys [:field/prompt] :as field} link-ctxs {:keys [peer] :as param-ctx}]
+(defn field [entity {:keys [:field/prompt] :as field} anchors {:keys [peer] :as param-ctx}]
   [:div.field
    [:label
     (let [docstring (-> field :field/attribute :attribute/doc)]
@@ -15,13 +15,13 @@
         prompt))]
    (if-let [renderer (renderer/renderer-for-attribute (:field/attribute field))]
      (let [{renderer :value error :error} (eval renderer)
-           repeating-link-ctxs (->> link-ctxs
-                                    (filter :link-ctx/repeating?)
-                                    (mapv (juxt #(-> % :link-ctx/ident) identity))
-                                    (into {}))
+           repeating-anchors (->> anchors
+                                  (filter :anchor/repeating?)
+                                  (mapv (juxt #(-> % :anchor/ident) identity))
+                                  (into {}))
            link-fn (fn [ident label param-ctx]
-                     (let [link-ctx (get repeating-link-ctxs ident)
-                           props (links/build-link-props link-ctx param-ctx)]
+                     (let [anchor (get repeating-anchors ident)
+                           props (links/build-link-props anchor param-ctx)]
                        [(:navigate-cmp param-ctx) props label param-ctx]))]
        [:div.value
         (if error
@@ -29,11 +29,11 @@
           (try
             (renderer peer link-fn entity)
             (catch :default e (pr-str e))))])
-     (let [link-ctxs (filter #(= (:db/id field) (some-> % :link-ctx/field :db/id)) link-ctxs)]
-       [auto-control entity field link-ctxs param-ctx]))])
+     (let [anchors (filter #(= (:db/id field) (some-> % :anchor/field :db/id)) anchors)]
+       [auto-control entity field anchors param-ctx]))])
 
 
-(defn form [entity form link-ctxs param-ctx]
+(defn form [entity form anchors param-ctx]
   (let [param-ctx (assoc param-ctx :color ((:color-fn param-ctx) entity param-ctx)
                                    :owner ((:owner-fn param-ctx) entity param-ctx)
                                    :entity entity)
@@ -44,4 +44,4 @@
           (map (fn [fieldinfo]
                  (let [ident (-> fieldinfo :field/attribute :attribute/ident)]
                    ^{:key ident}
-                   [field entity fieldinfo link-ctxs param-ctx]))))]))
+                   [field entity fieldinfo anchors param-ctx]))))]))
