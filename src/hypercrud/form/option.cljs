@@ -1,5 +1,6 @@
 (ns hypercrud.form.option
-  (:require [cats.monad.exception :as exception]
+  (:require [cats.core :as cats :refer-macros [mlet]]
+            [cats.monad.exception :as exception]
             [cljs.reader :as reader]
             [hypercrud.browser.links :as links]
             [hypercrud.client.core :as hc]
@@ -26,16 +27,15 @@
 
 (defn get-option-records [field param-ctx]
   ; we are assuming we have a query link here
-  (let [{find-elements :link-query/find-element q :link-query/value :as link-query} (-> field :field/options-anchor :anchor/link :link/request)]
-    (if-let [q (if-not (empty? q)
-                 (reader/read-string q))]
-      (let [ordered-find-elements (find-elements-util/order-find-elements find-elements q)
-            result-query (let [params-map (merge (:query-params (links/build-url-params-map (:field/options-anchor field) param-ctx))
-                                                 (q-util/build-dbhole-lookup link-query))]
-                           (q-util/query-value q link-query params-map param-ctx))]
-        (->> (hc/hydrate (:peer param-ctx) result-query)
-             (exception/extract)
-             (mapv (fn [result]
-                     (mapv (fn [find-element]
-                             (get result (:find-element/name find-element)))
-                           ordered-find-elements))))))))
+  (let [link-query (-> field :field/options-anchor :anchor/link :link/request)]
+    (mlet [q (exception/try-on (reader/read-string (:link-query/value link-query)))
+           resultset (let [params-map (merge (:query-params (links/build-url-params-map (:field/options-anchor field) param-ctx))
+                                             (q-util/build-dbhole-lookup link-query))
+                           query-value (q-util/query-value q link-query params-map param-ctx)]
+                       (hc/hydrate (:peer param-ctx) query-value))]
+          (let [ordered-find-elements (find-elements-util/order-find-elements (:link-query/find-element link-query) q)]
+            (cats/return (mapv (fn [result]
+                                 (mapv (fn [find-element]
+                                         (get result (:find-element/name find-element)))
+                                       ordered-find-elements))
+                               resultset))))))

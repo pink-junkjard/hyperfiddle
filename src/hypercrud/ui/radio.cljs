@@ -1,5 +1,6 @@
 (ns hypercrud.ui.radio
-  (:require [hypercrud.client.tx :as tx]
+  (:require [cats.monad.exception :as exception]
+            [hypercrud.client.tx :as tx]
             [hypercrud.form.option :as option]))
 
 
@@ -53,14 +54,17 @@
         form-name "TODO"                                    ;form-name in the HTML sense
         change! #(user-swap! {:tx (tx/update-entity-attr entity attribute %)})]
     [:div.value {:key (option/get-key field)}
-     (map (fn [result]
-            (assert (= 1 (count result)) "Cannot use multiple find-elements for an options-link")
-            (let [{:keys [:db/id] :as entity} (first result)
-                  label (option/label-prop field result)
-                  checked? (= id value)]
-              ^{:key (hash id)}
-              [radio-option label form-name #(change! id) checked?]))
-          (option/get-option-records field param-ctx))
+     (let [option-records (option/get-option-records field param-ctx)]
+       (if (exception/failure? option-records)
+         [:span (pr-str (.-e option-records))])
+       (map (fn [result]
+              (assert (= 1 (count result)) "Cannot use multiple find-elements for an options-link")
+              (let [{:keys [:db/id] :as entity} (first result)
+                    label (option/label-prop field result)
+                    checked? (= id value)]
+                ^{:key (hash id)}
+                [radio-option label form-name #(change! id) checked?]))
+            (.-v option-records)))
      ^{:key :blank}
      [radio-option "--" form-name #(change! nil) (= nil value)]]))
 

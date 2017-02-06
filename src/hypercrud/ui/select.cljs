@@ -1,5 +1,6 @@
 (ns hypercrud.ui.select
-  (:require [hypercrud.client.tx :as tx]
+  (:require [cats.monad.exception :as exception]
+            [hypercrud.client.tx :as tx]
             [hypercrud.form.option :as option]
             [hypercrud.types :refer [->DbId]]))
 
@@ -37,20 +38,23 @@
                                         :else-hc-select-option-node (->DbId (js/parseInt select-value 10) conn-id))]
                             (user-swap! {:tx (tx/update-entity-attr entity attribute dbid)}))}]
     (let [option-records (option/get-option-records field param-ctx)]
-      #_(assert (or (nil? value)
-                    (tx/tempid? (:db/id value))
-                    (nil? option-records)                   ; user hasn't picked the query yet but may be about to
-                    (contains? (set option-records) value)) (str "Select options does not contain selected value: " (pr-str value)))
-      [:select.select props (-> (->> option-records
-                                     (mapv (fn [result]
-                                             (assert (= 1 (count result)) "Cannot use multiple find-elements for an options-link")
-                                             (let [entity (first result)
-                                                   dbid (:db/id entity)
-                                                   label-prop (option/label-prop field result)]
-                                               [dbid label-prop])))
-                                     (sort-by second)
-                                     (mapv (fn [[dbid label-prop]]
-                                             ^{:key (hash dbid)}
-                                             [:option {:value (.-id dbid)} label-prop])))
-                                (concat
-                                  [[:option {:key :blank :value ""} "--"]]))])))
+      (if (exception/failure? option-records)
+        [:span (pr-str (.-e option-records))]
+        (let [option-records (.-v option-records)]
+          #_(assert (or (nil? value)
+                        (tx/tempid? (:db/id value))
+                        (nil? option-records)               ; user hasn't picked the query yet but may be about to
+                        (contains? (set option-records) value)) (str "Select options does not contain selected value: " (pr-str value)))
+          [:select.select props (-> (->> option-records
+                                         (mapv (fn [result]
+                                                 (assert (= 1 (count result)) "Cannot use multiple find-elements for an options-link")
+                                                 (let [entity (first result)
+                                                       dbid (:db/id entity)
+                                                       label-prop (option/label-prop field result)]
+                                                   [dbid label-prop])))
+                                         (sort-by second)
+                                         (mapv (fn [[dbid label-prop]]
+                                                 ^{:key (hash dbid)}
+                                                 [:option {:value (.-id dbid)} label-prop])))
+                                    (concat
+                                      [[:option {:key :blank :value ""} "--"]]))])))))
