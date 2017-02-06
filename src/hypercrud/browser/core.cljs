@@ -145,7 +145,7 @@
       (if-let [options-anchor (:field/options-anchor field)]
         (let [params-map (links/build-url-params-map options-anchor param-ctx)
               param-ctx (-> param-ctx
-                            (assoc :debug (str "field-options:" (:db/id field)))
+                            (update :debug #(str % ">field-options[" (:db/id field) "]"))
                             (dissoc :entity :request))]
           (request params-map param-ctx false))))))
 
@@ -162,7 +162,7 @@
                              (mapcat (fn [inline-anchor]
                                        (let [params-map (links/build-url-params-map inline-anchor param-ctx)
                                              param-ctx (-> param-ctx
-                                                           (assoc :debug (str "inline-query:" (:db/id inline-anchor)))
+                                                           (update :debug #(str % ">inline-link[" (:db/id inline-anchor) ":" (:anchor/prompt inline-anchor) "]"))
                                                            (dissoc :entity :request))]
                                          (request params-map param-ctx true)))))]
     (concat option-requests inline-requests)))
