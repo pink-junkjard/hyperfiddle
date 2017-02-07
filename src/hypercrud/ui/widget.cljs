@@ -15,25 +15,27 @@
             [reagent.core :as r]))
 
 
-(defn render-anchors [anchors param-ctx]
-  [:div.links
-   (->> anchors
-        (remove :anchor/render-inline?)
-        (filter #(links/link-visible? % param-ctx))
-        (map (fn [{:keys [:anchor/link] :as anchor}]
+(defn render-anchors
+  ([anchor-ctx-pairs]
+   (->> anchor-ctx-pairs
+        (filter (partial apply links/link-visible?))
+        (map (fn [[anchor param-ctx]]
                ^{:key (:db/id anchor)}
                [(:navigate-cmp param-ctx) (links/build-link-props anchor param-ctx) (:anchor/prompt anchor) param-ctx]))
-        (interpose " · "))])
+        (interpose " · ")))
+  ([anchors param-ctx]
+   (render-anchors (map vector anchors (repeatedly (constantly param-ctx))))))
 
 
 (defn render-inline-links
   ([field anchors param-ctx]
    (render-inline-links anchors (assoc param-ctx :isComponent (-> field :field/attribute :attribute/isComponent))))
   ([anchors param-ctx]
-   (->> anchors
-        (filter :anchor/render-inline?)
-        (filter #(links/link-visible? % param-ctx))
-        (map (fn [anchor]
+   (render-inline-links (map vector anchors (repeatedly (constantly param-ctx)))))
+  ([anchor-ctx-pairs]
+   (->> anchor-ctx-pairs
+        (filter (partial apply links/link-visible?))
+        (map (fn [[anchor param-ctx]]
                (let [params-map (links/build-url-params-map anchor param-ctx)
                      ui-param-ctx (-> param-ctx
                                       (update :debug #(str % ">inline-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]"))
@@ -89,21 +91,21 @@
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)]
     [:div.value
      [:div.editable-select {:key ident}
-      (render-anchors anchors param-ctx)
+      [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
       (if (:read-only props)
         [:span.text (condp = (get entity ident)
                       true "True"
                       false "False"
                       "--")]
         (select-boolean* entity field param-ctx))]
-     (render-inline-links field anchors param-ctx)]))
+     (render-inline-links field (filter :anchor/render-inline? anchors) param-ctx)]))
 
 
 ; this can be used sometimes, on the entity page, but not the query page
 (defn select-ref [entity field anchors props param-ctx]
   [:div.value
    [:div.editable-select {:key (option/get-key field)}
-    (render-anchors anchors param-ctx)
+    [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
     (if (:read-only props)
       [:span.text
        (-> entity
@@ -115,14 +117,14 @@
                     :field/attribute :attribute/ident)))]
       [:span.select
        (select* entity field param-ctx)])]
-   (render-inline-links field anchors param-ctx)])
+   (render-inline-links field (filter :anchor/render-inline? anchors) param-ctx)])
 
 
 (defn select-ref-component [entity field anchors props param-ctx]
   [:div.value
    #_(pr-str (get-in entity [(-> field :field/attribute :attribute/ident) :db/id]))
-   (render-inline-links field anchors param-ctx)
-   (render-anchors anchors param-ctx)])
+   (render-inline-links field (filter :anchor/render-inline? anchors) param-ctx)
+   [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]])
 
 
 (defn table-many-ref [entity field anchors props param-ctx]
@@ -130,8 +132,8 @@
    #_(->> (get entity (-> field :field/attribute :attribute/ident))
           (mapv :db/id)
           (pr-str))
-   (render-inline-links field anchors param-ctx)
-   (render-anchors anchors param-ctx)])
+   (render-inline-links field (filter :anchor/render-inline? anchors) param-ctx)
+   [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]])
 
 
 (comment
@@ -168,8 +170,8 @@
    #_(->> (get entity (-> field :field/attribute :attribute/ident))
           (mapv :db/id)
           (pr-str))
-   (render-inline-links field anchors param-ctx)
-   (render-anchors anchors param-ctx)])
+   (render-inline-links field (filter :anchor/render-inline? anchors) param-ctx)
+   [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]])
 
 
 (defn multi-select-ref [entity field anchors props {:keys [user-swap!] :as param-ctx}]
@@ -226,8 +228,8 @@
         :db.cardinality/one (pr-str value)
         :db.cardinality/many (map pr-str value)
         "Incomplete attribute for field"))]
-   (render-inline-links field anchors param-ctx)
-   (render-anchors anchors param-ctx)])
+   (render-inline-links field (filter :anchor/render-inline? anchors) param-ctx)
+   [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]])
 
 
 (defn default [entity field anchors props param-ctx]

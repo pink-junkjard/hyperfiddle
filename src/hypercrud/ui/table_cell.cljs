@@ -14,8 +14,8 @@
   [:div
    #_(->> (get-in entity [(-> field :field/attribute :attribute/ident) :db/id])
           (pr-str))
-   (widget/render-anchors anchors param-ctx)
-   (widget/render-inline-links field anchors param-ctx)])
+   [:div.anchors (widget/render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
+   (widget/render-inline-links field (filter :anchor/render-inline? anchors) param-ctx)])
 
 
 (defn ref-many [entity field anchors props param-ctx]
@@ -24,8 +24,8 @@
           (mapv :db/id)
           (pr-str)
           (ellipsis 15))
-   (widget/render-anchors anchors param-ctx)
-   (widget/render-inline-links field anchors param-ctx)])
+   [:div.anchors (widget/render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
+   (widget/render-inline-links field (filter :anchor/render-inline? anchors) param-ctx)])
 
 
 (defn other-many [entity field anchors props param-ctx]

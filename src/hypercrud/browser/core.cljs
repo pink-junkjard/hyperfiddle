@@ -56,7 +56,8 @@
                                          ; get all our forms for this link
                                          {:link-query/find-element ['* {:find-element/form form-pull-exp}]}]
                           ; get links one layer deep; todo not sure if we need this
-                          :link/anchor ['* {:anchor/link ['*]}]}
+                          :link/anchor ['* {:anchor/link ['*]
+                                            :anchor/find-element [:db/id :find-element/name]}]}
                       {:hypercrud/owner ['*]}])))
 
 

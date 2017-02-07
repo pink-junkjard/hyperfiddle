@@ -92,7 +92,7 @@ input.invalid[type="text"] {
     width: 100%;
 }
 
-.links {
+.anchors {
     float: right;
 }
 
@@ -100,7 +100,7 @@ input.invalid[type="text"] {
     display: block;
     overflow: hidden;
 }
-.editable-select > .links {
+.editable-select > .anchors {
     float: right;
     padding-left: 3px;
 }
