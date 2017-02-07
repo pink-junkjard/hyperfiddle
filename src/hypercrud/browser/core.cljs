@@ -175,8 +175,6 @@
         param-ctx (assoc param-ctx :query-params query-params)]
     (let [request (q-util/query-value q link-query params-map param-ctx)]
       (concat
-        (->> (:link-query/find-element link-query)
-             (mapv #(->DbVal (-> % :find-element/connection :db/id :id) nil)))
         [request]
         (if recurse?
           (if-let [resultset (exception/extract (hc/hydrate peer request) nil)]
@@ -190,8 +188,7 @@
 (defn requests-for-link-entity [link query-params {:keys [peer] :as param-ctx} recurse?]
   (let [request (q-util/->entityRequest (:link/request link) query-params)]
     (concat
-      [(->DbVal (get-in link [:link/request :link-entity/connection :db/id :id]) nil)
-       request]
+      [request]
       (if recurse?
         (if-let [response (exception/extract (hc/hydrate peer request) nil)]
           (let [form (get-in link [:link/request :link-entity/form])]

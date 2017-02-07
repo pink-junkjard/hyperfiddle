@@ -6,8 +6,6 @@
             [hypercrud.client.core :as hc]
             [hypercrud.client.internal :as internal]
             [hypercrud.client.peer :as peer]
-            [hypercrud.client.schema :as schema-util]
-            [hypercrud.types :as types :refer [->DbId ->DbVal]]
             [kvlt.core :as kvlt]
             [kvlt.middleware.params]
             [promesa.core :as p]))
@@ -44,7 +42,7 @@
 
 (deftype HttpConnection [entry-uri ^:mutable peer]
   hc/Connection
-  (hydrate! [this requests staged-tx force? editor-dbval editor-schema]
+  (hydrate! [this requests staged-tx force?]
     (if (and (not force?) (hc/hydrated? this requests))
       (p/resolved peer)
       (-> (kvlt/request!
@@ -53,16 +51,11 @@
              :accept content-type-transit                   ; needs to be fast so transit
              :method :post
              :form {:staged-tx staged-tx
-                    :request (->> requests
-                                  (mapv (fn [req-or-dbval]
-                                          (if (instance? types/DbVal req-or-dbval)
-                                            (schema-util/schema-request editor-dbval req-or-dbval)
-                                            req-or-dbval)))
-                                  (into #{}))}
+                    :request (into #{} requests)}
              :as :auto})
           (p/then (fn [resp]
                     (let [{:keys [t pulled-trees-map]} (-> resp :body :hypercrud)]
-                      (set! peer (peer/->peer editor-schema (into #{} requests) pulled-trees-map))
+                      (set! peer (peer/->Peer (into #{} requests) pulled-trees-map))
                       peer))))))
 
 

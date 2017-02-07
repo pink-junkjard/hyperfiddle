@@ -3,6 +3,7 @@
 
 (def ^:dynamic *temp-id!*)
 (def ^:dynamic *root-conn-id* nil)
+(def ^:dynamic *editor-schema* nil)
 
 
 (defprotocol Peer
@@ -11,6 +12,6 @@
 
 
 (defprotocol Connection
-  (hydrate! [this requests staged-tx force? editor-dbval editor-schema])
+  (hydrate! [this requests staged-tx force?])
   (hydrated? [this requests])
   (transact! [this tx]))

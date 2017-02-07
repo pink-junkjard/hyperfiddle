@@ -127,7 +127,6 @@
                                             [form/form entity form (:link/anchor link) param-ctx]))
                                         ordered-find-elements)]])
                                [:div "No results"])
-                             ^{:key (hc/t (:peer param-ctx))}
                              [table/table resultset ordered-find-elements (:link/anchor link) param-ctx]))]
     (condp = (links/link-type link)
       :link-query
