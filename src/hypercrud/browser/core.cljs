@@ -8,7 +8,7 @@
             [hypercrud.client.core :as hc]
             [hypercrud.compile.eval :refer [eval]]
             [hypercrud.form.q-util :as q-util]
-            [hypercrud.types :as types :refer [->DbId ->DbVal ->EntityRequest]]
+            [hypercrud.types :refer [->DbId ->DbVal ->EntityRequest]]
             [hypercrud.ui.auto-control :as auto-control]
             [hypercrud.util :as util]))
 
@@ -156,17 +156,44 @@
   (mapcat #(field-requests param-ctx %) (:form/field form)))
 
 
-(defn dependent-requests [anchors forms param-ctx]
-  (let [option-requests (mapcat #(form-option-requests % param-ctx) forms)
-        inline-requests (->> anchors
-                             (filter :anchor/render-inline?)
-                             (mapcat (fn [inline-anchor]
-                                       (let [params-map (links/build-url-params-map inline-anchor param-ctx)
-                                             param-ctx (-> param-ctx
-                                                           (update :debug #(str % ">inline-link[" (:db/id inline-anchor) ":" (:anchor/prompt inline-anchor) "]"))
-                                                           (dissoc :entity :request))]
-                                         (request params-map param-ctx true)))))]
-    (concat option-requests inline-requests)))
+(defn dependent-requests [resultset find-elements anchors param-ctx]
+  (let [anchors (filter :anchor/render-inline? anchors)     ; at this point we only care about inline anchors
+        repeating-anchors-lookup (->> anchors
+                                      (filter :anchor/repeating?)
+                                      (group-by (fn [anchor]
+                                                  (if-let [find-element (:anchor/find-element anchor)]
+                                                    (:find-element/name find-element)
+                                                    (if (:anchor/field anchor)
+                                                      ; entity links can have fields but not find-elements specified
+                                                      :entity
+                                                      nil)))))
+        recurse-request (fn [anchor param-ctx]
+                          (let [params-map (links/build-url-params-map anchor param-ctx)
+                                param-ctx (-> param-ctx
+                                              (update :debug #(str % ">inline-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]"))
+                                              (dissoc :entity :request))]
+                            (request params-map param-ctx true)))]
+    (concat
+      ; field/options-anchor requests
+      (mapcat #(form-option-requests (:find-element/form %) param-ctx) find-elements)
+
+      ; non-repeating inline-links
+      (->> anchors
+           (remove :anchor/repeating?)
+           (mapcat #(recurse-request % param-ctx)))
+
+      ; repeating inline-links (require :result and :entity in param-ctx)
+      (->> resultset
+           (mapcat (fn [result]
+                     (let [param-ctx (assoc param-ctx :result result)]
+                       (concat (->> (get repeating-anchors-lookup nil)
+                                    (mapcat #(recurse-request % param-ctx)))
+                               (->> find-elements
+                                    (mapcat (fn [find-element]
+                                              (let [entity (get result (:find-element/name find-element))
+                                                    param-ctx (assoc param-ctx :entity entity)]
+                                                (->> (get repeating-anchors-lookup (:find-element/name find-element))
+                                                     (mapcat #(recurse-request % param-ctx)))))))))))))))
 
 
 (defn requests-for-link-query [link query-params {:keys [peer] :as param-ctx} recurse?]
@@ -179,11 +206,7 @@
         [request]
         (if recurse?
           (if-let [resultset (exception/extract (hc/hydrate peer request) nil)]
-            (->> resultset
-                 (mapcat (fn [result]
-                           (let [forms (mapv :find-element/form (:link-query/find-element link-query))
-                                 param-ctx (assoc param-ctx :result result)]
-                             (dependent-requests (:link/anchor link) forms param-ctx)))))))))))
+            (dependent-requests resultset (:link-query/find-element link-query) (:link/anchor link) param-ctx)))))))
 
 
 (defn requests-for-link-entity [link query-params {:keys [peer] :as param-ctx} recurse?]
@@ -191,15 +214,12 @@
     (concat
       [request]
       (if recurse?
-        (if-let [response (exception/extract (hc/hydrate peer request) nil)]
-          (let [form (get-in link [:link/request :link-entity/form])]
-            (if (instance? types/DbId (:dbid-s request))
-              (let [param-ctx (assoc param-ctx :entity response)]
-                (dependent-requests (:link/anchor link) [form] param-ctx))
-              (->> response
-                   (mapcat (fn [entity]
-                             (let [param-ctx (assoc param-ctx :entity entity)]
-                               (dependent-requests (:link/anchor link) [form] param-ctx))))))))))))
+        (if-let [resultset (exception/extract (hc/hydrate peer request) nil)]
+          (let [resultset (->> (if (map? resultset) [resultset] resultset)
+                               (mapv #(assoc {} :entity %)))
+                find-elements [{:find-element/name :entity
+                                :find-element/form (get-in link [:link/request :link-entity/form])}]]
+            (dependent-requests resultset find-elements (:link/anchor link) param-ctx)))))))
 
 
 (defn requests-for-link [link query-params param-ctx recurse?]

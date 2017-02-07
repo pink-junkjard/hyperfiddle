@@ -77,7 +77,7 @@
                       find-element-anchors (get find-element-anchors-lookup (:find-element/name find-element))
                       param-ctx (assoc param-ctx :color ((:color-fn param-ctx) entity param-ctx)
                                                  :owner ((:owner-fn param-ctx) entity param-ctx)
-                                                 (:find-element/name find-element) entity)]
+                                                 :entity entity)]
                   ^{:key (hash [(:db/id entity) (:db/id (:find-element/form find-element))])}
                   [:div.find-element
                    (widget/render-anchors (->> find-element-anchors

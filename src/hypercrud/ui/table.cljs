@@ -124,10 +124,10 @@
 
 
 (defn table-row [result ordered-find-elements repeating-anchors param-ctx]
-  (let [build-find-element-ctx (fn [find-element entity param-ctx]
-                                 (assoc param-ctx :color ((:color-fn param-ctx) entity param-ctx)
-                                                  :owner ((:owner-fn param-ctx) entity param-ctx)
-                                                  (:find-element/name find-element) entity))
+  (let [build-entity-ctx (fn [entity param-ctx]
+                           (assoc param-ctx :color ((:color-fn param-ctx) entity param-ctx)
+                                            :owner ((:owner-fn param-ctx) entity param-ctx)
+                                            :entity entity))
         find-element-anchors-lookup (->> repeating-anchors
                                          ; entity links can have fields but not find-elements specified
                                          (filter #(or (:anchor/find-element %) (:anchor/field %)))
@@ -141,7 +141,7 @@
                                                      (remove #(nil? (:anchor/field %))))
                      form (:find-element/form find-element)
                      entity (get result (:find-element/name find-element))
-                     param-ctx (build-find-element-ctx find-element entity param-ctx)]
+                     param-ctx (build-entity-ctx entity param-ctx)]
                  (build-row-cells-for-form form entity find-element-field-anchors param-ctx)))
              ordered-find-elements)
      [:td.link-cell {:key :link-cell}
@@ -158,7 +158,7 @@
                                               (let [find-element-anchors (->> (get find-element-anchors-lookup (:find-element/name find-element))
                                                                               (filter #(nil? (:anchor/field %))))
                                                     entity (get result (:find-element/name find-element))
-                                                    param-ctx (build-find-element-ctx find-element entity param-ctx)]
+                                                    param-ctx (build-entity-ctx entity param-ctx)]
                                                 (mapv vector find-element-anchors (repeatedly (constantly param-ctx)))))))))]]))
 
 
