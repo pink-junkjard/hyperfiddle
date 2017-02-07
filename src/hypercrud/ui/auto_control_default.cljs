@@ -89,7 +89,7 @@
 
 
 (defmethod auto-control/resultset :default [resultset link param-ctx]
-  (let [ui-for-resultset #(if % form/forms-list table/table)]
+  (let [ui-for-resultset (fn [single-result-as-entity?] (if single-result-as-entity? form/forms-list table/table))]
     (condp = (links/link-type link)
       :link-query
       (let [link-query (:link/request link)
