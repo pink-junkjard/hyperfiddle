@@ -17,7 +17,7 @@
 
 
 (defn build-props [entity field anchors param-ctx]
-  {:read-only ((get param-ctx :read-only (constantly false)) param-ctx)})
+  {:read-only ((get param-ctx :read-only (constantly false)) field param-ctx)})
 
 
 (defn ascertain-valueType [attribute]
