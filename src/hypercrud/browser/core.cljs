@@ -28,37 +28,45 @@
 
 
 (defn request-for-link [link-dbid]
-  (let [inner-form-pull-exp ['* {:form/field
-                                 ['*
-                                  {:field/attribute ['*
-                                                     {:attribute/valueType [:db/id :db/ident]}
-                                                     {:attribute/cardinality [:db/id :db/ident]}
-                                                     {:attribute/unique [:db/id :db/ident]}]}]}]
-        form-pull-exp ['* {:form/field
-                           ['*
-                            {:field/attribute ['*
-                                               {:attribute/valueType [:db/id :db/ident]}
-                                               {:attribute/cardinality [:db/id :db/ident]}
-                                               {:attribute/unique [:db/id :db/ident]}]}
-                            ; we don't have to recurse for options-anchors
-                            ; because we know these links don't have additional links
-                            {:field/options-anchor ['* {:anchor/link
-                                                        ['* {:link/request ['*
-                                                                            {:link-entity/form inner-form-pull-exp}
-                                                                            {:link-query/find-element ['* {:find-element/form inner-form-pull-exp}]}]}]}]}]}]]
+  (let [inner-form-pull-exp ['*
+                             {:form/field
+                              ['*
+                               {:field/attribute ['*
+                                                  {:attribute/valueType [:db/id :db/ident]
+                                                   :attribute/cardinality [:db/id :db/ident]
+                                                   :attribute/unique [:db/id :db/ident]}]}]}]
+        form-pull-exp ['*
+                       {:form/field
+                        ['*
+                         {:field/attribute ['*
+                                            {:attribute/valueType [:db/id :db/ident]
+                                             :attribute/cardinality [:db/id :db/ident]
+                                             :attribute/unique [:db/id :db/ident]}]
+                          ; we don't have to recurse for options-anchors
+                          ; because we know these links don't have additional links
+                          :field/options-anchor ['*
+                                                 {:anchor/link
+                                                  ['*
+                                                   {:hypercrud/owner ['*]
+                                                    :link/request ['*
+                                                                   {:link-entity/form inner-form-pull-exp
+                                                                    :link-query/find-element ['*
+                                                                                              {:find-element/form inner-form-pull-exp}]}]}]}]}]}]]
     (->EntityRequest link-dbid (->DbVal hc/*root-conn-id* nil)
-                     ['* {:link/request ['*
-                                         :link-entity/connection
-                                         {:link-entity/form form-pull-exp}
-                                         :link-query/value
-                                         :link-query/single-result-as-entity?
-                                         {:link-query/dbhole ['* {:dbhole/value ['*]}]}
-                                         ; get all our forms for this link
-                                         {:link-query/find-element ['* {:find-element/form form-pull-exp}]}]
-                          ; get links one layer deep; todo not sure if we need this
-                          :link/anchor ['* {:anchor/link ['*]
-                                            :anchor/find-element [:db/id :find-element/name]}]}
-                      {:hypercrud/owner ['*]}])))
+                     ['*
+                      {:link/request ['*
+                                      :link-entity/connection
+                                      :link-query/value
+                                      :link-query/single-result-as-entity?
+                                      {:link-entity/form form-pull-exp
+                                       :link-query/dbhole ['* {:dbhole/value ['*]}]
+                                       ; get all our forms for this link
+                                       :link-query/find-element ['* {:find-element/form form-pull-exp}]}]
+                       :link/anchor ['*
+                                     {:anchor/link [:db/id
+                                                    {:hypercrud/owner ['*]}] ; need the link's owner to render the href to it
+                                      :anchor/find-element [:db/id :find-element/name]}]
+                       :hypercrud/owner ['*]}])))
 
 
 (defn user-resultset [resultset link param-ctx]

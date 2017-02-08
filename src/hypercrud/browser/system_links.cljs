@@ -72,7 +72,8 @@
                                                                   {:attribute/cardinality [:db/id :db/ident]}
                                                                   {:attribute/unique [:db/id :db/ident]}]}]}]]
                        [:db/id
-                        {:link/request
+                        {:hypercrud/owner ['*]
+                         :link/request
                          [:db/id
                           {:link-query/find-element [:db/id
                                                      :find-element/name
