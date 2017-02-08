@@ -186,9 +186,6 @@
                                               (dissoc :entity :request))]
                             (request params-map param-ctx true)))]
     (concat
-      ; field/options-anchor requests
-      (mapcat #(form-option-requests (:find-element/form %) param-ctx) find-elements)
-
       ; non-repeating inline-links
       (->> anchors
            (remove :anchor/repeating?)
@@ -204,8 +201,11 @@
                                     (mapcat (fn [find-element]
                                               (let [entity (get result (:find-element/name find-element))
                                                     param-ctx (assoc param-ctx :entity entity)]
-                                                (->> (get repeating-anchors-lookup (:find-element/name find-element))
-                                                     (mapcat #(recurse-request % param-ctx)))))))))))))))
+                                                (concat
+                                                  (->> (get repeating-anchors-lookup (:find-element/name find-element))
+                                                       (mapcat #(recurse-request % param-ctx)))
+                                                  ; field/options-anchor requests (require :result and :entity in param-ctx)
+                                                  (form-option-requests (:find-element/form find-element) param-ctx))))))))))))))
 
 
 (defn requests-for-link-query [link query-params {:keys [peer] :as param-ctx} recurse?]
