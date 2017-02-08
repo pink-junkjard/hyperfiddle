@@ -39,7 +39,7 @@
                             (user-swap! {:tx (tx/update-entity-attr entity attribute dbid)}))}]
     (let [option-records (option/get-option-records field param-ctx)]
       (if (exception/failure? option-records)
-        [:span (pr-str (.-e option-records))]
+        [:span {:on-click #(js/alert (pr-str (.-e option-records)))} "Failed to hydrate"]
         (let [option-records (.-v option-records)]
           #_(assert (or (nil? value)
                         (tx/tempid? (:db/id value))
