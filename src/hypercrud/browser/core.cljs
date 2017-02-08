@@ -86,15 +86,17 @@
                                  query-params (:query-params params-map)]
                              (mlet [link (hc/hydrate (:peer param-ctx) (request-for-link (-> anchor :anchor/link :db/id)))
                                     query-value (try-on
-                                                  (condp = (links/link-type link)
+                                                  (case (links/link-type link)
                                                     :link-query (let [q (some-> link :link/request :link-query/value reader/read-string)
                                                                       params-map (merge query-params
                                                                                         (q-util/build-dbhole-lookup (:link/request link)))]
                                                                   (q-util/query-value q (:link/request link) params-map param-ctx))
 
                                                     :link-entity (q-util/->entityRequest (:link/request link) query-params)
-                                                    (js/Error. "Missing link request")))
-                                    resultset (hc/hydrate (:peer param-ctx) query-value)]
+                                                    nil))
+                                    resultset (if request
+                                                (hc/hydrate peer request)
+                                                (exception/success nil))]
                                    (cats/return resultset))))
         param-ctx (assoc param-ctx
                     :link-fn (fn [ident label param-ctx]
