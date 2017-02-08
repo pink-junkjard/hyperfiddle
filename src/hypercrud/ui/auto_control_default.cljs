@@ -88,6 +88,19 @@
     old-fields))
 
 
+(defn no-link-type [anchors param-ctx]
+  (let [non-repeating-top-anchors (->> anchors
+                                       (remove :anchor/repeating?)
+                                       (remove :anchor/find-element)
+                                       (remove :anchor/field))]
+    [:div
+     "Unable to render unknown link type"
+     [:br]
+     (widget/render-anchors (remove :anchor/render-inline? non-repeating-top-anchors) param-ctx)
+     (let [param-ctx (dissoc param-ctx :isComponent)]
+       (widget/render-inline-links (filter :anchor/render-inline? non-repeating-top-anchors) param-ctx))]))
+
+
 (defmethod auto-control/resultset :default [resultset link param-ctx]
   (let [ui-for-resultset (fn [single-result-as-entity?] (if single-result-as-entity? form/forms-list table/table))]
     (condp = (links/link-type link)
@@ -101,7 +114,7 @@
         [ui resultset ordered-find-elements (:link/anchor link) param-ctx])
 
       :link-entity
-      (let [single-result-as-entity? (map? resultset)
+      (let [single-result-as-entity? (map? resultset)       ;todo this is broken when no results are returned
             ui (ui-for-resultset single-result-as-entity?)
             ordered-find-elements [{:find-element/name :entity
                                     :find-element/form (-> (get-in link [:link/request :link-entity/form])
@@ -110,4 +123,4 @@
                            (mapv #(assoc {} :entity %)))]
         [ui resultset ordered-find-elements (:link/anchor link) param-ctx])
 
-      [:div "Unable to render unknown link type"])))
+      [no-link-type (:link/anchor link) param-ctx])))

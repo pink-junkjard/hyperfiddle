@@ -117,14 +117,16 @@
                                       (cats/fmap #(system-links/generate-system-link system-link-id %))))
                                (hc/hydrate peer (request-for-link (:link-dbid params-map))))
                         request (try-on
-                                  (condp = (links/link-type link)
+                                  (case (links/link-type link)
                                     :link-query (let [link-query (:link/request link)
                                                       q (some-> link-query :link-query/value reader/read-string)
                                                       params-map (merge query-params (q-util/build-dbhole-lookup link-query))]
                                                   (q-util/query-value q link-query params-map param-ctx))
                                     :link-entity (q-util/->entityRequest (:link/request link) (:query-params params-map))
-                                    (js/Error. "Missing link request")))
-                        resultset (hc/hydrate peer request)]
+                                    nil))
+                        resultset (if request
+                                    (hc/hydrate peer request)
+                                    (exception/success nil))]
                        (cats/return (condp = (get param-ctx :display-mode :dressed)
                                       :dressed (user-resultset resultset link (user-bindings link param-ctx))
                                       :undressed (auto-control/resultset resultset link (user-bindings link param-ctx))
