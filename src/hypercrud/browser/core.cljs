@@ -111,10 +111,10 @@
           {:keys [peer] :as param-ctx}]
   (let [param-ctx (assoc param-ctx :query-params query-params)
         dom-or-e (mlet [link (if (vector? (-> params-map :link-dbid :id))
-                               (let [system-link-dbid (-> params-map :link-dbid :id)]
-                                 (->> (system-links/request-for-system-link system-link-dbid)
+                               (let [system-link-id (-> params-map :link-dbid :id)]
+                                 (->> (system-links/request-for-system-link system-link-id)
                                       (hc/hydrate peer)
-                                      (cats/fmap #(system-links/generate-system-link system-link-dbid %))))
+                                      (cats/fmap #(system-links/generate-system-link system-link-id %))))
                                (hc/hydrate peer (request-for-link (:link-dbid params-map))))
                         request (try-on
                                   (condp = (links/link-type link)
@@ -240,13 +240,13 @@
 
 (defn request [params-map param-ctx recurse?]
   (if (vector? (-> params-map :link-dbid :id))
-    (let [system-link-dbid (-> params-map :link-dbid :id)
-          sytem-link-request (system-links/request-for-system-link system-link-dbid)]
+    (let [system-link-id (-> params-map :link-dbid :id)
+          system-link-request (system-links/request-for-system-link system-link-id)]
       (concat
-        [sytem-link-request]
-        (if-let [system-link-deps (-> (hc/hydrate (:peer param-ctx) sytem-link-request)
+        [system-link-request]
+        (if-let [system-link-deps (-> (hc/hydrate (:peer param-ctx) system-link-request)
                                       (exception/extract nil))]
-          (let [link (system-links/generate-system-link system-link-dbid system-link-deps)]
+          (let [link (system-links/generate-system-link system-link-id system-link-deps)]
             (requests-for-link link (:query-params params-map) param-ctx recurse?)))))
     (let [link-request (request-for-link (:link-dbid params-map))]
       (concat [link-request]
