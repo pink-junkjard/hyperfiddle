@@ -85,7 +85,7 @@
                                  params-map (links/build-url-params-map anchor param-ctx)
                                  query-params (:query-params params-map)]
                              (mlet [link (hc/hydrate (:peer param-ctx) (request-for-link (-> anchor :anchor/link :db/id)))
-                                    query-value (try-on
+                                    request (try-on
                                                   (case (links/link-type link)
                                                     :link-query (let [q (some-> link :link/request :link-query/value reader/read-string)
                                                                       params-map (merge query-params
@@ -95,7 +95,7 @@
                                                     :link-entity (q-util/->entityRequest (:link/request link) query-params)
                                                     nil))
                                     resultset (if request
-                                                (hc/hydrate peer request)
+                                                (hc/hydrate (:peer param-ctx) request)
                                                 (exception/success nil))]
                                    (cats/return resultset))))
         param-ctx (assoc param-ctx
