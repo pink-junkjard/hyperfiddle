@@ -55,13 +55,14 @@
     (->EntityRequest link-dbid (->DbVal hc/*root-conn-id* nil)
                      ['*
                       {:link/request ['*
-                                      :link-entity/connection
                                       :link-query/value
                                       :link-query/single-result-as-entity?
-                                      {:link-entity/form form-pull-exp
+                                      {:link-entity/connection [:db/id :database/ident]
+                                       :link-entity/form form-pull-exp
                                        :link-query/dbhole ['* {:dbhole/value ['*]}]
                                        ; get all our forms for this link
-                                       :link-query/find-element ['* {:find-element/form form-pull-exp}]}]
+                                       :link-query/find-element ['* {:find-element/form form-pull-exp
+                                                                     :find-element/connection [:db/id :database/ident]}]}]
                        :link/anchor ['*
                                      {:anchor/link [:db/id
                                                     {:hypercrud/owner ['*]}] ; need the link's owner to render the href to it
@@ -86,14 +87,14 @@
                                  query-params (:query-params params-map)]
                              (mlet [link (hc/hydrate (:peer param-ctx) (request-for-link (-> anchor :anchor/link :db/id)))
                                     request (try-on
-                                                  (case (links/link-type link)
-                                                    :link-query (let [q (some-> link :link/request :link-query/value reader/read-string)
-                                                                      params-map (merge query-params
-                                                                                        (q-util/build-dbhole-lookup (:link/request link)))]
-                                                                  (q-util/query-value q (:link/request link) params-map param-ctx))
+                                              (case (links/link-type link)
+                                                :link-query (let [q (some-> link :link/request :link-query/value reader/read-string)
+                                                                  params-map (merge query-params
+                                                                                    (q-util/build-dbhole-lookup (:link/request link)))]
+                                                              (q-util/query-value q (:link/request link) params-map param-ctx))
 
-                                                    :link-entity (q-util/->entityRequest (:link/request link) query-params)
-                                                    nil))
+                                                :link-entity (q-util/->entityRequest (:link/request link) query-params)
+                                                nil))
                                     resultset (if request
                                                 (hc/hydrate (:peer param-ctx) request)
                                                 (exception/success nil))]

@@ -8,7 +8,7 @@
 (defn safe-read-string [code-str]
   (try
     (reader/read-string code-str)
-    (catch js/Error e
+    (catch :default e
       ;; Nothing to be done at this point -
       ;; this error must be caught by the widget before it is staged.
       nil)))

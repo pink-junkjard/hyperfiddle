@@ -3,8 +3,10 @@
             [hypercrud.compile.eval :refer [eval]]
             [hypercrud.types :refer [->DbVal]]
             [hypercrud.ui.auto-control :refer [auto-control connection-color]]
+            [hypercrud.ui.input :as input]
             [hypercrud.ui.renderer :as renderer]
-            [hypercrud.ui.widget :as widget]))
+            [hypercrud.ui.widget :as widget]
+            [reagent.core :as r]))
 
 
 (defn field [value {:keys [:field/prompt] :as field} anchors {:keys [peer] :as param-ctx}]
@@ -33,6 +35,20 @@
        [auto-control value field anchors param-ctx]))])
 
 
+(defn new-field [entity param-ctx]
+  (let [attr-ident (r/atom nil)]
+    (fn [entity param-ctx]
+      [:div.field
+       [:label
+        (let [on-change! #(reset! attr-ident %)]
+          [input/keyword-input* @attr-ident on-change!])]
+       (let [on-change! #(let [tx [[:db/add (:db/id entity) @attr-ident %]]]
+                           ; todo cardinality many
+                           ((:user-swap! param-ctx) {:tx tx}))
+             props (if (nil? @attr-ident) {:read-only true})]
+         [input/edn-input* nil on-change! props])])))
+
+
 (defn form [entity form anchors param-ctx]
   (let [style {:border-color (connection-color (:color param-ctx))}]
     [:div.form {:style style}
@@ -42,7 +58,9 @@
                  (let [ident (-> fieldinfo :field/attribute :attribute/ident)
                        value (get entity ident)]
                    ^{:key (or (:db/id fieldinfo) ident)}
-                   [field value fieldinfo anchors param-ctx]))))]))
+                   [field value fieldinfo anchors param-ctx]))))
+     ^{:key (hash (keys entity))}
+     [new-field entity param-ctx]]))
 
 
 (defn forms-list [resultset ordered-find-elements anchors param-ctx]

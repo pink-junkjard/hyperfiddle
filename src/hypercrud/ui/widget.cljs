@@ -19,7 +19,7 @@
    (->> anchor-ctx-pairs
         (filter (partial apply links/link-visible?))
         (map (fn [[anchor param-ctx]]
-               ^{:key (:db/id anchor)}
+               ^{:key (hash anchor)}
                [(:navigate-cmp param-ctx) (links/build-link-props anchor param-ctx) (:anchor/prompt anchor) param-ctx]))
         (interpose " · ")))
   ([anchors param-ctx]
@@ -39,19 +39,14 @@
                      ui-param-ctx (-> param-ctx
                                       (update :debug #(str % ">inline-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]"))
                                       (dissoc :result :entity))]
-                 ^{:key (:db/id anchor)}
+                 ^{:key (hash anchor)}
                  [browser/ui params-map ui-param-ctx]))))))
 
 
 (defn input-keyword [value field anchors props {:keys [user-swap!] :as param-ctx}]
   (let [attribute (:field/attribute field)
-        on-change! #(user-swap! {:tx (tx/update-entity-attr (:entity param-ctx) attribute %)})
-        parse-string reader/read-string
-        to-string str
-        valid? #(try (let [code (reader/read-string %)]
-                       (or (nil? code) (keyword? code)))
-                     (catch :default e false))]
-    [input/validated-input value on-change! parse-string to-string valid? props]))
+        on-change! #(user-swap! {:tx (tx/update-entity-attr (:entity param-ctx) attribute %)})]
+    [input/keyword-input* value on-change! props]))
 
 
 (defn input [value field anchors props {:keys [user-swap!] :as param-ctx}]
