@@ -25,8 +25,7 @@
   {:db/id (system-edit-link-dbid (-> find-element :db/id :id) (:db/id parent-link))
    :link/name (str "edit " (:find-element/name find-element))
    :hypercrud/owner (:hypercrud/owner parent-link)
-   :link/request {:link-entity/connection (:find-element/connection find-element)
-                  :link-entity/form (:find-element/form find-element)}})
+   :link/request {:link-entity/connection (:find-element/connection find-element)}})
 
 
 (defn system-edit-field-link [find-element field parent-link]
