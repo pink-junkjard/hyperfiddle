@@ -10,31 +10,27 @@
            (str (subs s 0 (- c 3)) "..."))))
 
 
-(defn ref-one-component [entity field anchors props param-ctx]
+(defn ref-one-component [value field anchors props param-ctx]
   [:div
-   #_(->> (get-in entity [(-> field :field/attribute :attribute/ident) :db/id])
-          (pr-str))
+   #_(pr-str (:db/id value))
    [:div.anchors (widget/render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
    (widget/render-inline-links field (filter :anchor/render-inline? anchors) param-ctx)])
 
 
-(defn ref-many [entity field anchors props param-ctx]
+(defn ref-many [value field anchors props param-ctx]
   [:div
-   #_(->> (get entity (-> field :field/attribute :attribute/ident))
-          (mapv :db/id)
+   #_(->> (mapv :db/id value)
           (pr-str)
           (ellipsis 15))
    [:div.anchors (widget/render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
    (widget/render-inline-links field (filter :anchor/render-inline? anchors) param-ctx)])
 
 
-(defn other-many [entity field anchors props param-ctx]
-  (let [ident (-> field :field/attribute :attribute/ident)]
-    [:div
-     [:button {:on-click #(js/alert "todo")} "Edit"]
-     #_(let [{:keys [href]} (links/field-link (:db/id field) (:db/id entity))]
-         [(:navigate-cmp param-ctx) {:href href} "Edit" param-ctx])
-     " "
-     (->> (get entity ident)
-          (map pr-str)                                      ;todo account for many different types of values
-          (string/join ", "))]))
+(defn other-many [value field anchors props param-ctx]
+  [:div
+   [:button {:on-click #(js/alert "todo")} "Edit"]
+   #_(let [{:keys [href]} (links/field-link (:db/id field) (:db/id entity))]
+       [(:navigate-cmp param-ctx) {:href href} "Edit" param-ctx])
+   " "
+   (->> (map pr-str value)                                  ;todo account for many different types of values
+        (string/join ", "))])

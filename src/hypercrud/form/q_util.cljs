@@ -50,9 +50,11 @@
 
 
 (defn form-pull-exp [form]
-  (concat
-    [:db/id]
-    (remove nil? (set (mapv #(-> % :field/attribute :attribute/ident) (:form/field form))))))
+  (if form
+    (concat
+      [:db/id]
+      (remove nil? (set (mapv #(-> % :field/attribute :attribute/ident) (:form/field form)))))
+    ['*]))
 
 
 ;todo rename and move? ->queryRequest

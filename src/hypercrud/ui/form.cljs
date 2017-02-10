@@ -7,7 +7,7 @@
             [hypercrud.ui.widget :as widget]))
 
 
-(defn field [entity {:keys [:field/prompt] :as field} anchors {:keys [peer] :as param-ctx}]
+(defn field [value {:keys [:field/prompt] :as field} anchors {:keys [peer] :as param-ctx}]
   [:div.field
    [:label
     (let [docstring (-> field :field/attribute :attribute/doc)]
@@ -27,10 +27,10 @@
         (if error
           (pr-str error)
           (try
-            (renderer peer link-fn entity)
+            (renderer peer link-fn value)
             (catch :default e (pr-str e))))])
      (let [anchors (filter #(= (:db/id field) (some-> % :anchor/field :db/id)) anchors)]
-       [auto-control entity field anchors param-ctx]))])
+       [auto-control value field anchors param-ctx]))])
 
 
 (defn form [entity form anchors param-ctx]
@@ -39,8 +39,10 @@
      (->> (:form/field form)
           (sort-by :field/order)
           (map (fn [fieldinfo]
-                 ^{:key (:db/id fieldinfo)}
-                 [field entity fieldinfo anchors param-ctx])))]))
+                 (let [ident (-> fieldinfo :field/attribute :attribute/ident)
+                       value (get entity ident)]
+                   ^{:key (or (:db/id fieldinfo) ident)}
+                   [field value fieldinfo anchors param-ctx]))))]))
 
 
 (defn forms-list [resultset ordered-find-elements anchors param-ctx]

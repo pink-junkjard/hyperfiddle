@@ -46,13 +46,12 @@
      [radio-option "--" form-name #(change! nil) (= nil value)]]))
 
 
-(defn radio-ref* [entity field props {:keys [user-swap!] :as param-ctx}]
+(defn radio-ref* [value field props {:keys [user-swap!] :as param-ctx}]
   (assert false "todo readonly")
   ; TODO only one radio-group on the page until we get a unique form-name
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
-        value (get entity ident)
         form-name "TODO"                                    ;form-name in the HTML sense
-        change! #(user-swap! {:tx (tx/update-entity-attr entity attribute %)})]
+        change! #(user-swap! {:tx (tx/update-entity-attr (:entity param-ctx) attribute %)})]
     [:div.value {:key (option/get-key field)}
      (let [option-records (option/get-option-records field param-ctx)]
        (if (exception/failure? option-records)

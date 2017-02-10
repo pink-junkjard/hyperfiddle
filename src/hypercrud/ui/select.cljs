@@ -5,9 +5,8 @@
             [hypercrud.types :refer [->DbId]]))
 
 
-(defn select-boolean* [entity field {:keys [user-swap!] :as param-ctx}]
+(defn select-boolean* [value field {:keys [user-swap!] :as param-ctx}]
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
-        value (get entity ident)
         props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
                :value (if (nil? value) "" (str value))
                ;; reconstruct the typed value
@@ -15,17 +14,16 @@
                                      "" nil
                                      "true" true
                                      "false" false)]
-                             (user-swap! {:tx (tx/update-entity-attr entity attribute v)}))}]
+                             (user-swap! {:tx (tx/update-entity-attr (:entity param-ctx) attribute v)}))}]
     [:select props
      [:option {:key true :value "true"} "True"]
      [:option {:key false :value "false"} "False"]
      [:option {:key :nil :value ""} "--"]]))
 
 
-(defn select* [entity field {:keys [user-swap!] :as param-ctx}]
+(defn select* [value field {:keys [user-swap!] :as param-ctx}]
   (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
-        value (get entity ident)
-        conn-id (get-in entity [:db/id :conn-id])
+        conn-id (:conn-id value)
         props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
                :value (cond
                         (nil? value) ""
@@ -36,7 +34,7 @@
                                  dbid (cond
                                         (= "" select-value) nil
                                         :else-hc-select-option-node (->DbId (js/parseInt select-value 10) conn-id))]
-                            (user-swap! {:tx (tx/update-entity-attr entity attribute dbid)}))}]
+                             (user-swap! {:tx (tx/update-entity-attr (:entity param-ctx) attribute dbid)}))}]
     (let [option-records (option/get-option-records field param-ctx)]
       (if (exception/failure? option-records)
         [:span {:on-click #(js/alert (pr-str (.-e option-records)))} "Failed to hydrate"]

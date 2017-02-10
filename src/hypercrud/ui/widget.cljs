@@ -5,7 +5,6 @@
             [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx]
             [hypercrud.form.option :as option]
-            [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.code-editor :refer [code-editor*]]
             [hypercrud.ui.input :as input]
             [hypercrud.ui.multi-select :refer [multi-select* multi-select-markup]]
@@ -44,10 +43,9 @@
                  [browser/ui params-map ui-param-ctx]))))))
 
 
-(defn input-keyword [entity field anchors props {:keys [user-swap!] :as param-ctx}]
-  (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
-        value (get entity ident)
-        on-change! #(user-swap! {:tx (tx/update-entity-attr entity attribute %)})
+(defn input-keyword [value field anchors props {:keys [user-swap!] :as param-ctx}]
+  (let [attribute (:field/attribute field)
+        on-change! #(user-swap! {:tx (tx/update-entity-attr (:entity param-ctx) attribute %)})
         parse-string reader/read-string
         to-string str
         valid? #(try (let [code (reader/read-string %)]
@@ -56,59 +54,57 @@
     [input/validated-input value on-change! parse-string to-string valid? props]))
 
 
-(defn input [entity field anchors props {:keys [user-swap!] :as param-ctx}]
-  (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
-        value (get entity ident)
-        on-change! #(user-swap! {:tx (tx/update-entity-attr entity attribute %)})]
+(defn input [value field anchors props {:keys [user-swap!] :as param-ctx}]
+  (let [attribute (:field/attribute field)
+        on-change! #(user-swap! {:tx (tx/update-entity-attr (:entity param-ctx) attribute %)})]
     [input/input* value on-change! props]))
 
 
-(defn input-long [entity field anchors props {:keys [user-swap!] :as param-ctx}]
-  (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)]
+(defn input-long [value field anchors props {:keys [user-swap!] :as param-ctx}]
+  (let [attribute (:field/attribute field)]
     [input/validated-input
-     (get entity ident) #(user-swap! {:tx (tx/update-entity-attr entity attribute %)})
+     value #(user-swap! {:tx (tx/update-entity-attr (:entity param-ctx) attribute %)})
      #(js/parseInt % 10) pr-str
      #(integer? (js/parseInt % 10))
      props]))
 
 
-(defn textarea [entity field anchors props {:keys [user-swap!] :as param-ctx}]
-  (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
-        value (get entity ident)
-        set-attr! #(user-swap! {:tx (tx/update-entity-attr entity attribute %)})]
+(defn textarea [value field anchors props {:keys [user-swap!] :as param-ctx}]
+  (let [attribute (:field/attribute field)
+        set-attr! #(user-swap! {:tx (tx/update-entity-attr (:entity param-ctx) attribute %)})]
     [textarea* (merge {:type "text"
                        :value value
                        :on-change set-attr!}
                       props)]))
 
 
-(defn radio-ref [entity field anchors props param-ctx]
+(defn radio-ref [value field anchors props param-ctx]
   ;;radio* needs parameterized markup fn todo
-  [radio/radio-ref* entity field props param-ctx])
+  [radio/radio-ref* value field props param-ctx])
 
 
-(defn select-boolean [entity field anchors props param-ctx]
-  (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)]
+(defn select-boolean [value field anchors props param-ctx]
+  (let [{:keys [:attribute/ident]} (:field/attribute field)]
     [:div.value
      [:div.editable-select {:key ident}
       [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
       (if (:read-only props)
-        [:span.text (condp = (get entity ident)
+        [:span.text (condp = value
                       true "True"
                       false "False"
                       "--")]
-        (select-boolean* entity field param-ctx))]
+        (select-boolean* value field param-ctx))]
      (render-inline-links field (filter :anchor/render-inline? anchors) param-ctx)]))
 
 
 ; this can be used sometimes, on the entity page, but not the query page
-(defn select-ref [entity field anchors props param-ctx]
+(defn select-ref [value field anchors props param-ctx]
   [:div.value
    [:div.editable-select {:key (option/get-key field)}
     [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
     (if (:read-only props)
       [:span.text
-       (-> entity
+       (-> value
            (get (-> field :field/attribute :attribute/ident))
            (get (-> field
                     ; we are assuming we have a query link here
@@ -116,21 +112,20 @@
                     :find-element/form :form/field first
                     :field/attribute :attribute/ident)))]
       [:span.select
-       (select* entity field param-ctx)])]
+       (select* value field param-ctx)])]
    (render-inline-links field (filter :anchor/render-inline? anchors) param-ctx)])
 
 
-(defn select-ref-component [entity field anchors props param-ctx]
+(defn select-ref-component [value field anchors props param-ctx]
   [:div.value
-   #_(pr-str (get-in entity [(-> field :field/attribute :attribute/ident) :db/id]))
+   #_(pr-str (:db/id value))
    (render-inline-links field (filter :anchor/render-inline? anchors) param-ctx)
    [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]])
 
 
-(defn table-many-ref [entity field anchors props param-ctx]
+(defn table-many-ref [value field anchors props param-ctx]
   [:div.value
-   #_(->> (get entity (-> field :field/attribute :attribute/ident))
-          (mapv :db/id)
+   #_(->> (mapv :db/id value)
           (pr-str))
    (render-inline-links field (filter :anchor/render-inline? anchors) param-ctx)
    [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]])
@@ -165,30 +160,28 @@
             [:button {:on-click #(user-swap! {:tx (tx/edit-entity (:db/id entity) ident [] [@select-value-atom])})} "⬆"]])]))))
 
 
-(defn table-many-ref-component [entity field anchors props param-ctx]
+(defn table-many-ref-component [value field anchors props param-ctx]
   [:div.value
-   #_(->> (get entity (-> field :field/attribute :attribute/ident))
-          (mapv :db/id)
+   #_(->> (mapv :db/id value)
           (pr-str))
    (render-inline-links field (filter :anchor/render-inline? anchors) param-ctx)
    [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]])
 
 
-(defn multi-select-ref [entity field anchors props {:keys [user-swap!] :as param-ctx}]
-  (let [add-item! #(user-swap! {:tx (tx/edit-entity (:db/id entity) (-> field :field/attribute :attribute/ident) [] [nil])})]
-    (multi-select* multi-select-markup entity add-item! field anchors props param-ctx))) ;add-item! is: add nil to set
+(defn multi-select-ref [value field anchors props {:keys [user-swap!] :as param-ctx}]
+  (let [add-item! #(user-swap! {:tx (tx/edit-entity (:db/id (:entity param-ctx)) (-> field :field/attribute :attribute/ident) [] [nil])})]
+    (multi-select* multi-select-markup value add-item! field anchors props param-ctx))) ;add-item! is: add nil to set
 
 
-(defn multi-select-ref-component [entity field anchors props {:keys [user-swap!] :as param-ctx}]
-  (let [temp-id! (partial hc/*temp-id!* (-> entity :db/id :conn-id)) ; bound to fix render bug
-        add-item! #(user-swap! {:tx (tx/edit-entity (:db/id entity) (-> field :field/attribute :attribute/ident) [] [(temp-id!)])})]
-    [multi-select* multi-select-markup entity add-item! field anchors props param-ctx])) ;add new entity to set
+(defn multi-select-ref-component [value field anchors props {:keys [user-swap!] :as param-ctx}]
+  (let [temp-id! (partial hc/*temp-id!* (-> (:entity param-ctx) :db/id :conn-id)) ; bound to fix render bug
+        add-item! #(user-swap! {:tx (tx/edit-entity (:db/id (:entity param-ctx)) (-> field :field/attribute :attribute/ident) [] [(temp-id!)])})]
+    [multi-select* multi-select-markup value add-item! field anchors props param-ctx])) ;add new entity to set
 
 
-(defn code-editor [entity field anchors props {:keys [user-swap!] :as param-ctx}]
+(defn code-editor [value field anchors props {:keys [user-swap!] :as param-ctx}]
   (let [ident (-> field :field/attribute :attribute/ident)
-        value (get entity ident)
-        change! #(user-swap! {:tx (tx/edit-entity (:db/id entity) ident [value] [%])})]
+        change! #(user-swap! {:tx (tx/edit-entity (:db/id (:entity param-ctx)) ident [value] [%])})]
     ^{:key ident}
     [:div.value
      (let [props (if-not (nil? (:read-only props))
@@ -207,10 +200,9 @@
         (integer? ms))))
 
 
-(defn instant [entity field anchors props {:keys [user-swap!] :as param-ctx}]
-  (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
-        value (get entity ident)
-        on-change! #(user-swap! {:tx (tx/update-entity-attr entity attribute %)})
+(defn instant [value field anchors props {:keys [user-swap!] :as param-ctx}]
+  (let [attribute (:field/attribute field)
+        on-change! #(user-swap! {:tx (tx/update-entity-attr (:entity param-ctx) attribute %)})
         parse-string (fn [s]
                        (if (empty? s)
                          nil
@@ -220,19 +212,18 @@
     [input/validated-input value on-change! parse-string to-string valid-date-str? props]))
 
 
-(defn text [entity field anchors props param-ctx]
+(defn text [value field anchors props param-ctx]
   [:div.value
    [:span.text
-    (let [value (get entity (-> field :field/attribute :attribute/ident))]
-      (condp = (-> field :field/attribute :attribute/cardinality :db/ident)
-        :db.cardinality/one (pr-str value)
-        :db.cardinality/many (map pr-str value)
-        "Incomplete attribute for field"))]
+    (case (-> field :field/attribute :attribute/cardinality :db/ident)
+      :db.cardinality/one (pr-str value)
+      :db.cardinality/many (map pr-str value)
+      "Incomplete attribute for field")]
    (render-inline-links field (filter :anchor/render-inline? anchors) param-ctx)
    [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]])
 
 
-(defn default [entity field anchors props param-ctx]
+(defn default [value field anchors props param-ctx]
   (let [{:keys [:attribute/valueType :attribute/cardinality :attribute/isComponent]} (:field/attribute field)]
     [input/input*
      (str {:valueType (:db/ident valueType)

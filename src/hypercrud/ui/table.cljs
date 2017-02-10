@@ -69,8 +69,8 @@
                                      (map css-encode)
                                      (interpose " ")
                                      (apply str))]
-                  [:td {:class css-class :key (:db/id field) :on-click on-click}
-                   prompt
+                  [:td {:class css-class :key (or (:db/id field) ident) :on-click on-click}
+                   (str prompt)
                    (let [docstring (-> field :field/attribute :attribute/doc)]
                      (if-not (empty? docstring)
                        [native-listener {:on-click (fn [e]
@@ -92,17 +92,19 @@
     (->> (:form/field form)
          (sort-by :field/order)
          (map (fn [field]
-                [:td.truncate {:key (:db/id field) :style style}
-                 (if-let [renderer (renderer/renderer-for-attribute (:field/attribute field))]
-                   (let [{renderer :value error :error} (eval renderer)]
-                     [:div.value
-                      (if error
-                        (pr-str error)
-                        (try
-                          (renderer peer link-fn entity)
-                          (catch :default e (pr-str e))))])
-                   (let [anchors (filter #(= (:db/id field) (some-> % :anchor/field :db/id)) anchors)]
-                     [auto-table-cell entity field anchors param-ctx]))])))))
+                (let [ident (-> field :field/attribute :attribute/ident)
+                      value (get entity ident)]
+                  [:td.truncate {:key (or (:db/id field) ident) :style style}
+                   (if-let [renderer (renderer/renderer-for-attribute (:field/attribute field))]
+                     (let [{renderer :value error :error} (eval renderer)]
+                       [:div.value
+                        (if error
+                          (pr-str error)
+                          (try
+                            (renderer peer link-fn value)
+                            (catch :default e (pr-str e))))])
+                     (let [anchors (filter #(= (:db/id field) (some-> % :anchor/field :db/id)) anchors)]
+                       [auto-table-cell value field anchors param-ctx]))]))))))
 
 
 ;(defn links-cell [entity form repeating-links retract-entity! show-links? navigate-cmp]
