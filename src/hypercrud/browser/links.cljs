@@ -14,16 +14,23 @@
     nil))
 
 
-; todo we shouldn't depend on an actual anchor/link, just that anchor/link's dbid
-; the types for this function are too broad
-(defn build-url-params-map [anchor param-ctx]
-  #_(assert (not (empty? (-> anchor :anchor/link :link/request :link-query/find-element))) "dependent query insanity check")
-  {:domain (-> anchor :anchor/link :hypercrud/owner :database/domain)
-   :project (-> anchor :anchor/link :hypercrud/owner :database/ident)
-   :link-dbid (-> anchor :anchor/link :db/id #_ :id)
-   :query-params (->> (q-util/read-eval-formulas (:anchor/formula anchor))
-                      (util/map-values #(q-util/run-formula % param-ctx)))}
-  #_(condp = (link-type (:anchor/link anchor))
+(defn build-url-params-map
+  ([domain project link-dbid formula param-ctx]
+   {:domain domain
+    :project project
+    :link-dbid link-dbid #_:id
+    :query-params (->> (q-util/read-eval-formulas formula)
+                       (util/map-values #(q-util/run-formula % param-ctx)))})
+  ([link formula param-ctx]
+   (build-url-params-map
+     (-> link :hypercrud/owner :database/domain)
+     (-> link :hypercrud/owner :database/ident)
+     (-> link :db/id)
+     formula
+     param-ctx))
+  ([anchor param-ctx]
+   (build-url-params-map (:anchor/link anchor) (:anchor/formula anchor) param-ctx))
+  #_(case (link-type (:anchor/link anchor))
       :link-query {:link-dbid (-> anchor :anchor/link :db/id)
                    :query-params (->> (q-util/read-eval-formulas (:anchor/formula anchor))
                                       (util/map-values #(q-util/run-formula % param-ctx)))}
