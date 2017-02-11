@@ -264,4 +264,5 @@
   (let [replace-tempid #(or (get tempid-lookup %) %)]
     (-> params-map
         (update :link-dbid replace-tempid)
+        ; todo doubtful this works on :entity-dbid-s
         (update :query-params #(util/map-values replace-tempid %)))))
