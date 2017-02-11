@@ -47,8 +47,8 @@
           edit-links (->> find-elements
                           (mapv (fn [find-element]
                                   (let [connection-dbid (-> find-element :find-element/connection :db/id)
-                                        link-name (str "edit " (:find-element/name find-element))]
-                                    {:anchor/prompt link-name
+                                        link-name (str "system-edit " (:find-element/name find-element))]
+                                    {:anchor/prompt (str "edit " (:find-element/name find-element))
                                      :anchor/link (system-edit-link connection-dbid link-name parent-link)
                                      :anchor/repeating? true
                                      :anchor/find-element find-element
@@ -69,8 +69,8 @@
                             (set)
                             (mapv (fn [connection]
                                     (let [connection-dbid (:db/id connection)
-                                          link-name (str "create in " (:database/ident connection))]
-                                      {:anchor/prompt link-name
+                                          link-name (str "system-create " (:database/ident connection))]
+                                      {:anchor/prompt (str "create in " (:database/ident connection))
                                        :anchor/link (system-edit-link connection-dbid link-name parent-link)
                                        :anchor/repeating? false
                                        :anchor/formula (pr-str {:entity-dbid-s (pr-str `(fn [~'ctx]
