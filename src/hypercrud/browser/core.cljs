@@ -130,7 +130,7 @@
                         resultset (if request
                                     (hc/hydrate peer request)
                                     (exception/success nil))]
-                       (cats/return (condp = (get param-ctx :display-mode :dressed)
+                       (cats/return (case (get param-ctx :display-mode :dressed)
                                       :dressed (user-resultset resultset link (user-bindings link param-ctx))
                                       :undressed (auto-control/resultset resultset link (user-bindings link param-ctx))
 
@@ -237,7 +237,7 @@
 
 (defn requests-for-link [link query-params param-ctx recurse?]
   (let [param-ctx (assoc param-ctx :query-params query-params)]
-    (condp = (links/link-type link)
+    (case (links/link-type link)
       :link-query (requests-for-link-query link query-params param-ctx recurse?)
       :link-entity (requests-for-link-entity link query-params param-ctx recurse?)
       nil)))

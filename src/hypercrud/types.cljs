@@ -10,7 +10,7 @@
   IEquiv (-equiv [this other] (= (hash this) (hash other)))
   ILookup
   (-lookup [o k] (get o k nil))
-  (-lookup [o k not-found] (condp = k
+  (-lookup [o k not-found] (case k
                              :id (.-id o)
                              :conn-id (.-conn-id o)
                              not-found)))
@@ -25,7 +25,7 @@
   IEquiv (-equiv [this other] (= (hash this) (hash other)))
   ILookup
   (-lookup [o k] (get o k nil))
-  (-lookup [o k not-found] (condp = k
+  (-lookup [o k not-found] (case k
                              :conn-id (.-conn-id o)
                              :t (.-t o)
                              not-found)))
@@ -83,7 +83,7 @@
   IEquiv (-equiv [this other] (= (hash this) (hash other)))
   ILookup
   (-lookup [o k] (get o k nil))
-  (-lookup [o k not-found] (condp = k
+  (-lookup [o k not-found] (case k
                              :query query
                              :params params
                              :pull-exps pull-exps
@@ -96,7 +96,7 @@
   IEquiv (-equiv [this other] (= (hash this) (hash other)))
   ILookup
   (-lookup [o k] (get o k nil))
-  (-lookup [o k not-found] (condp = k
+  (-lookup [o k not-found] (case k
                              :dbid-s dbid-s
                              :dbval dbval
                              :pull-exp pull-exp

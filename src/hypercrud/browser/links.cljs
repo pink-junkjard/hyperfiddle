@@ -47,7 +47,7 @@
 
 
 (defn renderable-link? [link params-map]
-  (condp = (link-type link)
+  (case (link-type link)
     :link-query (some-> link :link/request :link-query/value
                         reader/read-string
                         q-util/parse-holes

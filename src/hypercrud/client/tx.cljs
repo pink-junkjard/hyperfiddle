@@ -24,13 +24,13 @@
                           new-val]
   (let [{:keys [old new]} (let [old-val (get entity ident)]
                             (if (= (:db/ident valueType) :db.type/ref)
-                              (condp = (:db/ident cardinality)
+                              (case (:db/ident cardinality)
                                 :db.cardinality/one {:old (let [old-val (:db/id old-val)]
                                                             (if (nil? old-val) [] [old-val]))
                                                      :new [new-val]}
                                 :db.cardinality/many {:old (map #(:db/id %) old-val)
                                                       :new new-val})
-                              (condp = (:db/ident cardinality)
+                              (case (:db/ident cardinality)
                                 :db.cardinality/one {:old (if (nil? old-val) [] [old-val])
                                                      :new [new-val]}
                                 :db.cardinality/many {:old old-val
@@ -44,14 +44,13 @@
                     simplified-tx)
         [op' e' a' v'] (first (get g true))                 ;if this count > 1, we have duplicate stmts, they are harmless and discard dups here.
         non-related (get g false)]
-    (cond
-      (= op :db/add) (if (= op' :db/retract)
-                       non-related                          ;we have a related previous stmt that cancels us and it out
-                       (conj non-related next-stmt))
-      (= op :db/retract) (if (= op' :db/add)
-                           non-related                      ;we have a related previous stmt that cancels us and it out
-                           (conj non-related next-stmt))
-      :else (throw "match error"))))
+    (case op
+      :db/add (if (= op' :db/retract)
+                non-related                                 ;we have a related previous stmt that cancels us and it out
+                (conj non-related next-stmt))
+      :db/retract (if (= op' :db/add)
+                    non-related                             ;we have a related previous stmt that cancels us and it out
+                    (conj non-related next-stmt)))))
 
 
 (defn into-tx [tx more-statements]
@@ -90,10 +89,10 @@
   (mapcat (fn [[attr v]]
             (let [{:keys [:db/cardinality :db/valueType :db/isComponent]} (get schema attr)]
               (if isComponent
-                (cond
-                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one)) [v]
-                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) (vec v)
-                  :else []))))
+                (case [valueType cardinality]
+                  [:db.type/ref :db.cardinality/one] [v]
+                  [:db.type/ref :db.cardinality/many] (vec v)
+                  []))))
           entity))
 
 
@@ -107,10 +106,10 @@
   (mapcat (fn [[attr v]]
             (let [{:keys [:db/cardinality :db/valueType]} (get schema attr)]
               ; todo can we just check if val is map? or coll? to remove dep on schema?
-              (cond
-                (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one)) [v]
-                (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) (vec v)
-                :else [])))
+              (case [valueType cardinality]
+                [:db.type/ref :db.cardinality/one] [v]
+                [:db.type/ref :db.cardinality/many] (vec v)
+                [])))
           entity))
 
 
@@ -151,10 +150,10 @@
                                              v (if-not (= valueType :db.type/ref)
                                                  v
                                                  (if isComponent
-                                                   (condp = cardinality
+                                                   (case cardinality
                                                      :db.cardinality/one (util/update-existing v :db/id replace-id!)
                                                      :db.cardinality/many (mapv #(util/update-existing % :db/id replace-id!) v))
-                                                   (condp = cardinality
+                                                   (case cardinality
                                                      :db.cardinality/one (select-keys v [:db/id])
                                                      :db.cardinality/many (mapv #(select-keys % [:db/id]) v))))]
                                          [a v])))

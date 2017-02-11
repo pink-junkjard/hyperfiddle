@@ -41,7 +41,7 @@
 (defn overlay-system-links-tx
   "remove the user links and provide the system links (edit, new, remove)"
   [parent-link]
-  (condp = (links/link-type parent-link)
+  (case (links/link-type parent-link)
     :link-query
     (let [find-elements (get-in parent-link [:link/request :link-query/find-element])
           edit-links (->> find-elements
@@ -111,5 +111,5 @@
         entity-conn-dbid (->DbId entity-conn-id hc/*root-conn-id*)
         ; system links are only generated on QueryRequests, so we don't need to determine the type of the parent link
         parent-link system-link-deps]
-    (condp = (:link/ident system-link-id)
+    (case (:link/ident system-link-id)
       :system-edit (system-edit-link entity-conn-dbid link-name parent-link))))

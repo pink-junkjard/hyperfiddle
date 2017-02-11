@@ -10,7 +10,7 @@
         props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
                :value (if (nil? value) "" (str value))
                ;; reconstruct the typed value
-               :on-change #(let [v (condp = (.-target.value %)
+               :on-change #(let [v (case (.-target.value %)
                                      "" nil
                                      "true" true
                                      "false" false)]

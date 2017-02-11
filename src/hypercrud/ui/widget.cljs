@@ -84,7 +84,7 @@
      [:div.editable-select {:key ident}
       [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
       (if (:read-only props)
-        [:span.text (condp = value
+        [:span.text (case value
                       true "True"
                       false "False"
                       "--")]

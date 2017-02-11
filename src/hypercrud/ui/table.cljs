@@ -45,7 +45,7 @@
                       with-sort-direction (fn [asc desc no-sort not-sortable]
                                             (if (sortable? field)
                                               (if (and (= form-dbid' form-dbid) (= ident' ident))
-                                                (condp = direction
+                                                (case direction
                                                   :asc asc
                                                   :desc desc)
                                                 no-sort)
@@ -177,7 +177,7 @@
                                       first)]
                        (if (and (not= nil field) (sortable? field))
                          (sort-by #(get-in % [find-element-name sort-key])
-                                  (condp = direction
+                                  (case direction
                                     :asc #(compare %1 %2)
                                     :desc #(compare %2 %1))
                                   resultset)
