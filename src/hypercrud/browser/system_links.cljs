@@ -5,20 +5,21 @@
 
 
 (defn system-edit-link-dbid [entity-conn-id link-name parent-link-dbid]
-  (->DbId [(-> parent-link-dbid :id)
-           (-> parent-link-dbid :conn-id)
-           :system-edit
-           entity-conn-id
-           link-name]
+  (->DbId {:parent-link-id (-> parent-link-dbid :id)
+           :parent-link-conn-id (-> parent-link-dbid :conn-id)
+           :link/ident :system-edit
+           :link/name link-name
+           :entity-conn-id entity-conn-id}
           (-> parent-link-dbid :conn-id)))
 
 
 (defn system-edit-field-link-dbid [find-element-id field-id parent-link-dbid]
-  (->DbId [(-> parent-link-dbid :id)
-           (-> parent-link-dbid :conn-id)
-           :system-edit-field
-           find-element-id
-           field-id]
+  (->DbId {:parent-link-id (-> parent-link-dbid :id)
+           :parent-link-conn-id (-> parent-link-dbid :conn-id)
+           :link/ident :system-edit-field
+           ;find-element-id
+           ;field-id
+           }
           (-> parent-link-dbid :conn-id)))
 
 
@@ -85,7 +86,7 @@
 
 
 (defn request-for-system-link [system-link-id]
-  (let [[parent-link-id parent-link-conn-id] system-link-id
+  (let [{:keys [parent-link-id parent-link-conn-id]} system-link-id
         parent-link-dbid (->DbId parent-link-id parent-link-conn-id)]
     (->EntityRequest parent-link-dbid
                      (->DbVal hc/*root-conn-id* nil)
@@ -106,9 +107,9 @@
 
 
 (defn generate-system-link [system-link-id system-link-deps]
-  (let [[_ _ system-link-name entity-conn-id link-name] system-link-id
+  (let [{:keys [entity-conn-id link-name]} system-link-id
         entity-conn-dbid (->DbId entity-conn-id hc/*root-conn-id*)
         ; system links are only generated on QueryRequests, so we don't need to determine the type of the parent link
         parent-link system-link-deps]
-    (condp = system-link-name
+    (condp = (:link/ident system-link-id)
       :system-edit (system-edit-link entity-conn-dbid link-name parent-link))))
