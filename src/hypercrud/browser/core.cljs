@@ -113,7 +113,7 @@
 (defn ui [{query-params :query-params :as params-map}
           {:keys [peer] :as param-ctx}]
   (let [param-ctx (assoc param-ctx :query-params query-params)
-        dom-or-e (mlet [link (if (map? (-> params-map :link-dbid :id))
+        dom-or-e (mlet [link (if (system-links/system-link? (-> params-map :link-dbid))
                                (let [system-link-id (-> params-map :link-dbid :id)]
                                  (->> (system-links/request-for-system-link system-link-id)
                                       (hc/hydrate peer)
@@ -244,7 +244,7 @@
 
 
 (defn request [params-map param-ctx recurse?]
-  (if (map? (-> params-map :link-dbid :id))
+  (if (system-links/system-link? (:link-dbid params-map))
     (let [system-link-id (-> params-map :link-dbid :id)
           system-link-request (system-links/request-for-system-link system-link-id)]
       (concat

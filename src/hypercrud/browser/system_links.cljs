@@ -4,6 +4,15 @@
             [hypercrud.types :refer [->DbId ->DbVal ->EntityRequest]]))
 
 
+(defn system-link? [link-dbid]
+  (map? (:id link-dbid)))
+
+
+(defn system-link-id->parent-link-dbid [system-link-dbid]
+  (->DbId (get system-link-dbid :parent-link-id)
+          (get system-link-dbid :parent-link-conn-id)))
+
+
 (defn system-edit-link-dbid [entity-conn-id link-name parent-link-dbid]
   (->DbId {:parent-link-id (-> parent-link-dbid :id)
            :parent-link-conn-id (-> parent-link-dbid :conn-id)
@@ -86,8 +95,7 @@
 
 
 (defn request-for-system-link [system-link-id]
-  (let [{:keys [parent-link-id parent-link-conn-id]} system-link-id
-        parent-link-dbid (->DbId parent-link-id parent-link-conn-id)]
+  (let [parent-link-dbid (system-link-id->parent-link-dbid system-link-id)]
     (->EntityRequest parent-link-dbid
                      (->DbVal hc/*root-conn-id* nil)
                      (let [form-pull-exp ['* {:form/field
