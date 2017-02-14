@@ -10,7 +10,8 @@
             [hypercrud.form.q-util :as q-util]
             [hypercrud.types :refer [->DbId ->DbVal ->EntityRequest]]
             [hypercrud.ui.auto-control :as auto-control]
-            [hypercrud.util :as util]))
+            [hypercrud.util :as util]
+            [hypercrud.client.schema :as schema-util]))
 
 
 (defn user-bindings [link param-ctx]
@@ -129,17 +130,21 @@
                                     nil))
                         resultset (if request
                                     (hc/hydrate peer request)
-                                    (exception/success nil))]
-                       (cats/return (case (get param-ctx :display-mode :dressed)
-                                      :dressed (user-resultset resultset link (user-bindings link param-ctx))
-                                      :undressed (auto-control/resultset resultset link (user-bindings link param-ctx))
+                                    (exception/success nil))
+                        schema (hc/hydrate peer (schema-util/schema-request nil))]
+                       (cats/return
+                         (case (get param-ctx :display-mode :dressed)
+                           :dressed (user-resultset resultset link (user-bindings link param-ctx))
+                           :undressed (auto-control/resultset resultset link (user-bindings link param-ctx))
 
-                                      ; raw ignores user links and gets free system links
-                                      :raw (let [link (system-links/overlay-system-links-tx link) ;todo don't overlay system links on system links
-                                                 ; sub-queries (e.g. combo boxes) will get the old pulled-tree
-                                                 ; Since we only changed link, this is only interesting for the hc-in-hc case
-                                                 ]
-                                             (auto-control/resultset resultset link param-ctx)))))]
+                           ; raw ignores user links and gets free system links
+                           :raw (let [link (system-links/overlay-system-links-tx link) ;todo don't overlay system links on system links
+                                      ; sub-queries (e.g. combo boxes) will get the old pulled-tree
+                                      ; Since we only changed link, this is only interesting for the hc-in-hc case
+
+                                      indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
+                                      param-ctx (assoc param-ctx :schema indexed-schema)]
+                                  (auto-control/resultset resultset link param-ctx)))))]
     (if (exception/failure? dom-or-e)
       [:div
        [:span (-> dom-or-e .-e .-msg)]
@@ -217,6 +222,9 @@
     (let [request (q-util/query-value q link-query params-map param-ctx)]
       (concat
         [request]
+        (->> (get-in link [:link/request :link-query/find-element])
+             (mapv :find-element/connection)
+             (mapv schema-util/schema-request))
         (if recurse?
           (if-let [resultset (exception/extract (hc/hydrate peer request) nil)]
             (dependent-requests resultset (:link-query/find-element link-query) (:link/anchor link) param-ctx)))))))
@@ -225,7 +233,8 @@
 (defn requests-for-link-entity [link query-params {:keys [peer] :as param-ctx} recurse?]
   (let [request (q-util/->entityRequest (:link/request link) query-params)]
     (concat
-      [request]
+      [request
+       (schema-util/schema-request (get-in link [:link/request :link-entity/connection]))]
       (if recurse?
         (if-let [resultset (exception/extract (hc/hydrate peer request) nil)]
           (let [resultset (->> (if (map? resultset) [resultset] resultset)

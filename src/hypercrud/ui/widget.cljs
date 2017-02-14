@@ -5,6 +5,7 @@
             [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx]
             [hypercrud.form.option :as option]
+            [hypercrud.form.q-util :as q-util]
             [hypercrud.ui.code-editor :refer [code-editor*]]
             [hypercrud.ui.input :as input]
             [hypercrud.ui.multi-select :refer [multi-select* multi-select-markup]]
@@ -226,3 +227,8 @@
            :isComponent isComponent})
      #()
      {:read-only true}]))
+
+
+(defn raw [value field anchors props param-ctx]
+  (let [on-change! #((:user-swap! param-ctx) {:tx (tx/update-entity-attr (:entity param-ctx) (:field/attribute field) %)})]
+    [input/edn-input* value on-change! props]))

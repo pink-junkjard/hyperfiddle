@@ -1,12 +1,17 @@
 (ns hypercrud.ui.form
   (:require [hypercrud.browser.links :as links]
+            [hypercrud.client.schema :as schema-util]
             [hypercrud.compile.eval :refer [eval]]
             [hypercrud.types :refer [->DbVal]]
-            [hypercrud.ui.auto-control :refer [auto-control connection-color]]
+            [hypercrud.ui.auto-control :refer [auto-control raw-control connection-color]]
             [hypercrud.ui.input :as input]
             [hypercrud.ui.renderer :as renderer]
             [hypercrud.ui.widget :as widget]
-            [reagent.core :as r]))
+            [reagent.core :as r]
+            [hypercrud.client.core :as hc]
+            [hypercrud.util :as util]
+            [cats.core :as cats]
+            [cats.monad.exception :as exception]))
 
 
 (defn field [value {:keys [:field/prompt] :as field} anchors {:keys [peer] :as param-ctx}]
@@ -32,7 +37,9 @@
             (renderer peer link-fn value)
             (catch :default e (pr-str e))))])
      (let [anchors (filter #(= (:db/id field) (some-> % :anchor/field :db/id)) anchors)]
-       [auto-control value field anchors param-ctx]))])
+       (if (= (:display-mode param-ctx) :raw)
+         [raw-control value field anchors param-ctx]
+         [auto-control value field anchors param-ctx])))])
 
 
 (defn new-field [entity param-ctx]
@@ -54,13 +61,15 @@
     [:div.form {:style style}
      (->> (:form/field form)
           (sort-by :field/order)
-          (map (fn [fieldinfo]
-                 (let [ident (-> fieldinfo :field/attribute :attribute/ident)
+          (map (fn [field*]
+                 (let [ident (-> field* :field/attribute :attribute/ident)
                        value (get entity ident)]
-                   ^{:key (or (:db/id fieldinfo) ident)}
-                   [field value fieldinfo anchors param-ctx]))))
-     ^{:key (hash (keys entity))}
-     [new-field entity param-ctx]]))
+                   ^{:key (or (:db/id field*) (str ident))}
+                   [field value field* anchors (assoc param-ctx :attribute-ident ident)])))
+          (doall))
+     (if (= (:display-mode param-ctx) :raw)
+       ^{:key (hash (keys entity))}                         ; reset local state
+       [new-field entity param-ctx])]))
 
 
 (defn forms-list [resultset ordered-find-elements anchors param-ctx]
@@ -92,24 +101,25 @@
                                                           (if-let [find-element (:anchor/find-element anchor)]
                                                             (:find-element/name find-element)
                                                             :entity))))]
-         (map (fn [find-element]
-                (let [entity (get result (:find-element/name find-element))
-                      find-element-anchors (get find-element-anchors-lookup (:find-element/name find-element))
-                      param-ctx (assoc param-ctx :color ((:color-fn param-ctx) entity param-ctx)
-                                                 :owner ((:owner-fn param-ctx) entity param-ctx)
-                                                 :entity entity)]
-                  ^{:key (hash [(:db/id entity) (:db/id (:find-element/form find-element))])}
-                  [:div.find-element
-                   (widget/render-anchors (->> find-element-anchors
-                                               (filter #(nil? (:anchor/field %)))
-                                               (remove :anchor/render-inline?))
-                                          param-ctx)
-                   [form entity (:find-element/form find-element) find-element-anchors param-ctx]
-                   (widget/render-inline-links (->> find-element-anchors
-                                                    (filter #(nil? (:anchor/field %)))
-                                                    (filter :anchor/render-inline?))
-                                               (dissoc param-ctx :isComponent))]))
-              ordered-find-elements))
+         (doall
+           (map (fn [find-element]
+                  (let [entity (get result (:find-element/name find-element))
+                        find-element-anchors (get find-element-anchors-lookup (:find-element/name find-element))
+                        param-ctx (assoc param-ctx :color ((:color-fn param-ctx) entity param-ctx)
+                                                   :owner ((:owner-fn param-ctx) entity param-ctx)
+                                                   :entity entity)]
+                    ^{:key (str (:db/id entity) "-" (:find-element/name find-element))}
+                    [:div.find-element
+                     (widget/render-anchors (->> find-element-anchors
+                                                 (filter #(nil? (:anchor/field %)))
+                                                 (remove :anchor/render-inline?))
+                                            param-ctx)
+                     [form entity (:find-element/form find-element) find-element-anchors param-ctx]
+                     (widget/render-inline-links (->> find-element-anchors
+                                                      (filter #(nil? (:anchor/field %)))
+                                                      (filter :anchor/render-inline?))
+                                                 (dissoc param-ctx :isComponent))]))
+                ordered-find-elements)))
        [:div "No results"])
      (widget/render-inline-links (concat
                                    ; non-repeating should not have :result

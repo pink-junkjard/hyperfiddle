@@ -5,6 +5,8 @@
 
 (defmulti auto-control (fn [] :default))
 
+(defmulti raw-control (fn [] :default))
+
 (defmulti auto-table-cell (fn [] :default))
 
 (defmulti resultset (fn [] :default))
