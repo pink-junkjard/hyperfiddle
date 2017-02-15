@@ -19,12 +19,13 @@
   ([anchor-ctx-pairs]
    (->> anchor-ctx-pairs
         (filter (partial apply links/link-visible?))
-        (map (fn [[anchor param-ctx]]
-               ^{:key (hash anchor)}
-               [(:navigate-cmp param-ctx) (links/build-link-props anchor param-ctx) (:anchor/prompt anchor) param-ctx]))
+        (mapv (fn [[anchor param-ctx]]
+                (assert (:navigate-cmp param-ctx))
+                ^{:key (hash anchor)}
+                [(:navigate-cmp param-ctx) (links/build-link-props anchor param-ctx) (:anchor/prompt anchor) param-ctx]))
         (interpose " · ")))
   ([anchors param-ctx]
-   (render-anchors (map vector anchors (repeatedly (constantly param-ctx))))))
+   (render-anchors (map vector anchors (repeat param-ctx)))))
 
 
 (defn render-inline-links
@@ -140,7 +141,7 @@
          (let [props {:value (str @select-value-atom)
                       :on-change #(let [select-value (.-target.value %)
                                         value (reader/read-string select-value)]
-                                   (reset! select-value-atom value))}
+                                    (reset! select-value-atom value))}
                ; todo assert selected value is in record set
                ; need lower level select component that can be reused here and in select.cljs
                select-options (->> (option/get-option-records field param-ctx)
@@ -211,10 +212,9 @@
 (defn text [value field anchors props param-ctx]
   [:div.value
    [:span.text
-    (case (-> field :field/attribute :attribute/cardinality :db/ident)
-      :db.cardinality/one (pr-str value)
+    (case (-> (:attribute param-ctx) :attribute/cardinality :db/ident)
       :db.cardinality/many (map pr-str value)
-      "Incomplete attribute for field")]
+      (pr-str value))]
    (render-inline-links field (filter :anchor/render-inline? anchors) param-ctx)
    [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]])
 
@@ -229,6 +229,6 @@
      {:read-only true}]))
 
 
-(defn raw [value field anchors props param-ctx]
-  (let [on-change! #((:user-swap! param-ctx) {:tx (tx/update-entity-attr (:entity param-ctx) (:field/attribute field) %)})]
+(defn raw [value _ anchors props param-ctx]
+  (let [on-change! #((:user-swap! param-ctx) {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %)})]
     [input/edn-input* value on-change! props]))

@@ -12,22 +12,16 @@
             [hypercrud.client.tx :as tx]))
 
 
-; Auto-control takes the parent entity as context
-; We think this is only used for the dbid, so we can create a tx
-; If the parent was someday needed for dispatching, there are better things to dispatch on,
-; for example the entire graph can be available in dynamic scope for specific queries, no
-; need to limit it to parent.
-
-
 (defn build-props [value field anchors param-ctx]
+  ; why does this need the field
   {:read-only ((get param-ctx :read-only (constantly false)) field param-ctx)})
 
 
 (defmethod auto-control/auto-control :default
   [value field anchors param-ctx]
-  (let [{:keys [:attribute/cardinality :attribute/isComponent] :as attribute} (:field/attribute field)
-        valueType (-> attribute :attribute/valueType :db/ident)
-        cardinality (:db/ident cardinality)
+  (let [isComponent (-> (:attribute param-ctx) :attribute/isComponent)
+        valueType (-> (:attribute param-ctx) :attribute/valueType :db/ident)
+        cardinality (-> (:attribute param-ctx) :attribute/cardinality :db/ident)
         props (build-props value field anchors param-ctx)
         widget (cond
                  (and (= valueType :db.type/boolean) (= cardinality :db.cardinality/one)) widget/select-boolean
@@ -35,7 +29,7 @@
                  (and (= valueType :db.type/string) (= cardinality :db.cardinality/one) (not (:read-only props))) widget/input
                  (and (= valueType :db.type/long) (= cardinality :db.cardinality/one) (not (:read-only props))) widget/input-long
                  (and (= valueType :db.type/code) (= cardinality :db.cardinality/one)) widget/code-editor
-                 (and (= valueType :db.type/instant) (= cardinality :db.cardinality/one) (not (:read-only props))) widget/instant
+                 (and (= valueType :db.type/instant) (= cardinality :db.cardinality/one) #_ (not (:read-only props))) widget/instant
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one) isComponent) widget/select-ref-component
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many) isComponent) widget/table-many-ref-component
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one)) widget/select-ref
@@ -48,9 +42,9 @@
 
 (defmethod auto-control/auto-table-cell :default
   [value field anchors param-ctx]
-  (let [{:keys [:attribute/cardinality :attribute/isComponent] :as attribute} (:field/attribute field)
-        valueType (-> attribute :attribute/valueType :db/ident)
-        cardinality (:db/ident cardinality)
+  (let [isComponent (-> (:attribute param-ctx) :attribute/isComponent)
+        valueType (-> (:attribute param-ctx) :attribute/valueType :db/ident)
+        cardinality (-> (:attribute param-ctx) :attribute/cardinality :db/ident)
         props (build-props value field anchors param-ctx)
         widget (cond
                  (and (= valueType :db.type/boolean) (= cardinality :db.cardinality/one)) widget/select-boolean
@@ -58,7 +52,7 @@
                  (and (= valueType :db.type/string) (= cardinality :db.cardinality/one) (not (:read-only props))) widget/input
                  (and (= valueType :db.type/long) (= cardinality :db.cardinality/one) (not (:read-only props))) widget/input-long
                  (and (= valueType :db.type/code) (= cardinality :db.cardinality/one) (not (:read-only props))) widget/input
-                 (and (= valueType :db.type/instant) (= cardinality :db.cardinality/one) (not (:read-only props))) widget/instant
+                 (and (= valueType :db.type/instant) (= cardinality :db.cardinality/one) #_(not (:read-only props))) widget/instant
 
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one) isComponent) table-cell/ref-one-component
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one)) widget/select-ref
@@ -93,22 +87,6 @@
        (widget/render-inline-links (filter :anchor/render-inline? non-repeating-top-anchors) param-ctx))]))
 
 
-(defn fields-for-entity [schema entity]
-  (->> (keys entity)
-       (mapv (fn [attribute-ident]
-               {:field/attribute (get schema attribute-ident)
-                :field/prompt attribute-ident}))))
-
-
-(defn fields-for-entity-list [schema entity-list]
-  (->> (mapcat keys entity-list)
-       (set)
-       (mapv (fn [attribute-ident]
-               (let [])
-               {:field/attribute (get schema attribute-ident)
-                :field/prompt attribute-ident}))))
-
-
 (defmethod auto-control/resultset :default [resultset link param-ctx]
   (let [ui-for-resultset (fn [single-result-as-entity?] (if single-result-as-entity? form/forms-list table/table))]
     (case (links/link-type link)
@@ -121,16 +99,7 @@
             ordered-find-elements
             (->> (util/parse-query-element q :find)
                  (mapv str)
-                 (mapv
-                   (fn [find-element-name]
-                     (-> (get find-element-lookup find-element-name)
-                         (update :find-element/form
-                                 (fn [old-form]
-                                   (or old-form
-                                       {:form/field
-                                        (if (:link-query/single-result-as-entity? link-query)
-                                          (fields-for-entity (:schema param-ctx) (get (first resultset) find-element-name))
-                                          (fields-for-entity-list (:schema param-ctx) (mapv #(get % find-element-name) resultset)))}))))))
+                 (mapv #(get find-element-lookup %))
                  (mapv (fn [find-element]
                          (update-in find-element [:find-element/form :form/field] #(filter-visible-fields % param-ctx)))))]
         [ui resultset ordered-find-elements (:link/anchor link) param-ctx])
@@ -139,10 +108,7 @@
       (let [single-result-as-entity? (map? resultset)       ;todo this is broken when no results are returned
             ui (ui-for-resultset single-result-as-entity?)
             ordered-find-elements [{:find-element/name :entity
-                                    :find-element/form (-> (get-in link [:link/request :link-entity/form]
-                                                                   {:form/field (if single-result-as-entity?
-                                                                                  (fields-for-entity (:schema param-ctx) resultset)
-                                                                                  (fields-for-entity-list (:schema param-ctx) resultset))})
+                                    :find-element/form (-> (get-in link [:link/request :link-entity/form])
                                                            (update :form/field #(filter-visible-fields % param-ctx)))}]
             resultset (->> (if single-result-as-entity? [resultset] resultset)
                            (mapv #(assoc {} :entity %)))]
@@ -152,25 +118,11 @@
 
 
 (defmethod auto-control/raw-control :default
-  [value field anchors param-ctx]
-  (let [{:keys [:attribute/cardinality :attribute/isComponent] :as attribute} (:field/attribute field)
-        valueType (-> attribute :attribute/valueType :db/ident)
-        cardinality (:db/ident cardinality)
-        props {}
-        ;widget (cond
-        ;         (= cardinality :db.cardinality/one) widget/raw-one
-        ;
-        ;
-        ;         (and (= valueType :db.type/boolean) (= cardinality :db.cardinality/one)) widget/select-boolean
-        ;         (and (= valueType :db.type/keyword) (= cardinality :db.cardinality/one) (not (:read-only props))) widget/input-keyword
-        ;         (and (= valueType :db.type/string) (= cardinality :db.cardinality/one) (not (:read-only props))) widget/input
-        ;         (and (= valueType :db.type/long) (= cardinality :db.cardinality/one) (not (:read-only props))) widget/input-long
-        ;         (and (= valueType :db.type/code) (= cardinality :db.cardinality/one)) widget/code-editor
-        ;         (and (= valueType :db.type/instant) (= cardinality :db.cardinality/one) (not (:read-only props))) widget/instant
-        ;         (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one) isComponent) widget/select-ref-component
-        ;         (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many) isComponent) widget/table-many-ref-component
-        ;         (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one)) widget/select-ref
-        ;         (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) widget/table-many-ref
-        ;         :else (constantly [:div (pr-str [value valueType cardinality isComponent])]))
-        ]
-    [widget/raw value field anchors props param-ctx]))
+  [value anchors param-ctx]
+  (let [props {}]
+    [widget/raw value anchors props param-ctx]))
+
+(defmethod auto-control/raw-table-cell :default
+  [value anchors param-ctx]
+  (let [props {}]
+    [widget/raw value anchors props param-ctx]))

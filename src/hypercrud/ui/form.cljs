@@ -14,14 +14,16 @@
             [cats.monad.exception :as exception]))
 
 
-(defn field [value {:keys [:field/prompt] :as field} anchors {:keys [peer] :as param-ctx}]
+; field is optional (raw mode); schema and attribute is in dynamic scope in all modes
+(defn field [value field anchors {:keys [peer] :as param-ctx}]
   [:div.field
    [:label
-    (let [docstring (-> field :field/attribute :attribute/doc)]
+    (let [prompt (get field :field/prompt (-> param-ctx :attribute :attribute/ident str))
+          docstring (-> field :field/attribute :attribute/doc)]
       (if-not (empty? docstring)
         [:span.help {:on-click #(js/alert docstring)} prompt]
         prompt))]
-   (if-let [renderer (renderer/renderer-for-attribute (:field/attribute field))]
+   (if-let [renderer (renderer/renderer-for-attribute (:attribute param-ctx))]
      (let [{renderer :value error :error} (eval renderer)
            anchor-lookup (->> anchors
                               (mapv (juxt #(-> % :anchor/ident) identity))
@@ -38,7 +40,7 @@
             (catch :default e (pr-str e))))])
      (let [anchors (filter #(= (:db/id field) (some-> % :anchor/field :db/id)) anchors)]
        (if (= (:display-mode param-ctx) :raw)
-         [raw-control value field anchors param-ctx]
+         [raw-control value anchors param-ctx]
          [auto-control value field anchors param-ctx])))])
 
 
@@ -56,16 +58,17 @@
          [input/edn-input* nil on-change! props])])))
 
 
+; don't pass a form if raw mode
 (defn form [entity form anchors param-ctx]
-  (let [style {:border-color (connection-color (:color param-ctx))}]
+  (let [style {:border-color (connection-color (:color param-ctx))}
+        form' (group-by :form/field form)]
     [:div.form {:style style}
-     (->> (:form/field form)
-          (sort-by :field/order)
-          (map (fn [field*]
-                 (let [ident (-> field* :field/attribute :attribute/ident)
-                       value (get entity ident)]
-                   ^{:key (or (:db/id field*) (str ident))}
-                   [field value field* anchors (assoc param-ctx :attribute-ident ident)])))
+     (->> entity
+          (sort-by (fn [[k v]]
+                     (if-not form' (name k) (:field/order (get form' k)))))
+          (map (fn [[k v]]
+                 ^{:key k}
+                 [field v (get form' k) anchors (assoc param-ctx :attribute (get (:schema param-ctx) k))]))
           (doall))
      (if (= (:display-mode param-ctx) :raw)
        ^{:key (hash (keys entity))}                         ; reset local state
@@ -114,7 +117,11 @@
                                                  (filter #(nil? (:anchor/field %)))
                                                  (remove :anchor/render-inline?))
                                             param-ctx)
-                     [form entity (:find-element/form find-element) find-element-anchors param-ctx]
+                     (let [form* (if (not= (:display-mode param-ctx) :raw)
+                                   (:find-element/form find-element)
+                                   ; Ignore form in raw mode; it might be over-hydrated
+                                   nil)]
+                       [form entity form* find-element-anchors param-ctx])
                      (widget/render-inline-links (->> find-element-anchors
                                                       (filter #(nil? (:anchor/field %)))
                                                       (filter :anchor/render-inline?))

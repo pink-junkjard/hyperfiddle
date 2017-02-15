@@ -4,7 +4,7 @@
             [hypercrud.compile.eval :refer [eval]]
             [hypercrud.platform.native-event-listener :refer [native-listener]] ;provided dependency
             [hypercrud.types :refer [->DbId ->DbVal]]
-            [hypercrud.ui.auto-control :refer [auto-table-cell connection-color]]
+            [hypercrud.ui.auto-control :refer [auto-table-cell raw-table-cell connection-color]]
             [hypercrud.ui.renderer :as renderer]
             [hypercrud.ui.widget :as widget]
             [hypercrud.util :as util]
@@ -32,105 +32,58 @@
                  (:db/ident valueType)))))
 
 
-(defn build-col-heads [ordered-find-elements col-sort]
-  (let [[form-dbid' ident' direction] @col-sort]
-    (->> ordered-find-elements
-         (mapv :find-element/form)
-         (mapcat (fn [{form-dbid :db/id fields :form/field :as form}]
-                   (->> fields
-                        (sort-by :field/order)
-                        (mapv (juxt (constantly form-dbid) identity)))))
-         (map (fn [[form-dbid {:keys [:field/prompt] :as field}]]
-                (let [ident (-> field :field/attribute :attribute/ident)
-                      with-sort-direction (fn [asc desc no-sort not-sortable]
-                                            (if (sortable? field)
-                                              (if (and (= form-dbid' form-dbid) (= ident' ident))
-                                                (case direction
-                                                  :asc asc
-                                                  :desc desc)
-                                                no-sort)
-                                              not-sortable))
-                      on-click (with-sort-direction #(reset! col-sort [form-dbid ident :desc])
-                                                    #(reset! col-sort nil)
-                                                    #(reset! col-sort [form-dbid ident :asc])
-                                                    (constantly nil))
-                      arrow (with-sort-direction " ↓" " ↑" " ↕" nil)
-                      css-encode (fn [s]
-                                   ;todo flesh this out
-                                   ; http://stackoverflow.com/a/449000/959627
-                                   (-> s
-                                       (string/replace ":" "_co_")
-                                       (string/replace "/" "_bs_")
-                                       (string/replace " " "_sp_")))
-                      css-class (->> [(str "field-id-" (get-in field [:db/id :id]))
-                                      (some->> (:field/prompt field) (str "field-prompt-"))
-                                      (some->> field :field/attribute :attribute/ident (str "field-attr-"))]
-                                     (remove nil?)
-                                     (map css-encode)
-                                     (interpose " ")
-                                     (apply str))]
-                  [:td {:class css-class :key (or (:db/id field) ident) :on-click on-click}
-                   (str prompt)
-                   (let [docstring (-> field :field/attribute :attribute/doc)]
-                     (if-not (empty? docstring)
-                       [native-listener {:on-click (fn [e]
-                                                     (js/alert docstring)
-                                                     (.stopPropagation e))}
-                        [:span.help "ⓘ"]]))
-                   [:span.sort-arrow arrow]]))))))
+(defn css-slugify [s]
+  ; http://stackoverflow.com/a/449000/959627
+  (-> s
+      (string/replace ":" "-")
+      (string/replace "/" "-")
+      (string/replace " " "-")
+      (subs 1)))
 
 
-(defn build-row-cells-for-form [form entity anchors {:keys [peer] :as param-ctx}]
-  (let [link-fn (let [anchor-by-ident (->> anchors
-                                           (mapv (juxt #(-> % :anchor/ident) identity))
-                                           (into {}))]
-                  (fn [ident label param-ctx]
-                    (let [anchor (get anchor-by-ident ident)
-                          props (links/build-link-props anchor param-ctx)]
-                      [(:navigate-cmp param-ctx) props label param-ctx])))
-        style {:border-color (connection-color (:color param-ctx))}]
-    (->> (:form/field form)
-         (sort-by :field/order)
-         (map (fn [field]
-                (let [ident (-> field :field/attribute :attribute/ident)
-                      value (get entity ident)]
-                  [:td.truncate {:key (or (:db/id field) ident) :style style}
-                   (if-let [renderer (renderer/renderer-for-attribute (:field/attribute field))]
-                     (let [{renderer :value error :error} (eval renderer)]
-                       [:div.value
-                        (if error
-                          (pr-str error)
-                          (try
-                            (renderer peer link-fn value)
-                            (catch :default e (pr-str e))))])
-                     (let [anchors (filter #(= (:db/id field) (some-> % :anchor/field :db/id)) anchors)]
-                       [auto-table-cell value field anchors param-ctx]))]))))))
+(defn build-col-heads [colspec col-sort]
+  (->> (partition 3 colspec)
+       (mapv (fn [[fe-name ident field]]
+               (let [prompt (get field :field/prompt (str ident))
+                     css-classes [(str "field-element-" (css-slugify fe-name))
+                                  (str "field-attr-" (css-slugify (str ident)))] #_"Dustin removed field-id and field-prompt; use a custom renderer"
+                     on-click #()
 
+                     ;with-sort-direction (fn [asc desc no-sort not-sortable]
+                     ;                      (if (sortable? field)
+                     ;                        (if (and (= form-dbid' form-dbid) (= ident' ident))
+                     ;                          (case direction
+                     ;                            :asc asc
+                     ;                            :desc desc)
+                     ;                          no-sort)
+                     ;                        not-sortable))
 
-;(defn links-cell [entity form repeating-links retract-entity! show-links? navigate-cmp]
-;  (let [open? (r/atom false)]
-;    (fn [entity form retract-entity! show-links? navigate-cmp]
-;      (if @open?
-;        [:div.link-menu
-;         (if show-links?
-;           (conj
-;             (->> repeating-links
-;                  (map (fn [{:keys [:link/ident :link/prompt] :as link}]
-;                         (let [param-ctx {:user-profile hc/*user-profile*
-;                                          :result ???}]
-;                           (links/query-link link param-ctx #(navigate-cmp {:key ident :href %} prompt))))))
-;             (if retract-entity!
-;               [:span {:key "hypercrud-delete-row" :on-click #(retract-entity! (:db/id entity))} "Delete Row"])))
-;         [:span {:key "close" :on-click #(reset! open? false)} "Close"]]
-;        [:div {:on-click #(reset! open? true)} "⚙"]))))
+                     ;on-click (with-sort-direction #(reset! col-sort [form-dbid ident :desc])
+                     ;                              #(reset! col-sort nil)
+                     ;                              #(reset! col-sort [form-dbid ident :asc])
+                     ;                              (constantly nil))
+                     ;arrow (with-sort-direction " ↓" " ↑" " ↕" nil)
 
+                     ]
 
-(defn table-row [result ordered-find-elements repeating-anchors param-ctx]
-  (let [build-entity-ctx (fn [entity param-ctx]
-                           (assoc param-ctx :color ((:color-fn param-ctx) entity param-ctx)
-                                            :owner ((:owner-fn param-ctx) entity param-ctx)
-                                            :entity entity))
-        find-element-anchors-lookup (->> repeating-anchors
+                 [:td {:class (interpose " " css-classes) :key (str ident) :on-click on-click}
+                  (str prompt)
+                  (let [docstring (-> field :field/attribute :attribute/doc)]
+                    (if-not (empty? docstring)
+                      [native-listener {:on-click (fn [e]
+                                                    (js/alert docstring)
+                                                    (.stopPropagation e))}
+                       [:span.help "ⓘ"]]))
+                  #_[:span.sort-arrow arrow]])))
+       (seq)))
+
+(defn entity-param-ctx [entity param-ctx]
+  (assoc param-ctx :color ((:color-fn param-ctx) entity param-ctx)
+                   :owner ((:owner-fn param-ctx) entity param-ctx)
+                   :entity entity))
+
+(defn table-row-form [result colspec repeating-anchors param-ctx]
+  (let [find-element-anchors-lookup (->> repeating-anchors
                                          ; entity links can have fields but not find-elements specified
                                          (filter #(or (:anchor/find-element %) (:anchor/field %)))
                                          (group-by (fn [anchor]
@@ -138,14 +91,41 @@
                                                        (:find-element/name find-element)
                                                        :entity))))]
     [:tr
-     (mapcat (fn [find-element]
-               (let [find-element-field-anchors (->> (get find-element-anchors-lookup (:find-element/name find-element))
-                                                     (remove #(nil? (:anchor/field %))))
-                     form (:find-element/form find-element)
-                     entity (get result (:find-element/name find-element))
-                     param-ctx (build-entity-ctx entity param-ctx)]
-                 (build-row-cells-for-form form entity find-element-field-anchors param-ctx)))
-             ordered-find-elements)
+     (->> (partition 3 colspec)
+          (mapv (fn [[fe-name ident maybe-field]]
+                  (let [entity (get result fe-name)
+                        param-ctx (entity-param-ctx entity param-ctx)
+                        param-ctx (assoc param-ctx :attribute (get (:schema param-ctx) ident))
+
+                        ; rebuilt too much due to joining fe-name X ident
+                        field-anchors (->> (get find-element-anchors-lookup fe-name)
+                                           (remove #(nil? (:anchor/field %))))
+
+
+                        style {:border-color (connection-color (:color param-ctx))}
+                        value (get entity ident)]
+                    [:td.truncate {:key (or (:db/id maybe-field) ident) :style style}
+                     (if-let [renderer (renderer/renderer-for-attribute (:field/attribute maybe-field))]
+                       (let [{renderer :value error :error} (eval renderer)]
+                         [:div.value
+                          (if error
+                            (pr-str error)
+                            (try
+                              (let [link-fn (let [anchor-by-ident (->> field-anchors
+                                                                       (mapv (juxt #(-> % :anchor/ident) identity))
+                                                                       (into {}))]
+                                              (fn [ident label param-ctx]
+                                                (let [anchor (get anchor-by-ident ident)
+                                                      props (links/build-link-props anchor param-ctx)]
+                                                  [(:navigate-cmp param-ctx) props label param-ctx])))]
+                                (renderer (:peer param-ctx) link-fn value))
+                              (catch :default e (pr-str e))))])
+                       (let [anchors (filter #(= (:db/id maybe-field) (some-> % :anchor/field :db/id)) field-anchors)]
+                         (if (= (:display-mode param-ctx) :raw)
+                           [raw-table-cell value anchors param-ctx]
+                           [auto-table-cell value maybe-field anchors param-ctx])))])))
+          (seq))
+
      [:td.link-cell {:key :link-cell}
       ; render all repeating links (regardless if inline) as anchors
       (widget/render-anchors (concat
@@ -155,40 +135,77 @@
                                           (filter #(nil? (:anchor/field %))))
                                      (repeatedly (constantly param-ctx)))
                                ; find-element anchors need more items in their ctx
-                               (->> ordered-find-elements
-                                    (mapcat (fn [find-element]
-                                              (let [find-element-anchors (->> (get find-element-anchors-lookup (:find-element/name find-element))
-                                                                              (filter #(nil? (:anchor/field %))))
-                                                    entity (get result (:find-element/name find-element))
-                                                    param-ctx (build-entity-ctx entity param-ctx)]
-                                                (mapv vector find-element-anchors (repeatedly (constantly param-ctx)))))))))]]))
+                               (->> (partition 3 colspec)
+                                    (mapv first) (set)      ; distinct find elements
+                                    (mapcat (fn [fe-name]
+                                              (let [entity (get result fe-name)
+                                                    param-ctx (entity-param-ctx entity param-ctx)
+                                                    fe-anchors (->> (get find-element-anchors-lookup fe-name)
+                                                                    (filter #(nil? (:anchor/field %))))]
+                                                (mapv vector fe-anchors (repeat param-ctx))))))))]]))
 
 
-(defn body [resultset ordered-find-elements repeating-anchors sort-col param-ctx]
+(defn body [resultset colspec repeating-anchors sort-col param-ctx]
   [:tbody
    (let [[form-dbid sort-key direction] @sort-col
-         sort-eids (fn [resultset]
-                     (let [{form :find-element/form find-element-name :find-element/name}
-                           (->> ordered-find-elements
-                                (filter #(= form-dbid (-> % :find-element/form :db/id)))
-                                first)
-                           field (->> (:form/field form)
-                                      (filter #(= sort-key (-> % :field/attribute :attribute/ident)))
-                                      first)]
-                       (if (and (not= nil field) (sortable? field))
-                         (sort-by #(get-in % [find-element-name sort-key])
-                                  (case direction
-                                    :asc #(compare %1 %2)
-                                    :desc #(compare %2 %1))
-                                  resultset)
-                         resultset)))]
+         ;sort-eids (fn [resultset]
+         ;            (let [{form :find-element/form find-element-name :find-element/name}
+         ;                  (->> ordered-find-elements
+         ;                       (filter #(= form-dbid (-> % :find-element/form :db/id)))
+         ;                       first)
+         ;                  field (->> (:form/field form)
+         ;                             (filter #(= sort-key (-> % :field/attribute :attribute/ident)))
+         ;                             first)]
+         ;              (if (and (not= nil field) (sortable? field))
+         ;                (sort-by #(get-in % [find-element-name sort-key])
+         ;                         (case direction
+         ;                           :asc #(compare %1 %2)
+         ;                           :desc #(compare %2 %1))
+         ;                         resultset)
+         ;                resultset)))
+         ]
      (->> resultset
-          sort-eids
+          #_sort-eids
           (map (fn [result]
                  (let [param-ctx (assoc param-ctx :result result)]
                    ^{:key (hash (util/map-values :db/id result))}
-                   [table-row result ordered-find-elements repeating-anchors param-ctx])))))])
+                   [table-row-form result colspec repeating-anchors param-ctx])))))])
 
+
+; if raw mode, need to figure out the superset of attributes
+; else, we have forms to tell us, maybe. It's allowed to be null.
+; if we have a form, it is guaranteed consistent with the resultset pulled-tree shape.
+; So can we ignore the form and always look at the resultset?
+;; No because resultset includes db/id. If we have a form, use the form to drive the keyset.
+
+; always have a FE :: :form/field, :field/order, :field/attribute, :attribute/ident
+
+; If we don't have the forms e.g. raw mode
+; How can we know which columns to render? How many columns are there?
+; Need the superset of all entity keys per each find-element.
+; Forms provide prompt, order and ident (for styling)
+; Pass in a list of [ident prompt] already flattened and sorted?
+(defn determine-colspec "Colspec is what you have when you flatten out the find elements,
+but retaining and correlating all information, its like a join"
+  [resultset ordered-find-elements]
+
+  (mapcat (fn [resultset-for-fe fe]
+            (let [indexed-maybe-forms (util/group-by-assume-unique (comp :attribute/ident :field/attribute) (:find-element/form fe))
+                  find-element-name (ffirst resultset-for-fe)]
+              (->> (map second resultset-for-fe)
+                   (reduce (fn [acc v]
+                             (into acc (keys v)))
+                           #{})
+                   ; sorting is per find-element, not overall
+                   (sort-by (fn [k]
+                              (if-let [field (get indexed-maybe-forms k)]
+                                (:field/order field)
+                                k)))
+                   (mapcat (fn [k]
+                             ; return triples, which mapcat into a list of triples
+                             [find-element-name k (get indexed-maybe-forms k)])))))
+          (util/transpose resultset)
+          ordered-find-elements))
 
 (defn table [resultset ordered-find-elements anchors param-ctx]
   (let [sort-col (r/atom nil)]
@@ -196,15 +213,31 @@
       (let [non-repeating-top-anchors (->> anchors
                                            (remove :anchor/repeating?)
                                            (filter #(nil? (:anchor/find-element %)))
-                                           (filter #(nil? (:anchor/field %))))]
+                                           (filter #(nil? (:anchor/field %))))
+            raw-mode? (= (:display-mode param-ctx) :raw)
+            f (if raw-mode? #(dissoc % :find-element/form) identity) ; strip forms for raw mode even if we have them
+            ordered-find-elements (map f ordered-find-elements)
+
+            ; Not all entities are homogenous, especially consider the '* case,
+            ; so we need a uniform column set driving the body rows in sync with the headers
+
+            ; but the resultset needs to match this column-fields structure now too; since the find-element level
+            ; has been flattened out of the columns.
+
+            ; colspec is flattened triples- [fe-name, ident, field] ; field may be null
+            ; ["?blog" :post/title field1
+            ;  "?blog" :post/content field2
+            ;  "?user" :user/name field3
+            ;  "?user" :user/email field4]
+            colspec (determine-colspec resultset ordered-find-elements)]
         [:div.ui-table-with-links
          [:table.ui-table
           [:thead
            [:tr
-            (build-col-heads ordered-find-elements sort-col)
+            (build-col-heads colspec sort-col)
             [:td.link-cell {:key :link-cell}
              (widget/render-anchors (remove :anchor/render-inline? non-repeating-top-anchors) param-ctx)]]]
-          [body resultset ordered-find-elements (filter :anchor/repeating? anchors) sort-col param-ctx]]
+          [body resultset colspec (filter :anchor/repeating? anchors) sort-col param-ctx]]
          (let [anchors (filter :anchor/render-inline? non-repeating-top-anchors)
                param-ctx (dissoc param-ctx :isComponent)]
            (widget/render-inline-links anchors param-ctx))]))))
