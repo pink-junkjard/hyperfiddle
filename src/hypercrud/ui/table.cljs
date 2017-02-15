@@ -190,7 +190,7 @@ but retaining and correlating all information, its like a join"
   [resultset ordered-find-elements]
 
   (mapcat (fn [resultset-for-fe fe]
-            (let [indexed-maybe-forms (util/group-by-assume-unique (comp :attribute/ident :field/attribute) (:find-element/form fe))
+            (let [indexed-fields (util/group-by-assume-unique (comp :attribute/ident :field/attribute) (-> fe :find-element/form :form/field))
                   find-element-name (ffirst resultset-for-fe)]
               (->> (map second resultset-for-fe)
                    (reduce (fn [acc v]
@@ -198,12 +198,11 @@ but retaining and correlating all information, its like a join"
                            #{})
                    ; sorting is per find-element, not overall
                    (sort-by (fn [k]
-                              (if-let [field (get indexed-maybe-forms k)]
+                              (if-let [field (get indexed-fields k)]
                                 (:field/order field)
-                                k)))
+                                k #_ "raw mode sort is by namespaced attribute, per find-element")))
                    (mapcat (fn [k]
-                             ; return triples, which mapcat into a list of triples
-                             [find-element-name k (get indexed-maybe-forms k)])))))
+                             [find-element-name k (get indexed-fields k)])))))
           (util/transpose resultset)
           ordered-find-elements))
 
