@@ -239,7 +239,7 @@
         (if-let [resultset (exception/extract (hc/hydrate peer request) nil)]
           (let [resultset (->> (if (map? resultset) [resultset] resultset)
                                (mapv #(assoc {} :entity %)))
-                find-elements [{:find-element/name :entity
+                find-elements [{:find-element/name "entity"
                                 :find-element/form (get-in link [:link/request :link-entity/form])}]]
             (dependent-requests resultset find-elements (:link/anchor link) param-ctx)))))))
 

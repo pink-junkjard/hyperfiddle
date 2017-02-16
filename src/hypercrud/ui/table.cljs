@@ -7,6 +7,7 @@
             [hypercrud.ui.auto-control :refer [auto-table-cell raw-table-cell connection-color]]
             [hypercrud.ui.renderer :as renderer]
             [hypercrud.ui.widget :as widget]
+            [hypercrud.ui.form-util :as form-util]
             [hypercrud.util :as util]
             [reagent.core :as r]))
 
@@ -89,7 +90,7 @@
                                          (group-by (fn [anchor]
                                                      (if-let [find-element (:anchor/find-element anchor)]
                                                        (:find-element/name find-element)
-                                                       :entity))))]
+                                                       "entity"))))]
     [:tr
      (->> (partition 3 colspec)
           (mapv (fn [[fe-name ident maybe-field]]
@@ -171,41 +172,6 @@
                    ^{:key (hash (util/map-values :db/id result))}
                    [table-row-form result colspec repeating-anchors param-ctx])))))])
 
-
-; if raw mode, need to figure out the superset of attributes
-; else, we have forms to tell us, maybe. It's allowed to be null.
-; if we have a form, it is guaranteed consistent with the resultset pulled-tree shape.
-; So can we ignore the form and always look at the resultset?
-;; No because resultset includes db/id. If we have a form, use the form to drive the keyset.
-
-; always have a FE :: :form/field, :field/order, :field/attribute, :attribute/ident
-
-; If we don't have the forms e.g. raw mode
-; How can we know which columns to render? How many columns are there?
-; Need the superset of all entity keys per each find-element.
-; Forms provide prompt, order and ident (for styling)
-; Pass in a list of [ident prompt] already flattened and sorted?
-(defn determine-colspec "Colspec is what you have when you flatten out the find elements,
-but retaining and correlating all information, its like a join"
-  [resultset ordered-find-elements]
-
-  (mapcat (fn [resultset-for-fe fe]
-            (let [indexed-fields (util/group-by-assume-unique (comp :attribute/ident :field/attribute) (-> fe :find-element/form :form/field))
-                  find-element-name (ffirst resultset-for-fe)]
-              (->> (map second resultset-for-fe)
-                   (reduce (fn [acc v]
-                             (into acc (keys v)))
-                           #{})
-                   ; sorting is per find-element, not overall
-                   (sort-by (fn [k]
-                              (if-let [field (get indexed-fields k)]
-                                (:field/order field)
-                                k #_ "raw mode sort is by namespaced attribute, per find-element")))
-                   (mapcat (fn [k]
-                             [find-element-name k (get indexed-fields k)])))))
-          (util/transpose resultset)
-          ordered-find-elements))
-
 (defn table [resultset ordered-find-elements anchors param-ctx]
   (let [sort-col (r/atom nil)]
     (fn [resultset ordered-find-elements anchors param-ctx]
@@ -213,22 +179,11 @@ but retaining and correlating all information, its like a join"
                                            (remove :anchor/repeating?)
                                            (filter #(nil? (:anchor/find-element %)))
                                            (filter #(nil? (:anchor/field %))))
-            raw-mode? (= (:display-mode param-ctx) :raw)
-            f (if raw-mode? #(dissoc % :find-element/form) identity) ; strip forms for raw mode even if we have them
-            ordered-find-elements (map f ordered-find-elements)
-
             ; Not all entities are homogenous, especially consider the '* case,
             ; so we need a uniform column set driving the body rows in sync with the headers
-
             ; but the resultset needs to match this column-fields structure now too; since the find-element level
             ; has been flattened out of the columns.
-
-            ; colspec is flattened triples- [fe-name, ident, field] ; field may be null
-            ; ["?blog" :post/title field1
-            ;  "?blog" :post/content field2
-            ;  "?user" :user/name field3
-            ;  "?user" :user/email field4]
-            colspec (determine-colspec resultset ordered-find-elements)]
+            colspec (form-util/determine-colspec resultset ordered-find-elements param-ctx)]
         [:div.ui-table-with-links
          [:table.ui-table
           [:thead
