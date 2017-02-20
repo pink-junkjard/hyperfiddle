@@ -16,8 +16,8 @@
 
 
 ; field is optional (raw mode); schema and attribute is in dynamic scope in all modes
-(defn field [value field anchors {:keys [peer] :as param-ctx}]
-  [:div.field
+(defn field [value field anchors param-ctx]
+  [:div.field {:style {:border-color (connection-color (:color param-ctx))}}
    [:label
     (let [prompt (get field :field/prompt (-> param-ctx :attribute :attribute/ident str))
           docstring (-> field :field/attribute :attribute/doc)]
@@ -37,7 +37,7 @@
         (if error
           (pr-str error)
           (try
-            (renderer peer link-fn value)
+            (renderer (:peer param-ctx) link-fn value)
             (catch :default e (pr-str e))))])
      (let [anchors (filter #(= (:db/id field) (some-> % :anchor/field :db/id)) anchors)]
        (if (= (:display-mode param-ctx) :raw)
@@ -116,7 +116,6 @@
                                                         :owner ((:owner-fn param-ctx) entity param-ctx)
                                                         :entity entity
                                                         :attribute (get (:schema param-ctx) ident))
-                             style {:border-color (connection-color (:color param-ctx))}
                              v (get entity ident)]
                          ^{:key (str ident)}
                          [field v maybe-field anchors param-ctx]))))
