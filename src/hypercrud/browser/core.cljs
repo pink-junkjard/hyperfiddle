@@ -183,7 +183,7 @@
                                                     (:find-element/name find-element)
                                                     (if (:anchor/field anchor)
                                                       ; entity links can have fields but not find-elements specified
-                                                      :entity
+                                                      "entity"
                                                       nil)))))
         recurse-request (fn [anchor param-ctx]
                           (let [params-map (links/build-url-params-map anchor param-ctx)
@@ -238,7 +238,7 @@
       (if recurse?
         (if-let [resultset (exception/extract (hc/hydrate peer request) nil)]
           (let [resultset (->> (if (map? resultset) [resultset] resultset)
-                               (mapv #(assoc {} :entity %)))
+                               (mapv #(assoc {} "entity" %)))
                 find-elements [{:find-element/name "entity"
                                 :find-element/form (get-in link [:link/request :link-entity/form])}]]
             (dependent-requests resultset find-elements (:link/anchor link) param-ctx)))))))

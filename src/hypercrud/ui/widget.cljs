@@ -40,7 +40,7 @@
                (let [params-map (links/build-url-params-map anchor param-ctx)
                      ui-param-ctx (-> param-ctx
                                       (update :debug #(str % ">inline-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]"))
-                                      (dissoc :result :entity))]
+                                      (dissoc :result "entity"))]
                  ^{:key (hash anchor)}
                  [browser/ui params-map ui-param-ctx]))))))
 

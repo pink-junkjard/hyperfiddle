@@ -107,11 +107,11 @@
       :link-entity
       (let [single-result-as-entity? (map? resultset)       ;todo this is broken when no results are returned
             ui (ui-for-resultset single-result-as-entity?)
-            ordered-find-elements [{:find-element/name :entity
+            ordered-find-elements [{:find-element/name "entity"
                                     :find-element/form (-> (get-in link [:link/request :link-entity/form])
                                                            (update :form/field #(filter-visible-fields % param-ctx)))}]
             resultset (->> (if single-result-as-entity? [resultset] resultset)
-                           (mapv #(assoc {} :entity %)))]
+                           (mapv #(assoc {} "entity" %)))]
         [ui resultset ordered-find-elements (:link/anchor link) param-ctx])
 
       [no-link-type (:link/anchor link) param-ctx])))
