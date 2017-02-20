@@ -1,7 +1,17 @@
-(ns hypercrud.client.normalize-tx-test
+(ns hypercrud.client.tx-test
   (:require-macros [cljs.test :refer [deftest]])
-  (:require [cljs.test]
-            [hypercrud.client.test-util :refer [check-tx]]))
+  (:require [cljs.test :refer [is]]
+            [clojure.set :refer [difference]]
+            [hypercrud.client.tx :refer [into-tx]]))
+
+
+(defn check-tx [in expected-out]
+  (let [out (into-tx [] in)]
+    (do (is (= (count expected-out) (count out)))
+        (let [expected-out (set expected-out)
+              out (set out)]
+          (do (is (empty? (difference out expected-out)) "Unexpected datoms")
+              (is (empty? (difference expected-out out)) "Missing datoms"))))))
 
 
 (deftest no-op []
