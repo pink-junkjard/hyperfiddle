@@ -31,5 +31,4 @@
 
 (deftask test []
          ; cljs tests have to have _test in the filename
-         #_ (merge-env! :source-paths #{"test"})
          (test-cljs))
