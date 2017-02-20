@@ -1,6 +1,6 @@
 (ns hypercrud.client.tx-test
-  (:require-macros [cljs.test :refer [deftest]])
-  (:require [cljs.test :refer [is]]
+  (:require-macros [cljs.test :refer [deftest is]])
+  (:require [cljs.test]
             [clojure.set :refer [difference]]
             [hypercrud.client.tx :refer [into-tx]]))
 

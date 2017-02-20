@@ -11,8 +11,7 @@
             [hypercrud.ui.multi-select :refer [multi-select* multi-select-markup]]
             [hypercrud.ui.radio :as radio]
             [hypercrud.ui.select :refer [select* select-boolean*]]
-            [hypercrud.ui.textarea :refer [textarea*]]
-            [reagent.core :as r]))
+            [hypercrud.ui.textarea :refer [textarea*]]))
 
 
 (defn render-anchors

@@ -33,13 +33,13 @@
 (def resultset2
   [{"?e" {:db/id (->DbId 17592186045443 17592186045910),
           :district/name "Southwest",
-          :district/region #:db{:id (->DbId 17592186045435 17592186045910)}}}
+          :district/region {:db/id (->DbId 17592186045435 17592186045910)}}}
    {"?e" {:db/id (->DbId 17592186045508 17592186045910),
           :district/name "Delridge",
-          :district/region #:db{:id (->DbId 17592186045435 17592186045910)}}}
+          :district/region {:db/id (->DbId 17592186045435 17592186045910)}}}
    {"?e" {:db/id (->DbId 17592186045542 17592186045910),
           :district/name "Magnolia/Queen Anne",
-          :district/region #:db{:id (->DbId 17592186045436 17592186045910)}}}])
+          :district/region {:db/id (->DbId 17592186045436 17592186045910)}}}])
 
 
 (deftest test-determine-colspec []
