@@ -1,6 +1,5 @@
 (ns hypercrud.ui.form
   (:require [hypercrud.browser.links :as links]
-            [hypercrud.client.schema :as schema-util]
             [hypercrud.compile.eval :refer [eval]]
             [hypercrud.types :refer [->DbVal]]
             [hypercrud.ui.auto-control :refer [auto-control raw-control connection-color]]
@@ -8,10 +7,6 @@
             [hypercrud.ui.renderer :as renderer]
             [hypercrud.ui.widget :as widget]
             [reagent.core :as r]
-            [hypercrud.client.core :as hc]
-            [hypercrud.util :as util]
-            [cats.core :as cats]
-            [cats.monad.exception :as exception]
             [hypercrud.ui.form-util :as form-util]))
 
 
