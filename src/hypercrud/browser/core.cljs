@@ -131,7 +131,8 @@
                         resultset (if request
                                     (hc/hydrate peer request)
                                     (exception/success nil))
-                        schema (hc/hydrate peer (schema-util/schema-request nil))]
+                        ; schema is allowed to be nil if the link only has anchors and no data dependencies
+                        schema (exception/try-or-else (hc/hydrate peer (schema-util/schema-request nil)) nil)]
                        (cats/return
                          (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
                                param-ctx (assoc param-ctx :schema indexed-schema)]
@@ -249,7 +250,8 @@
     (case (links/link-type link)
       :link-query (requests-for-link-query link query-params param-ctx recurse?)
       :link-entity (requests-for-link-entity link query-params param-ctx recurse?)
-      nil)))
+      nil                                                   ; this case does not request the schema, as we don't have a connection for the link.
+      )))
 
 
 (defn request [params-map param-ctx recurse?]
