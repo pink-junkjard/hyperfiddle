@@ -9,7 +9,8 @@
             [hypercrud.ui.widget :as widget]
             [hypercrud.util :as util]
             [hypercrud.ui.input :as input]
-            [hypercrud.client.tx :as tx]))
+            [hypercrud.client.tx :as tx]
+            [hypercrud.browser.system-links :as system-links]))
 
 
 (defn build-props [value field anchors param-ctx]
@@ -90,7 +91,7 @@
 (defmethod auto-control/resultset :default [resultset link param-ctx]
   (let [ui-for-resultset (fn [single-result-as-entity?]
                            (if single-result-as-entity?
-                             (if (= :system-edit (-> link :db/id :id :link/ident))
+                             (if (system-links/system-link? (:db/id link)) #_(= :system-edit (-> link :db/id :id :link/ident))
                                form/sys-form
                                form/form)
                              table/table))]
