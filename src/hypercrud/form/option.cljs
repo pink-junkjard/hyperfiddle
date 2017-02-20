@@ -26,6 +26,7 @@
 
 
 (defn get-option-records [field param-ctx]
+  (assert field)
   ; we are assuming we have a query link here
   (let [link-query (-> field :field/options-anchor :anchor/link :link/request)]
     (mlet [q (exception/try-on (reader/read-string (:link-query/value link-query)))
