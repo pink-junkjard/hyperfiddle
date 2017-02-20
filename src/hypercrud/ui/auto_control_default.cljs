@@ -88,7 +88,12 @@
 
 
 (defmethod auto-control/resultset :default [resultset link param-ctx]
-  (let [ui-for-resultset (fn [single-result-as-entity?] (if single-result-as-entity? form/forms-list table/table))]
+  (let [ui-for-resultset (fn [single-result-as-entity?]
+                           (if single-result-as-entity?
+                             (if (= :system-edit (-> link :db/id :id :link/ident))
+                               form/sys-form
+                               form/form)
+                             table/table))]
     (case (links/link-type link)
       :link-query
       (let [link-query (:link/request link)

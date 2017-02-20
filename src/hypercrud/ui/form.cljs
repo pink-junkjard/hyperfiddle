@@ -40,36 +40,7 @@
          [auto-control value field anchors param-ctx])))])
 
 
-(defn new-field [entity param-ctx]
-  (let [attr-ident (r/atom nil)]
-    (fn [entity param-ctx]
-      [:div.field
-       [:label
-        (let [on-change! #(reset! attr-ident %)]
-          [input/keyword-input* @attr-ident on-change!])]
-       (let [on-change! #(let [tx [[:db/add (:db/id entity) @attr-ident %]]]
-                           ; todo cardinality many
-                           ((:user-swap! param-ctx) {:tx tx}))
-             props (if (nil? @attr-ident) {:read-only true})]
-         [input/edn-input* nil on-change! props])])))
-
-
-; don't pass a form if raw mode
-(defn form [entity form anchors param-ctx]
-  (let [style {:border-color (connection-color (:color param-ctx))}
-        indexed-fields (group-by (comp :attribute/ident :field/attribute) (:form/field form))]
-    [:div.form {:style style}
-     (->> entity
-          (map (fn [[k v]]
-                 ^{:key k}
-                 [field v (get indexed-fields k) anchors (assoc param-ctx :attribute (get (:schema param-ctx) k))]))
-          (doall))
-     (if (= (:display-mode param-ctx) :raw)
-       ^{:key (hash (keys entity))}                         ; reset local state
-       [new-field entity param-ctx])]))
-
-
-(defn forms-list [resultset ordered-find-elements anchors param-ctx]
+(defn form [resultset ordered-find-elements anchors param-ctx]
   (let [top-anchors (->> anchors
                          (filter #(nil? (:anchor/find-element %)))
                          (filter #(nil? (:anchor/field %))))
@@ -114,10 +85,6 @@
                              v (get entity ident)]
                          ^{:key (str ident)}
                          [field v maybe-field anchors param-ctx]))))
-           #_ (if (= (:display-mode param-ctx) :raw)
-             ^{:key (hash colspec)}                         ; reset local state
-             [new-field entity param-ctx])
-
 
            #_(map (fn [find-element]
                     (let [entity (get result (:find-element/name find-element))
@@ -160,3 +127,22 @@
                                                   (filter :anchor/render-inline?)
                                                   (filter :anchor/repeating?))
                                              (repeatedly (constantly param-ctx)))))))]))
+
+(defn new-field [entity param-ctx]
+  (let [attr-ident (r/atom nil)]
+    (fn [entity param-ctx]
+      [:div.field
+       [:label
+        (let [on-change! #(reset! attr-ident %)]
+          [input/keyword-input* @attr-ident on-change!])]
+       (let [on-change! #(let [tx [[:db/add (:db/id entity) @attr-ident %]]]
+                           ; todo cardinality many
+                           ((:user-swap! param-ctx) {:tx tx}))
+             props (if (nil? @attr-ident) {:read-only true})]
+         [input/edn-input* nil on-change! props])])))
+
+(defn sys-form [resultset ordered-find-elements anchors param-ctx]
+  [:div.dumb
+   (form resultset ordered-find-elements anchors param-ctx)
+   (let [entity (get (first resultset) "entity")]
+     ^{:key (hash (keys entity))} [new-field entity param-ctx])])
