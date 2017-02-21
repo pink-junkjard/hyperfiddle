@@ -260,7 +260,7 @@
           system-link-request (system-links/request-for-system-link system-link-id)]
       (concat
         [system-link-request]
-        (if-let [system-link-deps (-> (hc/hydrate (:peer param-ctx) system-link-request)
+        (if-let [system-link-deps (-> (hc/hydrate (:peer param-ctx) system-link-request) ; ?
                                       (exception/extract nil))]
           (let [link (system-links/generate-system-link system-link-id system-link-deps)]
             (requests-for-link link (:query-params params-map) param-ctx recurse?)))))
