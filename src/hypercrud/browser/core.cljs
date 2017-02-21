@@ -141,15 +141,9 @@
                          (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
                                param-ctx (assoc param-ctx :schema indexed-schema)]
                            (case (get param-ctx :display-mode :dressed)
-                             :dressed (user-resultset resultset link (user-bindings link param-ctx))
-                             :undressed (auto-control/resultset resultset link (user-bindings link param-ctx))
-
-                             ; raw ignores user links and gets free system links
-                             :raw (let [link (system-links/overlay-system-links-tx link) ;todo don't overlay system links on system links
-                                        ; sub-queries (e.g. combo boxes) will get the old pulled-tree
-                                        ; Since we only changed link, this is only interesting for the hc-in-hc case
-                                        ]
-                                    (auto-control/resultset resultset link param-ctx))))))]
+                             :dressed (user-resultset resultset (system-links/overlay-system-links-tx link) (user-bindings link param-ctx))
+                             :undressed (auto-control/resultset resultset (system-links/overlay-system-links-tx link) (user-bindings link param-ctx))
+                             :raw (auto-control/resultset resultset (-> link (dissoc link :link/anchor) (system-links/overlay-system-links-tx)) param-ctx)))))]
     (if (exception/failure? dom-or-e)
       [:div
        [:span (-> dom-or-e .-e .-msg)]

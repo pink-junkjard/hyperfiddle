@@ -48,7 +48,10 @@
 
 
 (defn overlay-system-links-tx
-  "remove the user links and provide the system links (edit, new, remove)"
+  "provide the system links (edit, new, remove). sub-queries (e.g. combo boxes) will get the old pulled-tree.
+  Since we only changed link, this is only interesting for the hc-in-hc case.
+
+  todo don't overlay system links on system links"
   [parent-link]
   (case (links/link-type parent-link)
     :link-query
@@ -85,13 +88,10 @@
                                        :anchor/formula (pr-str {:entity-dbid-s (pr-str `(fn [~'ctx]
                                                                                           (hc/*temp-id!* ~(:id connection-dbid))))})}))))
           anchors (concat edit-links create-links)]
-      (assoc parent-link :link/anchor anchors))
+      (update parent-link :link/anchor concat anchors))
 
-    :link-entity
-    (dissoc parent-link :link/anchor)
-
-    ; else
-    (dissoc parent-link :link/anchor)))
+    :link-entity parent-link                                ; No system links yet for entity links.
+    parent-link))
 
 
 (defn request-for-system-link [system-link-id]
