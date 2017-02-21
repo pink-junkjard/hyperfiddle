@@ -5,7 +5,7 @@
 
 
 (defn adapt-props-to-input [props]
-  (select-keys props [:read-only]))
+  {:disabled (:read-only props)})
 
 
 (defn- validated-input' [value on-change! parse-string to-string valid? props]
