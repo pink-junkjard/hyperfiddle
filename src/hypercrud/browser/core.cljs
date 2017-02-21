@@ -113,7 +113,11 @@
 
 (defn ui [{query-params :query-params :as params-map}
           {:keys [peer] :as param-ctx}]
-  (let [param-ctx (assoc param-ctx :query-params query-params)
+  (let [param-ctx (-> param-ctx
+                      (assoc :query-params query-params)
+                      ; Here is where to provide defaults - before the user-bindings run.
+                      ; Todo - also need this on query side.
+                      (update :read-only #(or % (constantly false))))
         dom-or-e (mlet [link (if (system-links/system-link? (-> params-map :link-dbid))
                                (let [system-link-id (-> params-map :link-dbid :id)]
                                  (->> (system-links/request-for-system-link system-link-id)

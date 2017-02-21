@@ -14,8 +14,8 @@
 
 
 (defn build-props [value field anchors param-ctx]
-  ; why does this need the field
-  {:read-only ((get param-ctx :read-only (constantly false)) field param-ctx)})
+  ; why does this need the field - it needs the ident for readonly in "Edit Anchors"
+  {:read-only ((get param-ctx :read-only) field param-ctx)})
 
 
 (defmethod auto-control/auto-control :default
