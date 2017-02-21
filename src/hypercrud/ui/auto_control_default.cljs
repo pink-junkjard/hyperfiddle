@@ -53,13 +53,10 @@
                  (and (= valueType :db.type/long) (= cardinality :db.cardinality/one)) widget/input-long
                  (and (= valueType :db.type/code) (= cardinality :db.cardinality/one)) widget/input
                  (and (= valueType :db.type/instant) (= cardinality :db.cardinality/one)) widget/instant
-
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one) isComponent) table-cell/ref-one-component
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one)) widget/select-ref
-
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) table-cell/ref-many
                  (and (= cardinality :db.cardinality/many)) table-cell/other-many
-                 (:read-only props) widget/text
                  :else (constantly [:div (pr-str [value valueType cardinality isComponent])]) ;widget/default
                  )]
     (widget value field anchors props param-ctx)))
