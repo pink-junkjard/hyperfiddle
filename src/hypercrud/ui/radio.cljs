@@ -46,24 +46,18 @@
      [radio-option "--" form-name #(change! nil) (= nil value)]]))
 
 
-(defn radio-ref* [value field props {:keys [user-swap!] :as param-ctx}]
+(defn radio-ref* [value maybe-field props {:keys [user-swap!] :as param-ctx}]
   (assert false "todo readonly")
   ; TODO only one radio-group on the page until we get a unique form-name
-  (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
-        form-name "TODO"                                    ;form-name in the HTML sense
-        change! #(user-swap! {:tx (tx/update-entity-attr (:entity param-ctx) attribute %)})]
-    [:div.value {:key (option/get-key field)}
-     (let [option-records (option/get-option-records field param-ctx)]
-       (if (exception/failure? option-records)
-         [:span (pr-str (.-e option-records))])
-       (map (fn [result]
-              (assert (= 1 (count result)) "Cannot use multiple find-elements for an options-link")
-              (let [{:keys [:db/id] :as entity} (first result)
-                    label (option/label-prop field result)
-                    checked? (= id value)]
-                ^{:key (hash id)}
-                [radio-option label form-name #(change! id) checked?]))
-            (.-v option-records)))
+  (let [form-name "TODO"                                    ;form-name in the HTML sense
+        change! #(user-swap! {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %)})]
+    [:div.value {:key (option/get-hydrate-key maybe-field)}
+     (let [options (if maybe-field (option/hydrate-options maybe-field param-ctx) (exception/success []))]
+       (if (exception/failure? options)
+         [:span (pr-str (.-e options))])
+       (map (fn [[dbid label]]
+              ^{:key dbid} [radio-option label form-name #(change! dbid) (= dbid value)])
+            (.-v options)))
      ^{:key :blank}
      [radio-option "--" form-name #(change! nil) (= nil value)]]))
 

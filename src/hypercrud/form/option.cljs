@@ -6,37 +6,35 @@
             [hypercrud.client.core :as hc]
             [hypercrud.form.find-elements :as find-elements-util]
             [hypercrud.form.q-util :as q-util]
-            [hypercrud.types :refer [->DbVal]]))
+            [hypercrud.types :refer [->DbVal]]
+            [hypercrud.ui.form-util :as form-util]))
 
 
-(defn label-prop [field result]
-  ; we are assuming we have a query link here
-  (let [find-elements (-> field :field/options-anchor :anchor/link :link/request :link-query/find-element)]
-    (->> (mapcat (fn [{{fields :form/field} :find-element/form} entity]
-                   (->> fields
-                        (mapv #(-> % :field/attribute :attribute/ident))
-                        (mapv #(get entity %))))
-                 find-elements result)
-         (interpose ", ")
-         (apply str))))
+(defn build-label [colspec result]
+  (->> (partition 3 colspec)
+       (mapv (fn [[fe-name ident maybe-field]]
+               (get-in result [fe-name ident])))
+       (interpose ", ")
+       (apply str)))
 
-
-(defn get-key [field]
+(defn get-hydrate-key [field]
   (hash (-> field :field/options-anchor :anchor/link :link/request)))
 
 
-(defn get-option-records [field param-ctx]
+(defn hydrate-options [field param-ctx]                     ; needs to return options as [[:db/id label]]
   (assert field)
   ; we are assuming we have a query link here
-  (let [link-query (-> field :field/options-anchor :anchor/link :link/request)]
-    (mlet [q (exception/try-on (reader/read-string (:link-query/value link-query)))
+  (let [request (-> field :field/options-anchor :anchor/link :link/request)]
+    (mlet [q (exception/try-on (reader/read-string (:link-query/value request)))
            resultset (let [params-map (merge (:query-params (links/build-url-params-map (:field/options-anchor field) param-ctx))
-                                             (q-util/build-dbhole-lookup link-query))
-                           query-value (q-util/query-value q link-query params-map param-ctx)]
+                                             (q-util/build-dbhole-lookup request))
+                           query-value (q-util/query-value q request params-map param-ctx)]
                        (hc/hydrate (:peer param-ctx) query-value))]
-          (let [ordered-find-elements (find-elements-util/order-find-elements (:link-query/find-element link-query) q)]
-            (cats/return (mapv (fn [result]
-                                 (mapv (fn [find-element]
-                                         (get result (:find-element/name find-element)))
-                                       ordered-find-elements))
-                               resultset))))))
+          (let [ordered-find-elements (find-elements-util/order-find-elements (:link-query/find-element request) q)
+                colspec (form-util/determine-colspec resultset ordered-find-elements param-ctx)]
+            (cats/return
+              (->> resultset
+                   (mapv (fn [result]
+                           (assert (= 1 (count ordered-find-elements)) "Cannot use multiple find-elements for an options-link; because you can't persist a ref to a tuple")
+                           (let [entity (get result (-> ordered-find-elements first :find-element/name))]
+                             [(:db/id entity) (build-label colspec result)])))))))))

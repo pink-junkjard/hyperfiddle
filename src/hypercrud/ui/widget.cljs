@@ -28,8 +28,8 @@
 
 
 (defn render-inline-links
-  ([field anchors param-ctx]
-   (render-inline-links anchors (assoc param-ctx :isComponent (-> field :field/attribute :attribute/isComponent))))
+  ([maybe-field anchors param-ctx]                          ; the unused param on this airity is concerning
+   (render-inline-links anchors (assoc param-ctx :isComponent (:attribute/isComponent (:attribute param-ctx)))))
   ([anchors param-ctx]
    (render-inline-links (map vector anchors (repeatedly (constantly param-ctx)))))
   ([anchor-ctx-pairs]
@@ -79,41 +79,26 @@
   [radio/radio-ref* value field props param-ctx])
 
 
-(defn select-boolean [value field anchors props param-ctx]
-  (let [{:keys [:attribute/ident]} (:field/attribute field)]
-    [:div.value
-     [:div.editable-select {:key ident}
-      [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
-      (if (:read-only props)
-        [:span.text (case value
-                      true "True"
-                      false "False"
-                      "--")]
-        (select-boolean* value field param-ctx))]
-     (render-inline-links field (filter :anchor/render-inline? anchors) param-ctx)]))
+(defn select-boolean [value maybe-field anchors props param-ctx]
+  [:div.value
+   [:div.editable-select {:key (:attribute/ident (:attribute param-ctx))}
+    [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
+    (select-boolean* value maybe-field props param-ctx)]
+   (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)])
 
 
 ; this can be used sometimes, on the entity page, but not the query page
-(defn select-ref [value field anchors props param-ctx]
+(defn select-ref [value maybe-field anchors props param-ctx]
   [:div.value
-   [:div.editable-select {:key (option/get-key field)}
+   [:div.editable-select {:key (option/get-hydrate-key maybe-field)} ; not sure if this is okay in nil field case, might just work
     [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
-    (if (:read-only props)
-      [:span.text
-       (-> value
-           (get (-> field :field/attribute :attribute/ident))
-           (get (-> field
-                    ; we are assuming we have a query link here
-                    :field/options-anchor :anchor/link :link/request :link-query/find-element first
-                    :find-element/form :form/field first
-                    :field/attribute :attribute/ident)))]
-      [:span.select
-       (select* value field param-ctx)])]
-   (render-inline-links field (filter :anchor/render-inline? anchors) param-ctx)])
+    [:span.select (select* value maybe-field props param-ctx)]]
+   (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)])
 
 
 (defn select-ref-component [value field anchors props param-ctx]
-  [:div.value
+  (select-ref value field anchors props param-ctx)
+  #_ [:div.value
    #_(pr-str (:db/id value))
    (render-inline-links field (filter :anchor/render-inline? anchors) param-ctx)
    [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]])
@@ -128,7 +113,7 @@
 
 
 (comment
-  (let [initial-select (let [result (first (option/get-option-records field param-ctx))]
+  (let [initial-select (let [result (first (option/hydrate-options field param-ctx))]
                          (assert (= 1 (count result)) "Cannot use multiple find-elements for an options-link")
                          (first result))
         select-value-atom (r/atom (:db/id initial-select))]
@@ -141,13 +126,8 @@
                       :on-change #(let [select-value (.-target.value %)
                                         value (reader/read-string select-value)]
                                     (reset! select-value-atom value))}
-               ; todo assert selected value is in record set
                ; need lower level select component that can be reused here and in select.cljs
-               select-options (->> (option/get-option-records field param-ctx)
-                                   (mapv (fn [result]
-                                           (assert (= 1 (count result)) "Cannot use multiple find-elements for an options-link")
-                                           (let [entity (first result)]
-                                             [(:db/id entity) (option/label-prop field result)])))
+               select-options (->> (option/hydrate-options field param-ctx)
                                    (sort-by second)
                                    (map (fn [[dbid label-prop]]
                                           [:option {:key (hash dbid) :value (pr-str dbid)} label-prop])))]
