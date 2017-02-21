@@ -38,8 +38,7 @@
   (-> s
       (string/replace ":" "-")
       (string/replace "/" "-")
-      (string/replace " " "-")
-      (subs 1)))
+      (string/replace " " "-")))
 
 
 (defn build-col-heads [colspec col-sort]
@@ -67,7 +66,7 @@
 
                      ]
 
-                 [:td {:class (interpose " " css-classes) :key (str ident) :on-click on-click}
+                 [:td {:class (string/join " " css-classes) :key (str ident) :on-click on-click}
                   (str prompt)
                   (let [docstring (-> field :field/attribute :attribute/doc)]
                     (if-not (empty? docstring)
