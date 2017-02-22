@@ -19,11 +19,11 @@
 
 
 (defmethod auto-control/auto-control :default
-  [value field anchors param-ctx]
+  [value maybe-field anchors param-ctx]
   (let [isComponent (-> (:attribute param-ctx) :attribute/isComponent)
         valueType (-> (:attribute param-ctx) :attribute/valueType :db/ident)
         cardinality (-> (:attribute param-ctx) :attribute/cardinality :db/ident)
-        props (build-props value field anchors param-ctx)
+        props (build-props value maybe-field anchors param-ctx)
         widget (cond
                  (and (= valueType :db.type/boolean) (= cardinality :db.cardinality/one)) widget/boolean
                  (and (= valueType :db.type/keyword) (= cardinality :db.cardinality/one)) widget/keyword
@@ -35,17 +35,17 @@
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many) isComponent) widget/ref-many-component-table
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one)) widget/ref
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) widget/ref-many-table
-                 :else (constantly [:div (pr-str [value valueType cardinality isComponent])]) ;widget/default
+                 :else widget/raw
                  )]
-    (widget value field anchors props param-ctx)))
+    (widget value maybe-field anchors props param-ctx)))
 
 
     (defmethod auto-control/auto-table-cell :default
-      [value field anchors param-ctx]
+      [value maybe-field anchors param-ctx]
       (let [isComponent (-> (:attribute param-ctx) :attribute/isComponent)
             valueType (-> (:attribute param-ctx) :attribute/valueType :db/ident)
             cardinality (-> (:attribute param-ctx) :attribute/cardinality :db/ident)
-            props (build-props value field anchors param-ctx)
+            props (build-props value maybe-field anchors param-ctx)
             widget (cond
                      (and (= valueType :db.type/boolean) (= cardinality :db.cardinality/one)) widget/boolean
                      (and (= valueType :db.type/keyword) (= cardinality :db.cardinality/one)) widget/keyword
@@ -57,9 +57,9 @@
                      (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one)) widget/ref
                      (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) table-cell/ref-many
                      (and (= cardinality :db.cardinality/many)) table-cell/other-many
-                     :else (constantly [:div (pr-str [value valueType cardinality isComponent])]) ;widget/default
+                     :else widget/raw
                      )]
-        (widget value field anchors props param-ctx)))
+        (widget value maybe-field anchors props param-ctx)))
 
 
 (defn filter-visible-fields [old-fields param-ctx]
@@ -117,14 +117,3 @@
         [ui resultset ordered-find-elements (:link/anchor link) param-ctx])
 
       [no-link-type (:link/anchor link) param-ctx])))
-
-
-(defmethod auto-control/raw-control :default
-  [value anchors param-ctx]
-  (let [props (build-props value nil anchors param-ctx)]
-    [widget/raw value anchors props param-ctx]))
-
-(defmethod auto-control/raw-table-cell :default
-  [value anchors param-ctx]
-  (let [props (build-props value nil anchors param-ctx)]
-    [widget/raw value anchors props param-ctx]))

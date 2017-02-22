@@ -213,7 +213,7 @@
      {:read-only true}]))
 
 
-(defn raw [value anchors props param-ctx]
+(defn raw [value _ anchors props param-ctx]
   (let [valueType (-> param-ctx :attribute :attribute/valueType :db/ident)
         value (if (= valueType :db.type/ref) (:db/id value) value)
         on-change! #((:user-swap! param-ctx) {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %)})]

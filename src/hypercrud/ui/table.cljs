@@ -121,9 +121,7 @@
                                 (renderer (:peer param-ctx) link-fn value))
                               (catch :default e (pr-str e))))])
                        (let [anchors (filter #(= (:db/id maybe-field) (some-> % :anchor/field :db/id)) field-anchors)]
-                         (if (= (:display-mode param-ctx) :raw)
-                           [raw-table-cell value anchors param-ctx]
-                           [auto-table-cell value maybe-field anchors param-ctx])))])))
+                         [auto-table-cell value maybe-field anchors param-ctx]))])))
           (seq))
 
      [:td.link-cell {:key :link-cell}

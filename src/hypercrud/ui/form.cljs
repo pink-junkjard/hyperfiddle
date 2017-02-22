@@ -35,9 +35,7 @@
             (renderer (:peer param-ctx) link-fn value)
             (catch :default e (pr-str e))))])
      (let [anchors (filter #(= (:db/id field) (some-> % :anchor/field :db/id)) anchors)]
-       (if (= (:display-mode param-ctx) :raw)
-         [raw-control value anchors param-ctx]
-         [auto-control value field anchors param-ctx])))])
+       [auto-control value field anchors param-ctx]))])
 
 
 (defn form [resultset ordered-find-elements anchors param-ctx]
