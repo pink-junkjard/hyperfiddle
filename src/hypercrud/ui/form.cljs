@@ -78,10 +78,14 @@
                 (map (fn [[fe-name ident maybe-field]]
                        (let [entity (get result fe-name)
                              fe-anchors (get fe-anchors-lookup fe-name)
-                             param-ctx (assoc param-ctx :color ((:color-fn param-ctx) entity param-ctx)
-                                                        :owner ((:owner-fn param-ctx) entity param-ctx)
-                                                        :entity entity
-                                                        :attribute (get (:schema param-ctx) ident))
+                             param-ctx (as-> param-ctx $
+                                             (assoc $
+                                               :color ((:color-fn param-ctx) entity param-ctx)
+                                               :owner ((:owner-fn param-ctx) entity param-ctx)
+                                               :entity entity
+                                               ; :db/id is missing from schema so fake it here, it has no valueType
+                                               :attribute (get (:schema param-ctx) ident {:attribute/ident ident}))
+                                             (if (= ident :db/id) (assoc $ :read-only (constantly true)) $))
                              v (get entity ident)]
                          ^{:key (str ident)}
                          [field v maybe-field anchors param-ctx]))))

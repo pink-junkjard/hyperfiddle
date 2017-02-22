@@ -13,9 +13,9 @@
             [hypercrud.browser.system-links :as system-links]))
 
 
-(defn build-props [value field anchors param-ctx]
+(defn build-props [value maybe-field anchors param-ctx]
   ; why does this need the field - it needs the ident for readonly in "Edit Anchors"
-  {:read-only ((get param-ctx :read-only) field param-ctx)})
+  {:read-only ((get param-ctx :read-only) maybe-field param-ctx)})
 
 
 (defmethod auto-control/auto-control :default
@@ -121,10 +121,10 @@
 
 (defmethod auto-control/raw-control :default
   [value anchors param-ctx]
-  (let [props {}]
+  (let [props (build-props value nil anchors param-ctx)]
     [widget/raw value anchors props param-ctx]))
 
 (defmethod auto-control/raw-table-cell :default
   [value anchors param-ctx]
-  (let [props {}]
+  (let [props (build-props value nil anchors param-ctx)]
     [widget/raw value anchors props param-ctx]))
