@@ -45,7 +45,7 @@
 (defn edn-input* [value on-change! & [props]]
   (let [parse-string q-util/safe-read-string
         to-string pr-str
-        valid? #(try (let [_ (reader/read-string %)]
+        valid? #(try (let [_ (reader/read-string %)]        ; differentiate between read `nil` and error
                        true)
                      (catch :default e false))]
     ^{:key value}
