@@ -113,12 +113,7 @@
 
 (defn ui [{query-params :query-params :as params-map}
           {:keys [peer] :as param-ctx}]
-  (let [param-ctx (-> param-ctx
-                      (assoc :query-params query-params)
-                      ; Here is where to provide defaults - before the user-bindings run.
-                      ; Todo - also need this on query side.
-                      (update :read-only #(or % (constantly false))))
-        dom-or-e (mlet [link (if (system-links/system-link? (-> params-map :link-dbid))
+  (let [dom-or-e (mlet [link (if (system-links/system-link? (-> params-map :link-dbid))
                                (let [system-link-id (-> params-map :link-dbid :id)]
                                  (->> (system-links/request-for-system-link system-link-id)
                                       (hc/hydrate peer)
@@ -139,7 +134,10 @@
                         schema (exception/try-or-else (hc/hydrate peer (schema-util/schema-request nil)) nil)]
                        (cats/return
                          (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
-                               param-ctx (assoc param-ctx :schema indexed-schema)]
+                               param-ctx (assoc param-ctx ; provide defaults before user-bindings run. TODO query side
+                                           :query-params query-params
+                                           :schema indexed-schema
+                                           :read-only (or (:read-only param-ctx) (constantly false)))]
                            (case (get param-ctx :display-mode :dressed)
                              :dressed (user-resultset resultset (system-links/overlay-system-links-tx link) (user-bindings link param-ctx))
                              :undressed (auto-control/resultset resultset (system-links/overlay-system-links-tx link) (user-bindings link param-ctx))
@@ -246,8 +244,8 @@
 (defn requests-for-link [link query-params param-ctx recurse?]
   (let [param-ctx (assoc param-ctx :query-params query-params)]
     (case (links/link-type link)
-      :link-query (requests-for-link-query link query-params param-ctx recurse?)
-      :link-entity (requests-for-link-entity link query-params param-ctx recurse?)
+      :link-query (requests-for-link-query link query-params param-ctx recurse?) ; Todo - hydrate refs deeper if no option link
+      :link-entity (requests-for-link-entity link query-params param-ctx recurse?) ; hydrate refs deeper if no option link
       nil                                                   ; this case does not request the schema, as we don't have a connection for the link.
       )))
 
