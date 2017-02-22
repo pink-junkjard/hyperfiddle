@@ -1,4 +1,5 @@
 (ns hypercrud.ui.widget
+  (:refer-clojure :exclude [keyword long boolean])
   (:require [cljs.reader :as reader]
             [hypercrud.browser.core :as browser]
             [hypercrud.browser.links :as links]
@@ -44,25 +45,22 @@
                  [browser/ui params-map ui-param-ctx]))))))
 
 
-(defn input-keyword [value field anchors props {:keys [user-swap!] :as param-ctx}]
-  (let [attribute (:field/attribute field)
-        on-change! #(user-swap! {:tx (tx/update-entity-attr (:entity param-ctx) attribute %)})]
+(defn keyword [value maybe-field anchors props param-ctx]
+  (let [on-change! #((:user-swap! param-ctx) {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %)})]
     [input/keyword-input* value on-change! props]))
 
 
-(defn input [value field anchors props {:keys [user-swap!] :as param-ctx}]
-  (let [attribute (:field/attribute field)
-        on-change! #(user-swap! {:tx (tx/update-entity-attr (:entity param-ctx) attribute %)})]
+(defn string [value maybe-field anchors props {:keys [user-swap!] :as param-ctx}]
+  (let [on-change! #(user-swap! {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %)})]
     [input/input* value on-change! props]))
 
 
-(defn input-long [value field anchors props {:keys [user-swap!] :as param-ctx}]
-  (let [attribute (:field/attribute field)]
-    [input/validated-input
-     value #(user-swap! {:tx (tx/update-entity-attr (:entity param-ctx) attribute %)})
-     #(js/parseInt % 10) pr-str
-     #(integer? (js/parseInt % 10))
-     props]))
+(defn long [value maybe-field anchors props {:keys [user-swap!] :as param-ctx}]
+  [input/validated-input
+   value #(user-swap! {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %)})
+   #(js/parseInt % 10) pr-str
+   #(integer? (js/parseInt % 10))
+   props])
 
 
 (defn textarea [value field anchors props {:keys [user-swap!] :as param-ctx}]
@@ -79,7 +77,7 @@
   [radio/radio-ref* value field props param-ctx])
 
 
-(defn select-boolean [value maybe-field anchors props param-ctx]
+(defn boolean [value maybe-field anchors props param-ctx]
   [:div.value
    [:div.editable-select {:key (:attribute/ident (:attribute param-ctx))}
     [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
@@ -87,24 +85,31 @@
    (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)])
 
 
+(defn dbid [value props param-ctx]
+  (let [on-change! #((:user-swap! param-ctx) {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %)})]
+    (input/dbid-input value on-change! props)))
+
+
 ; this can be used sometimes, on the entity page, but not the query page
-(defn select-ref [value maybe-field anchors props param-ctx]
+(defn ref [value maybe-field anchors props param-ctx]
   [:div.value
    [:div.editable-select {:key (option/get-hydrate-key maybe-field)} ; not sure if this is okay in nil field case, might just work
     [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
-    [:span.select (select* value maybe-field props param-ctx)]]
+    (if maybe-field
+      (select* value maybe-field props param-ctx)
+      (dbid value props param-ctx))]
    (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)])
 
 
-(defn select-ref-component [value field anchors props param-ctx]
-  (select-ref value field anchors props param-ctx)
+(defn ref-component [value field anchors props param-ctx]
+  (ref value field anchors props param-ctx)
   #_ [:div.value
    #_(pr-str (:db/id value))
    (render-inline-links field (filter :anchor/render-inline? anchors) param-ctx)
    [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]])
 
 
-(defn table-many-ref [value field anchors props param-ctx]
+(defn ref-many-table [value field anchors props param-ctx]
   [:div.value
    #_(->> (mapv :db/id value)
           (pr-str))
@@ -136,7 +141,7 @@
             [:button {:on-click #(user-swap! {:tx (tx/edit-entity (:db/id entity) ident [] [@select-value-atom])})} "⬆"]])]))))
 
 
-(defn table-many-ref-component [value field anchors props param-ctx]
+(defn ref-many-component-table [value field anchors props param-ctx]
   [:div.value
    #_(->> (mapv :db/id value)
           (pr-str))
@@ -155,7 +160,7 @@
     [multi-select* multi-select-markup value add-item! field anchors props param-ctx])) ;add new entity to set
 
 
-(defn code-editor [value field anchors props {:keys [user-swap!] :as param-ctx}]
+(defn code [value field anchors props {:keys [user-swap!] :as param-ctx}]
   (let [ident (-> field :field/attribute :attribute/ident)
         change! #(user-swap! {:tx (tx/edit-entity (:db/id (:entity param-ctx)) ident [value] [%])})]
     ^{:key ident}
@@ -208,6 +213,8 @@
      {:read-only true}]))
 
 
-(defn raw [value _ anchors props param-ctx]
-  (let [on-change! #((:user-swap! param-ctx) {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %)})]
+(defn raw [value anchors props param-ctx]
+  (let [valueType (-> param-ctx :attribute :attribute/valueType :db/ident)
+        value (if (= valueType :db.type/ref) (:db/id value) value)
+        on-change! #((:user-swap! param-ctx) {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %)})]
     [input/edn-input* value on-change! props]))

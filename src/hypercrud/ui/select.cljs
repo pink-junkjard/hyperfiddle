@@ -34,17 +34,17 @@
                                         (= "" select-value) nil
                                         :else-hc-select-option-node (->DbId (js/parseInt select-value 10) (-> value :db/id :conn-id)))]
                              ((:user-swap! param-ctx) {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) dbid)}))
-               :disabled (if (:read-only props) true false)}]
-
-    ; Having options is not required e.g. raw mode.
-    (let [options (if maybe-field (option/hydrate-options maybe-field param-ctx) (exception/success []))]
-      (if (exception/failure? options)
-        [:span {:on-click #(js/alert (pr-str (.-e options)))} "Failed to hydrate"]
-        (let [option-records (.-v options)]
-          [:select.select props
-           (concat
-             (->> (sort-by second option-records)
-                  (mapv (fn [[dbid label]]
-                          ^{:key dbid}
-                          [:option {:value (.-id dbid)} label])))
-             [[:option {:key :blank :value ""} "--"]])])))))
+               :disabled (if (:read-only props) true false)}
+        ; Having options is not required e.g. raw mode.
+        options (if maybe-field (option/hydrate-options maybe-field param-ctx) (exception/success []))]
+    [:span.select
+     (if (exception/failure? options)
+       [:span {:on-click #(js/alert (pr-str (.-e options)))} "Failed to hydrate"]
+       (let [option-records (.-v options)]
+         [:select.select props
+          (concat
+            (->> (sort-by second option-records)
+                 (mapv (fn [[dbid label]]
+                         ^{:key dbid}
+                         [:option {:value (.-id dbid)} label])))
+            [[:option {:key :blank :value ""} "--"]])]))]))

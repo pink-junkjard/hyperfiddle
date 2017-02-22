@@ -1,7 +1,8 @@
 (ns hypercrud.ui.input
   (:require [cljs.reader :as reader]
             [hypercrud.form.q-util :as q-util]
-            [reagent.core :as reagent]))
+            [reagent.core :as reagent]
+            [hypercrud.types :as types]))
 
 
 (defn adapt-props-to-input [props]
@@ -35,9 +36,8 @@
 (defn keyword-input* [value on-change! & [props]]
   (let [parse-string q-util/safe-read-string
         to-string pr-str
-        valid? #(try (let [value (reader/read-string %)]
-                       (or (nil? value) (keyword? value)))
-                     (catch :default e false))]
+        valid? #(let [value (q-util/safe-read-string %)]
+                  (or (nil? value) (keyword? value)))]
     ^{:key value}
     [validated-input' value on-change! parse-string to-string valid? props]))
 
@@ -50,3 +50,11 @@
                      (catch :default e false))]
     ^{:key value}
     [validated-input' value on-change! parse-string to-string valid? props]))
+
+
+(defn dbid-input [value on-change! & [props]]
+  ; value :: {:db/id #DbId[17592186045891 17592186045422]}
+  ^{:key (:db/id value)}
+  [validated-input' (:db/id value) on-change! q-util/safe-read-string pr-str
+   #(instance? types/DbId (q-util/safe-read-string %))
+   props])

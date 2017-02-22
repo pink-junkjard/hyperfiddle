@@ -25,41 +25,41 @@
         cardinality (-> (:attribute param-ctx) :attribute/cardinality :db/ident)
         props (build-props value field anchors param-ctx)
         widget (cond
-                 (and (= valueType :db.type/boolean) (= cardinality :db.cardinality/one)) widget/select-boolean
-                 (and (= valueType :db.type/keyword) (= cardinality :db.cardinality/one)) widget/input-keyword
-                 (and (= valueType :db.type/string) (= cardinality :db.cardinality/one)) widget/input
-                 (and (= valueType :db.type/long) (= cardinality :db.cardinality/one)) widget/input-long
-                 (and (= valueType :db.type/code) (= cardinality :db.cardinality/one)) widget/code-editor
+                 (and (= valueType :db.type/boolean) (= cardinality :db.cardinality/one)) widget/boolean
+                 (and (= valueType :db.type/keyword) (= cardinality :db.cardinality/one)) widget/keyword
+                 (and (= valueType :db.type/string) (= cardinality :db.cardinality/one)) widget/string
+                 (and (= valueType :db.type/long) (= cardinality :db.cardinality/one)) widget/long
+                 (and (= valueType :db.type/code) (= cardinality :db.cardinality/one)) widget/code
                  (and (= valueType :db.type/instant) (= cardinality :db.cardinality/one)) widget/instant
-                 (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one) isComponent) widget/select-ref-component
-                 (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many) isComponent) widget/table-many-ref-component
-                 (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one)) widget/select-ref
-                 (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) widget/table-many-ref
+                 (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one) isComponent) widget/ref-component
+                 (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many) isComponent) widget/ref-many-component-table
+                 (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one)) widget/ref
+                 (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) widget/ref-many-table
                  :else (constantly [:div (pr-str [value valueType cardinality isComponent])]) ;widget/default
                  )]
     (widget value field anchors props param-ctx)))
 
 
-(defmethod auto-control/auto-table-cell :default
-  [value field anchors param-ctx]
-  (let [isComponent (-> (:attribute param-ctx) :attribute/isComponent)
-        valueType (-> (:attribute param-ctx) :attribute/valueType :db/ident)
-        cardinality (-> (:attribute param-ctx) :attribute/cardinality :db/ident)
-        props (build-props value field anchors param-ctx)
-        widget (cond
-                 (and (= valueType :db.type/boolean) (= cardinality :db.cardinality/one)) widget/select-boolean
-                 (and (= valueType :db.type/keyword) (= cardinality :db.cardinality/one)) widget/input-keyword
-                 (and (= valueType :db.type/string) (= cardinality :db.cardinality/one)) widget/input
-                 (and (= valueType :db.type/long) (= cardinality :db.cardinality/one)) widget/input-long
-                 (and (= valueType :db.type/code) (= cardinality :db.cardinality/one)) widget/input
-                 (and (= valueType :db.type/instant) (= cardinality :db.cardinality/one)) widget/instant
-                 (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one) isComponent) table-cell/ref-one-component
-                 (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one)) widget/select-ref
-                 (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) table-cell/ref-many
-                 (and (= cardinality :db.cardinality/many)) table-cell/other-many
-                 :else (constantly [:div (pr-str [value valueType cardinality isComponent])]) ;widget/default
-                 )]
-    (widget value field anchors props param-ctx)))
+    (defmethod auto-control/auto-table-cell :default
+      [value field anchors param-ctx]
+      (let [isComponent (-> (:attribute param-ctx) :attribute/isComponent)
+            valueType (-> (:attribute param-ctx) :attribute/valueType :db/ident)
+            cardinality (-> (:attribute param-ctx) :attribute/cardinality :db/ident)
+            props (build-props value field anchors param-ctx)
+            widget (cond
+                     (and (= valueType :db.type/boolean) (= cardinality :db.cardinality/one)) widget/boolean
+                     (and (= valueType :db.type/keyword) (= cardinality :db.cardinality/one)) widget/keyword
+                     (and (= valueType :db.type/string) (= cardinality :db.cardinality/one)) widget/string
+                     (and (= valueType :db.type/long) (= cardinality :db.cardinality/one)) widget/long
+                     (and (= valueType :db.type/code) (= cardinality :db.cardinality/one)) widget/string
+                     (and (= valueType :db.type/instant) (= cardinality :db.cardinality/one)) widget/instant
+                     (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one) isComponent) table-cell/ref-one-component
+                     (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one)) widget/ref
+                     (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) table-cell/ref-many
+                     (and (= cardinality :db.cardinality/many)) table-cell/other-many
+                     :else (constantly [:div (pr-str [value valueType cardinality isComponent])]) ;widget/default
+                     )]
+        (widget value field anchors props param-ctx)))
 
 
 (defn filter-visible-fields [old-fields param-ctx]

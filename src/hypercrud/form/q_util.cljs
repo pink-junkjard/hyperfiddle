@@ -54,6 +54,10 @@
     (concat
       [:db/id]
       (remove nil? (set (mapv #(-> % :field/attribute :attribute/ident) (:form/field form)))))
+
+    ; should we hydrate one level deeper for refs in undressed mode? nah
+    ; we don't have the info to know which ref attrs might be used; its not really possible to do this.
+    ; If you want pretty select options, you should model the options query and form.
     ['*]))
 
 
