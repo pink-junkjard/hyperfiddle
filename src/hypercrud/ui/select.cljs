@@ -38,13 +38,13 @@
         ; Having options is not required e.g. raw mode.
         options (if maybe-field (option/hydrate-options maybe-field param-ctx) (exception/success []))]
     [:span.select
-     (if (exception/failure? options)
-       [:span {:on-click #(js/alert (pr-str (.-e options)))} "Failed to hydrate"]
-       (let [option-records (.-v options)]
-         [:select.select props
-          (concat
-            (->> (sort-by second option-records)
-                 (mapv (fn [[dbid label]]
-                         ^{:key dbid}
-                         [:option {:value (.-id dbid)} label])))
-            [[:option {:key :blank :value ""} "--"]])]))]))
+     (let [option-records (.-v options)
+           no-options? (or (not maybe-field) (exception/failure? options) (empty? (exception/extract options)))
+           props (update props :disabled #(or % no-options?))]
+       [:select.select props
+        (concat
+          (->> (sort-by second option-records)
+               (mapv (fn [[dbid label]]
+                       ^{:key dbid}
+                       [:option {:value (.-id dbid)} label])))
+          [[:option {:key :blank :value ""} "--"]])])]))

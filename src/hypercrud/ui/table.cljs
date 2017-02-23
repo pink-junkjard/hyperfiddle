@@ -84,8 +84,8 @@
 
 (defn table-row-form [result colspec repeating-anchors param-ctx]
   (let [find-element-anchors-lookup (->> repeating-anchors
-                                         ; entity links can have fields but not find-elements specified
-                                         (filter #(or (:anchor/find-element %) (:anchor/field %)))
+                                         ; entity links can have attributes but not find-elements specified
+                                         (filter #(or (:anchor/find-element %) (:anchor/attribute %)))
                                          (group-by (fn [anchor]
                                                      (if-let [find-element (:anchor/find-element anchor)]
                                                        (:find-element/name find-element)
@@ -98,8 +98,8 @@
                         param-ctx (assoc param-ctx :attribute (get (:schema param-ctx) ident))
 
                         ; rebuilt too much due to joining fe-name X ident
-                        field-anchors (->> (get find-element-anchors-lookup fe-name)
-                                           (remove #(nil? (:anchor/field %))))
+                        attribute-anchors (->> (get find-element-anchors-lookup fe-name)
+                                               (remove #(nil? (:anchor/attribute %))))
 
 
                         style {:border-color (connection-color (:color param-ctx))}
@@ -111,7 +111,7 @@
                           (if error
                             (pr-str error)
                             (try
-                              (let [link-fn (let [anchor-by-ident (->> field-anchors
+                              (let [link-fn (let [anchor-by-ident (->> attribute-anchors
                                                                        (mapv (juxt #(-> % :anchor/ident) identity))
                                                                        (into {}))]
                                               (fn [ident label param-ctx]
@@ -120,7 +120,7 @@
                                                   [(:navigate-cmp param-ctx) props label param-ctx])))]
                                 (renderer (:peer param-ctx) link-fn value))
                               (catch :default e (pr-str e))))])
-                       (let [anchors (filter #(= (:db/id maybe-field) (some-> % :anchor/field :db/id)) field-anchors)]
+                       (let [anchors (filter #(= (-> param-ctx :attribute :db/id) (some-> % :anchor/attribute :db/id)) attribute-anchors)]
                          [auto-table-cell value maybe-field anchors param-ctx]))])))
           (seq))
 
@@ -130,7 +130,7 @@
                                (mapv vector
                                      (->> repeating-anchors
                                           (filter #(nil? (:anchor/find-element %)))
-                                          (filter #(nil? (:anchor/field %))))
+                                          (filter #(nil? (:anchor/attribute %))))
                                      (repeatedly (constantly param-ctx)))
                                ; find-element anchors need more items in their ctx
                                (->> (partition 3 colspec)
@@ -139,7 +139,7 @@
                                               (let [entity (get result fe-name)
                                                     param-ctx (entity-param-ctx entity param-ctx)
                                                     fe-anchors (->> (get find-element-anchors-lookup fe-name)
-                                                                    (filter #(nil? (:anchor/field %))))]
+                                                                    (filter #(nil? (:anchor/attribute %))))]
                                                 (mapv vector fe-anchors (repeat param-ctx))))))))]]))
 
 
@@ -175,7 +175,7 @@
       (let [non-repeating-top-anchors (->> anchors
                                            (remove :anchor/repeating?)
                                            (filter #(nil? (:anchor/find-element %)))
-                                           (filter #(nil? (:anchor/field %))))
+                                           (filter #(nil? (:anchor/attribute %))))
             ; Not all entities are homogenous, especially consider the '* case,
             ; so we need a uniform column set driving the body rows in sync with the headers
             ; but the resultset needs to match this column-fields structure now too; since the find-element level

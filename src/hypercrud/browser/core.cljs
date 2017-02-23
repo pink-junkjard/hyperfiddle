@@ -178,7 +178,7 @@
                                       (group-by (fn [anchor]
                                                   (if-let [find-element (:anchor/find-element anchor)]
                                                     (:find-element/name find-element)
-                                                    (if (:anchor/field anchor)
+                                                    (if (:anchor/attribute anchor)
                                                       ; entity links can have fields but not find-elements specified
                                                       "entity"
                                                       nil)))))

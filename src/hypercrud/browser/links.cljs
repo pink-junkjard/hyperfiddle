@@ -38,7 +38,7 @@
                     :query-params (->> (q-util/read-eval-formulas (:anchor/formula anchor))
                                        (util/map-values #(q-util/run-formula % param-ctx)))
                     #_(let [find-element-name nil
-                            attr (-> anchor :anchor/field :field/attribute :attribute/ident)]
+                            attr (-> anchor :anchor/attribute :attribute/ident)]
                         (get-in param-ctx [:result find-element-name attr :db/id]))}))
 
 

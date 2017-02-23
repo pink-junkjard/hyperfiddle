@@ -4,12 +4,22 @@
             [hypercrud.types :as types]))
 
 
+(defn human-error [e req]
+  (let [unfilled-holes (->> (filter (comp nil? val) (.-params req)) (map key))]
+    (if-not (empty? unfilled-holes)
+      (pr-str unfilled-holes)
+      e)))
+
+
 (deftype Peer [requests pulled-trees-map]
   hc/Peer
   (hydrate [this request]
+    ; (exception/try-or-recover  (constantly (exception/failure (str unfilled-holes))))
+
+
     (if-let [resultset-or-error (get pulled-trees-map request)]
       (if (instance? types/DbError resultset-or-error)
-        (exception/failure (js/Error. (.-msg resultset-or-error))) ;build a stack trace
+        (exception/failure (human-error resultset-or-error request))
         (exception/success resultset-or-error))
       (exception/failure (js/Error. (str "Unhydrated request:\n" (pr-str request))))))
 

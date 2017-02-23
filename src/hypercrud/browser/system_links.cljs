@@ -74,7 +74,7 @@
                                                      :anchor/link (system-edit-field-link find-element field parent-link)
                                                      :anchor/repeating? true
                                                      :anchor/find-element find-element
-                                                     :anchor/field field
+                                                     :anchor/attribute ??? #_ field
                                                      :anchor/formula (pr-str {:entity-dbid-s (pr-str '(fn [ctx] nil))})}]))))))
           create-links (->> find-elements
                             (mapv :find-element/connection)

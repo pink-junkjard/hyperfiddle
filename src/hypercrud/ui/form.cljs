@@ -34,14 +34,14 @@
           (try
             (renderer (:peer param-ctx) link-fn value)
             (catch :default e (pr-str e))))])
-     (let [anchors (filter #(= (:db/id field) (some-> % :anchor/field :db/id)) anchors)]
+     (let [anchors (filter #(= (-> param-ctx :attribute :db/id) (some-> % :anchor/attribute :db/id)) anchors)]
        [auto-control value field anchors param-ctx]))])
 
 
 (defn form [resultset ordered-find-elements anchors param-ctx]
   (let [top-anchors (->> anchors
                          (filter #(nil? (:anchor/find-element %)))
-                         (filter #(nil? (:anchor/field %))))
+                         (filter #(nil? (:anchor/attribute %))))
         colspec (form-util/determine-colspec resultset ordered-find-elements param-ctx)]
     [:div.forms-list
      (widget/render-anchors (concat
@@ -62,8 +62,8 @@
        ; everything inside this let is repeating, thus getting :result in ctx
        (let [param-ctx (assoc param-ctx :result result)
              fe-anchors-lookup (->> anchors
-                                    ; entity links can have fields but not find-elements specified
-                                    (filter #(or (:anchor/find-element %) (:anchor/field %)))
+                                    ; entity links can have attributes but not find-elements specified
+                                    (filter #(or (:anchor/find-element %) (:anchor/attribute %)))
                                     (group-by (fn [anchor]
                                                 (if-let [find-element (:anchor/find-element anchor)]
                                                   (:find-element/name find-element)
@@ -97,7 +97,7 @@
                       ^{:key (str (:db/id entity) "-" (:find-element/name find-element))}
                       [:div.find-element
                        (widget/render-anchors (->> find-element-anchors
-                                                   (filter #(nil? (:anchor/field %)))
+                                                   (filter #(nil? (:anchor/attribute %)))
                                                    (remove :anchor/render-inline?))
                                               param-ctx)
                        (let [form* (if (not= (:display-mode param-ctx) :raw)
@@ -106,7 +106,7 @@
                                      nil)]
                          [form entity form* find-element-anchors param-ctx])
                        (widget/render-inline-links (->> find-element-anchors
-                                                        (filter #(nil? (:anchor/field %)))
+                                                        (filter #(nil? (:anchor/attribute %)))
                                                         (filter :anchor/render-inline?))
                                                    (dissoc param-ctx :isComponent))]))
                   ordered-find-elements)))

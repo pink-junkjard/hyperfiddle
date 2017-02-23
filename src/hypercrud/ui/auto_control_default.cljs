@@ -15,7 +15,7 @@
 
 (defn build-props [value maybe-field anchors param-ctx]
   ; why does this need the field - it needs the ident for readonly in "Edit Anchors"
-  {:read-only ((get param-ctx :read-only) maybe-field param-ctx)})
+  {:read-only ((get param-ctx :read-only) (:attribute param-ctx) param-ctx)})
 
 
 (defmethod auto-control/auto-control :default
@@ -75,7 +75,7 @@
   (let [non-repeating-top-anchors (->> anchors
                                        (remove :anchor/repeating?)
                                        (remove :anchor/find-element)
-                                       (remove :anchor/field))]
+                                       (remove :anchor/attribute))]
     [:div
      "Unable to render unknown link type"
      [:br]
