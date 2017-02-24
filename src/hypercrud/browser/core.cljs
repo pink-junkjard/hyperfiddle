@@ -139,9 +139,9 @@
                                            :schema indexed-schema
                                            :read-only (or (:read-only param-ctx) (constantly false)))]
                            (case (get param-ctx :display-mode :dressed)
-                             :dressed (user-resultset resultset (system-links/overlay-system-links-tx link) (user-bindings link param-ctx))
-                             :undressed (auto-control/resultset resultset (system-links/overlay-system-links-tx link) (user-bindings link param-ctx))
-                             :raw (auto-control/resultset resultset (-> link (dissoc link :link/anchor) (system-links/overlay-system-links-tx)) param-ctx)))))]
+                             :dressed (user-resultset resultset (system-links/overlay-system-links-tx link resultset param-ctx) (user-bindings link param-ctx))
+                             :undressed (auto-control/resultset resultset (system-links/overlay-system-links-tx link resultset param-ctx) (user-bindings link param-ctx))
+                             :raw (auto-control/resultset resultset (system-links/overlay-system-links-tx (dissoc link :link/anchor) resultset param-ctx) param-ctx)))))]
     (if (exception/failure? dom-or-e)
       [:div
        [:span (-> dom-or-e .-e .-msg)]

@@ -10,7 +10,8 @@
             [hypercrud.util :as util]
             [hypercrud.ui.input :as input]
             [hypercrud.client.tx :as tx]
-            [hypercrud.browser.system-links :as system-links]))
+            [hypercrud.browser.system-links :as system-links]
+            [hypercrud.ui.form-util :as form-util]))
 
 
 (defn build-props [value maybe-field anchors param-ctx]
@@ -40,35 +41,29 @@
     (widget value maybe-field anchors props param-ctx)))
 
 
-    (defmethod auto-control/auto-table-cell :default
-      [value maybe-field anchors param-ctx]
-      (let [isComponent (-> (:attribute param-ctx) :attribute/isComponent)
-            valueType (-> (:attribute param-ctx) :attribute/valueType :db/ident)
-            cardinality (-> (:attribute param-ctx) :attribute/cardinality :db/ident)
-            props (build-props value maybe-field anchors param-ctx)
-            widget (cond
-                     (and (= valueType :db.type/boolean) (= cardinality :db.cardinality/one)) widget/boolean
-                     (and (= valueType :db.type/keyword) (= cardinality :db.cardinality/one)) widget/keyword
-                     (and (= valueType :db.type/string) (= cardinality :db.cardinality/one)) widget/string
-                     (and (= valueType :db.type/long) (= cardinality :db.cardinality/one)) widget/long
-                     (and (= valueType :db.type/code) (= cardinality :db.cardinality/one)) widget/string
-                     (and (= valueType :db.type/instant) (= cardinality :db.cardinality/one)) widget/instant
-                     (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one) isComponent) table-cell/ref-one-component
-                     (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one)) widget/ref
-                     (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) table-cell/ref-many
-                     (and (= cardinality :db.cardinality/many)) table-cell/other-many
-                     :else widget/raw
-                     )]
-        (widget value maybe-field anchors props param-ctx)))
+(defmethod auto-control/auto-table-cell :default
+  [value maybe-field anchors param-ctx]
+  (let [isComponent (-> (:attribute param-ctx) :attribute/isComponent)
+        valueType (-> (:attribute param-ctx) :attribute/valueType :db/ident)
+        cardinality (-> (:attribute param-ctx) :attribute/cardinality :db/ident)
+        props (build-props value maybe-field anchors param-ctx)
+        widget (cond
+                 (and (= valueType :db.type/boolean) (= cardinality :db.cardinality/one)) widget/boolean
+                 (and (= valueType :db.type/keyword) (= cardinality :db.cardinality/one)) widget/keyword
+                 (and (= valueType :db.type/string) (= cardinality :db.cardinality/one)) widget/string
+                 (and (= valueType :db.type/long) (= cardinality :db.cardinality/one)) widget/long
+                 (and (= valueType :db.type/code) (= cardinality :db.cardinality/one)) widget/string
+                 (and (= valueType :db.type/instant) (= cardinality :db.cardinality/one)) widget/instant
+                 (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one) isComponent) table-cell/ref-one-component
+                 (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one)) widget/ref
+                 (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) table-cell/ref-many
+                 (and (= cardinality :db.cardinality/many)) table-cell/other-many
+                 :else widget/raw
+                 )]
+    (widget value maybe-field anchors props param-ctx)))
 
 
-(defn filter-visible-fields [old-fields param-ctx]
-  (filter
-    (fn [fieldinfo]
-      (let [attr (-> fieldinfo :field/attribute :attribute/ident)
-            visible-fn (get-in param-ctx [:fields attr :visible?] (constantly true))]
-        (visible-fn param-ctx)))
-    old-fields))
+
 
 
 (defn no-link-type [anchors param-ctx]
@@ -84,36 +79,28 @@
        (widget/render-inline-links (filter :anchor/render-inline? non-repeating-top-anchors) param-ctx))]))
 
 
+
+
 (defmethod auto-control/resultset :default [resultset link param-ctx]
   (let [ui-for-resultset (fn [single-result-as-entity?]
                            (if single-result-as-entity?
                              (if (system-links/system-link? (:db/id link)) #_(= :system-edit (-> link :db/id :id :link/ident))
                                form/sys-form
                                form/form)
-                             table/table))]
+                             table/table))
+        colspec (form-util/determine-colspec resultset link param-ctx)]
     (case (links/link-type link)
       :link-query
       (let [link-query (:link/request link)
-            q (some-> link-query :link-query/value reader/read-string)
-            ui (ui-for-resultset (:link-query/single-result-as-entity? link-query))
-            find-element-lookup (->> (mapv (juxt :find-element/name identity) (:link-query/find-element link-query))
-                                     (into {}))
-            ordered-find-elements
-            (->> (util/parse-query-element q :find)
-                 (mapv str)
-                 (mapv #(get find-element-lookup %))
-                 (mapv (fn [find-element]
-                         (update-in find-element [:find-element/form :form/field] #(filter-visible-fields % param-ctx)))))]
-        [ui resultset ordered-find-elements (:link/anchor link) param-ctx])
+            ui (ui-for-resultset (:link-query/single-result-as-entity? link-query))]
+        [ui resultset colspec (:link/anchor link) param-ctx])
 
       :link-entity
       (let [single-result-as-entity? (map? resultset)       ;todo this is broken when no results are returned
             ui (ui-for-resultset single-result-as-entity?)
-            ordered-find-elements [{:find-element/name "entity"
-                                    :find-element/form (-> (get-in link [:link/request :link-entity/form])
-                                                           (update :form/field #(filter-visible-fields % param-ctx)))}]
+            colspec nil
             resultset (->> (if single-result-as-entity? [resultset] resultset)
                            (mapv #(assoc {} "entity" %)))]
-        [ui resultset ordered-find-elements (:link/anchor link) param-ctx])
+        [ui resultset colspec (:link/anchor link) param-ctx])
 
       [no-link-type (:link/anchor link) param-ctx])))

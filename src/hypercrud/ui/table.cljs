@@ -169,18 +169,13 @@
                    ^{:key (hash (util/map-values :db/id result))}
                    [table-row-form result colspec repeating-anchors param-ctx])))))])
 
-(defn table [resultset ordered-find-elements anchors param-ctx]
+(defn table [resultset colspec anchors param-ctx]
   (let [sort-col (r/atom nil)]
-    (fn [resultset ordered-find-elements anchors param-ctx]
+    (fn [resultset colspec anchors param-ctx]
       (let [non-repeating-top-anchors (->> anchors
                                            (remove :anchor/repeating?)
                                            (filter #(nil? (:anchor/find-element %)))
-                                           (filter #(nil? (:anchor/attribute %))))
-            ; Not all entities are homogenous, especially consider the '* case,
-            ; so we need a uniform column set driving the body rows in sync with the headers
-            ; but the resultset needs to match this column-fields structure now too; since the find-element level
-            ; has been flattened out of the columns.
-            colspec (form-util/determine-colspec resultset ordered-find-elements param-ctx)]
+                                           (filter #(nil? (:anchor/attribute %))))]
         [:div.ui-table-with-links
          [:table.ui-table
           [:thead

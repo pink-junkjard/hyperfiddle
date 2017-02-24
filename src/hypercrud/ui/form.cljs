@@ -38,11 +38,10 @@
        [auto-control value field anchors param-ctx]))])
 
 
-(defn form [resultset ordered-find-elements anchors param-ctx]
+(defn form [resultset colspec anchors param-ctx]
   (let [top-anchors (->> anchors
                          (filter #(nil? (:anchor/find-element %)))
-                         (filter #(nil? (:anchor/attribute %))))
-        colspec (form-util/determine-colspec resultset ordered-find-elements param-ctx)]
+                         (filter #(nil? (:anchor/attribute %))))]
     [:div.forms-list
      (widget/render-anchors (concat
                               ; non-repeating should not have :result
@@ -143,8 +142,8 @@
              props (if (nil? @attr-ident) {:read-only true})]
          [input/edn-input* nil on-change! props])])))
 
-(defn sys-form [resultset ordered-find-elements anchors param-ctx]
+(defn sys-form [resultset colspec anchors param-ctx]
   [:div.dumb
-   (form resultset ordered-find-elements anchors param-ctx)
+   (form resultset colspec anchors param-ctx)
    (let [entity (get (first resultset) "entity")]
      ^{:key (hash (keys entity))} [new-field entity param-ctx])])

@@ -1,7 +1,8 @@
 (ns hypercrud.browser.system-links
   (:require [hypercrud.browser.links :as links]
             [hypercrud.client.core :as hc]
-            [hypercrud.types :refer [->DbId ->DbVal ->EntityRequest]]))
+            [hypercrud.types :refer [->DbId ->DbVal ->EntityRequest]]
+            [hypercrud.ui.form-util :as form-util]))
 
 
 (defn system-link? [link-dbid]
@@ -22,10 +23,10 @@
           (-> parent-link-dbid :conn-id)))
 
 
-(defn system-edit-field-link-dbid [find-element-id field-id parent-link-dbid]
+(defn system-edit-attr-link-dbid [find-element-id attr-id parent-link-dbid]
   (->DbId {:parent-link-id (-> parent-link-dbid :id)
            :parent-link-conn-id (-> parent-link-dbid :conn-id)
-           :link/ident :system-edit-field
+           :link/ident :system-edit-attr
            ;find-element-id
            ;field-id
            }
@@ -39,12 +40,11 @@
    :link/request {:link-entity/connection {:db/id connection-dbid}}})
 
 
-(defn system-edit-field-link [find-element field parent-link]
-  {:db/id (system-edit-field-link-dbid (-> find-element :db/id :id) (get-in field [:db/id :id]) (:db/id parent-link))
-   :link/name (str "edit " (:find-element/name find-element) " " (get-in field [:field/attribute :attribute/ident]))
+(defn system-edit-attr-link [find-element attr parent-link]
+  {:db/id (system-edit-attr-link-dbid (-> find-element :db/id :id) (get-in attr [:db/id :id]) (:db/id parent-link))
+   :link/name (str "edit " (:find-element/name find-element) " " (:attribute/ident attr))
    :hypercrud/owner (:hypercrud/owner parent-link)
-   :link/request {:link-entity/connection (:find-element/connection find-element)
-                  :link-entity/form (:find-element/form find-element)}})
+   :link/request {:link-entity/connection (:find-element/connection find-element)}})
 
 
 (defn overlay-system-links-tx
@@ -52,46 +52,54 @@
   Since we only changed link, this is only interesting for the hc-in-hc case.
 
   todo don't overlay system links on system links"
-  [parent-link]
-  (case (links/link-type parent-link)
-    :link-query
-    (let [find-elements (get-in parent-link [:link/request :link-query/find-element])
-          edit-links (->> find-elements
-                          (mapv (fn [find-element]
-                                  (let [connection-dbid (-> find-element :find-element/connection :db/id)
-                                        link-name (str "system-edit " (:find-element/name find-element))]
-                                    {:anchor/prompt (str "edit " (:find-element/name find-element))
-                                     :anchor/link (system-edit-link connection-dbid link-name parent-link)
-                                     :anchor/repeating? true
-                                     :anchor/find-element find-element
-                                     :anchor/formula (pr-str {:entity-dbid-s (pr-str `(fn [~'ctx]
-                                                                                        (get-in ~'ctx [:result ~(:find-element/name find-element) :db/id])))})})
-                                  #_(->> (-> find-element :find-element/form :form/field)
-                                         (filter #(= :db.type/ref (-> % :field/attribute :attribute/valueType)))
-                                         (mapcat (fn [field]
-                                                   [{:db/id "i dont think we need this"
-                                                     :anchor/prompt "edit"
-                                                     :anchor/link (system-edit-field-link find-element field parent-link)
-                                                     :anchor/repeating? true
-                                                     :anchor/find-element find-element
-                                                     :anchor/attribute ??? #_ field
-                                                     :anchor/formula (pr-str {:entity-dbid-s (pr-str '(fn [ctx] nil))})}]))))))
-          create-links (->> find-elements
-                            (mapv :find-element/connection)
-                            (set)
-                            (mapv (fn [connection]
-                                    (let [connection-dbid (:db/id connection)
-                                          link-name (str "system-create " (:database/ident connection))]
-                                      {:anchor/prompt (str "create in " (:database/ident connection))
+  [parent-link resultset param-ctx]
+  (let [colspec (form-util/determine-colspec resultset parent-link param-ctx)
+        find-elements (form-util/find-elements-by-name (:link/request parent-link))]
+    (case (links/link-type parent-link)
+      :link-query
+      (let [fe-names (->> colspec (partition 3) (map first) (set))
+            edit-links (->> fe-names
+                            (mapv (fn [fe-name]
+                                    (let [fe (get find-elements fe-name)
+                                          connection-dbid (-> fe :find-element/connection :db/id)
+                                          ;connection-dbid (->DbId (-> resultset first (get fe-name) :db/id :conn-id) hc/*root-conn-id*)
+                                          link-name (str "system-edit " fe-name)]
+                                      {:anchor/prompt (str "edit " (:find-element/name fe-name))
                                        :anchor/link (system-edit-link connection-dbid link-name parent-link)
-                                       :anchor/repeating? false
+                                       :anchor/repeating? true
+                                       :anchor/find-element fe
                                        :anchor/formula (pr-str {:entity-dbid-s (pr-str `(fn [~'ctx]
-                                                                                          (hc/*temp-id!* ~(:id connection-dbid))))})}))))
-          anchors (concat edit-links create-links)]
-      (update parent-link :link/anchor concat anchors))
+                                                                                          (get-in ~'ctx [:result ~(:find-element/name fe-name) :db/id])))})}))))
 
-    :link-entity parent-link                                ; No system links yet for entity links.
-    parent-link))
+            edit-attr-links (->> (partition 3 colspec)
+                                 (mapcat (fn [[fe-name ident maybe-field]]
+                                           (let [fe (get find-elements fe-name)
+                                                 attr ((:schema param-ctx) ident)]
+                                             (case (-> attr :attribute/valueType :db/ident)
+                                               :db.type/ref [{:anchor/prompt (str "edit " (:attribute/ident attr))
+                                                              :anchor/link (system-edit-attr-link fe attr parent-link)
+                                                              :anchor/repeating? true
+                                                              :anchor/find-element fe
+                                                              :anchor/attribute attr
+                                                              :anchor/formula (pr-str {:entity-dbid-s (pr-str '(fn [ctx] nil))})}]
+                                               nil))))
+                                 doall)
+            create-links (->> fe-names
+                              (mapv (fn [fe-name]
+                                      (get-in find-elements [fe-name :find-element/connection])))
+                              (set)
+                              (mapv (fn [connection]
+                                      (let [connection-dbid (:db/id connection)
+                                            link-name (str "system-create " (:database/ident connection))]
+                                        {:anchor/prompt (str "create in " (:database/ident connection))
+                                         :anchor/link (system-edit-link connection-dbid link-name parent-link)
+                                         :anchor/repeating? false
+                                         :anchor/formula (pr-str {:entity-dbid-s (pr-str `(fn [~'ctx]
+                                                                                            (hc/*temp-id!* ~(:id connection-dbid))))})}))))]
+        (update parent-link :link/anchor concat create-links edit-links edit-attr-links))
+
+      :link-entity parent-link                              ; No system links yet for entity links.
+      parent-link)))
 
 
 (defn request-for-system-link [system-link-id]
