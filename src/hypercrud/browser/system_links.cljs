@@ -47,7 +47,7 @@
    :link/request {:link-entity/connection (:find-element/connection find-element)}})
 
 
-(defn overlay-system-links-tx
+(defn system-anchors
   "provide the system links (edit, new, remove). sub-queries (e.g. combo boxes) will get the old pulled-tree.
   Since we only changed link, this is only interesting for the hc-in-hc case.
 
@@ -96,10 +96,10 @@
                                          :anchor/repeating? false
                                          :anchor/formula (pr-str {:entity-dbid-s (pr-str `(fn [~'ctx]
                                                                                             (hc/*temp-id!* ~(:id connection-dbid))))})}))))]
-        (update parent-link :link/anchor concat create-links edit-links edit-attr-links))
+        (concat create-links edit-links edit-attr-links))
 
-      :link-entity parent-link                              ; No system links yet for entity links.
-      parent-link)))
+      :link-entity []                              ; No system links yet for entity links.
+      [])))
 
 
 (defn request-for-system-link [system-link-id]

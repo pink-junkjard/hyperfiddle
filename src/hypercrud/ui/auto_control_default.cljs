@@ -72,35 +72,20 @@
                                        (remove :anchor/find-element)
                                        (remove :anchor/attribute))]
     [:div
-     "Unable to render unknown link type"
-     [:br]
      (widget/render-anchors (remove :anchor/render-inline? non-repeating-top-anchors) param-ctx)
      (let [param-ctx (dissoc param-ctx :isComponent)]
        (widget/render-inline-links (filter :anchor/render-inline? non-repeating-top-anchors) param-ctx))]))
 
 
+(defn form-or-sys-form [resultset colspec link param-ctx]
+  (let [c (if (system-links/system-link? (:db/id link))
+            form/sys-form
+            form/form)]
+    (c resultset colspec link param-ctx)))
 
 
-(defmethod auto-control/resultset :default [resultset link param-ctx]
-  (let [ui-for-resultset (fn [single-result-as-entity?]
-                           (if single-result-as-entity?
-                             (if (system-links/system-link? (:db/id link)) #_(= :system-edit (-> link :db/id :id :link/ident))
-                               form/sys-form
-                               form/form)
-                             table/table))
-        colspec (form-util/determine-colspec resultset link param-ctx)]
-    (case (links/link-type link)
-      :link-query
-      (let [link-query (:link/request link)
-            ui (ui-for-resultset (:link-query/single-result-as-entity? link-query))]
-        [ui resultset colspec (:link/anchor link) param-ctx])
-
-      :link-entity
-      (let [single-result-as-entity? (map? resultset)       ;todo this is broken when no results are returned
-            ui (ui-for-resultset single-result-as-entity?)
-            colspec nil
-            resultset (->> (if single-result-as-entity? [resultset] resultset)
-                           (mapv #(assoc {} "entity" %)))]
-        [ui resultset colspec (:link/anchor link) param-ctx])
-
-      [no-link-type (:link/anchor link) param-ctx])))
+(defmethod auto-control/resultset :default [type resultset colspec anchors param-ctx]
+  (case type
+    :link-query [table/table resultset colspec anchors param-ctx] ; stateful
+    :link-entity (form-or-sys-form resultset colspec anchors param-ctx)
+    (no-link-type anchors param-ctx)))

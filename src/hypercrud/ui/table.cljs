@@ -66,7 +66,7 @@
 
                      ]
 
-                 [:td {:class (string/join " " css-classes) :key (str ident) :on-click on-click}
+                 [:td {:class (string/join " " css-classes) :key (str fe-name "-" ident) :on-click on-click}
                   (str prompt)
                   (let [docstring (-> field :field/attribute :attribute/doc)]
                     (if-not (empty? docstring)
@@ -92,7 +92,7 @@
                                                        "entity"))))]
     [:tr
      (->> (partition 3 colspec)
-          (mapv (fn [[fe-name ident maybe-field]]
+          (mapv (fn [[fe-name ident maybe-field]]           ; (fe-name, ident) are unique if taken together
                   (let [entity (get result fe-name)
                         param-ctx (entity-param-ctx entity param-ctx)
                         param-ctx (assoc param-ctx :attribute (get (:schema param-ctx) ident))
@@ -104,7 +104,7 @@
 
                         style {:border-color (connection-color (:color param-ctx))}
                         value (get entity ident)]
-                    [:td.truncate {:key (or (:db/id maybe-field) ident) :style style}
+                    [:td.truncate {:key (or (:db/id maybe-field) (str fe-name ident)) :style style}
                      (if-let [renderer (renderer/renderer-for-attribute (:field/attribute maybe-field))]
                        (let [{renderer :value error :error} (eval renderer)]
                          [:div.value
