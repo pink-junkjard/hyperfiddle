@@ -50,10 +50,12 @@
              props (if (nil? @attr-ident) {:read-only true})]
          [input/edn-input* nil on-change! props])])))
 
-(defn form [resultset colspec anchors param-ctx]
-  (assert (first resultset) "even create new should have a hydrated (empty) entity")
-  (let [result (first resultset)
-        top-anchors (->> anchors
+; We can draw a form of a relation by flatting a list-of-forms
+; Use the colspec abstraction to unify these cases (this means
+; that entity results have been manually lifted into a relation
+; with fe-name "entity")
+(defn form [relation colspec anchors param-ctx]
+  (let [top-anchors (->> anchors
                          (filter #(nil? (:anchor/find-element %)))
                          (filter #(nil? (:anchor/attribute %))))]
     [:div.forms-list
@@ -63,17 +65,16 @@
                                     (->> top-anchors
                                          (remove :anchor/render-inline?)
                                          (remove :anchor/repeating?))
-                                    (repeatedly (constantly param-ctx)))
-                              (if-let [result (first resultset)]
-                                ; repeating gets the :result in ctx
-                                (mapv vector
-                                      (->> top-anchors
-                                           (remove :anchor/render-inline?)
-                                           (filter :anchor/repeating?))
-                                      (repeatedly (constantly (assoc param-ctx :result result)))))))
+                                    (repeat param-ctx))
+                              ; repeating gets the :result in ctx
+                              (mapv vector
+                                    (->> top-anchors
+                                         (remove :anchor/render-inline?)
+                                         (filter :anchor/repeating?))
+                                    (repeat (assoc param-ctx :result relation))))) ; todo :result -> :relation
 
      ; everything inside this let is repeating, thus getting :result in ctx
-     (let [param-ctx (assoc param-ctx :result result)
+     (let [param-ctx (assoc param-ctx :result relation)     ;  todo :result -> :relation
            fe-anchors-lookup (->> anchors
                                   ; entity links can have attributes but not find-elements specified
                                   (filter #(or (:anchor/find-element %) (:anchor/attribute %)))
@@ -85,7 +86,7 @@
            ;; Missing are find-element anchors (need to hoist and concat), its just one form now not a list-form
            spec-fields (->> (partition 3 colspec)
                             (mapv (fn [[fe-name ident maybe-field]]
-                                    (let [entity (get result fe-name)
+                                    (let [entity (get relation fe-name)
                                           fe-anchors (get fe-anchors-lookup fe-name)
                                           param-ctx (as-> param-ctx $
                                                           (assoc $
@@ -102,13 +103,14 @@
                       (mapv #(nth % 2))
                       (every? #(not= nil %)))
            extra (if-not form?
-                   (let [entity (get (first resultset) "entity")] ; makes sense only for entity links, not query links as entity.
+                   ; can we assert entity?
+                   (if-let [entity (get relation "entity")] ; makes sense only for entity links, not query links as entity.
                      ^{:key (hash (keys entity))} [new-field entity param-ctx]))]
 
        (concat spec-fields [extra])
 
        #_(map (fn [find-element]
-                (let [entity (get result (:find-element/name find-element))
+                (let [entity (get relation (:find-element/name find-element))
                       find-element-anchors (get fe-anchors-lookup (:find-element/name find-element))
                       param-ctx (assoc param-ctx :color ((:color-fn param-ctx) entity param-ctx)
                                                  :owner ((:owner-fn param-ctx) entity param-ctx)
@@ -138,7 +140,7 @@
                                                 (remove :anchor/repeating?))
                                            (repeat param-ctx)))
                                    ; repeating gets :result
-                                   (let [param-ctx (-> param-ctx (dissoc :isComponent) (assoc :result result))]
+                                   (let [param-ctx (-> param-ctx (dissoc :isComponent) (assoc :result relation))]
                                      (mapv vector
                                            (->> top-anchors
                                                 (filter :anchor/render-inline?)

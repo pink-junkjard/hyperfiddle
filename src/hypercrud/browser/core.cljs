@@ -72,44 +72,46 @@
                        :hypercrud/owner ['*]}])))
 
 
-(defn user-resultset [link]
+(defn user-result [link]
   (let [render-fn (if (empty? (:link/renderer link))
-                    auto-control/resultset
+                    auto-control/result
                     (let [{f :value error :error} (eval (:link/renderer link))]
                       (if error
-                        (fn [type resultset colspec anchor-index param-ctx]
+                        (fn [type result colspec anchor-index param-ctx]
                           [:pre (pprint/pprint error)])
                         f)))]
-    (fn [type resultset colspec anchors param-ctx]
+    (fn [result colspec anchors param-ctx]
       (let [anchor-index (->> anchors
                               (mapv (juxt #(-> % :anchor/ident) identity))
                               (into {}))
-            inline-resultset (fn [ident param-ctx]
-                               (let [anchor (get anchor-index ident)
-                                     params-map (links/build-url-params-map anchor param-ctx)
-                                     query-params (:query-params params-map)]
-                                 (mlet [link (hc/hydrate (:peer param-ctx) (request-for-link (-> anchor :anchor/link :db/id)))
-                                        request (try-on
-                                                  (case (links/link-type link)
-                                                    :link-query (let [q (some-> link :link/request :link-query/value reader/read-string)
-                                                                      params-map (merge query-params
-                                                                                        (q-util/build-dbhole-lookup (:link/request link)))]
-                                                                  (q-util/query-value q (:link/request link) params-map param-ctx))
+            inline-result (fn [ident param-ctx]
+                            (let [anchor (get anchor-index ident)
+                                  params-map (links/build-url-params-map anchor param-ctx)
+                                  query-params (:query-params params-map)]
+                              (mlet [link (hc/hydrate (:peer param-ctx) (request-for-link (-> anchor :anchor/link :db/id)))
+                                     request (try-on
+                                               (case (links/link-type link)
+                                                 :link-query (let [q (some-> link :link/request :link-query/value reader/read-string)
+                                                                   params-map (merge query-params
+                                                                                     (q-util/build-dbhole-lookup (:link/request link)))]
+                                                               (q-util/query-value q (:link/request link) params-map param-ctx))
 
-                                                    :link-entity (q-util/->entityRequest (:link/request link) query-params)
-                                                    nil))
-                                        resultset (if request
-                                                    (hc/hydrate (:peer param-ctx) request)
-                                                    (exception/success nil))]
-                                       (cats/return resultset))))
+                                                 :link-entity (q-util/->entityRequest (:link/request link) query-params)
+                                                 nil))
+                                     result (if request
+                                              (hc/hydrate (:peer param-ctx) request)
+                                              (exception/success nil))]
+                                    (cats/return result))))
             param-ctx (assoc param-ctx
                         :link-fn (fn [ident label param-ctx]
                                    (let [anchor (get anchor-index ident)
                                          props (links/build-link-props anchor param-ctx)]
                                      [(:navigate-cmp param-ctx) props label param-ctx]))
-                        :inline-resultset inline-resultset)]
+                        ;:inline-result inline-result
+                        )]
         (try
-          (render-fn type resultset colspec anchors param-ctx)
+          ; result is relation or set of relations
+          (render-fn result colspec anchors param-ctx)
           (catch :default e (pr-str e)))))))
 
 
@@ -129,9 +131,7 @@
                                                   (q-util/query-value q link-query params-map param-ctx))
                                     :link-entity (q-util/->entityRequest (:link/request link) (:query-params params-map))
                                     nil))
-                        resultset (if request
-                                    (hc/hydrate peer request)
-                                    (exception/success nil))
+                        result (if request (hc/hydrate peer request) (exception/success nil))
                         ; schema is allowed to be nil if the link only has anchors and no data dependencies
                         schema (exception/try-or-else (hc/hydrate peer (schema-util/schema-request nil)) nil)]
                        (cats/return
@@ -140,16 +140,14 @@
                                            :query-params query-params
                                            :schema indexed-schema
                                            :read-only (or (:read-only param-ctx) (constantly false)))
-                               type (if (-> link :link/request :link-query/single-result-as-entity?)
-                                      :link-entity
-                                      (links/link-type link))
-                               resultset (case type :link-entity (mapv #(assoc {} "entity" %) [resultset]) resultset)
-                               colspec (form-util/determine-colspec resultset link param-ctx)
-                               system-anchors (system-links/system-anchors link resultset param-ctx)]
+                               result (if (-> link :link/request :link-entity/connection) {"entity" result} result) ; wrap singular result into a relation ("entity" fe)
+                               result (if (-> link :link/request :link-query/single-result-as-entity?) (first result) result) ; unwrap query into entity
+                               colspec (form-util/determine-colspec result link param-ctx)
+                               system-anchors (system-links/system-anchors link result param-ctx)]
                            (case (get param-ctx :display-mode :dressed)
-                             :dressed ((user-resultset link) type resultset colspec (concat (:link/anchor link) system-anchors) (user-bindings link param-ctx))
-                             :undressed (auto-control/resultset type resultset colspec (concat (:link/anchor link) system-anchors) (user-bindings link param-ctx))
-                             :raw (auto-control/resultset type resultset colspec system-anchors param-ctx)))))]
+                             :dressed ((user-result link) result colspec (concat (:link/anchor link) system-anchors) (user-bindings link param-ctx))
+                             :undressed (auto-control/result result colspec (concat (:link/anchor link) system-anchors) (user-bindings link param-ctx))
+                             :raw (auto-control/result result colspec system-anchors param-ctx)))))]
     (if (exception/failure? dom-or-e)
       [:div
        [:span (-> dom-or-e .-e .-msg)]

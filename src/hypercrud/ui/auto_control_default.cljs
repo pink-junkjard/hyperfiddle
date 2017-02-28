@@ -73,8 +73,10 @@
      (let [param-ctx (dissoc param-ctx :isComponent)]
        (widget/render-inline-links (filter :anchor/render-inline? non-repeating-top-anchors) param-ctx))]))
 
-(defmethod auto-control/resultset :default [type resultset colspec anchors param-ctx]
-  (case type
-    :link-query [table/table resultset colspec anchors param-ctx] ; stateful
-    :link-entity (form/form resultset colspec anchors param-ctx)
-    (no-link-type anchors param-ctx)))
+; Result is either a relation, or a set of relations (vector on the wire)
+(defmethod auto-control/result :default [result colspec anchors param-ctx]
+  (cond
+    ; order matters here
+    (map? result) (form/form result colspec anchors param-ctx)
+    (coll? result) [table/table result colspec anchors param-ctx] ; stateful
+    :else (no-link-type anchors param-ctx)))

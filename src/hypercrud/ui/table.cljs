@@ -82,7 +82,7 @@
                    :owner ((:owner-fn param-ctx) entity param-ctx)
                    :entity entity))
 
-(defn table-row-form [result colspec repeating-anchors param-ctx]
+(defn table-row-form [relation colspec repeating-anchors param-ctx]
   (let [find-element-anchors-lookup (->> repeating-anchors
                                          ; entity links can have attributes but not find-elements specified
                                          (filter #(or (:anchor/find-element %) (:anchor/attribute %)))
@@ -93,7 +93,7 @@
     [:tr
      (->> (partition 3 colspec)
           (mapv (fn [[fe-name ident maybe-field]]           ; (fe-name, ident) are unique if taken together
-                  (let [entity (get result fe-name)
+                  (let [entity (get relation fe-name)
                         param-ctx (entity-param-ctx entity param-ctx)
                         param-ctx (assoc param-ctx :attribute (get (:schema param-ctx) ident))
 
@@ -136,14 +136,14 @@
                                (->> (partition 3 colspec)
                                     (mapv first) (set)      ; distinct find elements
                                     (mapcat (fn [fe-name]
-                                              (let [entity (get result fe-name)
+                                              (let [entity (get relation fe-name)
                                                     param-ctx (entity-param-ctx entity param-ctx)
                                                     fe-anchors (->> (get find-element-anchors-lookup fe-name)
                                                                     (filter #(nil? (:anchor/attribute %))))]
                                                 (mapv vector fe-anchors (repeat param-ctx))))))))]]))
 
 
-(defn body [resultset colspec repeating-anchors sort-col param-ctx]
+(defn body [relations colspec repeating-anchors sort-col param-ctx]
   [:tbody
    (let [[form-dbid sort-key direction] @sort-col
          ;sort-eids (fn [resultset]
@@ -162,16 +162,16 @@
          ;                         resultset)
          ;                resultset)))
          ]
-     (->> resultset
+     (->> relations
           #_sort-eids
-          (map (fn [result]
-                 (let [param-ctx (assoc param-ctx :result result)]
-                   ^{:key (hash (util/map-values :db/id result))}
-                   [table-row-form result colspec repeating-anchors param-ctx])))))])
+          (map (fn [relation]
+                 (let [param-ctx (assoc param-ctx :result relation)] ; todo :result -> :relation
+                   ^{:key (hash (util/map-values :db/id relation))}
+                   [table-row-form relation colspec repeating-anchors param-ctx])))))])
 
-(defn table [resultset colspec anchors param-ctx]
+(defn table [relations colspec anchors param-ctx]
   (let [sort-col (r/atom nil)]
-    (fn [resultset colspec anchors param-ctx]
+    (fn [relations colspec anchors param-ctx]
       (let [non-repeating-top-anchors (->> anchors
                                            (remove :anchor/repeating?)
                                            (filter #(nil? (:anchor/find-element %)))
@@ -183,7 +183,7 @@
             (build-col-heads colspec sort-col)
             [:td.link-cell {:key :link-cell}
              (widget/render-anchors (remove :anchor/render-inline? non-repeating-top-anchors) param-ctx)]]]
-          [body resultset colspec (filter :anchor/repeating? anchors) sort-col param-ctx]]
+          [body relations colspec (filter :anchor/repeating? anchors) sort-col param-ctx]]
          (let [anchors (filter :anchor/render-inline? non-repeating-top-anchors)
                param-ctx (dissoc param-ctx :isComponent)]
            (widget/render-inline-links anchors param-ctx))]))))

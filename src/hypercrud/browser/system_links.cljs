@@ -52,8 +52,8 @@
   Since we only changed link, this is only interesting for the hc-in-hc case.
 
   todo don't overlay system links on system links"
-  [parent-link resultset param-ctx]
-  (let [colspec (form-util/determine-colspec resultset parent-link param-ctx)
+  [parent-link result param-ctx]
+  (let [colspec (form-util/determine-colspec result parent-link param-ctx)
         find-elements (form-util/find-elements-by-name (:link/request parent-link))]
     (case (links/link-type parent-link)
       :link-query
@@ -62,7 +62,6 @@
                             (mapv (fn [fe-name]
                                     (let [fe (get find-elements fe-name)
                                           connection-dbid (-> fe :find-element/connection :db/id)
-                                          ;connection-dbid (->DbId (-> resultset first (get fe-name) :db/id :conn-id) hc/*root-conn-id*)
                                           link-name (str "system-edit " fe-name)]
                                       {:anchor/prompt (str "edit " (:find-element/name fe-name))
                                        :anchor/link (system-edit-link connection-dbid link-name parent-link)

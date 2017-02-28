@@ -41,12 +41,13 @@ but retaining and correlating all information through a join. Not all entities a
 especially consider the '* case, so we need a uniform column set driving the body rows in sync
 with the headers but the resultset needs to match this column-fields structure now too; since
 the find-element level has been flattened out of the columns."
-  [resultset link param-ctx]
-  (let [ordered-find-elements (get-ordered-find-elements link param-ctx)
+  [result link param-ctx]
+  (let [result (if (map? result) [{"entity" result}] result)           ; unified colspec for table and form
+        ordered-find-elements (get-ordered-find-elements link param-ctx)
         ordered-find-elements (strip-forms-in-raw-mode ordered-find-elements param-ctx)
         raw-mode? (= (:display-mode param-ctx) :raw)]
     (vec
-      (mapcat (fn [resultset-for-fe fe]
+      (mapcat (fn [resultset-for-fe fe]                     ; misnamed
                 (let [indexed-fields (util/group-by-assume-unique (comp :attribute/ident :field/attribute) (-> fe :find-element/form :form/field))
                       find-element-name (ffirst resultset-for-fe)
 
@@ -62,5 +63,5 @@ the find-element level has been flattened out of the columns."
                                            col-idents)]
                   (mapcat (fn [k]
                             [find-element-name k (get indexed-fields k)]) col-idents')))
-              (util/transpose resultset)
+              (util/transpose result)
               ordered-find-elements))))
