@@ -33,11 +33,9 @@
                  (and (= valueType :db.type/code) (= cardinality :db.cardinality/one)) widget/code
                  (and (= valueType :db.type/instant) (= cardinality :db.cardinality/one)) widget/instant
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one) isComponent) widget/ref-component
-                 (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many) isComponent) widget/ref-many-component-table
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one)) widget/ref
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) widget/ref-many-table
-                 :else widget/raw
-                 )]
+                 :else widget/raw)]
     (widget value maybe-field anchors props param-ctx)))
 
 
@@ -58,8 +56,7 @@
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one)) widget/ref
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) table-cell/ref-many
                  (and (= cardinality :db.cardinality/many)) table-cell/other-many
-                 :else widget/raw
-                 )]
+                 :else widget/raw)]
     (widget value maybe-field anchors props param-ctx)))
 
 
@@ -76,16 +73,8 @@
      (let [param-ctx (dissoc param-ctx :isComponent)]
        (widget/render-inline-links (filter :anchor/render-inline? non-repeating-top-anchors) param-ctx))]))
 
-
-(defn form-or-sys-form [resultset colspec link param-ctx]
-  (let [c (if (system-links/system-link? (:db/id link))
-            form/sys-form
-            form/form)]
-    (c resultset colspec link param-ctx)))
-
-
 (defmethod auto-control/resultset :default [type resultset colspec anchors param-ctx]
   (case type
     :link-query [table/table resultset colspec anchors param-ctx] ; stateful
-    :link-entity (form-or-sys-form resultset colspec anchors param-ctx)
+    :link-entity (form/form resultset colspec anchors param-ctx)
     (no-link-type anchors param-ctx)))

@@ -109,7 +109,7 @@
                                      [(:navigate-cmp param-ctx) props label param-ctx]))
                         :inline-resultset inline-resultset)]
         (try
-          (render-fn type resultset colspec anchor-index param-ctx)
+          (render-fn type resultset colspec anchors param-ctx)
           (catch :default e (pr-str e)))))))
 
 

@@ -101,18 +101,17 @@
    (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)])
 
 
-(defn ref-component [value field anchors props param-ctx]
-  (ref value field anchors props param-ctx)
-  #_ [:div.value
+(defn ref-component [value maybe-field anchors props param-ctx]
+  (assert (> (count (filter :anchor/render-inline? anchors)) 0))
+  #_ (ref value maybe-field anchors props param-ctx)
+  [:div.value
    #_(pr-str (:db/id value))
-   (render-inline-links field (filter :anchor/render-inline? anchors) param-ctx)
+   (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)
    [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]])
 
 
 (defn ref-many-table [value field anchors props param-ctx]
   [:div.value
-   #_(->> (mapv :db/id value)
-          (pr-str))
    (render-inline-links field (filter :anchor/render-inline? anchors) param-ctx)
    [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]])
 
@@ -143,8 +142,6 @@
 
 (defn ref-many-component-table [value field anchors props param-ctx]
   [:div.value
-   #_(->> (mapv :db/id value)
-          (pr-str))
    (render-inline-links field (filter :anchor/render-inline? anchors) param-ctx)
    [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]])
 
