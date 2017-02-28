@@ -42,7 +42,7 @@ especially consider the '* case, so we need a uniform column set driving the bod
 with the headers but the resultset needs to match this column-fields structure now too; since
 the find-element level has been flattened out of the columns."
   [result link param-ctx]
-  (let [result (if (map? result) [{"entity" result}] result)           ; unified colspec for table and form
+  (let [result (if (map? result) [result] result)           ; unified colspec for table and form
         ordered-find-elements (get-ordered-find-elements link param-ctx)
         ordered-find-elements (strip-forms-in-raw-mode ordered-find-elements param-ctx)
         raw-mode? (= (:display-mode param-ctx) :raw)]

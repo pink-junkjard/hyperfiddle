@@ -103,7 +103,7 @@
                       (mapv #(nth % 2))
                       (every? #(not= nil %)))
            extra (if-not form?
-                   ; can we assert entity?
+                   ; can we assert entity? No, bc we could model a link to a single relation without a form.
                    (if-let [entity (get relation "entity")] ; makes sense only for entity links, not query links as entity.
                      ^{:key (hash (keys entity))} [new-field entity param-ctx]))]
 
