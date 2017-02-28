@@ -140,7 +140,14 @@
                                            :query-params query-params
                                            :schema indexed-schema
                                            :read-only (or (:read-only param-ctx) (constantly false)))
-                               result (if (-> link :link/request :link-entity/connection) {"entity" result} result) ; wrap singular result into a relation ("entity" fe)
+
+                               ; ereq doesn't have a fe yet; wrap with a fe.
+                               ; Doesn't make sense to do on server since this is going to optimize away anyway.
+                               result (if (-> link :link/request :link-entity/connection)
+                                        (if (map? result) ; But the ereq might return a vec for cardinality many
+                                          {"entity" result}
+                                          (mapv (fn [relation] {"entity" relation}) result))
+                                         result)
                                result (if (-> link :link/request :link-query/single-result-as-entity?) (first result) result) ; unwrap query into entity
                                colspec (form-util/determine-colspec result link param-ctx)
                                system-anchors (system-links/system-anchors link result param-ctx)]
