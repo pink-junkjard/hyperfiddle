@@ -11,11 +11,11 @@
 
 
 ; field is optional (raw mode); schema and attribute is in dynamic scope in all modes
-(defn field [value field anchors param-ctx]
+(defn field [value maybe-field anchors param-ctx]
   [:div.field {:style {:border-color (connection-color (:color param-ctx))}}
    [:label
-    (let [prompt (get field :field/prompt (-> param-ctx :attribute :attribute/ident str))
-          docstring (-> field :field/attribute :attribute/doc)]
+    (let [prompt (get maybe-field :field/prompt (-> param-ctx :attribute :attribute/ident str))
+          docstring (-> maybe-field :field/attribute :attribute/doc)]
       (if-not (empty? docstring)
         [:span.help {:on-click #(js/alert docstring)} prompt]
         prompt))]
@@ -35,7 +35,7 @@
             (renderer (:peer param-ctx) link-fn value)
             (catch :default e (pr-str e))))])
      (let [anchors (filter #(= (-> param-ctx :attribute :db/id) (some-> % :anchor/attribute :db/id)) anchors)]
-       [auto-control value field anchors param-ctx]))])
+       [auto-control value maybe-field anchors param-ctx]))])
 
 
 (defn form [resultset colspec anchors param-ctx]
