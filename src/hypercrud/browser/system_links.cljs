@@ -68,7 +68,7 @@
                                        :anchor/repeating? true
                                        :anchor/find-element fe
                                        :anchor/formula (pr-str {:entity-dbid-s (pr-str `(fn [~'ctx]
-                                                                                          (get-in ~'ctx [:result ~(:find-element/name fe-name) :db/id])))})}))))
+                                                                                          (get-in ~'ctx [:result ~fe-name :db/id])))})}))))
 
             edit-attr-links (->> (partition 3 colspec)
                                  (mapcat (fn [[fe-name ident maybe-field]]
