@@ -47,11 +47,11 @@ the find-element level has been flattened out of the columns."
         ordered-find-elements (strip-forms-in-raw-mode ordered-find-elements param-ctx)
         raw-mode? (= (:display-mode param-ctx) :raw)]
     (vec
-      (mapcat (fn [resultset-for-fe fe]                     ; misnamed
+      (mapcat (fn [relation-for-fe fe]
                 (let [indexed-fields (util/group-by-assume-unique (comp :attribute/ident :field/attribute) (-> fe :find-element/form :form/field))
-                      find-element-name (ffirst resultset-for-fe)
+                      find-element-name (ffirst relation-for-fe)
 
-                      entities (map second resultset-for-fe)
+                      entities (map second relation-for-fe)
                       col-idents (if (or raw-mode? (empty? (keys indexed-fields)))
                                    (reduce (fn [acc v] (into acc (keys v))) #{} entities)
                                    (keys indexed-fields))
