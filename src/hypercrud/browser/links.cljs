@@ -4,7 +4,8 @@
             [hypercrud.client.internal :as internal]
             [hypercrud.compile.eval :refer [eval]]
             [hypercrud.form.q-util :as q-util]
-            [hypercrud.util :as util]))
+            [hypercrud.util :as util]
+            [promesa.core :as p]))
 
 
 (defn link-type [link]
@@ -66,7 +67,7 @@
 
     ;; add-result #(tx/edit-entity (:db/id entity) ident [] [(first %)])
     (if tx-fn
-      {:on-click #((:user-swap! param-ctx) (tx-fn param-ctx))}
+      {:on-click #(-> (tx-fn param-ctx) (p/then (:user-swap! param-ctx)))}
       (let [params-map (build-url-params-map anchor param-ctx)]
         {:route params-map
          :class (if-not (renderable-link? (:anchor/link anchor) params-map)

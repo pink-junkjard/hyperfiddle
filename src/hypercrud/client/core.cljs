@@ -12,6 +12,8 @@
 
 
 (defprotocol Connection
+  (hydrate!* [this requests staged-tx])                     ; internal & used for clone-link
+  (hydrate-one! [this request staged-tx])
   (hydrate! [this requests staged-tx force?])
   (hydrated? [this requests])
   (transact! [this tx]))

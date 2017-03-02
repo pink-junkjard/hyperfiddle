@@ -42,21 +42,29 @@
 
 (deftype HttpConnection [entry-uri ^:mutable peer]
   hc/Connection
+  (hydrate!* [this requests staged-tx]
+    (-> (kvlt/request! {:url (resolve-relative-uri entry-uri (goog.Uri. "hydrate"))
+                        :content-type content-type-transit  ; helps debugging to view as edn
+                        :accept content-type-transit        ; needs to be fast so transit
+                        :method :post
+                        :form {:staged-tx staged-tx :request (into #{} requests)}
+                        :as :auto})
+        (p/then (fn [http-response]
+                  (let [{:keys [t pulled-trees-map]} (-> http-response :body :hypercrud)]
+                    (peer/->Peer (into #{} requests) pulled-trees-map))))))
+
   (hydrate! [this requests staged-tx force?]
     (if (and (not force?) (hc/hydrated? this requests))
       (p/resolved peer)
-      (-> (kvlt/request!
-            {:url (resolve-relative-uri entry-uri (goog.Uri. "hydrate"))
-             :content-type content-type-transit             ; helps debugging to view as edn
-             :accept content-type-transit                   ; needs to be fast so transit
-             :method :post
-             :form {:staged-tx staged-tx
-                    :request (into #{} requests)}
-             :as :auto})
-          (p/then (fn [resp]
-                    (let [{:keys [t pulled-trees-map]} (-> resp :body :hypercrud)]
-                      (set! peer (peer/->Peer (into #{} requests) pulled-trees-map))
-                      peer))))))
+      (-> (hc/hydrate!* this requests staged-tx)
+          (p/then (fn [peer']
+                    (set! peer peer')
+                    peer)))))
+
+  ; for clone link - is this bad? yeah its bad since it can never be batched.
+  (hydrate-one! [this request staged-tx]
+    (-> (hc/hydrate!* this #{request} staged-tx)
+        (p/then (fn [peer] (hypercrud.client.core/hydrate peer request)))))
 
 
   (hydrated? [this requests]

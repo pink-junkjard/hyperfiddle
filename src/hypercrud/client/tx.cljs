@@ -161,8 +161,11 @@
     (recursive-clone entity)))
 
 
-(defn export-link [schema link tempid!]
-  (let [successors (fn [node]
+(defn export-link [schema link]
+  (let [tempid! (let [temp-id-atom (atom 0)]
+                  (fn [conn-id]
+                    (hypercrud.types/->DbId (swap! temp-id-atom dec) conn-id)))
+        successors (fn [node]
                      (entity-children schema node))
         filter-pred (fn [node predecessor depth]
                       ;  also may need (not (:db/ident node)) - attrs ref datomic built-ins
