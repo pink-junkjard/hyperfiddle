@@ -94,7 +94,7 @@
 (defn ref [value maybe-field anchors props param-ctx]
   [:div.value
    [:div.editable-select {:key (option/get-hydrate-key maybe-field)} ; not sure if this is okay in nil field case, might just work
-    [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
+    #_[:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
     (if maybe-field
       (select* value maybe-field props param-ctx)
       (dbid value props param-ctx))]
