@@ -53,15 +53,13 @@
 
   todo don't overlay system links on system links"
   [parent-link result param-ctx]
-  (let [colspec (form-util/determine-colspec result parent-link param-ctx)
+  (let [colspec (form-util/determine-colspec result parent-link param-ctx) ; colspec can be empty if result is empty and no form.
         find-elements (form-util/find-elements-by-name (:link/request parent-link))]
     (case (links/link-type parent-link)
       :link-query
-      (let [fe-names (->> colspec (partition 3) (map first) (set))
-            edit-links (->> fe-names
-                            (mapv (fn [fe-name]
-                                    (let [fe (get find-elements fe-name)
-                                          connection-dbid (-> fe :find-element/connection :db/id)
+      (let [edit-links (->> find-elements
+                            (mapv (fn [[fe-name fe]]
+                                    (let [connection-dbid (-> fe :find-element/connection :db/id)
                                           link-name (str "system-edit " fe-name)]
                                       {:anchor/prompt (str "edit " (:find-element/name fe-name))
                                        :anchor/link (system-edit-link connection-dbid link-name parent-link)
@@ -70,7 +68,7 @@
                                        :anchor/formula (pr-str {:entity-dbid-s (pr-str `(fn [~'ctx]
                                                                                           (get-in ~'ctx [:result ~fe-name :db/id])))})}))))
 
-            edit-attr-links (->> (partition 3 colspec)
+            edit-attr-links (->> (partition 3 colspec)      ; driven by colspec, not find elements, because what matters is what's there.
                                  (mapcat (fn [[fe-name ident maybe-field]]
                                            (let [fe (get find-elements fe-name)
                                                  attr ((:schema param-ctx) ident)]
@@ -83,12 +81,10 @@
                                                               :anchor/formula (pr-str {:entity-dbid-s (pr-str '(fn [ctx] nil))})}]
                                                nil))))
                                  doall)
-            create-links (->> fe-names
-                              (mapv (fn [fe-name]
-                                      (get-in find-elements [fe-name :find-element/connection])))
-                              (set)
-                              (mapv (fn [connection]
-                                      (let [connection-dbid (:db/id connection)
+            create-links (->> find-elements
+                              (mapv (fn [[fe-name fe]]
+                                      (let [connection (:find-element/connection fe)
+                                            connection-dbid (:db/id connection)
                                             link-name (str "system-create " (:database/ident connection))]
                                         {:anchor/prompt (str "create in " (:database/ident connection))
                                          :anchor/link (system-edit-link connection-dbid link-name parent-link)
@@ -97,7 +93,7 @@
                                                                                             (hc/*temp-id!* ~(:id connection-dbid))))})}))))]
         (concat create-links edit-links edit-attr-links))
 
-      :link-entity []                              ; No system links yet for entity links.
+      :link-entity []                              ; No system links yet for entity links. What will there be?
       [])))
 
 
