@@ -77,11 +77,6 @@
                   #_[:span.sort-arrow arrow]])))
        (seq)))
 
-(defn entity-param-ctx [entity param-ctx]
-  (assoc param-ctx :color ((:color-fn param-ctx) entity param-ctx)
-                   :owner ((:owner-fn param-ctx) entity param-ctx)
-                   :entity entity))
-
 (defn table-row-form [relation colspec repeating-anchors param-ctx]
   (let [find-element-anchors-lookup (->> repeating-anchors
                                          ; entity links can have attributes but not find-elements specified
@@ -94,14 +89,12 @@
      (->> (partition 3 colspec)
           (mapv (fn [[fe-name ident maybe-field]]           ; (fe-name, ident) are unique if taken together
                   (let [entity (get relation fe-name)
-                        param-ctx (entity-param-ctx entity param-ctx)
-                        param-ctx (assoc param-ctx :attribute (get (:schema param-ctx) ident))
-
+                        param-ctx (-> (form-util/entity-param-ctx entity param-ctx)
+                                      (assoc :attribute (get (:schema param-ctx) ident)
+                                             :layout :table))
                         ; rebuilt too much due to joining fe-name X ident
                         attribute-anchors (->> (get find-element-anchors-lookup fe-name)
                                                (remove #(nil? (:anchor/attribute %))))
-
-
                         style {:border-color (connection-color (:color param-ctx))}
                         value (get entity ident)]
                     [:td.truncate {:key (or (:db/id maybe-field) (str fe-name ident)) :style style}
@@ -125,7 +118,7 @@
                                     (mapv first) (set)      ; distinct find elements
                                     (mapcat (fn [fe-name]
                                               (let [entity (get relation fe-name)
-                                                    param-ctx (entity-param-ctx entity param-ctx)
+                                                    param-ctx (form-util/entity-param-ctx entity param-ctx)
                                                     fe-anchors (->> (get find-element-anchors-lookup fe-name)
                                                                     (filter #(nil? (:anchor/attribute %))))]
                                                 (mapv vector fe-anchors (repeat param-ctx))))))))]]))

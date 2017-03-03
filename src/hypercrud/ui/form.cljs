@@ -74,12 +74,10 @@
                                     (let [entity (get relation fe-name)
                                           fe-anchors (get fe-anchors-lookup fe-name)
                                           param-ctx (as-> param-ctx $
-                                                          (assoc $
-                                                            :color ((:color-fn param-ctx) entity param-ctx)
-                                                            :owner ((:owner-fn param-ctx) entity param-ctx)
-                                                            :entity entity
-                                                            ; :db/id is missing from schema so fake it here, it has no valueType
-                                                            :attribute (get (:schema param-ctx) ident {:attribute/ident ident}))
+                                                          (form-util/entity-param-ctx entity $)
+                                                          ; :db/id is missing from schema so fake it here, it has no valueType
+                                                          (assoc $ :attribute (get (:schema param-ctx) ident {:attribute/ident ident})
+                                                                   :layout :form)
                                                           (if (= ident :db/id) (assoc $ :read-only (constantly true)) $))
                                           v (get entity ident)]
                                       ^{:key (str ident)}

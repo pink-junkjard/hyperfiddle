@@ -15,7 +15,6 @@
                  (and (= valueType :db.type/keyword) (= cardinality :db.cardinality/one)) widget/keyword
                  (and (= valueType :db.type/string) (= cardinality :db.cardinality/one)) widget/string
                  (and (= valueType :db.type/long) (= cardinality :db.cardinality/one)) widget/long
-                 (and (= valueType :db.type/code) (= cardinality :db.cardinality/one)) widget/code
                  (and (= valueType :db.type/instant) (= cardinality :db.cardinality/one)) widget/instant
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one) isComponent) widget/ref-component
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one)) widget/ref
@@ -34,7 +33,6 @@
                  (and (= valueType :db.type/keyword) (= cardinality :db.cardinality/one)) widget/keyword
                  (and (= valueType :db.type/string) (= cardinality :db.cardinality/one)) widget/string
                  (and (= valueType :db.type/long) (= cardinality :db.cardinality/one)) widget/long
-                 (and (= valueType :db.type/code) (= cardinality :db.cardinality/one)) widget/string
                  (and (= valueType :db.type/instant) (= cardinality :db.cardinality/one)) widget/instant
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one) isComponent) table-cell/ref-one-component
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one)) widget/ref

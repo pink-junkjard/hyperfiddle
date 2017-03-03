@@ -102,7 +102,7 @@
 
 (defn ref-component [value maybe-field anchors props param-ctx]
   (assert (> (count (filter :anchor/render-inline? anchors)) 0))
-  #_ (ref value maybe-field anchors props param-ctx)
+  #_(ref value maybe-field anchors props param-ctx)
   [:div.value
    #_(pr-str (:db/id value))
    (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)
@@ -157,14 +157,18 @@
         change! #((:user-swap! param-ctx) {:tx (tx/edit-entity (:db/id (:entity param-ctx)) ident [value] [%])})]
     ^{:key ident}
     [:div.value
-     (let [props (if-not (nil? (:read-only props))
-                   (-> props
-                       (dissoc :read-only)
-                       (assoc :readOnly (if (:read-only props)
-                                          "nocursor"
-                                          false)))
-                   props)]
-       [code-editor* value change! props])]))
+     (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)
+     (case (:layout param-ctx)
+       :form (let [props (if-not (nil? (:read-only props))
+                           (-> props
+                               (dissoc :read-only)
+                               (assoc :readOnly (if (:read-only props)
+                                                  "nocursor"
+                                                  false)))
+                           props)]
+               [code-editor* value change! props])
+       [:noscript])
+     [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]]))
 
 (defn valid-date-str? [s]
   (or (empty? s)
