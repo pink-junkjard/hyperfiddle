@@ -75,7 +75,7 @@
                                                  attr ((:schema param-ctx) ident)]
                                              (case (-> attr :attribute/valueType :db/ident)
                                                :db.type/ref [{:anchor/prompt (str "edit " ident)
-                                                              :anchor/ident (keyword (str fe-name (form-util/css-slugify ident)))
+                                                              :anchor/ident (keyword (str fe-name (form-util/css-slugify (str ident))))
                                                               :anchor/link (system-edit-attr-link fe attr parent-link)
                                                               :anchor/repeating? true
                                                               :anchor/find-element fe
