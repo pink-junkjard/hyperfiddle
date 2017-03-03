@@ -1,30 +1,15 @@
 (ns hypercrud.ui.auto-control-default
-  (:require [cljs.reader :as reader]
-            [hypercrud.browser.links :as links]
-            [hypercrud.types :as types]
-            [hypercrud.ui.auto-control :as auto-control]
+  (:require [hypercrud.ui.auto-control :as auto-control]
             [hypercrud.ui.form :as form]
             [hypercrud.ui.table :as table]
             [hypercrud.ui.table-cell :as table-cell]
-            [hypercrud.ui.widget :as widget]
-            [hypercrud.util :as util]
-            [hypercrud.ui.input :as input]
-            [hypercrud.client.tx :as tx]
-            [hypercrud.browser.system-links :as system-links]
-            [hypercrud.ui.form-util :as form-util]))
-
-
-(defn build-props [value maybe-field anchors param-ctx]
-  ; why does this need the field - it needs the ident for readonly in "Edit Anchors"
-  {:read-only ((get param-ctx :read-only) (:attribute param-ctx) param-ctx)})
-
+            [hypercrud.ui.widget :as widget]))
 
 (defmethod auto-control/auto-control :default
-  [value maybe-field anchors param-ctx]
+  [value maybe-field anchors props param-ctx]
   (let [isComponent (-> (:attribute param-ctx) :attribute/isComponent)
         valueType (-> (:attribute param-ctx) :attribute/valueType :db/ident)
         cardinality (-> (:attribute param-ctx) :attribute/cardinality :db/ident)
-        props (build-props value maybe-field anchors param-ctx)
         widget (cond
                  (and (= valueType :db.type/boolean) (= cardinality :db.cardinality/one)) widget/boolean
                  (and (= valueType :db.type/keyword) (= cardinality :db.cardinality/one)) widget/keyword
@@ -40,11 +25,10 @@
 
 
 (defmethod auto-control/auto-table-cell :default
-  [value maybe-field anchors param-ctx]
+  [value maybe-field anchors props param-ctx]
   (let [isComponent (-> (:attribute param-ctx) :attribute/isComponent)
         valueType (-> (:attribute param-ctx) :attribute/valueType :db/ident)
         cardinality (-> (:attribute param-ctx) :attribute/cardinality :db/ident)
-        props (build-props value maybe-field anchors param-ctx)
         widget (cond
                  (and (= valueType :db.type/boolean) (= cardinality :db.cardinality/one)) widget/boolean
                  (and (= valueType :db.type/keyword) (= cardinality :db.cardinality/one)) widget/keyword

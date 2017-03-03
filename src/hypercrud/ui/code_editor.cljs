@@ -26,10 +26,9 @@
                                                  :viewportMargin js/Infinity}
                                                 props)))]
          (aset this "codeMirrorRef" ref)
-         (.on ref "blur" (fn [e]
+         (.on ref "blur" (fn [e f]
                            (let [[_ value change! props] (r-comp/get-argv this)]
                              (change! (.getValue e)))))))
-
 
      :component-will-unmount
      (fn [this] (.toTextArea (aget this "codeMirrorRef")))

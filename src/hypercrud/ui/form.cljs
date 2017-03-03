@@ -1,14 +1,11 @@
 (ns hypercrud.ui.form
-  (:require [hypercrud.browser.links :as links]
-            [hypercrud.compile.eval :refer [eval]]
-            [hypercrud.types :refer [->DbVal]]
-            [hypercrud.ui.auto-control :refer [auto-control raw-control connection-color]]
+  (:require [hypercrud.types :refer [->DbVal]]
+            [hypercrud.ui.auto-control :refer [auto-control connection-color]]
+            [hypercrud.ui.form-util :as form-util]
             [hypercrud.ui.input :as input]
             [hypercrud.ui.renderer :as renderer]
             [hypercrud.ui.widget :as widget]
-            [reagent.core :as r]
-            [hypercrud.ui.form-util :as form-util]))
-
+            [reagent.core :as r]))
 
 ; field is optional (raw mode); schema and attribute is in dynamic scope in all modes
 (defn field [value maybe-field anchors param-ctx]
@@ -19,23 +16,11 @@
       (if-not (empty? docstring)
         [:span.help {:on-click #(js/alert docstring)} prompt]
         prompt))]
-   (if-let [renderer (renderer/renderer-for-attribute (:attribute param-ctx))]
-     (let [{renderer :value error :error} (eval renderer)
-           anchor-lookup (->> anchors
-                              (mapv (juxt #(-> % :anchor/ident) identity))
-                              (into {}))
-           link-fn (fn [ident label param-ctx]
-                     (let [anchor (get anchor-lookup ident)
-                           props (links/build-link-props anchor param-ctx)]
-                       [(:navigate-cmp param-ctx) props label param-ctx]))]
-       [:div.value
-        (if error
-          (pr-str error)
-          (try
-            (renderer (:peer param-ctx) link-fn value)
-            (catch :default e (pr-str e))))])
-     (let [anchors (filter #(= (-> param-ctx :attribute :db/id) (some-> % :anchor/attribute :db/id)) anchors)]
-       [auto-control value maybe-field anchors param-ctx]))])
+   (let [anchors (filter #(= (-> param-ctx :attribute :db/id) (some-> % :anchor/attribute :db/id)) anchors)
+         props (form-util/build-props value maybe-field anchors param-ctx)]
+     (if (renderer/renderer-for-attribute (:attribute param-ctx))
+       (renderer/attribute-renderer value maybe-field anchors props param-ctx)
+       [auto-control value maybe-field anchors props param-ctx]))])
 
 (defn new-field [entity param-ctx]
   (let [attr-ident (r/atom nil)]

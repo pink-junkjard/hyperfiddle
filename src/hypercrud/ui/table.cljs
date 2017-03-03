@@ -4,7 +4,7 @@
             [hypercrud.compile.eval :refer [eval]]
             [hypercrud.platform.native-event-listener :refer [native-listener]] ;provided dependency
             [hypercrud.types :refer [->DbId ->DbVal]]
-            [hypercrud.ui.auto-control :refer [auto-table-cell raw-table-cell connection-color]]
+            [hypercrud.ui.auto-control :refer [auto-table-cell connection-color]]
             [hypercrud.ui.renderer :as renderer]
             [hypercrud.ui.widget :as widget]
             [hypercrud.ui.form-util :as form-util]
@@ -105,23 +105,11 @@
                         style {:border-color (connection-color (:color param-ctx))}
                         value (get entity ident)]
                     [:td.truncate {:key (or (:db/id maybe-field) (str fe-name ident)) :style style}
-                     (if-let [renderer (renderer/renderer-for-attribute (:field/attribute maybe-field))]
-                       (let [{renderer :value error :error} (eval renderer)]
-                         [:div.value
-                          (if error
-                            (pr-str error)
-                            (try
-                              (let [link-fn (let [anchor-by-ident (->> attribute-anchors
-                                                                       (mapv (juxt #(-> % :anchor/ident) identity))
-                                                                       (into {}))]
-                                              (fn [ident label param-ctx]
-                                                (let [anchor (get anchor-by-ident ident)
-                                                      props (links/build-link-props anchor param-ctx)]
-                                                  [(:navigate-cmp param-ctx) props label param-ctx])))]
-                                (renderer (:peer param-ctx) link-fn value))
-                              (catch :default e (pr-str e))))])
-                       (let [anchors (filter #(= (-> param-ctx :attribute :db/id) (some-> % :anchor/attribute :db/id)) attribute-anchors)]
-                         [auto-table-cell value maybe-field anchors param-ctx]))])))
+                     (let [anchors (filter #(= (-> param-ctx :attribute :db/id) (some-> % :anchor/attribute :db/id)) attribute-anchors)
+                           props (form-util/build-props value maybe-field anchors param-ctx)]
+                       (if (renderer/renderer-for-attribute (:attribute param-ctx))
+                         (renderer/attribute-renderer value maybe-field anchors props param-ctx)
+                         [auto-table-cell value maybe-field anchors props param-ctx]))])))
           (seq))
 
      [:td.link-cell {:key :link-cell}

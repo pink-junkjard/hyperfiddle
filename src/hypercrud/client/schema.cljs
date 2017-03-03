@@ -77,6 +77,7 @@
     (->QueryRequest '[:find ?attr :in $ :where [?attr :attribute/ident]]
                     {"$" root-dbval}
                     {"?attr" [root-dbval ['*
-                                          {:attribute/valueType [:db/id :db/ident]}
-                                          {:attribute/cardinality [:db/id :db/ident]}
-                                          {:attribute/unique [:db/id :db/ident]}]]})))
+                                          {:attribute/valueType [:db/id :db/ident]
+                                           :attribute/cardinality [:db/id :db/ident]
+                                           :attribute/unique [:db/id :db/ident]
+                                           :attribute/hc-type ['*]}]]})))

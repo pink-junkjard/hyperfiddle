@@ -5,7 +5,7 @@
             [hypercrud.types :refer [->DbId]]))
 
 
-(defn select-boolean* [value maybe-field props param-ctx]
+(defn select-boolean* [value props param-ctx]
   (let [props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
                :value (if (nil? value) "" (str value))
                ;; reconstruct the typed value
