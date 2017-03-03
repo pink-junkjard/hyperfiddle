@@ -1,8 +1,15 @@
 (ns hypercrud.ui.form-util
   (:require [hypercrud.util :as util]
             [cljs.reader :as reader]
-            [hypercrud.browser.links :as links]))
+            [hypercrud.browser.links :as links]
+            [clojure.string :as string]))
 
+(defn css-slugify [s]
+  ; http://stackoverflow.com/a/449000/959627
+  (-> s
+      (string/replace ":" "-")
+      (string/replace "/" "-")
+      (string/replace " " "-")))
 
 (defn strip-forms-in-raw-mode [ordered-find-elements param-ctx]
   (let [raw-mode? (= (:display-mode param-ctx) :raw)

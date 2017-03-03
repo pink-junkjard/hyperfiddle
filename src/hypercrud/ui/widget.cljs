@@ -167,7 +167,7 @@
                                                   false)))
                            props)]
                [code-editor* value change! props])
-       [:noscript])
+       :table (string value maybe-field anchors props param-ctx))
      [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]]))
 
 (defn valid-date-str? [s]

@@ -61,7 +61,8 @@
                             (mapv (fn [[fe-name fe]]
                                     (let [connection-dbid (-> fe :find-element/connection :db/id)
                                           link-name (str "system-edit " fe-name)]
-                                      {:anchor/prompt (str "edit " (:find-element/name fe-name))
+                                      {:anchor/prompt (str fe-name)
+                                       :anchor/ident (keyword fe-name)
                                        :anchor/link (system-edit-link connection-dbid link-name parent-link)
                                        :anchor/repeating? true
                                        :anchor/find-element fe
@@ -73,7 +74,8 @@
                                            (let [fe (get find-elements fe-name)
                                                  attr ((:schema param-ctx) ident)]
                                              (case (-> attr :attribute/valueType :db/ident)
-                                               :db.type/ref [{:anchor/prompt (str "edit " (:attribute/ident attr))
+                                               :db.type/ref [{:anchor/prompt (str "edit " ident)
+                                                              :anchor/ident (keyword (str fe-name (form-util/css-slugify ident)))
                                                               :anchor/link (system-edit-attr-link fe attr parent-link)
                                                               :anchor/repeating? true
                                                               :anchor/find-element fe

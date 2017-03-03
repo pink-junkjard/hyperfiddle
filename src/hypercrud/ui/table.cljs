@@ -32,21 +32,12 @@
                    :db.type/code}
                  (:db/ident valueType)))))
 
-
-(defn css-slugify [s]
-  ; http://stackoverflow.com/a/449000/959627
-  (-> s
-      (string/replace ":" "-")
-      (string/replace "/" "-")
-      (string/replace " " "-")))
-
-
 (defn build-col-heads [colspec col-sort]
   (->> (partition 3 colspec)
        (mapv (fn [[fe-name ident field]]
                (let [prompt (get field :field/prompt (str ident))
-                     css-classes [(str "field-element-" (css-slugify fe-name))
-                                  (str "field-attr-" (css-slugify (str ident)))] #_"Dustin removed field-id and field-prompt; use a custom renderer"
+                     css-classes [(str "field-element-" (form-util/css-slugify fe-name))
+                                  (str "field-attr-" (form-util/css-slugify (str ident)))] #_"Dustin removed field-id and field-prompt; use a custom renderer"
                      on-click #()
 
                      ;with-sort-direction (fn [asc desc no-sort not-sortable]
