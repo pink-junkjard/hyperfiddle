@@ -12,7 +12,9 @@
             [hypercrud.ui.multi-select :refer [multi-select* multi-select-markup]]
             [hypercrud.ui.radio :as radio]
             [hypercrud.ui.select :refer [select* select-boolean*]]
-            [hypercrud.ui.textarea :refer [textarea*]]))
+            [hypercrud.ui.textarea :refer [textarea*]]
+            [re-com.core :as re-com :refer-macros [handler-fn]]
+            [reagent.core :as r]))
 
 
 (defn render-anchors
@@ -152,23 +154,36 @@
         add-item! #((:user-swap! param-ctx) {:tx (tx/edit-entity (:db/id (:entity param-ctx)) (:attribute param-ctx) [] [(temp-id!)])})]
     [multi-select* multi-select-markup value add-item! maybe-field anchors props param-ctx])) ;add new entity to set
 
-(defn code [value maybe-field anchors props param-ctx]
-  (let [ident (-> param-ctx :attribute :attribute/ident)
-        change! #((:user-swap! param-ctx) {:tx (tx/edit-entity (:db/id (:entity param-ctx)) ident [value] [%])})]
-    ^{:key ident}
-    [:div.value
-     (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)
-     (case (:layout param-ctx)
-       :form (let [props (if-not (nil? (:read-only props))
-                           (-> props
-                               (dissoc :read-only)
-                               (assoc :readOnly (if (:read-only props)
-                                                  "nocursor"
-                                                  false)))
-                           props)]
-               [code-editor* value change! props])
-       :table (string value maybe-field anchors props param-ctx))
-     [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]]))
+(defn code [& args]
+  (let [showing? (r/atom false)]
+    (fn [value maybe-field anchors props param-ctx]
+      (let [ident (-> param-ctx :attribute :attribute/ident)
+            change! #((:user-swap! param-ctx) {:tx (tx/edit-entity (:db/id (:entity param-ctx)) ident [value] [%])})
+            code-widget (let [props (if-not (nil? (:read-only props))
+                                      (-> props
+                                          (dissoc :read-only)
+                                          (assoc :readOnly (if (:read-only props) "nocursor" false)))
+                                      props)]
+                          [code-editor* value change! props])]
+        ^{:key ident}
+        [:div.value
+         (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)
+         (case (:layout param-ctx)
+           :form code-widget
+           :table [:div
+                   [re-com/popover-anchor-wrapper
+                    :showing? showing?
+                    :position :below-center
+                    :anchor [:a {:href "javascript:void 0;"
+                                 :on-click #(swap! showing? not)} "edit"]
+                    :popover [re-com/popover-content-wrapper
+                              :close-button? true
+                              :on-cancel #(reset! showing? false)
+                              :no-clip? true
+                              :width "500px"
+                              :body code-widget]]
+                   " " value])
+         [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]]))))
 
 (defn valid-date-str? [s]
   (or (empty? s)
