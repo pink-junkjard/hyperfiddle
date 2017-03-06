@@ -5,11 +5,11 @@
             [hypercrud.compile.eval :refer [eval]]))
 
 (defn safe-render! [this]
-  (let [[react-ctor user-fn & props] (r-comp/get-argv this)
+  (let [[react-ctor & cmp-and-props] (r-comp/get-argv this)
         dom-el (reagent/dom-node this)]
     (try
-      (let [comp (apply user-fn props)]
-        (reagent/render [:div comp] dom-el))
+      ; construct hiccup markup for reagent lolz
+      (reagent/render (vec cmp-and-props) dom-el)
       (catch js/Error e
         (reagent/render [:pre (pr-str e)] dom-el)))))
 
