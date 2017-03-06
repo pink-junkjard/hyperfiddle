@@ -67,7 +67,10 @@
 
     ;; add-result #(tx/edit-entity (:db/id entity) ident [] [(first %)])
     (if tx-fn
-      {:on-click #(-> (tx-fn param-ctx) (p/then (:user-swap! param-ctx)))}
+      {:on-click #(let [result (tx-fn param-ctx)]
+                    ; tx-fn can be sync or async, based on return instance.
+                    (-> (if-not (p/promise? result) (p/resolved result) result)
+                        (p/then (:user-swap! param-ctx))))}
       (let [params-map (build-url-params-map anchor param-ctx)]
         {:route params-map
          :class (if-not (renderable-link? (:anchor/link anchor) params-map)
