@@ -3,6 +3,11 @@
             [reagent.impl.component :as r-comp]))
 
 
+(defn sync-changed-props! [ref props]
+  (doseq [[prop val] props]
+    (if-not (= val (.getOption ref (name prop)))
+      (.setOption ref (name prop) val))))
+
 (def code-editor*
 
   ;; all usages of value (from react lifecycle) need to be (str value), because
@@ -35,5 +40,6 @@
 
      :component-did-update
      (fn [this]
-       (let [[_ value change! props] (r-comp/get-argv this)]
-         (.setValue (aget this "codeMirrorRef") (str value))))}))
+       (let [[_ value change! props] (r-comp/get-argv this)
+             ref (aget this "codeMirrorRef")]
+         (sync-changed-props! ref (assoc props :value (str value)))))}))
