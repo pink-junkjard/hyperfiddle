@@ -84,15 +84,15 @@
                                                nil))))
                                  doall)
             create-links (->> find-elements
-                              (mapv (fn [[fe-name fe]]
-                                      (let [connection (:find-element/connection fe)
-                                            connection-dbid (:db/id connection)
-                                            link-name (str "system-create " (:database/ident connection))]
+                              (mapv (fn [[fe-name fe]] (:find-element/connection fe)))
+                              (set)                         ; distinct connections
+                              (mapv (fn [connection]
+                                      (let [link-name (str "system-create " (:database/ident connection))]
                                         {:anchor/prompt (str "create in " (:database/ident connection))
-                                         :anchor/link (system-edit-link connection-dbid link-name parent-link)
+                                         :anchor/link (system-edit-link (:db/id connection) link-name parent-link)
                                          :anchor/repeating? false
                                          :anchor/formula (pr-str {:entity-dbid-s (pr-str `(fn [~'ctx]
-                                                                                            (hc/*temp-id!* ~(:id connection-dbid))))})}))))]
+                                                                                            (hc/*temp-id!* ~(-> connection :db/id :id))))})}))))]
         (concat create-links edit-links edit-attr-links))
 
       :link-entity []                              ; No system links yet for entity links. What will there be?
