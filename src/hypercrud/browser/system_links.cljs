@@ -66,8 +66,8 @@
                                        :anchor/link (system-edit-link connection-dbid link-name parent-link)
                                        :anchor/repeating? true
                                        :anchor/find-element fe
-                                       :anchor/formula (pr-str {:entity-dbid-s (pr-str `(fn [~'ctx]
-                                                                                          (get-in ~'ctx [:result ~fe-name :db/id])))})}))))
+                                       :anchor/formula (pr-str {:entity-dbid-s `(fn [~'ctx]
+                                                                                  (get-in ~'ctx [:result ~fe-name :db/id]))})}))))
 
             edit-attr-links (->> (partition 3 colspec)      ; driven by colspec, not find elements, because what matters is what's there.
                                  (mapcat (fn [[fe-name ident maybe-field]]
@@ -80,7 +80,7 @@
                                                               :anchor/repeating? true
                                                               :anchor/find-element fe
                                                               :anchor/attribute attr
-                                                              :anchor/formula (pr-str {:entity-dbid-s (pr-str '(fn [ctx] nil))})}]
+                                                              :anchor/formula (pr-str {:entity-dbid-s '(fn [ctx] nil)})}]
                                                nil))))
                                  doall)
             create-links (->> find-elements
@@ -91,11 +91,11 @@
                                         {:anchor/prompt (str "create in " (:database/ident connection))
                                          :anchor/link (system-edit-link (:db/id connection) link-name parent-link)
                                          :anchor/repeating? false
-                                         :anchor/formula (pr-str {:entity-dbid-s (pr-str `(fn [~'ctx]
-                                                                                            (hc/*temp-id!* ~(-> connection :db/id :id))))})}))))]
+                                         :anchor/formula (pr-str {:entity-dbid-s `(fn [~'ctx]
+                                                                                    (hc/*temp-id!* ~(-> connection :db/id :id)))})}))))]
         (concat create-links edit-links edit-attr-links))
 
-      :link-entity []                              ; No system links yet for entity links. What will there be?
+      :link-entity []                                       ; No system links yet for entity links. What will there be?
       [])))
 
 

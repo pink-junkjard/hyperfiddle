@@ -39,7 +39,7 @@
 
 (defn read-eval-formulas [formulas]
   (->> (if-not (empty? formulas) (safe-read-string formulas))
-       (util/map-values eval)))
+       (util/map-values eval)))                             ; not eval-str, because the formula-map was already read
 
 
 (defn run-formula [{formula :value error :error} param-ctx]

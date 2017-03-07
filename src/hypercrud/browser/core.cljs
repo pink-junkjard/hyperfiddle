@@ -6,7 +6,7 @@
             [hypercrud.browser.links :as links]
             [hypercrud.browser.system-links :as system-links]
             [hypercrud.client.core :as hc]
-            [hypercrud.compile.eval :refer [eval]]
+            [hypercrud.compile.eval :refer [eval-str]]
             [hypercrud.form.q-util :as q-util]
             [hypercrud.types :refer [->DbId ->DbVal ->EntityRequest]]
             [hypercrud.ui.auto-control :as auto-control]
@@ -18,7 +18,7 @@
 (defn user-bindings [link param-ctx]
   (let [bindings-fn (if (empty? (:link/bindings link))
                       identity
-                      (let [{f :value error :error} (eval (:link/bindings link))]
+                      (let [{f :value error :error} (eval-str (:link/bindings link))]
                         (if error
                           (fn [_] (throw error))
                           f)))]
@@ -75,7 +75,7 @@
 (defn user-result [link]
   (let [render-fn (if (empty? (:link/renderer link))
                     auto-control/result
-                    (let [{f :value error :error} (eval (:link/renderer link))]
+                    (let [{f :value error :error} (eval-str (:link/renderer link))]
                       (if error
                         (fn [type result colspec anchor-index param-ctx]
                           [:pre (pprint/pprint error)])

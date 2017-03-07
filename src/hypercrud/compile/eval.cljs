@@ -4,7 +4,7 @@
             [markdown.core]))
 
 
-(def eval
+(def eval-str
   (memoize (fn [code-str]
              ;; Hack - we don't understand why cljs compiler doesn't handle top level forms naturally
              ;; but wrapping in identity fixes the problem
@@ -15,3 +15,12 @@
                                 nil
                                 {:eval cljs/js-eval}
                                 identity))))))
+
+(def eval
+  (memoize (fn [form]
+             (let [form' `(identity ~form)]
+               (binding [analyzer/*cljs-warning-handlers* []]
+                 (cljs/eval (cljs/empty-state)
+                            form'
+                            {:eval cljs/js-eval}
+                            identity))))))

@@ -2,7 +2,7 @@
   (:require [cljs.reader :as reader]
             [clojure.set :as set]
             [hypercrud.client.internal :as internal]
-            [hypercrud.compile.eval :refer [eval]]
+            [hypercrud.compile.eval :refer [eval-str]]
             [hypercrud.form.q-util :as q-util]
             [hypercrud.util :as util]
             [promesa.core :as p]))
@@ -60,7 +60,7 @@
 (defn build-link-props [anchor param-ctx]
   (let [param-ctx (assoc param-ctx :link-owner (-> anchor :anchor/link :hypercrud/owner)) ; tx-fn may need this
         tx-fn (if-let [tx-fn (:anchor/tx-fn anchor)]
-                (let [{value :value error :error} (eval tx-fn)]
+                (let [{value :value error :error} (eval-str tx-fn)]
                   ;; non-fatal error, report it here so user can fix it
                   (if error (js/alert (str "cljs eval error: " error)))
                   value))]
@@ -80,7 +80,7 @@
 (defn link-visible? [anchor param-ctx]
   (let [visible-src (:anchor/visible? anchor)
         visible-fn (if-not (empty? visible-src)
-                     (let [{:keys [value error]} (eval visible-src)]
+                     (let [{:keys [value error]} (eval-str visible-src)]
                        (if error (js/alert (str "cljs eval error: " error)))
                        value)
                      (constantly true))]

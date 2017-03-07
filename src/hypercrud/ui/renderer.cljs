@@ -2,7 +2,7 @@
   (:require [reagent.core :as reagent]
             [reagent.impl.component :as r-comp]
             [hypercrud.browser.links :as links]
-            [hypercrud.compile.eval :refer [eval]]))
+            [hypercrud.compile.eval :refer [eval-str]]))
 
 (defn safe-render! [this]
   (let [[react-ctor & cmp-and-props] (r-comp/get-argv this)
@@ -30,7 +30,7 @@
       (empty-string-to-nil (-> attribute :attribute/hc-type :hc-type/renderer))))
 
 (defn attribute-renderer [value maybe-field anchors props param-ctx]
-  (let [{user-fn :value error :error} (eval (renderer-for-attribute (:attribute param-ctx)))]
+  (let [{user-fn :value error :error} (eval-str (renderer-for-attribute (:attribute param-ctx)))]
     [:div.value
      (if error
        [:div.value [:pre (pr-str error)]]

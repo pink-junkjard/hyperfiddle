@@ -1,7 +1,5 @@
 (ns hypercrud.ui.table
   (:require [clojure.string :as string]
-            [hypercrud.browser.links :as links]
-            [hypercrud.compile.eval :refer [eval]]
             [hypercrud.platform.native-event-listener :refer [native-listener]] ;provided dependency
             [hypercrud.types :refer [->DbId ->DbVal]]
             [hypercrud.ui.auto-control :refer [auto-table-cell connection-color]]
