@@ -180,7 +180,7 @@
                               :close-button? true
                               :on-cancel #(reset! showing? false)
                               :no-clip? true
-                              :width "500px"
+                              :width "600px"
                               :body code-widget]]
                    " " value])
          [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]]))))
