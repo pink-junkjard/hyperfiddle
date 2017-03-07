@@ -7,10 +7,11 @@
 
 (defn safe-read-string [code-str]
   (try
-    (reader/read-string code-str)
+    (reader/read-string code-str)                           ; this doesn't handle sharp-lambdas
     (catch :default e
       ;; Nothing to be done at this point -
       ;; this error must be caught by the widget before it is staged.
+      (.warn js/console "bad formula " code-str e)
       nil)))
 
 
@@ -37,9 +38,10 @@
        (into {})))
 
 
-(defn read-eval-formulas [formulas]
-  (->> (if-not (empty? formulas) (safe-read-string formulas))
-       (util/map-values eval)))                             ; not eval-str, because the formula-map was already read
+(defn read-eval-formulas [formulas-str]
+  (if-not (empty? formulas-str)
+    (let [formulas-map (safe-read-string formulas-str)]
+      (util/map-values eval formulas-map))))                ; not eval-str, because the formula-map was already read
 
 
 (defn run-formula [{formula :value error :error} param-ctx]
