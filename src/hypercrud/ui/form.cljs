@@ -9,18 +9,19 @@
 
 ; field is optional (raw mode); schema and attribute is in dynamic scope in all modes
 (defn field [value maybe-field anchors param-ctx]
-  [:div.field {:style {:border-color (connection-color (:color param-ctx))}}
-   [:label
-    (let [prompt (get maybe-field :field/prompt (-> param-ctx :attribute :attribute/ident str))
-          docstring (-> maybe-field :field/attribute :attribute/doc)]
-      (if-not (empty? docstring)
-        [:span.help {:on-click #(js/alert docstring)} prompt]
-        prompt))]
-   (let [anchors (filter #(= (-> param-ctx :attribute :db/id) (some-> % :anchor/attribute :db/id)) anchors)
-         props (form-util/build-props value maybe-field anchors param-ctx)]
-     (if (renderer/renderer-for-attribute (:attribute param-ctx))
-       (renderer/attribute-renderer value maybe-field anchors props param-ctx)
-       [auto-control value maybe-field anchors props param-ctx]))])
+  (let [param-ctx (assoc param-ctx :value value)]
+    [:div.field {:style {:border-color (connection-color (:color param-ctx))}}
+     [:label
+      (let [prompt (get maybe-field :field/prompt (-> param-ctx :attribute :attribute/ident str))
+            docstring (-> maybe-field :field/attribute :attribute/doc)]
+        (if-not (empty? docstring)
+          [:span.help {:on-click #(js/alert docstring)} prompt]
+          prompt))]
+     (let [anchors (filter #(= (-> param-ctx :attribute :db/id) (some-> % :anchor/attribute :db/id)) anchors)
+           props (form-util/build-props value maybe-field anchors param-ctx)]
+       (if (renderer/renderer-for-attribute (:attribute param-ctx))
+         (renderer/attribute-renderer value maybe-field anchors props param-ctx)
+         [auto-control value maybe-field anchors props param-ctx]))]))
 
 (defn new-field [entity param-ctx]
   (let [attr-ident (r/atom nil)]
