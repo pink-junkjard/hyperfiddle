@@ -74,7 +74,7 @@
                                            (let [fe (get find-elements fe-name)
                                                  attr ((:schema param-ctx) ident)]
                                              (case (-> attr :attribute/valueType :db/ident)
-                                               :db.type/ref [{:anchor/prompt (str "edit " ident)
+                                               :db.type/ref [{:anchor/prompt (str "edit") ; conserve space in label
                                                               :anchor/ident (keyword (str fe-name (form-util/css-slugify (str ident))))
                                                               :anchor/link (system-edit-attr-link fe attr parent-link)
                                                               :anchor/repeating? true
