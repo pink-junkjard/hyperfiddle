@@ -156,9 +156,7 @@
                              :undressed (auto-control/result result colspec (concat (:link/anchor link) system-anchors) (user-bindings link param-ctx))
                              :raw (auto-control/result result colspec system-anchors param-ctx)))))]
     (if (exception/failure? dom-or-e)
-      [:div
-       [:span (-> dom-or-e .-e .-msg)]
-       [:pre (-> dom-or-e .-e .-stack)]]
+      (-> dom-or-e .-e .-data)
       (.-v dom-or-e))))
 
 
