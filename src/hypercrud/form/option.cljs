@@ -9,11 +9,21 @@
             [hypercrud.types :refer [->DbVal]]
             [hypercrud.ui.form-util :as form-util]))
 
+(defn render-label [v]                                      ; hardcode some stuff
+  (cond
+    (instance? cljs.core/Keyword v) (name v)
+    :else (str v))
+  #_(condp (fn [x c] (instance? c x)) v
+      cljs.core/Keyword (name v)
+      (str v)))
 
-(defn build-label [colspec result]
+(defn build-label [colspec result param-ctx]
   (->> (partition 3 colspec)
        (mapv (fn [[fe-name ident maybe-field]]
-               (get-in result [fe-name ident])))
+               (let [value (get-in result [fe-name ident])]
+                 ; Custom label renderers? Can't use the attribute renderer, since that
+                 ; is how we are in a select options in the first place.
+                 (render-label value))))
        (interpose ", ")
        (apply str)))
 
@@ -39,4 +49,4 @@
                    (mapv (fn [relation]
                            (let [[fe-name ident maybe-field] (first (partition 3 colspec))
                                  entity (get relation fe-name)]
-                             [(:db/id entity) (build-label colspec relation)])))))))))
+                             [(:db/id entity) (build-label colspec relation param-ctx)])))))))))
