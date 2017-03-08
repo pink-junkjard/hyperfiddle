@@ -56,7 +56,10 @@ the find-element level has been flattened out of the columns."
     (vec
       (mapcat (fn [relation-for-fe fe]
                 (let [indexed-fields (util/group-by-assume-unique (comp :attribute/ident :field/attribute) (-> fe :find-element/form :form/field))
-                      find-element-name (ffirst relation-for-fe)
+
+                      ; find-elements are parsed from the query, so they are known to be good,
+                      ; even in raw mode when they haven't been modeled yet.
+                      find-element-name (-> fe :find-element/name)
 
                       entities (map second relation-for-fe)
                       col-idents (if (or raw-mode? (empty? (keys indexed-fields)))
@@ -70,7 +73,7 @@ the find-element level has been flattened out of the columns."
                                            col-idents)]
                   (mapcat (fn [k]
                             [find-element-name k (get indexed-fields k)]) col-idents')))
-              (util/transpose result)
+              (concat (util/transpose result) (repeat {}))  ; Drive from the find elements, the result might be empty
               ordered-find-elements))))
 
 (defn build-props [value maybe-field anchors param-ctx]
