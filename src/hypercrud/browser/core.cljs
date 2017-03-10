@@ -31,14 +31,16 @@
 
 (defn request-for-link [link-dbid]
   (let [inner-form-pull-exp ['*
-                             {:form/field
+                             {:hypercrud/owner ['*]
+                              :form/field
                               ['*
                                {:field/attribute ['*
                                                   {:attribute/valueType [:db/id :db/ident]
                                                    :attribute/cardinality [:db/id :db/ident]
                                                    :attribute/unique [:db/id :db/ident]}]}]}]
         form-pull-exp ['*
-                       {:form/field
+                       {:hypercrud/owner ['*]
+                        :form/field
                         ['*
                          {:field/attribute ['*
                                             {:attribute/valueType [:db/id :db/ident]

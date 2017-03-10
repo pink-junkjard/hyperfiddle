@@ -54,13 +54,17 @@
 (defn form-pull-exp [form]
   (if form
     (concat
-      [:db/id]
-      (remove nil? (set (mapv #(-> % :field/attribute :attribute/ident) (:form/field form)))))
+      [:db/id {:hypercrud/owner ['*]}]
+      (->> (:form/field form)
+           (mapv #(-> % :field/attribute :attribute/ident))
+           (set)
+           (remove #{:hypercrud/owner})                     ; in meta-fiddle this is part of the form, but we want to hydrate deeper always.
+           (remove nil?)))
 
     ; should we hydrate one level deeper for refs in undressed mode? nah
     ; we don't have the info to know which ref attrs might be used; its not really possible to do this.
     ; If you want pretty select options, you should model the options query and form.
-    ['*]))
+    ['* {:hypercrud/owner ['*]}]))
 
 
 ;todo rename and move? ->queryRequest
