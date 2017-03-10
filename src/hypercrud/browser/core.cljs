@@ -114,47 +114,62 @@
           (render-fn result colspec anchors param-ctx)
           (catch :default e (pr-str e)))))))
 
+(defn merge-anchors [sys-anchors link-anchors]
+  ; Merge the link-anchors into the sys-anchors such that matching anchors properly override.
+  ; anchor uniqueness is determined by [repeat entity attr ident]. Nil ident means
+  ; don't match anything. For example [nil nil nil nil] can just mean i have a lot
+  ; of top level links that i didn't bother to name yet.
+  (let [f (fn [e]
+            [(or (-> e :anchor/repeating?) false)           ; nil matches false
+             (-> e :anchor/find-element :db/id)
+             (-> e :anchor/attribute :db/id)
+             (or (-> e :anchor/ident) (:db/id e)) #_"if the link isn't named, it's unique"])
+        collated (merge-with concat (group-by f sys-anchors) (group-by f link-anchors))
+        merged (map #(apply merge %) (vals collated)) #_(apply map merge (vals collated))]
+    merged))
 
 (defn ui [{query-params :query-params :as params-map}
           {:keys [peer] :as param-ctx}]
-  (let [dom-or-e (mlet [link (if (system-links/system-link? (-> params-map :link-dbid))
-                               (let [system-link-id (-> params-map :link-dbid :id)]
-                                 (->> (system-links/request-for-system-link system-link-id)
-                                      (hc/hydrate peer)
-                                      (cats/fmap #(system-links/generate-system-link system-link-id %))))
-                               (hc/hydrate peer (request-for-link (:link-dbid params-map))))
-                        request (try-on
-                                  (case (links/link-type link)
-                                    :link-query (let [link-query (:link/request link)
-                                                      q (some-> link-query :link-query/value reader/read-string)
-                                                      params-map (merge query-params (q-util/build-dbhole-lookup link-query))]
-                                                  (q-util/query-value q link-query params-map param-ctx))
-                                    :link-entity (q-util/->entityRequest (:link/request link) (:query-params params-map))
-                                    nil))
-                        result (if request (hc/hydrate peer request) (exception/success nil))
-                        ; schema is allowed to be nil if the link only has anchors and no data dependencies
-                        schema (exception/try-or-else (hc/hydrate peer (schema-util/schema-request nil)) nil)]
-                       (cats/return
-                         (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
-                               param-ctx (assoc param-ctx   ; provide defaults before user-bindings run. TODO query side
-                                           :query-params query-params
-                                           :schema indexed-schema
-                                           :read-only (or (:read-only param-ctx) (constantly false)))
+  (let [sys-link? (system-links/system-link? (-> params-map :link-dbid))
+        dom-or-e
+        (mlet [link (if sys-link?
+                      (let [system-link-id (-> params-map :link-dbid :id)]
+                        (->> (system-links/request-for-system-link system-link-id)
+                             (hc/hydrate peer)
+                             (cats/fmap #(system-links/generate-system-link system-link-id %))))
+                      (hc/hydrate peer (request-for-link (:link-dbid params-map))))
+               request (try-on
+                         (case (links/link-type link)
+                           :link-query (let [link-query (:link/request link)
+                                             q (some-> link-query :link-query/value reader/read-string)
+                                             params-map (merge query-params (q-util/build-dbhole-lookup link-query))]
+                                         (q-util/query-value q link-query params-map param-ctx))
+                           :link-entity (q-util/->entityRequest (:link/request link) (:query-params params-map))
+                           nil))
+               result (if request (hc/hydrate peer request) (exception/success nil))
+               ; schema is allowed to be nil if the link only has anchors and no data dependencies
+               schema (exception/try-or-else (hc/hydrate peer (schema-util/schema-request nil)) nil)]
+              (cats/return
+                (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
+                      param-ctx (assoc param-ctx            ; provide defaults before user-bindings run. TODO query side
+                                  :query-params query-params
+                                  :schema indexed-schema
+                                  :read-only (or (:read-only param-ctx) (constantly false)))
 
-                               ; ereq doesn't have a fe yet; wrap with a fe.
-                               ; Doesn't make sense to do on server since this is going to optimize away anyway.
-                               result (if (-> link :link/request :link-entity/connection)
-                                        (if (map? result) ; But the ereq might return a vec for cardinality many
-                                          {"entity" result}
-                                          (mapv (fn [relation] {"entity" relation}) result))
-                                         result)
-                               result (if (-> link :link/request :link-query/single-result-as-entity?) (first result) result) ; unwrap query into entity
-                               colspec (form-util/determine-colspec result link param-ctx)
-                               system-anchors (system-links/system-anchors link result param-ctx)]
-                           (case (get param-ctx :display-mode :dressed)
-                             :dressed ((user-result link) result colspec (concat (:link/anchor link) system-anchors) (user-bindings link param-ctx))
-                             :undressed (auto-control/result result colspec (concat (:link/anchor link) system-anchors) (user-bindings link param-ctx))
-                             :raw (auto-control/result result colspec system-anchors param-ctx)))))]
+                      ; ereq doesn't have a fe yet; wrap with a fe.
+                      ; Doesn't make sense to do on server since this is going to optimize away anyway.
+                      result (if (-> link :link/request :link-entity/connection)
+                               (if (map? result)            ; But the ereq might return a vec for cardinality many
+                                 {"entity" result}
+                                 (mapv (fn [relation] {"entity" relation}) result))
+                               result)
+                      result (if (-> link :link/request :link-query/single-result-as-entity?) (first result) result) ; unwrap query into entity
+                      colspec (form-util/determine-colspec result link param-ctx)
+                      system-anchors #_(if-not sys-link?) (system-links/system-anchors link result param-ctx)]
+                  (case (get param-ctx :display-mode :dressed)
+                    :dressed ((user-result link) result colspec (merge-anchors system-anchors (:link/anchor link)) (user-bindings link param-ctx))
+                    :undressed (auto-control/result result colspec (merge-anchors system-anchors (:link/anchor link)) (user-bindings link param-ctx))
+                    :raw (auto-control/result result colspec system-anchors param-ctx)))))]
     (if (exception/failure? dom-or-e)
       (-> dom-or-e .-e .-data)
       (.-v dom-or-e))))

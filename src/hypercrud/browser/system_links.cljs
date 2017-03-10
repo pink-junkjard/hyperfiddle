@@ -48,10 +48,8 @@
 
 
 (defn system-anchors
-  "provide the system links (edit, new, remove). sub-queries (e.g. combo boxes) will get the old pulled-tree.
-  Since we only changed link, this is only interesting for the hc-in-hc case.
-
-  todo don't overlay system links on system links"
+  "All sys links are :anchor/ident :sys, so they can be matched and merged with user-anchors.
+  Matching is determined by [repeat? entity attribute ident]"
   [parent-link result param-ctx]
   (let [colspec (form-util/determine-colspec result parent-link param-ctx) ; colspec can be empty if result is empty and no form.
         find-elements (form-util/find-elements-by-name (:link/request parent-link))]
@@ -62,7 +60,7 @@
                                     (let [connection-dbid (-> fe :find-element/connection :db/id)
                                           link-name (str "system-edit " fe-name)]
                                       {:anchor/prompt (str fe-name)
-                                       :anchor/ident (keyword fe-name)
+                                       :anchor/ident :sys
                                        :anchor/link (system-edit-link connection-dbid link-name parent-link)
                                        :anchor/repeating? true
                                        :anchor/find-element fe
@@ -75,7 +73,7 @@
                                                  attr ((:schema param-ctx) ident)]
                                              (case (-> attr :attribute/valueType :db/ident)
                                                :db.type/ref [{:anchor/prompt (str "edit") ; conserve space in label
-                                                              :anchor/ident (keyword (str fe-name (form-util/css-slugify (str ident))))
+                                                              :anchor/ident :sys
                                                               :anchor/link (system-edit-attr-link fe attr parent-link)
                                                               :anchor/repeating? true
                                                               :anchor/find-element fe
@@ -88,7 +86,8 @@
                               (set)                         ; distinct connections
                               (mapv (fn [connection]
                                       (let [link-name (str "system-create " (:database/ident connection))]
-                                        {:anchor/prompt (str "create in " (:database/ident connection))
+                                        {:anchor/ident :sys
+                                         :anchor/prompt (str "create in " (:database/ident connection))
                                          :anchor/link (system-edit-link (:db/id connection) link-name parent-link)
                                          :anchor/repeating? false
                                          :anchor/formula (pr-str {:entity-dbid-s `(fn [~'ctx]
