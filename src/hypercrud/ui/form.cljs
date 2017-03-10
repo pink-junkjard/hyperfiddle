@@ -1,6 +1,6 @@
 (ns hypercrud.ui.form
   (:require [hypercrud.types :refer [->DbVal]]
-            [hypercrud.ui.auto-control :refer [auto-control connection-color]]
+            [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.form-util :as form-util]
             [hypercrud.ui.input :as input]
             [hypercrud.ui.renderer :as renderer]
@@ -10,7 +10,7 @@
 ; field is optional (raw mode); schema and attribute is in dynamic scope in all modes
 (defn field [value maybe-field anchors param-ctx]
   (let [param-ctx (assoc param-ctx :value value)]
-    [:div.field {:style {:border-color (connection-color (:color param-ctx))}}
+    [:div.field {:style {:border-color (form-util/connection-color (:color param-ctx))}}
      [:label
       (let [prompt (get maybe-field :field/prompt (-> param-ctx :attribute :attribute/ident str))
             docstring (-> maybe-field :field/attribute :attribute/doc)]

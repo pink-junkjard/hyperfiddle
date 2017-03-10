@@ -2,7 +2,9 @@
   (:require [hypercrud.util :as util]
             [cljs.reader :as reader]
             [hypercrud.browser.links :as links]
-            [clojure.string :as string]))
+            [clojure.string :as string]
+            [hypercrud.client.core :as hc]
+            [hypercrud.random-color :as random-color]))
 
 (defn css-slugify [s]
   ; http://stackoverflow.com/a/449000/959627
@@ -84,3 +86,11 @@ the find-element level has been flattened out of the columns."
   (assoc param-ctx :color ((:color-fn param-ctx) entity param-ctx)
                    :owner ((:owner-fn param-ctx) entity param-ctx)
                    :entity entity))
+
+(def connection-color
+  (memoize
+    (fn [conn-id]
+      (case conn-id
+        nil "#fff"
+        hc/*root-conn-id* "#777"
+        (random-color/random-color)))))

@@ -2,7 +2,8 @@
   (:require [cats.monad.exception :as exception]
             [hypercrud.client.tx :as tx]
             [hypercrud.form.option :as option]
-            [hypercrud.types :refer [->DbId]]))
+            [hypercrud.types :refer [->DbId]]
+            [hypercrud.ui.form-util :as form-util]))
 
 
 (defn select-boolean* [value props param-ctx]
@@ -40,7 +41,10 @@
     [:span.select
      (let [option-records (.-v options)
            no-options? (or (not maybe-field) (exception/failure? options) (empty? (exception/extract options)))
-           props (update props :disabled #(or % no-options?))]
+           props (update props :disabled #(or % no-options?))
+           props (if (#{:find-element/connection :dbhole/value :hypercrud/owner} (-> param-ctx :attribute :attribute/ident)) ; lol hack
+                   (assoc props :style {:background-color (form-util/connection-color (-> value :db/id :id))})
+                   props)]
        [:select.select props
         (concat
           (->> (sort-by second option-records)
