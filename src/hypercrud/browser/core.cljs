@@ -167,7 +167,7 @@
                                result)
                       result (if (-> link :link/request :link-query/single-result-as-entity?) (first result) result) ; unwrap query into entity
                       colspec (form-util/determine-colspec result link param-ctx)
-                      system-anchors #_(if-not sys-link?) (system-links/system-anchors link result param-ctx)]
+                      system-anchors (if-not sys-link? (system-links/system-anchors link result param-ctx))]
                   (case (get param-ctx :display-mode :dressed)
                     :dressed ((user-result link) result colspec (merge-anchors system-anchors (:link/anchor link)) (user-bindings link param-ctx))
                     :undressed (auto-control/result result colspec (merge-anchors system-anchors (:link/anchor link)) (user-bindings link param-ctx))
