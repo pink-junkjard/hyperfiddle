@@ -25,7 +25,7 @@
     (try
       (bindings-fn param-ctx)
       (catch :default error
-        (js/alert (str "error in user-bindings:\n" (pr-str error)))
+        (.warn js/console (str "error in user-bindings:\n" (pr-str error)))
         param-ctx))))
 
 

@@ -4,12 +4,13 @@
             [cljs.reader :as reader]
             [hypercrud.browser.links :as links]
             [hypercrud.client.core :as hc]
-            [hypercrud.form.find-elements :as find-elements-util]
+            [hypercrud.compile.eval :refer [eval-str]]
             [hypercrud.form.q-util :as q-util]
             [hypercrud.types :refer [->DbVal]]
-            [hypercrud.ui.form-util :as form-util]))
+            [hypercrud.ui.form-util :as form-util]
+            [hypercrud.browser.core :as browser]))
 
-(defn render-label [v]                                      ; hardcode some stuff
+(defn default-label-renderer [v]
   (cond
     (instance? cljs.core/Keyword v) (name v)
     :else (str v))
@@ -20,10 +21,19 @@
 (defn build-label [colspec result param-ctx]
   (->> (partition 3 colspec)
        (mapv (fn [[fe-name ident maybe-field]]
-               (let [value (get-in result [fe-name ident])]
-                 ; Custom label renderers? Can't use the attribute renderer, since that
-                 ; is how we are in a select options in the first place.
-                 (render-label value))))
+               ; Custom label renderers? Can't use the attribute renderer, since that
+               ; is how we are in a select options in the first place.
+               (let [value (get-in result [fe-name ident])
+                     user-renderer (-> param-ctx :fields ident :label-renderer)
+                     {f :value error :error} (if-not (empty? user-renderer) (eval-str user-renderer))]
+                 (if error (.warn js/console (str "Bad label rendererer " user-renderer)))
+                 (if-not f
+                   (default-label-renderer value)
+                   (try
+                     (f value)
+                     (catch js/Error e
+                       (.warn js/console "user error in label-renderer: " (str e))
+                       (default-label-renderer value)))))))
        (interpose ", ")
        (apply str)))
 
@@ -43,7 +53,9 @@
                                           (q-util/build-dbhole-lookup request))
                         query-value (q-util/query-value q request params-map param-ctx)]
                     (hc/hydrate (:peer param-ctx) query-value))]
-          (let [colspec (form-util/determine-colspec result link param-ctx)]
+          (let [colspec (form-util/determine-colspec result link param-ctx)
+                ; options have custom renderers which get user bindings
+                param-ctx (browser/user-bindings link param-ctx)]
             (cats/return
               (->> result
                    (mapv (fn [relation]
