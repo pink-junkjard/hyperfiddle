@@ -29,8 +29,6 @@
 (defn other-many [value field anchors props param-ctx]
   [:div
    [:button {:on-click #(js/alert "todo")} "Edit"]
-   #_(let [{:keys [href]} (links/field-link (:db/id field) (:db/id entity))]
-       [(:navigate-cmp param-ctx) {:href href} "Edit" param-ctx])
    " "
    (->> (map pr-str value)                                  ;todo account for many different types of values
         (string/join ", "))])

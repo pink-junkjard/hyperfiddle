@@ -5,9 +5,10 @@
             [hypercrud.ui.auto-control :refer [auto-table-cell]]
             [hypercrud.ui.renderer :as renderer]
             [hypercrud.ui.widget :as widget]
-            [hypercrud.ui.form-util :as form-util]
+            [hypercrud.browser.connection-color :as connection-color]
             [hypercrud.util :as util]
-            [reagent.core :as r]))
+            [reagent.core :as r]
+            [hypercrud.ui.form-util :as form-util]))
 
 
 (defn sortable? [field]
@@ -84,7 +85,7 @@
                         ; rebuilt too much due to joining fe-name X ident
                         attribute-anchors (->> (get find-element-anchors-lookup fe-name)
                                                (remove #(nil? (:anchor/attribute %))))
-                        style {:border-color (form-util/connection-color (:color param-ctx))}
+                        style {:border-color (connection-color/connection-color (:color param-ctx))}
                         value (get entity ident)]
                     [:td.truncate {:key (or (:db/id maybe-field) (str fe-name ident)) :style style}
                      (let [anchors (filter #(= (-> param-ctx :attribute :db/id) (some-> % :anchor/attribute :db/id)) attribute-anchors)

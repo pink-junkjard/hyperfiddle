@@ -5,12 +5,13 @@
             [hypercrud.ui.input :as input]
             [hypercrud.ui.renderer :as renderer]
             [hypercrud.ui.widget :as widget]
-            [reagent.core :as r]))
+            [reagent.core :as r]
+            [hypercrud.browser.connection-color :as connection-color]))
 
 ; field is optional (raw mode); schema and attribute is in dynamic scope in all modes
 (defn field [value maybe-field anchors param-ctx]
   (let [param-ctx (assoc param-ctx :value value)]
-    [:div.field {:style {:border-color (form-util/connection-color (:color param-ctx))}}
+    [:div.field {:style {:border-color (connection-color/connection-color (:color param-ctx))}}
      [:label
       (let [prompt (get maybe-field :field/prompt (-> param-ctx :attribute :attribute/ident str))
             docstring (-> maybe-field :field/attribute :attribute/doc)]
