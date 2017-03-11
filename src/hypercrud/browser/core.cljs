@@ -12,7 +12,8 @@
             [hypercrud.ui.auto-control :as auto-control]
             [hypercrud.util :as util]
             [hypercrud.client.schema :as schema-util]
-            [hypercrud.ui.form-util :as form-util]))
+            [hypercrud.ui.form-util :as form-util]
+            [hypercrud.ui.renderer :as renderer]))
 
 
 (defn user-bindings [link param-ctx]
@@ -111,10 +112,8 @@
                                      [(:navigate-cmp param-ctx) props label param-ctx]))
                         ;:inline-result inline-result
                         )]
-        (try
-          ; result is relation or set of relations
-          (render-fn result colspec anchors param-ctx)
-          (catch :default e (pr-str e)))))))
+        ; result is relation or set of relations
+        [renderer/safe-user-renderer render-fn result colspec anchors param-ctx]))))
 
 (defn merge-anchors [sys-anchors link-anchors]
   ; Merge the link-anchors into the sys-anchors such that matching anchors properly override.
