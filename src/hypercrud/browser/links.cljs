@@ -62,7 +62,7 @@
         tx-fn (if-let [tx-fn (:anchor/tx-fn anchor)]
                 (let [{value :value error :error} (eval-str tx-fn)]
                   ;; non-fatal error, report it here so user can fix it
-                  (if error (js/alert (str "cljs eval error: " error)))
+                  (if error (js/alert (str "cljs eval error: " error))) ; return monad so tooltip can draw the error
                   value))]
 
     ;; add-result #(tx/edit-entity (:db/id entity) ident [] [(first %)])
@@ -71,10 +71,11 @@
                     ; tx-fn can be sync or async, based on return instance.
                     (-> (if-not (p/promise? result) (p/resolved result) result)
                         (p/then (:user-swap! param-ctx))))}
-      (let [params-map (build-url-params-map anchor param-ctx)]
+      (let [params-map (build-url-params-map anchor param-ctx)] ; return monad so tooltip can draw the error
         {:route params-map
-         :class (if-not (renderable-link? (:anchor/link anchor) params-map)
-                  "invalid")}))))
+         ; can't know if link is invalid with just the anchor, and we haven't hydrated the links (that is pretty heavy)
+         :class nil #_(if-not (renderable-link? (:anchor/link anchor) params-map)
+                        "invalid")}))))
 
 
 (defn link-visible? [anchor param-ctx]
