@@ -108,7 +108,8 @@
             param-ctx (assoc param-ctx
                         :link-fn (fn [ident label param-ctx]
                                    (let [anchor (get anchor-index ident)
-                                         props (links/build-link-props anchor param-ctx)]
+                                         props (-> (links/build-link-props anchor param-ctx)
+                                                   (dissoc :style) #_ "custom renderers don't want colored links")]
                                      [(:navigate-cmp param-ctx) props label param-ctx]))
                         ;:inline-result inline-result
                         )]
@@ -129,16 +130,17 @@
         merged (map #(apply merge %) (vals collated)) #_(apply map merge (vals collated))]
     merged))
 
-(defn ui [{query-params :query-params :as params-map}
-          {:keys [peer] :as param-ctx}]
-  (let [sys-link? (system-links/system-link? (-> params-map :link-dbid))
-        dom-or-e
-        (mlet [link (if sys-link?
-                      (let [system-link-id (-> params-map :link-dbid :id)]
-                        (->> (system-links/request-for-system-link system-link-id)
-                             (hc/hydrate peer)
-                             (cats/fmap #(system-links/generate-system-link system-link-id %))))
-                      (hc/hydrate peer (request-for-link (:link-dbid params-map))))
+(defn hydrate-link [peer link-dbid]
+  (if (system-links/system-link? link-dbid)
+    (let [system-link-id (-> link-dbid :id)]
+      (->> (system-links/request-for-system-link system-link-id)
+           (hc/hydrate peer)
+           (cats/fmap #(system-links/generate-system-link system-link-id %))))
+    (hc/hydrate peer (request-for-link link-dbid))))
+
+(defn ui [{query-params :query-params :as params-map} param-ctx]
+  (let [dom-or-e
+        (mlet [link (hydrate-link (:peer param-ctx) (:link-dbid params-map))
                request (try-on
                          (case (links/link-type link)
                            :link-query (let [link-query (:link/request link)
@@ -147,9 +149,9 @@
                                          (q-util/query-value q link-query params-map param-ctx))
                            :link-entity (q-util/->entityRequest (:link/request link) (:query-params params-map))
                            nil))
-               result (if request (hc/hydrate peer request) (exception/success nil))
+               result (if request (hc/hydrate (:peer param-ctx) request) (exception/success nil))
                ; schema is allowed to be nil if the link only has anchors and no data dependencies
-               schema (exception/try-or-else (hc/hydrate peer (schema-util/schema-request nil)) nil)]
+               schema (exception/try-or-else (hc/hydrate (:peer param-ctx) (schema-util/schema-request nil)) nil)]
               (cats/return
                 (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
                       param-ctx (assoc param-ctx            ; provide defaults before user-bindings run. TODO query side
@@ -166,7 +168,8 @@
                                result)
                       result (if (-> link :link/request :link-query/single-result-as-entity?) (first result) result) ; unwrap query into entity
                       colspec (form-util/determine-colspec result link param-ctx)
-                      system-anchors (if-not sys-link? (system-links/system-anchors link result param-ctx))]
+                      system-anchors (if-not (system-links/system-link? (-> params-map :link-dbid))
+                                       (system-links/system-anchors link result param-ctx))]
                   (case (get param-ctx :display-mode :dressed)
                     :dressed ((user-result link) result colspec (merge-anchors system-anchors (:link/anchor link)) (user-bindings link param-ctx))
                     :undressed (auto-control/result result colspec (merge-anchors system-anchors (:link/anchor link)) (user-bindings link param-ctx))
