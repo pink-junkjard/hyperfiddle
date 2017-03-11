@@ -47,16 +47,25 @@
 (defn holes-filled? [hole-names query-params-map]
   (set/subset? (set hole-names) (set (keys (into {} (remove (comp nil? val) query-params-map))))))
 
+(defn anchor-valid? [url-params]
+  ; Can't know this for sure with just the anchor, but any nil url-param is either an error or mistake.
+  ; For example, a bad formula will not be caught by this.
+  ; It would seem appropriate to hydrate these links though to validate their query params.
+  (every? (complement nil?) (vals (:query-params url-params)))
+  #_(case (link-type link)
+      :link-query (some-> link :link/request :link-query/value
+                          reader/read-string
+                          q-util/parse-holes
+                          (holes-filled? (:query-params params-map)))
+      :link-entity true
+      false))
 
-(defn renderable-link? [link params-map]
-  (case (link-type link)
-    :link-query (some-> link :link/request :link-query/value
-                        reader/read-string
-                        q-util/parse-holes
-                        (holes-filled? (:query-params params-map)))
-    :link-entity true
-    false))
-
+(defn anchor-tooltip [url-params param-ctx]
+  (case (:display-mode param-ctx)
+    :undressed (if (anchor-valid? url-params)
+                 [nil (pr-str (:query-params url-params))]
+                 [:warning (pr-str (:query-params url-params))])
+    nil))
 
 (defn build-link-props [anchor param-ctx]
   (let [param-ctx (assoc param-ctx :link-owner (-> anchor :anchor/link :hypercrud/owner)) ; tx-fn may need this
@@ -65,26 +74,15 @@
                   ;; non-fatal error, report it here so user can fix it
                   (if error (js/alert (str "cljs eval error: " error))) ; return monad so tooltip can draw the error
                   value))]
-
-
-    ;; add-result #(tx/edit-entity (:db/id entity) ident [] [(first %)])
     (if tx-fn
-      {:on-click #(let [result (tx-fn param-ctx)]
-                    ; tx-fn can be sync or async, based on return instance.
+      {:on-click #(let [result (tx-fn param-ctx)]           ; tx-fn may be sync or async
                     (-> (if-not (p/promise? result) (p/resolved result) result)
                         (p/then (:user-swap! param-ctx))))}
-      (let [url-params (build-url-params-map anchor param-ctx) ; return monad so tooltip can draw the error?
-            ; Can't know this for sure with just the anchor, but any nil url-param is either an error or mistake.
-            ; For example, a bad formula will not be caught by this.
-            ; It would seem appropriate to hydrate these links though to validate their query params.
-            url-valid (every? (complement nil?) (vals (:query-params url-params))) #_ (renderable-link? (:anchor/link anchor) url-params)]
+      (let [url-params (build-url-params-map anchor param-ctx) #_"return monad so tooltip can draw the error?"]
         {:route url-params
          :style {:color (connection-color/connection-color (-> anchor :anchor/link :hypercrud/owner :db/id :id))}
-         :tooltip (if url-valid
-                    [nil (pr-str (:query-params url-params))]
-                    [:warning (pr-str (:query-params url-params))])
-         :class (if-not url-valid "invalid")}))))
-
+         :tooltip (anchor-tooltip url-params param-ctx)
+         :class (if-not (anchor-valid? url-params) "invalid")}))))
 
 (defn link-visible? [anchor param-ctx]
   (let [visible-src (:anchor/visible? anchor)

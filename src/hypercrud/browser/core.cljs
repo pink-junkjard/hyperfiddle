@@ -109,7 +109,7 @@
                         :link-fn (fn [ident label param-ctx]
                                    (let [anchor (get anchor-index ident)
                                          props (-> (links/build-link-props anchor param-ctx)
-                                                   (dissoc :style) #_ "custom renderers don't want colored links")]
+                                                   #_(dissoc :style) #_ "custom renderers don't want colored links")]
                                      [(:navigate-cmp param-ctx) props label param-ctx]))
                         ;:inline-result inline-result
                         )]
