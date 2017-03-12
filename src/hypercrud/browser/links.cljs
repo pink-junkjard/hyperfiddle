@@ -47,22 +47,18 @@
 (defn holes-filled? [hole-names query-params-map]
   (set/subset? (set hole-names) (set (keys (into {} (remove (comp nil? val) query-params-map))))))
 
-(defn anchor-valid? [url-params]
-  ; Can't know this for sure with just the anchor, but any nil url-param is either an error or mistake.
-  ; For example, a bad formula will not be caught by this.
-  ; It would seem appropriate to hydrate these links though to validate their query params.
-  (every? (complement nil?) (vals (:query-params url-params)))
-  #_(case (link-type link)
-      :link-query (some-> link :link/request :link-query/value
-                          reader/read-string
-                          q-util/parse-holes
-                          (holes-filled? (:query-params params-map)))
-      :link-entity true
-      false))
+(defn anchor-valid? [link url-params]                       ; could return monad to say why
+  ; We specifically hydrate this deep just so we can validate anchors like this.
+  (case (link-type link)
+    :link-query (-> link :link/request :link-query/value
+                    reader/read-string q-util/parse-param-holes
+                    (holes-filled? (:query-params url-params)))
+    :link-entity (contains? (:query-params url-params) :entity-dbid-s)
+    false))
 
-(defn anchor-tooltip [url-params param-ctx]
+(defn anchor-tooltip [link url-params param-ctx]
   (case (:display-mode param-ctx)
-    :undressed (if (anchor-valid? url-params)
+    :undressed (if (anchor-valid? link url-params)
                  [nil (pr-str (:query-params url-params))]
                  [:warning (pr-str (:query-params url-params))])
     nil))
@@ -81,8 +77,8 @@
       (let [url-params (build-url-params-map anchor param-ctx) #_"return monad so tooltip can draw the error?"]
         {:route url-params
          :style {:color (connection-color/connection-color (-> anchor :anchor/link :hypercrud/owner :db/id :id))}
-         :tooltip (anchor-tooltip url-params param-ctx)
-         :class (if-not (anchor-valid? url-params) "invalid")}))))
+         :tooltip (anchor-tooltip (:anchor/link anchor) url-params param-ctx)
+         :class (if-not (anchor-valid? (:anchor/link anchor) url-params) "invalid")}))))
 
 (defn link-visible? [anchor param-ctx]
   (let [visible-src (:anchor/visible? anchor)

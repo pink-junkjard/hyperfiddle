@@ -1,5 +1,6 @@
 (ns hypercrud.form.q-util
   (:require [cljs.reader :as reader]
+            [clojure.string :as string]
             [hypercrud.compile.eval :refer [eval]]
             [hypercrud.types :refer [->DbVal ->EntityRequest ->QueryRequest]]
             [hypercrud.util :as util]))
@@ -19,6 +20,10 @@
   (->> (util/parse-query-element q :in)
        ;; the string conversion should happen at the other side imo
        (map str)))
+
+(defn parse-param-holes [q]
+  (->> (parse-holes q)
+       (remove #(string/starts-with? % "$"))))
 
 
 (defn build-dbhole-lookup [link-query]

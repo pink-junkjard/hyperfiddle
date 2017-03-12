@@ -69,7 +69,7 @@
                                        :link-query/find-element ['* {:find-element/form form-pull-exp
                                                                      :find-element/connection [:db/id :database/ident]}]}]
                        :link/anchor ['*
-                                     {:anchor/link [:db/id
+                                     {:anchor/link ['*      ; hydrate the whole link for validating the anchor by query params
                                                     {:hypercrud/owner ['*]}] ; need the link's owner to render the href to it
                                       :anchor/find-element [:db/id :find-element/name]}]
                        :hypercrud/owner ['*]}])))
