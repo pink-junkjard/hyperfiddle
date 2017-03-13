@@ -276,8 +276,7 @@
     (case (links/link-type link)
       :link-query (requests-for-link-query link query-params param-ctx recurse?) ; Todo - hydrate refs deeper if no option link
       :link-entity (requests-for-link-entity link query-params param-ctx recurse?) ; hydrate refs deeper if no option link
-      nil                                                   ; this case does not request the schema, as we don't have a connection for the link.
-      )))
+      :link-blank (dependent-requests [] [] (:link/anchor link) param-ctx)))) ; this case does not request the schema, as we don't have a connection for the link.
 
 
 (defn request [params-map param-ctx recurse?]
@@ -292,8 +291,7 @@
             (requests-for-link link (:query-params params-map) param-ctx recurse?)))))
     (let [link-request (request-for-link (:link-dbid params-map))]
       (concat [link-request]
-              (if-let [link (-> (hc/hydrate (:peer param-ctx) link-request)
-                                (exception/extract nil))]
+              (if-let [link (-> (hc/hydrate (:peer param-ctx) link-request) (exception/extract nil))]
                 (requests-for-link link (:query-params params-map) param-ctx recurse?))))))
 
 

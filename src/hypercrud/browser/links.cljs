@@ -6,14 +6,18 @@
             [hypercrud.form.q-util :as q-util]
             [hypercrud.util :as util]
             [promesa.core :as p]
-            [hypercrud.browser.connection-color :as connection-color]))
+            [hypercrud.browser.connection-color :as connection-color]
+            [hypercrud.browser.system-links :as system-links]))
 
 
-(defn link-type [link]
-  (condp #(contains? %2 %1) (->> (keys (:link/request link)) (mapv namespace) set)
-    "link-query" :link-query
-    "link-entity" :link-entity
-    nil))
+(defn link-type [link]                                      ; system, blank
+  (let [link-key-namespaces (->> (keys (:link/request link)) (mapv namespace) set)]
+    (cond
+      (contains? link-key-namespaces "link-query") :link-query
+      (contains? link-key-namespaces "link-entity") :link-entity
+      ; system links are entity links in practice
+      ;(system-links/system-link? (:db/id link)) :link-system
+      :else :link-blank)))
 
 
 (defn build-url-params-map
