@@ -175,7 +175,7 @@
                     :undressed (auto-control/result result colspec (merge-anchors system-anchors (:link/anchor link)) (user-bindings link param-ctx))
                     :raw (auto-control/result result colspec system-anchors param-ctx)))))]
     (if (exception/failure? dom-or-e)
-      (-> dom-or-e .-e .-data)
+      (or (-> dom-or-e .-e .-data) [:pre (pr-str (-> dom-or-e .-e))])
       (.-v dom-or-e))))
 
 
