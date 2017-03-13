@@ -8,7 +8,7 @@
             [hypercrud.client.core :as hc]
             [hypercrud.compile.eval :refer [eval-str]]
             [hypercrud.form.q-util :as q-util]
-            [hypercrud.types :refer [->DbId ->DbVal ->EntityRequest]]
+            [hypercrud.types :as types :refer [->DbId ->DbVal ->EntityRequest]]
             [hypercrud.ui.auto-control :as auto-control]
             [hypercrud.util :as util]
             [hypercrud.client.schema :as schema-util]
@@ -109,7 +109,7 @@
                         :link-fn (fn [ident label param-ctx]
                                    (let [anchor (get anchor-index ident)
                                          props (-> (links/build-link-props anchor param-ctx)
-                                                   #_(dissoc :style) #_ "custom renderers don't want colored links")]
+                                                   #_(dissoc :style) #_"custom renderers don't want colored links")]
                                      [(:navigate-cmp param-ctx) props label param-ctx]))
                         ;:inline-result inline-result
                         )]
@@ -148,6 +148,7 @@
                                              params-map (merge query-params (q-util/build-dbhole-lookup link-query))]
                                          (q-util/query-value q link-query params-map param-ctx))
                            :link-entity (q-util/->entityRequest (:link/request link) (:query-params params-map))
+                           :link-blank nil
                            nil))
                result (if request (hc/hydrate (:peer param-ctx) request) (exception/success nil))
                ; schema is allowed to be nil if the link only has anchors and no data dependencies
@@ -161,12 +162,23 @@
 
                       ; ereq doesn't have a fe yet; wrap with a fe.
                       ; Doesn't make sense to do on server since this is going to optimize away anyway.
-                      result (if (-> link :link/request :link-entity/connection)
-                               (if (map? result)            ; But the ereq might return a vec for cardinality many
-                                 {"entity" result}
-                                 (mapv (fn [relation] {"entity" relation}) result))
-                               result)
-                      result (if (-> link :link/request :link-query/single-result-as-entity?) (first result) result) ; unwrap query into entity
+
+                      result (cond
+
+                               (instance? types/EntityRequest request) ; But the ereq might return a vec for cardinality many
+                               (cond
+                                 ; order matters here a lot!
+                                 (nil? result) nil
+                                 (empty? result) (if (coll? (.-dbid-s request)) [] {}) ; comes back as [] sometimes if cardinaltiy many request. this is causing problems as nil or {} in different places.
+                                 (map? result) {"entity" result}
+                                 (coll? result) (mapv (fn [relation] {"entity" relation}) result))
+
+
+                               (instance? types/QueryRequest request)
+                               (cond
+                                 (-> link :link/request :link-query/single-result-as-entity?) (first result)
+                                 :else result))
+
                       colspec (form-util/determine-colspec result link param-ctx)
                       system-anchors (if-not (system-links/system-link? (-> params-map :link-dbid))
                                        (system-links/system-anchors link result param-ctx))]

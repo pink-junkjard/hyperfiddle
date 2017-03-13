@@ -52,29 +52,33 @@ the find-element level has been flattened out of the columns."
   (let [result (if (map? result) [result] result)           ; unified colspec for table and form
         ordered-find-elements (get-ordered-find-elements link param-ctx)
         ordered-find-elements (strip-forms-in-raw-mode ordered-find-elements param-ctx)
-        raw-mode? (= (:display-mode param-ctx) :raw)]
-    (vec
-      (mapcat (fn [relation-for-fe fe]
-                (let [indexed-fields (util/group-by-assume-unique (comp :attribute/ident :field/attribute) (-> fe :find-element/form :form/field))
+        raw-mode? (= (:display-mode param-ctx) :raw)
+        result-as-columns (util/transpose result)
+        map' (util/map-pad {})]
+    (->>
+      (map' (fn [relation-for-fe fe]
+              (let [indexed-fields (util/group-by-assume-unique (comp :attribute/ident :field/attribute) (-> fe :find-element/form :form/field))
 
-                      ; find-elements are parsed from the query, so they are known to be good,
-                      ; even in raw mode when they haven't been modeled yet.
-                      find-element-name (-> fe :find-element/name)
+                    ; find-elements are parsed from the query, so they are known to be good,
+                    ; even in raw mode when they haven't been modeled yet.
+                    find-element-name (-> fe :find-element/name)
 
-                      entities (map second relation-for-fe)
-                      col-idents (if (or raw-mode? (empty? (keys indexed-fields)))
-                                   (reduce (fn [acc v] (into acc (keys v))) #{} entities)
-                                   (keys indexed-fields))
-                      col-idents' (sort-by (fn [k]
-                                             (if-let [field (get indexed-fields k)]
-                                               (:field/order field)
-                                               ; raw mode sort is by namespaced attribute, per find-element
-                                               k))
-                                           col-idents)]
-                  (mapcat (fn [k]
-                            [find-element-name k (get indexed-fields k)]) col-idents')))
-              (concat (util/transpose result) (repeat {}))  ; Drive from the find elements, the result might be empty
-              ordered-find-elements))))
+                    entities (map second relation-for-fe)
+                    col-idents (if (or raw-mode? (empty? (keys indexed-fields)))
+                                 (reduce (fn [acc v] (into acc (keys v))) #{} entities)
+                                 (keys indexed-fields))
+                    col-idents' (sort-by (fn [k]
+                                           (if-let [field (get indexed-fields k)]
+                                             (:field/order field)
+                                             ; raw mode sort is by namespaced attribute, per find-element
+                                             k))
+                                         col-idents)]
+                (mapcat (fn [k]
+                          [find-element-name k (get indexed-fields k)]) col-idents')))
+            result-as-columns
+            ordered-find-elements)
+      (flatten)
+      (vec))))
 
 (defn build-props [value maybe-field anchors param-ctx]
   ; why does this need the field - it needs the ident for readonly in "Edit Anchors"
