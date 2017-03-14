@@ -1,5 +1,5 @@
 (ns hypercrud.browser.system-links
-  (:require [hypercrud.browser.links :as links]
+  (:require [hypercrud.browser.link-util :as link-util]
             [hypercrud.client.core :as hc]
             [hypercrud.types :refer [->DbId ->DbVal ->EntityRequest]]
             [hypercrud.ui.form-util :as form-util]))
@@ -53,7 +53,7 @@
   [parent-link result param-ctx]
   (let [colspec (form-util/determine-colspec result parent-link param-ctx) ; colspec can be empty if result is empty and no form.
         find-elements (form-util/find-elements-by-name (:link/request parent-link))]
-    (case (links/link-type parent-link)
+    (case (link-util/link-type parent-link)
       :link-query
       (let [edit-links (->> find-elements
                             (mapv (fn [[fe-name fe]]

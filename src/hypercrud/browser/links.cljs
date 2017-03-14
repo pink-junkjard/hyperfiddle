@@ -1,23 +1,12 @@
 (ns hypercrud.browser.links
   (:require [cljs.reader :as reader]
             [clojure.set :as set]
-            [hypercrud.client.internal :as internal]
             [hypercrud.compile.eval :refer [eval-str]]
             [hypercrud.form.q-util :as q-util]
             [hypercrud.util :as util]
             [promesa.core :as p]
             [hypercrud.browser.connection-color :as connection-color]
-            [hypercrud.browser.system-links :as system-links]))
-
-
-(defn link-type [link]                                      ; system, blank
-  (let [link-key-namespaces (->> (keys (:link/request link)) (mapv namespace) set)]
-    (cond
-      (contains? link-key-namespaces "link-query") :link-query
-      (contains? link-key-namespaces "link-entity") :link-entity
-      ; system links are entity links in practice
-      ;(system-links/system-link? (:db/id link)) :link-system
-      :else :link-blank)))
+            [hypercrud.browser.link-util :as link-util]))
 
 
 (defn build-url-params-map
@@ -53,7 +42,7 @@
 
 (defn anchor-valid? [link url-params]                       ; could return monad to say why
   ; We specifically hydrate this deep just so we can validate anchors like this.
-  (case (link-type link)
+  (case (link-util/link-type link)
     :link-query (-> link :link/request :link-query/value
                     reader/read-string q-util/parse-param-holes
                     (holes-filled? (:query-params url-params)))

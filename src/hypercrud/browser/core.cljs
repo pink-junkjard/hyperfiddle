@@ -13,7 +13,8 @@
             [hypercrud.util :as util]
             [hypercrud.client.schema :as schema-util]
             [hypercrud.ui.form-util :as form-util]
-            [hypercrud.ui.renderer :as renderer]))
+            [hypercrud.ui.renderer :as renderer]
+            [hypercrud.browser.link-util :as link-util]))
 
 
 (defn user-bindings [link param-ctx]
@@ -93,7 +94,7 @@
                                   query-params (:query-params params-map)]
                               (mlet [link (hc/hydrate (:peer param-ctx) (request-for-link (-> anchor :anchor/link :db/id)))
                                      request (try-on
-                                               (case (links/link-type link)
+                                               (case (link-util/link-type link)
                                                  :link-query (let [q (some-> link :link/request :link-query/value reader/read-string)
                                                                    params-map (merge query-params
                                                                                      (q-util/build-dbhole-lookup (:link/request link)))]
@@ -142,7 +143,7 @@
   (let [dom-or-e
         (mlet [link (hydrate-link (:peer param-ctx) (:link-dbid params-map))
                request (try-on
-                         (case (links/link-type link)
+                         (case (link-util/link-type link)
                            :link-query (let [link-query (:link/request link)
                                              q (some-> link-query :link-query/value reader/read-string)
                                              params-map (merge query-params (q-util/build-dbhole-lookup link-query))]
@@ -285,7 +286,7 @@
 
 (defn requests-for-link [link query-params param-ctx recurse?]
   (let [param-ctx (assoc param-ctx :query-params query-params)]
-    (case (links/link-type link)
+    (case (link-util/link-type link)
       :link-query (requests-for-link-query link query-params param-ctx recurse?) ; Todo - hydrate refs deeper if no option link
       :link-entity (requests-for-link-entity link query-params param-ctx recurse?) ; hydrate refs deeper if no option link
       :link-blank (dependent-requests [] [] (:link/anchor link) param-ctx)))) ; this case does not request the schema, as we don't have a connection for the link.

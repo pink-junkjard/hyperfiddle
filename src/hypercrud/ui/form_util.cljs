@@ -1,7 +1,7 @@
 (ns hypercrud.ui.form-util
   (:require [hypercrud.util :as util]
             [cljs.reader :as reader]
-            [hypercrud.browser.links :as links]
+            [hypercrud.browser.link-util :as link-util]
             [clojure.string :as string]))
 
 (defn css-slugify [s]
@@ -30,7 +30,7 @@
 
 (defn get-ordered-find-elements [link param-ctx]
   (let [req (:link/request link)]
-    (case (links/link-type link)
+    (case (link-util/link-type link)
       :link-query (let [q (some-> req :link-query/value reader/read-string)
                         find-element-lookup (find-elements-by-name req)]
                     (->> (util/parse-query-element q :find)
