@@ -103,7 +103,7 @@
 
 
 (defn ref-component [value maybe-field anchors props param-ctx]
-  (assert (> (count (filter :anchor/render-inline? anchors)) 0))
+  #_(assert (> (count (filter :anchor/render-inline? anchors)) 0))
   #_(ref value maybe-field anchors props param-ctx)
   [:div.value
    #_(pr-str (:db/id value))
