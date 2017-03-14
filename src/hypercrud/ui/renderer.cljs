@@ -9,7 +9,9 @@
         dom-el (reagent/dom-node this)]
     (try
       ; construct hiccup markup for reagent lolz
-      (reagent/render (vec cmp-and-props) dom-el)
+      ; Hack in a key because these are simple user-fns, they can't construct proper reagent classes
+      ; with lifecycle, yet.
+      (reagent/render (with-meta (vec cmp-and-props) {:key (rest cmp-and-props)}) dom-el)
       (catch js/Error e
         (reagent/render [:pre (pr-str e)] dom-el)))))
 
