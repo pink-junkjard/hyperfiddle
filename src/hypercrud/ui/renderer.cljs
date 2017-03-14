@@ -28,10 +28,11 @@
   (if (empty? s) nil s))
 
 (defn user-renderer [param-ctx]
-  (or
-    (empty-string-to-nil (some-> param-ctx :fields (-> param-ctx :attribute :attribute/ident) :renderer))
-    (empty-string-to-nil (some-> param-ctx :attribute :attribute/renderer))
-    (empty-string-to-nil (some-> param-ctx :attribute :attribute/hc-type :hc-type/renderer))))
+  (let [attr (:attribute param-ctx)]
+    (or
+      (empty-string-to-nil (get-in param-ctx [:fields (:attribute/ident attr) :renderer]))
+      (empty-string-to-nil (-> attr :attribute/renderer))
+      (empty-string-to-nil (-> attr :attribute/hc-type :hc-type/renderer)))))
 
 (defn user-render [value maybe-field anchors props param-ctx]
   (let [{user-fn :value error :error} (eval-str (user-renderer param-ctx))]
