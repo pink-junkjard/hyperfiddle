@@ -10,7 +10,7 @@
             [hypercrud.ui.code-editor :refer [code-editor*]]
             [hypercrud.ui.input :as input]
             [hypercrud.ui.multi-select :refer [multi-select* multi-select-markup]]
-            [hypercrud.ui.radio :as radio]
+            [hypercrud.ui.radio :as radio]                  ; used in user renderers
             [hypercrud.ui.select :refer [select* select-boolean*]]
             [hypercrud.ui.textarea :refer [textarea*]]
             [re-com.core :as re-com :refer-macros [handler-fn]]
@@ -44,7 +44,8 @@
                                       (update :debug #(str % ">inline-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]"))
                                       (dissoc :result "entity"))]
                  ^{:key (hash anchor)}
-                 [browser/ui params-map ui-param-ctx]))))))
+                 [browser/ui params-map ui-param-ctx])))
+        (doall))))
 
 
 (defn keyword [value maybe-field anchors props param-ctx]
@@ -71,12 +72,6 @@
                        :value value
                        :on-change set-attr!}
                       props)]))
-
-
-(defn radio-ref [value maybe-field anchors props param-ctx]
-  ;;radio* needs parameterized markup fn todo
-  [radio/radio-ref* value maybe-field props param-ctx])
-
 
 (defn boolean [value maybe-field anchors props param-ctx]
   [:div.value

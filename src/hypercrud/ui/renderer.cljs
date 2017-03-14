@@ -15,7 +15,7 @@
 
 (def safe-user-renderer
   (reagent/create-class
-    {:reagent-render (fn [user-fn & props] [:div]) ; portal container
+    {:reagent-render (fn [user-fn & props] [:div])          ; portal container
      :component-did-mount safe-render!
      :component-will-unmount
      (fn [this]
@@ -25,12 +25,14 @@
 (defn empty-string-to-nil [s]
   (if (empty? s) nil s))
 
-(defn renderer-for-attribute [attribute]
-  (or (empty-string-to-nil (:attribute/renderer attribute))
-      (empty-string-to-nil (-> attribute :attribute/hc-type :hc-type/renderer))))
+(defn user-renderer [param-ctx]
+  (or
+    (empty-string-to-nil (get-in param-ctx [:fields (-> param-ctx :attribute :attribute/ident) :renderer]))
+    (empty-string-to-nil (-> param-ctx :attribute :attribute/renderer))
+    (empty-string-to-nil (-> param-ctx :attribute :attribute/hc-type :hc-type/renderer))))
 
-(defn attribute-renderer [value maybe-field anchors props param-ctx]
-  (let [{user-fn :value error :error} (eval-str (renderer-for-attribute (:attribute param-ctx)))]
+(defn user-render [value maybe-field anchors props param-ctx]
+  (let [{user-fn :value error :error} (eval-str (user-renderer param-ctx))]
     [:div.value
      (if error
        [:div.value [:pre (pr-str error)]]

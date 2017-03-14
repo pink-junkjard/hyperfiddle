@@ -90,8 +90,8 @@
                     [:td.truncate {:key (or (:db/id maybe-field) (str fe-name ident)) :style style}
                      (let [anchors (filter #(= (-> param-ctx :attribute :db/id) (some-> % :anchor/attribute :db/id)) attribute-anchors)
                            props (form-util/build-props value maybe-field anchors param-ctx)]
-                       (if (renderer/renderer-for-attribute (:attribute param-ctx))
-                         (renderer/attribute-renderer value maybe-field anchors props param-ctx)
+                       (if (renderer/user-renderer (:attribute param-ctx))
+                         (renderer/user-render value maybe-field anchors props param-ctx)
                          [auto-table-cell value maybe-field anchors props param-ctx]))])))
           (seq))
 

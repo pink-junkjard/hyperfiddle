@@ -4,62 +4,73 @@
             [hypercrud.form.option :as option]))
 
 
-(defn radio-option [label name change! checked?]
-  ;; explicitly don't pass any arguments from react because the callsite
-  ;; should have the value in closure scope, and the radios are confusing
-  (let [change! #(change!)]
-    [:div.radio-group
-     [:input {:type "radio"
-              :name name
-              :checked checked?
-              :on-change change!}]
-     [:label {:on-click change!} label]]))
+
+(defn radio-option [label target cur]
+  [:label {:key target}
+   [:input {:type "radio" :style {:width "auto"}
+            :checked (= @cur target) :on-change #(do (reset! cur target) nil)}]
+   label])
 
 
-; value is a scalar, the choice of options which is set-scalar
-; option is a set of scalar
-;(defn radio-scalar [value options {:keys [name prompt values]} change!]
-;  [:div.editable-radio {:key (hash options)}
-;   (map (fn [{:keys [label value]}]
-;          (let [change! nil
-;                checked? (= value @cur)]
-;            ^{:key (hash [label value])}
-;            [radio-option label name change! checked?]))
-;        options)
-;   #_(comment
-;       ^{:key :blank}
-;       [radio-option "--" form-name #(change! nil) (= nil value)])])
+; Old stuff.
+
+(comment
+  (defn radio-option [label name change! checked?]
+    ;; explicitly don't pass any arguments from react because the callsite
+    ;; should have the value in closure scope, and the radios are confusing
+    (let [change! #(change!)]
+      [:div.radio-group
+       [:input {:type "radio"
+                :name name
+                :checked checked?
+                :on-change change!}]
+       [:label {:on-click change!} label]]))
 
 
-(defn radio-boolean [entity field props {:keys [user-swap!] :as param-ctx}]
-  (assert false "todo readonly")
-  (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
-        value (get entity ident)
-        form-name (str (:db/id entity) ident)
-        change! #(user-swap! {:tx (tx/update-entity-attr entity attribute %)})]
-    [:div.value.radio-boolean {:key ident}
-     ^{:key :true}
-     [radio-option "True" form-name #(change! true) (= true value)]
-     ^{:key :false}
-     [radio-option "False" form-name #(change! false) (= false value)]
-     ^{:key :blank}
-     [radio-option "--" form-name #(change! nil) (= nil value)]]))
+  ; value is a scalar, the choice of options which is set-scalar
+  ; option is a set of scalar
+  ;(defn radio-scalar [value options {:keys [name prompt values]} change!]
+  ;  [:div.editable-radio {:key (hash options)}
+  ;   (map (fn [{:keys [label value]}]
+  ;          (let [change! nil
+  ;                checked? (= value @cur)]
+  ;            ^{:key (hash [label value])}
+  ;            [radio-option label name change! checked?]))
+  ;        options)
+  ;   #_(comment
+  ;       ^{:key :blank}
+  ;       [radio-option "--" form-name #(change! nil) (= nil value)])])
 
 
-(defn radio-ref* [value maybe-field props {:keys [user-swap!] :as param-ctx}]
-  (assert false "todo readonly")
-  ; TODO only one radio-group on the page until we get a unique form-name
-  (let [form-name "TODO"                                    ;form-name in the HTML sense
-        change! #(user-swap! {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %)})]
-    [:div.value {:key (option/get-hydrate-key maybe-field)}
-     (let [options (if maybe-field (option/hydrate-options maybe-field param-ctx) (exception/success []))]
-       (if (exception/failure? options)
-         [:span (pr-str (.-e options))])
-       (map (fn [[dbid label]]
-              ^{:key dbid} [radio-option label form-name #(change! dbid) (= dbid value)])
-            (.-v options)))
-     ^{:key :blank}
-     [radio-option "--" form-name #(change! nil) (= nil value)]]))
+  (defn radio-boolean [entity field props {:keys [user-swap!] :as param-ctx}]
+    (assert false "todo readonly")
+    (let [{:keys [:attribute/ident] :as attribute} (:field/attribute field)
+          value (get entity ident)
+          form-name (str (:db/id entity) ident)
+          change! #(user-swap! {:tx (tx/update-entity-attr entity attribute %)})]
+      [:div.value.radio-boolean {:key ident}
+       ^{:key :true}
+       [radio-option "True" form-name #(change! true) (= true value)]
+       ^{:key :false}
+       [radio-option "False" form-name #(change! false) (= false value)]
+       ^{:key :blank}
+       [radio-option "--" form-name #(change! nil) (= nil value)]]))
+
+
+  (defn radio-ref* [value maybe-field props {:keys [user-swap!] :as param-ctx}]
+    (assert false "todo readonly")
+    ; TODO only one radio-group on the page until we get a unique form-name
+    (let [form-name "TODO"                                  ;form-name in the HTML sense
+          change! #(user-swap! {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %)})]
+      [:div.value {:key (option/get-hydrate-key maybe-field)}
+       (let [options (if maybe-field (option/hydrate-options maybe-field param-ctx) (exception/success []))]
+         (if (exception/failure? options)
+           [:span (pr-str (.-e options))])
+         (map (fn [[dbid label]]
+                ^{:key dbid} [radio-option label form-name #(change! dbid) (= dbid value)])
+              (.-v options)))
+       ^{:key :blank}
+       [radio-option "--" form-name #(change! nil) (= nil value)]])))
 
 (comment
   ; todo factor out aggregation into widget lib

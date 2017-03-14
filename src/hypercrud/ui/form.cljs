@@ -20,8 +20,8 @@
           prompt))]
      (let [anchors (filter #(= (-> param-ctx :attribute :db/id) (some-> % :anchor/attribute :db/id)) anchors)
            props (form-util/build-props value maybe-field anchors param-ctx)]
-       (if (renderer/renderer-for-attribute (:attribute param-ctx))
-         (renderer/attribute-renderer value maybe-field anchors props param-ctx)
+       (if (renderer/user-renderer param-ctx)
+         (renderer/user-render value maybe-field anchors props param-ctx)
          [auto-control value maybe-field anchors props param-ctx]))]))
 
 (defn new-field [entity param-ctx]
