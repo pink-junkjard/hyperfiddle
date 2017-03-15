@@ -14,8 +14,10 @@
    {:domain domain
     :project project
     :link-dbid link-dbid #_:id
-    :query-params (->> (q-util/read-eval-formulas formula)
-                       (util/map-values #(q-util/run-formula % param-ctx)))})
+    :query-params (try                                      ; todo return monad
+                    (->> (q-util/read-eval-formulas formula)
+                         (util/map-values #(q-util/run-formula % param-ctx)))
+                    (catch js/Error e {}))})
   ([link formula param-ctx]
    (build-url-params-map
      (-> link :hypercrud/owner :database/domain)
