@@ -3,7 +3,8 @@
             [clojure.string :as string]
             [hypercrud.compile.eval :refer [eval]]
             [hypercrud.types :refer [->DbVal ->EntityRequest ->QueryRequest]]
-            [hypercrud.util :as util]))
+            [hypercrud.util :as util]
+            [hypercrud.ui.form-util :as form-util]))
 
 
 (defn safe-read-string [code-str]
@@ -75,7 +76,9 @@
 ;todo rename and move? ->queryRequest
 (defn query-value [q link-query params-map param-ctx]
   (let [params (build-params #(get params-map %) link-query param-ctx)
-        pull-exp (->> (:link-query/find-element link-query)
+        find-elements (:link-query/find-element link-query)
+        find-elements (-> find-elements (form-util/strip-forms-in-raw-mode param-ctx))
+        pull-exp (->> find-elements
                       (mapv (juxt :find-element/name (fn [{:keys [:find-element/connection :find-element/form]}]
                                                        [(->DbVal (-> connection :db/id :id) nil) (form-pull-exp form)])))
                       (into {}))]

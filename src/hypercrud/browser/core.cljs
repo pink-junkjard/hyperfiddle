@@ -184,8 +184,7 @@
                       system-anchors (if-not (system-links/system-link? (-> params-map :link-dbid))
                                        (system-links/system-anchors link result param-ctx))]
 
-                  ; get's not-found airity doesn't work since we copied it out of a cursor, its nil here
-                  (case (or (get param-ctx :display-mode) :dressed)
+                  (case (get param-ctx :display-mode)       ; default happens higher, it influences queries too
                     :dressed ((user-result link) result colspec (merge-anchors system-anchors (:link/anchor link)) (user-bindings link param-ctx))
                     :undressed (auto-control/result result colspec (merge-anchors system-anchors (:link/anchor link)) (user-bindings link param-ctx))
                     :raw (auto-control/result result colspec system-anchors param-ctx)))))]
@@ -256,7 +255,7 @@
                                                   (form-option-requests (:find-element/form find-element) param-ctx))))))))))))))
 
 
-(defn requests-for-link-query [link query-params {:keys [peer] :as param-ctx} recurse?]
+(defn requests-for-link-query [link query-params param-ctx recurse?]
   (let [link-query (:link/request link)
         q (some-> link-query :link-query/value reader/read-string)
         params-map (merge query-params (q-util/build-dbhole-lookup link-query))
@@ -268,17 +267,17 @@
              (mapv :find-element/connection)
              (mapv schema-util/schema-request))
         (if recurse?
-          (if-let [resultset (exception/extract (hc/hydrate peer request) nil)]
+          (if-let [resultset (exception/extract (hc/hydrate (:peer param-ctx) request) nil)]
             (dependent-requests resultset (:link-query/find-element link-query) (:link/anchor link) param-ctx)))))))
 
 
-(defn requests-for-link-entity [link query-params {:keys [peer] :as param-ctx} recurse?]
+(defn requests-for-link-entity [link query-params param-ctx recurse?]
   (let [request (q-util/->entityRequest (:link/request link) query-params)]
     (concat
       [request
        (schema-util/schema-request (get-in link [:link/request :link-entity/connection]))]
       (if recurse?
-        (if-let [resultset (exception/extract (hc/hydrate peer request) nil)]
+        (if-let [resultset (exception/extract (hc/hydrate (:peer param-ctx) request) nil)]
           (let [resultset (->> (if (map? resultset) [resultset] resultset)
                                (mapv #(assoc {} "entity" %)))
                 find-elements [{:find-element/name "entity"
