@@ -183,7 +183,9 @@
                       colspec (form-util/determine-colspec result link param-ctx)
                       system-anchors (if-not (system-links/system-link? (-> params-map :link-dbid))
                                        (system-links/system-anchors link result param-ctx))]
-                  (case (get param-ctx :display-mode :dressed)
+
+                  ; get's not-found airity doesn't work since we copied it out of a cursor, its nil here
+                  (case (or (get param-ctx :display-mode) :dressed)
                     :dressed ((user-result link) result colspec (merge-anchors system-anchors (:link/anchor link)) (user-bindings link param-ctx))
                     :undressed (auto-control/result result colspec (merge-anchors system-anchors (:link/anchor link)) (user-bindings link param-ctx))
                     :raw (auto-control/result result colspec system-anchors param-ctx)))))]
