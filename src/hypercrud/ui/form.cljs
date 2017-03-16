@@ -10,7 +10,6 @@
             [hypercrud.ui.code-editor :as code-editor]
             [reagent.core :as r]
             [re-com.core :as re-com]
-            [cljs.pprint :as pprint]
             [hypercrud.util :as util]))
 
 ; field is optional (raw mode); schema and attribute is in dynamic scope in all modes
@@ -33,7 +32,7 @@
                   :popover [re-com/popover-content-wrapper
                             :on-cancel #(do (reset! (tooltip-cur [:raw]) false) nil)
                             :no-clip? true
-                            :body [code-editor/code-editor* (util/pprint-str value) nil {:readOnly "nocursor"}]]]))
+                            :body [code-editor/code-editor* (util/pprint-str value 100) nil {:readOnly "nocursor"}]]]))
              " "
              [re-com/popover-tooltip
               :label docstring
