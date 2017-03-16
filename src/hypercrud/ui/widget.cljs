@@ -157,7 +157,7 @@
             code-widget (let [props (if-not (nil? (:read-only props))
                                       (-> props
                                           (dissoc :read-only)
-                                          (assoc :readOnly (if (:read-only props) "nocursor" false)))
+                                          (assoc :readOnly (:read-only props)))
                                       props)]
                           [code-editor* value change! props])]
         ^{:key ident}

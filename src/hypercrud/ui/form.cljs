@@ -32,7 +32,7 @@
                   :popover [re-com/popover-content-wrapper
                             :on-cancel #(do (reset! (tooltip-cur [:raw]) false) nil)
                             :no-clip? true
-                            :body [code-editor/code-editor* (util/pprint-str value 100) nil {:readOnly "nocursor"}]]]))
+                            :body [code-editor/code-editor* (util/pprint-str value 100) nil {:readOnly true}]]]))
              " "
              [re-com/popover-tooltip
               :label docstring

@@ -16,7 +16,7 @@
   (reagent/create-class
     {:reagent-render
      (fn [value change! props]
-       [:div.code-editor-wrapper
+       [:div.code-editor-wrapper {:class (if (:readOnly props) "read-only")}
         [:textarea {:default-value (str value) :auto-complete "off" :class "text"}]])
 
      :component-did-mount
