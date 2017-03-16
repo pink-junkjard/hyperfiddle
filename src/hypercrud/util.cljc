@@ -1,4 +1,7 @@
-(ns hypercrud.util)
+(ns hypercrud.util
+  (:require [clojure.string :as string]
+    #?(:clj  [clojure.pprint :refer [pprint]]
+       :cljs [cljs.pprint :refer [pprint]])))
 
 
 (defn map-values [f m]
@@ -52,3 +55,6 @@
   (map + [1 1 1] [1 1 1 1])                                 ;=> (2 2 2)
   ((map-pad 0) + [1 1 1] [1 1 1 1])                         ;=> (2 2 2 1)
   )
+
+(defn pprint-str [v]
+  (string/trim (with-out-str (pprint v))))

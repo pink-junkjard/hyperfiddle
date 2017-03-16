@@ -1,28 +1,53 @@
 (ns hypercrud.ui.form
-  (:require [hypercrud.types :refer [->DbVal]]
+  (:require [cursor.core :refer [cursor]]
+            [hypercrud.types :refer [->DbVal]]
+            [hypercrud.browser.connection-color :as connection-color]
             [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.form-util :as form-util]
             [hypercrud.ui.input :as input]
             [hypercrud.ui.renderer :as renderer]
             [hypercrud.ui.widget :as widget]
+            [hypercrud.ui.code-editor :as code-editor]
             [reagent.core :as r]
-            [hypercrud.browser.connection-color :as connection-color]))
+            [re-com.core :as re-com]
+            [cljs.pprint :as pprint]
+            [hypercrud.util :as util]))
 
 ; field is optional (raw mode); schema and attribute is in dynamic scope in all modes
 (defn field [value maybe-field anchors param-ctx]
-  (let [param-ctx (assoc param-ctx :value value)]
-    [:div.field {:style {:border-color (connection-color/connection-color (:color param-ctx))}}
-     [:label
-      (let [prompt (get maybe-field :field/prompt (-> param-ctx :attribute :attribute/ident str))
-            docstring (-> maybe-field :field/attribute :attribute/doc)]
-        (if-not (empty? docstring)
-          [:span.help {:on-click #(js/alert docstring)} prompt]
-          prompt))]
-     (let [anchors (filter #(= (-> param-ctx :attribute :db/id) (some-> % :anchor/attribute :db/id)) anchors)
-           props (form-util/build-props value maybe-field anchors param-ctx)]
-       (if (renderer/user-renderer param-ctx)
-         (renderer/user-render value maybe-field anchors props param-ctx)
-         [auto-control value maybe-field anchors props param-ctx]))]))
+  (let [tooltip-state (r/atom {:docstring false :raw false})]
+    (fn [value maybe-field anchors param-ctx]
+      (let [param-ctx (assoc param-ctx :value value)]
+        [:div.field {:style {:border-color (connection-color/connection-color (:color param-ctx))}}
+         [:label
+          (let [tooltip-cur (cursor tooltip-state)
+                docstring (or (-> maybe-field :field/attribute :attribute/doc) "")
+                field-prompt (get maybe-field :field/prompt (-> param-ctx :attribute :attribute/ident str))]
+            [:div
+             (let [is-ref? (coll? value)]
+               (if is-ref?
+                 [re-com/popover-anchor-wrapper
+                  :showing? (tooltip-cur [:raw])
+                  :position :below-center
+                  :anchor [:a {:href "javascript:void 0;" :on-click #(swap! (tooltip-cur [:raw]) not)} "§"]
+                  :popover [re-com/popover-content-wrapper
+                            :on-cancel #(do (reset! (tooltip-cur [:raw]) false) nil)
+                            :no-clip? true
+                            :body [code-editor/code-editor* (util/pprint-str value) nil {:readOnly "nocursor"}]]]))
+             " "
+             [re-com/popover-tooltip
+              :label docstring
+              :showing? (tooltip-cur [:docstring])
+              :anchor (let [props {:on-mouse-over #(do (if-not (empty? docstring) (reset! (tooltip-cur [:docstring]) true)) nil)
+                                   :on-mouse-out #(do (reset! (tooltip-cur [:docstring]) false) nil)
+                                   :class (if-not (empty? docstring) "help")}]
+                        [:span props field-prompt])]])]
+
+         (let [anchors (filter #(= (-> param-ctx :attribute :db/id) (some-> % :anchor/attribute :db/id)) anchors)
+               props (form-util/build-props value maybe-field anchors param-ctx)]
+           (if (renderer/user-renderer param-ctx)
+             (renderer/user-render value maybe-field anchors props param-ctx)
+             [auto-control value maybe-field anchors props param-ctx]))]))))
 
 (defn new-field [entity param-ctx]
   (let [attr-ident (r/atom nil)]
