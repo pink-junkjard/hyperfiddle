@@ -64,7 +64,7 @@
                                        :anchor/link (system-edit-link connection-dbid link-name parent-link)
                                        :anchor/repeating? true
                                        :anchor/find-element fe
-                                       :anchor/formula (pr-str {:entity-dbid-s `(fn [~'ctx]
+                                       :anchor/formula (pr-str {:entity `(fn [~'ctx]
                                                                                   (get-in ~'ctx [:result ~fe-name :db/id]))})}))))
 
             edit-attr-links (->> (partition 3 colspec)      ; driven by colspec, not find elements, because what matters is what's there.
@@ -78,7 +78,7 @@
                                                               :anchor/repeating? true
                                                               :anchor/find-element fe
                                                               :anchor/attribute attr
-                                                              :anchor/formula (pr-str {:entity-dbid-s '(fn [ctx] nil)})}]
+                                                              :anchor/formula (pr-str {:entity '(fn [ctx] nil)})}]
                                                nil))))
                                  doall)
             create-links (->> find-elements
@@ -90,7 +90,7 @@
                                          :anchor/prompt (str "create in " (:database/ident connection))
                                          :anchor/link (system-edit-link (:db/id connection) link-name parent-link)
                                          :anchor/repeating? false
-                                         :anchor/formula (pr-str {:entity-dbid-s `(fn [~'ctx]
+                                         :anchor/formula (pr-str {:entity `(fn [~'ctx]
                                                                                     (hc/*temp-id!* ~(-> connection :db/id :id)))})}))))]
         (concat create-links edit-links edit-attr-links))
 

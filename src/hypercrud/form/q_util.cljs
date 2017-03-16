@@ -86,7 +86,7 @@
 
 
 (defn ->entityRequest [link-entity params-map]
-  (let [dbid-s (:entity-dbid-s params-map)
+  (let [dbid-s (:entity params-map)
         dbval (->DbVal (-> link-entity :link-entity/connection :db/id :id) nil)
         pull-exp (form-pull-exp (:link-entity/form link-entity))]
     (->EntityRequest dbid-s dbval pull-exp)))
