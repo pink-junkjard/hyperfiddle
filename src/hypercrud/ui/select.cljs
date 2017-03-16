@@ -44,7 +44,10 @@
            props (update props :disabled #(or % no-options?))
            props (if (#{:find-element/connection :dbhole/value :hypercrud/owner} (-> param-ctx :attribute :attribute/ident)) ; lol hack
                    (assoc props :style {:background-color (connection-color/connection-color (-> value :db/id :id))})
-                   props)]
+                   props)
+           ; hack in the selected value if we don't have options hydrated?
+           ; Can't, since we only have the #DbId hydrated, and it gets complicated with relaton vs entity etc
+           ]
        [:select.select props
         (concat
           (->> (sort-by second option-records)
