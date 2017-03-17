@@ -32,8 +32,8 @@
                  (:db/ident valueType)))))
 
 (defn build-col-heads [colspec col-sort]
-  (->> (partition 3 colspec)
-       (mapv (fn [[fe-name ident field]]
+  (->> (partition 4 colspec)
+       (mapv (fn [[conn fe-name ident field]]
                (let [prompt (get field :field/prompt (str ident))
                      css-classes [(str "field-element-" (form-util/css-slugify fe-name))
                                   (str "field-attr-" (form-util/css-slugify (str ident)))] #_"Dustin removed field-id and field-prompt; use a custom renderer"
@@ -56,7 +56,10 @@
 
                      ]
 
-                 [:td {:class (string/join " " css-classes) :key (str fe-name "-" ident) :on-click on-click}
+                 [:td {:class (string/join " " css-classes)
+                       :style {:background-color (connection-color/connection-color (-> conn :db/id :id))}
+                       :key (str fe-name "-" ident)
+                       :on-click on-click}
                   (str prompt)
                   (let [docstring (-> field :field/attribute :attribute/doc)]
                     (if-not (empty? docstring)
@@ -76,8 +79,8 @@
                                                        (:find-element/name find-element)
                                                        "entity"))))]
     [:tr
-     (->> (partition 3 colspec)
-          (mapv (fn [[fe-name ident maybe-field]]           ; (fe-name, ident) are unique if taken together
+     (->> (partition 4 colspec)
+          (mapv (fn [[conn fe-name ident maybe-field]]      ; (fe-name, ident) are unique if taken together
                   (let [entity (get relation fe-name)
                         param-ctx (-> (form-util/entity-param-ctx entity param-ctx)
                                       (assoc :attribute (get (:schema param-ctx) ident)
@@ -104,8 +107,9 @@
                                           (filter #(nil? (:anchor/attribute %))))
                                      (repeatedly (constantly param-ctx)))
                                ; find-element anchors need more items in their ctx
-                               (->> (partition 3 colspec)
-                                    (mapv first) (set)      ; distinct find elements
+                               (->> (partition 4 colspec)
+                                    (mapv (fn [[conn fe-name attr maybe-field]] fe-name))
+                                    (set)                   ; distinct find elements
                                     (mapcat (fn [fe-name]
                                               (let [entity (get relation fe-name)
                                                     param-ctx (form-util/entity-param-ctx entity param-ctx)

@@ -61,7 +61,8 @@ the find-element level has been flattened out of the columns."
 
                     ; find-elements are parsed from the query, so they are known to be good,
                     ; even in raw mode when they haven't been modeled yet.
-                    find-element-name (-> fe :find-element/name)
+                    fe-name (-> fe :find-element/name)
+                    fe-conn (-> fe :find-element/connection)
 
                     entities (map second relation-for-fe)
                     col-idents (if (or raw-mode? (empty? (keys indexed-fields)))
@@ -74,7 +75,7 @@ the find-element level has been flattened out of the columns."
                                              k))
                                          col-idents)]
                 (mapcat (fn [k]
-                          [find-element-name k (get indexed-fields k)]) col-idents')))
+                          [fe-conn fe-name k (get indexed-fields k)]) col-idents')))
             result-as-columns
             ordered-find-elements)
       (flatten)

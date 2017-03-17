@@ -95,8 +95,8 @@
                                                 "entity"))))
 
            ;; Missing are find-element anchors (need to hoist and concat), its just one form now not a list-form
-           spec-fields (->> (partition 3 colspec)
-                            (mapv (fn [[fe-name ident maybe-field]]
+           spec-fields (->> (partition 4 colspec)
+                            (mapv (fn [[conn fe-name ident maybe-field]]
                                     (let [entity (get relation fe-name)
                                           fe-anchors (get fe-anchors-lookup fe-name)
                                           param-ctx (as-> param-ctx $
@@ -108,8 +108,8 @@
                                           v (get entity ident)]
                                       ^{:key (str ident)}
                                       [field v maybe-field anchors param-ctx]))))
-           form? (->> (partition 3 colspec)
-                      (mapv #(nth % 2))
+           form? (->> (partition 4 colspec)
+                      (mapv (fn [[conn fe-name attr maybe-field]] maybe-field))
                       (every? #(not= nil %)))
            extra (if-not form?
                    ; can we assert entity? No, bc we could model a link to a single relation without a form.

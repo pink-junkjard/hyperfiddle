@@ -67,8 +67,8 @@
                                        :anchor/formula (pr-str {:entity `(fn [~'ctx]
                                                                                   (get-in ~'ctx [:result ~fe-name :db/id]))})}))))
 
-            edit-attr-links (->> (partition 3 colspec)      ; driven by colspec, not find elements, because what matters is what's there.
-                                 (mapcat (fn [[fe-name ident maybe-field]]
+            edit-attr-links (->> (partition 4 colspec)      ; driven by colspec, not find elements, because what matters is what's there.
+                                 (mapcat (fn [[conn fe-name ident maybe-field]]
                                            (let [fe (get find-elements fe-name)
                                                  attr ((:schema param-ctx) ident)]
                                              (case (-> attr :attribute/valueType :db/ident)

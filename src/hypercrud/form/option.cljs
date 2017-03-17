@@ -19,8 +19,8 @@
       (str v)))
 
 (defn build-label [colspec result param-ctx]
-  (->> (partition 3 colspec)
-       (mapv (fn [[fe-name ident maybe-field]]
+  (->> (partition 4 colspec)
+       (mapv (fn [[conn fe-name ident maybe-field]]
                ; Custom label renderers? Can't use the attribute renderer, since that
                ; is how we are in a select options in the first place.
                (let [value (get-in result [fe-name ident])
@@ -59,6 +59,6 @@
             (cats/return
               (->> result
                    (mapv (fn [relation]
-                           (let [[fe-name ident maybe-field] (first (partition 3 colspec))
+                           (let [[conn fe-name ident maybe-field] (first (partition 4 colspec))
                                  entity (get relation fe-name)]
                              [(:db/id entity) (build-label colspec relation param-ctx)])))))))))
