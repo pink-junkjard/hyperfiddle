@@ -8,6 +8,7 @@
                   [org.clojure/core.match "0.3.0-alpha4"]
                   [org.clojars.cemerick/loom "0.6.1-SNAPSHOT"] ; see https://github.com/aysylu/loom/pull/91
                   [reagent "0.6.0-rc" :exclusions [] #_ [cljsjs/react cljsjs/react-dom cljsjs/react-dom-server]]
+                  [re-com "2.0.0"]
 
                   [adzerk/boot-cljs "1.7.228-1" :scope "test"]
                   [adzerk/bootlaces "0.1.13" :scope "test"]
