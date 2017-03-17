@@ -21,7 +21,7 @@
          [:label
           (let [tooltip-cur (cursor tooltip-state)
                 docstring (or (-> maybe-field :field/doc) "")
-                field-prompt (get maybe-field :field/prompt (-> param-ctx :attribute :attribute/ident str))]
+                field-prompt (util/fallback empty? (get maybe-field :field/prompt) (-> param-ctx :attribute :attribute/ident str))]
             [:div
              (let [is-ref? (coll? value)]
                (if is-ref?

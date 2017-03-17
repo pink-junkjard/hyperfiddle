@@ -57,6 +57,9 @@
   )
 
 (defn pprint-str [v & [columns]]
-  (string/trim
+  (string/trimr
     (binding [pprint/*print-right-margin* (or columns pprint/*print-right-margin*)]
       (with-out-str (pprint/pprint v)))))
+
+(defn fallback [p v not-found]
+  (if-not (p v) v not-found))
