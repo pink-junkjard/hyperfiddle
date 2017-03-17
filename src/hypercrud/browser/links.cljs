@@ -45,9 +45,9 @@
 (defn anchor-valid? [link url-params]                       ; could return monad to say why
   ; We specifically hydrate this deep just so we can validate anchors like this.
   (case (link-util/link-type link)
-    :link-query (-> link :link/request :link-query/value
-                    reader/read-string q-util/parse-param-holes
-                    (holes-filled? (:query-params url-params)))
+    :link-query (some-> link :link/request :link-query/value
+                        reader/read-string q-util/parse-param-holes
+                        (holes-filled? (:query-params url-params)))
     :link-entity (contains? (:query-params url-params) :entity)
     false))
 
