@@ -20,7 +20,7 @@
         [:div.field {:style {:border-color (connection-color/connection-color (:color param-ctx))}}
          [:label
           (let [tooltip-cur (cursor tooltip-state)
-                docstring (or (-> maybe-field :field/attribute :attribute/doc) "")
+                docstring (or (-> maybe-field :field/doc) "")
                 field-prompt (get maybe-field :field/prompt (-> param-ctx :attribute :attribute/ident str))]
             [:div
              (let [is-ref? (coll? value)]
