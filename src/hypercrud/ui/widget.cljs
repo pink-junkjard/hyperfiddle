@@ -59,11 +59,14 @@
 
 
 (defn long [value maybe-field anchors props param-ctx]
-  [input/validated-input
-   value #((:user-swap! param-ctx) {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %)})
-   #(js/parseInt % 10) pr-str
-   #(integer? (js/parseInt % 10))
-   props])
+  [:div.value
+   [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
+   [input/validated-input
+    value #((:user-swap! param-ctx) {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %)})
+    #(js/parseInt % 10) pr-str
+    #(integer? (js/parseInt % 10))
+    props]
+   (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)])
 
 
 (defn textarea [value maybe-field anchors props param-ctx]
