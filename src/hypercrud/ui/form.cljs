@@ -116,30 +116,7 @@
                    (if-let [entity (get relation "entity")] ; makes sense only for entity links, not query links as entity.
                      ^{:key (hash (keys entity))} [new-field entity param-ctx]))]
 
-       (concat spec-fields [extra])
-
-       #_(map (fn [find-element]
-                (let [entity (get relation (:find-element/name find-element))
-                      find-element-anchors (get fe-anchors-lookup (:find-element/name find-element))
-                      param-ctx (assoc param-ctx :color ((:color-fn param-ctx) entity param-ctx)
-                                                 :owner ((:owner-fn param-ctx) entity param-ctx)
-                                                 :entity entity)]
-                  ^{:key (str (:db/id entity) "-" (:find-element/name find-element))}
-                  [:div.find-element
-                   (widget/render-anchors (->> find-element-anchors
-                                               (filter #(nil? (:anchor/attribute %)))
-                                               (remove :anchor/render-inline?))
-                                          param-ctx)
-                   (let [form* (if (not= (:display-mode param-ctx) :raw)
-                                 (:find-element/form find-element)
-                                 ; Ignore form in raw mode; it might be over-hydrated
-                                 nil)]
-                     [form entity form* find-element-anchors param-ctx])
-                   (widget/render-inline-links (->> find-element-anchors
-                                                    (filter #(nil? (:anchor/attribute %)))
-                                                    (filter :anchor/render-inline?))
-                                               (dissoc param-ctx :isComponent))]))
-              ordered-find-elements))
+       (concat spec-fields [extra]))
      (widget/render-inline-links (concat
                                    ; non-repeating doesn't get :result
                                    (let [param-ctx (dissoc param-ctx :isComponent)]
