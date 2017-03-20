@@ -22,7 +22,7 @@
      [:option {:key :nil :value ""} "--"]]))
 
 
-(defn select* [value maybe-field props param-ctx]
+(defn select* [value options-anchor props param-ctx]
   ; value :: {:db/id #DbId[17592186045891 17592186045422]}
   (let [props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
                :value (cond
@@ -33,14 +33,16 @@
                :on-change #(let [select-value (.-target.value %)
                                  dbid (cond
                                         (= "" select-value) nil
-                                        :else-hc-select-option-node (->DbId (js/parseInt select-value 10) (-> value :db/id :conn-id)))]
-                             ((:user-swap! param-ctx) {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) dbid)}))
-               :disabled (if (:read-only props) true false)}
-        ; Having options is not required e.g. raw mode.
-        options (if maybe-field (option/hydrate-options maybe-field param-ctx) (exception/success []))]
+                                        :else-hc-select-option-node (->DbId (js/parseInt select-value 10) (-> value :db/id :conn-id)))] ;todo bugfix, value can be null
+                            ((:user-swap! param-ctx) {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) dbid)}))
+               :disabled (:read-only props)}
+        options (option/hydrate-options options-anchor param-ctx)]
     [:span.select
-     (let [option-records (.-v options)
-           no-options? (or (not maybe-field) (exception/failure? options) (empty? (exception/extract options)))
+     (let [option-records (exception/extract options nil)
+           _ (when (exception/failure? options)
+               ; todo something better with this exception
+               (.error js/console (pr-str (.-e options))))
+           no-options? (empty? option-records)
            props (update props :disabled #(or % no-options?))
            props (if (#{:find-element/connection :link-entity/connection :dbhole/value :hypercrud/owner} (-> param-ctx :attribute :attribute/ident)) ; lol hack
                    (assoc props :style {:background-color (connection-color/connection-color (-> value :db/id :id))})

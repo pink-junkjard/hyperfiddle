@@ -32,32 +32,14 @@
 
 
 (defn request-for-link [link-dbid]
-  (let [inner-form-pull-exp ['*
-                             {:hypercrud/owner ['*]
-                              :form/field
-                              ['*
-                               {:field/attribute ['*
-                                                  {:attribute/valueType [:db/id :db/ident]
-                                                   :attribute/cardinality [:db/id :db/ident]
-                                                   :attribute/unique [:db/id :db/ident]}]}]}]
-        form-pull-exp ['*
+  (let [form-pull-exp ['*
                        {:hypercrud/owner ['*]
                         :form/field
                         ['*
                          {:field/attribute ['*
                                             {:attribute/valueType [:db/id :db/ident]
                                              :attribute/cardinality [:db/id :db/ident]
-                                             :attribute/unique [:db/id :db/ident]}]
-                          ; we don't have to recurse for options-anchors
-                          ; because we know these links don't have additional links
-                          :field/options-anchor ['*
-                                                 {:anchor/link
-                                                  ['*
-                                                   {:hypercrud/owner ['*]
-                                                    :link/request ['*
-                                                                   {:link-entity/form inner-form-pull-exp
-                                                                    :link-query/find-element ['*
-                                                                                              {:find-element/form inner-form-pull-exp}]}]}]}]}]}]]
+                                             :attribute/unique [:db/id :db/ident]}]}]}]]
     (->EntityRequest link-dbid (->DbVal hc/*root-conn-id* nil)
                      ['*
                       {:link/request ['*
@@ -195,26 +177,6 @@
 
 (declare request)
 
-
-(defn field-requests [param-ctx field]
-  (let [{:keys [:attribute/valueType :attribute/isComponent]} (:field/attribute field)
-        is-ref (= (:db/ident valueType) :db.type/ref)]
-    ; if we are a ref we ALWAYS need the query from the field options
-    ; EXCEPT when we are component, in which case no options are rendered, just a form, handled below
-    (if (and is-ref (not isComponent))
-      (if-let [options-anchor (:field/options-anchor field)]
-        (let [params-map (links/build-url-params-map options-anchor param-ctx)
-              param-ctx (-> param-ctx
-                            (update :debug #(str % ">field-options[" (:db/id field) "]"))
-                            (dissoc :entity :request))]
-          (request params-map param-ctx false))))))
-
-
-(defn form-option-requests "get the form options recursively for all expanded forms"
-  [form param-ctx]
-  (mapcat #(field-requests param-ctx %) (:form/field form)))
-
-
 (defn dependent-requests [resultset find-elements anchors param-ctx]
   (let [anchors (filter :anchor/render-inline? anchors)     ; at this point we only care about inline anchors
         repeating-anchors-lookup (->> anchors
@@ -248,11 +210,8 @@
                                     (mapcat (fn [find-element]
                                               (let [entity (get result (:find-element/name find-element))
                                                     param-ctx (assoc param-ctx :entity entity)]
-                                                (concat
-                                                  (->> (get repeating-anchors-lookup (:find-element/name find-element))
-                                                       (mapcat #(recurse-request % param-ctx)))
-                                                  ; field/options-anchor requests (require :result and :entity in param-ctx)
-                                                  (form-option-requests (:find-element/form find-element) param-ctx))))))))))))))
+                                                (->> (get repeating-anchors-lookup (:find-element/name find-element))
+                                                     (mapcat #(recurse-request % param-ctx)))))))))))))))
 
 
 (defn requests-for-link-query [link query-params param-ctx recurse?]

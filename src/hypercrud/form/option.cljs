@@ -37,19 +37,19 @@
        (interpose ", ")
        (apply str)))
 
-(defn get-hydrate-key [field]
-  (hash (-> field :field/options-anchor :anchor/link :link/request)))
-
-
-(defn hydrate-options [field param-ctx]                     ; needs to return options as [[:db/id label]]
-  (assert field)
-  ; we are assuming we have a query link here
-  (let [link (-> field :field/options-anchor :anchor/link)
+(defn hydrate-options [options-anchor param-ctx]                     ; needs to return options as [[:db/id label]]
+  (assert options-anchor)
+  (let [link (let [request (browser/request-for-link (-> options-anchor :anchor/link :db/id))
+                   resp (hc/hydrate (:peer param-ctx) request)]
+               (if (exception/failure? resp)
+                 (.error js/console (pr-str (.-e resp)))
+                 (exception/extract resp)))
         request (-> link :link/request)]
+    ; we are assuming we have a query link here
     (mlet [q (if-let [qstr (:link-query/value request)]     ; We avoid caught exceptions when possible
                (exception/try-on (reader/read-string qstr))
                (exception/failure nil))                     ; is this a success or failure? Doesn't matter - datomic will fail.
-           result (let [params-map (merge (:query-params (links/build-url-params-map (:field/options-anchor field) param-ctx))
+           result (let [params-map (merge (:query-params (links/build-url-params-map options-anchor param-ctx))
                                           (q-util/build-dbhole-lookup request))
                         query-value (q-util/query-value q request params-map param-ctx)]
                     (hc/hydrate (:peer param-ctx) query-value))]

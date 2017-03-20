@@ -1,12 +1,12 @@
 (ns hypercrud.ui.widget
   (:refer-clojure :exclude [keyword long boolean])
-  (:require [cljs.reader :as reader]
+  (:require [cats.monad.exception :as exception]
+            [cljs.reader :as reader]
             [hypercrud.browser.core :as browser]
             [hypercrud.browser.links :as links]
             [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx]
             [hypercrud.form.option :as option]
-            [hypercrud.form.q-util :as q-util]
             [hypercrud.ui.code-editor :refer [code-editor*]]
             [hypercrud.ui.input :as input]
             [hypercrud.ui.multi-select :refer [multi-select* multi-select-markup]]
@@ -91,13 +91,21 @@
 
 ; this can be used sometimes, on the entity page, but not the query page
 (defn ref [value maybe-field anchors props param-ctx]
-  [:div.value
-   [:div.editable-select {:key (option/get-hydrate-key maybe-field)} ; not sure if this is okay in nil field case, might just work
-    [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
-    (if maybe-field
-      (select* value maybe-field props param-ctx)
-      (dbid value props param-ctx))]
-   (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)])
+  (let [grouped (group-by :anchor/render-inline? anchors)
+        anchors (get grouped false)
+        grouped (group-by #(= :select-options (:anchor/ident %)) (get grouped true))
+        inline-links (get grouped false)
+        options-anchors (get grouped true)
+        maybe-options-anchor (do (assert (<= (count options-anchors) 1) "More than one options-anchor found")
+                                 (first options-anchors))]
+    [:div.value
+     ; todo this key is encapsulating other unrelated anchors
+     [:div.editable-select {:key (hash (get-in maybe-options-anchor [:anchor/link :link/request]))} ; not sure if this is okay in nil field case, might just work
+      [:div.anchors (render-anchors anchors param-ctx)]     ;todo can this be lifted out of editable-select?
+      (if maybe-options-anchor
+        (select* value maybe-options-anchor props param-ctx)
+        (dbid value props param-ctx))]
+     (render-inline-links maybe-field inline-links param-ctx)]))
 
 
 (defn ref-component [value maybe-field anchors props param-ctx]
