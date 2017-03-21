@@ -59,13 +59,13 @@
 
 
 (defn user-result [link]
-  (let [render-fn (if (empty? (:link/renderer link))
-                    auto-control/result
-                    (let [{f :value error :error} (eval-str (:link/renderer link))]
-                      (if error
-                        (fn [type result colspec anchor-index param-ctx]
-                          [:pre (pprint/pprint error)])
-                        f)))]
+  (let [user-fn (if (empty? (:link/renderer link))
+                  auto-control/result
+                  (let [{f :value error :error} (eval-str (:link/renderer link))]
+                    (if error
+                      (fn [type result colspec anchor-index param-ctx]
+                        [:pre (pprint/pprint error)])
+                      f)))]
     (fn [result colspec anchors param-ctx]
       (let [anchor-index (->> anchors
                               (mapv (juxt #(-> % :anchor/ident) identity))
@@ -93,11 +93,11 @@
                                    (let [anchor (get anchor-index ident)
                                          props (-> (links/build-link-props anchor param-ctx)
                                                    #_(dissoc :style) #_"custom renderers don't want colored links")]
-                                     [(:navigate-cmp param-ctx) props label param-ctx]))
+                                     [(:navigate-cmp param-ctx) props label]))
                         ;:inline-result inline-result
                         )]
         ; result is relation or set of relations
-        [renderer/safe-user-renderer render-fn result colspec anchors param-ctx]))))
+        [renderer/safe-user-renderer user-fn result colspec anchors param-ctx]))))
 
 (defn merge-anchors [sys-anchors link-anchors]
   ; Merge the link-anchors into the sys-anchors such that matching anchors properly override.

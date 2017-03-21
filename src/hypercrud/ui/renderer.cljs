@@ -42,10 +42,11 @@
        (let [anchor-lookup (->> anchors
                                 (mapv (juxt #(-> % :anchor/ident) identity))
                                 (into {}))
-             ; Todo unify link-fn with widget interface or something
-             link-fn (fn [ident label param-ctx]
-                       (let [anchor (get anchor-lookup ident)
-                             props (links/build-link-props anchor param-ctx)]
-                         [(:navigate-cmp param-ctx) props label param-ctx]))]
+             param-ctx (assoc param-ctx                     ; Todo unify link-fn with widget interface or something
+                         :link-fn
+                         (fn [ident label param-ctx]
+                           (let [anchor (get anchor-lookup ident)
+                                 props (links/build-link-props anchor param-ctx)] ; needs param-ctx to run formulas
+                             [(:navigate-cmp param-ctx) props label])))]
          ; Same interface as auto-control widgets.
          [safe-user-renderer user-fn value maybe-field anchors props param-ctx]))]))

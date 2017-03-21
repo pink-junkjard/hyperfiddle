@@ -24,7 +24,7 @@
         (mapv (fn [[anchor param-ctx]]
                 (assert (:navigate-cmp param-ctx))
                 ^{:key (hash anchor)}                       ; not a great key but syslinks don't have much.
-                [(:navigate-cmp param-ctx) (links/build-link-props anchor param-ctx) (:anchor/prompt anchor) param-ctx]))
+                [(:navigate-cmp param-ctx) (links/build-link-props anchor param-ctx) (:anchor/prompt anchor)]))
         (interpose " · ")))
   ([anchors param-ctx]
    (render-anchors (map vector anchors (repeat param-ctx)))))
