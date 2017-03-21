@@ -18,7 +18,7 @@
                  (and (= valueType :db.type/instant) (= cardinality :db.cardinality/one)) widget/instant
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one) isComponent) widget/ref-component
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one)) widget/ref
-                 (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) widget/ref-many
+                 (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) widget/ref-many-table
                  :else widget/raw)]
     (widget value maybe-field anchors props param-ctx)))
 
@@ -36,7 +36,7 @@
                  (and (= valueType :db.type/instant) (= cardinality :db.cardinality/one)) widget/instant
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one) isComponent) table-cell/ref-one-component
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one)) widget/ref
-                 (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) widget/ref-many
+                 (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) table-cell/ref-many
                  (and (= cardinality :db.cardinality/many)) table-cell/other-many
                  :else widget/raw)]
     (widget value maybe-field anchors props param-ctx)))

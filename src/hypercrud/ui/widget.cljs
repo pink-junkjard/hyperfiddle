@@ -1,6 +1,7 @@
 (ns hypercrud.ui.widget
   (:refer-clojure :exclude [keyword long boolean])
   (:require [cats.monad.exception :as exception]
+            [cljs.reader :as reader]
             [hypercrud.browser.core :as browser]
             [hypercrud.browser.links :as links]
             [hypercrud.client.core :as hc]
@@ -12,7 +13,6 @@
             [hypercrud.ui.radio :as radio]                  ; used in user renderers
             [hypercrud.ui.select :refer [select* select-boolean*]]
             [hypercrud.ui.textarea :refer [textarea*]]
-            [hypercrud.types :refer [->DbId]]
             [re-com.core :as re-com :refer-macros [handler-fn]]
             [reagent.core :as r]))
 
@@ -47,14 +47,6 @@
                  [browser/ui params-map ui-param-ctx])))
         (doall))))
 
-(defn process-anchors [anchors]
-  (let [grouped (group-by :anchor/render-inline? anchors)
-        inline-grouped (group-by #(= :select-options (:anchor/ident %)) (get grouped true))
-        options-anchors (get inline-grouped true)]
-    {:inline (get inline-grouped false)
-     :select-options (do (assert (<= (count options-anchors) 1) "More than one options-anchor found")
-                         (first options-anchors))
-     :rest (get grouped false)}))
 
 (defn keyword [value maybe-field anchors props param-ctx]
   (let [on-change! #((:user-swap! param-ctx) {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %)})]
@@ -99,15 +91,21 @@
 
 ; this can be used sometimes, on the entity page, but not the query page
 (defn ref [value maybe-field anchors props param-ctx]
-  (let [{:keys [inline select-options rest]} (process-anchors anchors)]
+  (let [grouped (group-by :anchor/render-inline? anchors)
+        anchors (get grouped false)
+        grouped (group-by #(= :select-options (:anchor/ident %)) (get grouped true))
+        inline-links (get grouped false)
+        options-anchors (get grouped true)
+        maybe-options-anchor (do (assert (<= (count options-anchors) 1) "More than one options-anchor found")
+                                 (first options-anchors))]
     [:div.value
      ; todo this key is encapsulating other unrelated anchors
-     [:div.editable-select {:key (hash (get-in select-options [:anchor/link :link/request]))} ; not sure if this is okay in nil field case, might just work
-      [:div.anchors (render-anchors rest param-ctx)]        ;todo can this be lifted out of editable-select?
-      (if select-options
-        (select* value select-options props param-ctx)
+     [:div.editable-select {:key (hash (get-in maybe-options-anchor [:anchor/link :link/request]))} ; not sure if this is okay in nil field case, might just work
+      [:div.anchors (render-anchors anchors param-ctx)]     ;todo can this be lifted out of editable-select?
+      (if maybe-options-anchor
+        (select* value maybe-options-anchor props param-ctx)
         (dbid value props param-ctx))]
-     (render-inline-links maybe-field inline param-ctx)]))
+     (render-inline-links maybe-field inline-links param-ctx)]))
 
 
 (defn ref-component [value maybe-field anchors props param-ctx]
@@ -124,40 +122,29 @@
    (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)
    [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]])
 
-(defn ref-many [value maybe-field anchors props param-ctx]
-  (let [initial-select (-> (option/hydrate-options (:select-options (process-anchors anchors)) param-ctx)
-                           (exception/extract nil)          ; todo handle exception
-                           first
-                           first)
-        select-value-atom (r/atom initial-select)]
-    (fn [value maybe-field anchors props param-ctx]
-      (let [{:keys [inline select-options rest]} (process-anchors anchors)]
+
+(comment
+  (let [initial-select (let [result (first (option/hydrate-options field param-ctx))]
+                         (assert (= 1 (count result)) "Cannot use multiple find-elements for an options-link")
+                         (first result))
+        select-value-atom (r/atom (:db/id initial-select))]
+    (fn [entity {:keys [field graph navigate-cmp user-swap!]}]
+      (let [ident (-> field :field/attribute :attribute/ident)
+            resultset (mapv vector (get entity ident))]
         [:div.value
-         [:div.anchors (render-anchors rest param-ctx)]
-         [:ul
-          (->> value
-               (map (fn [v]
-                      [:li {:key (:db/id v)}
-                       (:db/id v) ; todo remove button
-                       ])))]
-         [:div.table-controls
-          (if select-options
-            (let [props {:value (-> @select-value-atom :id str)
-                         :on-change #(let [select-value (.-target.value %)
-                                           dbid (when (not= "" select-value)
-                                                  (->DbId (js/parseInt select-value 10) (get-in param-ctx [:entity :db/id :conn-id])))]
-                                       (.log js/console (pr-str select-value))
-                                       (reset! select-value-atom dbid))}
-                  ; need lower level select component that can be reused here and in select.cljs
-                  select-options (->> (exception/extract (option/hydrate-options select-options param-ctx) nil) ;todo handle exception
-                                      (map (fn [[dbid label-prop]]
-                                             [:option {:key (:id dbid) :value (-> dbid :id str)} label-prop])))]
-              [:select props select-options])
-            ; todo wire input to up arrow
-            #_(dbid value props param-ctx))
-          [:br]
-          [:button {:on-click #((:user-swap! param-ctx) {:tx (tx/edit-entity (get-in param-ctx [:entity :db/id]) (-> param-ctx :attribute :attribute/ident) [] [@select-value-atom])})} "⬆"]]
-         (render-inline-links maybe-field inline param-ctx)]))))
+         [table/table graph resultset (vector (:field/form field)) user-swap! navigate-cmp] ; busto
+         (let [props {:value (str @select-value-atom)
+                      :on-change #(let [select-value (.-target.value %)
+                                        value (reader/read-string select-value)]
+                                    (reset! select-value-atom value))}
+               ; need lower level select component that can be reused here and in select.cljs
+               select-options (->> (option/hydrate-options field param-ctx)
+                                   (sort-by second)
+                                   (map (fn [[dbid label-prop]]
+                                          [:option {:key (hash dbid) :value (pr-str dbid)} label-prop])))]
+           [:div.table-controls
+            [:select props select-options]
+            [:button {:on-click #(user-swap! {:tx (tx/edit-entity (:db/id entity) ident [] [@select-value-atom])})} "⬆"]])]))))
 
 (defn ref-many-component-table [value maybe-field anchors props param-ctx]
   [:div.value
