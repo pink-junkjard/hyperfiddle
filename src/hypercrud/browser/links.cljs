@@ -48,7 +48,7 @@
     :link-query (some-> link :link/request :link-query/value
                         reader/read-string q-util/parse-param-holes
                         (holes-filled? (:query-params url-params)))
-    :link-entity (contains? (:query-params url-params) :entity)
+    :link-entity (not= nil (-> url-params :query-params :entity))
     false))
 
 (defn anchor-tooltip [link url-params param-ctx]
