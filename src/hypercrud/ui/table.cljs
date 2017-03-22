@@ -148,9 +148,9 @@
   (let [sort-col (r/atom nil)]
     (fn [relations colspec anchors param-ctx]
       (let [non-repeating-top-anchors (->> anchors
-                                           (remove :anchor/repeating?)
-                                           (filter #(nil? (:anchor/find-element %)))
-                                           (filter #(nil? (:anchor/attribute %))))]
+                                           (remove :anchor/repeating?) ; if non-repeating, the rest has to be nil
+                                           #_(filter #(nil? (:anchor/find-element %)))
+                                           #_(filter #(nil? (:anchor/attribute %))))]
         [:div.ui-table-with-links
          [:table.ui-table
           [:thead
