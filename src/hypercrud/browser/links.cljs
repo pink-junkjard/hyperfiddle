@@ -89,6 +89,13 @@
                  [:warning (pr-str (:query-params url-params))])
     nil))
 
+(defn build-link-props-raw [route link param-ctx] ; param-ctx is for display-mode
+  ; doesn't handle tx-fn - meant for the self-link. Weird and prob bad.
+  {:route route
+   :style {:color (connection-color/connection-color (-> link :hypercrud/owner :db/id :id))}
+   :tooltip (anchor-tooltip link route param-ctx)
+   :class (if-not (anchor-valid? link route) "invalid")})
+
 (defn build-link-props [anchor param-ctx]
   (let [param-ctx (assoc param-ctx :link-owner (-> anchor :anchor/link :hypercrud/owner)) ; tx-fn may need this
         tx-fn (if-let [tx-fn (:anchor/tx-fn anchor)]
@@ -100,11 +107,8 @@
       {:on-click #(let [result (tx-fn param-ctx)]           ; tx-fn may be sync or async
                     (-> (if-not (p/promise? result) (p/resolved result) result)
                         (p/then (:user-swap! param-ctx))))}
-      (let [url-params (build-url-params-map anchor param-ctx) #_"return monad so tooltip can draw the error?"]
-        {:route url-params
-         :style {:color (connection-color/connection-color (-> anchor :anchor/link :hypercrud/owner :db/id :id))}
-         :tooltip (anchor-tooltip (:anchor/link anchor) url-params param-ctx)
-         :class (if-not (anchor-valid? (:anchor/link anchor) url-params) "invalid")}))))
+      (let [route (build-url-params-map anchor param-ctx) #_"return monad so tooltip can draw the error?"]
+        (build-link-props-raw route (:anchor/link anchor) param-ctx)))))
 
 (defn link-visible? [anchor param-ctx]
   (let [visible-src (:anchor/visible? anchor)
