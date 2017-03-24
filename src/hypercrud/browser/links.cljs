@@ -9,6 +9,30 @@
             [hypercrud.browser.link-util :as link-util]))
 
 
+(defn auto-formula [anchor]                                 ; what about long-coersion?
+  ; we don't need eval to do this, we can do it as a special form in a new airity TODO
+  (let [{:keys [:anchor/repeating? :anchor/find-element :anchor/attribute]} anchor]
+    ; its weird - we already have this info in dynamic scope, (:result, :entity, :value)
+    ; so really we don't need to look at the anchor at all?
+    (cond
+      (not (nil? attribute))
+      (pr-str {:entity `(fn [~'ctx]
+                          ; We need to look at the schema, for cardinality
+                          (get-in ~'ctx [:value :db/id]))})
+
+      (not (nil? find-element))
+      (pr-str {:entity `(fn [~'ctx]
+                          ; find-elements don't have cardinality
+                          (get-in ~'ctx [:entity :db/id]))})
+
+      ; what can you do here? Give the whole relation in the formula?
+      ; Entitiy pages don't get a chance to color different things differently.
+      ; It would need to be a query page with multiple named params, at which point
+      ; you need a custom formula.
+      repeating? nil
+
+      :else nil)))
+
 (defn build-url-params-map
   ([domain project link-dbid formula param-ctx]
    {:domain domain
@@ -26,7 +50,12 @@
      formula
      param-ctx))
   ([anchor param-ctx]
-   (build-url-params-map (:anchor/link anchor) (:anchor/formula anchor) param-ctx))
+   (let [formula (:anchor/formula anchor)
+         formula (if (empty? formula)
+                   (auto-formula anchor)
+                   formula)
+         ]
+     (build-url-params-map (:anchor/link anchor) formula param-ctx)))
   #_(case (link-type (:anchor/link anchor))
       :link-query {:link-dbid (-> anchor :anchor/link :db/id)
                    :query-params (->> (q-util/read-eval-formulas (:anchor/formula anchor))

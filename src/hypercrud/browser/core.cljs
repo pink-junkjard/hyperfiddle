@@ -106,9 +106,9 @@
   ; of top level links that i didn't bother to name yet.
   (let [f (fn [e]
             [(or (-> e :anchor/repeating?) false)           ; nil matches false
-             (-> e :anchor/find-element :db/id)
-             (-> e :anchor/attribute :db/id)
-             (or (-> e :anchor/ident) (:db/id e)) #_"if the link isn't named, it's unique"])
+             (-> e :anchor/find-element :db/id)             ; nil is okay here
+             (-> e :anchor/attribute :db/id)                ; nil is okay here
+             (or (-> e :anchor/ident) (:db/id e)) #_"if no ident, it's unique"])
         collated (merge-with concat (group-by f sys-anchors) (group-by f link-anchors))
         merged (map #(apply merge %) (vals collated)) #_(apply map merge (vals collated))]
     merged))

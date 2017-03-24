@@ -63,9 +63,7 @@
                                        :anchor/ident :sys
                                        :anchor/link (system-edit-link connection-dbid link-name parent-link)
                                        :anchor/repeating? true
-                                       :anchor/find-element fe
-                                       :anchor/formula (pr-str {:entity `(fn [~'ctx]
-                                                                                  (get-in ~'ctx [:result ~fe-name :db/id]))})}))))
+                                       :anchor/find-element fe}))))
 
             edit-attr-links (->> (partition 4 colspec)      ; driven by colspec, not find elements, because what matters is what's there.
                                  (mapcat (fn [[conn fe-name ident maybe-field]]
@@ -77,21 +75,21 @@
                                                               :anchor/link (system-edit-attr-link fe attr parent-link)
                                                               :anchor/repeating? true
                                                               :anchor/find-element fe
-                                                              :anchor/attribute attr
-                                                              :anchor/formula (pr-str {:entity '(fn [ctx] nil)})}]
+                                                              :anchor/attribute attr}]
                                                nil))))
                                  doall)
             create-links (->> find-elements
                               (mapv (fn [[fe-name fe]] (:find-element/connection fe)))
-                              (set)                         ; distinct connections
+                              (set)                         ; distinct connections - but this may be a misstep.
+                              ; If we drive by find elements instead, we can set the anchor/find-element and auto generate the formula.
                               (mapv (fn [connection]
                                       (let [link-name (str "system-create " (:database/ident connection))]
                                         {:anchor/ident :sys
                                          :anchor/prompt (str "create in " (:database/ident connection))
                                          :anchor/link (system-edit-link (:db/id connection) link-name parent-link)
                                          :anchor/repeating? false
-                                         :anchor/formula (pr-str {:entity `(fn [~'ctx]
-                                                                                    (hc/*temp-id!* ~(-> connection :db/id :id)))})}))))]
+                                         :anchor/formula (pr-str {:entity `(fn [~'ctx] ; hmm
+                                                                             (hc/*temp-id!* ~(-> connection :db/id :id)))})}))))]
         (concat create-links edit-links edit-attr-links))
 
       :link-entity []                                       ; No system links yet for entity links. What will there be?
