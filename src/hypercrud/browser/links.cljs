@@ -80,7 +80,7 @@
                         reader/read-string q-util/parse-param-holes
                         (holes-filled? (:query-params url-params)))
     :link-entity (not= nil (-> url-params :query-params :entity))
-    false))
+    true #_ "no query, probably, like hyperfiddle admin"))
 
 (defn anchor-tooltip [link url-params param-ctx]
   (case (:display-mode param-ctx)
