@@ -12,13 +12,15 @@
 (defn auto-formula [anchor]                                 ; what about long-coersion?
   ; we don't need eval to do this, we can do it as a special form in a new airity TODO
   (let [{:keys [:anchor/repeating? :anchor/find-element :anchor/attribute]} anchor]
-    ; its weird - we already have this info in dynamic scope, (:result, :entity, :value)
-    ; so really we don't need to look at the anchor at all?
+    ; its weird - we already have this info in the runtime param-ctx (:result, :entity, :value)
+    ; so really we don't need to look at the anchor at all, if we delay this until formula runtime.
     (cond
       (not (nil? attribute))
       (pr-str {:entity `(fn [~'ctx]
-                          ; We need to look at the schema, for cardinality
-                          (get-in ~'ctx [:value :db/id]))})
+                          ; i am seeing cljs compiler bugs here? introducing let forms breaks it.
+                          (if (= :db.cardinality/many (-> (get (:schema ~'ctx) (-> ~'ctx :attribute :attribute/ident)) :attribute/cardinality :db/ident))
+                            (mapv :db/id (get ~'ctx :value))
+                            (get-in ~'ctx [:value :db/id])))})
 
       (not (nil? find-element))
       (pr-str {:entity `(fn [~'ctx]
