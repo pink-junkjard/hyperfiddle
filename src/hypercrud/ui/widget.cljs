@@ -49,7 +49,7 @@
 
 (defn option-anchor? [anchor]
   ; don't care if its inline or not, just do the right thing.
-  (= :select-options (:anchor/ident anchor)))
+  (= :options (:anchor/ident anchor)))
 
 (defn keyword [value maybe-field anchors props param-ctx]
   (let [on-change! #((:user-swap! param-ctx) {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %)})]
