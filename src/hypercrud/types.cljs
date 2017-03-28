@@ -18,7 +18,7 @@
 (def read-DbId #(apply ->DbId %))
 
 
-(deftype DbVal [conn-id t]
+(deftype DbVal [conn-id t #_ history?]
   Object (toString [_] (str "#DbVal" (pr-str [conn-id t])))
   IPrintWithWriter (-pr-writer [o writer _] (-write writer (.toString o)))
   IHash (-hash [this] (hash [conn-id t]))
