@@ -33,7 +33,7 @@
    "DbError" types/DbErrorTransitReader
    "QReq" types/read-QueryRequest
    "EReq" types/read-EntityRequest
-   "Peer" peer/Peer})
+   "Peer" peer/read-Peer})
 
 (def transit-write-handlers
   {goog.Uri (UriHandler.)

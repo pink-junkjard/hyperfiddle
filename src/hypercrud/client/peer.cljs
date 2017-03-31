@@ -42,8 +42,8 @@
   (-equiv [this other]
     (= (hash this) (hash other)))
 
-  ; edn readers - used in ssr
-  Object (toString [_] (str "#Peer" (pr-str [requests pulled-trees-map])))
+  ; This looks like edn but is not edn - its really just for debugging.
+  Object (toString [this] (str "#Peer" (pr-str [(count requests) (hash this)])))
   IPrintWithWriter (-pr-writer [o writer _] (-write writer (.toString o))))
 
 
