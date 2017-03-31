@@ -22,7 +22,10 @@
       (if (instance? types/DbError resultset-or-error)
         (exception/failure (human-error resultset-or-error request))
         (exception/success resultset-or-error))
-      (exception/failure (js/Error. (str "Unhydrated request:\n" (pr-str request))))))
+      (do
+        (let [error (js/Error. (str "Unhydrated request:\n" (pr-str request)))]
+          #_ (js/console.log error)                         ; happens a lot during query fns - would need to silence this log during query phase.
+          (exception/failure error)))))
 
 
   (t [this]

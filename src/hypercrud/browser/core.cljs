@@ -13,7 +13,7 @@
             [hypercrud.util :as util]
             [hypercrud.client.schema :as schema-util]
             [hypercrud.ui.form-util :as form-util]
-            [hypercrud.ui.renderer :as renderer]
+            [hypercrud.platform.safe-render :refer [safe-user-renderer]]
             [hypercrud.browser.link-util :as link-util]))
 
 
@@ -97,7 +97,7 @@
                         ;:inline-result inline-result
                         )]
         ; result is relation or set of relations
-        [renderer/safe-user-renderer user-fn result colspec anchors param-ctx]))))
+        [safe-user-renderer user-fn result colspec anchors param-ctx]))))
 
 (defn merge-anchors [sys-anchors link-anchors]
   ; Merge the link-anchors into the sys-anchors such that matching anchors properly override.
