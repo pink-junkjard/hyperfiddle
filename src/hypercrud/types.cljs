@@ -115,10 +115,7 @@
   (rep [this v] [(.-dbid-s v) (.-dbval v) (.-pull-exp v)])
   (stringRep [this v] nil))
 
-(defn QueryRequestTransitReader [v] (apply ->QueryRequest v))
-(defn EntityRequestTransitReader [v] (apply ->EntityRequest v))
-
-(def read-QueryRequest #(apply ->QueryRequest %))
+(def read-QueryRequest #(apply ->QueryRequest %))           ; dedup
 (def read-EntityRequest #(apply ->EntityRequest %))
 
 (reader/register-tag-parser! 'QReq read-QueryRequest)

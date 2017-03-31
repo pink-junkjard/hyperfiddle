@@ -31,8 +31,8 @@
    "DbId" types/DbIdTransitReader
    "DbVal" types/DbValTransitReader
    "DbError" types/DbErrorTransitReader
-   "QReq" types/QueryRequestTransitReader
-   "EReq" types/EntityRequestTransitReader
+   "QReq" types/read-QueryRequest
+   "EReq" types/read-EntityRequest
    "Peer" peer/Peer})
 
 (def transit-write-handlers
