@@ -1,7 +1,8 @@
 (ns hypercrud.client.peer
   (:require [cats.monad.exception :as exception]
             [hypercrud.client.core :as hc]
-            [hypercrud.types :as types]))
+            [hypercrud.types :as types]
+            [cljs.reader :as reader]))
 
 (defn human-error [e req]
   (let [unfilled-holes (->> (filter (comp nil? val) (.-params req)) (map key))]
@@ -39,4 +40,20 @@
 
   IEquiv
   (-equiv [this other]
-    (= (hash this) (hash other))))
+    (= (hash this) (hash other)))
+
+  ; edn readers - used in ssr
+  Object (toString [_] (str "#Peer" (pr-str [requests pulled-trees-map])))
+  IPrintWithWriter (-pr-writer [o writer _] (-write writer (.toString o))))
+
+
+(deftype PeerTransitHandler []
+  Object
+  (tag [this v] "Peer")
+
+  ; is it true that the requests are just (set (keys pulled-trees-map)) ?
+  (rep [this v] [(.-requests v) (.-pulled-trees-map v)])
+  (stringRep [this v] nil))
+
+(def read-Peer #(apply ->Peer %))
+(reader/register-tag-parser! 'Peer read-Peer)

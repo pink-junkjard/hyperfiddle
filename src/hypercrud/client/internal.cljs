@@ -2,7 +2,8 @@
   (:require [cognitect.transit :as t]
             [goog.Uri]
             [goog.string]
-            [hypercrud.types :as types]))
+            [hypercrud.types :as types]
+            [hypercrud.client.peer :as peer]))
 
 
 ;; transit uri encoder type
@@ -31,7 +32,8 @@
    "DbVal" types/DbValTransitReader
    "DbError" types/DbErrorTransitReader
    "QReq" types/QueryRequestTransitReader
-   "EReq" types/EntityRequestTransitReader})
+   "EReq" types/EntityRequestTransitReader
+   "Peer" peer/Peer})
 
 (def transit-write-handlers
   {goog.Uri (UriHandler.)
@@ -39,7 +41,8 @@
    types/DbVal (types/DbValTransitHandler.)
    types/DbError (types/DbErrorTransitHandler.)
    types/QueryRequest (types/QueryRequestTransitHandler.)
-   types/EntityRequest (types/EntityRequestTransitHandler.)})
+   types/EntityRequest (types/EntityRequestTransitHandler.)
+   peer/Peer (peer/PeerTransitHandler.)})
 
 
 (def transit-encoding-opts {:handlers transit-write-handlers})
