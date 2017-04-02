@@ -15,7 +15,7 @@
             t-props                                         ; label, status
             {:label (or (:label t-props) "")                ; required
              :anchor [:span {:on-mouse-enter #(do (if (:label t-props) (reset! state true)) nil)
-                             :on-mouse-out #(do (if (:label t-props) (reset! state false)) nil)}
+                             :on-mouse-leave #(do (if (:label t-props) (reset! state false)) nil)}
                       anchor]}))))))
 
 (defn popover-anchor-wrapper* [& args]
@@ -54,7 +54,7 @@
              :showing? state}
             (dissoc t-props :body)
             {:anchor [:div {:on-mouse-enter #(do (if (:body t-props) (reset! state true)) nil)
-                             :on-mouse-out #(do (if (:body t-props) (reset! state false)) nil)}
+                            :on-mouse-leave #(do (if (:body t-props) (reset! state false)) nil)}
                       anchor]
              :popover [re-com/popover-content-wrapper
                        :on-cancel #(do (reset! state false) nil)
