@@ -44,19 +44,19 @@
 
 (deftest test-determine-colspec []
   ; there's a form but strip it for raw mode
-  (is (= (determine-colspec resultset2 fe2 {:display-mode :raw})
+  (is (= (determine-colspec resultset2 fe2 {:display-mode :root})
          ["?e" :db/id nil "?e" :district/name nil "?e" :district/region nil]))
 
   ; no form hydrated
-  (is (= (determine-colspec resultset2 fe2 {:display-mode :undressed})
+  (is (= (determine-colspec resultset2 fe2 {:display-mode :xray})
          ["?e" :db/id nil "?e" :district/name nil "?e" :district/region nil]))
 
   ; there's a form and strip it
-  (is (= (determine-colspec resultset1 fe1 {:display-mode :raw})
+  (is (= (determine-colspec resultset1 fe1 {:display-mode :root})
          [:entity :db/id nil :entity :hypercrud/owner nil :entity :link/name nil :entity :link/renderer nil]))
 
   ; there's a form and use it
-  (is (= (determine-colspec resultset1 fe1 {:display-mode :undressed})
+  (is (= (determine-colspec resultset1 fe1 {:display-mode :xray})
          [:entity
           :link/renderer
           {:db/id (->DbId 17592186045553 17592186045422),

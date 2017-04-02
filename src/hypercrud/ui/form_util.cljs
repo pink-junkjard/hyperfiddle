@@ -12,7 +12,7 @@
       (string/replace " " "-")))
 
 (defn strip-forms-in-raw-mode [ordered-find-elements param-ctx]
-  (let [raw-mode? (= (:display-mode param-ctx) :raw)
+  (let [raw-mode? (= (:display-mode param-ctx) :root)
         f (if raw-mode? #(dissoc % :find-element/form) identity)]
     (map f ordered-find-elements)))
 
@@ -52,7 +52,7 @@ the find-element level has been flattened out of the columns."
   (let [result (if (map? result) [result] result)           ; unified colspec for table and form
         ordered-find-elements (get-ordered-find-elements link param-ctx)
         ordered-find-elements (strip-forms-in-raw-mode ordered-find-elements param-ctx)
-        raw-mode? (= (:display-mode param-ctx) :raw)
+        raw-mode? (= (:display-mode param-ctx) :root)
         result-as-columns (util/transpose result)
         map' (util/map-pad {})]
     (->>

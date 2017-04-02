@@ -80,16 +80,16 @@
                         reader/read-string q-util/parse-param-holes
                         (holes-filled? (:query-params url-params)))
     :link-entity (not= nil (-> url-params :query-params :entity))
-    true #_ "no query, probably, like hyperfiddle admin"))
+    true #_"no query, probably, like hyperfiddle admin"))
 
 (defn anchor-tooltip [link url-params param-ctx]
   (case (:display-mode param-ctx)
-    :undressed (if (anchor-valid? link url-params)
-                 [nil (pr-str (:query-params url-params))]
-                 [:warning (pr-str (:query-params url-params))])
+    :xray (if (anchor-valid? link url-params)
+            [nil (pr-str (:query-params url-params))]
+            [:warning (pr-str (:query-params url-params))])
     nil))
 
-(defn build-link-props-raw [route link param-ctx] ; param-ctx is for display-mode
+(defn build-link-props-raw [route link param-ctx]           ; param-ctx is for display-mode
   ; doesn't handle tx-fn - meant for the self-link. Weird and prob bad.
   {:route route
    :style {:color (connection-color/connection-color (-> link :hypercrud/owner :db/id :id))}

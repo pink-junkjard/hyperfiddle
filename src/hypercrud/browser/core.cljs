@@ -167,10 +167,9 @@
                                        (system-links/system-anchors link result param-ctx))]
 
                   (case (get param-ctx :display-mode)       ; default happens higher, it influences queries too
-                    :dressed ((user-result link) result colspec (merge-anchors system-anchors (:link/anchor link)) (user-bindings link param-ctx))
-                    :undressed (auto-control/result result colspec (merge-anchors system-anchors (:link/anchor link)) (user-bindings link param-ctx))
-                    :form (auto-control/result result colspec (merge-anchors system-anchors (:link/anchor link)) (user-bindings link param-ctx)) ; same as :undressed
-                    :raw (auto-control/result result colspec system-anchors param-ctx)))))]
+                    :user ((user-result link) result colspec (merge-anchors system-anchors (:link/anchor link)) (user-bindings link param-ctx))
+                    :xray (auto-control/result result colspec (merge-anchors system-anchors (:link/anchor link)) (user-bindings link param-ctx))
+                    :root (auto-control/result result colspec system-anchors param-ctx)))))]
     (if (exception/failure? dom-or-e)
       (or (-> dom-or-e .-e .-data) [:pre (pr-str (-> dom-or-e .-e))])
       (.-v dom-or-e))))
