@@ -145,7 +145,7 @@
                    ^{:key (hash (util/map-values :db/id relation))}
                    [table-row-form relation colspec repeating-anchors param-ctx])))))])
 
-(defn table [relations colspec anchors param-ctx]
+(defn table [& props]
   (let [sort-col (r/atom nil)]
     (fn [relations colspec anchors param-ctx]
       (let [non-repeating-top-anchors (->> anchors
