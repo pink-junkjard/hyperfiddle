@@ -2,9 +2,12 @@
   (:require [hypercrud.ui.tooltip :as tooltip]))
 
 
-(defn option [label target value change! & [tooltip]]
-  [tooltip/hover-tooltip {:label tooltip}
-   [:label
-    [:input {:type "radio" :style {:width "auto"}
-             :checked (= value target) :on-change #(change! target)}]
-    label]])
+(defn option [props]
+  [tooltip/hover-tooltip {:label (:tooltip props)}
+   [:label.radio-option
+    [:input {:type "radio"
+             :style {:width "auto"}
+             :checked (= (:value props) (:target props))
+             :on-change #((:change! props) (:target props))
+             :disabled (:disabled props)}]
+    (:label props)]])
