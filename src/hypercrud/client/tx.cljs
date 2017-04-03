@@ -144,49 +144,30 @@
               [op new-e a new-v]))
           tx)))
 
-(defn walk-entity [schema entity f]
+(defn walk-entity [schema entity f]                         ; Walks entity components, applying f to each component, dehydrating non-components
   (->> (f entity)
        (mapv
          (fn [[a v]]
            (let [{:keys [:db/cardinality :db/valueType :db/isComponent]} (get schema a)
-                 v (if-not (= valueType :db.type/ref)   ; dbid absent from schema, its fine
+                 v (if-not (= valueType :db.type/ref)       ; dbid absent from schema, its fine
                      v
                      (if isComponent
-                       (case cardinality                ; clone deeper
+                       (case cardinality                    ; Walk component (go deeper)
                          :db.cardinality/one (walk-entity schema v f)
                          :db.cardinality/many (mapv #(walk-entity schema % f) v))
 
-                       (case cardinality                ; just outgoing ref. Call site may need to re-hydrate
-                         :db.cardinality/one (select-keys v [:db/id]) ; this can be a cycle to something that was cloned - fixup later
+                       (case cardinality                    ; Dehydrate non-component
+                         :db.cardinality/one (select-keys v [:db/id])
                          :db.cardinality/many (mapv #(select-keys % [:db/id]) v))))]
              [a v])))
        (into {})))
 
-(defn clone-entity* [schema entity replace-id!]
-  (->> (util/update-existing entity :db/id replace-id!)
-       (mapv (fn [[a v]]
-               (let [{:keys [:db/cardinality :db/valueType :db/isComponent]} (get schema a)
-                     v (if-not (= valueType :db.type/ref)   ; dbid absent from schema, its fine
-                         v
-                         (if isComponent
-                           (case cardinality                ; clone deeper
-                             :db.cardinality/one (clone-entity* schema v replace-id!)
-                             :db.cardinality/many (mapv #(clone-entity* schema % replace-id!) v))
-
-                           (case cardinality                ; just outgoing ref. Call site may need to re-hydrate
-                             :db.cardinality/one (select-keys v [:db/id]) ; this can be a cycle to something that was cloned - fixup later
-                             :db.cardinality/many (mapv #(select-keys % [:db/id]) v))))]
-                 [a v])))
-       (into {})))
-
-; First do the clone, respecting component, granting tempids to owned nodes.
-; After, traverse again, fixing up any non-component refs to owned nodes to use the new tempid.
 (defn clone-entity [schema entity tempid!]
-  (let [[replace-id! fix-seen-id!] (clone-id-factory (-> entity :db/id :conn-id) tempid!) ; pretend dynamic scope
-        asdf (clone-entity* schema entity replace-id!)
-
-        ]
-    asdf))
+  (let [[replace-id! fix-seen-id!] (clone-id-factory (-> entity :db/id :conn-id) tempid!)]
+    (-> entity
+        ; Walk twice because of cycles.
+        (walk-entity schema #(util/update-existing entity :db/id replace-id!))
+        (walk-entity schema #(util/update-existing entity :db/id fix-seen-id!)))))
 
 
 (defn export-link [schema link]
