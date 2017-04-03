@@ -119,19 +119,22 @@
        (mapcat entity->statements)))
 
 
-(defn replace-id-builder [conn-id tempid!]
-  (let [id-map (atom {})]
-    (fn [dbid]
-      (let [new-dbid (get @id-map dbid)]
-        (if (nil? new-dbid)
-          (let [new-dbid (tempid! conn-id)]
-            (swap! id-map assoc dbid new-dbid)
-            new-dbid)
-          new-dbid)))))
+(defn clone-id-factory [conn-id tempid!]
+  (let [id-map (atom {})
+        replace-id! (fn [dbid]
+                      (let [new-dbid (get @id-map dbid)]
+                        (if (nil? new-dbid)
+                          (let [new-dbid (tempid! conn-id)]
+                            (swap! id-map assoc dbid new-dbid)
+                            new-dbid)
+                          new-dbid)))
+        fix-seen-id! (fn [dbid]
+                       (get @id-map dbid dbid))]
+    [replace-id! fix-seen-id!]))
 
 
 (defn replace-ids-in-tx [schema conn-id skip? temp-id! tx]
-  (let [replace-id! (replace-id-builder conn-id temp-id!)]
+  (let [[replace-id!] (clone-id-factory conn-id temp-id!)]
     (mapv (fn [[op e a v]]
             (let [new-e (replace-id! e)
                   valueType (get-in schema [a :db/valueType])
@@ -141,32 +144,49 @@
               [op new-e a new-v]))
           tx)))
 
+(defn walk-entity [schema entity f]
+  (->> (f entity)
+       (mapv
+         (fn [[a v]]
+           (let [{:keys [:db/cardinality :db/valueType :db/isComponent]} (get schema a)
+                 v (if-not (= valueType :db.type/ref)   ; dbid absent from schema, its fine
+                     v
+                     (if isComponent
+                       (case cardinality                ; clone deeper
+                         :db.cardinality/one (walk-entity schema v f)
+                         :db.cardinality/many (mapv #(walk-entity schema % f) v))
 
-; Really you want to hydrate the entity and all components,
-; and make a copy of it, stripping component dbids and preserving refs to outside dbids, that's it.
-(defn clone-entity [schema entity tempid!]                  ; where is the recursion? This goes 1 layer deep.
-  (let [replace-id! (replace-id-builder (-> entity :db/id :conn-id) tempid!)]
-    (->> (util/update-existing entity :db/id replace-id!) ; why do we even need one? No refs to it. unless for redirect?. entity->statements can generate a tempid.
-         (mapv (fn [[a v]]
-                 (let [{:keys [:db/cardinality :db/valueType :db/isComponent]} (get schema a)
-                       v (if-not (= valueType :db.type/ref)
-                           v
-                           (if isComponent ; strip owned dbids?
-                             (case cardinality
-                               ; leave otherwise untouched. This should be recursive though. Looks like a pulled-tree to me.
-                               ; anchors and stuff are components too.
-                               :db.cardinality/one (util/update-existing v :db/id replace-id!)
-                               :db.cardinality/many (mapv #(util/update-existing % :db/id replace-id!) v))
+                       (case cardinality                ; just outgoing ref. Call site may need to re-hydrate
+                         :db.cardinality/one (select-keys v [:db/id]) ; this can be a cycle to something that was cloned - fixup later
+                         :db.cardinality/many (mapv #(select-keys % [:db/id]) v))))]
+             [a v])))
+       (into {})))
 
-                             (case cardinality
-                               ; preserve outgoing dbids and throw away everything else as its not part of the transaction?
-                               ; but what about using the link now to do something? I guess we should force a hydrate if you
-                               ; want that.
+(defn clone-entity* [schema entity replace-id!]
+  (->> (util/update-existing entity :db/id replace-id!)
+       (mapv (fn [[a v]]
+               (let [{:keys [:db/cardinality :db/valueType :db/isComponent]} (get schema a)
+                     v (if-not (= valueType :db.type/ref)   ; dbid absent from schema, its fine
+                         v
+                         (if isComponent
+                           (case cardinality                ; clone deeper
+                             :db.cardinality/one (clone-entity* schema v replace-id!)
+                             :db.cardinality/many (mapv #(clone-entity* schema % replace-id!) v))
 
-                               :db.cardinality/one (select-keys v [:db/id])
-                               :db.cardinality/many (mapv #(select-keys % [:db/id]) v))))]
-                   [a v])))
-         (into {}))))
+                           (case cardinality                ; just outgoing ref. Call site may need to re-hydrate
+                             :db.cardinality/one (select-keys v [:db/id]) ; this can be a cycle to something that was cloned - fixup later
+                             :db.cardinality/many (mapv #(select-keys % [:db/id]) v))))]
+                 [a v])))
+       (into {})))
+
+; First do the clone, respecting component, granting tempids to owned nodes.
+; After, traverse again, fixing up any non-component refs to owned nodes to use the new tempid.
+(defn clone-entity [schema entity tempid!]
+  (let [[replace-id! fix-seen-id!] (clone-id-factory (-> entity :db/id :conn-id) tempid!) ; pretend dynamic scope
+        asdf (clone-entity* schema entity replace-id!)
+
+        ]
+    asdf))
 
 
 (defn export-link [schema link]
