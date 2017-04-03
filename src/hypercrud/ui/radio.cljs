@@ -4,7 +4,7 @@
 
 (defn option [props]
   [tooltip/hover-tooltip {:label (:tooltip props)}
-   [:label.radio-option
+   [:label.radio-option {:class (if (:disabled props) "disabled")}
     [:input {:type "radio"
              :style {:width "auto"}
              :checked (= (:value props) (:target props))
