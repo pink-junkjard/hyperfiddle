@@ -4,6 +4,7 @@
 
 
 (defn hover-tooltip [& props]
+  ; if there is no tooltip, the hovers are such that it will never be shown
   (let [state (r/atom false)]
     (fn [t-props anchor]
       (apply
