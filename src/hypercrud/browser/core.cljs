@@ -73,10 +73,11 @@
 
 (defn hydrate-link [peer link-dbid]
   (if (system-links/system-link? link-dbid)
-    (let [system-link-id (-> link-dbid :id)]
-      (->> (system-links/request-for-system-link system-link-id)
+    (let [system-link-idmap (-> link-dbid :id)]
+      (->> (system-links/request-for-system-link system-link-idmap)
            (hc/hydrate peer)
-           (cats/fmap #(system-links/generate-system-link system-link-id %))))
+           (cats/fmap (fn [parent-link]
+                        (system-links/generate-system-link system-link-idmap parent-link)))))
     (hc/hydrate peer (request-for-link link-dbid))))
 
 (declare user-result)
@@ -243,13 +244,13 @@
 
 (defn request [params-map param-ctx recurse?]
   (if (system-links/system-link? (:link-dbid params-map))
-    (let [system-link-id (-> params-map :link-dbid :id)
-          system-link-request (system-links/request-for-system-link system-link-id)]
+    (let [system-link-idmap (-> params-map :link-dbid :id)
+          system-link-request (system-links/request-for-system-link system-link-idmap)]
       (concat
         [system-link-request]
         (if-let [system-link-deps (-> (hc/hydrate (:peer param-ctx) system-link-request) ; ?
                                       (exception/extract nil))]
-          (let [link (system-links/generate-system-link system-link-id system-link-deps)]
+          (let [link (system-links/generate-system-link system-link-idmap system-link-deps)]
             (requests-for-link link (:query-params params-map) param-ctx recurse?)))))
     (let [link-request (request-for-link (:link-dbid params-map))]
       (concat [link-request]
