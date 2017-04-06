@@ -144,7 +144,7 @@
               [op new-e a new-v]))
           tx)))
 
-(defn walk-entity [schema entity f]                         ; Walks entity components, applying f to each component, dehydrating non-components
+(defn walk-entity [schema f entity]                         ; Walks entity components, applying f to each component, dehydrating non-components
   (->> (f entity)
        (mapv
          (fn [[a v]]
@@ -153,8 +153,8 @@
                      v
                      (if isComponent
                        (case cardinality                    ; Walk component (go deeper)
-                         :db.cardinality/one (walk-entity schema v f)
-                         :db.cardinality/many (mapv #(walk-entity schema % f) v))
+                         :db.cardinality/one (walk-entity schema f v)
+                         :db.cardinality/many (mapv #(walk-entity schema f %) v))
 
                        (case cardinality                    ; Dehydrate non-component
                          :db.cardinality/one (select-keys v [:db/id])
@@ -164,10 +164,10 @@
 
 (defn clone-entity [schema entity tempid!]
   (let [[replace-id! fix-seen-id!] (clone-id-factory (-> entity :db/id :conn-id) tempid!)]
-    (-> entity
-        ; Walk twice because of cycles.
-        (walk-entity schema #(util/update-existing entity :db/id replace-id!))
-        (walk-entity schema #(util/update-existing entity :db/id fix-seen-id!)))))
+    (->> entity
+         ; Walk twice because of cycles.
+         (walk-entity schema #(util/update-existing % :db/id replace-id!))
+         (walk-entity schema #(util/update-existing % :db/id fix-seen-id!)))))
 
 
 (defn export-link [schema link]
