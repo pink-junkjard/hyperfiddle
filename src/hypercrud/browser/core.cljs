@@ -57,48 +57,6 @@
                                       :anchor/find-element [:db/id :find-element/name :find-element/connection]}]
                        :hypercrud/owner ['*]}])))
 
-
-(defn user-result [link]
-  (let [user-fn (if (empty? (:link/renderer link))
-                  auto-control/result
-                  (let [{f :value error :error} (eval-str (:link/renderer link))]
-                    (if error
-                      (fn [type result colspec anchor-index param-ctx]
-                        [:pre (pprint/pprint error)])
-                      f)))]
-    (fn [result colspec anchors param-ctx]
-      (let [anchor-index (->> anchors
-                              (mapv (juxt #(-> % :anchor/ident) identity))
-                              (into {}))
-            inline-result (fn [ident param-ctx]
-                            (let [anchor (get anchor-index ident)
-                                  params-map (links/build-url-params-map anchor param-ctx)
-                                  query-params (:query-params params-map)]
-                              (mlet [link (hc/hydrate (:peer param-ctx) (request-for-link (-> anchor :anchor/link :db/id)))
-                                     request (try-on
-                                               (case (link-util/link-type link)
-                                                 :link-query (let [q (some-> link :link/request :link-query/value reader/read-string)
-                                                                   params-map (merge query-params
-                                                                                     (q-util/build-dbhole-lookup (:link/request link)))]
-                                                               (q-util/query-value q (:link/request link) params-map param-ctx))
-
-                                                 :link-entity (q-util/->entityRequest (:link/request link) query-params)
-                                                 nil))
-                                     result (if request
-                                              (hc/hydrate (:peer param-ctx) request)
-                                              (exception/success nil))]
-                                    (cats/return result))))
-            param-ctx (assoc param-ctx
-                        :link-fn (fn [ident label param-ctx]
-                                   (let [anchor (get anchor-index ident)
-                                         props (-> (links/build-link-props anchor param-ctx)
-                                                   #_(dissoc :style) #_"custom renderers don't want colored links")]
-                                     [(:navigate-cmp param-ctx) props label]))
-                        :inline-result inline-result
-                        )]
-        ; result is relation or set of relations
-        [safe-user-renderer user-fn result colspec anchors param-ctx]))))
-
 (defn merge-anchors [sys-anchors link-anchors]
   ; Merge the link-anchors into the sys-anchors such that matching anchors properly override.
   ; anchor uniqueness is determined by [repeat entity attr ident]. Nil ident means
@@ -120,6 +78,8 @@
            (hc/hydrate peer)
            (cats/fmap #(system-links/generate-system-link system-link-id %))))
     (hc/hydrate peer (request-for-link link-dbid))))
+
+(declare user-result)
 
 (defn ui [{query-params :query-params :as params-map} param-ctx]
   (let [dom-or-e
@@ -167,12 +127,41 @@
                                        (system-links/system-anchors link result param-ctx))]
 
                   (case (get param-ctx :display-mode)       ; default happens higher, it influences queries too
-                    :user ((user-result link) result colspec (merge-anchors system-anchors (:link/anchor link)) (user-bindings link param-ctx))
+                    :user ((user-result link param-ctx) result colspec (merge-anchors system-anchors (:link/anchor link)) (user-bindings link param-ctx))
                     :xray (auto-control/result result colspec (merge-anchors system-anchors (:link/anchor link)) (user-bindings link param-ctx))
                     :root (auto-control/result result colspec system-anchors param-ctx)))))]
     (if (exception/failure? dom-or-e)
       (or (-> dom-or-e .-e .-data) [:pre (pr-str (-> dom-or-e .-e))])
       (.-v dom-or-e))))
+
+(defn link-user-fn [link]
+  (if-not (empty? (:link/renderer link))
+    (let [{f :value error :error} (eval-str (:link/renderer link))]
+      (if error
+        (fn [type result colspec anchor-index param-ctx]
+          [:pre (pprint/pprint error)])
+        f))))
+
+(defn user-result [link param-ctx]
+  (let [user-fn (first (remove nil? [(:user-renderer param-ctx) (link-user-fn link) auto-control/result]))]
+    (fn [result colspec anchors param-ctx]
+      (let [anchor-index (->> anchors
+                              (mapv (juxt #(-> % :anchor/ident) identity))
+                              (into {}))
+            with-inline-result (fn [ident param-ctx f]
+                                 (let [anchor (get anchor-index ident)
+                                       params-map (links/build-url-params-map anchor param-ctx)]
+                                   (ui params-map (assoc param-ctx :user-renderer f))))
+            param-ctx (assoc param-ctx
+                        :link-fn (fn [ident label param-ctx]
+                                   (let [anchor (get anchor-index ident)
+                                         props (-> (links/build-link-props anchor param-ctx)
+                                                   #_(dissoc :style) #_"custom renderers don't want colored links")]
+                                     [(:navigate-cmp param-ctx) props label]))
+                        :with-inline-result with-inline-result
+                        )]
+        ; result is relation or set of relations
+        [safe-user-renderer user-fn result colspec anchors param-ctx]))))
 
 
 (declare request)
