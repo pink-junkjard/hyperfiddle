@@ -94,7 +94,7 @@
                                          props (-> (links/build-link-props anchor param-ctx)
                                                    #_(dissoc :style) #_"custom renderers don't want colored links")]
                                      [(:navigate-cmp param-ctx) props label]))
-                        ;:inline-result inline-result
+                        :inline-result inline-result
                         )]
         ; result is relation or set of relations
         [safe-user-renderer user-fn result colspec anchors param-ctx]))))
