@@ -23,8 +23,11 @@
         (filter (partial apply links/link-visible?))
         (mapv (fn [[anchor param-ctx]]
                 (assert (:navigate-cmp param-ctx))
-                ^{:key (hash anchor)}                       ; not a great key but syslinks don't have much.
-                [(:navigate-cmp param-ctx) (links/build-link-props anchor param-ctx) (:anchor/prompt anchor)]))
+                (let [prompt (or (:anchor/prompt anchor)
+                                 (:anchor/ident anchor)
+                                 "_")]
+                  ^{:key (hash anchor)}                     ; not a great key but syslinks don't have much.
+                  [(:navigate-cmp param-ctx) (links/build-link-props anchor param-ctx) prompt])))
         (interpose " ")))
   ([anchors param-ctx]
    (render-anchors (map vector anchors (repeat param-ctx)))))
@@ -97,7 +100,10 @@
 ; this can be used sometimes, on the entity page, but not the query page
 (defn ref [value maybe-field anchors props param-ctx]
   (let [[options-anchor] (filter option-anchor? anchors)
-        anchors (case (:display-mode param-ctx) :user (remove option-anchor? anchors) anchors)]
+        anchors (remove option-anchor? anchors)
+        anchors (case (:display-mode param-ctx)
+                  :xray (conj anchors (assoc options-anchor :anchor/render-inline? false))
+                  anchors)]
     [:div.value
      ; todo this key is encapsulating other unrelated anchors
      [:div.editable-select {:key (hash (get-in options-anchor [:anchor/link :link/request]))} ; not sure if this is okay in nil field case, might just work
@@ -132,7 +138,10 @@
         select-value-atom (r/atom initial-select)]
     (fn [value maybe-field anchors props param-ctx]
       (let [[options-anchor] (filter option-anchor? anchors)
-            anchors (case (:display-mode param-ctx) :user (remove option-anchor? anchors) anchors)]
+            anchors (remove option-anchor? anchors)
+            anchors (case (:display-mode param-ctx)
+                      :xray (conj anchors (assoc options-anchor :anchor/render-inline? false))
+                      anchors)]
         [:div.value
          [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
          [:ul
