@@ -101,8 +101,8 @@
 (defn ref [value maybe-field anchors props param-ctx]
   (let [[options-anchor] (filter option-anchor? anchors)
         anchors (remove option-anchor? anchors)
-        anchors (case (:display-mode param-ctx)
-                  :xray (conj anchors (assoc options-anchor :anchor/render-inline? false))
+        anchors (if (and options-anchor (= :xray (:display-mode param-ctx)))
+                  (conj anchors (assoc options-anchor :anchor/render-inline? false))
                   anchors)]
     [:div.value
      ; todo this key is encapsulating other unrelated anchors
@@ -130,7 +130,7 @@
 
 (defn ref-many [value maybe-field anchors props param-ctx]
   (let [[options-anchor] (filter option-anchor? anchors)
-        initial-select (some-> options-anchor
+        initial-select (some-> options-anchor               ; not okay to auto-select.
                                (option/hydrate-options param-ctx)
                                (exception/extract nil)      ; todo handle exception
                                first
@@ -139,8 +139,8 @@
     (fn [value maybe-field anchors props param-ctx]
       (let [[options-anchor] (filter option-anchor? anchors)
             anchors (remove option-anchor? anchors)
-            anchors (case (:display-mode param-ctx)
-                      :xray (conj anchors (assoc options-anchor :anchor/render-inline? false))
+            anchors (if (and options-anchor (= :xray (:display-mode param-ctx)))
+                      (conj anchors (assoc options-anchor :anchor/render-inline? false))
                       anchors)]
         [:div.value
          [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
