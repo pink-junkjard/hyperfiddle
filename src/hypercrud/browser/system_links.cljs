@@ -79,17 +79,16 @@
                                                nil))))
                                  doall)
             create-links (->> find-elements
-                              (mapv (fn [[fe-name fe]] (:find-element/connection fe)))
-                              (set)                         ; distinct connections - but this may be a misstep.
-                              ; If we drive by find elements instead, we can set the anchor/find-element and auto generate the formula.
-                              (mapv (fn [connection]
-                                      (let [link-name (str "system-create " (:database/ident connection))]
+                              ; Really we want distinct connections - but that causes problems.
+                              ; 1. we want to auto-generate the formulas, not macro it here.
+                              ; 2. In the link merge step they need to match differently and the conn is not a field to match on.
+                              (mapv (fn [[fe-name fe]]
+                                      (let [link-name (str "system-create " fe-name)]
                                         {:anchor/ident :sys
-                                         :anchor/prompt (str "create in " (:database/ident connection))
-                                         :anchor/link (system-edit-link (:db/id connection) link-name parent-link)
-                                         :anchor/repeating? false
-                                         :anchor/formula (pr-str {:entity `(fn [~'ctx] ; hmm
-                                                                             (hc/*temp-id!* ~(-> connection :db/id :id)))})}))))]
+                                         :anchor/find-element fe
+                                         :anchor/prompt (str "create in " fe-name)
+                                         :anchor/link (system-edit-link (:db/id (:find-element/connection fe)) link-name parent-link)
+                                         :anchor/repeating? false}))))]
         (concat create-links edit-links edit-attr-links))
 
       :link-entity []                                       ; No system links yet for entity links. What will there be?

@@ -54,7 +54,7 @@
                        :link/anchor ['*
                                      {:anchor/link ['*      ; hydrate the whole link for validating the anchor by query params
                                                     {:hypercrud/owner ['*]}] ; need the link's owner to render the href to it
-                                      :anchor/find-element [:db/id :find-element/name]}]
+                                      :anchor/find-element [:db/id :find-element/name :find-element/connection]}]
                        :hypercrud/owner ['*]}])))
 
 

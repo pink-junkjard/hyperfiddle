@@ -1,6 +1,7 @@
 (ns hypercrud.browser.links
   (:require [cljs.reader :as reader]
             [clojure.set :as set]
+            [hypercrud.client.core :as hc]
             [hypercrud.compile.eval :refer [eval-str]]
             [hypercrud.form.q-util :as q-util]
             [hypercrud.util :as util]
@@ -22,7 +23,11 @@
                             (mapv :db/id (get ~'ctx :value))
                             (get-in ~'ctx [:value :db/id])))})
 
-      (not (nil? find-element))
+      (and (not repeating?) (not (nil? find-element)))      ; create
+      (pr-str {:entity `(fn [~'ctx]
+                          (hc/*temp-id!* ~(-> find-element :find-element/connection :db/id :id)))})
+
+      (and repeating? (not (nil? find-element)))            ; edit
       (pr-str {:entity `(fn [~'ctx]
                           ; find-elements don't have cardinality
                           (get-in ~'ctx [:entity :db/id]))})
@@ -31,7 +36,7 @@
       ; Entitiy pages don't get a chance to color different things differently.
       ; It would need to be a query page with multiple named params, at which point
       ; you need a custom formula.
-      repeating? nil
+      (and repeating? (nil? find-element)) nil
 
       :else nil)))
 
