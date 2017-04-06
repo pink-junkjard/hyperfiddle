@@ -25,7 +25,7 @@
                 (assert (:navigate-cmp param-ctx))
                 ^{:key (hash anchor)}                       ; not a great key but syslinks don't have much.
                 [(:navigate-cmp param-ctx) (links/build-link-props anchor param-ctx) (:anchor/prompt anchor)]))
-        (interpose " · ")))
+        (interpose " ")))
   ([anchors param-ctx]
    (render-anchors (map vector anchors (repeat param-ctx)))))
 
@@ -38,13 +38,14 @@
   ([anchor-ctx-pairs]
    (->> anchor-ctx-pairs
         (filter (partial apply links/link-visible?))
-        (map (fn [[anchor param-ctx]]
-               (let [params-map (links/build-url-params-map anchor param-ctx)
-                     ui-param-ctx (-> param-ctx
-                                      (update :debug #(str % ">inline-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]"))
-                                      (dissoc :result "entity"))]
-                 ^{:key (hash anchor)}
-                 [browser/ui params-map ui-param-ctx])))
+        (mapcat (fn [[anchor param-ctx]]
+                  (let [params-map (links/build-url-params-map anchor param-ctx)
+                        ui-param-ctx (-> param-ctx
+                                         (update :debug #(str % ">inline-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]"))
+                                         (dissoc :result "entity"))]
+                    ^{:key (hash anchor)}
+                    (remove nil? [(case (:display-mode param-ctx) :xray (render-anchors [anchor] param-ctx) nil)
+                                  [browser/ui params-map ui-param-ctx]]))))
         (doall))))
 
 (defn option-anchor? [anchor]
@@ -95,7 +96,7 @@
 ; this can be used sometimes, on the entity page, but not the query page
 (defn ref [value maybe-field anchors props param-ctx]
   (let [[options-anchor] (filter option-anchor? anchors)
-        anchors (remove option-anchor? anchors)]
+        anchors (case (:display-mode param-ctx) :user (remove option-anchor? anchors) anchors)]
     [:div.value
      ; todo this key is encapsulating other unrelated anchors
      [:div.editable-select {:key (hash (get-in options-anchor [:anchor/link :link/request]))} ; not sure if this is okay in nil field case, might just work
@@ -130,7 +131,7 @@
         select-value-atom (r/atom initial-select)]
     (fn [value maybe-field anchors props param-ctx]
       (let [[options-anchor] (filter option-anchor? anchors)
-            anchors (remove option-anchor? anchors)]
+            anchors (case (:display-mode param-ctx) :user (remove option-anchor? anchors) anchors)]
         [:div.value
          [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
          [:ul
