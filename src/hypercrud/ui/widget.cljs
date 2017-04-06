@@ -38,14 +38,15 @@
   ([anchor-ctx-pairs]
    (->> anchor-ctx-pairs
         (filter (partial apply links/link-visible?))
-        (mapcat (fn [[anchor param-ctx]]
-                  (let [params-map (links/build-url-params-map anchor param-ctx)
-                        ui-param-ctx (-> param-ctx
-                                         (update :debug #(str % ">inline-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]"))
-                                         (dissoc :result "entity"))]
-                    ^{:key (hash anchor)}
-                    (remove nil? [(case (:display-mode param-ctx) :xray (render-anchors [anchor] param-ctx) nil)
-                                  [browser/ui params-map ui-param-ctx]]))))
+        (map (fn [[anchor param-ctx]]
+               (let [params-map (links/build-url-params-map anchor param-ctx)
+                     ui-param-ctx (-> param-ctx
+                                      (update :debug #(str % ">inline-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]"))
+                                      (dissoc :result "entity"))]
+
+                 [:div {:key (hash anchor)}               ; extra div bc had trouble getting keys to work
+                  (case (:display-mode param-ctx) :xray (render-anchors [anchor] param-ctx) nil)
+                  [browser/ui params-map ui-param-ctx]])))
         (doall))))
 
 (defn option-anchor? [anchor]
