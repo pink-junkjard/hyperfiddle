@@ -24,6 +24,8 @@
 
 
 (defn system-edit-link [parent-link fe]
+  (assert parent-link)
+  (assert fe)
   {:db/id (system-edit-link-dbid parent-link fe)
    :hypercrud/owner (:hypercrud/owner parent-link)
    :link/name (str "edit ")                                 ; hmm
@@ -31,6 +33,9 @@
 
 
 (defn system-edit-attr-link [parent-link fe attr]
+  (assert parent-link)
+  (assert fe)
+  (assert attr)
   {:db/id (system-edit-attr-link-dbid parent-link fe attr)
    :link/name (str "edit " (:find-element/name fe) " " (:attribute/ident attr))
    :hypercrud/owner (:hypercrud/owner parent-link)
@@ -79,10 +84,12 @@
         (concat create-links edit-links edit-attr-links))
 
       :link-entity []                                       ; No system links yet for entity links. What will there be?
+      ; entities get edit-attr-links
       [])))
 
 
 (defn request-for-system-link [system-link-idmap]
+  (assert (:parent-link system-link-idmap))
   ; both need parent-link
   ; both need fe
   ; one needs attr

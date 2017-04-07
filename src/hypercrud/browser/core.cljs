@@ -32,6 +32,7 @@
 
 
 (defn request-for-link [link-dbid]
+  (assert link-dbid)
   (let [form-pull-exp ['*
                        {:hypercrud/owner ['*]
                         :form/field
@@ -148,7 +149,7 @@
   (let [user-fn (first (remove nil? [(:user-renderer param-ctx) (link-user-fn link) auto-control/result]))]
     (fn [result colspec anchors param-ctx]
       (let [anchor-index (->> anchors
-                              (mapv (juxt #(-> % :anchor/ident) identity))
+                              (mapv (juxt #(-> % :anchor/ident) identity)) ; [ repeating entity attr ident ]
                               (into {}))
             with-inline-result (fn [ident param-ctx f]
                                  (let [anchor (get anchor-index ident)
@@ -191,7 +192,7 @@
            (remove :anchor/repeating?)
            (mapcat #(recurse-request % param-ctx)))
 
-      ; repeating inline-links (param-ctx maintains: :result, :entity, :attribute)
+      ; repeating inline-links (param-ctx maintains: :result, :entity, :attribute, :value)
       (->> result
            (mapcat (fn [relation]
                      (let [param-ctx (assoc param-ctx :result relation)]
@@ -203,7 +204,6 @@
                                                 (concat (->> (get repeating-anchors-lookup [(:find-element/name fe) nil]) (mapcat #(recurse-request % param-ctx)))
                                                         (->> (-> fe :find-element/form :form/field)
                                                              (mapcat (fn [field]
-                                                                       ; check schema here?
                                                                        (let [attribute (-> field :field/attribute)
                                                                              param-ctx (assoc param-ctx :attribute attribute
                                                                                                         :value (get entity (:attribute/ident attribute)))]

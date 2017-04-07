@@ -54,7 +54,7 @@
 ; with fe-name "entity")
 (defn form [relation colspec anchors param-ctx]
   (let [top-anchors (->> anchors
-                         (filter #(nil? (:anchor/find-element %)))
+                         (filter #(nil? (:anchor/find-element %))) ; this can be auto-set if "entity" req
                          (filter #(nil? (:anchor/attribute %))))]
     [:div.forms-list
      (widget/render-anchors (concat
@@ -69,7 +69,10 @@
                                     (->> top-anchors
                                          (remove :anchor/render-inline?)
                                          (filter :anchor/repeating?))
-                                    (repeat (assoc param-ctx :result relation))))) ; todo :result -> :relation
+                                    (repeat (assoc param-ctx :result relation)))
+
+                              ; there is another set if we have entity auto-filled?
+                              )) ; todo :result -> :relation
 
      ; everything inside this let is repeating, thus getting :result in ctx
      (let [param-ctx (assoc param-ctx :result relation)     ;  todo :result -> :relation
