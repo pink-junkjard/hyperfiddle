@@ -54,7 +54,8 @@
                        :link/anchor ['*
                                      {:anchor/link ['*      ; hydrate the whole link for validating the anchor by query params
                                                     {:hypercrud/owner ['*]}] ; need the link's owner to render the href to it
-                                      :anchor/find-element [:db/id :find-element/name :find-element/connection]}]
+                                      :anchor/find-element [:db/id :find-element/name :find-element/connection]
+                                      :anchor/attribute [:db/id :attribute/ident]}]
                        :hypercrud/owner ['*]}])))
 
 (defn merge-anchors [sys-anchors link-anchors]
@@ -167,12 +168,23 @@
 
 (declare request)
 
-(defn dependent-requests [resultset find-elements anchors param-ctx]
+(defn dependent-requests [result find-elements anchors param-ctx]
   (let [anchors (filter :anchor/render-inline? anchors)     ; at this point we only care about inline anchors
+        ; sys links already merged and accounted for above
+        ; manufacture the query-params
         repeating-anchors-lookup (->> anchors
                                       (filter :anchor/repeating?)
                                       (group-by (fn [anchor]
-                                                  (if-let [find-element (:anchor/find-element anchor)]
+                                                  (let [fe (-> anchor :anchor/find-element :find-element/name)
+                                                        ; dont have attr ident hydrated here.
+                                                        attr (-> anchor :anchor/attribute :attribute/ident)]
+
+                                                    ; if we have an attr but no fe, do we need to supply "entity" faked fe?
+                                                    ; This should be auto-selected in the future so we always have fe if we have attr.
+                                                    [fe attr])
+
+
+                                                  #_(if-let [find-element (:anchor/find-element anchor)]
                                                     (:find-element/name find-element)
                                                     (if (:anchor/attribute anchor)
                                                       ; entity links can have fields but not find-elements specified
@@ -182,7 +194,7 @@
                           (let [params-map (links/build-url-params-map anchor param-ctx)
                                 param-ctx (-> param-ctx
                                               (update :debug #(str % ">inline-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]"))
-                                              (dissoc :entity :request))]
+                                              (dissoc :result :entity :attribute :value))]
                             (request params-map param-ctx)))]
     (concat
       ; non-repeating inline-links
@@ -190,18 +202,24 @@
            (remove :anchor/repeating?)
            (mapcat #(recurse-request % param-ctx)))
 
-      ; repeating inline-links (require :result and :entity in param-ctx)
-      (->> resultset
-           (mapcat (fn [result]
-                     (let [param-ctx (assoc param-ctx :result result)]
-                       (concat (->> (get repeating-anchors-lookup nil)
-                                    (mapcat #(recurse-request % param-ctx)))
+      ; repeating inline-links (param-ctx maintains: :result, :entity, :attribute)
+      (->> result
+           (mapcat (fn [relation]
+                     (let [param-ctx (assoc param-ctx :result relation)]
+                       (concat (->> (get repeating-anchors-lookup [nil nil]) (mapcat #(recurse-request % param-ctx)))
                                (->> find-elements
-                                    (mapcat (fn [find-element]
-                                              (let [entity (get result (:find-element/name find-element))
+                                    (mapcat (fn [fe]
+                                              (let [entity (get relation (:find-element/name fe))
                                                     param-ctx (assoc param-ctx :entity entity)]
-                                                (->> (get repeating-anchors-lookup (:find-element/name find-element))
-                                                     (mapcat #(recurse-request % param-ctx)))))))))))))))
+                                                (concat (->> (get repeating-anchors-lookup [(:find-element/name fe) nil]) (mapcat #(recurse-request % param-ctx)))
+                                                        (->> (-> fe :find-element/form :form/field)
+                                                             (mapcat (fn [field]
+                                                                       ; check schema here?
+                                                                       (let [attribute (-> field :field/attribute)
+                                                                             param-ctx (assoc param-ctx :attribute attribute
+                                                                                                        :value (get entity (:attribute/ident attribute)))]
+                                                                         (->> (get repeating-anchors-lookup [(:find-element/name fe) (:attribute/ident attribute)]) (mapcat #(recurse-request % param-ctx)))
+                                                                         )))))))))))))))))
 
 
 (defn requests-for-link-query [link query-params param-ctx]
