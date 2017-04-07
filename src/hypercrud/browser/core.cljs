@@ -216,29 +216,46 @@
              (mapv :find-element/connection)
              (mapv schema-util/schema-request))
         (if recurse?
-          (if-let [resultset (exception/extract (hc/hydrate (:peer param-ctx) request) nil)]
-            (dependent-requests resultset (:link-query/find-element link-query) (:link/anchor link) param-ctx)))))))
-
+          (exception/extract
+            (mlet [result (hc/hydrate (:peer param-ctx) request)
+                   schema (hc/hydrate (:peer param-ctx) (schema-util/schema-request nil))] ; map connections
+                  (cats/return
+                    (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
+                          param-ctx (assoc param-ctx :schema indexed-schema)]
+                      (dependent-requests result (:link-query/find-element link-query)
+                                          (merge-anchors
+                                            (system-links/system-anchors link result param-ctx)
+                                            (:link/anchor link))
+                                          param-ctx))))
+            nil))))))
 
 (defn requests-for-link-entity [link query-params param-ctx recurse?]
-  (let [request (q-util/->entityRequest (:link/request link) query-params)]
+  (let [request (q-util/->entityRequest (:link/request link) query-params)
+        schema-request (schema-util/schema-request (get-in link [:link/request :link-entity/connection]))]
     (concat
-      [request
-       (schema-util/schema-request (get-in link [:link/request :link-entity/connection]))]
+      [request schema-request]
       (if recurse?
-        (if-let [resultset (exception/extract (hc/hydrate (:peer param-ctx) request) nil)]
-          (let [resultset (->> (if (map? resultset) [resultset] resultset)
-                               (mapv #(assoc {} "entity" %)))
-                find-elements [{:find-element/name "entity"
-                                :find-element/form (get-in link [:link/request :link-entity/form])}]]
-            (dependent-requests resultset find-elements (:link/anchor link) param-ctx)))))))
-
+        (exception/extract
+          (mlet [result (hc/hydrate (:peer param-ctx) request)
+                 schema (hc/hydrate (:peer param-ctx) schema-request)]
+                (cats/return
+                  (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
+                        param-ctx (assoc param-ctx :schema indexed-schema)
+                        result (->> (if (map? result) [result] result) (mapv #(assoc {} "entity" %)))
+                        find-elements [{:find-element/name "entity"
+                                        :find-element/form (get-in link [:link/request :link-entity/form])}]]
+                    (dependent-requests result find-elements
+                                        (merge-anchors
+                                          (system-links/system-anchors link result param-ctx)
+                                          (:link/anchor link))
+                                        param-ctx))))
+          nil)))))
 
 (defn requests-for-link [link query-params param-ctx recurse?]
   (let [param-ctx (assoc param-ctx :query-params query-params)]
     (case (link-util/link-type link)
-      :link-query (requests-for-link-query link query-params param-ctx recurse?) ; Todo - hydrate refs deeper if no option link
-      :link-entity (requests-for-link-entity link query-params param-ctx recurse?) ; hydrate refs deeper if no option link
+      :link-query (requests-for-link-query link query-params param-ctx recurse?)
+      :link-entity (requests-for-link-entity link query-params param-ctx recurse?)
       :link-blank (dependent-requests [] [] (:link/anchor link) param-ctx)))) ; this case does not request the schema, as we don't have a connection for the link.
 
 

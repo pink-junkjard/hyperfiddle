@@ -72,7 +72,7 @@
        build-indexed-schema))
 
 
-(defn schema-request [project-dbid]
+(defn schema-request [connection]
   (let [root-dbval (->DbVal hc/*root-conn-id* nil)]
     (->QueryRequest '[:find ?attr :in $ :where [?attr :attribute/ident]]
                     {"$" root-dbval}
