@@ -176,20 +176,9 @@
                                       (filter :anchor/repeating?)
                                       (group-by (fn [anchor]
                                                   (let [fe (-> anchor :anchor/find-element :find-element/name)
-                                                        ; dont have attr ident hydrated here.
-                                                        attr (-> anchor :anchor/attribute :attribute/ident)]
-
-                                                    ; if we have an attr but no fe, do we need to supply "entity" faked fe?
-                                                    ; This should be auto-selected in the future so we always have fe if we have attr.
-                                                    [fe attr])
-
-
-                                                  #_(if-let [find-element (:anchor/find-element anchor)]
-                                                    (:find-element/name find-element)
-                                                    (if (:anchor/attribute anchor)
-                                                      ; entity links can have fields but not find-elements specified
-                                                      "entity"
-                                                      nil)))))
+                                                        attr (-> anchor :anchor/attribute :attribute/ident)
+                                                        fe (if (and attr (nil? fe)) "entity" fe)] ; This should be auto-selected in the future so we always have fe if we have attr.
+                                                    [fe attr]))))
         recurse-request (fn [anchor param-ctx]
                           (let [params-map (links/build-url-params-map anchor param-ctx)
                                 param-ctx (-> param-ctx
