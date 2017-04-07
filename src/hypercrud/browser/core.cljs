@@ -85,67 +85,76 @@
 (declare user-result)
 
 (defn ui [{query-params :query-params :as params-map} param-ctx]
-  (let [dom-or-e
-        (mlet [link (hydrate-link (:peer param-ctx) (:link-dbid params-map))
-               request (try-on
-                         (case (link-util/link-type link)
-                           :link-query (let [link-query (:link/request link)
-                                             q (some-> link-query :link-query/value reader/read-string)
-                                             params-map (merge query-params (q-util/build-dbhole-lookup link-query))]
-                                         (q-util/query-value q link-query params-map param-ctx))
-                           :link-entity (q-util/->entityRequest (:link/request link) (:query-params params-map))
-                           :link-blank nil
-                           nil))
-               result (if request (hc/hydrate (:peer param-ctx) request) (exception/success nil))
-               ; schema is allowed to be nil if the link only has anchors and no data dependencies
-               schema (exception/try-or-else (hc/hydrate (:peer param-ctx) (schema-util/schema-request nil)) nil)]
-              (cats/return
-                (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
-                      param-ctx (assoc param-ctx            ; provide defaults before user-bindings run. TODO query side
-                                  :query-params query-params
-                                  :schema indexed-schema
-                                  :read-only (or (:read-only param-ctx) (constantly false)))
+  (mlet [link (hydrate-link (:peer param-ctx) (:link-dbid params-map))
+         request (try-on
+                   (case (link-util/link-type link)
+                     :link-query (let [link-query (:link/request link)
+                                       q (some-> link-query :link-query/value reader/read-string)
+                                       params-map (merge query-params (q-util/build-dbhole-lookup link-query))]
+                                   (q-util/query-value q link-query params-map param-ctx))
+                     :link-entity (q-util/->entityRequest (:link/request link) (:query-params params-map))
+                     :link-blank nil
+                     nil))
+         result (if request (hc/hydrate (:peer param-ctx) request) (exception/success nil))
+         ; schema is allowed to be nil if the link only has anchors and no data dependencies
+         schema (exception/try-or-else (hc/hydrate (:peer param-ctx) (schema-util/schema-request nil)) nil)]
+        (cats/return
+          (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
+                param-ctx (assoc param-ctx            ; provide defaults before user-bindings run. TODO query side
+                            :query-params query-params
+                            :schema indexed-schema
+                            :read-only (or (:read-only param-ctx) (constantly false)))
 
-                      ; ereq doesn't have a fe yet; wrap with a fe.
-                      ; Doesn't make sense to do on server since this is going to optimize away anyway.
+                ; ereq doesn't have a fe yet; wrap with a fe.
+                ; Doesn't make sense to do on server since this is going to optimize away anyway.
 
-                      result (cond
+                result (cond
 
-                               (instance? types/EntityRequest request) ; But the ereq might return a vec for cardinality many
-                               (cond
-                                 ; order matters here a lot!
-                                 (nil? result) nil
-                                 (empty? result) (if (coll? (.-dbid-s request)) [] {}) ; comes back as [] sometimes if cardinaltiy many request. this is causing problems as nil or {} in different places.
-                                 (map? result) {"entity" result}
-                                 (coll? result) (mapv (fn [relation] {"entity" relation}) result))
+                         (instance? types/EntityRequest request) ; But the ereq might return a vec for cardinality many
+                         (cond
+                           ; order matters here a lot!
+                           (nil? result) nil
+                           (empty? result) (if (coll? (.-dbid-s request)) [] {}) ; comes back as [] sometimes if cardinaltiy many request. this is causing problems as nil or {} in different places.
+                           (map? result) {"entity" result}
+                           (coll? result) (mapv (fn [relation] {"entity" relation}) result))
 
 
-                               (instance? types/QueryRequest request)
-                               (cond
-                                 (-> link :link/request :link-query/single-result-as-entity?) (first result)
-                                 :else result))
+                         (instance? types/QueryRequest request)
+                         (cond
+                           (-> link :link/request :link-query/single-result-as-entity?) (first result)
+                           :else result))
 
-                      colspec (form-util/determine-colspec result link param-ctx)
-                      system-anchors (if-not (system-links/system-link? (-> params-map :link-dbid))
-                                       (system-links/system-anchors link result param-ctx))]
+                colspec (form-util/determine-colspec result link param-ctx)
+                system-anchors (if-not (system-links/system-link? (-> params-map :link-dbid))
+                                 (system-links/system-anchors link result param-ctx))]
 
-                  (case (get param-ctx :display-mode)       ; default happens higher, it influences queries too
-                    :user ((user-result link param-ctx) result colspec (merge-anchors system-anchors (:link/anchor link)) (user-bindings link param-ctx))
-                    :xray (auto-control/result result colspec (merge-anchors system-anchors (:link/anchor link)) (user-bindings link param-ctx))
-                    :root (auto-control/result result colspec system-anchors param-ctx)))))]
-    (if (exception/failure? dom-or-e)
-      (or (-> dom-or-e .-e .-data) [:pre (pr-str (-> dom-or-e .-e))])
-      (.-v dom-or-e))))
+            (case (get param-ctx :display-mode)       ; default happens higher, it influences queries too
+              :user ((user-result link param-ctx) result colspec (merge-anchors system-anchors (:link/anchor link)) (user-bindings link param-ctx))
+              :xray (auto-control/result result colspec (merge-anchors system-anchors (:link/anchor link)) (user-bindings link param-ctx))
+              :root (auto-control/result result colspec system-anchors param-ctx))))))
+
+(defn safe-ui [& args]
+  ; there can be a hydrate error, or a javascript error in hyperfiddle, or
+  ; a js error in a user-fn.
+  (try
+    (let [dom-or-e (apply ui args)]
+      (if (exception/failure? dom-or-e)
+        (or (-> dom-or-e .-e .-data) [:pre (pr-str (-> dom-or-e .-e))]) ; hydrate error
+        (.-v dom-or-e)))                                    ; happy path
+    (catch :default e                                       ; js errors? Why do we need this.
+      [:pre (.-stack e)])))
 
 (defn link-user-fn [link]
   (if-not (empty? (:link/renderer link))
-    (let [{f :value error :error} (eval-str (:link/renderer link))]
+    (let [{user-fn :value error :error} (eval-str (:link/renderer link))]
       (if error
-        (fn [type result colspec anchor-index param-ctx]
+        (fn [result colspec anchors param-ctx]
           [:pre (pprint/pprint error)])
-        f))))
+        (fn [result colspec anchors param-ctx]
+          [safe-user-renderer user-fn result colspec anchors param-ctx])))))
 
 (defn user-result [link param-ctx]
+  ; only need a safewrap on other people's user-fns; this context's user fn only needs the topmost safewrap.
   (let [user-fn (first (remove nil? [(:user-renderer param-ctx) (link-user-fn link) auto-control/result]))]
     (fn [result colspec anchors param-ctx]
       (let [anchor-index (->> anchors
@@ -154,7 +163,7 @@
             with-inline-result (fn [ident param-ctx f]
                                  (let [anchor (get anchor-index ident)
                                        params-map (links/build-url-params-map anchor param-ctx)]
-                                   (ui params-map (assoc param-ctx :user-renderer f))))
+                                   @(ui params-map (assoc param-ctx :user-renderer f))))
             param-ctx (assoc param-ctx
                         :link-fn (fn [ident label param-ctx]
                                    (let [anchor (get anchor-index ident)
@@ -164,7 +173,7 @@
                         :with-inline-result with-inline-result
                         )]
         ; result is relation or set of relations
-        [safe-user-renderer user-fn result colspec anchors param-ctx]))))
+        (user-fn result colspec anchors param-ctx)))))
 
 
 (declare request)

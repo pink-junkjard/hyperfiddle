@@ -49,7 +49,7 @@
 
                  [:div {:key (hash anchor)}               ; extra div bc had trouble getting keys to work
                   (case (:display-mode param-ctx) :xray (render-anchors [anchor] param-ctx) nil)
-                  [browser/ui params-map ui-param-ctx]])))
+                  [browser/safe-ui params-map ui-param-ctx]])))
         (doall))))
 
 (defn option-anchor? [anchor]
