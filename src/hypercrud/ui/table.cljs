@@ -31,7 +31,7 @@
                    :db.type/code}
                  (:db/ident valueType)))))
 
-(defn build-col-heads [colspec col-sort]
+(defn build-col-heads [colspec col-sort param-ctx]
   (->> (partition 4 colspec)
        (mapv (fn [[conn fe-name ident field]]
                (let [prompt (util/fallback empty? (get field :field/prompt) (str ident))
@@ -60,13 +60,7 @@
                        :style {:background-color (connection-color/connection-color (-> conn :db/id :id))}
                        :key (str fe-name "-" ident)
                        :on-click on-click}
-                  (str prompt)
-                  (let [docstring (-> field :field/attribute :attribute/doc)]
-                    (if-not (empty? docstring)
-                      [native-listener {:on-click (fn [e]
-                                                    (js/alert docstring)
-                                                    (.stopPropagation e))}
-                       [:span.help "ⓘ"]]))
+                  [:label (form-util/field-label field param-ctx)]
                   #_[:span.sort-arrow arrow]])))
        (seq)))
 
@@ -156,7 +150,7 @@
          [:table.ui-table
           [:thead
            [:tr
-            (build-col-heads colspec sort-col)
+            (build-col-heads colspec sort-col param-ctx)
             [:td.link-cell {:key :link-cell}
              (widget/render-anchors (remove :anchor/render-inline? non-repeating-top-anchors) param-ctx)]]]
           [body relations colspec (filter :anchor/repeating? anchors) sort-col param-ctx]]

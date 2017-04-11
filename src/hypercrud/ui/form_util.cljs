@@ -1,8 +1,10 @@
 (ns hypercrud.ui.form-util
-  (:require [hypercrud.util :as util]
-            [cljs.reader :as reader]
+  (:require [cljs.reader :as reader]
+            [clojure.string :as string]
             [hypercrud.browser.link-util :as link-util]
-            [clojure.string :as string]))
+            [hypercrud.ui.code-editor :as code-editor]
+            [hypercrud.ui.tooltip :as tooltip]
+            [hypercrud.util :as util]))
 
 (defn css-slugify [s]
   ; http://stackoverflow.com/a/449000/959627
@@ -89,3 +91,28 @@ the find-element level has been flattened out of the columns."
   (assoc param-ctx :color ((:color-fn param-ctx) entity param-ctx)
                    :owner ((:owner-fn param-ctx) entity param-ctx)
                    :entity entity))
+
+(defn attribute-human [attr]
+  (-> attr
+      (dissoc :db/id)
+      (util/update-existing :attribute/cardinality :db/ident)
+      (util/update-existing :attribute/valueType :db/ident)))
+
+(defn field-label [maybe-field param-ctx]
+  (let [docstring (-> maybe-field :field/doc)
+        field-prompt (util/fallback empty? (get maybe-field :field/prompt) (-> param-ctx :attribute :attribute/ident str))]
+    [tooltip/hover-popover
+     {:label (case (:display-mode param-ctx)
+               :user (if-not (empty? docstring) [:pre docstring])
+               :xray [:pre (util/pprint-str (attribute-human (:attribute param-ctx)) 50)])}
+     [:span {:class (case (:display-mode param-ctx)
+                      :user (if-not (empty? docstring) "help")
+                      :xray "help")} field-prompt]]
+    #_[:div
+       (let [is-ref? (coll? value)]
+         (if is-ref?
+           [tooltip/click-popover
+            {:body [code-editor/code-editor* (util/pprint-str value 100) nil {:readOnly true}]}
+            [:a {:href "javascript:void 0;"} "§"]]))
+       " "
+       ]))

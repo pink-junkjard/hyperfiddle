@@ -6,29 +6,14 @@
             [hypercrud.ui.form-util :as form-util]
             [hypercrud.ui.input :as input]
             [hypercrud.ui.renderer :as renderer]
-            [hypercrud.ui.tooltip :as tooltip]
             [hypercrud.ui.widget :as widget]
-            [hypercrud.ui.code-editor :as code-editor]
-            [reagent.core :as r]
-            [hypercrud.util :as util]))
+            [reagent.core :as r]))
 
 ; field is optional (raw mode); schema and attribute is in dynamic scope in all modes
 (defn field [value maybe-field anchors param-ctx]
   (let [param-ctx (assoc param-ctx :value value)]
     [:div.field {:style {:border-color (connection-color/connection-color (:color param-ctx))}}
-     [:label
-      (let [docstring (or (-> maybe-field :field/doc) "")
-            field-prompt (util/fallback empty? (get maybe-field :field/prompt) (-> param-ctx :attribute :attribute/ident str))]
-        [:div
-         (let [is-ref? (coll? value)]
-           (if is-ref?
-             [tooltip/click-popover
-              {:body [code-editor/code-editor* (util/pprint-str value 100) nil {:readOnly true}]}
-              [:a {:href "javascript:void 0;"} "§"]]))
-         " "
-         [tooltip/hover-tooltip
-          {:label docstring}
-          [:span {:class (if-not (empty? docstring) "help")} field-prompt]]])]
+     [:label (form-util/field-label maybe-field param-ctx)]
      (let [anchors (filter #(= (-> param-ctx :attribute :db/id) (some-> % :anchor/attribute :db/id)) anchors)
            props (form-util/build-props value maybe-field anchors param-ctx)]
        (if (renderer/user-renderer param-ctx)
