@@ -34,7 +34,7 @@
 (defn build-col-heads [colspec col-sort param-ctx]
   (->> (partition 4 colspec)
        (mapv (fn [[conn fe-name ident field]]
-               (let [prompt (util/fallback empty? (get field :field/prompt) (str ident))
+               (let [param-ctx (assoc param-ctx :attribute (get (:schema param-ctx) ident))
                      css-classes [(str "field-element-" (form-util/css-slugify fe-name))
                                   (str "field-attr-" (form-util/css-slugify (str ident)))] #_"Dustin removed field-id and field-prompt; use a custom renderer"
                      on-click #()
