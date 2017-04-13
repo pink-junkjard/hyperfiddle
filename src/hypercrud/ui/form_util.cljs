@@ -97,6 +97,7 @@ the find-element level has been flattened out of the columns."
       (dissoc :db/id)
       (util/update-existing :attribute/cardinality :db/ident)
       (util/update-existing :attribute/valueType :db/ident)
+      (util/update-existing :attribute/unique :db/ident)
       (util/update-existing :attribute/hc-type :hc-type/name)))
 
 (defn field-label [maybe-field param-ctx]
