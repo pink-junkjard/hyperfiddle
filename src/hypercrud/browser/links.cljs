@@ -22,15 +22,15 @@
 
       ; attr edit
       (and r true #_e a)                                    ; legacy links may not set entity here
-      (pr-str {:entity `(fn [~'ctx]                         ; cljs compiler bug? introduce let breaks this
-                          (if (= :db.cardinality/many (-> (get (:schema ~'ctx) (-> ~'ctx :attribute :attribute/ident)) :attribute/cardinality :db/ident))
-                            (mapv :db/id (get ~'ctx :value))
-                            (get-in ~'ctx [:value :db/id])))})
+      (pr-str {:entity `(fn [ctx#]
+                          (if (= :db.cardinality/many (-> (get (:schema ctx#) (-> ctx# :attribute :attribute/ident)) :attribute/cardinality :db/ident))
+                            (mapv :db/id (get ctx# :value))
+                            (get-in ctx# [:value :db/id])))})
 
       ; entity edit
       (and r e (not a))
-      (pr-str {:entity `(fn [~'ctx]                         ; find-elements don't have cardinality
-                          (get-in ~'ctx [:entity :db/id]))})
+      (pr-str {:entity `(fn [ctx#]                          ; find-elements don't have cardinality
+                          (get-in ctx# [:entity :db/id]))})
 
       ; attr create
       (and (not r) true #_e a)
@@ -38,7 +38,7 @@
 
       ; entity create
       (and (not r) e (not a))
-      (pr-str {:entity `(fn [~'ctx]
+      (pr-str {:entity `(fn [ctx#]
                           (hc/*temp-id!* ~(-> e :find-element/connection :db/id :id)))})
 
       ; naked
@@ -56,13 +56,13 @@
 
       ; legacy links don't have e
       (and (not r) true #_e a)                              ; attr create
-      (pr-str `(fn [~'ctx]
-                 (let [parent# (:entity ~'ctx)
+      (pr-str `(fn [ctx#]
+                 (let [parent# (:entity ctx#)
                        new-dbid# (hc/*temp-id!* (-> parent# :db/id :conn-id))
                        tx-from-modal# [[:db/add new-dbid# :form/name ""]]]
                    {:tx
                     (concat
-                      (let [attr-ident# (-> ~'ctx :attribute :attribute/ident)
+                      (let [attr-ident# (-> ctx# :attribute :attribute/ident)
                             rets# (some-> parent# attr-ident# :db/id vector)
                             adds# [new-dbid#]]
                         (tx/edit-entity (:db/id parent#) attr-ident# rets# adds#))
