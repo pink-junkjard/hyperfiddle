@@ -59,15 +59,30 @@
       (pr-str `(fn [ctx#]
                  (let [parent# (:entity ctx#)
                        new-dbid# (hc/*temp-id!* (-> parent# :db/id :conn-id))
-                       tx-from-modal# [[:db/add new-dbid# :form/name ""]]]
-                   {:tx
-                    (concat
-                      (let [attr-ident# (-> ctx# :attribute :attribute/ident)
-                            rets# (some-> parent# attr-ident# :db/id vector)
-                            adds# [new-dbid#]]
-                        (tx/edit-entity (:db/id parent#) attr-ident# rets# adds#))
-                      tx-from-modal#)})))
 
+                       req# nil
+                       staged-tx# nil
+
+                       ; hydrate the link as if embedded, in fact should this be embed true?
+
+                       ; request the whole browser for this link
+                       p-link# (p/resolved nil) #_(hc/hydrate!* ~'hypercrud.runtime.main/client #{req#} staged-tx#)]
+                   (-> p-link#
+                       ; then show the modal
+                       (p/then (fn [peer#]
+                                 ; draw browser in modal
+                                 ; wait for button click, then resolve with the tx
+                                 (p/resolved
+                                   [[:db/add new-dbid# :form/name ""]])))
+                       ; then return the managed ref tx
+                       (p/then (fn [tx-from-modal#]
+                                 {:tx
+                                  (concat
+                                    (let [attr-ident# (-> ctx# :attribute :attribute/ident)
+                                          rets# (some-> parent# attr-ident# :db/id vector)
+                                          adds# [new-dbid#]]
+                                      (tx/edit-entity (:db/id parent#) attr-ident# rets# adds#))
+                                    tx-from-modal#)}))))))
       :else nil)))
 
 (defn build-url-params-map
