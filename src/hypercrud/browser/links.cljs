@@ -2,6 +2,7 @@
   (:require [cljs.reader :as reader]
             [clojure.set :as set]
             [hypercrud.client.core :as hc]
+            [hypercrud.client.tx :as tx]
             [hypercrud.compile.eval :refer [eval-str]]
             [hypercrud.form.q-util :as q-util]
             [hypercrud.util :as util]
@@ -21,20 +22,19 @@
 
       ; attr edit
       (and r true #_e a)                                    ; legacy links may not set entity here
-      (pr-str {:entity `(fn [~'ctx]
-                          ; i am seeing cljs compiler bugs here? introducing let forms breaks it.
+      (pr-str {:entity `(fn [~'ctx]                         ; cljs compiler bug? introduce let breaks this
                           (if (= :db.cardinality/many (-> (get (:schema ~'ctx) (-> ~'ctx :attribute :attribute/ident)) :attribute/cardinality :db/ident))
                             (mapv :db/id (get ~'ctx :value))
                             (get-in ~'ctx [:value :db/id])))})
 
       ; entity edit
       (and r e (not a))
-      (pr-str {:entity `(fn [~'ctx]
-                          ; find-elements don't have cardinality
+      (pr-str {:entity `(fn [~'ctx]                         ; find-elements don't have cardinality
                           (get-in ~'ctx [:entity :db/id]))})
 
       ; attr create
-      (and (not r) e a) nil
+      (and (not r) true #_e a)
+      nil                                                   ; managed - see auto-txfn
 
       ; entity create
       (and (not r) e (not a))
@@ -50,29 +50,48 @@
 
       :else (assert false (str "auto-formula matrix - missing pattern: " (util/pprint-str [r e a]))))))
 
+(defn auto-txfn [anchor]
+  (let [{r :anchor/repeating? e :anchor/find-element a :anchor/attribute} anchor]
+    (cond
+
+      ; legacy links don't have e
+      (and (not r) true #_e a)                              ; attr create
+      (pr-str `(fn [~'ctx]
+                 (let [parent# (:entity ~'ctx)
+                       new-dbid# (hc/*temp-id!* (-> parent# :db/id :conn-id))
+                       tx-from-modal# [[:db/add new-dbid# :form/name ""]]]
+                   {:tx
+                    (concat
+                      (let [attr-ident# (-> ~'ctx :attribute :attribute/ident)
+                            rets# (some-> parent# attr-ident# :db/id vector)
+                            adds# [new-dbid#]]
+                        (tx/edit-entity (:db/id parent#) attr-ident# rets# adds#))
+                      tx-from-modal#)})))
+
+      :else nil)))
+
 (defn build-url-params-map
-  ([domain project link-dbid formula param-ctx]
+  ([domain project link-dbid formula-str param-ctx]
    {:domain domain
     :project project
     :link-dbid link-dbid #_:id
     :query-params (try                                      ; todo return monad
-                    (->> (q-util/read-eval-formulas formula)
+                    (->> (q-util/read-eval-formulas formula-str)
                          (util/map-values #(q-util/run-formula % param-ctx)))
                     (catch js/Error e {}))})
-  ([link formula param-ctx]
+  ([link formula-str param-ctx]
    (build-url-params-map
      (-> link :hypercrud/owner :database/domain)
      (-> link :hypercrud/owner :database/ident)
      (-> link :db/id)
-     formula
+     formula-str
      param-ctx))
   ([anchor param-ctx]
-   (let [formula (:anchor/formula anchor)
-         formula (if (empty? formula)
-                   (auto-formula anchor)
-                   formula)
-         ]
-     (build-url-params-map (:anchor/link anchor) formula param-ctx)))
+   (let [formula-str (:anchor/formula anchor)
+         formula-str (if (empty? formula-str)
+                       (auto-formula anchor)
+                       formula-str)]
+     (build-url-params-map (:anchor/link anchor) formula-str param-ctx)))
   #_(case (link-type (:anchor/link anchor))
       :link-query {:link-dbid (-> anchor :anchor/link :db/id)
                    :query-params (->> (q-util/read-eval-formulas (:anchor/formula anchor))
@@ -112,9 +131,14 @@
    :class (if-not (anchor-valid? link route) "invalid")})
 
 (defn build-link-props [anchor param-ctx]
+  ; auto-tx-fn in addition to auto-formula
   (let [param-ctx (assoc param-ctx :link-owner (-> anchor :anchor/link :hypercrud/owner)) ; tx-fn may need this
-        tx-fn (if-let [tx-fn (:anchor/tx-fn anchor)]
-                (let [{value :value error :error} (eval-str tx-fn)]
+        tx-fn-str (let [tx-fn-str (:anchor/tx-fn anchor)]
+                    (if (empty? tx-fn-str)
+                      (auto-txfn anchor)
+                      tx-fn-str))
+        tx-fn (if tx-fn-str
+                (let [{value :value error :error} (eval-str tx-fn-str)]
                   ;; non-fatal error, report it here so user can fix it
                   (if error (js/alert (str "cljs eval error: " error))) ; return monad so tooltip can draw the error
                   value))]
