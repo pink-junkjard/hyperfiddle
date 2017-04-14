@@ -48,17 +48,18 @@
 
 
 (defn no-link-type [anchors param-ctx]
-  (let [non-repeating-top-anchors (->> anchors
-                                       (remove :anchor/repeating?)
-                                       (remove :anchor/find-element)
-                                       (remove :anchor/attribute))]
+  (let [naked-anchors (->> anchors
+                           (remove :anchor/repeating?)
+                           (remove :anchor/find-element)
+                           (remove :anchor/attribute))]
     [:div
-     (widget/render-anchors (remove :anchor/render-inline? non-repeating-top-anchors) param-ctx)
+     (widget/render-anchors (remove :anchor/render-inline? naked-anchors) param-ctx)
      (let [param-ctx (dissoc param-ctx :isComponent)]
-       (widget/render-inline-links (filter :anchor/render-inline? non-repeating-top-anchors) param-ctx))]))
+       (widget/render-inline-links (filter :anchor/render-inline? naked-anchors) param-ctx))]))
 
 ; Result is either a relation, or a set of relations (vector on the wire)
 (defmethod auto-control/result :default [result colspec anchors param-ctx]
+  ; todo render naked anchors in all three cases, its not specific to blank case
   (cond
     ; order matters here
     (map? result) (form/form result colspec anchors param-ctx)

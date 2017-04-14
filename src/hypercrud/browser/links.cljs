@@ -11,34 +11,44 @@
 
 
 (defn auto-formula [anchor]                                 ; what about long-coersion?
-  ; we don't need eval to do this, we can do it as a special form in a new airity TODO
-  (let [{:keys [:anchor/repeating? :anchor/find-element :anchor/attribute]} anchor]
-    ; its weird - we already have this info in the runtime param-ctx (:result, :entity, :value)
-    ; so really we don't need to look at the anchor at all, if we delay this until formula runtime.
+  ; Future improvement:
+  ; we already have this info in the runtime param-ctx, so we could delay until formula runtime
+  ; and not look at the anchor at all and bypass the formula read-eval.
+
+  ; this is a 3x3 matrix - repeating, entity, attribute. attribute depends on entity
+  (let [{r :anchor/repeating? e :anchor/find-element a :anchor/attribute} anchor]
     (cond
-      (not (nil? attribute))
+
+      ; attr edit
+      (and r true #_e a)                                    ; legacy links may not set entity here
       (pr-str {:entity `(fn [~'ctx]
                           ; i am seeing cljs compiler bugs here? introducing let forms breaks it.
                           (if (= :db.cardinality/many (-> (get (:schema ~'ctx) (-> ~'ctx :attribute :attribute/ident)) :attribute/cardinality :db/ident))
                             (mapv :db/id (get ~'ctx :value))
                             (get-in ~'ctx [:value :db/id])))})
 
-      (and (not repeating?) (not (nil? find-element)))      ; create
-      (pr-str {:entity `(fn [~'ctx]
-                          (hc/*temp-id!* ~(-> find-element :find-element/connection :db/id :id)))})
-
-      (and repeating? (not (nil? find-element)))            ; edit
+      ; entity edit
+      (and r e (not a))
       (pr-str {:entity `(fn [~'ctx]
                           ; find-elements don't have cardinality
                           (get-in ~'ctx [:entity :db/id]))})
 
-      ; what can you do here? Give the whole relation in the formula?
-      ; Entitiy pages don't get a chance to color different things differently.
-      ; It would need to be a query page with multiple named params, at which point
-      ; you need a custom formula.
-      (and repeating? (nil? find-element)) nil
+      ; attr create
+      (and (not r) e a) nil
 
-      :else nil)))
+      ; entity create
+      (and (not r) e (not a))
+      (pr-str {:entity `(fn [~'ctx]
+                          (hc/*temp-id!* ~(-> e :find-element/connection :db/id :id)))})
+
+      ; naked
+      (and (not r) (not e) (not a)) nil
+
+      ; relation edit (this is not really a thing)
+      ; If this is a thing, it probably is a query with named params and a custom formula.
+      (and r (not e) (not a)) nil
+
+      :else (assert false (str "auto-formula matrix - missing pattern: " (util/pprint-str [r e a]))))))
 
 (defn build-url-params-map
   ([domain project link-dbid formula param-ctx]
