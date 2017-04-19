@@ -9,6 +9,8 @@
   (map? (:id link-dbid)))
 
 (defn system-edit-link-dbid [parent-link fe]
+  (assert parent-link) (assert (:db/id parent-link))
+  (assert fe) (assert (:db/id fe))
   (->DbId {:ident :system-edit
            :parent-link (:db/id parent-link)
            :find-element (:db/id fe)}
@@ -16,6 +18,9 @@
 
 
 (defn system-edit-attr-link-dbid [parent-link fe attr]
+  (assert parent-link) (assert (:db/id parent-link))
+  (assert fe) (assert (:db/id fe))
+  (assert attr) (assert (:db/id attr))
   (->DbId {:ident :system-edit-attr
            :parent-link (:db/id parent-link)
            :find-element (:db/id fe)
@@ -65,9 +70,11 @@
                                       :anchor/ident :sys
                                       :anchor/link (system-edit-link parent-link fe)
                                       :anchor/repeating? false
-                                      :anchor/find-element fe}]))
+                                      :anchor/find-element fe
+                                      ;:anchor/render-inline? true
+                                      }]))
                           doall)
-        attr-links (->> (partition 4 colspec)           ; driven by colspec, not find elements, because what matters is what's there.
+        attr-links (->> (partition 4 colspec)               ; driven by colspec, not find elements, because what matters is what's there.
                         (mapcat (fn [[conn fe-name ident maybe-field]]
                                   (let [fe (get find-elements fe-name)
                                         attr ((:schema param-ctx) ident)]
@@ -85,7 +92,9 @@
                                                      :anchor/link (system-edit-attr-link parent-link fe attr)
                                                      :anchor/repeating? false
                                                      :anchor/find-element fe
-                                                     :anchor/attribute attr}]
+                                                     :anchor/attribute attr
+                                                     :anchor/render-inline? true
+                                                     }]
                                       nil))))
                         doall)]
     (case (link-util/link-type parent-link)
@@ -117,13 +126,14 @@
                                                    :find-element/connection
                                                    {:find-element/form form-pull-exp}]}]}])))
 
-
-
-
-
-(defn generate-system-link [system-link-idmap parent-link]
-  (let [fe (first (filter #(= (:db/id %) (:find-element system-link-idmap))
-                          (-> parent-link :link/request :link-query/find-element)))
+(defn generate-system-link [system-link-idmap parent-link param-ctx]
+  ; account for "entity" fes here. Maybe search by name rather than dbid.
+  ; We use the dbid because it is a database dependency.
+  ; aren't they all entity links? No
+  (let [fe (if (= "entity" (:find-element system-link-idmap))
+             (form-util/entity-find-elements parent-link param-ctx)
+             (first (filter #(= (:db/id %) (:find-element system-link-idmap))
+                            (-> parent-link :link/request :link-query/find-element))))
         attr (first (filter #(= (-> % :field/attribute :db/id) (:attribute system-link-idmap))
                             (-> fe :find-element/form :form/field)))]
     (case (:ident system-link-idmap)

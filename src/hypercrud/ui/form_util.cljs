@@ -30,6 +30,13 @@
   (->> (mapv (juxt :find-element/name identity) (:link-query/find-element link-req))
        (into {})))
 
+(defn entity-find-elements [link param-ctx]
+  [{:db/id "entity"                        ; sentinel
+    :find-element/name "entity"
+    :find-element/connection nil
+    :find-element/form (-> (-> link :link/request :link-entity/form)
+                           (update :form/field filter-visible-fields param-ctx))}])
+
 (defn get-ordered-find-elements [link param-ctx]
   (let [req (:link/request link)]
     (case (link-util/link-type link)
@@ -38,9 +45,7 @@
                     (->> (util/parse-query-element q :find)
                          (mapv str)
                          (mapv #(get find-element-lookup %))))
-      :link-entity [{:find-element/name "entity"
-                     :find-element/form (-> (:link-entity/form req)
-                                            (update :form/field filter-visible-fields param-ctx))}]
+      :link-entity (entity-find-elements link param-ctx)
       [])))
 
 
@@ -103,7 +108,7 @@ the find-element level has been flattened out of the columns."
 (defn field-label [maybe-field param-ctx]
   (let [docstring (-> maybe-field :field/doc)
         field-prompt (util/fallback empty? (get maybe-field :field/prompt) (-> param-ctx :attribute :attribute/ident str))]
-    [tooltip/hover-popover
+    [tooltip/hover-popover-managed
      {:label (case (:display-mode param-ctx)
                :user (if-not (empty? docstring) [:pre docstring])
                :xray [:pre (util/pprint-str (attribute-human (:attribute param-ctx)) 50)])}
@@ -113,7 +118,7 @@ the find-element level has been flattened out of the columns."
     #_[:div
        (let [is-ref? (coll? value)]
          (if is-ref?
-           [tooltip/click-popover
+           [tooltip/click-popover-managed
             {:body [code-editor/code-editor* (util/pprint-str value 100) nil {:readOnly true}]}
             [:a {:href "javascript:void 0;"} "§"]]))
        " "

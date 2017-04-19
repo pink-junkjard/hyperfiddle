@@ -26,7 +26,7 @@
 ;                          }))]
 ;    (apply popover-anchor-wrapper* (apply concat props))))
 
-(defn hover-tooltip [& args]
+(defn hover-tooltip-managed [& args]
   ; if there is no tooltip, the hovers are such that it will never be shown
   (let [state (r/atom false)]
     (fn [t-props anchor]
@@ -42,41 +42,60 @@
                              :on-mouse-leave #(do (if (:label t-props) (reset! state false)) nil)}
                       anchor]}))))))
 
-(defn click-popover [& args]
-  (let [state (r/atom false)]
-    (fn [t-props anchor]                                    ; magic :body key is documented at :popover :body
-      (apply
-        popover-anchor-wrapper*
-        (apply
-          concat
-          (merge
-            {:position :below-center
-             :showing? state}
-            (dissoc t-props :body)
-            {:anchor [:span {:on-click #(do (swap! state not) nil)}
-                      anchor]
-             :popover [re-com/popover-content-wrapper
-                       :on-cancel #(do (reset! state false) nil)
-                       :no-clip? true
-                       :body (:body t-props)]}))))))
+(defn click-popover* [state t-props anchor]
+  (apply
+    popover-anchor-wrapper*
+    (apply
+      concat
+      (merge
+        {:position :below-center
+         :showing? state}
+        (dissoc t-props :body)
+        {:anchor [:span {:on-click #(do (swap! state not) nil)}
+                  anchor]
+         :popover [re-com/popover-content-wrapper
+                   :on-cancel #(do (reset! state false) nil)
+                   :no-clip? true
+                   :body (:body t-props)]}))))
 
-(defn hover-popover* [& args]                               ; accept :label instead of :body to standardize
+(defn click-popover-managed* [& args]
   (let [state (r/atom false)]
-    (fn [t-props anchor]
-      (apply
-        popover-anchor-wrapper*
-        (apply
-          concat
-          (merge
-            {:position :below-center
-             :showing? state}
-            (dissoc t-props :label :status)                 ; just ignore status, todo fix
-            {:anchor [:span {:on-mouse-enter #(do (if (:label t-props) (reset! state true)) nil)
-                             :on-mouse-leave #(do (if (:label t-props) (reset! state false)) nil)}
-                      anchor]
-             :popover [re-com/popover-content-wrapper
-                       :no-clip? true
-                       :body (:label t-props)]}))))))
+    (fn [& args]
+      (apply click-popover* state args))))
+
+(defn- hover-popover* [state t-props anchor]                               ; accept :label instead of :body to standardize
+  (apply
+    popover-anchor-wrapper*
+    (apply
+      concat
+      (merge
+        {:position :below-center
+         :showing? state}
+        (dissoc t-props :label :status)                 ; just ignore status, todo fix
+        {:anchor [:span {:on-mouse-enter #(do (if (:label t-props) (reset! state true)) nil)
+                         :on-mouse-leave #(do (if (:label t-props) (reset! state false)) nil)}
+                  anchor]
+         :popover [re-com/popover-content-wrapper
+                   :no-clip? true
+                   :body (:label t-props)]}))))
+
+(defn- hover-popover-managed* [& args]
+  (let [state (r/atom false)]
+    (fn [& args]
+      (apply hover-popover* state args))))
+
+
+; public interface is functions - why was this important again?
+; was it for teasing apart this file into smaller pieces?
+
+(defn click-popover-managed [& args]
+  (apply vector click-popover-managed* args))
+
+(defn click-popover [& args]
+  (apply vector click-popover* args))
+
+(defn hover-popover-managed [& args]
+  (apply vector hover-popover-managed* args))
 
 (defn hover-popover [& args]
   (apply vector hover-popover* args))

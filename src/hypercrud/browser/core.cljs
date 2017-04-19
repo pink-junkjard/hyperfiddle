@@ -73,19 +73,19 @@
         merged (map #(apply merge %) (vals collated)) #_(apply map merge (vals collated))]
     merged))
 
-(defn hydrate-link [peer link-dbid]
+(defn hydrate-link [peer link-dbid param-ctx]
   (if (system-links/system-link? link-dbid)
     (let [system-link-idmap (-> link-dbid :id)]
       (->> (system-links/request-for-system-link system-link-idmap)
            (hc/hydrate peer)
            (cats/fmap (fn [parent-link]
-                        (system-links/generate-system-link system-link-idmap parent-link)))))
+                        (system-links/generate-system-link system-link-idmap parent-link param-ctx)))))
     (hc/hydrate peer (request-for-link link-dbid))))
 
 (declare user-result)
 
 (defn ui [{query-params :query-params :as params-map} param-ctx]
-  (mlet [link (hydrate-link (:peer param-ctx) (:link-dbid params-map))
+  (mlet [link (hydrate-link (:peer param-ctx) (:link-dbid params-map) param-ctx)
          request (try-on
                    (case (link-util/link-type link)
                      :link-query (let [link-query (:link/request link)
@@ -100,7 +100,7 @@
          schema (exception/try-or-else (hc/hydrate (:peer param-ctx) (schema-util/schema-request nil)) nil)]
         (cats/return
           (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
-                param-ctx (assoc param-ctx            ; provide defaults before user-bindings run. TODO query side
+                param-ctx (assoc param-ctx                  ; provide defaults before user-bindings run. TODO query side
                             :query-params query-params
                             :schema indexed-schema
                             :read-only (or (:read-only param-ctx) (constantly false)))
@@ -128,7 +128,7 @@
                 system-anchors (if-not (system-links/system-link? (-> params-map :link-dbid))
                                  (system-links/system-anchors link result param-ctx))]
 
-            (case (get param-ctx :display-mode)       ; default happens higher, it influences queries too
+            (case (get param-ctx :display-mode)             ; default happens higher, it influences queries too
               :user ((user-result link param-ctx) result colspec (merge-anchors system-anchors (:link/anchor link)) (user-bindings link param-ctx))
               :xray (auto-control/result result colspec (merge-anchors system-anchors (:link/anchor link)) (user-bindings link param-ctx))
               :root (auto-control/result result colspec system-anchors param-ctx))))))
@@ -182,42 +182,52 @@
   (let [anchors (filter :anchor/render-inline? anchors)     ; at this point we only care about inline anchors
         ; sys links already merged and accounted for above
         ; manufacture the query-params
-        repeating-anchors-lookup (->> anchors
-                                      (filter :anchor/repeating?)
-                                      (group-by (fn [anchor]
-                                                  (let [fe (-> anchor :anchor/find-element :find-element/name)
-                                                        attr (-> anchor :anchor/attribute :attribute/ident)
-                                                        fe (if (and attr (nil? fe)) "entity" fe)] ; This should be auto-selected in the future so we always have fe if we have attr.
-                                                    [fe attr]))))
+        anchors-lookup (->> anchors
+                            (group-by (fn [anchor]
+                                        (let [r (-> anchor :anchor/repeating?)
+                                              fe (-> anchor :anchor/find-element :find-element/name)
+                                              attr (-> anchor :anchor/attribute :attribute/ident)
+                                              fe (if (and attr (nil? fe)) "entity" fe)] ; This should be auto-selected in the future so we always have fe if we have attr.
+                                          [r fe attr]))))
         recurse-request (fn [anchor param-ctx]
                           (let [params-map (links/build-url-params-map anchor param-ctx)
                                 param-ctx (-> param-ctx
                                               (update :debug #(str % ">inline-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]"))
                                               (dissoc :result :entity :attribute :value))]
                             (request params-map param-ctx)))]
-    (concat
-      ; non-repeating inline-links
-      (->> anchors
-           (remove :anchor/repeating?)
-           (mapcat #(recurse-request % param-ctx)))
 
-      ; repeating inline-links (param-ctx maintains: :result, :entity, :attribute, :value)
-      (->> result
-           (mapcat (fn [relation]
-                     (let [param-ctx (assoc param-ctx :result relation)]
-                       (concat (->> (get repeating-anchors-lookup [nil nil]) (mapcat #(recurse-request % param-ctx)))
-                               (->> find-elements
-                                    (mapcat (fn [fe]
-                                              (let [entity (get relation (:find-element/name fe))
-                                                    param-ctx (assoc param-ctx :entity entity)]
-                                                (concat (->> (get repeating-anchors-lookup [(:find-element/name fe) nil]) (mapcat #(recurse-request % param-ctx)))
-                                                        (->> (-> fe :find-element/form :form/field)
-                                                             (mapcat (fn [field]
-                                                                       (let [attribute (-> field :field/attribute)
-                                                                             param-ctx (assoc param-ctx :attribute attribute
-                                                                                                        :value (get entity (:attribute/ident attribute)))]
-                                                                         (->> (get repeating-anchors-lookup [(:find-element/name fe) (:attribute/ident attribute)]) (mapcat #(recurse-request % param-ctx)))
-                                                                         )))))))))))))))))
+    ; param-ctx maintains: :result, :entity, :attribute, :value
+    (let [lookup {:index #(get anchors-lookup [true nil nil]) ; why repeating? have we been filtered higher? doesn't seem so.
+                  :index-new #(get anchors-lookup [false nil nil]) ; New Page?
+                  :relation (constantly [])                 ; Relation links don't make sense to me yet. where would they go?
+                  :relation-new (constantly [])             ; We haven't implemented them.
+                  :entity #(get anchors-lookup [true (:find-element/name %1) nil])
+                  :entity-new #(get anchors-lookup [false (:find-element/name %1) nil])
+                  :entity-attr #(get anchors-lookup [true (:find-element/name %1) (:attribute/ident %2)])
+                  :entity-attr-new #(get anchors-lookup [false (:find-element/name %1) (:attribute/ident %2)])}]
+      (concat
+        (->> ((:index lookup)) (mapcat #(recurse-request % param-ctx)))
+        (->> ((:index-new lookup)) (mapcat #(recurse-request % param-ctx)))
+        (->> result
+             (mapcat (fn [relation]
+                       (let [param-ctx (assoc param-ctx :result relation)]
+                         (concat (->> ((:relation lookup)) (mapcat #(recurse-request % param-ctx)))
+                                 (->> ((:relation-new lookup)) (mapcat #(recurse-request % param-ctx)))
+                                 (->> find-elements
+                                      (mapcat (fn [fe]
+                                                (let [entity (get relation (:find-element/name fe))
+                                                      param-ctx (assoc param-ctx :entity entity)]
+                                                  (concat (->> ((:entity lookup) fe) (mapcat #(recurse-request % param-ctx)))
+                                                          (->> ((:entity-new lookup) fe) (mapcat #(recurse-request % param-ctx)))
+                                                          (->> (-> fe :find-element/form :form/field)
+                                                               (mapcat (fn [field]
+                                                                         (let [attribute (-> field :field/attribute)
+                                                                               param-ctx (assoc param-ctx :attribute attribute
+                                                                                                          :value (get entity (:attribute/ident attribute)))]
+                                                                           (concat
+                                                                             (->> ((:entity-attr lookup) fe attribute) (mapcat #(recurse-request % param-ctx)))
+                                                                             (->> ((:entity-attr-new lookup) fe attribute) (mapcat #(recurse-request % param-ctx))))
+                                                                           ))))))))))))))))))
 
 
 (defn requests-for-link-query [link query-params param-ctx]
@@ -281,7 +291,7 @@
         [system-link-request]
         (if-let [system-link-deps (-> (hc/hydrate (:peer param-ctx) system-link-request) ; ?
                                       (exception/extract nil))]
-          (let [link (system-links/generate-system-link system-link-idmap system-link-deps)]
+          (let [link (system-links/generate-system-link system-link-idmap system-link-deps param-ctx)]
             (requests-for-link link (:query-params params-map) param-ctx)))))
     (let [link-request (request-for-link (:link-dbid params-map))]
       (concat [link-request]

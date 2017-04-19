@@ -8,7 +8,8 @@
             [hypercrud.util :as util]
             [promesa.core :as p]
             [hypercrud.browser.connection-color :as connection-color]
-            [hypercrud.browser.link-util :as link-util]))
+            [hypercrud.browser.link-util :as link-util]
+            [reagent.core :as r]))
 
 
 (defn auto-formula [anchor]                                 ; what about long-coersion?
@@ -27,14 +28,15 @@
                             (mapv :db/id (get ctx# :value))
                             (get-in ctx# [:value :db/id])))})
 
+      ; attr create (managed, see auto-txfn)
+      (and (not r) e a)
+      (pr-str {:entity `(fn [ctx#]                          ; create ignores cardinality
+                          (hc/*temp-id!* ~(-> e :find-element/connection :db/id :id)))})
+
       ; entity edit
       (and r e (not a))
       (pr-str {:entity `(fn [ctx#]                          ; find-elements don't have cardinality
                           (get-in ctx# [:entity :db/id]))})
-
-      ; attr create
-      (and (not r) true #_e a)
-      nil                                                   ; managed - see auto-txfn
 
       ; entity create
       (and (not r) e (not a))
@@ -50,39 +52,56 @@
 
       :else (assert false (str "auto-formula matrix - missing pattern: " (util/pprint-str [r e a]))))))
 
+(declare build-link-props)
+
 (defn auto-txfn [anchor]
   (let [{r :anchor/repeating? e :anchor/find-element a :anchor/attribute} anchor]
     (cond
 
       ; legacy links don't have e
       (and (not r) true #_e a)                              ; attr create
-      (pr-str `(fn [ctx#]
-                 (let [parent# (:entity ctx#)
-                       new-dbid# (hc/*temp-id!* (-> parent# :db/id :conn-id))
+      (let [anchor (tx/walk-pulled-tree nil #(dissoc % :db/id) anchor)] ; hacks because we can't read #DbId at "compile time" which is dumb
+        (pr-str `(fn [ctx# show-popover!#]
+                   (let [parent# (:entity ctx#)
+                         ; if you middle click this link, it would work, but you lose the managed.
+                         new-dbid# (hc/*temp-id!* (-> parent# :db/id :conn-id))
 
-                       req# nil
-                       staged-tx# nil
+                         ; hydrate the anchor as if embedded, in fact should this be embed true already?
 
-                       ; hydrate the link as if embedded, in fact should this be embed true?
+                         ; This manufactured anchor has no repeat, entity, attr, its a create form.
+                         ; What if the create form is sophosticated?
+                         ; can we reuse this same anchor? Yeah, give it the formula and we can do whatever
+                         ; The only thing were changing here is managing the ref after.
+                         ;route# (build-link-props (dissoc ~anchor :anchor/tx-fn) ctx#)
+                         ;req# (~'hypercrud.browser.core/request route# ctx#) ; break cycle
+                         ;staged-tx# (:tx @~'hypercrud.runtime.main/state #_evil)
+                         ]
+                     (-> (show-popover!#)
+                         (p/then (fn [tx-from-modal#]
+                                   {:tx
+                                    (concat
+                                      (let [attr-ident# (-> ctx# :attribute :attribute/ident)
+                                            rets# (some-> parent# attr-ident# :db/id vector)
+                                            adds# [new-dbid#]]
+                                        (tx/edit-entity (:db/id parent#) attr-ident# rets# adds#))
+                                      tx-from-modal#)})))
 
-                       ; request the whole browser for this link
-                       p-link# (p/resolved nil) #_(hc/hydrate!* ~'hypercrud.runtime.main/client #{req#} staged-tx#)]
-                   (-> p-link#
-                       ; then show the modal
-                       (p/then (fn [peer#]
-                                 ; draw browser in modal
-                                 ; wait for button click, then resolve with the tx
-                                 (p/resolved
-                                   [[:db/add new-dbid# :form/name ""]])))
-                       ; then return the managed ref tx
-                       (p/then (fn [tx-from-modal#]
-                                 {:tx
-                                  (concat
-                                    (let [attr-ident# (-> ctx# :attribute :attribute/ident)
-                                          rets# (some-> parent# attr-ident# :db/id vector)
-                                          adds# [new-dbid#]]
-                                      (tx/edit-entity (:db/id parent#) attr-ident# rets# adds#))
-                                    tx-from-modal#)}))))))
+
+                     #_(-> (hc/hydrate!* ~'hypercrud.runtime.main/client req# staged-tx#)
+                           ; then show the modal
+                           (p/then (fn [peer#]
+                                     ; draw browser in modal
+                                     ; (~'hypercrud.browser.core/safe-ui route# ctx#)
+                                     ; wait for button click, then resolve with the tx
+
+
+                                     ; how do we plumb this to a popover?
+                                     ; we're in the on-click of the nav-cmp
+
+                                     (p/resolved
+                                       [[:db/add new-dbid# :form/name ""]])))
+                           ; then return the managed ref tx
+                           )))))
       :else nil)))
 
 (defn build-url-params-map
@@ -157,12 +176,29 @@
                   ;; non-fatal error, report it here so user can fix it
                   (if error (js/alert (str "cljs eval error: " error))) ; return monad so tooltip can draw the error
                   value))]
-    (if tx-fn
-      {:on-click #(let [result (tx-fn param-ctx)]           ; tx-fn may be sync or async
+    (doall
+      (merge
+        (if tx-fn
+          ; do we need to hydrate any dependencies in this chain?
+          {:txfn #(let [result (tx-fn param-ctx %)]         ; tx-fn may be sync or async
                     (-> (if-not (p/promise? result) (p/resolved result) result)
-                        (p/then (:user-swap! param-ctx))))}
-      (let [route (build-url-params-map anchor param-ctx) #_"return monad so tooltip can draw the error?"]
-        (build-link-props-raw route (:anchor/link anchor) param-ctx)))))
+                        (p/branch (:user-swap! param-ctx)
+                                  (fn cancelled [why] nil))))})
+
+        (if (and tx-fn (:anchor/link anchor))               ; default case is a syslink
+          ; this is a special case where due to the txfn the embed goes in a popover
+          {:popover (fn [state]
+                      ; assumes everything is hydrated
+                      [hypercrud.browser.core/safe-ui       ; cycle
+                       (build-url-params-map anchor param-ctx)
+                       (assoc param-ctx :user-swap!
+                                        (fn [{:keys [tx route]}]
+                                          (assert (not route) "popups not allowed to route")
+                                          (swap! state tx/into-tx tx)))])})
+
+        (if (:anchor/link anchor)
+          (let [route (build-url-params-map anchor param-ctx) #_"return monad so tooltip can draw the error?"]
+            (build-link-props-raw route (:anchor/link anchor) param-ctx)))))))
 
 (defn link-visible? [anchor param-ctx]
   (let [visible-src (:anchor/visible? anchor)

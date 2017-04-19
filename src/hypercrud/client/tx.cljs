@@ -2,7 +2,8 @@
   (:require [cljs.core.match :refer-macros [match]]
             [hypercrud.types :refer [->DbId]]
             [hypercrud.util :as util]
-            [loom.alg-generic :as loom]))
+            [loom.alg-generic :as loom]
+            [clojure.walk :as walk]))
 
 
 (defn tempid? [dbid] (< (.-id dbid) 0))
@@ -144,11 +145,16 @@
               [op new-e a new-v]))
           tx)))
 
+(defn walk-pulled-tree [schema f tree]                      ; don't actually need schema for anything but component which is ignored here
+  (walk/postwalk
+    (fn [o] (if (map? o) (f o) o))
+    tree))
+
 (defn walk-entity [schema f entity]                         ; Walks entity components, applying f to each component, dehydrating non-components
   (->> (f entity)
        (mapv
          (fn [[a v]]
-           (let [{:keys [:db/cardinality :db/valueType :db/isComponent]} (get schema a)
+           (let [{:keys [:db/cardinality :db/valueType :db/isComponent]} (get schema a) ; really just for component, the rest could be polymorphic
                  v (if-not (= valueType :db.type/ref)       ; dbid absent from schema, its fine
                      v
                      (if isComponent
