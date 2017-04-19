@@ -63,19 +63,7 @@
       (let [anchor (tx/walk-pulled-tree nil #(dissoc % :db/id) anchor)] ; hacks because we can't read #DbId at "compile time" which is dumb
         (pr-str `(fn [ctx# show-popover!#]
                    (let [parent# (:entity ctx#)
-                         ; if you middle click this link, it would work, but you lose the managed.
-                         new-dbid# (hc/*temp-id!* (-> parent# :db/id :conn-id))
-
-                         ; hydrate the anchor as if embedded, in fact should this be embed true already?
-
-                         ; This manufactured anchor has no repeat, entity, attr, its a create form.
-                         ; What if the create form is sophosticated?
-                         ; can we reuse this same anchor? Yeah, give it the formula and we can do whatever
-                         ; The only thing were changing here is managing the ref after.
-                         ;route# (build-link-props (dissoc ~anchor :anchor/tx-fn) ctx#)
-                         ;req# (~'hypercrud.browser.core/request route# ctx#) ; break cycle
-                         ;staged-tx# (:tx @~'hypercrud.runtime.main/state #_evil)
-                         ]
+                         new-dbid# (hc/*temp-id!* (-> parent# :db/id :conn-id))]
                      (-> (show-popover!#)
                          (p/then (fn [tx-from-modal#]
                                    {:tx
@@ -84,24 +72,7 @@
                                             rets# (some-> parent# attr-ident# :db/id vector)
                                             adds# [new-dbid#]]
                                         (tx/edit-entity (:db/id parent#) attr-ident# rets# adds#))
-                                      tx-from-modal#)})))
-
-
-                     #_(-> (hc/hydrate!* ~'hypercrud.runtime.main/client req# staged-tx#)
-                           ; then show the modal
-                           (p/then (fn [peer#]
-                                     ; draw browser in modal
-                                     ; (~'hypercrud.browser.core/safe-ui route# ctx#)
-                                     ; wait for button click, then resolve with the tx
-
-
-                                     ; how do we plumb this to a popover?
-                                     ; we're in the on-click of the nav-cmp
-
-                                     (p/resolved
-                                       [[:db/add new-dbid# :form/name ""]])))
-                           ; then return the managed ref tx
-                           )))))
+                                      tx-from-modal#)})))))))
       :else nil)))
 
 (defn build-url-params-map!
@@ -164,6 +135,11 @@
    :tooltip (anchor-tooltip link route param-ctx)
    :class (if-not (anchor-valid? link route) "invalid")})
 
+
+
+; if this is driven by anchor, and not route, it needs memoized.
+; the route is a fn of the formulas and the formulas can have effects
+; which have to be run only once.
 (defn build-link-props [anchor param-ctx]
   ; auto-tx-fn in addition to auto-formula
   (let [param-ctx (assoc param-ctx :link-owner (-> anchor :anchor/link :hypercrud/owner)) ; tx-fn may need this
