@@ -42,7 +42,7 @@
    (->> anchor-ctx-pairs
         (filter (partial apply links/link-visible?))
         (map (fn [[anchor param-ctx]]
-               (let [params-map (links/build-url-params-map anchor param-ctx)
+               (let [params-map (links/build-url-params-map! anchor param-ctx)
                      ui-param-ctx (-> param-ctx
                                       (update :debug #(str % ">inline-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]"))
                                       (dissoc :result "entity"))]

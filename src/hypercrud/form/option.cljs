@@ -49,7 +49,7 @@
     (mlet [q (if-let [qstr (:link-query/value request)]     ; We avoid caught exceptions when possible
                (exception/try-on (reader/read-string qstr))
                (exception/failure nil))                     ; is this a success or failure? Doesn't matter - datomic will fail.
-           result (let [params-map (merge (:query-params (links/build-url-params-map options-anchor param-ctx))
+           result (let [params-map (merge (:query-params (links/build-url-params-map! options-anchor param-ctx))
                                           (q-util/build-dbhole-lookup request))
                         query-value (q-util/query-value q request params-map param-ctx)]
                     (hc/hydrate (:peer param-ctx) query-value))]

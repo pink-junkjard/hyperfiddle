@@ -50,11 +50,10 @@
       (util/map-values eval formulas-map))))                ; not eval-str, because the formula-map was already read
 
 
-(defn run-formula [{formula :value error :error} param-ctx]
+(defn run-formula! [{formula! :value error :error} param-ctx]
   (if error
     (throw error)                                           ; first error, lose the rest of the errors
-    (if formula (formula param-ctx))                        ; can also throw, lose the rest
-    ))
+    (if formula! (formula! param-ctx))))                      ; can also throw, lose the rest
 
 
 (defn form-pull-exp [form]
