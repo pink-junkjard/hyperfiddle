@@ -56,6 +56,10 @@
   ; don't care if its inline or not, just do the right thing.
   (= :options (:anchor/ident anchor)))
 
+(defn popover-anchor? [anchor]
+  (let [{r :anchor/repeating? e :anchor/find-element a :anchor/attribute} anchor]
+    (and (not r) e a)))
+
 (defn keyword [value maybe-field anchors props param-ctx]
   (let [on-change! #((:user-swap! param-ctx) {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %)})]
     [input/keyword-input* value on-change! props]))
@@ -100,10 +104,17 @@
 ; this can be used sometimes, on the entity page, but not the query page
 (defn ref [value maybe-field anchors props param-ctx]
   (let [[options-anchor] (filter option-anchor? anchors)
-        anchors (remove option-anchor? anchors)
+        popover-anchors (filter popover-anchor? anchors)
+        anchors (->> anchors
+                     (remove option-anchor?)                ; only in xray mode
+                     (remove popover-anchor?))              ; ensure inline-false
+
+        ; put the special anchors back as links in xray mode
         anchors (if (and options-anchor (= :xray (:display-mode param-ctx)))
                   (conj anchors (assoc options-anchor :anchor/render-inline? false))
-                  anchors)]
+                  anchors)
+
+        anchors (concat anchors (mapv #(assoc % :anchor/render-inline? false) popover-anchors))]
     [:div.value
      ; todo this key is encapsulating other unrelated anchors
      [:div.editable-select {:key (hash (get-in options-anchor [:anchor/link :link/request]))} ; not sure if this is okay in nil field case, might just work
