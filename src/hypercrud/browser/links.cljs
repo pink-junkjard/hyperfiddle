@@ -5,6 +5,7 @@
             [hypercrud.client.tx :as tx]
             [hypercrud.compile.eval :refer [eval-str]]
             [hypercrud.form.q-util :as q-util]
+            [hypercrud.types :refer [->DbId]]
             [hypercrud.util :as util]
             [promesa.core :as p]
             [hypercrud.browser.connection-color :as connection-color]
@@ -31,7 +32,12 @@
       ; attr create (managed, see auto-txfn)
       (and (not r) e a)
       (pr-str {:entity `(fn [ctx#]                          ; create ignores cardinality
-                          (hc/*temp-id!* ~(-> e :find-element/connection :db/id :id)))})
+                          (->DbId (-> (str (-> ctx# :entity :db/id :id) "."
+                                           (-> ctx# :attribute :attribute/ident) "."
+                                           "0")             ; if cardinality many, ensure no conflicts
+                                      hash js/Math.abs - str
+                                      )
+                                  ~(-> e :find-element/connection :db/id :id)))})
 
       ; entity edit
       (and r e (not a))
@@ -41,7 +47,11 @@
       ; entity create
       (and (not r) e (not a))
       (pr-str {:entity `(fn [ctx#]
-                          (hc/*temp-id!* ~(-> e :find-element/connection :db/id :id)))})
+                          (->DbId (-> (str (-> ctx# :entity :db/id :id) "."
+                                           "."              ; don't collide ids with attributes
+                                           "0")             ; if cardinality many, ensure no conflicts
+                                      hash js/Math.abs - str)
+                                  ~(-> e :find-element/connection :db/id :id)))})
 
       ; naked
       (and (not r) (not e) (not a)) nil
@@ -63,13 +73,18 @@
       (let [anchor (tx/walk-pulled-tree nil #(dissoc % :db/id) anchor)] ; hacks because we can't read #DbId at "compile time" which is dumb
         (pr-str `(fn [ctx# show-popover!#]
                    (let [parent# (:entity ctx#)
-                         new-dbid# (hc/*temp-id!* (-> parent# :db/id :conn-id))]
-                     (-> (show-popover!#)
+                         new-dbid# (->DbId (-> (str (-> ctx# :entity :db/id :id) "."
+                                                    (-> ctx# :attribute :attribute/ident) "."
+                                                    "0" #_"fixme can collide")
+                                               hash js/Math.abs - str
+                                               )
+                                           (-> parent# :db/id :conn-id))]
+                     (-> (show-popover!# new-dbid#)
                          (p/then (fn [tx-from-modal#]
                                    {:tx
                                     (concat
                                       (let [attr-ident# (-> ctx# :attribute :attribute/ident)
-                                            rets# (some-> parent# attr-ident# :db/id vector)
+                                            rets# (some-> ctx# :value :db/id vector)
                                             adds# [new-dbid#]]
                                         (tx/edit-entity (:db/id parent#) attr-ident# rets# adds#))
                                       tx-from-modal#)})))))))

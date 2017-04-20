@@ -1,7 +1,6 @@
 (ns hypercrud.client.core)
 
 
-(def ^:dynamic *temp-id!*)
 (def ^:dynamic *root-conn-id* nil)
 (def ^:dynamic *editor-schema* nil)
 

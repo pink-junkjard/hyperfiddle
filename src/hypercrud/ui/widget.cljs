@@ -178,10 +178,9 @@
   (let [add-item! #((:user-swap! param-ctx) {:tx (tx/edit-entity (:db/id (:entity param-ctx)) (:attribute param-ctx) [] [nil])})]
     (multi-select* multi-select-markup value add-item! maybe-field anchors props param-ctx))) ;add-item! is: add nil to set
 
-(defn multi-select-ref-component [value maybe-field anchors props param-ctx]
-  (let [temp-id! (partial hc/*temp-id!* (-> (:entity param-ctx) :db/id :conn-id)) ; bound to fix render bug
-        add-item! #((:user-swap! param-ctx) {:tx (tx/edit-entity (:db/id (:entity param-ctx)) (:attribute param-ctx) [] [(temp-id!)])})]
-    [multi-select* multi-select-markup value add-item! maybe-field anchors props param-ctx])) ;add new entity to set
+;(defn multi-select-ref-component [value maybe-field anchors props param-ctx]
+;  (let [add-item! #((:user-swap! param-ctx) {:tx (tx/edit-entity (:db/id (:entity param-ctx)) (:attribute param-ctx) [] [(temp-id!)])})]
+;    [multi-select* multi-select-markup value add-item! maybe-field anchors props param-ctx])) ;add new entity to set
 
 (defn code [& args]
   (let [showing? (r/atom false)]
