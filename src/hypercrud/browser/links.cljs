@@ -35,8 +35,7 @@
                           (->DbId (-> (str (-> ctx# :entity :db/id :id) "."
                                            (-> ctx# :attribute :attribute/ident) "."
                                            "0")             ; if cardinality many, ensure no conflicts
-                                      hash js/Math.abs - str
-                                      )
+                                      hash js/Math.abs - str)
                                   ~(-> e :find-element/connection :db/id :id)))})
 
       ; entity edit
@@ -69,25 +68,23 @@
     (cond
 
       ; legacy links don't have e
-      (and (not r) true #_e a)                              ; attr create
-      (let [anchor (tx/walk-pulled-tree nil #(dissoc % :db/id) anchor)] ; hacks because we can't read #DbId at "compile time" which is dumb
-        (pr-str `(fn [ctx# show-popover!#]
-                   (let [parent# (:entity ctx#)
-                         new-dbid# (->DbId (-> (str (-> ctx# :entity :db/id :id) "."
-                                                    (-> ctx# :attribute :attribute/ident) "."
-                                                    "0" #_"fixme can collide")
-                                               hash js/Math.abs - str
-                                               )
-                                           (-> parent# :db/id :conn-id))]
-                     (-> (show-popover!# new-dbid#)
-                         (p/then (fn [tx-from-modal#]
-                                   {:tx
-                                    (concat
-                                      (let [attr-ident# (-> ctx# :attribute :attribute/ident)
-                                            rets# (some-> ctx# :value :db/id vector)
-                                            adds# [new-dbid#]]
-                                        (tx/edit-entity (:db/id parent#) attr-ident# rets# adds#))
-                                      tx-from-modal#)})))))))
+      (and (not r) e a)                                     ; attr create
+      (pr-str `(fn [ctx# show-popover!#]
+                 (let [parent# (:entity ctx#)
+                       new-dbid# (->DbId (-> (str (-> ctx# :entity :db/id :id) "."
+                                                  (-> ctx# :attribute :attribute/ident) "."
+                                                  "0" #_"fixme can collide")
+                                             hash js/Math.abs - str)
+                                         ~(-> e :find-element/connection :db/id :id) #_(-> parent# :db/id :conn-id))]
+                   (-> (show-popover!# new-dbid#)
+                       (p/then (fn [tx-from-modal#]
+                                 {:tx
+                                  (concat
+                                    (let [attr-ident# (-> ctx# :attribute :attribute/ident)
+                                          rets# (some-> ctx# :value :db/id vector)
+                                          adds# [new-dbid#]]
+                                      (tx/edit-entity (:db/id parent#) attr-ident# rets# adds#))
+                                    tx-from-modal#)}))))))
       :else nil)))
 
 (defn build-url-params-map!
