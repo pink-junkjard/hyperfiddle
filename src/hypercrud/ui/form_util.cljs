@@ -30,12 +30,12 @@
   (->> (mapv (juxt :find-element/name identity) (:link-query/find-element link-req))
        (into {})))
 
-(defn entity-find-elements [link param-ctx]
-  [{:db/id "entity"                        ; sentinel
-    :find-element/name "entity"
-    :find-element/connection nil
-    :find-element/form (-> (-> link :link/request :link-entity/form)
-                           (update :form/field filter-visible-fields param-ctx))}])
+(defn manufacture-entity-find-element [link param-ctx]
+  {:db/id "entity"                                          ; sentinel
+   :find-element/name "entity"
+   :find-element/connection nil
+   :find-element/form (-> (-> link :link/request :link-entity/form)
+                          (update :form/field filter-visible-fields param-ctx))})
 
 (defn get-ordered-find-elements [link param-ctx]
   (let [req (:link/request link)]
@@ -45,7 +45,7 @@
                     (->> (util/parse-query-element q :find)
                          (mapv str)
                          (mapv #(get find-element-lookup %))))
-      :link-entity (entity-find-elements link param-ctx)
+      :link-entity [(manufacture-entity-find-element link param-ctx)]
       [])))
 
 

@@ -131,11 +131,11 @@
   ; We use the dbid because it is a database dependency.
   ; aren't they all entity links? No
   (let [fe (if (= "entity" (:find-element system-link-idmap))
-             (form-util/entity-find-elements parent-link param-ctx)
+             (form-util/manufacture-entity-find-element parent-link param-ctx)
              (first (filter #(= (:db/id %) (:find-element system-link-idmap))
                             (-> parent-link :link/request :link-query/find-element))))
-        attr (first (filter #(= (-> % :field/attribute :db/id) (:attribute system-link-idmap))
-                            (-> fe :find-element/form :form/field)))]
+        attr (first (filter #(= (:db/id %) (:attribute system-link-idmap)) ; maybe put ident in the system-link-idmap
+                            (vals (:schema param-ctx))))]
     (case (:ident system-link-idmap)
       :system-edit (system-edit-link parent-link fe)
       :system-edit-attr (system-edit-attr-link parent-link fe attr))))
