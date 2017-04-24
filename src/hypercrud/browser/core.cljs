@@ -162,7 +162,7 @@
                               (into {}))
             with-inline-result (fn [ident param-ctx f]
                                  (let [anchor (get anchor-index ident)
-                                       params-map (links/build-url-params-map! anchor param-ctx)]
+                                       params-map (links/build-url-params-map anchor param-ctx)]
                                    @(ui params-map (assoc param-ctx :user-renderer f))))
             param-ctx (assoc param-ctx
                         :link-fn (fn [ident label param-ctx]
@@ -190,7 +190,7 @@
                                               fe (if (and attr (nil? fe)) "entity" fe)] ; This should be auto-selected in the future so we always have fe if we have attr.
                                           [r fe attr]))))
         recurse-request (fn [anchor param-ctx]
-                          (let [params-map (links/build-url-params-map! anchor param-ctx)
+                          (let [params-map (links/build-url-params-map anchor param-ctx)
                                 param-ctx (-> param-ctx
                                               (update :debug #(str % ">inline-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]"))
                                               (dissoc :result :entity :attribute :value))]

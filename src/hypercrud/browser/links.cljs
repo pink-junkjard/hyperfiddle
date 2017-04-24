@@ -87,7 +87,7 @@
                                     tx-from-modal#)}))))))
       :else nil)))
 
-(defn build-url-params-map!
+(defn build-url-params-map
   ([domain project link-dbid formula-str param-ctx]
    {:domain domain
     :project project
@@ -97,7 +97,7 @@
                          (util/map-values #(q-util/run-formula! % param-ctx)))
                     (catch js/Error e {}))})
   ([link formula-str param-ctx]
-   (build-url-params-map!
+   (build-url-params-map
      (-> link :hypercrud/owner :database/domain)
      (-> link :hypercrud/owner :database/ident)
      (-> link :db/id)
@@ -108,7 +108,7 @@
          formula-str (if (empty? formula-str)
                        (auto-formula anchor)
                        formula-str)]
-     (build-url-params-map! (:anchor/link anchor) formula-str param-ctx)))
+     (build-url-params-map (:anchor/link anchor) formula-str param-ctx)))
   #_(case (link-type (:anchor/link anchor))
       :link-query {:link-dbid (-> anchor :anchor/link :db/id)
                    :query-params (->> (q-util/read-eval-formulas (:anchor/formula anchor))
@@ -164,7 +164,7 @@
                   ;; non-fatal error, report it here so user can fix it
                   (if error (js/alert (str "cljs eval error: " error))) ; return monad so tooltip can draw the error
                   value))
-        route (if (:anchor/link anchor) (build-url-params-map! anchor param-ctx)) #_"return monad so tooltip can draw the error?"]
+        route (if (:anchor/link anchor) (build-url-params-map anchor param-ctx)) #_"return monad so tooltip can draw the error?"]
     (doall
       (merge
         (if tx-fn
