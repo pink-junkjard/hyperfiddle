@@ -71,7 +71,8 @@
                                       :anchor/link (system-edit-link parent-link fe)
                                       :anchor/repeating? false
                                       :anchor/find-element fe
-                                      :anchor/render-inline? true}]))
+                                      :anchor/render-inline? false ; this link is not managed, no txfn, no popover.
+                                      }]))
                           doall)
         attr-links (->> (partition 4 colspec)               ; driven by colspec, not find elements, because what matters is what's there.
                         (mapcat (fn [[conn fe-name ident maybe-field]]
