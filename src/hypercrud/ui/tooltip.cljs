@@ -35,7 +35,8 @@
         (apply
           concat
           (merge
-            {:showing? state}
+            {:showing? state
+             :position :below-left #_ "work around popover flicker"}
             t-props                                         ; label, status
             {:label (or (:label t-props) "")                ; required
              :anchor [:span {:on-mouse-enter #(do (if (:label t-props) (reset! state true)) nil)
@@ -48,7 +49,7 @@
     (apply
       concat
       (merge
-        {:position :below-center
+        {:position :below-center                            ; todo fix flicker
          :showing? state}
         (dissoc t-props :body)
         {:anchor [:span {:on-click #(do (swap! state not) nil)}
@@ -69,7 +70,7 @@
     (apply
       concat
       (merge
-        {:position :below-center
+        {:position :below-center                            ; todo fix flicker
          :showing? state}
         (dissoc t-props :label :status)                 ; just ignore status, todo fix
         {:anchor [:span {:on-mouse-enter #(do (if (:label t-props) (reset! state true)) nil)
