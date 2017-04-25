@@ -101,8 +101,7 @@
     (input/dbid-input value on-change! props)))
 
 
-; this can be used sometimes, on the entity page, but not the query page
-(defn ref [value maybe-field anchors props param-ctx]
+(defn process-option-popover-anchors [anchors param-ctx]
   (let [[options-anchor] (filter option-anchor? anchors)
         popover-anchors (filter popover-anchor? anchors)
         anchors (->> anchors
@@ -115,6 +114,11 @@
                   anchors)
 
         anchors (concat anchors (mapv #(assoc % :anchor/render-inline? false) popover-anchors))]
+    [anchors options-anchor]))
+
+; this can be used sometimes, on the entity page, but not the query page
+(defn ref [value maybe-field anchors props param-ctx]
+  (let [[anchors options-anchor] (process-option-popover-anchors anchors param-ctx)]
     [:div.value
      ; todo this key is encapsulating other unrelated anchors
      [:div.editable-select {:key (hash (get-in options-anchor [:anchor/link :link/request]))} ; not sure if this is okay in nil field case, might just work
@@ -126,18 +130,21 @@
 
 
 (defn ref-component [value maybe-field anchors props param-ctx]
-  #_(assert (> (count (filter :anchor/render-inline? anchors)) 0))
-  #_(ref value maybe-field anchors props param-ctx)
-  [:div.value
-   #_(pr-str (:db/id value))
-   (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)
-   [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]])
+  (let [[anchors options-anchor] (process-option-popover-anchors anchors param-ctx)]
+    (assert (not options-anchor) "ref-components don't have options; todo handle gracefully")
+    #_(assert (> (count (filter :anchor/render-inline? anchors)) 0))
+    #_(ref value maybe-field anchors props param-ctx)
+    [:div.value
+     (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)
+     [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]]))
 
 
 (defn ref-many-table [value maybe-field anchors props param-ctx]
-  [:div.value
-   (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)
-   [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]])
+  (let [[anchors options-anchor] (process-option-popover-anchors anchors param-ctx)]
+    (assert (not options-anchor) "ref-component-many don't have options; todo handle gracefully")
+    [:div.value
+     (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)
+     [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]]))
 
 (defn ref-many [value maybe-field anchors props param-ctx]
   (let [[options-anchor] (filter option-anchor? anchors)
