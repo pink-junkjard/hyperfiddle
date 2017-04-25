@@ -74,7 +74,7 @@
                                          (filter #(or (:anchor/find-element %) (:anchor/attribute %)))
 
                                          (group-by (fn [anchor]
-                                                     ; can this branch happen anymore?
+                                                     ; can this branch happen anymore? Yeah, user link-entity
                                                      (if-let [find-element (:anchor/find-element anchor)]
                                                        (:find-element/name find-element)
                                                        "entity"))))]
@@ -162,7 +162,7 @@
             [:td.link-cell {:key :link-cell}
              (widget/render-anchors (->> anchors
                                          (remove :anchor/repeating?)
-                                         #_(filter :anchor/find-element) ; this filter is allowed, except it catches some legacy tx links.
+                                         #_(filter :anchor/find-element) ; this filter is allowed, except link-entity doesn't set this to the manufac fe except sys links
                                          (remove :anchor/attribute)
                                          (remove :anchor/render-inline?))
                                     param-ctx)]]]
@@ -171,7 +171,7 @@
            sort-col param-ctx]]
          (widget/render-inline-links (->> anchors
                                           (remove :anchor/repeating?)
-                                          #_(filter :anchor/find-element) ; this filter is allowed, except it catches some legacy tx links.
+                                          #_(filter :anchor/find-element) ; link-entity
                                           (remove :anchor/attribute)
                                           (filter :anchor/render-inline?))
                                      (dissoc param-ctx :isComponent) #_ "why?")]))))
