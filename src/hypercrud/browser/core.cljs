@@ -139,7 +139,8 @@
   (try
     (let [dom-or-e (apply ui args)]
       (if (exception/failure? dom-or-e)
-        (or [:pre (-> dom-or-e .-e .-data)] [:pre (pr-str (-> dom-or-e .-e))]) ; hydrate error
+        [:pre (or (-> dom-or-e .-e .-data)
+                  (pr-str (-> dom-or-e .-e)))]              ; hydrate error
         (.-v dom-or-e)))                                    ; happy path
     (catch :default e                                       ; js errors? Why do we need this.
       [:pre (.-stack e)])))
