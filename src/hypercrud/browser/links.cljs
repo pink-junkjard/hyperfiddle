@@ -23,14 +23,14 @@
     (cond
 
       ; attr edit
-      (and r true #_e a)                                    ; legacy links may not set entity here
+      (and r #_e a)                                           ; entity links don't set the manufactured entity yet
       (pr-str {:entity `(fn [ctx#]
                           (if (= :db.cardinality/many (-> (get (:schema ctx#) (-> ctx# :attribute :attribute/ident)) :attribute/cardinality :db/ident))
                             (mapv :db/id (get ctx# :value))
                             (get-in ctx# [:value :db/id])))})
 
       ; attr create (managed, see auto-txfn)
-      (and (not r) e a)
+      (and (not r) e a)                                     ; what about entity links?
       (pr-str {:entity `(fn [ctx#]                          ; create ignores cardinality
                           (->DbId (-> (str (-> ctx# :entity :db/id :id) "."
                                            (-> ctx# :attribute :attribute/ident) "."
@@ -39,7 +39,7 @@
                                   ~(-> e :find-element/connection :db/id :id)))})
 
       ; entity edit
-      (and r e (not a))
+      (and r e (not a))                                     ; link-entity might hit this, but it doesn't now since it can't select an entity. Except sys links which hit this as we manufacture the fe properly.
       (pr-str {:entity `(fn [ctx#]                          ; find-elements don't have cardinality
                           (get-in ctx# [:entity :db/id]))})
 
@@ -67,15 +67,18 @@
   (let [{r :anchor/repeating? e :anchor/find-element a :anchor/attribute} anchor]
     (cond
 
-      ; legacy links don't have e
-      (and (not r) e a)                                     ; attr create
+      ; legacy links don't have e, we need to ensure all attr links have an entity now
+      ; this includes entity links which odn't have find-element
+      ; or we can manufacture by looking at the link, deciding if entity link
+      (and (not r) #_e a)                                     ; attr create
       (pr-str `(fn [ctx# show-popover!#]
                  (let [parent# (:entity ctx#)
                        new-dbid# (->DbId (-> (str (-> ctx# :entity :db/id :id) "."
                                                   (-> ctx# :attribute :attribute/ident) "."
                                                   "0" #_"fixme can collide")
                                              hash js/Math.abs - str)
-                                         ~(-> e :find-element/connection :db/id :id) #_(-> parent# :db/id :conn-id))]
+                                         (-> ctx# :entity :db/id :conn-id)
+                                         #_~(-> e :find-element/connection :db/id :id) #_(-> parent# :db/id :conn-id))]
                    (-> (show-popover!# new-dbid#)
                        (p/then (fn [tx-from-modal#]
                                  {:tx
