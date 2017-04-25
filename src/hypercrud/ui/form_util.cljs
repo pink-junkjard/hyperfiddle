@@ -33,16 +33,16 @@
 
 (defn manufacture-entity-find-element [link param-ctx]
   (let [conn (or
-               (-> link :link/request :link-entity/connection :db/id)
+               (-> link :link/request :link-entity/connection)
                (let [dbid-s (-> param-ctx :query-params :entity)]
-                 (->DbId (if (vector? dbid-s)
-                           (:conn-id (first dbid-s))
-                           (:conn-id dbid-s))
-                         nil #_ "ignored in the place we need it, ->entityRequest")))]
+                 {:db/id (->DbId (if (vector? dbid-s)
+                                   (:conn-id (first dbid-s))
+                                   (:conn-id dbid-s))
+                                 nil #_"ignored in the place we need it, ->entityRequest")}))]
     (assert conn)
     {:db/id "entity"                                        ; sentinel
      :find-element/name "entity"
-     :find-element/connection {:db/id conn}
+     :find-element/connection conn
      :find-element/form (-> (-> link :link/request :link-entity/form)
                             (update :form/field filter-visible-fields param-ctx))}))
 
