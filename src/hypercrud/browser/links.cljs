@@ -30,13 +30,15 @@
                             (get-in ctx# [:value :db/id])))})
 
       ; attr create (managed, see auto-txfn)
-      (and (not r) e a)                                     ; what about entity links?
+      (and (not r) #_e a)                                     ; what about entity links?
       (pr-str {:entity `(fn [ctx#]                          ; create ignores cardinality
+                          (assert (-> ctx# :entity :db/id :conn-id))
                           (->DbId (-> (str (-> ctx# :entity :db/id :id) "."
                                            (-> ctx# :attribute :attribute/ident) "."
                                            "0")             ; if cardinality many, ensure no conflicts
                                       hash js/Math.abs - str)
-                                  ~(-> e :find-element/connection :db/id :id)))})
+                                  (-> ctx# :entity :db/id :conn-id) ; inherit parent since the fe is never explicitly set by user
+                                  #_~(-> e :find-element/connection :db/id :id)))})
 
       ; entity edit
       (and r e (not a))                                     ; link-entity might hit this, but it doesn't now since it can't select an entity. Except sys links which hit this as we manufacture the fe properly.

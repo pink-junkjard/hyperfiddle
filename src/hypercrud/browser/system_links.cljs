@@ -30,7 +30,7 @@
 
 (defn system-edit-link [parent-link fe]
   (assert parent-link)
-  (assert fe)
+  (assert fe) (assert (:find-element/connection fe))
   {:db/id (system-edit-link-dbid parent-link fe)
    :hypercrud/owner (:hypercrud/owner parent-link)
    :link/name (str "edit ")                                 ; hmm
@@ -39,7 +39,7 @@
 
 (defn system-edit-attr-link [parent-link fe attr]
   (assert parent-link)
-  (assert fe)
+  (assert fe) (assert (:find-element/connection fe))
   (assert attr)
   {:db/id (system-edit-attr-link-dbid parent-link fe attr)
    :link/name (str "edit " (:find-element/name fe) " " (:attribute/ident attr))

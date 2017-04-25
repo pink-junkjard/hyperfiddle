@@ -2,6 +2,7 @@
   (:require [cljs.reader :as reader]
             [clojure.string :as string]
             [hypercrud.browser.link-util :as link-util]
+            [hypercrud.types :refer [->DbId]]
             [hypercrud.ui.code-editor :as code-editor]
             [hypercrud.ui.tooltip :as tooltip]
             [hypercrud.util :as util]))
@@ -31,11 +32,19 @@
        (into {})))
 
 (defn manufacture-entity-find-element [link param-ctx]
-  {:db/id "entity"                                          ; sentinel
-   :find-element/name "entity"
-   :find-element/connection nil
-   :find-element/form (-> (-> link :link/request :link-entity/form)
-                          (update :form/field filter-visible-fields param-ctx))})
+  (let [conn (or
+               (-> link :link/request :link-entity/connection :db/id)
+               (let [dbid-s (-> param-ctx :query-params :entity)]
+                 (->DbId (if (vector? dbid-s)
+                           (:conn-id (first dbid-s))
+                           (:conn-id dbid-s))
+                         nil #_ "ignored in the place we need it, ->entityRequest")))]
+    (assert conn)
+    {:db/id "entity"                                        ; sentinel
+     :find-element/name "entity"
+     :find-element/connection {:db/id conn}
+     :find-element/form (-> (-> link :link/request :link-entity/form)
+                            (update :form/field filter-visible-fields param-ctx))}))
 
 (defn get-ordered-find-elements [link param-ctx]
   (let [req (:link/request link)]
