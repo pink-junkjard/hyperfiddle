@@ -179,7 +179,7 @@
 
 (declare request)
 
-(defn dependent-requests [result find-elements anchors param-ctx]
+(defn link-query-dependent-requests [result find-elements anchors param-ctx]
   (let [anchors (filter :anchor/render-inline? anchors)     ; at this point we only care about inline anchors
         ; sys links already merged and accounted for above
         ; manufacture the query-params
@@ -214,7 +214,7 @@
                        (let [param-ctx (assoc param-ctx :result relation)]
                          (concat (->> ((:relation lookup)) (mapcat #(recurse-request % param-ctx)))
                                  (->> ((:relation-new lookup)) (mapcat #(recurse-request % param-ctx)))
-                                 (->> find-elements
+                                 (->> find-elements         ; these are wrong for link-entity somehow?
                                       (mapcat (fn [fe]
                                                 (let [entity (get relation (:find-element/name fe))
                                                       param-ctx (assoc param-ctx :entity entity)]
@@ -229,6 +229,40 @@
                                                                              (->> ((:entity-attr lookup) fe attribute) (mapcat #(recurse-request % param-ctx)))
                                                                              (->> ((:entity-attr-new lookup) fe attribute) (mapcat #(recurse-request % param-ctx))))
                                                                            ))))))))))))))))))
+
+(defn link-entity-dependent-requests [result form anchors param-ctx]
+  (let [recurse-request (fn [anchor param-ctx]
+                          (let [params-map (links/build-url-params-map anchor param-ctx)
+                                param-ctx (-> param-ctx
+                                              (update :debug #(str % ">inline-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]"))
+                                              (dissoc :result :entity :attribute :value))]
+                            (request params-map param-ctx)))
+        anchors (filter :anchor/render-inline? anchors)
+        anchors-lookup (->> anchors
+                            (group-by (fn [anchor]
+                                        (let [r (-> anchor :anchor/repeating?)
+                                              attr (-> anchor :anchor/attribute :attribute/ident)]
+                                          [r attr]))))]
+    (let [lookup {:index #(get anchors-lookup [true nil])   ; why repeating? have we been filtered higher? doesn't seem so.
+                  :index-new #(get anchors-lookup [false nil]) ; New Page?
+                  :entity-attr #(get anchors-lookup [true (:attribute/ident %)])
+                  :entity-attr-new #(get anchors-lookup [false (:attribute/ident %)])}]
+      (concat
+        (->> ((:index lookup)) (mapcat #(recurse-request % param-ctx)))
+        (->> ((:index-new lookup)) (mapcat #(recurse-request % param-ctx)))
+        (->> result
+             (mapcat (fn [relation]
+                       (let [entity (get relation "entity")
+                             param-ctx (assoc param-ctx :entity entity)]
+                         (->> (-> form :form/field)
+                              (mapcat (fn [field]
+                                        (let [attribute (-> field :field/attribute)
+                                              param-ctx (assoc param-ctx :attribute attribute
+                                                                         :value (get entity (:attribute/ident attribute)))]
+                                          (concat
+                                            (->> ((:entity-attr lookup) attribute) (mapcat #(recurse-request % param-ctx)))
+                                            (->> ((:entity-attr-new lookup) attribute) (mapcat #(recurse-request % param-ctx))))
+                                          ))))))))))))
 
 
 (defn requests-for-link-query [link query-params param-ctx]
@@ -248,11 +282,11 @@
                 (cats/return
                   (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
                         param-ctx (assoc param-ctx :schema indexed-schema)]
-                    (dependent-requests result (:link-query/find-element link-query)
-                                        (merge-anchors
-                                          (system-links/system-anchors link result param-ctx)
-                                          (:link/anchor link))
-                                        param-ctx))))
+                    (link-query-dependent-requests result (:link-query/find-element link-query)
+                                                   (merge-anchors
+                                                     (system-links/system-anchors link result param-ctx)
+                                                     (:link/anchor link))
+                                                   param-ctx))))
           nil)))))
 
 (defn requests-for-link-entity [link query-params param-ctx]
@@ -267,13 +301,13 @@
                 (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
                       param-ctx (assoc param-ctx :schema indexed-schema)
                       result (->> (if (map? result) [result] result) (mapv #(assoc {} "entity" %)))
-                      find-elements [{:find-element/name "entity"
-                                      :find-element/form (get-in link [:link/request :link-entity/form])}]]
-                  (dependent-requests result find-elements
-                                      (merge-anchors
-                                        (system-links/system-anchors link result param-ctx)
-                                        (:link/anchor link))
-                                      param-ctx))))
+                      form (-> (-> link :link/request :link-entity/form)
+                               (update :form/field form-util/filter-visible-fields param-ctx))]
+                  (link-entity-dependent-requests result form
+                                                  (merge-anchors
+                                                    (system-links/system-anchors link result param-ctx)
+                                                    (:link/anchor link))
+                                                  param-ctx))))
         nil))))
 
 (defn requests-for-link [link query-params param-ctx]
@@ -281,7 +315,7 @@
     (case (link-util/link-type link)
       :link-query (requests-for-link-query link query-params param-ctx)
       :link-entity (requests-for-link-entity link query-params param-ctx)
-      :link-blank (dependent-requests [] [] (:link/anchor link) param-ctx)))) ; this case does not request the schema, as we don't have a connection for the link.
+      :link-blank (link-query-dependent-requests [] [] (:link/anchor link) param-ctx)))) ; this case does not request the schema, as we don't have a connection for the link.
 
 
 (defn request [params-map param-ctx]

@@ -8,43 +8,53 @@
 (defn system-link? [link-dbid]
   (map? (:id link-dbid)))
 
-(defn system-edit-link-dbid [parent-link fe]
+(defn link-query-system-edit [parent-link fe]
   (assert parent-link) (assert (:db/id parent-link))
-  (assert fe) (assert (:db/id fe))
-  (->DbId {:ident :system-edit
-           :parent-link (:db/id parent-link)
-           :find-element (:db/id fe)}
-          (-> parent-link :db/id :conn-id)))
-
-
-(defn system-edit-attr-link-dbid [parent-link fe attr]
-  (assert parent-link) (assert (:db/id parent-link))
-  (assert fe) (assert (:db/id fe))
-  (assert attr) (assert (:db/id attr))
-  (->DbId {:ident :system-edit-attr
-           :parent-link (:db/id parent-link)
-           :find-element (:db/id fe)
-           :attribute (:db/id attr)}
-          (-> parent-link :db/id :conn-id)))
-
-
-(defn system-edit-link [parent-link fe]
-  (assert parent-link)
-  (assert fe) (assert (:find-element/connection fe))
-  {:db/id (system-edit-link-dbid parent-link fe)
+  (assert fe) (assert (:db/id fe)) (assert (:find-element/connection fe))
+  {:db/id (->DbId {:ident :system-edit
+                   :parent-link (:db/id parent-link)
+                   :find-element (:db/id fe)}
+                  (-> parent-link :db/id :conn-id))
    :hypercrud/owner (:hypercrud/owner parent-link)
    :link/name (str "edit ")                                 ; hmm
    :link/request {:link-entity/connection (:find-element/connection fe)}})
 
+(defn link-entity-system-edit [parent-link conn]
+  (assert parent-link) (assert (:db/id parent-link))
+  (assert conn) (assert (-> conn :db/id :id))
+  {:db/id (->DbId {:ident :system-edit-attr
+                   :parent-link (:db/id parent-link)
+                   :conn (-> conn :db/id)}
+                  (-> parent-link :db/id :conn-id))
+   :hypercrud/owner (:hypercrud/owner parent-link)
+   :link/name (str "edit ")                                 ; hmm
+   :link/request {:link-entity/connection conn}})
 
-(defn system-edit-attr-link [parent-link fe attr]
-  (assert parent-link)
-  (assert fe) (assert (:find-element/connection fe))
-  (assert attr)
-  {:db/id (system-edit-attr-link-dbid parent-link fe attr)
+(defn link-query-system-edit-attr [parent-link fe attr]
+  (assert parent-link) (assert (:db/id parent-link))
+  (assert fe) (assert (:db/id fe)) (assert (:find-element/connection fe))
+  (assert attr) (assert (:db/id attr))
+  {:db/id (->DbId {:ident :system-edit-attr
+                   :parent-link (:db/id parent-link)
+                   :find-element (:db/id fe)
+                   :attribute (:db/id attr)}
+                  (-> parent-link :db/id :conn-id))
    :link/name (str "edit " (:find-element/name fe) " " (:attribute/ident attr))
    :hypercrud/owner (:hypercrud/owner parent-link)
    :link/request {:link-entity/connection (:find-element/connection fe)}})
+
+(defn link-entity-system-edit-attr [parent-link conn attr]
+  (assert parent-link) (assert (:db/id parent-link))
+  (assert conn) (assert (-> conn :db/id :id))
+  (assert attr) (assert (:db/id attr))
+  {:db/id (->DbId {:ident :system-edit-attr
+                   :parent-link (:db/id parent-link)
+                   :conn (-> conn :db/id)
+                   :attribute (:db/id attr)}
+                  (-> parent-link :db/id :conn-id))
+   :link/name (str "edit " (:attribute/ident attr))
+   :hypercrud/owner (:hypercrud/owner parent-link)
+   :link/request {:link-entity/connection conn}})
 
 
 (defn system-anchors
@@ -52,48 +62,74 @@
   Matching is determined by [repeat? entity attribute ident]"
   [parent-link result param-ctx]
   (let [colspec (form-util/determine-colspec result parent-link param-ctx) ; colspec can be empty if result is empty and no form.
-        find-elements (->> (form-util/get-ordered-find-elements parent-link param-ctx)
-                           (mapv (juxt :find-element/name identity))
-                           (into {}))
+        find-elements (case (link-util/link-type parent-link)
+                        :link-query (->> (form-util/get-ordered-find-elements parent-link param-ctx)
+                                         (mapv (juxt :find-element/name identity))
+                                         (into {}))
+                        :link-entity nil
+                        :link-blank nil)
 
-        entity-links (->> find-elements
-                          (mapcat (fn [[fe-name fe]]
-                                    [{:anchor/prompt (str fe-name)
-                                      :anchor/ident :sys
-                                      :anchor/link (system-edit-link parent-link fe)
-                                      :anchor/repeating? true
-                                      :anchor/find-element fe}
-                                     ; create links mirror edit links but repeating false, see auto-formula.
-                                     ; This is because the connection comes from the find-element, and when merging
-                                     ; sys links we match on the find-element.
-                                     {:anchor/prompt (str "new " fe-name)
-                                      :anchor/ident :sys
-                                      :anchor/link (system-edit-link parent-link fe)
-                                      :anchor/repeating? false
-                                      :anchor/find-element fe
-                                      :anchor/render-inline? false ; this link is not managed, no txfn, no popover.
-                                      }]))
-                          doall)
+        ; entity links for link-query (have fe)
+        ; or, entity links for link-entity
+        entity-links (if find-elements
+                       (->> find-elements
+                            (mapcat (fn [[fe-name fe]]
+                                      [{:anchor/prompt (str fe-name)
+                                        :anchor/ident :sys
+                                        :anchor/link (link-query-system-edit parent-link fe)
+                                        :anchor/repeating? true
+                                        :anchor/find-element fe}
+                                       ; create links mirror edit links but repeating false, see auto-formula.
+                                       ; This is because the connection comes from the find-element, and when merging
+                                       ; sys links we match on the find-element.
+                                       {:anchor/prompt (str "new " fe-name)
+                                        :anchor/ident :sys
+                                        :anchor/link (link-query-system-edit parent-link fe)
+                                        :anchor/repeating? false
+                                        :anchor/find-element fe
+                                        :anchor/render-inline? false #_"this link is not managed, no txfn, no popover."}]))
+                            doall)
+                       (let [conn (or
+                                    (-> parent-link :link/request :link-entity/connection)
+                                    (let [dbid-s (-> param-ctx :query-params :entity)]
+                                      {:db/id (->DbId (if (vector? dbid-s)
+                                                        (:conn-id (first dbid-s))
+                                                        (:conn-id dbid-s))
+                                                      nil #_"ignored in the place we need it, ->entityRequest")}))]
+                         [{:anchor/prompt "entity"
+                           :anchor/ident :sys
+                           :anchor/link (link-entity-system-edit parent-link conn)
+                           :anchor/repeating? true}
+                          {:anchor/prompt (str "new entity")
+                           :anchor/ident :sys
+                           :anchor/link (link-entity-system-edit parent-link conn)
+                           :anchor/repeating? false
+                           :anchor/render-inline? false}]))
         attr-links (->> (partition 4 colspec)               ; driven by colspec, not find elements, because what matters is what's there.
                         (mapcat (fn [[conn fe-name ident maybe-field]]
-                                  (let [fe (get find-elements fe-name)
-                                        attr ((:schema param-ctx) ident)]
-                                    (assert fe)
-                                    #_(assert attr)
+                                  (let [fe (get find-elements fe-name) ; can be nil now
+                                        attr ((:schema param-ctx) ident) #_"nil for db/id"]
                                     (case (-> attr :attribute/valueType :db/ident)
-                                      :db.type/ref [{:anchor/prompt (str "edit") ; conserve space in label
-                                                     :anchor/ident :sys
-                                                     :anchor/link (system-edit-attr-link parent-link fe attr)
-                                                     :anchor/repeating? true
-                                                     :anchor/find-element fe
-                                                     :anchor/attribute attr}
-                                                    {:anchor/prompt (str "new") ; conserve space in label
-                                                     :anchor/ident :sys
-                                                     :anchor/link (system-edit-attr-link parent-link fe attr)
-                                                     :anchor/repeating? false
-                                                     :anchor/find-element fe
-                                                     :anchor/attribute attr
-                                                     :anchor/render-inline? true}]
+                                      :db.type/ref
+                                      [(merge
+                                         {:anchor/prompt (str "edit") ; conserve space in label
+                                          :anchor/ident :sys
+                                          :anchor/repeating? true
+                                          :anchor/attribute attr}
+                                         (if fe
+                                           {:anchor/link (link-entity-system-edit-attr parent-link fe attr)
+                                            :anchor/find-element fe}
+                                           {:anchor/link (link-entity-system-edit-attr parent-link conn attr)}))
+                                       (merge
+                                         {:anchor/prompt (str "new") ; conserve space in label
+                                          :anchor/ident :sys
+                                          :anchor/repeating? false
+                                          :anchor/attribute attr
+                                          :anchor/render-inline? true}
+                                         (if fe
+                                           {:anchor/link (link-entity-system-edit-attr parent-link fe attr)
+                                            :anchor/find-element fe}
+                                           {:anchor/link (link-entity-system-edit-attr parent-link conn attr)}))]
                                       nil))))
                         doall)]
     (case (link-util/link-type parent-link)
@@ -125,16 +161,31 @@
                                                    :find-element/connection
                                                    {:find-element/form form-pull-exp}]}]}])))
 
+(defn entity-conn [param-ctx]
+  (let [dbid-s (-> param-ctx :query-params :entity)]
+    {:db/id (->DbId (if (vector? dbid-s)
+                      (:conn-id (first dbid-s))
+                      (:conn-id dbid-s))
+                    nil #_"ignored in the place we need it, ->entityRequest")}))
+
+(defn link-query-fe [fe-name parent-link]
+  (first (filter #(= (:db/id %) fe-name)
+                 (-> parent-link :link/request :link-query/find-element))))
+
+(defn link-either-attr [attrid param-ctx]
+  (first (filter #(= (:db/id %) attrid)                     ; maybe put ident in the system-link-idmap
+                 (vals (:schema param-ctx)))))
+
 (defn generate-system-link [system-link-idmap parent-link param-ctx]
-  ; account for "entity" fes here. Maybe search by name rather than dbid.
-  ; We use the dbid because it is a database dependency.
-  ; aren't they all entity links? No
-  (let [fe (if (= "entity" (:find-element system-link-idmap))
-             (form-util/manufacture-entity-find-element parent-link param-ctx)
-             (first (filter #(= (:db/id %) (:find-element system-link-idmap))
-                            (-> parent-link :link/request :link-query/find-element))))
-        attr (first (filter #(= (:db/id %) (:attribute system-link-idmap)) ; maybe put ident in the system-link-idmap
-                            (vals (:schema param-ctx))))]
-    (case (:ident system-link-idmap)
-      :system-edit (system-edit-link parent-link fe)
-      :system-edit-attr (system-edit-attr-link parent-link fe attr))))
+  ; entity-links don't have a fe. Inherit the connection in this case.
+  ; query-links use the dbid because it is a database dependency.
+  (case (:ident system-link-idmap)
+    :system-edit
+    (if (:find-element system-link-idmap)
+      (link-query-system-edit parent-link (link-query-fe (:find-element system-link-idmap) parent-link))
+      (link-entity-system-edit parent-link {:db/id (:conn system-link-idmap)}))
+    :system-edit-attr
+    (let [attr (link-either-attr (:attribute system-link-idmap) param-ctx)]
+      (if (:find-element system-link-idmap)
+        (link-query-system-edit-attr parent-link (link-query-fe (:find-element system-link-idmap) parent-link) attr)
+        (link-entity-system-edit-attr parent-link {:db/id (:conn system-link-idmap)} attr)))))

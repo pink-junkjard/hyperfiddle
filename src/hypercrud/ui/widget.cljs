@@ -57,8 +57,8 @@
   (= :options (:anchor/ident anchor)))
 
 (defn popover-anchor? [anchor]
-  (let [{r :anchor/repeating? e :anchor/find-element a :anchor/attribute} anchor]
-    (and (not r) e a)))
+  (let [{r :anchor/repeating? a :anchor/attribute} anchor]
+    (and (not r) a)))
 
 (defn keyword [value maybe-field anchors props param-ctx]
   (let [on-change! #((:user-swap! param-ctx) {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %)})]
@@ -135,6 +135,7 @@
     #_(assert (> (count (filter :anchor/render-inline? anchors)) 0))
     #_(ref value maybe-field anchors props param-ctx)
     [:div.value
+     #_[:pre (pr-str value)]
      (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)
      [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]]))
 
@@ -143,6 +144,7 @@
   (let [[anchors options-anchor] (process-option-popover-anchors anchors param-ctx)]
     (assert (not options-anchor) "ref-component-many don't have options; todo handle gracefully")
     [:div.value
+     #_[:pre (pr-str maybe-field)]
      (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)
      [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]]))
 

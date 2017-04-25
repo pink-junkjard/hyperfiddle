@@ -86,6 +86,8 @@
 
 
 (defn ->entityRequest [link-entity query-params]
+  ;(assert (:entity query-params))
+  ;(if (vector? (:entity query-params)) (assert (not (empty? (:entity query-params))))) - this is cardinality many underhydrated - happens during the hydrate loop?
   (assert (-> link-entity :link-entity/connection :db/id :id))
   (let [dbid-s (:entity query-params)
         dbval (->DbVal (-> link-entity :link-entity/connection :db/id :id) nil)
