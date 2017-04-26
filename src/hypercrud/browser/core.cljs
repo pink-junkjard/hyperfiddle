@@ -79,7 +79,7 @@
       (->> (system-links/request-for-system-link system-link-idmap)
            (hc/hydrate peer)
            (cats/fmap (fn [parent-link]
-                        (system-links/generate-system-link system-link-idmap parent-link param-ctx)))))
+                        (system-links/hydrate-system-link system-link-idmap parent-link param-ctx)))))
     (hc/hydrate peer (request-for-link link-dbid))))
 
 (declare user-result)
@@ -326,7 +326,7 @@
         [system-link-request]
         (if-let [system-link-deps (-> (hc/hydrate (:peer param-ctx) system-link-request) ; ?
                                       (exception/extract nil))]
-          (let [link (system-links/generate-system-link system-link-idmap system-link-deps param-ctx)]
+          (let [link (system-links/hydrate-system-link system-link-idmap system-link-deps param-ctx)]
             (requests-for-link link (:query-params params-map) param-ctx)))))
     (let [link-request (request-for-link (:link-dbid params-map))]
       (concat [link-request]

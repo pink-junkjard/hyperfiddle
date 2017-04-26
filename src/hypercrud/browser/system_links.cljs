@@ -208,7 +208,7 @@
   (first (filter #(= (:db/id %) attrid)                     ; maybe put ident in the system-link-idmap
                  (vals (:schema param-ctx)))))
 
-(defn generate-system-link [system-link-idmap parent-link param-ctx]
+(defn hydrate-system-link [system-link-idmap parent-link param-ctx]
   ; entity-links don't have a fe. Inherit the connection in this case.
   ; query-links use the dbid because it is a database dependency.
   (case (:ident system-link-idmap)
