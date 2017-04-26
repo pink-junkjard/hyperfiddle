@@ -130,14 +130,14 @@
                                           :anchor/repeating? true
                                           :anchor/find-element fe
                                           :anchor/attribute attr
-                                          :anchor/link (link-entity-system-edit-attr parent-link fe attr)}
+                                          :anchor/link (link-query-system-edit-attr parent-link fe attr)}
                                          {:anchor/prompt (str "new") ; conserve space in label
                                           :anchor/ident :sys
                                           :anchor/repeating? false
                                           :anchor/find-element fe
                                           :anchor/attribute attr
                                           :anchor/render-inline? true
-                                          :anchor/link (link-entity-system-edit-attr parent-link fe attr)}]
+                                          :anchor/link (link-query-system-edit-attr parent-link fe attr)}]
                                         nil))))
                           doall)
 
