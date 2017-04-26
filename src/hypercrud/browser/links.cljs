@@ -94,6 +94,7 @@
 
 (defn build-url-params-map
   ([domain project link-dbid formula-str param-ctx]
+    ;(assert project)                                         ; safe - maybe constructing it now
    {:domain domain
     :project project
     :link-dbid link-dbid #_:id

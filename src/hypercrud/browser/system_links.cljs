@@ -204,10 +204,6 @@
   (first (filter #(= (:db/id %) fe-name)
                  (-> parent-link :link/request :link-query/find-element))))
 
-(defn link-either-attr [attrid param-ctx]
-  (first (filter #(= (:db/id %) attrid)                     ; maybe put ident in the system-link-idmap
-                 (vals (:schema param-ctx)))))
-
 (defn hydrate-system-link [system-link-idmap parent-link param-ctx]
   ; entity-links don't have a fe. Inherit the connection in this case.
   ; query-links use the dbid because it is a database dependency.
@@ -217,7 +213,7 @@
       (link-query-system-edit parent-link (link-query-fe (:find-element system-link-idmap) parent-link))
       (link-entity-system-edit parent-link {:db/id (:conn system-link-idmap)}))
     :system-edit-attr
-    (let [attr (link-either-attr (:attribute system-link-idmap) param-ctx)]
+    (let [attr {:db/id (:attribute system-link-idmap)} #_"fake pulled tree"]
       (if (:find-element system-link-idmap)
         (link-query-system-edit-attr parent-link (link-query-fe (:find-element system-link-idmap) parent-link) attr)
         (link-entity-system-edit-attr parent-link {:db/id (:conn system-link-idmap)} attr)))))

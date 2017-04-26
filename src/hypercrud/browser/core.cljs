@@ -291,6 +291,7 @@
 
 (defn requests-for-link-entity [link query-params param-ctx]
   (let [request (q-util/->entityRequest (:link/request link) query-params)
+        _ (assert (get-in link [:link/request :link-entity/connection]))
         schema-request (schema-util/schema-request (get-in link [:link/request :link-entity/connection]))]
     (concat
       [request schema-request]
