@@ -32,8 +32,9 @@
        (into {})))
 
 (defn manufacture-entity-find-element [link param-ctx]
-  (let [conn (or
-               (-> link :link/request :link-entity/connection)
+  (let [conn (-> link :link/request :link-entity/connection)
+        #_(or
+               #_(-> link :link/request :link-entity/connection)
                (let [dbid-s (-> param-ctx :query-params :entity)]
                  {:db/id (->DbId (if (vector? dbid-s)
                                    (:conn-id (first dbid-s))
@@ -96,6 +97,11 @@ the find-element level has been flattened out of the columns."
             ordered-find-elements)
       (flatten)
       (vec))))
+
+(defn link-entity-colspec [result link param-ctx]
+  (let [result (if (map? result) [result] result)]
+
+    ))
 
 (defn build-props [value maybe-field anchors param-ctx]
   ; why does this need the field - it needs the ident for readonly in "Edit Anchors"

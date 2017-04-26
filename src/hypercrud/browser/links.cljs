@@ -32,6 +32,7 @@
       ; attr create (managed, see auto-txfn)
       (and (not r) a)
       (pr-str {:entity `(fn [ctx#]                          ; create ignores cardinality
+                          (assert (-> ctx# :entity))
                           (assert (-> ctx# :entity :db/id :conn-id))
                           (->DbId (-> (str (-> ctx# :entity :db/id :id) "."
                                            (-> ctx# :attribute :attribute/ident) "."

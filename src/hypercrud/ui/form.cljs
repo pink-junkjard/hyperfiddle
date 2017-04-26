@@ -73,6 +73,7 @@
            spec-fields (->> (partition 4 colspec)
                             (mapv (fn [[conn fe-name ident maybe-field]]
                                     (let [entity (get relation fe-name)
+                                          ;_ (assert entity)
                                           fe-anchors (get fe-anchors-lookup fe-name)
                                           param-ctx (as-> param-ctx $
                                                           (form-util/entity-param-ctx entity $)

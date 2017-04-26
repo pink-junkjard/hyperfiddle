@@ -7,6 +7,8 @@
 
 (defmethod auto-control/auto-control :default
   [value maybe-field anchors props param-ctx]
+  ;(assert (:entity param-ctx))
+
   (let [isComponent (-> (:attribute param-ctx) :attribute/isComponent)
         valueType (-> (:attribute param-ctx) :attribute/valueType :db/ident)
         cardinality (-> (:attribute param-ctx) :attribute/cardinality :db/ident)

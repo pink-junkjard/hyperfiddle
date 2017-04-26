@@ -46,7 +46,7 @@
 (defn link-entity-system-edit-attr [parent-link conn attr]
   (assert parent-link) (assert (:db/id parent-link))
   (assert conn) (assert (-> conn :db/id :id))
-  (assert attr) (assert (:db/id attr))
+  ;(assert attr) (assert (:db/id attr)) ; schema not hydrated yet?
   {:db/id (->DbId {:ident :system-edit-attr
                    :parent-link (:db/id parent-link)
                    :conn (-> conn :db/id)
@@ -62,7 +62,10 @@
   Matching is determined by [repeat? entity attribute ident]"
   [parent-link result param-ctx]
   (let [colspec (form-util/determine-colspec result parent-link param-ctx) ; colspec can be empty if result is empty and no form.
-        find-elements (case (link-util/link-type parent-link)
+
+        type (link-util/link-type parent-link)
+
+        find-elements (case type
                         :link-query (->> (form-util/get-ordered-find-elements parent-link param-ctx)
                                          (mapv (juxt :find-element/name identity))
                                          (into {}))
@@ -71,7 +74,8 @@
 
         ; entity links for link-query (have fe)
         ; or, entity links for link-entity
-        entity-links (if find-elements
+        entity-links (case type
+                       :link-query
                        (->> find-elements
                             (mapcat (fn [[fe-name fe]]
                                       [{:anchor/prompt (str fe-name)
@@ -89,6 +93,8 @@
                                         :anchor/find-element fe
                                         :anchor/render-inline? false #_"this link is not managed, no txfn, no popover."}]))
                             doall)
+
+                       :link-entity
                        (let [conn (or
                                     (-> parent-link :link/request :link-entity/connection)
                                     (let [dbid-s (-> param-ctx :query-params :entity)]
@@ -99,40 +105,66 @@
                          [{:anchor/prompt "entity"
                            :anchor/ident :sys
                            :anchor/link (link-entity-system-edit parent-link conn)
-                           :anchor/repeating? true}
+                           :anchor/repeating? true
+                           :anchor/find-element nil}
                           {:anchor/prompt (str "new entity")
                            :anchor/ident :sys
                            :anchor/link (link-entity-system-edit parent-link conn)
                            :anchor/repeating? false
-                           :anchor/render-inline? false}]))
-        attr-links (->> (partition 4 colspec)               ; driven by colspec, not find elements, because what matters is what's there.
-                        (mapcat (fn [[conn fe-name ident maybe-field]]
-                                  (let [fe (get find-elements fe-name) ; can be nil now
-                                        attr ((:schema param-ctx) ident) #_"nil for db/id"]
-                                    (case (-> attr :attribute/valueType :db/ident)
-                                      :db.type/ref
-                                      [(merge
-                                         {:anchor/prompt (str "edit") ; conserve space in label
+                           :anchor/find-element nil
+                           :anchor/render-inline? false}])
+
+                       :link-blank [])
+
+
+        attr-links (case type
+                     :link-query
+                     (->> (partition 4 colspec)             ; driven by colspec, not find elements, because what matters is what's there.
+                          (mapcat (fn [[conn fe-name ident maybe-field]]
+                                    (let [fe (get find-elements fe-name) ; can be nil now
+                                          attr ((:schema param-ctx) ident) #_"nil for db/id"]
+                                      (case (-> attr :attribute/valueType :db/ident)
+                                        :db.type/ref
+                                        [{:anchor/prompt (str "edit") ; conserve space in label
                                           :anchor/ident :sys
                                           :anchor/repeating? true
-                                          :anchor/attribute attr}
-                                         (if fe
-                                           {:anchor/link (link-entity-system-edit-attr parent-link fe attr)
-                                            :anchor/find-element fe}
-                                           {:anchor/link (link-entity-system-edit-attr parent-link conn attr)}))
-                                       (merge
+                                          :anchor/find-element fe
+                                          :anchor/attribute attr
+                                          :anchor/link (link-entity-system-edit-attr parent-link fe attr)}
                                          {:anchor/prompt (str "new") ; conserve space in label
                                           :anchor/ident :sys
                                           :anchor/repeating? false
+                                          :anchor/find-element fe
                                           :anchor/attribute attr
-                                          :anchor/render-inline? true}
-                                         (if fe
-                                           {:anchor/link (link-entity-system-edit-attr parent-link fe attr)
-                                            :anchor/find-element fe}
-                                           {:anchor/link (link-entity-system-edit-attr parent-link conn attr)}))]
-                                      nil))))
-                        doall)]
-    (case (link-util/link-type parent-link)
+                                          :anchor/render-inline? true
+                                          :anchor/link (link-entity-system-edit-attr parent-link fe attr)}]
+                                        nil))))
+                          doall)
+
+                     :link-entity
+                     (->> (partition 4 colspec)
+                          (mapcat (fn [[conn fe-name ident maybe-field]]
+                                    (let [attr ((:schema param-ctx) ident) #_"nil for db/id"]
+                                      (case (-> attr :attribute/valueType :db/ident)
+                                        :db.type/ref
+                                        [{:anchor/prompt (str "edit") ; conserve space in label
+                                          :anchor/ident :sys
+                                          :anchor/repeating? true
+                                          :anchor/find-element nil
+                                          :anchor/attribute attr
+                                          :anchor/link (link-entity-system-edit-attr parent-link conn attr)}
+                                         {:anchor/prompt (str "new") ; conserve space in label
+                                          :anchor/ident :sys
+                                          :anchor/repeating? false
+                                          :anchor/find-element nil
+                                          :anchor/attribute attr
+                                          :anchor/render-inline? true
+                                          :anchor/link (link-entity-system-edit-attr parent-link conn attr)}]
+                                        nil))))
+                          doall)
+
+                     :link-blank [])]
+    (case type
       :link-query (concat entity-links attr-links)
       :link-entity (concat attr-links)
       :link-blank [])))
