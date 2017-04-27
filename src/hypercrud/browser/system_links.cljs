@@ -91,7 +91,13 @@
                                         :anchor/link (link-query-system-edit parent-link fe)
                                         :anchor/repeating? false
                                         :anchor/find-element fe
-                                        :anchor/render-inline? false #_"this link is not managed, no txfn, no popover."}]))
+                                        :anchor/render-inline? false}
+                                       {:anchor/prompt (str "remove " fe-name)
+                                        :anchor/ident :remove
+                                        :anchor/link nil
+                                        :anchor/repeating? true
+                                        :anchor/find-element fe
+                                        :anchor/render-inline? false}]))
                             doall)
 
                        :link-entity
@@ -102,16 +108,21 @@
                                                         (:conn-id (first dbid-s))
                                                         (:conn-id dbid-s))
                                                       nil #_"ignored in the place we need it, ->entityRequest")}))]
-                         [{:anchor/prompt "entity"
+                         [{:anchor/prompt "edit"
                            :anchor/ident :sys
                            :anchor/link (link-entity-system-edit parent-link conn)
                            :anchor/repeating? true
                            :anchor/find-element nil}
-                          {:anchor/prompt (str "new entity")
+                          {:anchor/prompt "new"
                            :anchor/ident :sys
                            :anchor/link (link-entity-system-edit parent-link conn)
                            :anchor/repeating? false
                            :anchor/find-element nil
+                           :anchor/render-inline? false}
+                          {:anchor/prompt "remove"
+                           :anchor/ident :remove
+                           :anchor/link nil
+                           :anchor/repeating? true
                            :anchor/render-inline? false}])
 
                        :link-blank [])
@@ -164,10 +175,7 @@
                           doall)
 
                      :link-blank [])]
-    (case type
-      :link-query (concat entity-links attr-links)
-      :link-entity (concat attr-links)
-      :link-blank [])))
+    (concat entity-links attr-links)))
 
 
 (defn request-for-system-link [system-link-idmap]

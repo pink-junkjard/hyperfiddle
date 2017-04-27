@@ -18,7 +18,9 @@
   ; we already have this info in the runtime param-ctx, so we could delay until formula runtime
   ; and not look at the anchor at all and bypass the formula read-eval.
 
-  ; this is a 3x3 matrix - repeating, entity, attribute. attribute depends on entity
+  ; this is a 3x3 matrix - repeating, entity, attribute. Find element is not part of the matrix.
+  ; link-query's always have a find-element, if they have an attribute
+  ; link-entity's never do, despite having an attribute.
   (let [{r :anchor/repeating? e :anchor/find-element a :anchor/attribute} anchor]
     (cond
 
@@ -39,21 +41,30 @@
                                            "0")             ; if cardinality many, ensure no conflicts
                                       hash js/Math.abs - str)
                                   ; inherit parent since the fe is never explicitly set by user
+                                  ; it would be more correct to use the FE if we have it, but
+                                  ; that information is guaranteed to be the same?
                                   (-> ctx# :entity :db/id :conn-id)))})
 
       ; entity edit
-      (and r e (not a))                                     ; xxx link-entity might hit this, but it doesn't now since it can't select an entity. Except sys links which hit this as we manufacture the fe properly.
-      (pr-str {:entity `(fn [ctx#]                          ; find-elements don't have cardinality
+      (and r (not a))
+      (pr-str {:entity `(fn [ctx#]
                           (get-in ctx# [:entity :db/id]))})
 
       ; entity create
-      (and (not r) e (not a))
+      ; is it managed or not? We need a connection. Either we got the find-element, or
+      ; we are managed. If we're managed, we need an entity in scope, to conjure a connection.
+      ; So despite not really needing the value in scope, we need the connection, so we need the value.
+      ; This is counter intuitive. It only happens for sys links. Regular links set the linkentity/connection
+      ; so don't have this problem.
+      (and (not r) (not a))
       (pr-str {:entity `(fn [ctx#]
                           (->DbId (-> (str (-> ctx# :entity :db/id :id) "."
                                            "."              ; don't collide ids with attributes
                                            "0")             ; if cardinality many, ensure no conflicts
                                       hash js/Math.abs - str)
-                                  ~(-> e :find-element/connection :db/id :id)))})
+                                  (-> ctx# :entity :db/id :conn-id)
+                                  #_(or ~(-> e :find-element/connection :db/id :id)
+                                      )))})
 
       ; naked
       (and (not r) (not e) (not a)) nil
@@ -67,12 +78,13 @@
 (declare build-link-props)
 
 (defn auto-txfn [anchor]
-  (let [{r :anchor/repeating? e :anchor/find-element a :anchor/attribute} anchor]
+  (let [{r :anchor/repeating? e :anchor/find-element a :anchor/attribute ident :anchor/ident} anchor]
     (cond
 
-      ; legacy links don't have e, we need to ensure all attr links have an entity now
-      ; this includes entity links which odn't have find-element
-      ; or we can manufacture by looking at the link, deciding if entity link
+      ; link-query's always have a find-element
+      ; link-entity's never do
+      ; that bit is not interesting here.
+
       (and (not r) a)                                       ; attr create
       (pr-str `(fn [ctx# show-popover!#]
                  (let [parent# (:entity ctx#)
@@ -90,6 +102,12 @@
                                           adds# [new-dbid#]]
                                       (tx/edit-entity (:db/id parent#) attr-ident# rets# adds#))
                                     tx-from-modal#)}))))))
+
+      (and r (not a) (= ident :remove))
+      (pr-str `(fn [ctx#]
+                 {:tx [:db.fn/retractEntity (-> ctx# :entity :db/id)]}))
+
+
       :else nil)))
 
 (defn build-url-params-map

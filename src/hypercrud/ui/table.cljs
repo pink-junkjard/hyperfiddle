@@ -65,19 +65,11 @@
        (seq)))
 
 (defn table-row-form [relation colspec anchors param-ctx]
-  (let [find-element-anchors-lookup (->> anchors
-                                         ; entity links must have fe - this might break legacy links.
-                                         #_(filter :anchor/find-element) ; happens higher?
-                                         #_(filter :anchor/attribute)
-
-                                         ; So leave legacy logic for now.
-                                         (filter #(or (:anchor/find-element %) (:anchor/attribute %)))
-
-                                         (group-by (fn [anchor]
-                                                     ; can this branch happen anymore? Yeah, user link-entity
-                                                     (if-let [find-element (:anchor/find-element anchor)]
-                                                       (:find-element/name find-element)
-                                                       "entity"))))]
+  (let [entity-anchors-lookup (->> anchors
+                                   (group-by (fn [anchor]
+                                               (if-let [find-element (:anchor/find-element anchor)]
+                                                 (:find-element/name find-element)
+                                                 "entity"))))]
     [:tr
      (->> (partition 4 colspec)
           (mapv (fn [[conn fe-name ident maybe-field]]      ; (fe-name, ident) are unique if taken together
@@ -88,7 +80,7 @@
                                              :value value
                                              :layout :table))
                         ; rebuilt too much due to joining fe-name X ident
-                        attribute-anchors (->> (get find-element-anchors-lookup fe-name)
+                        attribute-anchors (->> (get entity-anchors-lookup fe-name)
                                                (filter :anchor/attribute))
                         style {:border-color (connection-color/connection-color (:color param-ctx))}]
                     [:td.truncate {:key (or (:db/id maybe-field) (str fe-name ident)) :style style}
@@ -101,11 +93,13 @@
           (seq))
 
      [:td.link-cell {:key :link-cell}
-      ; render all repeating links (regardless if inline) as anchors
+      ; inline entity-anchors are not yet implemented, what does that mean.
       (widget/render-anchors (concat
                                (mapv vector
                                      (->> anchors
-                                          (filter :anchor/repeating?) (remove :anchor/find-element) (remove :anchor/attribute))
+                                          (filter :anchor/repeating?)
+                                          (remove :anchor/attribute)
+                                          (remove :anchor/render-inline?))
                                      (repeatedly (constantly param-ctx)))
                                ; find-element anchors need more items in their ctx
                                (->> (partition 4 colspec)
@@ -114,10 +108,10 @@
                                     (mapcat (fn [fe-name]
                                               (let [entity (get relation fe-name)
                                                     param-ctx (form-util/entity-param-ctx entity param-ctx)
-                                                    fe-anchors (->> (get find-element-anchors-lookup fe-name)
+                                                    fe-anchors (->> (get entity-anchors-lookup fe-name)
                                                                     (filter :anchor/repeating?)
-                                                                    (filter :anchor/find-element)
-                                                                    (remove :anchor/attribute))]
+                                                                    (remove :anchor/attribute)
+                                                                    (remove :anchor/render-inline?))]
                                                 (mapv vector fe-anchors (repeat param-ctx))))))))]]))
 
 
@@ -150,28 +144,16 @@
 (defn table [& props]
   (let [sort-col (r/atom nil)]
     (fn [relations colspec anchors param-ctx]
-      (let [non-repeating-top-anchors (->> anchors          ; e.g. create links are not repeating, have fe, no attr
-                                           (remove :anchor/repeating?)
-                                           #_(filter :anchor/find-element)
-                                           (remove :anchor/attribute))]
-        [:div.ui-table-with-links
-         [:table.ui-table
-          [:thead
-           [:tr
-            (build-col-heads colspec sort-col param-ctx)
-            [:td.link-cell {:key :link-cell}
-             (widget/render-anchors (->> anchors
+      [:div.ui-table-with-links
+       [:table.ui-table
+        [:thead
+         [:tr
+          (build-col-heads colspec sort-col param-ctx)
+          [:td.link-cell {:key :link-cell}                  ; these are handled generically above
+           #_(widget/render-anchors (->> anchors
                                          (remove :anchor/repeating?)
-                                         #_(filter :anchor/find-element) ; this filter is allowed, except link-entity doesn't set this to the manufac fe except sys links
                                          (remove :anchor/attribute)
                                          (remove :anchor/render-inline?))
                                     param-ctx)]]]
-          [body relations colspec
-           anchors #_ (filter :anchor/find-element anchors) ; entity links and attr links, no naked links. this probably breaks legacy links
-           sort-col param-ctx]]
-         (widget/render-inline-links (->> anchors
-                                          (remove :anchor/repeating?)
-                                          #_(filter :anchor/find-element) ; link-entity
-                                          (remove :anchor/attribute)
-                                          (filter :anchor/render-inline?))
-                                     (dissoc param-ctx :isComponent) #_ "why?")]))))
+        [body relations colspec anchors sort-col param-ctx]] ; filter repeating
+       ])))

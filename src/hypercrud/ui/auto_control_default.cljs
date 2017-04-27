@@ -45,25 +45,20 @@
                  :else widget/raw)]
     (widget value maybe-field anchors props param-ctx)))
 
-
-
-
-
-(defn no-link-type [anchors param-ctx]
-  (let [naked-anchors (->> anchors
-                           (remove :anchor/repeating?)
-                           (remove :anchor/find-element)
-                           (remove :anchor/attribute))]
-    [:div
-     (widget/render-anchors (remove :anchor/render-inline? naked-anchors) param-ctx)
-     (let [param-ctx (dissoc param-ctx :isComponent)]
-       (widget/render-inline-links (filter :anchor/render-inline? naked-anchors) param-ctx))]))
-
-; Result is either a relation, or a set of relations (vector on the wire)
 (defmethod auto-control/result :default [result colspec anchors param-ctx]
-  ; todo render naked anchors in all three cases, its not specific to blank case
-  (cond
-    ; order matters here
-    (map? result) (form/form result colspec anchors param-ctx)
-    (coll? result) [table/table result colspec anchors param-ctx] ; stateful
-    :else (no-link-type anchors param-ctx)))
+  [:div
+   (widget/render-anchors (->> anchors
+                               (remove :anchor/repeating?)
+                               (remove :anchor/attribute)
+                               (remove :anchor/render-inline?))
+                          (dissoc param-ctx :isComponent))
+   (cond
+     ; order matters here
+     (map? result) (form/form result colspec anchors param-ctx)
+     (coll? result) [table/table result colspec anchors param-ctx] ; stateful
+     :else nil)
+   (widget/render-inline-links (->> anchors
+                                    (remove :anchor/repeating?)
+                                    (remove :anchor/attribute)
+                                    (filter :anchor/render-inline?))
+                               (dissoc param-ctx :isComponent))])
