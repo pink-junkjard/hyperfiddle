@@ -66,6 +66,8 @@
 
 (defn table-row-form [relation colspec anchors param-ctx]
   (let [entity-anchors-lookup (->> anchors
+                                   ; entity anchors are guaranteed repeating
+                                   ; attr anchors might be not-repeating for create-new
                                    (group-by (fn [anchor]
                                                (if-let [find-element (:anchor/find-element anchor)]
                                                  (:find-element/name find-element)
@@ -93,25 +95,19 @@
 
      [:td.link-cell {:key :link-cell}
       ; inline entity-anchors are not yet implemented, what does that mean.
-      (widget/render-anchors (concat
-                               (mapv vector
-                                     (->> anchors
-                                          (filter :anchor/repeating?)
-                                          (remove :anchor/attribute)
-                                          (remove :anchor/render-inline?))
-                                     (repeatedly (constantly param-ctx)))
-                               ; find-element anchors need more items in their ctx
-                               (->> (partition 4 colspec)
-                                    (mapv (fn [[conn fe-name attr maybe-field]] fe-name))
-                                    (set)                   ; distinct find elements
-                                    (mapcat (fn [fe-name]
-                                              (let [entity (get relation fe-name)
-                                                    param-ctx (form-util/entity-param-ctx entity param-ctx)
-                                                    fe-anchors (->> (get entity-anchors-lookup fe-name)
-                                                                    (filter :anchor/repeating?)
-                                                                    (remove :anchor/attribute)
-                                                                    (remove :anchor/render-inline?))]
-                                                (mapv vector fe-anchors (repeat param-ctx))))))))]]))
+      ; find-element anchors need more items in their ctx
+      (widget/render-anchors (->> (partition 4 colspec)
+                                  (mapv second)
+                                  (set)                     ; distinct find elements
+                                  (mapcat (fn [fe-name]
+                                            (let [entity (get relation fe-name)
+                                                  _ (assert entity)
+                                                  param-ctx (form-util/entity-param-ctx entity param-ctx)
+                                                  fe-anchors (->> (get entity-anchors-lookup fe-name)
+                                                                  (filter :anchor/repeating?)
+                                                                  (remove :anchor/attribute)
+                                                                  (remove :anchor/render-inline?))]
+                                              (mapv vector fe-anchors (repeat param-ctx)))))))]]))
 
 
 (defn body [relations colspec anchors sort-col param-ctx]
@@ -150,9 +146,9 @@
           (build-col-heads colspec sort-col param-ctx)
           [:td.link-cell {:key :link-cell}
            (widget/render-anchors (->> anchors
-                                       (remove :anchor/repeating?)
+                                       (remove :anchor/repeating?) ; link-entity new unmanaged
                                        (remove :anchor/attribute)
                                        (remove :anchor/render-inline?))
                                   param-ctx)]]]
-        [body relations colspec anchors sort-col param-ctx]] ; filter repeating
-       ])))
+        ; filter repeating? No because create-new-attribute down here too.
+        [body relations colspec anchors sort-col param-ctx]]])))
