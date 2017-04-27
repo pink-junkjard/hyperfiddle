@@ -108,7 +108,7 @@
                                                         (:conn-id (first dbid-s))
                                                         (:conn-id dbid-s))
                                                       nil #_"ignored in the place we need it, ->entityRequest")}))]
-                         [{:anchor/prompt "edit"
+                         [#_{:anchor/prompt "edit"
                            :anchor/ident :sys
                            :anchor/link (link-entity-system-edit parent-link conn)
                            :anchor/repeating? true
