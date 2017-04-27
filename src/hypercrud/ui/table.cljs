@@ -149,11 +149,11 @@
         [:thead
          [:tr
           (build-col-heads colspec sort-col param-ctx)
-          [:td.link-cell {:key :link-cell}                  ; these are handled generically above
-           #_(widget/render-anchors (->> anchors
-                                         (remove :anchor/repeating?)
-                                         (remove :anchor/attribute)
-                                         (remove :anchor/render-inline?))
-                                    param-ctx)]]]
+          [:td.link-cell {:key :link-cell}
+           (widget/render-anchors (->> anchors
+                                       (remove :anchor/repeating?)
+                                       (remove :anchor/attribute)
+                                       (remove :anchor/render-inline?))
+                                  param-ctx)]]]
         [body relations colspec anchors sort-col param-ctx]] ; filter repeating
        ])))
