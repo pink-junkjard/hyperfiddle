@@ -60,45 +60,45 @@
   (let [{r :anchor/repeating? a :anchor/attribute} anchor]
     (and (not r) a)))
 
-(defn keyword [value maybe-field anchors props param-ctx]
+(defn keyword [maybe-field anchors props param-ctx]
   (let [on-change! #((:user-swap! param-ctx) {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %)})]
-    [input/keyword-input* value on-change! props]))
+    [input/keyword-input* (:value param-ctx) on-change! props]))
 
 
-(defn string [value maybe-field anchors props param-ctx]
+(defn string [maybe-field anchors props param-ctx]
   (let [on-change! #((:user-swap! param-ctx) {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %)})]
-    [input/input* value on-change! props]))
+    [input/input* (:value param-ctx) on-change! props]))
 
 
-(defn long [value maybe-field anchors props param-ctx]
+(defn long [maybe-field anchors props param-ctx]
   [:div.value
    [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
    [input/validated-input
-    value #((:user-swap! param-ctx) {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %)})
+    (:value param-ctx) #((:user-swap! param-ctx) {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %)})
     #(js/parseInt % 10) pr-str
     #(or (integer? (js/parseInt % 10)) (= "nil" %))
     props]
    (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)])
 
 
-(defn textarea [value maybe-field anchors props param-ctx]
+(defn textarea [maybe-field anchors props param-ctx]
   (let [set-attr! #((:user-swap! param-ctx) {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %)})]
     [textarea* (merge {:type "text"
-                       :value value
+                       :value (:value param-ctx)
                        :on-change set-attr!}
                       props)]))
 
-(defn boolean [value maybe-field anchors props param-ctx]
+(defn boolean [maybe-field anchors props param-ctx]
   [:div.value
    [:div.editable-select {:key (:attribute/ident (:attribute param-ctx))}
     [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
-    (select-boolean* value props param-ctx)]
+    (select-boolean* (:value param-ctx) props param-ctx)]
    (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)])
 
 
-(defn dbid [value props param-ctx]
+(defn dbid [props param-ctx]
   (let [on-change! #((:user-swap! param-ctx) {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %)})]
-    (input/dbid-input value on-change! props)))
+    (input/dbid-input (:value param-ctx) on-change! props)))
 
 
 (defn process-option-popover-anchors [anchors param-ctx]
@@ -117,30 +117,30 @@
     [anchors options-anchor]))
 
 ; this can be used sometimes, on the entity page, but not the query page
-(defn ref [value maybe-field anchors props param-ctx]
+(defn ref [maybe-field anchors props param-ctx]
   (let [[anchors options-anchor] (process-option-popover-anchors anchors param-ctx)]
     [:div.value
      ; todo this key is encapsulating other unrelated anchors
      [:div.editable-select {:key (hash (get-in options-anchor [:anchor/link :link/request]))} ; not sure if this is okay in nil field case, might just work
       [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)] ;todo can this be lifted out of editable-select?
       (if options-anchor
-        (select* value options-anchor props param-ctx)
-        (dbid value props param-ctx))]
+        (select* (:value param-ctx) options-anchor props param-ctx)
+        (dbid props param-ctx))]
      (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)]))
 
 
-(defn ref-component [value maybe-field anchors props param-ctx]
+(defn ref-component [maybe-field anchors props param-ctx]
   (let [[anchors options-anchor] (process-option-popover-anchors anchors param-ctx)]
     (assert (not options-anchor) "ref-components don't have options; todo handle gracefully")
     #_(assert (> (count (filter :anchor/render-inline? anchors)) 0))
-    #_(ref value maybe-field anchors props param-ctx)
+    #_(ref maybe-field anchors props param-ctx)
     [:div.value
-     #_[:pre (pr-str value)]
+     #_[:pre (pr-str (:value param-ctx))]
      [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
      (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)]))
 
 
-(defn ref-many-table [value maybe-field anchors props param-ctx]
+(defn ref-many-table [maybe-field anchors props param-ctx]
   (let [[anchors options-anchor] (process-option-popover-anchors anchors param-ctx)]
     (assert (not options-anchor) "ref-component-many don't have options; todo handle gracefully")
     [:div.value
@@ -148,7 +148,7 @@
      [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
      (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)]))
 
-(defn ref-many [value maybe-field anchors props param-ctx]
+(defn ref-many [maybe-field anchors props param-ctx]
   (let [[options-anchor] (filter option-anchor? anchors)
         initial-select (some-> options-anchor               ; not okay to auto-select.
                                (option/hydrate-options param-ctx)
@@ -156,7 +156,7 @@
                                first
                                first)
         select-value-atom (r/atom initial-select)]
-    (fn [value maybe-field anchors props param-ctx]
+    (fn [maybe-field anchors props param-ctx]
       (let [[options-anchor] (filter option-anchor? anchors)
             anchors (remove option-anchor? anchors)
             anchors (if (and options-anchor (= :xray (:display-mode param-ctx)))
@@ -165,7 +165,7 @@
         [:div.value
          [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
          [:ul
-          (->> value
+          (->> (:value param-ctx)
                (map (fn [v]
                       [:li {:key (:db/id v)}
                        (:db/id v)                           ; todo remove button
@@ -184,35 +184,35 @@
                                              [:option {:key (:id dbid) :value (-> dbid :id str)} label-prop])))]
               [:select props select-options])
             ; todo wire input to up arrow
-            #_(dbid value props param-ctx))
+            #_(dbid props param-ctx))
           [:br]
           [:button {:on-click #((:user-swap! param-ctx) {:tx (tx/edit-entity (get-in param-ctx [:entity :db/id]) (-> param-ctx :attribute :attribute/ident) [] [@select-value-atom])})} "⬆"]]
          (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)]))))
 
-(defn ref-many-component-table [value maybe-field anchors props param-ctx]
+(defn ref-many-component-table [maybe-field anchors props param-ctx]
   [:div.value
    (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)
    [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]])
 
-(defn multi-select-ref [value maybe-field anchors props param-ctx]
+(defn multi-select-ref [maybe-field anchors props param-ctx]
   (let [add-item! #((:user-swap! param-ctx) {:tx (tx/edit-entity (:db/id (:entity param-ctx)) (:attribute param-ctx) [] [nil])})]
-    (multi-select* multi-select-markup value add-item! maybe-field anchors props param-ctx))) ;add-item! is: add nil to set
+    (multi-select* multi-select-markup add-item! maybe-field anchors props param-ctx))) ;add-item! is: add nil to set
 
-;(defn multi-select-ref-component [value maybe-field anchors props param-ctx]
+;(defn multi-select-ref-component [maybe-field anchors props param-ctx]
 ;  (let [add-item! #((:user-swap! param-ctx) {:tx (tx/edit-entity (:db/id (:entity param-ctx)) (:attribute param-ctx) [] [(temp-id!)])})]
-;    [multi-select* multi-select-markup value add-item! maybe-field anchors props param-ctx])) ;add new entity to set
+;    [multi-select* multi-select-markup add-item! maybe-field anchors props param-ctx])) ;add new entity to set
 
 (defn code [& args]
   (let [showing? (r/atom false)]
-    (fn [value maybe-field anchors props param-ctx]
+    (fn [maybe-field anchors props param-ctx]
       (let [ident (-> param-ctx :attribute :attribute/ident)
-            change! #((:user-swap! param-ctx) {:tx (tx/edit-entity (:db/id (:entity param-ctx)) ident [value] [%])})
+            change! #((:user-swap! param-ctx) {:tx (tx/edit-entity (:db/id (:entity param-ctx)) ident [(:value param-ctx)] [%])})
             code-widget (let [props (if-not (nil? (:read-only props))
                                       (-> props
                                           (dissoc :read-only)
                                           (assoc :readOnly (:read-only props)))
                                       props)]
-                          [code-editor* value change! props])]
+                          [code-editor* (:value param-ctx) change! props])]
         ^{:key ident}
         [:div.value
          (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)
@@ -230,7 +230,7 @@
                               :no-clip? true
                               :width "600px"
                               :body code-widget]]
-                   " " value])
+                   " " (:value param-ctx)])
          [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]]))))
 
 (defn valid-date-str? [s]
@@ -238,7 +238,7 @@
       (let [ms (.parse js/Date s)]                          ; NaN if not valid string
         (integer? ms))))
 
-(defn instant [value maybe-field anchors props param-ctx]
+(defn instant [maybe-field anchors props param-ctx]
   (let [on-change! #((:user-swap! param-ctx) {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %)})
         parse-string (fn [s]
                        (if (empty? s)
@@ -246,18 +246,18 @@
                          (let [ms (.parse js/Date s)]
                            (js/Date. ms))))
         to-string #(some-> % .toISOString)]
-    [input/validated-input value on-change! parse-string to-string valid-date-str? props]))
+    [input/validated-input (:value param-ctx) on-change! parse-string to-string valid-date-str? props]))
 
-(defn text [value maybe-field anchors props param-ctx]
+(defn text [maybe-field anchors props param-ctx]
   [:div.value
    [:span.text
     (case (-> (:attribute param-ctx) :attribute/cardinality :db/ident)
-      :db.cardinality/many (map pr-str value)
-      (pr-str value))]
+      :db.cardinality/many (map pr-str (:value param-ctx))
+      (pr-str (:value param-ctx)))]
    (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)
    [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]])
 
-(defn default [value maybe-field anchors props param-ctx]
+(defn default [maybe-field anchors props param-ctx]
   (let [{:keys [:attribute/valueType :attribute/cardinality :attribute/isComponent]} (:attribute param-ctx)]
     [input/input*
      (str {:valueType (:db/ident valueType)
@@ -266,8 +266,8 @@
      #()
      {:read-only true}]))
 
-(defn raw [value _ anchors props param-ctx]
+(defn raw [_ anchors props param-ctx]
   (let [valueType (-> param-ctx :attribute :attribute/valueType :db/ident)
-        value (if (= valueType :db.type/ref) (:db/id value) value)
+        value (if (= valueType :db.type/ref) (:db/id (:value param-ctx)) (:value param-ctx))
         on-change! #((:user-swap! param-ctx) {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %)})]
     [input/edn-input* value on-change! props]))

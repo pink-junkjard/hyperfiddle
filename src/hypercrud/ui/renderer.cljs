@@ -14,7 +14,7 @@
       (empty-string-to-nil (-> attr :attribute/renderer))
       (empty-string-to-nil (-> attr :attribute/hc-type :hc-type/renderer)))))
 
-(defn user-render [value maybe-field anchors props param-ctx]
+(defn user-render [maybe-field anchors props param-ctx]
   (let [{user-fn :value error :error} (eval-str (user-renderer param-ctx))]
     [:div.value
      (if error
@@ -29,4 +29,5 @@
                                  props (links/build-link-props anchor param-ctx)] ; needs param-ctx to run formulas
                              [(:navigate-cmp param-ctx) props label])))]
          ; Same interface as auto-control widgets.
-         [safe-user-renderer user-fn value maybe-field anchors props param-ctx]))]))
+         ; pass value only as scope todo
+         [safe-user-renderer user-fn maybe-field anchors props param-ctx]))]))

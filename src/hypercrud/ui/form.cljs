@@ -13,10 +13,10 @@
   [:div.field {:style {:border-color (connection-color/connection-color (:color param-ctx))}}
    [:label (form-util/field-label maybe-field param-ctx)]
    (let [anchors (filter #(= (-> param-ctx :attribute :db/id) (some-> % :anchor/attribute :db/id)) anchors)
-         props (form-util/build-props (:value param-ctx) maybe-field anchors param-ctx)]
+         props (form-util/build-props maybe-field anchors param-ctx)]
      (if (renderer/user-renderer param-ctx)
-       (renderer/user-render (:value param-ctx) maybe-field anchors props param-ctx)
-       [auto-control (:value param-ctx) maybe-field anchors props param-ctx]))])
+       (renderer/user-render maybe-field anchors props param-ctx)
+       [auto-control maybe-field anchors props param-ctx]))])
 
 (defn new-field [entity param-ctx]
   (let [attr-ident (r/atom nil)]

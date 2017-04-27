@@ -103,7 +103,7 @@ the find-element level has been flattened out of the columns."
 
     ))
 
-(defn build-props [value maybe-field anchors param-ctx]
+(defn build-props [maybe-field anchors param-ctx]
   ; why does this need the field - it needs the ident for readonly in "Edit Anchors"
   {:read-only ((get param-ctx :read-only) (:attribute param-ctx) param-ctx)})
 

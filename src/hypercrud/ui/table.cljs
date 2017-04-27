@@ -74,10 +74,9 @@
      (->> (partition 4 colspec)
           (mapv (fn [[conn fe-name ident maybe-field]]      ; (fe-name, ident) are unique if taken together
                   (let [entity (get relation fe-name)
-                        value (get entity ident)
                         param-ctx (-> (form-util/entity-param-ctx entity param-ctx)
                                       (assoc :attribute (get (:schema param-ctx) ident)
-                                             :value value
+                                             :value (get entity ident)
                                              :layout :table))
                         ; rebuilt too much due to joining fe-name X ident
                         attribute-anchors (->> (get entity-anchors-lookup fe-name)
@@ -86,10 +85,10 @@
                     [:td.truncate {:key (or (:db/id maybe-field) (str fe-name ident)) :style style}
                      (let [anchors (filter #(= (-> param-ctx :attribute :db/id)
                                                (some-> % :anchor/attribute :db/id)) attribute-anchors)
-                           props (form-util/build-props value maybe-field anchors param-ctx)]
+                           props (form-util/build-props maybe-field anchors param-ctx)]
                        (if (renderer/user-renderer param-ctx)
-                         (renderer/user-render value maybe-field anchors props param-ctx)
-                         [auto-table-cell value maybe-field anchors props param-ctx]))])))
+                         (renderer/user-render maybe-field anchors props param-ctx)
+                         [auto-table-cell maybe-field anchors props param-ctx]))])))
           (seq))
 
      [:td.link-cell {:key :link-cell}
