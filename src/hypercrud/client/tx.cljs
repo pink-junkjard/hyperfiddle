@@ -51,7 +51,10 @@
                 (conj non-related next-stmt))
       :db/retract (if (= op' :db/add)
                     non-related                             ;we have a related previous stmt that cancels us and it out
-                    (conj non-related next-stmt)))))
+                    (conj non-related next-stmt))
+
+      ; else probably a :db.fn
+      (conj non-related next-stmt))))
 
 
 (defn into-tx [tx more-statements]
