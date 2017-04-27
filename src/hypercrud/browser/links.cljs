@@ -38,7 +38,7 @@
                           (assert (-> ctx# :entity :db/id :conn-id))
                           (->DbId (-> (str (-> ctx# :entity :db/id :id) "."
                                            (-> ctx# :attribute :attribute/ident) "."
-                                           "0")             ; if cardinality many, ensure no conflicts
+                                           (count (:value ctx#))) ; if cardinality many, ensure no conflicts
                                       hash js/Math.abs - str)
                                   ; inherit parent since the fe is never explicitly set by user
                                   ; it would be more correct to use the FE if we have it, but
@@ -60,7 +60,7 @@
       (pr-str {:entity `(fn [ctx#]
                           (->DbId (-> (str (-> ctx# :entity :db/id :id) "."
                                            "."              ; don't collide ids with attributes
-                                           "0")             ; if cardinality many, ensure no conflicts
+                                           (count (:value ctx#))) ; if cardinality many, ensure no conflicts
                                       hash js/Math.abs - str)
                                   (or ~(-> e :find-element/connection :db/id :id)
                                       (-> ctx# :entity :db/id :conn-id))))})
@@ -87,24 +87,25 @@
       (and (not r) a)                                       ; attr create
       (pr-str `(fn [ctx# show-popover!#]
                  (let [parent# (:entity ctx#)
-                       new-dbid# (->DbId (-> (str (-> ctx# :entity :db/id :id) "."
+                       ; this dbid lines up exactly with the unmanaged dbid in the formula,
+                       ; which is how the tx-from-modal has the same dbid.
+                       new-dbid# (->DbId (-> (str (-> parent# :db/id :id) "."
                                                   (-> ctx# :attribute :attribute/ident) "."
-                                                  "0" #_"fixme can collide")
+                                                  (count (:value ctx#)))
                                              hash js/Math.abs - str)
                                          (-> ctx# :entity :db/id :conn-id))]
-                   (-> (show-popover!# new-dbid#)
+                   (-> (show-popover!#)
                        (p/then (fn [tx-from-modal#]
                                  {:tx
                                   (concat
                                     (let [attr-ident# (-> ctx# :attribute :attribute/ident)
-                                          rets# (some-> ctx# :value :db/id vector)
                                           adds# [new-dbid#]]
-                                      (tx/edit-entity (:db/id parent#) attr-ident# rets# adds#))
+                                      (tx/edit-entity (:db/id parent#) attr-ident# [] adds#))
                                     tx-from-modal#)}))))))
 
       (and r (not a) (= ident :remove))
       (pr-str `(fn [ctx#]
-                 {:tx [:db.fn/retractEntity (-> ctx# :entity :db/id)]}))
+                 {:tx [[:db.fn/retractEntity (-> ctx# :entity :db/id)]]}))
 
 
       :else nil)))
