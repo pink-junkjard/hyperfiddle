@@ -62,9 +62,8 @@
                                            "."              ; don't collide ids with attributes
                                            "0")             ; if cardinality many, ensure no conflicts
                                       hash js/Math.abs - str)
-                                  (-> ctx# :entity :db/id :conn-id)
-                                  #_(or ~(-> e :find-element/connection :db/id :id)
-                                      )))})
+                                  (or ~(-> e :find-element/connection :db/id :id)
+                                      (-> ctx# :entity :db/id :conn-id))))})
 
       ; naked
       (and (not r) (not e) (not a)) nil
