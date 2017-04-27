@@ -76,7 +76,7 @@
    [input/validated-input
     value #((:user-swap! param-ctx) {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %)})
     #(js/parseInt % 10) pr-str
-    #(integer? (js/parseInt % 10))
+    #(or (integer? (js/parseInt % 10)) (= "nil" %))
     props]
    (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)])
 
