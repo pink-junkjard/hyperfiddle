@@ -136,8 +136,8 @@
     #_(ref value maybe-field anchors props param-ctx)
     [:div.value
      #_[:pre (pr-str value)]
-     (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)
-     [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]]))
+     [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
+     (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)]))
 
 
 (defn ref-many-table [value maybe-field anchors props param-ctx]
@@ -145,8 +145,8 @@
     (assert (not options-anchor) "ref-component-many don't have options; todo handle gracefully")
     [:div.value
      #_[:pre (pr-str maybe-field)]
-     (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)
-     [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]]))
+     [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
+     (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)]))
 
 (defn ref-many [value maybe-field anchors props param-ctx]
   (let [[options-anchor] (filter option-anchor? anchors)
