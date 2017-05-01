@@ -19,9 +19,11 @@
 
 
 (defn parse-holes [q]
+  {:pre [(vector? q)]
+   :post [(vector? %)]}
   (->> (util/parse-query-element q :in)
        ;; the string conversion should happen at the other side imo
-       (map str)))
+       (mapv str)))
 
 (defn parse-param-holes [q]
   (->> (parse-holes q)
@@ -36,13 +38,24 @@
                 [name (->DbVal (-> value :db/id :id) nil)])))
        (into {})))
 
+(defn safe-parse-query-validated [link-query]
+  ; return monad and display the error to the widget?
+  ; Should try not to even stage bad queries. If it happens though,
+  ; we can draw the server error. Why can't we even get to server error now?
+  (let [q (some-> link-query :link-query/value safe-read-string)]
+    (if (vector? q)
+      q
+      [])))
 
 ; type fill-hole = fn [hole-name param-ctx] => param
 (defn build-params [fill-hole link-query param-ctx]
-  (->> (some-> link-query :link-query/value safe-read-string)
-       (parse-holes)                                        ; nil means '() and does the right thing
-       (mapv (juxt identity #(fill-hole % param-ctx)))
-       (into {})))
+  (try
+    (->> (safe-parse-query-validated link-query)
+         (parse-holes)                                      ; nil means '() and does the right thing
+         (mapv (juxt identity #(fill-hole % param-ctx)))
+         (into {}))
+    (catch :default e
+      {})))                                                 ; e.g. `:find is not ISeqable`
 
 
 (defn read-eval-formulas [formulas-str]
@@ -54,7 +67,7 @@
 (defn run-formula! [{formula! :value error :error} param-ctx]
   (if error
     (throw error)                                           ; first error, lose the rest of the errors
-    (if formula! (formula! param-ctx))))                      ; can also throw, lose the rest
+    (if formula! (formula! param-ctx))))                    ; can also throw, lose the rest
 
 
 (defn form-pull-exp [form]
