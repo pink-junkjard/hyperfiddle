@@ -8,52 +8,48 @@
 (defn system-link? [link-dbid]
   (map? (:id link-dbid)))
 
-(defn link-query-system-edit [parent-link fe]
-  (assert parent-link) (assert (:db/id parent-link))
-  (assert fe) (assert (:db/id fe)) (assert (:find-element/connection fe))
+(defn link-query-system-edit [conn owner e]
+  {:pre [conn owner e]}
   {:db/id (->DbId {:ident :system-edit
-                   :parent-link (:db/id parent-link)
-                   :find-element (:db/id fe)}
-                  (-> parent-link :db/id :conn-id))
-   :hypercrud/owner (:hypercrud/owner parent-link)
-   :link/name (str "edit ")                                 ; hmm
-   :link/request {:link-entity/connection (:find-element/connection fe)}})
-
-(defn link-entity-system-edit [parent-link conn]
-  (assert parent-link) (assert (:db/id parent-link))
-  (assert conn) (assert (-> conn :db/id :id))
-  {:db/id (->DbId {:ident :system-edit-attr
-                   :parent-link (:db/id parent-link)
-                   :conn (-> conn :db/id)}
-                  (-> parent-link :db/id :conn-id))
-   :hypercrud/owner (:hypercrud/owner parent-link)
-   :link/name (str "edit ")                                 ; hmm
+                   :owner (-> owner :db/id :id)
+                   :conn (-> conn :db/id :id)
+                   :e (-> e :db/id :id)}
+                  (-> conn :db/id :id))
+   :hypercrud/owner owner
+   :link/name (str "system-" (:find-element/name e))
    :link/request {:link-entity/connection conn}})
 
-(defn link-query-system-edit-attr [parent-link fe attr]
-  (assert parent-link) (assert (:db/id parent-link))
-  (assert fe) (assert (:db/id fe)) (assert (:find-element/connection fe))
-  (assert attr) (assert (:db/id attr))
-  {:db/id (->DbId {:ident :system-edit-attr
-                   :parent-link (:db/id parent-link)
-                   :find-element (:db/id fe)
-                   :attribute (:db/id attr)}
-                  (-> parent-link :db/id :conn-id))
-   :link/name (str "edit " (:find-element/name fe) " " (:attribute/ident attr))
-   :hypercrud/owner (:hypercrud/owner parent-link)
-   :link/request {:link-entity/connection (:find-element/connection fe)}})
+(defn link-entity-system-edit [conn owner]
+  {:pre [conn owner]}
+  {:db/id (->DbId {:ident :system-edit-attrowner
+                   :owner (-> owner :db/id :id)
+                   :conn (-> conn :db/id :id)}
+                  (-> conn :db/id :id))
+   :hypercrud/owner owner
+   :link/name (str "system-entity")
+   :link/request {:link-entity/connection conn}})
 
-(defn link-entity-system-edit-attr [parent-link conn attr]
-  (assert parent-link) (assert (:db/id parent-link))
-  (assert conn) (assert (-> conn :db/id :id))
-  ;(assert attr) (assert (:db/id attr)) ; schema not hydrated yet?
+(defn link-query-system-edit-attr [conn owner e a]
+  {:pre [conn owner e a]}
   {:db/id (->DbId {:ident :system-edit-attr
-                   :parent-link (:db/id parent-link)
-                   :conn (-> conn :db/id)
-                   :attribute (:db/id attr)}
-                  (-> parent-link :db/id :conn-id))
-   :link/name (str "edit " (:attribute/ident attr))
-   :hypercrud/owner (:hypercrud/owner parent-link)
+                   :owner (-> owner :db/id :id)
+                   :conn (-> conn :db/id :id)
+                   :e (-> e :db/id :id)
+                   :a (-> a :db/id :id)}
+                  (-> conn :db/id :id))
+   :link/name (str "system-" (:find-element/name e) "-" (:attribute/ident a))
+   :hypercrud/owner owner
+   :link/request {:link-entity/connection conn}})
+
+(defn link-entity-system-edit-attr [conn owner a]
+  {:pre [conn owner a]}
+  {:db/id (->DbId {:ident :system-edit-attr
+                   :owner (-> owner :db/id :id)
+                   :conn (-> conn :db/id :id)
+                   :a (-> a :db/id :id)}
+                  (-> conn :db/id :id))
+   :link/name (str "system-entity-" (:attribute/ident a))
+   :hypercrud/owner owner
    :link/request {:link-entity/connection conn}})
 
 
@@ -80,7 +76,7 @@
                             (mapcat (fn [[fe-name fe]]
                                       [{:anchor/prompt (str fe-name)
                                         :anchor/ident :sys
-                                        :anchor/link (link-query-system-edit parent-link fe)
+                                        :anchor/link (link-query-system-edit (:find-element/connection fe) (:hypercrud/owner parent-link) fe)
                                         :anchor/repeating? true
                                         :anchor/find-element fe}
                                        ; create links mirror edit links but repeating false, see auto-formula.
@@ -88,7 +84,7 @@
                                        ; sys links we match on the find-element.
                                        {:anchor/prompt (str "new " fe-name)
                                         :anchor/ident :sys
-                                        :anchor/link (link-query-system-edit parent-link fe)
+                                        :anchor/link (link-query-system-edit (:find-element/connection fe) (:hypercrud/owner parent-link) fe)
                                         :anchor/repeating? false
                                         :anchor/find-element fe
                                         :anchor/render-inline? false}
@@ -101,21 +97,21 @@
                             doall)
 
                        :link-entity
-                       (let [conn (or
-                                    (-> parent-link :link/request :link-entity/connection)
-                                    (let [dbid-s (-> param-ctx :query-params :entity)]
-                                      {:db/id (->DbId (if (vector? dbid-s)
-                                                        (:conn-id (first dbid-s))
-                                                        (:conn-id dbid-s))
-                                                      nil #_"ignored in the place we need it, ->entityRequest")}))]
+                       (let [conn-id (or
+                                       (-> parent-link :link/request :link-entity/connection :db/id :id)
+                                       (let [dbid-s (-> param-ctx :query-params :entity)]
+                                         (if (vector? dbid-s)
+                                           (:conn-id (first dbid-s))
+                                           (:conn-id dbid-s))))
+                             conn {:db/id (->DbId conn-id hc/*root-conn-id*)}]
                          [#_{:anchor/prompt "edit"
-                           :anchor/ident :sys
-                           :anchor/link (link-entity-system-edit parent-link conn)
-                           :anchor/repeating? true
-                           :anchor/find-element nil}
+                             :anchor/ident :sys
+                             :anchor/link (link-entity-system-edit parent-link conn-id)
+                             :anchor/repeating? true
+                             :anchor/find-element nil}
                           {:anchor/prompt "new"
                            :anchor/ident :sys
-                           :anchor/link (link-entity-system-edit parent-link conn)
+                           :anchor/link (link-entity-system-edit conn (:hypercrud/owner parent-link))
                            :anchor/repeating? false
                            :anchor/find-element nil
                            :anchor/render-inline? false}
@@ -132,7 +128,8 @@
                      :link-query
                      (->> (partition 4 colspec)             ; driven by colspec, not find elements, because what matters is what's there.
                           (mapcat (fn [[conn fe-name ident maybe-field]]
-                                    (let [fe (get find-elements fe-name) ; can be nil now
+                                    (let [fe (get find-elements fe-name)
+                                          _ (assert fe)
                                           attr ((:schema param-ctx) ident) #_"nil for db/id"]
                                       (case (-> attr :attribute/valueType :db/ident)
                                         :db.type/ref
@@ -141,14 +138,14 @@
                                           :anchor/repeating? true
                                           :anchor/find-element fe
                                           :anchor/attribute attr
-                                          :anchor/link (link-query-system-edit-attr parent-link fe attr)}
+                                          :anchor/link (link-query-system-edit-attr conn (:hypercrud/owner parent-link) fe attr)}
                                          {:anchor/prompt (str "new") ; conserve space in label
                                           :anchor/ident :sys
                                           :anchor/repeating? false
                                           :anchor/find-element fe
                                           :anchor/attribute attr
                                           :anchor/render-inline? true
-                                          :anchor/link (link-query-system-edit-attr parent-link fe attr)}]
+                                          :anchor/link (link-query-system-edit-attr conn (:hypercrud/owner parent-link) fe attr)}]
                                         nil))))
                           doall)
 
@@ -163,14 +160,14 @@
                                           :anchor/repeating? true
                                           :anchor/find-element nil
                                           :anchor/attribute attr
-                                          :anchor/link (link-entity-system-edit-attr parent-link conn attr)}
+                                          :anchor/link (link-entity-system-edit-attr conn (:hypercrud/owner parent-link) attr)}
                                          {:anchor/prompt (str "new") ; conserve space in label
                                           :anchor/ident :sys
                                           :anchor/repeating? false
                                           :anchor/find-element nil
                                           :anchor/attribute attr
                                           :anchor/render-inline? true
-                                          :anchor/link (link-entity-system-edit-attr parent-link conn attr)}]
+                                          :anchor/link (link-entity-system-edit-attr conn (:hypercrud/owner parent-link) attr)}]
                                         nil))))
                           doall)
 
@@ -179,49 +176,44 @@
 
 
 (defn request-for-system-link [system-link-idmap]
-  (assert (:parent-link system-link-idmap))
-  ; both need parent-link
-  ; both need fe
-  ; one needs attr
+  ; connection, owner, fe, attr.
+
   ; all this is in the parent-link, we can just overhydrate and then prune away what we don't need.
-  (->EntityRequest (:parent-link system-link-idmap)
-                   (->DbVal hc/*root-conn-id* nil)
-                   (let [form-pull-exp ['* {:form/field
-                                            ['*
-                                             {:field/attribute ['*
-                                                                {:attribute/valueType [:db/id :db/ident]}
-                                                                {:attribute/cardinality [:db/id :db/ident]}
-                                                                {:attribute/unique [:db/id :db/ident]}]}]}]]
-                     [:db/id
-                      {:hypercrud/owner ['*]
-                       :link/request
-                       [:db/id
-                        {:link-query/find-element [:db/id
-                                                   :find-element/name
-                                                   :find-element/connection
-                                                   {:find-element/form form-pull-exp}]}]}])))
+  ; That was the plan, but it doesn't work in second layer deep sys links, the parent is a sys link. So we
+  ; need to just hydrate what we need.
 
-(defn entity-conn [param-ctx]
-  (let [dbid-s (-> param-ctx :query-params :entity)]
-    {:db/id (->DbId (if (vector? dbid-s)
-                      (:conn-id (first dbid-s))
-                      (:conn-id dbid-s))
-                    nil #_"ignored in the place we need it, ->entityRequest")}))
+  [(->EntityRequest (->DbId (:conn system-link-idmap) hc/*root-conn-id*) (->DbVal hc/*root-conn-id* nil) ['*])
+   (->EntityRequest (->DbId (:owner system-link-idmap) hc/*root-conn-id*) (->DbVal hc/*root-conn-id* nil) ['*])
+   (if-let [e (:e system-link-idmap)] (->EntityRequest (->DbId (:e system-link-idmap) hc/*root-conn-id*) (->DbVal hc/*root-conn-id* nil)
+                                                       [:db/id
+                                                        :find-element/name
+                                                        :find-element/connection
+                                                        {:find-element/form ['* {:form/field
+                                                                                 ['*
+                                                                                  {:field/attribute ['*
+                                                                                                     {:attribute/valueType [:db/id :db/ident]}
+                                                                                                     {:attribute/cardinality [:db/id :db/ident]}
+                                                                                                     {:attribute/unique [:db/id :db/ident]}]}]}]}]))
+   (if-let [a (:a system-link-idmap)] (->EntityRequest (->DbId (:a system-link-idmap) hc/*root-conn-id*) (->DbVal hc/*root-conn-id* nil)
+                                                       ['*
+                                                        {:attribute/valueType [:db/id :db/ident]
+                                                         :attribute/cardinality [:db/id :db/ident]
+                                                         :attribute/unique [:db/id :db/ident]}]))])
 
-(defn link-query-fe [fe-name parent-link]
-  (first (filter #(= (:db/id %) fe-name)
-                 (-> parent-link :link/request :link-query/find-element))))
+(defn hydrate-system-link [system-link-idmap [conn owner e a] param-ctx]
+  (let [owner-id (:owner system-link-idmap)                 ; hydrate this?
+        conn-id (:conn system-link-idmap)
+        fe-id (:e system-link-idmap)
+        attr-id (:a system-link-idmap)]
 
-(defn hydrate-system-link [system-link-idmap parent-link param-ctx]
-  ; entity-links don't have a fe. Inherit the connection in this case.
-  ; query-links use the dbid because it is a database dependency.
-  (case (:ident system-link-idmap)
-    :system-edit
-    (if (:find-element system-link-idmap)
-      (link-query-system-edit parent-link (link-query-fe (:find-element system-link-idmap) parent-link))
-      (link-entity-system-edit parent-link {:db/id (:conn system-link-idmap)}))
-    :system-edit-attr
-    (let [attr {:db/id (:attribute system-link-idmap)} #_"fake pulled tree"]
-      (if (:find-element system-link-idmap)
-        (link-query-system-edit-attr parent-link (link-query-fe (:find-element system-link-idmap) parent-link) attr)
-        (link-entity-system-edit-attr parent-link {:db/id (:conn system-link-idmap)} attr)))))
+    (case (:ident system-link-idmap)
+
+      :system-edit
+      (if fe-id
+        (link-query-system-edit conn owner e)
+        (link-entity-system-edit conn owner))
+
+      :system-edit-attr
+      (if fe-id
+        (link-query-system-edit-attr conn owner e a)
+        (link-entity-system-edit-attr conn owner a)))))

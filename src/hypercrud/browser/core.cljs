@@ -77,9 +77,10 @@
   (if (system-links/system-link? link-dbid)
     (let [system-link-idmap (-> link-dbid :id)]
       (->> (system-links/request-for-system-link system-link-idmap)
-           (hc/hydrate peer)
-           (cats/fmap (fn [parent-link]
-                        (system-links/hydrate-system-link system-link-idmap parent-link param-ctx)))))
+           (mapv #(if % (hc/hydrate (:peer param-ctx) %)
+                        (exception/success nil)))
+           (reduce #(mlet [acc %1 v %2] (cats/return (conj acc v))) (exception/success []))
+           (cats/fmap #(system-links/hydrate-system-link system-link-idmap % param-ctx))))
     (hc/hydrate peer (request-for-link link-dbid))))
 
 (declare user-result)
@@ -125,8 +126,7 @@
                            :else result))
 
                 colspec (form-util/determine-colspec result link param-ctx)
-                system-anchors (if-not (system-links/system-link? (-> params-map :link-dbid))
-                                 (system-links/system-anchors link result param-ctx))]
+                system-anchors (system-links/system-anchors link result param-ctx)]
 
             (case (get param-ctx :display-mode)             ; default happens higher, it influences queries too
               :user ((user-result link param-ctx) result colspec (merge-anchors system-anchors (:link/anchor link)) (user-bindings link param-ctx))
@@ -322,11 +322,14 @@
 (defn request [params-map param-ctx]
   (if (system-links/system-link? (:link-dbid params-map))
     (let [system-link-idmap (-> params-map :link-dbid :id)
-          system-link-request (system-links/request-for-system-link system-link-idmap)]
+          system-link-requests (system-links/request-for-system-link system-link-idmap)]
       (concat
-        [system-link-request]
-        (if-let [system-link-deps (-> (hc/hydrate (:peer param-ctx) system-link-request) ; ?
-                                      (exception/extract nil))]
+        (remove nil? system-link-requests)
+        (if-let [system-link-deps (exception/extract
+                                    (->> (mapv #(if % (hc/hydrate (:peer param-ctx) %)
+                                                      (exception/success nil)) system-link-requests)
+                                         (reduce #(mlet [acc %1 v %2] (cats/return (conj acc v))) (exception/success [])))
+                                    nil)]
           (let [link (system-links/hydrate-system-link system-link-idmap system-link-deps param-ctx)]
             (requests-for-link link (:query-params params-map) param-ctx)))))
     (let [link-request (request-for-link (:link-dbid params-map))]
