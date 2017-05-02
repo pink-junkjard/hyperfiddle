@@ -148,15 +148,18 @@
 (defn holes-filled? [hole-names query-params-map]
   (set/subset? (set hole-names) (set (keys (into {} (remove (comp nil? val) query-params-map))))))
 
-(defn anchor-valid? [link url-params]                       ; could return monad to say why
+(defn anchor-valid? [link route]                       ; could return monad to say why
   ; We specifically hydrate this deep just so we can validate anchors like this.
   (case (link-util/link-type link)
     :link-query (some-> link :link/request
                         q-util/safe-parse-query-validated
                         q-util/parse-param-holes
-                        (holes-filled? (:query-params url-params)))
-    :link-entity (not= nil (-> url-params :query-params :entity))
-    true #_"no query, probably, like hyperfiddle admin"))
+                        (holes-filled? (:query-params route)))
+    :link-entity (not= nil (-> route :query-params :entity))
+    :link-blank true))
+
+(defn anchor-valid?' [anchor route]
+  (anchor-valid? (:anchor/link anchor) route))
 
 (defn anchor-tooltip [link url-params param-ctx]
   (case (:display-mode param-ctx)
@@ -189,7 +192,8 @@
                   ;; non-fatal error, report it here so user can fix it
                   (if error (js/alert (str "cljs eval error: " error))) ; return monad so tooltip can draw the error
                   value))
-        route (if (:anchor/link anchor) (build-url-params-map anchor param-ctx)) #_"return monad so tooltip can draw the error?"]
+        route (if (:anchor/link anchor) (build-url-params-map anchor param-ctx)) #_"return monad so tooltip can draw the error?"
+        route-props (if route (build-link-props-raw route (:anchor/link anchor) param-ctx))]
     (doall
       (merge
         (if tx-fn
@@ -203,14 +207,18 @@
           ; this is a special case where due to the txfn the embed goes in a popover
           {:popover (fn [state]
                       ; assumes everything is hydrated
-                      [hypercrud.browser.core/safe-ui       ; cycle
-                       route
-                       (assoc param-ctx :user-swap!
-                                        (fn [{:keys [tx route]}]
-                                          (assert (not route) "popups not allowed to route")
-                                          (swap! state tx/into-tx tx)))])})
+                      [:div
+                       (case (:display-mode param-ctx)
+                         :xray [(:navigate-cmp param-ctx) route-props "self"]
+                         nil)
+                       [hypercrud.browser.core/safe-ui      ; cycle
+                        route
+                        (assoc param-ctx :user-swap!
+                                         (fn [{:keys [tx route]}]
+                                           (assert (not route) "popups not allowed to route")
+                                           (swap! state tx/into-tx tx)))]])})
 
-        (if route (build-link-props-raw route (:anchor/link anchor) param-ctx))))))
+        route-props))))
 
 (defn link-visible? [anchor param-ctx]
   (let [visible-src (:anchor/visible? anchor)

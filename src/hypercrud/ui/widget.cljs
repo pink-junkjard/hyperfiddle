@@ -42,14 +42,15 @@
    (->> anchor-ctx-pairs
         (filter (partial apply links/link-visible?))
         (map (fn [[anchor param-ctx]]
-               (let [params-map (links/build-url-params-map anchor param-ctx)
-                     ui-param-ctx (-> param-ctx
-                                      (update :debug #(str % ">inline-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]"))
-                                      (dissoc :result "entity"))]
-
-                 [:div {:key (hash anchor)}               ; extra div bc had trouble getting keys to work
-                  (case (:display-mode param-ctx) :xray (render-anchors [(assoc anchor :anchor/prompt "self")] param-ctx) nil)
-                  [browser/safe-ui params-map ui-param-ctx]])))
+               (let [route (links/build-url-params-map anchor param-ctx)
+                     valid? (links/anchor-valid?' anchor route)]
+                 (if valid?
+                   [:div {:key (hash anchor)}               ; extra div bc had trouble getting keys to work
+                    (case (:display-mode param-ctx) :xray (render-anchors [(assoc anchor :anchor/prompt "self")] param-ctx) nil)
+                    [browser/safe-ui route (-> param-ctx
+                                               (update :debug #(str % ">inline-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]"))
+                                               (dissoc :result "entity"))]]))))
+        (remove nil?)
         (doall))))
 
 (defn option-anchor? [anchor]
