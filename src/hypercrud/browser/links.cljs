@@ -33,6 +33,9 @@
 
       ; attr create (managed, see auto-txfn)
       (and (not r) a)
+      ; inherit parent since the fe is never explicitly set by user
+      ; it would be more correct to use the FE if we have it, but
+      ; that information is guaranteed to be the same?
       (pr-str {:entity `(fn [ctx#]                          ; create ignores cardinality
                           (assert (-> ctx# :entity))
                           (assert (-> ctx# :entity :db/id :conn-id))
@@ -40,9 +43,6 @@
                                            (-> ctx# :attribute :attribute/ident) "."
                                            (count (:value ctx#))) ; if cardinality many, ensure no conflicts
                                       hash js/Math.abs - str)
-                                  ; inherit parent since the fe is never explicitly set by user
-                                  ; it would be more correct to use the FE if we have it, but
-                                  ; that information is guaranteed to be the same?
                                   (-> ctx# :entity :db/id :conn-id)))})
 
       ; entity edit
@@ -213,10 +213,12 @@
                          nil)
                        [hypercrud.browser.core/safe-ui      ; cycle
                         route
-                        (assoc param-ctx :user-swap!
-                                         (fn [{:keys [tx route]}]
-                                           (assert (not route) "popups not allowed to route")
-                                           (swap! state tx/into-tx tx)))]])})
+                        (-> param-ctx
+                            (dissoc :result :entity :attribute :value)
+                            (assoc :user-swap!
+                                   (fn [{:keys [tx route]}]
+                                     (assert (not route) "popups not allowed to route")
+                                     (swap! state tx/into-tx tx))))]])})
 
         route-props))))
 
