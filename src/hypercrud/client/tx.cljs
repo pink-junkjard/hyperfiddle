@@ -123,12 +123,12 @@
        (mapcat entity->statements)))
 
 
-(defn clone-id-factory [conn-id tempid!]
+(defn clone-id-factory [conn-id root-dbid]
   (let [id-map (atom {})
         replace-id! (fn [dbid]
                       (let [new-dbid (get @id-map dbid)]
                         (if (nil? new-dbid)
-                          (let [new-dbid (tempid! conn-id)]
+                          (let [new-dbid (->DbId (-> (str (:id root-dbid) "." (count (keys @id-map))) hash js/Math.abs - str) conn-id)]
                             (swap! id-map assoc dbid new-dbid)
                             new-dbid)
                           new-dbid)))
@@ -171,12 +171,13 @@
              [a v])))
        (into {})))
 
-(defn clone-entity [schema entity tempid!]
-  (let [[replace-id! fix-seen-id!] (clone-id-factory (-> entity :db/id :conn-id) tempid!)]
-    (->> entity
-         ; Walk twice because of cycles.
-         (walk-entity schema #(util/update-existing % :db/id replace-id!))
-         (walk-entity schema #(util/update-existing % :db/id fix-seen-id!)))))
+(defn clone-entity [schema entity new-dbid]
+  (let [[replace-id! fix-seen-id!] (clone-id-factory (-> entity :db/id :conn-id) new-dbid) ; ew
+        entity' (->> (dissoc entity :db/id)
+                     ; Walk twice because of cycles.
+                     (walk-entity schema #(util/update-existing % :db/id replace-id!))
+                     (walk-entity schema #(util/update-existing % :db/id fix-seen-id!)))]
+    (assoc entity' :db/id new-dbid)))
 
 
 (defn export-link [schema link]
