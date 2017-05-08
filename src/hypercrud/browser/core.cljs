@@ -188,7 +188,7 @@
                                         (let [r (-> anchor :anchor/repeating?)
                                               fe (-> anchor :anchor/find-element :find-element/name)
                                               attr (-> anchor :anchor/attribute :attribute/ident)
-                                              fe (if (and attr (nil? fe)) "entity" fe)] ; This should be auto-selected in the future so we always have fe if we have attr.
+                                              fe (if (and attr (nil? fe)) "entity" fe)]
                                           [r fe attr]))))
         recurse-request (fn [anchor param-ctx]
                           (let [params-map (links/build-url-params-map anchor param-ctx)
