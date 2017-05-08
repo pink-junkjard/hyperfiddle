@@ -79,4 +79,11 @@
                            (if-let [entity (get relation "entity")] ; makes sense only for entity links, not query links as entity.
                              ^{:key (hash (keys entity))} [new-field entity param-ctx]))]
 
-     (concat fields [magic-new-field]))])
+     (concat fields [magic-new-field]))
+   ; Can't differentiate between index links and entity links on link-entity right now.
+   #_(widget/render-inline-links (->> anchors
+                                    (remove :anchor/repeating?)
+                                    (remove :anchor/attribute)
+                                    (filter :anchor/render-inline?))
+                               (dissoc param-ctx :isComponent))
+   ])
