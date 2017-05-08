@@ -35,6 +35,7 @@
   [:div.forms-list.block
    ; all anchors need a find-element at least, because it has a connection affinity.
    (let [param-ctx (assoc param-ctx :result relation)
+         anchors (widget/process-popover-anchors anchors param-ctx)
          entity-anchors-lookup (->> (remove :anchor/attribute anchors)
                                     (group-by (fn [anchor]
                                                 ; link-entity's don't set find-element, but they get the entity in scope nonetheless.

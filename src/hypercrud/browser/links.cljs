@@ -128,27 +128,13 @@
      formula-str
      param-ctx))
   ([anchor param-ctx]
-   (let [formula-str (:anchor/formula anchor)
-         formula-str (if (empty? formula-str)
-                       (auto-formula anchor)
-                       formula-str)]
-     (build-url-params-map (:anchor/link anchor) formula-str param-ctx)))
-  #_(case (link-type (:anchor/link anchor))
-      :link-query {:link-dbid (-> anchor :anchor/link :db/id)
-                   :query-params (->> (q-util/read-eval-formulas (:anchor/formula anchor))
-                                      (util/map-values #(q-util/run-formula! % param-ctx)))}
-      :link-entity {:link-dbid (-> anchor :anchor/link :db/id)
-                    :query-params (->> (q-util/read-eval-formulas (:anchor/formula anchor))
-                                       (util/map-values #(q-util/run-formula! % param-ctx)))
-                    #_(let [find-element-name nil
-                            attr (-> anchor :anchor/attribute :attribute/ident)]
-                        (get-in param-ctx [:result find-element-name attr :db/id]))}))
+   (build-url-params-map (:anchor/link anchor) (:anchor/formula anchor) param-ctx)))
 
 
 (defn holes-filled? [hole-names query-params-map]
   (set/subset? (set hole-names) (set (keys (into {} (remove (comp nil? val) query-params-map))))))
 
-(defn anchor-valid? [link route]                       ; could return monad to say why
+(defn anchor-valid? [link route]                            ; could return monad to say why
   ; We specifically hydrate this deep just so we can validate anchors like this.
   (case (link-util/link-type link)
     :link-query (some-> link :link/request
@@ -181,29 +167,24 @@
 ; the route is a fn of the formulas and the formulas can have effects
 ; which have to be run only once.
 (defn build-link-props [anchor param-ctx]
-  ; auto-tx-fn in addition to auto-formula
-  (let [param-ctx (assoc param-ctx :link-owner (-> anchor :anchor/link :hypercrud/owner)) ; tx-fn may need this
-        tx-fn-str (let [tx-fn-str (:anchor/tx-fn anchor)]
-                    (if (empty? tx-fn-str)
-                      (auto-txfn anchor)
-                      tx-fn-str))
-        tx-fn (if tx-fn-str
-                (let [{value :value error :error} (eval-str tx-fn-str)]
-                  ;; non-fatal error, report it here so user can fix it
-                  (if error (js/alert (str "cljs eval error: " error))) ; return monad so tooltip can draw the error
-                  value))
+  (let [param-ctx (assoc param-ctx :link-owner (-> anchor :anchor/link :hypercrud/owner)) ; txfn may need this
+        txfn (if-let [txfn-str (:anchor/tx-fn anchor)]
+               (let [{value :value error :error} (eval-str txfn-str)]
+                 ; non-fatal error, report it here so user can fix it
+                 (if error (js/alert (str "cljs eval error: " error))) ; return monad so tooltip can draw the error
+                 value))
         route (if (:anchor/link anchor) (build-url-params-map anchor param-ctx)) #_"return monad so tooltip can draw the error?"
         route-props (if route (build-link-props-raw route (:anchor/link anchor) param-ctx))]
     (doall
       (merge
-        (if tx-fn
+        (if txfn
           ; do we need to hydrate any dependencies in this chain?
-          {:txfn #(let [result (tx-fn param-ctx %)]         ; tx-fn may be sync or async
+          {:txfn #(let [result (txfn param-ctx %)]          ; txfn may be sync or async
                     (-> (if-not (p/promise? result) (p/resolved result) result)
                         (p/branch (:user-swap! param-ctx)
                                   (fn cancelled [why] nil))))})
 
-        (if (and tx-fn (:anchor/link anchor))               ; default case is a syslink
+        (if (and txfn (:anchor/link anchor))                ; default case is a syslink
           ; this is a special case where due to the txfn the embed goes in a popover
           {:popover (fn [state]
                       ; assumes everything is hydrated

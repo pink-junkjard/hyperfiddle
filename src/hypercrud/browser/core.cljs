@@ -59,6 +59,20 @@
                                       :anchor/attribute [:db/id :attribute/ident]}]
                        :hypercrud/owner ['*]}])))
 
+(defn auto-anchor [anchor]
+  (-> anchor
+      (update :anchor/tx-fn (fn [txfn-str]
+                              (if (empty? txfn-str)
+                                (links/auto-txfn anchor)
+                                txfn-str)))
+      (update :anchor/formula (fn [fxfn-str]
+                                (if (empty? fxfn-str)
+                                  (links/auto-formula anchor)
+                                  fxfn-str)))))
+
+(defn auto-anchors [anchors]
+  (map auto-anchor anchors))
+
 (defn merge-anchors [sys-anchors link-anchors]
   ; Merge the link-anchors into the sys-anchors such that matching anchors properly override.
   ; anchor uniqueness is determined by [repeat entity attr ident]. Nil ident means
@@ -126,11 +140,11 @@
                            :else result))
 
                 colspec (form-util/determine-colspec result link param-ctx)
-                system-anchors (system-links/system-anchors link result param-ctx)]
+                system-anchors (auto-anchors (system-links/system-anchors link result param-ctx))]
 
             (case (get param-ctx :display-mode)             ; default happens higher, it influences queries too
-              :user ((user-result link param-ctx) result colspec (merge-anchors system-anchors (:link/anchor link)) (user-bindings link param-ctx))
-              :xray (auto-control/result result colspec (merge-anchors system-anchors (:link/anchor link)) (user-bindings link param-ctx))
+              :user ((user-result link param-ctx) result colspec (merge-anchors system-anchors (auto-anchors (:link/anchor link))) (user-bindings link param-ctx))
+              :xray (auto-control/result result colspec (merge-anchors system-anchors (auto-anchors (:link/anchor link))) (user-bindings link param-ctx))
               :root (auto-control/result result colspec system-anchors param-ctx))))))
 
 (defn safe-ui [& args]
@@ -296,8 +310,8 @@
                         param-ctx (assoc param-ctx :schema indexed-schema)]
                     (link-query-dependent-requests result (:link-query/find-element link-query)
                                                    (merge-anchors
-                                                     (system-links/system-anchors link result param-ctx)
-                                                     (:link/anchor link))
+                                                     (auto-anchors (system-links/system-anchors link result param-ctx))
+                                                     (auto-anchors (:link/anchor link)))
                                                    param-ctx))))
           nil)))))
 
@@ -318,8 +332,8 @@
                                (update :form/field form-util/filter-visible-fields param-ctx))]
                   (link-entity-dependent-requests result form
                                                   (merge-anchors
-                                                    (system-links/system-anchors link result param-ctx)
-                                                    (:link/anchor link))
+                                                    (auto-anchors (system-links/system-anchors link result param-ctx))
+                                                    (auto-anchors (:link/anchor link)))
                                                   param-ctx))))
         nil))))
 

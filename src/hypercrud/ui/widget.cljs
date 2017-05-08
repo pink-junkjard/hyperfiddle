@@ -58,8 +58,7 @@
   (= :options (:anchor/ident anchor)))
 
 (defn popover-anchor? [anchor]
-  (let [{r :anchor/repeating? a :anchor/attribute} anchor]
-    (and (not r) a)))
+  (and (:anchor/tx-fn anchor) (:anchor/link anchor)))
 
 (defn keyword [maybe-field anchors props param-ctx]
   (let [on-change! #((:user-swap! param-ctx) {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %)})]
@@ -101,21 +100,21 @@
   (let [on-change! #((:user-swap! param-ctx) {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %)})]
     (input/dbid-input (:value param-ctx) on-change! props)))
 
-
-(defn process-option-popover-anchors [anchors param-ctx]
+(defn process-option-anchors [anchors param-ctx]
   (let [[options-anchor] (filter option-anchor? anchors)
-        popover-anchors (filter popover-anchor? anchors)
-        anchors (->> anchors
-                     (remove option-anchor?)                ; only in xray mode
-                     (remove popover-anchor?))              ; ensure inline-false
-
-        ; put the special anchors back as links in xray mode
+        anchors (remove option-anchor? anchors)
         anchors (if (and options-anchor (= :xray (:display-mode param-ctx)))
                   (conj anchors (assoc options-anchor :anchor/render-inline? false))
-                  anchors)
-
-        anchors (concat anchors (mapv #(assoc % :anchor/render-inline? false) popover-anchors))]
+                  anchors)]
     [anchors options-anchor]))
+
+(defn process-popover-anchors [anchors param-ctx]
+  (concat
+    (->> anchors (remove popover-anchor?))
+    (->> anchors (filter popover-anchor?) (mapv #(assoc % :anchor/render-inline? false)))))
+
+(defn process-option-popover-anchors [anchors param-ctx]
+  (process-option-anchors (process-popover-anchors anchors param-ctx) param-ctx))
 
 ; this can be used sometimes, on the entity page, but not the query page
 (defn ref [maybe-field anchors props param-ctx]
