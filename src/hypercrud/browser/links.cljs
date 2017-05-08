@@ -60,7 +60,7 @@
       (pr-str {:entity `(fn [ctx#]
                           (->DbId (-> (str (-> ctx# :entity :db/id :id) "."
                                            "."              ; don't collide ids with attributes
-                                           (count (:value ctx#))) ; if cardinality many, ensure no conflicts
+                                           (if (set? (:value ctx#)) (count (:value ctx#)))) ; if cardinality many, ensure no conflicts
                                       hash js/Math.abs - str)
                                   (or ~(-> e :find-element/connection :db/id :id)
                                       (-> ctx# :entity :db/id :conn-id))))})
@@ -199,7 +199,9 @@
                             (assoc :user-swap!
                                    (fn [{:keys [tx route]}]
                                      (assert (not route) "popups not allowed to route")
-                                     (swap! state tx/into-tx tx))))]])})
+                                     (swap! state tx/into-tx tx)
+                                     ; watch this and re-hydrate
+                                     )))]])})
 
         route-props))))
 
