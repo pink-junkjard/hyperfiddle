@@ -57,13 +57,21 @@
                             (dissoc param-ctx :isComponent))
    (cond
      ; order matters here
-     (map? result) (form/form result colspec anchors param-ctx)
-     (coll? result) [table/table result colspec anchors param-ctx] ; stateful
-     :else nil)
-
-   ; Might these also need to conjure a connection? A unmanaged create-new link with render inline?
-   (widget/render-inline-links (->> anchors
-                                    (remove :anchor/repeating?)
-                                    (remove :anchor/attribute)
-                                    (filter :anchor/render-inline?))
-                               (dissoc param-ctx :isComponent))])
+     (map? result)
+     (list
+       (form/form result colspec anchors param-ctx)
+       ; Can't differentiate between index links and entity links on link-entity right now.
+       #_(widget/render-inline-links (->> anchors
+                                          (remove :anchor/repeating?)
+                                          (remove :anchor/attribute)
+                                          (filter :anchor/render-inline?))
+                                     (dissoc param-ctx :isComponent)))
+     (coll? result)
+     (list
+       [table/table result colspec anchors param-ctx]       ; stateful
+       (widget/render-inline-links (->> anchors
+                                        (remove :anchor/repeating?)
+                                        (remove :anchor/attribute)
+                                        (filter :anchor/render-inline?))
+                                   (dissoc param-ctx :isComponent)))
+     :else nil)])

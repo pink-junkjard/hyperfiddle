@@ -242,27 +242,39 @@
                             (group-by (fn [anchor]
                                         (let [r (-> anchor :anchor/repeating?)
                                               attr (-> anchor :anchor/attribute :attribute/ident)]
-                                          [r attr]))))]
-    (let [lookup {:index #(get anchors-lookup [true nil])   ; why repeating? have we been filtered higher? doesn't seem so.
-                  :index-new #(get anchors-lookup [false nil]) ; New Page?
-                  :entity-attr #(get anchors-lookup [true (:attribute/ident %)])
-                  :entity-attr-new #(get anchors-lookup [false (:attribute/ident %)])}]
+                                          [r nil attr]))))]
+
+    ; Can't differentiate between index and entity links right now, bugs here.
+    (let [lookup {:index #(get anchors-lookup [true nil nil])
+                  :index-new #(get anchors-lookup [false nil nil])
+                  :relation (constantly [])
+                  :relation-new (constantly [])
+                  :entity #(get anchors-lookup [true nil nil])
+                  :entity-new #(get anchors-lookup [false nil nil]) ; New Page?
+                  :entity-attr #(get anchors-lookup [true nil (:attribute/ident %)])
+                  :entity-attr-new #(get anchors-lookup [false nil (:attribute/ident %)])}]
       (concat
-        (->> ((:index lookup)) (mapcat #(recurse-request % param-ctx)))
-        (->> ((:index-new lookup)) (mapcat #(recurse-request % param-ctx)))
+        ;(->> ((:index lookup)) (mapcat #(recurse-request % param-ctx)))
+        ;(->> ((:index-new lookup)) (mapcat #(recurse-request % param-ctx)))
         (->> result
              (mapcat (fn [relation]
-                       (let [entity (get relation "entity")
-                             param-ctx (assoc param-ctx :entity entity)]
-                         (->> (-> form :form/field)
-                              (mapcat (fn [field]
-                                        (let [attribute (-> field :field/attribute)
-                                              param-ctx (assoc param-ctx :attribute attribute
-                                                                         :value (get entity (:attribute/ident attribute)))]
-                                          (concat
-                                            (->> ((:entity-attr lookup) attribute) (mapcat #(recurse-request % param-ctx)))
-                                            (->> ((:entity-attr-new lookup) attribute) (mapcat #(recurse-request % param-ctx))))
-                                          ))))))))))))
+                       (concat
+                         (->> ((:relation lookup)) (mapcat #(recurse-request % param-ctx)))
+                         (->> ((:relation-new lookup)) (mapcat #(recurse-request % param-ctx)))
+                         (let [entity (get relation "entity")
+                               param-ctx (assoc param-ctx :result relation :entity entity)]
+                           (concat
+                             (->> ((:entity lookup) entity) (mapcat #(recurse-request % param-ctx)))
+                             (->> ((:entity-new lookup) entity) (mapcat #(recurse-request % param-ctx)))
+                             (->> (-> form :form/field)
+                                  (mapcat (fn [field]
+                                            (let [attribute (-> field :field/attribute)
+                                                  param-ctx (assoc param-ctx :attribute attribute
+                                                                             :value (get entity (:attribute/ident attribute)))]
+                                              (concat
+                                                (->> ((:entity-attr lookup) attribute) (mapcat #(recurse-request % param-ctx)))
+                                                (->> ((:entity-attr-new lookup) attribute) (mapcat #(recurse-request % param-ctx))))
+                                              ))))))))))))))
 
 
 (defn requests-for-link-query [link query-params param-ctx]
