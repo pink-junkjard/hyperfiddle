@@ -32,7 +32,7 @@
          [input/edn-input* nil on-change! props])])))
 
 (defn form [relation colspec anchors param-ctx]
-  [:div.forms-list
+  [:div.forms-list.block
    ; all anchors need a find-element at least, because it has a connection affinity.
    (let [param-ctx (assoc param-ctx :result relation)
          entity-anchors-lookup (->> (remove :anchor/attribute anchors)
