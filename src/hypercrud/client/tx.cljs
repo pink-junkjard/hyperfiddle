@@ -91,9 +91,9 @@
 
 (defn entity-components [schema entity]
   (mapcat (fn [[attr v]]
-            (let [{:keys [:db/cardinality :db/valueType :db/isComponent]} (get schema attr)]
+            (let [{:keys [:attribute/cardinality :attribute/valueType :attribute/isComponent]} (get schema attr)]
               (if isComponent
-                (case [valueType cardinality]
+                (case [(:db/ident valueType) (:db/ident cardinality)]
                   [:db.type/ref :db.cardinality/one] [v]
                   [:db.type/ref :db.cardinality/many] (vec v)
                   []))))
@@ -108,10 +108,10 @@
 
 (defn entity-children [schema entity]
   (mapcat (fn [[attr v]]
-            (let [{:keys [:db/cardinality :db/valueType]} (get schema attr)]
+            (let [{:keys [:attribute/cardinality :attribute/valueType]} (get schema attr)]
               ; todo can we just check if val is map? or coll? to remove dep on schema?
               ; yes if this is a pulled-tree.
-              (case [valueType cardinality]
+              (case [(:db/ident valueType) (:db/ident cardinality)]
                 [:db.type/ref :db.cardinality/one] [v]
                 [:db.type/ref :db.cardinality/many] (vec v)
                 [])))
@@ -141,7 +141,7 @@
   (let [[replace-id!] (clone-id-factory conn-id temp-id!)]
     (mapv (fn [[op e a v]]
             (let [new-e (replace-id! e)
-                  valueType (get-in schema [a :db/valueType])
+                  valueType (get-in schema [a :attribute/valueType])
                   new-v (if (and (not (skip? a)) (= valueType :db.type/ref))
                           (replace-id! v)
                           v)]
@@ -157,15 +157,15 @@
   (->> (f entity)
        (mapv
          (fn [[a v]]
-           (let [{:keys [:db/cardinality :db/valueType :db/isComponent]} (get schema a) ; really just for component, the rest could be polymorphic
-                 v (if-not (= valueType :db.type/ref)       ; dbid absent from schema, its fine
+           (let [{:keys [:attribute/cardinality :attribute/valueType :attribute/isComponent]} (get schema a) ; really just for component, the rest could be polymorphic
+                 v (if-not (= (:db/ident valueType) :db.type/ref) ; dbid absent from schema, its fine
                      v
                      (if isComponent
-                       (case cardinality                    ; Walk component (go deeper)
+                       (case (:db/ident cardinality)        ; Walk component (go deeper)
                          :db.cardinality/one (walk-entity schema f v)
                          :db.cardinality/many (mapv #(walk-entity schema f %) v))
 
-                       (case cardinality                    ; Dehydrate non-component
+                       (case (:db/ident cardinality)        ; Dehydrate non-component
                          :db.cardinality/one (select-keys v [:db/id])
                          :db.cardinality/many (mapv #(select-keys % [:db/id]) v))))]
              [a v])))

@@ -2,7 +2,6 @@
 
 
 (def ^:dynamic *root-conn-id* nil)
-(def ^:dynamic *editor-schema* nil)
 
 
 (defprotocol Peer
