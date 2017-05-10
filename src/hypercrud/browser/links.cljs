@@ -41,7 +41,7 @@
                           (assert (-> ctx# :entity :db/id :conn-id))
                           (->DbId (-> (str (-> ctx# :entity :db/id :id) "."
                                            (-> ctx# :attribute :attribute/ident) "."
-                                           (count (:value ctx#))) ; if cardinality many, ensure no conflicts
+                                           (if (set? (:value ctx#)) (count (:value ctx#)))) ; if cardinality many, ensure no conflicts
                                       hash js/Math.abs - str)
                                   (-> ctx# :entity :db/id :conn-id)))})
 
@@ -91,7 +91,7 @@
                        ; which is how the tx-from-modal has the same dbid.
                        new-dbid# (->DbId (-> (str (-> parent# :db/id :id) "."
                                                   (-> ctx# :attribute :attribute/ident) "."
-                                                  (count (:value ctx#)))
+                                                  (if (set? (:value ctx#)) (count (:value ctx#))))
                                              hash js/Math.abs - str)
                                          (-> ctx# :entity :db/id :conn-id))]
                    (-> (show-popover!#)
