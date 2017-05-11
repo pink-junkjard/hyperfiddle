@@ -195,7 +195,7 @@
                        [hypercrud.browser.core/safe-ui      ; cycle
                         route
                         (-> param-ctx
-                            (dissoc :result :entity :attribute :value)
+                            (dissoc :result :entity :attribute :value :layout)
                             (assoc :user-swap!
                                    (fn [{:keys [tx route]}]
                                      (assert (not route) "popups not allowed to route")
