@@ -57,7 +57,9 @@
                      ]
 
                  [:td {:class (string/join " " css-classes)
-                       :style {:background-color (connection-color/connection-color (-> conn :db/id :id))}
+                       :style {:background-color (connection-color/connection-color (or (:color param-ctx)
+                                                                                        ; hack for top tables
+                                                                                        (-> conn :db/id :id)))}
                        :key (str fe-name "-" ident)
                        :on-click on-click}
                   [:label (form-util/field-label field param-ctx)]
