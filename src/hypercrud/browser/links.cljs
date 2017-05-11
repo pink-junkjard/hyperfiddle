@@ -27,21 +27,23 @@
       ; attr edit
       (and r a)
       (pr-str {:entity `(fn [ctx#]
-                          (if (= :db.cardinality/many (-> (get (:schema ctx#) (-> ctx# :attribute :attribute/ident)) :attribute/cardinality :db/ident))
-                            (mapv :db/id (get ctx# :value))
-                            (get-in ctx# [:value :db/id])))})
+                          (case (-> ((:schema ctx#) (-> ctx# :attribute :attribute/ident)) :attribute/cardinality :db/ident)
+                            :db.cardinality/one (get-in ctx# [:value :db/id])
+                            :db.cardinality/many (mapv :db/id (get ctx# :value))))})
 
       ; attr create (managed, see auto-txfn)
       (and (not r) a)
       ; inherit parent since the fe is never explicitly set by user
       ; it would be more correct to use the FE if we have it, but
       ; that information is guaranteed to be the same?
-      (pr-str {:entity `(fn [ctx#]                          ; create ignores cardinality
+      (pr-str {:entity `(fn [ctx#]
                           (assert (-> ctx# :entity))
                           (assert (-> ctx# :entity :db/id :conn-id))
                           (->DbId (-> (str (-> ctx# :entity :db/id :id) "."
                                            (-> ctx# :attribute :attribute/ident) "."
-                                           (if (set? (:value ctx#)) (count (:value ctx#)))) ; if cardinality many, ensure no conflicts
+                                           (case (-> ((:schema ctx#) (-> ctx# :attribute :attribute/ident)) :attribute/cardinality :db/ident)
+                                             :db.cardinality/one nil
+                                             :db.cardinality/many (inc (count (:value ctx#)))))
                                       hash js/Math.abs - str)
                                   (-> ctx# :entity :db/id :conn-id)))})
 
@@ -59,8 +61,9 @@
       (and (not r) (not a))
       (pr-str {:entity `(fn [ctx#]
                           (->DbId (-> (str (-> ctx# :entity :db/id :id) "."
-                                           "."              ; don't collide ids with attributes
-                                           (if (set? (:value ctx#)) (count (:value ctx#)))) ; if cardinality many, ensure no conflicts
+                                           "."
+                                           ; this is gonna collide, how do we know how to generate unique id here
+                                           )
                                       hash js/Math.abs - str)
                                   (or ~(-> e :find-element/connection :db/id :id)
                                       (-> ctx# :entity :db/id :conn-id))))})
@@ -86,22 +89,20 @@
 
       (and (not r) a)                                       ; attr create
       (pr-str `(fn [ctx# show-popover!#]
-                 (let [parent# (:entity ctx#)
-                       ; this dbid lines up exactly with the unmanaged dbid in the formula,
-                       ; which is how the tx-from-modal has the same dbid.
-                       new-dbid# (->DbId (-> (str (-> parent# :db/id :id) "."
+                 (let [new-dbid# (->DbId (-> (str (-> ctx# :entity :db/id :id) "."
                                                   (-> ctx# :attribute :attribute/ident) "."
-                                                  (if (set? (:value ctx#)) (count (:value ctx#))))
+                                                  (case (-> ((:schema ctx#) (-> ctx# :attribute :attribute/ident)) :attribute/cardinality :db/ident)
+                                                    :db.cardinality/one nil
+                                                    :db.cardinality/many (inc (count (:value ctx#)))))
                                              hash js/Math.abs - str)
                                          (-> ctx# :entity :db/id :conn-id))]
                    (-> (show-popover!#)
                        (p/then (fn [tx-from-modal#]
-                                 {:tx
-                                  (concat
-                                    (let [attr-ident# (-> ctx# :attribute :attribute/ident)
-                                          adds# [new-dbid#]]
-                                      (tx/edit-entity (:db/id parent#) attr-ident# [] adds#))
-                                    tx-from-modal#)}))))))
+                                 {:tx (concat
+                                        tx-from-modal#
+                                        (tx/edit-entity (-> ctx# :entity :db/id)
+                                                        (-> ctx# :attribute :attribute/ident)
+                                                        [] [new-dbid#]))}))))))
 
       (and r (not a) (= ident :remove))
       (pr-str `(fn [ctx#]
