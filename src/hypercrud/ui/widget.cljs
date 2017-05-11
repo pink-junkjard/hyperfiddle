@@ -49,7 +49,7 @@
                     (case (:display-mode param-ctx) :xray (render-anchors [(assoc anchor :anchor/prompt "self")] param-ctx) nil)
                     [browser/safe-ui route (-> param-ctx
                                                (update :debug #(str % ">inline-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]"))
-                                               (dissoc :result "entity"))]]))))
+                                               (dissoc :result :entity :attribute :value :layout))]]))))
         (remove nil?)
         (doall))))
 
@@ -202,36 +202,40 @@
 ;  (let [add-item! #((:user-swap! param-ctx) {:tx (tx/edit-entity (:db/id (:entity param-ctx)) (:attribute param-ctx) [] [(temp-id!)])})]
 ;    [multi-select* multi-select-markup add-item! maybe-field anchors props param-ctx])) ;add new entity to set
 
-(defn code [& args]
+(defn code-block [props change! param-ctx]
+  (let [props (if-not (nil? (:read-only props))
+                (-> props
+                    (dissoc :read-only)
+                    (assoc :readOnly (:read-only props)))
+                props)]
+    [code-editor* (:value param-ctx) change! props]))
+
+(defn code-inline-block [& args]
   (let [showing? (r/atom false)]
-    (fn [maybe-field anchors props param-ctx]
-      (let [ident (-> param-ctx :attribute :attribute/ident)
-            change! #((:user-swap! param-ctx) {:tx (tx/edit-entity (:db/id (:entity param-ctx)) ident [(:value param-ctx)] [%])})
-            code-widget (let [props (if-not (nil? (:read-only props))
-                                      (-> props
-                                          (dissoc :read-only)
-                                          (assoc :readOnly (:read-only props)))
-                                      props)]
-                          [code-editor* (:value param-ctx) change! props])]
-        ^{:key ident}
-        [:div.value
-         (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)
-         (case (:layout param-ctx)
-           :form code-widget
-           :table [:div
-                   [re-com/popover-anchor-wrapper
-                    :showing? showing?
-                    :position :below-center
-                    :anchor [:a {:href "javascript:void 0;"
-                                 :on-click #(swap! showing? not)} "edit"]
-                    :popover [re-com/popover-content-wrapper
-                              :close-button? true
-                              :on-cancel #(reset! showing? false)
-                              :no-clip? true
-                              :width "600px"
-                              :body code-widget]]
-                   " " (:value param-ctx)])
-         [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]]))))
+    (fn [props change! param-ctx]
+      [:div
+       [re-com/popover-anchor-wrapper
+        :showing? showing?
+        :position :below-center
+        :anchor [:a {:href "javascript:void 0;" :on-click #(swap! showing? not)} "edit"]
+        :popover [re-com/popover-content-wrapper
+                  :close-button? true
+                  :on-cancel #(reset! showing? false)
+                  :no-clip? true
+                  :width "600px"
+                  :body (code-block props change! param-ctx)]]
+       " " (:value param-ctx)])))
+
+(defn code [& args]
+  (fn [maybe-field anchors props param-ctx]
+    (let [ident (-> param-ctx :attribute :attribute/ident)
+          change! #((:user-swap! param-ctx) {:tx (tx/edit-entity (:db/id (:entity param-ctx)) ident [(:value param-ctx)] [%])})]
+      ^{:key ident}
+      [:div.value
+       (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)
+       (let [widget (case (:layout param-ctx) :block code-block :inline-block code-inline-block :table code-inline-block)]
+         [widget props change! param-ctx])
+       [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]])))
 
 (defn valid-date-str? [s]
   (or (empty? s)
