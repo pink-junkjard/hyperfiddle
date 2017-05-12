@@ -39,19 +39,21 @@
 
 (defn hydrate-options [options-anchor param-ctx]                     ; needs to return options as [[:db/id label]]
   (assert options-anchor)
-  (let [link (let [request (browser/request-for-link (-> options-anchor :anchor/link :db/id))
-                   resp (hc/hydrate (:peer param-ctx) request)]
-               (if (exception/failure? resp)
-                 (.error js/console (pr-str (.-e resp)))
-                 (exception/extract resp)))
-        request (-> link :link/request)]
+  ; This needs to be robust to partially constructed anchors
+  (let [link (let [request (if-let [link (-> options-anchor :anchor/link :db/id)]
+                             (browser/request-for-link link))
+                   resp (if request (hc/hydrate (:peer param-ctx) request))]
+               (if resp
+                 (if (exception/failure? resp)
+                   (.error js/console (pr-str (.-e resp)))
+                   (exception/extract resp))))]
     ; we are assuming we have a query link here
-    (mlet [q (if-let [qstr (:link-query/value request)]     ; We avoid caught exceptions when possible
+    (mlet [q (if-let [qstr (-> link :link/request :link-query/value)]     ; We avoid caught exceptions when possible
                (exception/try-on (reader/read-string qstr))
                (exception/failure nil))                     ; is this a success or failure? Doesn't matter - datomic will fail.
            result (let [params-map (merge (:query-params (links/build-url-params-map options-anchor param-ctx))
-                                          (q-util/build-dbhole-lookup request))
-                        query-value (q-util/query-value q request params-map param-ctx)]
+                                          (q-util/build-dbhole-lookup (:link/request link)))
+                        query-value (q-util/query-value q (:link/request link) params-map param-ctx)]
                     (hc/hydrate (:peer param-ctx) query-value))]
           (let [colspec (form-util/determine-colspec result link param-ctx)
                 ; options have custom renderers which get user bindings
