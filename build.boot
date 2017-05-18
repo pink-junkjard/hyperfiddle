@@ -14,14 +14,14 @@
                   [adzerk/bootlaces "0.1.13" :scope "test"]
                   [adzerk/boot-test "1.1.1" :scope "test"]
                   [crisptrutski/boot-cljs-test "0.2.2-SNAPSHOT" :scope "test"]
-                  [onetom/boot-lein-generate "0.1.3" :scope "test"]]
+                  [sparkfund/boot-lein-generate "0.3.0" :scope "test"]]
   :resource-paths #{"src"})
 
 (require '[adzerk.boot-cljs :refer :all]
          '[adzerk.bootlaces :refer :all]
          '[crisptrutski.boot-cljs-test :refer [test-cljs]])
 
-(require 'boot.lein) (boot.lein/generate)
+(require 'boot.lein) (boot.lein/write-project-clj)
 
 (def +version+ "0.1.0-SNAPSHOT")
 
