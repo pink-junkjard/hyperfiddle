@@ -19,13 +19,14 @@
   hc/Peer
   (hydrate [this request]
     ; (exception/try-or-recover  (constantly (exception/failure (str unfilled-holes))))
-    (if-let [resultset-or-error (get pulled-trees-map request)]
-      (if (instance? types/DbError resultset-or-error)
-        (exception/failure (human-error resultset-or-error request))
-        (exception/success resultset-or-error))
+    (if (contains? pulled-trees-map request)
+      (let [resultset-or-error (get pulled-trees-map request)]
+        (if (instance? types/DbError resultset-or-error)
+          (exception/failure (human-error resultset-or-error request))
+          (exception/success resultset-or-error)))
       (do
         (let [error (js/Error. (str "Unhydrated request:\n" (pr-str request)))]
-          #_ (js/console.log error)                         ; happens a lot during query fns - would need to silence this log during query phase.
+          #_(js/console.log error)                          ; happens a lot during query fns - would need to silence this log during query phase.
           (exception/failure error)))))
 
 
