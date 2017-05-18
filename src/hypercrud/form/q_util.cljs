@@ -57,13 +57,6 @@
     (catch :default e
       {})))                                                 ; e.g. `:find is not ISeqable`
 
-
-(defn read-eval-formulas [formulas-str]
-  (if-not (empty? formulas-str)
-    (let [formulas-map (safe-read-string formulas-str)]
-      (util/map-values eval formulas-map))))                ; not eval-str, because the formula-map was already read
-
-
 (defn run-formula! [{formula! :value error :error} param-ctx]
   (if error
     (throw error)                                           ; first error, lose the rest of the errors
@@ -103,7 +96,8 @@
   ;(assert (:entity query-params)) -- this happens sometimes in prod so i guess its ok? don't understand.
   ;(if (vector? (:entity query-params)) (assert (not (empty? (:entity query-params))))) - this is cardinality many underhydrated - happens during the hydrate loop?
   (assert (-> link-entity :link-entity/connection :db/id :id))
-  (let [dbid-s (:entity query-params)
-        dbval (->DbVal (-> link-entity :link-entity/connection :db/id :id) nil)
-        pull-exp (form-pull-exp (:link-entity/form link-entity))]
-    (->EntityRequest dbid-s dbval pull-exp)))
+  (->EntityRequest
+    (:entity query-params)
+    (:a query-params)
+    (->DbVal (-> link-entity :link-entity/connection :db/id :id) nil)
+    (form-pull-exp (:link-entity/form link-entity))))

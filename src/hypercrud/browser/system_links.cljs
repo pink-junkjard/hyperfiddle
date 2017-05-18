@@ -99,10 +99,7 @@
                        :link-entity
                        (let [conn-id (or
                                        (-> parent-link :link/request :link-entity/connection :db/id :id)
-                                       (let [dbid-s (-> param-ctx :query-params :entity)]
-                                         (if (vector? dbid-s)
-                                           (:conn-id (first dbid-s))
-                                           (:conn-id dbid-s))))
+                                       (-> param-ctx :query-params :entity :conn-id) #_ "cardinality many parent conn-id is correct")
                              conn {:db/id (->DbId conn-id hc/*root-conn-id*)}]
                          [#_{:anchor/prompt "edit"
                              :anchor/ident :sys
@@ -182,9 +179,9 @@
   ; That was the plan, but it doesn't work in second layer deep sys links, the parent is a sys link. So we
   ; need to just hydrate what we need.
 
-  [(->EntityRequest (->DbId (:conn system-link-idmap) hc/*root-conn-id*) (->DbVal hc/*root-conn-id* nil) ['*])
-   (->EntityRequest (->DbId (:owner system-link-idmap) hc/*root-conn-id*) (->DbVal hc/*root-conn-id* nil) ['*])
-   (if-let [e (:e system-link-idmap)] (->EntityRequest (->DbId (:e system-link-idmap) hc/*root-conn-id*) (->DbVal hc/*root-conn-id* nil)
+  [(->EntityRequest (->DbId (:conn system-link-idmap) hc/*root-conn-id*) nil (->DbVal hc/*root-conn-id* nil) ['*])
+   (->EntityRequest (->DbId (:owner system-link-idmap) hc/*root-conn-id*) nil (->DbVal hc/*root-conn-id* nil) ['*])
+   (if-let [e (:e system-link-idmap)] (->EntityRequest (->DbId (:e system-link-idmap) hc/*root-conn-id*) nil (->DbVal hc/*root-conn-id* nil)
                                                        [:db/id
                                                         :find-element/name
                                                         :find-element/connection
@@ -194,7 +191,7 @@
                                                                                                      {:attribute/valueType [:db/id :db/ident]}
                                                                                                      {:attribute/cardinality [:db/id :db/ident]}
                                                                                                      {:attribute/unique [:db/id :db/ident]}]}]}]}]))
-   (if-let [a (:a system-link-idmap)] (->EntityRequest (->DbId (:a system-link-idmap) hc/*root-conn-id*) (->DbVal hc/*root-conn-id* nil)
+   (if-let [a (:a system-link-idmap)] (->EntityRequest (->DbId (:a system-link-idmap) hc/*root-conn-id*) nil (->DbVal hc/*root-conn-id* nil)
                                                        ['*
                                                         {:attribute/valueType [:db/id :db/ident]
                                                          :attribute/cardinality [:db/id :db/ident]

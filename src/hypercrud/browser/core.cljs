@@ -41,7 +41,7 @@
                                             {:attribute/valueType [:db/id :db/ident]
                                              :attribute/cardinality [:db/id :db/ident]
                                              :attribute/unique [:db/id :db/ident]}]}]}]]
-    (->EntityRequest link-dbid (->DbVal hc/*root-conn-id* nil)
+    (->EntityRequest link-dbid nil (->DbVal hc/*root-conn-id* nil)
                      ['*
                       {:link/request ['*
                                       :link-query/value
@@ -129,7 +129,12 @@
                          (cond
                            ; order matters here a lot!
                            (nil? result) nil
-                           (empty? result) (if (coll? (.-dbid-s request)) [] {}) ; comes back as [] sometimes if cardinaltiy many request. this is causing problems as nil or {} in different places.
+                           (empty? result) (if (.-a request)
+                                             ; comes back as [] sometimes if cardinaltiy many request. this is causing problems as nil or {} in different places.
+                                             ; Above comment seems backwards, left it as is
+                                             (case (-> ((:schema param-ctx) (.-a request)) :attribute/cardinality :db/ident)
+                                               :db.cardinality/one {}
+                                               :db.cardinality/many []))
                            (map? result) {"entity" result}
                            (coll? result) (mapv (fn [relation] {"entity" relation}) result))
 

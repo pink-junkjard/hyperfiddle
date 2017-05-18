@@ -21,36 +21,41 @@
   ; this is a 3x3 matrix - repeating, entity, attribute. Find element is not part of the matrix.
   ; link-query's always have a find-element, if they have an attribute
   ; link-entity's never do, despite having an attribute.
+
+  ; Fn syntax can go here if we have proper cljs dynamic vars.
   (let [{r :anchor/repeating? e :anchor/find-element a :anchor/attribute} anchor]
     (cond
 
       ; attr edit
       (and r a)
-      (pr-str {:entity `(fn [ctx#]
-                          (case (-> ((:schema ctx#) (-> ctx# :attribute :attribute/ident)) :attribute/cardinality :db/ident)
-                            :db.cardinality/one (get-in ctx# [:value :db/id])
-                            :db.cardinality/many (mapv :db/id (get ctx# :value))))})
+      (pr-str `(fn [ctx#]
+                 (let [attr# (-> ctx# :attribute)]
+                   (case (-> ((:schema ctx#) (:attribute/ident attr#)) :attribute/cardinality :db/ident)
+                     :db.cardinality/one {:entity (get-in ctx# [:value :db/id])}
+                     :db.cardinality/many {:entity (get-in ctx# [:entity :db/id])
+                                           :a (:attribute/ident attr#)}))))
 
       ; attr create (managed, see auto-txfn)
       (and (not r) a)
       ; inherit parent since the fe is never explicitly set by user
       ; it would be more correct to use the FE if we have it, but
       ; that information is guaranteed to be the same?
-      (pr-str {:entity `(fn [ctx#]
-                          (assert (-> ctx# :entity))
-                          (assert (-> ctx# :entity :db/id :conn-id))
-                          (->DbId (-> (str (-> ctx# :entity :db/id :id) "."
-                                           (-> ctx# :attribute :attribute/ident) "."
-                                           (case (-> ((:schema ctx#) (-> ctx# :attribute :attribute/ident)) :attribute/cardinality :db/ident)
-                                             :db.cardinality/one nil
-                                             :db.cardinality/many (inc (count (:value ctx#)))))
-                                      hash js/Math.abs - str)
-                                  (-> ctx# :entity :db/id :conn-id)))})
+      (pr-str `(fn [ctx#]
+                 (assert (-> ctx# :entity))
+                 (assert (-> ctx# :entity :db/id :conn-id))
+                 {:entity
+                  (->DbId (-> (str (-> ctx# :entity :db/id :id) "."
+                                   (-> ctx# :attribute :attribute/ident) "."
+                                   (case (-> ((:schema ctx#) (-> ctx# :attribute :attribute/ident)) :attribute/cardinality :db/ident)
+                                     :db.cardinality/one nil
+                                     :db.cardinality/many (inc (count (:value ctx#)))))
+                              hash js/Math.abs - str)
+                          (-> ctx# :entity :db/id :conn-id))}))
 
       ; entity edit
       (and r (not a))
-      (pr-str {:entity `(fn [ctx#]
-                          (get-in ctx# [:entity :db/id]))})
+      (pr-str `(fn [ctx#]
+                 {:entity (get-in ctx# [:entity :db/id])}))
 
       ; entity create
       ; is it managed or not? We need a connection. Either we got the find-element, or
@@ -59,14 +64,15 @@
       ; This is counter intuitive. It only happens for sys links. Regular links set the linkentity/connection
       ; so don't have this problem.
       (and (not r) (not a))
-      (pr-str {:entity `(fn [ctx#]
-                          (->DbId (-> (str (-> ctx# :entity :db/id :id) "."
-                                           "."
-                                           ; this is gonna collide, how do we know how to generate unique id here
-                                           )
-                                      hash js/Math.abs - str)
-                                  (or ~(-> e :find-element/connection :db/id :id)
-                                      (-> ctx# :entity :db/id :conn-id))))})
+      (pr-str `(fn [ctx#]
+                 {:entity
+                  (->DbId (-> (str (-> ctx# :entity :db/id :id) "."
+                                   "."
+                                   ; this is gonna collide, how do we know how to generate unique id here
+                                   )
+                              hash js/Math.abs - str)
+                          (or ~(-> e :find-element/connection :db/id :id)
+                              (-> ctx# :entity :db/id :conn-id)))}))
 
       ; naked
       (and (not r) (not e) (not a)) nil
@@ -118,8 +124,8 @@
     :project project
     :link-dbid link-dbid #_:id
     :query-params (try                                      ; todo return monad
-                    (->> (q-util/read-eval-formulas formula-str)
-                         (util/map-values #(q-util/run-formula! % param-ctx)))
+                    (-> (eval-str formula-str)
+                        (q-util/run-formula! param-ctx))
                     (catch js/Error e {}))})
   ([link formula-str param-ctx]
    (build-url-params-map
@@ -142,7 +148,7 @@
                         q-util/safe-parse-query-validated
                         q-util/parse-param-holes
                         (holes-filled? (:query-params route)))
-    :link-entity (not= nil (-> route :query-params :entity))
+    :link-entity (not= nil (-> route :query-params :entity)) ; add logic for a
     :link-blank true))
 
 (defn anchor-valid?' [anchor route]
