@@ -33,8 +33,6 @@
   ([anchor param-ctx]
    (build-anchor-route (:anchor/link anchor) (:anchor/formula anchor) param-ctx)))
 
-(def build-url-params-map build-anchor-route)               ; legacy formulas need migrating
-
 (defn holes-filled? [hole-names query-params-map]
   (set/subset? (set hole-names) (set (keys (into {} (remove (comp nil? val) query-params-map))))))
 
