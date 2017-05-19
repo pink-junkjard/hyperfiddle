@@ -20,14 +20,14 @@
 (defn render-anchors
   ([anchor-ctx-pairs]
    (->> anchor-ctx-pairs
-        (filter (partial apply links/link-visible?))
+        (filter (partial apply links/anchor-visible?))
         (mapv (fn [[anchor param-ctx]]
                 (assert (:navigate-cmp param-ctx))
                 (let [prompt (or (:anchor/prompt anchor)
                                  (:anchor/ident anchor)
                                  "_")]
                   ^{:key (hash anchor)}                     ; not a great key but syslinks don't have much.
-                  [(:navigate-cmp param-ctx) (links/build-link-props anchor param-ctx) prompt])))
+                  [(:navigate-cmp param-ctx) (links/build-anchor-props anchor param-ctx) prompt])))
         (interpose " ")))
   ([anchors param-ctx]
    (render-anchors (map vector anchors (repeat param-ctx)))))
@@ -40,9 +40,9 @@
    (render-inline-links (map vector anchors (repeatedly (constantly param-ctx)))))
   ([anchor-ctx-pairs]
    (->> anchor-ctx-pairs
-        (filter (partial apply links/link-visible?))
+        (filter (partial apply links/anchor-visible?))
         (map (fn [[anchor param-ctx]]
-               (let [route (links/build-url-params-map anchor param-ctx)
+               (let [route (links/build-anchor-route anchor param-ctx)
                      valid? (links/anchor-valid?' anchor route)]
                  (if valid?
                    [:div {:key (hash anchor)}               ; extra div bc had trouble getting keys to work

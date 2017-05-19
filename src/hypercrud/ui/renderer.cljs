@@ -26,7 +26,7 @@
                          :link-fn
                          (fn [ident label param-ctx]
                            (let [anchor (get anchor-lookup ident)
-                                 props (links/build-link-props anchor param-ctx)] ; needs param-ctx to run formulas
+                                 props (links/build-anchor-props anchor param-ctx)] ; needs param-ctx to run formulas
                              [(:navigate-cmp param-ctx) props label])))]
          ; Same interface as auto-control widgets.
          ; pass value only as scope todo

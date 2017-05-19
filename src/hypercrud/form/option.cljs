@@ -2,13 +2,14 @@
   (:require [cats.core :as cats :refer-macros [mlet]]
             [cats.monad.exception :as exception]
             [cljs.reader :as reader]
+            [hypercrud.browser.browser-request :as browser-request]
             [hypercrud.browser.links :as links]
+            [hypercrud.browser.user-bindings :as user-bindings]
             [hypercrud.client.core :as hc]
             [hypercrud.compile.eval :refer [eval-str]]
             [hypercrud.form.q-util :as q-util]
             [hypercrud.types :refer [->DbVal]]
-            [hypercrud.ui.form-util :as form-util]
-            [hypercrud.browser.core :as browser]))
+            [hypercrud.ui.form-util :as form-util]))
 
 (defn default-label-renderer [v]
   (cond
@@ -41,7 +42,7 @@
   (assert options-anchor)
   ; This needs to be robust to partially constructed anchors
   (let [link (let [request (if-let [link (-> options-anchor :anchor/link :db/id)]
-                             (browser/request-for-link link))
+                             (browser-request/request-for-link link))
                    resp (if request (hc/hydrate (:peer param-ctx) request))]
                (if resp
                  (if (exception/failure? resp)
@@ -51,13 +52,13 @@
     (mlet [q (if-let [qstr (-> link :link/request :link-query/value)]     ; We avoid caught exceptions when possible
                (exception/try-on (reader/read-string qstr))
                (exception/failure nil))                     ; is this a success or failure? Doesn't matter - datomic will fail.
-           result (let [params-map (merge (:query-params (links/build-url-params-map options-anchor param-ctx))
+           result (let [params-map (merge (:query-params (links/build-anchor-route options-anchor param-ctx))
                                           (q-util/build-dbhole-lookup (:link/request link)))
                         query-value (q-util/query-value q (:link/request link) params-map param-ctx)]
                     (hc/hydrate (:peer param-ctx) query-value))]
           (let [colspec (form-util/determine-colspec result link param-ctx)
                 ; options have custom renderers which get user bindings
-                param-ctx (browser/user-bindings link param-ctx)]
+                param-ctx (user-bindings/user-bindings link param-ctx)]
             (cats/return
               (->> result
                    (mapv (fn [relation]

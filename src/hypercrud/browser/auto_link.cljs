@@ -1,4 +1,4 @@
-(ns hypercrud.browser.system-links
+(ns hypercrud.browser.auto-link
   (:require [hypercrud.browser.link-util :as link-util]
             [hypercrud.client.core :as hc]
             [hypercrud.types :refer [->DbId ->DbVal ->EntityRequest]]
