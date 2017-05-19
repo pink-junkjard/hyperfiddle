@@ -79,7 +79,7 @@
                                                                    (if (= ident :db/id) (assoc $ :read-only (constantly true)) $))]
                                                ^{:key (str ident)}
                                                [field maybe-field anchors param-ctx]))))
-                                (widget/render-inline-links (filter :anchor/render-inline? entity-anchors) param-ctx))))))))
+                                (widget/render-inline-anchors (filter :anchor/render-inline? entity-anchors) param-ctx))))))))
         not-splat? (and (not (empty? colspec))
                         (->> (partition 4 colspec)
                              (mapv (fn [[conn fe-name attr maybe-field]] maybe-field))
@@ -92,9 +92,9 @@
     [:div {:class (str "forms-list " (name (:layout param-ctx)))}
      (concat fields [magic-new-field])])
   ; Can't differentiate between index links and entity links on link-entity right now.
-  #_(widget/render-inline-links (->> anchors
-                                     (remove :anchor/repeating?)
-                                     (remove :anchor/attribute)
-                                     (filter :anchor/render-inline?))
-                                (dissoc param-ctx :isComponent))
+  #_(widget/render-inline-anchors (->> anchors
+                                       (remove :anchor/repeating?)
+                                       (remove :anchor/attribute)
+                                       (filter :anchor/render-inline?))
+                                  (dissoc param-ctx :isComponent))
   )

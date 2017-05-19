@@ -1,4 +1,4 @@
-(ns hypercrud.browser.links
+(ns hypercrud.browser.anchor
   (:require [cljs.reader :as reader]
             [clojure.set :as set]
             [hypercrud.client.core :as hc]

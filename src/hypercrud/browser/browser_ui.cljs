@@ -9,7 +9,7 @@
             [hypercrud.browser.auto-anchor-txfn :refer [auto-txfn]]
             [hypercrud.browser.auto-link :as auto-link]
             [hypercrud.browser.browser-request :as browser-request]
-            [hypercrud.browser.links :as links]
+            [hypercrud.browser.anchor :as anchor]
             [hypercrud.browser.user-bindings :as user-bindings]
             [hypercrud.client.core :as hc]
             [hypercrud.client.schema :as schema-util]
@@ -117,12 +117,12 @@
                               (into {}))
             with-inline-result (fn [ident param-ctx f]
                                  (let [anchor (get anchor-index ident)
-                                       params-map (links/build-anchor-route anchor param-ctx)]
+                                       params-map (anchor/build-anchor-route anchor param-ctx)]
                                    @(ui params-map (assoc param-ctx :user-renderer f))))
             param-ctx (assoc param-ctx
                         :link-fn (fn [ident label param-ctx]
                                    (let [anchor (get anchor-index ident)
-                                         props (-> (links/build-anchor-props anchor param-ctx)
+                                         props (-> (anchor/build-anchor-props anchor param-ctx)
                                                    #_(dissoc :style) #_"custom renderers don't want colored links")]
                                      [(:navigate-cmp param-ctx) props label]))
                         :with-inline-result with-inline-result

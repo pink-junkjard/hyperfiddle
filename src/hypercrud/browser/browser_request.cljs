@@ -1,17 +1,17 @@
 (ns hypercrud.browser.browser-request
-  (:require [hypercrud.types :as types :refer [->DbId ->DbVal ->EntityRequest]]
+  (:require [cats.core :as cats :refer-macros [mlet]]
+            [cats.monad.exception :as exception]
+            [cljs.reader :as reader]
             [hypercrud.browser.auto-anchor :as browser-anchors]
             [hypercrud.browser.auto-link :as system-links]
+            [hypercrud.browser.anchor :as anchor]
+            [hypercrud.browser.link-util :as link-util]
             [hypercrud.client.core :as hc]
-            [cats.monad.exception :as exception]
-            [cats.core :as cats :refer-macros [mlet]]
-            [hypercrud.browser.links :as links]
             [hypercrud.client.schema :as schema-util]
             [hypercrud.form.q-util :as q-util]
-            [cljs.reader :as reader]
-            [hypercrud.util :as util]
-            [hypercrud.browser.link-util :as link-util]
-            [hypercrud.ui.form-util :as form-util]))
+            [hypercrud.types :as types :refer [->DbId ->DbVal ->EntityRequest]]
+            [hypercrud.ui.form-util :as form-util]
+            [hypercrud.util :as util]))
 
 
 (defn request-for-link [link-dbid]
@@ -56,7 +56,7 @@
                                               fe (if (and attr (nil? fe)) "entity" fe)]
                                           [r fe attr]))))
         recurse-request (fn [anchor param-ctx]
-                          (let [params-map (links/build-anchor-route anchor param-ctx)
+                          (let [params-map (anchor/build-anchor-route anchor param-ctx)
                                 param-ctx (-> param-ctx
                                               (update :debug #(str % ">inline-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]"))
                                               (dissoc :result :entity :attribute :value))]
@@ -97,7 +97,7 @@
 
 (defn link-entity-dependent-requests [result form anchors param-ctx]
   (let [recurse-request (fn [anchor param-ctx]
-                          (let [params-map (links/build-anchor-route anchor param-ctx)
+                          (let [params-map (anchor/build-anchor-route anchor param-ctx)
                                 param-ctx (-> param-ctx
                                               (update :debug #(str % ">inline-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]"))
                                               (dissoc :result :entity :attribute :value))]

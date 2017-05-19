@@ -154,8 +154,8 @@
                                   param-ctx)]]]
         ; filter repeating? No because create-new-attribute down here too.
         [body relations colspec anchors sort-col param-ctx]]
-       (widget/render-inline-links (->> anchors
-                                        (remove :anchor/repeating?)
-                                        (remove :anchor/attribute)
-                                        (filter :anchor/render-inline?))
-                                   (dissoc param-ctx :isComponent))])))
+       (widget/render-inline-anchors (->> anchors
+                                          (remove :anchor/repeating?)
+                                          (remove :anchor/attribute)
+                                          (filter :anchor/render-inline?))
+                                     (dissoc param-ctx :isComponent))])))

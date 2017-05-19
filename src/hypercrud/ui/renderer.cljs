@@ -1,6 +1,6 @@
 (ns hypercrud.ui.renderer
   (:require [hypercrud.platform.safe-render :refer [safe-user-renderer]]
-            [hypercrud.browser.links :as links]
+            [hypercrud.browser.anchor :as anchor]
             [hypercrud.compile.eval :refer [eval-str]]))
 
 
@@ -26,7 +26,7 @@
                          :link-fn
                          (fn [ident label param-ctx]
                            (let [anchor (get anchor-lookup ident)
-                                 props (links/build-anchor-props anchor param-ctx)] ; needs param-ctx to run formulas
+                                 props (anchor/build-anchor-props anchor param-ctx)] ; needs param-ctx to run formulas
                              [(:navigate-cmp param-ctx) props label])))]
          ; Same interface as auto-control widgets.
          ; pass value only as scope todo

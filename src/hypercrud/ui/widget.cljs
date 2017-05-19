@@ -2,7 +2,7 @@
   (:refer-clojure :exclude [keyword long boolean])
   (:require [cats.monad.exception :as exception]
             [hypercrud.browser.core :as browser]
-            [hypercrud.browser.links :as links]
+            [hypercrud.browser.anchor :as anchor]
             [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx]
             [hypercrud.form.option :as option]
@@ -20,30 +20,30 @@
 (defn render-anchors
   ([anchor-ctx-pairs]
    (->> anchor-ctx-pairs
-        (filter (partial apply links/anchor-visible?))
+        (filter (partial apply anchor/anchor-visible?))
         (mapv (fn [[anchor param-ctx]]
                 (assert (:navigate-cmp param-ctx))
                 (let [prompt (or (:anchor/prompt anchor)
                                  (:anchor/ident anchor)
                                  "_")]
                   ^{:key (hash anchor)}                     ; not a great key but syslinks don't have much.
-                  [(:navigate-cmp param-ctx) (links/build-anchor-props anchor param-ctx) prompt])))
+                  [(:navigate-cmp param-ctx) (anchor/build-anchor-props anchor param-ctx) prompt])))
         (interpose " ")))
   ([anchors param-ctx]
    (render-anchors (map vector anchors (repeat param-ctx)))))
 
 
-(defn render-inline-links
+(defn render-inline-anchors
   ([maybe-field anchors param-ctx]                          ; the unused param on this airity is concerning
-   (render-inline-links anchors (assoc param-ctx :isComponent (:attribute/isComponent (:attribute param-ctx)))))
+   (render-inline-anchors anchors (assoc param-ctx :isComponent (:attribute/isComponent (:attribute param-ctx)))))
   ([anchors param-ctx]
-   (render-inline-links (map vector anchors (repeatedly (constantly param-ctx)))))
+   (render-inline-anchors (map vector anchors (repeatedly (constantly param-ctx)))))
   ([anchor-ctx-pairs]
    (->> anchor-ctx-pairs
-        (filter (partial apply links/anchor-visible?))
+        (filter (partial apply anchor/anchor-visible?))
         (map (fn [[anchor param-ctx]]
-               (let [route (links/build-anchor-route anchor param-ctx)
-                     valid? (links/anchor-valid?' anchor route)]
+               (let [route (anchor/build-anchor-route anchor param-ctx)
+                     valid? (anchor/anchor-valid?' anchor route)]
                  (if valid?
                    [:div {:key (hash anchor)}               ; extra div bc had trouble getting keys to work
                     (case (:display-mode param-ctx) :xray (render-anchors [(assoc anchor :anchor/prompt "self")] param-ctx) nil)
@@ -78,7 +78,7 @@
     #(js/parseInt % 10) pr-str
     #(or (integer? (js/parseInt % 10)) (= "nil" %))
     props]
-   (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)])
+   (render-inline-anchors maybe-field (filter :anchor/render-inline? anchors) param-ctx)])
 
 
 (defn textarea [maybe-field anchors props param-ctx]
@@ -93,7 +93,7 @@
    [:div.editable-select {:key (:attribute/ident (:attribute param-ctx))}
     [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
     (select-boolean* (:value param-ctx) props param-ctx)]
-   (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)])
+   (render-inline-anchors maybe-field (filter :anchor/render-inline? anchors) param-ctx)])
 
 
 (defn dbid [props param-ctx]
@@ -126,7 +126,7 @@
       (if options-anchor
         (select* (:value param-ctx) options-anchor props param-ctx)
         (dbid props param-ctx))]
-     (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)]))
+     (render-inline-anchors maybe-field (filter :anchor/render-inline? anchors) param-ctx)]))
 
 
 (defn ref-component [maybe-field anchors props param-ctx]
@@ -137,7 +137,7 @@
     [:div.value
      #_[:pre (pr-str (:value param-ctx))]
      [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
-     (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)]))
+     (render-inline-anchors maybe-field (filter :anchor/render-inline? anchors) param-ctx)]))
 
 
 (defn ref-many-table [maybe-field anchors props param-ctx]
@@ -146,7 +146,7 @@
     [:div.value
      #_[:pre (pr-str maybe-field)]
      [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
-     (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)]))
+     (render-inline-anchors maybe-field (filter :anchor/render-inline? anchors) param-ctx)]))
 
 (defn ref-many [maybe-field anchors props param-ctx]
   (let [[options-anchor] (filter option-anchor? anchors)
@@ -187,11 +187,11 @@
             #_(dbid props param-ctx))
           [:br]
           [:button {:on-click #((:user-swap! param-ctx) {:tx (tx/edit-entity (get-in param-ctx [:entity :db/id]) (-> param-ctx :attribute :attribute/ident) [] [@select-value-atom])})} "⬆"]]
-         (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)]))))
+         (render-inline-anchors maybe-field (filter :anchor/render-inline? anchors) param-ctx)]))))
 
 (defn ref-many-component-table [maybe-field anchors props param-ctx]
   [:div.value
-   (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)
+   (render-inline-anchors maybe-field (filter :anchor/render-inline? anchors) param-ctx)
    [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]])
 
 (defn multi-select-ref [maybe-field anchors props param-ctx]
@@ -232,7 +232,7 @@
           change! #((:user-swap! param-ctx) {:tx (tx/edit-entity (:db/id (:entity param-ctx)) ident [(:value param-ctx)] [%])})]
       ^{:key ident}
       [:div.value
-       (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)
+       (render-inline-anchors maybe-field (filter :anchor/render-inline? anchors) param-ctx)
        (let [widget (case (:layout param-ctx) :block code-block :inline-block code-inline-block :table code-inline-block)]
          [widget props change! param-ctx])
        [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]])))
@@ -258,7 +258,7 @@
     (case (-> (:attribute param-ctx) :attribute/cardinality :db/ident)
       :db.cardinality/many (map pr-str (:value param-ctx))
       (pr-str (:value param-ctx)))]
-   (render-inline-links maybe-field (filter :anchor/render-inline? anchors) param-ctx)
+   (render-inline-anchors maybe-field (filter :anchor/render-inline? anchors) param-ctx)
    [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]])
 
 (defn default [maybe-field anchors props param-ctx]

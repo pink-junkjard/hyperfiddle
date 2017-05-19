@@ -3,7 +3,7 @@
             [cats.monad.exception :as exception]
             [cljs.reader :as reader]
             [hypercrud.browser.browser-request :as browser-request]
-            [hypercrud.browser.links :as links]
+            [hypercrud.browser.anchor :as anchor]
             [hypercrud.browser.user-bindings :as user-bindings]
             [hypercrud.client.core :as hc]
             [hypercrud.compile.eval :refer [eval-str]]
@@ -52,7 +52,7 @@
     (mlet [q (if-let [qstr (-> link :link/request :link-query/value)]     ; We avoid caught exceptions when possible
                (exception/try-on (reader/read-string qstr))
                (exception/failure nil))                     ; is this a success or failure? Doesn't matter - datomic will fail.
-           result (let [params-map (merge (:query-params (links/build-anchor-route options-anchor param-ctx))
+           result (let [params-map (merge (:query-params (anchor/build-anchor-route options-anchor param-ctx))
                                           (q-util/build-dbhole-lookup (:link/request link)))
                         query-value (q-util/query-value q (:link/request link) params-map param-ctx)]
                     (hc/hydrate (:peer param-ctx) query-value))]
