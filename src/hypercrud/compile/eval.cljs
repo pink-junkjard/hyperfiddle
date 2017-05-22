@@ -8,7 +8,7 @@
   (memoize (fn [code-str]
              ;; Hack - we don't understand why cljs compiler doesn't handle top level forms naturally
              ;; but wrapping in identity fixes the problem
-             (let [code-str' (str "(identity " code-str ")")]
+             (let [code-str' (str "(identity\n" code-str "\n)")]
                (binding [analyzer/*cljs-warning-handlers* []]
                  (cljs/eval-str (cljs/empty-state)
                                 code-str'
