@@ -58,7 +58,7 @@
   (= :options (:anchor/ident anchor)))
 
 (defn popover-anchor? [anchor]
-  (and (:anchor/tx-fn anchor) (:anchor/link anchor)))
+  (and (:anchor/tx-fn anchor) (not (empty? (:anchor/link anchor)))))
 
 (defn keyword [maybe-field anchors props param-ctx]
   (let [on-change! #((:user-swap! param-ctx) {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %)})]

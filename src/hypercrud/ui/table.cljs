@@ -141,21 +141,22 @@
 (defn table [& props]
   (let [sort-col (r/atom nil)]
     (fn [relations colspec anchors param-ctx]
-      [:div.ui-table-with-links
-       [:table.ui-table
-        [:thead
-         [:tr
-          (build-col-heads colspec sort-col param-ctx)
-          [:td.link-cell {:key :link-cell}
-           (widget/render-anchors (->> anchors
-                                       (remove :anchor/repeating?) ; link-entity new unmanaged
-                                       (remove :anchor/attribute)
-                                       (remove :anchor/render-inline?))
-                                  param-ctx)]]]
-        ; filter repeating? No because create-new-attribute down here too.
-        [body relations colspec anchors sort-col param-ctx]]
-       (widget/render-inline-anchors (->> anchors
-                                          (remove :anchor/repeating?)
-                                          (remove :anchor/attribute)
-                                          (filter :anchor/render-inline?))
-                                     (dissoc param-ctx :isComponent))])))
+      (let [anchors (widget/process-popover-anchors anchors param-ctx)]
+        [:div.ui-table-with-links
+         [:table.ui-table
+          [:thead
+           [:tr
+            (build-col-heads colspec sort-col param-ctx)
+            [:td.link-cell {:key :link-cell}
+             (widget/render-anchors (->> anchors
+                                         (remove :anchor/repeating?) ; link-entity new unmanaged
+                                         (remove :anchor/attribute)
+                                         (remove :anchor/render-inline?))
+                                    param-ctx)]]]
+          ; filter repeating? No because create-new-attribute down here too.
+          [body relations colspec anchors sort-col param-ctx]]
+         (widget/render-inline-anchors (->> anchors
+                                            (remove :anchor/repeating?)
+                                            (remove :anchor/attribute)
+                                            (filter :anchor/render-inline?))
+                                       (dissoc param-ctx :isComponent))]))))

@@ -84,7 +84,9 @@
           {:txfn #(let [result (txfn param-ctx %)]          ; txfn may be sync or async
                     (-> (if-not (p/promise? result) (p/resolved result) result)
                         (p/branch (:user-swap! param-ctx)
-                                  (fn cancelled [why] nil))))})
+                                  (fn error [why]
+                                    (if-not (= :cancel why)
+                                      (js/console.error why))))))})
 
         (if (and txfn (:anchor/link anchor))                ; default case is a syslink
           ; this is a special case where due to the txfn the embed goes in a popover

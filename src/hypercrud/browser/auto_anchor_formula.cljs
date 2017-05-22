@@ -38,7 +38,7 @@
                                    (-> ctx# :attribute :attribute/ident) "."
                                    (case (-> ((:schema ctx#) (-> ctx# :attribute :attribute/ident)) :attribute/cardinality :db/ident)
                                      :db.cardinality/one nil
-                                     :db.cardinality/many (inc (count (:value ctx#)))))
+                                     :db.cardinality/many (hash (into #{} (mapv :db/id (:value ctx#))))))
                               hash js/Math.abs - str)
                           (-> ctx# :entity :db/id :conn-id))}))
 
