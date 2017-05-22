@@ -49,7 +49,13 @@
   (cond
     (map? result) (form/form result colspec anchors param-ctx)
     (coll? result) [table/table result colspec anchors param-ctx]
-    :else nil)
+    :else
+    [:div.blank
+     (widget/render-anchors (->> anchors
+                                 (remove :anchor/find-element)
+                                 (remove :anchor/attribute)
+                                 (remove :anchor/render-inline?))
+                            param-ctx)])
 
   #_[:div
    ; This has to be handled internally due to weirdness around create-new links
