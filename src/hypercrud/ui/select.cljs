@@ -32,7 +32,9 @@
                ;; reconstruct the typed value
                :on-change #(let [select-value (.-target.value %)
                                  dbid (when (not= "" select-value)
-                                        (->DbId (js/parseInt select-value 10) (get-in param-ctx [:entity :db/id :conn-id])))]
+                                        (let [id (js/parseInt select-value 10)
+                                              id (if (< id 0) (str id) id)]
+                                          (->DbId id (get-in param-ctx [:entity :db/id :conn-id]))))]
                              ((:user-swap! param-ctx) {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) dbid)}))
                :disabled (:read-only props)}
         options (option/hydrate-options options-anchor param-ctx)]
