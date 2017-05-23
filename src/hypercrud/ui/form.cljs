@@ -41,6 +41,8 @@
              props (if (nil? @attr-ident) {:read-only true})]
          [input/edn-input* nil on-change! props])])))
 
+(def always-read-only (constantly true))
+
 (defn form [relation colspec anchors param-ctx]
   ; all anchors need a find-element at least, because it has a connection affinity.
   (let [param-ctx (assoc param-ctx :result relation
@@ -76,7 +78,7 @@
                                                                    ; :db/id is missing from schema so fake it here, it has no valueType
                                                                    (assoc $ :attribute (get (:schema param-ctx) ident {:attribute/ident ident})
                                                                             :value (get entity ident))
-                                                                   (if (= ident :db/id) (assoc $ :read-only (constantly true)) $))]
+                                                                   (if (= ident :db/id) (assoc $ :read-only always-read-only) $))]
                                                ^{:key (str ident)}
                                                [field maybe-field anchors param-ctx]))))
                                 (widget/render-inline-anchors (filter :anchor/render-inline? entity-anchors) param-ctx))))))))

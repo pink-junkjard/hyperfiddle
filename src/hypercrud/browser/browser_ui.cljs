@@ -34,6 +34,8 @@
 
 (declare user-result)
 
+(def never-read-only (constantly false))
+
 (defn ui [{query-params :query-params :as params-map} param-ctx]
   (mlet [link (hydrate-link (:peer param-ctx) (:link-dbid params-map) param-ctx)
          request (try-on
@@ -53,7 +55,7 @@
                 param-ctx (assoc param-ctx                  ; provide defaults before user-bindings run. TODO query side
                             :query-params query-params
                             :schema indexed-schema
-                            :read-only (or (:read-only param-ctx) (constantly false)))
+                            :read-only (or (:read-only param-ctx) never-read-only))
 
                 ; ereq doesn't have a fe yet; wrap with a fe.
                 ; Doesn't make sense to do on server since this is going to optimize away anyway.
