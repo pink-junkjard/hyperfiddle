@@ -6,7 +6,6 @@
             [hypercrud.client.core :as hc]
             [hypercrud.client.internal :as internal]
             [hypercrud.client.peer :as peer]
-            [hypercrud.util.performance :as perf]
             [kvlt.core :as kvlt]
             [kvlt.middleware.params]
             [promesa.core :as p]))
@@ -44,16 +43,15 @@
 (deftype HttpConnection [entry-uri ^:mutable peer]
   hc/Connection
   (hydrate!* [this requests staged-tx]
-    (perf/time "hydrate!*"
-               (-> (kvlt/request! {:url (resolve-relative-uri entry-uri (goog.Uri. "hydrate"))
-                                   :content-type content-type-transit ; helps debugging to view as edn
-                                   :accept content-type-transit ; needs to be fast so transit
-                                   :method :post
-                                   :form {:staged-tx staged-tx :request (into #{} requests)}
-                                   :as :auto})
-                   (p/then (fn [http-response]
-                             (let [{:keys [t pulled-trees-map]} (-> http-response :body :hypercrud)]
-                               (peer/->Peer (into #{} requests) pulled-trees-map)))))))
+    (-> (kvlt/request! {:url (resolve-relative-uri entry-uri (goog.Uri. "hydrate"))
+                        :content-type content-type-transit ; helps debugging to view as edn
+                        :accept content-type-transit ; needs to be fast so transit
+                        :method :post
+                        :form {:staged-tx staged-tx :request (into #{} requests)}
+                        :as :auto})
+        (p/then (fn [http-response]
+                  (let [{:keys [t pulled-trees-map]} (-> http-response :body :hypercrud)]
+                    (peer/->Peer (into #{} requests) pulled-trees-map))))))
 
   (hydrate! [this requests staged-tx force?]
     (if (and (not force?) (hc/hydrated? this requests))
@@ -71,8 +69,7 @@
 
   (hydrated? [this requests]
     ; compare our pre-loaded state with the peer dependencies
-    (perf/time "hydrated?"
-               (set/subset? (set requests) (some-> peer .-requests))))
+    (set/subset? (set requests) (some-> peer .-requests)))
 
 
   (transact! [this tx]
