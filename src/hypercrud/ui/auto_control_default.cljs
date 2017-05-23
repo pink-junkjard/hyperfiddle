@@ -47,7 +47,7 @@
 
 (defmethod auto-control/result :default [result colspec anchors param-ctx]
   (cond
-    (map? result) (form/form result colspec anchors param-ctx)
+    (map? result) [form/form result colspec anchors param-ctx]
     (coll? result) [table/table result colspec anchors param-ctx]
     :else
     [:div.blank
