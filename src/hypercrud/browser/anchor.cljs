@@ -96,7 +96,7 @@
                        (case (:display-mode param-ctx)
                          :xray [(:navigate-cmp param-ctx) route-props "self"]
                          nil)
-                       [hypercrud.browser.core/safe-ui      ; cycle
+                       [hypercrud.browser.core/safe-ui'      ; cycle
                         route
                         (-> param-ctx
                             (dissoc :result :entity :attribute :value :layout)

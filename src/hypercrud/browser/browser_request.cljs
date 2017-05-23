@@ -55,11 +55,8 @@
                                               attr (-> anchor :anchor/attribute :attribute/ident)]
                                           [r fe attr]))))
         recurse-request (fn [anchor param-ctx]
-                          (let [route (anchor/build-anchor-route anchor param-ctx)
-                                param-ctx (-> param-ctx
-                                              (update :debug #(str % ">inline-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]"))
-                                              (dissoc :result :entity :attribute :value))]
-                            (request route param-ctx)))]
+                          (let [param-ctx (update param-ctx :debug #(str % ">inline-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]"))]
+                            (request anchor param-ctx)))]
 
     ; param-ctx maintains: :result, :entity, :attribute, :value
     (let [lookup {:index #(get anchors-lookup [true nil nil]) ; why repeating? have we been filtered higher? doesn't seem so.
@@ -98,11 +95,8 @@
 
 (defn link-entity-dependent-requests [result form anchors param-ctx]
   (let [recurse-request (fn [anchor param-ctx]
-                          (let [route (anchor/build-anchor-route anchor param-ctx)
-                                param-ctx (-> param-ctx
-                                              (update :debug #(str % ">inline-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]"))
-                                              (dissoc :result :entity :attribute :value))]
-                            (request route param-ctx)))
+                          (let [param-ctx (update param-ctx :debug #(str % ">inline-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]"))]
+                            (request anchor param-ctx)))
         anchors (filter :anchor/render-inline? anchors)
         anchors-lookup (->> anchors
                             (group-by (fn [anchor]
@@ -196,8 +190,7 @@
       :link-entity (requests-for-link-entity link query-params param-ctx)
       :link-blank (link-query-dependent-requests [] [] (:link/anchor link) param-ctx)))) ; this case does not request the schema, as we don't have a connection for the link.
 
-
-(defn request [route param-ctx]
+(defn request' [route param-ctx]
   (if (auto-link/system-link? (:link-dbid route))
     (let [system-link-idmap (-> route :link-dbid :id)
           system-link-requests (auto-link/request-for-system-link system-link-idmap)]
@@ -214,3 +207,9 @@
       (concat [link-request]
               (if-let [link (-> (hc/hydrate (:peer param-ctx) link-request) (exception/extract nil))]
                 (requests-for-link link (:query-params route) param-ctx))))))
+
+(defn request [anchor param-ctx]
+  (if (:anchor/link anchor)
+    (request' (anchor/build-anchor-route anchor param-ctx)
+              ; entire context must be encoded in the route
+              (dissoc param-ctx :result :entity :attribute :value))))

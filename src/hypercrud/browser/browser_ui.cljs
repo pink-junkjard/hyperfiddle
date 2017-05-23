@@ -36,15 +36,15 @@
 
 (def never-read-only (constantly false))
 
-(defn ui [{query-params :query-params :as params-map} param-ctx]
-  (mlet [link (hydrate-link (:peer param-ctx) (:link-dbid params-map) param-ctx)
+(defn ui' [{query-params :query-params :as route} param-ctx]
+  (mlet [link (hydrate-link (:peer param-ctx) (:link-dbid route) param-ctx)
          request (try-on
                    (case (link-util/link-type link)
                      :link-query (let [link-query (:link/request link)
                                        q (some-> link-query :link-query/value reader/read-string)
-                                       params-map (merge query-params (q-util/build-dbhole-lookup link-query))]
-                                   (q-util/query-value q link-query params-map param-ctx))
-                     :link-entity (q-util/->entityRequest (:link/request link) (:query-params params-map))
+                                       route (merge query-params (q-util/build-dbhole-lookup link-query))]
+                                   (q-util/query-value q link-query route param-ctx))
+                     :link-entity (q-util/->entityRequest (:link/request link) (:query-params route))
                      :link-blank nil
                      nil))
          result (if request (hc/hydrate (:peer param-ctx) request) (exception/success nil))
@@ -89,17 +89,29 @@
               :xray (auto-control/result result colspec (auto-anchor/merge-anchors system-anchors (auto-anchor/auto-anchors (:link/anchor link))) (user-bindings/user-bindings link param-ctx))
               :root (auto-control/result result colspec system-anchors param-ctx))))))
 
-(defn safe-ui [& args]
-  ; there can be a hydrate error, or a javascript error in hyperfiddle, or
-  ; a js error in a user-fn.
+(defn ui [anchor param-ctx]
+  (if (:anchor/link anchor)
+    (ui' (anchor/build-anchor-route anchor param-ctx)
+         ; entire context must be encoded in the route
+         (dissoc param-ctx :result :entity :attribute :value :layout))
+    (exception/failure "anchor has no link")))
+
+(defn safe [f & args]
+  ; reports: hydrate failure, hyperfiddle javascript error, user-fn js error
   (try
-    (let [dom-or-e (apply ui args)]
+    (let [dom-or-e (apply f args)]
       (if (exception/failure? dom-or-e)
         [:pre (or (-> dom-or-e .-e .-data)
                   (pr-str (-> dom-or-e .-e)))]              ; hydrate error
         (.-v dom-or-e)))                                    ; happy path
     (catch :default e                                       ; js errors? Why do we need this.
       [:pre (.-stack e)])))
+
+(defn safe-ui' [& args]
+  (apply safe ui' args))
+
+(defn safe-ui [& args]
+  (apply safe ui args))
 
 (defn link-user-fn [link]
   (if-not (empty? (:link/renderer link))
@@ -118,9 +130,7 @@
                               (mapv (juxt #(-> % :anchor/ident) identity)) ; [ repeating entity attr ident ]
                               (into {}))
             with-inline-result (fn [ident param-ctx f]
-                                 (let [anchor (get anchor-index ident)
-                                       params-map (anchor/build-anchor-route anchor param-ctx)]
-                                   @(ui params-map (assoc param-ctx :user-renderer f))))
+                                 @(ui (get anchor-index ident) (assoc param-ctx :user-renderer f)))
             param-ctx (assoc param-ctx
                         :link-fn (fn [ident label param-ctx]
                                    (let [anchor (get anchor-index ident)

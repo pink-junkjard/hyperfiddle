@@ -12,3 +12,8 @@
 
 (def safe-ui browser-ui/safe-ui)
 (def request browser-request/request)
+
+; legacy - this interface is to reuse an evaluated route (performance of eval and effects)
+; and also the entrypoint (route is document.location, original anchor is unknowable)
+(def safe-ui' browser-ui/safe-ui')
+(def request' browser-request/request')
