@@ -48,30 +48,37 @@
   (let [param-ctx (assoc param-ctx :result relation
                                    :layout (:layout param-ctx :block))
         anchors (widget/process-popover-anchors anchors param-ctx)
-        entity-anchors-lookup (->> (remove :anchor/attribute anchors)
-                                   (group-by (fn [anchor]
-                                               ; link-entity's don't set find-element, but they get the entity in scope nonetheless.
-                                               (if-let [find-element (:anchor/find-element anchor)]
-                                                 (:find-element/name find-element)
-                                                 "entity"))))
+        anchors-lookup (->> (remove :anchor/attribute anchors)
+                            (group-by (fn [anchor]
+                                        ; link-entity's don't set find-element, but they get the entity in scope nonetheless.
+                                        ; unless repeating=false.
+                                        (if-let [find-element (:anchor/find-element anchor)]
+                                          (:find-element/name find-element)
+                                          "entity"))))
         fields (->> (partition 4 colspec)
                     (group-by second)
                     (mapcat
                       (fn [[fe-name colspec]]
-                        (let [entity-anchors (get entity-anchors-lookup fe-name)]
+                        (let [form-anchors (get anchors-lookup fe-name)
+                              entity-new-anchors (->> form-anchors (remove :anchor/repeating?))
+                              entity-anchors (->> form-anchors (filter :anchor/repeating?))]
                           (concat
+                            ; don't put entity in scope because it messes up formulas which have to be deterministic with request side.
+                            (widget/render-anchors (remove :anchor/render-inline? entity-new-anchors) param-ctx)
+                            (widget/render-inline-anchors (filter :anchor/render-inline? entity-new-anchors) param-ctx)
                             ; This is counter intuitive. For link-entity-sys-new only, we need to conjure a connection,
                             ; so we put the entity in scope to do this. The value is not depended on because it's not truly
                             ; repeating. Another way to code it would be to just inspect all the result for a connection
                             ; and add the connection into the ctx. Because if we got here from a sys link, we know we have at least
                             ; something. What if we have a link-query with no results? then we know the connection from the
                             ; link-query. A link-entity with no results is not possible. There is no sys-link-blank.
-                            #_(widget/render-anchors (mapv vector (remove :anchor/repeating? entity-anchors) (repeat param-ctx)))
+                            #_(widget/render-anchors (mapv vector (remove :anchor/repeating? form-anchors) (repeat param-ctx)))
                             (let [entity (get relation fe-name)
                                   param-ctx (form-util/entity-param-ctx entity param-ctx)]
                               #_(assert entity "i think this is true now")
                               (concat
                                 (widget/render-anchors (remove :anchor/render-inline? entity-anchors) param-ctx)
+                                (widget/render-inline-anchors (filter :anchor/render-inline? entity-anchors) param-ctx)
                                 (->> colspec
                                      (mapv (fn [[conn fe-name ident maybe-field]]
                                              (let [param-ctx (as-> param-ctx $
@@ -80,8 +87,7 @@
                                                                             :value (get entity ident))
                                                                    (if (= ident :db/id) (assoc $ :read-only always-read-only) $))]
                                                ^{:key (str ident)}
-                                               [field maybe-field anchors param-ctx]))))
-                                (widget/render-inline-anchors (filter :anchor/render-inline? entity-anchors) param-ctx))))))))
+                                               [field maybe-field anchors param-ctx])))))))))))
         not-splat? (and (not (empty? colspec))
                         (->> (partition 4 colspec)
                              (mapv (fn [[conn fe-name attr maybe-field]] maybe-field))

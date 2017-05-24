@@ -5,8 +5,6 @@
             [cljs.reader :as reader]
             [hypercrud.browser.link-util :as link-util]
             [hypercrud.browser.auto-anchor :as auto-anchor]
-            [hypercrud.browser.auto-anchor-formula :refer [auto-formula]]
-            [hypercrud.browser.auto-anchor-txfn :refer [auto-txfn]]
             [hypercrud.browser.auto-link :as auto-link]
             [hypercrud.browser.browser-request :as browser-request]
             [hypercrud.browser.anchor :as anchor]
@@ -93,7 +91,7 @@
   (if (:anchor/link anchor)
     (ui' (anchor/build-anchor-route anchor param-ctx)
          ; entire context must be encoded in the route
-         (dissoc param-ctx :result :entity :attribute :value :layout))
+         (dissoc param-ctx :result :entity :attribute :value))
     (exception/failure "anchor has no link")))
 
 (defn safe [f & args]

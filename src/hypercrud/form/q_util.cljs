@@ -94,6 +94,7 @@
 
 (defn ->entityRequest [link-entity query-params]
   (assert (:entity query-params))                           ;-- this happens sometimes in prod so i guess its ok? don't understand.
+  #_(assert (:conn-id (:entity query-params)))
   (assert (-> link-entity :link-entity/connection :db/id :id))
   (->EntityRequest
     (:entity query-params)

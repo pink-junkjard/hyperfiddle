@@ -56,7 +56,7 @@
             [:warning (pr-str (:query-params url-params))])
     nil))
 
-(defn build-anchor-props-raw [route link param-ctx]           ; param-ctx is for display-mode
+(defn build-anchor-props-raw [route link param-ctx]         ; param-ctx is for display-mode
   ; doesn't handle tx-fn - meant for the self-link. Weird and prob bad.
   {:route route
    :style {:color (connection-color/connection-color (-> link :hypercrud/owner :db/id :id))}
@@ -96,7 +96,7 @@
                        (case (:display-mode param-ctx)
                          :xray [(:navigate-cmp param-ctx) route-props "self"]
                          nil)
-                       [hypercrud.browser.core/safe-ui'      ; cycle
+                       [hypercrud.browser.core/safe-ui'     ; cycle
                         route
                         (-> param-ctx
                             (dissoc :result :entity :attribute :value :layout)

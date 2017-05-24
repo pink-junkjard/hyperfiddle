@@ -53,13 +53,13 @@
       ; So despite not really needing the value in scope, we need the connection, so we need the value.
       ; This is counter intuitive. It only happens for sys links. Regular links set the linkentity/connection
       ; so don't have this problem.
+      ; Mystery deepens: If ur a syslink u better have a conn-id here because autolink inspects the entity connid to manufacture
+      ; the right entity connection. If you're an explicit link with a conn set, it doesn't matter what you put here since the server
+      ; will ignore this and use the explicit conn. This is only needed to plumb a connection to the autolink logic so it can choose the right connection.
       (and (not r) (not a))
       (pr-str `(fn [ctx#]
                  {:entity
-                  (->DbId (-> (str (-> ctx# :entity :db/id :id) "."
-                                   "."
-                                   ; this is gonna collide, how do we know how to generate unique id here
-                                   )
+                  (->DbId (-> (str (-> ctx# :entity :db/id :id) "." ".")
                               hash js/Math.abs - str)
                           (or ~(-> e :find-element/connection :db/id :id)
                               (-> ctx# :entity :db/id :conn-id)))}))
