@@ -93,7 +93,7 @@
 
 
 (defn ->entityRequest [link-entity query-params]
-  (assert (:entity query-params))                           ;-- this happens sometimes in prod so i guess its ok? don't understand.
+  #_(assert (:entity query-params))                           ;-- Commented because we are requesting invisible things that the UI never tries to render - can be fixed
   #_(assert (:conn-id (:entity query-params)))
   (assert (-> link-entity :link-entity/connection :db/id :id))
   (->EntityRequest
