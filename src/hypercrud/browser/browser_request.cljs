@@ -176,7 +176,6 @@
                       result (->> (if (map? result) [result] result) (mapv #(assoc {} "entity" %)))
                       form (-> (-> link :link/request :link-entity/form)
                                (update :form/field form-util/filter-visible-fields param-ctx))]
-                  (js/console.log (pr-str link))
                   (link-entity-dependent-requests result form
                                                   (auto-anchor/merge-anchors
                                                     (auto-anchor/auto-anchors (auto-link/system-anchors link branch result param-ctx))
@@ -203,11 +202,6 @@
                                          (reduce #(mlet [acc %1 v %2] (cats/return (conj acc v))) (exception/success [])))
                                     nil)]
           (let [link (auto-link/hydrate-system-link system-link-idmap system-link-deps param-ctx)]
-            (if-not (-> link :link/request :link-entity/connection :db/id :id)
-              (do
-                (js/console.log (pr-str route))
-                (js/console.log (pr-str system-link-idmap))
-                (js/console.log (pr-str link))))
             (requests-for-link link (:branch route) (:query-params route) param-ctx)))))
     (let [link-request (request-for-link (:root-db param-ctx) (:link-dbid route))]
       (concat [link-request]
