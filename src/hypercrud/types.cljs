@@ -19,10 +19,10 @@
 (def read-DbId #(apply ->DbId %))
 
 
-(deftype DbVal [conn-id branch #_history?]
-  Object (toString [_] (str "#DbVal" (pr-str [conn-id branch])))
+(deftype DbVal [conn-id branch stage-hash #_history?]
+  Object (toString [_] (str "#DbVal" (pr-str [conn-id branch stage-hash])))
   IPrintWithWriter (-pr-writer [o writer _] (-write writer (.toString o)))
-  IHash (-hash [this] (hash [conn-id branch]))
+  IHash (-hash [this] (hash [conn-id branch stage-hash]))
   IEquiv (-equiv [this other] (= (hash this) (hash other)))
   ILookup
   (-lookup [o k] (get o k nil))
@@ -59,7 +59,7 @@
 (deftype DbValTransitHandler []
   Object
   (tag [_ v] "DbVal")
-  (rep [_ v] [(.-conn-id v) (.-branch v)])
+  (rep [_ v] [(.-conn-id v) (.-branch v) (.-stage-hash v)])
   (stringRep [_ v] nil)
   (getVerboseHandler [_] nil))
 

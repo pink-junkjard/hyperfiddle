@@ -30,7 +30,7 @@
           (exception/failure error)))))
 
   (db [this conn-id branch]
-    (->DbVal conn-id branch))
+    (->DbVal conn-id branch (hash (get-in stage-val [conn-id branch] []))))
 
   (tx [this db]
     (get-in stage-val [(.-conn-id db) (.-branch db)] []))
@@ -38,7 +38,7 @@
   IHash
   (-hash [this]
     ; requests have a dbval which has a hash of the stage
-    (hash requests))
+    (hash [requests stage-val]))
 
   IEquiv
   (-equiv [this other]
