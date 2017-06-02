@@ -13,24 +13,29 @@
             [reagent.core :as r]))
 
 
+(defn safe-run-user-code-str [code-str param-ctx]
+  (try                                      ; todo return monad
+    (-> (eval-str code-str)
+        (q-util/run-formula! param-ctx))
+    (catch js/Error e {})))
+
 (defn build-anchor-route
-  ([domain project link-dbid formula-str branch param-ctx]
+  ([domain project link-dbid formula-str branch-str param-ctx]
     ;(assert project)                                         ; safe - maybe constructing it now
    {:domain domain
     :project project
     :link-dbid link-dbid #_:id
-    :branch (or (some-> (:db param-ctx) .-branch (str "`" branch)) branch)
-    :query-params (try                                      ; todo return monad
-                    (-> (eval-str formula-str)
-                        (q-util/run-formula! param-ctx))
-                    (catch js/Error e {}))})
-  ([link formula-str branch param-ctx]
+    :branch (if-let [branch (safe-run-user-code-str branch-str param-ctx)]
+              (some-> (:db param-ctx) .-branch (str "`" branch))
+              (some-> (:db param-ctx) .-branch))
+    :query-params (safe-run-user-code-str formula-str param-ctx)})
+  ([link formula-str branch-str param-ctx]
    (build-anchor-route
      (-> link :hypercrud/owner :database/domain)
      (-> link :hypercrud/owner :database/ident)
      (-> link :db/id)
      formula-str
-     branch
+     branch-str
      param-ctx))
   ([anchor param-ctx]
    (build-anchor-route (:anchor/link anchor) (:anchor/formula anchor) (:anchor/branch anchor) param-ctx)))
