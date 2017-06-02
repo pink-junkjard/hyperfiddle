@@ -107,8 +107,8 @@
                          nil)
                        [hypercrud.browser.core/safe-ui'     ; cycle
                         route                               ; draw the branch
-                        (dissoc param-ctx :result :entity :attribute :value :layout)]])}
-          route-props)))))
+                        (dissoc param-ctx :result :entity :attribute :value :layout)]])})
+        route-props))))
 
 (defn anchor-visible? [anchor param-ctx]
   (let [visible-src (:anchor/visible? anchor)
