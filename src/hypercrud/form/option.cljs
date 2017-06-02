@@ -8,7 +8,6 @@
             [hypercrud.client.core :as hc]
             [hypercrud.compile.eval :refer [eval-str]]
             [hypercrud.form.q-util :as q-util]
-            [hypercrud.types :refer [->DbVal]]
             [hypercrud.ui.form-util :as form-util]))
 
 (defn default-label-renderer [v]

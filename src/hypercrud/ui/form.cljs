@@ -1,6 +1,5 @@
 (ns hypercrud.ui.form
   (:require [cursor.core :refer [cursor]]
-            [hypercrud.types :refer [->DbVal]]
             [hypercrud.browser.connection-color :as connection-color]
             [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.form-util :as form-util]

@@ -1,7 +1,6 @@
 (ns hypercrud.ui.table
   (:require [clojure.string :as string]
             [hypercrud.platform.native-event-listener :refer [native-listener]] ;provided dependency
-            [hypercrud.types :refer [->DbId ->DbVal]]
             [hypercrud.ui.auto-control :refer [auto-table-cell]]
             [hypercrud.ui.renderer :as renderer]
             [hypercrud.ui.widget :as widget]
