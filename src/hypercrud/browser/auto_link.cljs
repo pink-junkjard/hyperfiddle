@@ -8,7 +8,7 @@
 (defn system-link? [link-dbid]
   (map? (:id link-dbid)))
 
-(defn link-query-system-edit [conn owner e]
+(defn link-query-system-edit [conn owner e]                 ; these need to be thick/hydrated params bc we are manufacturing a pulled tree here.
   {:pre [conn owner e]}
   {:db/id (->DbId {:ident :system-edit
                    :owner (-> owner :db/id :id)
@@ -99,7 +99,7 @@
                        :link-entity
                        (let [conn-id (or
                                        (-> parent-link :link/request :link-entity/connection :db/id :id)
-                                       (-> param-ctx :query-params :entity :conn-id) #_ "cardinality many parent conn-id is correct")
+                                       (-> param-ctx :query-params :entity :conn-id) #_"cardinality many parent conn-id is correct")
                              conn {:db/id (->DbId conn-id hc/*root-conn-id*)}]
                          [#_{:anchor/prompt "edit"
                              :anchor/ident :sys
@@ -124,8 +124,9 @@
         attr-links (case type
                      :link-query
                      (->> (partition 4 colspec)             ; driven by colspec, not find elements, because what matters is what's there.
-                          (mapcat (fn [[conn fe-name ident maybe-field]]
-                                    (let [fe (get find-elements fe-name)
+                          (mapcat (fn [[db fe-name ident maybe-field]]
+                                    (let [conn {:db/id (->DbId (.-conn-id db) hc/*root-conn-id*)}
+                                          fe (get find-elements fe-name)
                                           _ (assert fe)
                                           attr ((:schema param-ctx) ident) #_"nil for db/id"]
                                       (case (-> attr :attribute/valueType :db/ident)
@@ -148,8 +149,9 @@
 
                      :link-entity
                      (->> (partition 4 colspec)
-                          (mapcat (fn [[conn fe-name ident maybe-field]]
-                                    (let [attr ((:schema param-ctx) ident) #_"nil for db/id"]
+                          (mapcat (fn [[db fe-name ident maybe-field]]
+                                    (let [conn {:db/id (->DbId (.-conn-id db) hc/*root-conn-id*)}
+                                          attr ((:schema param-ctx) ident) #_"nil for db/id"]
                                       (case (-> attr :attribute/valueType :db/ident)
                                         :db.type/ref
                                         [{:anchor/prompt (str "edit") ; conserve space in label
@@ -172,7 +174,7 @@
     (concat entity-links attr-links)))
 
 
-(defn request-for-system-link [root-db system-link-idmap]           ; always latest
+(defn request-for-system-link [root-db system-link-idmap]   ; always latest
   ; connection, owner, fe, attr.
 
   ; all this is in the parent-link, we can just overhydrate and then prune away what we don't need.
