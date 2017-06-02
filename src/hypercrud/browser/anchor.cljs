@@ -85,24 +85,22 @@
     (doall
       (merge
         (if txfn
-          ; do we need to hydrate any dependencies in this chain?
-          {:txfn #(let [result (txfn param-ctx %)]          ; branched
-                    (-> (if-not (p/promise? result) (p/resolved result) result) ; txfn may be sync or async
-                        (p/branch (fn [result]
-                                    ; the branch is out of date
-                                    ((:discard! param-ctx) (.-conn-id (:db param-ctx)) (.-branch (:db param-ctx)))
-                                    ; stage the result from biz logic into master
-                                    ((:with! param-ctx) (.-conn-id (:db param-ctx)) nil (:tx result))
-                                    nil)
-                                  (fn error [why]
-                                    (case why
-                                      :cancel ((:discard! param-ctx) (.-conn-id (:db param-ctx)) (.-branch (:db param-ctx)))
-                                      (js/console.error why))
-                                    nil))))})
+          (let [tx-from-modal (hc/tx (:response param-ctx) (:db param-ctx))]
+            ; do we need to hydrate any dependencies in this chain?
+            {:txfns {:stage (fn []
+                              (p/branch (txfn param-ctx tx-from-modal)
+                                        (fn [result]
+                                          ; the branch is out of date
+                                          ((:discard! param-ctx) (.-conn-id (:db param-ctx)) (.-branch (:db param-ctx)))
+                                          ; stage the result from biz logic into master
+                                          ((:with! param-ctx) (.-conn-id (:db param-ctx)) nil (:tx result))
+                                          nil)
+                                        (fn [why]
+                                          (js/console.error why))))
+                     :cancel #((:discard! param-ctx) (.-conn-id (:db param-ctx)) (.-branch (:db param-ctx)))}}))
 
         (if (:anchor/branch anchor)                         ; the whole point of popovers is managed branches.
-          {:modal-tx (hc/tx (:response param-ctx) (:db param-ctx)) ; biz logic runs on the branch stage
-           :popover (fn []
+          {:popover (fn []
                       [:div
                        (case (:display-mode param-ctx)
                          :xray [(:navigate-cmp param-ctx) route-props "self"]
