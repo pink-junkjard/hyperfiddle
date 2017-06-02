@@ -49,18 +49,19 @@
         anchors (widget/process-popover-anchors anchors param-ctx)
         anchors-lookup (->> (remove :anchor/attribute anchors)
                             (group-by (fn [anchor]
-                                        ; link-entity's don't set find-element, but they get the entity in scope nonetheless.
-                                        ; unless repeating=false.
                                         (if-let [find-element (:anchor/find-element anchor)]
                                           (:find-element/name find-element)
                                           "entity"))))
         fields (->> (partition 4 colspec)
-                    (group-by second)
+                    (group-by (fn [[dbval fe-name ident maybe-field]] fe-name))
                     (mapcat
                       (fn [[fe-name colspec]]
                         (let [form-anchors (get anchors-lookup fe-name)
                               entity-new-anchors (->> form-anchors (remove :anchor/repeating?))
-                              entity-anchors (->> form-anchors (filter :anchor/repeating?))]
+                              entity-anchors (->> form-anchors (filter :anchor/repeating?))
+                              db (ffirst colspec)
+                              param-ctx (assoc param-ctx :db db
+                                                         :user-swap! (partial (:user-swap! param-ctx) (.-conn-id db) (.-branch db)))]
                           (concat
                             ; don't put entity in scope because it messes up formulas which have to be deterministic with request side.
                             (widget/render-anchors (remove :anchor/render-inline? entity-new-anchors) param-ctx)
@@ -70,7 +71,7 @@
                               (concat
                                 (widget/render-anchors (remove :anchor/render-inline? entity-anchors) param-ctx)
                                 (->> colspec
-                                     (mapv (fn [[conn fe-name ident maybe-field]]
+                                     (mapv (fn [[db fe-name ident maybe-field]]
                                              (let [param-ctx (as-> param-ctx $
                                                                    ; :db/id is missing from schema so fake it here, it has no valueType
                                                                    (assoc $ :attribute (get (:schema param-ctx) ident {:attribute/ident ident})

@@ -1,7 +1,7 @@
 (ns hypercrud.browser.auto-link
   (:require [hypercrud.browser.link-util :as link-util]
             [hypercrud.client.core :as hc]
-            [hypercrud.types :refer [->DbId ->DbVal ->EntityRequest]]
+            [hypercrud.types :refer [->DbId ->EntityRequest]]
             [hypercrud.ui.form-util :as form-util]))
 
 
@@ -14,7 +14,7 @@
                    :owner (-> owner :db/id :id)
                    :conn (-> conn :db/id :id)
                    :e (-> e :db/id :id)}
-                  (-> conn :db/id :id))
+                  (-> conn :db/id :id))                     ; this should be root-conn, bug
    :hypercrud/owner owner
    :link/name (str "system-" (:find-element/name e))
    :link/request {:link-entity/connection conn}})
@@ -56,8 +56,8 @@
 (defn system-anchors
   "All sys links are :anchor/ident :sys, so they can be matched and merged with user-anchors.
   Matching is determined by [repeat? entity attribute ident]"
-  [parent-link result param-ctx]
-  (let [colspec (form-util/determine-colspec result parent-link param-ctx) ; colspec can be empty if result is empty and no form.
+  [parent-link branch-or-branches result param-ctx]
+  (let [colspec (form-util/determine-colspec result parent-link branch-or-branches param-ctx) ; colspec can be empty if result is empty and no form.
 
         type (link-util/link-type parent-link)
 
@@ -172,16 +172,16 @@
     (concat entity-links attr-links)))
 
 
-(defn request-for-system-link [system-link-idmap]
+(defn request-for-system-link [root-db system-link-idmap]           ; always latest
   ; connection, owner, fe, attr.
 
   ; all this is in the parent-link, we can just overhydrate and then prune away what we don't need.
   ; That was the plan, but it doesn't work in second layer deep sys links, the parent is a sys link. So we
   ; need to just hydrate what we need.
 
-  [(->EntityRequest (->DbId (:conn system-link-idmap) hc/*root-conn-id*) nil (->DbVal hc/*root-conn-id* nil) ['*])
-   (->EntityRequest (->DbId (:owner system-link-idmap) hc/*root-conn-id*) nil (->DbVal hc/*root-conn-id* nil) ['*])
-   (if-let [e (:e system-link-idmap)] (->EntityRequest (->DbId (:e system-link-idmap) hc/*root-conn-id*) nil (->DbVal hc/*root-conn-id* nil)
+  [(->EntityRequest (->DbId (:conn system-link-idmap) hc/*root-conn-id*) nil root-db ['*])
+   (->EntityRequest (->DbId (:owner system-link-idmap) hc/*root-conn-id*) nil root-db ['*])
+   (if-let [e (:e system-link-idmap)] (->EntityRequest (->DbId (:e system-link-idmap) hc/*root-conn-id*) nil root-db
                                                        [:db/id
                                                         :find-element/name
                                                         :find-element/connection
@@ -191,7 +191,7 @@
                                                                                                      {:attribute/valueType [:db/id :db/ident]}
                                                                                                      {:attribute/cardinality [:db/id :db/ident]}
                                                                                                      {:attribute/unique [:db/id :db/ident]}]}]}]}]))
-   (if-let [a (:a system-link-idmap)] (->EntityRequest (->DbId (:a system-link-idmap) hc/*root-conn-id*) nil (->DbVal hc/*root-conn-id* nil)
+   (if-let [a (:a system-link-idmap)] (->EntityRequest (->DbId (:a system-link-idmap) hc/*root-conn-id*) nil root-db
                                                        ['*
                                                         {:attribute/valueType [:db/id :db/ident]
                                                          :attribute/cardinality [:db/id :db/ident]

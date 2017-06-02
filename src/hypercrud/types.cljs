@@ -1,5 +1,6 @@
 (ns hypercrud.types
-  (:require [cljs.reader :as reader]))
+  (:require [cljs.reader :as reader]
+            [hypercrud.client.core :as hc]))
 
 
 (deftype DbId [id conn-id]
@@ -18,16 +19,16 @@
 (def read-DbId #(apply ->DbId %))
 
 
-(deftype DbVal [conn-id t #_ history?]
-  Object (toString [_] (str "#DbVal" (pr-str [conn-id t])))
+(deftype DbVal [conn-id branch #_history?]
+  Object (toString [_] (str "#DbVal" (pr-str [conn-id branch])))
   IPrintWithWriter (-pr-writer [o writer _] (-write writer (.toString o)))
-  IHash (-hash [this] (hash [conn-id t]))
+  IHash (-hash [this] (hash [conn-id branch]))
   IEquiv (-equiv [this other] (= (hash this) (hash other)))
   ILookup
   (-lookup [o k] (get o k nil))
   (-lookup [o k not-found] (case k
                              :conn-id (.-conn-id o)
-                             :t (.-t o)
+                             :branch (.-branch o)
                              not-found)))
 
 (def read-DbVal #(apply ->DbVal %))
@@ -58,7 +59,7 @@
 (deftype DbValTransitHandler []
   Object
   (tag [_ v] "DbVal")
-  (rep [_ v] [(.-conn-id v) (.-t v)])
+  (rep [_ v] [(.-conn-id v) (.-branch v)])
   (stringRep [_ v] nil)
   (getVerboseHandler [_] nil))
 
@@ -89,17 +90,17 @@
                              :pull-exps pull-exps
                              not-found)))
 
-(deftype EntityRequest [e a dbval pull-exp]
-  Object (toString [_] (str "#EReq" (pr-str [e a dbval pull-exp])))
+(deftype EntityRequest [e a db pull-exp]
+  Object (toString [_] (str "#EReq" (pr-str [e a db pull-exp])))
   IPrintWithWriter (-pr-writer [o writer _] (-write writer (.toString o)))
-  IHash (-hash [this] (hash [e a dbval pull-exp]))
+  IHash (-hash [this] (hash [e a db pull-exp]))
   IEquiv (-equiv [this other] (= (hash this) (hash other)))
   ILookup
   (-lookup [o k] (get o k nil))
   (-lookup [o k not-found] (case k
                              :e e
                              :a a
-                             :dbval dbval
+                             :db db
                              :pull-exp pull-exp
                              not-found)))
 
@@ -113,7 +114,7 @@
 (deftype EntityRequestTransitHandler []
   Object
   (tag [this v] "EReq")
-  (rep [this v] [(.-e v) (.-a v) (.-dbval v) (.-pull-exp v)])
+  (rep [this v] [(.-e v) (.-a v) (.-db v) (.-pull-exp v)])
   (stringRep [this v] nil))
 
 (def read-QueryRequest #(apply ->QueryRequest %))           ; dedup

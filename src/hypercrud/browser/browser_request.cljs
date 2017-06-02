@@ -9,12 +9,12 @@
             [hypercrud.client.core :as hc]
             [hypercrud.client.schema :as schema-util]
             [hypercrud.form.q-util :as q-util]
-            [hypercrud.types :as types :refer [->DbId ->DbVal ->EntityRequest]]
+            [hypercrud.types :refer [->DbId ->EntityRequest]]
             [hypercrud.ui.form-util :as form-util]
             [hypercrud.util :as util]))
 
 
-(defn request-for-link [link-dbid]
+(defn request-for-link [root-db link-dbid]                          ; always latest
   (assert link-dbid)
   (let [form-pull-exp ['*
                        {:hypercrud/owner ['*]
@@ -24,7 +24,7 @@
                                             {:attribute/valueType [:db/id :db/ident]
                                              :attribute/cardinality [:db/id :db/ident]
                                              :attribute/unique [:db/id :db/ident]}]}]}]]
-    (->EntityRequest link-dbid nil (->DbVal hc/*root-conn-id* nil)
+    (->EntityRequest link-dbid nil root-db
                      ['*
                       {:link/request ['*
                                       :link-query/value
@@ -137,76 +137,82 @@
                                               ))))))))))))))
 
 
-(defn requests-for-link-query [link query-params param-ctx]
+(defn requests-for-link-query [link branches query-params param-ctx]
   (let [link-query (:link/request link)
         q (some-> link-query :link-query/value reader/read-string)
-        params-map (merge query-params (q-util/build-dbhole-lookup link-query))
+        params-map (merge query-params (q-util/build-dbhole-lookup (:response param-ctx) branches link-query))
         param-ctx (assoc param-ctx :query-params query-params)]
-    (let [request (q-util/query-value q link-query params-map param-ctx)]
+    (let [request (q-util/->queryRequest q link-query branches params-map param-ctx)]
       (concat
         [request]
         (->> (get-in link [:link/request :link-query/find-element])
              (mapv :find-element/connection)
-             (mapv schema-util/schema-request))
+             (mapv (partial schema-util/schema-request (:root-db param-ctx))))
         (exception/extract
-          (mlet [result (hc/hydrate (:peer param-ctx) request)
-                 schema (hc/hydrate (:peer param-ctx) (schema-util/schema-request nil))] ; map connections
+          (mlet [result (hc/hydrate (:response param-ctx) request)
+                 schema (hc/hydrate (:response param-ctx) (schema-util/schema-request (:root-db param-ctx) nil))] ; map connections
                 (cats/return
                   (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
                         param-ctx (assoc param-ctx :schema indexed-schema)]
                     (link-query-dependent-requests result (:link-query/find-element link-query)
                                                    (auto-anchor/merge-anchors
-                                                     (auto-anchor/auto-anchors (auto-link/system-anchors link result param-ctx))
+                                                     (auto-anchor/auto-anchors (auto-link/system-anchors link branches result param-ctx))
                                                      (auto-anchor/auto-anchors (:link/anchor link)))
                                                    param-ctx))))
           nil)))))
 
-(defn requests-for-link-entity [link query-params param-ctx]
-  (let [request (q-util/->entityRequest (:link/request link) query-params)
+(defn requests-for-link-entity [link branch query-params param-ctx]
+  (let [request (q-util/->entityRequest (:link/request link) branch query-params param-ctx)
         _ (assert (get-in link [:link/request :link-entity/connection]))
-        schema-request (schema-util/schema-request (get-in link [:link/request :link-entity/connection]))]
+        schema-request (schema-util/schema-request (:root-db param-ctx) (get-in link [:link/request :link-entity/connection]))]
     (concat
       [request schema-request]
       (exception/extract
-        (mlet [result (hc/hydrate (:peer param-ctx) request)
-               schema (hc/hydrate (:peer param-ctx) schema-request)]
+        (mlet [result (hc/hydrate (:response param-ctx) request)
+               schema (hc/hydrate (:response param-ctx) schema-request)]
               (cats/return
                 (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
                       param-ctx (assoc param-ctx :schema indexed-schema)
                       result (->> (if (map? result) [result] result) (mapv #(assoc {} "entity" %)))
                       form (-> (-> link :link/request :link-entity/form)
                                (update :form/field form-util/filter-visible-fields param-ctx))]
+                  (js/console.log (pr-str link))
                   (link-entity-dependent-requests result form
                                                   (auto-anchor/merge-anchors
-                                                    (auto-anchor/auto-anchors (auto-link/system-anchors link result param-ctx))
+                                                    (auto-anchor/auto-anchors (auto-link/system-anchors link branch result param-ctx))
                                                     (auto-anchor/auto-anchors (:link/anchor link)))
                                                   param-ctx))))
         nil))))
 
-(defn requests-for-link [link query-params param-ctx]
+(defn requests-for-link [link branch query-params param-ctx] ; Now we are hydrating userland, use the branch
   (let [param-ctx (assoc param-ctx :query-params query-params)]
     (case (link-util/link-type link)
-      :link-query (requests-for-link-query link query-params param-ctx)
-      :link-entity (requests-for-link-entity link query-params param-ctx)
+      :link-query (requests-for-link-query link branch query-params param-ctx)
+      :link-entity (requests-for-link-entity link branch query-params param-ctx)
       :link-blank (link-query-dependent-requests [] [] (:link/anchor link) param-ctx)))) ; this case does not request the schema, as we don't have a connection for the link.
 
 (defn request' [route param-ctx]
   (if (auto-link/system-link? (:link-dbid route))
     (let [system-link-idmap (-> route :link-dbid :id)
-          system-link-requests (auto-link/request-for-system-link system-link-idmap)]
+          system-link-requests (auto-link/request-for-system-link (:root-db param-ctx) system-link-idmap)]
       (concat
         (remove nil? system-link-requests)
         (if-let [system-link-deps (exception/extract
-                                    (->> (mapv #(if % (hc/hydrate (:peer param-ctx) %)
+                                    (->> (mapv #(if % (hc/hydrate (:response param-ctx) %)
                                                       (exception/success nil)) system-link-requests)
                                          (reduce #(mlet [acc %1 v %2] (cats/return (conj acc v))) (exception/success [])))
                                     nil)]
           (let [link (auto-link/hydrate-system-link system-link-idmap system-link-deps param-ctx)]
-            (requests-for-link link (:query-params route) param-ctx)))))
-    (let [link-request (request-for-link (:link-dbid route))]
+            (if-not (-> link :link/request :link-entity/connection :db/id :id)
+              (do
+                (js/console.log (pr-str route))
+                (js/console.log (pr-str system-link-idmap))
+                (js/console.log (pr-str link))))
+            (requests-for-link link (:branch route) (:query-params route) param-ctx)))))
+    (let [link-request (request-for-link (:root-db param-ctx) (:link-dbid route))]
       (concat [link-request]
-              (if-let [link (-> (hc/hydrate (:peer param-ctx) link-request) (exception/extract nil))]
-                (requests-for-link link (:query-params route) param-ctx))))))
+              (if-let [link (-> (hc/hydrate (:response param-ctx) link-request) (exception/extract nil))]
+                (requests-for-link link (:branch route) (:query-params route) param-ctx))))))
 
 (defn request [anchor param-ctx]
   (if (:anchor/link anchor)

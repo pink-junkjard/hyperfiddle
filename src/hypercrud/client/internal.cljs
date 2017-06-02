@@ -3,7 +3,7 @@
             [goog.Uri]
             [goog.string]
             [hypercrud.types :as types]
-            [hypercrud.client.peer :as peer]))
+            [hypercrud.client.response :as response]))
 
 
 ;; transit uri encoder type
@@ -33,7 +33,7 @@
    "DbError" types/DbErrorTransitReader
    "QReq" types/read-QueryRequest
    "EReq" types/read-EntityRequest
-   "Peer" peer/read-Peer})
+   "Response" response/read-Response})
 
 (def transit-write-handlers
   {goog.Uri (UriHandler.)
@@ -42,7 +42,7 @@
    types/DbError (types/DbErrorTransitHandler.)
    types/QueryRequest (types/QueryRequestTransitHandler.)
    types/EntityRequest (types/EntityRequestTransitHandler.)
-   peer/Peer (peer/PeerTransitHandler.)})
+   response/Response (response/ResponseTransitHandler.)})
 
 
 (def transit-encoding-opts {:handlers transit-write-handlers})

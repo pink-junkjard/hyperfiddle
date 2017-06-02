@@ -23,31 +23,31 @@
 (defn hydrate-link [peer link-dbid param-ctx]
   (if (auto-link/system-link? link-dbid)
     (let [system-link-idmap (-> link-dbid :id)]
-      (->> (auto-link/request-for-system-link system-link-idmap)
-           (mapv #(if % (hc/hydrate (:peer param-ctx) %)
+      (->> (auto-link/request-for-system-link (:root-db param-ctx) system-link-idmap)
+           (mapv #(if % (hc/hydrate (:response param-ctx) %)
                         (exception/success nil)))
            (reduce #(mlet [acc %1 v %2] (cats/return (conj acc v))) (exception/success []))
            (cats/fmap #(auto-link/hydrate-system-link system-link-idmap % param-ctx))))
-    (hc/hydrate peer (browser-request/request-for-link link-dbid))))
+    (hc/hydrate peer (browser-request/request-for-link (:root-db param-ctx) link-dbid))))
 
 (declare user-result)
 
 (def never-read-only (constantly false))
 
 (defn ui' [{query-params :query-params :as route} param-ctx]
-  (mlet [link (hydrate-link (:peer param-ctx) (:link-dbid route) param-ctx)
+  (mlet [link (hydrate-link (:response param-ctx) (:link-dbid route) param-ctx) ; always latest
          request (try-on
                    (case (link-util/link-type link)
                      :link-query (let [link-query (:link/request link)
                                        q (some-> link-query :link-query/value reader/read-string)
-                                       route (merge query-params (q-util/build-dbhole-lookup link-query))]
-                                   (q-util/query-value q link-query route param-ctx))
-                     :link-entity (q-util/->entityRequest (:link/request link) (:query-params route))
+                                       params-map (merge query-params (q-util/build-dbhole-lookup (:response param-ctx) (:branch route) link-query))]
+                                   (q-util/->queryRequest q link-query (:branch route) params-map param-ctx))
+                     :link-entity (q-util/->entityRequest (:link/request link) (:branch route) (:query-params route) param-ctx)
                      :link-blank nil
                      nil))
-         result (if request (hc/hydrate (:peer param-ctx) request) (exception/success nil))
+         result (if request (hc/hydrate (:response param-ctx) request) (exception/success nil))
          ; schema is allowed to be nil if the link only has anchors and no data dependencies
-         schema (exception/try-or-else (hc/hydrate (:peer param-ctx) (schema-util/schema-request nil)) nil)]
+         schema (exception/try-or-else (hc/hydrate (:response param-ctx) (schema-util/schema-request (:root-db param-ctx) nil)) nil)]
         (cats/return
           (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
                 param-ctx (assoc param-ctx                  ; provide defaults before user-bindings run. TODO query side
@@ -79,8 +79,8 @@
                            (-> link :link/request :link-query/single-result-as-entity?) (first result)
                            :else result))
 
-                colspec (form-util/determine-colspec result link param-ctx)
-                system-anchors (auto-anchor/auto-anchors (auto-link/system-anchors link result param-ctx))]
+                colspec (form-util/determine-colspec result link (:branch route) param-ctx)
+                system-anchors (auto-anchor/auto-anchors (auto-link/system-anchors link (:branch route) result param-ctx))]
 
             (case (get param-ctx :display-mode)             ; default happens higher, it influences queries too
               :user ((user-result link param-ctx) result colspec (auto-anchor/merge-anchors system-anchors (auto-anchor/auto-anchors (:link/anchor link))) (user-bindings/user-bindings link param-ctx))

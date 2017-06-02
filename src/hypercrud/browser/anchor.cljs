@@ -14,24 +14,26 @@
 
 
 (defn build-anchor-route
-  ([domain project link-dbid formula-str param-ctx]
+  ([domain project link-dbid formula-str branch param-ctx]
     ;(assert project)                                         ; safe - maybe constructing it now
    {:domain domain
     :project project
     :link-dbid link-dbid #_:id
+    :branch (or (some-> (:db param-ctx) .-branch (str "`" branch)) branch)
     :query-params (try                                      ; todo return monad
                     (-> (eval-str formula-str)
                         (q-util/run-formula! param-ctx))
                     (catch js/Error e {}))})
-  ([link formula-str param-ctx]
+  ([link formula-str branch param-ctx]
    (build-anchor-route
      (-> link :hypercrud/owner :database/domain)
      (-> link :hypercrud/owner :database/ident)
      (-> link :db/id)
      formula-str
+     branch
      param-ctx))
   ([anchor param-ctx]
-   (build-anchor-route (:anchor/link anchor) (:anchor/formula anchor) param-ctx)))
+   (build-anchor-route (:anchor/link anchor) (:anchor/formula anchor) (:anchor/branch anchor) param-ctx)))
 
 (defn holes-filled? [hole-names query-params-map]
   (set/subset? (set hole-names) (set (keys (into {} (remove (comp nil? val) query-params-map))))))
@@ -75,39 +77,40 @@
                  ; non-fatal error, report it here so user can fix it
                  (if error (js/alert (str "cljs eval error: " error))) ; return monad so tooltip can draw the error
                  value))
-        route (if (:anchor/link anchor) (build-anchor-route anchor param-ctx)) #_"return monad so tooltip can draw the error?"
-        route-props (if route (build-anchor-props-raw route (:anchor/link anchor) param-ctx))]
+        route (if (:anchor/link anchor) (build-anchor-route anchor param-ctx #_"not branched yet! about to branch"))
+        route-props (if route (build-anchor-props-raw route (:anchor/link anchor) param-ctx))
+        param-ctx (if-let [branch (:branch route)]
+                    (update param-ctx :db #(hc/db (:response param-ctx) (.-conn-id %) branch))
+                    param-ctx)]
     (doall
       (merge
         (if txfn
           ; do we need to hydrate any dependencies in this chain?
-          {:txfn #(let [result (txfn param-ctx %)]          ; txfn may be sync or async
-                    (-> (if-not (p/promise? result) (p/resolved result) result)
-                        (p/branch (:user-swap! param-ctx)
+          {:txfn #(let [result (txfn param-ctx %)]          ; branched
+                    (-> (if-not (p/promise? result) (p/resolved result) result) ; txfn may be sync or async
+                        (p/branch (fn [result]
+                                    ; the branch is out of date
+                                    ((:discard! param-ctx) (.-conn-id (:db param-ctx)) (.-branch (:db param-ctx)))
+                                    ; stage the result from biz logic into master
+                                    ((:with! param-ctx) (.-conn-id (:db param-ctx)) nil (:tx result))
+                                    nil)
                                   (fn error [why]
-                                    (if-not (= :cancel why)
-                                      (js/console.error why))))))})
+                                    (case why
+                                      :cancel ((:discard! param-ctx) (.-conn-id (:db param-ctx)) (.-branch (:db param-ctx)))
+                                      (js/console.error why))
+                                    nil))))})
 
-        (if (and txfn (:anchor/link anchor))                ; default case is a syslink
-          ; this is a special case where due to the txfn the embed goes in a popover
-          {:popover (fn [state]
-                      ; assumes everything is hydrated
+        (if (:anchor/branch anchor)                         ; the whole point of popovers is managed branches.
+          {:modal-tx (hc/tx (:response param-ctx) (:db param-ctx)) ; biz logic runs on the branch stage
+           :popover (fn []
                       [:div
                        (case (:display-mode param-ctx)
                          :xray [(:navigate-cmp param-ctx) route-props "self"]
                          nil)
                        [hypercrud.browser.core/safe-ui'     ; cycle
-                        route
-                        (-> param-ctx
-                            (dissoc :result :entity :attribute :value :layout)
-                            (assoc :user-swap!
-                                   (fn [{:keys [tx route]}]
-                                     (assert (not route) "popups not allowed to route")
-                                     (swap! state tx/into-tx tx)
-                                     ; watch this and re-hydrate
-                                     )))]])})
-
-        route-props))))
+                        route                               ; draw the branch
+                        (dissoc param-ctx :result :entity :attribute :value :layout)]])}
+          route-props)))))
 
 (defn anchor-visible? [anchor param-ctx]
   (let [visible-src (:anchor/visible? anchor)

@@ -32,7 +32,6 @@
   ([anchors param-ctx]
    (render-anchors (map vector anchors (repeat param-ctx)))))
 
-
 (defn render-inline-anchors
   ([maybe-field anchors param-ctx]                          ; the unused param on this airity is concerning
    (render-inline-anchors anchors (assoc param-ctx :isComponent (:attribute/isComponent (:attribute param-ctx)))))

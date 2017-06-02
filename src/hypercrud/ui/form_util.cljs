@@ -2,6 +2,7 @@
   (:require [cljs.reader :as reader]
             [clojure.string :as string]
             [hypercrud.browser.link-util :as link-util]
+            [hypercrud.client.core :as hc]
             [hypercrud.types :refer [->DbId]]
             [hypercrud.ui.code-editor :as code-editor]
             [hypercrud.ui.tooltip :as tooltip]
@@ -31,7 +32,7 @@
   (->> (mapv (juxt :find-element/name identity) (:link-query/find-element link-req))
        (into {})))
 
-(defn manufacture-entity-find-element [link param-ctx]
+(defn manufacture-entity-find-element [link #_branches param-ctx]
   (let [conn (-> link :link/request :link-entity/connection)
         #_(or
                #_(-> link :link/request :link-entity/connection)
@@ -47,7 +48,7 @@
      :find-element/form (-> (-> link :link/request :link-entity/form)
                             (update :form/field filter-visible-fields param-ctx))}))
 
-(defn get-ordered-find-elements [link param-ctx]
+(defn get-ordered-find-elements [link #_branches param-ctx]
   (let [req (:link/request link)]
     (case (link-util/link-type link)
       :link-query (let [q (some-> req :link-query/value reader/read-string)
@@ -55,7 +56,7 @@
                     (->> (util/parse-query-element q :find)
                          (mapv str)
                          (mapv #(get find-element-lookup %))))
-      :link-entity [(manufacture-entity-find-element link param-ctx)]
+      :link-entity [(manufacture-entity-find-element link #_branches param-ctx)]
       [])))
 
 
@@ -65,9 +66,10 @@ but retaining and correlating all information through a join. Not all entities a
 especially consider the '* case, so we need a uniform column set driving the body rows in sync
 with the headers but the resultset needs to match this column-fields structure now too; since
 the find-element level has been flattened out of the columns."
-  [result link param-ctx]
+  [result link branch-or-branches param-ctx]
   (let [result (if (map? result) [result] result)           ; unified colspec for table and form
-        ordered-find-elements (get-ordered-find-elements link param-ctx)
+        branches (if-not (map? branch-or-branches) {"entity" branch-or-branches} branch-or-branches)
+        ordered-find-elements (get-ordered-find-elements link #_branches param-ctx)
         ordered-find-elements (strip-forms-in-raw-mode ordered-find-elements param-ctx)
         raw-mode? (= (:display-mode param-ctx) :root)
         result-as-columns (util/transpose result)
@@ -90,9 +92,11 @@ the find-element level has been flattened out of the columns."
                                              (:field/order field)
                                              ; raw mode sort is by namespaced attribute, per find-element
                                              k))
-                                         col-idents)]
+                                         col-idents)
+
+                    db (hc/db (:response param-ctx) (-> fe-conn :db/id :id) (get branches fe-name))]
                 (mapcat (fn [k]
-                          [fe-conn fe-name k (get indexed-fields k)]) col-idents')))
+                          [db fe-name k (get indexed-fields k)]) col-idents')))
             result-as-columns
             ordered-find-elements)
       (flatten)

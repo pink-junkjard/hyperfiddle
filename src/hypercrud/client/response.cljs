@@ -1,7 +1,7 @@
-(ns hypercrud.client.peer
+(ns hypercrud.client.response
   (:require [cats.monad.exception :as exception]
             [hypercrud.client.core :as hc]
-            [hypercrud.types :as types]
+            [hypercrud.types :as types :refer [->DbVal]]
             [cljs.reader :as reader]))
 
 (defn human-error [e req]
@@ -15,8 +15,8 @@
        [:pre (.-msg e)]]
       (.-msg e))))
 
-(deftype Peer [requests pulled-trees-map]
-  hc/Peer
+(deftype Response [requests pulled-trees-map stage-val]         ; can this be called cache?
+  hc/Response
   (hydrate [this request]
     ; (exception/try-or-recover  (constantly (exception/failure (str unfilled-holes))))
     (if (contains? pulled-trees-map request)
@@ -29,32 +29,33 @@
           #_(js/console.log error)                          ; happens a lot during query fns - would need to silence this log during query phase.
           (exception/failure error)))))
 
+  (db [this conn-id branch]
+    (->DbVal conn-id branch))
 
-  (t [this]
-    (hash pulled-trees-map))
-
+  (tx [this db]
+    (get-in stage-val [(.-conn-id db) (.-branch db)] []))
 
   IHash
   (-hash [this]
+    ; requests have a dbval which has a hash of the stage
     (hash requests))
-
 
   IEquiv
   (-equiv [this other]
     (= (hash this) (hash other)))
 
   ; This looks like edn but is not edn - its really just for debugging.
-  Object (toString [this] (str "#Peer" (pr-str [(count requests) (hash this)])))
+  Object (toString [this] (str "#Response" (pr-str [(count requests) (hash this)])))
   IPrintWithWriter (-pr-writer [o writer _] (-write writer (.toString o))))
 
 
-(deftype PeerTransitHandler []
+(deftype ResponseTransitHandler []
   Object
-  (tag [this v] "Peer")
+  (tag [this v] "Response")
 
   ; is it true that the requests are just (set (keys pulled-trees-map)) ?
-  (rep [this v] [(.-requests v) (.-pulled-trees-map v)])
+  (rep [this v] [(.-requests v) (.-pulled-trees-map v) (.-stage v)])
   (stringRep [this v] nil))
 
-(def read-Peer #(apply ->Peer %))
-(reader/register-tag-parser! 'Peer read-Peer)
+(def read-Response #(apply ->Response %))
+(reader/register-tag-parser! 'Response read-Response)

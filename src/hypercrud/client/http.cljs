@@ -2,10 +2,12 @@
   (:require [cljs.pprint :as pprint]
             [cljs.reader :as reader]
             [clojure.set :as set]
+            [clojure.string :as str]
             [goog.Uri]
             [hypercrud.client.core :as hc]
             [hypercrud.client.internal :as internal]
-            [hypercrud.client.peer :as peer]
+            [hypercrud.client.response :as response]
+            [hypercrud.client.tx :as tx]
             [kvlt.core :as kvlt]
             [kvlt.middleware.params]
             [promesa.core :as p]))
@@ -40,47 +42,70 @@
       (.resolve relative-uri)))
 
 
-(deftype HttpConnection [entry-uri ^:mutable peer]
-  hc/Connection
-  (hydrate!* [this requests staged-tx]
-    (-> (kvlt/request! {:url (resolve-relative-uri entry-uri (goog.Uri. "hydrate"))
-                        :content-type content-type-transit ; helps debugging to view as edn
-                        :accept content-type-transit ; needs to be fast so transit
-                        :method :post
-                        :form {:staged-tx staged-tx :request (into #{} requests)}
-                        :as :auto})
-        (p/then (fn [http-response]
-                  (let [{:keys [t pulled-trees-map]} (-> http-response :body :hypercrud)]
-                    (peer/->Peer (into #{} requests) pulled-trees-map))))))
+(deftype Peer [entry-uri stage ^:mutable last-response]
+  hc/Peer
+  (hydrate!* [this requests]
+    (let [stage-val @stage]
+      (-> (kvlt/request! {:url (resolve-relative-uri entry-uri (goog.Uri. "hydrate"))
+                          :content-type content-type-transit ; helps debugging to view as edn
+                          :accept content-type-transit      ; needs to be fast so transit
+                          :method :post
+                          :form {:staged-tx stage-val :request (into #{} requests)}
+                          :as :auto})
+          (p/then (fn [http-response]
+                    (let [{:keys [t pulled-trees-map]} (-> http-response :body :hypercrud)]
+                      (response/->Response (into #{} requests) pulled-trees-map stage-val)))))))
 
-  (hydrate! [this requests staged-tx force?]
-    (if (and (not force?) (hc/hydrated? this requests))
-      (p/resolved peer)
-      (-> (hc/hydrate!* this requests staged-tx)
-          (p/then (fn [peer']
-                    (set! peer peer')
-                    peer)))))
+  ; why did 'force?' behavior change?
+  (hydrate! [this request]
+    #_(if (hc/hydrated? this request)                         ; this if check should be higher?
+      (p/resolved last-response))
+    (-> (hc/hydrate!* this request)
+        (p/then (fn [response]
+                  (set! last-response response)
+                  last-response))))
 
   ; for clone link - is this bad? yeah its bad since it can never be batched.
-  (hydrate-one! [this request staged-tx]
-    (-> (hc/hydrate!* this #{request} staged-tx)
+  (hydrate-one! [this request]
+    (-> (hc/hydrate!* this #{request})
         (p/then (fn [peer] (hypercrud.client.core/hydrate peer request)))))
 
 
   (hydrated? [this requests]
     ; compare our pre-loaded state with the peer dependencies
-    (set/subset? (set requests) (some-> peer .-requests)))
+    (set/subset? (set requests) (some-> last-response .-requests)))
 
 
-  (transact! [this tx]
+  (transact! [this conn-id]
     (-> (kvlt/request!
           {:url (resolve-relative-uri entry-uri (goog.Uri. "transact"))
            :content-type content-type-edn
            :accept content-type-edn
            :method :post
-           :form tx
+           :form (get-in stage [conn-id nil])
            :as :auto})
         (p/then (fn [resp]
                   (if (:success resp)
+                    ; clear master stage
+                    ; but that has to be transactional with a redirect???
                     (p/resolved (-> resp :body :hypercrud))
-                    (p/rejected resp)))))))
+                    (p/rejected resp))))))
+
+  ; We should just provide reducers.
+  (with! [this conn-id branch tx]
+    (swap! stage update-in [conn-id branch] tx/into-tx tx)
+    nil)
+
+  (merge! [this conn-id branch]
+    (let [parent-branch (butlast (str/split branch #"`"))]
+      (swap! stage (fn [s]
+                     (-> s
+                         (update-in [conn-id parent-branch] tx/into-tx (hc/tx last-response (hc/db last-response conn-id branch)))
+                         (update-in [conn-id] dissoc branch)))))
+    nil)
+
+  (discard! [this conn-id branch]
+    (swap! stage (fn [s]
+                   (update s conn-id dissoc branch)))
+    nil)
+  )

@@ -32,38 +32,43 @@
 
 (defn build-col-heads [colspec col-sort param-ctx]
   (->> (partition 4 colspec)
-       (mapv (fn [[conn fe-name ident field]]
-               (let [param-ctx (assoc param-ctx :attribute (get (:schema param-ctx) ident))
-                     css-classes [(str "field-element-" (form-util/css-slugify fe-name))
-                                  (str "field-attr-" (form-util/css-slugify (str ident)))] #_"Dustin removed field-id and field-prompt; use a custom renderer"
-                     on-click #()
+       (group-by (fn [[dbval fe-name ident maybe-field]] fe-name))
+       (mapcat (fn [[fe-name colspec]]
+                 (let [db (ffirst colspec)
+                       param-ctx (assoc param-ctx :db db
+                                                  :user-swap! (partial (:user-swap! param-ctx) (.-conn-id db) (.-branch db)))]
+                   (->> colspec
+                        (mapv (fn [[db fe-name ident field]]
+                                (let [param-ctx (assoc param-ctx :attribute (get (:schema param-ctx) ident {:attribute/ident ident}))
+                                      css-classes [(str "field-element-" (form-util/css-slugify fe-name))
+                                                   (str "field-attr-" (form-util/css-slugify (str ident)))] #_"Dustin removed field-id and field-prompt; use a custom renderer"
+                                      on-click #()
 
-                     ;with-sort-direction (fn [asc desc no-sort not-sortable]
-                     ;                      (if (sortable? field)
-                     ;                        (if (and (= form-dbid' form-dbid) (= ident' ident))
-                     ;                          (case direction
-                     ;                            :asc asc
-                     ;                            :desc desc)
-                     ;                          no-sort)
-                     ;                        not-sortable))
+                                      ;with-sort-direction (fn [asc desc no-sort not-sortable]
+                                      ;                      (if (sortable? field)
+                                      ;                        (if (and (= form-dbid' form-dbid) (= ident' ident))
+                                      ;                          (case direction
+                                      ;                            :asc asc
+                                      ;                            :desc desc)
+                                      ;                          no-sort)
+                                      ;                        not-sortable))
 
-                     ;on-click (with-sort-direction #(reset! col-sort [form-dbid ident :desc])
-                     ;                              #(reset! col-sort nil)
-                     ;                              #(reset! col-sort [form-dbid ident :asc])
-                     ;                              (constantly nil))
-                     ;arrow (with-sort-direction " ↓" " ↑" " ↕" nil)
+                                      ;on-click (with-sort-direction #(reset! col-sort [form-dbid ident :desc])
+                                      ;                              #(reset! col-sort nil)
+                                      ;                              #(reset! col-sort [form-dbid ident :asc])
+                                      ;                              (constantly nil))
+                                      ;arrow (with-sort-direction " ↓" " ↑" " ↕" nil)
 
-                     ]
+                                      ]
 
-                 [:td {:class (string/join " " css-classes)
-                       :style {:background-color (connection-color/connection-color (or (:color param-ctx)
-                                                                                        ; hack for top tables
-                                                                                        (-> conn :db/id :id)))}
-                       :key (str fe-name "-" ident)
-                       :on-click on-click}
-                  [:label (form-util/field-label field param-ctx)]
-                  #_[:span.sort-arrow arrow]])))
-       (seq)))
+                                  [:td {:class (string/join " " css-classes)
+                                        :style {:background-color (connection-color/connection-color (or (:color param-ctx)
+                                                                                                         ; hack for top tables
+                                                                                                         (.-conn-id db)))}
+                                        :key (str fe-name "-" ident)
+                                        :on-click on-click}
+                                   [:label (form-util/field-label field param-ctx)]
+                                   #_[:span.sort-arrow arrow]])))))))))
 
 (defn table-row-form [relation colspec anchors param-ctx]
   (let [entity-anchors-lookup (->> anchors
@@ -75,34 +80,37 @@
                                                  "entity"))))]
     [:tr
      (->> (partition 4 colspec)
-          (mapv (fn [[conn fe-name ident maybe-field]]      ; (fe-name, ident) are unique if taken together
-                  (let [entity (get relation fe-name)
-                        param-ctx (-> (form-util/entity-param-ctx entity param-ctx)
-                                      (assoc :attribute (get (:schema param-ctx) ident)
-                                             :value (get entity ident)
-                                             :layout :table))
-                        ; rebuilt too much due to joining fe-name X ident
-                        attribute-anchors (->> (get entity-anchors-lookup fe-name)
-                                               (filter :anchor/attribute))
-                        style {:border-color (connection-color/connection-color (:color param-ctx))}]
-                    [:td.truncate {:key (or (:db/id maybe-field) (str fe-name ident)) :style style}
-                     (let [anchors (filter #(= (-> param-ctx :attribute :db/id)
-                                               (some-> % :anchor/attribute :db/id)) attribute-anchors)
-                           props (form-util/build-props maybe-field anchors param-ctx)]
-                       (if (renderer/user-renderer param-ctx)
-                         (renderer/user-render maybe-field anchors props param-ctx)
-                         [auto-table-cell maybe-field anchors props param-ctx]))])))
-          (seq))
+          (group-by (fn [[db fe-name ident maybe-field]] fe-name))
+          (mapcat (fn [[fe-name colspec]]
+                    (let [entity (get relation fe-name)
+                          db (ffirst colspec)
+                          param-ctx (assoc param-ctx :db db
+                                                     :user-swap! (partial (:user-swap! param-ctx) (.-conn-id db) (.-branch db)))
+                          param-ctx (form-util/entity-param-ctx entity param-ctx)
+                          attribute-anchors (->> (get entity-anchors-lookup fe-name)
+                                                 (filter :anchor/attribute))]
+                      (->> colspec
+                           (mapv (fn [[db fe-name ident maybe-field]]
+                                   (let [param-ctx (assoc param-ctx :attribute (get (:schema param-ctx) ident {:attribute/ident ident})
+                                                                    :value (get entity ident)
+                                                                    :layout :table)
+                                         style {:border-color (connection-color/connection-color (:color param-ctx))}]
+                                     [:td.truncate {:key (or (:db/id maybe-field) (str fe-name ident)) :style style}
+                                      (let [anchors (filter #(= (-> param-ctx :attribute :db/id)
+                                                                (some-> % :anchor/attribute :db/id)) attribute-anchors)
+                                            props (form-util/build-props maybe-field anchors param-ctx)]
+                                        (if (renderer/user-renderer param-ctx)
+                                          (renderer/user-render maybe-field anchors props param-ctx)
+                                          [auto-table-cell maybe-field anchors props param-ctx]))]))))))))
 
      [:td.link-cell {:key :link-cell}
       ; inline entity-anchors are not yet implemented, what does that mean.
       ; find-element anchors need more items in their ctx
       (widget/render-anchors (->> (partition 4 colspec)
-                                  (mapv second)
-                                  (set)                     ; distinct find elements
-                                  (mapcat (fn [fe-name]
-                                            (let [entity (get relation fe-name)
-                                                  _ (assert entity)
+                                  (group-by (fn [[db fe-name ident maybe-field]] fe-name)) ; keys are set, ignore colspec now except for db which is uniform.
+                                  (mapcat (fn [[fe-name colspec]]
+                                            (let [entity (get relation fe-name) _ (assert entity)
+                                                  param-ctx (assoc param-ctx :db (ffirst colspec))
                                                   param-ctx (form-util/entity-param-ctx entity param-ctx)
                                                   fe-anchors (->> (get entity-anchors-lookup fe-name)
                                                                   (filter :anchor/repeating?)
@@ -147,14 +155,23 @@
            [:tr
             (build-col-heads colspec sort-col param-ctx)
             [:td.link-cell {:key :link-cell}
-             (widget/render-anchors (->> anchors
-                                         (remove :anchor/repeating?) ; link-entity new unmanaged
-                                         (remove :anchor/attribute)
-                                         (remove :anchor/render-inline?))
-                                    param-ctx)]]]
+             (let [anchors-lookup (->> anchors
+                                       (remove :anchor/repeating?)
+                                       (remove :anchor/attribute)
+                                       (remove :anchor/render-inline?)
+                                       (group-by (fn [anchor]
+                                                   (if-let [find-element (:anchor/find-element anchor)]
+                                                     (:find-element/name find-element)
+                                                     "entity"))))]
+               (->> (partition 4 colspec)
+                    (group-by (fn [[dbval fe-name ident maybe-field]] fe-name))
+                    (mapcat (fn [[fe-name colspec]]
+                              (let [form-anchors (get anchors-lookup fe-name)
+                                    param-ctx (assoc param-ctx :db (ffirst colspec))]
+                                (widget/render-anchors form-anchors param-ctx))))))]]]
           ; filter repeating? No because create-new-attribute down here too.
           [body relations colspec anchors sort-col param-ctx]]
-         (widget/render-inline-anchors (->> anchors
+         (widget/render-inline-anchors (->> anchors         ; busted
                                             (remove :anchor/repeating?)
                                             (remove :anchor/attribute)
                                             (filter :anchor/render-inline?))
