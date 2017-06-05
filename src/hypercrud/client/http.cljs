@@ -58,8 +58,8 @@
 
   ; why did 'force?' behavior change?
   (hydrate! [this request]
-    #_(if (hc/hydrated? this request)                         ; this if check should be higher?
-      (p/resolved last-response))
+    #_(if (hc/hydrated? this request)                       ; this if check should be higher?
+        (p/resolved last-response))
     (-> (hc/hydrate!* this request)
         (p/then (fn [response]
                   (set! last-response response)
@@ -107,5 +107,4 @@
   (discard! [this conn-id branch]
     (swap! stage (fn [s]
                    (update s conn-id dissoc branch)))
-    nil)
-  )
+    nil))

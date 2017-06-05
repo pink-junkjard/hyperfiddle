@@ -30,23 +30,23 @@
   (->> (mapv (juxt :find-element/name identity) (:link-query/find-element link-req))
        (into {})))
 
-(defn manufacture-entity-find-element [link #_branches param-ctx]
+(defn manufacture-entity-find-element [link param-ctx]
   (let [conn (-> link :link/request :link-entity/connection)
         #_(or
-               #_(-> link :link/request :link-entity/connection)
-               (let [dbid-s (-> param-ctx :query-params :entity)]
-                 {:db/id (->DbId (if (vector? dbid-s)
-                                   (:conn-id (first dbid-s))
-                                   (:conn-id dbid-s))
-                                 nil #_"ignored in the place we need it, ->entityRequest")}))]
+            #_(-> link :link/request :link-entity/connection)
+            (let [dbid-s (-> param-ctx :query-params :entity)]
+              {:db/id (->DbId (if (vector? dbid-s)
+                                (:conn-id (first dbid-s))
+                                (:conn-id dbid-s))
+                              nil #_"ignored in the place we need it, ->entityRequest")}))]
     (assert conn)
     {:db/id "entity"                                        ; sentinel
      :find-element/name "entity"
      :find-element/connection conn
-     :find-element/form (-> (-> link :link/request :link-entity/form)
+     :find-element/form (-> link :link/request :link-entity/form
                             (update :form/field filter-visible-fields param-ctx))}))
 
-(defn get-ordered-find-elements [link #_branches param-ctx]
+(defn get-ordered-find-elements [link param-ctx]
   (let [req (:link/request link)]
     (case (link-util/link-type link)
       :link-query (let [q (some-> req :link-query/value reader/read-string)
@@ -54,10 +54,8 @@
                     (->> (util/parse-query-element q :find)
                          (mapv str)
                          (mapv #(get find-element-lookup %))))
-      :link-entity [(manufacture-entity-find-element link #_branches param-ctx)]
+      :link-entity [(manufacture-entity-find-element link param-ctx)]
       [])))
-
-
 
 (defn determine-colspec "Colspec is what you have when you flatten out the find elements,
 but retaining and correlating all information through a join. Not all entities are homogenous,
@@ -67,8 +65,8 @@ the find-element level has been flattened out of the columns."
   [result link branch-or-branches param-ctx]
   (let [result (if (map? result) [result] result)           ; unified colspec for table and form
         branches (if-not (map? branch-or-branches) {"entity" branch-or-branches} branch-or-branches)
-        ordered-find-elements (get-ordered-find-elements link #_branches param-ctx)
-        ordered-find-elements (strip-forms-in-raw-mode ordered-find-elements param-ctx)
+        ordered-find-elements (-> (get-ordered-find-elements link param-ctx)
+                                  (strip-forms-in-raw-mode param-ctx))
         raw-mode? (= (:display-mode param-ctx) :root)
         result-as-columns (util/transpose result)
         map' (util/map-pad {})]
@@ -99,11 +97,6 @@ the find-element level has been flattened out of the columns."
             ordered-find-elements)
       (flatten)
       (vec))))
-
-(defn link-entity-colspec [result link param-ctx]
-  (let [result (if (map? result) [result] result)]
-
-    ))
 
 (defn build-props [maybe-field anchors param-ctx]
   ; why does this need the field - it needs the ident for readonly in "Edit Anchors"

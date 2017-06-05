@@ -9,12 +9,12 @@
             [hypercrud.client.core :as hc]
             [hypercrud.client.schema :as schema-util]
             [hypercrud.form.q-util :as q-util]
-            [hypercrud.types :refer [->DbId ->EntityRequest]]
+            [hypercrud.types :refer [->EntityRequest]]
             [hypercrud.ui.form-util :as form-util]
             [hypercrud.util :as util]))
 
 
-(defn request-for-link [root-db link-dbid]                          ; always latest
+(defn request-for-link [root-db link-dbid]                  ; always latest
   (assert link-dbid)
   (let [form-pull-exp ['*
                        {:hypercrud/owner ['*]
