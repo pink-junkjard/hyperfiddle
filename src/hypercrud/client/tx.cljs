@@ -183,7 +183,7 @@
 (defn export-link [schema link]
   (let [tempid! (let [temp-id-atom (atom 0)]
                   (fn [conn-id]
-                    (hypercrud.types/->DbId (swap! temp-id-atom dec) conn-id)))
+                    (->DbId (swap! temp-id-atom dec) conn-id)))
         successors (fn [node]
                      (entity-children schema node))
         filter-pred (fn [node predecessor depth]
