@@ -1,7 +1,6 @@
 (ns hypercrud.browser.auto-anchor-txfn
   (:require [hypercrud.types :refer [->DbId]]
-            [hypercrud.client.tx :as tx]
-            [promesa.core :as p]))
+            [hypercrud.client.tx :as tx]))
 
 
 (defn auto-txfn [anchor]

@@ -3,7 +3,6 @@
   (:require [cats.monad.exception :as exception]
             [hypercrud.browser.core :as browser]
             [hypercrud.browser.anchor :as anchor]
-            [hypercrud.client.core :as hc]
             [hypercrud.client.tx :as tx]
             [hypercrud.form.option :as option]
             [hypercrud.ui.code-editor :refer [code-editor*]]

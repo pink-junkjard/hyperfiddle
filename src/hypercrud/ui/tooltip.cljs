@@ -1,6 +1,6 @@
 (ns hypercrud.ui.tooltip
-  (:require [reagent.core :as r]
-            [re-com.core :as re-com]))
+  (:require [re-com.core :as re-com]
+            [reagent.core :as r]))
 
 
 ;(defn tooltip [& {:as props}]                               ; re-com style props

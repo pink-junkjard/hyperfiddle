@@ -1,6 +1,5 @@
 (ns hypercrud.types
-  (:require [cljs.reader :as reader]
-            [hypercrud.client.core :as hc]))
+  (:require [cljs.reader :as reader]))
 
 
 (deftype DbId [id conn-id]

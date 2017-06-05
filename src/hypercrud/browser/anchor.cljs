@@ -1,16 +1,11 @@
 (ns hypercrud.browser.anchor
-  (:require [cljs.reader :as reader]
-            [clojure.set :as set]
-            [hypercrud.client.core :as hc]
-            [hypercrud.client.tx :as tx]
-            [hypercrud.compile.eval :refer [eval-str]]
-            [hypercrud.form.q-util :as q-util]
-            [hypercrud.types :refer [->DbId]]
-            [hypercrud.util :as util]
-            [promesa.core :as p]
+  (:require [clojure.set :as set]
             [hypercrud.browser.connection-color :as connection-color]
             [hypercrud.browser.link-util :as link-util]
-            [reagent.core :as r]))
+            [hypercrud.client.core :as hc]
+            [hypercrud.compile.eval :refer [eval-str]]
+            [hypercrud.form.q-util :as q-util]
+            [promesa.core :as p]))
 
 
 (defn safe-run-user-code-str [code-str param-ctx]

@@ -3,8 +3,6 @@
             [clojure.string :as string]
             [hypercrud.browser.link-util :as link-util]
             [hypercrud.client.core :as hc]
-            [hypercrud.types :refer [->DbId]]
-            [hypercrud.ui.code-editor :as code-editor]
             [hypercrud.ui.tooltip :as tooltip]
             [hypercrud.util :as util]))
 

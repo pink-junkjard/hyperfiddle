@@ -1,9 +1,9 @@
 (ns hypercrud.ui.select
   (:require [cats.monad.exception :as exception]
+            [hypercrud.browser.connection-color :as connection-color]
             [hypercrud.client.tx :as tx]
             [hypercrud.form.option :as option]
-            [hypercrud.types :refer [->DbId]]
-            [hypercrud.browser.connection-color :as connection-color]))
+            [hypercrud.types :refer [->DbId]]))
 
 
 (defn select-boolean* [value props param-ctx]

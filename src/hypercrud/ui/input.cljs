@@ -1,8 +1,8 @@
 (ns hypercrud.ui.input
   (:require [cljs.reader :as reader]
             [hypercrud.form.q-util :as q-util]
-            [reagent.core :as reagent]
-            [hypercrud.types :as types]))
+            [hypercrud.types :as types]
+            [reagent.core :as reagent]))
 
 
 (defn adapt-props-to-input [props]

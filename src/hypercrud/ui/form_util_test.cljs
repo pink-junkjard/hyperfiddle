@@ -1,8 +1,8 @@
 (ns hypercrud.ui.form-util-test
-  (:require-macros [cljs.test :refer [deftest testing is]])
+  (:require-macros [cljs.test :refer [deftest is]])
   (:require [cljs.test]
             [hypercrud.types :refer [->DbId]]
-            [hypercrud.ui.form-util :refer [determine-colspec strip-forms-in-raw-mode]]))
+            [hypercrud.ui.form-util :refer [determine-colspec]]))
 
 
 ;(def foo #DbId [1 2])

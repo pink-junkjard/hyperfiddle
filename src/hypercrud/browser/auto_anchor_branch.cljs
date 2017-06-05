@@ -1,7 +1,4 @@
-(ns hypercrud.browser.auto-anchor-branch
-  (:require [hypercrud.types :refer [->DbId]]
-            [hypercrud.client.tx :as tx]
-            [promesa.core :as p]))
+(ns hypercrud.browser.auto-anchor-branch)
 
 
 (defn auto-branch [anchor]

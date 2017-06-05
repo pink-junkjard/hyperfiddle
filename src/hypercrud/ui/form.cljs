@@ -1,14 +1,13 @@
 (ns hypercrud.ui.form
-  (:require [cursor.core :refer [cursor]]
-            [hypercrud.browser.connection-color :as connection-color]
+  (:require [hypercrud.browser.connection-color :as connection-color]
             [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.form-util :as form-util]
             [hypercrud.ui.input :as input]
             [hypercrud.ui.renderer :as renderer]
-            [hypercrud.ui.widget :as widget]
-            [reagent.core :as r]
             [hypercrud.ui.tooltip :as tooltip]
-            [hypercrud.util :as util]))
+            [hypercrud.ui.widget :as widget]
+            [hypercrud.util :as util]
+            [reagent.core :as r]))
 
 (defn field [maybe-field anchors param-ctx]
   (let [control (let [anchors (filter #(= (-> param-ctx :attribute :db/id) (some-> % :anchor/attribute :db/id)) anchors)
