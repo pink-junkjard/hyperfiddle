@@ -3,11 +3,11 @@
             [cljs.reader :as reader]
             [clojure.set :as set]
             [goog.Uri]
-            [hypercrud.branch :as branch]
             [hypercrud.client.core :as hc]
             [hypercrud.client.internal :as internal]
             [hypercrud.client.response :as response]
             [hypercrud.client.tx :as tx]
+            [hypercrud.util.branch :as branch]
             [kvlt.core :as kvlt]
             [kvlt.middleware.params]
             [promesa.core :as p]))

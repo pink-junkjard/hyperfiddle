@@ -3,7 +3,7 @@
             [clojure.string :as string]
             [hypercrud.compile.eval :refer [eval]]
             [hypercrud.types :refer [->EntityRequest ->QueryRequest]]
-            [hypercrud.util :as util]
+            [hypercrud.util.core :as util]
             [hypercrud.ui.form-util :as form-util]
             [hypercrud.client.core :as hc]))
 

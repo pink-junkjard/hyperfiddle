@@ -6,7 +6,7 @@
             [hypercrud.ui.renderer :as renderer]
             [hypercrud.ui.tooltip :as tooltip]
             [hypercrud.ui.widget :as widget]
-            [hypercrud.util :as util]
+            [hypercrud.util.core :as util]
             [reagent.core :as r]))
 
 (defn field [maybe-field anchors param-ctx]

@@ -1,7 +1,7 @@
 (ns hypercrud.browser.core
   (:require [hypercrud.browser.browser-ui :as browser-ui]
             [hypercrud.browser.browser-request :as browser-request]
-            [hypercrud.util :as util]))
+            [hypercrud.util.core :as util]))
 
 (defn replace-tempids-in-route [tempid-lookup params-map]
   (let [replace-tempid #(or (get tempid-lookup %) %)]

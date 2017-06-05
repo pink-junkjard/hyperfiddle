@@ -17,7 +17,7 @@
             [hypercrud.types :as types]
             [hypercrud.ui.form-util :as form-util]
             [hypercrud.ui.auto-control :as auto-control]
-            [hypercrud.util :as util]))
+            [hypercrud.util.core :as util]))
 
 
 (defn hydrate-link [peer link-dbid param-ctx]

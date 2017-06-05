@@ -1,11 +1,11 @@
 (ns hypercrud.browser.anchor
   (:require [clojure.set :as set]
-            [hypercrud.branch :as branch]
             [hypercrud.browser.connection-color :as connection-color]
             [hypercrud.browser.link-util :as link-util]
             [hypercrud.client.core :as hc]
             [hypercrud.compile.eval :refer [eval-str]]
             [hypercrud.form.q-util :as q-util]
+            [hypercrud.util.branch :as branch]
             [promesa.core :as p]))
 
 

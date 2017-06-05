@@ -6,7 +6,7 @@
             [hypercrud.ui.form-util :as form-util]
             [hypercrud.ui.renderer :as renderer]
             [hypercrud.ui.widget :as widget]
-            [hypercrud.util :as util]
+            [hypercrud.util.core :as util]
             [reagent.core :as r]))
 
 

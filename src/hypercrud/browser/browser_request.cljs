@@ -11,7 +11,7 @@
             [hypercrud.form.q-util :as q-util]
             [hypercrud.types :refer [->EntityRequest]]
             [hypercrud.ui.form-util :as form-util]
-            [hypercrud.util :as util]))
+            [hypercrud.util.core :as util]))
 
 
 (defn request-for-link [root-db link-dbid]                  ; always latest

@@ -4,7 +4,7 @@
             [hypercrud.browser.link-util :as link-util]
             [hypercrud.client.core :as hc]
             [hypercrud.ui.tooltip :as tooltip]
-            [hypercrud.util :as util]))
+            [hypercrud.util.core :as util]))
 
 (defn css-slugify [s]
   ; http://stackoverflow.com/a/449000/959627

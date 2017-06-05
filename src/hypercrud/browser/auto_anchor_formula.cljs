@@ -1,6 +1,6 @@
 (ns hypercrud.browser.auto-anchor-formula
   (:require [hypercrud.types :refer [->DbId]]
-            [hypercrud.util :as util]))
+            [hypercrud.util.core :as util]))
 
 
 (defn auto-formula [anchor]                                 ; what about long-coersion?
