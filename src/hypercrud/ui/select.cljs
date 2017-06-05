@@ -3,7 +3,7 @@
             [hypercrud.browser.connection-color :as connection-color]
             [hypercrud.client.tx :as tx]
             [hypercrud.form.option :as option]
-            [hypercrud.types :refer [->DbId]]))
+            [hypercrud.types.DbId :refer [->DbId]]))
 
 
 (defn select-boolean* [value props param-ctx]

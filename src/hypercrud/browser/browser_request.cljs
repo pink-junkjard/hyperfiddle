@@ -9,7 +9,7 @@
             [hypercrud.client.core :as hc]
             [hypercrud.client.schema :as schema-util]
             [hypercrud.form.q-util :as q-util]
-            [hypercrud.types :refer [->EntityRequest]]
+            [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.ui.form-util :as form-util]
             [hypercrud.util.core :as util]))
 

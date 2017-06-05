@@ -11,7 +11,7 @@
             [hypercrud.ui.radio :as radio]                  ; used in user renderers
             [hypercrud.ui.select :refer [select* select-boolean*]]
             [hypercrud.ui.textarea :refer [textarea*]]
-            [hypercrud.types :refer [->DbId]]
+            [hypercrud.types.DbId :refer [->DbId]]
             [re-com.core :as re-com :refer-macros [handler-fn]]
             [reagent.core :as r]))
 

@@ -2,7 +2,8 @@
   (:require [cljs.reader :as reader]
             [clojure.string :as string]
             [hypercrud.compile.eval :refer [eval]]
-            [hypercrud.types :refer [->EntityRequest ->QueryRequest]]
+            [hypercrud.types.EntityRequest :refer [->EntityRequest]]
+            [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hypercrud.util.core :as util]
             [hypercrud.ui.form-util :as form-util]
             [hypercrud.client.core :as hc]))
@@ -96,7 +97,7 @@
 
 
 (defn ->entityRequest [link-entity branch query-params param-ctx]
-  #_(assert (:entity query-params))                           ;-- Commented because we are requesting invisible things that the UI never tries to render - can be fixed
+  #_(assert (:entity query-params))                         ;-- Commented because we are requesting invisible things that the UI never tries to render - can be fixed
   #_(assert (:conn-id (:entity query-params)))
   (assert (-> link-entity :link-entity/connection :db/id :id))
   (->EntityRequest

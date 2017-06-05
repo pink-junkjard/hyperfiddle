@@ -1,7 +1,7 @@
 (ns hypercrud.ui.form-util-test
   (:require-macros [cljs.test :refer [deftest is]])
   (:require [cljs.test]
-            [hypercrud.types :refer [->DbId]]
+            [hypercrud.types.DbId :refer [->DbId]]
             [hypercrud.ui.form-util :refer [determine-colspec]]))
 
 

@@ -1,5 +1,5 @@
 (ns hypercrud.browser.auto-anchor-formula
-  (:require [hypercrud.types :refer [->DbId]]
+  (:require [hypercrud.types.DbId :refer [->DbId]]
             [hypercrud.util.core :as util]))
 
 

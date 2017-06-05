@@ -1,7 +1,7 @@
 (ns hypercrud.ui.input
   (:require [cljs.reader :as reader]
             [hypercrud.form.q-util :as q-util]
-            [hypercrud.types :as types]
+            [hypercrud.types.DbId :refer [DbId]]
             [reagent.core :as reagent]))
 
 
@@ -56,5 +56,5 @@
   ; value :: {:db/id #DbId[17592186045891 17592186045422]}
   ^{:key (:db/id value)}
   [validated-input' (:db/id value) on-change! q-util/safe-read-string pr-str
-   #(instance? types/DbId (q-util/safe-read-string %))
+   #(instance? DbId (q-util/safe-read-string %))
    props])

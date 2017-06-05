@@ -1,5 +1,5 @@
 (ns hypercrud.client.schema
-  (:require [hypercrud.types :refer [->QueryRequest]]))
+  (:require [hypercrud.types.QueryRequest :refer [->QueryRequest]]))
 
 
 (defn schema-request [root-db connection]

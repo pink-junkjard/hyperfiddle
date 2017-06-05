@@ -14,7 +14,8 @@
             [hypercrud.compile.eval :refer [eval-str]]
             [hypercrud.form.q-util :as q-util]
             [hypercrud.platform.safe-render :refer [safe-user-renderer]]
-            [hypercrud.types :as types]
+            [hypercrud.types.EntityRequest :refer [EntityRequest]]
+            [hypercrud.types.QueryRequest :refer [QueryRequest]]
             [hypercrud.ui.form-util :as form-util]
             [hypercrud.ui.auto-control :as auto-control]
             [hypercrud.util.core :as util]))
@@ -60,7 +61,7 @@
 
                 result (cond
 
-                         (instance? types/EntityRequest request) ; But the ereq might return a vec for cardinality many
+                         (instance? EntityRequest request)  ; But the ereq might return a vec for cardinality many
                          (cond
                            ; order matters here a lot!
                            (nil? result) nil
@@ -74,7 +75,7 @@
                            (coll? result) (mapv (fn [relation] {"entity" relation}) result))
 
 
-                         (instance? types/QueryRequest request)
+                         (instance? QueryRequest request)
                          (cond
                            (-> link :link/request :link-query/single-result-as-entity?) (first result)
                            :else result))

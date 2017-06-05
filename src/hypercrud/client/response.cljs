@@ -1,7 +1,8 @@
 (ns hypercrud.client.response
   (:require [cats.monad.exception :as exception]
             [hypercrud.client.core :as hc]
-            [hypercrud.types :as types :refer [->DbVal]]
+            [hypercrud.types.DbVal :refer [->DbVal]]
+            [hypercrud.types.DbError :refer [DbError]]
             [cljs.reader :as reader]))
 
 (defn human-error [e req]
@@ -21,7 +22,7 @@
     ; (exception/try-or-recover  (constantly (exception/failure (str unfilled-holes))))
     (if (contains? pulled-trees-map request)
       (let [resultset-or-error (get pulled-trees-map request)]
-        (if (instance? types/DbError resultset-or-error)
+        (if (instance? DbError resultset-or-error)
           (exception/failure (human-error resultset-or-error request))
           (exception/success resultset-or-error)))
       (do

@@ -1,7 +1,8 @@
 (ns hypercrud.browser.auto-link
   (:require [hypercrud.browser.link-util :as link-util]
             [hypercrud.client.core :as hc]
-            [hypercrud.types :refer [->DbId ->EntityRequest]]
+            [hypercrud.types.DbId :refer [->DbId]]
+            [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.ui.form-util :as form-util]))
 
 

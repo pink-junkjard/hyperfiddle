@@ -2,7 +2,11 @@
   (:require [cognitect.transit :as t]
             [goog.Uri]
             [goog.string]
-            [hypercrud.types :as types]
+            [hypercrud.types.DbId :refer [DbId DbIdTransitReader DbIdTransitHandler]]
+            [hypercrud.types.DbVal :refer [DbVal DbValTransitReader DbValTransitHandler]]
+            [hypercrud.types.DbError :refer [DbError DbErrorTransitReader DbErrorTransitHandler]]
+            [hypercrud.types.QueryRequest :refer [QueryRequest read-QueryRequest QueryRequestTransitHandler]]
+            [hypercrud.types.EntityRequest :refer [EntityRequest read-EntityRequest EntityRequestTransitHandler]]
             [hypercrud.client.response :as response]))
 
 
@@ -28,20 +32,20 @@
 
 (def transit-read-handlers
   {"r" (fn [v] (goog.Uri. v))
-   "DbId" types/DbIdTransitReader
-   "DbVal" types/DbValTransitReader
-   "DbError" types/DbErrorTransitReader
-   "QReq" types/read-QueryRequest
-   "EReq" types/read-EntityRequest
+   "DbId" DbIdTransitReader
+   "DbVal" DbValTransitReader
+   "DbError" DbErrorTransitReader
+   "QReq" read-QueryRequest
+   "EReq" read-EntityRequest
    "Response" response/read-Response})
 
 (def transit-write-handlers
   {goog.Uri (UriHandler.)
-   types/DbId (types/DbIdTransitHandler.)
-   types/DbVal (types/DbValTransitHandler.)
-   types/DbError (types/DbErrorTransitHandler.)
-   types/QueryRequest (types/QueryRequestTransitHandler.)
-   types/EntityRequest (types/EntityRequestTransitHandler.)
+   DbId (DbIdTransitHandler.)
+   DbVal (DbValTransitHandler.)
+   DbError (DbErrorTransitHandler.)
+   QueryRequest (QueryRequestTransitHandler.)
+   EntityRequest (EntityRequestTransitHandler.)
    response/Response (response/ResponseTransitHandler.)})
 
 

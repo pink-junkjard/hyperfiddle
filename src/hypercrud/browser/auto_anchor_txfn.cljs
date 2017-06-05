@@ -1,5 +1,5 @@
 (ns hypercrud.browser.auto-anchor-txfn
-  (:require [hypercrud.types :refer [->DbId]]
+  (:require [hypercrud.types.DbId :refer [->DbId]]
             [hypercrud.client.tx :as tx]))
 
 
