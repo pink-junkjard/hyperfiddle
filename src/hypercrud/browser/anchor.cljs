@@ -1,5 +1,6 @@
 (ns hypercrud.browser.anchor
   (:require [clojure.set :as set]
+            [hypercrud.branch :as branch]
             [hypercrud.browser.connection-color :as connection-color]
             [hypercrud.browser.link-util :as link-util]
             [hypercrud.client.core :as hc]
@@ -9,7 +10,7 @@
 
 
 (defn safe-run-user-code-str [code-str param-ctx]
-  (try                                      ; todo return monad
+  (try                                                      ; todo return monad
     (-> (eval-str code-str)
         (q-util/run-formula! param-ctx))
     (catch js/Error e {})))
@@ -20,9 +21,8 @@
    {:domain domain
     :project project
     :link-dbid link-dbid #_:id
-    :branch (if-let [branch (safe-run-user-code-str branch-str param-ctx)]
-              (some-> (:db param-ctx) .-branch (str "`" branch))
-              (some-> (:db param-ctx) .-branch))
+    :branch (branch/encode-branch-child (some-> (:db param-ctx) .-branch)
+                                        (safe-run-user-code-str branch-str param-ctx))
     :query-params (safe-run-user-code-str formula-str param-ctx)})
   ([link formula-str branch-str param-ctx]
    (build-anchor-route

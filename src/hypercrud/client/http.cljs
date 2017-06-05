@@ -2,8 +2,8 @@
   (:require [cljs.pprint :as pprint]
             [cljs.reader :as reader]
             [clojure.set :as set]
-            [clojure.string :as str]
             [goog.Uri]
+            [hypercrud.branch :as branch]
             [hypercrud.client.core :as hc]
             [hypercrud.client.internal :as internal]
             [hypercrud.client.response :as response]
@@ -97,7 +97,7 @@
     nil)
 
   (merge! [this conn-id branch]
-    (let [parent-branch (butlast (str/split branch #"`"))]
+    (let [parent-branch (branch/decode-parent-branch branch)]
       (swap! stage (fn [s]
                      (-> s
                          (update-in [conn-id parent-branch] tx/into-tx (hc/tx last-response (hc/db last-response conn-id branch)))
