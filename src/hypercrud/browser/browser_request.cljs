@@ -55,7 +55,8 @@
                                               attr (-> anchor :anchor/attribute :attribute/ident)]
                                           [r fe attr]))))
         recurse-request (fn [anchor param-ctx]
-                          (let [param-ctx (update param-ctx :debug #(str % ">inline-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]"))]
+                          (let [param-ctx (anchor/anchor-branch-logic anchor param-ctx)
+                                param-ctx (update param-ctx :debug #(str % ">inline-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]"))]
                             (request anchor param-ctx)))]
 
     ; param-ctx maintains: :result, :entity, :attribute, :value
@@ -81,9 +82,12 @@
                                  (->> find-elements         ; these are wrong for link-entity somehow?
                                       (mapcat (fn [fe]
                                                 (let [entity (get relation (:find-element/name fe))
-                                                      param-ctx (assoc param-ctx :entity entity)]
+                                                      param-ctx (assoc param-ctx :entity entity
+                                                                                 :db (let [conn-id (-> fe :find-element/connection :db/id :id)]
+                                                                                       (hc/db (:response param-ctx) conn-id (get-in param-ctx [:branches conn-id]))))]
                                                   (concat (->> ((:entity lookup) fe) (mapcat #(recurse-request % param-ctx)))
                                                           (->> (-> fe :find-element/form :form/field)
+                                                               (filter #(form-util/filter-visible-fields % param-ctx))
                                                                (mapcat (fn [field]
                                                                          (let [attribute (-> field :field/attribute)
                                                                                param-ctx (assoc param-ctx :attribute attribute
@@ -93,9 +97,10 @@
                                                                              (->> ((:entity-attr-new lookup) fe attribute) (mapcat #(recurse-request % param-ctx))))
                                                                            ))))))))))))))))))
 
-(defn link-entity-dependent-requests [result form anchors param-ctx]
+(defn link-entity-dependent-requests [result link-entity anchors param-ctx]
   (let [recurse-request (fn [anchor param-ctx]
-                          (let [param-ctx (update param-ctx :debug #(str % ">inline-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]"))]
+                          (let [param-ctx (anchor/anchor-branch-logic anchor param-ctx)
+                                param-ctx (update param-ctx :debug #(str % ">inline-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]"))]
                             (request anchor param-ctx)))
         anchors (filter :anchor/render-inline? anchors)
         anchors-lookup (->> anchors
@@ -123,10 +128,14 @@
                        (concat
                          (->> ((:relation lookup)) (mapcat #(recurse-request % param-ctx)))
                          (let [entity (get relation "entity")
-                               param-ctx (assoc param-ctx :result relation :entity entity)]
+                               param-ctx (assoc param-ctx :result relation
+                                                          :db (let [conn-id (-> link-entity :link-entity/connection :db/id :id)]
+                                                                (hc/db (:response param-ctx) conn-id (get-in param-ctx [:branches conn-id])))
+                                                          :entity entity)]
                            (concat
                              (->> ((:entity lookup) entity) (mapcat #(recurse-request % param-ctx)))
-                             (->> (-> form :form/field)
+                             (->> (get-in link-entity [:link-entity/form :form/field])
+                                  (filter #(form-util/filter-visible-fields % param-ctx))
                                   (mapcat (fn [field]
                                             (let [attribute (-> field :field/attribute)
                                                   param-ctx (assoc param-ctx :attribute attribute
@@ -137,12 +146,12 @@
                                               ))))))))))))))
 
 
-(defn requests-for-link-query [link branches query-params param-ctx]
+(defn requests-for-link-query [link query-params param-ctx]
   (let [link-query (:link/request link)
         q (some-> link-query :link-query/value reader/read-string)
-        params-map (merge query-params (q-util/build-dbhole-lookup (:response param-ctx) branches link-query))
+        params-map (merge query-params (q-util/build-dbhole-lookup link-query param-ctx))
         param-ctx (assoc param-ctx :query-params query-params)]
-    (let [request (q-util/->queryRequest q link-query branches params-map param-ctx)]
+    (let [request (q-util/->queryRequest q link-query params-map param-ctx)]
       (concat
         [request]
         (->> (get-in link [:link/request :link-query/find-element])
@@ -156,13 +165,13 @@
                         param-ctx (assoc param-ctx :schema indexed-schema)]
                     (link-query-dependent-requests result (:link-query/find-element link-query)
                                                    (auto-anchor/merge-anchors
-                                                     (auto-anchor/auto-anchors (auto-link/system-anchors link branches result param-ctx))
+                                                     (auto-anchor/auto-anchors (auto-link/system-anchors link result param-ctx))
                                                      (auto-anchor/auto-anchors (:link/anchor link)))
                                                    param-ctx))))
           nil)))))
 
-(defn requests-for-link-entity [link branch query-params param-ctx]
-  (let [request (q-util/->entityRequest (:link/request link) branch query-params param-ctx)
+(defn requests-for-link-entity [link query-params param-ctx]
+  (let [request (q-util/->entityRequest (:link/request link) query-params param-ctx)
         _ (assert (get-in link [:link/request :link-entity/connection]))
         schema-request (schema-util/schema-request (:root-db param-ctx) (get-in link [:link/request :link-entity/connection]))]
     (concat
@@ -173,21 +182,19 @@
               (cats/return
                 (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
                       param-ctx (assoc param-ctx :schema indexed-schema)
-                      result (->> (if (map? result) [result] result) (mapv #(assoc {} "entity" %)))
-                      form (-> (-> link :link/request :link-entity/form)
-                               (update :form/field form-util/filter-visible-fields param-ctx))]
-                  (link-entity-dependent-requests result form
+                      result (->> (if (map? result) [result] result) (mapv #(assoc {} "entity" %)))]
+                  (link-entity-dependent-requests result (:link/request link)
                                                   (auto-anchor/merge-anchors
-                                                    (auto-anchor/auto-anchors (auto-link/system-anchors link branch result param-ctx))
+                                                    (auto-anchor/auto-anchors (auto-link/system-anchors link result param-ctx))
                                                     (auto-anchor/auto-anchors (:link/anchor link)))
                                                   param-ctx))))
         nil))))
 
-(defn requests-for-link [link branch query-params param-ctx] ; Now we are hydrating userland, use the branch
+(defn requests-for-link [link query-params param-ctx]
   (let [param-ctx (assoc param-ctx :query-params query-params)]
     (case (link-util/link-type link)
-      :link-query (requests-for-link-query link branch query-params param-ctx)
-      :link-entity (requests-for-link-entity link branch query-params param-ctx)
+      :link-query (requests-for-link-query link query-params param-ctx)
+      :link-entity (requests-for-link-entity link query-params param-ctx)
       :link-blank (link-query-dependent-requests [] [] (:link/anchor link) param-ctx)))) ; this case does not request the schema, as we don't have a connection for the link.
 
 (defn request' [route param-ctx]
@@ -202,11 +209,11 @@
                                          (reduce #(mlet [acc %1 v %2] (cats/return (conj acc v))) (exception/success [])))
                                     nil)]
           (let [link (auto-link/hydrate-system-link system-link-idmap system-link-deps param-ctx)]
-            (requests-for-link link (:branch route) (:query-params route) param-ctx)))))
+            (requests-for-link link (:query-params route) param-ctx)))))
     (let [link-request (request-for-link (:root-db param-ctx) (:link-dbid route))]
       (concat [link-request]
               (if-let [link (-> (hc/hydrate (:response param-ctx) link-request) (exception/extract nil))]
-                (requests-for-link link (:branch route) (:query-params route) param-ctx))))))
+                (requests-for-link link (:query-params route) param-ctx))))))
 
 (defn request [anchor param-ctx]
   (if (:anchor/link anchor)

@@ -41,9 +41,9 @@
                    (case (link-util/link-type link)
                      :link-query (let [link-query (:link/request link)
                                        q (some-> link-query :link-query/value reader/read-string)
-                                       params-map (merge query-params (q-util/build-dbhole-lookup (:response param-ctx) (:branch route) link-query))]
-                                   (q-util/->queryRequest q link-query (:branch route) params-map param-ctx))
-                     :link-entity (q-util/->entityRequest (:link/request link) (:branch route) (:query-params route) param-ctx)
+                                       params-map (merge query-params (q-util/build-dbhole-lookup link-query param-ctx))]
+                                   (q-util/->queryRequest q link-query params-map param-ctx))
+                     :link-entity (q-util/->entityRequest (:link/request link) (:query-params route) param-ctx)
                      :link-blank nil
                      nil))
          result (if request (hc/hydrate (:response param-ctx) request) (exception/success nil))
@@ -80,8 +80,8 @@
                            (-> link :link/request :link-query/single-result-as-entity?) (first result)
                            :else result))
 
-                colspec (form-util/determine-colspec result link (:branch route) param-ctx)
-                system-anchors (auto-anchor/auto-anchors (auto-link/system-anchors link (:branch route) result param-ctx))]
+                colspec (form-util/determine-colspec result link param-ctx)
+                system-anchors (auto-anchor/auto-anchors (auto-link/system-anchors link result param-ctx))]
 
             (case (get param-ctx :display-mode)             ; default happens higher, it influences queries too
               :user ((user-result link param-ctx) result colspec (auto-anchor/merge-anchors system-anchors (auto-anchor/auto-anchors (:link/anchor link))) (user-bindings/user-bindings link param-ctx))

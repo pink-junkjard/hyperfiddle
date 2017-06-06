@@ -5,16 +5,11 @@
 
 
 (defn auto-anchor [anchor]
-  (let [anchor (-> anchor
-                   (update :anchor/tx-fn (fn [txfn-str]
-                                           (if (empty? txfn-str) (auto-txfn anchor) txfn-str)))
-                   (update :anchor/formula (fn [fxfn-str]
-                                             (if (empty? fxfn-str) (auto-formula anchor) fxfn-str))))]
-    ; do i need to branch?
-    (if (and (:anchor/tx-fn anchor) (:anchor/link anchor))
-      (update anchor :anchor/branch (fn [s]
-                                      (if (empty? s) (auto-branch anchor) s)))
-      anchor)))
+  (-> anchor
+      (update :anchor/tx-fn (fn [txfn-str]
+                              (if (empty? txfn-str) (auto-txfn anchor) txfn-str)))
+      (update :anchor/formula (fn [fxfn-str]
+                                (if (empty? fxfn-str) (auto-formula anchor) fxfn-str)))))
 
 (defn auto-anchors [anchors]
   (map auto-anchor anchors))

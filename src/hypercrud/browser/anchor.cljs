@@ -1,5 +1,6 @@
 (ns hypercrud.browser.anchor
   (:require [clojure.set :as set]
+            [hypercrud.browser.auto-anchor-branch :refer [auto-branch]]
             [hypercrud.browser.connection-color :as connection-color]
             [hypercrud.browser.link-util :as link-util]
             [hypercrud.client.core :as hc]
@@ -16,24 +17,21 @@
     (catch js/Error e {})))
 
 (defn build-anchor-route
-  ([domain project link-dbid formula-str branch-str param-ctx]
+  ([domain project link-dbid formula-str param-ctx]
     ;(assert project)                                         ; safe - maybe constructing it now
    {:domain domain
     :project project
     :link-dbid link-dbid #_:id
-    :branch (branch/encode-branch-child (some-> (:db param-ctx) .-branch)
-                                        (safe-run-user-code-str branch-str param-ctx))
     :query-params (safe-run-user-code-str formula-str param-ctx)})
-  ([link formula-str branch-str param-ctx]
+  ([link formula-str param-ctx]
    (build-anchor-route
      (-> link :hypercrud/owner :database/domain)
      (-> link :hypercrud/owner :database/ident)
      (-> link :db/id)
      formula-str
-     branch-str
      param-ctx))
   ([anchor param-ctx]
-   (build-anchor-route (:anchor/link anchor) (:anchor/formula anchor) (:anchor/branch anchor) param-ctx)))
+   (build-anchor-route (:anchor/link anchor) (:anchor/formula anchor) param-ctx)))
 
 (defn holes-filled? [hole-names query-params-map]
   (set/subset? (set hole-names) (set (keys (into {} (remove (comp nil? val) query-params-map))))))
@@ -65,7 +63,20 @@
    :tooltip (anchor-tooltip link route param-ctx)
    :class (if-not (anchor-valid? link route) "invalid")})
 
+(defn is-anchor-managed? [anchor]
+  (let [{r :anchor/repeating? e :anchor/find-element a :anchor/attribute ident :anchor/ident} anchor]
+    (or
+      (and (not r) a)
+      (and (not r) e (not a)))))
 
+(defn anchor-branch-logic [anchor param-ctx]
+  (if (is-anchor-managed? anchor)
+    (let [branch (branch/encode-branch-child (some-> (:db param-ctx) .-branch)
+                                             (safe-run-user-code-str (auto-branch anchor) param-ctx))]
+      (-> param-ctx
+          (assoc-in [:branches (.-conn-id (:db param-ctx))] branch)
+          (update :db #(hc/db (:response param-ctx) (.-conn-id %) branch))))
+    param-ctx))
 
 ; if this is driven by anchor, and not route, it needs memoized.
 ; the route is a fn of the formulas and the formulas can have effects
@@ -77,18 +88,17 @@
                  ; non-fatal error, report it here so user can fix it
                  (if error (js/alert (str "cljs eval error: " error))) ; return monad so tooltip can draw the error
                  value))
-        route (if (:anchor/link anchor) (build-anchor-route anchor param-ctx #_"not branched yet! about to branch"))
+        route (if (:anchor/link anchor) (build-anchor-route anchor param-ctx #_"links & routes have nothing to do with branches"))
         route-props (if route (build-anchor-props-raw route (:anchor/link anchor) param-ctx))
-        param-ctx (if-let [branch (:branch route)]
-                    (update param-ctx :db #(hc/db (:response param-ctx) (.-conn-id %) branch))
-                    param-ctx)]
+        param-ctx (anchor-branch-logic anchor param-ctx)]
     (doall
       (merge
         (if txfn
           (let [tx-from-modal (hc/tx (:response param-ctx) (:db param-ctx))]
             ; do we need to hydrate any dependencies in this chain?
             {:txfns {:stage (fn []
-                              (p/branch (txfn param-ctx tx-from-modal)
+                              (p/branch (let [result (txfn param-ctx tx-from-modal)]
+                                          (if-not (p/promise? result) (p/resolved result) result)) ; txfn may be sync or async)
                                         (fn [result]
                                           ; the branch is out of date
                                           ((:discard! param-ctx) (.-conn-id (:db param-ctx)) (.-branch (:db param-ctx)))
@@ -99,7 +109,7 @@
                                           (js/console.error why))))
                      :cancel #((:discard! param-ctx) (.-conn-id (:db param-ctx)) (.-branch (:db param-ctx)))}}))
 
-        (if (:anchor/branch anchor)                         ; the whole point of popovers is managed branches.
+        (if (is-anchor-managed? anchor)                     ; the whole point of popovers is managed branches.
           {:popover (fn []
                       [:div
                        (case (:display-mode param-ctx)

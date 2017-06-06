@@ -32,12 +32,12 @@
        (remove #(string/starts-with? % "$"))))
 
 
-(defn build-dbhole-lookup [response branches link-query]
+(defn build-dbhole-lookup [link-query param-ctx]
   (->> (:link-query/dbhole link-query)
        (map (fn [{:keys [:dbhole/name :dbhole/value]}]
               (if-not (or (empty? name) (nil? value))
                 ; transform project-id into conn-id
-                [name (hc/db response (-> value :db/id :id) (get branches name))])))
+                [name (hc/db (:response param-ctx) (-> value :db/id :id) (get-in param-ctx [:branches (-> value :db/id :id)]))])))
        (into {})))
 
 (defn safe-parse-query-validated [link-query]
@@ -82,26 +82,27 @@
     ['* {:hypercrud/owner ['*]}]))
 
 
-(defn ->queryRequest [q link-query branches params-map param-ctx]
-  (assert (not branches) "link-query branches not supported")
+(defn ->queryRequest [q link-query params-map param-ctx]
   (let [params (build-params #(get params-map %) link-query param-ctx)
         find-elements (:link-query/find-element link-query)
         find-elements (-> find-elements (form-util/strip-forms-in-raw-mode param-ctx))
         pull-exp (->> find-elements
                       (mapv (juxt :find-element/name
                                   (fn [fe]
-                                    [(hc/db (:response param-ctx) (-> fe :find-element/connection :db/id :id) (get branches (:find-element/name fe)))
-                                     (form-pull-exp (:find-element/form fe))])))
+                                    (let [conn-id (-> fe :find-element/connection :db/id :id)]
+                                      [(hc/db (:response param-ctx) conn-id (get-in param-ctx [:branches conn-id]))
+                                       (form-pull-exp (:find-element/form fe))]))))
                       (into {}))]
     (->QueryRequest q params pull-exp)))
 
 
-(defn ->entityRequest [link-entity branch query-params param-ctx]
+(defn ->entityRequest [link-entity query-params param-ctx]
   #_(assert (:entity query-params))                         ;-- Commented because we are requesting invisible things that the UI never tries to render - can be fixed
   #_(assert (:conn-id (:entity query-params)))
   (assert (-> link-entity :link-entity/connection :db/id :id))
   (->EntityRequest
     (:entity query-params)
     (:a query-params)
-    (hc/db (:response param-ctx) (-> link-entity :link-entity/connection :db/id :id) branch)
+    (let [conn-id (-> link-entity :link-entity/connection :db/id :id)]
+      (hc/db (:response param-ctx) conn-id (get-in param-ctx [:branches conn-id])))
     (form-pull-exp (:link-entity/form link-entity))))

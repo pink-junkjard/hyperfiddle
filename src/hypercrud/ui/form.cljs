@@ -60,7 +60,7 @@
                               entity-anchors (->> form-anchors (filter :anchor/repeating?))
                               db (ffirst colspec)
                               param-ctx (assoc param-ctx :db db
-                                                         :user-swap! (partial (:user-swap! param-ctx) (.-conn-id db) (.-branch db)))]
+                                                         :user-swap! (partial (:app-swap! param-ctx) (.-conn-id db) (.-branch db)))]
                           (concat
                             ; don't put entity in scope because it messes up formulas which have to be deterministic with request side.
                             (widget/render-anchors (remove :anchor/render-inline? entity-new-anchors) param-ctx)

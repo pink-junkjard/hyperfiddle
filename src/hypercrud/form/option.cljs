@@ -37,7 +37,7 @@
        (interpose ", ")
        (apply str)))
 
-(defn hydrate-options [options-anchor param-ctx]                     ; needs to return options as [[:db/id label]]
+(defn hydrate-options [options-anchor param-ctx]            ; needs to return options as [[:db/id label]]
   (assert options-anchor)
   ; This needs to be robust to partially constructed anchors
   (let [link (let [request (if-let [link (-> options-anchor :anchor/link :db/id)]
@@ -49,13 +49,13 @@
                    (exception/extract resp))))
         route (anchor/build-anchor-route options-anchor param-ctx)]
     ; we are assuming we have a query link here
-    (mlet [q (if-let [qstr (-> link :link/request :link-query/value)]     ; We avoid caught exceptions when possible
+    (mlet [q (if-let [qstr (-> link :link/request :link-query/value)] ; We avoid caught exceptions when possible
                (exception/try-on (reader/read-string qstr))
                (exception/failure nil))                     ; is this a success or failure? Doesn't matter - datomic will fail.
-           result (let [params-map (merge (:query-params route) (q-util/build-dbhole-lookup (:response param-ctx) (:branch route) (:link/request link)))
-                        query-value (q-util/->queryRequest q (:link/request link) (:branch route) params-map param-ctx)]
+           result (let [params-map (merge (:query-params route) (q-util/build-dbhole-lookup (:link/request link) param-ctx))
+                        query-value (q-util/->queryRequest q (:link/request link) params-map param-ctx)]
                     (hc/hydrate (:response param-ctx) query-value))]
-          (let [colspec (form-util/determine-colspec result link (:branch route) param-ctx)
+          (let [colspec (form-util/determine-colspec result link param-ctx)
                 ; options have custom renderers which get user bindings
                 param-ctx (user-bindings/user-bindings link param-ctx)]
             (cats/return

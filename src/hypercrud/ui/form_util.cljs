@@ -18,13 +18,10 @@
         f (if raw-mode? #(dissoc % :find-element/form) identity)]
     (map f ordered-find-elements)))
 
-(defn filter-visible-fields [fields param-ctx]
-  (filter
-    (fn [fieldinfo]
-      (let [attr (-> fieldinfo :field/attribute :attribute/ident)
-            visible-fn (get-in param-ctx [:fields attr :visible?] (constantly true))]
-        (visible-fn param-ctx)))
-    fields))
+(defn filter-visible-fields [fieldinfo param-ctx]
+  (let [attr (-> fieldinfo :field/attribute :attribute/ident)
+        visible-fn (get-in param-ctx [:fields attr :visible?] (constantly true))]
+    (visible-fn param-ctx)))
 
 (defn find-elements-by-name [link-req]
   (->> (mapv (juxt :find-element/name identity) (:link-query/find-element link-req))
@@ -44,7 +41,7 @@
      :find-element/name "entity"
      :find-element/connection conn
      :find-element/form (-> link :link/request :link-entity/form
-                            (update :form/field filter-visible-fields param-ctx))}))
+                            (update :form/field (fn [fields] (filter #(filter-visible-fields % param-ctx) fields))))}))
 
 (defn get-ordered-find-elements [link param-ctx]
   (let [req (:link/request link)]
@@ -62,9 +59,8 @@ but retaining and correlating all information through a join. Not all entities a
 especially consider the '* case, so we need a uniform column set driving the body rows in sync
 with the headers but the resultset needs to match this column-fields structure now too; since
 the find-element level has been flattened out of the columns."
-  [result link branch-or-branches param-ctx]
+  [result link param-ctx]
   (let [result (if (map? result) [result] result)           ; unified colspec for table and form
-        branches (if-not (map? branch-or-branches) {"entity" branch-or-branches} branch-or-branches)
         ordered-find-elements (-> (get-ordered-find-elements link param-ctx)
                                   (strip-forms-in-raw-mode param-ctx))
         raw-mode? (= (:display-mode param-ctx) :root)
@@ -89,8 +85,7 @@ the find-element level has been flattened out of the columns."
                                              ; raw mode sort is by namespaced attribute, per find-element
                                              k))
                                          col-idents)
-
-                    db (hc/db (:response param-ctx) (-> fe-conn :db/id :id) (get branches fe-name))]
+                    db (hc/db (:response param-ctx) (-> fe-conn :db/id :id) (get-in param-ctx [:branches (-> fe-conn :db/id :id)]))]
                 (mapcat (fn [k]
                           [db fe-name k (get indexed-fields k)]) col-idents')))
             result-as-columns
