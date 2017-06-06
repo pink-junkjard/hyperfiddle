@@ -71,8 +71,7 @@
 
 (defn anchor-branch-logic [anchor param-ctx]
   (if (is-anchor-managed? anchor)
-    (let [branch (branch/encode-branch-child (some-> (:db param-ctx) .-branch)
-                                             (safe-run-user-code-str (auto-branch anchor) param-ctx))]
+    (let [branch (branch/encode-branch-child (some-> (:db param-ctx) .-branch) (auto-branch anchor param-ctx))]
       (-> param-ctx
           (assoc-in [:branches (.-conn-id (:db param-ctx))] branch)
           (update :db #(hc/db (:response param-ctx) (.-conn-id %) branch))))

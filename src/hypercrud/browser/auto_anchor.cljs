@@ -1,7 +1,6 @@
 (ns hypercrud.browser.auto-anchor
   (:require [hypercrud.browser.auto-anchor-formula :refer [auto-formula]]
-            [hypercrud.browser.auto-anchor-txfn :refer [auto-txfn]]
-            [hypercrud.browser.auto-anchor-branch :refer [auto-branch]]))
+            [hypercrud.browser.auto-anchor-txfn :refer [auto-txfn]]))
 
 
 (defn auto-anchor [anchor]

@@ -1,7 +1,7 @@
 (ns hypercrud.browser.auto-anchor-branch)
 
 
-(defn auto-branch [anchor]
+(defn auto-branch [anchor param-ctx]
   (let [{r :anchor/repeating? e :anchor/find-element a :anchor/attribute} anchor]
     (cond
 
@@ -9,18 +9,16 @@
 
       ; attr create
       (and (not r) a)
-      (pr-str `(fn [ctx#]
-                 (-> (str (-> ctx# :entity :db/id :id) "."
-                          (-> ctx# :attribute :attribute/ident) "."
-                          (case (-> ((:schema ctx#) (-> ctx# :attribute :attribute/ident)) :attribute/cardinality :db/ident)
-                            :db.cardinality/one nil
-                            :db.cardinality/many (hash (into #{} (mapv :db/id (:value ctx#))))))
-                     hash js/Math.abs - str)))
+      (-> (str (-> param-ctx :entity :db/id :id) "."
+               (-> param-ctx :attribute :attribute/ident) "."
+               (case (-> ((:schema param-ctx) (-> param-ctx :attribute :attribute/ident)) :attribute/cardinality :db/ident)
+                 :db.cardinality/one nil
+                 :db.cardinality/many (hash (into #{} (mapv :db/id (:value param-ctx))))))
+          hash js/Math.abs - str)
 
       ;entity create
       (and (not r) (not a))
-      (pr-str `(fn [ctx#]
-                 (-> (str (-> ctx# :entity :db/id :id) "." ".")
-                     hash js/Math.abs - str)))
+      (-> (str (-> param-ctx :entity :db/id :id) "." ".")
+          hash js/Math.abs - str)
 
       :else nil)))
