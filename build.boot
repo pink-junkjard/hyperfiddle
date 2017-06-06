@@ -22,7 +22,10 @@
          '[adzerk.bootlaces :refer :all]
          '[crisptrutski.boot-cljs-test :refer [test-cljs]])
 
-(require 'boot.lein) (boot.lein/write-project-clj)
+(require 'boot.lein)
+(when (> (.lastModified (clojure.java.io/file "build.boot"))
+         (.lastModified (clojure.java.io/file "project.clj")))
+  (boot.lein/write-project-clj))
 
 (def +version+ "0.1.0-SNAPSHOT")
 
