@@ -11,7 +11,7 @@
 
 (defprotocol Peer
   (hydrate! [this request])                                 ; hydrate a full page
-  (transact! [this conn-id])                                ; push - stage first as a separate step.
+  (transact! [this])                                        ; push - stage first as a separate step.
 
   ; just need branch identity, don't need a hydrated db value
   (with! [this conn-id branch tx])                          ; stage datoms in a branch

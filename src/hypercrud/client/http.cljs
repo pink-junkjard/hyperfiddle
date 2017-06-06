@@ -8,6 +8,7 @@
             [hypercrud.client.response :as response]
             [hypercrud.client.tx :as tx]
             [hypercrud.util.branch :as branch]
+            [hypercrud.util.core :as util]
             [kvlt.core :as kvlt]
             [kvlt.middleware.params]
             [promesa.core :as p]))
@@ -76,13 +77,21 @@
     (set/subset? (set requests) (some-> last-response .-requests)))
 
 
-  (transact! [this conn-id]
+  (transact! [this]
     (-> (kvlt/request!
           {:url (resolve-relative-uri entry-uri (goog.Uri. "transact"))
            :content-type content-type-edn
            :accept content-type-edn
            :method :post
-           :form (get-in stage [conn-id nil])
+           :form (->> @stage
+                      (util/map-values (fn [branch-tx]
+                                         (->> (get branch-tx nil)
+                                              (filter (fn [[op e a v]]
+                                                        (not (and (or (= :db/add op) (= :db/retract op))
+                                                                  (nil? v)))))))))
+
+
+           #_(get-in @stage [conn-id nil])
            :as :auto})
         (p/then (fn [resp]
                   (if (:success resp)
