@@ -55,12 +55,12 @@
   (and (:anchor/tx-fn anchor) (not (empty? (:anchor/link anchor)))))
 
 (defn keyword [maybe-field anchors props param-ctx]
-  (let [on-change! #((:user-swap! param-ctx) {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %)})]
+  (let [on-change! #((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %))]
     [input/keyword-input* (:value param-ctx) on-change! props]))
 
 
 (defn string [maybe-field anchors props param-ctx]
-  (let [on-change! #((:user-swap! param-ctx) {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %)})]
+  (let [on-change! #((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %))]
     [input/input* (:value param-ctx) on-change! props]))
 
 
@@ -68,7 +68,7 @@
   [:div.value
    [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
    [input/validated-input
-    (:value param-ctx) #((:user-swap! param-ctx) {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %)})
+    (:value param-ctx) #((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %))
     #(js/parseInt % 10) pr-str
     #(or (integer? (js/parseInt % 10)) (= "nil" %))
     props]
@@ -76,7 +76,7 @@
 
 
 (defn textarea [maybe-field anchors props param-ctx]
-  (let [set-attr! #((:user-swap! param-ctx) {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %)})]
+  (let [set-attr! #((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %))]
     [textarea* (merge {:type "text"
                        :value (:value param-ctx)
                        :on-change set-attr!}
@@ -91,7 +91,7 @@
 
 
 (defn dbid [props param-ctx]
-  (let [on-change! #((:user-swap! param-ctx) {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %)})]
+  (let [on-change! #((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %))]
     (input/dbid-input (:value param-ctx) on-change! props)))
 
 (defn process-option-anchors [anchors param-ctx]
@@ -180,7 +180,7 @@
             ; todo wire input to up arrow
             #_(dbid props param-ctx))
           [:br]
-          [:button {:on-click #((:user-swap! param-ctx) {:tx (tx/edit-entity (get-in param-ctx [:entity :db/id]) (-> param-ctx :attribute :attribute/ident) [] [@select-value-atom])})} "⬆"]]
+          [:button {:on-click #((:user-with! param-ctx) (tx/edit-entity (get-in param-ctx [:entity :db/id]) (-> param-ctx :attribute :attribute/ident) [] [@select-value-atom]))} "⬆"]]
          (render-inline-anchors maybe-field (filter :anchor/render-inline? anchors) param-ctx)]))))
 
 (defn ref-many-component-table [maybe-field anchors props param-ctx]
@@ -189,7 +189,7 @@
    [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]])
 
 (defn multi-select-ref [maybe-field anchors props param-ctx]
-  (let [add-item! #((:user-swap! param-ctx) {:tx (tx/edit-entity (:db/id (:entity param-ctx)) (:attribute param-ctx) [] [nil])})]
+  (let [add-item! #((:user-with! param-ctx) (tx/edit-entity (:db/id (:entity param-ctx)) (:attribute param-ctx) [] [nil]))]
     (multi-select* multi-select-markup add-item! maybe-field anchors props param-ctx))) ;add-item! is: add nil to set
 
 ;(defn multi-select-ref-component [maybe-field anchors props param-ctx]
@@ -223,7 +223,7 @@
 (defn code [& args]
   (fn [maybe-field anchors props param-ctx]
     (let [ident (-> param-ctx :attribute :attribute/ident)
-          change! #((:user-swap! param-ctx) {:tx (tx/edit-entity (:db/id (:entity param-ctx)) ident [(:value param-ctx)] [%])})]
+          change! #((:user-with! param-ctx) (tx/edit-entity (:db/id (:entity param-ctx)) ident [(:value param-ctx)] [%]))]
       ^{:key ident}
       [:div.value
        (render-inline-anchors maybe-field (filter :anchor/render-inline? anchors) param-ctx)
@@ -237,7 +237,7 @@
         (integer? ms))))
 
 (defn instant [maybe-field anchors props param-ctx]
-  (let [on-change! #((:user-swap! param-ctx) {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %)})
+  (let [on-change! #((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %))
         parse-string (fn [s]
                        (if (empty? s)
                          nil
@@ -267,5 +267,5 @@
 (defn raw [_ anchors props param-ctx]
   (let [valueType (-> param-ctx :attribute :attribute/valueType :db/ident)
         value (if (= valueType :db.type/ref) (:db/id (:value param-ctx)) (:value param-ctx))
-        on-change! #((:user-swap! param-ctx) {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %)})]
+        on-change! #((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %))]
     [input/edn-input* value on-change! props]))

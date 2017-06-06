@@ -35,7 +35,7 @@
           [input/keyword-input* @attr-ident on-change!])]
        (let [on-change! #(let [tx [[:db/add (:db/id entity) @attr-ident %]]]
                            ; todo cardinality many
-                           ((:user-swap! param-ctx) {:tx tx}))
+                           ((:user-with! param-ctx) tx))
              props (if (nil? @attr-ident) {:read-only true})]
          [input/edn-input* nil on-change! props])])))
 
@@ -60,7 +60,8 @@
                               entity-anchors (->> form-anchors (filter :anchor/repeating?))
                               db (ffirst colspec)
                               param-ctx (assoc param-ctx :db db
-                                                         :user-swap! (partial (:app-swap! param-ctx) (.-conn-id db) (.-branch db)))]
+                                                         ; todo custom user-dispatch with all the tx-fns as reducers
+                                                         :user-with! (partial (:dispatch! param-ctx) :with (.-conn-id db) (.-branch db)))]
                           (concat
                             ; don't put entity in scope because it messes up formulas which have to be deterministic with request side.
                             (widget/render-anchors (remove :anchor/render-inline? entity-new-anchors) param-ctx)

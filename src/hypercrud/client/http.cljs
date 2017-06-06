@@ -6,8 +6,6 @@
             [hypercrud.client.core :as hc]
             [hypercrud.client.internal :as internal]
             [hypercrud.client.response :as response]
-            [hypercrud.client.tx :as tx]
-            [hypercrud.util.branch :as branch]
             [hypercrud.util.core :as util]
             [kvlt.core :as kvlt]
             [kvlt.middleware.params]
@@ -89,31 +87,10 @@
                                               (filter (fn [[op e a v]]
                                                         (not (and (or (= :db/add op) (= :db/retract op))
                                                                   (nil? v)))))))))
-
-
-           #_(get-in @stage [conn-id nil])
            :as :auto})
         (p/then (fn [resp]
                   (if (:success resp)
                     ; clear master stage
                     ; but that has to be transactional with a redirect???
                     (p/resolved (-> resp :body :hypercrud))
-                    (p/rejected resp))))))
-
-  ; We should just provide reducers.
-  (with! [this conn-id branch tx]
-    (swap! stage update-in [conn-id branch] tx/into-tx tx)
-    nil)
-
-  (merge! [this conn-id branch]
-    (let [parent-branch (branch/decode-parent-branch branch)]
-      (swap! stage (fn [s]
-                     (-> s
-                         (update-in [conn-id parent-branch] tx/into-tx (hc/tx last-response (hc/db last-response conn-id branch)))
-                         (update-in [conn-id] dissoc branch)))))
-    nil)
-
-  (discard! [this conn-id branch]
-    (swap! stage (fn [s]
-                   (update s conn-id dissoc branch)))
-    nil))
+                    (p/rejected resp)))))))

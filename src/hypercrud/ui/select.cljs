@@ -14,7 +14,7 @@
                                      "" nil
                                      "true" true
                                      "false" false)]
-                             ((:user-swap! param-ctx) {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) v)}))
+                             ((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) v)))
                :disabled (if (:read-only props) true false)}]
     [:select props
      [:option {:key true :value "true"} "True"]
@@ -35,7 +35,7 @@
                                         (let [id (js/parseInt select-value 10)
                                               id (if (< id 0) (str id) id)]
                                           (->DbId id (get-in param-ctx [:entity :db/id :conn-id]))))]
-                             ((:user-swap! param-ctx) {:tx (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) dbid)}))
+                             ((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) dbid)))
                :disabled (:read-only props)}
         options (option/hydrate-options options-anchor param-ctx)]
     [:span.select

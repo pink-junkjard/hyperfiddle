@@ -36,7 +36,8 @@
        (mapcat (fn [[fe-name colspec]]
                  (let [db (ffirst colspec)
                        param-ctx (assoc param-ctx :db db
-                                                  :user-swap! (partial (:app-swap! param-ctx) (.-conn-id db) (.-branch db)))]
+                                                  ; todo custom user-dispatch with all the tx-fns as reducers
+                                                  :user-with! (partial (:dispatch! param-ctx) :with (.-conn-id db) (.-branch db)))]
                    (->> colspec
                         (mapv (fn [[db fe-name ident field]]
                                 (let [param-ctx (assoc param-ctx :attribute (get (:schema param-ctx) ident {:attribute/ident ident}))
@@ -85,7 +86,8 @@
                     (let [entity (get relation fe-name)
                           db (ffirst colspec)
                           param-ctx (assoc param-ctx :db db
-                                                     :user-swap! (partial (:app-swap! param-ctx) (.-conn-id db) (.-branch db)))
+                                                     ; todo custom user-dispatch with all the tx-fns as reducers
+                                                     :user-with! (partial (:dispatch! param-ctx) :with (.-conn-id db) (.-branch db)))
                           param-ctx (form-util/entity-param-ctx entity param-ctx)
                           attribute-anchors (->> (get entity-anchors-lookup fe-name)
                                                  (filter :anchor/attribute))]

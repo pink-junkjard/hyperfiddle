@@ -99,14 +99,17 @@
                               (p/branch (let [result (txfn param-ctx tx-from-modal)]
                                           (if-not (p/promise? result) (p/resolved result) result)) ; txfn may be sync or async)
                                         (fn [result]
-                                          ; the branch is out of date
-                                          ((:discard! param-ctx) (.-conn-id (:db param-ctx)) (.-branch (:db param-ctx)))
-                                          ; stage the result from biz logic into master
-                                          ((:with! param-ctx) (.-conn-id (:db param-ctx)) nil (:tx result))
+                                          (let [conn-id (.-conn-id (:db param-ctx))
+                                                branch (.-branch (:db param-ctx))]
+                                            ((:dispatch! param-ctx) :batch
+                                              ; the branch is out of date
+                                              [:discard conn-id branch]
+                                              ; stage the result from biz logic into the parent
+                                              [:with conn-id (branch/decode-parent-branch branch) (:tx result)]))
                                           nil)
                                         (fn [why]
                                           (js/console.error why))))
-                     :cancel #((:discard! param-ctx) (.-conn-id (:db param-ctx)) (.-branch (:db param-ctx)))}}))
+                     :cancel #((:dispatch! param-ctx) :discard (.-conn-id (:db param-ctx)) (.-branch (:db param-ctx)))}}))
 
         (if (is-anchor-managed? anchor)                     ; the whole point of popovers is managed branches.
           {:popover (fn []
