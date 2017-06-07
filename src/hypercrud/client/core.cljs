@@ -16,6 +16,5 @@
   ; for UIs
   (hydrated? [this request])
 
-  ; internal & used for clone-link
-  (hydrate!* [this request])
+  ; used for clone-link
   (hydrate-one! [this request]))

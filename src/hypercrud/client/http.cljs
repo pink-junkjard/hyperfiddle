@@ -40,33 +40,31 @@
   (-> (.clone entry-uri)
       (.resolve relative-uri)))
 
+(defn- hydrate! [entry-uri requests stage-val]
+  (-> (kvlt/request! {:url (resolve-relative-uri entry-uri (goog.Uri. "hydrate"))
+                      :content-type content-type-transit    ; helps debugging to view as edn
+                      :accept content-type-transit          ; needs to be fast so transit
+                      :method :post
+                      :form {:staged-tx stage-val :request (into #{} requests)}
+                      :as :auto})
+      (p/then (fn [http-response]
+                (let [{:keys [t pulled-trees-map]} (-> http-response :body :hypercrud)]
+                  (response/->Response (into #{} requests) pulled-trees-map stage-val))))))
 
 (deftype Peer [entry-uri stage ^:mutable last-response]
   hc/Peer
-  (hydrate!* [this requests]
-    (let [stage-val @stage]
-      (-> (kvlt/request! {:url (resolve-relative-uri entry-uri (goog.Uri. "hydrate"))
-                          :content-type content-type-transit ; helps debugging to view as edn
-                          :accept content-type-transit      ; needs to be fast so transit
-                          :method :post
-                          :form {:staged-tx stage-val :request (into #{} requests)}
-                          :as :auto})
-          (p/then (fn [http-response]
-                    (let [{:keys [t pulled-trees-map]} (-> http-response :body :hypercrud)]
-                      (response/->Response (into #{} requests) pulled-trees-map stage-val)))))))
-
   ; why did 'force?' behavior change?
   (hydrate! [this request]
     #_(if (hc/hydrated? this request)                       ; this if check should be higher?
         (p/resolved last-response))
-    (-> (hc/hydrate!* this request)
+    (-> (hydrate! entry-uri request @stage)
         (p/then (fn [response]
                   (set! last-response response)
                   last-response))))
 
   ; for clone link - is this bad? yeah its bad since it can never be batched.
   (hydrate-one! [this request]
-    (-> (hc/hydrate!* this #{request})
+    (-> (hydrate! entry-uri #{request} @stage)
         (p/then (fn [peer] (hypercrud.client.core/hydrate peer request)))))
 
 
