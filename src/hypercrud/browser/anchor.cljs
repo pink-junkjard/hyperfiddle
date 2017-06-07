@@ -102,10 +102,8 @@
                                           (let [conn-id (.-conn-id (:db param-ctx))
                                                 branch (.-branch (:db param-ctx))]
                                             ((:dispatch! param-ctx) :batch
-                                              ; the branch is out of date
-                                              [:discard conn-id branch]
-                                              ; stage the result from biz logic into the parent
-                                              [:with conn-id (branch/decode-parent-branch branch) (:tx result)]))
+                                              [:with conn-id branch (:tx result)]
+                                              [:merge conn-id branch]))
                                           nil)
                                         (fn [why]
                                           (js/console.error why))))

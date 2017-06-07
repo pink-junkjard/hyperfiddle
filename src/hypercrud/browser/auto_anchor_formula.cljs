@@ -3,6 +3,15 @@
             [hypercrud.util.core :as util]))
 
 
+(defn auto-entity-id [ctx & [conn-id]]
+  (->DbId (-> (str (-> ctx :entity :db/id :id) "."
+                   (-> ctx :attribute :attribute/ident) "."
+                   (case (-> ((:schema ctx) (-> ctx :attribute :attribute/ident)) :attribute/cardinality :db/ident)
+                     :db.cardinality/one nil
+                     :db.cardinality/many (hash (into #{} (mapv :db/id (:value ctx))))))
+              hash js/Math.abs - str)
+          (or conn-id (-> ctx :entity :db/id :conn-id))))
+
 (defn auto-formula [anchor]                                 ; what about long-coersion?
   ; Future improvement:
   ; we already have this info in the runtime param-ctx, so we could delay until formula runtime
@@ -33,14 +42,7 @@
       (pr-str `(fn [ctx#]
                  (assert (-> ctx# :entity))
                  (assert (-> ctx# :entity :db/id :conn-id))
-                 {:entity
-                  (->DbId (-> (str (-> ctx# :entity :db/id :id) "."
-                                   (-> ctx# :attribute :attribute/ident) "."
-                                   (case (-> ((:schema ctx#) (-> ctx# :attribute :attribute/ident)) :attribute/cardinality :db/ident)
-                                     :db.cardinality/one nil
-                                     :db.cardinality/many (hash (into #{} (mapv :db/id (:value ctx#))))))
-                              hash js/Math.abs - str)
-                          (-> ctx# :entity :db/id :conn-id))}))
+                 {:entity (auto-entity-id ctx#)}))
 
       ; entity edit
       (and r (not a))
@@ -58,11 +60,7 @@
       ; will ignore this and use the explicit conn. This is only needed to plumb a connection to the autolink logic so it can choose the right connection.
       (and (not r) (not a))
       (pr-str `(fn [ctx#]
-                 {:entity
-                  (->DbId (-> (str (-> ctx# :entity :db/id :id) "." ".")
-                              hash js/Math.abs - str)
-                          (or ~(-> e :find-element/connection :db/id :id)
-                              (-> ctx# :entity :db/id :conn-id)))}))
+                 {:entity (auto-entity-id ctx# ~(-> e :find-element/connection :db/id :id))}))
 
       ; naked
       (and (not r) (not e) (not a)) nil
