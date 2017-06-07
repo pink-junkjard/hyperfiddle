@@ -65,12 +65,13 @@
 
 (defn is-anchor-managed? [anchor]
   (let [{r :anchor/repeating? e :anchor/find-element a :anchor/attribute ident :anchor/ident} anchor]
-    (and (or a e) (:anchor/tx-fn anchor) (:anchor/link anchor))))
+    (and (:anchor/tx-fn anchor) (:anchor/link anchor))))
 
 (defn anchor-branch-logic [anchor param-ctx]
   (if (is-anchor-managed? anchor)
     (let [branch (branch/encode-branch-child (some-> (:db param-ctx) .-branch) (:id (auto-entity-dbid param-ctx)))]
       (-> param-ctx
+          ; if we are an index link, what are we forking? Provide a binding
           (assoc-in [:branches (.-conn-id (:db param-ctx))] branch)
           (update :db #(hc/db (:response param-ctx) (.-conn-id %) branch))))
     param-ctx))

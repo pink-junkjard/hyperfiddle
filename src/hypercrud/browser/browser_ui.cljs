@@ -92,7 +92,7 @@
   (if (:anchor/link anchor)
     (ui' (anchor/build-anchor-route anchor param-ctx)
          ; entire context must be encoded in the route
-         (dissoc param-ctx :result :entity :attribute :value :layout))
+         (dissoc param-ctx :result :db :entity :attribute :value :layout))
     (exception/failure "anchor has no link")))
 
 (defn safe [f & args]

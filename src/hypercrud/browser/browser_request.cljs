@@ -6,6 +6,7 @@
             [hypercrud.browser.auto-link :as auto-link]
             [hypercrud.browser.anchor :as anchor]
             [hypercrud.browser.link-util :as link-util]
+            [hypercrud.browser.user-bindings :as user-bindings]
             [hypercrud.client.core :as hc]
             [hypercrud.client.schema :as schema-util]
             [hypercrud.form.q-util :as q-util]
@@ -163,11 +164,12 @@
                 (cats/return
                   (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
                         param-ctx (assoc param-ctx :schema indexed-schema)]
+                    ; todo :root mode
                     (link-query-dependent-requests result (:link-query/find-element link-query)
                                                    (auto-anchor/merge-anchors
                                                      (auto-anchor/auto-anchors (auto-link/system-anchors link result param-ctx))
                                                      (auto-anchor/auto-anchors (:link/anchor link)))
-                                                   param-ctx))))
+                                                   (user-bindings/user-bindings link param-ctx)))))
           nil)))))
 
 (defn requests-for-link-entity [link query-params param-ctx]
@@ -183,11 +185,12 @@
                 (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
                       param-ctx (assoc param-ctx :schema indexed-schema)
                       result (->> (if (map? result) [result] result) (mapv #(assoc {} "entity" %)))]
+                  ;todo ;root mode
                   (link-entity-dependent-requests result (:link/request link)
                                                   (auto-anchor/merge-anchors
                                                     (auto-anchor/auto-anchors (auto-link/system-anchors link result param-ctx))
                                                     (auto-anchor/auto-anchors (:link/anchor link)))
-                                                  param-ctx))))
+                                                  (user-bindings/user-bindings link param-ctx)))))
         nil))))
 
 (defn requests-for-link [link query-params param-ctx]
@@ -219,4 +222,4 @@
   (if (:anchor/link anchor)
     (request' (anchor/build-anchor-route anchor param-ctx)
               ; entire context must be encoded in the route
-              (dissoc param-ctx :result :entity :attribute :value))))
+              (dissoc param-ctx :result :db :entity :attribute :value))))
