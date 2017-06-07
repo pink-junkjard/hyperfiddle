@@ -1,6 +1,6 @@
 (ns hypercrud.browser.anchor
   (:require [clojure.set :as set]
-            [hypercrud.browser.auto-anchor-branch :refer [auto-branch]]
+            [hypercrud.browser.auto-anchor-formula :refer [auto-entity-dbid]]
             [hypercrud.browser.connection-color :as connection-color]
             [hypercrud.browser.link-util :as link-util]
             [hypercrud.client.core :as hc]
@@ -65,13 +65,11 @@
 
 (defn is-anchor-managed? [anchor]
   (let [{r :anchor/repeating? e :anchor/find-element a :anchor/attribute ident :anchor/ident} anchor]
-    (or
-      (and (not r) a)
-      (and (not r) e (not a)))))
+    (and (or a e) (:anchor/tx-fn anchor) (:anchor/link anchor))))
 
 (defn anchor-branch-logic [anchor param-ctx]
   (if (is-anchor-managed? anchor)
-    (let [branch (branch/encode-branch-child (some-> (:db param-ctx) .-branch) (auto-branch anchor param-ctx))]
+    (let [branch (branch/encode-branch-child (some-> (:db param-ctx) .-branch) (:id (auto-entity-dbid param-ctx)))]
       (-> param-ctx
           (assoc-in [:branches (.-conn-id (:db param-ctx))] branch)
           (update :db #(hc/db (:response param-ctx) (.-conn-id %) branch))))

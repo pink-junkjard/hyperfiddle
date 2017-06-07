@@ -65,7 +65,7 @@
   ; for clone link - is this bad? yeah its bad since it can never be batched.
   (hydrate-one! [this request]
     (-> (hydrate! entry-uri #{request} @stage)
-        (p/then (fn [peer] (hypercrud.client.core/hydrate peer request)))))
+        (p/then (fn [response] (hypercrud.client.core/hydrate response request)))))
 
 
   (hydrated? [this requests]
