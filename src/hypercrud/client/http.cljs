@@ -1,12 +1,8 @@
 (ns hypercrud.client.http
   (:require [cljs.pprint :as pprint]
             [cljs.reader :as reader]
-            [clojure.set :as set]
             [goog.Uri]
-            [hypercrud.client.core :as hc]
             [hypercrud.client.internal :as internal]
-            [hypercrud.client.response :as response]
-            [hypercrud.util.core :as util]
             [kvlt.core :as kvlt]
             [kvlt.middleware.params]
             [promesa.core :as p]))
@@ -40,55 +36,26 @@
   (-> (.clone entry-uri)
       (.resolve relative-uri)))
 
-(defn- hydrate! [entry-uri requests stage-val]
+(defn hydrate! [entry-uri requests stage-val]
   (-> (kvlt/request! {:url (resolve-relative-uri entry-uri (goog.Uri. "hydrate"))
                       :content-type content-type-transit    ; helps debugging to view as edn
                       :accept content-type-transit          ; needs to be fast so transit
                       :method :post
                       :form {:staged-tx stage-val :request (into #{} requests)}
                       :as :auto})
-      (p/then (fn [http-response]
-                (let [{:keys [t pulled-trees-map]} (-> http-response :body :hypercrud)]
-                  (response/->Response (into #{} requests) pulled-trees-map stage-val))))))
+      (p/then #(-> % :body :hypercrud))))
 
-(deftype Peer [entry-uri stage ^:mutable last-response]
-  hc/Peer
-  ; why did 'force?' behavior change?
-  (hydrate! [this request]
-    #_(if (hc/hydrated? this request)                       ; this if check should be higher?
-        (p/resolved last-response))
-    (-> (hydrate! entry-uri request @stage)
-        (p/then (fn [response]
-                  (set! last-response response)
-                  last-response))))
-
-  ; for clone link - is this bad? yeah its bad since it can never be batched.
-  (hydrate-one! [this request]
-    (-> (hydrate! entry-uri #{request} @stage)
-        (p/then (fn [response] (hypercrud.client.core/hydrate response request)))))
-
-
-  (hydrated? [this requests]
-    ; compare our pre-loaded state with the peer dependencies
-    (set/subset? (set requests) (some-> last-response .-requests)))
-
-
-  (transact! [this]
-    (-> (kvlt/request!
-          {:url (resolve-relative-uri entry-uri (goog.Uri. "transact"))
-           :content-type content-type-edn
-           :accept content-type-edn
-           :method :post
-           :form (->> @stage
-                      (util/map-values (fn [branch-tx]
-                                         (->> (get branch-tx nil)
-                                              (filter (fn [[op e a v]]
-                                                        (not (and (or (= :db/add op) (= :db/retract op))
-                                                                  (nil? v)))))))))
-           :as :auto})
-        (p/then (fn [resp]
-                  (if (:success resp)
-                    ; clear master stage
-                    ; but that has to be transactional with a redirect???
-                    (p/resolved (-> resp :body :hypercrud))
-                    (p/rejected resp)))))))
+(defn transact! [entry-uri htx-groups]
+  (-> (kvlt/request!
+        {:url (resolve-relative-uri entry-uri (goog.Uri. "transact"))
+         :content-type content-type-edn
+         :accept content-type-edn
+         :method :post
+         :form htx-groups
+         :as :auto})
+      (p/then (fn [resp]
+                (if (:success resp)
+                  ; clear master stage
+                  ; but that has to be transactional with a redirect???
+                  (p/resolved (-> resp :body :hypercrud))
+                  (p/rejected resp))))))
