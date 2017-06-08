@@ -69,11 +69,14 @@
 
 (defn anchor-branch-logic [anchor param-ctx]
   (if (is-anchor-managed? anchor)
-    (let [branch (branch/encode-branch-child (some-> (:db param-ctx) .-branch) (:id (auto-entity-dbid param-ctx)))]
-      (-> param-ctx
-          ; if we are an index link, what are we forking? Provide a binding
-          (assoc-in [:branches (.-conn-id (:db param-ctx))] branch)
-          (update :db #(hc/db (:response param-ctx) (.-conn-id %) branch))))
+    (if-let [db (:db param-ctx)]
+      (let [branch (branch/encode-branch-child (some-> (:db param-ctx) .-branch) (:id (auto-entity-dbid param-ctx)))]
+        (-> param-ctx
+            ; if we are an index link, what are we forking? Provide a binding
+            (assoc-in [:branches (.-conn-id (:db param-ctx))] branch)
+            (update :db #(hc/db (:response param-ctx) (.-conn-id %) branch))))
+      ; Inform user via tooltip that we can't branch an index link because there is no db in scope. Explicitly set db in user bindings.
+      param-ctx)
     param-ctx))
 
 ; if this is driven by anchor, and not route, it needs memoized.
@@ -86,6 +89,8 @@
                  ; non-fatal error, report it here so user can fix it
                  (if error (js/alert (str "cljs eval error: " error))) ; return monad so tooltip can draw the error
                  value))
+
+        ; these three things can fail and need to inform user error
         route (if (:anchor/link anchor) (build-anchor-route anchor param-ctx #_"links & routes have nothing to do with branches"))
         route-props (if route (build-anchor-props-raw route (:anchor/link anchor) param-ctx))
         param-ctx (anchor-branch-logic anchor param-ctx)]
