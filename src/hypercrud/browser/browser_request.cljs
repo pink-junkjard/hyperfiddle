@@ -207,8 +207,9 @@
       (concat
         (remove nil? system-link-requests)
         (if-let [system-link-deps (exception/extract
-                                    (->> (mapv #(if % (hc/hydrate (:response param-ctx) %)
-                                                      (exception/success nil)) system-link-requests)
+                                    (->> system-link-requests
+                                         (mapv #(if % (hc/hydrate (:response param-ctx) %)
+                                                      (exception/success nil)))
                                          (reduce #(mlet [acc %1 v %2] (cats/return (conj acc v))) (exception/success [])))
                                     nil)]
           (let [link (auto-link/hydrate-system-link system-link-idmap system-link-deps param-ctx)]

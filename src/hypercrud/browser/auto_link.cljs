@@ -53,6 +53,15 @@
    :hypercrud/owner owner
    :link/request {:link-entity/connection conn}})
 
+(defn link-blank-system-remove [owner]
+  {:pre [owner]}
+  {:db/id (->DbId {:ident :sys-remove} nil)
+   :link/name "sys-remove"
+   :hypercrud/owner owner
+   :link/renderer (pr-str `(fn [result# colspec# anchors# param-ctx#]
+                             [:p "Retract entity?"]))
+   })
+
 
 (defn system-anchors
   "All sys links are :anchor/ident :sys, so they can be matched and merged with user-anchors.
@@ -91,10 +100,10 @@
                                         :anchor/render-inline? false}
                                        {:anchor/prompt (str "remove " fe-name)
                                         :anchor/ident :remove
-                                        :anchor/link nil
+                                        :anchor/link (link-blank-system-remove (:hypercrud/owner parent-link))
                                         :anchor/repeating? true
                                         :anchor/find-element fe
-                                        :anchor/render-inline? false}]))
+                                        :anchor/render-inline? true}]))
                             doall)
 
                        :link-entity
@@ -115,9 +124,9 @@
                            :anchor/render-inline? false}
                           {:anchor/prompt "remove"
                            :anchor/ident :remove
-                           :anchor/link nil
+                           :anchor/link (link-blank-system-remove (:hypercrud/owner parent-link))
                            :anchor/repeating? true
-                           :anchor/render-inline? false}])
+                           :anchor/render-inline? true}])
 
                        :link-blank [])
 
@@ -182,9 +191,9 @@
   ; That was the plan, but it doesn't work in second layer deep sys links, the parent is a sys link. So we
   ; need to just hydrate what we need.
 
-  [(->EntityRequest (->DbId (:conn system-link-idmap) hc/*root-conn-id*) nil root-db ['*])
-   (->EntityRequest (->DbId (:owner system-link-idmap) hc/*root-conn-id*) nil root-db ['*])
-   (if-let [e (:e system-link-idmap)] (->EntityRequest (->DbId (:e system-link-idmap) hc/*root-conn-id*) nil root-db
+  [(->EntityRequest (->DbId (:owner system-link-idmap) hc/*root-conn-id*) nil root-db ['*])
+   (if-let [conn (:conn system-link-idmap)] (->EntityRequest (->DbId conn hc/*root-conn-id*) nil root-db ['*]))
+   (if-let [e (:e system-link-idmap)] (->EntityRequest (->DbId e hc/*root-conn-id*) nil root-db
                                                        [:db/id
                                                         :find-element/name
                                                         :find-element/connection
@@ -194,13 +203,13 @@
                                                                                                      {:attribute/valueType [:db/id :db/ident]}
                                                                                                      {:attribute/cardinality [:db/id :db/ident]}
                                                                                                      {:attribute/unique [:db/id :db/ident]}]}]}]}]))
-   (if-let [a (:a system-link-idmap)] (->EntityRequest (->DbId (:a system-link-idmap) hc/*root-conn-id*) nil root-db
+   (if-let [a (:a system-link-idmap)] (->EntityRequest (->DbId a hc/*root-conn-id*) nil root-db
                                                        ['*
                                                         {:attribute/valueType [:db/id :db/ident]
                                                          :attribute/cardinality [:db/id :db/ident]
                                                          :attribute/unique [:db/id :db/ident]}]))])
 
-(defn hydrate-system-link [system-link-idmap [conn owner e a] param-ctx]
+(defn hydrate-system-link [system-link-idmap [owner conn e a] param-ctx]
   (let [owner-id (:owner system-link-idmap)                 ; hydrate this?
         conn-id (:conn system-link-idmap)
         fe-id (:e system-link-idmap)
@@ -216,4 +225,7 @@
       :system-edit-attr
       (if fe-id
         (link-query-system-edit-attr conn owner e a)
-        (link-entity-system-edit-attr conn owner a)))))
+        (link-entity-system-edit-attr conn owner a))
+
+      :sys-remove
+      (link-blank-system-remove owner))))
