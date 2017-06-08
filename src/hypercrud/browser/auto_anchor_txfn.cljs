@@ -1,6 +1,7 @@
 (ns hypercrud.browser.auto-anchor-txfn
-  (:require [hypercrud.types.DbId :refer [->DbId]]
-            [hypercrud.client.tx :as tx]))
+  (:require [hypercrud.browser.auto-anchor-formula :refer [auto-entity-dbid]]
+            [hypercrud.client.tx :as tx]
+            [hypercrud.types.DbId :refer [->DbId]]))
 
 
 (defn auto-txfn [anchor]
@@ -12,13 +13,7 @@
 
       (and (not r) a)                                       ; attr create
       (pr-str `(fn [ctx# tx-from-modal#]
-                 (let [new-dbid# (->DbId (-> (str (-> ctx# :entity :db/id :id) "."
-                                                  (-> ctx# :attribute :attribute/ident) "."
-                                                  (case (-> ((:schema ctx#) (-> ctx# :attribute :attribute/ident)) :attribute/cardinality :db/ident)
-                                                    :db.cardinality/one nil
-                                                    :db.cardinality/many (hash (into #{} (mapv :db/id (:value ctx#))))))
-                                             hash js/Math.abs - str)
-                                         (-> ctx# :entity :db/id :conn-id))]
+                 (let [new-dbid# (auto-entity-dbid ctx#)]
                    {:tx (concat
                           tx-from-modal#
                           (tx/edit-entity (-> ctx# :entity :db/id)
@@ -42,7 +37,7 @@
                    {:tx tx-from-modal'#})))
 
       (and r (not a) (= ident :remove))
-      (pr-str `(fn [ctx#]
+      (pr-str `(fn [ctx# tx-from-modal#]
                  {:tx [[:db.fn/retractEntity (-> ctx# :entity :db/id)]]}))
 
 
