@@ -101,13 +101,15 @@
             ; do we need to hydrate any dependencies in this chain?
             {:txfns {:stage (fn []
                               (p/branch (let [result (txfn param-ctx tx-from-modal)]
-                                          (if-not (p/promise? result) (p/resolved result) result)) ; txfn may be sync or async)
+                                          (if-not (p/promise? result) (p/resolved result) result)) ; txfn may be sync or async
                                         (fn [result]
                                           (let [conn-id (.-conn-id (:db param-ctx))
                                                 branch (.-branch (:db param-ctx))]
                                             ((:dispatch! param-ctx) :batch
                                               [:with conn-id branch (:tx result)]
-                                              [:merge conn-id branch]))
+                                              [:merge conn-id branch]
+                                              (if-let [app-route (:app-route result)]
+                                                [:soft-set-route app-route])))
                                           nil)
                                         (fn [why]
                                           (js/console.error why))))
