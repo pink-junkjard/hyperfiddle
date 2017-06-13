@@ -3,6 +3,7 @@
             [clojure.string :as string]
             [hypercrud.browser.link-util :as link-util]
             [hypercrud.client.core :as hc]
+            [hypercrud.ui.markdown :refer [markdown]]
             [hypercrud.ui.tooltip :as tooltip]
             [hypercrud.util.core :as util]))
 
@@ -115,7 +116,8 @@ the find-element level has been flattened out of the columns."
         field-prompt (util/fallback empty? (get maybe-field :field/prompt) (-> param-ctx :attribute :attribute/ident str))]
     [tooltip/hover-popover-managed
      {:label (case (:display-mode param-ctx)
-               :user (if-not (empty? docstring) [:pre docstring])
+               ; (auto-control maybe-field anchors props param-ctx)
+               :user (if-not (empty? docstring) (markdown docstring #()))
                :xray [:pre (util/pprint-str (attribute-human (:attribute param-ctx)) 50)])}
      [:span {:class (case (:display-mode param-ctx)
                       :user (if-not (empty? docstring) "help")
