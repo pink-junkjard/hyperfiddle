@@ -73,6 +73,11 @@
         {:position :below-center                            ; todo fix flicker
          :showing? state}
         (dissoc t-props :label :status)                 ; just ignore status, todo fix
+
+        ; Delay hide and cancel delay if we enter again.
+        ; Track enter and leave on both anchor and content.
+        ; https://github.com/react-bootstrap/react-bootstrap/pull/1557/files
+
         {:anchor [:span {:on-mouse-enter #(do (if (:label t-props) (reset! state true)) nil)
                          :on-mouse-leave #(do (if (:label t-props) (reset! state false)) nil)}
                   anchor]
