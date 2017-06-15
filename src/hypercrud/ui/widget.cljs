@@ -12,7 +12,7 @@
             [hypercrud.ui.select :refer [select* select-boolean*]]
             [hypercrud.ui.textarea :refer [textarea*]]
             [hypercrud.types.DbId :refer [->DbId]]
-            [re-com.core :as re-com :refer-macros [handler-fn]]
+            [re-com.core :as re-com]
             [reagent.core :as r]))
 
 
