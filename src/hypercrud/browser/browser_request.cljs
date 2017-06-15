@@ -73,9 +73,12 @@
         (->> ((:index lookup)) (mapcat #(recurse-request % param-ctx)))
         (->> ((:index-new lookup)) (mapcat #(recurse-request % param-ctx)))
         (->> ((:relation-new lookup)) (mapcat #(recurse-request % param-ctx)))
-        (->> find-elements
+        (->> find-elements                                  ; might have empty results
              (mapcat (fn [fe]
-                       (->> ((:entity-new lookup) fe) (mapcat #(recurse-request % param-ctx))))))
+                       (->> ((:entity-new lookup) fe) (mapcat #(recurse-request % (assoc param-ctx
+                                                                                    :db (let [conn-id (-> fe :find-element/connection :db/id :id)]
+                                                                                          (hc/db (:response param-ctx) conn-id (get-in param-ctx [:branches conn-id])))
+                                                                                    :find-element fe)))))))
         (->> result
              (mapcat (fn [relation]
                        (let [param-ctx (assoc param-ctx :result relation)]
@@ -83,9 +86,11 @@
                                  (->> find-elements         ; these are wrong for link-entity somehow?
                                       (mapcat (fn [fe]
                                                 (let [entity (get relation (:find-element/name fe))
-                                                      param-ctx (assoc param-ctx :entity entity
-                                                                                 :db (let [conn-id (-> fe :find-element/connection :db/id :id)]
-                                                                                       (hc/db (:response param-ctx) conn-id (get-in param-ctx [:branches conn-id]))))]
+                                                      param-ctx (assoc param-ctx
+                                                                  :db (let [conn-id (-> fe :find-element/connection :db/id :id)]
+                                                                        (hc/db (:response param-ctx) conn-id (get-in param-ctx [:branches conn-id])))
+                                                                  :find-element fe
+                                                                  :entity entity)]
                                                   (concat (->> ((:entity lookup) fe) (mapcat #(recurse-request % param-ctx)))
                                                           (->> (-> fe :find-element/form :form/field)
                                                                (filter #(form-util/filter-visible-fields % param-ctx))
@@ -98,7 +103,7 @@
                                                                              (->> ((:entity-attr-new lookup) fe attribute) (mapcat #(recurse-request % param-ctx))))
                                                                            ))))))))))))))))))
 
-(defn link-entity-dependent-requests [result link-entity anchors param-ctx]
+(defn link-entity-dependent-requests [result fe anchors param-ctx]
   (let [recurse-request (fn [anchor param-ctx]
                           (let [param-ctx (anchor/anchor-branch-logic anchor param-ctx)
                                 param-ctx (update param-ctx :debug #(str % ">inline-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]"))]
@@ -123,19 +128,23 @@
         ;(->> ((:index lookup)) (mapcat #(recurse-request % param-ctx)))
         ;(->> ((:index-new lookup)) (mapcat #(recurse-request % param-ctx)))
         (->> ((:relation-new lookup)) (mapcat #(recurse-request % param-ctx)))
-        (->> ((:entity-new lookup)) (mapcat #(recurse-request % param-ctx)))
+        (->> ((:entity-new lookup)) (mapcat #(recurse-request % (assoc param-ctx
+                                                                  :db (let [conn-id (-> fe :find-element/connection :db/id :id)]
+                                                                        (hc/db (:response param-ctx) conn-id (get-in param-ctx [:branches conn-id])))
+                                                                  :find-element fe))))
         (->> result
              (mapcat (fn [relation]
                        (concat
                          (->> ((:relation lookup)) (mapcat #(recurse-request % param-ctx)))
                          (let [entity (get relation "entity")
                                param-ctx (assoc param-ctx :result relation
-                                                          :db (let [conn-id (-> link-entity :link-entity/connection :db/id :id)]
+                                                          :db (let [conn-id (-> fe :find-element/connection :db/id :id)]
                                                                 (hc/db (:response param-ctx) conn-id (get-in param-ctx [:branches conn-id])))
+                                                          :find-element fe
                                                           :entity entity)]
                            (concat
                              (->> ((:entity lookup) entity) (mapcat #(recurse-request % param-ctx)))
-                             (->> (get-in link-entity [:link-entity/form :form/field])
+                             (->> (get-in fe [:find-element/form :form/field])
                                   (filter #(form-util/filter-visible-fields % param-ctx))
                                   (mapcat (fn [field]
                                             (let [attribute (-> field :field/attribute)
@@ -184,9 +193,10 @@
               (cats/return
                 (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
                       param-ctx (assoc param-ctx :schema indexed-schema)
+                      fe (form-util/manufacture-entity-find-element link param-ctx) ; if driven by colspec this hack goes away
                       result (->> (if (map? result) [result] result) (mapv #(assoc {} "entity" %)))]
                   ;todo ;root mode
-                  (link-entity-dependent-requests result (:link/request link)
+                  (link-entity-dependent-requests result fe
                                                   (auto-anchor/merge-anchors
                                                     (auto-anchor/auto-anchors (auto-link/system-anchors link result param-ctx))
                                                     (auto-anchor/auto-anchors (:link/anchor link)))
@@ -194,7 +204,10 @@
         nil))))
 
 (defn requests-for-link [link query-params param-ctx]
-  (let [param-ctx (assoc param-ctx :query-params query-params)]
+  (let [param-ctx (assoc param-ctx :query-params query-params)
+        ; i think driving this by colspec will unify the two paths (entity vs query)
+        ;colspec (form-util/determine-colspec result link param-ctx)
+        ]
     (case (link-util/link-type link)
       :link-query (requests-for-link-query link query-params param-ctx)
       :link-entity (requests-for-link-entity link query-params param-ctx)
@@ -223,4 +236,4 @@
   (if (:anchor/link anchor)
     (request' (anchor/build-anchor-route anchor param-ctx)
               ; entire context must be encoded in the route
-              (dissoc param-ctx :result :db :entity :attribute :value))))
+              (dissoc param-ctx :result :db :find-element :entity :attribute :value))))

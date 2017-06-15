@@ -20,10 +20,11 @@
 
 (defn build-label [colspec result param-ctx]
   (->> (partition 4 colspec)
-       (mapv (fn [[conn fe-name ident maybe-field]]
+       (mapv (fn [[conn fe attr maybe-field]]
                ; Custom label renderers? Can't use the attribute renderer, since that
                ; is how we are in a select options in the first place.
-               (let [value (get-in result [fe-name ident])
+               (let [ident (-> attr :attribute/ident)
+                     value (get-in result [(-> fe :find-element/name) ident])
                      user-renderer (-> param-ctx :fields ident :label-renderer)
                      {f :value error :error} (if-not (empty? user-renderer) (eval-str user-renderer))]
                  (if error (.warn js/console (str "Bad label rendererer " user-renderer)))
@@ -61,6 +62,6 @@
             (cats/return
               (->> result
                    (mapv (fn [relation]
-                           (let [[conn fe-name ident maybe-field] (first (partition 4 colspec))
-                                 entity (get relation fe-name)]
+                           (let [[conn fe attr maybe-field] (first (partition 4 colspec))
+                                 entity (get relation (-> fe :find-element/name))]
                              [(:db/id entity) (build-label colspec relation param-ctx)])))))))))

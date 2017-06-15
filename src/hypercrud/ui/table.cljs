@@ -32,15 +32,18 @@
 
 (defn build-col-heads [colspec col-sort param-ctx]
   (->> (partition 4 colspec)
-       (group-by (fn [[dbval fe-name ident maybe-field]] fe-name))
-       (mapcat (fn [[fe-name colspec]]
+       (group-by (fn [[dbval fe attr maybe-field]] fe))
+       (mapcat (fn [[fe colspec]]
                  (let [db (ffirst colspec)
                        param-ctx (assoc param-ctx :db db
+                                                  :find-element fe
                                                   ; todo custom user-dispatch with all the tx-fns as reducers
                                                   :user-with! (partial (:dispatch! param-ctx) :with (.-conn-id db) (.-branch db)))]
                    (->> colspec
-                        (mapv (fn [[db fe-name ident field]]
-                                (let [param-ctx (assoc param-ctx :attribute (get (:schema param-ctx) ident {:attribute/ident ident}))
+                        (mapv (fn [[db fe attr field]]
+                                (let [fe-name (-> fe :find-element/name)
+                                      ident (-> attr :attribute/ident)
+                                      param-ctx (assoc param-ctx :attribute attr)
                                       css-classes [(str "field-element-" (form-util/css-slugify fe-name))
                                                    (str "field-attr-" (form-util/css-slugify (str ident)))] #_"Dustin removed field-id and field-prompt; use a custom renderer"
                                       on-click #()
@@ -81,19 +84,22 @@
                                                  "entity"))))]
     [:tr
      (->> (partition 4 colspec)
-          (group-by (fn [[db fe-name ident maybe-field]] fe-name))
-          (mapcat (fn [[fe-name colspec]]
-                    (let [entity (get relation fe-name)
+          (group-by (fn [[db fe ident maybe-field]] fe))
+          (mapcat (fn [[fe colspec]]
+                    (let [entity (get relation (-> fe :find-element/name))
                           db (ffirst colspec)
                           param-ctx (assoc param-ctx :db db
+                                                     :find-element fe
                                                      ; todo custom user-dispatch with all the tx-fns as reducers
                                                      :user-with! (partial (:dispatch! param-ctx) :with (.-conn-id db) (.-branch db)))
                           param-ctx (form-util/entity-param-ctx entity param-ctx)
-                          attribute-anchors (->> (get entity-anchors-lookup fe-name)
+                          attribute-anchors (->> (get entity-anchors-lookup (-> fe :find-element/name))
                                                  (filter :anchor/attribute))]
                       (->> colspec
-                           (mapv (fn [[db fe-name ident maybe-field]]
-                                   (let [param-ctx (assoc param-ctx :attribute (get (:schema param-ctx) ident {:attribute/ident ident})
+                           (mapv (fn [[db fe attr maybe-field]]
+                                   (let [fe-name (-> fe :find-element/name)
+                                         ident (-> attr :attribute/ident)
+                                         param-ctx (assoc param-ctx :attribute attr
                                                                     :value (get entity ident)
                                                                     :layout :table)
                                          style {:border-color (connection-color/connection-color (:color param-ctx))}]
@@ -109,10 +115,12 @@
       ; inline entity-anchors are not yet implemented, what does that mean.
       ; find-element anchors need more items in their ctx
       (widget/render-anchors (->> (partition 4 colspec)
-                                  (group-by (fn [[db fe-name ident maybe-field]] fe-name)) ; keys are set, ignore colspec now except for db which is uniform.
-                                  (mapcat (fn [[fe-name colspec]]
-                                            (let [entity (get relation fe-name) _ (assert entity)
-                                                  param-ctx (assoc param-ctx :db (ffirst colspec))
+                                  (group-by (fn [[db fe attr maybe-field]] fe)) ; keys are set, ignore colspec now except for db which is uniform.
+                                  (mapcat (fn [[fe colspec]]
+                                            (let [fe-name (-> fe :find-element/name)
+                                                  entity (get relation fe-name) _ (assert entity)
+                                                  param-ctx (assoc param-ctx :db (ffirst colspec)
+                                                                             :find-element fe)
                                                   param-ctx (form-util/entity-param-ctx entity param-ctx)
                                                   fe-anchors (->> (get entity-anchors-lookup fe-name)
                                                                   (filter :anchor/repeating?)
@@ -166,10 +174,11 @@
                                                      (:find-element/name find-element)
                                                      "entity"))))]
                (->> (partition 4 colspec)
-                    (group-by (fn [[dbval fe-name ident maybe-field]] fe-name))
-                    (mapcat (fn [[fe-name colspec]]
-                              (let [form-anchors (get anchors-lookup fe-name)
-                                    param-ctx (assoc param-ctx :db (ffirst colspec))]
+                    (group-by (fn [[dbval fe attr maybe-field]] fe))
+                    (mapcat (fn [[fe colspec]]
+                              (let [form-anchors (get anchors-lookup (-> fe :find-element/name))
+                                    param-ctx (assoc param-ctx :db (ffirst colspec)
+                                                               :find-element fe)]
                                 (widget/render-anchors form-anchors param-ctx))))))]]]
           ; filter repeating? No because create-new-attribute down here too.
           [body relations colspec anchors sort-col param-ctx]]

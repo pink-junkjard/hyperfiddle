@@ -60,6 +60,7 @@ but retaining and correlating all information through a join. Not all entities a
 especially consider the '* case, so we need a uniform column set driving the body rows in sync
 with the headers but the resultset needs to match this column-fields structure now too; since
 the find-element level has been flattened out of the columns."
+  ; Need result only for raw mode.
   [result link param-ctx]
   (let [result (if (map? result) [result] result)           ; unified colspec for table and form
         ordered-find-elements (-> (get-ordered-find-elements link param-ctx)
@@ -76,9 +77,9 @@ the find-element level has been flattened out of the columns."
                     fe-name (-> fe :find-element/name)
                     fe-conn (-> fe :find-element/connection)
 
-                    entities (map second relation-for-fe)
                     col-idents (if (or raw-mode? (empty? (keys indexed-fields)))
-                                 (reduce (fn [acc v] (into acc (keys v))) #{} entities)
+                                 (let [entities (map second relation-for-fe)]
+                                   (reduce (fn [acc v] (into acc (keys v))) #{} entities))
                                  (keys indexed-fields))
                     col-idents' (sort-by (fn [k]
                                            (if-let [field (get indexed-fields k)]
@@ -87,8 +88,11 @@ the find-element level has been flattened out of the columns."
                                              k))
                                          col-idents)
                     db (hc/db (:response param-ctx) (-> fe-conn :db/id :id) (get-in param-ctx [:branches (-> fe-conn :db/id :id)]))]
-                (mapcat (fn [k]
-                          [db fe-name k (get indexed-fields k)]) col-idents')))
+                (mapcat (fn [ident]
+                          ; :db/id is missing from schema so fake it here, it has no valueType
+                          (let [attr (get (:schema param-ctx) ident {:attribute/ident ident})
+                                field (get indexed-fields ident)]
+                            [db fe attr field])) col-idents')))
             result-as-columns
             ordered-find-elements)
       (flatten)

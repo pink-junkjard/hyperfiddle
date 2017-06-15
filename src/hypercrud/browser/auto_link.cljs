@@ -134,8 +134,10 @@
         attr-links (case type
                      :link-query
                      (->> (partition 4 colspec)             ; driven by colspec, not find elements, because what matters is what's there.
-                          (mapcat (fn [[db fe-name ident maybe-field]]
-                                    (let [conn {:db/id (->DbId (.-conn-id db) hc/*root-conn-id*)}
+                          (mapcat (fn [[db fe attr maybe-field]]
+                                    (let [fe-name (-> fe :find-element/name)
+                                          ident (-> attr :attribute/ident)
+                                          conn {:db/id (->DbId (.-conn-id db) hc/*root-conn-id*)}
                                           fe (get find-elements fe-name)
                                           _ (assert fe)
                                           attr ((:schema param-ctx) ident) #_"nil for db/id"]
@@ -159,8 +161,10 @@
 
                      :link-entity
                      (->> (partition 4 colspec)
-                          (mapcat (fn [[db fe-name ident maybe-field]]
-                                    (let [conn {:db/id (->DbId (.-conn-id db) hc/*root-conn-id*)}
+                          (mapcat (fn [[db fe attr maybe-field]]
+                                    (let [fe-name (-> fe :find-element/name)
+                                          ident (-> attr :attribute/ident)
+                                          conn {:db/id (->DbId (.-conn-id db) hc/*root-conn-id*)}
                                           attr ((:schema param-ctx) ident) #_"nil for db/id"]
                                       (case (-> attr :attribute/valueType :db/ident)
                                         :db.type/ref

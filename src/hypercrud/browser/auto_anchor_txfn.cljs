@@ -23,8 +23,7 @@
 
       (and (not r) e (not a))
       (pr-str `(fn [ctx# tx-from-modal#]
-                 (let [branch# (-> (str (-> ctx# :entity :db/id :id) "." nil ".")
-                                   hash js/Math.abs - str)
+                 (let [branch# (auto-entity-dbid ctx#)
                        id'# (-> (js/Date.now) - str)
                        ; alter the dbid before transacting so it can be reused.
                        ; This has to happen at a side-effect point and will cause a hydrate

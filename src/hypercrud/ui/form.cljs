@@ -52,14 +52,16 @@
                                           (:find-element/name find-element)
                                           "entity"))))
         fields (->> (partition 4 colspec)
-                    (group-by (fn [[dbval fe-name ident maybe-field]] fe-name))
+                    (group-by (fn [[dbval fe attr maybe-field]] fe))
                     (mapcat
-                      (fn [[fe-name colspec]]
-                        (let [form-anchors (get anchors-lookup fe-name)
+                      (fn [[fe colspec]]
+                        (let [fe-name (-> fe :find-element/name)
+                              form-anchors (get anchors-lookup fe-name)
                               entity-new-anchors (->> form-anchors (remove :anchor/repeating?))
                               entity-anchors (->> form-anchors (filter :anchor/repeating?))
                               db (ffirst colspec)
                               param-ctx (assoc param-ctx :db db
+                                                         :find-element fe
                                                          ; todo custom user-dispatch with all the tx-fns as reducers
                                                          :user-with! (partial (:dispatch! param-ctx) :with (.-conn-id db) (.-branch db)))]
                           (concat
@@ -71,10 +73,10 @@
                               (concat
                                 (widget/render-anchors (remove :anchor/render-inline? entity-anchors) param-ctx)
                                 (->> colspec
-                                     (mapv (fn [[db fe-name ident maybe-field]]
-                                             (let [param-ctx (as-> param-ctx $
-                                                                   ; :db/id is missing from schema so fake it here, it has no valueType
-                                                                   (assoc $ :attribute (get (:schema param-ctx) ident {:attribute/ident ident})
+                                     (mapv (fn [[db fe attr maybe-field]]
+                                             (let [ident (-> attr :attribute/ident)
+                                                   param-ctx (as-> param-ctx $
+                                                                   (assoc $ :attribute attr
                                                                             :value (get entity ident))
                                                                    (if (= ident :db/id) (assoc $ :read-only always-read-only) $))]
                                                ^{:key (str ident)}

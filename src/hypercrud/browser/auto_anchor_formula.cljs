@@ -3,17 +3,28 @@
             [hypercrud.util.core :as util]))
 
 
+(defn deterministic-ident [fe e a v]
+  ; Need comment explaining why.
+  ; [fe e a v] quad is sufficient to answer "where are we".
+  ; Why Db is omitted?
+  ; Why value is only inspected in :many for unique hashing?
+  (-> (str (-> fe :find-element/name) "."
+           (-> e :db/id :id) "."
+           (-> a :attribute/ident) "."
+           (case (get-in a [:attribute/cardinality :db/ident])
+             :db.cardinality/one nil
+             :db.cardinality/many (hash (into #{} (mapv :db/id v))) ; todo scalar
+             nil nil #_":db/id has a faked attribute with no cardinality, need more thought to make elegant"))
+      hash js/Math.abs - str
+      ))
+
 (defn auto-entity-dbid [ctx & [conn-id]]
-  (let [attr (:attribute ctx)]
-    (->DbId (-> (str (-> ctx :entity :db/id :id) "."
-                     (:attribute/ident attr) "."
-                     (if attr
-                       (case (get-in attr [:attribute/cardinality :db/ident])
-                         :db.cardinality/one nil
-                         :db.cardinality/many (hash (into #{} (mapv :db/id (:value ctx))))
-                         nil nil #_ ":db/id has a faked attribute with no cardinality, need more thought to make elegant")))
-                hash js/Math.abs - str)
-            (or conn-id (-> ctx :entity :db/id :conn-id)))))
+  (->DbId (deterministic-ident
+            (-> ctx :find-element)
+            (-> ctx :entity)
+            (-> ctx :attribute)
+            (-> ctx :value))
+          (or conn-id (-> ctx :entity :db/id :conn-id))))
 
 (defn auto-formula [anchor]                                 ; what about long-coersion?
   ; Future improvement:
@@ -32,7 +43,7 @@
       (and r a)
       (pr-str `(fn [ctx#]
                  (let [attr# (-> ctx# :attribute)]
-                   (case (-> ((:schema ctx#) (:attribute/ident attr#)) :attribute/cardinality :db/ident)
+                   (case (-> attr# :attribute/cardinality :db/ident)
                      :db.cardinality/one {:entity (get-in ctx# [:value :db/id])}
                      :db.cardinality/many {:entity (get-in ctx# [:entity :db/id])
                                            :a (:attribute/ident attr#)}))))

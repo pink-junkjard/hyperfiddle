@@ -97,8 +97,8 @@
 
 
 (defn ->entityRequest [link-entity query-params param-ctx]
-  #_(assert (:entity query-params))                         ;-- Commented because we are requesting invisible things that the UI never tries to render - can be fixed
-  #_(assert (:conn-id (:entity query-params)))
+  ;(assert (:entity query-params))                         ;-- Commented because we are requesting invisible things that the UI never tries to render - can be fixed
+  ;(assert (:conn-id (:entity query-params))) ; this is not looked at on server now.
   (assert (-> link-entity :link-entity/connection :db/id :id))
   (->EntityRequest
     (:entity query-params)
