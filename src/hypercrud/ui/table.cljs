@@ -1,6 +1,7 @@
 (ns hypercrud.ui.table
   (:require [clojure.string :as string]
             [hypercrud.browser.connection-color :as connection-color]
+            [hypercrud.runtime.ui.state.actions :as actions] ; todo bad dep
             [hypercrud.platform.native-event-listener :refer [native-listener]] ;provided dependency
             [hypercrud.ui.auto-control :refer [auto-table-cell]]
             [hypercrud.ui.form-util :as form-util]
@@ -38,7 +39,7 @@
                        param-ctx (assoc param-ctx :db db
                                                   :find-element fe
                                                   ; todo custom user-dispatch with all the tx-fns as reducers
-                                                  :user-with! (partial (:dispatch! param-ctx) :with (.-conn-id db) (.-branch db)))]
+                                                  :user-with! (fn [tx] (:dispatch! param-ctx) (actions/with (.-conn-id db) (.-branch db) tx)))]
                    (->> colspec
                         (mapv (fn [[db fe attr field]]
                                 (let [fe-name (-> fe :find-element/name)
@@ -91,7 +92,7 @@
                           param-ctx (assoc param-ctx :db db
                                                      :find-element fe
                                                      ; todo custom user-dispatch with all the tx-fns as reducers
-                                                     :user-with! (partial (:dispatch! param-ctx) :with (.-conn-id db) (.-branch db)))
+                                                     :user-with! (fn [tx] (:dispatch! param-ctx) (actions/with (.-conn-id db) (.-branch db) tx)))
                           param-ctx (form-util/entity-param-ctx entity param-ctx)
                           attribute-anchors (->> (get entity-anchors-lookup (-> fe :find-element/name))
                                                  (filter :anchor/attribute))]

@@ -1,5 +1,6 @@
 (ns hypercrud.ui.form
   (:require [hypercrud.browser.connection-color :as connection-color]
+            [hypercrud.runtime.ui.state.actions :as actions] ; todo bad dep
             [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.form-util :as form-util]
             [hypercrud.ui.input :as input]
@@ -63,7 +64,7 @@
                               param-ctx (assoc param-ctx :db db
                                                          :find-element fe
                                                          ; todo custom user-dispatch with all the tx-fns as reducers
-                                                         :user-with! (partial (:dispatch! param-ctx) :with (.-conn-id db) (.-branch db)))]
+                                                         :user-with! (fn [tx] (:dispatch! param-ctx) (actions/with (.-conn-id db) (.-branch db) tx)))]
                           (concat
                             ; don't put entity in scope because it messes up formulas which have to be deterministic with request side.
                             (widget/render-anchors (remove :anchor/render-inline? entity-new-anchors) param-ctx)

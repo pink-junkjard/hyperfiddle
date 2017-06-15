@@ -6,6 +6,7 @@
             [hypercrud.client.core :as hc]
             [hypercrud.compile.eval :refer [eval-str]]
             [hypercrud.form.q-util :as q-util]
+            [hypercrud.runtime.ui.state.actions :as actions] ; todo bad dep
             [hypercrud.util.branch :as branch]
             [promesa.core :as p]))
 
@@ -105,15 +106,16 @@
                                         (fn [result]
                                           (let [conn-id (.-conn-id (:db param-ctx))
                                                 branch (.-branch (:db param-ctx))]
-                                            ((:dispatch! param-ctx) :batch
-                                              [:with conn-id branch (:tx result)]
-                                              [:merge conn-id branch]
-                                              (if-let [app-route (:app-route result)]
-                                                [:soft-set-route app-route])))
+                                            ((:dispatch! param-ctx) (actions/batch
+                                                                      ; todo
+                                                                      (actions/with conn-id branch (:tx result))
+                                                                      (actions/merge-branch conn-id branch)
+                                                                      (if-let [app-route (:app-route result)]
+                                                                        (actions/soft-set-route app-route)))))
                                           nil)
                                         (fn [why]
                                           (js/console.error why))))
-                     :cancel #((:dispatch! param-ctx) :discard (.-conn-id (:db param-ctx)) (.-branch (:db param-ctx)))}}))
+                     :cancel #((:dispatch! param-ctx) (actions/discard (.-conn-id (:db param-ctx)) (.-branch (:db param-ctx))))}}))
 
         (if (is-anchor-managed? anchor)                     ; the whole point of popovers is managed branches.
           {:popover (fn []

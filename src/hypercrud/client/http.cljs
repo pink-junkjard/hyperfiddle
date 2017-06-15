@@ -41,7 +41,7 @@
                       :content-type content-type-transit    ; helps debugging to view as edn
                       :accept content-type-transit          ; needs to be fast so transit
                       :method :post
-                      :form {:staged-tx stage-val :request (into #{} requests)}
+                      :form {:staged-tx stage-val :request requests}
                       :as :auto})
       (p/then #(-> % :body :hypercrud))))
 
