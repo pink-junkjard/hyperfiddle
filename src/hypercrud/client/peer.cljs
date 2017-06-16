@@ -25,9 +25,9 @@
                                                                     (nil? v)))))))))]
     (http/transact! entry-uri htx-groups)))
 
-(defn hydrated? [last-response requests]
+(defn hydrated? [response requests]
   ; compare our pre-loaded state with the peer dependencies
-  (set/subset? (set requests) (some-> last-response .-requests)))
+  (set/subset? (set requests) (some-> response .-requests)))
 
 (deftype Peer [entry-uri stage last-response]
   hc/Peer
