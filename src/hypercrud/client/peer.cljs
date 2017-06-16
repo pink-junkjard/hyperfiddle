@@ -10,7 +10,11 @@
 (defn hydrate! [entry-uri requests stage-val]
   (-> (http/hydrate! entry-uri requests stage-val)
       (p/then (fn [{:keys [t pulled-trees-map]}]
-                (response/->Response (into #{} requests) pulled-trees-map stage-val)))))
+                (response/->Response requests pulled-trees-map stage-val)))))
+
+(defn hydrate-one! [entry-uri request stage-val]
+  (-> (hydrate! entry-uri #{request} stage-val)
+      (p/then (fn [response] (hc/hydrate response request)))))
 
 (defn transact! [entry-uri stage-val]
   (let [htx-groups (->> stage-val
@@ -32,8 +36,7 @@
 
   ; for clone link - is this bad? yeah its bad since it can never be batched.
   (hydrate-one! [this request]
-    (-> (hydrate! entry-uri #{request} @stage)
-        (p/then (fn [response] (hc/hydrate response request)))))
+    (hydrate-one! entry-uri request @stage))
 
   (hydrated? [this requests]
     (hydrated? @last-response requests))
