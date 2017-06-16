@@ -64,7 +64,7 @@
                               param-ctx (assoc param-ctx :db db
                                                          :find-element fe
                                                          ; todo custom user-dispatch with all the tx-fns as reducers
-                                                         :user-with! (fn [tx] (:dispatch! param-ctx) (actions/with (.-conn-id db) (.-branch db) tx)))]
+                                                         :user-with! (fn [tx] ((:dispatch! param-ctx) (actions/with (.-conn-id db) (.-branch db) tx))))]
                           (concat
                             ; don't put entity in scope because it messes up formulas which have to be deterministic with request side.
                             (widget/render-anchors (remove :anchor/render-inline? entity-new-anchors) param-ctx)

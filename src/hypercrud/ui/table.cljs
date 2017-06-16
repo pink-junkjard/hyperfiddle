@@ -39,7 +39,7 @@
                        param-ctx (assoc param-ctx :db db
                                                   :find-element fe
                                                   ; todo custom user-dispatch with all the tx-fns as reducers
-                                                  :user-with! (fn [tx] (:dispatch! param-ctx) (actions/with (.-conn-id db) (.-branch db) tx)))]
+                                                  :user-with! (fn [tx] ((:dispatch! param-ctx) (actions/with (.-conn-id db) (.-branch db) tx))))]
                    (->> colspec
                         (mapv (fn [[db fe attr field]]
                                 (let [fe-name (-> fe :find-element/name)
@@ -92,7 +92,7 @@
                           param-ctx (assoc param-ctx :db db
                                                      :find-element fe
                                                      ; todo custom user-dispatch with all the tx-fns as reducers
-                                                     :user-with! (fn [tx] (:dispatch! param-ctx) (actions/with (.-conn-id db) (.-branch db) tx)))
+                                                     :user-with! (fn [tx] ((:dispatch! param-ctx) (actions/with (.-conn-id db) (.-branch db) tx))))
                           param-ctx (form-util/entity-param-ctx entity param-ctx)
                           attribute-anchors (->> (get entity-anchors-lookup (-> fe :find-element/name))
                                                  (filter :anchor/attribute))]
