@@ -106,12 +106,7 @@
                                         (fn [result]
                                           (let [conn-id (.-conn-id (:db param-ctx))
                                                 branch (.-branch (:db param-ctx))]
-                                            ((:dispatch! param-ctx) (actions/batch
-                                                                      ; todo
-                                                                      (actions/with conn-id branch (:tx result))
-                                                                      (actions/merge-branch conn-id branch)
-                                                                      (if-let [app-route (:app-route result)]
-                                                                        (actions/soft-set-route app-route)))))
+                                            ((:dispatch! param-ctx) (actions/stage-popover conn-id branch (:tx result) (:app-route result))))
                                           nil)
                                         (fn [why]
                                           (js/console.error why))))
