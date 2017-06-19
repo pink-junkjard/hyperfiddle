@@ -6,7 +6,7 @@
             [hypercrud.client.core :as hc]
             [hypercrud.compile.eval :refer [eval-str]]
             [hypercrud.form.q-util :as q-util]
-            [hypercrud.runtime.ui.state.actions :as actions] ; todo bad dep
+            [hypercrud.runtime.state.actions :as actions]   ; todo bad dep
             [hypercrud.util.branch :as branch]
             [promesa.core :as p]))
 

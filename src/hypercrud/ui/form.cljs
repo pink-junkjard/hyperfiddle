@@ -1,6 +1,6 @@
 (ns hypercrud.ui.form
   (:require [hypercrud.browser.connection-color :as connection-color]
-            [hypercrud.runtime.ui.state.actions :as actions] ; todo bad dep
+            [hypercrud.runtime.state.actions :as actions]   ; todo bad dep
             [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.form-util :as form-util]
             [hypercrud.ui.input :as input]
