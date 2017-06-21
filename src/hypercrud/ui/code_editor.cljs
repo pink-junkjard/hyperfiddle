@@ -1,6 +1,5 @@
 (ns hypercrud.ui.code-editor
-  (:require [reagent.core :as reagent]
-            [reagent.impl.component :as r-comp]))
+  (:require [reagent.core :as reagent]))
 
 
 (defn sync-changed-props! [ref props]
@@ -21,7 +20,7 @@
 
      :component-did-mount
      (fn [this]
-       (let [[_ value change! props] (r-comp/get-argv this) ;[value change! props] (reagent/props this)
+       (let [[_ value change! props] (reagent/argv this)    ;[value change! props] (reagent/props this)
              div (.querySelector (reagent/dom-node this) "textarea")
              ref (.fromTextArea js/CodeMirror div
                                 (clj->js (merge {:mode "clojure"
@@ -32,7 +31,7 @@
                                                 props)))]
          (aset this "codeMirrorRef" ref)
          (.on ref "blur" (fn [_ e]
-                           (let [[_ value change! props] (r-comp/get-argv this)
+                           (let [[_ value change! props] (reagent/argv this)
                                  value' (.getValue ref)]
                              (if-not (= value value')
                                (change! value')))))))
@@ -42,6 +41,6 @@
 
      :component-did-update
      (fn [this]
-       (let [[_ value change! props] (r-comp/get-argv this)
+       (let [[_ value change! props] (reagent/argv this)
              ref (aget this "codeMirrorRef")]
          (sync-changed-props! ref (assoc props :value (str value)))))}))
