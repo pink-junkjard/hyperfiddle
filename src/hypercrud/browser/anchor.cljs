@@ -71,10 +71,10 @@
 (defn anchor-branch-logic [anchor param-ctx]
   (if (is-anchor-managed? anchor)
     (if-let [db (:db param-ctx)]
-      (let [branch (branch/encode-branch-child (some-> (:db param-ctx) .-branch) (:id (auto-entity-dbid param-ctx)))]
+      (let [branch (branch/encode-branch-child (.-branch db) (:id (auto-entity-dbid param-ctx)))]
         (-> param-ctx
             ; if we are an index link, what are we forking? Provide a binding
-            (assoc-in [:branches (.-conn-id (:db param-ctx))] branch)
+            (assoc-in [:branches (.-conn-id db)] branch)
             (update :db #(hc/db (:response param-ctx) (.-conn-id %) branch))))
       ; Inform user via tooltip that we can't branch an index link because there is no db in scope. Explicitly set db in user bindings.
       param-ctx)
