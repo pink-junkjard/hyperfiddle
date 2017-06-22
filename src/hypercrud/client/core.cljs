@@ -2,19 +2,11 @@
 
 
 (def ^:dynamic *root-conn-id* nil)
-
-(defprotocol Response
-  (hydrate [this request])
-  (db [this conn-id branch])
-  (tx [this db]))
-
+(def ^:dynamic *peer* nil)
 
 (defprotocol Peer
-  (hydrate! [this request])                                 ; hydrate a full page
-  (transact! [this])                                        ; push - stage first as a separate step.
-
-  ; for UIs
-  (hydrated? [this request])
+  (hydrate [this request])
+  (db [this conn-id branch])
 
   ; used for clone-link
   (hydrate-one! [this request]))

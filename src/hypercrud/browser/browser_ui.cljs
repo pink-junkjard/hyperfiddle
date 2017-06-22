@@ -10,6 +10,7 @@
             [hypercrud.browser.anchor :as anchor]
             [hypercrud.browser.user-bindings :as user-bindings]
             [hypercrud.client.core :as hc]
+            [hypercrud.client.reagent :refer [connect]]
             [hypercrud.client.schema :as schema-util]
             [hypercrud.compile.eval :refer [eval-str]]
             [hypercrud.form.q-util :as q-util]
@@ -21,79 +22,21 @@
             [hypercrud.util.core :as util]))
 
 
-(defn hydrate-link [peer link-dbid param-ctx]
-  (if (auto-link/system-link? link-dbid)
-    (let [system-link-idmap (-> link-dbid :id)]
-      (->> (auto-link/request-for-system-link (:root-db param-ctx) system-link-idmap)
-           (mapv #(if % (hc/hydrate (:response param-ctx) %)
-                        (exception/success nil)))
-           (reduce #(mlet [acc %1 v %2] (cats/return (conj acc v))) (exception/success []))
-           (cats/fmap #(auto-link/hydrate-system-link system-link-idmap % param-ctx))))
-    (hc/hydrate peer (browser-request/request-for-link (:root-db param-ctx) link-dbid))))
+(defn with-hydrated-link [link-dbid param-ctx comp]
+  (connect {:dbval [[hc/*root-conn-id* nil]]}
+           (fn [{[root-db] :dbval}]
+             (if (auto-link/system-link? link-dbid)
+               (let [system-link-idmap (-> link-dbid :id)]
+                 (connect {:hydrate (auto-link/request-for-system-link root-db system-link-idmap)}
+                          (fn [results]
+                            (let [r (reduce #(mlet [acc %1 v %2] (cats/return (conj acc v)))
+                                            (exception/success [])
+                                            (:hydrate results))]
+                              [comp (cats/fmap #(auto-link/hydrate-system-link system-link-idmap % #_[owner conn e a] param-ctx) r)])))))
+             (connect {:hydrate [(browser-request/request-for-link root-db link-dbid)]}
+                      (fn [{[link] :hydrate}] [comp link])))))
 
 (declare user-result)
-
-(def never-read-only (constantly false))
-
-(defn ui' [{query-params :query-params :as route} param-ctx]
-  (mlet [link (hydrate-link (:response param-ctx) (:link-dbid route) param-ctx) ; always latest
-         request (try-on
-                   (case (link-util/link-type link)
-                     :link-query (let [link-query (:link/request link)
-                                       q (some-> link-query :link-query/value reader/read-string)
-                                       params-map (merge query-params (q-util/build-dbhole-lookup link-query param-ctx))]
-                                   (q-util/->queryRequest q link-query params-map param-ctx))
-                     :link-entity (q-util/->entityRequest (:link/request link) (:query-params route) param-ctx)
-                     :link-blank nil
-                     nil))
-         result (if request (hc/hydrate (:response param-ctx) request) (exception/success nil))
-         ; schema is allowed to be nil if the link only has anchors and no data dependencies
-         schema (exception/try-or-else (hc/hydrate (:response param-ctx) (schema-util/schema-request (:root-db param-ctx) nil)) nil)]
-        (cats/return
-          (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
-                param-ctx (assoc param-ctx                  ; provide defaults before user-bindings run. TODO query side
-                            :query-params query-params
-                            :schema indexed-schema
-                            :read-only (or (:read-only param-ctx) never-read-only))
-
-                ; ereq doesn't have a fe yet; wrap with a fe.
-                ; Doesn't make sense to do on server since this is going to optimize away anyway.
-
-                result (cond
-
-                         (instance? EntityRequest request)  ; But the ereq might return a vec for cardinality many
-                         (cond
-                           ; order matters here a lot!
-                           (nil? result) nil
-                           (empty? result) (if (.-a request)
-                                             ; comes back as [] sometimes if cardinaltiy many request. this is causing problems as nil or {} in different places.
-                                             ; Above comment seems backwards, left it as is
-                                             (case (-> ((:schema param-ctx) (.-a request)) :attribute/cardinality :db/ident)
-                                               :db.cardinality/one {}
-                                               :db.cardinality/many []))
-                           (map? result) {"entity" result}
-                           (coll? result) (mapv (fn [relation] {"entity" relation}) result))
-
-
-                         (instance? QueryRequest request)
-                         (cond
-                           (-> link :link/request :link-query/single-result-as-entity?) (first result)
-                           :else result))
-
-                colspec (form-util/determine-colspec result link param-ctx)
-                system-anchors (auto-anchor/auto-anchors (auto-link/system-anchors link result param-ctx))]
-
-            (case (get param-ctx :display-mode)             ; default happens higher, it influences queries too
-              :user ((user-result link param-ctx) result colspec (auto-anchor/merge-anchors system-anchors (auto-anchor/auto-anchors (:link/anchor link))) (user-bindings/user-bindings link param-ctx))
-              :xray (auto-control/result result colspec (auto-anchor/merge-anchors system-anchors (auto-anchor/auto-anchors (:link/anchor link))) (user-bindings/user-bindings link param-ctx))
-              :root (auto-control/result result colspec system-anchors param-ctx))))))
-
-(defn ui [anchor param-ctx]
-  (if (:anchor/link anchor)
-    (ui' (anchor/build-anchor-route anchor param-ctx)
-         ; entire context must be encoded in the route
-         (dissoc param-ctx :result :db :find-element :entity :attribute :value :layout))
-    (exception/failure "anchor has no link")))
 
 (defn safe [f & args]
   ; reports: hydrate failure, hyperfiddle javascript error, user-fn js error
@@ -106,11 +49,97 @@
     (catch :default e                                       ; js errors? Why do we need this.
       [:pre (.-stack e)])))
 
+(def never-read-only (constantly false))
+
+(defn ui-thing [result link param-ctx]
+  (js/console.log (str "render: ui-thing[" (:debug param-ctx) "]"))
+  (let [colspec (form-util/determine-colspec result link param-ctx)
+        system-anchors (auto-anchor/auto-anchors (auto-link/system-anchors link result param-ctx))]
+    (case (:display-mode param-ctx)                         ; default happens higher, it influences queries too
+      :user ((user-result link param-ctx) result colspec (auto-anchor/merge-anchors system-anchors (auto-anchor/auto-anchors (:link/anchor link))) (user-bindings/user-bindings link param-ctx))
+      :xray (auto-control/result result colspec (auto-anchor/merge-anchors system-anchors (auto-anchor/auto-anchors (:link/anchor link))) (user-bindings/user-bindings link param-ctx))
+      :root (auto-control/result result colspec system-anchors param-ctx))))
+
+(defn query-ui [link param-ctx]
+  (let [link-query (:link/request link)
+        q (some-> link-query :link-query/value reader/read-string)]
+    (q-util/->queryRequest-connect q link-query param-ctx
+                                   (fn [request]
+                                     (connect {:hydrate [request]}
+                                              (fn [{[result] :hydrate}]
+                                                (safe (fn [] (cats/fmap (fn [result]
+                                                                          (let [result (if (-> link :link/request :link-query/single-result-as-entity?)
+                                                                                         (first result)
+                                                                                         result)]
+                                                                            (ui-thing result link param-ctx)))
+                                                                        result)))))))))
+
+(defn entity-ui [link param-ctx]
+  (q-util/->entityRequest-connect (:link/request link) param-ctx
+                                  (fn [request]
+                                    (connect {:hydrate [request]}
+                                             (fn [{[result] :hydrate}]
+                                               (safe (fn [] (cats/fmap (fn [result]
+                                                                         ; ereq doesn't have a fe yet; wrap with a fe.
+                                                                         ; Doesn't make sense to do on server since this is going to optimize away anyway.
+                                                                         (let [result (cond
+                                                                                        ; order matters here a lot!
+                                                                                        (nil? result) nil
+                                                                                        (empty? result) (if (.-a request)
+                                                                                                          ; comes back as [] sometimes if cardinaltiy many request. this is causing problems as nil or {} in different places.
+                                                                                                          ; Above comment seems backwards, left it as is
+                                                                                                          (case (-> ((:schema param-ctx) (.-a request)) :attribute/cardinality :db/ident)
+                                                                                                            :db.cardinality/one {}
+                                                                                                            :db.cardinality/many []))
+                                                                                        (map? result) {"entity" result}
+                                                                                        (coll? result) (mapv (fn [relation] {"entity" relation}) result))]
+                                                                           (ui-thing result link param-ctx)))
+                                                                       result))))))))
+
+(defn nil-ui [link param-ctx]
+  (safe exception/success (ui-thing nil link param-ctx)))
+
+(defn ui-for-link [query-params link param-ctx]
+  (connect {:dbval [[hc/*root-conn-id* nil]]}
+           (fn [{[root-db] :dbval}]
+             (let [schema-request (schema-util/schema-request root-db nil)]
+               (connect {:hydrate [schema-request]}
+                        (fn [{[schema] :hydrate}]
+                          (safe (fn []
+                                  (cats/fmap (fn [schema]
+                                               (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
+                                                     param-ctx (assoc param-ctx ; provide defaults before user-bindings run. TODO query side
+                                                                 :query-params query-params
+                                                                 :schema indexed-schema
+                                                                 :read-only (or (:read-only param-ctx) never-read-only))
+                                                     f (case (link-util/link-type link)
+                                                         :link-query query-ui
+                                                         :link-entity entity-ui
+                                                         :link-blank nil-ui
+                                                         nil-ui)]
+                                                 (f link param-ctx)))
+                                             schema)))))))))
+
+(defn ui' [{query-params :query-params :as route} param-ctx]
+  (with-hydrated-link (:link-dbid route) param-ctx
+                      (fn [link]
+                        (safe (fn []
+                                (cats/fmap (fn [link]
+                                             (ui-for-link query-params link param-ctx))
+                                           link))))))
+
+(defn ui [anchor param-ctx]
+  (if (:anchor/link anchor)
+    (ui' (anchor/build-anchor-route anchor param-ctx)
+         ; entire context must be encoded in the route
+         (dissoc param-ctx :result :db :find-element :entity :attribute :value :layout))
+    (exception/failure "anchor has no link")))
+
 (defn safe-ui' [& args]
-  (apply safe ui' args))
+  (apply ui' args))
 
 (defn safe-ui [& args]
-  (apply safe ui args))
+  (apply ui args))
 
 (defn link-user-fn [link]
   (if-not (empty? (:link/renderer link))

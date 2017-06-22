@@ -32,6 +32,7 @@
 
 (defn link-query-system-edit-attr [conn owner e a]
   {:pre [conn owner e a]}
+  (assert (not (nil? (-> conn :db/id :id))))
   {:db/id (->DbId {:ident :system-edit-attr
                    :owner (-> owner :db/id :id)
                    :conn (-> conn :db/id :id)
@@ -44,6 +45,7 @@
 
 (defn link-entity-system-edit-attr [conn owner a]
   {:pre [conn owner a]}
+  (assert (not (nil? (-> conn :db/id :id))))
   {:db/id (->DbId {:ident :system-edit-attr
                    :owner (-> owner :db/id :id)
                    :conn (-> conn :db/id :id)
@@ -137,7 +139,7 @@
                           (mapcat (fn [[db fe attr maybe-field]]
                                     (let [fe-name (-> fe :find-element/name)
                                           ident (-> attr :attribute/ident)
-                                          conn {:db/id (->DbId (.-conn-id db) hc/*root-conn-id*)}
+                                          conn {:db/id (->DbId (first db) hc/*root-conn-id*)}
                                           fe (get find-elements fe-name)
                                           _ (assert fe)
                                           attr ((:schema param-ctx) ident) #_"nil for db/id"]
@@ -164,7 +166,7 @@
                           (mapcat (fn [[db fe attr maybe-field]]
                                     (let [fe-name (-> fe :find-element/name)
                                           ident (-> attr :attribute/ident)
-                                          conn {:db/id (->DbId (.-conn-id db) hc/*root-conn-id*)}
+                                          conn {:db/id (->DbId (first db) hc/*root-conn-id*)}
                                           attr ((:schema param-ctx) ident) #_"nil for db/id"]
                                       (case (-> attr :attribute/valueType :db/ident)
                                         :db.type/ref

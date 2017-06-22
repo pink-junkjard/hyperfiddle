@@ -143,45 +143,44 @@
      (render-inline-anchors maybe-field (filter :anchor/render-inline? anchors) param-ctx)]))
 
 (defn ref-many [maybe-field anchors props param-ctx]
-  (let [[options-anchor] (filter option-anchor? anchors)
-        initial-select (some-> options-anchor               ; not okay to auto-select.
-                               (option/hydrate-options param-ctx)
-                               (exception/extract nil)      ; todo handle exception
-                               first
-                               first)
-        select-value-atom (r/atom initial-select)]
-    (fn [maybe-field anchors props param-ctx]
-      (let [[options-anchor] (filter option-anchor? anchors)
-            anchors (remove option-anchor? anchors)
-            anchors (if (and options-anchor (= :xray (:display-mode param-ctx)))
-                      (conj anchors (assoc options-anchor :anchor/render-inline? false))
-                      anchors)]
-        [:div.value
-         [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
-         [:ul
-          (->> (:value param-ctx)
-               (map (fn [v]
-                      [:li {:key (:db/id v)}
-                       (:db/id v)                           ; todo remove button
-                       ])))]
-         [:div.table-controls
-          (if options-anchor
-            (let [props {:value (-> @select-value-atom :id str)
-                         :on-change #(let [select-value (.-target.value %)
-                                           dbid (when (not= "" select-value)
-                                                  (->DbId (js/parseInt select-value 10) (get-in param-ctx [:entity :db/id :conn-id])))]
-                                       (.log js/console (pr-str select-value))
-                                       (reset! select-value-atom dbid))}
-                  ; need lower level select component that can be reused here and in select.cljs
-                  select-options (->> (exception/extract (option/hydrate-options options-anchor param-ctx) nil) ;todo handle exception
-                                      (map (fn [[dbid label-prop]]
-                                             [:option {:key (:id dbid) :value (-> dbid :id str)} label-prop])))]
-              [:select props select-options])
-            ; todo wire input to up arrow
-            #_(dbid props param-ctx))
-          [:br]
-          [:button {:on-click #((:user-with! param-ctx) (tx/edit-entity (get-in param-ctx [:entity :db/id]) (-> param-ctx :attribute :attribute/ident) [] [@select-value-atom]))} "⬆"]]
-         (render-inline-anchors maybe-field (filter :anchor/render-inline? anchors) param-ctx)]))))
+  (let [[options-anchor] (filter option-anchor? anchors)]
+    (option/with-options
+      options-anchor param-ctx
+      (fn [option-records]
+        (let [initial-select (some-> option-records first first)
+              select-value-atom (r/atom initial-select)]
+          (fn [option-records]
+            (let [[options-anchor] (filter option-anchor? anchors)
+                  anchors (remove option-anchor? anchors)
+                  anchors (if (and options-anchor (= :xray (:display-mode param-ctx)))
+                            (conj anchors (assoc options-anchor :anchor/render-inline? false))
+                            anchors)]
+              [:div.value
+               [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
+               [:ul
+                (->> (:value param-ctx)
+                     (map (fn [v]
+                            [:li {:key (:db/id v)}
+                             (:db/id v)                     ; todo remove button
+                             ])))]
+               [:div.table-controls
+                (if options-anchor
+                  (let [props {:value (-> @select-value-atom :id str)
+                               :on-change #(let [select-value (.-target.value %)
+                                                 dbid (when (not= "" select-value)
+                                                        (->DbId (js/parseInt select-value 10) (get-in param-ctx [:entity :db/id :conn-id])))]
+                                             (.log js/console (pr-str select-value))
+                                             (reset! select-value-atom dbid))}
+                        ; need lower level select component that can be reused here and in select.cljs
+                        select-options (map (fn [[dbid label-prop]]
+                                              [:option {:key (:id dbid) :value (-> dbid :id str)} label-prop])
+                                            option-records)]
+                    [:select props select-options])
+                  ; todo wire input to up arrow
+                  #_(dbid props param-ctx))
+                [:br]
+                [:button {:on-click #((:user-with! param-ctx) (tx/edit-entity (get-in param-ctx [:entity :db/id]) (-> param-ctx :attribute :attribute/ident) [] [@select-value-atom]))} "⬆"]]
+               (render-inline-anchors maybe-field (filter :anchor/render-inline? anchors) param-ctx)])))))))
 
 (defn ref-many-component-table [maybe-field anchors props param-ctx]
   [:div.value

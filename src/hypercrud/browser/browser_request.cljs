@@ -77,7 +77,7 @@
              (mapcat (fn [fe]
                        (->> ((:entity-new lookup) fe) (mapcat #(recurse-request % (assoc param-ctx
                                                                                     :db (let [conn-id (-> fe :find-element/connection :db/id :id)]
-                                                                                          (hc/db (:response param-ctx) conn-id (get-in param-ctx [:branches conn-id])))
+                                                                                          [conn-id (get-in param-ctx [:branches conn-id])])
                                                                                     :find-element fe)))))))
         (->> result
              (mapcat (fn [relation]
@@ -88,7 +88,7 @@
                                                 (let [entity (get relation (:find-element/name fe))
                                                       param-ctx (assoc param-ctx
                                                                   :db (let [conn-id (-> fe :find-element/connection :db/id :id)]
-                                                                        (hc/db (:response param-ctx) conn-id (get-in param-ctx [:branches conn-id])))
+                                                                        [conn-id (get-in param-ctx [:branches conn-id])])
                                                                   :find-element fe
                                                                   :entity entity)]
                                                   (concat (->> ((:entity lookup) fe) (mapcat #(recurse-request % param-ctx)))
@@ -130,7 +130,7 @@
         (->> ((:relation-new lookup)) (mapcat #(recurse-request % param-ctx)))
         (->> ((:entity-new lookup)) (mapcat #(recurse-request % (assoc param-ctx
                                                                   :db (let [conn-id (-> fe :find-element/connection :db/id :id)]
-                                                                        (hc/db (:response param-ctx) conn-id (get-in param-ctx [:branches conn-id])))
+                                                                        [conn-id (get-in param-ctx [:branches conn-id])])
                                                                   :find-element fe))))
         (->> result
              (mapcat (fn [relation]
@@ -139,7 +139,7 @@
                          (let [entity (get relation "entity")
                                param-ctx (assoc param-ctx :result relation
                                                           :db (let [conn-id (-> fe :find-element/connection :db/id :id)]
-                                                                (hc/db (:response param-ctx) conn-id (get-in param-ctx [:branches conn-id])))
+                                                                [conn-id (get-in param-ctx [:branches conn-id])])
                                                           :find-element fe
                                                           :entity entity)]
                            (concat
@@ -155,41 +155,41 @@
                                                 (->> ((:entity-attr-new lookup) attribute) (mapcat #(recurse-request % param-ctx))))
                                               ))))))))))))))
 
-
 (defn requests-for-link-query [link query-params param-ctx]
   (let [link-query (:link/request link)
         q (some-> link-query :link-query/value reader/read-string)
-        params-map (merge query-params (q-util/build-dbhole-lookup link-query param-ctx))
-        param-ctx (assoc param-ctx :query-params query-params)]
-    (let [request (q-util/->queryRequest q link-query params-map param-ctx)]
-      (concat
-        [request]
-        (->> (get-in link [:link/request :link-query/find-element])
-             (mapv :find-element/connection)
-             (mapv (partial schema-util/schema-request (:root-db param-ctx))))
-        (exception/extract
-          (mlet [result (hc/hydrate (:response param-ctx) request)
-                 schema (hc/hydrate (:response param-ctx) (schema-util/schema-request (:root-db param-ctx) nil))] ; map connections
-                (cats/return
-                  (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
-                        param-ctx (assoc param-ctx :schema indexed-schema)]
-                    ; todo :root mode
-                    (link-query-dependent-requests result (:link-query/find-element link-query)
-                                                   (auto-anchor/merge-anchors
-                                                     (auto-anchor/auto-anchors (auto-link/system-anchors link result param-ctx))
-                                                     (auto-anchor/auto-anchors (:link/anchor link)))
-                                                   (user-bindings/user-bindings link param-ctx)))))
-          nil)))))
+        param-ctx (assoc param-ctx :query-params query-params)
+        request (q-util/->queryRequest q link-query query-params param-ctx)
+        root-db (hc/db hc/*peer* hc/*root-conn-id* nil)]
+    (concat
+      [request]
+      (->> (get-in link [:link/request :link-query/find-element])
+           (mapv :find-element/connection)
+           (mapv (partial schema-util/schema-request root-db)))
+      (exception/extract
+        (mlet [result (hc/hydrate hc/*peer* request)
+               schema (hc/hydrate hc/*peer* (schema-util/schema-request root-db nil))] ; map connections
+              (cats/return
+                (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
+                      param-ctx (assoc param-ctx :schema indexed-schema)]
+                  ; todo :root mode
+                  (link-query-dependent-requests result (:link-query/find-element link-query)
+                                                 (auto-anchor/merge-anchors
+                                                   (auto-anchor/auto-anchors (auto-link/system-anchors link result param-ctx))
+                                                   (auto-anchor/auto-anchors (:link/anchor link)))
+                                                 (user-bindings/user-bindings link param-ctx)))))
+        nil))))
 
 (defn requests-for-link-entity [link query-params param-ctx]
   (let [request (q-util/->entityRequest (:link/request link) query-params param-ctx)
         _ (assert (get-in link [:link/request :link-entity/connection]))
-        schema-request (schema-util/schema-request (:root-db param-ctx) (get-in link [:link/request :link-entity/connection]))]
+        root-db (hc/db hc/*peer* hc/*root-conn-id* nil)
+        schema-request (schema-util/schema-request root-db (get-in link [:link/request :link-entity/connection]))]
     (concat
       [request schema-request]
       (exception/extract
-        (mlet [result (hc/hydrate (:response param-ctx) request)
-               schema (hc/hydrate (:response param-ctx) schema-request)]
+        (mlet [result (hc/hydrate hc/*peer* request)
+               schema (hc/hydrate hc/*peer* schema-request)]
               (cats/return
                 (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
                       param-ctx (assoc param-ctx :schema indexed-schema)
@@ -214,23 +214,24 @@
       :link-blank (link-query-dependent-requests [] [] (:link/anchor link) param-ctx)))) ; this case does not request the schema, as we don't have a connection for the link.
 
 (defn request' [route param-ctx]
-  (if (auto-link/system-link? (:link-dbid route))
-    (let [system-link-idmap (-> route :link-dbid :id)
-          system-link-requests (auto-link/request-for-system-link (:root-db param-ctx) system-link-idmap)]
-      (concat
-        (remove nil? system-link-requests)
-        (if-let [system-link-deps (exception/extract
-                                    (->> system-link-requests
-                                         (mapv #(if % (hc/hydrate (:response param-ctx) %)
-                                                      (exception/success nil)))
-                                         (reduce #(mlet [acc %1 v %2] (cats/return (conj acc v))) (exception/success [])))
-                                    nil)]
-          (let [link (auto-link/hydrate-system-link system-link-idmap system-link-deps param-ctx)]
-            (requests-for-link link (:query-params route) param-ctx)))))
-    (let [link-request (request-for-link (:root-db param-ctx) (:link-dbid route))]
-      (concat [link-request]
-              (if-let [link (-> (hc/hydrate (:response param-ctx) link-request) (exception/extract nil))]
-                (requests-for-link link (:query-params route) param-ctx))))))
+  (let [root-db (hc/db hc/*peer* hc/*root-conn-id* nil)]
+    (if (auto-link/system-link? (:link-dbid route))
+      (let [system-link-idmap (-> route :link-dbid :id)
+            system-link-requests (auto-link/request-for-system-link root-db system-link-idmap)]
+        (concat
+          (remove nil? system-link-requests)
+          (if-let [system-link-deps (exception/extract
+                                      (->> system-link-requests
+                                           (mapv #(if % (hc/hydrate hc/*peer* %)
+                                                        (exception/success nil)))
+                                           (reduce #(mlet [acc %1 v %2] (cats/return (conj acc v))) (exception/success [])))
+                                      nil)]
+            (let [link (auto-link/hydrate-system-link system-link-idmap system-link-deps param-ctx)]
+              (requests-for-link link (:query-params route) param-ctx)))))
+      (let [link-request (request-for-link root-db (:link-dbid route))]
+        (concat [link-request]
+                (if-let [link (-> (hc/hydrate hc/*peer* link-request) (exception/extract nil))]
+                  (requests-for-link link (:query-params route) param-ctx)))))))
 
 (defn request [anchor param-ctx]
   (if (:anchor/link anchor)

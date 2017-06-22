@@ -1,12 +1,13 @@
 (ns hypercrud.form.q-util
   (:require [cljs.reader :as reader]
             [clojure.string :as string]
+            [hypercrud.client.core :as hc]
+            [hypercrud.client.reagent :refer [connect]]
             [hypercrud.compile.eval :refer [eval]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hypercrud.util.core :as util]
-            [hypercrud.ui.form-util :as form-util]
-            [hypercrud.client.core :as hc]))
+            [hypercrud.ui.form-util :as form-util]))
 
 
 (defn safe-read-string [code-str]
@@ -37,7 +38,7 @@
        (map (fn [{:keys [:dbhole/name :dbhole/value]}]
               (if-not (or (empty? name) (nil? value))
                 ; transform project-id into conn-id
-                [name (hc/db (:response param-ctx) (-> value :db/id :id) (get-in param-ctx [:branches (-> value :db/id :id)]))])))
+                [name (hc/db hc/*peer* (-> value :db/id :id) (get-in param-ctx [:branches (-> value :db/id :id)]))])))
        (into {})))
 
 (defn safe-parse-query-validated [link-query]
@@ -82,27 +83,68 @@
     ['* {:hypercrud/owner ['*]}]))
 
 
-(defn ->queryRequest [q link-query params-map param-ctx]
-  (let [params (build-params #(get params-map %) link-query param-ctx)
+(defn ->queryRequest-connect [q link-query param-ctx comp]
+  (connect {:dbval (->> (:link-query/dbhole link-query)
+                        (map (fn [{:keys [:dbhole/name :dbhole/value]}]
+                               (if-not (or (empty? name) (nil? value))
+                                 ; transform project-id into conn-id
+                                 [name [(-> value :db/id :id) (get-in param-ctx [:branches (-> value :db/id :id)])]])))
+                        (into {}))}
+           (fn [{:keys [dbval]}]
+             (let [params-map (merge (:query-params param-ctx) dbval)
+                   params (build-params #(get params-map %) link-query param-ctx)
+                   find-elements (:link-query/find-element link-query)
+                   find-elements (-> find-elements (form-util/strip-forms-in-raw-mode param-ctx))
+                   find-elements-lookup (->> find-elements
+                                             (mapv (juxt :find-element/name identity))
+                                             (into {}))]
+               (connect {:dbval (util/map-values (fn [fe]
+                                                   (let [conn-id (-> fe :find-element/connection :db/id :id)]
+                                                     [conn-id (get-in param-ctx [:branches conn-id])]))
+                                                 find-elements-lookup)}
+                        (fn [{:keys [dbval]}]
+                          (let [pull-exp (->> find-elements-lookup
+                                              (util/map-values (fn [fe]
+                                                                 (let [conn-id (-> fe :find-element/connection :db/id :id)]
+                                                                   [(get dbval (:find-element/name fe))
+                                                                    (form-pull-exp (:find-element/form fe))]))))]
+                            [comp (->QueryRequest q params pull-exp)])))))))
+
+
+(defn ->queryRequest [q link-query query-params param-ctx]
+  (let [params-map (merge query-params (build-dbhole-lookup link-query param-ctx))
+        params (build-params #(get params-map %) link-query param-ctx)
         find-elements (:link-query/find-element link-query)
         find-elements (-> find-elements (form-util/strip-forms-in-raw-mode param-ctx))
         pull-exp (->> find-elements
                       (mapv (juxt :find-element/name
                                   (fn [fe]
                                     (let [conn-id (-> fe :find-element/connection :db/id :id)]
-                                      [(hc/db (:response param-ctx) conn-id (get-in param-ctx [:branches conn-id]))
+                                      [(hc/db hc/*peer* conn-id (get-in param-ctx [:branches conn-id]))
                                        (form-pull-exp (:find-element/form fe))]))))
                       (into {}))]
     (->QueryRequest q params pull-exp)))
 
-
-(defn ->entityRequest [link-entity query-params param-ctx]
+(defn ->entityRequest-connect [link-entity param-ctx comp]
   ;(assert (:entity query-params))                         ;-- Commented because we are requesting invisible things that the UI never tries to render - can be fixed
   ;(assert (:conn-id (:entity query-params))) ; this is not looked at on server now.
+  (assert (-> link-entity :link-entity/connection :db/id :id))
+  (let [conn-id (-> link-entity :link-entity/connection :db/id :id)]
+    (connect {:dbval [[conn-id (get-in param-ctx [:branches conn-id])]]}
+             (fn [{[db] :dbval}]
+               [comp
+                (->EntityRequest
+                  (-> param-ctx :query-params :entity)
+                  (-> param-ctx :query-params :a)
+                  db
+                  (form-pull-exp (:link-entity/form link-entity)))]))))
+
+
+(defn ->entityRequest [link-entity query-params param-ctx]
   (assert (-> link-entity :link-entity/connection :db/id :id))
   (->EntityRequest
     (:entity query-params)
     (:a query-params)
     (let [conn-id (-> link-entity :link-entity/connection :db/id :id)]
-      (hc/db (:response param-ctx) conn-id (get-in param-ctx [:branches conn-id])))
+      (hc/db hc/*peer* conn-id (get-in param-ctx [:branches conn-id])))
     (form-pull-exp (:link-entity/form link-entity))))

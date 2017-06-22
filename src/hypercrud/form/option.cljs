@@ -5,7 +5,7 @@
             [hypercrud.browser.browser-request :as browser-request]
             [hypercrud.browser.anchor :as anchor]
             [hypercrud.browser.user-bindings :as user-bindings]
-            [hypercrud.client.core :as hc]
+            [hypercrud.client.reagent :refer [connect]]
             [hypercrud.compile.eval :refer [eval-str]]
             [hypercrud.form.q-util :as q-util]
             [hypercrud.ui.form-util :as form-util]))
@@ -38,30 +38,31 @@
        (interpose ", ")
        (apply str)))
 
-(defn hydrate-options [options-anchor param-ctx]            ; needs to return options as [[:db/id label]]
+(defn with-options [options-anchor param-ctx comp]          ; needs to return options as [[:db/id label]]
   (assert options-anchor)
-  ; This needs to be robust to partially constructed anchors
-  (let [link (let [request (if-let [link (-> options-anchor :anchor/link :db/id)]
-                             (browser-request/request-for-link (:root-db param-ctx) link))
-                   resp (if request (hc/hydrate (:response param-ctx) request))]
-               (if resp
-                 (if (exception/failure? resp)
-                   (.error js/console (pr-str (.-e resp)))
-                   (exception/extract resp))))
-        route (anchor/build-anchor-route options-anchor param-ctx)]
-    ; we are assuming we have a query link here
-    (mlet [q (if-let [qstr (-> link :link/request :link-query/value)] ; We avoid caught exceptions when possible
-               (exception/try-on (reader/read-string qstr))
-               (exception/failure nil))                     ; is this a success or failure? Doesn't matter - datomic will fail.
-           result (let [params-map (merge (:query-params route) (q-util/build-dbhole-lookup (:link/request link) param-ctx))
-                        query-value (q-util/->queryRequest q (:link/request link) params-map param-ctx)]
-                    (hc/hydrate (:response param-ctx) query-value))]
-          (let [colspec (form-util/determine-colspec result link param-ctx)
-                ; options have custom renderers which get user bindings
-                param-ctx (user-bindings/user-bindings link param-ctx)]
-            (cats/return
-              (->> result
-                   (mapv (fn [relation]
-                           (let [[conn fe attr maybe-field] (first (partition 4 colspec))
-                                 entity (get relation (-> fe :find-element/name))]
-                             [(:db/id entity) (build-label colspec relation param-ctx)])))))))))
+  (let [request (if-let [link (-> options-anchor :anchor/link :db/id)]
+                  (browser-request/request-for-link (:root-db param-ctx) link))]
+    (connect {:hydrate [request]}
+             (fn [link]
+               (if-let [link (exception/extract link nil)]
+                 ; This needs to be robust to partially constructed anchors
+                 (let [route (anchor/build-anchor-route options-anchor param-ctx)
+                       q (if-let [qstr (-> link :link/request :link-query/value)] ; We avoid caught exceptions when possible
+                           (exception/try-on (reader/read-string qstr))
+                           (exception/failure nil))         ; is this a success or failure? Doesn't matter - datomic will fail.
+                       param-ctx (assoc param-ctx :query-params (:query-params route)) ; todo assoc more/extract fn
+                       ]
+                   (q-util/->queryRequest-connect
+                     q (:link/request link) param-ctx
+                     (fn [request]
+                       (connect {:hydrate [request]}
+                                (fn [result]
+                                  (let [result (exception/extract result nil)
+                                        colspec (form-util/determine-colspec result link param-ctx)
+                                        ; options have custom renderers which get user bindings
+                                        param-ctx (user-bindings/user-bindings link param-ctx)]
+                                    [comp (->> result
+                                               (mapv (fn [relation]
+                                                       (let [[conn fe attr maybe-field] (first (partition 4 colspec))
+                                                             entity (get relation (-> fe :find-element/name))]
+                                                         [(:db/id entity) (build-label colspec relation param-ctx)]))))])))))))))))

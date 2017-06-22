@@ -39,7 +39,7 @@
                        param-ctx (assoc param-ctx :db db
                                                   :find-element fe
                                                   ; todo custom user-dispatch with all the tx-fns as reducers
-                                                  :user-with! (fn [tx] ((:dispatch! param-ctx) (actions/with (.-conn-id db) (.-branch db) tx))))]
+                                                  :user-with! (fn [tx] ((:dispatch! param-ctx) (actions/with (first db) (second db) tx))))]
                    (->> colspec
                         (mapv (fn [[db fe attr field]]
                                 (let [fe-name (-> fe :find-element/name)
@@ -69,7 +69,7 @@
                                   [:td {:class (string/join " " css-classes)
                                         :style {:background-color (connection-color/connection-color (or (:color param-ctx)
                                                                                                          ; hack for top tables
-                                                                                                         (.-conn-id db)))}
+                                                                                                         (first db)))}
                                         :key (str fe-name "-" ident)
                                         :on-click on-click}
                                    [:label (form-util/field-label field param-ctx)]
@@ -92,7 +92,7 @@
                           param-ctx (assoc param-ctx :db db
                                                      :find-element fe
                                                      ; todo custom user-dispatch with all the tx-fns as reducers
-                                                     :user-with! (fn [tx] ((:dispatch! param-ctx) (actions/with (.-conn-id db) (.-branch db) tx))))
+                                                     :user-with! (fn [tx] ((:dispatch! param-ctx) (actions/with (first db) (second db) tx))))
                           param-ctx (form-util/entity-param-ctx entity param-ctx)
                           attribute-anchors (->> (get entity-anchors-lookup (-> fe :find-element/name))
                                                  (filter :anchor/attribute))]

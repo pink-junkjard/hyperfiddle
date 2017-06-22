@@ -6,8 +6,7 @@
             [hypercrud.types.DbVal :refer [DbVal DbValTransitReader DbValTransitHandler]]
             [hypercrud.types.DbError :refer [DbError DbErrorTransitReader DbErrorTransitHandler]]
             [hypercrud.types.QueryRequest :refer [QueryRequest read-QueryRequest QueryRequestTransitHandler]]
-            [hypercrud.types.EntityRequest :refer [EntityRequest read-EntityRequest EntityRequestTransitHandler]]
-            [hypercrud.client.response :as response]))
+            [hypercrud.types.EntityRequest :refer [EntityRequest read-EntityRequest EntityRequestTransitHandler]]))
 
 
 ;; transit uri encoder type
@@ -36,8 +35,7 @@
    "DbVal" DbValTransitReader
    "DbError" DbErrorTransitReader
    "QReq" read-QueryRequest
-   "EReq" read-EntityRequest
-   "Response" response/read-Response})
+   "EReq" read-EntityRequest})
 
 (def transit-write-handlers
   {goog.Uri (UriHandler.)
@@ -45,8 +43,7 @@
    DbVal (DbValTransitHandler.)
    DbError (DbErrorTransitHandler.)
    QueryRequest (QueryRequestTransitHandler.)
-   EntityRequest (EntityRequestTransitHandler.)
-   response/Response (response/ResponseTransitHandler.)})
+   EntityRequest (EntityRequestTransitHandler.)})
 
 
 (def transit-encoding-opts {:handlers transit-write-handlers})
