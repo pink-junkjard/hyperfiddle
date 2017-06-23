@@ -30,20 +30,11 @@
       (p/then (fn [{:keys [t pulled-trees-map]}]
                 (hydrate (get pulled-trees-map request) request)))))
 
-(def loading-response (exception/success [:div "loading"]))
-
 (deftype Peer [state-atom]
   hc/Peer
   (hydrate [this request]
     (or (hydrate @(reagent/cursor state-atom [:ptm request]) request)
-        (exception/failure (js/Error. (str "Unhydrated request:\n" (pr-str request)))))
-
-    #_(let [{:keys [hydrate-id ptm]} @state-atom]
-      (if-let [result (hydrate ptm request)]
-        result
-        (if (and hydrate-id *reactive-hydrate?*)
-          loading-response
-          (exception/failure (js/Error. (str "Unhydrated request:\n" (pr-str request))))))))
+        (exception/failure (js/Error. (str "Unhydrated request:\n" (pr-str request))))))
 
   (db [this conn-id branch]
     (->DbVal conn-id branch))
