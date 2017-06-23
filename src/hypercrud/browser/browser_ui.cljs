@@ -21,22 +21,22 @@
             [hypercrud.util.core :as util]))
 
 
-(defn hydrate-link [peer link-dbid param-ctx]
+(defn hydrate-link [link-dbid param-ctx]
   (if (auto-link/system-link? link-dbid)
     (let [system-link-idmap (-> link-dbid :id)]
       (->> (auto-link/request-for-system-link (:root-db param-ctx) system-link-idmap)
-           (mapv #(if % (hc/hydrate (:response param-ctx) %)
+           (mapv #(if % (hc/hydrate (:peer param-ctx) %)
                         (exception/success nil)))
            (reduce #(mlet [acc %1 v %2] (cats/return (conj acc v))) (exception/success []))
            (cats/fmap #(auto-link/hydrate-system-link system-link-idmap % param-ctx))))
-    (hc/hydrate peer (browser-request/request-for-link (:root-db param-ctx) link-dbid))))
+    (hc/hydrate (:peer param-ctx) (browser-request/request-for-link (:root-db param-ctx) link-dbid))))
 
 (declare user-result)
 
 (def never-read-only (constantly false))
 
 (defn ui' [{query-params :query-params :as route} param-ctx]
-  (mlet [link (hydrate-link (:response param-ctx) (:link-dbid route) param-ctx) ; always latest
+  (mlet [link (hydrate-link (:link-dbid route) param-ctx)   ; always latest
          request (try-on
                    (case (link-util/link-type link)
                      :link-query (let [link-query (:link/request link)
@@ -46,9 +46,9 @@
                      :link-entity (q-util/->entityRequest (:link/request link) (:query-params route) param-ctx)
                      :link-blank nil
                      nil))
-         result (if request (hc/hydrate (:response param-ctx) request) (exception/success nil))
+         result (if request (hc/hydrate (:peer param-ctx) request) (exception/success nil))
          ; schema is allowed to be nil if the link only has anchors and no data dependencies
-         schema (exception/try-or-else (hc/hydrate (:response param-ctx) (schema-util/schema-request (:root-db param-ctx) nil)) nil)]
+         schema (exception/try-or-else (hc/hydrate (:peer param-ctx) (schema-util/schema-request (:root-db param-ctx) nil)) nil)]
         (cats/return
           (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
                 param-ctx (assoc param-ctx                  ; provide defaults before user-bindings run. TODO query side

@@ -87,7 +87,7 @@ the find-element level has been flattened out of the columns."
                                              ; raw mode sort is by namespaced attribute, per find-element
                                              k))
                                          col-idents)
-                    db (hc/db (:response param-ctx) (-> fe-conn :db/id :id) (get-in param-ctx [:branches (-> fe-conn :db/id :id)]))]
+                    db (hc/db (:peer param-ctx) (-> fe-conn :db/id :id) (get-in param-ctx [:branches (-> fe-conn :db/id :id)]))]
                 (mapcat (fn [ident]
                           ; :db/id is missing from schema so fake it here, it has no valueType
                           (let [attr (get (:schema param-ctx) ident {:attribute/ident ident})

@@ -1,45 +1,76 @@
 (ns hypercrud.client.peer
-  (:require [clojure.set :as set]
+  (:require [cats.monad.exception :as exception]
             [hypercrud.client.core :as hc]
             [hypercrud.client.http :as http]
-            [hypercrud.client.response :as response]
-            [hypercrud.util.core :as util]
+            [hypercrud.types.DbVal :refer [->DbVal]]
+            [hypercrud.types.DbError :refer [DbError]]
             [promesa.core :as p]))
 
+; removable by adding reactive requests
+(def ^:dynamic *reactive-hydrate?* true)
 
-(defn hydrate! [entry-uri requests stage-val]
-  (-> (http/hydrate! entry-uri requests stage-val)
-      (p/then (fn [{:keys [t pulled-trees-map]}]
-                (response/->Response requests pulled-trees-map stage-val)))))
+(defn human-error [e req]
+  (let [unfilled-holes (->> (filter (comp nil? val) (.-params req)) (map key))]
+    (if-not (empty? unfilled-holes)
+      [:div "Query "
+       [:pre (pr-str (.-query req))]
+       "has unfilled holes"
+       [:pre (pr-str unfilled-holes)]
+       "datomic reported"
+       [:pre (.-msg e)]]
+      (.-msg e))))
+
+(defn- hydrate [ptm request]
+  (if-let [resultset-or-error (get ptm request)]
+    (if (instance? DbError resultset-or-error)
+      (exception/failure (human-error resultset-or-error request))
+      (exception/success resultset-or-error))))
 
 (defn hydrate-one! [entry-uri request stage-val]
-  (-> (hydrate! entry-uri #{request} stage-val)
-      (p/then (fn [response] (hc/hydrate response request)))))
+  (-> (http/hydrate! entry-uri #{request} stage-val)
+      (p/then (fn [{:keys [t pulled-trees-map]}]
+                (hydrate pulled-trees-map request)))))
 
-(defn transact! [entry-uri stage-val]
-  (let [htx-groups (->> stage-val
-                        (util/map-values (fn [branch-tx]
-                                           (->> (get branch-tx nil)
-                                                (filter (fn [[op e a v]]
-                                                          (not (and (or (= :db/add op) (= :db/retract op))
-                                                                    (nil? v)))))))))]
-    (http/transact! entry-uri htx-groups)))
+(def loading-response (exception/success [:div "loading"]))
 
-(defn hydrated? [response requests]
-  ; compare our pre-loaded state with the peer dependencies
-  (set/subset? (set requests) (some-> response .-requests)))
-
-(deftype Peer [entry-uri stage last-response]
+(deftype Peer [state-atom watches]
   hc/Peer
-  (hydrate! [this request]
-    (hydrate! entry-uri request @stage))
+  (hydrate [this request]
+    ; todo use a better value for loading
+    (let [{:keys [hydrate-id ptm]} @state-atom]
+      (if-let [result (hydrate ptm request)]
+        result
+        (if (and hydrate-id *reactive-hydrate?*)
+          loading-response
+          (exception/failure (js/Error. (str "Unhydrated request:\n" (pr-str request))))))))
 
-  ; for clone link - is this bad? yeah its bad since it can never be batched.
+  (db [this conn-id branch]
+    ; todo fix dbval type, remove stage-hash
+    (->DbVal conn-id branch nil))
+
   (hydrate-one! [this request]
-    (hydrate-one! entry-uri request @stage))
+    (let [{:keys [entry-uri stage]} @state-atom]
+      (hydrate-one! entry-uri request stage)))
 
-  (hydrated? [this requests]
-    (hydrated? @last-response requests))
+  IWatchable
+  (-notify-watches [this oldval newval]
+    (doseq [[key f] watches]
+      (f key this oldval newval)))
+  (-add-watch [this key f]
+    (set! (.-watches this) (conj watches [key f]))
+    this)
+  (-remove-watch [this key]
+    (set! (.-watches this) (apply vector (remove #(= key (first %)) watches))))
 
-  (transact! [this]
-    (transact! entry-uri @stage)))
+  IHash
+  (-hash [this] (goog/getUid this)))
+
+(defn ->peer [state-atom]
+  (let [peer (->Peer state-atom [])]
+    (add-watch state-atom (hash peer)
+               (fn [k r o n]
+                 (let [o (select-keys o [:ptm :stage])
+                       n (select-keys n [:ptm :stage])]
+                   #_(when (not= o n))
+                   (-notify-watches peer o n))))
+    peer))

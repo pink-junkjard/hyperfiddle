@@ -43,7 +43,7 @@
   ; This needs to be robust to partially constructed anchors
   (let [link (let [request (if-let [link (-> options-anchor :anchor/link :db/id)]
                              (browser-request/request-for-link (:root-db param-ctx) link))
-                   resp (if request (hc/hydrate (:response param-ctx) request))]
+                   resp (if request (hc/hydrate (:peer param-ctx) request))]
                (if resp
                  (if (exception/failure? resp)
                    (.error js/console (pr-str (.-e resp)))
@@ -55,7 +55,7 @@
                (exception/failure nil))                     ; is this a success or failure? Doesn't matter - datomic will fail.
            result (let [params-map (merge (:query-params route) (q-util/build-dbhole-lookup (:link/request link) param-ctx))
                         query-value (q-util/->queryRequest q (:link/request link) params-map param-ctx)]
-                    (hc/hydrate (:response param-ctx) query-value))]
+                    (hc/hydrate (:peer param-ctx) query-value))]
           (let [colspec (form-util/determine-colspec result link param-ctx)
                 ; options have custom renderers which get user bindings
                 param-ctx (user-bindings/user-bindings link param-ctx)]

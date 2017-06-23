@@ -37,7 +37,7 @@
        (map (fn [{:keys [:dbhole/name :dbhole/value]}]
               (if-not (or (empty? name) (nil? value))
                 ; transform project-id into conn-id
-                [name (hc/db (:response param-ctx) (-> value :db/id :id) (get-in param-ctx [:branches (-> value :db/id :id)]))])))
+                [name (hc/db (:peer param-ctx) (-> value :db/id :id) (get-in param-ctx [:branches (-> value :db/id :id)]))])))
        (into {})))
 
 (defn safe-parse-query-validated [link-query]
@@ -90,7 +90,7 @@
                       (mapv (juxt :find-element/name
                                   (fn [fe]
                                     (let [conn-id (-> fe :find-element/connection :db/id :id)]
-                                      [(hc/db (:response param-ctx) conn-id (get-in param-ctx [:branches conn-id]))
+                                      [(hc/db (:peer param-ctx) conn-id (get-in param-ctx [:branches conn-id]))
                                        (form-pull-exp (:find-element/form fe))]))))
                       (into {}))]
     (->QueryRequest q params pull-exp)))
@@ -104,5 +104,5 @@
     (:entity query-params)
     (:a query-params)
     (let [conn-id (-> link-entity :link-entity/connection :db/id :id)]
-      (hc/db (:response param-ctx) conn-id (get-in param-ctx [:branches conn-id])))
+      (hc/db (:peer param-ctx) conn-id (get-in param-ctx [:branches conn-id])))
     (form-pull-exp (:link-entity/form link-entity))))

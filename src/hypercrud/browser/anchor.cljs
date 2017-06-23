@@ -75,7 +75,7 @@
         (-> param-ctx
             ; if we are an index link, what are we forking? Provide a binding
             (assoc-in [:branches (.-conn-id db)] branch)
-            (update :db #(hc/db (:response param-ctx) (.-conn-id %) branch))))
+            (update :db #(hc/db (:peer param-ctx) (.-conn-id %) branch))))
       ; Inform user via tooltip that we can't branch an index link because there is no db in scope. Explicitly set db in user bindings.
       param-ctx)
     param-ctx))
@@ -98,19 +98,20 @@
     (doall
       (merge
         (if txfn
-          (let [tx-from-modal (hc/tx (:response param-ctx) (:db param-ctx))]
-            ; do we need to hydrate any dependencies in this chain?
-            {:txfns {:stage (fn []
-                              (p/branch (let [result (txfn param-ctx tx-from-modal)]
-                                          (if-not (p/promise? result) (p/resolved result) result)) ; txfn may be sync or async
-                                        (fn [result]
-                                          (let [conn-id (.-conn-id (:db param-ctx))
-                                                branch (.-branch (:db param-ctx))]
-                                            ((:dispatch! param-ctx) (actions/stage-popover conn-id branch (:tx result) (:app-route result))))
-                                          nil)
-                                        (fn [why]
-                                          (js/console.error why))))
-                     :cancel #((:dispatch! param-ctx) (actions/discard (.-conn-id (:db param-ctx)) (.-branch (:db param-ctx))))}}))
+          ; do we need to hydrate any dependencies in this chain?
+          {:txfns {:stage (fn []
+                            ; this is a roundabout way of just swapping tx-from-modal with a thunk
+                            ; this whole :stage fn needs a rewrite from scratch
+                            (p/branch (let [tx-from-modal (assert false "todo") #_(hc/tx hc/*peer* (:db param-ctx))
+                                            result (txfn param-ctx tx-from-modal)]
+                                        (if-not (p/promise? result) (p/resolved result) result)) ; txfn may be sync or async
+                                      (fn [result]
+                                        (let [[conn-id branch] (:db param-ctx)]
+                                          ((:dispatch! param-ctx) (actions/stage-popover conn-id branch (:tx result) (:app-route result))))
+                                        nil)
+                                      (fn [why]
+                                        (js/console.error why))))
+                   :cancel #((:dispatch! param-ctx) (apply actions/discard (:db param-ctx)))}})
 
         (if (is-anchor-managed? anchor)                     ; the whole point of popovers is managed branches.
           {:popover (fn []
