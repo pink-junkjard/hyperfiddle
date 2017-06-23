@@ -19,7 +19,7 @@
        [:pre (.-msg e)]]
       (.-msg e))))
 
-(defn- hydrate [resultset-or-error request]
+(defn- process-result [resultset-or-error request]
   (if resultset-or-error
     (if (instance? DbError resultset-or-error)
       (exception/failure (human-error resultset-or-error request))
@@ -28,12 +28,12 @@
 (defn hydrate-one! [entry-uri request stage-val]
   (-> (http/hydrate! entry-uri #{request} stage-val)
       (p/then (fn [{:keys [t pulled-trees-map]}]
-                (hydrate (get pulled-trees-map request) request)))))
+                (process-result (get pulled-trees-map request) request)))))
 
 (deftype Peer [state-atom]
   hc/Peer
   (hydrate [this request]
-    (or (hydrate @(reagent/cursor state-atom [:ptm request]) request)
+    (or (process-result @(reagent/cursor state-atom [:ptm request]) request)
         (exception/failure (js/Error. (str "Unhydrated request:\n" (pr-str request))))))
 
   (db [this conn-id branch]
