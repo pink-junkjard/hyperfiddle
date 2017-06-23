@@ -1,10 +1,10 @@
 (ns hypercrud.types.DbVal
   (:require [cljs.reader :as reader]))
 
-(deftype DbVal [conn-id branch stage-hash #_history?]
-  Object (toString [_] (str "#DbVal" (pr-str [conn-id branch stage-hash])))
+(deftype DbVal [conn-id branch #_history?]
+  Object (toString [_] (str "#DbVal" (pr-str [conn-id branch])))
   IPrintWithWriter (-pr-writer [o writer _] (-write writer (.toString o)))
-  IHash (-hash [this] (hash [conn-id branch stage-hash]))
+  IHash (-hash [this] (hash [conn-id branch]))
   IEquiv (-equiv [this other] (= (hash this) (hash other)))
   ILookup
   (-lookup [o k] (get o k nil))
@@ -20,7 +20,7 @@
 (deftype DbValTransitHandler []
   Object
   (tag [_ v] "DbVal")
-  (rep [_ v] [(.-conn-id v) (.-branch v) (.-stage-hash v)])
+  (rep [_ v] [(.-conn-id v) (.-branch v)])
   (stringRep [_ v] nil)
   (getVerboseHandler [_] nil))
 

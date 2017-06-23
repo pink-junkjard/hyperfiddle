@@ -46,8 +46,7 @@
           (exception/failure (js/Error. (str "Unhydrated request:\n" (pr-str request))))))))
 
   (db [this conn-id branch]
-    ; todo fix dbval type, remove stage-hash
-    (->DbVal conn-id branch nil))
+    (->DbVal conn-id branch))
 
   (hydrate-one! [this request]
     (let [{:keys [entry-uri stage]} @state-atom]
