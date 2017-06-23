@@ -32,7 +32,7 @@
 
 (def loading-response (exception/success [:div "loading"]))
 
-(deftype Peer [state-atom watches]
+(deftype Peer [state-atom]
   hc/Peer
   (hydrate [this request]
     (or (hydrate @(reagent/cursor state-atom [:ptm request]) request)
@@ -53,25 +53,5 @@
     (let [{:keys [entry-uri stage]} @state-atom]
       (hydrate-one! entry-uri request stage)))
 
-  IWatchable
-  (-notify-watches [this oldval newval]
-    (doseq [[key f] watches]
-      (f key this oldval newval)))
-  (-add-watch [this key f]
-    (set! (.-watches this) (conj watches [key f]))
-    this)
-  (-remove-watch [this key]
-    (set! (.-watches this) (apply vector (remove #(= key (first %)) watches))))
-
   IHash
   (-hash [this] (goog/getUid this)))
-
-(defn ->peer [state-atom]
-  (let [peer (->Peer state-atom [])]
-    (add-watch state-atom (hash peer)
-               (fn [k r o n]
-                 (let [o (select-keys o [:ptm :stage])
-                       n (select-keys n [:ptm :stage])]
-                   #_(when (not= o n))
-                   (-notify-watches peer o n))))
-    peer))
