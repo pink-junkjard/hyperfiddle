@@ -100,18 +100,22 @@
         (if txfn
           ; do we need to hydrate any dependencies in this chain?
           {:txfns {:stage (fn []
-                            ; this is a roundabout way of just swapping tx-from-modal with a thunk
-                            ; this whole :stage fn needs a rewrite from scratch
-                            (p/branch (let [tx-from-modal (assert false "todo") #_(hc/tx hc/*peer* (:db param-ctx))
-                                            result (txfn param-ctx tx-from-modal)]
-                                        (if-not (p/promise? result) (p/resolved result) result)) ; txfn may be sync or async
-                                      (fn [result]
-                                        (let [[conn-id branch] (:db param-ctx)]
-                                          ((:dispatch! param-ctx) (actions/stage-popover conn-id branch (:tx result) (:app-route result))))
-                                        nil)
-                                      (fn [why]
-                                        (js/console.error why))))
-                   :cancel #((:dispatch! param-ctx) (apply actions/discard (:db param-ctx)))}})
+                            (p/promise (fn [resolve reject]
+                                         (let [swap-fn (fn [tx-from-modal]
+                                                         (let [result (let [result (txfn param-ctx tx-from-modal)]
+                                                                        ; txfn may be sync or async
+                                                                        (if-not (p/promise? result) (p/resolved result) result))]
+                                                           ; let the caller of this :stage fn know the result
+                                                           (p/branch result
+                                                                     (fn [result] (resolve nil))
+                                                                     (fn [why]
+                                                                       (reject why)
+                                                                       (js/console.error why)))
+
+                                                           ; return the result to the action
+                                                           result))]
+                                           ((:dispatch! param-ctx) (actions/stage-popover (.-conn-id (:db param-ctx)) (.-branch (:db param-ctx)) swap-fn))))))
+                   :cancel #((:dispatch! param-ctx) (actions/discard (.-conn-id (:db param-ctx)) (.-branch (:db param-ctx))))}})
 
         (if (is-anchor-managed? anchor)                     ; the whole point of popovers is managed branches.
           {:popover (fn []
