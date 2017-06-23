@@ -2,7 +2,6 @@
 
 
 (def ^:dynamic *root-conn-id* nil)
-(def ^:dynamic *peer* nil)
 
 (defprotocol Peer
   (hydrate [this request])
