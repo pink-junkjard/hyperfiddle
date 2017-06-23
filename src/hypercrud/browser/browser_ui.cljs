@@ -129,7 +129,8 @@
                               (mapv (juxt #(-> % :anchor/ident) identity)) ; [ repeating entity attr ident ]
                               (into {}))
             with-inline-result (fn [ident param-ctx f]
-                                 @(ui (get anchor-index ident) (assoc param-ctx :user-renderer f)))
+                                 [safe-ui (get anchor-index ident) (assoc param-ctx :user-renderer f)]
+                                 #_@(ui (get anchor-index ident) (assoc param-ctx :user-renderer f)))
             param-ctx (assoc param-ctx
                         :link-fn (fn [ident label param-ctx]
                                    (let [anchor (get anchor-index ident)
