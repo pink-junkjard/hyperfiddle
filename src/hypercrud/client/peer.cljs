@@ -34,7 +34,7 @@
   hc/Peer
   (hydrate [this request]
     (or (process-result @(reagent/cursor state-atom [:ptm request]) request)
-        (exception/failure (js/Error. (str "Unhydrated request:\n" (pr-str request))))))
+        (exception/failure "Loading..." #_(js/Error. (str "Unhydrated request:\n" (pr-str request))))))
 
   (db [this conn-id branch]
     (->DbVal conn-id branch))
