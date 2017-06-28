@@ -40,9 +40,9 @@
         options (option/hydrate-options options-anchor param-ctx)]
     [:span.select
      (let [option-records (exception/extract options nil)
-           _ (when (exception/failure? options)
-               ; todo something better with this exception
-               (.error js/console (pr-str (.-e options))))
+           ;_ (when (exception/failure? options)
+           ;    ; todo something better with this exception
+           ;    (.error js/console (pr-str (.-e options))))
            no-options? (empty? option-records)
            props (update props :disabled #(or % no-options?))
            props (if (#{:find-element/connection :link-entity/connection :dbhole/value :hypercrud/owner} (-> param-ctx :attribute :attribute/ident)) ; lol hack
