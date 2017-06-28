@@ -55,7 +55,12 @@
                                  (remove :anchor/find-element)
                                  (remove :anchor/attribute)
                                  (remove :anchor/render-inline?))
-                            param-ctx)])
+                            param-ctx)
+     (widget/render-inline-anchors (->> anchors
+                                        (remove :anchor/find-element)
+                                        (remove :anchor/attribute)
+                                        (filter :anchor/render-inline?))
+                                   (dissoc param-ctx :isComponent))])
 
   #_[:div
    ; This has to be handled internally due to weirdness around create-new links
