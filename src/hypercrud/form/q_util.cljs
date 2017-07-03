@@ -11,7 +11,7 @@
 
 (defn safe-read-string [code-str]
   (try
-    (reader/read-string code-str)                           ; this doesn't handle sharp-lambdas
+    (if code-str (reader/read-string code-str))                    ; this doesn't handle sharp-lambdas
     (catch :default e
       ; Nothing to be done at this point -
       ; this error must be caught by the widget before it is staged.
