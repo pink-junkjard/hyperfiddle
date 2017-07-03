@@ -40,7 +40,7 @@
    (->> anchor-ctx-pairs
         (filter (partial apply anchor/anchor-visible?))
         (map (fn [[anchor param-ctx]]
-               ; don't test anchor validity, we need to render the failure.
+               ; don't test anchor validity, we need to render the failure. If this is a dependent link, use visibility predicate to hide the error.
                [:div {:key (hash anchor)}                   ; extra div bc had trouble getting keys to work
                 (case (:display-mode param-ctx)
                   :xray (render-anchors [(assoc anchor :anchor/prompt (-> anchor :anchor/link :link/name))] param-ctx) nil)
