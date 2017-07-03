@@ -44,10 +44,7 @@
   (let [link (let [request (if-let [link (-> options-anchor :anchor/link :db/id)]
                              (browser-request/request-for-link (:root-db param-ctx) link))
                    resp (if request (hc/hydrate (:peer param-ctx) request))]
-               (if resp
-                 (if (exception/failure? resp)
-                   (.error js/console (pr-str (.-e resp)))
-                   (exception/extract resp))))
+               (exception/extract resp nil))
         route (anchor/build-anchor-route options-anchor param-ctx)]
     ; we are assuming we have a query link here
     (mlet [q (if-let [qstr (-> link :link/request :link-query/value)] ; We avoid caught exceptions when possible
