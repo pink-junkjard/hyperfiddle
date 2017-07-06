@@ -22,7 +22,7 @@
 
 (defn link-entity-system-edit [conn owner]
   {:pre [conn owner]}
-  {:db/id (->DbId {:ident :system-edit-attrowner
+  {:db/id (->DbId {:ident :system-edit
                    :owner (-> owner :db/id :id)
                    :conn (-> conn :db/id :id)}
                   (-> conn :db/id :id))
@@ -120,12 +120,13 @@
                            :anchor/ident :sys
                            :anchor/link (link-entity-system-edit conn (:hypercrud/owner parent-link))
                            :anchor/repeating? false
-                           :anchor/find-element nil
+                           :anchor/find-element nil         ; "entity"
                            :anchor/render-inline? false}
                           {:anchor/prompt "remove"
                            :anchor/ident :remove
                            :anchor/link (link-blank-system-remove (:hypercrud/owner parent-link))
                            :anchor/repeating? true
+                           :anchor/find-element nil         ; "entity"
                            :anchor/render-inline? true}])
 
                        :link-blank [])
@@ -180,7 +181,13 @@
                                           :anchor/find-element nil
                                           :anchor/attribute attr
                                           :anchor/render-inline? true
-                                          :anchor/link (link-entity-system-edit-attr conn (:hypercrud/owner parent-link) attr)}]
+                                          :anchor/link (link-entity-system-edit-attr conn (:hypercrud/owner parent-link) attr)}
+                                         (if (= :db.cardinality/one (-> attr :attribute/cardinality :db/ident))
+                                           {:anchor/prompt "remove"
+                                            :anchor/ident :remove
+                                            :anchor/link (link-blank-system-remove (:hypercrud/owner parent-link))
+                                            :anchor/repeating? true
+                                            :anchor/render-inline? true})]
                                         nil))))
                           doall)
 
