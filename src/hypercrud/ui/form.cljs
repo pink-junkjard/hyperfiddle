@@ -1,5 +1,6 @@
 (ns hypercrud.ui.form
-  (:require [hypercrud.browser.connection-color :as connection-color]
+  (:require [hypercrud.browser.anchor :as anchor]
+            [hypercrud.browser.connection-color :as connection-color]
             [hypercrud.runtime.state.actions :as actions]   ; todo bad dep
             [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.form-util :as form-util]
@@ -74,6 +75,8 @@
                               (concat
                                 (widget/render-anchors (remove :anchor/render-inline? entity-anchors) param-ctx)
                                 (->> colspec
+                                     (filter (fn [[db fe attr maybe-field]]
+                                               (anchor/anchor-visible? maybe-field param-ctx)))
                                      (mapv (fn [[db fe attr maybe-field]]
                                              (let [ident (-> attr :attribute/ident)
                                                    param-ctx (as-> param-ctx $
