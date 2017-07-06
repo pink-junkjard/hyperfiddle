@@ -88,6 +88,7 @@
                                         :anchor/ident :sys
                                         :anchor/link (link-query-system-edit (:find-element/connection fe) (:hypercrud/owner parent-link) fe)
                                         :anchor/repeating? true
+                                        :anchor/managed? false
                                         :anchor/find-element fe}
                                        ; create links mirror edit links but repeating false, see auto-formula.
                                        ; This is because the connection comes from the find-element, and when merging
@@ -97,12 +98,15 @@
                                         :anchor/link (link-query-system-edit (:find-element/connection fe) (:hypercrud/owner parent-link) fe)
                                         :anchor/repeating? false
                                         :anchor/find-element fe
+                                        :anchor/managed? true
+                                        :anchor/create? true
                                         :anchor/render-inline? false}
                                        {:anchor/prompt (str "remove " fe-name)
                                         :anchor/ident :remove
                                         :anchor/link (link-blank-system-remove (:hypercrud/owner parent-link))
                                         :anchor/repeating? true
                                         :anchor/find-element fe
+                                        :anchor/managed? true
                                         :anchor/render-inline? true}]))
                             doall)
 
@@ -115,18 +119,22 @@
                              :anchor/ident :sys
                              :anchor/link (link-entity-system-edit parent-link conn-id)
                              :anchor/repeating? true
+                             :anchor/managed? false
                              :anchor/find-element nil}
                           {:anchor/prompt "new"
                            :anchor/ident :sys
                            :anchor/link (link-entity-system-edit conn (:hypercrud/owner parent-link))
                            :anchor/repeating? false
                            :anchor/find-element nil         ; "entity"
+                           :anchor/create? true
+                           :anchor/managed? true
                            :anchor/render-inline? false}
                           {:anchor/prompt "remove"
                            :anchor/ident :remove
                            :anchor/link (link-blank-system-remove (:hypercrud/owner parent-link))
                            :anchor/repeating? true
                            :anchor/find-element nil         ; "entity"
+                           :anchor/managed? true
                            :anchor/render-inline? true}])
 
                        :link-blank [])
@@ -149,12 +157,15 @@
                                           :anchor/repeating? true
                                           :anchor/find-element fe
                                           :anchor/attribute attr
+                                          :anchor/managed? false
                                           :anchor/link (link-query-system-edit-attr conn (:hypercrud/owner parent-link) fe attr)}
                                          {:anchor/prompt (str "new") ; conserve space in label
                                           :anchor/ident :sys
                                           :anchor/repeating? false
                                           :anchor/find-element fe
                                           :anchor/attribute attr
+                                          :anchor/managed? true
+                                          :anchor/create? true
                                           :anchor/render-inline? true
                                           :anchor/link (link-query-system-edit-attr conn (:hypercrud/owner parent-link) fe attr)}]
                                         nil))))
@@ -172,6 +183,7 @@
                                         [{:anchor/prompt (str "edit") ; conserve space in label
                                           :anchor/ident :sys
                                           :anchor/repeating? true
+                                          :anchor/managed? false
                                           :anchor/find-element nil
                                           :anchor/attribute attr
                                           :anchor/link (link-entity-system-edit-attr conn (:hypercrud/owner parent-link) attr)}
@@ -180,6 +192,8 @@
                                           :anchor/repeating? false
                                           :anchor/find-element nil
                                           :anchor/attribute attr
+                                          :anchor/managed? true
+                                          :anchor/create? true
                                           :anchor/render-inline? true
                                           :anchor/link (link-entity-system-edit-attr conn (:hypercrud/owner parent-link) attr)}
                                          (if (= :db.cardinality/one (-> attr :attribute/cardinality :db/ident))
@@ -187,6 +201,7 @@
                                             :anchor/ident :remove
                                             :anchor/link (link-blank-system-remove (:hypercrud/owner parent-link))
                                             :anchor/repeating? true
+                                            :anchor/managed? true
                                             :anchor/render-inline? true})]
                                         nil))))
                           doall)

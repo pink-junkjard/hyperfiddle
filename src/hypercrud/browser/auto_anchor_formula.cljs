@@ -36,11 +36,14 @@
   ; link-entity's never do, despite having an attribute.
 
   ; Fn syntax can go here if we have proper cljs dynamic vars.
-  (let [{r :anchor/repeating? e :anchor/find-element a :anchor/attribute} anchor]
+  (let [{dependent? :anchor/repeating?
+         create? :anchor/create?
+         fe :anchor/find-element
+         a :anchor/attribute} anchor]
     (cond
 
       ; attr edit
-      (and r a)
+      (and dependent? a)
       (pr-str `(fn [ctx#]
                  (let [attr# (-> ctx# :attribute)]
                    (case (-> attr# :attribute/cardinality :db/ident)
@@ -49,17 +52,16 @@
                                            :a (:attribute/ident attr#)}))))
 
       ; attr create (managed, see auto-txfn)
-      (and (not r) a)
+      (and create? a)
       ; inherit parent since the fe is never explicitly set by user
       ; it would be more correct to use the FE if we have it, but
       ; that information is guaranteed to be the same?
       (pr-str `(fn [ctx#]
-                 (assert (-> ctx# :entity))
-                 (assert (-> ctx# :entity :db/id :conn-id))
-                 {:entity (auto-entity-dbid ctx#)}))
+                 (assert (-> ctx# :db .-conn-id))
+                 {:entity (auto-entity-dbid ctx# (-> ctx# :db .-conn-id))}))
 
       ; entity edit
-      (and r (not a))
+      (and dependent? (not create?) (not a))
       (pr-str `(fn [ctx#]
                  {:entity (get-in ctx# [:entity :db/id])}))
 
@@ -72,15 +74,16 @@
       ; Mystery deepens: If ur a syslink u better have a conn-id here because autolink inspects the entity connid to manufacture
       ; the right entity connection. If you're an explicit link with a conn set, it doesn't matter what you put here since the server
       ; will ignore this and use the explicit conn. This is only needed to plumb a connection to the autolink logic so it can choose the right connection.
-      (and (not r) (not a))
+      (and (not dependent?) create? (not a))
       (pr-str `(fn [ctx#]
-                 {:entity (auto-entity-dbid ctx# ~(-> e :find-element/connection :db/id :id))}))
+                 {:entity (auto-entity-dbid ctx# ~(-> fe :find-element/connection :db/id :id))}))
 
-      ; naked
-      (and (not r) (not e) (not a)) nil
+      ; index links can't be dependent on anything
+      (and (not dependent?) (not fe) (not a)) nil
 
       ; relation edit (this is not really a thing)
       ; If this is a thing, it probably is a query with named params and a custom formula.
-      (and r (not e) (not a)) nil
+      (and dependent? (not fe) (not a)) nil
 
-      :else (assert false (str "auto-formula matrix - missing pattern: " (util/pprint-str [r e a]))))))
+      ;:else (assert false (str "auto-formula matrix - missing pattern: " (util/pprint-str [r c e a])))
+      )))

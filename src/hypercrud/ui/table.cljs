@@ -31,7 +31,7 @@
                    :db.type/code}
                  (:db/ident valueType)))))
 
-(defn build-col-heads [colspec col-sort param-ctx]
+(defn build-col-heads [colspec anchors col-sort param-ctx]
   (->> (partition 4 colspec)
        (group-by (fn [[dbval fe attr maybe-field]] fe))
        (mapcat (fn [[fe colspec]]
@@ -48,6 +48,11 @@
                                       css-classes [(str "field-element-" (form-util/css-slugify fe-name))
                                                    (str "field-attr-" (form-util/css-slugify (str ident)))] #_"Dustin removed field-id and field-prompt; use a custom renderer"
                                       on-click #()
+                                      anchors (->> anchors
+                                                   (filter #(= (-> attr :db/id) (-> % :anchor/attribute :db/id)))
+                                                   #_(filter #(= (-> fe :db/id) (-> % :anchor/find-element :db/id))) #_ "entity"
+                                                   (remove :anchor/repeating?))
+                                      [anchors options-anchor] (widget/process-option-popover-anchors anchors param-ctx)
 
                                       ;with-sort-direction (fn [asc desc no-sort not-sortable]
                                       ;                      (if (sortable? field)
@@ -73,6 +78,8 @@
                                         :key (str fe-name "-" ident)
                                         :on-click on-click}
                                    [:label (form-util/field-label field param-ctx)]
+                                   [:div.anchors (widget/render-anchors (->> anchors (remove :anchor/render-inline?)) param-ctx)]
+                                   (widget/render-inline-anchors field (->> anchors (filter :anchor/render-inline?)) param-ctx)
                                    #_[:span.sort-arrow arrow]])))))))))
 
 (defn table-row-form [relation colspec anchors param-ctx]
@@ -169,7 +176,7 @@
          [:table.ui-table
           [:thead
            [:tr
-            (build-col-heads colspec sort-col param-ctx)
+            (build-col-heads colspec anchors sort-col param-ctx)
             [:td.link-cell {:key :link-cell}
              (let [anchors-lookup (->> anchors
                                        (remove :anchor/repeating?)

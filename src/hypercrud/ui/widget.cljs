@@ -53,7 +53,7 @@
   (= :options (:anchor/ident anchor)))
 
 (defn popover-anchor? [anchor]
-  (and (:anchor/tx-fn anchor) (not (empty? (:anchor/link anchor)))))
+  (:anchor/managed? anchor))
 
 (defn keyword [maybe-field anchors props param-ctx]
   (let [on-change! #((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %))]
@@ -113,7 +113,8 @@
 
 ; this can be used sometimes, on the entity page, but not the query page
 (defn ref [maybe-field anchors props param-ctx]
-  (let [[anchors options-anchor] (process-option-popover-anchors anchors param-ctx)]
+  (let [[anchors options-anchor] (process-option-popover-anchors anchors param-ctx)
+        anchors (->> anchors (filter :anchor/repeating?))]
     [:div.value
      ; todo this key is encapsulating other unrelated anchors
      [:div.editable-select {:key (hash (get-in options-anchor [:anchor/link :link/request]))} ; not sure if this is okay in nil field case, might just work
@@ -125,7 +126,8 @@
 
 
 (defn ref-component [maybe-field anchors props param-ctx]
-  (let [[anchors options-anchor] (process-option-popover-anchors anchors param-ctx)]
+  (let [[anchors options-anchor] (process-option-popover-anchors anchors param-ctx)
+        anchors (->> anchors (filter :anchor/repeating?))]
     (assert (not options-anchor) "ref-components don't have options; todo handle gracefully")
     #_(assert (> (count (filter :anchor/render-inline? anchors)) 0))
     #_(ref maybe-field anchors props param-ctx)
@@ -136,7 +138,8 @@
 
 
 (defn ref-many-table [maybe-field anchors props param-ctx]
-  (let [[anchors options-anchor] (process-option-popover-anchors anchors param-ctx)]
+  (let [[anchors options-anchor] (process-option-popover-anchors anchors param-ctx)
+        anchors (->> anchors (filter :anchor/repeating?))]
     (assert (not options-anchor) "ref-component-many don't have options; todo handle gracefully")
     [:div.value
      #_[:pre (pr-str maybe-field)]
@@ -152,11 +155,8 @@
                                first)
         select-value-atom (r/atom initial-select)]
     (fn [maybe-field anchors props param-ctx]
-      (let [[options-anchor] (filter option-anchor? anchors)
-            anchors (remove option-anchor? anchors)
-            anchors (if (and options-anchor (= :xray (:display-mode param-ctx)))
-                      (conj anchors (assoc options-anchor :anchor/render-inline? false))
-                      anchors)]
+      (let [[anchors options-anchor] (process-option-popover-anchors anchors param-ctx)
+            anchors (->> anchors (filter :anchor/repeating?))]
         [:div.value
          [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
          [:ul

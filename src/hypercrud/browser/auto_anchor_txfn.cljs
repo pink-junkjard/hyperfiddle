@@ -5,13 +5,13 @@
 
 
 (defn auto-txfn [anchor]
-  (let [{r :anchor/repeating? e :anchor/find-element a :anchor/attribute ident :anchor/ident} anchor]
+  (let [{m :anchor/managed? e :anchor/find-element a :anchor/attribute ident :anchor/ident} anchor]
     (cond
 
       ; link-query's always have a find-element (e)
       ; link-entity's never do (which is semantically unsound since semantically they always do)
 
-      (and (not r) a)                                       ; attr create
+      (and m a)                                       ; attr create
       (pr-str `(fn [ctx# tx-from-modal#]
                  (let [new-dbid# (auto-entity-dbid ctx#)]
                    {:tx (concat
@@ -21,7 +21,7 @@
                                           []
                                           [new-dbid#]))})))
 
-      (and (not r) e (not a))
+      (and m e (not a))
       (pr-str `(fn [ctx# tx-from-modal#]
                  (let [branch# (auto-entity-dbid ctx#)
                        id'# (-> (js/Date.now) - str)
@@ -35,7 +35,7 @@
                                                       [op# dbid# a# v#]))))]
                    {:tx tx-from-modal'#})))
 
-      (and r (not a) (= ident :remove))
+      (and m (not a) (= ident :remove))
       (pr-str `(fn [ctx# tx-from-modal#]
                  {:tx [[:db.fn/retractEntity (-> ctx# :entity :db/id)]]}))
 

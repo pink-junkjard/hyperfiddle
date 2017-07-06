@@ -65,8 +65,7 @@
    :class (if-not (anchor-valid? link route) "invalid")})
 
 (defn is-anchor-managed? [anchor]
-  (let [{r :anchor/repeating? e :anchor/find-element a :anchor/attribute ident :anchor/ident} anchor]
-    (and (:anchor/tx-fn anchor) (:anchor/link anchor))))
+  (:anchor/managed? anchor))
 
 (defn anchor-branch-logic [anchor param-ctx]
   (if (is-anchor-managed? anchor)
@@ -97,7 +96,7 @@
         param-ctx (anchor-branch-logic anchor param-ctx)]
     (doall
       (merge
-        (if txfn
+        (if txfn                                            ; better also be managed!
           ; do we need to hydrate any dependencies in this chain?
           {:txfns {:stage (fn []
                             (p/promise (fn [resolve reject]

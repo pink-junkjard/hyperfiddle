@@ -30,7 +30,8 @@
                       {:link/request ['*
                                       :link-query/value
                                       :link-query/single-result-as-entity?
-                                      {:link-entity/connection [:db/id :database/ident]
+                                      {:request/type [:db/id :request.type/ident]
+                                       :link-entity/connection [:db/id :database/ident]
                                        :link-entity/form form-pull-exp
                                        :link-query/dbhole ['* {:dbhole/value ['*]}]
                                        ; get all our forms for this link
@@ -75,10 +76,18 @@
         (->> ((:relation-new lookup)) (mapcat #(recurse-request % param-ctx)))
         (->> find-elements                                  ; might have empty results
              (mapcat (fn [fe]
-                       (->> ((:entity-new lookup) fe) (mapcat #(recurse-request % (assoc param-ctx
-                                                                                    :db (let [conn-id (-> fe :find-element/connection :db/id :id)]
-                                                                                          (hc/db (:peer param-ctx) conn-id (get-in param-ctx [:branches conn-id])))
-                                                                                    :find-element fe)))))))
+                       (let [param-ctx (assoc param-ctx
+                                         :db (let [conn-id (-> fe :find-element/connection :db/id :id)]
+                                               (hc/db (:peer param-ctx) conn-id (get-in param-ctx [:branches conn-id])))
+                                         :find-element fe)]
+                         (concat
+                           (->> ((:entity-new lookup) fe) (mapcat #(recurse-request % param-ctx)))
+                           (->> (-> fe :find-element/form :form/field)
+                                (filter #(form-util/filter-visible-fields % param-ctx))
+                                (mapcat (fn [field]
+                                          (let [attribute (-> field :field/attribute)
+                                                param-ctx (assoc param-ctx :attribute attribute)]
+                                            (->> ((:entity-attr-new lookup) fe attribute) (mapcat #(recurse-request % param-ctx))))))))))))
         (->> result
              (mapcat (fn [relation]
                        (let [param-ctx (assoc param-ctx :result relation)]
@@ -98,9 +107,7 @@
                                                                          (let [attribute (-> field :field/attribute)
                                                                                param-ctx (assoc param-ctx :attribute attribute
                                                                                                           :value (get entity (:attribute/ident attribute)))]
-                                                                           (concat
-                                                                             (->> ((:entity-attr lookup) fe attribute) (mapcat #(recurse-request % param-ctx)))
-                                                                             (->> ((:entity-attr-new lookup) fe attribute) (mapcat #(recurse-request % param-ctx))))
+                                                                           (->> ((:entity-attr lookup) fe attribute) (mapcat #(recurse-request % param-ctx)))
                                                                            ))))))))))))))))))
 
 (defn link-entity-dependent-requests [result fe anchors param-ctx]
@@ -128,10 +135,18 @@
         ;(->> ((:index lookup)) (mapcat #(recurse-request % param-ctx)))
         ;(->> ((:index-new lookup)) (mapcat #(recurse-request % param-ctx)))
         (->> ((:relation-new lookup)) (mapcat #(recurse-request % param-ctx)))
-        (->> ((:entity-new lookup)) (mapcat #(recurse-request % (assoc param-ctx
-                                                                  :db (let [conn-id (-> fe :find-element/connection :db/id :id)]
-                                                                        (hc/db (:peer param-ctx) conn-id (get-in param-ctx [:branches conn-id])))
-                                                                  :find-element fe))))
+        (let [param-ctx (assoc param-ctx
+                          :db (let [conn-id (-> fe :find-element/connection :db/id :id)]
+                                (hc/db (:peer param-ctx) conn-id (get-in param-ctx [:branches conn-id])))
+                          :find-element fe)]
+          (concat
+            (->> ((:entity-new lookup)) (mapcat #(recurse-request % param-ctx)))
+            (->> (get-in fe [:find-element/form :form/field])
+                 (filter #(form-util/filter-visible-fields % param-ctx))
+                 (mapcat (fn [field]
+                           (let [attribute (-> field :field/attribute)
+                                 param-ctx (assoc param-ctx :attribute attribute)]
+                             (->> ((:entity-attr-new lookup) attribute) (mapcat #(recurse-request % param-ctx)))))))))
         (->> result
              (mapcat (fn [relation]
                        (concat
@@ -150,9 +165,7 @@
                                             (let [attribute (-> field :field/attribute)
                                                   param-ctx (assoc param-ctx :attribute attribute
                                                                              :value (get entity (:attribute/ident attribute)))]
-                                              (concat
-                                                (->> ((:entity-attr lookup) attribute) (mapcat #(recurse-request % param-ctx)))
-                                                (->> ((:entity-attr-new lookup) attribute) (mapcat #(recurse-request % param-ctx))))
+                                              (->> ((:entity-attr lookup) attribute) (mapcat #(recurse-request % param-ctx)))
                                               ))))))))))))))
 
 
