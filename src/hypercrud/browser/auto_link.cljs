@@ -84,8 +84,8 @@
                        :link-query
                        (->> find-elements
                             (mapcat (fn [[fe-name fe]]
-                                      [{:anchor/prompt (str fe-name)
-                                        :anchor/ident :sys
+                                      [{:anchor/prompt (str "sys-edit-" fe-name)
+                                        :anchor/ident (keyword (str "sys-edit-" fe-name))
                                         :anchor/link (link-query-system-edit (:find-element/connection fe) (:hypercrud/owner parent-link) fe)
                                         :anchor/repeating? true
                                         :anchor/managed? false
@@ -93,16 +93,16 @@
                                        ; create links mirror edit links but repeating false, see auto-formula.
                                        ; This is because the connection comes from the find-element, and when merging
                                        ; sys links we match on the find-element.
-                                       {:anchor/prompt (str "new " fe-name)
-                                        :anchor/ident :sys
+                                       {:anchor/prompt (str "sys-new-" fe-name)
+                                        :anchor/ident (keyword (str "sys-new-" fe-name))
                                         :anchor/link (link-query-system-edit (:find-element/connection fe) (:hypercrud/owner parent-link) fe)
                                         :anchor/repeating? false
                                         :anchor/find-element fe
                                         :anchor/managed? true
                                         :anchor/create? true
                                         :anchor/render-inline? false}
-                                       {:anchor/prompt (str "remove " fe-name)
-                                        :anchor/ident :remove
+                                       {:anchor/prompt (str "sys-remove-" fe-name)
+                                        :anchor/ident (keyword (str "sys-remove-" fe-name))
                                         :anchor/link (link-blank-system-remove (:hypercrud/owner parent-link))
                                         :anchor/repeating? true
                                         :anchor/find-element fe
@@ -121,16 +121,16 @@
                              :anchor/repeating? true
                              :anchor/managed? false
                              :anchor/find-element nil}
-                          {:anchor/prompt "new"
-                           :anchor/ident :sys
+                          {:anchor/prompt "sys-new-entity"
+                           :anchor/ident (keyword "sys-new-entity")
                            :anchor/link (link-entity-system-edit conn (:hypercrud/owner parent-link))
                            :anchor/repeating? false
                            :anchor/find-element nil         ; "entity"
                            :anchor/create? true
                            :anchor/managed? true
                            :anchor/render-inline? false}
-                          {:anchor/prompt "remove"
-                           :anchor/ident :remove
+                          {:anchor/prompt "sys-remove-entity"
+                           :anchor/ident (keyword "remove")
                            :anchor/link (link-blank-system-remove (:hypercrud/owner parent-link))
                            :anchor/repeating? true
                            :anchor/find-element nil         ; "entity"
@@ -152,15 +152,15 @@
                                           attr ((:schema param-ctx) ident) #_"nil for db/id"]
                                       (case (-> attr :attribute/valueType :db/ident)
                                         :db.type/ref
-                                        [{:anchor/prompt (str "edit") ; conserve space in label
-                                          :anchor/ident :sys
+                                        [{:anchor/prompt (str "sys-edit-" fe-name "-" ident) ; conserve space in label
+                                          :anchor/ident (keyword (str "sys-edit-" fe-name "-" ident))
                                           :anchor/repeating? true
                                           :anchor/find-element fe
                                           :anchor/attribute attr
                                           :anchor/managed? false
                                           :anchor/link (link-query-system-edit-attr conn (:hypercrud/owner parent-link) fe attr)}
-                                         {:anchor/prompt (str "new") ; conserve space in label
-                                          :anchor/ident :sys
+                                         {:anchor/prompt (str "sys-new-" fe-name "-" ident) ; conserve space in label
+                                          :anchor/ident (keyword (str "sys-new-" fe-name "-" ident))
                                           :anchor/repeating? false
                                           :anchor/find-element fe
                                           :anchor/attribute attr
@@ -174,21 +174,21 @@
                      :link-entity
                      (->> (partition 4 colspec)
                           (mapcat (fn [[db fe attr maybe-field]]
-                                    (let [fe-name (-> fe :find-element/name)
+                                    (let [fe-name (-> fe :find-element/name) ; "entity" ?
                                           ident (-> attr :attribute/ident)
                                           conn {:db/id (->DbId (.-conn-id db) hc/*root-conn-id*)}
                                           attr ((:schema param-ctx) ident) #_"nil for db/id"]
                                       (case (-> attr :attribute/valueType :db/ident)
                                         :db.type/ref
-                                        [{:anchor/prompt (str "edit") ; conserve space in label
-                                          :anchor/ident :sys
+                                        [{:anchor/prompt (str "sys-edit-" fe-name "-" ident) ; conserve space in label
+                                          :anchor/ident (keyword (str "sys-edit-" fe-name "-" ident))
                                           :anchor/repeating? true
                                           :anchor/managed? false
                                           :anchor/find-element nil
                                           :anchor/attribute attr
                                           :anchor/link (link-entity-system-edit-attr conn (:hypercrud/owner parent-link) attr)}
-                                         {:anchor/prompt (str "new") ; conserve space in label
-                                          :anchor/ident :sys
+                                         {:anchor/prompt (str "sys-new-" fe-name "-" ident) ; conserve space in label
+                                          :anchor/ident (keyword (str "sys-new-" fe-name "-" ident))
                                           :anchor/repeating? false
                                           :anchor/find-element nil
                                           :anchor/attribute attr
@@ -197,8 +197,8 @@
                                           :anchor/render-inline? true
                                           :anchor/link (link-entity-system-edit-attr conn (:hypercrud/owner parent-link) attr)}
                                          (if (= :db.cardinality/one (-> attr :attribute/cardinality :db/ident))
-                                           {:anchor/prompt "remove"
-                                            :anchor/ident :remove
+                                           {:anchor/prompt (str "sys-remove-" fe-name "-" ident)
+                                            :anchor/ident (keyword (str "sys-remove-" fe-name "-" ident))
                                             :anchor/link (link-blank-system-remove (:hypercrud/owner parent-link))
                                             :anchor/repeating? true
                                             :anchor/managed? true

@@ -12,21 +12,32 @@
             [reagent.core :as r]))
 
 (defn field [maybe-field anchors param-ctx]
-  (let [control (let [anchors (filter #(= (-> param-ctx :attribute :db/id) (some-> % :anchor/attribute :db/id)) anchors)
-                      props (form-util/build-props maybe-field anchors param-ctx)]
+  (let [anchors (filter #(= (-> param-ctx :attribute :db/id) (some-> % :anchor/attribute :db/id)) anchors)
+        control (let [props (form-util/build-props maybe-field anchors param-ctx)]
                   (if (renderer/user-renderer param-ctx)
                     (renderer/user-render maybe-field anchors props param-ctx)
                     [auto-control maybe-field anchors props param-ctx]))]
 
     [:div.field {:style {:border-color (connection-color/connection-color (:color param-ctx))}}
-     (case (:layout param-ctx)
-       :block [:label (form-util/field-label maybe-field param-ctx)]
-       :inline-block nil)
-     (case (:layout param-ctx)
-       :block control
-       :inline-block
-       [tooltip/hover-tooltip-managed {:label (util/fallback empty? (get maybe-field :field/prompt) (-> param-ctx :attribute :attribute/ident str))}
-        control])]))
+     (let [param-ctx (dissoc param-ctx :entity :value)
+           [anchors] (-> (remove :anchor/repeating? anchors)
+                         #_(filter #(= (-> fe :db/id) (-> % :anchor/find-element :db/id))) #_"entity"
+                         (widget/process-option-popover-anchors param-ctx))]
+       [:div
+        [:label (form-util/field-label maybe-field param-ctx)]
+        #_ [:div.anchors]
+        (widget/render-anchors (->> anchors (remove :anchor/render-inline?)) param-ctx)
+        (widget/render-anchors (->> anchors (filter :anchor/render-inline?)) param-ctx)
+        ])
+     control
+     #_(case (:layout param-ctx)
+         :block
+         :inline-block nil)
+     #_(case (:layout param-ctx)
+         :block control
+         :inline-block
+         [tooltip/hover-tooltip-managed {:label (util/fallback empty? (get maybe-field :field/prompt) (-> param-ctx :attribute :attribute/ident str))}
+          control])]))
 
 (defn new-field [entity param-ctx]
   (let [attr-ident (r/atom nil)]

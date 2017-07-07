@@ -118,19 +118,20 @@
         anchors (filter :anchor/render-inline? anchors)
         anchors-lookup (->> anchors
                             (group-by (fn [anchor]
-                                        (let [r (-> anchor :anchor/repeating?)
+                                        (let [r (or (-> anchor :anchor/repeating?) false)
+                                              c (or (-> anchor :anchor/create?) false)
                                               attr (-> anchor :anchor/attribute :attribute/ident)]
-                                          [r nil attr]))))]
+                                          [r c nil attr]))))]
 
     ; Can't differentiate between index and entity links right now, bugs here.
-    (let [lookup {:index #(get anchors-lookup [true nil nil])
-                  :index-new #(get anchors-lookup [false nil nil])
+    (let [lookup {:index #(get anchors-lookup [false false nil nil])
+                  :index-new #(get anchors-lookup [false true nil nil])
                   :relation (constantly [])
                   :relation-new (constantly [])
-                  :entity #(get anchors-lookup [true nil nil])
-                  :entity-new #(get anchors-lookup [false nil nil]) ; New Page?
-                  :entity-attr #(get anchors-lookup [true nil (:attribute/ident %)])
-                  :entity-attr-new #(get anchors-lookup [false nil (:attribute/ident %)])}]
+                  :entity #(get anchors-lookup [true false nil nil])
+                  :entity-new #(get anchors-lookup [false true nil nil]) ; New Page?
+                  :entity-attr #(get anchors-lookup [true false nil (:attribute/ident %)])
+                  :entity-attr-new #(get anchors-lookup [false true nil (:attribute/ident %)])}]
       (concat
         ;(->> ((:index lookup)) (mapcat #(recurse-request % param-ctx)))
         ;(->> ((:index-new lookup)) (mapcat #(recurse-request % param-ctx)))
@@ -188,9 +189,10 @@
                         param-ctx (assoc param-ctx :schema indexed-schema)]
                     ; todo :root mode
                     (link-query-dependent-requests result (:link-query/find-element link-query)
-                                                   (auto-anchor/merge-anchors
-                                                     (auto-anchor/auto-anchors (auto-link/system-anchors link result param-ctx))
-                                                     (auto-anchor/auto-anchors (:link/anchor link)))
+                                                   (auto-anchor/auto-anchors
+                                                     (auto-anchor/merge-anchors
+                                                       (auto-link/system-anchors link result param-ctx)
+                                                       (:link/anchor link)))
                                                    (user-bindings/user-bindings link param-ctx)))))
           nil)))))
 
@@ -210,9 +212,10 @@
                       result (->> (if (map? result) [result] result) (mapv #(assoc {} "entity" %)))]
                   ;todo ;root mode
                   (link-entity-dependent-requests result fe
-                                                  (auto-anchor/merge-anchors
-                                                    (auto-anchor/auto-anchors (auto-link/system-anchors link result param-ctx))
-                                                    (auto-anchor/auto-anchors (:link/anchor link)))
+                                                  (auto-anchor/auto-anchors
+                                                    (auto-anchor/merge-anchors
+                                                      (auto-link/system-anchors link result param-ctx)
+                                                      (:link/anchor link)))
                                                   (user-bindings/user-bindings link param-ctx)))))
         nil))))
 

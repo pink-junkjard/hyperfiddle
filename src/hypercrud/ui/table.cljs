@@ -52,7 +52,7 @@
                                                    (filter #(= (-> attr :db/id) (-> % :anchor/attribute :db/id)))
                                                    #_(filter #(= (-> fe :db/id) (-> % :anchor/find-element :db/id))) #_ "entity"
                                                    (remove :anchor/repeating?))
-                                      [anchors options-anchor] (widget/process-option-popover-anchors anchors param-ctx)
+                                      [anchors] (widget/process-option-popover-anchors anchors param-ctx)
 
                                       ;with-sort-direction (fn [asc desc no-sort not-sortable]
                                       ;                      (if (sortable? field)
@@ -160,7 +160,7 @@
           #_sort-eids
           (map (fn [relation]
                  (let [param-ctx (assoc param-ctx :result relation)] ; todo :result -> :relation
-                   ^{:key (hash (util/map-values :db/id relation))}
+                   ^{:key (hash (util/map-values #(or (:db/id %) (:anchor/ident %)) relation))}
                    [table-row-form relation colspec anchors param-ctx])))))])
 
 (defn table [& props]
