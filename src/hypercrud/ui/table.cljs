@@ -50,7 +50,7 @@
                                       on-click #()
                                       anchors (->> anchors
                                                    (filter #(= (-> attr :db/id) (-> % :anchor/attribute :db/id)))
-                                                   #_(filter #(= (-> fe :db/id) (-> % :anchor/find-element :db/id))) #_ "entity"
+                                                   #_(filter #(= (-> fe :db/id) (-> % :anchor/find-element :db/id))) #_"entity"
                                                    (remove :anchor/repeating?))
                                       [anchors] (widget/process-option-popover-anchors anchors param-ctx)
 
@@ -110,7 +110,7 @@
                                          param-ctx (assoc param-ctx :attribute attr
                                                                     :value (get entity ident)
                                                                     :layout :table)
-                                         style {:border-color (connection-color/connection-color (:color param-ctx))}]
+                                         style {:border-color (if (:db/id entity) (connection-color/connection-color (:color param-ctx)))}]
                                      [:td.truncate {:key (or (:db/id maybe-field) (str fe-name ident)) :style style}
                                       (let [anchors (filter #(= (-> param-ctx :attribute :db/id)
                                                                 (some-> % :anchor/attribute :db/id)) attribute-anchors)
@@ -160,7 +160,7 @@
           #_sort-eids
           (map (fn [relation]
                  (let [param-ctx (assoc param-ctx :result relation)] ; todo :result -> :relation
-                   ^{:key (hash (util/map-values #(or (:db/id %) (:anchor/ident %)) relation))}
+                   ^{:key (hash (util/map-values #(or (:db/id %) (-> % :anchor/link :db/id)) relation))}
                    [table-row-form relation colspec anchors param-ctx])))))])
 
 (defn table [& props]

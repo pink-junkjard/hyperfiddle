@@ -130,8 +130,10 @@
                   :relation-new (constantly [])
                   :entity #(get anchors-lookup [true false nil nil])
                   :entity-new #(get anchors-lookup [false true nil nil]) ; New Page?
-                  :entity-attr #(get anchors-lookup [true false nil (:attribute/ident %)])
-                  :entity-attr-new #(get anchors-lookup [false true nil (:attribute/ident %)])}]
+                  :entity-attr-t #(get anchors-lookup [true false nil (:attribute/ident %)])
+                  :entity-attr-f #(get anchors-lookup [false false nil (:attribute/ident %)])
+                  :entity-attr-new-t #(get anchors-lookup [true true nil (:attribute/ident %)])
+                  :entity-attr-new-f #(get anchors-lookup [false true nil (:attribute/ident %)])}]
       (concat
         ;(->> ((:index lookup)) (mapcat #(recurse-request % param-ctx)))
         ;(->> ((:index-new lookup)) (mapcat #(recurse-request % param-ctx)))
@@ -147,7 +149,9 @@
                  (mapcat (fn [field]
                            (let [attribute (-> field :field/attribute)
                                  param-ctx (assoc param-ctx :attribute attribute)]
-                             (->> ((:entity-attr-new lookup) attribute) (mapcat #(recurse-request % param-ctx)))))))))
+                             (concat
+                               (->> ((:entity-attr-f lookup) attribute) (mapcat #(recurse-request % param-ctx)))
+                               (->> ((:entity-attr-new-f lookup) attribute) (mapcat #(recurse-request % param-ctx))))))))))
         (->> result
              (mapcat (fn [relation]
                        (concat
@@ -166,7 +170,9 @@
                                             (let [attribute (-> field :field/attribute)
                                                   param-ctx (assoc param-ctx :attribute attribute
                                                                              :value (get entity (:attribute/ident attribute)))]
-                                              (->> ((:entity-attr lookup) attribute) (mapcat #(recurse-request % param-ctx)))
+                                              (concat
+                                                (->> ((:entity-attr-t lookup) attribute) (mapcat #(recurse-request % param-ctx)))
+                                                (->> ((:entity-attr-new-t lookup) attribute) (mapcat #(recurse-request % param-ctx))))
                                               ))))))))))))))
 
 

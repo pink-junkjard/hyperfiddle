@@ -16,8 +16,8 @@
 (defn merge-anchors [sys-anchors link-anchors]
   (let [f (fn [anchor]
             (let [ident (:anchor/ident anchor)]
-              (if (= ident :sys)
-                (js/performance.now)
+              (if (or (= ident :sys) (= ident :remove) (= ident :options))
+                (js/Math.random)
                 ident)))
         collated (merge-with concat (group-by f sys-anchors) (group-by f link-anchors))
         merged (map #(apply merge %) (vals collated)) #_(apply map merge (vals collated))]

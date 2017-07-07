@@ -53,15 +53,15 @@
    :hypercrud/owner owner
    :link/request {:link-entity/connection conn}})
 
-(defn link-blank-system-remove [owner]
+(defn link-blank-system-remove [owner e a]
   {:pre [owner]}
-  {:db/id (->DbId {:ident :sys-remove} nil)
+  {:db/id (->DbId {:ident :sys-remove
+                   :e (-> e :db/id :id)
+                   :a (-> a :db/id :id)} nil)
    :link/name "sys-remove"
    :hypercrud/owner owner
    :link/renderer (pr-str `(fn [result# colspec# anchors# param-ctx#]
-                             [:p "Retract entity?"]))
-   })
-
+                             [:p "Retract entity?"]))})
 
 (defn system-anchors
   "All sys links are :anchor/ident :sys, so they can be matched and merged with user-anchors.
@@ -103,7 +103,7 @@
                                         :anchor/render-inline? false}
                                        {:anchor/prompt (str "sys-remove-" fe-name)
                                         :anchor/ident (keyword (str "sys-remove-" fe-name))
-                                        :anchor/link (link-blank-system-remove (:hypercrud/owner parent-link))
+                                        :anchor/link (link-blank-system-remove (:hypercrud/owner parent-link) fe nil)
                                         :anchor/repeating? true
                                         :anchor/find-element fe
                                         :anchor/managed? true
@@ -130,8 +130,8 @@
                            :anchor/managed? true
                            :anchor/render-inline? false}
                           {:anchor/prompt "sys-remove-entity"
-                           :anchor/ident (keyword "remove")
-                           :anchor/link (link-blank-system-remove (:hypercrud/owner parent-link))
+                           :anchor/ident (keyword "sys-remove-entity")
+                           :anchor/link (link-blank-system-remove (:hypercrud/owner parent-link) nil nil) ; "entity"
                            :anchor/repeating? true
                            :anchor/find-element nil         ; "entity"
                            :anchor/managed? true
@@ -199,7 +199,9 @@
                                          (if (= :db.cardinality/one (-> attr :attribute/cardinality :db/ident))
                                            {:anchor/prompt (str "sys-remove-" fe-name "-" ident)
                                             :anchor/ident (keyword (str "sys-remove-" fe-name "-" ident))
-                                            :anchor/link (link-blank-system-remove (:hypercrud/owner parent-link))
+                                            :anchor/link (link-blank-system-remove (:hypercrud/owner parent-link) fe attr)
+                                            :anchor/find-element nil
+                                            :anchor/attribute attr
                                             :anchor/repeating? true
                                             :anchor/managed? true
                                             :anchor/render-inline? true})]
@@ -254,4 +256,4 @@
         (link-entity-system-edit-attr conn owner a))
 
       :sys-remove
-      (link-blank-system-remove owner))))
+      (link-blank-system-remove owner e a))))
