@@ -35,9 +35,4 @@
                                                       [op# dbid# a# v#]))))]
                    {:tx tx-from-modal'#})))
 
-      (and m (not a) (= ident :remove))
-      (pr-str `(fn [ctx# tx-from-modal#]
-                 {:tx [[:db.fn/retractEntity (-> ctx# :entity :db/id)]]}))
-
-
       :else nil)))
