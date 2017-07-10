@@ -180,31 +180,32 @@
                                           attr ((:schema param-ctx) ident) #_"nil for db/id"]
                                       (case (-> attr :attribute/valueType :db/ident)
                                         :db.type/ref
-                                        [{:anchor/prompt (str "sys-edit-" fe-name "-" ident) ; conserve space in label
-                                          :anchor/ident (keyword (str "sys-edit-" fe-name "-" ident))
-                                          :anchor/repeating? true
-                                          :anchor/managed? false
-                                          :anchor/find-element nil
-                                          :anchor/attribute attr
-                                          :anchor/link (link-entity-system-edit-attr conn (:hypercrud/owner parent-link) attr)}
-                                         {:anchor/prompt (str "sys-new-" fe-name "-" ident) ; conserve space in label
-                                          :anchor/ident (keyword (str "sys-new-" fe-name "-" ident))
-                                          :anchor/repeating? true
-                                          :anchor/find-element nil
-                                          :anchor/attribute attr
-                                          :anchor/managed? true
-                                          :anchor/create? true
-                                          :anchor/render-inline? true
-                                          :anchor/link (link-entity-system-edit-attr conn (:hypercrud/owner parent-link) attr)}
-                                         (if (= :db.cardinality/one (-> attr :attribute/cardinality :db/ident))
-                                           {:anchor/prompt (str "sys-remove-" fe-name "-" ident)
-                                            :anchor/ident (keyword (str "sys-remove-" fe-name "-" ident))
-                                            :anchor/link (link-blank-system-remove (:hypercrud/owner parent-link) fe attr)
+                                        (concat
+                                          [{:anchor/prompt (str "sys-edit-" fe-name "-" ident) ; conserve space in label
+                                            :anchor/ident (keyword (str "sys-edit-" fe-name "-" ident))
+                                            :anchor/repeating? true
+                                            :anchor/managed? false
                                             :anchor/find-element nil
                                             :anchor/attribute attr
+                                            :anchor/link (link-entity-system-edit-attr conn (:hypercrud/owner parent-link) attr)}
+                                           {:anchor/prompt (str "sys-new-" fe-name "-" ident) ; conserve space in label
+                                            :anchor/ident (keyword (str "sys-new-" fe-name "-" ident))
                                             :anchor/repeating? true
+                                            :anchor/find-element nil
+                                            :anchor/attribute attr
                                             :anchor/managed? true
-                                            :anchor/render-inline? true})]
+                                            :anchor/create? true
+                                            :anchor/render-inline? true
+                                            :anchor/link (link-entity-system-edit-attr conn (:hypercrud/owner parent-link) attr)}]
+                                          (if (= :db.cardinality/one (-> attr :attribute/cardinality :db/ident))
+                                            [{:anchor/prompt (str "sys-remove-" fe-name "-" ident)
+                                              :anchor/ident (keyword (str "sys-remove-" fe-name "-" ident))
+                                              :anchor/link (link-blank-system-remove (:hypercrud/owner parent-link) fe attr)
+                                              :anchor/find-element nil
+                                              :anchor/attribute attr
+                                              :anchor/repeating? true
+                                              :anchor/managed? true
+                                              :anchor/render-inline? true}]))
                                         nil))))
                           doall)
 
