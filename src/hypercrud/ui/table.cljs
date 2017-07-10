@@ -160,7 +160,7 @@
           #_sort-eids
           (map (fn [relation]
                  (let [param-ctx (assoc param-ctx :result relation)] ; todo :result -> :relation
-                   ^{:key (hash (util/map-values #(or (:db/id %) (-> % :anchor/link :db/id)) relation))}
+                   ^{:key (hash (util/map-values #(or (:db/id %) (-> % :anchor/ident)) relation))}
                    [table-row-form relation colspec anchors param-ctx])))))])
 
 (defn table [& props]
