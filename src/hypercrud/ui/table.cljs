@@ -11,25 +11,24 @@
             [reagent.core :as r]))
 
 
-(defn sortable? [field]
-  (let [{:keys [:attribute/cardinality :attribute/valueType]} (:field/attribute field)]
-    (and
-      (= (:db/ident cardinality) :db.cardinality/one)
-      ; ref requires more work (inspect label-prop)
-      (contains? #{:db.type/keyword
-                   :db.type/string
-                   :db.type/boolean
-                   :db.type/long
-                   :db.type/bigint
-                   :db.type/float
-                   :db.type/double
-                   :db.type/bigdec
-                   :db.type/instant
-                   :db.type/uuid
-                   :db.type/uri
-                   :db.type/bytes
-                   :db.type/code}
-                 (:db/ident valueType)))))
+(defn sortable? [{:keys [:attribute/cardinality :attribute/valueType] :as attr}]
+  (and
+    (= (:db/ident cardinality) :db.cardinality/one)
+    ; ref requires more work (inspect label-prop)
+    (contains? #{:db.type/keyword
+                 :db.type/string
+                 :db.type/boolean
+                 :db.type/long
+                 :db.type/bigint
+                 :db.type/float
+                 :db.type/double
+                 :db.type/bigdec
+                 :db.type/instant
+                 :db.type/uuid
+                 :db.type/uri
+                 :db.type/bytes
+                 :db.type/code}
+               (:db/ident valueType))))
 
 (defn build-col-heads [colspec anchors col-sort param-ctx]
   (->> (partition 4 colspec)
@@ -47,30 +46,27 @@
                                       param-ctx (assoc param-ctx :attribute attr)
                                       css-classes [(str "field-element-" (form-util/css-slugify fe-name))
                                                    (str "field-attr-" (form-util/css-slugify (str ident)))] #_"Dustin removed field-id and field-prompt; use a custom renderer"
-                                      on-click #()
                                       anchors (->> anchors
                                                    (filter #(= (-> attr :db/id) (-> % :anchor/attribute :db/id)))
                                                    #_(filter #(= (-> fe :db/id) (-> % :anchor/find-element :db/id))) #_"entity"
                                                    (remove :anchor/repeating?))
                                       [anchors] (widget/process-option-popover-anchors anchors param-ctx)
 
-                                      ;with-sort-direction (fn [asc desc no-sort not-sortable]
-                                      ;                      (if (sortable? field)
-                                      ;                        (if (and (= form-dbid' form-dbid) (= ident' ident))
-                                      ;                          (case direction
-                                      ;                            :asc asc
-                                      ;                            :desc desc)
-                                      ;                          no-sort)
-                                      ;                        not-sortable))
+                                      [sort-fe-dbid sort-key direction] @col-sort
+                                      with-sort-direction (fn [asc desc no-sort not-sortable]
+                                                            (if (sortable? attr)
+                                                              (if (and (= (:db/id fe) sort-fe-dbid) (= sort-key ident))
+                                                                (case direction
+                                                                  :asc asc
+                                                                  :desc desc)
+                                                                no-sort)
+                                                              not-sortable))
 
-                                      ;on-click (with-sort-direction #(reset! col-sort [form-dbid ident :desc])
-                                      ;                              #(reset! col-sort nil)
-                                      ;                              #(reset! col-sort [form-dbid ident :asc])
-                                      ;                              (constantly nil))
-                                      ;arrow (with-sort-direction " ↓" " ↑" " ↕" nil)
-
-                                      ]
-
+                                      on-click (with-sort-direction #(reset! col-sort [(:db/id fe) ident :desc])
+                                                                    #(reset! col-sort nil)
+                                                                    #(reset! col-sort [(:db/id fe) ident :asc])
+                                                                    (constantly nil))
+                                      arrow (with-sort-direction " ↓" " ↑" " ↕" nil)]
                                   [:td {:class (string/join " " css-classes)
                                         :style {:background-color (connection-color/connection-color (or (:color param-ctx)
                                                                                                          ; hack for top tables
@@ -80,7 +76,7 @@
                                    [:label (form-util/field-label field param-ctx)]
                                    [:div.anchors (widget/render-anchors (->> anchors (remove :anchor/render-inline?)) param-ctx)]
                                    (widget/render-inline-anchors field (->> anchors (filter :anchor/render-inline?)) param-ctx)
-                                   #_[:span.sort-arrow arrow]])))))))))
+                                   [:span.sort-arrow arrow]])))))))))
 
 (defn table-row-form [relation colspec anchors param-ctx]
   (let [entity-anchors-lookup (->> anchors
@@ -139,25 +135,22 @@
 
 (defn body [relations colspec anchors sort-col param-ctx]
   [:tbody
-   (let [[form-dbid sort-key direction] @sort-col
-         ;sort-eids (fn [resultset]
-         ;            (let [{form :find-element/form find-element-name :find-element/name}
-         ;                  (->> ordered-find-elements
-         ;                       (filter #(= form-dbid (-> % :find-element/form :db/id)))
-         ;                       first)
-         ;                  field (->> (:form/field form)
-         ;                             (filter #(= sort-key (-> % :field/attribute :attribute/ident)))
-         ;                             first)]
-         ;              (if (and (not= nil field) (sortable? field))
-         ;                (sort-by #(get-in % [find-element-name sort-key])
-         ;                         (case direction
-         ;                           :asc #(compare %1 %2)
-         ;                           :desc #(compare %2 %1))
-         ;                         resultset)
-         ;                resultset)))
-         ]
+   (let [[fe-dbid sort-key direction] @sort-col
+         sort-eids (fn [relations]
+                     (let [[_ fe attr _] (->> (partition 4 colspec)
+                                              (filter (fn [[db fe attr maybe-field]]
+                                                        (and (= fe-dbid (:db/id fe))
+                                                             (= (:attribute/ident attr) sort-key))))
+                                              first)]
+                       (if (sortable? attr)
+                         (sort-by #(get-in % [(:find-element/name fe) sort-key])
+                                  (case direction
+                                    :asc #(compare %1 %2)
+                                    :desc #(compare %2 %1))
+                                  relations)
+                         relations)))]
      (->> relations
-          #_sort-eids
+          sort-eids
           (map (fn [relation]
                  (let [param-ctx (assoc param-ctx :result relation)] ; todo :result -> :relation
                    ^{:key (hash (util/map-values #(or (:db/id %) (-> % :anchor/ident)) relation))}
