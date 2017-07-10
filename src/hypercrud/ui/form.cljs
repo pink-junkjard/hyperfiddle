@@ -25,7 +25,7 @@
                          (widget/process-option-popover-anchors param-ctx))]
        [:div
         [:label (form-util/field-label maybe-field param-ctx)]
-        #_ [:div.anchors]
+        #_[:div.anchors]
         (widget/render-anchors (->> anchors (remove :anchor/render-inline?)) param-ctx)
         (widget/render-anchors (->> anchors (filter :anchor/render-inline?)) param-ctx)
         ])
@@ -105,7 +105,12 @@
         magic-new-field (if-not not-splat?
                           ; can we assert entity? No, bc we could model a link to a single relation without a form.
                           (if-let [entity (get relation "entity")] ; makes sense only for entity links, not query links as entity.
-                            ^{:key (hash (keys entity))} [new-field entity param-ctx]))]
+                            (let [[db fe _ _] (take 4 colspec)
+                                  param-ctx (assoc param-ctx :db db ; equal hack to assuming fe is "entity"
+                                                             :find-element fe
+                                                             ; todo custom user-dispatch with all the tx-fns as reducers
+                                                             :user-with! (fn [tx] ((:dispatch! param-ctx) (actions/with (.-conn-id db) (.-branch db) tx))))]
+                              ^{:key (hash (keys entity))} [new-field entity param-ctx])))]
 
     [:div {:class (str "forms-list " (name (:layout param-ctx)))}
      (concat fields [magic-new-field])])
