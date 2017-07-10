@@ -189,7 +189,7 @@
                                           :anchor/link (link-entity-system-edit-attr conn (:hypercrud/owner parent-link) attr)}
                                          {:anchor/prompt (str "sys-new-" fe-name "-" ident) ; conserve space in label
                                           :anchor/ident (keyword (str "sys-new-" fe-name "-" ident))
-                                          :anchor/repeating? false
+                                          :anchor/repeating? true
                                           :anchor/find-element nil
                                           :anchor/attribute attr
                                           :anchor/managed? true
