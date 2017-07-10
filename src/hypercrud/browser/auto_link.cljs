@@ -172,28 +172,20 @@
                                           :anchor/create? true
                                           :anchor/render-inline? true
                                           :anchor/link (link-query-system-edit-attr conn (:hypercrud/owner parent-link) fe attr)}
-                                         (if (= :db.cardinality/one (-> attr :attribute/cardinality :db/ident))
-                                           {:anchor/prompt (str "sys-remove-" fe-name "-" ident)
-                                            :anchor/ident (keyword (str "sys-remove-" fe-name "-" ident))
-                                            :anchor/link (link-blank-system-remove (:hypercrud/owner parent-link) fe attr)
-                                            :anchor/find-element nil
-                                            :anchor/attribute attr
-                                            :anchor/repeating? true
-                                            :anchor/managed? true
-                                            :anchor/render-inline? true
-                                            :anchor/tx-fn (pr-str `(fn [ctx# tx-from-modal#]
-                                                                     {:tx [[:db.fn/retractEntity (-> ctx# :value :db/id)]]}))}
-                                           {:anchor/prompt (str "sys-remove-" fe-name "-" ident)
-                                            :anchor/ident (keyword (str "sys-remove-" fe-name "-" ident))
-                                            :anchor/link (link-blank-system-remove (:hypercrud/owner parent-link) fe attr)
-                                            :anchor/find-element nil
-                                            :anchor/attribute attr
-                                            :anchor/repeating? true
-                                            :anchor/managed? true
-                                            :anchor/render-inline? true
-                                            :anchor/tx-fn (pr-str `(fn [ctx# tx-from-modal#]
+                                         {:anchor/prompt (str "sys-remove-" fe-name "-" ident)
+                                          :anchor/ident (keyword (str "sys-remove-" fe-name "-" ident))
+                                          :anchor/link (link-blank-system-remove (:hypercrud/owner parent-link) fe attr)
+                                          :anchor/find-element nil
+                                          :anchor/attribute attr
+                                          :anchor/repeating? true
+                                          :anchor/managed? true
+                                          :anchor/render-inline? true
+                                          :anchor/tx-fn (pr-str (if (= :db.cardinality/one (-> attr :attribute/cardinality :db/ident))
+                                                                  `(fn [ctx# tx-from-modal#]
+                                                                     {:tx [[:db.fn/retractEntity (-> ctx# :value :db/id)]]})
+                                                                  `(fn [ctx# tx-from-modal#]
                                                                      {:tx (->> (:value ctx#)
-                                                                               (mapv (fn [e#] [:db.fn/retractEntity (:db/id e#)])))}))})]
+                                                                               (mapv (fn [e#] [:db.fn/retractEntity (:db/id e#)])))})))}]
 
                                         nil))))
                           doall)
@@ -223,28 +215,21 @@
                                           :anchor/create? true
                                           :anchor/render-inline? true
                                           :anchor/link (link-entity-system-edit-attr conn (:hypercrud/owner parent-link) attr)}
-                                         (if (= :db.cardinality/one (-> attr :attribute/cardinality :db/ident))
-                                           {:anchor/prompt (str "sys-remove-" fe-name "-" ident)
-                                            :anchor/ident (keyword (str "sys-remove-" fe-name "-" ident))
-                                            :anchor/link (link-blank-system-remove (:hypercrud/owner parent-link) fe attr)
-                                            :anchor/find-element nil
-                                            :anchor/attribute attr
-                                            :anchor/repeating? true
-                                            :anchor/managed? true
-                                            :anchor/render-inline? true
-                                            :anchor/tx-fn (pr-str `(fn [ctx# tx-from-modal#]
-                                                                     {:tx [[:db.fn/retractEntity (-> ctx# :value :db/id)]]}))}
-                                           {:anchor/prompt (str "sys-remove-" fe-name "-" ident)
-                                            :anchor/ident (keyword (str "sys-remove-" fe-name "-" ident))
-                                            :anchor/link (link-blank-system-remove (:hypercrud/owner parent-link) fe attr)
-                                            :anchor/find-element nil
-                                            :anchor/attribute attr
-                                            :anchor/repeating? true
-                                            :anchor/managed? true
-                                            :anchor/render-inline? true 
-                                            :anchor/tx-fn (pr-str `(fn [ctx# tx-from-modal#]
-                                                                     {:tx (->> (:value ctx#)
-                                                                               (mapv (fn [e#] [:db.fn/retractEntity (:db/id e#)])))}))})]
+                                         {:anchor/prompt (str "sys-remove-" fe-name "-" ident)
+                                          :anchor/ident (keyword (str "sys-remove-" fe-name "-" ident))
+                                          :anchor/link (link-blank-system-remove (:hypercrud/owner parent-link) fe attr)
+                                          :anchor/find-element nil
+                                          :anchor/attribute attr
+                                          :anchor/repeating? true
+                                          :anchor/managed? true
+                                          :anchor/render-inline? true
+                                          :anchor/tx-fn (pr-str
+                                                          (if (= :db.cardinality/one (-> attr :attribute/cardinality :db/ident))
+                                                            `(fn [ctx# tx-from-modal#]
+                                                               {:tx [[:db.fn/retractEntity (-> ctx# :value :db/id)]]})
+                                                            `(fn [ctx# tx-from-modal#]
+                                                               {:tx (->> (:value ctx#)
+                                                                         (mapv (fn [e#] [:db.fn/retractEntity (:db/id e#)])))})))}]
                                         nil))))
                           doall)
 
