@@ -23,7 +23,7 @@
            [anchors] (-> (remove :anchor/repeating? anchors)
                          #_(filter #(= (-> fe :db/id) (-> % :anchor/find-element :db/id))) #_"entity"
                          (widget/process-option-popover-anchors param-ctx))]
-       [:div
+       [:div.hc-label
         [:label (form-util/field-label maybe-field param-ctx)]
         #_[:div.anchors]
         (widget/render-anchors (->> anchors (remove :anchor/render-inline?)) param-ctx)
@@ -43,9 +43,10 @@
   (let [attr-ident (r/atom nil)]
     (fn [entity param-ctx]
       [:div.field {:style {:border-color (connection-color/connection-color (-> entity :db/id :conn-id))}}
-       [:label
-        (let [on-change! #(reset! attr-ident %)]
-          [input/keyword-input* @attr-ident on-change!])]
+       [:div.hc-label
+        [:label
+         (let [on-change! #(reset! attr-ident %)]
+           [input/keyword-input* @attr-ident on-change!])]]
        (let [on-change! #(let [tx [[:db/add (:db/id entity) @attr-ident %]]]
                            ; todo cardinality many
                            ((:user-with! param-ctx) tx))
