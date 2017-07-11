@@ -25,10 +25,9 @@
                          (widget/process-option-popover-anchors param-ctx))]
        [:div.hc-label
         [:label (form-util/field-label maybe-field param-ctx)]
-        #_[:div.anchors]
-        (widget/render-anchors (->> anchors (remove :anchor/render-inline?)) param-ctx)
-        (widget/render-anchors (->> anchors (filter :anchor/render-inline?)) param-ctx)
-        ])
+        [:div.anchors
+         (widget/render-anchors (->> anchors (remove :anchor/render-inline?)) param-ctx)
+         (widget/render-anchors (->> anchors (filter :anchor/render-inline?)) param-ctx)]])
      control
      #_(case (:layout param-ctx)
          :block
