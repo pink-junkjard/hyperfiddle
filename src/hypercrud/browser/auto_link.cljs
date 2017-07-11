@@ -130,7 +130,7 @@
                            :anchor/find-element nil         ; "entity"
                            :anchor/create? true
                            :anchor/managed? true
-                           :anchor/render-inline? false}
+                           :anchor/render-inline? true}
                           {:anchor/prompt "sys-remove-entity"
                            :anchor/ident (keyword "sys-remove-entity")
                            :anchor/link (link-blank-system-remove (:hypercrud/owner parent-link) nil nil) ; "entity"
