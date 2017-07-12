@@ -81,9 +81,9 @@
 
                 colspec (form-util/determine-colspec result link indexed-schema param-ctx)]
             (case (get param-ctx :display-mode)             ; default happens higher, it influences queries too
-              :user ((user-result link param-ctx) result colspec (auto-anchor/auto-anchors link result param-ctx) (user-bindings/user-bindings link param-ctx))
-              :xray (auto-control/result result colspec (auto-anchor/auto-anchors link result param-ctx) (user-bindings/user-bindings link param-ctx))
-              :root (auto-control/result result colspec (auto-anchor/auto-anchors link result param-ctx {:ignore-user-links true}) param-ctx))))))
+              :user ((user-result link param-ctx) result colspec (auto-anchor/auto-anchors link colspec param-ctx) (user-bindings/user-bindings link param-ctx))
+              :xray (auto-control/result result colspec (auto-anchor/auto-anchors link colspec param-ctx) (user-bindings/user-bindings link param-ctx))
+              :root (auto-control/result result colspec (auto-anchor/auto-anchors link colspec param-ctx {:ignore-user-links true}) param-ctx))))))
 
 (defn ui [anchor param-ctx]
   (if (:anchor/link anchor)

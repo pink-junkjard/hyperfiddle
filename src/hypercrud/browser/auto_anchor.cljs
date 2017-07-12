@@ -25,8 +25,8 @@
        flatten
        doall))
 
-(defn auto-anchors [link result param-ctx & [{:keys [ignore-user-links]}]]
-  (let [sys-anchors (auto-link/system-anchors link result param-ctx)]
+(defn auto-anchors [link colspec param-ctx & [{:keys [ignore-user-links]}]]
+  (let [sys-anchors (auto-link/system-anchors link colspec param-ctx)]
     (->> (if ignore-user-links
            sys-anchors
            (merge-anchors sys-anchors (:link/anchor link)))

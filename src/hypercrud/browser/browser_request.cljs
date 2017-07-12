@@ -191,10 +191,11 @@
           (mlet [result (hc/hydrate (:peer param-ctx) request)
                  schema (hc/hydrate (:peer param-ctx) (schema-util/schema-request (:root-db param-ctx) nil))] ; map connections
                 (cats/return
-                  (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))]
+                  (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
+                        colspec (form-util/determine-colspec result link indexed-schema param-ctx)]
                     ; todo :root mode
                     (link-query-dependent-requests result (:link-query/find-element link-query)
-                                                   (auto-anchor/auto-anchors link result param-ctx)
+                                                   (auto-anchor/auto-anchors link colspec param-ctx)
                                                    (user-bindings/user-bindings link param-ctx)))))
           nil)))))
 
@@ -210,20 +211,25 @@
               (cats/return
                 (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
                       fe (form-util/manufacture-entity-find-element link param-ctx) ; if driven by colspec this hack goes away
-                      result (->> (if (map? result) [result] result) (mapv #(assoc {} "entity" %)))]
+                      result (->> (if (map? result) [result] result) (mapv #(assoc {} "entity" %)))
+                      colspec (form-util/determine-colspec result link indexed-schema param-ctx)]
                   ;todo ;root mode
                   (link-entity-dependent-requests result fe
-                                                  (auto-anchor/auto-anchors link result param-ctx)
+                                                  (auto-anchor/auto-anchors link colspec param-ctx)
                                                   (user-bindings/user-bindings link param-ctx)))))
         nil))))
 
 (defn requests-for-link-blank [link query-params param-ctx]
   ; this case does not request the schema, as we don't have a connection for the link.
   (let [find-elements []
-        result []]
+        result []
+        ; technically schema isnt needed to build colspec for blank links,
+        ; fragile, but will be improved by ui/request unification
+        indexed-schema nil
+        colspec (form-util/determine-colspec result link indexed-schema param-ctx)]
     ;todo ;root mode
     (link-query-dependent-requests result find-elements
-                                   (auto-anchor/auto-anchors link result param-ctx)
+                                   (auto-anchor/auto-anchors link colspec param-ctx)
                                    (user-bindings/user-bindings link param-ctx))))
 
 (defn requests-for-link [link query-params param-ctx]
