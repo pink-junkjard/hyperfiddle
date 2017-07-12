@@ -191,8 +191,7 @@
           (mlet [result (hc/hydrate (:peer param-ctx) request)
                  schema (hc/hydrate (:peer param-ctx) (schema-util/schema-request (:root-db param-ctx) nil))] ; map connections
                 (cats/return
-                  (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
-                        param-ctx (assoc param-ctx :schema indexed-schema)]
+                  (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))]
                     ; todo :root mode
                     (link-query-dependent-requests result (:link-query/find-element link-query)
                                                    (auto-anchor/auto-anchors link result param-ctx)
@@ -210,7 +209,6 @@
                schema (hc/hydrate (:peer param-ctx) schema-request)]
               (cats/return
                 (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
-                      param-ctx (assoc param-ctx :schema indexed-schema)
                       fe (form-util/manufacture-entity-find-element link param-ctx) ; if driven by colspec this hack goes away
                       result (->> (if (map? result) [result] result) (mapv #(assoc {} "entity" %)))]
                   ;todo ;root mode

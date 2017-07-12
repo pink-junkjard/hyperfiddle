@@ -153,8 +153,7 @@
                                           ident (-> attr :attribute/ident)
                                           conn {:db/id (->DbId (.-conn-id db) hc/*root-conn-id*)}
                                           fe (get find-elements fe-name)
-                                          _ (assert fe)
-                                          attr ((:schema param-ctx) ident) #_"nil for db/id"]
+                                          _ (assert fe)]
                                       (case (-> attr :attribute/valueType :db/ident)
                                         :db.type/ref
                                         [{:anchor/prompt (str "sys-edit-" fe-name "-" ident) ; conserve space in label
@@ -196,8 +195,7 @@
                           (mapcat (fn [[db fe attr maybe-field]]
                                     (let [fe-name (-> fe :find-element/name) ; "entity" ?
                                           ident (-> attr :attribute/ident)
-                                          conn {:db/id (->DbId (.-conn-id db) hc/*root-conn-id*)}
-                                          attr ((:schema param-ctx) ident) #_"nil for db/id"]
+                                          conn {:db/id (->DbId (.-conn-id db) hc/*root-conn-id*)}]
                                       (case (-> attr :attribute/valueType :db/ident)
                                         :db.type/ref
                                         [{:anchor/prompt (str "sys-edit-" fe-name "-" ident) ; conserve space in label

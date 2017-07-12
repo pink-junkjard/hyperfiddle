@@ -6,9 +6,11 @@
             [hypercrud.browser.anchor :as anchor]
             [hypercrud.browser.user-bindings :as user-bindings]
             [hypercrud.client.core :as hc]
+            [hypercrud.client.schema :as schema-util]
             [hypercrud.compile.eval :refer [eval-str]]
             [hypercrud.form.q-util :as q-util]
-            [hypercrud.ui.form-util :as form-util]))
+            [hypercrud.ui.form-util :as form-util]
+            [hypercrud.util.core :as util]))
 
 (defn default-label-renderer [v]
   (cond
@@ -38,6 +40,7 @@
        (interpose ", ")
        (apply str)))
 
+; todo should use upcoming ui/request unified abstraction
 (defn hydrate-options [options-anchor param-ctx]            ; needs to return options as [[:db/id label]]
   (assert options-anchor)
   ; This needs to be robust to partially constructed anchors
@@ -52,8 +55,11 @@
                (exception/failure nil))                     ; is this a success or failure? Doesn't matter - datomic will fail.
            result (let [params-map (merge (:query-params route) (q-util/build-dbhole-lookup (:link/request link) param-ctx))
                         query-value (q-util/->queryRequest q (:link/request link) params-map param-ctx)]
-                    (hc/hydrate (:peer param-ctx) query-value))]
-          (let [colspec (form-util/determine-colspec result link param-ctx)
+                    (hc/hydrate (:peer param-ctx) query-value))
+           ; schema is allowed to be nil if the link only has anchors and no data dependencies
+           schema (exception/try-or-else (hc/hydrate (:peer param-ctx) (schema-util/schema-request (:root-db param-ctx) nil)) nil)]
+          (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
+                colspec (form-util/determine-colspec result link indexed-schema param-ctx)
                 ; options have custom renderers which get user bindings
                 param-ctx (user-bindings/user-bindings link param-ctx)]
             (cats/return

@@ -53,7 +53,6 @@
           (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
                 param-ctx (assoc param-ctx                  ; provide defaults before user-bindings run. TODO query side
                             :query-params query-params
-                            :schema indexed-schema
                             :read-only (or (:read-only param-ctx) never-read-only))
 
                 ; ereq doesn't have a fe yet; wrap with a fe.
@@ -68,7 +67,7 @@
                            (empty? result) (if (.-a request)
                                              ; comes back as [] sometimes if cardinaltiy many request. this is causing problems as nil or {} in different places.
                                              ; Above comment seems backwards, left it as is
-                                             (case (-> ((:schema param-ctx) (.-a request)) :attribute/cardinality :db/ident)
+                                             (case (-> (get schema (.-a request)) :attribute/cardinality :db/ident)
                                                :db.cardinality/one {}
                                                :db.cardinality/many []))
                            (map? result) {"entity" result}
@@ -80,7 +79,7 @@
                            (-> link :link/request :link-query/single-result-as-entity?) (first result)
                            :else result))
 
-                colspec (form-util/determine-colspec result link param-ctx)]
+                colspec (form-util/determine-colspec result link indexed-schema param-ctx)]
             (case (get param-ctx :display-mode)             ; default happens higher, it influences queries too
               :user ((user-result link param-ctx) result colspec (auto-anchor/auto-anchors link result param-ctx) (user-bindings/user-bindings link param-ctx))
               :xray (auto-control/result result colspec (auto-anchor/auto-anchors link result param-ctx) (user-bindings/user-bindings link param-ctx))
