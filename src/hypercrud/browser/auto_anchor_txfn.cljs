@@ -11,24 +11,24 @@
       ; link-query's always have a find-element (e)
       ; link-entity's never do (which is semantically unsound since semantically they always do)
 
-      (and m a)                                       ; attr create
-      (pr-str `(fn [ctx# tx-from-modal#]
+      (and m a)                                             ; attr create
+      (pr-str `(fn [ctx# get-tx-from-modal#]
                  (let [new-dbid# (auto-entity-dbid ctx#)]
                    {:tx (concat
-                          tx-from-modal#
+                          (get-tx-from-modal#)
                           (tx/edit-entity (-> ctx# :entity :db/id)
                                           (-> ctx# :attribute :attribute/ident)
                                           []
                                           [new-dbid#]))})))
 
       (and m e (not a))
-      (pr-str `(fn [ctx# tx-from-modal#]
+      (pr-str `(fn [ctx# get-tx-from-modal#]
                  (let [branch# (auto-entity-dbid ctx#)
                        id'# (-> (js/Date.now) - str)
                        ; alter the dbid before transacting so it can be reused.
                        ; This has to happen at a side-effect point and will cause a hydrate
                        ; so we do it when we already have to hydrate.
-                       tx-from-modal'# (->> tx-from-modal#
+                       tx-from-modal'# (->> (get-tx-from-modal#)
                                             (mapv (fn [[op# dbid# a# v#]]
                                                     (if (= (:id dbid#) branch#)
                                                       [op# (->DbId id'# (:conn-id dbid#)) a# v#]
