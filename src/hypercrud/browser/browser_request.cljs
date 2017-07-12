@@ -219,6 +219,15 @@
                                                   (user-bindings/user-bindings link param-ctx)))))
         nil))))
 
+(defn requests-for-link-blank [link query-params param-ctx]
+  ; this case does not request the schema, as we don't have a connection for the link.
+  (let [find-elements []
+        result []]
+    ;todo ;root mode
+    (link-query-dependent-requests result find-elements
+                                   (auto-anchor/auto-anchors link result param-ctx)
+                                   (user-bindings/user-bindings link param-ctx))))
+
 (defn requests-for-link [link query-params param-ctx]
   (let [param-ctx (assoc param-ctx :query-params query-params)
         ; i think driving this by colspec will unify the two paths (entity vs query)
@@ -227,7 +236,7 @@
     (case (link-util/link-type link)
       :link-query (requests-for-link-query link query-params param-ctx)
       :link-entity (requests-for-link-entity link query-params param-ctx)
-      :link-blank (link-query-dependent-requests [] [] (:link/anchor link) param-ctx)))) ; this case does not request the schema, as we don't have a connection for the link.
+      :link-blank (requests-for-link-blank link query-params param-ctx))))
 
 (defn request' [route param-ctx]
   (if (auto-link/system-link? (:link-dbid route))
