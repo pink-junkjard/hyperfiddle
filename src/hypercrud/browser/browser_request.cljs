@@ -195,10 +195,7 @@
                         param-ctx (assoc param-ctx :schema indexed-schema)]
                     ; todo :root mode
                     (link-query-dependent-requests result (:link-query/find-element link-query)
-                                                   (auto-anchor/auto-anchors
-                                                     (auto-anchor/merge-anchors
-                                                       (auto-link/system-anchors link result param-ctx)
-                                                       (:link/anchor link)))
+                                                   (auto-anchor/auto-anchors link result param-ctx)
                                                    (user-bindings/user-bindings link param-ctx)))))
           nil)))))
 
@@ -218,10 +215,7 @@
                       result (->> (if (map? result) [result] result) (mapv #(assoc {} "entity" %)))]
                   ;todo ;root mode
                   (link-entity-dependent-requests result fe
-                                                  (auto-anchor/auto-anchors
-                                                    (auto-anchor/merge-anchors
-                                                      (auto-link/system-anchors link result param-ctx)
-                                                      (:link/anchor link)))
+                                                  (auto-anchor/auto-anchors link result param-ctx)
                                                   (user-bindings/user-bindings link param-ctx)))))
         nil))))
 

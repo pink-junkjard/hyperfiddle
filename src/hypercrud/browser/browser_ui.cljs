@@ -80,15 +80,11 @@
                            (-> link :link/request :link-query/single-result-as-entity?) (first result)
                            :else result))
 
-                colspec (form-util/determine-colspec result link param-ctx)
-                db-anchors (:link/anchor link)
-                system-anchors (auto-link/system-anchors link result param-ctx)]
-
+                colspec (form-util/determine-colspec result link param-ctx)]
             (case (get param-ctx :display-mode)             ; default happens higher, it influences queries too
-              :user ((user-result link param-ctx) result colspec (auto-anchor/auto-anchors
-                                                                   (auto-anchor/merge-anchors system-anchors db-anchors)) (user-bindings/user-bindings link param-ctx))
-              :xray (auto-control/result result colspec (auto-anchor/auto-anchors (auto-anchor/merge-anchors system-anchors db-anchors)) (user-bindings/user-bindings link param-ctx))
-              :root (auto-control/result result colspec (auto-anchor/auto-anchors system-anchors) param-ctx))))))
+              :user ((user-result link param-ctx) result colspec (auto-anchor/auto-anchors link result param-ctx) (user-bindings/user-bindings link param-ctx))
+              :xray (auto-control/result result colspec (auto-anchor/auto-anchors link result param-ctx) (user-bindings/user-bindings link param-ctx))
+              :root (auto-control/result result colspec (auto-anchor/auto-anchors link result param-ctx {:ignore-user-links true}) param-ctx))))))
 
 (defn ui [anchor param-ctx]
   (if (:anchor/link anchor)

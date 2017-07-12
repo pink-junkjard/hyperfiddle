@@ -1,6 +1,7 @@
 (ns hypercrud.browser.auto-anchor
   (:require [hypercrud.browser.auto-anchor-formula :refer [auto-formula]]
-            [hypercrud.browser.auto-anchor-txfn :refer [auto-txfn]]))
+            [hypercrud.browser.auto-anchor-txfn :refer [auto-txfn]]
+            [hypercrud.browser.auto-link :as auto-link]))
 
 
 (defn auto-anchor [anchor]
@@ -9,9 +10,6 @@
                               (if (empty? txfn-str) (auto-txfn anchor) txfn-str)))
       (update :anchor/formula (fn [fxfn-str]
                                 (if (empty? fxfn-str) (auto-formula anchor) fxfn-str)))))
-
-(defn auto-anchors [anchors]
-  (map auto-anchor anchors))
 
 (defn merge-anchors [sys-anchors link-anchors]
   (->> (reduce (fn [grouped-link-anchors sys-anchor]
@@ -26,3 +24,10 @@
        vals
        flatten
        doall))
+
+(defn auto-anchors [link result param-ctx & [{:keys [ignore-user-links]}]]
+  (let [sys-anchors (auto-link/system-anchors link result param-ctx)]
+    (->> (if ignore-user-links
+           sys-anchors
+           (merge-anchors sys-anchors (:link/anchor link)))
+         (map auto-anchor))))

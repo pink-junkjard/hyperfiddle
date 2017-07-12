@@ -63,6 +63,7 @@
    :link/renderer (pr-str `(fn [result# colspec# anchors# param-ctx#]
                              [:p "Retract entity?"]))})
 
+; todo this belongs in auto-anchor namespace
 (defn system-anchors
   "All sys links are :anchor/ident :sys, so they can be matched and merged with user-anchors.
   Matching is determined by [repeat? entity attribute ident]"
