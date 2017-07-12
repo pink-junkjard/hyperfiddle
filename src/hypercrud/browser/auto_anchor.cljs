@@ -14,11 +14,15 @@
   (map auto-anchor anchors))
 
 (defn merge-anchors [sys-anchors link-anchors]
-  (let [f (fn [anchor]
-            (let [ident (:anchor/ident anchor)]
-              (if (or (= ident :sys) (= ident :remove) (= ident :options))
-                (js/Math.random)
-                ident)))
-        collated (merge-with concat (group-by f sys-anchors) (group-by f link-anchors))
-        merged (map #(apply merge %) (vals collated)) #_(apply map merge (vals collated))]
-    merged))
+  (->> (reduce (fn [grouped-link-anchors sys-anchor]
+                 (update grouped-link-anchors
+                         (:anchor/ident sys-anchor)
+                         (fn [maybe-link-anchors]
+                           (if maybe-link-anchors
+                             (map (partial merge sys-anchor) maybe-link-anchors)
+                             [sys-anchor]))))
+               (group-by :anchor/ident link-anchors)
+               sys-anchors)
+       vals
+       flatten
+       doall))
