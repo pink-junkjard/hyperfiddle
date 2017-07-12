@@ -122,14 +122,6 @@
                              :anchor/repeating? true
                              :anchor/managed? false
                              :anchor/find-element nil}
-                          {:anchor/prompt "sys-new-entity"
-                           :anchor/ident (keyword "sys-new-entity")
-                           :anchor/link (link-entity-system-edit conn (:hypercrud/owner parent-link))
-                           :anchor/repeating? false
-                           :anchor/find-element nil         ; "entity"
-                           :anchor/create? true
-                           :anchor/managed? true
-                           :anchor/render-inline? true}
                           {:anchor/prompt "sys-remove-entity"
                            :anchor/ident (keyword "sys-remove-entity")
                            :anchor/link (link-blank-system-remove (:hypercrud/owner parent-link) nil nil) ; "entity"
