@@ -128,22 +128,27 @@
                   :index-new #(get anchors-lookup [false true nil nil])
                   :relation (constantly [])
                   :relation-new (constantly [])
-                  :entity #(get anchors-lookup [true false nil nil])
-                  :entity-new #(get anchors-lookup [false true nil nil]) ; New Page?
+
+                  :entity-t #(get anchors-lookup [true false nil nil])
+                  :entity-f #(get anchors-lookup [false false nil nil])
+                  :entity-new-t #(get anchors-lookup [true true nil nil]) ; New Page?
+                  :entity-new-f #(get anchors-lookup [false true nil nil]) ; New Page?
+
                   :entity-attr-t #(get anchors-lookup [true false nil (:attribute/ident %)])
                   :entity-attr-f #(get anchors-lookup [false false nil (:attribute/ident %)])
                   :entity-attr-new-t #(get anchors-lookup [true true nil (:attribute/ident %)])
                   :entity-attr-new-f #(get anchors-lookup [false true nil (:attribute/ident %)])}]
       (concat
-        ;(->> ((:index lookup)) (mapcat #(recurse-request % param-ctx)))
-        ;(->> ((:index-new lookup)) (mapcat #(recurse-request % param-ctx)))
+        (->> ((:index lookup)) (mapcat #(recurse-request % param-ctx)))
+        (->> ((:index-new lookup)) (mapcat #(recurse-request % param-ctx)))
         (->> ((:relation-new lookup)) (mapcat #(recurse-request % param-ctx)))
         (let [param-ctx (assoc param-ctx
                           :db (let [conn-id (-> fe :find-element/connection :db/id :id)]
                                 (hc/db (:peer param-ctx) conn-id (get-in param-ctx [:branches conn-id])))
                           :find-element fe)]
           (concat
-            (->> ((:entity-new lookup)) (mapcat #(recurse-request % param-ctx)))
+            (->> ((:entity-f lookup)) (mapcat #(recurse-request % param-ctx)))
+            (->> ((:entity-new-f lookup)) (mapcat #(recurse-request % param-ctx)))
             (->> (get-in fe [:find-element/form :form/field])
                  (filter #(form-util/filter-visible-fields % param-ctx))
                  (mapcat (fn [field]
@@ -163,7 +168,8 @@
                                                           :find-element fe
                                                           :entity entity)]
                            (concat
-                             (->> ((:entity lookup) entity) (mapcat #(recurse-request % param-ctx)))
+                             (->> ((:entity-t lookup) entity) (mapcat #(recurse-request % param-ctx)))
+                             (->> ((:entity-new-t lookup) entity) (mapcat #(recurse-request % param-ctx)))
                              (->> (get-in fe [:find-element/form :form/field])
                                   (filter #(form-util/filter-visible-fields % param-ctx))
                                   (mapcat (fn [field]
