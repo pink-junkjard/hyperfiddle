@@ -10,6 +10,8 @@ Hypercrud Browser navigates app-values like a web browser navigates HTML. App-va
 
 ![](http://i.imgur.com/4mKpHhw.png)
 
+# Hyperfiddle
+
 [Hyperfiddle](http://hyperfiddle.net/) is a WYSIWYG editor for building Hypercrud app-values, and optionally, a cloud platform to host them in.
 
 ![](http://i.imgur.com/lhGmOqX.png)
