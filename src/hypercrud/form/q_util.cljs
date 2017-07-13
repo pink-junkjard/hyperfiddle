@@ -96,13 +96,14 @@
     (->QueryRequest q params pull-exp)))
 
 
-(defn ->entityRequest [link-entity query-params param-ctx]
+(defn ->entityRequest [link-request query-params param-ctx]
   ;(assert (:entity query-params))                         ;-- Commented because we are requesting invisible things that the UI never tries to render - can be fixed
   ;(assert (:conn-id (:entity query-params))) ; this is not looked at on server now.
-  (assert (-> link-entity :link-entity/connection :db/id :id))
-  (->EntityRequest
-    (:entity query-params)
-    (:a query-params)
-    (let [conn-id (-> link-entity :link-entity/connection :db/id :id)]
-      (hc/db (:peer param-ctx) conn-id (get-in param-ctx [:branches conn-id])))
-    (form-pull-exp (:link-entity/form link-entity))))
+  (let [entity-fe (first (filter #(= (:find-element/name %) "entity") (:link-query/find-element link-request)))
+        conn-id (-> entity-fe :find-element/connection :db/id :id)]
+    (assert conn-id)
+    (->EntityRequest
+      (:entity query-params)
+      (:a query-params)
+      (hc/db (:peer param-ctx) conn-id (get-in param-ctx [:branches conn-id]))
+      (form-pull-exp (:find-element/form link-request)))))

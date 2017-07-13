@@ -1,11 +1,10 @@
-(ns hypercrud.browser.link-util) ; Just to break dependency cycles
+(ns hypercrud.browser.link-util)                            ; Just to break dependency cycles
 
 
 (defn link-type [link]                                      ; system, blank
-  (let [link-key-namespaces (->> (keys (:link/request link)) (mapv namespace) set)]
-    (cond
-      (contains? link-key-namespaces "link-query") :link-query
-      (contains? link-key-namespaces "link-entity") :link-entity
-      ; system links are entity links in practice
-      ;(system-links/system-link? (:db/id link)) :link-system
-      :else :link-blank)))
+  (if (= (-> link :link/request :request/type) :entity)
+    :link-entity
+    (let [link-key-namespaces (->> (keys (:link/request link)) (mapv namespace) set)]
+      (if (contains? link-key-namespaces "link-query")
+        :link-query
+        :link-blank))))

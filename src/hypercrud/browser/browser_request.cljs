@@ -30,10 +30,8 @@
                       {:link/request ['*
                                       :link-query/value
                                       :link-query/single-result-as-entity?
-                                      {:request/type [:db/id :request.type/ident]
-                                       :link-entity/connection [:db/id :database/ident]
-                                       :link-entity/form form-pull-exp
-                                       :link-query/dbhole ['* {:dbhole/value ['*]}]
+                                      :request/type
+                                      {:link-query/dbhole ['* {:dbhole/value ['*]}]
                                        ; get all our forms for this link
                                        :link-query/find-element ['* {:find-element/form form-pull-exp
                                                                      :find-element/connection [:db/id :database/ident]}]}]
@@ -207,8 +205,12 @@
 
 (defn requests-for-link-entity [link query-params param-ctx]
   (let [request (q-util/->entityRequest (:link/request link) query-params param-ctx)
-        _ (assert (get-in link [:link/request :link-entity/connection]))
-        schema-request (schema-util/schema-request (:root-db param-ctx) (get-in link [:link/request :link-entity/connection]))]
+        conn (->> (get-in link [:link/request :link-query/find-element])
+                  (filter #(= (:find-element/name %) "entity"))
+                  first
+                  :find-element/connection)
+        _ (assert conn)
+        schema-request (schema-util/schema-request (:root-db param-ctx) conn)]
     (concat
       [request schema-request]
       (exception/extract

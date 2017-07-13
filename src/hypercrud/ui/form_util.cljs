@@ -29,20 +29,10 @@
        (into {})))
 
 (defn manufacture-entity-find-element [link param-ctx]
-  (let [conn (-> link :link/request :link-entity/connection)
-        #_(or
-            #_(-> link :link/request :link-entity/connection)
-            (let [dbid-s (-> param-ctx :query-params :entity)]
-              {:db/id (->DbId (if (vector? dbid-s)
-                                (:conn-id (first dbid-s))
-                                (:conn-id dbid-s))
-                              nil #_"ignored in the place we need it, ->entityRequest")}))]
-    (assert conn)
-    {:db/id "entity"                                        ; sentinel
-     :find-element/name "entity"
-     :find-element/connection conn
-     :find-element/form (-> link :link/request :link-entity/form
-                            (update :form/field (fn [fields] (filter #(filter-visible-fields % param-ctx) fields))))}))
+  (let [fe (->> (-> link :link/request :link-query/find-element)
+                (filter #(= (:find-element/name %) "entity"))
+                first)]
+    (update fe :form/field (fn [fields] (filter #(filter-visible-fields % param-ctx) fields)))))
 
 (defn get-ordered-find-elements [link param-ctx]
   (let [req (:link/request link)]
