@@ -39,11 +39,10 @@
   (mlet [link (hydrate-link (:link-dbid route) param-ctx)   ; always latest
          request (try-on
                    (case (link-util/link-type link)
-                     :link-query (let [link-query (:link/request link)
-                                       q (some-> link-query :link-query/value reader/read-string)
-                                       params-map (merge query-params (q-util/build-dbhole-lookup link-query param-ctx))]
-                                   (q-util/->queryRequest q link-query params-map param-ctx))
-                     :link-entity (q-util/->entityRequest (:link/request link) (:query-params route) param-ctx)
+                     :link-query (let [q (some-> link :link-query/value reader/read-string)
+                                       params-map (merge query-params (q-util/build-dbhole-lookup link param-ctx))]
+                                   (q-util/->queryRequest q link params-map param-ctx))
+                     :link-entity (q-util/->entityRequest link (:query-params route) param-ctx)
                      :link-blank nil
                      nil))
          result (if request (hc/hydrate (:peer param-ctx) request) (exception/success nil))
@@ -76,7 +75,7 @@
 
                          (instance? QueryRequest request)
                          (cond
-                           (-> link :link/request :link-query/single-result-as-entity?) (first result)
+                           (-> link :link-query/single-result-as-entity?) (first result)
                            :else result))
 
                 colspec (form-util/determine-colspec result link indexed-schema param-ctx)]

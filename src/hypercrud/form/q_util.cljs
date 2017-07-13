@@ -32,27 +32,27 @@
        (remove #(string/starts-with? % "$"))))
 
 
-(defn build-dbhole-lookup [link-query param-ctx]
-  (->> (:link-query/dbhole link-query)
+(defn build-dbhole-lookup [link param-ctx]
+  (->> (:link-query/dbhole link)
        (map (fn [{:keys [:dbhole/name :dbhole/value]}]
               (if-not (or (empty? name) (nil? value))
                 ; transform project-id into conn-id
                 [name (hc/db (:peer param-ctx) (-> value :db/id :id) (get-in param-ctx [:branches (-> value :db/id :id)]))])))
        (into {})))
 
-(defn safe-parse-query-validated [link-query]
+(defn safe-parse-query-validated [link]
   ; return monad and display the error to the widget?
   ; Should try not to even stage bad queries. If it happens though,
   ; we can draw the server error. Why can't we even get to server error now?
-  (let [q (some-> link-query :link-query/value safe-read-string)]
+  (let [q (some-> link :link-query/value safe-read-string)]
     (if (vector? q)
       q
       [])))
 
 ; type fill-hole = fn [hole-name param-ctx] => param
-(defn build-params [fill-hole link-query param-ctx]
+(defn build-params [fill-hole link param-ctx]
   (try
-    (->> (safe-parse-query-validated link-query)
+    (->> (safe-parse-query-validated link)
          (parse-holes)                                      ; nil means '() and does the right thing
          (mapv (juxt identity #(fill-hole % param-ctx)))
          (into {}))
@@ -82,9 +82,9 @@
     ['* {:hypercrud/owner ['*]}]))
 
 
-(defn ->queryRequest [q link-query params-map param-ctx]
-  (let [params (build-params #(get params-map %) link-query param-ctx)
-        find-elements (:link-query/find-element link-query)
+(defn ->queryRequest [q link params-map param-ctx]
+  (let [params (build-params #(get params-map %) link param-ctx)
+        find-elements (:link-query/find-element link)
         find-elements (-> find-elements (form-util/strip-forms-in-raw-mode param-ctx))
         pull-exp (->> find-elements
                       (mapv (juxt :find-element/name
@@ -96,14 +96,14 @@
     (->QueryRequest q params pull-exp)))
 
 
-(defn ->entityRequest [link-request query-params param-ctx]
+(defn ->entityRequest [link query-params param-ctx]
   ;(assert (:entity query-params))                         ;-- Commented because we are requesting invisible things that the UI never tries to render - can be fixed
   ;(assert (:conn-id (:entity query-params))) ; this is not looked at on server now.
-  (let [entity-fe (first (filter #(= (:find-element/name %) "entity") (:link-query/find-element link-request)))
+  (let [entity-fe (first (filter #(= (:find-element/name %) "entity") (:link-query/find-element link)))
         conn-id (-> entity-fe :find-element/connection :db/id :id)]
     (assert conn-id)
     (->EntityRequest
       (:entity query-params)
       (:a query-params)
       (hc/db (:peer param-ctx) conn-id (get-in param-ctx [:branches conn-id]))
-      (form-pull-exp (:find-element/form link-request)))))
+      (form-pull-exp (:find-element/form entity-fe)))))

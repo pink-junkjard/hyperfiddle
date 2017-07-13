@@ -40,7 +40,7 @@
 (defn anchor-valid? [link route]                            ; could return monad to say why
   ; We specifically hydrate this deep just so we can validate anchors like this.
   (case (link-util/link-type link)
-    :link-query (some-> link :link/request
+    :link-query (some-> link
                         q-util/safe-parse-query-validated
                         q-util/parse-param-holes
                         (holes-filled? (:query-params route)))

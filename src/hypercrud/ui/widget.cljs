@@ -117,7 +117,7 @@
         anchors (->> anchors (filter :anchor/repeating?))]
     [:div.value
      ; todo this key is encapsulating other unrelated anchors
-     [:div.editable-select {:key (hash (get-in options-anchor [:anchor/link :link/request]))} ; not sure if this is okay in nil field case, might just work
+     [:div.editable-select {:key (hash (:anchor/link options-anchor))} ; not sure if this is okay in nil field case, might just work
       [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)] ;todo can this be lifted out of editable-select?
       (if options-anchor
         (select* (:value param-ctx) options-anchor props param-ctx)

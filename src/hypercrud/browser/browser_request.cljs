@@ -27,14 +27,13 @@
                                              :attribute/unique [:db/id :db/ident]}]}]}]]
     (->EntityRequest link-dbid nil root-db
                      ['*
-                      {:link/request ['*
-                                      :link-query/value
-                                      :link-query/single-result-as-entity?
-                                      :request/type
-                                      {:link-query/dbhole ['* {:dbhole/value ['*]}]
-                                       ; get all our forms for this link
-                                       :link-query/find-element ['* {:find-element/form form-pull-exp
-                                                                     :find-element/connection [:db/id :database/ident]}]}]
+                      :link-query/value
+                      :link-query/single-result-as-entity?
+                      :request/type
+                      {:link-query/dbhole ['* {:dbhole/value ['*]}]
+                       ; get all our forms for this link
+                       :link-query/find-element ['* {:find-element/form form-pull-exp
+                                                     :find-element/connection [:db/id :database/ident]}]
                        :link/anchor ['*
                                      {:anchor/link ['*      ; hydrate the whole link for validating the anchor by query params
                                                     {:hypercrud/owner ['*]}] ; need the link's owner to render the href to it
@@ -181,14 +180,13 @@
 
 
 (defn requests-for-link-query [link query-params param-ctx]
-  (let [link-query (:link/request link)
-        q (some-> link-query :link-query/value reader/read-string)
-        params-map (merge query-params (q-util/build-dbhole-lookup link-query param-ctx))
+  (let [q (some-> link :link-query/value reader/read-string)
+        params-map (merge query-params (q-util/build-dbhole-lookup link param-ctx))
         param-ctx (assoc param-ctx :query-params query-params)]
-    (let [request (q-util/->queryRequest q link-query params-map param-ctx)]
+    (let [request (q-util/->queryRequest q link params-map param-ctx)]
       (concat
         [request]
-        (->> (get-in link [:link/request :link-query/find-element])
+        (->> (:link-query/find-element link)
              (mapv :find-element/connection)
              (mapv (partial schema-util/schema-request (:root-db param-ctx))))
         (exception/extract
@@ -198,14 +196,14 @@
                   (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
                         colspec (form-util/determine-colspec result link indexed-schema param-ctx)]
                     ; todo :root mode
-                    (link-query-dependent-requests result (:link-query/find-element link-query)
+                    (link-query-dependent-requests result (:link-query/find-element link)
                                                    (auto-anchor/auto-anchors link colspec param-ctx)
                                                    (user-bindings/user-bindings link param-ctx)))))
           nil)))))
 
 (defn requests-for-link-entity [link query-params param-ctx]
-  (let [request (q-util/->entityRequest (:link/request link) query-params param-ctx)
-        conn (->> (get-in link [:link/request :link-query/find-element])
+  (let [request (q-util/->entityRequest link query-params param-ctx)
+        conn (->> (:link-query/find-element link)
                   (filter #(= (:find-element/name %) "entity"))
                   first
                   :find-element/connection)

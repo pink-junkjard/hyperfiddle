@@ -18,9 +18,9 @@
                   (-> conn :db/id :id))                     ; this should be root-conn, bug
    :hypercrud/owner owner
    :link/name (str "system-" (:find-element/name e))
-   :link/request {:request/type :entity
-                  :link-query/find-element [{:find-element/name "entity"
-                                             :find-element/connection conn}]}})
+   :request/type :entity
+   :link-query/find-element [{:find-element/name "entity"
+                              :find-element/connection conn}]})
 
 (defn link-entity-system-edit [conn owner]
   {:pre [conn owner]}
@@ -30,9 +30,9 @@
                   (-> conn :db/id :id))
    :hypercrud/owner owner
    :link/name (str "system-entity")
-   :link/request {:request/type :entity
-                  :link-query/find-element [{:find-element/name "entity"
-                                             :find-element/connection conn}]}})
+   :request/type :entity
+   :link-query/find-element [{:find-element/name "entity"
+                              :find-element/connection conn}]})
 
 (defn link-query-system-edit-attr [conn owner e a]
   {:pre [conn owner e a]}
@@ -44,9 +44,9 @@
                   (-> conn :db/id :id))
    :link/name (str "system-" (:find-element/name e) "-" (:attribute/ident a))
    :hypercrud/owner owner
-   :link/request {:request/type :entity
-                  :link-query/find-element [{:find-element/name "entity"
-                                             :find-element/connection conn}]}})
+   :request/type :entity
+   :link-query/find-element [{:find-element/name "entity"
+                              :find-element/connection conn}]})
 
 (defn link-entity-system-edit-attr [conn owner a]
   {:pre [conn owner a]}
@@ -57,9 +57,9 @@
                   (-> conn :db/id :id))
    :link/name (str "system-entity-" (:attribute/ident a))
    :hypercrud/owner owner
-   :link/request {:request/type :entity
-                  :link-query/find-element [{:find-element/name "entity"
-                                             :find-element/connection conn}]}})
+   :request/type :entity
+   :link-query/find-element [{:find-element/name "entity"
+                              :find-element/connection conn}]})
 
 (defn link-blank-system-remove [owner e a]
   {:pre [owner]}
@@ -122,7 +122,7 @@
 
                        :link-entity
                        (let [conn-id (or
-                                       (-> parent-link :link/request :link-query/find-element
+                                       (-> parent-link :link-query/find-element
                                            (->> (filter #(= (:find-element/name %) "entity"))
                                                 first)
                                            :find-element/connection :db/id :id)

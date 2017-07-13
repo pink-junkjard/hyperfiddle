@@ -50,11 +50,11 @@
                (exception/extract resp nil))
         route (anchor/build-anchor-route options-anchor param-ctx)]
     ; we are assuming we have a query link here
-    (mlet [q (if-let [qstr (-> link :link/request :link-query/value)] ; We avoid caught exceptions when possible
+    (mlet [q (if-let [qstr (:link-query/value link)] ; We avoid caught exceptions when possible
                (exception/try-on (reader/read-string qstr))
                (exception/failure nil))                     ; is this a success or failure? Doesn't matter - datomic will fail.
-           result (let [params-map (merge (:query-params route) (q-util/build-dbhole-lookup (:link/request link) param-ctx))
-                        query-value (q-util/->queryRequest q (:link/request link) params-map param-ctx)]
+           result (let [params-map (merge (:query-params route) (q-util/build-dbhole-lookup link param-ctx))
+                        query-value (q-util/->queryRequest q link params-map param-ctx)]
                     (hc/hydrate (:peer param-ctx) query-value))
            ; schema is allowed to be nil if the link only has anchors and no data dependencies
            schema (exception/try-or-else (hc/hydrate (:peer param-ctx) (schema-util/schema-request (:root-db param-ctx) nil)) nil)]

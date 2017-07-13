@@ -24,26 +24,25 @@
         visible-fn (get-in param-ctx [:fields attr :visible?] (constantly true))]
     (visible-fn param-ctx)))
 
-(defn find-elements-by-name [link-req]
-  (->> (mapv (juxt :find-element/name identity) (:link-query/find-element link-req))
+(defn find-elements-by-name [link]
+  (->> (mapv (juxt :find-element/name identity) (:link-query/find-element link))
        (into {})))
 
 (defn manufacture-entity-find-element [link param-ctx]
-  (let [fe (->> (-> link :link/request :link-query/find-element)
+  (let [fe (->> (:link-query/find-element link)
                 (filter #(= (:find-element/name %) "entity"))
                 first)]
     (update fe :form/field (fn [fields] (filter #(filter-visible-fields % param-ctx) fields)))))
 
 (defn get-ordered-find-elements [link param-ctx]
-  (let [req (:link/request link)]
-    (case (link-util/link-type link)
-      :link-query (let [q (some-> req :link-query/value reader/read-string)
-                        find-element-lookup (find-elements-by-name req)]
-                    (->> (util/parse-query-element q :find)
-                         (mapv str)
-                         (mapv #(get find-element-lookup %))))
-      :link-entity [(manufacture-entity-find-element link param-ctx)]
-      [])))
+  (case (link-util/link-type link)
+    :link-query (let [q (some-> link :link-query/value reader/read-string)
+                      find-element-lookup (find-elements-by-name link)]
+                  (->> (util/parse-query-element q :find)
+                       (mapv str)
+                       (mapv #(get find-element-lookup %))))
+    :link-entity [(manufacture-entity-find-element link param-ctx)]
+    []))
 
 (defn determine-colspec "Colspec is what you have when you flatten out the find elements,
 but retaining and correlating all information through a join. Not all entities are homogenous,
