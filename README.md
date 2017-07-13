@@ -8,9 +8,8 @@ Hypercrud Client is an I/O runtime that handles efficient client-server data syn
 
 Hypercrud Browser navigates app-values like a web browser navigates HTML. App-values define Pages, each Page declares his data dependencies, and Links to other Pages. Pages compose by composing their data dependencies therein (like an iframe), and are thus a scalable model for building UIs. Hypercrud Browser is HATEOAS.
 
-![](http://i.imgur.com/fm8ZdcW.png)
+![](http://i.imgur.com/4mKpHhw.png)
 
 [Hyperfiddle](http://hyperfiddle.net/) is a WYSIWYG editor for building Hypercrud app-values, and optionally, a cloud platform to host them in.
 
-![](http://i.imgur.com/9x4AyXy.png)
-![](http://i.imgur.com/l181tQV.png)
+![](http://i.imgur.com/lhGmOqX.png)
