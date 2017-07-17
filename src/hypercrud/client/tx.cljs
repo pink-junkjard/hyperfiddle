@@ -73,6 +73,7 @@
         :else v))
 
 
+; Internal
 (defn entity->statements
   "Only need schema to recurse into component entities. valueType and cardinality is determined dynamically.
   If schema is omitted, don't recurse refs."
@@ -100,17 +101,19 @@
           entity))
 
 
+; pulled-tree->statements, respect component
 (defn entity-and-components->statements [schema e]
   ; tree-seq lets us get component entities too
   (->> (tree-seq map? #(entity-components schema %) e)
        (mapcat entity->statements)))
 
 
-(defn entity-children [schema entity]
+; ignores component, not useful imo
+(defn pulled-tree-children [schema entity]
+  ; Need schema for component. How can you walk a pulled-tree without inspecting component?
+  ; If it turns out we don't need component, we can dispatch on map?/coll? and not need schema.
   (mapcat (fn [[attr v]]
             (let [{:keys [:attribute/cardinality :attribute/valueType]} (get schema attr)]
-              ; todo can we just check if val is map? or coll? to remove dep on schema?
-              ; yes if this is a pulled-tree.
               (case [(:db/ident valueType) (:db/ident cardinality)]
                 [:db.type/ref :db.cardinality/one] [v]
                 [:db.type/ref :db.cardinality/many] (vec v)
@@ -118,8 +121,9 @@
           entity))
 
 
+; ignore component - pretty useless imo
 (defn pulled-tree->statements [schema pulled-tree]
-  (->> (tree-seq map? #(entity-children schema %) pulled-tree)
+  (->> (tree-seq map? #(pulled-tree-children schema %) pulled-tree)
        (mapcat entity->statements)))
 
 
@@ -148,11 +152,13 @@
               [op new-e a new-v]))
           tx)))
 
+; don't know what this is
 (defn walk-pulled-tree [schema f tree]                      ; don't actually need schema for anything but component which is ignored here
   (walk/postwalk
     (fn [o] (if (map? o) (f o) o))
     tree))
 
+; rename: walk-pulled-tree (respecting component)
 (defn walk-entity [schema f entity]                         ; Walks entity components, applying f to each component, dehydrating non-components
   (->> (f entity)
        (mapv
@@ -171,6 +177,8 @@
              [a v])))
        (into {})))
 
+; rename: clone-pulled-tree
+; Works by making a copy of the entity with tempids instead of dbids
 (defn clone-entity [schema entity new-dbid]
   (let [[replace-id! fix-seen-id!] (clone-id-factory (-> entity :db/id :conn-id) new-dbid) ; ew
         entity' (->> (dissoc entity :db/id)
@@ -185,7 +193,7 @@
                   (fn [conn-id]
                     (->DbId (swap! temp-id-atom dec) conn-id)))
         successors (fn [node]
-                     (entity-children schema node))
+                     (pulled-tree-children schema node))
         filter-pred (fn [node predecessor depth]
                       ;  also may need (not (:db/ident node)) - attrs ref datomic built-ins
                       (not (:attribute/ident node)))]
