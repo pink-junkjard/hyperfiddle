@@ -10,8 +10,9 @@ Hypercrud Browser navigates app-values like a web browser navigates HTML. App-va
 
 ![](http://i.imgur.com/4mKpHhw.png)
 
+![](http://i.imgur.com/lhGmOqX.png)
+
 # Hyperfiddle
 
-[Hyperfiddle](http://hyperfiddle.net/) is a WYSIWYG editor for building Hypercrud app-values, and optionally, a cloud platform to host them in.
+[Hyperfiddle](http://hyperfiddle.net/) is a WYSIWYG editor for building Hypercrud app-values. It is also a better Datomic Console - an interactive query builder, entity explorer and can be attached to an arbitrary Datomic database without changing it. It heavily leans on d/with as a transaction staging area, including a notion of branching and discard.
 
-![](http://i.imgur.com/lhGmOqX.png)
