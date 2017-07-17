@@ -77,7 +77,7 @@
                                                :anchor/find-element fe
                                                :anchor/managed? true
                                                :anchor/create? true
-                                               :anchor/render-inline? false}
+                                               :anchor/render-inline? true}
                                           remove {:anchor/prompt (str "sys-remove-" fe-name)
                                                   :anchor/ident (keyword (str "sys-remove-" fe-name))
                                                   :anchor/link (link-blank-system-remove (:hypercrud/owner parent-link) fe nil)
