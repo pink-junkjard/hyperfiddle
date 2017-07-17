@@ -61,7 +61,7 @@
         ; or, entity links for link-entity
         entity-links (->> find-elements
                           (mapcat (fn [[fe-name fe]]
-                                    (let [edit {:anchor/prompt (str "sys-edit-" fe-name)
+                                    (let [edit {:anchor/prompt (str "edit-" fe-name)
                                                 :anchor/ident (keyword (str "sys-edit-" fe-name))
                                                 :anchor/link (link-system-edit (:find-element/connection fe) (:hypercrud/owner parent-link) fe)
                                                 :anchor/repeating? true
@@ -70,7 +70,7 @@
                                           ; create links mirror edit links but repeating false, see auto-formula.
                                           ; This is because the connection comes from the find-element, and when merging
                                           ; sys links we match on the find-element.
-                                          new {:anchor/prompt (str "sys-new-" fe-name)
+                                          new {:anchor/prompt (str "new-" fe-name)
                                                :anchor/ident (keyword (str "sys-new-" fe-name))
                                                :anchor/link (link-system-edit (:find-element/connection fe) (:hypercrud/owner parent-link) fe)
                                                :anchor/repeating? false ; not managed, no parent-child ref
@@ -78,7 +78,7 @@
                                                :anchor/managed? true
                                                :anchor/create? true
                                                :anchor/render-inline? true}
-                                          remove {:anchor/prompt (str "sys-remove-" fe-name)
+                                          remove {:anchor/prompt (str "remove-" fe-name)
                                                   :anchor/ident (keyword (str "sys-remove-" fe-name))
                                                   :anchor/link (link-blank-system-remove (:hypercrud/owner parent-link) fe nil)
                                                   :anchor/repeating? true
@@ -105,14 +105,14 @@
                                           fe (get find-elements fe-name)
                                           _ (assert fe)]
                                       (if (and (not= ident :db/id) (= :db.type/ref (-> attr :attribute/valueType :db/ident)))
-                                        [{:anchor/prompt (str "sys-edit-" fe-name "-" ident) ; conserve space in label
+                                        [{:anchor/prompt (str "edit") ; conserve space in label
                                           :anchor/ident (keyword (str "sys-edit-" fe-name "-" ident))
                                           :anchor/repeating? true
                                           :anchor/find-element fe
                                           :anchor/attribute attr
                                           :anchor/managed? false
                                           :anchor/link (link-system-edit-attr conn (:hypercrud/owner parent-link) fe attr)}
-                                         {:anchor/prompt (str "sys-new-" fe-name "-" ident) ; conserve space in label
+                                         {:anchor/prompt (str "new") ; conserve space in label
                                           :anchor/ident (keyword (str "sys-new-" fe-name "-" ident))
                                           :anchor/repeating? true ; manged - need parent-child ref
                                           :anchor/find-element fe
@@ -121,7 +121,7 @@
                                           :anchor/create? true
                                           :anchor/render-inline? true
                                           :anchor/link (link-system-edit-attr conn (:hypercrud/owner parent-link) fe attr)}
-                                         {:anchor/prompt (str "sys-remove-" fe-name "-" ident)
+                                         {:anchor/prompt (str "remove")
                                           :anchor/ident (keyword (str "sys-remove-" fe-name "-" ident))
                                           :anchor/link (link-blank-system-remove (:hypercrud/owner parent-link) fe attr)
                                           :anchor/find-element fe
