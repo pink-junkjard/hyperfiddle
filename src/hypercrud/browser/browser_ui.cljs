@@ -51,6 +51,7 @@
         (cats/return
           (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
                 param-ctx (assoc param-ctx                  ; provide defaults before user-bindings run. TODO query side
+                            :schema indexed-schema          ; For tx/entity->statements in userland.
                             :query-params query-params
                             :read-only (or (:read-only param-ctx) never-read-only))
 
@@ -66,7 +67,7 @@
                            (empty? result) (if (.-a request)
                                              ; comes back as [] sometimes if cardinaltiy many request. this is causing problems as nil or {} in different places.
                                              ; Above comment seems backwards, left it as is
-                                             (case (-> (get schema (.-a request)) :attribute/cardinality :db/ident)
+                                             (case (-> (get indexed-schema (.-a request)) :attribute/cardinality :db/ident)
                                                :db.cardinality/one {}
                                                :db.cardinality/many []))
                            (map? result) {"entity" result}
