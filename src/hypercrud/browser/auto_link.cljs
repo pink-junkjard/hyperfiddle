@@ -73,7 +73,7 @@
                                           new {:anchor/prompt (str "sys-new-" fe-name)
                                                :anchor/ident (keyword (str "sys-new-" fe-name))
                                                :anchor/link (link-system-edit (:find-element/connection fe) (:hypercrud/owner parent-link) fe)
-                                               :anchor/repeating? false
+                                               :anchor/repeating? false ; not managed, no parent-child ref
                                                :anchor/find-element fe
                                                :anchor/managed? true
                                                :anchor/create? true
@@ -114,7 +114,7 @@
                                           :anchor/link (link-system-edit-attr conn (:hypercrud/owner parent-link) fe attr)}
                                          {:anchor/prompt (str "sys-new-" fe-name "-" ident) ; conserve space in label
                                           :anchor/ident (keyword (str "sys-new-" fe-name "-" ident))
-                                          :anchor/repeating? false #_true
+                                          :anchor/repeating? true ; manged - need parent-child ref
                                           :anchor/find-element fe
                                           :anchor/attribute attr
                                           :anchor/managed? true
