@@ -32,7 +32,7 @@
   (let [fe (->> (:link-query/find-element link)
                 (filter #(= (:find-element/name %) "entity"))
                 first)]
-    (update fe :form/field (fn [fields] (filter #(filter-visible-fields % param-ctx) fields)))))
+    (update-in fe [:find-element/form :form/field] (fn [fields] (filter #(filter-visible-fields % param-ctx) fields)))))
 
 (defn get-ordered-find-elements [link param-ctx]
   (case (link-util/link-type link)
