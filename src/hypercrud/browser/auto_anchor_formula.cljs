@@ -1,6 +1,5 @@
 (ns hypercrud.browser.auto-anchor-formula
-  (:require [hypercrud.types.DbId :refer [->DbId]]
-            [hypercrud.util.core :as util]))
+  (:require [hypercrud.types.DbId :refer [->DbId]]))
 
 
 (defn deterministic-ident [fe e a v]
