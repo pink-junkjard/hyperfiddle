@@ -20,14 +20,13 @@
   ([anchor-ctx-pairs]
    (->> anchor-ctx-pairs
         (filter (partial apply anchor/anchor-visible?))
-        (mapv (fn [[anchor param-ctx]]
+        (map (fn [[anchor param-ctx]]
                 (assert (:navigate-cmp param-ctx))
                 (let [prompt (or (:anchor/prompt anchor)
                                  (:anchor/ident anchor)
                                  "_")]
                   ^{:key (hash anchor)}                     ; not a great key but syslinks don't have much.
-                  [(:navigate-cmp param-ctx) (anchor/build-anchor-props anchor param-ctx) prompt])))
-        (interpose " ")))
+                  [(:navigate-cmp param-ctx) (anchor/build-anchor-props anchor param-ctx) prompt])))))
   ([anchors param-ctx]
    (render-anchors (map vector anchors (repeat param-ctx)))))
 

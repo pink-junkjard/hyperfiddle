@@ -125,16 +125,22 @@
       (let [anchor-index (->> anchors
                               (mapv (juxt #(-> % :anchor/ident) identity)) ; [ repeating entity attr ident ]
                               (into {}))
-            with-inline-result (fn [ident param-ctx f]
-                                 [safe-ui (get anchor-index ident) (assoc param-ctx :user-renderer f)]
-                                 #_@(ui (get anchor-index ident) (assoc param-ctx :user-renderer f)))
+            with-view (fn [ident param-ctx f]
+                                 [safe-ui (get anchor-index ident) (assoc param-ctx :user-renderer f)])
+            with-data (fn [ident ctx f]
+                        (ui (get anchor-index ident) (assoc param-ctx :user-renderer (or f identity))))
+            anchor (fn [ident label param-ctx]
+                     (let [anchor (get anchor-index ident)
+                           props (-> (anchor/build-anchor-props anchor param-ctx)
+                                     #_(dissoc :style) #_"custom renderers don't want colored links")]
+                       [(:navigate-cmp param-ctx) props label]))
             param-ctx (assoc param-ctx
-                        :link-fn (fn [ident label param-ctx]
-                                   (let [anchor (get anchor-index ident)
-                                         props (-> (anchor/build-anchor-props anchor param-ctx)
-                                                   #_(dissoc :style) #_"custom renderers don't want colored links")]
-                                     [(:navigate-cmp param-ctx) props label]))
-                        :with-inline-result with-inline-result
-                        )]
+                        :anchor anchor
+                        :view with-view
+                        :data with-data
+
+                        ; backwards compat
+                        :with-inline-result with-view
+                        :link-fn anchor)]
         ; result is relation or set of relations
         (user-fn result colspec anchors param-ctx)))))

@@ -50,7 +50,7 @@
     (map? result) [form/form result colspec anchors param-ctx]
     (coll? result) [table/table result colspec anchors param-ctx]
     :else
-    [:div.blank
+    [:div.browser.blank
      (widget/render-anchors (->> anchors
                                  (remove :anchor/find-element)
                                  (remove :anchor/attribute)
@@ -60,19 +60,4 @@
                                         (remove :anchor/find-element)
                                         (remove :anchor/attribute)
                                         (filter :anchor/render-inline?))
-                                   (dissoc param-ctx :isComponent))])
-
-  #_[:div
-   ; This has to be handled internally due to weirdness around create-new links
-   ; where we need to conjure a connection. It would be more elegant if we conjured the
-   ; connection up here, which is possible by inspecting the result in entity-syslink case.
-   #_(widget/render-anchors (->> anchors
-                                 (remove :anchor/repeating?)
-                                 (remove :anchor/attribute)
-                                 (remove :anchor/render-inline?))
-                            (dissoc param-ctx :isComponent))
-   (cond
-     ; order matters here
-     (map? result) (form/form result colspec anchors param-ctx)
-     (coll? result) [table/table result colspec anchors param-ctx]         ; stateful
-     :else nil)])
+                                   (dissoc param-ctx :isComponent))]))
