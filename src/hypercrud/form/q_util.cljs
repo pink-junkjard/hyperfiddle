@@ -1,12 +1,8 @@
 (ns hypercrud.form.q-util
   (:require [cljs.reader :as reader]
             [clojure.string :as string]
-            [hypercrud.compile.eval :refer [eval]]
-            [hypercrud.types.EntityRequest :refer [->EntityRequest]]
-            [hypercrud.types.QueryRequest :refer [->QueryRequest]]
-            [hypercrud.util.core :as util]
-            [hypercrud.ui.form-util :as form-util]
-            [hypercrud.client.core :as hc]))
+            [hypercrud.client.core :as hc]
+            [hypercrud.util.core :as util]))
 
 
 (defn safe-read-string [code-str]
@@ -74,30 +70,3 @@
     ; If you want pretty select options, you should model the options query and form.
     ; Now we are using sys-edit-attr render-inline to hydrate this level accurately with a form.
     ['* {:hypercrud/owner ['*]}]))
-
-
-(defn ->queryRequest [q link params-map param-ctx]
-  (let [params (build-params #(get params-map %) link param-ctx)
-        find-elements (:link-query/find-element link)
-        find-elements (-> find-elements (form-util/strip-forms-in-raw-mode param-ctx))
-        pull-exp (->> find-elements
-                      (mapv (juxt :find-element/name
-                                  (fn [fe]
-                                    (let [conn-id (-> fe :find-element/connection :db/id :id)]
-                                      [(hc/db (:peer param-ctx) conn-id (get-in param-ctx [:branches conn-id]))
-                                       (form-pull-exp (:find-element/form fe))]))))
-                      (into {}))]
-    (->QueryRequest q params pull-exp)))
-
-
-(defn ->entityRequest [link query-params param-ctx]
-  ;(assert (:entity query-params))                         ;-- Commented because we are requesting invisible things that the UI never tries to render - can be fixed
-  ;(assert (:conn-id (:entity query-params))) ; this is not looked at on server now.
-  (let [entity-fe (first (filter #(= (:find-element/name %) "entity") (:link-query/find-element link)))
-        conn-id (-> entity-fe :find-element/connection :db/id :id)]
-    (assert conn-id)
-    (->EntityRequest
-      (:entity query-params)
-      (:a query-params)
-      (hc/db (:peer param-ctx) conn-id (get-in param-ctx [:branches conn-id]))
-      (form-pull-exp (:find-element/form entity-fe)))))

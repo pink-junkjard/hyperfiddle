@@ -1,17 +1,12 @@
 (ns hypercrud.browser.browser-ui
   (:require [cats.core :as cats :refer-macros [mlet]]
             [cats.monad.exception :as exception :refer-macros [try-on]]
-            [cljs.reader :as reader]
-            [hypercrud.browser.link-util :as link-util]
-            [hypercrud.browser.auto-anchor :as auto-anchor]
-            [hypercrud.browser.auto-link :as auto-link]
-            [hypercrud.browser.browser-request :as browser-request]
             [hypercrud.browser.anchor :as anchor]
-            [hypercrud.browser.user-bindings :as user-bindings]
+            [hypercrud.browser.auto-link :as auto-link]
+            [hypercrud.browser.base :as base]
             [hypercrud.client.core :as hc]
             [hypercrud.client.schema :as schema-util]
             [hypercrud.compile.eval :refer [eval-str]]
-            [hypercrud.form.q-util :as q-util]
             [hypercrud.platform.safe-render :refer [safe-user-renderer]]
             [hypercrud.types.EntityRequest :refer [EntityRequest]]
             [hypercrud.types.QueryRequest :refer [QueryRequest]]
@@ -28,61 +23,26 @@
                         (exception/success nil)))
            (reduce #(mlet [acc %1 v %2] (cats/return (conj acc v))) (exception/success []))
            (cats/fmap #(auto-link/hydrate-system-link system-link-idmap % param-ctx))))
-    (hc/hydrate (:peer param-ctx) (browser-request/request-for-link (:root-db param-ctx) link-dbid))))
+    (hc/hydrate (:peer param-ctx) (base/meta-request-for-link (:root-db param-ctx) link-dbid))))
 
 (declare user-result)
 
-(def never-read-only (constantly false))
+(defn get-ui-f [link param-ctx]
+  (case (:display-mode param-ctx)
+    :user (user-result link param-ctx)
+    :xray auto-control/result
+    :root auto-control/result))
 
-(defn ui' [{query-params :query-params :as route} param-ctx]
-  (mlet [link (hydrate-link (:link-dbid route) param-ctx)   ; always latest
-         request (try-on
-                   (case (link-util/link-type link)
-                     :link-query (let [q (some-> link :link-query/value reader/read-string)
-                                       params-map (merge query-params (q-util/build-dbhole-lookup link param-ctx))]
-                                   (q-util/->queryRequest q link params-map param-ctx))
-                     :link-entity (q-util/->entityRequest link (:query-params route) param-ctx)
-                     :link-blank nil
-                     nil))
-         result (if request (hc/hydrate (:peer param-ctx) request) (exception/success nil))
-         ; schema is allowed to be nil if the link only has anchors and no data dependencies
-         schema (exception/try-or-else (hc/hydrate (:peer param-ctx) (schema-util/schema-request (:root-db param-ctx) nil)) nil)]
-        (cats/return
-          (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
-                param-ctx (assoc param-ctx                  ; provide defaults before user-bindings run. TODO query side
-                            :schema indexed-schema          ; For tx/entity->statements in userland.
-                            :query-params query-params
-                            :read-only (or (:read-only param-ctx) never-read-only))
-
-                ; ereq doesn't have a fe yet; wrap with a fe.
-                ; Doesn't make sense to do on server since this is going to optimize away anyway.
-
-                result (cond
-
-                         (instance? EntityRequest request)  ; But the ereq might return a vec for cardinality many
-                         (cond
-                           ; order matters here a lot!
-                           (nil? result) nil
-                           (empty? result) (if (.-a request)
-                                             ; comes back as [] sometimes if cardinaltiy many request. this is causing problems as nil or {} in different places.
-                                             ; Above comment seems backwards, left it as is
-                                             (case (-> (get indexed-schema (.-a request)) :attribute/cardinality :db/ident)
-                                               :db.cardinality/one {}
-                                               :db.cardinality/many []))
-                           (map? result) {"entity" result}
-                           (coll? result) (mapv (fn [relation] {"entity" relation}) result))
-
-
-                         (instance? QueryRequest request)
-                         (cond
-                           (-> link :link-query/single-result-as-entity?) (first result)
-                           :else result))
-
-                colspec (form-util/determine-colspec result link indexed-schema param-ctx)]
-            (case (get param-ctx :display-mode)             ; default happens higher, it influences queries too
-              :user ((user-result link param-ctx) result colspec (auto-anchor/auto-anchors link colspec param-ctx) (user-bindings/user-bindings link param-ctx))
-              :xray (auto-control/result result colspec (auto-anchor/auto-anchors link colspec param-ctx) (user-bindings/user-bindings link param-ctx))
-              :root (auto-control/result result colspec (auto-anchor/auto-anchors link colspec param-ctx {:ignore-user-links true}) param-ctx))))))
+(defn ui' [{query-params :query-params :as route} param-ctx
+           ; hack for first pass on select options
+           & [override-get-ui-f]]
+  (let [get-ui-f (or override-get-ui-f get-ui-f)]
+    (mlet [link (hydrate-link (:link-dbid route) param-ctx) ; always latest
+           request (base/request-for-link link query-params param-ctx)
+           result (if request (hc/hydrate (:peer param-ctx) request) (exception/success nil))
+           ; schema is allowed to be nil if the link only has anchors and no data dependencies
+           schema (exception/try-or-else (hc/hydrate (:peer param-ctx) (schema-util/schema-request (:root-db param-ctx) nil)) nil)]
+      (cats/return (base/process-results get-ui-f query-params link request result schema param-ctx)))))
 
 (defn ui [anchor param-ctx]
   (if (:anchor/link anchor)

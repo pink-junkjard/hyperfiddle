@@ -3,7 +3,6 @@
             [clojure.set :as set]
             [hypercrud.browser.auto-anchor-formula :refer [auto-entity-dbid]]
             [hypercrud.browser.connection-color :as connection-color]
-            [hypercrud.browser.link-util :as link-util]
             [hypercrud.client.core :as hc]
             [hypercrud.compile.eval :refer [eval-str']]
             [hypercrud.form.q-util :as q-util]
@@ -42,13 +41,14 @@
 
 (defn anchor-valid? [link route']                           ; could return monad to say why
   ; We specifically hydrate this deep just so we can validate anchors like this.
-  (case (link-util/link-type link)
-    :link-query (some-> link
-                        q-util/safe-parse-query-validated
-                        q-util/parse-param-holes
-                        (holes-filled? (:query-params (exception/extract route' nil))))
-    :link-entity (not= nil (-> (exception/extract route' nil) :query-params :entity)) ; add logic for a
-    :link-blank true))
+  (case (:request/type link)
+    :query (some-> link
+                   q-util/safe-parse-query-validated
+                   q-util/parse-param-holes
+                   (holes-filled? (:query-params (exception/extract route' nil))))
+    :entity (not= nil (-> (exception/extract route' nil) :query-params :entity))     ; add logic for a
+    :blank true
+    true))
 
 (defn anchor-valid?' [anchor route]
   (anchor-valid? (:anchor/link anchor) route))
