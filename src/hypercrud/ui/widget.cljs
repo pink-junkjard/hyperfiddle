@@ -42,7 +42,7 @@
                ; don't test anchor validity, we need to render the failure. If this is a dependent link, use visibility predicate to hide the error.
                [:div {:key (hash anchor)}                   ; extra div bc had trouble getting keys to work
                 (case (:display-mode param-ctx)
-                  :xray (render-anchors [(assoc anchor :anchor/prompt (-> anchor :anchor/link :link/name))] param-ctx) nil)
+                  :xray (render-anchors [(assoc anchor :anchor/prompt (or (:anchor/prompt anchor) (-> anchor :anchor/link :link/name)))] param-ctx) nil)
                 [browser/safe-ui anchor (update param-ctx :debug #(str % ">inline-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]"))]]))
         (remove nil?)
         (doall))))
