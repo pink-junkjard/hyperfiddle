@@ -1,7 +1,6 @@
 (ns hypercrud.browser.browser-ui
   (:require [cats.core :as cats :refer-macros [mlet]]
             [cats.monad.exception :as exception :refer-macros [try-on]]
-            [cljs.pprint :as pprint]
             [cljs.reader :as reader]
             [hypercrud.browser.link-util :as link-util]
             [hypercrud.browser.auto-anchor :as auto-anchor]
@@ -18,7 +17,7 @@
             [hypercrud.types.QueryRequest :refer [QueryRequest]]
             [hypercrud.ui.form-util :as form-util]
             [hypercrud.ui.auto-control :as auto-control]
-            [hypercrud.util.core :as util]))
+            [hypercrud.util.core :as util :refer [pprint-str]]))
 
 
 (defn hydrate-link [link-dbid param-ctx]
@@ -87,9 +86,10 @@
 
 (defn ui [anchor param-ctx]
   (if (:anchor/link anchor)
-    (ui' (anchor/build-anchor-route anchor param-ctx)
-         ; entire context must be encoded in the route
-         (dissoc param-ctx :result :db :find-element :entity :attribute :value :layout))
+    (mlet [route (anchor/build-anchor-route' anchor param-ctx)]
+          (ui' route
+               ; entire context must be encoded in the route
+               (dissoc param-ctx :result :db :find-element :entity :attribute :value :layout)))
     (exception/failure "anchor has no link")))
 
 (defn safe [f & args]
@@ -114,7 +114,7 @@
     (let [{user-fn :value error :error} (eval-str (:link/renderer link))]
       (if error
         (fn [result colspec anchors param-ctx]
-          [:pre (pprint/pprint error)])
+          [:pre (pprint-str error)])
         (fn [result colspec anchors param-ctx]
           [safe-user-renderer user-fn result colspec anchors param-ctx])))))
 
@@ -125,22 +125,23 @@
       (let [anchor-index (->> anchors
                               (mapv (juxt #(-> % :anchor/ident) identity)) ; [ repeating entity attr ident ]
                               (into {}))
-            with-view (fn [ident param-ctx f]
-                                 [safe-ui (get anchor-index ident) (assoc param-ctx :user-renderer f)])
-            with-data (fn [ident ctx f]
-                        (ui (get anchor-index ident) (assoc param-ctx :user-renderer (or f identity))))
-            anchor (fn [ident label param-ctx]
-                     (let [anchor (get anchor-index ident)
-                           props (-> (anchor/build-anchor-props anchor param-ctx)
+            browse (fn [ident param-ctx f & args]
+                     [safe-ui (get anchor-index ident) (assoc param-ctx :user-renderer f #_(if f #(apply f %1 %2 %3 %4 args)))])
+            anchor (fn [ident param-ctx label]
+                     (let [props (-> (anchor/build-anchor-props (get anchor-index ident) param-ctx)
                                      #_(dissoc :style) #_"custom renderers don't want colored links")]
                        [(:navigate-cmp param-ctx) props label]))
+            browse' (fn [ident ctx]
+                      (ui (get anchor-index ident) (assoc param-ctx :user-renderer identity)))
+            anchor* (fn [ident ctx] (anchor/build-anchor-props (get anchor-index ident) ctx))
             param-ctx (assoc param-ctx
                         :anchor anchor
-                        :view with-view
-                        :data with-data
+                        :browse browse
+                        :anchor* anchor*
+                        :browse' browse'
 
                         ; backwards compat
-                        :with-inline-result with-view
-                        :link-fn anchor)]
+                        :with-inline-result browse
+                        :link-fn (fn [ident label param-ctx] (anchor ident param-ctx label)))]
         ; result is relation or set of relations
         (user-fn result colspec anchors param-ctx)))))

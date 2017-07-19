@@ -37,13 +37,12 @@
 
   ; Fn syntax can go here if we have proper cljs dynamic vars.
   (let [{dependent? :anchor/repeating?
-         create? :anchor/create?
          fe :anchor/find-element
-         a :anchor/attribute} anchor]
+         a :anchor/attribute
+         create? :anchor/create?} anchor]
     (cond
 
-      ; attr edit
-      (and #_dependent? (not create?) a)
+      (and fe a (not create?))
       (pr-str `(fn [ctx#]
                  (let [attr# (-> ctx# :attribute)]
                    (case (-> attr# :attribute/cardinality :db/ident)
@@ -51,8 +50,7 @@
                      :db.cardinality/many {:entity (get-in ctx# [:entity :db/id])
                                            :a (:attribute/ident attr#)}))))
 
-      ; attr create (managed, see auto-txfn)
-      (and #_(not dependent?) create? a)
+      (and fe a create?)
       ; inherit parent since the fe is never explicitly set by user
       ; it would be more correct to use the FE if we have it, but
       ; that information is guaranteed to be the same?
@@ -61,7 +59,7 @@
                  {:entity (auto-entity-dbid ctx# (-> ctx# :db .-conn-id))}))
 
       ; entity edit
-      (and #_ dependent? (not create?) (not a))
+      (and fe (not a) (not create?))
       (pr-str `(fn [ctx#]
                  {:entity (get-in ctx# [:entity :db/id])}))
 

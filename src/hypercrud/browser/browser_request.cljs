@@ -269,6 +269,7 @@
 
 (defn request [anchor param-ctx]
   (if (:anchor/link anchor)
-    (request' (anchor/build-anchor-route anchor param-ctx)
-              ; entire context must be encoded in the route
-              (dissoc param-ctx :result :db :find-element :entity :attribute :value))))
+    (mlet [route (anchor/build-anchor-route' anchor param-ctx)]
+          (request' route
+                    ; entire context must be encoded in the route
+                    (dissoc param-ctx :result :db :find-element :entity :attribute :value)))))

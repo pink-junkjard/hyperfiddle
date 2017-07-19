@@ -47,10 +47,10 @@
   (let [link (let [request (if-let [link (-> options-anchor :anchor/link :db/id)]
                              (browser-request/request-for-link (:root-db param-ctx) link))
                    resp (if request (hc/hydrate (:peer param-ctx) request))]
-               (exception/extract resp nil))
-        route (anchor/build-anchor-route options-anchor param-ctx)]
-    ; we are assuming we have a query link here
-    (mlet [q (if-let [qstr (:link-query/value link)] ; We avoid caught exceptions when possible
+               (exception/extract resp nil))]
+    (mlet [route (anchor/build-anchor-route' options-anchor param-ctx)
+           ; we are assuming we have a query link here
+           q (if-let [qstr (:link-query/value link)] ; We avoid caught exceptions when possible
                (exception/try-on (reader/read-string qstr))
                (exception/failure nil))                     ; is this a success or failure? Doesn't matter - datomic will fail.
            result (let [params-map (merge (:query-params route) (q-util/build-dbhole-lookup link param-ctx))

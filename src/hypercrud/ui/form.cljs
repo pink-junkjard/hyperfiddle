@@ -86,8 +86,7 @@
                               (concat
                                 (widget/render-anchors (remove :anchor/render-inline? entity-anchors) param-ctx)
                                 (->> colspec
-                                     (filter (fn [[db fe attr maybe-field]]
-                                               (anchor/anchor-visible? maybe-field param-ctx)))
+                                     ; Don't filter hidden links; because they could be broken or invalid and need to draw error.
                                      (mapv (fn [[db fe attr maybe-field]]
                                              (let [ident (-> attr :attribute/ident)
                                                    param-ctx (as-> param-ctx $

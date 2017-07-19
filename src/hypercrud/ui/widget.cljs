@@ -19,7 +19,7 @@
 (defn render-anchors
   ([anchor-ctx-pairs]
    (->> anchor-ctx-pairs
-        (filter (partial apply anchor/anchor-visible?))
+        ; Don't filter hidden links; because they could be broken or invalid and need to draw error.
         (map (fn [[anchor param-ctx]]
                 (assert (:navigate-cmp param-ctx))
                 (let [prompt (or (:anchor/prompt anchor)
@@ -37,7 +37,7 @@
    (render-inline-anchors (map vector anchors (repeatedly (constantly param-ctx)))))
   ([anchor-ctx-pairs]
    (->> anchor-ctx-pairs
-        (filter (partial apply anchor/anchor-visible?))
+        ; Don't filter hidden links; because they could be broken or invalid and need to draw error.
         (map (fn [[anchor param-ctx]]
                ; don't test anchor validity, we need to render the failure. If this is a dependent link, use visibility predicate to hide the error.
                [:div {:key (hash anchor)}                   ; extra div bc had trouble getting keys to work
