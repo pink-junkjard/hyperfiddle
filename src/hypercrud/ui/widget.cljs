@@ -170,7 +170,6 @@
                          :on-change #(let [select-value (.-target.value %)
                                            dbid (when (not= "" select-value)
                                                   (->DbId (js/parseInt select-value 10) (get-in param-ctx [:entity :db/id :conn-id])))]
-                                       (.log js/console (pr-str select-value))
                                        (reset! select-value-atom dbid))}
                   ; need lower level select component that can be reused here and in select.cljs
                   select-options (->> (exception/extract (option/hydrate-options options-anchor param-ctx) nil) ;todo handle exception

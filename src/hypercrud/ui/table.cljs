@@ -79,13 +79,7 @@
                                    [:span.sort-arrow arrow]])))))))))
 
 (defn table-row-form [relation colspec anchors param-ctx]
-  (let [entity-anchors-lookup (->> anchors
-                                   ; entity anchors are guaranteed repeating
-                                   ; attr anchors might be not-repeating for create-new
-                                   (group-by (fn [anchor]
-                                               (if-let [find-element (:anchor/find-element anchor)]
-                                                 (:find-element/name find-element)
-                                                 "entity"))))]
+  (let [entity-anchors-lookup (group-by (comp :find-element/name :anchor/find-element) anchors)]
     [:tr
      (->> (partition 4 colspec)
           (group-by (fn [[db fe ident maybe-field]] fe))
@@ -175,10 +169,7 @@
                                        (remove :anchor/repeating?)
                                        (remove :anchor/attribute)
                                        (remove :anchor/render-inline?)
-                                       (group-by (fn [anchor]
-                                                   (if-let [find-element (:anchor/find-element anchor)]
-                                                     (:find-element/name find-element)
-                                                     "entity"))))]
+                                       (group-by (comp :find-element/name :anchor/find-element)))]
                (->> (partition 4 colspec)
                     (group-by (fn [[dbval fe attr maybe-field]] fe))
                     (mapcat (fn [[fe colspec]]

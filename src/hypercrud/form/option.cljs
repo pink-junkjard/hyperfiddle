@@ -1,16 +1,7 @@
 (ns hypercrud.form.option
-  (:require [cats.core :as cats :refer-macros [mlet]]
-            [cats.monad.exception :as exception]
-            [cljs.reader :as reader]
-            [hypercrud.browser.anchor :as anchor]
-            [hypercrud.browser.browser-request :as browser-request]
-            [hypercrud.browser.user-bindings :as user-bindings]
-            [hypercrud.client.core :as hc]
-            [hypercrud.client.schema :as schema-util]
-            [hypercrud.compile.eval :refer [eval-str]]
-            [hypercrud.form.q-util :as q-util]
-            [hypercrud.ui.form-util :as form-util]
-            [hypercrud.util.core :as util]))
+  (:require [hypercrud.browser.anchor :as anchor]
+            [hypercrud.browser.browser-ui :as browser-ui]
+            [hypercrud.compile.eval :refer [eval-str]]))
 
 (defn default-label-renderer [v]
   (cond
@@ -40,31 +31,15 @@
        (interpose ", ")
        (apply str)))
 
-; todo should use upcoming ui/request unified abstraction
 (defn hydrate-options [options-anchor param-ctx]            ; needs to return options as [[:db/id label]]
-  (assert options-anchor)
-  ; This needs to be robust to partially constructed anchors
-  (let [link (let [request (if-let [link (-> options-anchor :anchor/link :db/id)]
-                             (browser-request/request-for-link (:root-db param-ctx) link))
-                   resp (if request (hc/hydrate (:peer param-ctx) request))]
-               (exception/extract resp nil))
-        route (anchor/build-anchor-route options-anchor param-ctx)]
-    ; we are assuming we have a query link here
-    (mlet [q (if-let [qstr (:link-query/value link)] ; We avoid caught exceptions when possible
-               (exception/try-on (reader/read-string qstr))
-               (exception/failure nil))                     ; is this a success or failure? Doesn't matter - datomic will fail.
-           result (let [params-map (merge (:query-params route) (q-util/build-dbhole-lookup link param-ctx))
-                        query-value (q-util/->queryRequest q link params-map param-ctx)]
-                    (hc/hydrate (:peer param-ctx) query-value))
-           ; schema is allowed to be nil if the link only has anchors and no data dependencies
-           schema (exception/try-or-else (hc/hydrate (:peer param-ctx) (schema-util/schema-request (:root-db param-ctx) nil)) nil)]
-          (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
-                colspec (form-util/determine-colspec result link indexed-schema param-ctx)
-                ; options have custom renderers which get user bindings
-                param-ctx (user-bindings/user-bindings link param-ctx)]
-            (cats/return
-              (->> result
-                   (mapv (fn [relation]
-                           (let [[conn fe attr maybe-field] (first (partition 4 colspec))
-                                 entity (get relation (-> fe :find-element/name))]
-                             [(:db/id entity) (build-label colspec relation param-ctx)])))))))))
+  (assert options-anchor)                                   ;todo this assert should be within the exception monad
+  (let [route (anchor/build-anchor-route options-anchor param-ctx)
+        get-ui-f (fn [result colspec anchors param-ctx]
+                   (->> result
+                        (mapv (fn [relation]
+                                (let [[conn fe attr maybe-field] (first (partition 4 colspec))
+                                      entity (get relation (-> fe :find-element/name))]
+                                  [(:db/id entity) (build-label colspec relation param-ctx)])))))]
+    ; todo we want to at least invoke ui not ui' (missing param-ctx dissocs)
+    ; probably just want callees to invoke with a custom render fn, and this calls safe-ui
+    (browser-ui/ui' route param-ctx (constantly get-ui-f))))
