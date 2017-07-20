@@ -14,12 +14,15 @@
             [hypercrud.util.core :as util]
             [reagent.core :as r]))
 
-(defn field [maybe-field anchors param-ctx]
+(defn control [maybe-field anchors param-ctx]
+  (let [anchors (filter #(= (-> param-ctx :attribute :db/id) (some-> % :anchor/attribute :db/id)) anchors)]
+    (let [props (form-util/build-props maybe-field anchors param-ctx)]
+      (if (renderer/user-renderer param-ctx)
+        (renderer/user-render maybe-field anchors props param-ctx)
+        [auto-control maybe-field anchors props param-ctx]))))
+
+(defn field [control maybe-field anchors param-ctx]
   (let [anchors (filter #(= (-> param-ctx :attribute :db/id) (some-> % :anchor/attribute :db/id)) anchors)
-        control (let [props (form-util/build-props maybe-field anchors param-ctx)]
-                  (if (renderer/user-renderer param-ctx)
-                    (renderer/user-render maybe-field anchors props param-ctx)
-                    [auto-control maybe-field anchors props param-ctx]))
 
         ; Check visibility user fn. Error states: eval error, apply error.
         maybe-visible' (if-let [user-fn-str (:field/visible? maybe-field)]
@@ -29,7 +32,7 @@
                              (try-on (user-fn (:entity param-ctx) param-ctx)))))
         hidden (not (if maybe-visible' (exception/extract maybe-visible' true) true))
 
-        ; Draw error instead of field.
+        ; Draw error instead of control.
         control (if (exception/failure? maybe-visible')
                   [:pre (js/pprint-str (.-e maybe-visible'))]
                   control)]
@@ -108,9 +111,11 @@
                                                    param-ctx (as-> param-ctx $
                                                                    (assoc $ :attribute attr
                                                                             :value (get entity ident))
-                                                                   (if (= ident :db/id) (assoc $ :read-only always-read-only) $))]
+                                                                   (if (= ident :db/id) (assoc $ :read-only always-read-only) $))
+                                                   field (case (:display-mode param-ctx) :xray field :user (get param-ctx :field field) )
+                                                   control (case (:display-mode param-ctx) :xray control :user (get param-ctx :control control))]
                                                ^{:key (str ident)}
-                                               [field maybe-field anchors param-ctx]))))
+                                               [field [control maybe-field anchors param-ctx] maybe-field anchors param-ctx]))))
                                 (widget/render-inline-anchors (filter :anchor/render-inline? entity-anchors) param-ctx)))
                             (widget/render-inline-anchors (filter :anchor/render-inline? entity-new-anchors) param-ctx))))))
         not-splat? (and (not (empty? colspec))
