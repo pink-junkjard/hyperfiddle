@@ -46,18 +46,19 @@
     (widget maybe-field anchors props param-ctx)))
 
 (defmethod auto-control/result :default [result colspec anchors param-ctx]
-  (cond
-    (map? result) [form/form result colspec anchors param-ctx]
-    (coll? result) [table/table result colspec anchors param-ctx]
-    :else
-    [:div.browser.blank
-     (widget/render-anchors (->> anchors
-                                 (remove :anchor/find-element)
-                                 (remove :anchor/attribute)
-                                 (remove :anchor/render-inline?))
-                            param-ctx)
-     (widget/render-inline-anchors (->> anchors
-                                        (remove :anchor/find-element)
-                                        (remove :anchor/attribute)
-                                        (filter :anchor/render-inline?))
-                                   (dissoc param-ctx :isComponent))]))
+  [:div.auto-result
+   (cond
+     (map? result) [form/form result colspec anchors param-ctx]
+     (coll? result) [table/table result colspec anchors param-ctx]
+     :else
+     [:div.blank
+      (widget/render-anchors (->> anchors
+                                  (remove :anchor/find-element)
+                                  (remove :anchor/attribute)
+                                  (remove :anchor/render-inline?))
+                             param-ctx)
+      (widget/render-inline-anchors (->> anchors
+                                         (remove :anchor/find-element)
+                                         (remove :anchor/attribute)
+                                         (filter :anchor/render-inline?))
+                                    (dissoc param-ctx :isComponent))])])
