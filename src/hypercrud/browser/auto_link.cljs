@@ -9,20 +9,20 @@
   (map? (:id link-dbid)))
 
 (defn link-system-edit [conn owner fe]                      ; these need to be thick/hydrated params bc we are manufacturing a pulled tree here.
-  {:pre [conn owner fe]}
+  {:pre [conn fe]}
   {:db/id (->DbId {:ident :system-edit
                    :owner (-> owner :db/id :id)
                    :conn (-> conn :db/id :id)
                    :fe (-> fe :db/id :id)}
                   (-> conn :db/id :id))                     ; this should be root-conn, bug
-   :hypercrud/owner owner
+   ;:hypercrud/owner owner
    :link/name (str "system-" (:find-element/name fe))
    :request/type :entity
    :link-query/find-element [{:find-element/name "entity"
                               :find-element/connection conn}]})
 
 (defn link-system-edit-attr [conn owner fe a]
-  {:pre [conn owner fe a]}
+  {:pre [conn fe a]}
   {:db/id (->DbId {:ident :system-edit-attr
                    :owner (-> owner :db/id :id)
                    :conn (-> conn :db/id :id)
@@ -30,18 +30,18 @@
                    :a (-> a :db/id :id)}
                   (-> conn :db/id :id))
    :link/name (str "system-" (:find-element/name fe) "-" (:attribute/ident a))
-   :hypercrud/owner owner
+   ;:hypercrud/owner owner
    :request/type :entity
    :link-query/find-element [{:find-element/name "entity"
                               :find-element/connection conn}]})
 
 (defn link-blank-system-remove [owner fe a]
-  {:pre [owner]}
+  {:pre []}
   {:db/id (->DbId {:ident :sys-remove
                    :fe (-> fe :db/id :id)
                    :a (-> a :db/id :id)} nil)
    :link/name "sys-remove"
-   :hypercrud/owner owner
+   ;:hypercrud/owner owner
    :request/type :blank
    :link/renderer (pr-str `(fn [result# colspec# anchors# param-ctx#]
                              [:p "Retract entity?"]))})

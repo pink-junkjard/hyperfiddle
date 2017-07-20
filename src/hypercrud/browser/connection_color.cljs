@@ -10,7 +10,7 @@
 (defn connection-color [conn-id & [l]]
   (let [n (if conn-id (- conn-id hc/*root-conn-id*))]
     (case n
-      nil "#ddd"
+      nil "#000"
       0 "#777"                                          ; root
       (js/Color (clj->js {:h (* 360 (mod (+ seed (* n golden-ratio)) 1))
                           :s 55 #_"Too bright hurts the eyes"
