@@ -19,14 +19,22 @@
       (return nil))))
 
 (defn build-anchor-route'
-  [anchor param-ctx]
-  (let [link (:anchor/link anchor)]
+  ([domain project link-dbid formula-str param-ctx]
     ;(assert project)                                         ; safe - maybe constructing it now
-    (mlet [query-params (safe-run-user-code-str' (:anchor/formula anchor) param-ctx)]
-      (return {:domain (-> link :hypercrud/owner :database/domain)
-               :project (-> link :hypercrud/owner :database/ident)
-               :link-dbid (-> link :db/id) #_:id
-               :query-params query-params}))))
+   (mlet [query-params (safe-run-user-code-str' formula-str param-ctx)]
+     (return {:domain domain
+              :project project
+              :link-dbid link-dbid #_:id
+              :query-params query-params})))
+  ([link formula-str param-ctx]
+   (build-anchor-route'
+     (-> link :hypercrud/owner :database/domain)
+     (-> link :hypercrud/owner :database/ident)
+     (-> link :db/id)
+     formula-str
+     param-ctx))
+  ([anchor param-ctx]
+   (build-anchor-route' (:anchor/link anchor) (:anchor/formula anchor) param-ctx)))
 
 (defn holes-filled? [hole-names query-params-map]
   (set/subset? (set hole-names) (set (keys (into {} (remove (comp nil? val) query-params-map))))))
