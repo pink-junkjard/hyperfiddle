@@ -48,15 +48,7 @@
           [:div.anchors
            (widget/render-anchors (->> anchors (remove :anchor/render-inline?)) param-ctx)
            (widget/render-anchors (->> anchors (filter :anchor/render-inline?)) param-ctx)]])
-       control
-       #_(case (:layout param-ctx)
-           :block
-           :inline-block nil)
-       #_(case (:layout param-ctx)
-           :block control
-           :inline-block
-           [tooltip/hover-tooltip-managed {:label (util/fallback empty? (get maybe-field :field/prompt) (-> param-ctx :attribute :attribute/ident str))}
-            control])])))
+       control])))
 
 (defn new-field [entity param-ctx]
   (let [attr-ident (r/atom nil)]
@@ -115,7 +107,7 @@
                                                    field (case (:display-mode param-ctx) :xray field :user (get param-ctx :field field) )
                                                    control (case (:display-mode param-ctx) :xray control :user (get param-ctx :control control))]
                                                ^{:key (str ident)}
-                                               [field [control maybe-field anchors param-ctx] maybe-field anchors param-ctx]))))
+                                               [field (control maybe-field anchors param-ctx) maybe-field anchors param-ctx]))))
                                 (widget/render-inline-anchors (filter :anchor/render-inline? entity-anchors) param-ctx)))
                             (widget/render-inline-anchors (filter :anchor/render-inline? entity-new-anchors) param-ctx))))))
         not-splat? (and (not (empty? colspec))
