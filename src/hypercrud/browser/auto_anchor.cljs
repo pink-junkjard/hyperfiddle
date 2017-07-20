@@ -5,11 +5,14 @@
 
 
 (defn auto-anchor [anchor]
-  (-> anchor
-      (update :anchor/tx-fn (fn [txfn-str]
-                              (if (empty? txfn-str) (auto-txfn anchor) txfn-str)))
-      (update :anchor/formula (fn [fxfn-str]
-                                (if (empty? fxfn-str) (auto-formula anchor) fxfn-str)))))
+  (let [auto-fn (fn [anchor attr auto-f]
+                  (let [v (get anchor attr)]
+                    (if (or (not v) (and (string? v) (empty? v)))
+                      (assoc anchor attr (auto-f anchor))
+                      anchor)))]
+    (-> anchor
+        (auto-fn :anchor/tx-fn auto-txfn)
+        (auto-fn :anchor/formula auto-formula))))
 
 (defn merge-anchors [sys-anchors link-anchors]
   (->> (reduce (fn [grouped-link-anchors sys-anchor]

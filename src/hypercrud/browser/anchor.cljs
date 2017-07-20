@@ -1,5 +1,5 @@
 (ns hypercrud.browser.anchor
-  (:require [cats.core :as cats :refer [mlet alet return]]
+  (:require [cats.core :refer [mlet return]]
             [cats.monad.exception :as exception :refer [try-on]]
             [clojure.set :as set]
             [hypercrud.browser.auto-anchor-formula :refer [auto-entity-dbid]]
@@ -12,28 +12,21 @@
             [promesa.core :as p]))
 
 
-(defn safe-run-user-code-str' [code-str param-ctx]
-  (if (empty? code-str)
-    (exception/success nil)
-    (mlet [user-fn (eval-str' code-str)] (try-on (user-fn param-ctx)))))
+(defn safe-run-user-code-str' [code-str & args]
+  (mlet [user-fn (eval-str' code-str)]
+    (if user-fn
+      (exception/try-on (apply user-fn args))
+      (return nil))))
 
 (defn build-anchor-route'
-  ([domain project link-dbid formula-str param-ctx]
+  [anchor param-ctx]
+  (let [link (:anchor/link anchor)]
     ;(assert project)                                         ; safe - maybe constructing it now
-   (mlet [query-params (safe-run-user-code-str' formula-str param-ctx)]
-     (return {:domain domain
-              :project project
-              :link-dbid link-dbid #_:id
-              :query-params query-params})))
-  ([link formula-str param-ctx]
-   (build-anchor-route'
-     (-> link :hypercrud/owner :database/domain)
-     (-> link :hypercrud/owner :database/ident)
-     (-> link :db/id)
-     formula-str
-     param-ctx))
-  ([anchor param-ctx]
-   (build-anchor-route' (:anchor/link anchor) (:anchor/formula anchor) param-ctx)))
+    (mlet [query-params (safe-run-user-code-str' (:anchor/formula anchor) param-ctx)]
+      (return {:domain (-> link :hypercrud/owner :database/domain)
+               :project (-> link :hypercrud/owner :database/ident)
+               :link-dbid (-> link :db/id) #_:id
+               :query-params query-params}))))
 
 (defn holes-filled? [hole-names query-params-map]
   (set/subset? (set hole-names) (set (keys (into {} (remove (comp nil? val) query-params-map))))))
@@ -45,7 +38,7 @@
                    q-util/safe-parse-query-validated
                    q-util/parse-param-holes
                    (holes-filled? (:query-params (exception/extract route' nil))))
-    :entity (not= nil (-> (exception/extract route' nil) :query-params :entity))     ; add logic for a
+    :entity (not= nil (-> (exception/extract route' nil) :query-params :entity)) ; add logic for a
     :blank true
     true))
 
@@ -83,7 +76,6 @@
 ; the route is a fn of the formulas and the formulas can have effects
 ; which have to be run only once.
 (defn build-anchor-props [anchor param-ctx]
-
   ; Draw as much as possible even in the presence of errors, still draw the link, collect all errors in a tooltip.
   ; Error states:
   ; - no route
@@ -92,46 +84,46 @@
   ; - broken user txfn
   ; - broken user visible fn
   ; If these fns are ommitted (nil), its not an error.
-  (let [maybe-txfn' (if-let [user-fn-str (:anchor/tx-fn anchor)] (eval-str' user-fn-str))
-        maybe-visible' (if-let [user-fn-str (:anchor/visible? anchor)]
-                         (if-not (empty? user-fn-str)
-                           (mlet [user-fn (eval-str' user-fn-str)] (try-on (user-fn param-ctx)))))
-        route' (if (:anchor/link anchor) (build-anchor-route' anchor param-ctx #_"links & routes have nothing to do with branches"))]
-    (let [anchor-props-route (if route' (build-anchor-props-raw route' (:anchor/link anchor) param-ctx))
+  (let [visible? (-> (safe-run-user-code-str' (:anchor/visible? anchor) param-ctx)
+                     (exception/extract nil)
+                     ((fn [v] (if (nil? v) true v))))
+        route' (if (:anchor/link anchor) (build-anchor-route' anchor param-ctx #_"links & routes have nothing to do with branches"))
+        anchor-props-route (if route' (build-anchor-props-raw route' (:anchor/link anchor) param-ctx))
 
-          param-ctx (anchor-branch-logic anchor param-ctx)
-          param-ctx (assoc param-ctx :link-owner (-> anchor :anchor/link :hypercrud/owner)) #_"txfn may need this"
 
-          anchor-props-txfn (if-let [user-txfn (and maybe-txfn' (exception/extract maybe-txfn' nil))] ; better also be managed!
-                              ; do we need to hydrate any dependencies in this chain?
-                              {:txfns {:stage (fn []
-                                                (p/promise (fn [resolve reject]
-                                                             (let [swap-fn (fn [get-tx-from-modal]
-                                                                             (let [result (let [result (user-txfn param-ctx get-tx-from-modal)]
-                                                                                            ; txfn may be sync or async
-                                                                                            (if-not (p/promise? result) (p/resolved result) result))]
-                                                                               ; let the caller of this :stage fn know the result
-                                                                               (p/branch result
-                                                                                         (fn [result] (resolve nil))
-                                                                                         (fn [why]
-                                                                                           (reject why)
-                                                                                           (js/console.error why)))
+        param-ctx (anchor-branch-logic anchor param-ctx)
+        param-ctx (assoc param-ctx :link-owner (-> anchor :anchor/link :hypercrud/owner)) #_"txfn may need this"
 
-                                                                               ; return the result to the action
-                                                                               result))]
-                                                               ((:dispatch! param-ctx) (actions/stage-popover (.-conn-id (:db param-ctx)) (.-branch (:db param-ctx)) swap-fn))))))
-                                       :cancel #((:dispatch! param-ctx) (actions/discard (.-conn-id (:db param-ctx)) (.-branch (:db param-ctx))))}})
+        anchor-props-txfn (if-let [user-txfn (some-> (:anchor/tx-fn anchor) eval-str' (exception/extract nil))]
+                            ; do we need to hydrate any dependencies in this chain?
+                            {:txfns {:stage (fn []
+                                              (p/promise (fn [resolve reject]
+                                                           (let [swap-fn (fn [get-tx-from-modal]
+                                                                           (let [result (let [result (user-txfn param-ctx get-tx-from-modal)]
+                                                                                          ; txfn may be sync or async
+                                                                                          (if-not (p/promise? result) (p/resolved result) result))]
+                                                                             ; let the caller of this :stage fn know the result
+                                                                             (p/branch result
+                                                                                       (fn [result] (resolve nil))
+                                                                                       (fn [why]
+                                                                                         (reject why)
+                                                                                         (js/console.error why)))
 
-          ; the whole point of popovers is managed branches
-          anchor-props-popover (if-let [route (and (:anchor/managed? anchor) (exception/extract route' nil))]
-                                 ; If no route, there's nothing to draw, and the anchor tooltip shows the error.
-                                 {:popover (fn []
-                                             [:div
-                                              (case (:display-mode param-ctx)
-                                                :xray [(:navigate-cmp param-ctx) anchor-props-route "self"]
-                                                nil)
-                                              [hypercrud.browser.core/safe-ui' ; cycle
-                                               route        ; draw the branch
-                                               (dissoc param-ctx :result :db :find-element :entity :attribute :value :layout)]])})
-          anchor-props-hidden {:hidden (not (if maybe-visible' (exception/extract maybe-visible' true) true))}]
-      (merge anchor-props-route anchor-props-txfn anchor-props-popover anchor-props-hidden))))
+                                                                             ; return the result to the action
+                                                                             result))]
+                                                             ((:dispatch! param-ctx) (actions/stage-popover (.-conn-id (:db param-ctx)) (.-branch (:db param-ctx)) swap-fn))))))
+                                     :cancel #((:dispatch! param-ctx) (actions/discard (.-conn-id (:db param-ctx)) (.-branch (:db param-ctx))))}})
+
+        ; the whole point of popovers is managed branches
+        anchor-props-popover (if-let [route (and (:anchor/managed? anchor) (exception/extract route' nil))]
+                               ; If no route, there's nothing to draw, and the anchor tooltip shows the error.
+                               {:popover (fn []
+                                           [:div
+                                            (case (:display-mode param-ctx)
+                                              :xray [(:navigate-cmp param-ctx) anchor-props-route "self"]
+                                              nil)
+                                            [hypercrud.browser.core/safe-ui' ; cycle
+                                             route          ; draw the branch
+                                             (dissoc param-ctx :result :db :find-element :entity :attribute :value :layout)]])})
+        anchor-props-hidden {:hidden (not visible?)}]
+    (merge anchor-props-route anchor-props-txfn anchor-props-popover anchor-props-hidden)))

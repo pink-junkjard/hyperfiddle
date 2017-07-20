@@ -34,7 +34,10 @@
       :else (exception/success value))))
 
 (defn eval-str' [code-str]
-  (-> code-str eval-str (exception-from-compiler-result code-str)))
+  ;if there is a string rep in the meta, the object itself is code
+  (if (:str (meta code-str))
+    (exception/success code-str)
+    (-> code-str eval-str (exception-from-compiler-result code-str))))
 
 (defn eval' [form]
   (-> form eval (exception-from-compiler-result form)))
