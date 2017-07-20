@@ -3,6 +3,7 @@
             [cljs.reader :as reader]
             [goog.Uri]
             [hypercrud.client.internal :as internal]
+            [hypercrud.util.core :as util]
             [kvlt.core :as kvlt]
             [kvlt.middleware.params]
             [promesa.core :as p]))
@@ -46,16 +47,22 @@
       (p/then #(-> % :body :hypercrud))))
 
 (defn transact! [entry-uri htx-groups]
-  (-> (kvlt/request!
-        {:url (resolve-relative-uri entry-uri (goog.Uri. "transact"))
-         :content-type content-type-edn
-         :accept content-type-edn
-         :method :post
-         :form htx-groups
-         :as :auto})
-      (p/then (fn [resp]
-                (if (:success resp)
-                  ; clear master stage
-                  ; but that has to be transactional with a redirect???
-                  (p/resolved (-> resp :body :hypercrud))
-                  (p/rejected resp))))))
+  (let [htx-groups (util/map-values (fn [branch-tx]
+                                      (->> (get branch-tx nil)
+                                           (filter (fn [[op e a v]]
+                                                     (not (and (or (= :db/add op) (= :db/retract op))
+                                                               (nil? v)))))))
+                                    htx-groups)]
+    (-> (kvlt/request!
+          {:url (resolve-relative-uri entry-uri (goog.Uri. "transact"))
+           :content-type content-type-edn
+           :accept content-type-edn
+           :method :post
+           :form htx-groups
+           :as :auto})
+        (p/then (fn [resp]
+                  (if (:success resp)
+                    ; clear master stage
+                    ; but that has to be transactional with a redirect???
+                    (p/resolved (-> resp :body :hypercrud))
+                    (p/rejected resp)))))))
