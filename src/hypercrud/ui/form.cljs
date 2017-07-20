@@ -1,6 +1,9 @@
 (ns hypercrud.ui.form
-  (:require [hypercrud.browser.anchor :as anchor]
+  (:require [cats.core :as cats :refer [mlet]]
+            [cats.monad.exception :as exception :refer [try-on]]
+            [hypercrud.browser.anchor :as anchor]
             [hypercrud.browser.connection-color :as connection-color]
+            [hypercrud.compile.eval :refer [eval-str']]
             [hypercrud.runtime.state.actions :as actions]   ; todo bad dep
             [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.form-util :as form-util]
@@ -16,27 +19,41 @@
         control (let [props (form-util/build-props maybe-field anchors param-ctx)]
                   (if (renderer/user-renderer param-ctx)
                     (renderer/user-render maybe-field anchors props param-ctx)
-                    [auto-control maybe-field anchors props param-ctx]))]
+                    [auto-control maybe-field anchors props param-ctx]))
 
-    [:div.field {:style {:border-color (connection-color/connection-color (:color param-ctx))}}
-     (let [param-ctx (dissoc param-ctx :entity :value)
-           [anchors] (-> (remove :anchor/repeating? anchors)
-                         #_(filter #(= (-> fe :db/id) (-> % :anchor/find-element :db/id))) #_"entity"
-                         (widget/process-option-popover-anchors param-ctx))]
-       [:div.hc-label
-        [:label (form-util/field-label maybe-field param-ctx)]
-        [:div.anchors
-         (widget/render-anchors (->> anchors (remove :anchor/render-inline?)) param-ctx)
-         (widget/render-anchors (->> anchors (filter :anchor/render-inline?)) param-ctx)]])
-     control
-     #_(case (:layout param-ctx)
-         :block
-         :inline-block nil)
-     #_(case (:layout param-ctx)
-         :block control
-         :inline-block
-         [tooltip/hover-tooltip-managed {:label (util/fallback empty? (get maybe-field :field/prompt) (-> param-ctx :attribute :attribute/ident str))}
-          control])]))
+        ; Check visibility user fn. Error states: eval error, apply error.
+        maybe-visible' (if-let [user-fn-str (:field/visible? maybe-field)]
+                         (if-not (empty? user-fn-str)
+                           (mlet [user-fn (eval-str' user-fn-str)]
+                             ; predicate gets whole entity as arg 1, for keyword syntax sugar
+                             (try-on (user-fn (:entity param-ctx) param-ctx)))))
+        hidden (not (if maybe-visible' (exception/extract maybe-visible' true) true))
+
+        ; Draw error instead of field.
+        control (if (exception/failure? maybe-visible')
+                  [:pre (js/pprint-str (.-e maybe-visible'))]
+                  control)]
+
+    (if-not hidden
+      [:div.field {:style {:border-color (connection-color/connection-color (:color param-ctx))}}
+       (let [param-ctx (dissoc param-ctx :entity :value)
+             [anchors] (-> (remove :anchor/repeating? anchors)
+                           #_(filter #(= (-> fe :db/id) (-> % :anchor/find-element :db/id))) #_"entity"
+                           (widget/process-option-popover-anchors param-ctx))]
+         [:div.hc-label
+          [:label (form-util/field-label maybe-field param-ctx)]
+          [:div.anchors
+           (widget/render-anchors (->> anchors (remove :anchor/render-inline?)) param-ctx)
+           (widget/render-anchors (->> anchors (filter :anchor/render-inline?)) param-ctx)]])
+       control
+       #_(case (:layout param-ctx)
+           :block
+           :inline-block nil)
+       #_(case (:layout param-ctx)
+           :block control
+           :inline-block
+           [tooltip/hover-tooltip-managed {:label (util/fallback empty? (get maybe-field :field/prompt) (-> param-ctx :attribute :attribute/ident str))}
+            control])])))
 
 (defn new-field [entity param-ctx]
   (let [attr-ident (r/atom nil)]
@@ -86,7 +103,6 @@
                               (concat
                                 (widget/render-anchors (remove :anchor/render-inline? entity-anchors) param-ctx)
                                 (->> colspec
-                                     ; Don't filter hidden links; because they could be broken or invalid and need to draw error.
                                      (mapv (fn [[db fe attr maybe-field]]
                                              (let [ident (-> attr :attribute/ident)
                                                    param-ctx (as-> param-ctx $

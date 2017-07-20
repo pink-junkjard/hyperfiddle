@@ -1,5 +1,6 @@
 (ns hypercrud.browser.anchor
   (:require [cats.core :as cats :refer [mlet alet return]]
+            [cats.monad.exception :as exception :refer [try-on]]
             [clojure.set :as set]
             [hypercrud.browser.auto-anchor-formula :refer [auto-entity-dbid]]
             [hypercrud.browser.connection-color :as connection-color]
@@ -8,15 +9,13 @@
             [hypercrud.form.q-util :as q-util]
             [hypercrud.runtime.state.actions :as actions]   ; todo bad dep
             [hypercrud.util.branch :as branch]
-            [promesa.core :as p]
-            [cats.monad.exception :as exception]))
+            [promesa.core :as p]))
 
 
 (defn safe-run-user-code-str' [code-str param-ctx]
   (if (empty? code-str)
     (exception/success nil)
-    (mlet [user-fn (eval-str' code-str)]
-      (exception/try-on (user-fn param-ctx)))))
+    (mlet [user-fn (eval-str' code-str)] (try-on (user-fn param-ctx)))))
 
 (defn build-anchor-route'
   ([domain project link-dbid formula-str param-ctx]
@@ -96,8 +95,7 @@
   (let [maybe-txfn' (if-let [user-fn-str (:anchor/tx-fn anchor)] (eval-str' user-fn-str))
         maybe-visible' (if-let [user-fn-str (:anchor/visible? anchor)]
                          (if-not (empty? user-fn-str)
-                           (mlet [user-fn (eval-str' user-fn-str)]
-                             (exception/try-on (user-fn param-ctx)))))
+                           (mlet [user-fn (eval-str' user-fn-str)] (try-on (user-fn param-ctx)))))
         route' (if (:anchor/link anchor) (build-anchor-route' anchor param-ctx #_"links & routes have nothing to do with branches"))]
     (let [anchor-props-route (if route' (build-anchor-props-raw route' (:anchor/link anchor) param-ctx))
 
