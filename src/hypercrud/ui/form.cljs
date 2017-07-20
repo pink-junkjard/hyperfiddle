@@ -127,7 +127,7 @@
                                                              :user-with! (fn [tx] ((:dispatch! param-ctx) (actions/with (.-conn-id db) (.-branch db) tx))))]
                               ^{:key (hash (keys entity))} [new-field entity param-ctx])))]
 
-    [:div {:class (str "browser forms-list " (name (:layout param-ctx)))}
+    [:div {:class (str "forms-list " (name (:layout param-ctx)))}
      (concat fields [magic-new-field])])
   ; Can't differentiate between index links and entity links on link-entity right now.
   #_(widget/render-inline-anchors (->> anchors

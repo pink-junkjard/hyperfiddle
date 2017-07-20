@@ -154,7 +154,7 @@
   (let [sort-col (r/atom nil)]
     (fn [relations colspec anchors param-ctx]
       (let [anchors (widget/process-popover-anchors anchors param-ctx)]
-        [:div.browser.ui-table-with-links
+        [:div.ui-table-with-links
          (widget/render-anchors (->> anchors
                                      (remove :anchor/attribute)
                                      (remove :anchor/find-element)
