@@ -4,7 +4,7 @@
 
 Hypercrud is a Clojure and ClojureScript system for building database apps.
 
-![](http://i.imgur.com/Htk6B1g.gif)
+![](http://i.imgur.com/Bd5QKoQ.gif)
 
 ### Motivation
 
