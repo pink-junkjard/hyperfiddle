@@ -86,9 +86,9 @@
                                                   :anchor/managed? true
                                                   :anchor/render-inline? true
                                                   :anchor/tx-fn (str-and-code
-                                                                  (fn [ctx# get-tx-from-modal#]
-                                                                    {:tx (concat (get-tx-from-modal#)
-                                                                                 [[:db.fn/retractEntity (-> ctx# :entity :db/id)]])}))}]
+                                                                  (fn [ctx tx-from-modal]
+                                                                    {:tx (concat tx-from-modal
+                                                                                 [[:db.fn/retractEntity (-> ctx :entity :db/id)]])}))}]
                                       (case (:request/type parent-link)
                                         :entity [remove]
 
@@ -132,14 +132,14 @@
                                           :anchor/render-inline? true
                                           :anchor/tx-fn (if (= :db.cardinality/one (-> attr :attribute/cardinality :db/ident))
                                                           (str-and-code
-                                                            (fn [ctx# get-tx-from-modal#]
-                                                              {:tx (concat (get-tx-from-modal#)
-                                                                           [[:db.fn/retractEntity (-> ctx# :value :db/id)]])}))
+                                                            (fn [ctx tx-from-modal]
+                                                              {:tx (concat tx-from-modal
+                                                                           [[:db.fn/retractEntity (-> ctx :value :db/id)]])}))
                                                           (str-and-code
-                                                            (fn [ctx# get-tx-from-modal#]
-                                                              {:tx (concat (get-tx-from-modal#)
-                                                                           (->> (:value ctx#)
-                                                                                (mapv (fn [e#] [:db.fn/retractEntity (:db/id e#)]))))})))}]))))
+                                                            (fn [ctx tx-from-modal]
+                                                              {:tx (concat tx-from-modal
+                                                                           (->> (:value ctx)
+                                                                                (mapv (fn [e] [:db.fn/retractEntity (:db/id e)]))))})))}]))))
                           doall))]
     (concat entity-links attr-links)))
 

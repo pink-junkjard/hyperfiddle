@@ -106,8 +106,8 @@
                             ; do we need to hydrate any dependencies in this chain?
                             {:txfns {:stage (fn []
                                               (p/promise (fn [resolve reject]
-                                                           (let [swap-fn (fn [get-tx-from-modal]
-                                                                           (let [result (let [result (user-txfn param-ctx get-tx-from-modal)]
+                                                           (let [swap-fn (fn [tx-from-modal]
+                                                                           (let [result (let [result (user-txfn param-ctx tx-from-modal)]
                                                                                           ; txfn may be sync or async
                                                                                           (if-not (p/promise? result) (p/resolved result) result))]
                                                                              ; let the caller of this :stage fn know the result

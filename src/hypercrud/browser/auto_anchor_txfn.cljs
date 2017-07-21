@@ -11,10 +11,10 @@
     (cond
       (and m fe a)                                          ; attr create
       (str-and-code
-        (fn [ctx get-tx-from-modal]
+        (fn [ctx tx-from-modal]
           (let [new-dbid (hypercrud.browser.auto-anchor-formula/auto-entity-dbid ctx)]
             {:tx (concat
-                   (get-tx-from-modal)
+                   tx-from-modal
                    (hypercrud.client.tx/edit-entity
                      (-> ctx :entity :db/id)
                      (-> ctx :attribute :attribute/ident)
@@ -23,13 +23,13 @@
 
       (and m fe (not a))
       (str-and-code
-        (fn [ctx get-tx-from-modal]
+        (fn [ctx tx-from-modal]
           (let [branch (hypercrud.browser.auto-anchor-formula/auto-entity-dbid ctx)
                 id' (-> (js/Date.now) - str)
                 ; alter the dbid before transacting so it can be reused.
                 ; This has to happen at a side-effect point and will cause a hydrate
                 ; so we do it when we already have to hydrate.
-                tx-from-modal' (->> (get-tx-from-modal)
+                tx-from-modal' (->> tx-from-modal
                                     (mapv (fn [[op dbid a v]]
                                             (if (= (:id dbid) branch)
                                               [op (hypercrud.types.DbId/->DbId id' (:conn-id dbid)) a v]
