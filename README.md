@@ -8,13 +8,17 @@ Hypercrud is a Clojure and ClojureScript system for building database apps.
 
 Most CRUD apps are 90% the same boilerplate. The things we need backend code for - security, performance, async, and failure handling - are all accidental complexity, unrelated to the application's actual purpose. This boilerplate manifests itself in the [backend-for-frontend pattern](http://samnewman.io/patterns/architectural/bff/) (anti-pattern), whereby each backend is hand-optimized to the performance constraints of the frontend it services, for example hand-optimized database queries to avoid database roundtrips, caching vs consistency tradeoffs.
 
+> "REST does a shitty job of efficiently expressing relational data. I mean REST has its place. For example, it has very predictable performance and well-known cache characteristics. The problem is when you want to fetch data in repeated rounds, or when you want to fetch data that isn't expressed well as a hierarchy (think a graph with cycles -- not uncommon). That's where it breaks down. I think you can get pretty far with batched REST, but I'd like to see some way to query graphs in an easier way." - Pete Hunt, Facebook, 2014 April
+
 ![](https://i.imgur.com/mq6KaTv.png)
 
 **If we had a general purpuse data server, we would not see this O(n) growth in boilerplate, but alas!** The failure to generalize is a manifestation of the object/relational impedance mismatch and is inherent to the relational model. Attempts to solve the mismatch, generally with Object/Relational Mappers (ORM), have lead to never ending flame wars and statements like "ORMs are the Vietnam of Computer Science", and [MongoDB](https://www.google.com/search?q=mongodb+site:reddit.com/r/programming).
 
+> When we build sophisticated interfaces today, there’s an explosion of asynchronous code. All throughout your frontend code, you’re using promises, or core.async, or Rx. All these abstractions that are meant to make async things easier to work with. But the problem is that it had to be async in the first place. Why does this need to be asynchronous? Anywhere we do I/O, we need to consider the performance consideration. So our entire frontend application, every single line of code in it nearly, has to consider the performance cost of doing something, of fetching the data. And it’s the same on the backend. Our queries have latency, we have to optimize them by hand. We write complicated sql joins to avoid I/O. We manually parallelize. Correct error handling is hard and we always get it wrong. Our async abstractions have ways to propagate the error through our asynchronous pipeline, and like, that’s okay, but what if we could make it not fail in the first place? What if we could make failure impossible? – Dustin Getz, LambdaConf, 2016 May
+
 ### Key insight
 
-Our thesis is that by leveraging full-stack immutability from database to frontend, we can build a fully-general solution that is correct, consistent and yet also maximally performant.
+Our thesis is that by leveraging full-stack immutability from database to frontend, we can sequester I/O to the fringes of the system, using immutability as a foundation to build a fully-general solution that is correct, consistent and yet also maximally performant.
 
 The key is Datomic, the immutable database. Datomic does not have an object/relational impedance mismatch, and thus can be used as the keystone component of a fully general data server. If you'd like to understand this claim, you might start with the [Datomic documentation](http://docs.datomic.com/getting-started/brief-overview.html). Henceforth in this document, I take this claim for granted, and will defend it in a separate blog post which isn't yet published.
 
@@ -23,6 +27,9 @@ The key is Datomic, the immutable database. Datomic does not have an object/rela
 So now we have a single backend server which can service many frontends, with different data needs, without sacrificing consistency or performance. What does it mean?
 
 Performance concerns no longer dictate that we run our application code on the server. Security is the only remaining application code that needs to run trusted. Datomic includes a way to run a small security kernel inside the database. Read security is enforced inside the query process, and write security inside the transactor process.
+
+![](https://i.imgur.com/5YZervK.png)
+[Nikita Prokopov, The Web After Tomorrow, 2015 June](http://tonsky.me/blog/the-web-after-tomorrow/)
 
 All our business rules, our queries and forms and transactions, all things typically done in a backend, now can be pushed into the client (often a web browser).
 
@@ -122,11 +129,11 @@ You might imagine the code to interpret an app-value to produce a view and a req
 (def app-value { ... })
 
 (defn view [state peer dispatch!]
-  [browser/safe-ui app-value (:route state) {:display-mode :xray :dispatch! dispatch!}])
+  [browser/safe-ui app-value (:route state) {:dispatch! dispatch!}])
 
 (defn request [state peer]
   ; code your own data dependencies, or let the browser figure it out from an app-value
-  (browser/request app-value (:route state) {:display-mode :xray}))
+  (browser/request app-value (:route state)))
 ```
 
 Pages compose by composing their data dependencies therein (like an iframe). The page abstraction is sufficient to implement composite widgets like select options, which are themselves a page with a query and form.
