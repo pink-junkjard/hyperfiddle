@@ -38,17 +38,17 @@ All decision making is driven by the client. The client programming experience i
 
 ### Hypercrud Browser
 
-Hypercrud Browser navigates app-values like a web browser navigates HTML. **The things we generally have to write code for - security, performance, async, and failure handling - are all accidental complexity.** When you take that away, we're left with the very simple essence of an application's true business domain. For this, a simple DSL will do, the simpler the better. We're left with the essense of an application, as a value. App-values define Pages, each Page declares his data dependencies, and Links to other Pages. App-values are called "hyperfiddles."
+Hypercrud Browser navigates app-values like a web browser navigates HTML. **The things we generally have to write code for - security, performance, async, and failure handling - are all accidental complexity.** When you take that away, we're left with the very simple essence of an application's true business domain. For this, a simple DSL will do, the simpler the better. We're left with the essense of an application, as a value. App-values define Pages, each Page declares his data dependencies, and Links to other Pages.
 
-Final hyperfiddle in a web browser, with custom renderers disabled:
+Interpreted app-value in a web browser, with custom renderers disabled:
 
 ![](http://i.imgur.com/f1ngGLt.png)
 
-The hyperfiddle with the renderers:
+Same app-value but as the end user sees it, respecting renderers:
 
 ![](http://i.imgur.com/4WlmuW8.png)
 
-The hyperfiddle's app-value:
+Here's the raw app-value:
 
 ```edn
 {:page/name "Sample Blog",
@@ -84,7 +84,7 @@ The hyperfiddle's app-value:
  :page/renderer "(fn [relations colspec anchors param-ctx] ... )"}
 ```
 
-You might imagine the code to interpret a hyperfiddle app-value and produce a view and a request. This code is called Hypercrud Browser and provided as a library:
+You might imagine the code to interpret an app-value to produce a view and a request. This code is called Hypercrud Browser and provided as a library:
 
 ```clojure
 (def app-value { ... })
@@ -101,10 +101,10 @@ Pages compose by composing their data dependencies therein (like an iframe), and
 
 ![](http://i.imgur.com/4mKpHhw.png)
 
-App values are graph shaped and can grow to be quite large. It is natural to want to store app-values in a database, and create tooling to build these up visually and interactively, which leads us to:
+App-values are graph-shaped and grow to be quite large. It is natural to want to store app-values in a database, and create tooling to build these up visually and interactively, which leads us to:
 
 ### Hyperfiddle.net
 
-[hyperfiddle.net](http://hyperfiddle.net/) is a WYSIWYG editor for building Hypercrud app-values. It is also a better Datomic Console - an interactive query builder, entity explorer and can be attached to an arbitrary Datomic database without changing it. It heavily leans on d/with as a transaction staging area, including a notion of branching and discard.
+[hyperfiddle.net](http://hyperfiddle.net/) is a WYSIWYG editor for building Hyperfiddle app-values ("hyperfiddles"). It is also a better Datomic Console - an interactive query builder, entity explorer and can be attached to an arbitrary Datomic database without changing it. It heavily leans on d/with as a transaction staging area, including a notion of branching and discard.
 
 ![](http://i.imgur.com/v3cmewv.png)
