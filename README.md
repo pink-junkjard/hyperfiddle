@@ -129,9 +129,11 @@ You might imagine the code to interpret an app-value to produce a view and a req
   (browser/request app-value (:route state) {:display-mode :xray}))
 ```
 
-Pages compose by composing their data dependencies therein (like an iframe). The page abstraction is sufficient to implement composite widgets like select options, which are themselves a page with a query and form. You can further compose things like a complicated grid, a master-detail picker.
+Pages compose by composing their data dependencies therein (like an iframe). The page abstraction is sufficient to implement composite widgets like select options, which are themselves a page with a query and form.
 
-Pages with links between are thus a scalable model for building UIs. Hypercrud Browser is HATEOAS.
+If you stop and think, this is a lot how a web browser works. Web browsers are a general HTML client which navigates a graph by following links between pages; this is the design objective of REST, what HATEOAS means, and is called a fully general hypermedia client. **Hyperfiddle browses CRUD apps like web browsers browse HTML.** This core browser technology is implemented as an open-source library called Hypercrud Browser. It is a fully general hypermedia client, it solves the failure of REST, and is what makes Hyperfiddle possible. Hypercrud Browser is HATEOAS.
+
+Thus, we claim that "app-as-a-value" is the scalable model we need to build tomorrow's most sophisticated UIs.
 
 ![](http://i.imgur.com/4mKpHhw.png)
 
@@ -155,6 +157,6 @@ App-values are graph-shaped and grow to be quite large. It is natural to want to
 
 ![](https://i.imgur.com/VluIFyM.png)
 
-**Hyperfiddle in Hyperfiddle** Here you can see we built the gray dev-mode widget in Hyperfiddle. We can make live changes to it.
+**Hyperfiddle in Hyperfiddle** Here you can see we built the gray dev-mode widget in Hyperfiddle. We can make live changes to it. All of Hyperfiddle's UI is built in Hyperfiddle, though it is all rather meta so I won't go into it here.
 
 ![](http://i.imgur.com/5VPb8iA.gif)
