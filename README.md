@@ -26,13 +26,14 @@ Hypercrud is a Clojure and ClojureScript system for building sophisticated CRUD 
   [request-blog])
 ```
 
+![](http://i.imgur.com/zwoGq2I.png)
+
 A general client, plus sequestering of I/O to a runtime, lets us push all "service" code, like your database queries, into the client. The client programming experience is that of composing functions and values, which makes it a straightforward exercise to model the app as an EDN value.
 
-**Hypercrud Browser navigates app-values like a web browser navigates HTML.** **All the things we generally have to write code for - security, performance, async, and error handling - are solved generally, the core business of an application is now simple enough to model as a value.** App-values define Pages, each Page declares his data dependencies, and Links to other Pages. Pages compose by composing their data dependencies therein (like an iframe), and are thus a scalable model for building UIs. Hypercrud Browser is HATEOAS.
+**Hypercrud Browser navigates app-values like a web browser navigates HTML.** **All the things we generally have to write code for - security, performance, async, and error handling - are solved generally, the core business of an application is now simple enough to model as a value.** App-values define Pages, each Page declares his data dependencies, and Links to other Pages.
 
-![](http://i.imgur.com/4mKpHhw.png)
-
-![](http://i.imgur.com/lhGmOqX.png)
+![](http://i.imgur.com/f1ngGLt.png)  
+![](http://i.imgur.com/4WlmuW8.png)
 
 ```clojure
 (def app-value { ... })
@@ -45,8 +46,14 @@ A general client, plus sequestering of I/O to a runtime, lets us push all "servi
   (browser/request app-value (:route state) {:display-mode :xray}))
 ```
 
+Pages compose by composing their data dependencies therein (like an iframe), and are thus a scalable model for building UIs. Hypercrud Browser is HATEOAS.
+
+![](http://i.imgur.com/4mKpHhw.png)
+
 It is natural to want to store app-values in a database, which leads us to:
 
 # Hyperfiddle
 
 [Hyperfiddle](http://hyperfiddle.net/) is a WYSIWYG editor for building Hypercrud app-values. It is also a better Datomic Console - an interactive query builder, entity explorer and can be attached to an arbitrary Datomic database without changing it. It heavily leans on d/with as a transaction staging area, including a notion of branching and discard.
+
+![](http://i.imgur.com/v3cmewv.png)
