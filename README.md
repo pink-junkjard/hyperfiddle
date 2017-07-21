@@ -2,38 +2,88 @@
 
 > navigate EDN app-values like a web browser navigates HTML
 
-Hypercrud is a Clojure and ClojureScript system for building sophisticated CRUD apps. The key is Datomic: by leveraging immutability from database to frontend, we can build a fully general data server which is correct, consistent yet also performant. A general purpose data server permits us to escape the backend-for-frontend pattern, such that we can service N different frontends all with from the same backend. The only trusted backend code is a tiny security kernel; the rest of the code need not be trusted, and thus "service" code need no longer be trusted and can be moved to the client.
+Hypercrud is a Clojure and ClojureScript system for building sophisticated CRUD apps. The key is Datomic: by leveraging immutability from database to frontend, we can build a fully general data server which is correct, consistent yet also performant. A general purpose data server permits us to escape the backend-for-frontend pattern, such that we can service N different frontends all with from the same backend. The only trusted backend code is a tiny security kernel; the rest of the code need not be trusted, and thus **"service" code and business rules, like database queries, need no longer be trusted and can be moved to the client.**
 
-**Hypercrud Client is an I/O runtime for  efficient client-server data sync** with Hypercrud Server. Inspired by Om Next, the userland interface is two functions: a request function to specify data dependencies, and a view function (React.js expression). The runtime will fetch the data dependencies as specified by the request function, and then pass that value to the view. By sequestering I/O to the fringe of the system, we are left with a composable programming model of pure functions against local data. Userland code experiences no async, no failures, no latency. This permits "service" business logic to be a pure function that runs in the client, and since the client drives all decision making, it is fully general, like a browser.
+### Hypercrud Client, Hypercrud Server
+
+Hypercrud Client is an I/O runtime for  efficient client-server data sync with Hypercrud Server. Inspired by Om Next, the userland interface is two functions: a request function to specify data dependencies, and a view function (React.js expression). The runtime will fetch the data dependencies as specified by the request function, and then pass that value to the view. By sequestering I/O to the fringe of the system, we are left with a composable programming model of pure functions against local data. **Userland code experiences no async, no failures, no latency.**
 
 ```clojure
 (def request-blog
-  (->QueryRequest '[:find ?e :where [?e :post/title]]
+  (->QueryRequest '[:find ?post :where [?post :post/title]]
                   {"$" #DbVal[:samples-blog]}
-                  {"?e" [#DbVal[:samples-blog] ['*]]}))
-
-(defn view [state peer dispatch!]
-  (-> (mlet [result (hc/hydrate peer request-blog)]
-        [:ul
-         (->> result ; [{"?e" {:db/id #DbId[17592186045429 17592186045786], :post/title "Fourth blog post"}} ...]
-              (map (fn [relation]
-                     (let [post (get relation "?e")]
-                       [:li {:key (:db/id post)}
-                        (:post/title post)]))))])
-      (exception/extract [:h1 "Loading..."])))
+                  {"?post" [#DbVal[:samples-blog] ['*]]}))
 
 (defn request [state peer]
   [request-blog])
+
+(defn view [state peer dispatch!]
+  (-> (let [result @(hc/hydrate peer request-blog)]     ; synchronous
+        ; result looks like
+        ; [{"?post" {:db/id #DbId[17592186045419 17592186045786], :post/title "First blog post"}}
+        ;  {"?post" {:db/id #DbId[17592186045420 17592186045786], :post/title "Second blog post"}} ... ]
+        [:ul
+         (->> result
+              (map (fn [relation]
+                     (let [post (get relation "?post")]
+                       [:li {:key (:db/id post)}
+                        (:post/title post)]))))])))
 ```
+
+The runtime will manage the lifecycle of these functions and render your application:
 
 ![](http://i.imgur.com/zwoGq2I.png)
 
-A general client, plus sequestering of I/O to a runtime, lets us push all "service" code, like your database queries, into the client. The client programming experience is that of composing functions and values, which makes it a straightforward exercise to model the app as an EDN value.
+All decision making is driven by the client. The client programming experience is that of composing functions and values, which makes it a straightforward exercise to model the app as an EDN value to be interpreted by the client.
 
-**Hypercrud Browser navigates app-values like a web browser navigates HTML.** **All the things we generally have to write code for - security, performance, async, and error handling - are solved generally, the core business of an application is now simple enough to model as a value.** App-values define Pages, each Page declares his data dependencies, and Links to other Pages.
+### Hypercrud Browser
 
-![](http://i.imgur.com/f1ngGLt.png)  
+Hypercrud Browser navigates app-values like a web browser navigates HTML. **When the things we generally have to write code for - security, performance, async, and failure handling - are handled generically, the essential complexity of the application is now simple enough to model as a value.** That's all accidental complexity. When you take that away, we're left with the very simple essence of an application's true business domain. For this, a simple DSL will do, the simpler the better.
+
+App-values define Pages, each Page declares his data dependencies, and Links to other Pages.
+
+Here is how it looks:
+
+![](http://i.imgur.com/f1ngGLt.png)
 ![](http://i.imgur.com/4WlmuW8.png)
+
+This is the app-value which defines the above application:
+
+```edn
+{:page/name "Sample Blog",
+ :page/query "[:find ?post :in $ :where [?post :post/title]]",
+ :page/dbs [{:dbhole/name "$", :dbhole/value {:database/ident "samples-blog",}}],
+ :page/find-elements [{:find-element/name "?post",
+                       :find-element/connection {:database/ident "samples-blog"}
+                       :find-element/form {:form/name "samples-blog - post",
+                                           :form/field [{:field/prompt "title",
+                                                         :field/attribute {:attribute/ident :post/title,
+                                                                           :attribute/valueType #:db{:ident :db.type/string},
+                                                                           :attribute/cardinality #:db{:ident :db.cardinality/one}}}
+                                                        {:field/prompt "date",
+                                                         :field/attribute {:attribute/ident :post/date,
+                                                                           :attribute/valueType #:db{:ident :db.type/instant},
+                                                                           :attribute/cardinality #:db{:ident :db.cardinality/one}}}
+                                                        {:field/prompt "content",
+                                                         :field/attribute {:attribute/ident :post/content,
+                                                                           :attribute/valueType #:db{:ident :db.type/string},
+                                                                           :attribute/cardinality #:db{:ident :db.cardinality/one}}}]}}]
+
+ :page/links [{:link/prompt "view",
+               :link/link {:db/id #DbId[17592186045791 17592186045422], :page/name "view post"},
+               :link/repeating? true,
+               :link/find-element {:find-element/name "?post", :find-element/connection #:db{:id #DbId[17592186045786 17592186045422]}},
+               :link/ident :sys-edit-?post}
+              {:link/prompt "new",
+               :link/ident :sys-new-?post,
+               :link/repeating? false,
+               :link/find-element {:find-element/name "?post", :find-element/connection #:db{:id #DbId[17592186045786 17592186045422]}},
+               :link/render-inline? true,
+               :link/page {:db/id #DbId[17592186045791 17592186045422], :page/name "view post"}}]
+ :page/renderer "(fn [relations colspec anchors param-ctx] ... )"}
+```
+
+The code which interprets the app-value into a request and a view is called Hypercrud Browser and provided as a library:
 
 ```clojure
 (def app-value { ... })
@@ -50,9 +100,9 @@ Pages compose by composing their data dependencies therein (like an iframe), and
 
 ![](http://i.imgur.com/4mKpHhw.png)
 
-It is natural to want to store app-values in a database, which leads us to:
+App values are graph shaped and can grow to be quite large. It is natural to want to store app-values in a database, and create tooling to build these up visually and interactively, which leads us to:
 
-# Hyperfiddle
+### Hyperfiddle
 
 [Hyperfiddle](http://hyperfiddle.net/) is a WYSIWYG editor for building Hypercrud app-values. It is also a better Datomic Console - an interactive query builder, entity explorer and can be attached to an arbitrary Datomic database without changing it. It heavily leans on d/with as a transaction staging area, including a notion of branching and discard.
 
