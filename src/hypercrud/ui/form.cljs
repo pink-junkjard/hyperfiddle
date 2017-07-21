@@ -122,11 +122,14 @@
                               ^{:key (hash (keys entity))} [new-field entity param-ctx])))]
 
     [:div {:class (str "forms-list " (name (:layout param-ctx)))}
-     (concat fields [magic-new-field])])
-  ; Can't differentiate between index links and entity links on link-entity right now.
-  #_(widget/render-inline-anchors (->> anchors
-                                       (remove :anchor/repeating?)
-                                       (remove :anchor/attribute)
-                                       (filter :anchor/render-inline?))
-                                  (dissoc param-ctx :isComponent))
-  )
+     (widget/render-anchors (->> anchors
+                                 (remove :anchor/repeating?)
+                                 (remove :anchor/attribute)
+                                 (remove :anchor/render-inline?))
+                            (dissoc param-ctx :isComponent))
+     (concat fields [magic-new-field])
+     (widget/render-inline-anchors (->> anchors
+                                        (remove :anchor/repeating?)
+                                        (remove :anchor/attribute)
+                                        (filter :anchor/render-inline?))
+                                   (dissoc param-ctx :isComponent))]))
