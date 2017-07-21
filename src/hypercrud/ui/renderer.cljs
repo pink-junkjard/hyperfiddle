@@ -20,6 +20,7 @@
      (if error
        [:div.value [:pre (pr-str error)]]
        (let [anchor-lookup (->> anchors
+                                (filter :anchor/ident)      ; cannot lookup nil idents
                                 (mapv (juxt #(-> % :anchor/ident) identity))
                                 (into {}))
              param-ctx (assoc param-ctx                     ; Todo unify link-fn with widget interface or something

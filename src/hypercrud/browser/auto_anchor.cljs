@@ -22,7 +22,7 @@
                            (if maybe-link-anchors
                              (map (partial merge sys-anchor) maybe-link-anchors)
                              [sys-anchor]))))
-               (group-by :anchor/ident link-anchors)
+               (group-by #(or (:anchor/ident %) (:db/id %)) link-anchors)
                sys-anchors)
        vals
        flatten

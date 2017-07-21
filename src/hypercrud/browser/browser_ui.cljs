@@ -83,6 +83,7 @@
   (let [user-fn (first (remove nil? [(:user-renderer param-ctx) (link-user-fn link) auto-control/result]))]
     (fn [result colspec anchors param-ctx]
       (let [anchor-index (->> anchors
+                              (filter :anchor/ident)        ; cannot lookup nil idents
                               (mapv (juxt #(-> % :anchor/ident) identity)) ; [ repeating entity attr ident ]
                               (into {}))
             browse (fn [ident param-ctx f & args]
