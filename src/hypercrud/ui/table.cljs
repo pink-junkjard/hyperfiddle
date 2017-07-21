@@ -75,7 +75,7 @@
                                         :on-click on-click}
                                    [:label (form-util/field-label field param-ctx)]
                                    [:div.anchors (widget/render-anchors (->> anchors (remove :anchor/render-inline?)) param-ctx)]
-                                   (widget/render-inline-anchors field (->> anchors (filter :anchor/render-inline?)) param-ctx)
+                                   (widget/render-inline-anchors (->> anchors (filter :anchor/render-inline?)) param-ctx)
                                    [:span.sort-arrow arrow]])))))))))
 
 (defn table-row-form [relation colspec anchors param-ctx]

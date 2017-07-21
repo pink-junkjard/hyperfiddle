@@ -14,7 +14,7 @@
   [:div
    #_(pr-str (:db/id (:value param-ctx)))
    [:div.anchors (widget/render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
-   (widget/render-inline-anchors field (filter :anchor/render-inline? anchors) param-ctx)])
+   (widget/render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)])
 
 
 (defn ref-many [field anchors props param-ctx]
@@ -23,7 +23,7 @@
           (pr-str)
           (ellipsis 15))
    [:div.anchors (widget/render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
-   (widget/render-inline-anchors field (filter :anchor/render-inline? anchors) param-ctx)])
+   (widget/render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)])
 
 
 (defn other-many [field anchors props param-ctx]
