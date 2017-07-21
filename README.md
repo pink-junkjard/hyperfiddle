@@ -1,12 +1,36 @@
 # Hypercrud Browser
 
-> navigate EDN app-values like a web browser navigates HTML
+> navigate app-values like a web browser navigates HTML
 
-Hypercrud is a Clojure and ClojureScript system for building sophisticated CRUD apps. The key is Datomic: by leveraging immutability from database to frontend, we can build a fully general data server which is correct, consistent yet also performant. A general purpose data server permits us to escape the backend-for-frontend pattern, such that we can service N different frontends all with from the same backend. The only trusted backend code is a tiny security kernel; the rest of the code need not be trusted, and thus **"service" code and business rules, like database queries, need no longer be trusted and can be moved to the client.**
+Hypercrud is a Clojure and ClojureScript system for building database apps.
 
-### Hypercrud Client, Hypercrud Server
+### Motivation
 
-Hypercrud Client is an I/O runtime for  efficient client-server data sync with Hypercrud Server. Inspired by Om Next, the userland interface is two functions: a request function to specify data dependencies, and a view function (React.js expression). The runtime will fetch the data dependencies as specified by the request function, and then pass that value to the view. By sequestering I/O to the fringe of the system, we are left with a composable programming model of pure functions against local data. **Userland code experiences no async, no failures, no latency.**
+Most CRUD apps are 90% the same boilerplate. The things we need backend code for - security, performance, async, and failure handling - are all accidental complexity, unrelated to the application's actual purpose. This boilerplate manifests itself in the [backend-for-frontend pattern](http://samnewman.io/patterns/architectural/bff/) (anti-pattern), whereby each backend is hand-optimized to the performance constraints of the frontend it services, for example hand-optimized database queries to avoid database roundtrips, caching vs consistency tradeoffs.
+
+![](https://i.imgur.com/mq6KaTv.png)
+
+If we had a general purpuse data server, we would not see this O(n) growth in boilerplate, but alas! The failure to generalize is a manifestation of the object/relational impedance mismatch and is inherent to the relational model.
+
+### Key insight
+
+Our thesis is that by leveraging full-stack immutability from database to frontend, we can build a fully-general solution that is correct, consistent and yet also maximally performant.
+
+The key is Datomic, the immutable database. Datomic does not have an object/relational impedance mismatch, and thus can be used as the keystone component of a fully general data server. A single backend server which can service many frontends, with different data needs, without sacrificing consistency or performance. If you'd like to understand this claim, you might start with the [Datomic documentation](http://docs.datomic.com/getting-started/brief-overview.html). Henceforth in this document, I take this claim for granted, and will defend it in a separate blog post which isn't yet published.
+
+### Implications
+
+A general backend data server solves performance, async, and failure handling. Performance concerns no longer dictate that we run our application code on the server. Security is the only remaining application code that needs to run trusted. Datomic includes a way to run a small security kernel inside the database. Read security is enforced inside the query process, and write security inside the transactor process.
+
+All our business rules, our queries and forms and transactions, all things typically done in a backend, now can be pushed into the client (often a web browser).
+
+This is an enormous architectural change, with profound and astounding implications as to the way we architect our applications.
+
+## Hypercrud Client, Hypercrud Server
+
+Hypercrud Client is an I/O runtime for efficient client-server data sync with Hypercrud Server. Inspired by Om Next, the userland interface is two functions: a request function to specify data dependencies, and a view function (React.js expression). The runtime will fetch the data dependencies as specified by the request function, and then pass that value to the view. By sequestering I/O to the fringe of the system, we are left with a composable programming model of pure functions against local data. **Userland code experiences no async, no failures, no latency.**
+
+#### What does userland code look like?
 
 ```clojure
 (def request-blog
@@ -112,3 +136,5 @@ App-values are graph-shaped and grow to be quite large. It is natural to want to
 ### FAQ
 
 **What about database schema?** Datomic schema is also a value, you can interactively build schema values and apply them without restarts. It really helps to have branching and discard here, so you can experiment with your schema in the browser before transacting the change.
+
+Datomic Peer or Datomic Client?
