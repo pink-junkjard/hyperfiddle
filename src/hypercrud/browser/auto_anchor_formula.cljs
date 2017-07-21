@@ -27,21 +27,13 @@
           (or conn-id (-> ctx :entity :db/id :conn-id))))
 
 (defn auto-formula [anchor]                                 ; what about long-coersion?
-  ; Future improvement:
-  ; we already have this info in the runtime param-ctx, so we could delay until formula runtime
-  ; and not look at the anchor at all and bypass the formula read-eval.
-
-  ; this is a 3x3 matrix - repeating, entity, attribute. Find element is not part of the matrix.
-  ; link-query's always have a find-element, if they have an attribute
-  ; link-entity's never do, despite having an attribute.
-
-  ; Fn syntax can go here if we have proper cljs dynamic vars.
-  (let [{dependent? :anchor/repeating?
-         fe :anchor/find-element
+  ; this is a 3x3 matrix - create?, find-element, attribute.
+  (let [{fe :anchor/find-element
          a :anchor/attribute
          create? :anchor/create?} anchor]
+    ; anchors MUST have a find-element, if they have an attribute or are create? or repeating?
+    ;(assert (not (and (not fe) (or a create? (:anchor/repeating? anchor)))) "missing find-element")
     (cond
-
       (and fe a (not create?))
       (str-and-code (fn [ctx]
                       (let [attr (-> ctx :attribute)]
@@ -83,5 +75,5 @@
       ; If this is a thing, it probably is a query with named params and a custom formula.
       (and (not fe) (not a)) nil
 
-      ;:else (assert false (str "auto-formula matrix - missing pattern: " (util/pprint-str [r c e a])))
+      ;:else (assert false (str "auto-formula matrix - missing pattern: " (util/pprint-str [create? e a])))
       )))
