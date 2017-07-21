@@ -4,6 +4,8 @@
 
 Hypercrud is a Clojure and ClojureScript system for building database apps.
 
+![](http://i.imgur.com/Htk6B1g.gif)
+
 ### Motivation
 
 Most CRUD apps are 90% the same boilerplate. The things we need backend code for - security, performance, async, and failure handling - are all accidental complexity, unrelated to the application's actual purpose. This boilerplate manifests itself in the [backend-for-frontend pattern](http://samnewman.io/patterns/architectural/bff/) (anti-pattern), whereby each backend is hand-optimized to the performance constraints of the frontend it services, for example hand-optimized database queries to avoid database roundtrips, caching vs consistency tradeoffs.
