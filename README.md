@@ -10,17 +10,19 @@ Most CRUD apps are 90% the same boilerplate. The things we need backend code for
 
 ![](https://i.imgur.com/mq6KaTv.png)
 
-**If we had a general purpuse data server, we would not see this O(n) growth in boilerplate, but alas!** The failure to generalize is a manifestation of the object/relational impedance mismatch and is inherent to the relational model.
+**If we had a general purpuse data server, we would not see this O(n) growth in boilerplate, but alas!** The failure to generalize is a manifestation of the object/relational impedance mismatch and is inherent to the relational model. Attempts to solve the mismatch, generally with Object/Relational Mappers (ORM), have lead to never ending flame wars and statements like "ORMs are the Vietnam of Computer Science", and [MongoDB](https://www.google.com/search?q=mongodb+site:reddit.com/r/programming).
 
 ### Key insight
 
 Our thesis is that by leveraging full-stack immutability from database to frontend, we can build a fully-general solution that is correct, consistent and yet also maximally performant.
 
-The key is Datomic, the immutable database. Datomic does not have an object/relational impedance mismatch, and thus can be used as the keystone component of a fully general data server. A single backend server which can service many frontends, with different data needs, without sacrificing consistency or performance. If you'd like to understand this claim, you might start with the [Datomic documentation](http://docs.datomic.com/getting-started/brief-overview.html). Henceforth in this document, I take this claim for granted, and will defend it in a separate blog post which isn't yet published.
+The key is Datomic, the immutable database. Datomic does not have an object/relational impedance mismatch, and thus can be used as the keystone component of a fully general data server. If you'd like to understand this claim, you might start with the [Datomic documentation](http://docs.datomic.com/getting-started/brief-overview.html). Henceforth in this document, I take this claim for granted, and will defend it in a separate blog post which isn't yet published.
 
 ### Implications
 
-A general backend data server solves performance, async, and failure handling. Performance concerns no longer dictate that we run our application code on the server. Security is the only remaining application code that needs to run trusted. Datomic includes a way to run a small security kernel inside the database. Read security is enforced inside the query process, and write security inside the transactor process.
+So now we have a single backend server which can service many frontends, with different data needs, without sacrificing consistency or performance. What does it mean?
+
+Performance concerns no longer dictate that we run our application code on the server. Security is the only remaining application code that needs to run trusted. Datomic includes a way to run a small security kernel inside the database. Read security is enforced inside the query process, and write security inside the transactor process.
 
 All our business rules, our queries and forms and transactions, all things typically done in a backend, now can be pushed into the client (often a web browser).
 
@@ -46,11 +48,12 @@ The runtime will fetch the data dependencies as specified by the request functio
 (defn request [state peer]
   [request-blog])
 
+; result looks like
+; [{"?post" {:db/id #DbId[17592186045419 17592186045786], :post/title "First blog post"}}
+;  {"?post" {:db/id #DbId[17592186045420 17592186045786], :post/title "Second blog post"}} ... ]
+
 (defn view [state peer dispatch!]
   (-> (let [result @(hc/hydrate peer request-blog)]     ; synchronous
-        ; result looks like
-        ; [{"?post" {:db/id #DbId[17592186045419 17592186045786], :post/title "First blog post"}}
-        ;  {"?post" {:db/id #DbId[17592186045420 17592186045786], :post/title "Second blog post"}} ... ]
         [:ul
          (->> result
               (map (fn [relation]
@@ -142,4 +145,6 @@ App-values are graph-shaped and grow to be quite large. It is natural to want to
 
 **What about database schema?** Datomic schema is also a value, you can interactively build schema values and apply them without restarts. It really helps to have branching and discard here, so you can experiment with your schema in the browser before transacting the change.
 
-Datomic Peer or Datomic Client?
+**Datomic Peer or Datomic Client?**
+
+**Why does `#DbId[17592186045791 17592186045422]` have two longs?** Historical reasons, soon the second long (indicating connection) will go away.
