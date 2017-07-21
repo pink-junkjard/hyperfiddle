@@ -129,7 +129,9 @@ You might imagine the code to interpret an app-value to produce a view and a req
   (browser/request app-value (:route state) {:display-mode :xray}))
 ```
 
-Pages compose by composing their data dependencies therein (like an iframe), and are thus a scalable model for building UIs. Hypercrud Browser is HATEOAS.
+Pages compose by composing their data dependencies therein (like an iframe). The page abstraction is sufficient to implement composite widgets like select options, which are themselves a page with a query and form. You can further compose things like a complicated grid, a master-detail picker.
+
+Pages with links between are thus a scalable model for building UIs. Hypercrud Browser is HATEOAS.
 
 ![](http://i.imgur.com/4mKpHhw.png)
 
@@ -148,3 +150,11 @@ App-values are graph-shaped and grow to be quite large. It is natural to want to
 **Datomic Peer or Datomic Client?** Hypercrud Server is a Peer. Hypercrud Client may be, but is not constrained to be, implemented as a [Datomic client](http://docs.datomic.com/clients-and-peers.html). If you use Hypercrud Client without Hyperfiddle app-values, you are stuck with the Datomic client model, which is fine, but suboptimal, and re-introduces a theoretical performance problem caused by client/peer round trips. However, when you model the app as a value, you can literally transmit your app-value up to the server, and actually run the code to interpret the value inside the Peer process. Optimal!
 
 **Why does `#DbId[17592186045791 17592186045422]` have two longs?** Historical reasons, soon the second long (indicating connection) will go away.
+
+**Select options** Here we model select options as a link to another page, which is embedded.
+
+![](https://i.imgur.com/VluIFyM.png)
+
+**Hyperfiddle in Hyperfiddle** Here you can see we built the gray dev-mode widget in Hyperfiddle. We can make live changes to it.
+
+![](http://i.imgur.com/5VPb8iA.gif)
