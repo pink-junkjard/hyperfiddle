@@ -30,7 +30,7 @@ So now we have a single backend server which can service many frontends, with di
 
 Performance concerns no longer dictate that we run our application code on the server. Security is the only remaining application code that needs to run trusted. Datomic includes a way to run a small security kernel inside the database. Read security is enforced inside the query process, and write security inside the transactor process.
 
-![](https://i.imgur.com/5YZervK.png)
+![](https://i.imgur.com/5YZervK.png)  
 [Nikita Prokopov, The Web After Tomorrow, 2015 June](http://tonsky.me/blog/the-web-after-tomorrow/)
 
 All our business rules, our queries and forms and transactions, all things typically done in a backend, now can be pushed into the client (often a web browser).
