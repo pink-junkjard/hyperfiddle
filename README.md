@@ -105,7 +105,7 @@ App-values are graph-shaped and grow to be quite large. It is natural to want to
 
 ### Hyperfiddle.net
 
-[hyperfiddle.net](http://hyperfiddle.net/) is a WYSIWYG editor for building Hyperfiddle app-values ("hyperfiddles"). It is also a better Datomic Console - an interactive query builder, entity explorer and can be attached to an arbitrary Datomic database without changing it. It heavily leans on d/with as a transaction staging area, including a notion of branching and discard.
+[hyperfiddle.net](http://hyperfiddle.net/) is a WYSIWYG editor for building Hyperfiddle app-values ("hyperfiddles"). It is also a better Datomic Console - an interactive query builder, entity explorer and can be attached to an arbitrary Datomic database without alterations. It heavily leans on d/with as a transaction staging area, including a notion of branching and discard.
 
 ![](http://i.imgur.com/v3cmewv.png)
 
