@@ -50,7 +50,7 @@
       (ui' route
            ; entire context must be encoded in the route
            (dissoc param-ctx :result :db :find-element :entity :attribute :value :layout :field)))
-    (exception/failure "anchor has no link")))
+    (exception/failure (str "anchor, " (or (:anchor/ident anchor) (:anchor/prompt anchor)) ", has no link "))))
 
 (defn safe [f & args]
   ; reports: hydrate failure, hyperfiddle javascript error, user-fn js error
