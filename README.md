@@ -108,3 +108,7 @@ App-values are graph-shaped and grow to be quite large. It is natural to want to
 [hyperfiddle.net](http://hyperfiddle.net/) is a WYSIWYG editor for building Hyperfiddle app-values ("hyperfiddles"). It is also a better Datomic Console - an interactive query builder, entity explorer and can be attached to an arbitrary Datomic database without changing it. It heavily leans on d/with as a transaction staging area, including a notion of branching and discard.
 
 ![](http://i.imgur.com/v3cmewv.png)
+
+### FAQ
+
+**What about database schema?** Datomic schema is also a value, you can interactively build schema values and apply them without restarts. It really helps to have branching and discard here, so you can experiment with your schema in the browser before transacting the change.
