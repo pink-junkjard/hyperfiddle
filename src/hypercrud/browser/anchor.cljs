@@ -97,11 +97,7 @@
                      ((fn [v] (if (nil? v) true v))))
         route' (if (:anchor/link anchor) (build-anchor-route' anchor param-ctx #_"links & routes have nothing to do with branches"))
         anchor-props-route (if route' (build-anchor-props-raw route' (:anchor/link anchor) param-ctx))
-
-
         param-ctx (anchor-branch-logic anchor param-ctx)
-        param-ctx (assoc param-ctx :link-owner (-> anchor :anchor/link :hypercrud/owner)) #_"txfn may need this"
-
         anchor-props-txfn (if-let [user-txfn (some-> (:anchor/tx-fn anchor) eval-str' (exception/extract nil))]
                             ; do we need to hydrate any dependencies in this chain?
                             {:txfns {:stage (fn []
