@@ -38,9 +38,7 @@ All decision making is driven by the client. The client programming experience i
 
 ### Hypercrud Browser
 
-Hypercrud Browser navigates app-values like a web browser navigates HTML. **When the things we generally have to write code for - security, performance, async, and failure handling - are handled generically, the essential complexity of the application is now simple enough to model as a value.** That's all accidental complexity. When you take that away, we're left with the very simple essence of an application's true business domain. For this, a simple DSL will do, the simpler the better.
-
-App-values define Pages, each Page declares his data dependencies, and Links to other Pages.
+Hypercrud Browser navigates app-values like a web browser navigates HTML. **The things we generally have to write code for - security, performance, async, and failure handling - are all accidental complexity.** When you take that away, we're left with the very simple essence of an application's true business domain. For this, a simple DSL will do, the simpler the better. We're left with the essense of an application, as a value. App-values define Pages, each Page declares his data dependencies, and Links to other Pages.
 
 Here is how it looks:
 
