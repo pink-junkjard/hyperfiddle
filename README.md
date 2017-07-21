@@ -10,7 +10,7 @@ Most CRUD apps are 90% the same boilerplate. The things we need backend code for
 
 ![](https://i.imgur.com/mq6KaTv.png)
 
-If we had a general purpuse data server, we would not see this O(n) growth in boilerplate, but alas! The failure to generalize is a manifestation of the object/relational impedance mismatch and is inherent to the relational model.
+**If we had a general purpuse data server, we would not see this O(n) growth in boilerplate, but alas!** The failure to generalize is a manifestation of the object/relational impedance mismatch and is inherent to the relational model.
 
 ### Key insight
 
@@ -28,7 +28,12 @@ This is an enormous architectural change, with profound and astounding implicati
 
 ## Hypercrud Client, Hypercrud Server
 
-Hypercrud Client is an I/O runtime for efficient client-server data sync with Hypercrud Server. Inspired by Om Next, the userland interface is two functions: a request function to specify data dependencies, and a view function (React.js expression). The runtime will fetch the data dependencies as specified by the request function, and then pass that value to the view. By sequestering I/O to the fringe of the system, we are left with a composable programming model of pure functions against local data. **Userland code experiences no async, no failures, no latency.**
+Hypercrud Client is an I/O runtime for efficient client-server data sync with Hypercrud Server. Inspired by Om Next, the userland interface is two functions.
+
+* a request function to specify data dependencies
+* a view function (React.js expression)
+
+The runtime will fetch the data dependencies as specified by the request function, and then pass that value to the view. By sequestering I/O to the fringe of the system, we are left with a composable programming model of pure functions against local data. **Userland code experiences no async, no failures, no latency.**
 
 #### What does userland code look like?
 
