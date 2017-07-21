@@ -72,10 +72,7 @@
                                    :layout (:layout param-ctx :block))
         anchors (widget/process-popover-anchors anchors param-ctx)
         anchors-lookup (->> (remove :anchor/attribute anchors)
-                            (group-by (fn [anchor]
-                                        (if-let [find-element (:anchor/find-element anchor)]
-                                          (:find-element/name find-element)
-                                          "entity"))))
+                            (group-by (comp :find-element/name :anchor/find-element)))
         fields (->> (partition 4 colspec)
                     (group-by (fn [[dbval fe attr maybe-field]] fe))
                     (mapcat
@@ -104,7 +101,7 @@
                                                                    (assoc $ :attribute attr
                                                                             :value (get entity ident))
                                                                    (if (= ident :db/id) (assoc $ :read-only always-read-only) $))
-                                                   field (case (:display-mode param-ctx) :xray field :user (get param-ctx :field field) )
+                                                   field (case (:display-mode param-ctx) :xray field :user (get param-ctx :field field))
                                                    control (case (:display-mode param-ctx) :xray control :user (get param-ctx :control control))]
                                                ^{:key (str ident)}
                                                [field (control maybe-field anchors param-ctx) maybe-field anchors param-ctx]))))
