@@ -2,9 +2,7 @@
   (:require [cats.core :refer [mlet]]
             [cats.monad.exception :as exception :refer [success] :refer-macros [try-on]]
             [hypercrud.browser.anchor :as anchor]
-            [hypercrud.browser.browser-ui :as browser-ui]
-            [hypercrud.compile.eval :refer [eval-str']]
-            [hypercrud.compile.eval :as eval]))
+            [hypercrud.browser.browser-ui :as browser-ui]))
 
 (defn default-label-renderer [v ctx]
   (cond
@@ -21,9 +19,8 @@
                ; is how we are in a select options in the first place.
                (let [ident (-> attr :attribute/ident)
                      value (get-in result [(-> fe :find-element/name) ident])
-                     label' (if-let [user-fn-str (eval/validate-user-code-str (-> param-ctx :fields ident :label-renderer))]
-                              (mlet [user-fn (eval-str' user-fn-str)]
-                                (try-on (user-fn value param-ctx)))
+                     label' (if-let [user-fn (-> param-ctx :fields ident :label-renderer)]
+                              (try-on (user-fn value param-ctx))
                               (success (default-label-renderer value param-ctx)))]
                  ; It's perfectly possible to properly report this error properly upstream.
                  (exception/extract label' (default-label-renderer value param-ctx)))))
