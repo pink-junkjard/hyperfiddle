@@ -41,7 +41,7 @@
         options (option/hydrate-options' options-anchor param-ctx)]
     [:span.select
      (if (failure? options)
-       [:pre (pr-str (cats/extract options))]
+       [:code (pr-str (cats/extract options))]
        (let [option-records @options
              ;_ (when (exception/failure? options)
              ;    ; todo something better with this exception
