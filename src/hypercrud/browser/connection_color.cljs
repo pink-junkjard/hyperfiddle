@@ -11,8 +11,10 @@
   (let [n (if conn-id (- conn-id hc/*root-conn-id*))]
     (case n
       nil "#000"
-      0 "#777"                                          ; root
-      (js/Color (clj->js {:h (* 360 (mod (+ seed (* n golden-ratio)) 1))
-                          :s 55 #_"Too bright hurts the eyes"
-                          :l (or l 50) #_"Medium gray (50) can be read on white and black backgrounds"
-                          })))))
+      0 "#777"                                              ; root
+      (-> {:h (* 360 (mod (+ seed (* n golden-ratio)) 1))
+           :s 55 #_"Too bright hurts the eyes"
+           :l (or l 50) #_"Medium gray (50) can be read on white and black backgrounds"}
+          (clj->js)
+          (js/Color)
+          (.string)))))
