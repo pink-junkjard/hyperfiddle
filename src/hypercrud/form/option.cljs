@@ -30,15 +30,15 @@
        (interpose ", ")
        (apply str)))
 
-(defn hydrate-options [options-anchor param-ctx]            ; needs to return options as [[:db/id label]]
+(defn hydrate-options' [options-anchor param-ctx]            ; needs to return options as [[:db/id label]]
   (assert options-anchor)                                   ;todo this assert should be within the exception monad
-  (let [route (exception/extract (anchor/build-anchor-route' options-anchor param-ctx) nil)
-        get-ui-f (fn [result colspec anchors param-ctx]
-                   (->> result
-                        (mapv (fn [relation]
-                                (let [[conn fe attr maybe-field] (first (partition 4 colspec))
-                                      entity (get relation (-> fe :find-element/name))]
-                                  [(:db/id entity) (build-label colspec relation param-ctx)])))))]
-    ; todo we want to at least invoke ui not ui' (missing param-ctx dissocs)
-    ; probably just want callees to invoke with a custom render fn, and this calls safe-ui
-    (browser-ui/ui' route param-ctx (constantly get-ui-f))))
+  (mlet [route (anchor/build-anchor-route' options-anchor param-ctx)]
+    (let [get-ui-f (fn [result colspec anchors param-ctx]
+                     (->> result
+                          (mapv (fn [relation]
+                                  (let [[conn fe attr maybe-field] (first (partition 4 colspec))
+                                        entity (get relation (-> fe :find-element/name))]
+                                    [(:db/id entity) (build-label colspec relation param-ctx)])))))]
+      ; todo we want to at least invoke ui not ui' (missing param-ctx dissocs)
+      ; probably just want callees to invoke with a custom render fn, and this calls safe-ui
+      (browser-ui/ui' route param-ctx (constantly get-ui-f)))))
