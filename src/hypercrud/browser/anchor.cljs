@@ -72,8 +72,9 @@
             ; if we are an index link, what are we forking? Provide a binding
             (assoc-in [:branches (.-conn-id db)] branch)
             (update :db #(hc/db (:peer param-ctx) (.-conn-id %) branch))))
-      ; Inform user via tooltip that we can't branch an index link because there is no db in scope. Explicitly set db in user bindings.
-      param-ctx)
+      (do
+        (js/console.warn "You are attempting to branch an index-link. We can't deduce the :db to branch, you must explicitly set it in user bindings.")
+        param-ctx))
     param-ctx))
 
 ; if this is driven by anchor, and not route, it needs memoized.
