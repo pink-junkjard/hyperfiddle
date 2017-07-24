@@ -44,9 +44,7 @@
                  :project (-> anchor :anchor/link :hypercrud/owner :database/ident)
                  :link-dbid (-> anchor :anchor/link :db/id)
                  :query-params query-params}]
-      (validated-route' (:anchor/link anchor) route)))
-
-  )
+      (validated-route' (:anchor/link anchor) route))))
 
 (defn anchor-tooltip [link route' param-ctx]
   (case (:display-mode param-ctx)
