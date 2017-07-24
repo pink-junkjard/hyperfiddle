@@ -1,6 +1,6 @@
 (ns hypercrud.browser.anchor
-  (:require [cats.core :refer [mlet return]]
-            [cats.monad.exception :as exception :refer [try-on]]
+  (:require [cats.core :refer [mlet extract return]]
+            [cats.monad.exception :as exception :refer [try-on success failure success?]]
             [clojure.set :as set]
             [hypercrud.browser.auto-anchor-formula :refer [auto-entity-dbid]]
             [hypercrud.browser.connection-color :as connection-color]
@@ -18,47 +18,36 @@
       (exception/try-on (apply user-fn args))
       (return nil))))
 
-(defn build-anchor-route'
-  ([domain project link-dbid formula-str param-ctx]
-    ;(assert project)                                         ; safe - maybe constructing it now
-   (mlet [query-params (safe-run-user-code-str' formula-str param-ctx)]
-     (return {:domain domain
-              :project project
-              :link-dbid link-dbid #_:id
-              :query-params query-params})))
-  ([link formula-str param-ctx]
-   (build-anchor-route'
-     (-> link :hypercrud/owner :database/domain)
-     (-> link :hypercrud/owner :database/ident)
-     (-> link :db/id)
-     formula-str
-     param-ctx))
-  ([anchor param-ctx]
-   (build-anchor-route' (:anchor/link anchor) (:anchor/formula anchor) param-ctx)))
-
-(defn holes-filled? [hole-names query-params-map]
-  (set/subset? (set hole-names) (set (keys (into {} (remove (comp nil? val) query-params-map))))))
-
-(defn anchor-valid? [link route']                           ; could return monad to say why
+(defn validated-route' [link route]
   ; We specifically hydrate this deep just so we can validate anchors like this.
   (case (:request/type link)
-    :query (some-> link
-                   q-util/safe-parse-query-validated
-                   q-util/parse-param-holes
-                   (holes-filled? (:query-params (exception/extract route' nil))))
-    :entity (not= nil (-> (exception/extract route' nil) :query-params :entity)) ; add logic for a
-    :blank true
-    true))
+    :query (mlet [q (success (q-util/safe-parse-query-validated link))]
+             (let [have (set (keys (into {} (remove (comp nil? val) (:query-params route)))))
+                   need (set (q-util/parse-param-holes q))
+                   missing (set/difference need have)]
+               (if (empty? missing)
+                 (success route)
+                 (failure missing "missing query params"))))
+    :entity (if (not= nil (-> route :query-params :entity)) ; add logic for a
+              (success route)
+              (failure #{:entity} "missing query params"))
+    :blank (success route)
+    (success route) #_ "wtf???  \"{:hypercrud/owner {:database/domain nil, :database/ident \"hyperfiddle\"}, :db/id #DbId[[:link/ident :hyperfiddle/new-page-popover] 17592186045422]}\"   "))
 
-(defn anchor-valid?' [anchor route]
-  (anchor-valid? (:anchor/link anchor) route))
+(defn build-anchor-route' [anchor param-ctx]                ; public
+  ;(assert project)                                         ; be safe - maybe constructing it now
+  (mlet [query-params (safe-run-user-code-str' (:anchor/formula anchor) param-ctx)]
+    (let [route {:domain (-> anchor :anchor/link :hypercrud/owner :database/domain)
+                 :project (-> anchor :anchor/link :hypercrud/owner :database/ident)
+                 :link-dbid (-> anchor :anchor/link :db/id)
+                 :query-params query-params}]
+      (validated-route' (:anchor/link anchor) route))))
 
 (defn anchor-tooltip [link route' param-ctx]
   (case (:display-mode param-ctx)
-    :xray (if (anchor-valid? link route')
-            ; can do better error reporting here.
-            [nil (pr-str (:query-params (exception/extract route' nil)))]
-            [:warning (pr-str (:query-params (exception/extract route' nil)))])
+    :xray (if (success? route')
+            [nil (pr-str (:query-params @route'))]
+            [:warning (pr-str (extract route'))])
     nil))
 
 (defn build-anchor-props-raw [route' link param-ctx]        ; param-ctx is for display-mode
@@ -66,7 +55,7 @@
   {:route (exception/extract route' nil)
    :style {:color (connection-color/connection-color (-> link :hypercrud/owner :db/id :id))}
    :tooltip (anchor-tooltip link route' param-ctx)
-   :class (if-not (anchor-valid? link route') "invalid")})
+   :class (if-not (success? route') "invalid")})
 
 (defn anchor-branch-logic [anchor param-ctx]
   (if (:anchor/managed? anchor)
@@ -128,6 +117,6 @@
                                               nil)
                                             [hypercrud.browser.core/safe-ui' ; cycle
                                              route          ; draw the branch
-                                             (dissoc param-ctx :result :db :find-element :entity :attribute :value :layout)]])})
+                                             (dissoc param-ctx :result :db :find-element :entity :attribute :value :layout :field)]])})
         anchor-props-hidden {:hidden (not visible?)}]
     (merge anchor-props-route anchor-props-txfn anchor-props-popover anchor-props-hidden)))

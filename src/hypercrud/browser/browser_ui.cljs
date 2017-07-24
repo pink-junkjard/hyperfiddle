@@ -49,7 +49,7 @@
     (mlet [route (anchor/build-anchor-route' anchor param-ctx)]
       (ui' route
            ; entire context must be encoded in the route
-           (dissoc param-ctx :result :db :find-element :entity :attribute :value :layout)))
+           (dissoc param-ctx :result :db :find-element :entity :attribute :value :layout :field)))
     (exception/failure "anchor has no link")))
 
 (defn safe [f & args]

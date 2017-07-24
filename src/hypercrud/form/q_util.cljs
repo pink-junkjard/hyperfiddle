@@ -36,7 +36,7 @@
                 [name (hc/db (:peer param-ctx) (-> value :db/id :id) (get-in param-ctx [:branches (-> value :db/id :id)]))])))
        (into {})))
 
-(defn safe-parse-query-validated [link]
+(defn safe-parse-query-validated [link]                     ; monad
   ; return monad and display the error to the widget?
   ; Should try not to even stage bad queries. If it happens though,
   ; we can draw the server error. Why can't we even get to server error now?
