@@ -156,6 +156,8 @@ App-values are graph-shaped and grow to be quite large. It is natural to want to
 
 ### FAQ
 
+**What does Color indicate?** Color indicates the database that the data came out of and/or is owned by. It starts to matter when you get into cross-database queries.
+
 **What about database schema?** Datomic schema is also a value, you can interactively build schema values and apply them without restarts. It really helps to have branching and discard here, so you can experiment with your schema in the browser before transacting the change.
 
 **Datomic Peer or Datomic Client?** Hypercrud Server is a Peer. Hypercrud Client may be, but is not constrained to be, implemented as a [Datomic client](http://docs.datomic.com/clients-and-peers.html). If you use Hypercrud Client without Hyperfiddle app-values, you are stuck with the Datomic client model, which is fine, but suboptimal, and re-introduces a theoretical performance problem caused by client/peer round trips. However, when you model the app as a value, you can literally transmit your app-value up to the server, and actually run the code to interpret the value inside the Peer process. Optimal!
