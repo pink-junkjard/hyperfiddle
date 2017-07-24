@@ -1,7 +1,10 @@
 (ns hypercrud.ui.renderer
-  (:require [hypercrud.platform.safe-render :refer [safe-user-renderer]]
+  (:require [cats.core :refer [mlet return]]
+            [cats.monad.exception :as exception :refer [try-on]]
+            [hypercrud.platform.safe-render :refer [safe-user-renderer]]
             [hypercrud.browser.anchor :as anchor]
-            [hypercrud.compile.eval :refer [eval-str]]))
+            [hypercrud.compile.eval :refer [eval-str']]
+            [hypercrud.util.core :as util :refer [pprint-str]]))
 
 
 (defn empty-string-to-nil [s]
@@ -15,10 +18,11 @@
       (empty-string-to-nil (-> attr :attribute/hc-type :hc-type/renderer)))))
 
 (defn user-render [maybe-field anchors props param-ctx]
-  (let [{user-fn :value error :error} (eval-str (user-renderer param-ctx))]
+  (let [user-fn' (if-let [user-fn-str (user-renderer param-ctx)]
+                   (eval-str' user-fn-str))]
     [:div.value
-     (if error
-       [:div.value [:pre (pr-str error)]]
+     (if (exception/failure? user-fn')
+       [:pre (pprint-str (.-e user-fn'))]
        (let [anchor-lookup (->> anchors
                                 (filter :anchor/ident)      ; cannot lookup nil idents
                                 (mapv (juxt #(-> % :anchor/ident) identity))
@@ -31,4 +35,4 @@
                              [(:navigate-cmp param-ctx) props label])))]
          ; Same interface as auto-control widgets.
          ; pass value only as scope todo
-         [safe-user-renderer user-fn maybe-field anchors props param-ctx]))]))
+         [safe-user-renderer @user-fn' maybe-field anchors props param-ctx]))]))

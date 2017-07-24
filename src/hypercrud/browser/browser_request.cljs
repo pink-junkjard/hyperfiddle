@@ -86,7 +86,7 @@
       (exception/extract
         (mlet [result (if link-request (hc/hydrate (:peer param-ctx) link-request) (exception/success nil))
                schema (exception/try-or-else (hc/hydrate (:peer param-ctx) (schema-util/schema-request (:root-db param-ctx) nil)) nil)] ; map connections
-          (cats/return (base/process-results (constantly link-dependent-requests) query-params link link-request result schema param-ctx)))
+          (base/process-results (constantly link-dependent-requests) query-params link link-request result schema param-ctx))
         nil))))
 
 (defn request' [route param-ctx]

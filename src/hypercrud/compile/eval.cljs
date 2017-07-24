@@ -5,20 +5,20 @@
             [markdown.core]))
 
 
-(def eval-str
+(def eval-str-
   (memoize (fn [code-str]
-             (if-not (empty? code-str)
-               ;; Hack - we don't understand why cljs compiler doesn't handle top level forms naturally
-               ;; but wrapping in identity fixes the problem
-               (let [code-str' (str "(identity\n" code-str "\n)")]
-                 (binding [analyzer/*cljs-warning-handlers* []]
-                   (cljs/eval-str (cljs/empty-state)
-                                  code-str'
-                                  nil
-                                  {:eval cljs/js-eval}
-                                  identity)))))))
+             {:pre [(not (empty? code-str))]}
+             ;; Hack - we don't understand why cljs compiler doesn't handle top level forms naturally
+             ;; but wrapping in identity fixes the problem
+             (let [code-str' (str "(identity\n" code-str "\n)")]
+               (binding [analyzer/*cljs-warning-handlers* []]
+                 (cljs/eval-str (cljs/empty-state)
+                                code-str'
+                                nil
+                                {:eval cljs/js-eval}
+                                identity))))))
 
-(def eval
+(def eval-
   (memoize (fn [form]
              (let [form' `(identity ~form)]
                (binding [analyzer/*cljs-warning-handlers* []]
@@ -37,7 +37,15 @@
   ;if there is a string rep in the meta, the object itself is code
   (if (:str (meta code-str))
     (exception/success code-str)
-    (-> code-str eval-str (exception-from-compiler-result code-str))))
+    (-> code-str eval-str- (exception-from-compiler-result code-str))))
 
 (defn eval' [form]
-  (-> form eval (exception-from-compiler-result form)))
+  (-> form eval- (exception-from-compiler-result form)))
+
+(defn validate-user-code-str [code-str]
+  (cond
+    (:str (meta code-str)) code-str
+    (and (string? code-str) (not (empty? code-str))) code-str
+    (and (string? code-str) (empty? code-str)) nil          ; coerce empty to nil
+    (not= nil code-str) code-str
+    :else nil))

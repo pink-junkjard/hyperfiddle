@@ -1,5 +1,6 @@
 (ns hypercrud.browser.base
-  (:require [cats.monad.exception :refer-macros [try-on]]
+  (:require [cats.core :as cats :refer [mlet]]
+            [cats.monad.exception :refer-macros [try-on]]
             [cljs.reader :as reader]
             [hypercrud.browser.auto-anchor :as auto-anchor]
             [hypercrud.browser.user-bindings :as user-bindings]
@@ -106,7 +107,9 @@
 
         colspec (form-util/determine-colspec result link indexed-schema param-ctx)
         f (get-f link param-ctx)]
-    (case (:display-mode param-ctx)                         ; default happens higher, it influences queries too
-      :user (f result colspec (auto-anchor/auto-anchors link colspec param-ctx) (user-bindings/user-bindings link param-ctx))
-      :xray (f result colspec (auto-anchor/auto-anchors link colspec param-ctx) (user-bindings/user-bindings link param-ctx))
-      :root (f result colspec (auto-anchor/auto-anchors link colspec param-ctx {:ignore-user-links true}) param-ctx))))
+    (mlet [param-ctx (user-bindings/user-bindings' link param-ctx)]
+      (cats/return
+        (case (:display-mode param-ctx)                     ; default happens higher, it influences queries too
+          :user (f result colspec (auto-anchor/auto-anchors link colspec param-ctx) param-ctx)
+          :xray (f result colspec (auto-anchor/auto-anchors link colspec param-ctx) param-ctx)
+          :root (f result colspec (auto-anchor/auto-anchors link colspec param-ctx {:ignore-user-links true}) param-ctx))))))

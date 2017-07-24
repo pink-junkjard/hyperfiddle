@@ -6,7 +6,7 @@
             [hypercrud.browser.base :as base]
             [hypercrud.client.core :as hc]
             [hypercrud.client.schema :as schema-util]
-            [hypercrud.compile.eval :refer [eval-str]]
+            [hypercrud.compile.eval :refer [eval-str']]
             [hypercrud.platform.safe-render :refer [safe-user-renderer]]
             [hypercrud.types.EntityRequest :refer [EntityRequest]]
             [hypercrud.types.QueryRequest :refer [QueryRequest]]
@@ -42,7 +42,7 @@
            result (if request (hc/hydrate (:peer param-ctx) request) (exception/success nil))
            ; schema is allowed to be nil if the link only has anchors and no data dependencies
            schema (exception/try-or-else (hc/hydrate (:peer param-ctx) (schema-util/schema-request (:root-db param-ctx) nil)) nil)]
-      (cats/return (base/process-results get-ui-f query-params link request result schema param-ctx)))))
+      (base/process-results get-ui-f query-params link request result schema param-ctx))))
 
 (defn ui [anchor param-ctx]
   (if (:anchor/link anchor)
@@ -71,12 +71,10 @@
 
 (defn link-user-fn [link]
   (if-not (empty? (:link/renderer link))
-    (let [{user-fn :value error :error} (eval-str (:link/renderer link))]
-      (if error
-        (fn [result colspec anchors param-ctx]
-          [:pre (pprint-str error)])
-        (fn [result colspec anchors param-ctx]
-          [safe-user-renderer user-fn result colspec anchors param-ctx])))))
+    (let [user-fn' (eval-str' (:link/renderer link))]
+      (if (exception/success? user-fn')
+        (fn [result colspec anchors param-ctx] [safe-user-renderer (exception/extract user-fn') result colspec anchors param-ctx])
+        (fn [result colspec anchors param-ctx] [:pre (pprint-str (.-e user-fn'))])))))
 
 (defn user-result [link param-ctx]
   ; only need a safewrap on other people's user-fns; this context's user fn only needs the topmost safewrap.

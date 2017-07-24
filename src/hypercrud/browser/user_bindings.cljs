@@ -1,16 +1,11 @@
 (ns hypercrud.browser.user-bindings
-  (:require [hypercrud.compile.eval :refer [eval-str]]))
+  (:require [cats.core :refer [mlet]]
+            [cats.monad.exception :as exception :refer [try-on success]]
+            [hypercrud.compile.eval :as eval :refer [eval-str']]))
 
-
-(defn user-bindings [link param-ctx]
-  (let [bindings-fn (if (empty? (:link/bindings link))
-                      identity
-                      (let [{f :value error :error} (eval-str (:link/bindings link))]
-                        (if error
-                          (fn [_] (throw error))
-                          f)))]
-    (try
-      (bindings-fn param-ctx)
-      (catch :default error
-        (.warn js/console (str "error in user-bindings:\n" (pr-str error)))
-        param-ctx))))
+(defn user-bindings' [link param-ctx]
+  {:post [(not (nil? %))]}
+  (if-let [code-str (eval/validate-user-code-str (:link/bindings link))]
+    (mlet [user-fn (eval-str' code-str)]
+      (try-on (user-fn param-ctx)))
+    (success param-ctx)))

@@ -5,7 +5,7 @@
             [hypercrud.browser.auto-anchor-formula :refer [auto-entity-dbid]]
             [hypercrud.browser.connection-color :as connection-color]
             [hypercrud.client.core :as hc]
-            [hypercrud.compile.eval :refer [eval-str']]
+            [hypercrud.compile.eval :as eval :refer [eval-str']]
             [hypercrud.form.q-util :as q-util]
             [hypercrud.runtime.state.actions :as actions]   ; todo bad dep
             [hypercrud.util.branch :as branch]
@@ -13,10 +13,11 @@
 
 
 (defn safe-run-user-code-str' [code-str & args]
-  (mlet [user-fn (eval-str' code-str)]
-    (if user-fn
-      (exception/try-on (apply user-fn args))
-      (return nil))))
+  (if-let [code-str (eval/validate-user-code-str code-str)]
+    (mlet [user-fn (eval-str' code-str)]
+      (if user-fn
+        (exception/try-on (apply user-fn args))
+        (return nil)))))
 
 (defn validated-route' [link route]
   ; We specifically hydrate this deep just so we can validate anchors like this.
@@ -32,16 +33,20 @@
               (success route)
               (failure #{:entity} "missing query params"))
     :blank (success route)
-    (success route) #_ "wtf???  \"{:hypercrud/owner {:database/domain nil, :database/ident \"hyperfiddle\"}, :db/id #DbId[[:link/ident :hyperfiddle/new-page-popover] 17592186045422]}\"   "))
+    (success route) #_"wtf???  \"{:hypercrud/owner {:database/domain nil, :database/ident \"hyperfiddle\"}, :db/id #DbId[[:link/ident :hyperfiddle/new-page-popover] 17592186045422]}\"   "))
 
-(defn build-anchor-route' [anchor param-ctx]                ; public
+(defn ^:export build-anchor-route' [anchor param-ctx]
   ;(assert project)                                         ; be safe - maybe constructing it now
-  (mlet [query-params (safe-run-user-code-str' (:anchor/formula anchor) param-ctx)]
+  (mlet [query-params (if-let [code-str (eval/validate-user-code-str (:anchor/formula anchor))]
+                        (safe-run-user-code-str' code-str param-ctx)
+                        (success nil))]
     (let [route {:domain (-> anchor :anchor/link :hypercrud/owner :database/domain)
                  :project (-> anchor :anchor/link :hypercrud/owner :database/ident)
                  :link-dbid (-> anchor :anchor/link :db/id)
                  :query-params query-params}]
-      (validated-route' (:anchor/link anchor) route))))
+      (validated-route' (:anchor/link anchor) route)))
+
+  )
 
 (defn anchor-tooltip [link route' param-ctx]
   (case (:display-mode param-ctx)
@@ -81,13 +86,14 @@
   ; - broken user txfn
   ; - broken user visible fn
   ; If these fns are ommitted (nil), its not an error.
-  (let [visible? (-> (safe-run-user-code-str' (:anchor/visible? anchor) param-ctx)
-                     (exception/extract nil)
-                     ((fn [v] (if (nil? v) true v))))
+  (let [visible? (-> (if-let [code-str (eval/validate-user-code-str (:anchor/visible? anchor))]
+                       (mlet [user-fn (eval-str' code-str)] (exception/try-on (user-fn param-ctx)))
+                       (success true))
+                     (exception/extract true))
         route' (if (:anchor/link anchor) (build-anchor-route' anchor param-ctx #_"links & routes have nothing to do with branches"))
         anchor-props-route (if route' (build-anchor-props-raw route' (:anchor/link anchor) param-ctx))
         param-ctx (anchor-branch-logic anchor param-ctx)
-        anchor-props-txfn (if-let [user-txfn (some-> (:anchor/tx-fn anchor) eval-str' (exception/extract nil))]
+        anchor-props-txfn (if-let [user-txfn (some-> (eval/validate-user-code-str (:anchor/tx-fn anchor)) eval-str' (exception/extract nil))]
                             ; do we need to hydrate any dependencies in this chain?
                             {:txfns {:stage (fn []
                                               (p/promise (fn [resolve reject]

@@ -1,10 +1,12 @@
 (ns hypercrud.form.option
-  (:require [cats.monad.exception :as exception]
+  (:require [cats.core :refer [mlet]]
+            [cats.monad.exception :as exception :refer [success] :refer-macros [try-on]]
             [hypercrud.browser.anchor :as anchor]
             [hypercrud.browser.browser-ui :as browser-ui]
-            [hypercrud.compile.eval :refer [eval-str]]))
+            [hypercrud.compile.eval :refer [eval-str']]
+            [hypercrud.compile.eval :as eval]))
 
-(defn default-label-renderer [v]
+(defn default-label-renderer [v ctx]
   (cond
     (instance? cljs.core/Keyword v) (name v)
     :else (str v))
@@ -19,16 +21,12 @@
                ; is how we are in a select options in the first place.
                (let [ident (-> attr :attribute/ident)
                      value (get-in result [(-> fe :find-element/name) ident])
-                     user-renderer (-> param-ctx :fields ident :label-renderer)
-                     {f :value error :error} (if-not (empty? user-renderer) (eval-str user-renderer))]
-                 (if error (.warn js/console (str "Bad label rendererer " user-renderer)))
-                 (if-not f
-                   (default-label-renderer value)
-                   (try
-                     (f value)
-                     (catch js/Error e
-                       (.warn js/console "user error in label-renderer: " (str e))
-                       (default-label-renderer value)))))))
+                     label' (if-let [user-fn-str (eval/validate-user-code-str (-> param-ctx :fields ident :label-renderer))]
+                              (mlet [user-fn (eval-str' user-fn-str)]
+                                (try-on (user-fn value param-ctx)))
+                              (success (default-label-renderer value param-ctx)))]
+                 ; It's perfectly possible to properly report this error properly upstream.
+                 (exception/extract label' (default-label-renderer value param-ctx)))))
        (interpose ", ")
        (apply str)))
 
