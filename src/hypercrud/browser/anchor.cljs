@@ -35,8 +35,7 @@
     :blank (success route)
     (success route) #_"wtf???  \"{:hypercrud/owner {:database/domain nil, :database/ident \"hyperfiddle\"}, :db/id #DbId[[:link/ident :hyperfiddle/new-page-popover] 17592186045422]}\"   "))
 
-(defn ^:export build-anchor-route' [anchor param-ctx]
-  ;(assert project)                                         ; be safe - maybe constructing it now
+(defn ^:export #_ "all fiddles render fn" build-anchor-route-unvalidated' [anchor param-ctx]
   (mlet [query-params (if-let [code-str (eval/validate-user-code-str (:anchor/formula anchor))]
                         (safe-run-user-code-str' code-str param-ctx)
                         (success nil))]
@@ -44,7 +43,12 @@
                  :project (-> anchor :anchor/link :hypercrud/owner :database/ident)
                  :link-dbid (-> anchor :anchor/link :db/id)
                  :query-params query-params}]
-      (validated-route' (:anchor/link anchor) route))))
+      (success route))))
+
+(defn ^:export build-anchor-route' [anchor param-ctx]
+  ;(assert project)                                         ; be safe - maybe constructing it now
+  (mlet [route (build-anchor-route-unvalidated' anchor param-ctx)]
+    (validated-route' (:anchor/link anchor) route)))
 
 (defn anchor-tooltip [link route' param-ctx]
   (case (:display-mode param-ctx)
@@ -92,24 +96,26 @@
         anchor-props-route (if route' (build-anchor-props-raw route' (:anchor/link anchor) param-ctx))
         param-ctx (anchor-branch-logic anchor param-ctx)
         anchor-props-txfn (if-let [user-txfn (some-> (eval/validate-user-code-str (:anchor/tx-fn anchor)) eval-str' (exception/extract nil))]
-                            ; do we need to hydrate any dependencies in this chain?
-                            {:txfns {:stage (fn []
-                                              (p/promise (fn [resolve reject]
-                                                           (let [swap-fn (fn [tx-from-modal]
-                                                                           (let [result (let [result (user-txfn param-ctx tx-from-modal)]
-                                                                                          ; txfn may be sync or async
-                                                                                          (if-not (p/promise? result) (p/resolved result) result))]
-                                                                             ; let the caller of this :stage fn know the result
-                                                                             (p/branch result
-                                                                                       (fn [result] (resolve nil))
-                                                                                       (fn [why]
-                                                                                         (reject why)
-                                                                                         (js/console.error why)))
+                            (do
+                              ;(assert (-contains-key? param-ctx :db))
+                              ; do we need to hydrate any dependencies in this chain?
+                              {:txfns {:stage (fn []
+                                                (p/promise (fn [resolve reject]
+                                                             (let [swap-fn (fn [tx-from-modal]
+                                                                             (let [result (let [result (user-txfn param-ctx tx-from-modal)]
+                                                                                            ; txfn may be sync or async
+                                                                                            (if-not (p/promise? result) (p/resolved result) result))]
+                                                                               ; let the caller of this :stage fn know the result
+                                                                               (p/branch result
+                                                                                         (fn [result] (resolve nil))
+                                                                                         (fn [why]
+                                                                                           (reject why)
+                                                                                           (js/console.error why)))
 
-                                                                             ; return the result to the action
-                                                                             result))]
-                                                             ((:dispatch! param-ctx) (actions/stage-popover (.-conn-id (:db param-ctx)) (.-branch (:db param-ctx)) swap-fn))))))
-                                     :cancel #((:dispatch! param-ctx) (actions/discard (.-conn-id (:db param-ctx)) (.-branch (:db param-ctx))))}})
+                                                                               ; return the result to the action
+                                                                               result))]
+                                                               ((:dispatch! param-ctx) (actions/stage-popover (.-conn-id (:db param-ctx)) (.-branch (:db param-ctx)) swap-fn))))))
+                                       :cancel #((:dispatch! param-ctx) (actions/discard (.-conn-id (:db param-ctx)) (.-branch (:db param-ctx))))}}))
 
         ; the whole point of popovers is managed branches
         anchor-props-popover (if-let [route (and (:anchor/managed? anchor) (exception/extract route' nil))]
