@@ -35,7 +35,7 @@
         ; Draw error instead of control.
         control (if (exception/failure? maybe-visible')
                   [:pre (js/pprint-str (.-e maybe-visible'))]
-                  control)]
+                  (control param-ctx))]
 
     (if-not hidden
       [:div.field {:style {:border-color (connection-color/connection-color (:color param-ctx))}}
@@ -103,8 +103,9 @@
                                                                    (if (= ident :db/id) (assoc $ :read-only always-read-only) $))
                                                    field (case (:display-mode param-ctx) :xray field :user (get param-ctx :field field))
                                                    control (case (:display-mode param-ctx) :xray control :user (get param-ctx :control control))]
+                                               ; What is the user-field allowed to change? The param-ctx. Can it change links or anchors? no.
                                                ^{:key (str ident)}
-                                               [field (control maybe-field anchors param-ctx) maybe-field anchors param-ctx]))))
+                                               [field #(control maybe-field anchors %) maybe-field anchors param-ctx]))))
                                 (widget/render-inline-anchors (filter :anchor/render-inline? entity-anchors) param-ctx)))
                             (widget/render-inline-anchors (filter :anchor/render-inline? entity-new-anchors) param-ctx))))))
         not-splat? (and (not (empty? colspec))
