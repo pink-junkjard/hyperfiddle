@@ -32,7 +32,7 @@
 (bootlaces! +version+)
 
 (task-options!
-  pom {:project 'org.hypercrud/hypercrud.client
+  pom {:project 'com.hyperfiddle/hypercrud.browser
        :version +version+}
   test-cljs {:js-env :node})
 
