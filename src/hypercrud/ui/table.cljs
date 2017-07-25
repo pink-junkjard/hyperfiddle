@@ -2,7 +2,6 @@
   (:require [clojure.string :as string]
             [hypercrud.browser.connection-color :as connection-color]
             [hypercrud.runtime.state.actions :as actions]   ; todo bad dep
-            [hypercrud.platform.native-event-listener :refer [native-listener]] ;provided dependency
             [hypercrud.ui.auto-control :refer [auto-table-cell]]
             [hypercrud.ui.form-util :as form-util]
             [hypercrud.ui.renderer :as renderer]
