@@ -4,7 +4,7 @@
             [hypercrud.platform.safe-render :refer [safe-user-renderer]]
             [hypercrud.browser.anchor :as anchor]
             [hypercrud.compile.eval :refer [eval-str']]
-            [hypercrud.util.core :as util :refer [pprint-str]]))
+            [hypercrud.util.core :refer [pprint-str]]))
 
 
 (defn empty-string-to-nil [s]

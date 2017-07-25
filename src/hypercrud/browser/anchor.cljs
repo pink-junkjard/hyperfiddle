@@ -35,7 +35,8 @@
     :blank (success route)
     (success route) #_"wtf???  \"{:hypercrud/owner {:database/domain nil, :database/ident \"hyperfiddle\"}, :db/id #DbId[[:link/ident :hyperfiddle/new-page-popover] 17592186045422]}\"   "))
 
-(defn ^:export #_ "all fiddles render fn" build-anchor-route-unvalidated' [anchor param-ctx]
+#_"all fiddles render fn"
+(defn ^:export build-anchor-route-unvalidated' [anchor param-ctx]
   (mlet [query-params (if-let [code-str (eval/validate-user-code-str (:anchor/formula anchor))]
                         (safe-run-user-code-str' code-str param-ctx)
                         (success nil))]
@@ -50,7 +51,7 @@
   (mlet [route (build-anchor-route-unvalidated' anchor param-ctx)]
     (validated-route' (:anchor/link anchor) route)))
 
-(defn anchor-tooltip [link route' param-ctx]
+(defn anchor-tooltip [route' param-ctx]
   (case (:display-mode param-ctx)
     :xray (if (success? route')
             [nil (pr-str (:query-params @route'))]
@@ -61,7 +62,7 @@
   ; doesn't handle tx-fn - meant for the self-link. Weird and prob bad.
   {:route (exception/extract route' nil)
    :style {:color (connection-color/connection-color (-> link :hypercrud/owner :db/id :id))}
-   :tooltip (anchor-tooltip link route' param-ctx)
+   :tooltip (anchor-tooltip route' param-ctx)
    :class (if-not (success? route') "invalid")})
 
 (defn anchor-branch-logic [anchor param-ctx]
