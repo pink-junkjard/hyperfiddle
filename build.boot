@@ -1,7 +1,7 @@
 (set-env!
   :dependencies '[[com.cemerick/url "0.1.1"]
                   [com.cognitect/transit-cljs "0.8.239"]
-                  [org.hypercrud/util "0.0.1-SNAPSHOT"]
+                  [com.hyperfiddle/util "0.0.1-SNAPSHOT"]
                   ;[funcool/promesa "1.1.1"]
                   [io.nervous/kvlt "0.1.1"]
                   [markdown-clj "0.9.88"]
