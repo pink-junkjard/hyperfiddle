@@ -1,12 +1,11 @@
 (ns hypercrud.browser.anchor
   (:require [cats.core :refer [mlet extract return]]
             [cats.monad.exception :as exception :refer [try-on success failure success?]]
-            [clojure.set :as set]
             [hypercrud.browser.auto-anchor-formula :refer [auto-entity-dbid]]
+            [hypercrud.browser.base :as base]
             [hypercrud.browser.connection-color :as connection-color]
             [hypercrud.client.core :as hc]
             [hypercrud.compile.eval :as eval :refer [eval-str']]
-            [hypercrud.form.q-util :as q-util]
             [hypercrud.runtime.state.actions :as actions]   ; todo bad dep
             [hypercrud.util.branch :as branch]
             [promesa.core :as p]))
@@ -18,22 +17,6 @@
       (if user-fn
         (exception/try-on (apply user-fn args))
         (return nil)))))
-
-(defn validated-route' [link route]
-  ; We specifically hydrate this deep just so we can validate anchors like this.
-  (case (:request/type link)
-    :query (mlet [q (success (q-util/safe-parse-query-validated link))]
-             (let [have (set (keys (into {} (remove (comp nil? val) (:query-params route)))))
-                   need (set (q-util/parse-param-holes q))
-                   missing (set/difference need have)]
-               (if (empty? missing)
-                 (success route)
-                 (failure missing "missing query params"))))
-    :entity (if (not= nil (-> route :query-params :entity)) ; add logic for a
-              (success route)
-              (failure #{:entity} "missing query params"))
-    :blank (success route)
-    (success route) #_"wtf???  \"{:hypercrud/owner {:database/domain nil, :database/ident \"hyperfiddle\"}, :db/id #DbId[[:link/ident :hyperfiddle/new-page-popover] 17592186045422]}\"   "))
 
 #_"all fiddles render fn"
 (defn ^:export build-anchor-route-unvalidated' [anchor param-ctx]
@@ -48,8 +31,10 @@
 
 (defn ^:export build-anchor-route' [anchor param-ctx]
   ;(assert project)                                         ; be safe - maybe constructing it now
-  (mlet [route (build-anchor-route-unvalidated' anchor param-ctx)]
-    (validated-route' (:anchor/link anchor) route)))
+  (mlet [route (build-anchor-route-unvalidated' anchor param-ctx)
+         ; validate the route by seeing if the request can be built the same as the browser
+         _ (base/request-for-link (:anchor/link anchor) (:query-params route) param-ctx)]
+    (return route)))
 
 (defn anchor-tooltip [route' param-ctx]
   (case (:display-mode param-ctx)

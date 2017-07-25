@@ -34,6 +34,7 @@
 
 (defn get-ordered-find-elements [link param-ctx]
   (case (:request/type link)
+    ; this could throw, we only run this code after a link has returned successfully, getting lucky here
     :query (let [q (some-> link :link-query/value reader/read-string)
                  find-element-lookup (find-elements-by-name link)]
              (->> (util/parse-query-element q :find)

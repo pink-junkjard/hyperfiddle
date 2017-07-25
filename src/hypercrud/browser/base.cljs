@@ -1,7 +1,6 @@
 (ns hypercrud.browser.base
   (:require [cats.core :as cats :refer [mlet]]
-            [cats.monad.exception :refer-macros [try-on]]
-            [cljs.reader :as reader]
+            [cats.monad.exception :as exception]
             [hypercrud.browser.auto-anchor :as auto-anchor]
             [hypercrud.browser.user-bindings :as user-bindings]
             [hypercrud.client.core :as hc]
@@ -9,7 +8,8 @@
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hypercrud.ui.form-util :as form-util]
-            [hypercrud.util.core :as util]))
+            [hypercrud.util.core :as util]
+            [hypercrud.util.string :as hc-string]))
 
 
 (def never-read-only (constantly false))
@@ -41,37 +41,41 @@
                        :hypercrud/owner ['*]}])))
 
 (defn request-for-link [link query-params param-ctx]
-  (try-on
-    (case (:request/type link)
-      :query
-      (let [q (some-> link :link-query/value reader/read-string)
-            params-map (merge query-params (q-util/build-dbhole-lookup link param-ctx))
-            params (q-util/build-params #(get params-map %) link param-ctx)
-            find-elements (-> link :link-query/find-element (form-util/strip-forms-in-raw-mode param-ctx))
-            pull-exp (->> find-elements
-                          (mapv (juxt :find-element/name
-                                      (fn [fe]
-                                        (let [conn-id (-> fe :find-element/connection :db/id :id)]
-                                          [(hc/db (:peer param-ctx) conn-id (get-in param-ctx [:branches conn-id]))
-                                           (q-util/form-pull-exp (:find-element/form fe))]))))
-                          (into {}))]
-        (->QueryRequest q params pull-exp))
+  (case (:request/type link)
+    :query
+    (let [params-map (merge query-params (q-util/build-dbhole-lookup link param-ctx))
+          pull-exp (->> (-> link :link-query/find-element (form-util/strip-forms-in-raw-mode param-ctx))
+                        (mapv (juxt :find-element/name
+                                    (fn [fe]
+                                      (let [conn-id (-> fe :find-element/connection :db/id :id)]
+                                        [(hc/db (:peer param-ctx) conn-id (get-in param-ctx [:branches conn-id]))
+                                         (q-util/form-pull-exp (:find-element/form fe))]))))
+                        (into {}))]
+      (mlet [q (hc-string/safe-read-string (:link-query/value link))
+             query-holes ((exception/wrap q-util/parse-holes) q)]
+        (let [params (->> query-holes
+                          (mapv (juxt identity #(get params-map %)))
+                          (into {}))
+              missing (filter nil? (vals params))]
+          (if (empty? missing)
+            (cats/return (->QueryRequest q params pull-exp))
+            (exception/failure missing "missing query params")))))
 
-      :entity
-      ;(assert (:entity query-params))                         ;-- Commented because we are requesting invisible things that the UI never tries to render - can be fixed
-      ;(assert (:conn-id (:entity query-params))) ; this is not looked at on server now.
+    :entity
+    (exception/try-on
       (let [entity-fe (first (filter #(= (:find-element/name %) "entity") (:link-query/find-element link)))
             conn-id (-> entity-fe :find-element/connection :db/id :id)]
         (assert conn-id)
+        (assert (:entity query-params) "missing query params")
         (->EntityRequest
           (:entity query-params)
           (:a query-params)
           (hc/db (:peer param-ctx) conn-id (get-in param-ctx [:branches conn-id]))
-          (q-util/form-pull-exp (:find-element/form entity-fe))))
+          (q-util/form-pull-exp (:find-element/form entity-fe)))))
 
-      :blank nil
+    :blank (exception/success nil)
 
-      nil)))
+    (exception/success nil)))
 
 (defn process-results [get-f query-params link request result schema param-ctx]
   (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
