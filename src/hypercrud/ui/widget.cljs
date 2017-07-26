@@ -21,7 +21,6 @@
    (->> anchor-ctx-pairs
         ; Don't filter hidden links; because they could be broken or invalid and need to draw error.
         (map (fn [[anchor param-ctx]]
-                (assert (:navigate-cmp param-ctx))
                 (let [prompt (or (:anchor/prompt anchor)
                                  (:anchor/ident anchor)
                                  "_")]
