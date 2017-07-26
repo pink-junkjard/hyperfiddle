@@ -1,5 +1,6 @@
 (ns hypercrud.ui.select
   (:require [cats.monad.either :as either]
+            [hypercrud.browser.browser-ui :as browser-ui]
             [hypercrud.browser.connection-color :as connection-color]
             [hypercrud.client.tx :as tx]
             [hypercrud.form.option :as option]
@@ -40,7 +41,7 @@
     [:span.select
      (-> (option/hydrate-options' options-anchor param-ctx)
          (either/branch
-           (fn [e] [:code (pr-str e)])
+           (fn [e] (browser-ui/ui-error e param-ctx))
            (fn [option-records]
              (let [no-options? (empty? option-records)
                    props (update props :disabled #(or % no-options?))

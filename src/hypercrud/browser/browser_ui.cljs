@@ -11,8 +11,7 @@
             [hypercrud.types.EntityRequest :refer [EntityRequest]]
             [hypercrud.types.QueryRequest :refer [QueryRequest]]
             [hypercrud.ui.auto-control :as auto-control]
-            [hypercrud.util.core :refer [pprint-str]]))
-
+            [hypercrud.util.core :as util :refer [pprint-str]]))
 
 (defn hydrate-link [link-dbid param-ctx]
   (if (auto-link/system-link? link-dbid)
@@ -50,15 +49,20 @@
            (dissoc param-ctx :result :db :find-element :entity :attribute :value :layout :field)))
     (either/left (str "anchor, " (or (:anchor/ident anchor) (:anchor/prompt anchor)) ", has no link "))))
 
-(defn safe [f & args]
+(defn ui-error [e ctx]
+  [(case (:layout ctx) :table :code :pre)
+   (pr-str e)
+   #_(ex-message e) #_(pr-str (ex-data e))])
+
+(defn safe [f & [_ ctx :as args]]
   ; reports: hydrate failure, hyperfiddle javascript error, user-fn js error
   (try
     (either/branch
       (apply f args)
-      (fn [e] [:pre (pr-str e)])
+      (fn [e] (ui-error e ctx))
       identity)
     (catch :default e                                       ; js errors? Why do we need this.
-      [:pre (.-stack e)])))
+      (ui-error e ctx))))
 
 (defn safe-ui' [& args]
   (apply safe ui' args))
