@@ -1,5 +1,6 @@
 (ns hypercrud.form.q-util
   (:require [cljs.reader :as reader]
+            [clojure.string :as string]
             [hypercrud.client.core :as hc]
             [hypercrud.util.core :as util]))
 
@@ -22,6 +23,19 @@
   (->> (util/parse-query-element q :in)
        ;; the string conversion should happen at the other side imo
        (mapv str)))
+
+(defn parse-param-holes [q]
+  (->> (parse-holes q)
+       (remove #(string/starts-with? % "$"))))
+
+(defn safe-parse-query-validated [link]                     ; monad
+  ; return monad and display the error to the widget?
+  ; Should try not to even stage bad queries. If it happens though,
+  ; we can draw the server error. Why can't we even get to server error now?
+  (let [q (some-> link :link-query/value safe-read-string)]
+    (if (vector? q)
+      q
+      [])))
 
 (defn build-dbhole-lookup [link param-ctx]
   (->> (:link-query/dbhole link)

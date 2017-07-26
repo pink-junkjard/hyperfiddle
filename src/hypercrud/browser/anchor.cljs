@@ -10,7 +10,12 @@
             [hypercrud.runtime.state.actions :as actions]   ; todo bad dep
             [hypercrud.util.branch :as branch]
             [hypercrud.util.monad :refer [exception->either]]
-            [promesa.core :as p]))
+            [promesa.core :as p]
+
+            [clojure.set :as set]
+            [hypercrud.form.q-util :as q-util]
+            [cats.monad.exception :refer [success failure success? failure? try-on]]
+            ))
 
 
 (defn safe-run-user-code-str' [code-str & args]
@@ -19,23 +24,16 @@
       (if user-fn
         (-> (exception/try-on (apply user-fn args))
             exception->either)
-        (return nil)))
-    (either/right nil)))
+        (return nil)))))
 
-#_"all fiddles render fn"
-(defn ^:export build-anchor-route-unvalidated' [anchor param-ctx]
-  (mlet [query-params (safe-run-user-code-str' (:anchor/formula anchor) param-ctx)]
+(defn ^:export build-anchor-route' [anchor param-ctx]
+  (mlet [query-params (if-let [code-str (:anchor/formula anchor)]
+                        (safe-run-user-code-str' code-str param-ctx)
+                        (either/right nil))]
     (return {:domain (-> anchor :anchor/link :hypercrud/owner :database/domain)
              :project (-> anchor :anchor/link :hypercrud/owner :database/ident)
              :link-dbid (-> anchor :anchor/link :db/id)
              :query-params query-params})))
-
-(defn ^:export build-anchor-route' [anchor param-ctx]
-  ;(assert project)                                         ; be safe - maybe constructing it now
-  (mlet [route (build-anchor-route-unvalidated' anchor param-ctx)
-         ; validate the route by seeing if the request can be built the same as the browser
-         _ (base/request-for-link (:anchor/link anchor) (:query-params route) param-ctx)]
-    (return route)))
 
 (defn anchor-tooltip [route' param-ctx]
   (case (:display-mode param-ctx)
@@ -45,14 +43,33 @@
                 (fn [route] [nil (pr-str (:query-params route))])))
     nil))
 
-(defn build-anchor-props-raw [route' link param-ctx]        ; param-ctx is for display-mode
-  ; doesn't handle tx-fn - meant for the self-link. Weird and prob bad.
-  {:route (-> route'
-              (cats/mplus (either/right nil))
-              (cats/extract))
-   :style {:color (connection-color/connection-color (-> link :hypercrud/owner :db/id :id))}
-   :tooltip (anchor-tooltip route' param-ctx)
-   :class (if (either/left? route') "invalid")})
+; this is same business logic as base/request-for-link
+; this is currently making assumptions on dbholes
+(defn validated-route' [link route]
+  ; We specifically hydrate this deep just so we can validate anchors like this.
+  (let [have (set (keys (into {} (remove (comp nil? val) (:query-params route)))))]
+    (case (:request/type link)
+      :query (mlet [q (success (q-util/safe-parse-query-validated link))]
+               (let [need (set (q-util/parse-param-holes q))
+                     missing (set/difference need have)]
+                 (if (empty? missing)
+                   (success route)
+                   (failure {:have have :missing missing} "missing query params"))))
+      :entity (if (not= nil (-> route :query-params :entity)) ; add logic for a
+                (success route)
+                (failure {:have have :missing #{:entity}} "missing query params"))
+      :blank (success route)
+      (success route) #_"wtf???  \"{:hypercrud/owner {:database/domain nil, :database/ident \"hyperfiddle\"}, :db/id #DbId[[:link/ident :hyperfiddle/new-page-popover] 17592186045422]}\"   ")))
+
+(defn build-anchor-props-raw [unvalidated-route' link param-ctx] ; param-ctx is for display-mode
+  (let [validated-route' (validated-route' link (exception/extract unvalidated-route' nil))]
+    ; doesn't handle tx-fn - meant for the self-link. Weird and prob bad.
+    {:route (-> unvalidated-route'
+                (cats/mplus (either/right nil))
+                (cats/extract))
+     :style {:color (connection-color/connection-color (-> link :hypercrud/owner :db/id :id))}
+     :tooltip (anchor-tooltip validated-route' param-ctx)
+     :class (if (either/left? validated-route') "invalid")}))
 
 (defn anchor-branch-logic [anchor param-ctx]
   (if (:anchor/managed? anchor)
