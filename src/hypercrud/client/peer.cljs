@@ -1,5 +1,5 @@
 (ns hypercrud.client.peer
-  (:require [cats.monad.exception :as exception]
+  (:require [cats.monad.either :as either]
             [hypercrud.client.core :as hc]
             [hypercrud.client.http :as http]
             [hypercrud.types.DbVal :refer [->DbVal]]
@@ -22,8 +22,8 @@
 (defn- process-result [resultset-or-error request]
   (if resultset-or-error
     (if (instance? DbError resultset-or-error)
-      (exception/failure (human-error resultset-or-error request))
-      (exception/success resultset-or-error))))
+      (either/left (human-error resultset-or-error request))
+      (either/right resultset-or-error))))
 
 (defn hydrate-one! [entry-uri request stage-val]
   (-> (http/hydrate! entry-uri #{request} stage-val)
@@ -34,7 +34,7 @@
   hc/Peer
   (hydrate [this request]
     (or (process-result @(reagent/cursor state-atom [:ptm request]) request)
-        (exception/failure "Loading..." #_(js/Error. (str "Unhydrated request:\n" (pr-str request))))))
+        (either/left "Loading..." #_(str "Unhydrated request:\n" (pr-str request)))))
 
   (db [this conn-id branch]
     (->DbVal conn-id branch))

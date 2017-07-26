@@ -1,10 +1,9 @@
 (ns hypercrud.ui.select
-  (:require [cats.monad.exception :as exception :refer [failure?]]
+  (:require [cats.monad.either :as either]
             [hypercrud.browser.connection-color :as connection-color]
             [hypercrud.client.tx :as tx]
             [hypercrud.form.option :as option]
-            [hypercrud.types.DbId :refer [->DbId]]
-            [cats.core :as cats]))
+            [hypercrud.types.DbId :refer [->DbId]]))
 
 
 (defn select-boolean* [value props param-ctx]
@@ -37,27 +36,24 @@
                                               id (if (< id 0) (str id) id)]
                                           (->DbId id (get-in param-ctx [:entity :db/id :conn-id]))))]
                              ((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) dbid)))
-               :disabled (:read-only props)}
-        options (option/hydrate-options' options-anchor param-ctx)]
+               :disabled (:read-only props)}]
     [:span.select
-     (if (failure? options)
-       [:code (pr-str (cats/extract options))]
-       (let [option-records @options
-             ;_ (when (exception/failure? options)
-             ;    ; todo something better with this exception
-             ;    (.error js/console (pr-str (.-e options))))
-             no-options? (empty? option-records)
-             props (update props :disabled #(or % no-options?))
-             props (if (#{:find-element/connection :dbhole/value :hypercrud/owner} (-> param-ctx :attribute :attribute/ident)) ; lol hack
-                     (assoc props :style {:background-color (connection-color/connection-color (-> value :db/id :id))})
-                     props)
-             ; hack in the selected value if we don't have options hydrated?
-             ; Can't, since we only have the #DbId hydrated, and it gets complicated with relaton vs entity etc
-             ]
-         [:select.select props
-          (concat
-            (->> (sort-by second option-records)
-                 (mapv (fn [[dbid label]]
-                         ^{:key dbid}
-                         [:option {:value (.-id dbid)} label])))
-            [[:option {:key :blank :value ""} "--"]])]))]))
+     (-> (option/hydrate-options' options-anchor param-ctx)
+         (either/branch
+           (fn [e] [:code (pr-str e)])
+           (fn [option-records]
+             (let [no-options? (empty? option-records)
+                   props (update props :disabled #(or % no-options?))
+                   props (if (#{:find-element/connection :dbhole/value :hypercrud/owner} (-> param-ctx :attribute :attribute/ident)) ; lol hack
+                           (assoc props :style {:background-color (connection-color/connection-color (-> value :db/id :id))})
+                           props)
+                   ; hack in the selected value if we don't have options hydrated?
+                   ; Can't, since we only have the #DbId hydrated, and it gets complicated with relaton vs entity etc
+                   ]
+               [:select.select props
+                (concat
+                  (->> (sort-by second option-records)
+                       (mapv (fn [[dbid label]]
+                               ^{:key dbid}
+                               [:option {:value (.-id dbid)} label])))
+                  [[:option {:key :blank :value ""} "--"]])]))))]))

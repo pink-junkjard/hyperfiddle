@@ -1,6 +1,7 @@
 (ns hypercrud.ui.widget
   (:refer-clojure :exclude [keyword long boolean])
-  (:require [cats.monad.exception :as exception]
+  (:require [cats.core :as cats]
+            [cats.monad.either :as either]
             [hypercrud.browser.core :as browser]
             [hypercrud.browser.anchor :as anchor]
             [hypercrud.client.tx :as tx]
@@ -146,7 +147,8 @@
   (let [[options-anchor] (filter option-anchor? anchors)
         initial-select (some-> options-anchor               ; not okay to auto-select.
                                (option/hydrate-options' param-ctx)
-                               (exception/extract nil)      ; todo handle exception
+                               (cats/mplus (either/right nil))      ; todo handle exception
+                               (cats/extract)
                                first
                                first)
         select-value-atom (r/atom initial-select)]
@@ -169,7 +171,9 @@
                                                   (->DbId (js/parseInt select-value 10) (get-in param-ctx [:entity :db/id :conn-id])))]
                                        (reset! select-value-atom dbid))}
                   ; need lower level select component that can be reused here and in select.cljs
-                  select-options (->> (exception/extract (option/hydrate-options' options-anchor param-ctx) nil) ;todo handle exception
+                  select-options (->> (option/hydrate-options' options-anchor param-ctx)
+                                      (cats/mplus (either/right nil)) ;todo handle exception
+                                      (cats/extract)
                                       (map (fn [[dbid label-prop]]
                                              [:option {:key (:id dbid) :value (-> dbid :id str)} label-prop])))]
               [:select props select-options])

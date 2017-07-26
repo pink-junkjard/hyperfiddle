@@ -1,5 +1,5 @@
 (ns hypercrud.compile.eval
-  (:require [cats.monad.exception :as exception]
+  (:require [cats.monad.either :as either]
             [cljs.analyzer :as analyzer]
             [cljs.js :as cljs]
             [markdown.core]))
@@ -27,20 +27,21 @@
                             {:eval cljs/js-eval}
                             identity))))))
 
-(defn exception-from-compiler-result [eval-result input]
+(defn wrap-from-compiler-result [eval-result input]
   (let [{value :value error :error} eval-result]
     (cond
-      error (exception/failure {:cljs-input input :cljs-result eval-result} "Failed cljs eval")
-      :else (exception/success value))))
+      error (either/left {:cljs-input input :cljs-result eval-result})
+      :else (either/right value))))
 
 (defn eval-str' [code-str]
   ;if there is a string rep in the meta, the object itself is code
   (if (:str (meta code-str))
-    (exception/success code-str)
-    (-> code-str eval-str- (exception-from-compiler-result code-str))))
+    (either/right code-str)
+    (-> code-str eval-str- (wrap-from-compiler-result code-str))))
 
+; todo im dead code
 (defn eval' [form]
-  (-> form eval- (exception-from-compiler-result form)))
+  (-> form eval- (wrap-from-compiler-result form)))
 
 (defn validate-user-code-str [code-str]
   (cond

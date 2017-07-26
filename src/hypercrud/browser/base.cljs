@@ -1,5 +1,6 @@
 (ns hypercrud.browser.base
   (:require [cats.core :as cats :refer [mlet]]
+            [cats.monad.either :as either]
             [cats.monad.exception :as exception]
             [hypercrud.browser.auto-anchor :as auto-anchor]
             [hypercrud.browser.user-bindings :as user-bindings]
@@ -9,6 +10,7 @@
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hypercrud.ui.form-util :as form-util]
             [hypercrud.util.core :as util]
+            [hypercrud.util.monad :refer [exception->either]]
             [hypercrud.util.string :as hc-string]))
 
 
@@ -51,34 +53,34 @@
                                         [(hc/db (:peer param-ctx) conn-id (get-in param-ctx [:branches conn-id]))
                                          (q-util/form-pull-exp (:find-element/form fe))]))))
                         (into {}))]
-      (mlet [q (hc-string/safe-read-string (:link-query/value link))
-             query-holes ((exception/wrap q-util/parse-holes) q)]
-        (let [params (->> query-holes
-                          (mapv (juxt identity #(get params-map %)))
-                          (into {}))
-              missing (->> params
-                           (filter (comp nil? second))
-                           (mapv first))]
-          (if (empty? missing)
-            (cats/return (->QueryRequest q params pull-exp))
-            (exception/failure missing "missing query params")))))
+      (mlet [q (-> (hc-string/safe-read-string (:link-query/value link)) exception->either)
+             query-holes (-> ((exception/wrap q-util/parse-holes) q) exception->either)
+             :let [params (->> query-holes
+                               (mapv (juxt identity #(get params-map %)))
+                               (into {}))
+                   missing (->> params
+                                (filter (comp nil? second))
+                                (mapv first))]]
+        (if (empty? missing)
+          (cats/return (->QueryRequest q params pull-exp))
+          (either/left (str "missing query params: " (pr-str missing))))))
 
     :entity
     (let [entity-fe (first (filter #(= (:find-element/name %) "entity") (:link-query/find-element link)))
           conn-id (-> entity-fe :find-element/connection :db/id :id)]
       (cond
-        (nil? conn-id) (exception/failure "missing conn-id")
-        (nil? (:entity query-params)) (exception/failure "missing query params")
-        :else (exception/success
+        (nil? conn-id) (either/left "missing conn-id")
+        (nil? (:entity query-params)) (either/left "missing query params")
+        :else (either/right
                 (->EntityRequest
                   (:entity query-params)
                   (:a query-params)
                   (hc/db (:peer param-ctx) conn-id (get-in param-ctx [:branches conn-id]))
                   (q-util/form-pull-exp (:find-element/form entity-fe))))))
 
-    :blank (exception/success nil)
+    :blank (either/right nil)
 
-    (exception/success nil)))
+    (either/right nil)))
 
 (defn process-results [get-f query-params link request result schema param-ctx]
   (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))

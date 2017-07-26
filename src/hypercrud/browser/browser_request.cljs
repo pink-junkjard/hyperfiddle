@@ -1,6 +1,6 @@
 (ns hypercrud.browser.browser-request
   (:require [cats.core :as cats :refer [mlet]]
-            [cats.monad.exception :as exception]
+            [cats.monad.either :as either]
             [hypercrud.browser.anchor :as anchor]
             [hypercrud.browser.auto-link :as auto-link]
             [hypercrud.browser.base :as base]
@@ -81,15 +81,16 @@
            (cats/fmap (fn [link-request]
                         (concat
                           (if link-request [link-request])
-                          (->> (:link-query/find-element link)
-                               (mapv :find-element/connection)
-                               (mapv (partial schema-util/schema-request (:root-db param-ctx))))
-                          (exception/extract
-                            (mlet [result (if link-request (hc/hydrate (:peer param-ctx) link-request) (exception/success nil))
-                                   schema (exception/try-or-else (hc/hydrate (:peer param-ctx) (schema-util/schema-request (:root-db param-ctx) nil)) nil)] ; map connections
-                              (base/process-results (constantly link-dependent-requests) query-params link link-request result schema param-ctx))
-                            nil)))))
-      (exception/extract nil)))
+                          [(schema-util/schema-request (:root-db param-ctx) nil)] ; todo map connections
+                          (-> (mlet [result (if link-request
+                                              (hc/hydrate (:peer param-ctx) link-request)
+                                              (either/right nil))
+                                     schema (hc/hydrate (:peer param-ctx) (schema-util/schema-request (:root-db param-ctx) nil))]
+                                (base/process-results (constantly link-dependent-requests) query-params link link-request result schema param-ctx))
+                              (cats/mplus (either/right nil))
+                              (cats/extract))))))
+      (cats/mplus (either/right nil))
+      (cats/extract)))
 
 (defn request' [route param-ctx]
   (if (auto-link/system-link? (:link-dbid route))
@@ -97,22 +98,25 @@
           system-link-requests (auto-link/request-for-system-link (:root-db param-ctx) system-link-idmap)]
       (concat
         (remove nil? system-link-requests)
-        (if-let [system-link-deps (exception/extract
-                                    (->> system-link-requests
-                                         (mapv #(if % (hc/hydrate (:peer param-ctx) %)
-                                                      (exception/success nil)))
-                                         (reduce #(mlet [acc %1 v %2] (cats/return (conj acc v))) (exception/success [])))
-                                    nil)]
-          (let [link (auto-link/hydrate-system-link system-link-idmap system-link-deps param-ctx)]
-            (requests-for-link link (:query-params route) param-ctx)))))
+        (-> (mapv #(if % (hc/hydrate (:peer param-ctx) %) (either/right nil)) system-link-requests)
+            (cats/sequence)
+            (either/branch
+              (constantly nil)
+              (fn [system-link-deps]
+                (let [link (auto-link/hydrate-system-link system-link-idmap system-link-deps param-ctx)]
+                  (requests-for-link link (:query-params route) param-ctx)))))))
     (let [meta-link-request (base/meta-request-for-link (:root-db param-ctx) (:link-dbid route))]
       (concat [meta-link-request]
-              (if-let [link (-> (hc/hydrate (:peer param-ctx) meta-link-request) (exception/extract nil))]
-                (requests-for-link link (:query-params route) param-ctx))))))
+              (-> (hc/hydrate (:peer param-ctx) meta-link-request)
+                  (either/branch (constantly nil)
+                                 #(requests-for-link % (:query-params route) param-ctx)))))))
 
 (defn request [anchor param-ctx]
   (if (:anchor/link anchor)
-    (if-let [route (exception/extract (anchor/build-anchor-route' anchor param-ctx) nil)]
-      (request' route
-                ; entire context must be encoded in the route
-                (dissoc param-ctx :result :db :find-element :entity :attribute :value)))))
+    (-> (anchor/build-anchor-route' anchor param-ctx)
+        (either/branch
+          (constantly nil)
+          (fn [route]
+            (request' route
+                      ; entire context must be encoded in the route
+                      (dissoc param-ctx :result :db :find-element :entity :attribute :value)))))))

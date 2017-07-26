@@ -1,6 +1,6 @@
 (ns hypercrud.browser.browser-ui
   (:require [cats.core :as cats :refer-macros [mlet]]
-            [cats.monad.exception :as exception :refer-macros [try-on]]
+            [cats.monad.either :as either]
             [hypercrud.browser.anchor :as anchor]
             [hypercrud.browser.auto-link :as auto-link]
             [hypercrud.browser.base :as base]
@@ -18,9 +18,8 @@
   (if (auto-link/system-link? link-dbid)
     (let [system-link-idmap (-> link-dbid :id)]
       (->> (auto-link/request-for-system-link (:root-db param-ctx) system-link-idmap)
-           (mapv #(if % (hc/hydrate (:peer param-ctx) %)
-                        (exception/success nil)))
-           (reduce #(mlet [acc %1 v %2] (cats/return (conj acc v))) (exception/success []))
+           (mapv #(if % (hc/hydrate (:peer param-ctx) %) (either/right nil)))
+           (cats/sequence)
            (cats/fmap #(auto-link/hydrate-system-link system-link-idmap % param-ctx))))
     (hc/hydrate (:peer param-ctx) (base/meta-request-for-link (:root-db param-ctx) link-dbid))))
 
@@ -38,9 +37,9 @@
   (let [get-ui-f (or override-get-ui-f get-ui-f)]
     (mlet [link (hydrate-link (:link-dbid route) param-ctx) ; always latest
            request (base/request-for-link link query-params param-ctx)
-           result (if request (hc/hydrate (:peer param-ctx) request) (exception/success nil))
+           result (if request (hc/hydrate (:peer param-ctx) request) (either/right nil))
            ; schema is allowed to be nil if the link only has anchors and no data dependencies
-           schema (exception/try-or-else (hc/hydrate (:peer param-ctx) (schema-util/schema-request (:root-db param-ctx) nil)) nil)]
+           schema (hc/hydrate (:peer param-ctx) (schema-util/schema-request (:root-db param-ctx) nil))]
       (base/process-results get-ui-f query-params link request result schema param-ctx))))
 
 (defn ui [anchor param-ctx]
@@ -49,16 +48,15 @@
       (ui' route
            ; entire context must be encoded in the route
            (dissoc param-ctx :result :db :find-element :entity :attribute :value :layout :field)))
-    (exception/failure (str "anchor, " (or (:anchor/ident anchor) (:anchor/prompt anchor)) ", has no link "))))
+    (either/left (str "anchor, " (or (:anchor/ident anchor) (:anchor/prompt anchor)) ", has no link "))))
 
 (defn safe [f & args]
   ; reports: hydrate failure, hyperfiddle javascript error, user-fn js error
   (try
-    (let [dom-or-e (apply f args)]
-      (if (exception/failure? dom-or-e)
-        [:pre (or (-> dom-or-e .-e .-data)
-                  (pr-str (-> dom-or-e .-e)))]              ; hydrate error
-        (.-v dom-or-e)))                                    ; happy path
+    (either/branch
+      (apply f args)
+      (fn [e] [:pre (pr-str e)])
+      identity)
     (catch :default e                                       ; js errors? Why do we need this.
       [:pre (.-stack e)])))
 
@@ -70,10 +68,11 @@
 
 (defn link-user-fn [link]
   (if-not (empty? (:link/renderer link))
-    (let [user-fn' (eval-str' (:link/renderer link))]
-      (if (exception/success? user-fn')
-        (fn [result colspec anchors param-ctx] [safe-user-renderer (exception/extract user-fn') result colspec anchors param-ctx])
-        (fn [result colspec anchors param-ctx] [:pre (pprint-str (.-e user-fn'))])))))
+    (-> (eval-str' (:link/renderer link))
+        (either/branch
+          (fn [e] (constantly [:pre (pprint-str e)]))
+          (fn [user-fn]
+            (fn [result colspec anchors param-ctx] [safe-user-renderer user-fn result colspec anchors param-ctx]))))))
 
 (defn user-result [link param-ctx]
   ; only need a safewrap on other people's user-fns; this context's user fn only needs the topmost safewrap.

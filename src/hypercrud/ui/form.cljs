@@ -1,7 +1,7 @@
 (ns hypercrud.ui.form
   (:require [cats.core :as cats :refer [mlet]]
-            [cats.monad.exception :as exception :refer [try-on]]
-            [hypercrud.browser.anchor :as anchor]
+            [cats.monad.either :as either]
+            [cats.monad.exception :as exception]
             [hypercrud.browser.connection-color :as connection-color]
             [hypercrud.compile.eval :refer [eval-str']]
             [hypercrud.runtime.state.actions :as actions]   ; todo bad dep
@@ -9,9 +9,8 @@
             [hypercrud.ui.form-util :as form-util]
             [hypercrud.ui.input :as input]
             [hypercrud.ui.renderer :as renderer]
-            [hypercrud.ui.tooltip :as tooltip]
             [hypercrud.ui.widget :as widget]
-            [hypercrud.util.core :as util]
+            [hypercrud.util.monad :refer [exception->either]]
             [reagent.core :as r]))
 
 (defn control [maybe-field anchors param-ctx]
@@ -29,12 +28,16 @@
                          (if-not (empty? user-fn-str)
                            (mlet [user-fn (eval-str' user-fn-str)]
                              ; predicate gets whole entity as arg 1, for keyword syntax sugar
-                             (try-on (user-fn (:entity param-ctx) param-ctx)))))
-        hidden (not (if maybe-visible' (exception/extract maybe-visible' true) true))
+                             (-> (exception/try-on (user-fn (:entity param-ctx) param-ctx))
+                                 exception->either))))
+        hidden (not (or (some-> maybe-visible'
+                                (cats/mplus (either/right true))
+                                (cats/extract))
+                        true))
 
         ; Draw error instead of control.
-        control (if (exception/failure? maybe-visible')
-                  [:pre (js/pprint-str (.-e maybe-visible'))]
+        control (if (either/left? maybe-visible')
+                  [:pre (js/pprint-str (cats/extract maybe-visible'))]
                   (control param-ctx))]
 
     (if-not hidden
