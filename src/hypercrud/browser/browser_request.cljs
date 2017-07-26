@@ -77,17 +77,19 @@
                                                 ))))))))))))
 
 (defn requests-for-link [link query-params param-ctx]
-  (let [link-request (exception/extract (base/request-for-link link query-params param-ctx))]
-    (concat
-      (if link-request [link-request])
-      (->> (:link-query/find-element link)
-           (mapv :find-element/connection)
-           (mapv (partial schema-util/schema-request (:root-db param-ctx))))
-      (exception/extract
-        (mlet [result (if link-request (hc/hydrate (:peer param-ctx) link-request) (exception/success nil))
-               schema (exception/try-or-else (hc/hydrate (:peer param-ctx) (schema-util/schema-request (:root-db param-ctx) nil)) nil)] ; map connections
-          (base/process-results (constantly link-dependent-requests) query-params link link-request result schema param-ctx))
-        nil))))
+  (-> (->> (base/request-for-link link query-params param-ctx)
+           (cats/fmap (fn [link-request]
+                        (concat
+                          (if link-request [link-request])
+                          (->> (:link-query/find-element link)
+                               (mapv :find-element/connection)
+                               (mapv (partial schema-util/schema-request (:root-db param-ctx))))
+                          (exception/extract
+                            (mlet [result (if link-request (hc/hydrate (:peer param-ctx) link-request) (exception/success nil))
+                                   schema (exception/try-or-else (hc/hydrate (:peer param-ctx) (schema-util/schema-request (:root-db param-ctx) nil)) nil)] ; map connections
+                              (base/process-results (constantly link-dependent-requests) query-params link link-request result schema param-ctx))
+                            nil)))))
+      (exception/extract nil)))
 
 (defn request' [route param-ctx]
   (if (auto-link/system-link? (:link-dbid route))
