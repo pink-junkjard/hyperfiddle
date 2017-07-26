@@ -68,13 +68,25 @@
                                                                     (constantly nil))
                                       arrow (with-sort-direction " ↓" " ↑" " ↕" nil)]
                                   [:td {:class (string/join " " css-classes)
-                                        :style {:background-color (connection-color/connection-color (or (:color param-ctx) (.-conn-id db) #_ "hack for top tables"))}
+                                        :style {:background-color (connection-color/connection-color (or (:color param-ctx) (.-conn-id db) #_"hack for top tables"))}
                                         :key (str fe-name "-" ident)
                                         :on-click on-click}
                                    [:label (form-util/field-label field param-ctx)]
                                    [:div.anchors (widget/render-anchors (->> anchors (remove :anchor/render-inline?)) param-ctx)]
                                    (widget/render-inline-anchors (->> anchors (filter :anchor/render-inline?)) param-ctx)
                                    [:span.sort-arrow arrow]])))))))))
+
+(defn control [maybe-field anchors param-ctx]
+  (let [props (form-util/build-props maybe-field anchors param-ctx)]
+    (if (renderer/user-renderer param-ctx)
+      (renderer/user-render maybe-field anchors props param-ctx)
+      [auto-table-cell maybe-field anchors props param-ctx])))
+
+(defn field [control maybe-field anchors param-ctx]
+  (let [shadow-link (not (-> param-ctx :entity :db/id))
+        style {:border-color (if-not shadow-link (connection-color/connection-color (:color param-ctx)))}]
+    [:td.truncate {:style style}
+     (control param-ctx)]))
 
 (defn row-cells [relation colspec anchors param-ctx]
   (let [entity-anchors-lookup (group-by (comp :find-element/name :anchor/find-element) anchors)
@@ -87,9 +99,7 @@
                                                               :find-element fe
                                                               ; todo custom user-dispatch with all the tx-fns as reducers
                                                               :user-with! (fn [tx] ((:dispatch! param-ctx) (actions/with (.-conn-id db) (.-branch db) tx))))
-                                   param-ctx (form-util/entity-param-ctx entity param-ctx)
-                                   attribute-anchors (->> (get entity-anchors-lookup (-> fe :find-element/name))
-                                                          (filter :anchor/attribute))]
+                                   param-ctx (form-util/entity-param-ctx entity param-ctx)]
                                (->> colspec
                                     (mapv (fn [[db fe attr maybe-field]]
                                             (let [fe-name (-> fe :find-element/name)
@@ -97,30 +107,27 @@
                                                   param-ctx (assoc param-ctx :attribute attr
                                                                              :value (get entity ident)
                                                                              :layout :table)
-                                                  style {:border-color (if (:db/id entity) (connection-color/connection-color (:color param-ctx)))}]
-                                              [:td.truncate {:key (or (:db/id maybe-field) (str fe-name ident)) :style style}
-                                               (let [anchors (filter #(= (-> param-ctx :attribute :db/id)
-                                                                         (some-> % :anchor/attribute :db/id)) attribute-anchors)
-                                                     props (form-util/build-props maybe-field anchors param-ctx)]
-                                                 (if (renderer/user-renderer param-ctx)
-                                                   (renderer/user-render maybe-field anchors props param-ctx)
-                                                   [auto-table-cell maybe-field anchors props param-ctx]))]))))))))
-        link-cell [:td.link-cell {:key :link-cell}
-                   ; inline entity-anchors are not yet implemented, what does that mean.
-                   ; find-element anchors need more items in their ctx
-                   (widget/render-anchors (->> (partition 4 colspec)
-                                               (group-by (fn [[db fe attr maybe-field]] fe)) ; keys are set, ignore colspec now except for db which is uniform.
-                                               (mapcat (fn [[fe colspec]]
-                                                         (let [fe-name (-> fe :find-element/name)
-                                                               entity (get relation fe-name) _ (assert entity)
-                                                               param-ctx (assoc param-ctx :db (ffirst colspec)
-                                                                                          :find-element fe)
-                                                               param-ctx (form-util/entity-param-ctx entity param-ctx)
-                                                               fe-anchors (->> (get entity-anchors-lookup fe-name)
-                                                                               (filter :anchor/repeating?)
-                                                                               (remove :anchor/attribute)
-                                                                               (remove :anchor/render-inline?))]
-                                                           (mapv vector fe-anchors (repeat param-ctx)))))))]]
+                                                  field (case (:display-mode param-ctx) :xray field :user (get param-ctx :field field))
+                                                  control (case (:display-mode param-ctx) :xray control :user (get param-ctx :control control))
+                                                  anchors (filter #(= (-> param-ctx :attribute :db/id) (some-> % :anchor/attribute :db/id)) anchors)]
+                                              ^{:key (or (:db/id maybe-field) (str fe-name ident))}
+                                              [field #(control maybe-field anchors %) maybe-field anchors param-ctx]))))))))
+        link-cell ^{:key :link-cell} [field #()
+                                      ; inline entity-anchors are not yet implemented, what does that mean.
+                                      ; find-element anchors need more items in their ctx
+                                      (widget/render-anchors (->> (partition 4 colspec)
+                                                                  (group-by (fn [[db fe attr maybe-field]] fe)) ; keys are set, ignore colspec now except for db which is uniform.
+                                                                  (mapcat (fn [[fe colspec]]
+                                                                            (let [fe-name (-> fe :find-element/name)
+                                                                                  entity (get relation fe-name) _ (assert entity)
+                                                                                  param-ctx (assoc param-ctx :db (ffirst colspec)
+                                                                                                             :find-element fe)
+                                                                                  param-ctx (form-util/entity-param-ctx entity param-ctx)
+                                                                                  fe-anchors (->> (get entity-anchors-lookup fe-name)
+                                                                                                  (filter :anchor/repeating?)
+                                                                                                  (remove :anchor/attribute)
+                                                                                                  (remove :anchor/render-inline?))]
+                                                                              (mapv vector fe-anchors (repeat param-ctx)))))))]]
     (conj (vec cells) link-cell)))
 
 

@@ -14,15 +14,13 @@
             [reagent.core :as r]))
 
 (defn control [maybe-field anchors param-ctx]
-  (let [anchors (filter #(= (-> param-ctx :attribute :db/id) (some-> % :anchor/attribute :db/id)) anchors)]
-    (let [props (form-util/build-props maybe-field anchors param-ctx)]
-      (if (renderer/user-renderer param-ctx)
-        (renderer/user-render maybe-field anchors props param-ctx)
-        [auto-control maybe-field anchors props param-ctx]))))
+  (let [props (form-util/build-props maybe-field anchors param-ctx)]
+    (if (renderer/user-renderer param-ctx)
+      (renderer/user-render maybe-field anchors props param-ctx)
+      [auto-control maybe-field anchors props param-ctx])))
 
 (defn field [control maybe-field anchors param-ctx]
-  (let [anchors (filter #(= (-> param-ctx :attribute :db/id) (some-> % :anchor/attribute :db/id)) anchors)
-
+  (let [
         ; Check visibility user fn. Error states: eval error, apply error.
         maybe-visible' (if-let [user-fn-str (:field/visible? maybe-field)]
                          (if-not (empty? user-fn-str)
@@ -105,7 +103,8 @@
                                                                             :value (get entity ident))
                                                                    (if (= ident :db/id) (assoc $ :read-only always-read-only) $))
                                                    field (case (:display-mode param-ctx) :xray field :user (get param-ctx :field field))
-                                                   control (case (:display-mode param-ctx) :xray control :user (get param-ctx :control control))]
+                                                   control (case (:display-mode param-ctx) :xray control :user (get param-ctx :control control))
+                                                   anchors (filter #(= (-> param-ctx :attribute :db/id) (some-> % :anchor/attribute :db/id)) anchors)]
                                                ; What is the user-field allowed to change? The param-ctx. Can it change links or anchors? no.
                                                ^{:key (str ident)}
                                                [field #(control maybe-field anchors %) maybe-field anchors param-ctx]))))
