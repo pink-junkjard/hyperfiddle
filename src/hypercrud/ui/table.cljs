@@ -7,6 +7,7 @@
             [hypercrud.ui.renderer :as renderer]
             [hypercrud.ui.widget :as widget]
             [hypercrud.util.core :as util]
+            [hypercrud.react.react-fragment :refer [react-fragment]]
             [reagent.core :as r]))
 
 
@@ -67,9 +68,7 @@
                                                                     (constantly nil))
                                       arrow (with-sort-direction " ↓" " ↑" " ↕" nil)]
                                   [:td {:class (string/join " " css-classes)
-                                        :style {:background-color (connection-color/connection-color (or (:color param-ctx)
-                                                                                                         ; hack for top tables
-                                                                                                         (.-conn-id db)))}
+                                        :style {:background-color (connection-color/connection-color (or (:color param-ctx) (.-conn-id db) #_ "hack for top tables"))}
                                         :key (str fe-name "-" ident)
                                         :on-click on-click}
                                    [:label (form-util/field-label field param-ctx)]
@@ -77,109 +76,108 @@
                                    (widget/render-inline-anchors (->> anchors (filter :anchor/render-inline?)) param-ctx)
                                    [:span.sort-arrow arrow]])))))))))
 
-(defn table-row-form [relation colspec anchors param-ctx]
-  (let [entity-anchors-lookup (group-by (comp :find-element/name :anchor/find-element) anchors)]
-    [:tr
-     (->> (partition 4 colspec)
-          (group-by (fn [[db fe ident maybe-field]] fe))
-          (mapcat (fn [[fe colspec]]
-                    (let [entity (get relation (-> fe :find-element/name))
-                          db (ffirst colspec)
-                          param-ctx (assoc param-ctx :db db
-                                                     :find-element fe
-                                                     ; todo custom user-dispatch with all the tx-fns as reducers
-                                                     :user-with! (fn [tx] ((:dispatch! param-ctx) (actions/with (.-conn-id db) (.-branch db) tx))))
-                          param-ctx (form-util/entity-param-ctx entity param-ctx)
-                          attribute-anchors (->> (get entity-anchors-lookup (-> fe :find-element/name))
-                                                 (filter :anchor/attribute))]
-                      (->> colspec
-                           (mapv (fn [[db fe attr maybe-field]]
-                                   (let [fe-name (-> fe :find-element/name)
-                                         ident (-> attr :attribute/ident)
-                                         param-ctx (assoc param-ctx :attribute attr
-                                                                    :value (get entity ident)
-                                                                    :layout :table)
-                                         style {:border-color (if (:db/id entity) (connection-color/connection-color (:color param-ctx)))}]
-                                     [:td.truncate {:key (or (:db/id maybe-field) (str fe-name ident)) :style style}
-                                      (let [anchors (filter #(= (-> param-ctx :attribute :db/id)
-                                                                (some-> % :anchor/attribute :db/id)) attribute-anchors)
-                                            props (form-util/build-props maybe-field anchors param-ctx)]
-                                        (if (renderer/user-renderer param-ctx)
-                                          (renderer/user-render maybe-field anchors props param-ctx)
-                                          [auto-table-cell maybe-field anchors props param-ctx]))]))))))))
-
-     [:td.link-cell {:key :link-cell}
-      ; inline entity-anchors are not yet implemented, what does that mean.
-      ; find-element anchors need more items in their ctx
-      (widget/render-anchors (->> (partition 4 colspec)
-                                  (group-by (fn [[db fe attr maybe-field]] fe)) ; keys are set, ignore colspec now except for db which is uniform.
-                                  (mapcat (fn [[fe colspec]]
+(defn row-cells [relation colspec anchors param-ctx]
+  (let [entity-anchors-lookup (group-by (comp :find-element/name :anchor/find-element) anchors)
+        cells (->> (partition 4 colspec)
+                   (group-by (fn [[db fe ident maybe-field]] fe))
+                   (mapcat (fn [[fe colspec]]
+                             (let [entity (get relation (-> fe :find-element/name))
+                                   db (ffirst colspec)
+                                   param-ctx (assoc param-ctx :db db
+                                                              :find-element fe
+                                                              ; todo custom user-dispatch with all the tx-fns as reducers
+                                                              :user-with! (fn [tx] ((:dispatch! param-ctx) (actions/with (.-conn-id db) (.-branch db) tx))))
+                                   param-ctx (form-util/entity-param-ctx entity param-ctx)
+                                   attribute-anchors (->> (get entity-anchors-lookup (-> fe :find-element/name))
+                                                          (filter :anchor/attribute))]
+                               (->> colspec
+                                    (mapv (fn [[db fe attr maybe-field]]
                                             (let [fe-name (-> fe :find-element/name)
-                                                  entity (get relation fe-name) _ (assert entity)
-                                                  param-ctx (assoc param-ctx :db (ffirst colspec)
-                                                                             :find-element fe)
-                                                  param-ctx (form-util/entity-param-ctx entity param-ctx)
-                                                  fe-anchors (->> (get entity-anchors-lookup fe-name)
-                                                                  (filter :anchor/repeating?)
-                                                                  (remove :anchor/attribute)
-                                                                  (remove :anchor/render-inline?))]
-                                              (mapv vector fe-anchors (repeat param-ctx)))))))]]))
+                                                  ident (-> attr :attribute/ident)
+                                                  param-ctx (assoc param-ctx :attribute attr
+                                                                             :value (get entity ident)
+                                                                             :layout :table)
+                                                  style {:border-color (if (:db/id entity) (connection-color/connection-color (:color param-ctx)))}]
+                                              [:td.truncate {:key (or (:db/id maybe-field) (str fe-name ident)) :style style}
+                                               (let [anchors (filter #(= (-> param-ctx :attribute :db/id)
+                                                                         (some-> % :anchor/attribute :db/id)) attribute-anchors)
+                                                     props (form-util/build-props maybe-field anchors param-ctx)]
+                                                 (if (renderer/user-renderer param-ctx)
+                                                   (renderer/user-render maybe-field anchors props param-ctx)
+                                                   [auto-table-cell maybe-field anchors props param-ctx]))]))))))))
+        link-cell [:td.link-cell {:key :link-cell}
+                   ; inline entity-anchors are not yet implemented, what does that mean.
+                   ; find-element anchors need more items in their ctx
+                   (widget/render-anchors (->> (partition 4 colspec)
+                                               (group-by (fn [[db fe attr maybe-field]] fe)) ; keys are set, ignore colspec now except for db which is uniform.
+                                               (mapcat (fn [[fe colspec]]
+                                                         (let [fe-name (-> fe :find-element/name)
+                                                               entity (get relation fe-name) _ (assert entity)
+                                                               param-ctx (assoc param-ctx :db (ffirst colspec)
+                                                                                          :find-element fe)
+                                                               param-ctx (form-util/entity-param-ctx entity param-ctx)
+                                                               fe-anchors (->> (get entity-anchors-lookup fe-name)
+                                                                               (filter :anchor/repeating?)
+                                                                               (remove :anchor/attribute)
+                                                                               (remove :anchor/render-inline?))]
+                                                           (mapv vector fe-anchors (repeat param-ctx)))))))]]
+    (conj (vec cells) link-cell)))
 
 
-(defn body [relations colspec anchors sort-col param-ctx]
-  [:tbody
-   (let [[fe-dbid sort-key direction] @sort-col
-         sort-eids (fn [relations]
-                     (let [[_ fe attr _] (->> (partition 4 colspec)
-                                              (filter (fn [[db fe attr maybe-field]]
-                                                        (and (= fe-dbid (:db/id fe))
-                                                             (= (:attribute/ident attr) sort-key))))
-                                              first)]
-                       (if (sortable? attr)
-                         (sort-by #(get-in % [(:find-element/name fe) sort-key])
-                                  (case direction
-                                    :asc #(compare %1 %2)
-                                    :desc #(compare %2 %1))
-                                  relations)
-                         relations)))]
-     (->> relations
-          sort-eids
-          (map (fn [relation]
-                 (let [param-ctx (assoc param-ctx :result relation)] ; todo :result -> :relation
-                   ^{:key (hash (util/map-values #(or (:db/id %) (-> % :anchor/ident)) relation))}
-                   [table-row-form relation colspec anchors param-ctx])))))])
+(defn rows [relations colspec anchors sort-col param-ctx]
+  (let [[fe-dbid sort-key direction] @sort-col
+        sort-eids (fn [relations]
+                    (let [[_ fe attr _] (->> (partition 4 colspec)
+                                             (filter (fn [[db fe attr maybe-field]]
+                                                       (and (= fe-dbid (:db/id fe))
+                                                            (= (:attribute/ident attr) sort-key))))
+                                             first)]
+                      (if (sortable? attr)
+                        (sort-by #(get-in % [(:find-element/name fe) sort-key])
+                                 (case direction
+                                   :asc #(compare %1 %2)
+                                   :desc #(compare %2 %1))
+                                 relations)
+                        relations)))]
+    (->> relations
+         sort-eids
+         (map (fn [relation]
+                (let [param-ctx (assoc param-ctx :result relation)] ; todo :result -> :relation
+                  ^{:key (hash (util/map-values #(or (:db/id %) (-> % :anchor/ident)) relation))}
+                  [:tr (apply react-fragment :table-row-form (row-cells relation colspec anchors param-ctx))]))))))
 
 (defn table [& props]
   (let [sort-col (r/atom nil)]
     (fn [relations colspec anchors param-ctx]
-      (let [anchors (widget/process-popover-anchors anchors param-ctx)]
+      (let [anchors (widget/process-popover-anchors anchors param-ctx)
+
+            links-index (widget/render-anchors (->> anchors
+                                                    (remove :anchor/attribute)
+                                                    (remove :anchor/find-element)
+                                                    (remove :anchor/render-inline?))
+                                               (dissoc param-ctx :isComponent))
+            links-fe-no-entity (let [anchors-lookup (->> anchors
+                                                         (remove :anchor/repeating?)
+                                                         (remove :anchor/attribute)
+                                                         (remove :anchor/render-inline?)
+                                                         (group-by (comp :find-element/name :anchor/find-element)))]
+                                 (->> (partition 4 colspec)
+                                      (group-by (fn [[dbval fe attr maybe-field]] fe))
+                                      (mapcat (fn [[fe colspec]]
+                                                (let [form-anchors (get anchors-lookup (-> fe :find-element/name))
+                                                      param-ctx (assoc param-ctx :db (ffirst colspec)
+                                                                                 :find-element fe)]
+                                                  (widget/render-anchors form-anchors param-ctx))))))
+            links-index-inline (widget/render-inline-anchors (->> anchors ; busted
+                                                                  (remove :anchor/repeating?)
+                                                                  (remove :anchor/attribute)
+                                                                  (filter :anchor/render-inline?))
+                                                             (dissoc param-ctx :isComponent))]
         [:div.ui-table-with-links
-         (widget/render-anchors (->> anchors
-                                     (remove :anchor/attribute)
-                                     (remove :anchor/find-element)
-                                     (remove :anchor/render-inline?))
-                                (dissoc param-ctx :isComponent))
+         links-index
          [:table.ui-table
-          [:thead
-           [:tr
-            (build-col-heads colspec anchors sort-col param-ctx)
-            [:td.link-cell {:key :link-cell}
-             (let [anchors-lookup (->> anchors
-                                       (remove :anchor/repeating?)
-                                       (remove :anchor/attribute)
-                                       (remove :anchor/render-inline?)
-                                       (group-by (comp :find-element/name :anchor/find-element)))]
-               (->> (partition 4 colspec)
-                    (group-by (fn [[dbval fe attr maybe-field]] fe))
-                    (mapcat (fn [[fe colspec]]
-                              (let [form-anchors (get anchors-lookup (-> fe :find-element/name))
-                                    param-ctx (assoc param-ctx :db (ffirst colspec)
-                                                               :find-element fe)]
-                                (widget/render-anchors form-anchors param-ctx))))))]]]
-          ; filter repeating? No because create-new-attribute down here too.
-          [body relations colspec anchors sort-col param-ctx]]
-         (widget/render-inline-anchors (->> anchors         ; busted
-                                            (remove :anchor/repeating?)
-                                            (remove :anchor/attribute)
-                                            (filter :anchor/render-inline?))
-                                       (dissoc param-ctx :isComponent))]))))
+          [:thead [:tr (build-col-heads colspec anchors sort-col param-ctx)
+                   [:td.link-cell {:key :link-cell} links-fe-no-entity]]]
+          ; Sometimes the leafnode needs all the anchors.
+          [:tbody (apply react-fragment :tbody (rows relations colspec anchors sort-col param-ctx))]]
+         links-index-inline]))))
