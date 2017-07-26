@@ -30,7 +30,7 @@
 (defn wrap-from-compiler-result [eval-result input]
   (let [{value :value error :error} eval-result]
     (cond
-      error (either/left {:cljs-input input :cljs-result eval-result})
+      error (either/left {:message "cljs eval failed" :cljs-input input :cljs-result eval-result})
       :else (either/right value))))
 
 (defn eval-str' [code-str]

@@ -6,9 +6,13 @@
             [hypercrud.util.monad :refer [exception->either]]))
 
 (defn user-bindings' [link param-ctx]
-  (-> (if-let [code-str (eval/validate-user-code-str (:link/bindings link))]
-        (mlet [user-fn (eval-str' code-str)
-               param-ctx (-> (exception/try-on (user-fn param-ctx)) exception->either)
-               :when (not (nil? param-ctx))]
-          (cats/return param-ctx))
-        (either/right param-ctx))))
+  {:post [(not (nil? %))]}
+  (if-let [code-str (eval/validate-user-code-str (:link/bindings link))]
+    (mlet [user-fn (eval-str' code-str)
+           param-ctx (-> (exception/try-on (user-fn param-ctx)) exception->either)]
+      (if (and (not= nil param-ctx) (map? param-ctx))
+        (cats/return param-ctx)
+        (either/left {:message "user-bindings invalid"
+                      :user-input code-str
+                      :user-result param-ctx})))
+    (either/right param-ctx)))
