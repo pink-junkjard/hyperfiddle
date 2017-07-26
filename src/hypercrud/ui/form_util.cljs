@@ -27,11 +27,6 @@
   (->> (mapv (juxt :find-element/name identity) (:link-query/find-element link))
        (into {})))
 
-(defn manufacture-entity-find-element [link]
-  (->> (:link-query/find-element link)
-       (filter #(= (:find-element/name %) "entity"))
-       first))
-
 (defn get-ordered-find-elements [link param-ctx]
   (case (:request/type link)
     ; this could throw, we only run this code after a link has returned successfully, getting lucky here
@@ -40,7 +35,9 @@
              (->> (util/parse-query-element q :find)
                   (mapv str)
                   (mapv #(get find-element-lookup %))))
-    :entity [(manufacture-entity-find-element link)]
+    :entity [(->> (:link-query/find-element link)
+                  (filter #(= (:find-element/name %) "entity"))
+                  first)]
     []))
 
 (defn determine-colspec "Colspec is what you have when you flatten out the find elements,
