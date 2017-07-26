@@ -56,7 +56,9 @@
         (let [params (->> query-holes
                           (mapv (juxt identity #(get params-map %)))
                           (into {}))
-              missing (filter nil? (vals params))]
+              missing (->> params
+                           (filter (comp nil? second))
+                           (mapv first))]
           (if (empty? missing)
             (cats/return (->QueryRequest q params pull-exp))
             (exception/failure missing "missing query params")))))
