@@ -64,16 +64,17 @@
             (exception/failure missing "missing query params")))))
 
     :entity
-    (exception/try-on
-      (let [entity-fe (first (filter #(= (:find-element/name %) "entity") (:link-query/find-element link)))
-            conn-id (-> entity-fe :find-element/connection :db/id :id)]
-        (assert conn-id)
-        (assert (:entity query-params) "missing query params")
-        (->EntityRequest
-          (:entity query-params)
-          (:a query-params)
-          (hc/db (:peer param-ctx) conn-id (get-in param-ctx [:branches conn-id]))
-          (q-util/form-pull-exp (:find-element/form entity-fe)))))
+    (let [entity-fe (first (filter #(= (:find-element/name %) "entity") (:link-query/find-element link)))
+          conn-id (-> entity-fe :find-element/connection :db/id :id)]
+      (cond
+        (nil? conn-id) (exception/failure "missing conn-id")
+        (nil? (:entity query-params)) (exception/failure "missing query params")
+        :else (exception/success
+                (->EntityRequest
+                  (:entity query-params)
+                  (:a query-params)
+                  (hc/db (:peer param-ctx) conn-id (get-in param-ctx [:branches conn-id]))
+                  (q-util/form-pull-exp (:find-element/form entity-fe))))))
 
     :blank (exception/success nil)
 
