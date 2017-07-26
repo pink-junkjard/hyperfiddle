@@ -77,7 +77,7 @@
 
 (defn user-result [link param-ctx]
   ; only need a safewrap on other people's user-fns; this context's user fn only needs the topmost safewrap.
-  (let [user-fn (first (remove nil? [(:user-renderer param-ctx) (link-user-fn link) auto-control/result]))]
+  (let [user-fn (or (:user-renderer param-ctx) (link-user-fn link) auto-control/result)]
     (fn [result colspec anchors param-ctx]
       (let [anchor-index (->> anchors
                               (filter :anchor/ident)        ; cannot lookup nil idents
