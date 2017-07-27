@@ -9,6 +9,7 @@
   (let [o-stage (:stage (get-state))
         hydrate-id (js/Math.random)                         ; todo want to hash state
         ]
+    ; todo assert on-start is not a thunk
     (dispatch! (apply internal/batch [:hydrate!-start hydrate-id] (if on-start (on-start get-state))))
     (let [{n-stage :stage} (get-state)]
       (-> (internal/hydrate-until-queries-settle! dispatch! get-state peer hydrate-id (not= o-stage n-stage))

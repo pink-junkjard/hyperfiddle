@@ -1,7 +1,7 @@
 (ns hypercrud.state.actions.internal
-  (:require [promesa.core :as p]
+  (:require [clojure.set :as set]
             [hypercrud.client.http :as http]
-            [clojure.set :as set]))
+            [promesa.core :as p]))
 
 ; batch doesn't make sense with thunks (can be sync or async dispatches in a thunk),
 ; user beware
@@ -14,9 +14,7 @@
         ; this peer could start returning inconsistent data compared to the state value,
         ; however another hydrating action should have dispatched in that scenario,
         ; so the resulting computation would be thrown away anyway
-        ;
-        ; re: circular dep
-        ; technically request should never fire an action, so if request was separated from ui, no circle in theory
+        ; todo parameterize/inject the request fn
         requests (into #{} (hyperfiddle.app/request state peer))
         hydrated? (set/subset? (set requests) (set (keys ptm)))]
     ; inspect dbvals used in requests see if stage has changed for them
