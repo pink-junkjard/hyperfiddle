@@ -1,4 +1,4 @@
-(ns hypercrud.platoform.base-64
+(ns hypercrud.platform.base-64
   (:require [cljs.nodejs :as node]))
 
 
