@@ -4,7 +4,7 @@
             [cats.monad.exception :as exception]
             [hypercrud.browser.connection-color :as connection-color]
             [hypercrud.compile.eval :refer [eval-str']]
-            [hypercrud.runtime.state.actions :as actions]   ; todo bad dep
+            [hypercrud.state.actions.core :as actions]
             [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.form-util :as form-util]
             [hypercrud.ui.input :as input]
