@@ -2,20 +2,17 @@
   (:require [cats.core :as cats :refer [mlet return]]
             [cats.monad.either :as either]
             [cats.monad.exception :as exception]
+            [clojure.set :as set]
             [hypercrud.browser.auto-anchor-formula :refer [auto-entity-dbid]]
             [hypercrud.browser.base :as base]
             [hypercrud.browser.connection-color :as connection-color]
             [hypercrud.client.core :as hc]
             [hypercrud.compile.eval :as eval :refer [eval-str']]
+            [hypercrud.form.q-util :as q-util]
             [hypercrud.runtime.state.actions :as actions]   ; todo bad dep
             [hypercrud.util.branch :as branch]
             [hypercrud.util.monad :refer [exception->either]]
-            [promesa.core :as p]
-
-            [clojure.set :as set]
-            [hypercrud.form.q-util :as q-util]
-            [cats.monad.exception :refer [success failure success? failure? try-on]]
-            ))
+            [promesa.core :as p]))
 
 
 (defn safe-run-user-code-str' [code-str & args]
@@ -49,20 +46,22 @@
   ; We specifically hydrate this deep just so we can validate anchors like this.
   (let [have (set (keys (into {} (remove (comp nil? val) (:query-params route)))))]
     (case (:request/type link)
-      :query (mlet [q (success (q-util/safe-parse-query-validated link))]
+      :query (mlet [q (either/right (q-util/safe-parse-query-validated link))]
                (let [need (set (q-util/parse-param-holes q))
                      missing (set/difference need have)]
                  (if (empty? missing)
-                   (success route)
-                   (failure {:have have :missing missing} "missing query params"))))
+                   (either/right route)
+                   (either/left {:message "missing query params" :have have :missing missing}))))
       :entity (if (not= nil (-> route :query-params :entity)) ; add logic for a
-                (success route)
-                (failure {:have have :missing #{:entity}} "missing query params"))
-      :blank (success route)
-      (success route) #_"wtf???  \"{:hypercrud/owner {:database/domain nil, :database/ident \"hyperfiddle\"}, :db/id #DbId[[:link/ident :hyperfiddle/new-page-popover] 17592186045422]}\"   ")))
+                (either/right route)
+                (either/left {:message "missing query params" :have have :missing #{:entity}}))
+      :blank (either/right route)
+      (either/right route) #_"wtf???  \"{:hypercrud/owner {:database/domain nil, :database/ident \"hyperfiddle\"}, :db/id #DbId[[:link/ident :hyperfiddle/new-page-popover] 17592186045422]}\"   ")))
 
 (defn build-anchor-props-raw [unvalidated-route' link param-ctx] ; param-ctx is for display-mode
-  (let [validated-route' (validated-route' link (exception/extract unvalidated-route' nil))]
+  (let [validated-route' (validated-route' link (-> unvalidated-route'
+                                                    (cats/mplus (either/right nil))
+                                                    (cats/extract)))]
     ; doesn't handle tx-fn - meant for the self-link. Weird and prob bad.
     {:route (-> unvalidated-route'
                 (cats/mplus (either/right nil))
