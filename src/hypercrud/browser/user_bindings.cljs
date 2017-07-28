@@ -12,7 +12,5 @@
            param-ctx (-> (exception/try-on (user-fn param-ctx)) exception->either)]
       (if (and (not= nil param-ctx) (map? param-ctx))
         (cats/return param-ctx)
-        (either/left {:message "user-bindings invalid"
-                      :user-input code-str
-                      :user-result param-ctx})))
+        (either/left {:message "user-bindings invalid" :data {:user-input code-str :user-result param-ctx}})))
     (either/right param-ctx)))

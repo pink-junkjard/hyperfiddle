@@ -54,10 +54,10 @@
                      missing (set/difference need have)]
                  (if (empty? missing)
                    (either/right route)
-                   (either/left {:message "missing query params" :have have :missing missing}))))
+                   (either/left {:message "missing query params" :data {:have have :missing missing}}))))
       :entity (if (not= nil (-> route :query-params :entity)) ; add logic for a
                 (either/right route)
-                (either/left {:message "missing query params" :have have :missing #{:entity}}))
+                (either/left {:message "missing query params" :data {:have have :missing #{:entity}}}))
       :blank (either/right route)
       (either/left {:message "route has no link" :data {:route route}})
       #_(either/right route) #_"wtf???  \"{:hypercrud/owner {:database/domain nil, :database/ident \"hyperfiddle\"}, :db/id #DbId[[:link/ident :hyperfiddle/new-page-popover] 17592186045422]}\"   ")))
