@@ -49,7 +49,6 @@
                        (concat
                          (->> ((:entity-f lookup) fe) (mapcat #(recurse-request % param-ctx)))
                          (->> (get-in fe [:find-element/form :form/field])
-                              (filter #(form-util/filter-visible-fields % param-ctx))
                               (mapcat (fn [field]
                                         (let [attribute (-> field :field/attribute)
                                               param-ctx (assoc param-ctx :attribute attribute)]
@@ -68,7 +67,6 @@
                                                 (concat
                                                   (->> ((:entity-t lookup) fe) (mapcat #(recurse-request % param-ctx)))
                                                   (->> (get-in fe [:find-element/form :form/field])
-                                                       (filter #(form-util/filter-visible-fields % param-ctx))
                                                        (mapcat (fn [field]
                                                                  (let [attribute (-> field :field/attribute)
                                                                        param-ctx (assoc param-ctx :attribute attribute

@@ -18,11 +18,6 @@
         f (if raw-mode? #(dissoc % :find-element/form) identity)]
     (map f ordered-find-elements)))
 
-(defn filter-visible-fields [fieldinfo param-ctx]
-  (let [attr (-> fieldinfo :field/attribute :attribute/ident)
-        visible-fn (get-in param-ctx [:fields attr :visible?] (constantly true))]
-    (visible-fn param-ctx)))
-
 (defn find-elements-by-name [link]
   (->> (mapv (juxt :find-element/name identity) (:link-query/find-element link))
        (into {})))
