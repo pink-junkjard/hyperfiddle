@@ -80,10 +80,10 @@
     :hydrate!-failure (first args)
     error))
 
-(def hc-reducer-map {:hydrate-id hydrate-id-reducer
-                     :route route-reducer
-                     :stage stage-reducer
-                     :ptm ptm-reducer
-                     :error error-reducer})
+(def root-reducer-map {:hydrate-id hydrate-id-reducer
+                       :route route-reducer
+                       :stage stage-reducer
+                       :ptm ptm-reducer
+                       :error error-reducer})
 
-(def hc-root-reducer (state/combine-reducers hc-reducer-map))
+(def root-reducer (state/combine-reducers root-reducer-map))
