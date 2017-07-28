@@ -2,7 +2,7 @@
 
 > navigate app-values like a web browser navigates HTML
 
-Hypercrud is a Clojure and ClojureScript system for building database apps.
+Hypercrud is a programmable Datomic Console replacement. It is sufficiently powerful to make sophisticated CRUD apps. It can be mounted onto your pre-existing Datomic databases without alterations. It is a bit like a game engine - Hypercrud provides a small number of composable primitives -- queries, forms, links, html expression -- which let an indie studio ship high quality applications without a huge engineering team, but a AAA studio still retains full ability to fork, extend and otherwise work with the source code.
 
 [![Live Demo](http://i.imgur.com/Bd5QKoQ.gif)](https://goo.gl/3s1cmd)
 
