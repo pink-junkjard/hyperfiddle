@@ -23,7 +23,7 @@
                         :form/field
                         ['*
                          {:field/attribute ['*
-                                            {:attribute/valueType [:db/id :db/ident]
+                                            {:attribute/valueType [:db/id :db/ident] ; i doubt we need :db/id here and its really confusing
                                              :attribute/cardinality [:db/id :db/ident]
                                              :attribute/unique [:db/id :db/ident]}]}]}]]
     (->EntityRequest link-dbid nil root-db
@@ -39,7 +39,7 @@
                                      {:anchor/link ['*      ; hydrate the whole link for validating the anchor by query params
                                                     {:hypercrud/owner ['*]}] ; need the link's owner to render the href to it
                                       :anchor/find-element [:db/id :find-element/name :find-element/connection]
-                                      :anchor/attribute [:db/id :attribute/ident]}]
+                                      :anchor/attribute [:db/id :attribute/ident {:attribute/cardinality [:db/ident]} #_ "auto-anchor-formula"]}]
                        :hypercrud/owner ['*]}])))
 
 (defn request-for-link [link query-params param-ctx]

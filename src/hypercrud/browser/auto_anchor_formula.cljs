@@ -26,34 +26,28 @@
             (-> ctx :value))
           (or conn-id (-> ctx :entity :db/id :conn-id))))
 
+; anchors MUST have a find-element, if they have an attribute or are create? or repeating?
+;(assert (not (and (not fe) (or a create? (:anchor/repeating? anchor)))) "missing find-element")
 (defn auto-formula [anchor]                                 ; what about long-coersion?
-  ; this is a 3x3 matrix - create?, find-element, attribute.
   (let [{fe :anchor/find-element
          a :anchor/attribute
-         create? :anchor/create?} anchor]
-    ; anchors MUST have a find-element, if they have an attribute or are create? or repeating?
-    ;(assert (not (and (not fe) (or a create? (:anchor/repeating? anchor)))) "missing find-element")
+         create? :anchor/create?
+         dependent? :anchor/repeating?} anchor]
     (cond
-      (and fe a (not create?))
-      (str-and-code (fn [ctx]
-                      (let [attr (-> ctx :attribute)]
-                        (case (-> attr :attribute/cardinality :db/ident)
-                          :db.cardinality/one {:entity (get-in ctx [:value :db/id])}
-                          :db.cardinality/many {:entity (get-in ctx [:entity :db/id])
-                                                :a (:attribute/ident attr)}))))
+      (and dependent? fe a (not create?))
+      (case (-> a :attribute/cardinality :db/ident)
+        :db.cardinality/one (str-and-code (fn [ctx] {:entity (get-in ctx [:value :db/id])}))
+        :db.cardinality/many (str-and-code (fn [ctx] {:entity (get-in ctx [:entity :db/id]) :a (-> ctx :attribute :attribute/ident)})))
 
-      (and fe a create?)
+      (and fe a create?)                                    ; create may or may not be dependent (maybe just managed)
       ; inherit parent since the fe is never explicitly set by user
       ; it would be more correct to use the FE if we have it, but
       ; that information is guaranteed to be the same?
-      (str-and-code (fn [ctx]
-                      (assert (-> ctx :db .-conn-id))
-                      {:entity (hypercrud.browser.auto-anchor-formula/auto-entity-dbid ctx (-> ctx :db .-conn-id))}))
+      (str-and-code (fn [ctx] {:entity (hypercrud.browser.auto-anchor-formula/auto-entity-dbid ctx (-> ctx :db .-conn-id))}))
 
       ; entity edit
-      (and fe (not a) (not create?))
-      (str-and-code (fn [ctx]
-                      {:entity (get-in ctx [:entity :db/id])}))
+      (and dependent? fe (not a) (not create?))
+      (str-and-code (fn [ctx] {:entity (get-in ctx [:entity :db/id])}))
 
       ; entity create
       ; is it managed or not? We need a connection. Either we got the find-element, or
@@ -64,9 +58,8 @@
       ; Mystery deepens: If ur a syslink u better have a conn-id here because autolink inspects the entity connid to manufacture
       ; the right entity connection. If you're an explicit link with a conn set, it doesn't matter what you put here since the server
       ; will ignore this and use the explicit conn. This is only needed to plumb a connection to the autolink logic so it can choose the right connection.
-      (and fe (not a) create?)
-      (str-and-code (fn [ctx]
-                      {:entity (hypercrud.browser.auto-anchor-formula/auto-entity-dbid ctx (-> ctx :find-element :find-element/connection :db/id :id))}))
+      (and (not dependent?) fe (not a) create?)             ; never managed, bc no attribute to have parent ref
+      (str-and-code (fn [ctx] {:entity (hypercrud.browser.auto-anchor-formula/auto-entity-dbid ctx (-> ctx :find-element :find-element/connection :db/id :id))}))
 
       ; index links can't be dependent on anything
       (and (not fe) (not a)) nil
