@@ -2,7 +2,9 @@
 
 > navigate app-values like a web browser navigates HTML
 
-Hypercrud is a programmable Datomic Console replacement. It is sufficiently powerful to make sophisticated CRUD apps. It mounts onto your existing Datomic databases with no alterations. It is a bit like a game engine - Hypercrud provides a small number of composable primitives -- queries, forms, links, html expression -- which let an indie studio ship high quality applications without a huge engineering team, but a AAA studio still retains full ability to fork, extend and otherwise work with the source code.
+Hyperfiddle is a programmable Datomic Console replacement. It is sufficiently powerful to make sophisticated CRUD apps. It mounts onto your existing Datomic databases with no alterations. It is a bit like a game engine - Hypercrud provides a small number of composable primitives -- queries, forms, links, html expression -- which let an indie studio ship high quality applications without a huge engineering team, but a AAA studio still retains full ability to fork, extend and otherwise work with the source code.
+
+Hypercrud Browser is the ClojureScript library powering this. You can integrate it into your existing codebase, or you can use one of our provided runtimes to mount directly directly onto to your database.
 
 [![Live Demo](http://i.imgur.com/Bd5QKoQ.gif)](https://goo.gl/3s1cmd)
 
@@ -150,9 +152,9 @@ Thus, we claim that "app-as-a-value" is the scalable model we need to build tomo
 
 App-values are graph-shaped and grow to be quite large. It is natural to want to store app-values in a database, and create tooling to build these up visually and interactively, which leads us to:
 
-# Hyperfiddle.net
+# Hyperfiddle
 
-[hyperfiddle.net](http://hyperfiddle.net/) is a WYSIWYG editor for building Hyperfiddle app-values ("hyperfiddles"). Think of it as a programmable Datomic Console. It can be mounted onto your pre-existing Datomic databases without alterations. It heavily leans on d/with as a transaction staging area, including a notion of branching and discard.
+[hyperfiddle](http://hyperfiddle.net/) is a WYSIWYG editor for Hyperfiddle app-values ("hyperfiddles").
 
 ![](http://i.imgur.com/v3cmewv.png)
 
