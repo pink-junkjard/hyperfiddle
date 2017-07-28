@@ -50,8 +50,10 @@
 
 (defn ui-error [e ctx]
   [(case (:layout ctx) :table :code :code)
-   (:message e) " "
-   (if-let [d (:data e)] (pr-str d)) ; could be a tooltip
+   (:message e)
+   (case (:display-mode ctx)
+     :user nil
+     (if-let [d (:data e)] (str " " (pr-str d))))           ; could be a tooltip
    #_(ex-message e) #_(pr-str (ex-data e))])
 
 (defn safe [f & [_ ctx :as args]]
