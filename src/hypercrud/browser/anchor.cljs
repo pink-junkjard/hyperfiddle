@@ -59,10 +59,12 @@
                 (either/right route)
                 (either/left {:message "missing query params" :have have :missing #{:entity}}))
       :blank (either/right route)
-      (either/right route) #_"wtf???  \"{:hypercrud/owner {:database/domain nil, :database/ident \"hyperfiddle\"}, :db/id #DbId[[:link/ident :hyperfiddle/new-page-popover] 17592186045422]}\"   ")))
+      (either/left {:message "route has no link" :data {:route route}})
+      #_(either/right route) #_"wtf???  \"{:hypercrud/owner {:database/domain nil, :database/ident \"hyperfiddle\"}, :db/id #DbId[[:link/ident :hyperfiddle/new-page-popover] 17592186045422]}\"   ")))
 
-(defn build-anchor-props-raw [unvalidated-route' link param-ctx] ; param-ctx is for display-mode
-  (let [validated-route' (validated-route' link (-> unvalidated-route'
+(defn build-anchor-props-raw [unvalidated-route' anchor param-ctx] ; param-ctx is for display-mode
+  (let [link (:anchor/link anchor)                          ; can be nil - in which case route is invalid
+        validated-route' (validated-route' link (-> unvalidated-route'
                                                     (cats/mplus (either/right nil))
                                                     (cats/extract)))]
     ; doesn't handle tx-fn - meant for the self-link. Weird and prob bad.
@@ -105,8 +107,8 @@
                        (either/right true))
                      (cats/mplus (either/right true))
                      (cats/extract))
-        route' (if (:anchor/link anchor) (build-anchor-route' anchor param-ctx #_"links & routes have nothing to do with branches"))
-        anchor-props-route (if route' (build-anchor-props-raw route' (:anchor/link anchor) param-ctx))
+        route' (build-anchor-route' anchor param-ctx)
+        anchor-props-route (build-anchor-props-raw route' anchor param-ctx)
         param-ctx (anchor-branch-logic anchor param-ctx)
         anchor-props-txfn (if-let [user-txfn (some-> (eval/validate-user-code-str (:anchor/tx-fn anchor))
                                                      eval-str'
