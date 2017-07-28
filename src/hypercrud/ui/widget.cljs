@@ -32,7 +32,7 @@
 
 (defn render-inline-anchors
   ([anchors param-ctx]
-   (render-inline-anchors (map vector anchors (repeatedly (constantly param-ctx)))))
+   (render-inline-anchors (map vector anchors (repeat param-ctx))))
   ([anchor-ctx-pairs]
    (->> anchor-ctx-pairs
         ; Don't filter hidden links; because they could be broken or invalid and need to draw error.
