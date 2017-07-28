@@ -87,7 +87,7 @@ the find-element level has been flattened out of the columns."
   ; why does this need the field - it needs the ident for readonly in "Edit Anchors"
   {:read-only ((get param-ctx :read-only) (:attribute param-ctx) param-ctx)})
 
-(defn entity-param-ctx [entity param-ctx]
+(defn entity-param-ctx [param-ctx entity]
   (assoc param-ctx :color ((:color-fn param-ctx) entity param-ctx)
                    :owner ((:owner-fn param-ctx) entity param-ctx)
                    :entity entity))

@@ -108,7 +108,7 @@
                                    :find-element fe
                                    ; todo custom user-dispatch with all the tx-fns as reducers
                                    :user-with! (fn [tx] ((:dispatch! param-ctx) (actions/with (.-conn-id db) (.-branch db) tx))))
-        param-ctx (form-util/entity-param-ctx entity param-ctx)]
+        param-ctx (form-util/entity-param-ctx param-ctx entity)]
     (->> colspec (mapv #(Value % entity-anchors-lookup param-ctx)))))
 
 (defn Relation [relation colspec fe-anchors-lookup param-ctx]
@@ -131,7 +131,7 @@
                                                   entity (get relation fe-name) _ (assert entity)
                                                   param-ctx (assoc param-ctx :db (ffirst colspec)
                                                                              :find-element fe)
-                                                  param-ctx (form-util/entity-param-ctx entity param-ctx)
+                                                  param-ctx (form-util/entity-param-ctx param-ctx entity)
                                                   fe-anchors (->> (get fe-anchors-lookup fe-name)
                                                                   (filter :anchor/repeating?)
                                                                   (remove :anchor/attribute)

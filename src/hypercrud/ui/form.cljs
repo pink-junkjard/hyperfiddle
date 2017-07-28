@@ -91,7 +91,7 @@
                             ; don't put entity in scope because it messes up formulas which have to be deterministic with request side.
                             (widget/render-anchors (remove :anchor/render-inline? entity-new-anchors) param-ctx)
                             (let [entity (get relation fe-name)
-                                  param-ctx (form-util/entity-param-ctx entity param-ctx)]
+                                  param-ctx (form-util/entity-param-ctx param-ctx entity)]
                               #_(assert entity "i think this is true now")
                               (concat
                                 (widget/render-anchors (remove :anchor/render-inline? entity-anchors) param-ctx)
