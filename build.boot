@@ -23,12 +23,8 @@
 
 (require '[adzerk.boot-cljs :refer :all]
          '[adzerk.bootlaces :refer :all]
-         '[crisptrutski.boot-cljs-test :refer [test-cljs]])
-
-(require 'boot.lein)
-(when (> (.lastModified (clojure.java.io/file "build.boot"))
-         (.lastModified (clojure.java.io/file "project.clj")))
-  (boot.lein/write-project-clj))
+         '[crisptrutski.boot-cljs-test :refer [test-cljs]]
+         'boot.lein)
 
 (def +version+ "0.2.0-SNAPSHOT")
 
@@ -39,8 +35,11 @@
        :version +version+}
   test-cljs {:js-env :node})
 
-
 (deftask test []
          ; cljs tests have to have _test in the filename
          #_(merge-env! :source-paths #{"test"})
          #_(test-cljs))
+
+(when (> (.lastModified (clojure.java.io/file "build.boot"))
+         (.lastModified (clojure.java.io/file "project.clj")))
+  (boot.lein/write-project-clj))
