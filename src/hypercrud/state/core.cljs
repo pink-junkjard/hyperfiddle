@@ -1,6 +1,9 @@
 (ns hypercrud.state.core)
 
 
+; IFn[state-value => List[Request]]
+(def ^:dynamic *request*)
+
 (defn combine-reducers [reducer-map]
   (fn [value action & args]
     (reduce (fn [state [k reducer]]
@@ -8,11 +11,11 @@
             value
             reducer-map)))
 
-(defn build-dispatch [state-atom root-reducer peer]
+(defn build-dispatch [state-atom root-reducer]
   (let [get-state (fn [] @state-atom)]
     (fn dispatch! [action-or-func]
       (if (goog/isFunction action-or-func)
-        (action-or-func dispatch! get-state peer)
+        (action-or-func dispatch! get-state)
 
         (let [[action & args] action-or-func]
           (if (= :batch action)

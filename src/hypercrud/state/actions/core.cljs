@@ -5,14 +5,14 @@
             [promesa.core :as p]))
 
 
-(defn hydrating-action [{:keys [on-start]} dispatch! get-state peer]
+(defn hydrating-action [{:keys [on-start]} dispatch! get-state]
   (let [o-stage (:stage (get-state))
         hydrate-id (js/Math.random)                         ; todo want to hash state
         ]
     ; todo assert on-start is not a thunk
     (dispatch! (apply internal/batch [:hydrate!-start hydrate-id] (if on-start (on-start get-state))))
     (let [{n-stage :stage} (get-state)]
-      (-> (internal/hydrate-until-queries-settle! dispatch! get-state peer hydrate-id (not= o-stage n-stage))
+      (-> (internal/hydrate-until-queries-settle! dispatch! get-state hydrate-id (not= o-stage n-stage))
           (p/then (fn []
                     (when (= hydrate-id (:hydrate-id (get-state)))
                       (dispatch! [:hydrate!-success]))))
@@ -25,12 +25,12 @@
   (partial hydrating-action {:on-start (constantly [[:soft-set-route route]])}))
 
 (defn set-route [route]
-  (fn [dispatch! get-state peer]
+  (fn [dispatch! get-state]
     (let [state (get-state)]
       (if (not= route (:route state))
         (if (= (some-> state :route :project) (:project route))
-          ((soft-set-route route) dispatch! get-state peer)
-          (hydrating-action {:on-start (constantly [[:hard-set-route route]])} dispatch! get-state peer))))))
+          ((soft-set-route route) dispatch! get-state)
+          (hydrating-action {:on-start (constantly [[:hard-set-route route]])} dispatch! get-state))))))
 
 (defn set-route-encoded [encoded-route-str]
   (try
@@ -47,22 +47,22 @@
   (partial hydrating-action {:on-start (constantly [[:with conn-id branch tx]])}))
 
 (defn stage-popover [conn-id branch swap-fn]
-  (fn [dispatch! get-state peer]
+  (fn [dispatch! get-state]
     (let [tx-from-modal (get-in (get-state) [:stage conn-id branch] [])]
       (p/then (swap-fn tx-from-modal)
               (fn [{:keys [tx app-route]}]
                 (let [actions [[:reset-branch conn-id branch tx]
                                [:merge conn-id branch]
                                (if app-route [:soft-set-route app-route])]]
-                  (hydrating-action {:on-start (constantly actions)} dispatch! get-state peer)))))))
+                  (hydrating-action {:on-start (constantly actions)} dispatch! get-state)))))))
 
 (defn reset-stage [tx]
-  (fn [dispatch! get-state peer]
+  (fn [dispatch! get-state]
     (when (not= tx (:stage (get-state)))
-      (hydrating-action {:on-start (constantly [[:reset-stage tx]])} dispatch! get-state peer))))
+      (hydrating-action {:on-start (constantly [[:reset-stage tx]])} dispatch! get-state))))
 
 (defn transact! []
-  (fn [dispatch! get-state peer]
+  (fn [dispatch! get-state]
     (dispatch! [:transact!-start])
     (let [{:keys [entry-uri stage]} (get-state)]
       (-> (http/transact! entry-uri stage)
@@ -71,4 +71,4 @@
                      (dispatch! [:transact!-failure error])
                      (p/rejected error)))
           (p/then (fn [{:keys [tempids]}]
-                    (hydrating-action {:on-start (constantly [[:transact!-success tempids]])} dispatch! get-state peer)))))))
+                    (hydrating-action {:on-start (constantly [[:transact!-success tempids]])} dispatch! get-state)))))))

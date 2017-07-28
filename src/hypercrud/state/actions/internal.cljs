@@ -1,6 +1,7 @@
 (ns hypercrud.state.actions.internal
   (:require [clojure.set :as set]
             [hypercrud.client.http :as http]
+            [hypercrud.state.core :as state]
             [promesa.core :as p]))
 
 ; batch doesn't make sense with thunks (can be sync or async dispatches in a thunk),
@@ -8,14 +9,13 @@
 (defn batch [& action-list] (cons :batch action-list))
 
 ; force is a hack to be removed once this function runs in node
-(defn hydrate-until-queries-settle! [dispatch! get-state peer hydrate-id force]
+(defn hydrate-until-queries-settle! [dispatch! get-state hydrate-id force]
   (let [{:keys [entry-uri ptm stage] :as state} (get-state)
         ; if the time to compute the requests is long
         ; this peer could start returning inconsistent data compared to the state value,
         ; however another hydrating action should have dispatched in that scenario,
         ; so the resulting computation would be thrown away anyway
-        ; todo parameterize/inject the request fn
-        requests (into #{} (hyperfiddle.app/request state peer))
+        requests (into #{} (state/*request* state))
         hydrated? (set/subset? (set requests) (set (keys ptm)))]
     ; inspect dbvals used in requests see if stage has changed for them
     (if (or force (not hydrated?))
@@ -23,5 +23,5 @@
               (fn [{:keys [t pulled-trees-map]}]
                 (when (= hydrate-id (:hydrate-id (get-state)))
                   (dispatch! [:set-ptm pulled-trees-map])
-                  (hydrate-until-queries-settle! dispatch! get-state peer hydrate-id false))))
+                  (hydrate-until-queries-settle! dispatch! get-state hydrate-id false))))
       (p/resolved nil))))
