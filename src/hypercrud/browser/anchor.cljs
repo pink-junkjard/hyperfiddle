@@ -26,10 +26,13 @@
 (defn ^:export build-anchor-route' [anchor param-ctx]
   (mlet [query-params (if-let [code-str (:anchor/formula anchor)]
                         (safe-run-user-code-str' code-str param-ctx)
-                        (either/right nil))]
+                        (either/right nil))
+         link-dbid (if-let [page (:anchor/link anchor)]
+                     (either/right (:db/id page))
+                     (either/left {:message "anchor has no link" :data {:anchor anchor}}))]
     (return {:domain (-> anchor :anchor/link :hypercrud/owner :database/domain)
              :project (-> anchor :anchor/link :hypercrud/owner :database/ident)
-             :link-dbid (-> anchor :anchor/link :db/id)
+             :link-dbid link-dbid
              :query-params query-params})))
 
 (defn anchor-tooltip [route' param-ctx]

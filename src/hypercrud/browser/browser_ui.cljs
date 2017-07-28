@@ -33,7 +33,8 @@
 (defn ui' [{query-params :query-params :as route} param-ctx
            ; hack for first pass on select options
            & [override-get-ui-f]]
-  (let [get-ui-f (or override-get-ui-f get-ui-f)]
+  (let [param-ctx (assoc param-ctx :route route)
+        get-ui-f (or override-get-ui-f get-ui-f)]
     (mlet [link (hydrate-link (:link-dbid route) param-ctx) ; always latest
            request (base/request-for-link link query-params param-ctx)
            result (if request (hc/hydrate (:peer param-ctx) request) (either/right nil))
@@ -42,12 +43,10 @@
       (base/process-results get-ui-f query-params link request result schema param-ctx))))
 
 (defn ui [anchor param-ctx]
-  (if (:anchor/link anchor)
-    (mlet [route (anchor/build-anchor-route' anchor param-ctx)]
-      (ui' route
-           ; entire context must be encoded in the route
-           (dissoc param-ctx :result :db :find-element :entity :attribute :value :layout :field)))
-    (either/left (str "anchor, " (or (:anchor/ident anchor) (:anchor/prompt anchor)) ", has no link "))))
+  (mlet [route (anchor/build-anchor-route' anchor param-ctx)]
+    (ui' route
+         ; entire context must be encoded in the route
+         (dissoc param-ctx :result :db :find-element :entity :attribute :value :layout :field))))
 
 (defn ui-error [e ctx]
   [(case (:layout ctx) :table :code :pre)
