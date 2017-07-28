@@ -43,10 +43,13 @@
       (base/process-results get-ui-f query-params link request result schema param-ctx))))
 
 (defn ui [anchor param-ctx]
-  (mlet [route (anchor/build-anchor-route' anchor param-ctx)]
-    (ui' route
-         ; entire context must be encoded in the route
-         (dissoc param-ctx :result :db :find-element :entity :attribute :value :layout :field))))
+  (let [anchor-props (anchor/build-anchor-props anchor param-ctx)] ; LOOOOOLLLLLL we are dumb
+    (if (:hidden anchor-props)
+      (either/right [:noscript])
+      (mlet [route (anchor/build-anchor-route' anchor param-ctx)]
+        (ui' route
+             ; entire context must be encoded in the route
+             (dissoc param-ctx :result :db :find-element :entity :attribute :value :layout :field))))))
 
 (defn ui-error [e ctx]
   [(case (:layout ctx) :table :code :code)

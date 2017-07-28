@@ -100,7 +100,7 @@
   ; - broken user txfn
   ; - broken user visible fn
   ; If these fns are ommitted (nil), its not an error.
-  (let [visible? (-> (if-let [code-str (eval/validate-user-code-str (:anchor/visible? anchor))]
+  (let [visible? (-> (if-let [code-str (eval/validate-user-code-str (:anchor/visible? anchor))] ; also inline links !
                        (mlet [user-fn (eval-str' code-str)]
                          (-> (exception/try-on (user-fn param-ctx))
                              exception->either))
