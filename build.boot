@@ -11,7 +11,7 @@
                   ; provided
                   [funcool/promesa "1.8.1" :scope "provided"]
                   [org.clojure/clojurescript "1.9.36" :scope "provided"]
-                  [reagent "0.6.0-rc" :scope "provided" :exclusions [] #_[cljsjs/react cljsjs/react-dom cljsjs/react-dom-server]]
+                  [reagent "0.6.0-rc" :scope "provided"]
 
                   ; build/test/dev
                   [adzerk/boot-cljs "1.7.228-1" :scope "test"]
@@ -30,7 +30,7 @@
          (.lastModified (clojure.java.io/file "project.clj")))
   (boot.lein/write-project-clj))
 
-(def +version+ "0.1.0-SNAPSHOT")
+(def +version+ "0.2.0-SNAPSHOT")
 
 (bootlaces! +version+)
 
