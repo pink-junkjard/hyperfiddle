@@ -104,11 +104,12 @@
 (defn FindElement [[fe colspec] entity-anchors-lookup param-ctx]
   (let [entity (get (:result param-ctx) (-> fe :find-element/name))
         db (ffirst colspec)
-        param-ctx (assoc param-ctx :db db
-                                   :find-element fe
-                                   ; todo custom user-dispatch with all the tx-fns as reducers
-                                   :user-with! (fn [tx] ((:dispatch! param-ctx) (actions/with (.-conn-id db) (.-branch db) tx))))
-        param-ctx (form-util/entity-param-ctx param-ctx entity)]
+        param-ctx (-> param-ctx
+                      (assoc :db db
+                             :find-element fe
+                             ; todo custom user-dispatch with all the tx-fns as reducers
+                             :user-with! (fn [tx] ((:dispatch! param-ctx) (actions/with (.-conn-id db) (.-branch db) tx))))
+                      (form-util/entity-param-ctx entity))]
     (->> colspec (mapv #(Value % entity-anchors-lookup param-ctx)))))
 
 (defn Relation [relation colspec fe-anchors-lookup param-ctx]
@@ -129,9 +130,9 @@
                                   (mapcat (fn [[fe colspec]]
                                             (let [fe-name (-> fe :find-element/name)
                                                   entity (get relation fe-name) _ (assert entity)
-                                                  param-ctx (assoc param-ctx :db (ffirst colspec)
-                                                                             :find-element fe)
-                                                  param-ctx (form-util/entity-param-ctx param-ctx entity)
+                                                  param-ctx (-> param-ctx
+                                                                (assoc :db (ffirst colspec) :find-element fe)
+                                                                (form-util/entity-param-ctx entity))
                                                   fe-anchors (->> (get fe-anchors-lookup fe-name)
                                                                   (filter :anchor/repeating?)
                                                                   (remove :anchor/attribute)
