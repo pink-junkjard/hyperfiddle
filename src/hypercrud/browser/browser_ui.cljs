@@ -49,8 +49,9 @@
          (dissoc param-ctx :result :db :find-element :entity :attribute :value :layout :field))))
 
 (defn ui-error [e ctx]
-  [(case (:layout ctx) :table :code :pre)
-   (pr-str e)
+  [(case (:layout ctx) :table :code :code)
+   (:message e) " "
+   (if-let [d (:data e)] (pr-str d)) ; could be a tooltip
    #_(ex-message e) #_(pr-str (ex-data e))])
 
 (defn safe [f & [_ ctx :as args]]
