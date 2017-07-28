@@ -4,7 +4,9 @@
 
 Hypercrud is a Clojure and ClojureScript system for building database apps.
 
-![](http://i.imgur.com/Bd5QKoQ.gif)
+[![Live Demo](http://i.imgur.com/Bd5QKoQ.gif)](https://goo.gl/3s1cmd)
+
+[Live Demo](https://goo.gl/3s1cmd)
 
 ### Motivation
 
@@ -150,7 +152,7 @@ App-values are graph-shaped and grow to be quite large. It is natural to want to
 
 # Hyperfiddle.net
 
-[hyperfiddle.net](http://hyperfiddle.net/) is a WYSIWYG editor for building Hyperfiddle app-values ("hyperfiddles"). It is also a better Datomic Console - an interactive query builder, entity explorer and can be attached to an arbitrary Datomic database without alterations. It heavily leans on d/with as a transaction staging area, including a notion of branching and discard.
+[hyperfiddle.net](http://hyperfiddle.net/) is a WYSIWYG editor for building Hyperfiddle app-values ("hyperfiddles"). Think of it as a programmable Datomic Console. It can be mounted onto your pre-existing Datomic databases without alterations. It heavily leans on d/with as a transaction staging area, including a notion of branching and discard.
 
 ![](http://i.imgur.com/v3cmewv.png)
 
