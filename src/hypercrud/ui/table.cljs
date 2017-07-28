@@ -109,25 +109,26 @@
                                                                              :layout :table)
                                                   field (case (:display-mode param-ctx) :xray field :user (get param-ctx :field field))
                                                   control (case (:display-mode param-ctx) :xray control :user (get param-ctx :control control))
-                                                  anchors (filter #(= (-> param-ctx :attribute :db/id) (some-> % :anchor/attribute :db/id)) anchors)]
+
+                                                  anchors (filter #(= (-> param-ctx :attribute :db/id) (some-> % :anchor/attribute :db/id)) (get entity-anchors-lookup fe-name))]
                                               ^{:key (or (:db/id maybe-field) (str fe-name ident))}
                                               [field #(control maybe-field anchors %) maybe-field anchors param-ctx]))))))))
-        link-cell ^{:key :link-cell} [field #()
-                                      ; inline entity-anchors are not yet implemented, what does that mean.
-                                      ; find-element anchors need more items in their ctx
-                                      (widget/render-anchors (->> (partition 4 colspec)
-                                                                  (group-by (fn [[db fe attr maybe-field]] fe)) ; keys are set, ignore colspec now except for db which is uniform.
-                                                                  (mapcat (fn [[fe colspec]]
-                                                                            (let [fe-name (-> fe :find-element/name)
-                                                                                  entity (get relation fe-name) _ (assert entity)
-                                                                                  param-ctx (assoc param-ctx :db (ffirst colspec)
-                                                                                                             :find-element fe)
-                                                                                  param-ctx (form-util/entity-param-ctx entity param-ctx)
-                                                                                  fe-anchors (->> (get entity-anchors-lookup fe-name)
-                                                                                                  (filter :anchor/repeating?)
-                                                                                                  (remove :anchor/attribute)
-                                                                                                  (remove :anchor/render-inline?))]
-                                                                              (mapv vector fe-anchors (repeat param-ctx)))))))]]
+        link-cell [:td.link-cell {:key :link-cell}
+                   ; inline entity-anchors are not yet implemented, what does that mean.
+                   ; find-element anchors need more items in their ctx
+                   (widget/render-anchors (->> (partition 4 colspec)
+                                               (group-by (fn [[db fe attr maybe-field]] fe)) ; keys are set, ignore colspec now except for db which is uniform.
+                                               (mapcat (fn [[fe colspec]]
+                                                         (let [fe-name (-> fe :find-element/name)
+                                                               entity (get relation fe-name) _ (assert entity)
+                                                               param-ctx (assoc param-ctx :db (ffirst colspec)
+                                                                                          :find-element fe)
+                                                               param-ctx (form-util/entity-param-ctx entity param-ctx)
+                                                               fe-anchors (->> (get entity-anchors-lookup fe-name)
+                                                                               (filter :anchor/repeating?)
+                                                                               (remove :anchor/attribute)
+                                                                               (remove :anchor/render-inline?))]
+                                                           (mapv vector fe-anchors (repeat param-ctx)))))))]]
     (conj (vec cells) link-cell)))
 
 
@@ -183,7 +184,8 @@
         [:div.ui-table-with-links
          links-index
          [:table.ui-table
-          [:thead [:tr (build-col-heads colspec anchors sort-col param-ctx)
+          [:thead [:tr
+                   (build-col-heads colspec anchors sort-col param-ctx)
                    [:td.link-cell {:key :link-cell} links-fe-no-entity]]]
           ; Sometimes the leafnode needs all the anchors.
           [:tbody (apply react-fragment :tbody (rows relations colspec anchors sort-col param-ctx))]]
