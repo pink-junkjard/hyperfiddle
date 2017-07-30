@@ -1,10 +1,14 @@
 # Hypercrud Browser
 
-> navigate app-values like a web browser navigates HTML
+> Programmable Datomic console, as a ClojureScript library
 
-Hyperfiddle is a programmable Datomic Console replacement. It is sufficiently powerful to make sophisticated CRUD apps. It mounts onto your existing Datomic databases with no alterations. It is a bit like a game engine - Hypercrud provides a small number of composable primitives -- queries, forms, links, html expression -- which let an indie studio ship high quality applications without a huge engineering team, but a AAA studio still retains full ability to fork, extend and otherwise work with the source code.
+**Hyperfiddle** is a programmable Datomic Console replacement.
 
-Hypercrud Browser is the ClojureScript library powering this. You can integrate it into your existing codebase, or you can use one of our provided runtimes to mount directly directly onto to your database.
+Hyperfiddle is sufficiently powerful to make CRUD apps without very much coding. It is a bit like a game engine, in that it provides a small number of composable primitives -- queries, forms, links, html expression -- which are sufficient to capture the essence of most CRUD apps. Hyperfiddle is a tooling for building CRUD apps out of these four primitives interactively and visually.
+
+**Hypercrud Browser** is the ClojureScript library powering Hyperfiddle. You can integrate Hypercrud Browser into your existing codebase, or you can use one of the provided runtime implementations to attach directly to your existing Datomic environments.
+
+The goal is to make it possible for small indie studios to ship high quality applications without a huge engineering team, but make zero compromises of power or programmability, such that a AAA studio still retains full ability to fork, extend and otherwise work in source code to have total control when necessary.
 
 [![Live Demo](http://i.imgur.com/Bd5QKoQ.gif)](https://goo.gl/3s1cmd)
 
@@ -154,23 +158,29 @@ App-values are graph-shaped and grow to be quite large. It is natural to want to
 
 # Hyperfiddle
 
-[hyperfiddle](http://hyperfiddle.net/) is a WYSIWYG editor for Hyperfiddle app-values ("hyperfiddles").
+Hyperfiddle is a WYSIWYG editor for Hyperfiddle app-values ("hyperfiddles"). Basically dev-tools for Hypercrud Browser.
+
+[hyperfiddle.net](http://hyperfiddle.net/) includes a production ready application runtime with:
+* a Datomic transactor
+* server side rendering
+* user authentication
+* application security models
 
 ![](http://i.imgur.com/v3cmewv.png)
 
-### FAQ
-
-**What does Color indicate?** Color indicates the database that the data came out of and/or is owned by. It starts to matter when you get into cross-database queries.
+# FAQ
 
 **What about database schema?** Datomic schema is also a value, you can interactively build schema values and apply them without restarts. It really helps to have branching and discard here, so you can experiment with your schema in the browser before transacting the change.
 
 **Datomic Peer or Datomic Client?** Hypercrud Server is a Peer. Hypercrud Client may be, but is not constrained to be, implemented as a [Datomic client](http://docs.datomic.com/clients-and-peers.html). If you use Hypercrud Client without Hyperfiddle app-values, you are stuck with the Datomic client model, which is fine, but suboptimal, and re-introduces a theoretical performance problem caused by client/peer round trips. However, when you model the app as a value, you can literally transmit your app-value up to the server, and actually run the code to interpret the value inside the Peer process. Optimal!
 
-**Why does `#DbId[17592186045791 17592186045422]` have two longs?** Historical reasons, soon the second long (indicating connection) will go away.
+**What does Color indicate?** Color indicates the database that the data came out of and/or is owned by. It starts to matter when you get into cross-database queries.
 
 **Select options** Here we model select options as a link to another page, which is embedded.
 
 ![](https://i.imgur.com/VluIFyM.png)
+
+**Why does `#DbId[17592186045791 17592186045422]` have two longs?** Historical reasons, soon the second long (indicating connection) will go away.
 
 **Hyperfiddle in Hyperfiddle** Here you can see we built the gray dev-mode widget in Hyperfiddle. We can make live changes to it. All of Hyperfiddle's UI is built in Hyperfiddle, though it is all rather meta so I won't go into it here.
 
