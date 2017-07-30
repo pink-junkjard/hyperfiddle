@@ -2,7 +2,7 @@
 
 > Programmable Datomic console, as a ClojureScript library
 
-**Hyperfiddle** is a drop-in Datomic Console replacement, scriptable in ClojureScript.
+**Hyperfiddle** is a drop-in Datomic Console replacement, scriptable from the web browser in ClojureScript.
 
 Hyperfiddle is sufficiently powerful to make CRUD apps without very much coding. It is a bit like a game engine, in that it provides a small number of composable primitives -- queries, forms, links, html expression -- which are sufficient to capture the essence of most CRUD apps. Hyperfiddle is a tooling for building CRUD apps out of these four primitives interactively and visually.
 
