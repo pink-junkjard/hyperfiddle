@@ -2,9 +2,9 @@
 
 > Programmable Datomic console, as a ClojureScript library
 
-[Live Demo](https://goo.gl/3s1cmd)
+[Live Demo](http://hyperfiddle.net/samples-blog/ezpkb21haW4gbmlsLCA6cHJvamVjdCAic2FtcGxlcy1ibG9nIiwgOmxpbmstZGJpZCAjRGJJZFsxNzU5MjE4NjA0NTc4NCAxNzU5MjE4NjA0NTQyMl0sIDpxdWVyeS1wYXJhbXMgbmlsfQ,,)
 
-[![Live Demo](http://i.imgur.com/Bd5QKoQ.gif)](https://goo.gl/3s1cmd)
+[![Live Demo](http://i.imgur.com/Bd5QKoQ.gif)](http://hyperfiddle.net/samples-blog/ezpkb21haW4gbmlsLCA6cHJvamVjdCAic2FtcGxlcy1ibG9nIiwgOmxpbmstZGJpZCAjRGJJZFsxNzU5MjE4NjA0NTc4NCAxNzU5MjE4NjA0NTQyMl0sIDpxdWVyeS1wYXJhbXMgbmlsfQ,,)
 
 **Hyperfiddle** is a drop-in Datomic Console replacement, scriptable from the web browser in ClojureScript.
 
