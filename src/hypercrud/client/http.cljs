@@ -61,7 +61,7 @@
            :form htx-groups
            :as :auto})
         (p/then (fn [resp]
-                  (if (:success resp)
+                  (if (= 200 (:status resp))
                     ; clear master stage
                     ; but that has to be transactional with a redirect???
                     (p/resolved (-> resp :body :hypercrud))
