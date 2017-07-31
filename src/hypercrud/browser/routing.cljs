@@ -5,6 +5,7 @@
             [hypercrud.types.DbId :refer [->DbId]]
             [hypercrud.util.base-64-url-safe :as base64]))
 
+(def ^:dynamic *index-route* nil)
 
 (defn slugify [s] s)
 
@@ -26,9 +27,4 @@
       ;(not (nil? project-name)) {:project (unslugify project-name)}
 
       ; The only way to get to / is if the user types it in. We never ever link to /, and nginx & node should redirect to the canonical.
-      :else
-      {:domain nil
-       :project "hyperfiddle-blog"
-       :link-dbid (->DbId [:link/ident :hyperfiddle.blog/post] hc/*root-conn-id*)
-       :query-params {:entity (->DbId [:hypercrud/ident :hyperfiddle.blog/homepage]
-                                      [:database/ident "hyperfiddle-blog"])}})))
+      :else *index-route*)))
