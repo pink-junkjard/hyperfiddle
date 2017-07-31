@@ -1,4 +1,4 @@
-(ns hypercrud.service.util.datomic-adapter
+(ns hypercrud.server.util.datomic-adapter
   (:require [datomic.api :as d]
             [hypercrud.types.DbId :refer [->DbId]])
   (:import (hypercrud.types.DbId DbId)))

@@ -1,4 +1,4 @@
-(ns hypercrud.service.util.http
+(ns hypercrud.server.util.http
   (:require [clojure.string :as string]
             [cognitect.transit :as transit]
             [hypercrud.types.DbId]

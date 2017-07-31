@@ -1,4 +1,4 @@
-(ns hypercrud.service.db-root)
+(ns hypercrud.server.db-root)
 
 
 (def transactor-uri nil)
