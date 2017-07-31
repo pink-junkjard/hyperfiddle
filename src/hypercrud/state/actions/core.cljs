@@ -1,25 +1,9 @@
 (ns hypercrud.state.actions.core
-  (:require [hypercrud.state.actions.internal :as internal]
+  (:require [hypercrud.state.actions.internal :refer [hydrating-action]]
             [hypercrud.browser.routing :as routing]
             [hypercrud.client.http :as http]
             [promesa.core :as p]))
 
-
-(defn hydrating-action [{:keys [on-start]} dispatch! get-state]
-  (let [o-stage (:stage (get-state))
-        hydrate-id (js/Math.random)                         ; todo want to hash state
-        ]
-    ; todo assert on-start is not a thunk
-    (dispatch! (apply internal/batch [:hydrate!-start hydrate-id] (if on-start (on-start get-state))))
-    (let [{n-stage :stage} (get-state)]
-      (-> (internal/hydrate-until-queries-settle! dispatch! get-state hydrate-id (not= o-stage n-stage))
-          (p/then (fn []
-                    (when (= hydrate-id (:hydrate-id (get-state)))
-                      (dispatch! [:hydrate!-success]))))
-          (p/catch (fn [error]
-                     (when (= hydrate-id (:hydrate-id (get-state)))
-                       (dispatch! [:hydrate!-failure error])))))))
-  nil)
 
 (defn soft-set-route [route]
   (partial hydrating-action {:on-start (constantly [[:soft-set-route route]])}))

@@ -11,7 +11,7 @@
 ; force is a hack to be removed once this function runs in node
 (defn hydrate-until-queries-settle!
   ([dispatch! get-state hydrate-id force]
-    (hydrate-until-queries-settle! dispatch! get-state hydrate-id force state/*request*))
+   (hydrate-until-queries-settle! dispatch! get-state hydrate-id force state/*request*))
   ([dispatch! get-state hydrate-id force request-fn]
    (let [{:keys [entry-uri ptm stage] :as state} (get-state)
          ; if the time to compute the requests is long
@@ -28,3 +28,19 @@
                    (dispatch! [:set-ptm pulled-trees-map])
                    (hydrate-until-queries-settle! dispatch! get-state hydrate-id false request-fn))))
        (p/resolved nil)))))
+
+(defn hydrating-action [{:keys [on-start]} dispatch! get-state]
+  (let [o-stage (:stage (get-state))
+        hydrate-id (js/Math.random)                         ; todo want to hash state
+        ]
+    ; todo assert on-start is not a thunk
+    (dispatch! (apply batch [:hydrate!-start hydrate-id] (if on-start (on-start get-state))))
+    (let [{n-stage :stage} (get-state)]
+      (-> (hydrate-until-queries-settle! dispatch! get-state hydrate-id (not= o-stage n-stage))
+          (p/then (fn []
+                    (when (= hydrate-id (:hydrate-id (get-state)))
+                      (dispatch! [:hydrate!-success]))))
+          (p/catch (fn [error]
+                     (when (= hydrate-id (:hydrate-id (get-state)))
+                       (dispatch! [:hydrate!-failure error])))))))
+  nil)
