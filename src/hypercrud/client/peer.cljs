@@ -29,7 +29,8 @@
 (deftype Peer [state-atom]
   hc/Peer
   (hydrate [this request]
-    (if-let [result @(reagent/cursor state-atom [:ptm request])]
+    (if-let [result (or @(reagent/cursor state-atom [:static-ptm request])
+                        @(reagent/cursor state-atom [:ptm request]))]
       (process-result result request)
       (either/left {:message "Loading" :request request})))
 
@@ -37,8 +38,11 @@
     (->DbVal conn-id branch))
 
   (hydrate-one! [this request]
-    (let [{:keys [entry-uri stage]} @state-atom]
-      (hydrate-one! entry-uri request stage)))
+    (or (some-> @(reagent/cursor state-atom [:static-ptm request])
+                (process-result request)
+                (either/branch p/rejected p/resolved))
+        (let [{:keys [entry-uri stage]} @state-atom]
+          (hydrate-one! entry-uri request stage))))
 
   IHash
   (-hash [this] (goog/getUid this)))
