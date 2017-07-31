@@ -160,13 +160,6 @@ App-values are graph-shaped and grow to be quite large. It is natural to want to
 
 Hyperfiddle is a WYSIWYG editor for Hyperfiddle app-values ("hyperfiddles"). Basically dev-tools for Hypercrud Browser.
 
-[hyperfiddle.net](http://hyperfiddle.net/) is a cloud platform for hosting hyperfiddles. It includes the following:
-
-* a Datomic transactor
-* server side rendering
-* user authentication
-* application security models (soon)
-
 ![](http://i.imgur.com/v3cmewv.png)
 
 # FAQ
