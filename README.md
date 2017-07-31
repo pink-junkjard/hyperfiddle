@@ -171,6 +171,8 @@ Hyperfiddle is a WYSIWYG editor for Hyperfiddle app-values ("hyperfiddles"). Bas
 
 # FAQ
 
+**Does it work without Datomic?** Not yet, but we are not coupled to Datomic in any deep way, though some really cool things like the staging area will not come for free.
+
 **What about database schema?** Datomic schema is also a value, you can interactively build schema values and apply them without restarts. It really helps to have branching and discard here, so you can experiment with your schema in the browser before transacting the change.
 
 **Datomic Peer or Datomic Client?** Hypercrud Server is a Peer. Hypercrud Client may be, but is not constrained to be, implemented as a [Datomic client](http://docs.datomic.com/clients-and-peers.html). If you use Hypercrud Client without Hyperfiddle app-values, you are stuck with the Datomic client model, which is fine, but suboptimal, and re-introduces a theoretical performance problem caused by client/peer round trips. However, when you model the app as a value, you can literally transmit your app-value up to the server, and actually run the code to interpret the value inside the Peer process. Optimal!
