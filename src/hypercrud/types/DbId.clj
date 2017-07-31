@@ -1,5 +1,4 @@
 (ns hypercrud.types.DbId
-  (:gen-class)
   (:import [com.cognitect.transit WriteHandler ReadHandler]
            [java.lang Comparable]
            [clojure.lang ILookup IHashEq]))

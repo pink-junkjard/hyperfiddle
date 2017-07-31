@@ -1,5 +1,4 @@
 (ns hypercrud.types.DbVal
-  (:gen-class)
   (:import [com.cognitect.transit WriteHandler ReadHandler]
            [clojure.lang ILookup]))
 

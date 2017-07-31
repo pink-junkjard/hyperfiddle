@@ -1,5 +1,4 @@
 (ns hypercrud.types.DbError
-  (:gen-class)
   (:import [com.cognitect.transit WriteHandler ReadHandler]))
 
 (deftype DbError [msg])

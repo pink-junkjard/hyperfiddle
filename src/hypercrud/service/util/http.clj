@@ -1,6 +1,11 @@
 (ns hypercrud.service.util.http
   (:require [clojure.string :as string]
             [cognitect.transit :as transit]
+            [hypercrud.types.DbId]
+            [hypercrud.types.DbVal]
+            [hypercrud.types.DbError]
+            [hypercrud.types.EntityRequest]
+            [hypercrud.types.QueryRequest]
             [io.pedestal.http :as http]
             [io.pedestal.interceptor.helpers :as interceptor])
   (:import (java.io OutputStreamWriter OutputStream)
