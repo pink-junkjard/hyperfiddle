@@ -10,6 +10,10 @@
 
                   ; provided
                   [funcool/promesa "1.8.1" :scope "provided"]
+                  ; todo this has a provided dependency on a hypercrud platform
+                  ; need to create a platform api library that node and browser implement
+                  ; platform-api : node/browser :: jaxrs api : jersey
+                  ; [com.hyperfiddle/hypercrud.platform.api "0.2.0-SNAPSHOT" :scope "provided"]
                   [org.clojure/clojurescript "1.9.36" :scope "provided"]
                   [reagent "0.6.0-rc" :scope "provided"]
 

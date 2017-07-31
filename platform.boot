@@ -19,11 +19,11 @@
   pom {:version +version+})
 
 (deftask browser []
-         (merge-env! :resource-paths #{"src-browser"})
+         (set-env! :resource-paths #{"src-browser"})
          (comp (pom :project 'com.hyperfiddle/hypercrud.platform.browser)
                (jar)))
 
 (deftask node []
-         (merge-env! :resource-paths #{"src-node"})
+         (set-env! :resource-paths #{"src-node"})
          (comp (pom :project 'com.hyperfiddle/hypercrud.platform.node)
                (jar)))
