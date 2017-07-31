@@ -14,7 +14,7 @@ jobs:
 
       - run:
           name: build service
-          command: boot aot pom uber jar push-snapshot
+          command: boot pom jar push-snapshot
 
       - save_cache:
           paths:
