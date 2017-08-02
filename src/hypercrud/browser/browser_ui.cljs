@@ -52,7 +52,7 @@
              (dissoc param-ctx :result :db :find-element :entity :attribute :value :layout :field))))))
 
 (defn ui-error [e ctx]
-  [(case (:layout ctx) :table :code :code)
+  [(case (:layout ctx) :table :code :code) {:class "ui"}
    (:message e)
    (case (:display-mode ctx)
      :user nil
