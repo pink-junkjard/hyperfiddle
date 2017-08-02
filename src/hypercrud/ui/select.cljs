@@ -4,7 +4,10 @@
             [hypercrud.browser.connection-color :as connection-color]
             [hypercrud.client.tx :as tx]
             [hypercrud.form.option :as option]
-            [hypercrud.types.DbId :refer [->DbId]]))
+            [hypercrud.platform.native-event-listener :refer [native-listener]]
+            [hypercrud.types.DbId :refer [->DbId]]
+            [hypercrud.runtime.state.actions :as actions]
+            [hypercrud.browser.anchor :as anchor]))
 
 
 (defn select-boolean* [value props param-ctx]
@@ -51,10 +54,13 @@
                    ; hack in the selected value if we don't have options hydrated?
                    ; Can't, since we only have the #DbId hydrated, and it gets complicated with relaton vs entity etc
                    ]
-               [:select.select.ui props
-                (concat
-                  (->> (sort-by second option-records)
-                       (mapv (fn [[dbid label]]
-                               ^{:key dbid}
-                               [:option {:value (.-id dbid)} label])))
-                  [[:option {:key :blank :value ""} "--"]])]))))]))
+               (let [c #(if (contains? (:pressed-keys @(-> param-ctx :peer .-state-atom)) "alt")
+                          (do ((:dispatch! param-ctx) (actions/set-route (:route (anchor/build-anchor-props options-anchor param-ctx)))) (.stopPropagation %)))]
+                 [native-listener {:on-click c}
+                  [:select.select.ui props
+                   (concat
+                     (->> (sort-by second option-records)
+                          (mapv (fn [[dbid label]]
+                                  ^{:key dbid}
+                                  [:option {:value (.-id dbid)} label])))
+                     [[:option {:key :blank :value ""} "--"]])]])))))]))

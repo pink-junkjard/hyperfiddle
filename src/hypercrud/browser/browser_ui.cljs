@@ -7,11 +7,14 @@
             [hypercrud.client.core :as hc]
             [hypercrud.client.schema :as schema-util]
             [hypercrud.compile.eval :refer [eval-str']]
+            [hypercrud.platform.native-event-listener :refer [native-listener]]
             [hypercrud.platform.safe-render :refer [safe-user-renderer]]
             [hypercrud.types.EntityRequest :refer [EntityRequest]]
             [hypercrud.types.QueryRequest :refer [QueryRequest]]
             [hypercrud.ui.auto-control :as auto-control]
-            [hypercrud.util.core :as util :refer [pprint-str]]))
+            [hypercrud.util.core :as util :refer [pprint-str]]
+            [hypercrud.runtime.state.actions :as actions]
+            [reagent.core :as r]))
 
 (defn hydrate-link [link-dbid param-ctx]
   (if (auto-link/system-link? link-dbid)
@@ -59,21 +62,22 @@
      (if-let [d (:data e)] (str " " (pr-str d))))           ; could be a tooltip
    #_(ex-message e) #_(pr-str (ex-data e))])
 
-(defn safe [f & [_ ctx :as args]]
-  ; reports: hydrate failure, hyperfiddle javascript error, user-fn js error
-  (try
-    (either/branch
-      (apply f args)
-      (fn [e] (ui-error e ctx))
-      (fn [v] [:div.ui v]))
-    (catch :default e                                       ; js errors? Why do we need this.
-      (ui-error e ctx))))
+(defn safe-ui' [route ctx]
+  (either/branch
+    (try (ui' route ctx) (catch :default e (either/left e))) ; js errors? Why do we need this.
+    (fn [e] (ui-error e ctx))                               ; @(r/cursor (-> ctx :peer .-state-atom) [:pressed-keys])
+    (fn [v] (let [c #(if (contains? (:pressed-keys @(-> ctx :peer .-state-atom)) "alt")
+                       (do ((:dispatch! ctx) (actions/set-route route)) (.stopPropagation %)))]
+              [native-listener {:on-click c} [:div.ui v]]))))
 
-(defn safe-ui' [& args]
-  (apply safe ui' args))
-
-(defn safe-ui [& args]
-  (apply safe ui args))
+(defn safe-ui [anchor ctx]
+  (either/branch
+    (try (ui anchor ctx) (catch :default e (either/left e))) ; js errors? Why do we need this.
+    (fn [e] (ui-error e ctx))
+    (fn [v] (let [{route :route} (anchor/build-anchor-props anchor ctx)
+                  c #(if (contains? (:pressed-keys @(-> ctx :peer .-state-atom)) "alt")
+                       (do ((:dispatch! ctx) (actions/set-route route)) (.stopPropagation %)))]
+              [native-listener {:on-click c} [:div.ui v]]))))
 
 (defn link-user-fn [link]
   (if-not (empty? (:link/renderer link))
