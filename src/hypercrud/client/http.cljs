@@ -37,22 +37,26 @@
   (-> (.clone entry-uri)
       (.resolve relative-uri)))
 
+(defn purge-nil-vals [hctx-groups]
+  (util/map-values (fn [branch-tx]
+                     (->> (get branch-tx nil)
+                          (filter (fn [[op e a v]]
+                                    (not (and (or (= :db/add op) (= :db/retract op))
+                                              (nil? v)))))))
+                   hctx-groups))
+
 (defn hydrate! [entry-uri requests stage-val]
-  (-> (kvlt/request! {:url (resolve-relative-uri entry-uri (goog.Uri. "hydrate"))
-                      :content-type content-type-transit    ; helps debugging to view as edn
-                      :accept content-type-transit          ; needs to be fast so transit
-                      :method :post
-                      :form {:staged-tx stage-val :request requests}
-                      :as :auto})
-      (p/then #(-> % :body :hypercrud))))
+  (let [stage-val (purge-nil-vals stage-val)]
+    (-> (kvlt/request! {:url (resolve-relative-uri entry-uri (goog.Uri. "hydrate"))
+                        :content-type content-type-transit  ; helps debugging to view as edn
+                        :accept content-type-transit        ; needs to be fast so transit
+                        :method :post
+                        :form {:staged-tx stage-val :request requests}
+                        :as :auto})
+        (p/then #(-> % :body :hypercrud)))))
 
 (defn transact! [entry-uri htx-groups]
-  (let [htx-groups (util/map-values (fn [branch-tx]
-                                      (->> (get branch-tx nil)
-                                           (filter (fn [[op e a v]]
-                                                     (not (and (or (= :db/add op) (= :db/retract op))
-                                                               (nil? v)))))))
-                                    htx-groups)]
+  (let [htx-groups (purge-nil-vals htx-groups)]
     (-> (kvlt/request!
           {:url (resolve-relative-uri entry-uri (goog.Uri. "transact"))
            :content-type content-type-edn
