@@ -38,7 +38,7 @@
                                           (->DbId id (get-in param-ctx [:entity :db/id :conn-id]))))]
                              ((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) dbid)))
                :disabled (:read-only props)}]
-    [:span.select
+    [:span.select                                           ; helps the weird anchor float left thing
      (-> (option/hydrate-options' options-anchor param-ctx)
          (either/branch
            (fn [e] (browser-ui/ui-error e param-ctx))
