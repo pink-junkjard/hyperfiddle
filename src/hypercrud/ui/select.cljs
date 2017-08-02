@@ -51,7 +51,7 @@
                    ; hack in the selected value if we don't have options hydrated?
                    ; Can't, since we only have the #DbId hydrated, and it gets complicated with relaton vs entity etc
                    ]
-               [:select.select props
+               [:select.select.ui props
                 (concat
                   (->> (sort-by second option-records)
                        (mapv (fn [[dbid label]]
