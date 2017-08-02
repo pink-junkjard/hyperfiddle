@@ -65,7 +65,7 @@
     (either/branch
       (apply f args)
       (fn [e] (ui-error e ctx))
-      identity)
+      (fn [v] [:div.ui v]))
     (catch :default e                                       ; js errors? Why do we need this.
       (ui-error e ctx))))
 
