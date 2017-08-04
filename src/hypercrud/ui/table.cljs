@@ -76,13 +76,13 @@
                                    (widget/render-inline-anchors (->> anchors (filter :anchor/render-inline?)) param-ctx)
                                    [:span.sort-arrow arrow]])))))))))
 
-(defn control [maybe-field anchors param-ctx]
+(defn Control [maybe-field anchors param-ctx]
   (let [props (form-util/build-props maybe-field anchors param-ctx)]
     (if (renderer/user-renderer param-ctx)
       (renderer/user-render maybe-field anchors props param-ctx)
       [auto-table-cell maybe-field anchors props param-ctx])))
 
-(defn field [control maybe-field anchors param-ctx]
+(defn Field [control maybe-field anchors param-ctx]
   (let [shadow-link (not (-> param-ctx :entity :db/id))
         style {:border-color (if-not shadow-link (connection-color/connection-color (:color param-ctx)))}]
     [:td.truncate {:style style}
@@ -94,8 +94,8 @@
         param-ctx (assoc param-ctx :attribute attr
                                    :value (get (:entity param-ctx) ident)
                                    :layout :table)
-        field (case (:display-mode param-ctx) :xray field :user (get param-ctx :field field))
-        control (case (:display-mode param-ctx) :xray control :user (get param-ctx :control control))
+        field (case (:display-mode param-ctx) :xray Field :user (get param-ctx :field Field))
+        control (case (:display-mode param-ctx) :xray Control :user (get param-ctx :control Control))
 
         anchors (filter #(= (-> param-ctx :attribute :db/id) (some-> % :anchor/attribute :db/id)) (get entity-anchors-lookup fe-name))]
     ^{:key (or (:db/id maybe-field) (str fe-name ident))}
@@ -156,7 +156,7 @@
                         relations)))]
     (->> relations sort-fn (map #(Row % colspec anchors param-ctx)))))
 
-(defn table [& props]
+(defn Table [& props]
   (let [sort-col (r/atom nil)]
     (fn [relations colspec anchors param-ctx]
       (let [anchors (widget/process-popover-anchors anchors param-ctx)
