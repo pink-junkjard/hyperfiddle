@@ -6,7 +6,7 @@ Live demos, docs and more: http://hyperfiddle.net/
 
 **Hyperfiddle** is a drop-in Datomic Console replacement, scriptable from the web browser in ClojureScript, for making sophisticated database applications.
 
-Hyperfiddle is built on top of the **Hypercrud** open source family, whose readme you are viewing.
+Hyperfiddle is built on top of the **Hypercrud** project, whose readme you are viewing.
 
 * Hypercrud Server - serves data from Datomic, securely and efficiently
 * Hypercrud Client - client/server data sync between javascript app and database
@@ -14,13 +14,18 @@ Hyperfiddle is built on top of the **Hypercrud** open source family, whose readm
 
 React offers the View as a pure function of data, but does not cover client/server data sync over network. UIs, of course, need to do data sync. Hypercrud handles the data sync.
 
-[![](http://i.imgur.com/Bd5QKoQ.gif)](http://hyperfiddle.net/)
+Solving data sync leaves us with truly composable UIs. Compose sophisticated UIs out of simpler UIs. UIs are no longer just view components, but thick applications, with their own server data dependencies. Hypercrud lets you compose them like functions, letting us climb a rung higher on the ladder of abstraction, to the real goal: data driven UIs, as an edn value.
+
+And app as an edn value paves the way for some seriously sophisticated application tooling. This entire screenshot is modeled as an edn value. The bottom half is an editor for said edn values.
+
+![](https://i.imgur.com/sisRPWO.png)
+*Hypercrud Browser navigates edn app-values like a web browser navigates HTML*
 
 ### Library, framework or platform?
 
 Hypercrud is 90% library, like Om Next or Reagent. The last 10% is the I/O runtime implementation that handles the data sync. The I/O runtime is general purpose, contains no application logic, and has a client piece and a server piece.
 
-## Hypercrud userland usage
+## Hypercrud's fundamental interface is two functions
 
 Hypercrud apps export two functions: a Reagent view expression, and a request function. The request function encodes the precise, total data dependencies of an entire page, recursively.
 
@@ -70,6 +75,8 @@ Like calling `ReactDOM.render(el, domNode)`, you'll need to provide an entrypoin
 
 Hypercrud's server runtime is like Apache -- a general purpose data server -- you don't need to change it. It is essentially just a Pedestal service around a Datomic Peer. Datomic Peer is already inches away from being a general purpose data server. There is no interesting code in the server runtime. You can implement your own server runtime, or reuse our internals, or whatever. It's all open source and a small amount of code.
 
-### Why not already using Datomic Client API?
+#### Why not already using Datomic Client API?
 
 Historical reasons only, Datomic was still on the REST api when this started so we had to code the client. Theirs will be better and when they release a clojurescript client, we will use it.
+
+## Hypercrud Browser
