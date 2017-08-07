@@ -12,7 +12,7 @@ Hyperfiddle is built on top of the **Hypercrud** project, whose readme you are v
 * Hypercrud Client - client/server data sync between javascript app and database
 * Hypercrud Browser - Library for **data driven UIs, as an EDN value**
 
-React offers the View as a pure function of data, but does not cover client/server data sync over network. UIs, of course, need to do data sync. Hypercrud handles the data sync.
+React offers the View as a pure function of data, but does not cover client/server data sync over network. UIs, of course, do data sync. Hypercrud handles the data sync.
 
 Solving data sync leaves us with truly composable UIs. Compose sophisticated UIs out of simpler UIs. UIs are no longer just view components, but thick applications, with their own server data dependencies. Hypercrud lets you compose them like functions, letting us climb a rung higher on the ladder of abstraction, to the real goal: data driven UIs, as an edn value.
 
@@ -78,8 +78,91 @@ Like calling `ReactDOM.render(el, domNode)`, you'll need to provide an entrypoin
 
 Hypercrud's server runtime is like Apache -- a general purpose data server -- you don't need to change it. It is essentially just a Pedestal service around a Datomic Peer. Datomic Peer is already inches away from being a general purpose data server. There is no interesting code in the server runtime. You can implement your own server runtime, or reuse our internals, or whatever. It's all open source and a small amount of code.
 
+#### server data security
+
+It works like Facebook "view my profile as other person" - the server restricts access to data based on who you are. Security is defined by two pure functions - a database filter predicate, and a transaction validator predicate. Both of these functions can query the database to make a decision. Datomic's distributed reads open the door for making this fast.
+
+You can configure Hypercrud Server with your own arbitrary security predicates.
+
 #### Why not already using Datomic Client API?
 
 Historical reasons only, Datomic was still on the REST api when this started so we had to code the client. Theirs will be better and when they release a clojurescript client, we will use it.
 
 ## Hypercrud Browser
+
+Hypercrud Browser navigates app-values like a web browser navigates HTML. **The things we generally have to write code for - security, performance, async, and failure handling - are all accidental complexity.** When you take that away, we're left with the very simple essence of an application's true business domain. For this, a simple DSL will do, the simpler the better. We're left with the essense of an application, as a value. App-values define Pages, each Page declares his data dependencies, and Links to other Pages.
+
+Interpreted app-value in a web browser, with custom renderers disabled:
+
+![](http://i.imgur.com/f1ngGLt.png)
+
+Same app-value but as the end user sees it, respecting renderers:
+
+![](http://i.imgur.com/4WlmuW8.png)
+
+Here's the raw edn app-value:
+
+```clojure
+{:page/name "Sample Blog",
+ :page/query "[:find ?post :in $ :where [?post :post/title]]",
+ :page/dbs [{:dbhole/name "$", :dbhole/value {:database/ident "samples-blog",}}],
+ :page/find-elements
+ [{:find-element/name "?post",
+   :find-element/connection {:database/ident "samples-blog"}
+   :find-element/form
+   {:form/name "samples-blog - post",
+    :form/field
+    [{:field/prompt "title",
+      :field/attribute
+      {:attribute/ident :post/title,
+       :attribute/valueType #:db{:ident :db.type/string},
+       :attribute/cardinality #:db{:ident :db.cardinality/one}}}
+     {:field/prompt "date",
+      :field/attribute
+      {:attribute/ident :post/date,
+       :attribute/valueType #:db{:ident :db.type/instant},
+       :attribute/cardinality #:db{:ident :db.cardinality/one}}}
+     {:field/prompt "content",
+      :field/attribute
+      {:attribute/ident :post/content,
+       :attribute/valueType #:db{:ident :db.type/string},
+       :attribute/cardinality #:db{:ident :db.cardinality/one}}}]}}]
+ :page/links
+ [{:link/prompt "view",
+   :link/link {:db/id #DbId[17592186045791 17592186045422], :page/name "view post"},
+   :link/repeating? true,
+   :link/find-element {:find-element/name "?post", :find-element/connection #:db{:id #DbId[17592186045786 17592186045422]}},
+   :link/ident :sys-edit-?post}
+  {:link/prompt "new",
+   :link/ident :sys-new-?post,
+   :link/repeating? false,
+   :link/find-element {:find-element/name "?post", :find-element/connection #:db{:id #DbId[17592186045786 17592186045422]}},
+   :link/render-inline? true,
+   :link/page {:db/id #DbId[17592186045791 17592186045422], :page/name "view post"}}]
+ :page/renderer "(fn [relations colspec anchors param-ctx] ... )"}
+```
+
+You might imagine the code to interpret an app-value to produce a view and a request, to satisfy the Hypercrud core interface. This code is called Hypercrud Browser and provided as a library:
+
+```clojure
+(def app-value { ... })
+
+(defn view [state peer dispatch!]
+  [browser/safe-ui app-value (:route state) {:dispatch! dispatch!}])
+
+(defn request [state peer]
+  ; code your own data dependencies, or let the browser figure it out from an app-value
+  (browser/request app-value (:route state)))
+```
+
+Pages compose by composing their data dependencies therein (like an iframe). The page abstraction is sufficient to implement composite widgets like select options, which are themselves a page with a query and form.
+
+If you stop and think, this is a lot how a web browser works. Web browsers are a general HTML client which navigates a graph by following links between pages; this is the design objective of REST, what HATEOAS means, and is called a fully general hypermedia client. **Hyperfiddle browses CRUD apps like web browsers browse HTML.** This core browser technology is implemented as an open-source library called Hypercrud Browser. It is a fully general hypermedia client, it solves the failure of REST, and is what makes Hyperfiddle possible. Hypercrud Browser is HATEOAS.
+
+App-values are graph-shaped and grow to be quite large. It is natural to want to store app-values in a database, and create tooling to build these up visually and interactively, which leads us to:
+
+# Hyperfiddle
+
+Hyperfiddle is a WYSIWYG editor for Hyperfiddle app-values ("hyperfiddles"). Basically dev-tools for Hypercrud Browser.
+
+![](http://i.imgur.com/v3cmewv.png)
