@@ -20,6 +20,10 @@ And app as an edn value paves the way for some seriously sophisticated applicati
 
 ![](https://i.imgur.com/sisRPWO.png)
 
+Facebook is not built in hyperfiddle, but if it was, here is how we might break it down:
+
+![](http://i.imgur.com/4mKpHhw.png)
+
 ### Library, framework or platform?
 
 Hypercrud is 90% library, like Om Next or Reagent. The last 10% is the I/O runtime implementation that handles the data sync. The I/O runtime is general purpose, contains no application logic, and has a client piece and a server piece.
