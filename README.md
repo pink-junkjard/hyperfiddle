@@ -18,7 +18,7 @@ Solving data sync leaves us with truly composable UIs. Compose sophisticated UIs
 
 App-as-a-value paves the way for some seriously sophisticated application tooling.
 
-**This entire screenshot is modeled as an edn value**. The bottom half is an editor for said edn values.
+**This entire screenshot is modeled as an edn value**. The bottom half is an editor for said edn values. The editor is itself modeled as an edn value too. [Yes it can edit itself and yes this is how we build it every day](http://hyperfiddle.net/hyperfiddle-blog/ezpkb21haW4gbmlsLCA6cHJvamVjdCAiaHlwZXJmaWRkbGUtYmxvZyIsIDpsaW5rLWRiaWQgI0RiSWRbMTc1OTIxODYwNDU4OTQgMTc1OTIxODYwNDU0MjJdLCA6cXVlcnktcGFyYW1zIHs6ZW50aXR5ICNEYklkWzE3NTkyMTg2MDQ2MjA3IDE3NTkyMTg2MDQ1ODgyXX19)).
 
 ![](https://i.imgur.com/sisRPWO.png)
 
