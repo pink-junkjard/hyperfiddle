@@ -16,7 +16,9 @@ React offers the View as a pure function of data, but does not cover client/serv
 
 Solving data sync leaves us with truly composable UIs. Compose sophisticated UIs out of simpler UIs. UIs are no longer just view components, but thick applications, with their own server data dependencies. Hypercrud lets you compose them like functions, letting us climb a rung higher on the ladder of abstraction, to the real goal: data driven UIs, as an edn value.
 
-And app as an edn value paves the way for some seriously sophisticated application tooling. This entire screenshot is modeled as an edn value. The bottom half is an editor for said edn values. **Hypercrud Browser navigates edn app-values like a web browser navigates HTML.**
+App-as-a-value paves the way for some seriously sophisticated application tooling.
+
+**This entire screenshot is modeled as an edn value**. The bottom half is an editor for said edn values.
 
 ![](https://i.imgur.com/sisRPWO.png)
 
