@@ -38,12 +38,11 @@
       (.resolve relative-uri)))
 
 (defn purge-nil-vals [hctx-groups]
-  (util/map-values (fn [branch-tx]
-                     (->> (get branch-tx nil)
-                          (filter (fn [[op e a v]]
-                                    (not (and (or (= :db/add op) (= :db/retract op))
-                                              (nil? v)))))))
-                   hctx-groups))
+  (let [v-not-nil? (fn [[op e a v]]
+                     (not (and (or (= :db/add op) (= :db/retract op))
+                               (nil? v))))]
+    (->> hctx-groups
+         (util/map-values #(util/map-values (partial filter v-not-nil?) %)))))
 
 (defn hydrate! [entry-uri requests stage-val]
   (let [stage-val (purge-nil-vals stage-val)]
@@ -56,7 +55,8 @@
         (p/then #(-> % :body :hypercrud)))))
 
 (defn transact! [entry-uri htx-groups]
-  (let [htx-groups (purge-nil-vals htx-groups)]
+  (let [htx-groups (->> (purge-nil-vals htx-groups)
+                        (util/map-values #(get % nil)))]
     (-> (kvlt/request!
           {:url (resolve-relative-uri entry-uri (goog.Uri. "transact"))
            :content-type content-type-edn
