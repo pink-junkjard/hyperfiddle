@@ -2,57 +2,29 @@
 
 > Programmable Datomic console, as a ClojureScript library
 
-#### [Live Demo](http://hyperfiddle.net/samples-blog/ezpkb21haW4gbmlsLCA6cHJvamVjdCAic2FtcGxlcy1ibG9nIiwgOmxpbmstZGJpZCAjRGJJZFsxNzU5MjE4NjA0NTc4NCAxNzU5MjE4NjA0NTQyMl0sIDpxdWVyeS1wYXJhbXMgbmlsfQ,,) | [Get Started](http://hyperfiddle.net/hyperfiddle-blog/ezpkb21haW4gbmlsLCA6cHJvamVjdCAiaHlwZXJmaWRkbGUtYmxvZyIsIDpsaW5rLWRiaWQgI0RiSWRbMTc1OTIxODYwNDU4OTQgMTc1OTIxODYwNDU0MjJdLCA6cXVlcnktcGFyYW1zIHs6ZW50aXR5ICNEYklkWzE3NTkyMTg2MDQ1NTE5IDE3NTkyMTg2MDQ1ODgyXX19) | [Docs](http://hyperfiddle.net/hyperfiddle-blog/ezpkb21haW4gbmlsLCA6cHJvamVjdCAiaHlwZXJmaWRkbGUtYmxvZyIsIDpsaW5rLWRiaWQgI0RiSWRbMTc1OTIxODYwNDU4OTQgMTc1OTIxODYwNDU0MjJdLCA6cXVlcnktcGFyYW1zIHs6ZW50aXR5ICNEYklkWzE3NTkyMTg2MDQ1OTA1IDE3NTkyMTg2MDQ1ODgyXX19)
+Live demos, docs and more: http://hyperfiddle.net/
 
-[![Live Demo](http://i.imgur.com/Bd5QKoQ.gif)](http://hyperfiddle.net/samples-blog/ezpkb21haW4gbmlsLCA6cHJvamVjdCAic2FtcGxlcy1ibG9nIiwgOmxpbmstZGJpZCAjRGJJZFsxNzU5MjE4NjA0NTc4NCAxNzU5MjE4NjA0NTQyMl0sIDpxdWVyeS1wYXJhbXMgbmlsfQ,,)
+**Hyperfiddle** is a drop-in Datomic Console replacement, scriptable from the web browser in ClojureScript, for making sophisticated database applications.
 
-**Hyperfiddle** is a drop-in Datomic Console replacement, scriptable from the web browser in ClojureScript.
+Hyperfiddle is built on top of the **Hypercrud** open source family, whose readme you are viewing.
 
-Hyperfiddle is sufficiently powerful to make CRUD apps without very much coding. It is a bit like a game engine, in that it provides a small number of composable primitives -- queries, forms, links, html expression -- which are sufficient to capture the essence of most CRUD apps. Hyperfiddle is a tooling for building CRUD apps out of these four primitives interactively and visually.
+* Hypercrud Server - serves data from Datomic, securely and efficiently
+* Hypercrud Client - client/server data sync between javascript app and database
+* Hypercrud Browser - Library for **data driven UIs, as an EDN value**
 
-**Hypercrud Browser** is the ClojureScript library powering Hyperfiddle. You can integrate the Hypercrud Browser library into **your existing codebase**, or you can use one of the provided runtime implementations to attach directly to **your existing Datomic environments**.
+React offers the View as a pure function of data, but does not cover client/server data sync over network. UIs, of course, need to do data sync. Hypercrud handles the data sync.
 
-The goal is to make it possible for small indie studios to ship high quality applications without a huge engineering team, but make zero compromises of power or programmability, such that a AAA studio still retains full ability to fork, extend and otherwise work in source code to have total control when necessary.
+[![](http://i.imgur.com/Bd5QKoQ.gif)](http://hyperfiddle.net/)
 
-### Motivation
+### Library, framework or platform?
 
-Most CRUD apps are 90% the same boilerplate. The things we need backend code for - security, performance, async, and failure handling - are all accidental complexity, unrelated to the application's actual purpose. This boilerplate manifests itself in the [backend-for-frontend pattern](http://samnewman.io/patterns/architectural/bff/) (anti-pattern), whereby each backend is hand-optimized to the performance constraints of the frontend it services, for example hand-optimized database queries to avoid database roundtrips, caching vs consistency tradeoffs.
+Hypercrud is 90% library, like Om Next or Reagent. The last 10% is the I/O runtime implementation that handles the data sync. The I/O runtime is general purpose, contains no application logic, and has a client piece and a server piece.
 
-> "REST does a shitty job of efficiently expressing relational data. I mean REST has its place. For example, it has very predictable performance and well-known cache characteristics. The problem is when you want to fetch data in repeated rounds, or when you want to fetch data that isn't expressed well as a hierarchy (think a graph with cycles -- not uncommon). That's where it breaks down. I think you can get pretty far with batched REST, but I'd like to see some way to query graphs in an easier way." - Pete Hunt, Facebook, 2014 April
+## Hypercrud userland usage
 
-![](https://i.imgur.com/mq6KaTv.png)
+Hypercrud apps export two functions: a Reagent view expression, and a request function. The request function encodes the precise, total data dependencies of an entire page, recursively.
 
-**If we had a general purpose data server, we would not see this O(n) growth in boilerplate, but alas!** The failure to generalize is a manifestation of the object/relational impedance mismatch and is inherent to the relational model. Attempts to solve the mismatch, generally with Object/Relational Mappers (ORM), have lead to never ending flame wars and statements like "ORMs are the Vietnam of Computer Science", and [MongoDB](https://www.google.com/search?q=mongodb+site:reddit.com/r/programming).
-
-### Key insight
-
-Our thesis is that by leveraging full-stack immutability from database to frontend, we can sequester I/O to the fringes of the system, using immutability as a foundation to build a fully-general solution that is correct, consistent and yet also maximally performant.
-
-The key is Datomic, the immutable database. Datomic does not have an object/relational impedance mismatch, and thus can be used as the keystone component of a fully general data server. If you'd like to understand this claim, you might start with the [Datomic documentation](http://docs.datomic.com/getting-started/brief-overview.html). Henceforth in this document, I take this claim for granted, and will defend it in a separate blog post which isn't yet published.
-
-### Implications
-
-So now we have a single backend server which can service many frontends, with different data needs, without sacrificing consistency or performance. What does it mean?
-
-Performance concerns no longer dictate that we run our application code on the server. Security is the only remaining application code that needs to run trusted. Datomic includes a way to run a small security kernel inside the database. Read security is enforced inside the query process, and write security inside the transactor process.
-
-![](https://i.imgur.com/5YZervK.png)  
-[Nikita Prokopov, The Web After Tomorrow, 2015 June](http://tonsky.me/blog/the-web-after-tomorrow/)
-
-All our business rules, our queries and forms and transactions, all things typically done in a backend, now can be pushed into the client (often a web browser).
-
-This is an enormous architectural change, with profound and astounding implications as to the way we architect our applications.
-
-# Hypercrud Client, Hypercrud Server
-
-Hypercrud Client is an I/O runtime for efficient client-server data sync with Hypercrud Server. Inspired by Om Next, the userland interface is two functions.
-
-* a request function to specify data dependencies
-* a view function (React.js expression)
-
-The runtime will fetch the data dependencies as specified by the request function, and then pass that value to the view. By sequestering I/O to the fringe of the system, we are left with a composable programming model of pure functions against local data. **Userland code experiences no async, no failures, no latency.**
-
-#### What does userland code look like?
+Here is the simplest possible Hypercrud app, a blog:
 
 ```clojure
 (def request-blog
@@ -62,11 +34,18 @@ The runtime will fetch the data dependencies as specified by the request functio
 
 (defn request [state peer]
   [request-blog])
+```
 
-; result looks like
-; [{"?post" {:db/id #DbId[17592186045419 17592186045786], :post/title "First blog post"}}
-;  {"?post" {:db/id #DbId[17592186045420 17592186045786], :post/title "Second blog post"}} ... ]
+The hydrated response looks like this:
 
+```clojure
+[{"?post" {:db/id #DbId[17592186045419 17592186045786], :post/title "First blog post"}}
+ {"?post" {:db/id #DbId[17592186045420 17592186045786], :post/title "Second blog post"}} ... ]
+```
+
+The hydrated response value is passed into the view function. Since the data is already fetched, this function is synchronous.
+
+```clojure
 (defn view [state peer dispatch!]
   (-> (let [result @(hc/hydrate peer request-blog)]     ; synchronous
         [:ul
@@ -77,105 +56,20 @@ The runtime will fetch the data dependencies as specified by the request functio
                         (:post/title post)]))))])))
 ```
 
-The runtime will manage the lifecycle of these functions and render your application:
-
 ![](http://i.imgur.com/zwoGq2I.png)
+
+If the data isn't already fetched, `hc/hydrate` returns an error value. The runtime will manage the lifecycle of these functions. It is up to your choice of runtime as to the details of this lifecycle, for example, do you want to call the view function when the data is only partially loaded? You can do that if you want. Hyperfiddle.net does this and draws loading components and reports database errors appropriately. Your runtime doesn't have to do that, it's up to you.
 
 All decision making is driven by the client. The client programming experience is that of composing functions and values, which makes it a straightforward exercise to model the app as an EDN value to be interpreted by the client.
 
-# Hypercrud Browser
+## The client runtime
 
-Hypercrud Browser navigates app-values like a web browser navigates HTML. **The things we generally have to write code for - security, performance, async, and failure handling - are all accidental complexity.** When you take that away, we're left with the very simple essence of an application's true business domain. For this, a simple DSL will do, the simpler the better. We're left with the essense of an application, as a value. App-values define Pages, each Page declares his data dependencies, and Links to other Pages.
+Like calling `ReactDOM.render(el, domNode)`, you'll need to provide an entrypoint which cedes control to the runtime. The simplest possible implementation is to create a single state atom, construct a Hypercrud Client with the state atom and the userland `request` function, and mount Reagent to the dom with the userland `view` function. Hypercrud Client watches the state atom for changes and will fetch data as needed.
 
-Interpreted app-value in a web browser, with custom renderers disabled:
+## The server runtime
 
-![](http://i.imgur.com/f1ngGLt.png)
+Hypercrud's server runtime is like Apache -- a general purpose data server -- you don't need to change it. It is essentially just a Pedestal service around a Datomic Peer. Datomic Peer is already inches away from being a general purpose data server. There is no interesting code in the server runtime. You can implement your own server runtime, or reuse our internals, or whatever. It's all open source and a small amount of code.
 
-Same app-value but as the end user sees it, respecting renderers:
+### Why not already using Datomic Client API?
 
-![](http://i.imgur.com/4WlmuW8.png)
-
-Here's the raw app-value:
-
-```edn
-{:page/name "Sample Blog",
- :page/query "[:find ?post :in $ :where [?post :post/title]]",
- :page/dbs [{:dbhole/name "$", :dbhole/value {:database/ident "samples-blog",}}],
- :page/find-elements [{:find-element/name "?post",
-                       :find-element/connection {:database/ident "samples-blog"}
-                       :find-element/form {:form/name "samples-blog - post",
-                                           :form/field [{:field/prompt "title",
-                                                         :field/attribute {:attribute/ident :post/title,
-                                                                           :attribute/valueType #:db{:ident :db.type/string},
-                                                                           :attribute/cardinality #:db{:ident :db.cardinality/one}}}
-                                                        {:field/prompt "date",
-                                                         :field/attribute {:attribute/ident :post/date,
-                                                                           :attribute/valueType #:db{:ident :db.type/instant},
-                                                                           :attribute/cardinality #:db{:ident :db.cardinality/one}}}
-                                                        {:field/prompt "content",
-                                                         :field/attribute {:attribute/ident :post/content,
-                                                                           :attribute/valueType #:db{:ident :db.type/string},
-                                                                           :attribute/cardinality #:db{:ident :db.cardinality/one}}}]}}]
-
- :page/links [{:link/prompt "view",
-               :link/link {:db/id #DbId[17592186045791 17592186045422], :page/name "view post"},
-               :link/repeating? true,
-               :link/find-element {:find-element/name "?post", :find-element/connection #:db{:id #DbId[17592186045786 17592186045422]}},
-               :link/ident :sys-edit-?post}
-              {:link/prompt "new",
-               :link/ident :sys-new-?post,
-               :link/repeating? false,
-               :link/find-element {:find-element/name "?post", :find-element/connection #:db{:id #DbId[17592186045786 17592186045422]}},
-               :link/render-inline? true,
-               :link/page {:db/id #DbId[17592186045791 17592186045422], :page/name "view post"}}]
- :page/renderer "(fn [relations colspec anchors param-ctx] ... )"}
-```
-
-You might imagine the code to interpret an app-value to produce a view and a request. This code is called Hypercrud Browser and provided as a library:
-
-```clojure
-(def app-value { ... })
-
-(defn view [state peer dispatch!]
-  [browser/safe-ui app-value (:route state) {:dispatch! dispatch!}])
-
-(defn request [state peer]
-  ; code your own data dependencies, or let the browser figure it out from an app-value
-  (browser/request app-value (:route state)))
-```
-
-Pages compose by composing their data dependencies therein (like an iframe). The page abstraction is sufficient to implement composite widgets like select options, which are themselves a page with a query and form.
-
-If you stop and think, this is a lot how a web browser works. Web browsers are a general HTML client which navigates a graph by following links between pages; this is the design objective of REST, what HATEOAS means, and is called a fully general hypermedia client. **Hyperfiddle browses CRUD apps like web browsers browse HTML.** This core browser technology is implemented as an open-source library called Hypercrud Browser. It is a fully general hypermedia client, it solves the failure of REST, and is what makes Hyperfiddle possible. Hypercrud Browser is HATEOAS.
-
-Thus, we claim that "app-as-a-value" is the scalable model we need to build tomorrow's most sophisticated UIs.
-
-![](http://i.imgur.com/4mKpHhw.png)
-
-App-values are graph-shaped and grow to be quite large. It is natural to want to store app-values in a database, and create tooling to build these up visually and interactively, which leads us to:
-
-# Hyperfiddle
-
-Hyperfiddle is a WYSIWYG editor for Hyperfiddle app-values ("hyperfiddles"). Basically dev-tools for Hypercrud Browser.
-
-![](http://i.imgur.com/v3cmewv.png)
-
-# FAQ
-
-**Does it work without Datomic?** Not yet, but we are not coupled to Datomic in any deep way, though some really cool things like the staging area will not come for free.
-
-**What about database schema?** Datomic schema is also a value, you can interactively build schema values and apply them without restarts. It really helps to have branching and discard here, so you can experiment with your schema in the browser before transacting the change.
-
-**Datomic Peer or Datomic Client?** Hypercrud Server is a Peer. Hypercrud Client may be, but is not constrained to be, implemented as a [Datomic client](http://docs.datomic.com/clients-and-peers.html). If you use Hypercrud Client without Hyperfiddle app-values, you are stuck with the Datomic client model, which is fine, but suboptimal, and re-introduces a theoretical performance problem caused by client/peer round trips. However, when you model the app as a value, you can literally transmit your app-value up to the server, and actually run the code to interpret the value inside the Peer process. Optimal!
-
-**What does Color indicate?** Color indicates the database that the data came out of and/or is owned by. It starts to matter when you get into cross-database queries.
-
-**Select options** Here we model select options as a link to another page, which is embedded.
-
-![](https://i.imgur.com/VluIFyM.png)
-
-**Why does `#DbId[17592186045791 17592186045422]` have two longs?** Historical reasons, soon the second long (indicating connection) will go away.
-
-**Hyperfiddle in Hyperfiddle** Here you can see we built the gray dev-mode widget in Hyperfiddle. We can make live changes to it. All of Hyperfiddle's UI is built in Hyperfiddle, though it is all rather meta so I won't go into it here.
-
-![](http://i.imgur.com/5VPb8iA.gif)
+Historical reasons only, Datomic was still on the REST api when this started so we had to code the client. Theirs will be better and when they release a clojurescript client, we will use it.
