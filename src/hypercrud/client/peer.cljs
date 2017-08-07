@@ -22,9 +22,9 @@
 (defn hydrate-one! [entry-uri request stage-val]
   (-> (http/hydrate! entry-uri #{request} stage-val)
       (p/then (fn [{:keys [t pulled-trees-map]}]
-                (if-let [result (get pulled-trees-map request)]
-                  (process-result result request)
-                  (either/left {:message "Server failure"}))))))
+                (if-let [result (some-> (get pulled-trees-map request) (process-result request))]
+                  (either/branch result p/rejected p/resolved)
+                  (p/rejected {:message "Server failure"}))))))
 
 (deftype Peer [state-atom]
   hc/Peer
