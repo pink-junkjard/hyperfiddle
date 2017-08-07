@@ -78,17 +78,21 @@ Like calling `ReactDOM.render(el, domNode)`, you'll need to provide an entrypoin
 
 ## The server runtime
 
-Hypercrud's server runtime is like Apache -- a general purpose data server -- you don't need to change it. It is essentially just a Pedestal service around a Datomic Peer. Datomic Peer is already inches away from being a general purpose data server. There is no interesting code in the server runtime. You can implement your own server runtime, or reuse our internals, or whatever. It's all open source and a small amount of code.
+Hypercrud's server runtime is like Apache -- a general purpose server -- you don't need to change it. It is essentially just a Pedestal service around a Datomic Peer. Datomic Peer is already inches away from being a general purpose data server. There is no interesting code in the server runtime. You can implement your own server runtime, or reuse our internals, or whatever. It's all open source and a small amount of code.
 
-#### server data security
+#### Isnt this just Datomic Client API?
+
+yeah pretty much, Datomic was still on the REST api when this started so we had to code the client, and afaik their javascript client isn't out yet.
+
+#### Data security
 
 It works like Facebook "view my profile as other person" - the server restricts access to data based on who you are. Security is defined by two pure functions - a database filter predicate, and a transaction validator predicate. Both of these functions can query the database to make a decision. Datomic's distributed reads open the door for making this fast.
 
 You can configure Hypercrud Server with your own arbitrary security predicates.
 
-#### Why not already using Datomic Client API?
+#### Performance - is it Datomic Peer or Datomic Client?
 
-Historical reasons only, Datomic was still on the REST api when this started so we had to code the client. Theirs will be better and when they release a clojurescript client, we will use it.
+ Hypercrud Server is a Peer. Hypercrud Client may be, but is not constrained to be, implemented as a Datomic client. If you use Hypercrud Client core interface (view, request) without hypercrud browser, you are stuck with the Datomic client model, which is fine, but suboptimal, and re-introduces a theoretical performance problem caused by client/peer round trips. However, when you model the app as a value, you can literally transmit your app-value up to the server, and actually run the code to interpret the value inside the Peer process. Optimal!
 
 ## Hypercrud Browser
 
