@@ -72,6 +72,28 @@ All decision making is driven by the client. The client programming experience i
 
 Like calling `ReactDOM.render(el, domNode)`, you'll need to provide an entrypoint which cedes control to the runtime. The simplest possible implementation is to create a single state atom, construct a Hypercrud Client with the state atom and the userland `request` function, and mount Reagent to the dom with the userland `view` function. Hypercrud Client watches the state atom for changes and will fetch data as needed.
 
+#### Why might I want to customize my client runtime?
+
+Customoze your nodejs runtime for total control:
+
+* server side rendering
+* a mobile site with static html only, no javascript
+* redirects, http headers, cookies
+* control caching strategy
+* authentication scheme
+
+Customize your browser runtime for total control:
+
+* Virtual dom implementation (Reagent vs Rum or whatever)
+* state atom implementation (e.g. clojure atom vs reagent reactive atom)
+* initialize state from server rendered initial state
+* HTML5 pushstate navigation, url and routing strategy, local storage, analytics
+
+All this is already provided with the included reference runtime and as part of Hyperfiddle, but you'll eventually want to control it. We also provide the simplest possible hello world runtime as a devkit example which doesn't have any of these features - just a React UI which syncs data, no user auth or anything else. The hello world runtime is two lines of code. The Hyperfiddle runtime is about 100 loc for the node runtime and 100 loc of web browser runtime.
+
+We haven't built a React Native runtime yet, but this is how you would do it.
+
+
 ## The server runtime
 
 Hypercrud's server runtime is like Apache -- a general purpose server -- you don't need to change it. It is essentially just a Pedestal service around a Datomic Peer. Datomic Peer is already inches away from being a general purpose data server. There is no interesting code in the server runtime. You can implement your own server runtime, or reuse our internals, or whatever. It's all open source and a small amount of code.
@@ -91,6 +113,13 @@ You can configure Hypercrud Server with your own arbitrary security predicates.
  Hypercrud Server is a Peer. Hypercrud Client may be, but is not constrained to be, implemented as a Datomic client. If you use Hypercrud Client core interface (view, request) without hypercrud browser, you are stuck with the Datomic client model, which is fine, but suboptimal, and re-introduces a theoretical performance problem caused by client/peer round trips. However, when you model the app as a value, you can literally transmit your app-value up to the server, and actually run the code to interpret the value inside the jvm Peer process. Optimal!
 
  Some of the above is on the roadmap and hasn't yet been implemented. We don't yet interpret app-values on JVM today, but we will. We can also run the entire application javascript in a nodejs environment colocated with a datomic peer. This happens in server side rendered cases, but not client side rendered cases today, but we will fix that soon so I can remove this sentence.
+
+#### Why might I want to customize my server runtime?
+
+* security
+* authentication, if it isn't handled at your gateway
+
+There aren't a lot of reasons for you to change the server runtime. It's like Apache for HTML - you just point it at Datomic and run the process.
 
 ## Hypercrud Browser
 
