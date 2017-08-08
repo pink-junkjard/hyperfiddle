@@ -133,46 +133,26 @@ Same app-value but as the end user sees it, respecting renderers:
 
 ![](http://i.imgur.com/4WlmuW8.png)
 
-Here's the raw edn app-value:
+Here's the raw edn app-value (truncated, here i don't show the whole thing):
 
 ```clojure
-{:page/name "Sample Blog",
- :page/query "[:find ?post :in $ :where [?post :post/title]]",
- :page/dbs [{:dbhole/name "$", :dbhole/value {:database/ident "samples-blog",}}],
- :page/find-elements
- [{:find-element/name "?post",
-   :find-element/connection {:database/ident "samples-blog"}
-   :find-element/form
-   {:form/name "samples-blog - post",
-    :form/field
-    [{:field/prompt "title",
-      :field/attribute
-      {:attribute/ident :post/title,
-       :attribute/valueType #:db{:ident :db.type/string},
-       :attribute/cardinality #:db{:ident :db.cardinality/one}}}
-     {:field/prompt "date",
-      :field/attribute
-      {:attribute/ident :post/date,
-       :attribute/valueType #:db{:ident :db.type/instant},
-       :attribute/cardinality #:db{:ident :db.cardinality/one}}}
-     {:field/prompt "content",
-      :field/attribute
-      {:attribute/ident :post/content,
-       :attribute/valueType #:db{:ident :db.type/string},
-       :attribute/cardinality #:db{:ident :db.cardinality/one}}}]}}]
- :page/links
- [{:link/prompt "view",
-   :link/link {:db/id #DbId[17592186045791 17592186045422], :page/name "view post"},
-   :link/repeating? true,
-   :link/find-element {:find-element/name "?post", :find-element/connection #:db{:id #DbId[17592186045786 17592186045422]}},
-   :link/ident :sys-edit-?post}
-  {:link/prompt "new",
-   :link/ident :sys-new-?post,
-   :link/repeating? false,
-   :link/find-element {:find-element/name "?post", :find-element/connection #:db{:id #DbId[17592186045786 17592186045422]}},
-   :link/render-inline? true,
-   :link/page {:db/id #DbId[17592186045791 17592186045422], :page/name "view post"}}]
- :page/renderer "(fn [relations colspec anchors param-ctx] ... )"}
+{:page/name "Sample Blog"
+ :page/query "[:find ?post :in $ :where [?post :post/title]]"
+ :page/dbs [{:dbhole/name "$" :dbhole/value {:database/ident "samples-blog"}}]
+ :page/renderer "(fn [relations colspec anchors param-ctx] ... )"
+ :page/find-elements [{:find-element/name "?post"
+                       :find-element/connection {:database/ident "samples-blog"}
+                       :find-element/form {:form/name "samples-blog - post"
+                                           :form/field [{:field/prompt "title" :field/attribute {:attribute/ident :post/title :attribute/valueType #:db{:ident :db.type/string} :attribute/cardinality #:db{:ident :db.cardinality/one}}}
+                                                        {:field/prompt "date" :field/attribute {:attribute/ident :post/date :attribute/valueType #:db{:ident :db.type/instant} :attribute/cardinality #:db{:ident :db.cardinality/one}}}
+                                                        {:field/prompt "content" :field/attribute {:attribute/ident :post/content :attribute/valueType #:db{:ident :db.type/string} :attribute/cardinality #:db{:ident :db.cardinality/one}}}]}}]
+ :page/links [{:link/prompt "view" :link/ident :sys-edit-?post
+               :link/repeating? true
+               :link/page {:db/id #DbId[17592186045791 17592186045422] :page/name "view post"}
+               :link/find-element {:find-element/name "?post" :find-element/connection #:db{:id #DbId[17592186045786 17592186045422]}}}
+              {:link/prompt "new" :link/ident :sys-new-?post :link/render-inline? true
+               :link/page {:db/id #DbId[17592186045791 17592186045422] :page/name "view post"}
+               :link/find-element {:find-element/name "?post" :find-element/connection #:db{:id #DbId[17592186045786 17592186045422]}}}]}
 ```
 
 You might imagine the code to interpret an app-value to produce a view and a request, to satisfy the Hypercrud core interface. This code is called Hypercrud Browser and provided as a library:
