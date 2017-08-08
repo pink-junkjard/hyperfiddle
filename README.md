@@ -2,13 +2,13 @@
 
 > client/server data sync, for composable UIs
 
-Live demos, docs and more: http://hyperfiddle.net/
+Live demos, docs and more: http://hyperfiddle.net/ (Hyperfiddle is the Hypercrud reference app)
 
 * Hypercrud Browser - library for **data driven UIs, as an EDN value**
 * Hypercrud Client - client/server data sync, UI as a function
 * Hypercrud Server - General purpose data server for [Datomic](http://www.datomic.com/)
 
-React.js offers the View as a pure function of data, but UIs are more than views. UIs are thick applications which hydrate server data. In database applications, network data sync -- I/O -- is root source of complexity. I/O has latency, it can fail, it is asynchronous, and these concerns poison huge swaths of our UIs today.
+React.js offers the View as a pure function of data, but UIs are more than views. UIs are thick applications which hydrate server data. In database applications, network data sync -- I/O -- is root source of complexity. I/O has latency, it can fail, it is asynchronous, and these concerns pervade our UIs today.
 
 Hypercrud handles the data sync, enabling us to program our UIs as pure functions of local data: truly composable UIs. Hypercrud UIs are functions, proper functions which compose, letting us climb a rung higher on the ladder of abstraction, to the real goal: data driven UIs, as an edn value.
 
@@ -78,7 +78,7 @@ Hypercrud's server runtime is like Apache -- a general purpose server -- you don
 
 #### Isnt this just Datomic Peer Server and Datomic Client API?
 
-yeah pretty much, Datomic was still on the REST api when this started so we had to code the client, and afaik their javascript client isn't out yet.
+yeah pretty much, Datomic was still on the REST api when this started so we had to code the client, and afaik their javascript client isn't out yet. Hypercrud Server is a Datomic peer + a comm protocol + a security layer, and not much else.
 
 #### Data security
 
@@ -88,7 +88,9 @@ You can configure Hypercrud Server with your own arbitrary security predicates.
 
 #### Performance - is it Datomic Peer or Datomic Client?
 
- Hypercrud Server is a Peer. Hypercrud Client may be, but is not constrained to be, implemented as a Datomic client. If you use Hypercrud Client core interface (view, request) without hypercrud browser, you are stuck with the Datomic client model, which is fine, but suboptimal, and re-introduces a theoretical performance problem caused by client/peer round trips. However, when you model the app as a value, you can literally transmit your app-value up to the server, and actually run the code to interpret the value inside the Peer process. Optimal!
+ Hypercrud Server is a Peer. Hypercrud Client may be, but is not constrained to be, implemented as a Datomic client. If you use Hypercrud Client core interface (view, request) without hypercrud browser, you are stuck with the Datomic client model, which is fine, but suboptimal, and re-introduces a theoretical performance problem caused by client/peer round trips. However, when you model the app as a value, you can literally transmit your app-value up to the server, and actually run the code to interpret the value inside the jvm Peer process. Optimal!
+
+ Some of the above is on the roadmap and hasn't yet been implemented. We don't yet interpret app-values on JVM today, but we will. We can also run the entire application javascript in a nodejs environment colocated with a datomic peer. This happens in server side rendered cases, but not client side rendered cases today, but we will fix that soon so I can remove this sentence.
 
 ## Hypercrud Browser
 
