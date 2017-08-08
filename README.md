@@ -10,9 +10,7 @@ Live demos, docs and more: http://hyperfiddle.net/ (Hyperfiddle is the Hypercrud
 
 ## Status
 
-Hyperfiddle.net is stable. The abstractions are stable. You'll be able to fork a repo to run it yourself in a couple weeks, in the meantime we're putting some finishing touches to make that easy.
-
-To be notified when it is ready, subscribe to the developer mailing list: <https://groups.google.com/forum/#!forum/hypercrud>
+You can't fork and run it yet. We're working on that right now. To be notified when it is ready, subscribe to the developer mailing list: <https://groups.google.com/forum/#!forum/hypercrud>
 
 ## Why
 
