@@ -1,24 +1,20 @@
-# Hypercrud Browser
+# Hypercrud
 
-> Programmable Datomic console, as a ClojureScript library
+> client/server data sync, for composable UIs
 
 Live demos, docs and more: http://hyperfiddle.net/
 
-**Hyperfiddle** is a drop-in Datomic Console replacement, scriptable from the web browser in ClojureScript, for making sophisticated database applications.
+* Hypercrud Browser - library for **data driven UIs, as an EDN value**
+* Hypercrud Client - client/server data sync, UI as a function
+* Hypercrud Server - General purpose data server for [Datomic](http://www.datomic.com/)
 
-Hyperfiddle is built on top of the **Hypercrud** project, whose readme you are viewing.
+React.js offers the View as a pure function of data, but UIs are more than views. UIs are thick applications which hydrate server data. In database applications, network data sync -- I/O -- is root source of complexity. I/O has latency, it can fail, it is asynchronous, and these concerns poison huge swaths of our UIs today.
 
-* Hypercrud Server - serves data from Datomic, securely and efficiently
-* Hypercrud Client - client/server data sync between javascript app and database
-* Hypercrud Browser - Library for **data driven UIs, as an EDN value**
-
-React offers the View as a pure function of data, but does not cover client/server data sync over network. UIs, of course, do data sync. Hypercrud handles the data sync.
-
-Solving data sync leaves us with truly composable UIs. Compose sophisticated UIs out of simpler UIs. UIs are no longer just view components, but thick applications, with their own server data dependencies. Hypercrud lets you compose them like functions, letting us climb a rung higher on the ladder of abstraction, to the real goal: data driven UIs, as an edn value.
+Hypercrud handles the data sync, enabling us to program our UIs as pure functions of local data: truly composable UIs. Hypercrud UIs are functions, proper functions which compose, letting us climb a rung higher on the ladder of abstraction, to the real goal: data driven UIs, as an edn value.
 
 App-as-a-value paves the way for some seriously sophisticated application tooling.
 
-**This entire screenshot is modeled as an edn value**. The bottom half is an editor for said edn values. The editor is itself modeled as an edn value too. [Yes it can edit itself and yes this is how we build it every day](http://hyperfiddle.net/hyperfiddle-blog/ezpkb21haW4gbmlsLCA6cHJvamVjdCAiaHlwZXJmaWRkbGUtYmxvZyIsIDpsaW5rLWRiaWQgI0RiSWRbMTc1OTIxODYwNDU4OTQgMTc1OTIxODYwNDU0MjJdLCA6cXVlcnktcGFyYW1zIHs6ZW50aXR5ICNEYklkWzE3NTkyMTg2MDQ2MjA3IDE3NTkyMTg2MDQ1ODgyXX19).
+**This entire screenshot is modeled as an edn value**. The bottom half is an editor for said edn values. The editor is itself modeled as an edn value too. [Yes it can edit itself and yes this is how we build it every day.](http://hyperfiddle.net/hyperfiddle-blog/ezpkb21haW4gbmlsLCA6cHJvamVjdCAiaHlwZXJmaWRkbGUtYmxvZyIsIDpsaW5rLWRiaWQgI0RiSWRbMTc1OTIxODYwNDU4OTQgMTc1OTIxODYwNDU0MjJdLCA6cXVlcnktcGFyYW1zIHs6ZW50aXR5ICNEYklkWzE3NTkyMTg2MDQ2MjA3IDE3NTkyMTg2MDQ1ODgyXX19)
 
 ![](https://i.imgur.com/sisRPWO.png)
 
@@ -80,7 +76,7 @@ Like calling `ReactDOM.render(el, domNode)`, you'll need to provide an entrypoin
 
 Hypercrud's server runtime is like Apache -- a general purpose server -- you don't need to change it. It is essentially just a Pedestal service around a Datomic Peer. Datomic Peer is already inches away from being a general purpose data server. There is no interesting code in the server runtime. You can implement your own server runtime, or reuse our internals, or whatever. It's all open source and a small amount of code.
 
-#### Isnt this just Datomic Client API?
+#### Isnt this just Datomic Peer Server and Datomic Client API?
 
 yeah pretty much, Datomic was still on the REST api when this started so we had to code the client, and afaik their javascript client isn't out yet.
 
@@ -169,9 +165,21 @@ App-values are graph-shaped and grow to be quite large. It is natural to want to
 
 # Hyperfiddle
 
+**Hyperfiddle** is a drop-in Datomic Console replacement, scriptable from the web browser in ClojureScript, for making sophisticated database applications.
+
 Hyperfiddle is a WYSIWYG editor for Hyperfiddle app-values ("hyperfiddles"). Basically dev-tools for Hypercrud Browser.
 
 ![](http://i.imgur.com/v3cmewv.png)
+
+Hyperfiddle is our reference app, because it and pushes Hypercrud in recursive ways. It forced us to converge our abstractions and data model to a total solution without any gaps. We had to shave approximately 100% of the yaks for it to even be possible.
+
+## Hyperfiddle's runtime
+
+single page app vs SSR hybrid
+Routing, links
+doesnt break web
+
+
 
 # More reading
 
