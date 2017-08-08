@@ -13,13 +13,13 @@
   ([dispatch! get-state hydrate-id force]
    (hydrate-until-queries-settle! dispatch! get-state hydrate-id force state/*request*))
   ([dispatch! get-state hydrate-id force request-fn]
-   (let [{:keys [entry-uri ptm static-ptm stage] :as state} (get-state)
+   (let [{:keys [entry-uri ptm stage] :as state} (get-state)
          ; if the time to compute the requests is long
          ; this peer could start returning inconsistent data compared to the state value,
          ; however another hydrating action should have dispatched in that scenario,
          ; so the resulting computation would be thrown away anyway
          requests (into #{} (request-fn state))
-         hydrated? (set/subset? (set requests) (set (concat (keys static-ptm) (keys ptm))))]
+         hydrated? (set/subset? (set requests) (set (keys ptm)))]
      ; inspect dbvals used in requests see if stage has changed for them
      (if (or force (not hydrated?))
        (p/then (http/hydrate! entry-uri requests stage)
