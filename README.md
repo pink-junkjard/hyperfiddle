@@ -12,6 +12,8 @@ Live demos, docs and more: http://hyperfiddle.net/ (Hyperfiddle is the Hypercrud
 
 Hyperfiddle.net is stable. The abstractions are stable. You'll be able to fork a repo to run it yourself in a couple weeks, in the meantime we're putting some finishing touches to make that easy.
 
+To be notified when it is ready, subscribe to the developer mailing list: <https://groups.google.com/forum/#!forum/hypercrud>
+
 ## Why
 
 React.js offers the View as a pure function of data, but UIs are more than views. UIs are thick applications which hydrate server data. In database applications, network data sync -- I/O -- is root source of complexity. I/O has latency, it can fail, it is asynchronous, and these concerns pervade our UIs today.
