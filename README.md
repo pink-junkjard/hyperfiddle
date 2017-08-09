@@ -28,8 +28,6 @@ Facebook is not built in hyperfiddle, but if it was, here is how we might break 
 
 Hypercrud is 90% library for UI, like Om Next or Reagent. The last 10% is the I/O interface, and our Datomic reference implementation. The I/O runtime is general purpose, contains no application logic, and has a client piece and a server piece. The server runtime is just a server process that you run colocated with your Datomic installation (you provide Datomic).
 
-<http://hyperfiddle.net/> is our reference app, and reference I/O runtime implementation backed by Datomic. The hyperfiddle cloud runtime also integrates with cloud infrastructure such as <https://auth0.com/>, scaling, server side rendering, caching & CDN. You should use this until you outgrow it, and then eject your app and selfhost for total control.
-
 Hypercrud is not really a framework, because it's just pure functions and an interface, you can replace any of the pieces, and provide your own implementation of the I/O interface.
 
 Warning! To achieve the optimal level of performance that this project is designed to achieve, your I/O runtime implementation will need deep coordination with your applications entrypoint code, and other infrastructure like database, nginx, web server, CDN. Let's call this infrastructure, your **application engine**.
@@ -38,16 +36,18 @@ Warning! To achieve the optimal level of performance that this project is design
 
 More about this later in this document.
 
+<http://hyperfiddle.net/> is our reference app, and reference I/O runtime implementation backed by Datomic. The hyperfiddle cloud runtime also integrates with cloud infrastructure such as <https://auth0.com/>, scaling, server side rendering, caching & CDN. You should use this until you outgrow it, and then eject your app and selfhost for total control.
+
 At a high level, you will have a few ways to approach your application engine:
 
 * use <http://hyperfiddle.net/> and don't think about it until later
-* self-host the same application engine that hyperfiddle.net uses (e.g. run our docker containers)
-* Use our I/O runtime but fork our application engine, you'll need to handle things like auth, security, caching
+* self-host the same application engine that hyperfiddle.net uses (e.g. run our docker containers with your API keys)
+* Use our I/O runtime but fork our application engine, to control things like auth, security, caching
 * Write your own I/O runtime and application engine, e.g. backed by [DataScript](https://github.com/tonsky/datascript), [Datsync](https://github.com/metasoarous/datsync), [FactUI](https://github.com/arachne-framework/factui)
 
 ## Status
 
-<http://hyperfiddle.net/>, our reference app & cloud platform, works great.
+<http://hyperfiddle.net/>, our reference app & cloud platform, works great. The UI will evolve over time but the application engine is pretty baked.
 
 In a few weeks, you will be able to run hypercrud outside of hyperfiddle.net as outlined above. We're working on that right now. To be notified when it is ready, subscribe to the developer mailing list: <https://groups.google.com/forum/#!forum/hypercrud>
 
@@ -103,7 +103,7 @@ However, Clojure runs in many places. **If you run your application in a process
 
 Here is a great /r/clojure discussion which braindumps the type of things you need to think about if you want to implement an I/O runtime. <https://www.reddit.com/r/Clojure/comments/6rncgw/arachneframeworkfactui/>
 
-## Datomic I/O runtime impl - data server piece
+### Datomic I/O runtime impl - data server piece
 
 Hypercrud's server runtime is like Apache -- a general purpose server -- you don't need to change it. It is essentially just a Pedestal service around a Datomic Peer. Datomic Peer is already inches away from being a general purpose data server. There is no interesting code in the server runtime. You can implement your own server runtime, or reuse our internals, or whatever. It's all open source and a small amount of code.
 
@@ -135,7 +135,7 @@ You can configure Hypercrud Server with your own arbitrary security predicates.
 
 There aren't a lot of reasons for you to change the server runtime. It's like Apache for HTML - you just point it at Datomic and run the process. Maybe configure it with some security functions written in clojure and put on your classpath.
 
-## Datomic I/O runtime impl & application engine
+## Datomic application engine - UI pieces
 
 Like calling `ReactDOM.render(<MyRootView/>, domNode)`, you'll need to provide an entrypoint which cedes control to the I/O runtime. The simplest possible implementation is to create a single state atom, construct a Hypercrud Client with the state atom and the userland `request` function, and mount Reagent to the dom with the userland `view` function. Hypercrud Client watches the state atom for changes and will fetch data as needed.
 
