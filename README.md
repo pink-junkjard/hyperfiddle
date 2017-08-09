@@ -105,9 +105,12 @@ However, Clojure runs in many places. **If you run your application in a process
 
 The Hypercrud project is focused on the Composable UI outcome - we don’t care as deeply about the data sync implementation, you can plug your implementation. We know that by slamming Datomic we will get correct answers, it will be ACID, you can trust it, it will scale to real industry database applications, and it will be strictly faster than your REST or GraphQL apps of today. But there are other interesting I/O strategies which may achieve better performance tradeoffs than the Datomic Peer model, particularly reactive approaches as discussed in <http://tonsky.me/blog/the-web-after-tomorrow/>
 
-* [DataScript](https://github.com/tonsky/datascript)
-* [Datsync](https://github.com/metasoarous/datsync)
-* [FactUI](https://github.com/arachne-framework/factui)
+* Nikita Prokopov's DataScript <https://github.com/tonsky/datascript>
+* Matt Parker's Posh <https://github.com/mpdairy/posh>
+* Chris Small's Datsync <https://github.com/metasoarous/datsync>
+* Luke Vanderbilt's FactUI <https://github.com/arachne-framework/factui>
+
+If you have another approach, either I haven't heard about it yet or don't understand the vision, write me!
 
 Here is a /r/clojure thread which braindumps the type of things you need to think about if you want to implement a reactive I/O runtime. <https://www.reddit.com/r/Clojure/comments/6rncgw/arachneframeworkfactui/>
 
