@@ -87,11 +87,9 @@ If the data isn't already fetched, `hc/hydrate` returns an error value. The runt
 
 ## The Datomic I/O runtime implementation
 
-When the database changes, we rehydrate all queries on the page through datomic. If a field blurs, we rehydrate all queries on the page.
+When the database changes, or the request changes, we rehydrate all queries on the page through datomic. So if a field blurs, we rehydrate all queries on the page.
 
-Isn't that slow?
-
-No. We make some unusual architecture choices to make it fast.
+Isn't that slow? **No. We make some unusual architecture choices to make it fast.**
 
 If you use this I/O runtime in a traditional client/server REST-like configuration, where the browser makes HTTP requests to the server, it will be horrible! (Hyperfiddle.net in some circumstances does this today - so you can feel the lag - we haven't bothered to optimize this yet)
 
@@ -99,7 +97,7 @@ However, Clojure runs in many places. **If you run your application in a process
 
 Long story short, your I/O runtime will need to coordinate carefully with your other application infrastructure, in order to make sure this is fast. Let's call this infrastructure, your **application engine**.
 
-Application engine = I/O runtime implementation + infrastructure to make it fast.
+`Application engine = I/O runtime implementation + infrastructure to make it fast`
 
 ## Details of an application engine
 
