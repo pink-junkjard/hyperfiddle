@@ -49,7 +49,7 @@ No matter your choice of app engine, the Hypercrud core interface will work, Hyp
 
 ## Status
 
-<http://hyperfiddle.net/>, our reference app & cloud platform, works great. The UI will evolve over time but the application engine is pretty baked.
+<http://hyperfiddle.net/>, our reference app & cloud platform, works great. The UI will evolve over time but the core interfaces are pretty baked.
 
 In a few weeks, you will be able to run hypercrud outside of hyperfiddle.net as outlined above. We're working on that right now. To be notified when it is ready, subscribe to the developer mailing list: <https://groups.google.com/forum/#!forum/hypercrud>
 
