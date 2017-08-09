@@ -3,12 +3,6 @@
                     [org.apache.commons/commons-lang3 "3.4"]
                     [org.clojure/clojure "1.9.0-alpha14"]
 
-                    ; unchecked
-                    ;[ch.qos.logback/logback-classic "1.1.7" :exclusions [org.slf4j/slf4j-api]]
-                    ;[com.datomic/datomic-free "0.9.5561" :scope "provided"]
-                    ;[io.pedestal/pedestal.jetty "0.5.1"]
-                    ;[io.pedestal/pedestal.service "0.5.1"]
-
                     ; build/test/dev
                     [adzerk/bootlaces "0.1.13" :scope "test"]
                     [sparkfund/boot-lein-generate "0.3.0" :scope "test"]
