@@ -14,7 +14,6 @@
     (fn [{{:keys [json-params edn-params transit-params]} :request :as context}]
       (assoc-in context [:request :body-params] (or json-params edn-params transit-params)))))
 
-
 ;; This is copied from the pedestal source code, it is private
 (defn- print-fn
   [prn-fn]
@@ -23,7 +22,6 @@
       (binding [*out* writer]
         (prn-fn))
       (.flush writer))))
-
 
 ;; Used for serializing the response body only; not used for parsing the request
 (def content-types
@@ -55,7 +53,6 @@
                             (StringEscapeUtils/escapeHtml4 $)
                             (format "<html><body><pre>%s</pre></body></html>" $))]
          (print-fn #(.write *out* body-str)))))})
-
 
 (def auto-content-type
   (interceptor/after

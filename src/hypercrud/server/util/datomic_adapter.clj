@@ -34,15 +34,12 @@
                                (dbid->datomic-id v)
                                v)])
 
-
 (defn stmt-dbid->id [[op e a v :as stmt]]
   (case op
     :db/add (process-add-ret stmt)
     :db/retract (process-add-ret stmt)
     :db.fn/retractEntity [op (.id e)]
     (throw (new Error (str "Unable to process op: " op)))))
-
-
 
 ;(defn datomic-map-to-hc-stmt [maps conn-id]
 ;  (->> maps

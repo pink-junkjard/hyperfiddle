@@ -1,8 +1,7 @@
 (ns hypercrud.server.core
   (:require [datomic.api :as d]
             [hypercrud.server.database :as database]
-            [hypercrud.server.db-root :as db]
-            [io.pedestal.http :as bootstrap]))
+            [hypercrud.server.db-root :as db]))
 
 
 (defn init-datomic [transactor-uri]
@@ -14,7 +13,3 @@
     (alter-var-root #'db/root-id (constantly
                                    (d/q '[:find ?db . :where [?db :database/ident "root"]]
                                         (d/db (database/get-root-conn)))))))
-
-(defn start-service []
-  )
-
