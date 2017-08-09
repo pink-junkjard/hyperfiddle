@@ -103,13 +103,13 @@ If you use this I/O runtime in a traditional client/server REST-like configurati
 
 However, Clojure runs in many places. **If you run your application in a process co-located with the datomic peer, all those network round trips drop out.** Hyperfiddle.net's infrastructure handles this - your ClojureScript code runs in a nodejs process colocated with a Datomic peer. In the future, maybe your application code will run inside the datomic peer process itself.
 
-There are other interesting I/O runtime implementations which may achieve better performance tradeoffs.
+The Hypercrud project is focused on the Composable UI outcome - we don’t care as deeply about the data sync implementation, you can plug your implementation. We know that by slamming Datomic we will get correct answers, it will be ACID, you can trust it, it will scale to real industry database applications, and it will be strictly faster than your REST or GraphQL apps of today. But there are other interesting I/O strategies which may achieve better performance tradeoffs than the Datomic Peer model, particularly reactive approaches as discussed in <http://tonsky.me/blog/the-web-after-tomorrow/>
 
 * [DataScript](https://github.com/tonsky/datascript)
 * [Datsync](https://github.com/metasoarous/datsync)
 * [FactUI](https://github.com/arachne-framework/factui)
 
-Here is a /r/clojure thread which braindumps the type of things you need to think about if you want to implement an I/O runtime. <https://www.reddit.com/r/Clojure/comments/6rncgw/arachneframeworkfactui/>
+Here is a /r/clojure thread which braindumps the type of things you need to think about if you want to implement a reactive I/O runtime. <https://www.reddit.com/r/Clojure/comments/6rncgw/arachneframeworkfactui/>
 
 ### Datomic I/O runtime impl - data server piece
 
