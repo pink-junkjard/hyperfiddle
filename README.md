@@ -97,8 +97,9 @@ If the data isn't already fetched, `hc/hydrate` returns an error value. The runt
 
 We provide an I/O runtime implementation that aggressively hydrates data through Datomic. When the database changes, or the request changes, we rehydrate all queries on the page through datomic. So if just a single field blurs, we rehydrate all queries on the page.
 
+In this gif, the popover is a speculative database branch. The first branch is discarded, the second is merged. And then we throw it all away without transacting it. See [datomic api: d/with](http://docs.datomic.com/clojure/#datomic.api/with)
+
 ![](http://i.imgur.com/hRXI1p7.gif)
-*The popover is a speculative database branch, the first is discarded, the second is merged*
 
 Isn't that slow? **No. Our unusual architecture choices make it fast.**
 
