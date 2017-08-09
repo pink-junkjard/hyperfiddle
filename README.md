@@ -101,7 +101,7 @@ If you use this I/O runtime in a traditional client/server REST-like configurati
 
 However, Clojure runs in many places. **If you run your application in a process co-located with the datomic peer, all those network round trips drop out.** Hyperfiddle.net's infrastructure handles this - your ClojureScript code runs in a nodejs process colocated with a Datomic peer. In the future, maybe your application code will run inside the datomic peer process itself.
 
-Here is a greast /r/clojure discussion which braindumps the type of things you need to think about if you want to implement an I/O runtime. <https://www.reddit.com/r/Clojure/comments/6rncgw/arachneframeworkfactui/>
+Here is a great /r/clojure discussion which braindumps the type of things you need to think about if you want to implement an I/O runtime. <https://www.reddit.com/r/Clojure/comments/6rncgw/arachneframeworkfactui/>
 
 ## Datomic I/O runtime impl - data server piece
 
