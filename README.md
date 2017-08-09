@@ -32,12 +32,18 @@ Hypercrud is 90% library for UI, like Om Next or Reagent. The last 10% is the I/
 
 Hypercrud is not really a framework, because it's just pure functions and an interface, you can replace any of the pieces, and provide your own implementation of the I/O interface.
 
-For hosting your application, you will have a few choices
+Warning! To achieve the optimal level of performance that this project is designed to achieve, your I/O runtime implementation will need deep coordination with your applications entrypoint code, and other infrastructure like database, nginx, web server, CDN. Let's call this infrastructure, your **application engine**.
+
+    Application engine = I/O runtime implementation + infrastructure to make it fast
+
+More about this later in this document.
+
+At a high level, you will have a few ways to approach your application engine:
 
 * use <http://hyperfiddle.net/> and don't think about it until later
-* self-host the same infrastructure that hyperfiddle.net uses (e.g. run our docker containers)
-* Use our Datomic I/O runtime, but roll your own application, you'll need to code auth, security, infrastructure like a real app obviously
-* Write your own I/O runtime or fork ours, e.g. backed by [DataScript](https://github.com/tonsky/datascript), [Datsync](https://github.com/metasoarous/datsync), [FactUI](https://github.com/arachne-framework/factui)
+* self-host the same application engine that hyperfiddle.net uses (e.g. run our docker containers)
+* Use our I/O runtime but fork our application engine, you'll need to handle things like auth, security, caching
+* Write your own I/O runtime and application engine, e.g. backed by [DataScript](https://github.com/tonsky/datascript), [Datsync](https://github.com/metasoarous/datsync), [FactUI](https://github.com/arachne-framework/factui)
 
 ## Status
 
@@ -85,7 +91,7 @@ The hydrated response value is passed into the view function. Since the data is 
 
 If the data isn't already fetched, `hc/hydrate` returns an error value. The runtime will manage the lifecycle of these functions. It is up to your choice of runtime as to the details of this lifecycle, for example, do you want to call the view function when the data is only partially loaded? You can do that if you want. Hyperfiddle.net does this and draws loading components and reports database errors appropriately. Your runtime doesn't have to do that, it's up to you.
 
-## The Datomic I/O runtime implementation
+## Datomic I/O runtime implementation
 
 When the database changes, or the request changes, we rehydrate all queries on the page through datomic. So if a field blurs, we rehydrate all queries on the page.
 
@@ -95,20 +101,49 @@ If you use this I/O runtime in a traditional client/server REST-like configurati
 
 However, Clojure runs in many places. **If you run your application in a process co-located with the datomic peer, all those network round trips drop out.** Hyperfiddle.net's infrastructure handles this - your ClojureScript code runs in a nodejs process colocated with a Datomic peer. In the future, maybe your application code will run inside the datomic peer process itself.
 
-Long story short, your I/O runtime will need to coordinate carefully with your other application infrastructure, in order to make sure this is fast. Let's call this infrastructure, your **application engine**.
+Here is a greast /r/clojure discussion which braindumps the type of things you need to think about if you want to implement an I/O runtime. <https://www.reddit.com/r/Clojure/comments/6rncgw/arachneframeworkfactui/>
 
-`Application engine = I/O runtime implementation + infrastructure to make it fast`
+## Datomic I/O runtime impl - data server piece
 
-Here is a great /r/clojure discussion which braindumps the type of things you need to think about if you want to implement an I/O runtime. <https://www.reddit.com/r/Clojure/comments/6rncgw/arachneframeworkfactui/>
+Hypercrud's server runtime is like Apache -- a general purpose server -- you don't need to change it. It is essentially just a Pedestal service around a Datomic Peer. Datomic Peer is already inches away from being a general purpose data server. There is no interesting code in the server runtime. You can implement your own server runtime, or reuse our internals, or whatever. It's all open source and a small amount of code.
 
-## Details of an application engine
+#### Isnt this just Datomic Peer Server and Datomic Client API?
+
+yeah pretty much, Datomic was still on the REST api when this started so we had to code the client, and afaik their javascript client isn't out yet. Hypercrud Server is a Datomic peer + a comm protocol + a security layer, and not much else.
+
+#### Which performance profile - is it Datomic Peer or Datomic Client?
+
+ Hypercrud Server is a Peer. Hypercrud Client may be, but is not constrained to be, implemented as a Datomic client. If you use Hypercrud Client core interface (view, request) without hypercrud browser, you are stuck with the Datomic client model, which is fine, but suboptimal, and re-introduces a theoretical performance problem caused by client/peer round trips. However, when you model the app as a value, you can literally transmit your app-value up to the server, and actually run the code to interpret the value inside the jvm Peer process. Optimal!
+
+ Some of the above is on the roadmap and hasn't yet been implemented. We don't yet interpret app-values on JVM today, but we will. We can also run the entire application javascript in a nodejs environment colocated with a datomic peer. This happens in server side rendered cases, but not client side rendered cases today, but we will fix that soon so I can remove this sentence.
+
+ More reading about performance:
+
+* [Hyperfiddle vs REST](http://hyperfiddle.net/hyperfiddle-blog/ezpkb21haW4gbmlsLCA6cHJvamVjdCAiaHlwZXJmaWRkbGUtYmxvZyIsIDpsaW5rLWRiaWQgI0RiSWRbMTc1OTIxODYwNDU4OTQgMTc1OTIxODYwNDU0MjJdLCA6cXVlcnktcGFyYW1zIHs6ZW50aXR5ICNEYklkWzE3NTkyMTg2MDQ2MTMyIDE3NTkyMTg2MDQ1ODgyXX19)
+* [Datomic vs the Object/Relational Impedance Mismatch](http://hyperfiddle.net/hyperfiddle-blog/ezpkb21haW4gbmlsLCA6cHJvamVjdCAiaHlwZXJmaWRkbGUtYmxvZyIsIDpsaW5rLWRiaWQgI0RiSWRbMTc1OTIxODYwNDU4OTQgMTc1OTIxODYwNDU0MjJdLCA6cXVlcnktcGFyYW1zIHs6ZW50aXR5ICNEYklkWzE3NTkyMTg2MDQ2MjEwIDE3NTkyMTg2MDQ1ODgyXX19)
+
+#### Data security
+
+It works like Facebook "view my profile as other person" - the server restricts access to data based on who you are. Security is defined by two pure functions - a database filter predicate, and a transaction validator predicate. Both of these functions can query the database to make a decision. Datomic's distributed reads open the door for making this fast.
+
+You can configure Hypercrud Server with your own arbitrary security predicates.
+
+#### Why might I want to customize my server runtime?
+
+* security
+* authentication, if it isn't handled at your gateway
+
+There aren't a lot of reasons for you to change the server runtime. It's like Apache for HTML - you just point it at Datomic and run the process. Maybe configure it with some security functions written in clojure and put on your classpath.
+
+## Datomic I/O runtime impl & application engine
 
 Like calling `ReactDOM.render(<MyRootView/>, domNode)`, you'll need to provide an entrypoint which cedes control to the I/O runtime. The simplest possible implementation is to create a single state atom, construct a Hypercrud Client with the state atom and the userland `request` function, and mount Reagent to the dom with the userland `view` function. Hypercrud Client watches the state atom for changes and will fetch data as needed.
 
-#### What types of things does an application engine do?
+#### What concerns does an app engine handle?
 
 nodejs engine:
 
+* Hydrate data dependencies for a route in one request, to eliminate client/server round trips for dependent requests
 * server side rendering e.g. [fork React to optimize ssr](https://stackoverflow.com/questions/34728962/react-rendertostring-performance-and-caching-react-components)
 * serve a mobile site with no javascript, only server rendered html
 * redirects, http headers, cookies
@@ -126,42 +161,11 @@ web browser engine:
 * server session vs local storage
 * analytics and user tracking e.g. <https://segment.com/>
 
-All this is already provided with the included reference runtime and as part of Hyperfiddle, but you'll eventually want to control it. We also provide the simplest possible hello world runtime as a devkit example which doesn't have any of these features - just a React UI which syncs data, no user auth or anything else. The hello world runtime is two lines of code. The Hyperfiddle runtime is about 100 loc for the node runtime and 100 loc of web browser runtime.
+All this is already provided with the included reference application engine and as part of Hyperfiddle, but you'll eventually want to control it. We also provide the simplest possible hello world application engine as a devkit example which doesn't have any of these features - just a React UI which syncs data, no user auth or SSR or anything else. The hello world devkit is two lines of code. The Hyperfiddle application engine is about 150 loc each for nodejs and browser entrypoints, plus sophisticated caching infrastructure which takes advantage of immutability.
 
-We haven't built a React Native application engine yet, but this is how you would do it.
+We haven't built a React Native app engine yet, but this is how you would do it.
 
-## The server I/O runtime
-
-Hypercrud's server runtime is like Apache -- a general purpose server -- you don't need to change it. It is essentially just a Pedestal service around a Datomic Peer. Datomic Peer is already inches away from being a general purpose data server. There is no interesting code in the server runtime. You can implement your own server runtime, or reuse our internals, or whatever. It's all open source and a small amount of code.
-
-#### Isnt this just Datomic Peer Server and Datomic Client API?
-
-yeah pretty much, Datomic was still on the REST api when this started so we had to code the client, and afaik their javascript client isn't out yet. Hypercrud Server is a Datomic peer + a comm protocol + a security layer, and not much else.
-
-#### Performance - is it Datomic Peer or Datomic Client?
-
- Hypercrud Server is a Peer. Hypercrud Client may be, but is not constrained to be, implemented as a Datomic client. If you use Hypercrud Client core interface (view, request) without hypercrud browser, you are stuck with the Datomic client model, which is fine, but suboptimal, and re-introduces a theoretical performance problem caused by client/peer round trips. However, when you model the app as a value, you can literally transmit your app-value up to the server, and actually run the code to interpret the value inside the jvm Peer process. Optimal!
-
- Some of the above is on the roadmap and hasn't yet been implemented. We don't yet interpret app-values on JVM today, but we will. We can also run the entire application javascript in a nodejs environment colocated with a datomic peer. This happens in server side rendered cases, but not client side rendered cases today, but we will fix that soon so I can remove this sentence.
-
- More reading about performance:
-
- * [Hyperfiddle vs REST](http://hyperfiddle.net/hyperfiddle-blog/ezpkb21haW4gbmlsLCA6cHJvamVjdCAiaHlwZXJmaWRkbGUtYmxvZyIsIDpsaW5rLWRiaWQgI0RiSWRbMTc1OTIxODYwNDU4OTQgMTc1OTIxODYwNDU0MjJdLCA6cXVlcnktcGFyYW1zIHs6ZW50aXR5ICNEYklkWzE3NTkyMTg2MDQ2MTMyIDE3NTkyMTg2MDQ1ODgyXX19)
-
-#### Data security
-
-It works like Facebook "view my profile as other person" - the server restricts access to data based on who you are. Security is defined by two pure functions - a database filter predicate, and a transaction validator predicate. Both of these functions can query the database to make a decision. Datomic's distributed reads open the door for making this fast.
-
-You can configure Hypercrud Server with your own arbitrary security predicates.
-
-#### Why might I want to customize my server runtime?
-
-* security
-* authentication, if it isn't handled at your gateway
-
-There aren't a lot of reasons for you to change the server runtime. It's like Apache for HTML - you just point it at Datomic and run the process. Maybe configure it with some security functions written in clojure and put on your classpath.
-
-## Hypercrud Browser
+# Hypercrud Browser
 
 Hypercrud Browser navigates hypercrud app-values like a web browser navigates HTML. App-values define Pages, each Page declares his data dependencies, and Links to other Pages. Everything composes.
 
@@ -223,8 +227,3 @@ Hyperfiddle is a WYSIWYG editor for Hyperfiddle app-values ("hyperfiddles"). Bas
 ![](http://i.imgur.com/v3cmewv.png)
 
 Hyperfiddle is our reference app, because it and pushes Hypercrud in recursive ways. It forced us to converge our abstractions and data model to a total solution without any gaps. We had to shave approximately 100% of the yaks for it to even be possible.
-
-# More reading
-
-* [Hyperfiddle vs REST](http://hyperfiddle.net/hyperfiddle-blog/ezpkb21haW4gbmlsLCA6cHJvamVjdCAiaHlwZXJmaWRkbGUtYmxvZyIsIDpsaW5rLWRiaWQgI0RiSWRbMTc1OTIxODYwNDU4OTQgMTc1OTIxODYwNDU0MjJdLCA6cXVlcnktcGFyYW1zIHs6ZW50aXR5ICNEYklkWzE3NTkyMTg2MDQ2MTMyIDE3NTkyMTg2MDQ1ODgyXX19)
-* [Datomic vs the Object/Relational Impedance Mismatch](http://hyperfiddle.net/hyperfiddle-blog/ezpkb21haW4gbmlsLCA6cHJvamVjdCAiaHlwZXJmaWRkbGUtYmxvZyIsIDpsaW5rLWRiaWQgI0RiSWRbMTc1OTIxODYwNDU4OTQgMTc1OTIxODYwNDU0MjJdLCA6cXVlcnktcGFyYW1zIHs6ZW50aXR5ICNEYklkWzE3NTkyMTg2MDQ2MjEwIDE3NTkyMTg2MDQ1ODgyXX19)
