@@ -93,9 +93,9 @@ The hydrated response value is passed into the view function. Since the data is 
 
 If the data isn't already fetched, `hc/hydrate` returns an error value. The runtime will manage the lifecycle of these functions. It is up to your choice of runtime as to the details of this lifecycle, for example, do you want to call the view function when the data is only partially loaded? You can do that if you want. Hyperfiddle.net does this and draws loading components and reports database errors appropriately. Your runtime doesn't have to do that, it's up to you.
 
-## Datomic I/O runtime implementation
+## The incuded Datomic I/O runtime
 
-When the database changes, or the request changes, we rehydrate all queries on the page through datomic. So if a field blurs, we rehydrate all queries on the page.
+We provide an I/O runtime implementation that aggressively hydrates data through Datomic. When the database changes, or the request changes, we rehydrate all queries on the page through datomic. So if just a single field blurs, we rehydrate all queries on the page.
 
 Isn't that slow? **No. We make some unusual architecture choices to make it fast.**
 
@@ -103,14 +103,15 @@ If you use this I/O runtime in a traditional client/server REST-like configurati
 
 However, Clojure runs in many places. **If you run your application in a process co-located with the datomic peer, all those network round trips drop out.** Hyperfiddle.net's infrastructure handles this - your ClojureScript code runs in a nodejs process colocated with a Datomic peer. In the future, maybe your application code will run inside the datomic peer process itself.
 
-The Hypercrud project is focused on the Composable UI outcome - we don’t care as deeply about the data sync implementation, you can plug your implementation. We know that by slamming Datomic we will get correct answers, it will be ACID, you can trust it, it will scale to real industry database applications, and it will be strictly faster than your REST or GraphQL apps of today. But there are other interesting I/O strategies which may achieve better performance tradeoffs than the Datomic Peer model, particularly reactive approaches as discussed in <http://tonsky.me/blog/the-web-after-tomorrow/>
+**The Hypercrud project is focused on the Composable UI outcome - we don’t care as deeply about the data sync implementation, you can plug your implementation.** We know that by slamming Datomic we will get correct answers, it will be ACID, you can trust it, it will scale to real industry database applications, and it will be strictly faster than your REST or GraphQL apps of today. But there are other interesting I/O strategies which may achieve better performance tradeoffs than the Datomic Peer model, particularly reactive approaches as discussed in <http://tonsky.me/blog/the-web-after-tomorrow/>.
 
 * Nikita Prokopov's DataScript <https://github.com/tonsky/datascript>
 * Matt Parker's Posh <https://github.com/mpdairy/posh>
 * Chris Small's Datsync <https://github.com/metasoarous/datsync>
 * Luke Vanderbilt's FactUI <https://github.com/arachne-framework/factui>
+* If you have another approach not listed here please write me!
 
-If you have another approach, either I haven't heard about it yet or don't understand the vision, write me!
+Consider: What if reactive queries could be maintained in the CDN edge server? What if there was a proper Datomic peer in your iphone, or your home router?
 
 Here is a /r/clojure thread which braindumps the type of things you need to think about if you want to implement a reactive I/O runtime. <https://www.reddit.com/r/Clojure/comments/6rncgw/arachneframeworkfactui/>
 
@@ -158,7 +159,7 @@ nodejs engine:
 * server side rendering e.g. [fork React to optimize ssr](https://stackoverflow.com/questions/34728962/react-rendertostring-performance-and-caching-react-components)
 * serve a mobile site with no javascript, only server rendered html
 * redirects, http headers, cookies
-* control caching strategy, coordinate with nginx or your CDN
+* control caching strategy, deep coordination with nginx and smart CDN
 * control authentication scheme e.g. <https://auth0.com/> or OAuth
 * server session
 
@@ -172,7 +173,7 @@ web browser engine:
 * server session vs local storage
 * analytics and user tracking e.g. <https://segment.com/>
 
-All this is already provided with the included reference application engine and as part of Hyperfiddle, but you'll eventually want to control it. We also provide the simplest possible hello world application engine as a devkit example which doesn't have any of these features - just a React UI which syncs data, no user auth or SSR or anything else. The hello world devkit is two lines of code. The Hyperfiddle application engine is about 150 loc each for nodejs and browser entrypoints, plus sophisticated caching infrastructure which takes advantage of immutability.
+Much of this is already provided with the included reference application engine and as part of Hyperfiddle, but you'll eventually want to control it. We also provide the simplest possible hello world application engine as a devkit example which doesn't have any of these features - just a React UI which syncs data, no user auth or SSR or anything else. The hello world devkit is two lines of code. The Hyperfiddle application engine is about 150 loc each for nodejs and browser entrypoints, plus sophisticated caching infrastructure which takes advantage of immutability.
 
 We haven't built a React Native app engine yet, but this is how you would do it.
 
