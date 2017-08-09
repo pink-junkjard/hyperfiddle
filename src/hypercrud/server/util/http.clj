@@ -1,26 +1,12 @@
 (ns hypercrud.server.util.http
   (:require [clojure.string :as string]
             [cognitect.transit :as transit]
-            [hypercrud.types.DbId]
-            [hypercrud.types.DbVal]
-            [hypercrud.types.DbError]
-            [hypercrud.types.EntityRequest]
-            [hypercrud.types.QueryRequest]
+            [hypercrud.server.internal :as internal]
             [io.pedestal.http :as http]
             [io.pedestal.interceptor.helpers :as interceptor])
   (:import (java.io OutputStreamWriter OutputStream)
-           org.apache.commons.lang3.StringEscapeUtils
-           (hypercrud.types.DbId DbId DbIdTransitHandler)
-           (hypercrud.types.DbVal DbVal DbValTransitHandler)
-           (hypercrud.types.DbError DbError DbErrorTransitHandler)
-           (hypercrud.types.EntityRequest EntityRequest EntityRequestTransitHandler)
-           (hypercrud.types.QueryRequest QueryRequest QueryRequestTransitHandler)))
+           org.apache.commons.lang3.StringEscapeUtils))
 
-(def transit-write-handlers {DbId (DbIdTransitHandler.)
-                             DbVal (DbValTransitHandler.)
-                             DbError (DbErrorTransitHandler.)
-                             QueryRequest (QueryRequestTransitHandler.)
-                             EntityRequest (EntityRequestTransitHandler.)})
 
 (def combine-body-params
   (interceptor/before
@@ -53,7 +39,7 @@
    (fn [body]
      (fn [^OutputStream output-stream]
        (transit/write (transit/writer output-stream :json-verbose
-                                      {:handlers transit-write-handlers}) body)
+                                      {:handlers internal/transit-write-handlers}) body)
        (.flush output-stream)))
 
    "application/transit+msgpack;charset=UTF-8"
