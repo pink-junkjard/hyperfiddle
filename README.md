@@ -38,12 +38,14 @@ More about this later in this document.
 
 <http://hyperfiddle.net/> is our reference app, and reference I/O runtime implementation backed by Datomic. The hyperfiddle cloud runtime also integrates with cloud infrastructure such as <https://auth0.com/>, scaling, server side rendering, caching & CDN. You should use this until you outgrow it, and then eject your app and selfhost for total control.
 
-At a high level, you will have a few ways to approach your application engine:
+At a high level, you will have a few ways to approach your app engine:
 
 * use <http://hyperfiddle.net/> and don't think about it until later
 * self-host the same application engine that hyperfiddle.net uses (e.g. run our docker containers with your API keys)
 * Use our I/O runtime but fork our application engine, to control things like auth, security, caching
-* Write your own I/O runtime and application engine, e.g. backed by [DataScript](https://github.com/tonsky/datascript), [Datsync](https://github.com/metasoarous/datsync), [FactUI](https://github.com/arachne-framework/factui)
+* Write your own I/O runtime and application engine
+
+No matter your choice of app engine, the Hypercrud core interface will work, Hypercrud Browser will work, and app as an edn value will work.
 
 ## Status
 
@@ -101,7 +103,13 @@ If you use this I/O runtime in a traditional client/server REST-like configurati
 
 However, Clojure runs in many places. **If you run your application in a process co-located with the datomic peer, all those network round trips drop out.** Hyperfiddle.net's infrastructure handles this - your ClojureScript code runs in a nodejs process colocated with a Datomic peer. In the future, maybe your application code will run inside the datomic peer process itself.
 
-Here is a great /r/clojure discussion which braindumps the type of things you need to think about if you want to implement an I/O runtime. <https://www.reddit.com/r/Clojure/comments/6rncgw/arachneframeworkfactui/>
+There are other interesting I/O runtime implementations which may achieve better performance tradeoffs.
+
+* [DataScript](https://github.com/tonsky/datascript)
+* [Datsync](https://github.com/metasoarous/datsync)
+* [FactUI](https://github.com/arachne-framework/factui)
+
+Here is a /r/clojure thread which braindumps the type of things you need to think about if you want to implement an I/O runtime. <https://www.reddit.com/r/Clojure/comments/6rncgw/arachneframeworkfactui/>
 
 ### Datomic I/O runtime impl - data server piece
 
@@ -218,7 +226,7 @@ If you stop and think, this is a lot how a web browser works. Web browsers are a
 
 App-values are graph-shaped and grow to be quite large. It is natural to want to store app-values in a database, and create tooling to build these up visually and interactively, which leads us to:
 
-# Hyperfiddle
+# <http://hyperfiddle.net>
 
 **Hyperfiddle** is a drop-in Datomic Console replacement, scriptable from the web browser in ClojureScript, for making sophisticated database applications.
 
