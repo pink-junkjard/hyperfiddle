@@ -99,7 +99,7 @@ Long story short, your I/O runtime will need to coordinate carefully with your o
 
 `Application engine = I/O runtime implementation + infrastructure to make it fast`
 
-Here is a greast /r/clojure discussion which braindumps the type of things you need to think about if you want to implement an I/O runtime. <https://www.reddit.com/r/Clojure/comments/6rncgw/arachneframeworkfactui/>
+Here is a great /r/clojure discussion which braindumps the type of things you need to think about if you want to implement an I/O runtime. <https://www.reddit.com/r/Clojure/comments/6rncgw/arachneframeworkfactui/>
 
 ## Details of an application engine
 
