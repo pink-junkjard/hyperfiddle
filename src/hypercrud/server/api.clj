@@ -125,7 +125,7 @@
             ;todo lookup project sec pred
             read-sec-predicate (constantly true)
             ;; todo account for new attrs (a migration)
-            project-db-with (database/with-tx (partial d/with db) conn-id read-sec-predicate dtx)]
+            project-db-with (database/with-tx (partial d/with db) read-sec-predicate dtx)]
         (swap! db-with-lookup assoc-in [conn-id branch] project-db-with)
         project-db-with)))
 
@@ -150,7 +150,7 @@
         root-dtx (->> (get-in hctx-groups [db/root-id nil])
                       (mapv datomic-adapter/stmt-dbid->id))
         root-db (d/db root-conn)                            ; run security here
-        {root-db :db :as root-with} (database/with-tx (partial d/with root-db) db/root-id root-security-predicate root-dtx)
+        {root-db :db :as root-with} (database/with-tx (partial d/with root-db) root-security-predicate root-dtx)
         db-with-lookup (atom {db/root-id {nil root-with}})
         pulled-trees-map (->> request
                               (mapv (juxt identity #(hydrate* % (partial get-secure-db-with db-with-lookup root-db

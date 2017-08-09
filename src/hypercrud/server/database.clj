@@ -50,7 +50,7 @@
   (let [id (d/resolve-tempid db-after tempids tempid)]
     [(->DbId tempid conn-id) (->DbId (str id) conn-id)]))
 
-(defn with-tx [f! conn-id read-sec-predicate dtx]
+(defn with-tx [f! read-sec-predicate dtx]
   (let [hc-dtx {:db/id (d/tempid :db.part/tx)
                 :hypercrud/audit-user context/*user*
                 ;:hypercrud/tx hc-tx-uuid ;todo we need a temp squuid or something
@@ -70,7 +70,7 @@
 (defn hc-transact-one-color! [root-db hc-tx-uuid conn-id dtx]
   (let [conn (get-conn root-db conn-id)
         tempids (->> dtx (map second) (into #{}) (filter datomic-adapter/datomic-tempid?))
-        result (with-tx (fn [& args] @(apply d/transact conn args)) conn-id (constantly true) dtx)]
+        result (with-tx (fn [& args] @(apply d/transact conn args)) (constantly true) dtx)]
     result
     #_{:result result
        :tempids (->> tempids
