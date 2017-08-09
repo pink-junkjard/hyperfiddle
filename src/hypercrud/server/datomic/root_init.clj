@@ -1,4 +1,4 @@
-(ns hypercrud.server.root-init
+(ns hypercrud.server.datomic.root-init
   (:require [clojure.java.io :as io]
             [datomic.api :as d]
             [hypercrud.util.core :as util]))

@@ -1,4 +1,4 @@
-(ns hypercrud.server.core
+(ns hypercrud.server.datomic.core
   (:require [datomic.api :as d]
             [hypercrud.server.database :as database]
             [hypercrud.server.db-root :as db]))
