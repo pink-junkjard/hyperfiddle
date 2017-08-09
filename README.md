@@ -99,6 +99,8 @@ Long story short, your I/O runtime will need to coordinate carefully with your o
 
 `Application engine = I/O runtime implementation + infrastructure to make it fast`
 
+Here is a greast /r/clojure discussion which braindumps the type of things you need to think about if you want to implement an I/O runtime. <https://www.reddit.com/r/Clojure/comments/6rncgw/arachneframeworkfactui/>
+
 ## Details of an application engine
 
 Like calling `ReactDOM.render(<MyRootView/>, domNode)`, you'll need to provide an entrypoint which cedes control to the I/O runtime. The simplest possible implementation is to create a single state atom, construct a Hypercrud Client with the state atom and the userland `request` function, and mount Reagent to the dom with the userland `view` function. Hypercrud Client watches the state atom for changes and will fetch data as needed.
