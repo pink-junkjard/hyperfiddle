@@ -97,11 +97,14 @@ If the data isn't already fetched, `hc/hydrate` returns an error value. The runt
 
 We provide an I/O runtime implementation that aggressively hydrates data through Datomic. When the database changes, or the request changes, we rehydrate all queries on the page through datomic. So if just a single field blurs, we rehydrate all queries on the page.
 
-Isn't that slow? **No. We make some unusual architecture choices to make it fast.**
+![](http://i.imgur.com/hRXI1p7.gif)
+*The popover is a speculative database branch, the first is discarded, the second is merged*
 
-If you use this I/O runtime in a traditional client/server REST-like configuration, where the browser makes HTTP requests to the server, it will be horrible! (Hyperfiddle.net in some circumstances does this today - so you can feel the lag - we haven't bothered to optimize this yet)
+Isn't that slow? **No. Our unusual architecture choices make it fast.**
 
-However, Clojure runs in many places. **If you run your application in a process co-located with the datomic peer, all those network round trips drop out.** Hyperfiddle.net's infrastructure handles this - your ClojureScript code runs in a nodejs process colocated with a Datomic peer. In the future, maybe your application code will run inside the datomic peer process itself.
+Well, back it up. If you use this I/O runtime in a traditional client/server REST-like configuration, where the browser makes HTTP requests to the server, it will be horrible! (Hyperfiddle.net in some circumstances does this today - so you can feel the lag - we haven't bothered to optimize this yet)
+
+However, Clojure runs in many places. **If you run your application javascript in a process co-located with the datomic peer, all those network round trips drop out.** Hyperfiddle.net's infrastructure handles this - your ClojureScript code runs in a nodejs process colocated with a Datomic peer. In the future, the portions of your app code relevant to data dependencies, will run inside the datomic peer process itself. The relevant parts of Hypercrud are already written in portable clojure with this in mind, we just need to plumb together the infrastructure.
 
 **The Hypercrud project is focused on the Composable UI outcome - we don’t care as deeply about the data sync implementation, you can plug your implementation.** We know that by slamming Datomic we will get correct answers, it will be ACID, you can trust it, it will scale to real industry database applications, and it will be strictly faster than your REST or GraphQL apps of today. But there are other interesting I/O strategies which may achieve better performance tradeoffs than the Datomic Peer model, particularly reactive approaches as discussed in <http://tonsky.me/blog/the-web-after-tomorrow/>.
 
