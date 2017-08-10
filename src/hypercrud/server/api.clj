@@ -115,7 +115,7 @@
         (let [dtx (->> (get-in hctx-groups [conn-id branch])
                        (mapv datomic-adapter/stmt-dbid->id))
               db (if branch
-                   (:db (get-secure-db-with db-with-lookup root-db hctx-groups root-validate-tx conn-id (branch/decode-parent-branch branch)))
+                   (:db (get-secure-db-with conn-id (branch/decode-parent-branch branch)))
                    (let [db (d/db (database/get-conn! root-db conn-id))
                          project-migration-tx (database/migration-tx root-db db)]
                      (-> (d/with db project-migration-tx)
