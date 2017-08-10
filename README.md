@@ -194,7 +194,13 @@ We haven't built a React Native app engine yet, but this is how you would do it.
 
 # Hypercrud Browser
 
-Hypercrud Browser navigates hypercrud app-values like a web browser navigates HTML. App-values define Pages, each Page declares his data dependencies, and Links to other Pages. Everything composes.
+Hypercrud Browser navigates hypercrud app-values like a web browser navigates HTML.
+
+App-values define Pages.
+
+* Pages declare their data dependencies (form, query)
+* Pages declare links to other pages (composition and navigation)
+* Pages have an optional HTML expression
 
 Interpreted app-value in a web browser, with custom renderers disabled:
 
