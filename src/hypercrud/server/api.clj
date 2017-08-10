@@ -134,20 +134,6 @@
   (let [root-conn (database/get-root-conn)
         root-t (if root-t (-> (d/db root-conn) d/basis-t))
         {hctx-groups :staged-tx request :request} form
-
-        ;todo move this filter hack to the client
-        hctx-groups (->> hctx-groups
-                         (map (fn [[conn-id branches]]
-                                [conn-id
-                                 (util/map-values
-                                   (fn [branch]
-                                     (filter (fn [[op e a v]]
-                                               (not (and (or (= :db/add op) (= :db/retract op))
-                                                         (nil? v))))
-                                             branch))
-                                   branches)]))
-                         (into {}))
-
         root-dtx (->> (get-in hctx-groups [db/root-id nil])
                       (mapv datomic-adapter/stmt-dbid->id))
         root-db (d/db root-conn)                            ; run security here
