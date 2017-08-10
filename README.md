@@ -133,7 +133,7 @@ yeah pretty much, Datomic was still on the REST api when this started so we had 
 
 #### Which performance profile - is it Datomic Peer or Datomic Client?
 
- Hypercrud Server is a Datomic peer. Hypercrud Client running in a web browser is Datomic Client, which is fine but suboptimal and reintroduces client/peer round trips. But you can bring back the Peer model - local data, no round trips - by colocating the Hypercrud client with the peer.
+ Hypercrud Server is a Datomic peer. Hypercrud Client running in a web browser is Datomic Client, which is fine but suboptimal and reintroduces client/peer round trips. But you can bring back the Peer model - local data, no round trips - by colocating the Hypercrud client with the peer. **If you can't put the database peer inside the browser, you can put the browser inside the database.**
 
  What clever things can we do to accomplish colocating the client with the peer?
 
