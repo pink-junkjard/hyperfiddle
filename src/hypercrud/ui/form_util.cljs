@@ -18,11 +18,6 @@
         f (if raw-mode? #(dissoc % :find-element/form) identity)]
     (map f ordered-find-elements)))
 
-(defn filter-visible-fields [fieldinfo param-ctx]
-  (let [attr (-> fieldinfo :field/attribute :attribute/ident)
-        visible-fn (get-in param-ctx [:fields attr :visible?] (constantly true))]
-    (visible-fn param-ctx)))
-
 (defn find-elements-by-name [link]
   (->> (mapv (juxt :find-element/name identity) (:link-query/find-element link))
        (into {})))
@@ -87,7 +82,7 @@ the find-element level has been flattened out of the columns."
   ; why does this need the field - it needs the ident for readonly in "Edit Anchors"
   {:read-only ((get param-ctx :read-only) (:attribute param-ctx) param-ctx)})
 
-(defn entity-param-ctx [entity param-ctx]
+(defn entity-param-ctx [param-ctx entity]
   (assoc param-ctx :color ((:color-fn param-ctx) entity param-ctx)
                    :owner ((:owner-fn param-ctx) entity param-ctx)
                    :entity entity))

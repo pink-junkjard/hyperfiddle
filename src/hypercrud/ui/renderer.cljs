@@ -20,7 +20,7 @@
   [:div.value
    (-> (if-let [user-fn-str (user-renderer param-ctx)]
          (eval-str' user-fn-str)
-         (either/left "missing user-renderer"))
+         (either/left {:message "missing user-renderer"}))  ; double error check, remove this one
        (either/branch
          (fn [e] [:pre (pprint-str e)])
          (fn [user-fn]

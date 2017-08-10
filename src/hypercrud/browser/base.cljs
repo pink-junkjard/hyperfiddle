@@ -22,7 +22,7 @@
                         :form/field
                         ['*
                          {:field/attribute ['*
-                                            {:attribute/valueType [:db/id :db/ident]
+                                            {:attribute/valueType [:db/id :db/ident] ; i doubt we need :db/id here and its really confusing
                                              :attribute/cardinality [:db/id :db/ident]
                                              :attribute/unique [:db/id :db/ident]}]}]}]]
     ['*
@@ -37,7 +37,7 @@
                     {:anchor/link ['*                       ; hydrate the whole link for validating the anchor by query params
                                    {:hypercrud/owner ['*]}] ; need the link's owner to render the href to it
                      :anchor/find-element [:db/id :find-element/name :find-element/connection]
-                     :anchor/attribute [:db/id :attribute/ident]}]
+                     :anchor/attribute [:db/id :attribute/ident {:attribute/cardinality [:db/ident]} #_ "auto-anchor-formula"]}]
       :hypercrud/owner ['*]}]))
 
 (defn meta-request-for-link [root-db link-dbid]             ; always latest
@@ -56,29 +56,26 @@
                                          (q-util/form-pull-exp (:find-element/form fe))]))))
                         (into {}))]
       (mlet [q (-> (hc-string/safe-read-string (:link-query/value link)) exception->either)
-             query-holes (-> ((exception/wrap q-util/parse-holes) q) exception->either)
-             :let [params (->> query-holes
-                               (mapv (juxt identity #(get params-map %)))
-                               (into {}))
-                   missing (->> params
-                                (filter (comp nil? second))
-                                (mapv first))]]
-        (if (empty? missing)
-          (cats/return (->QueryRequest q params pull-exp))
-          (either/left (str "missing query params: " (pr-str missing))))))
+             query-holes (-> ((exception/wrap q-util/parse-holes) q) exception->either)]
+        (let [params (->> query-holes (mapv (juxt identity #(get params-map %))) (into {}))
+              missing (->> params (filter (comp nil? second)) (mapv first))]
+          (if (empty? missing)
+            (cats/return (->QueryRequest q params pull-exp))
+            (either/left {:message "missing param" :data {:params params :missing missing}})))))
 
     :entity
-    (let [entity-fe (first (filter #(= (:find-element/name %) "entity") (:link-query/find-element link)))
-          conn-id (-> entity-fe :find-element/connection :db/id :id)]
+    (let [fe (first (filter #(= (:find-element/name %) "entity") (:link-query/find-element link)))
+          conn-id (-> fe :find-element/connection :db/id :id)]
       (cond
-        (nil? conn-id) (either/left "missing conn-id")
-        (nil? (:entity query-params)) (either/left "missing query params")
+        (nil? conn-id) (either/left {:message "no connection" :data {:find-element fe}})
+        (nil? (:entity query-params)) (either/left {:message "missing param" :data {:params query-params
+                                                                                    :missing #{:entity}}})
         :else (either/right
                 (->EntityRequest
                   (:entity query-params)
                   (:a query-params)
                   (hc/db (:peer param-ctx) conn-id (get-in param-ctx [:branches conn-id]))
-                  (q-util/form-pull-exp (:find-element/form entity-fe))))))
+                  (q-util/form-pull-exp (:find-element/form fe))))))
 
     :blank (either/right nil)
 

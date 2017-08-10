@@ -11,8 +11,8 @@
 (defn human-error [e req]
   (let [unfilled-holes (->> (filter (comp nil? val) (.-params req)) (map key))]
     (if-not (empty? unfilled-holes)
-      (either/left {:message "Invalid query" :datomic-error (.-msg e) :query (.-query req) :missing unfilled-holes})
-      (either/left {:message "Datomic error" :datomic-error (.-msg e)}))))
+      (either/left {:message "Invalid query" :data {:datomic-error (.-msg e) :query (.-query req) :missing unfilled-holes}})
+      (either/left {:message "Datomic error" :data {:datomic-error (.-msg e)}}))))
 
 (defn- process-result [resultset-or-error request]
   (if (instance? DbError resultset-or-error)
@@ -31,7 +31,7 @@
   (hydrate [this request]
     (if-let [result @(reagent/cursor state-atom [:ptm request])]
       (process-result result request)
-      (either/left {:message "Loading" :request request})))
+      (either/left {:message "Loading" :data {:request request}})))
 
   (db [this conn-id branch]
     (->DbVal conn-id branch))

@@ -7,11 +7,14 @@
             [hypercrud.client.core :as hc]
             [hypercrud.client.schema :as schema-util]
             [hypercrud.compile.eval :refer [eval-str']]
+            [hypercrud.platform.native-event-listener :refer [native-listener]]
             [hypercrud.platform.safe-render :refer [safe-user-renderer]]
             [hypercrud.types.EntityRequest :refer [EntityRequest]]
             [hypercrud.types.QueryRequest :refer [QueryRequest]]
             [hypercrud.ui.auto-control :as auto-control]
-            [hypercrud.util.core :as util :refer [pprint-str]]))
+            [hypercrud.util.core :as util :refer [pprint-str]]
+            [hypercrud.runtime.state.actions :as actions]
+            [reagent.core :as r]))
 
 (defn hydrate-link [link-dbid param-ctx]
   (if (auto-link/system-link? link-dbid)
@@ -33,7 +36,8 @@
 (defn ui' [{query-params :query-params :as route} param-ctx
            ; hack for first pass on select options
            & [override-get-ui-f]]
-  (let [get-ui-f (or override-get-ui-f get-ui-f)]
+  (let [param-ctx (assoc param-ctx :route route)
+        get-ui-f (or override-get-ui-f get-ui-f)]
     (mlet [link (hydrate-link (:link-dbid route) param-ctx) ; always latest
            request (base/request-for-link link query-params param-ctx)
            result (if request (hc/hydrate (:peer param-ctx) request) (either/right nil))
@@ -42,33 +46,45 @@
       (base/process-results get-ui-f query-params link request result schema param-ctx))))
 
 (defn ui [anchor param-ctx]
-  (if (:anchor/link anchor)
-    (mlet [route (anchor/build-anchor-route' anchor param-ctx)]
-      (ui' route
-           ; entire context must be encoded in the route
-           (dissoc param-ctx :result :db :find-element :entity :attribute :value :layout :field)))
-    (either/left (str "anchor, " (or (:anchor/ident anchor) (:anchor/prompt anchor)) ", has no link "))))
+  (let [anchor-props (anchor/build-anchor-props anchor param-ctx)] ; LOOOOOLLLLLL we are dumb
+    (if (:hidden anchor-props)
+      (either/right [:noscript])
+      (mlet [route (anchor/build-anchor-route' anchor param-ctx)]
+        (ui' route
+             ; entire context must be encoded in the route
+             (dissoc param-ctx :result :db :find-element :entity :attribute :value :layout :field))))))
 
 (defn ui-error [e ctx]
-  [(case (:layout ctx) :table :code :pre)
-   (pr-str e)
-   #_(ex-message e) #_(pr-str (ex-data e))])
+  ; :find-element :entity :attribute :value
+  (let [C (cond
+            (:ui-error ctx) (:ui-error ctx)                 ; botnav
+            (:attribute ctx) :code                          ; table: header or cell, form: header or cell
+            (:find-element ctx) :code                       ;
+            :else :pre)                                     ; browser including inline true links
+        ]
+    [C {:class "ui"}
+     (:message e)
+     (case (:display-mode ctx)
+       :user nil
+       (if-let [d (:data e)] (str " " (pr-str d))))         ; could be a tooltip
+     #_(ex-message e) #_(pr-str (ex-data e))]))
 
-(defn safe [f & [_ ctx :as args]]
-  ; reports: hydrate failure, hyperfiddle javascript error, user-fn js error
-  (try
-    (either/branch
-      (apply f args)
-      (fn [e] (ui-error e ctx))
-      identity)
-    (catch :default e                                       ; js errors? Why do we need this.
-      (ui-error e ctx))))
+(defn safe-ui' [route ctx]
+  (either/branch
+    (try (ui' route ctx) (catch :default e (either/left e))) ; js errors? Why do we need this.
+    (fn [e] (ui-error e ctx))                               ; @(r/cursor (-> ctx :peer .-state-atom) [:pressed-keys])
+    (fn [v] (let [c #(if (contains? (:pressed-keys @(-> ctx :peer .-state-atom)) "alt")
+                       (do ((:dispatch! ctx) (actions/set-route route)) (.stopPropagation %)))]
+              [native-listener {:on-click c} [:div.ui v]]))))
 
-(defn safe-ui' [& args]
-  (apply safe ui' args))
-
-(defn safe-ui [& args]
-  (apply safe ui args))
+(defn safe-ui [anchor ctx]
+  (either/branch
+    (try (ui anchor ctx) (catch :default e (either/left e))) ; js errors? Why do we need this.
+    (fn [e] (ui-error e ctx))
+    (fn [v] (let [{route :route} (anchor/build-anchor-props anchor ctx)
+                  c #(if (contains? (:pressed-keys @(-> ctx :peer .-state-atom)) "alt")
+                       (do ((:dispatch! ctx) (actions/set-route route)) (.stopPropagation %)))]
+              [native-listener {:on-click c} [:div.ui v]]))))
 
 (defn link-user-fn [link]
   (if-not (empty? (:link/renderer link))

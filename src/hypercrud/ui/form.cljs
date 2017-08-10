@@ -21,35 +21,33 @@
 
 (defn field [control maybe-field anchors param-ctx]
   (let [
-        ; Check visibility user fn. Error states: eval error, apply error.
-        maybe-visible' (if-let [user-fn-str (:field/visible? maybe-field)]
-                         (if-not (empty? user-fn-str)
-                           (mlet [user-fn (eval-str' user-fn-str)]
-                             ; predicate gets whole entity as arg 1, for keyword syntax sugar
-                             (-> (exception/try-on (user-fn (:entity param-ctx) param-ctx))
-                                 exception->either))))
-        hidden (not (or (some-> maybe-visible'
-                                (cats/mplus (either/right true))
-                                (cats/extract))
-                        true))
-
-        ; Draw error instead of control.
-        control (if (either/left? maybe-visible')
-                  [:pre (js/pprint-str (cats/extract maybe-visible'))]
-                  (control param-ctx))]
-
-    (if-not hidden
-      [:div.field {:style {:border-color (connection-color/connection-color (:color param-ctx))}}
-       (let [param-ctx (dissoc param-ctx :entity :value)
-             [anchors] (-> (remove :anchor/repeating? anchors)
-                           #_(filter #(= (-> fe :db/id) (-> % :anchor/find-element :db/id))) #_"entity"
-                           (widget/process-option-popover-anchors param-ctx))]
-         [:div.hc-label
-          [:label (form-util/field-label maybe-field param-ctx)]
-          [:div.anchors
-           (widget/render-anchors (->> anchors (remove :anchor/render-inline?)) param-ctx)
-           (widget/render-anchors (->> anchors (filter :anchor/render-inline?)) param-ctx)]])
-       control])))
+        ;; Check visibility user fn. Error states: eval error, apply error.
+        ;maybe-visible' (if-let [user-fn-str (:field/visible? maybe-field)]
+        ;                 (if-not (empty? user-fn-str)
+        ;                   (mlet [user-fn (eval-str' user-fn-str)]
+        ;                     ; predicate gets whole entity as arg 1, for keyword syntax sugar
+        ;                     (-> (exception/try-on (user-fn (:entity param-ctx) param-ctx))
+        ;                         exception->either))))
+        ;hidden (not (or (some-> maybe-visible'
+        ;                        (cats/mplus (either/right true))
+        ;                        (cats/extract))
+        ;                true))
+        ;
+        ;; Draw error instead of control.
+        ;control (if (either/left? maybe-visible')
+        ;          [:pre (js/pprint-str (cats/extract maybe-visible'))])
+        ]
+    [:div.field {:style {:border-color (connection-color/connection-color (:color param-ctx))}}
+     (let [param-ctx (dissoc param-ctx :entity :value)
+           [anchors] (-> (remove :anchor/repeating? anchors)
+                         #_(filter #(= (-> fe :db/id) (-> % :anchor/find-element :db/id))) #_"entity"
+                         (widget/process-option-popover-anchors param-ctx))]
+       [:div.hc-label
+        [:label (form-util/field-label maybe-field param-ctx)]
+        [:div.anchors
+         (widget/render-anchors (->> anchors (remove :anchor/render-inline?)) param-ctx)
+         (widget/render-anchors (->> anchors (filter :anchor/render-inline?)) param-ctx)]])
+     (control param-ctx)]))
 
 (defn new-field [entity param-ctx]
   (let [attr-ident (r/atom nil)]
@@ -91,7 +89,7 @@
                             ; don't put entity in scope because it messes up formulas which have to be deterministic with request side.
                             (widget/render-anchors (remove :anchor/render-inline? entity-new-anchors) param-ctx)
                             (let [entity (get relation fe-name)
-                                  param-ctx (form-util/entity-param-ctx entity param-ctx)]
+                                  param-ctx (form-util/entity-param-ctx param-ctx entity)]
                               #_(assert entity "i think this is true now")
                               (concat
                                 (widget/render-anchors (remove :anchor/render-inline? entity-anchors) param-ctx)
