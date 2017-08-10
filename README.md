@@ -107,7 +107,9 @@ Well, back it up. If you use this I/O runtime in a traditional client/server RES
 
 However, Clojure runs in many places. **If you run your application javascript in a process co-located with the datomic peer, all those network round trips drop out.** Hyperfiddle.net's infrastructure handles this - your ClojureScript code runs in a nodejs process colocated with a Datomic peer. In the future, the portions of your app code relevant to data dependencies, will run inside the datomic peer process itself. The relevant parts of Hypercrud are already written in portable clojure with this in mind, we just need to plumb together the infrastructure.
 
-**The Hypercrud project is focused on the Composable UI outcome - we don’t care as deeply about the data sync implementation, you can plug your implementation.** We know that by slamming Datomic we will get correct answers, it will be ACID, you can trust it, it will scale to real industry database applications, and it will be strictly faster than your REST or GraphQL apps of today. But there are other interesting I/O strategies which may achieve better performance tradeoffs than the Datomic Peer model, particularly reactive approaches as discussed in <http://tonsky.me/blog/the-web-after-tomorrow/>.
+**The Hypercrud project is focused on the Composable UI outcome - we don’t care as deeply about the data sync implementation, you can plug your implementation.** We know that by slamming Datomic we will get correct answers, it will be ACID, you can trust it, it will scale to real industry database applications, and it will be strictly faster than your REST or GraphQL apps of today.
+
+There are other interesting I/O strategies which may eventually achieve better performance tradeoffs than the Datomic Peer model, particularly reactive approaches as originally outlined by Nikita Prokopov in 2015 <http://tonsky.me/blog/the-web-after-tomorrow/>:
 
 * Nikita Prokopov's DataScript <https://github.com/tonsky/datascript>
 * Matt Parker's Posh <https://github.com/mpdairy/posh>
@@ -118,6 +120,8 @@ However, Clojure runs in many places. **If you run your application javascript i
 Consider: What if reactive queries could be maintained in the CDN edge server? What if there was a proper Datomic peer in your iphone, or your home router?
 
 Here is a /r/clojure thread which braindumps the type of things you need to think about if you want to implement a reactive I/O runtime. <https://www.reddit.com/r/Clojure/comments/6rncgw/arachneframeworkfactui/>
+
+That said, this is all research, the tradeoffs are not clear (to me at least), and Hypercrud's Datomic implementation is ready right now.
 
 ### Datomic I/O runtime impl - data server piece
 
