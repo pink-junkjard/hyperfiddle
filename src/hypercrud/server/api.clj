@@ -130,10 +130,9 @@
           (swap! db-with-lookup assoc-in [conn-id branch] project-db-with)
           project-db-with))))
 
-(defn hydrate [root-security-predicate root-validate-tx form root-t]
+(defn hydrate [root-security-predicate root-validate-tx hctx-groups request root-t]
   (let [root-conn (database/get-root-conn)
         root-t (if root-t (-> (d/db root-conn) d/basis-t))
-        {hctx-groups :staged-tx request :request} form
         root-dtx (->> (get-in hctx-groups [db/root-id nil])
                       (mapv datomic-adapter/stmt-dbid->id))
         root-db (d/db root-conn)                            ; run security here

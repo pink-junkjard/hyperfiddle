@@ -18,10 +18,11 @@
   ([req root-write-sec root-read-sec]
    (try
      (let [{:keys [query-params body-params]} req
-           root-t (if (:t query-params) (Long/parseLong (:t query-params)))]
+           root-t (if (:t query-params) (Long/parseLong (:t query-params)))
+           {hctx-groups :staged-tx request :request} body-params]
        (ring-resp/response
          (wrap-hypercrud
-           (api/hydrate root-read-sec root-write-sec body-params root-t))))
+           (api/hydrate root-read-sec root-write-sec hctx-groups request root-t))))
      (catch Exception e
        (println e)
        {:status 500 :headers {} :body (str e)}))))
