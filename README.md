@@ -36,22 +36,22 @@ Warning! To achieve the optimal level of performance that this project is design
 
 More about this later in this document.
 
-<http://hyperfiddle.net/> is our reference app, and reference I/O runtime implementation backed by Datomic. The hyperfiddle cloud runtime also integrates with cloud infrastructure such as <https://auth0.com/>, scaling, server side rendering, caching & CDN. You should use this until you outgrow it, and then eject your app and selfhost for total control.
+Hyperfiddle is our reference app, and reference I/O runtime implementation backed by Datomic. The hyperfiddle cloud runtime also integrates with cloud infrastructure such as <https://auth0.com/>, scaling, server side rendering, caching & CDN. You should use this until you outgrow it, and then eject your app and selfhost for total control.
 
 At a high level, you will have a few ways to approach your app engine:
 
-* use <http://hyperfiddle.net/> and don't think about it until later
-* self-host the same application engine that hyperfiddle.net uses (e.g. run our docker containers with your API keys)
-* Use our I/O runtime but fork our application engine, to control things like auth, security, caching
+* use Hyperfiddle and don't think about it until later
+* self-host the Hyperfiddle application engine (e.g. run our docker containers with your API keys)
+* Use our I/O runtime but fork the application engine, to control things like auth, security, caching
 * Write your own I/O runtime and application engine
 
 No matter your choice of app engine, the Hypercrud core interface will work, Hypercrud Browser will work, and app as an edn value will work.
 
 ## Status
 
-<http://hyperfiddle.net/>, our reference app & cloud platform, works great. The UI will evolve over time but the core interfaces are pretty baked.
+Hyperfiddle, our reference app & cloud platform, works great. The UI will evolve over time but the core interfaces are pretty baked.
 
-In a few weeks, you will be able to run hypercrud outside of hyperfiddle.net as outlined above. We're working on that right now. To be notified when it is ready, subscribe to the developer mailing list: <https://groups.google.com/forum/#!forum/hypercrud>
+In a few weeks, you will be able to run hypercrud outside of Hyperfiddle as outlined above. We're working on that right now. To be notified when it is ready, subscribe to the developer mailing list: <https://groups.google.com/forum/#!forum/hypercrud>
 
 ## Hypercrud's fundamental interface is two functions
 
@@ -97,7 +97,7 @@ If the data isn't already fetched, `hc/hydrate` returns an error value. The runt
 
 We provide an I/O runtime implementation that aggressively hydrates data through Datomic. When the database changes, or the request changes, we rehydrate all queries on the page through datomic. So if just a single field blurs, we rehydrate all queries on the page.
 
-In this gif, the popover is a speculative database branch. The first branch is discarded, the second is merged. And then we throw it all away without transacting it. See [datomic api: d/with](http://docs.datomic.com/clojure/#datomic.api/with)
+In this gif, the popover is a speculative database branch. The first branch is discarded, the second is merged. And then we throw it all away without ever transacting it. See [datomic api: d/with](http://docs.datomic.com/clojure/#datomic.api/with)
 
 ![](http://i.imgur.com/hRXI1p7.gif)
 
@@ -129,9 +129,15 @@ yeah pretty much, Datomic was still on the REST api when this started so we had 
 
 #### Which performance profile - is it Datomic Peer or Datomic Client?
 
- Hypercrud Server is a Peer. Hypercrud Client may be, but is not constrained to be, implemented as a Datomic client. If you use Hypercrud Client core interface (view, request) without hypercrud browser, you are stuck with the Datomic client model, which is fine, but suboptimal, and re-introduces a theoretical performance problem caused by client/peer round trips. However, when you model the app as a value, you can literally transmit your app-value up to the server, and actually run the code to interpret the value inside the jvm Peer process. Optimal!
+ Hypercrud Server is a Datomic peer. Hypercrud Client running in a web browser is Datomic Client, which is fine but suboptimal and reintroduces client/peer round trips. But you can bring back the Peer model - local data, no round trips - by colocating the Hypercrud client with the peer.
 
- Some of the above is on the roadmap and hasn't yet been implemented. We don't yet interpret app-values on JVM today, but we will. We can also run the entire application javascript in a nodejs environment colocated with a datomic peer. This happens in server side rendered cases, but not client side rendered cases today, but we will fix that soon so I can remove this sentence.
+ What clever things can we do to accomplish colocating the client with the peer?
+
+ 1. Literally run your application javascript in nodejs colocated with the peer, and using the web browser as a slightly smart HTML renderer.
+ 2. Code your Hypercrud Request function, the piece that declares the data dependencies, in portable CLJC, and run that in the JVM.
+ 3. Model your app as an edn value, and interpret the edn value inside the jvm peer.
+
+ Optimal! #1 is implemented today through React.js server side rendering. #2 and #3 are on the near-term roadmap.
 
  More reading about performance:
 
