@@ -51,14 +51,12 @@
     [(->DbId tempid conn-id) (->DbId (str id) conn-id)]))
 
 (defn with-tx [f! read-sec-predicate dtx]
-  (let [dtx (if context/*user*
-              (conj dtx
-                    {:db/id (d/tempid :db.part/tx)
-                     :hypercrud/audit-user context/*user*
-                     ;:hypercrud/tx hc-tx-uuid ;todo we need a temp squuid or something
-                     })
-              dtx)
-        {:keys [db-after tempids] :as result} (f! dtx)
+  (let [hc-dtx (if context/*user*
+                 [{:db/id (d/tempid :db.part/tx)
+                   :hypercrud/audit-user context/*user*
+                   ;:hypercrud/tx hc-tx-uuid ;todo we need a temp squuid or something
+                   }])
+        {:keys [db-after tempids] :as result} (f! (concat dtx hc-dtx))
         db (-> db-after
                ;(d/as-of (d/db root-conn) (d/t->tx root-t))
                (d/filter read-sec-predicate))
