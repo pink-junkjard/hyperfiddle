@@ -80,10 +80,14 @@
     :hydrate!-failure (first args)
     error))
 
+(defn pressed-keys-reducer [v action & args]
+  (or v #{}))
+
 (def root-reducer-map {:hydrate-id hydrate-id-reducer
                        :route route-reducer
                        :stage stage-reducer
                        :ptm ptm-reducer
-                       :error error-reducer})
+                       :error error-reducer
+                       :pressed-keys pressed-keys-reducer})
 
 (def root-reducer (state/combine-reducers root-reducer-map))
