@@ -244,12 +244,8 @@ If you stop and think, this is a lot how a web browser works. Web browsers are a
 
 App-values are graph-shaped and grow to be quite large. It is natural to want to store app-values in a database, and create tooling to build these up visually and interactively, which leads us to:
 
-# <http://hyperfiddle.net>
+# Hyperfiddle
 
-**Hyperfiddle** is a drop-in Datomic Console replacement, scriptable from the web browser in ClojureScript, for making sophisticated database applications.
-
-Hyperfiddle is a WYSIWYG editor for Hyperfiddle app-values ("hyperfiddles"). Basically dev-tools for Hypercrud Browser.
+<http://hyperfiddle.net> is a cloud platform for hosting Hyperfiddle app-values ("hyperfiddles"), and a WYSIWYG editor for making hyperfiddles (basically dev-tools for Hypercrud Browser).
 
 ![](http://i.imgur.com/v3cmewv.png)
-
-Hyperfiddle is our reference app, because it and pushes Hypercrud in recursive ways. It forced us to converge our abstractions and data model to a total solution without any gaps. We had to shave approximately 100% of the yaks for it to even be possible.
