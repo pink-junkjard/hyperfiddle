@@ -4,7 +4,6 @@
             [hypercrud.server.internal :as internal]
             [hypercrud.server.util.http :as http]
             [io.pedestal.http.body-params :as body-params]
-            [io.pedestal.http.ring-middlewares :as ring-middlewares]
             [io.pedestal.http.route :refer [expand-routes]]
             [ring.util.response :as ring-resp]))
 
@@ -47,17 +46,13 @@
 (defn http-root-conn-id [req]
   (ring-resp/response db/root-id))
 
-(defn interceptors []
-  [~(body-params/body-params
-      (body-params/default-parser-map :edn-options {:readers *data-readers*}
-                                      :transit-options [{:handlers internal/transit-read-handlers}]))
-   http/combine-body-params
-   http/auto-content-type
-   ring-middlewares/cookies])
-
 (def routes
   (expand-routes
-    `[[["/api" {} ^:interceptors (interceptors)
+    `[[["/api" {} ^:interceptors [~(body-params/body-params
+                                     (body-params/default-parser-map :edn-options {:readers *data-readers*}
+                                                                     :transit-options [{:handlers internal/transit-read-handlers}]))
+                                  http/combine-body-params
+                                  http/auto-content-type]
         ["/hydrate" {:post [:hydrate http-hydrate]}]
         ["/transact" {:post [:transact http-transact!]}]
         ["/latest" {:get [:latest http-root-latest]}]
