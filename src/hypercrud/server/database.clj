@@ -68,14 +68,8 @@
      :tempid->id (set/map-invert id->tempid)}))
 
 (defn hc-transact-one-color! [root-db hc-tx-uuid conn-id dtx]
-  (let [conn (get-conn! root-db conn-id)
-        tempids (->> dtx (map second) (into #{}) (filter datomic-adapter/datomic-tempid?))
-        result (with-tx (fn [& args] @(apply d/transact conn args)) (constantly true) dtx)]
-    result
-    #_{:result result
-       :tempids (->> tempids
-                     (map #(resolve-hc-tempid conn-id result %))
-                     (into {}))}))
+  (let [conn (get-conn! root-db conn-id)]
+    (with-tx (fn [& args] @(apply d/transact conn args)) (constantly true) dtx)))
 
 ; This function isn't compatible with a staging area with migrating schema.
 ; We need to make this happen through hydrates, against a zero-db or something.
