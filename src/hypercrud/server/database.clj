@@ -15,7 +15,7 @@
 (defn get-root-conn []
   (d/connect (str db/transactor-uri "root")))
 
-(defn get-db-conn [root-db database-id]
+(defn get-db-conn! [root-db database-id]
   (assert (or (number? database-id) (coll? database-id))
           (format "unsupported database-id `%s`; must be long or lookupref" database-id))
   (let [database-id (if-not (number? database-id)
@@ -28,10 +28,10 @@
 
 ; should root-db just be in dynamic scope? threading it feels dumb but indicates that
 ; we may yet resolve a hypercrud lookup ref (in conn-id position)
-(defn get-conn [root-db conn-id]
+(defn get-conn! [root-db conn-id]
   (if (= db/root-id conn-id)
     (get-root-conn)
-    (get-db-conn root-db conn-id)))
+    (get-db-conn! root-db conn-id)))
 
 (defn hc-attr->datomic-schema-attr [attribute]
   (->> (select-keys attribute [:attribute/ident
@@ -68,7 +68,7 @@
      :tempid->id (set/map-invert id->tempid)}))
 
 (defn hc-transact-one-color! [root-db hc-tx-uuid conn-id dtx]
-  (let [conn (get-conn root-db conn-id)
+  (let [conn (get-conn! root-db conn-id)
         tempids (->> dtx (map second) (into #{}) (filter datomic-adapter/datomic-tempid?))
         result (with-tx (fn [& args] @(apply d/transact conn args)) (constantly true) dtx)]
     result

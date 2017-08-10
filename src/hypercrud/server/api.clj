@@ -22,7 +22,7 @@
     root-db
     (let [security-predicate (constantly true)              ;todo lookup
           ; database-id could be a lookup ref in hypercrud fixtures
-          conn (database/get-db-conn root-db (.conn-id dbval))
+          conn (database/get-db-conn! root-db (.conn-id dbval))
           db (d/db conn)
           t (or (.branch dbval) (d/basis-t db))]
       (d/filter (d/as-of db (d/t->tx t)) security-predicate))))
@@ -116,7 +116,7 @@
                        (mapv datomic-adapter/stmt-dbid->id))
               db (if branch
                    (:db (get-secure-db-with db-with-lookup root-db hctx-groups root-validate-tx conn-id (branch/decode-parent-branch branch)))
-                   (let [db (d/db (database/get-conn root-db conn-id))
+                   (let [db (d/db (database/get-conn! root-db conn-id))
                          project-migration-tx (database/migration-tx root-db db)]
                      (-> (d/with db project-migration-tx)
                          :db-after)))
@@ -198,7 +198,7 @@
             ;; for each project, there may be a migration
             migration-dtxs (->> (keys dtx-groups)
                                 (mapv (fn [conn-id]
-                                        (let [conn (database/get-conn root-db conn-id)]
+                                        (let [conn (database/get-conn! root-db conn-id)]
                                           (database/migration-tx (:db root-result) (d/db conn)))))
                                 (zipmap (keys dtx-groups))
                                 doall)
