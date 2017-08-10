@@ -3,6 +3,8 @@
                     [io.pedestal/pedestal.service "0.5.1"]
                     [org.apache.commons/commons-lang3 "3.4"]
                     [org.clojure/clojure "1.9.0-alpha14"]
+                    [org.clojure/core.async "0.2.395"]      ; transitive - override pedestal
+                    [org.clojure/core.incubator "0.1.4"]    ; transitive - override pedestal
 
                     ; build/test/dev
                     [adzerk/bootlaces "0.1.13" :scope "test"]
