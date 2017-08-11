@@ -9,8 +9,10 @@
 
 (declare reset-db!)
 
-(defn database-uri [database-id]
-  (str db/transactor-uri database-id))
+(defn get-database-uri [root-db database-id]
+  (let [db-name (-> (d/entity root-db database-id) d/touch :database/ident)]
+    ; todo https://tools.ietf.org/html/rfc3986#section-2
+    (str db/transactor-uri db-name)))
 
 (defn get-root-conn []
   (d/connect (str db/transactor-uri "root")))
@@ -20,11 +22,12 @@
           (format "unsupported database-id `%s`; must be long or lookupref" database-id))
   (let [database-id (if-not (number? database-id)
                       (:db/id (d/entity root-db database-id))
-                      database-id)]
+                      database-id)
+        database-uri (get-database-uri root-db database-id)]
     ; hydrate idents in database-id position
-    (if (d/create-database (database-uri database-id))
+    (if (d/create-database database-uri)
       (reset-db! (constantly true) database-id))
-    (d/connect (database-uri database-id))))
+    (d/connect database-uri)))
 
 ; should root-db just be in dynamic scope? threading it feels dumb but indicates that
 ; we may yet resolve a hypercrud lookup ref (in conn-id position)
@@ -86,7 +89,7 @@
                          (map #(d/entity root-db %) $)
                          (map #(d/touch %) $))
         _ (assert database-record "no project found - failed security probably") ; would fail
-        db-uri (database-uri database-id)
+        db-uri (get-database-uri root-db database-id)
         _ (d/delete-database db-uri)]
     (try
       (let [_ (d/create-database db-uri)

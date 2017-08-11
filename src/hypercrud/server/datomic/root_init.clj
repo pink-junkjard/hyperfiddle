@@ -6,6 +6,7 @@
 
 (defn generate-db-record [db-name]
   {:db/id (d/tempid :db.part/user)
+   ; todo https://tools.ietf.org/html/rfc3986#section-2
    :database/ident db-name})
 
 (defn reflect-schema [conn]
