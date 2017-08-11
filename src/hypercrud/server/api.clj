@@ -183,6 +183,7 @@
             ;; for each project, there may be a migration
             migration-dtxs (->> (keys dtx-groups)
                                 (mapv (fn [conn-id]
+                                        ; todo this root-db is stale
                                         (let [conn (database/get-conn! root-db conn-id)]
                                           (database/migration-tx (:db root-result) (d/db conn)))))
                                 (zipmap (keys dtx-groups))
@@ -197,6 +198,7 @@
 
             hc-tempids (->> (concat (->> migration-dtxs
                                          (mapv (fn [[conn-id htx]]
+                                                 ; todo this root-db is stale
                                                  (let [result (database/hc-transact-one-color! root-db hc-tx-uuid conn-id htx)]
                                                    (->> (:id->tempid result)
                                                         (mapv (fn [[id tempid]]
@@ -205,6 +207,7 @@
                                          doall)
                                     (->> (dissoc dtx-groups db/root-id)
                                          (mapv (fn [[conn-id htx]]
+                                                 ; todo this root-db is stale
                                                  (let [result (database/hc-transact-one-color! root-db hc-tx-uuid conn-id htx)]
                                                    (->> (:id->tempid result)
                                                         (mapv (fn [[id tempid]]
