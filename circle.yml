@@ -11,7 +11,17 @@ jobs:
       - checkout
       - restore_cache:
           key: project-{{checksum "boot.properties" }}-{{ checksum "build.boot" }}
-      - run: boot pom jar push-snapshot
+
+      - run:
+          name: build client
+          command: boot pom jar push-snapshot
+      - run:
+          name: build browser platform
+          command: env BOOT_FILE=platform.boot boot browser push-snapshot
+      - run:
+          name: build node platform
+          command: env BOOT_FILE=platform.boot boot node push-snapshot
+
       - save_cache:
           paths:
             - ~/.m2

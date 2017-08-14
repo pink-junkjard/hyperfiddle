@@ -16,8 +16,7 @@
 
 (def never-read-only (constantly false))
 
-(defn meta-request-for-link [root-db link-dbid]             ; always latest
-  (assert link-dbid)
+(def meta-pull-exp-for-link
   (let [form-pull-exp ['*
                        {:hypercrud/owner ['*]
                         :form/field
@@ -26,21 +25,24 @@
                                             {:attribute/valueType [:db/id :db/ident] ; i doubt we need :db/id here and its really confusing
                                              :attribute/cardinality [:db/id :db/ident]
                                              :attribute/unique [:db/id :db/ident]}]}]}]]
-    (->EntityRequest link-dbid nil root-db
-                     ['*
-                      :link-query/value
-                      :link-query/single-result-as-entity?
-                      :request/type
-                      {:link-query/dbhole ['* {:dbhole/value ['*]}]
-                       ; get all our forms for this link
-                       :link-query/find-element ['* {:find-element/form form-pull-exp
-                                                     :find-element/connection [:db/id :database/ident]}]
-                       :link/anchor ['*
-                                     {:anchor/link ['*      ; hydrate the whole link for validating the anchor by query params
-                                                    {:hypercrud/owner ['*]}] ; need the link's owner to render the href to it
-                                      :anchor/find-element [:db/id :find-element/name :find-element/connection]
-                                      :anchor/attribute [:db/id :attribute/ident {:attribute/cardinality [:db/ident]} #_ "auto-anchor-formula"]}]
-                       :hypercrud/owner ['*]}])))
+    ['*
+     :link-query/value
+     :link-query/single-result-as-entity?
+     :request/type
+     {:link-query/dbhole ['* {:dbhole/value ['*]}]
+      ; get all our forms for this link
+      :link-query/find-element ['* {:find-element/form form-pull-exp
+                                    :find-element/connection [:db/id :database/ident]}]
+      :link/anchor ['*
+                    {:anchor/link ['*                       ; hydrate the whole link for validating the anchor by query params
+                                   {:hypercrud/owner ['*]}] ; need the link's owner to render the href to it
+                     :anchor/find-element [:db/id :find-element/name :find-element/connection]
+                     :anchor/attribute [:db/id :attribute/ident {:attribute/cardinality [:db/ident]} #_ "auto-anchor-formula"]}]
+      :hypercrud/owner ['*]}]))
+
+(defn meta-request-for-link [root-db link-dbid]             ; always latest
+  (assert link-dbid)
+  (->EntityRequest link-dbid nil root-db meta-pull-exp-for-link))
 
 (defn request-for-link [link query-params param-ctx]
   (case (:request/type link)

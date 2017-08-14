@@ -1,17 +1,23 @@
 (set-env!
-  :dependencies '[[com.cemerick/url "0.1.1"]
+  :dependencies '[[com.hyperfiddle/util "0.0.1-SNAPSHOT"]
                   [com.cognitect/transit-cljs "0.8.239"]
-                  [com.hyperfiddle/util "0.0.1-SNAPSHOT"]
-                  ;[funcool/promesa "1.8.1"]
                   [funcool/cats "2.1.0"]
                   [io.nervous/kvlt "0.1.4"]
                   [markdown-clj "0.9.88"]
-                  [org.clojure/clojurescript "1.9.36"]
-                  [org.clojure/core.match "0.3.0-alpha4"]
                   [org.clojars.cemerick/loom "0.6.1-SNAPSHOT"] ; see https://github.com/aysylu/loom/pull/91
-                  [reagent "0.6.0-rc" :exclusions [] #_ [cljsjs/react cljsjs/react-dom cljsjs/react-dom-server]]
+                  [org.clojure/tools.namespace "0.3.0-alpha3"] ; eval
                   [re-com "2.0.0"]
 
+                  ; provided
+                  [funcool/promesa "1.8.1" :scope "provided"]
+                  ; todo this has a provided dependency on a hypercrud platform
+                  ; need to create a platform api library that node and browser implement
+                  ; platform-api : node/browser :: jaxrs api : jersey
+                  ; [com.hyperfiddle/hypercrud.platform.api "0.2.0-SNAPSHOT" :scope "provided"]
+                  [org.clojure/clojurescript "1.9.36" :scope "provided"]
+                  [reagent "0.6.0-rc" :scope "provided"]
+
+                  ; build/test/dev
                   [adzerk/boot-cljs "1.7.228-1" :scope "test"]
                   [adzerk/bootlaces "0.1.13" :scope "test"]
                   [adzerk/boot-test "1.1.1" :scope "test"]
@@ -21,14 +27,10 @@
 
 (require '[adzerk.boot-cljs :refer :all]
          '[adzerk.bootlaces :refer :all]
-         '[crisptrutski.boot-cljs-test :refer [test-cljs]])
+         '[crisptrutski.boot-cljs-test :refer [test-cljs]]
+         'boot.lein)
 
-(require 'boot.lein)
-(when (> (.lastModified (clojure.java.io/file "build.boot"))
-         (.lastModified (clojure.java.io/file "project.clj")))
-  (boot.lein/write-project-clj))
-
-(def +version+ "0.1.0-SNAPSHOT")
+(def +version+ "0.2.0-SNAPSHOT")
 
 (bootlaces! +version+)
 
@@ -37,8 +39,11 @@
        :version +version+}
   test-cljs {:js-env :node})
 
-
 (deftask test []
          ; cljs tests have to have _test in the filename
-         #_ (merge-env! :source-paths #{"test"})
-         #_ (test-cljs))
+         #_(merge-env! :source-paths #{"test"})
+         #_(test-cljs))
+
+(when (> (.lastModified (clojure.java.io/file "build.boot"))
+         (.lastModified (clojure.java.io/file "project.clj")))
+  (boot.lein/write-project-clj))

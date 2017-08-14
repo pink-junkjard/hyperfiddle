@@ -1,6 +1,5 @@
 (ns hypercrud.client.tx
-  (:require [cljs.core.match :refer-macros [match]]
-            [hypercrud.types.DbId :refer [->DbId]]
+  (:require [hypercrud.types.DbId :refer [->DbId]]
             [hypercrud.util.core :as util]
             [loom.alg-generic :as loom]
             [clojure.walk :as walk]))
