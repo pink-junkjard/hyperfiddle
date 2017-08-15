@@ -26,7 +26,8 @@
                                 (:anchor/ident anchor)
                                 "_")]
                  ^{:key (hash anchor)}                      ; not a great key but syslinks don't have much.
-                 [(:navigate-cmp param-ctx) (anchor/build-anchor-props anchor param-ctx) prompt])))))
+                 [(:navigate-cmp param-ctx) (anchor/build-anchor-props anchor param-ctx) prompt])))
+        doall))
   ([anchors param-ctx]
    (render-anchors (map vector anchors (repeat param-ctx)))))
 
