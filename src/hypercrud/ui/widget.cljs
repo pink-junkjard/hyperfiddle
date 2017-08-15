@@ -22,11 +22,11 @@
    (->> anchor-ctx-pairs
         ; Don't filter hidden links; because they could be broken or invalid and need to draw error.
         (map (fn [[anchor param-ctx]]
-                (let [prompt (or (:anchor/prompt anchor)
-                                 (:anchor/ident anchor)
-                                 "_")]
-                  ^{:key (hash anchor)}                     ; not a great key but syslinks don't have much.
-                  [(:navigate-cmp param-ctx) (anchor/build-anchor-props anchor param-ctx) prompt])))))
+               (let [prompt (or (:anchor/prompt anchor)
+                                (:anchor/ident anchor)
+                                "_")]
+                 ^{:key (hash anchor)}                      ; not a great key but syslinks don't have much.
+                 [(:navigate-cmp param-ctx) (anchor/build-anchor-props anchor param-ctx) prompt])))))
   ([anchors param-ctx]
    (render-anchors (map vector anchors (repeat param-ctx)))))
 
@@ -150,7 +150,7 @@
   (let [[options-anchor] (filter option-anchor? anchors)
         initial-select (some-> options-anchor               ; not okay to auto-select.
                                (option/hydrate-options' param-ctx)
-                               (cats/mplus (either/right nil))      ; todo handle exception
+                               (cats/mplus (either/right nil)) ; todo handle exception
                                (cats/extract)
                                first
                                first)
