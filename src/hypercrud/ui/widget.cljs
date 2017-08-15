@@ -100,10 +100,13 @@
                   anchors)]
     [anchors options-anchor]))
 
+(defn process-popover-anchor [anchor]
+  (if (popover-anchor? anchor)
+    (assoc anchor :anchor/render-inline? false)
+    anchor))
+
 (defn process-popover-anchors [anchors param-ctx]
-  (concat
-    (->> anchors (remove popover-anchor?))
-    (->> anchors (filter popover-anchor?) (mapv #(assoc % :anchor/render-inline? false)))))
+  (mapv process-popover-anchor anchors))
 
 (defn process-option-popover-anchors [anchors param-ctx]
   (process-option-anchors (process-popover-anchors anchors param-ctx) param-ctx))
