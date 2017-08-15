@@ -1,7 +1,14 @@
 (ns hypercrud.browser.auto-anchor-formula
-  (:require [hypercrud.types.DbId :refer [->DbId]]
-            [hypercrud.compile.macros :refer-macros [str-and-code]]))
+  (:require [hypercrud.compile.macros :refer-macros [str-and-code]]
+            [hypercrud.types.DbId :refer [->DbId]]))
 
+
+(defn auto-entity-dbid-from-stage [conn-id branch param-ctx]
+  (let [stage-val (-> param-ctx :peer .-state-atom deref :stage)
+        branch-val (get-in stage-val [conn-id branch])
+        id (-> (or branch-val "nil stage")
+               hash js/Math.abs - str)]
+    (->DbId id conn-id)))
 
 (defn deterministic-ident [fe e a v]
   ; Need comment explaining why.
