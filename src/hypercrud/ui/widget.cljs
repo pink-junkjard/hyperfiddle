@@ -41,6 +41,7 @@
                [:div {:key (hash anchor)}                   ; extra div bc had trouble getting keys to work
                 (case (:display-mode param-ctx)
                   :xray (render-anchors [(assoc anchor :anchor/prompt (or (:anchor/prompt anchor) (-> anchor :anchor/link :link/name)))] param-ctx) nil)
+                ; NOTE: this param-ctx logic and structure is the same as the inline branch of browser-request/recurse-request
                 [browser/safe-ui anchor (update param-ctx :debug #(str % ">inline-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]"))]]))
         (remove nil?)
         (doall))))

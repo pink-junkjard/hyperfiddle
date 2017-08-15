@@ -5,11 +5,27 @@
             [hypercrud.browser.auto-link :as auto-link]
             [hypercrud.browser.base :as base]
             [hypercrud.client.core :as hc]
-            [hypercrud.client.schema :as schema-util]
-            [hypercrud.ui.form-util :as form-util]))
+            [hypercrud.client.schema :as schema-util]))
 
 
 (declare request)
+(declare request')
+
+(defn recurse-request [anchor param-ctx]
+  (if (:anchor/managed? anchor)
+    ; if the anchor IS a popover, we need to run the same logic as anchor/build-anchor-props
+    ; the param-ctx needs to be updated (branched, etc), but NOT BEFORE determining the route
+    ; that MUST happen in the parent context
+    (let [route' (anchor/build-anchor-route' anchor param-ctx)
+          param-ctx (-> (anchor/anchor-branch-logic anchor param-ctx)
+                        (dissoc :result :db :find-element :entity :attribute :value :layout :field)
+                        (update :debug #(str % ">popover-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]")))]
+      (either/branch route'
+                     (constantly nil)
+                     #(request' % param-ctx)))
+    ; if the anchor IS NOT a popover, this should be the same logic as widget/render-inline-anchors
+    (let [param-ctx (update param-ctx :debug #(str % ">inline-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]"))]
+      (request anchor param-ctx))))
 
 (defn link-dependent-requests [result colspec anchors param-ctx]
   (let [result (cond
@@ -26,10 +42,6 @@
         find-elements (->> (partition 4 colspec)
                            (map (fn [[dbval fe attr maybe-field]] fe))
                            (distinct))
-        recurse-request (fn [anchor param-ctx]
-                          (let [param-ctx (anchor/anchor-branch-logic anchor param-ctx)
-                                param-ctx (update param-ctx :debug #(str % ">inline-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]"))]
-                            (request anchor param-ctx)))
         lookup {:index #(get anchors-lookup [false nil nil])
                 :relation (constantly [])                   ; Relation links don't make sense to me yet. where would they go?
                 :relation-new (constantly [])               ; We haven't implemented them.

@@ -119,6 +119,7 @@
                               {:txfns {:stage (fn []
                                                 (p/promise (fn [resolve reject]
                                                              (let [swap-fn (fn [tx-from-modal]
+                                                                             ; todo why does the user-txfn have access to the parent link's :db :result etc?
                                                                              (let [result (let [result (user-txfn param-ctx tx-from-modal)]
                                                                                             ; txfn may be sync or async
                                                                                             (if-not (p/promise? result) (p/resolved result) result))]
@@ -142,8 +143,11 @@
                                             (case (:display-mode param-ctx)
                                               :xray [(:navigate-cmp param-ctx) anchor-props-route "self"]
                                               nil)
+                                            ; NOTE: this param-ctx logic and structure is the same as the popover branch of browser-request/recurse-request
                                             [hypercrud.browser.core/safe-ui' ; cycle
                                              route          ; draw the branch
-                                             (dissoc param-ctx :result :db :find-element :entity :attribute :value :layout :field)]])})
+                                             (-> param-ctx
+                                                 (dissoc :result :db :find-element :entity :attribute :value :layout :field)
+                                                 (update :debug #(str % ">popover-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]")))]])})
         anchor-props-hidden {:hidden (not visible?)}]
     (merge anchor-props-route anchor-props-txfn anchor-props-popover anchor-props-hidden)))
