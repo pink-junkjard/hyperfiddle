@@ -1,6 +1,8 @@
 (ns hypercrud.browser.auto-anchor-formula
-  (:require [hypercrud.compile.macros :refer-macros [str-and-code]]
-            [hypercrud.types.DbId :refer [->DbId]]))
+  (:require-macros [hypercrud.util.template :as template])
+  (:require [hypercrud.types.DbId :refer [->DbId]]
+            [hypercrud.util.core :as util]
+            [hypercrud.util.vedn :as vedn]))
 
 
 (defn auto-entity-dbid-from-stage [conn-id branch param-ctx]
@@ -33,59 +35,30 @@
             (-> ctx :value))
           (or conn-id (-> ctx :entity :db/id :conn-id))))
 
+(def auto-formula-lookup
+  (let [fe-no-create (->> (template/load-resource "auto-formula/fe-no-create.vedn")
+                          (vedn/read-string)
+                          (util/map-keys #(assoc % :fe true :c? false)))
+        fe-create (->> (template/load-resource "auto-formula/fe-create.vedn")
+                       (vedn/read-string)
+                       (util/map-keys #(assoc % :fe true :c? true)))
+        ; no fe = index or relation links
+        no-fe {{:fe false :c? false :d? true :a false} nil
+               {:fe false :c? false :d? true :a true} nil
+               {:fe false :c? false :d? false :a false} nil
+               {:fe false :c? false :d? false :a true} nil
+
+               {:fe false :c? true :d? true :a false} nil
+               {:fe false :c? true :d? true :a true} nil
+               {:fe false :c? true :d? false :a false} nil
+               {:fe false :c? true :d? false :a true} nil}]
+    (merge fe-create fe-no-create no-fe)))
+
 ; anchors MUST have a find-element, if they have an attribute or are create? or repeating?
 ;(assert (not (and (not fe) (or a create? (:anchor/repeating? anchor)))) "missing find-element")
 (defn auto-formula [anchor]                                 ; what about long-coersion?
-  (let [{fe :anchor/find-element
-         a :anchor/attribute
-         create? :anchor/create?
-         dependent? :anchor/repeating?} anchor]
-    (if-not fe
-      ; no fe = index or relation links
-      nil
-
-      ; enumerate the entire matrix; basically: (match [create? dependent a])
-      (cond
-        ; entity edit
-        (and (not create?) dependent? (not a))
-        (str-and-code (fn [ctx] {:entity (get-in ctx [:entity :db/id])}))
-
-        (and (not create?) dependent? a)
-        (case (-> a :attribute/cardinality :db/ident)
-          :db.cardinality/one (str-and-code (fn [ctx] {:entity (get-in ctx [:value :db/id])}))
-          :db.cardinality/many (str-and-code (fn [ctx] {:entity (get-in ctx [:entity :db/id]) :a (-> ctx :attribute :attribute/ident)})))
-
-        (and (not create?) (not dependent?) (not a))
-        nil
-
-        (and (not create?) (not dependent?) a)
-        nil
-
-        ; entity create
-        (and create? dependent? (not a))                    ;e.g. hf-fork
-        (str-and-code (fn [ctx] {:entity (hypercrud.browser.auto-anchor-formula/auto-entity-dbid ctx (-> ctx :find-element :find-element/connection :db/id :id))}))
-
-        (and create? dependent? a)
-        ; inherit parent since the fe is never explicitly set by user
-        ; it would be more correct to use the FE if we have it, but
-        ; that information is guaranteed to be the same?
-        (str-and-code (fn [ctx] {:entity (hypercrud.browser.auto-anchor-formula/auto-entity-dbid ctx (-> ctx :db .-conn-id))}))
-
-        ; entity create
-        ; is it managed or not? We need a connection. Either we got the find-element, or
-        ; we are managed. If we're managed, we need an entity in scope, to conjure a connection.
-        ; So despite not really needing the value in scope, we need the connection, so we need the value.
-        ; This is counter intuitive. It only happens for sys links. Regular links set the linkentity/connection
-        ; so don't have this problem.
-        ; Mystery deepens: If ur a syslink u better have a conn-id here because autolink inspects the entity connid to manufacture
-        ; the right entity connection. If you're an explicit link with a conn set, it doesn't matter what you put here since the server
-        ; will ignore this and use the explicit conn. This is only needed to plumb a connection to the autolink logic so it can choose the right connection.
-        (and create? (not dependent?) (not a))              ; never managed, bc no attribute to have parent ref
-        (str-and-code (fn [ctx] {:entity (hypercrud.browser.auto-anchor-formula/auto-entity-dbid ctx (-> ctx :find-element :find-element/connection :db/id :id))}))
-
-        (and create? (not dependent?) a)
-        ; inherit parent since the fe is never explicitly set by user
-        ; it would be more correct to use the FE if we have it, but
-        ; that information is guaranteed to be the same?
-        (str-and-code (fn [ctx] {:entity (hypercrud.browser.auto-anchor-formula/auto-entity-dbid ctx (-> ctx :db .-conn-id))}))
-        ))))
+  (get auto-formula-lookup
+       {:fe (not (nil? (:anchor/find-element anchor)))
+        :c? (or (:anchor/create? anchor) false)
+        :d? (or (:anchor/repeating? anchor) false)
+        :a (not (nil? (:anchor/attribute anchor)))}))

@@ -23,7 +23,7 @@
                   [adzerk/boot-test "1.1.1" :scope "test"]
                   [crisptrutski/boot-cljs-test "0.2.2-SNAPSHOT" :scope "test"]
                   [sparkfund/boot-lein-generate "0.3.0" :scope "test"]]
-  :resource-paths #{"src"})
+  :resource-paths #{"src" "resources"})
 
 (require '[adzerk.boot-cljs :refer :all]
          '[adzerk.bootlaces :refer :all]

@@ -18,6 +18,12 @@
                                 {:eval cljs/js-eval}
                                 identity))))))
 
+(defn eval-str-and-throw [code-str]
+  (let [compiler-result (eval-str- code-str)]
+    (if-let [error (:error compiler-result)]
+      (throw error)
+      (:value compiler-result))))
+
 (def eval-
   (memoize (fn [form]
              (let [form' `(identity ~form)]

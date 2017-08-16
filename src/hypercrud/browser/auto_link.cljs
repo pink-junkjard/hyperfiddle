@@ -1,9 +1,10 @@
 (ns hypercrud.browser.auto-link
+  (:require-macros [hypercrud.util.template :as template])
   (:require [hypercrud.client.core :as hc]
-            [hypercrud.compile.macros :refer-macros [str-and-code]]
             [hypercrud.types.DbId :refer [->DbId]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
-            [hypercrud.ui.form-util :as form-util]))
+            [hypercrud.ui.form-util :as form-util]
+            [hypercrud.util.vedn :as vedn]))
 
 
 (defn system-link? [link-dbid]
@@ -47,6 +48,10 @@
    :link/renderer (pr-str `(fn [result# colspec# anchors# param-ctx#]
                              [:p "Retract entity?"]))})
 
+(def auto-link-txfn-lookup
+  (->> (template/load-resource "auto-link/tx-fns.vedn")
+       (vedn/read-string)))
+
 ; todo this belongs in auto-anchor namespace
 (defn system-anchors
   "All sys links are :anchor/ident :sys, so they can be matched and merged with user-anchors.
@@ -85,10 +90,7 @@
                                                   :anchor/find-element fe
                                                   :anchor/managed? true
                                                   :anchor/render-inline? true
-                                                  :anchor/tx-fn (str-and-code
-                                                                  (fn [ctx tx-from-modal]
-                                                                    {:tx (concat tx-from-modal
-                                                                                 [[:db.fn/retractEntity (-> ctx :entity :db/id)]])}))}]
+                                                  :anchor/tx-fn (:entity-remove auto-link-txfn-lookup)}]
                                       (case (:request/type parent-link)
                                         :entity [remove]
 
@@ -131,15 +133,8 @@
                                           :anchor/managed? true
                                           :anchor/render-inline? true
                                           :anchor/tx-fn (if (= :db.cardinality/one (-> attr :attribute/cardinality :db/ident))
-                                                          (str-and-code
-                                                            (fn [ctx tx-from-modal]
-                                                              {:tx (concat tx-from-modal
-                                                                           [[:db.fn/retractEntity (-> ctx :value :db/id)]])}))
-                                                          (str-and-code
-                                                            (fn [ctx tx-from-modal]
-                                                              {:tx (concat tx-from-modal
-                                                                           (->> (:value ctx)
-                                                                                (mapv (fn [e] [:db.fn/retractEntity (:db/id e)]))))})))}]))))
+                                                          (:value-remove-one auto-link-txfn-lookup)
+                                                          (:value-remove-many auto-link-txfn-lookup))}]))))
                           doall))]
     (concat entity-links attr-links)))
 

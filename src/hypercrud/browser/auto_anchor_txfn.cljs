@@ -1,39 +1,31 @@
 (ns hypercrud.browser.auto-anchor-txfn
-  (:require [hypercrud.browser.auto-anchor-formula :refer [auto-entity-dbid]]
-            [hypercrud.client.tx]
-            [hypercrud.compile.macros :refer-macros [str-and-code]]
-            [hypercrud.types.DbId :refer [->DbId]]
-            [hypercrud.util.core :refer [pprint-str]]))
+  (:require-macros [hypercrud.util.template :as template])
+  (:require [clojure.string :as string]
+            [hypercrud.compile.eval :as eval]
+            [hypercrud.compile.macros :refer [str-and-code']]))
 
+
+(def auto-tx-fn-lookup
+  (letfn [(process-resource [code-str]
+            (let [code-str (string/trim code-str)]
+              (str-and-code' (eval/eval-str-and-throw code-str) code-str)))]
+    {{:m true :fe true :a true} (-> (template/load-resource "auto-txfn/mt-fet-at.edn")
+                                    process-resource)
+     {:m true :fe true :a false} (-> (template/load-resource "auto-txfn/mt-fet-af.edn")
+                                     process-resource)
+
+     {:m true :fe false :a true} nil
+     {:m true :fe false :a false} nil
+
+     {:m false :fe true :a true} nil
+     {:m false :fe true :a false} nil
+
+     {:m false :fe false :a true} nil
+     {:m false :fe false :a false} nil
+     }))
 
 (defn auto-txfn [anchor]
-  (let [{m :anchor/managed? fe :anchor/find-element a :anchor/attribute} anchor]
-    (cond
-      (and m fe a)                                          ; attr create
-      (str-and-code
-        (fn [ctx tx-from-modal]
-          (let [new-dbid (hypercrud.browser.auto-anchor-formula/auto-entity-dbid ctx)]
-            {:tx (concat
-                   tx-from-modal
-                   (hypercrud.client.tx/edit-entity
-                     (-> ctx :entity :db/id)
-                     (-> ctx :attribute :attribute/ident)
-                     []
-                     [new-dbid]))})))
-
-      (and m fe (not a))
-      (str-and-code
-        (fn [ctx tx-from-modal]
-          (let [branch (hypercrud.browser.auto-anchor-formula/auto-entity-dbid ctx)
-                id' (-> (js/Date.now) - str)
-                ; alter the dbid before transacting so it can be reused.
-                ; This has to happen at a side-effect point and will cause a hydrate
-                ; so we do it when we already have to hydrate.
-                tx-from-modal' (->> tx-from-modal
-                                    (mapv (fn [[op dbid a v]]
-                                            (if (= (:id dbid) branch)
-                                              [op (hypercrud.types.DbId/->DbId id' (:conn-id dbid)) a v]
-                                              [op dbid a v]))))]
-            {:tx tx-from-modal'})))
-
-      :else nil)))
+  (get auto-tx-fn-lookup
+       {:m (or (:anchor/managed? anchor) false)
+        :fe (not (nil? (:anchor/find-element anchor)))
+        :a (not (nil? (:anchor/attribute anchor)))}))

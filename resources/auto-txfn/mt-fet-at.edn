@@ -1,0 +1,9 @@
+(fn [ctx tx-from-modal]
+  (let [new-dbid (hypercrud.browser.auto-anchor-formula/auto-entity-dbid ctx)]
+    {:tx (concat
+           tx-from-modal
+           (hypercrud.client.tx/edit-entity
+             (-> ctx :entity :db/id)
+             (-> ctx :attribute :attribute/ident)
+             []
+             [new-dbid]))}))

@@ -1,0 +1,36 @@
+; this file is essentially a list delimited by '/^=='
+; entries can span many lines until the next delimeter
+
+==
+;entity edit
+{:d? true :a false}
+==
+(fn [ctx]
+  {:entity (get-in ctx [:entity :db/id])})
+
+
+==
+{:d? true :a true}
+==
+(fn [ctx]
+  (case (-> ctx :attribute :attribute/cardinality :db/ident)
+    :db.cardinality/one {:entity (get-in ctx [:value :db/id])}
+    :db.cardinality/many {:entity (get-in ctx [:entity :db/id])
+                          :a (-> ctx :attribute :attribute/ident)}))
+
+
+==
+{:d? false :a false}
+==
+(fn [ctx]
+  ; auto-formula unsupported
+  nil)
+
+
+==
+{:d? false :a true}
+==
+(fn [ctx]
+  ; auto-formula unsupported
+  nil)
+==
