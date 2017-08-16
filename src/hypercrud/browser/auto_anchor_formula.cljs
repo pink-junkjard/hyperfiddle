@@ -62,8 +62,8 @@
         nil
 
         ; entity create
-        (and create? dependent? (not a))
-        nil
+        (and create? dependent? (not a))                    ;e.g. hf-fork
+        (str-and-code (fn [ctx] {:entity (hypercrud.browser.auto-anchor-formula/auto-entity-dbid ctx (-> ctx :find-element :find-element/connection :db/id :id))}))
 
         (and create? dependent? a)
         ; inherit parent since the fe is never explicitly set by user
