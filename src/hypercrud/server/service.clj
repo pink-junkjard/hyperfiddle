@@ -11,6 +11,9 @@
 (defn wrap-hypercrud [m]
   {:hypercrud m})
 
+(defn http-index [req]
+  (ring-resp/response "Hypercrud Server Running!"))
+
 (defn http-hydrate
   ([req]
    (http-hydrate req (constantly true) (constantly true)))
@@ -48,7 +51,8 @@
 
 (def routes
   (expand-routes
-    `[[["/api" {} ^:interceptors [~(body-params/body-params
+    `[[["/" {:get [:index http-index]}]
+       ["/api" {} ^:interceptors [~(body-params/body-params
                                      (body-params/default-parser-map :edn-options {:readers *data-readers*}
                                                                      :transit-options [{:handlers internal/transit-read-handlers}]))
                                   http/combine-body-params
