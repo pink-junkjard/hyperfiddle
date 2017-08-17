@@ -12,6 +12,9 @@
       (throw (Error. "Must seed with a real root-db, can't bootstrap from nothing anymore.")))
 
     (alter-var-root #'db/transactor-uri (constantly transactor-uri))
+
+    ; todo this is no longer necessary, all databases are named by their ident now
+    ; the same process to look up a non-root db is the same as to find the root, which can be done on demand
     (if-let [root-id (d/q '[:find ?db . :where
                             [?a :db/ident :database/ident]
                             [?db ?a "root"]]
