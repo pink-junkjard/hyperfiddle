@@ -142,18 +142,18 @@
 (defn Resultset [relations colspec anchors sort-col param-ctx]
   (let [[fe-dbid sort-key direction] @sort-col
         sort-fn (fn [relations]
-                    (let [[_ fe attr _] (->> (partition 4 colspec)
-                                             (filter (fn [[db fe attr maybe-field]]
-                                                       (and (= fe-dbid (:db/id fe))
-                                                            (= (:attribute/ident attr) sort-key))))
-                                             first)]
-                      (if (sortable? attr)
-                        (sort-by #(get-in % [(:find-element/name fe) sort-key])
-                                 (case direction
-                                   :asc #(compare %1 %2)
-                                   :desc #(compare %2 %1))
-                                 relations)
-                        relations)))]
+                  (let [[_ fe attr _] (->> (partition 4 colspec)
+                                           (filter (fn [[db fe attr maybe-field]]
+                                                     (and (= fe-dbid (:db/id fe))
+                                                          (= (:attribute/ident attr) sort-key))))
+                                           first)]
+                    (if (sortable? attr)
+                      (sort-by #(get-in % [(:find-element/name fe) sort-key])
+                               (case direction
+                                 :asc #(compare %1 %2)
+                                 :desc #(compare %2 %1))
+                               relations)
+                      relations)))]
     (->> relations sort-fn (map #(Row % colspec anchors param-ctx)))))
 
 (defn Table [& props]

@@ -12,7 +12,7 @@
             [hypercrud.util.branch :as branch]
             [hypercrud.util.monad :refer [exception->either]]
             [promesa.core :as p]
-            [hypercrud.util.core :as util :refer [pprint-str]]))
+            [hypercrud.util.core :refer [pprint-str]]))
 
 
 (defn safe-run-user-code-str' [code-str & args]
