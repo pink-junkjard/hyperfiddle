@@ -53,20 +53,23 @@
              ; entire context must be encoded in the route
              (dissoc param-ctx :result :db :find-element :entity :attribute :value :layout :field))))))
 
+(defn ui-error-inline [e ctx]
+  (let [detail (if (:dev-open ctx) (str " -- " (pr-str (:data e))))]
+    [:code.ui (:message e) " " detail]))
+
+(defn ui-error-block [e ctx]
+  #_(ex-message e) #_(pr-str (ex-data e))
+  (let [detail (if (:dev-open ctx) (pr-str (:data e)))]
+    [:pre.ui (:message e) "--\n" detail]))
+
 (defn ui-error [e ctx]
   ; :find-element :entity :attribute :value
   (let [C (cond
             (:ui-error ctx) (:ui-error ctx)                 ; botnav
-            (:attribute ctx) :code                          ; table: header or cell, form: header or cell
-            (:find-element ctx) :code                       ;
-            :else :pre)                                     ; browser including inline true links
-        ]
-    [C {:class "ui"}
-     (:message e)
-     (case (:display-mode ctx)
-       :user nil
-       (if-let [d (:data e)] (str " " (pr-str d))))         ; could be a tooltip
-     #_(ex-message e) #_(pr-str (ex-data e))]))
+            (:attribute ctx) ui-error-inline                ; table: header or cell, form: header or cell
+            (:find-element ctx) ui-error-inline             ;
+            :else ui-error-block)]                          ; browser including inline true links
+    [C e ctx]))
 
 (defn safe-ui' [route ctx]
   (either/branch
