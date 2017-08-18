@@ -60,7 +60,7 @@
 (defn ui-error-block [e ctx]
   #_(ex-message e) #_(pr-str (ex-data e))
   (let [detail (if (:dev-open ctx) (pr-str (:data e)))]
-    [:pre.ui (:message e) "--\n" detail]))
+    [:pre.ui (:message e) "\n" detail]))
 
 (defn ui-error [e ctx]
   ; :find-element :entity :attribute :value
