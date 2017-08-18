@@ -25,19 +25,21 @@
                           (keyword "attribute" (name ident)))))))
 
 ; root isn't parameterized that well
-; the current hf-src will create a database for root (/root and the entity-id for root) AND pink (HFHF) AND user
-; this means 4 databases on top of existing infra :(
+; the current hf-src will create a database for root AND hyperfiddle AND hyperfiddle-users
+; this means 3 databases on top of existing infra :(
 (defn init [transactor-uri hf-schema-src hf-data-src]
+  (assert (.exists (io/file hf-schema-src)))
+  (assert (.exists (io/file hf-data-src)))
   (let [root-transactor-uri (str transactor-uri "root")]
     (if-not (d/create-database root-transactor-uri)
       (throw (new Error "Cannot initialize from existing database"))
 
       (let [root-conn (d/connect root-transactor-uri)]
         (println "Installing schema")
-        @(d/transact root-conn (-> (io/resource hf-schema-src) slurp read-string))
+        @(d/transact root-conn (-> hf-schema-src slurp read-string))
 
         (println "Installing hyperfiddle sources")
-        @(d/transact root-conn (-> (io/resource hf-data-src) slurp read-string))
+        @(d/transact root-conn (-> hf-data-src slurp read-string))
 
         ; all of the following reflection shouldn't be necessary after removing the root
         ; user fiddles should execute it on demand
