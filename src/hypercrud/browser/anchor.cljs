@@ -54,6 +54,11 @@
       (either/left {:message "route has no link" :data {:route route}})
       #_(either/right route) #_"wtf???  \"{:hypercrud/owner {:database/domain nil, :database/ident \"hyperfiddle\"}, :db/id #DbId[[:link/ident :hyperfiddle/new-page-popover] 17592186045422]}\"   ")))
 
+(defn get-or-apply' [expr & args]
+  (if (fn? expr)
+    (exception->either (exception/try-on (apply expr args)))
+    (either/right expr)))
+
 (defn build-anchor-props-raw [unvalidated-route' anchor param-ctx] ; param-ctx is for display-mode
 
   ; this is a fine place to eval, put error message in the tooltip prop
@@ -62,18 +67,16 @@
   (let [link (:anchor/link anchor)                          ; can be nil - in which case route is invalid
         route (-> unvalidated-route' (cats/mplus (either/right nil)) (cats/extract))
         validated-route' (validated-route' link route)
-        user-props' (if-let [code-str (eval/validate-user-code-str (:hypercrud/props anchor))]
-                      (mlet [user-val (eval-str' code-str)]
-                        (if (fn? user-val)                  ; it could be of type {} or (fn [ctx] {})
-                          (exception->either (exception/try-on (user-val param-ctx))) ; returns {...}
-                          (either/right user-val)))
+        user-props' (if-let [user-code-str (eval/validate-user-code-str (:hypercrud/props anchor))]
+                      (mlet [user-expr (eval-str' user-code-str)]
+                        (get-or-apply' user-expr param-ctx))
                       (either/right nil))
-        user-props (-> user-props' (cats/mplus (either/right nil)) (cats/extract))
-
-        errors (->> [user-props' unvalidated-route' validated-route']
-                    (filter either/left?)
-                    (map cats/extract)
-                    (into #{}))]
+        user-props-map-raw (cats/extract (cats/mplus user-props' (either/right nil)))
+        user-prop-val's (map #(get-or-apply' % param-ctx) (vals user-props-map-raw))
+        user-prop-vals (map #(cats/extract (cats/mplus % (either/right nil))) user-prop-val's)
+        errors (->> (concat [user-props' unvalidated-route' validated-route'] user-prop-val's)
+                    (filter either/left?) (map cats/extract) (into #{}))
+        user-props (zipmap (keys user-props-map-raw) user-prop-vals)]
     (merge
       user-props                                            ; e.g. disabled, tooltip, style, class - anything, it gets passed to a renderer maybe user renderer
       ; doesn't handle tx-fn - meant for the self-link. Weird and prob bad.
