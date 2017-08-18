@@ -6,7 +6,7 @@
 
 
 (defn auto-entity-dbid-from-stage [conn-id branch param-ctx]
-  (let [stage-val (-> param-ctx :peer .-state-atom deref :stage)
+  (let [stage-val (-> param-ctx :peer .-state-atom deref :stage)  ; This line is not allowed, it breaks determinism.
         branch-val (get-in stage-val [conn-id branch])
         id (-> (or branch-val "nil stage")
                hash js/Math.abs - str)]

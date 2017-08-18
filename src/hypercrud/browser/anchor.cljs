@@ -126,7 +126,7 @@
                      (cats/mplus (either/right true))
                      (cats/extract))
         route' (build-anchor-route' anchor param-ctx)
-        anchor-props-route (build-anchor-props-raw route' anchor param-ctx)
+        hypercrud-props (build-anchor-props-raw route' anchor param-ctx)
         param-ctx (anchor-branch-logic anchor param-ctx)
         anchor-props-txfn (if-let [user-txfn (some-> (eval/validate-user-code-str (:anchor/tx-fn anchor))
                                                      eval-str'
@@ -137,9 +137,9 @@
                               ; do we need to hydrate any dependencies in this chain?
                               {:txfns {:stage (fn []
                                                 (p/promise (fn [resolve reject]
-                                                             (let [swap-fn (fn [tx-from-modal]
+                                                             (let [swap-fn (fn [tx-from-modal] ; needs the route's :entity dbid
                                                                              ; todo why does the user-txfn have access to the parent link's :db :result etc?
-                                                                             (let [result (let [result (user-txfn param-ctx tx-from-modal)]
+                                                                             (let [result (let [result (user-txfn param-ctx tx-from-modal (:route hypercrud-props))]
                                                                                             ; txfn may be sync or async
                                                                                             (if-not (p/promise? result) (p/resolved result) result))]
                                                                                ; let the caller of this :stage fn know the result
@@ -160,7 +160,7 @@
                                {:popover (fn []
                                            [:div
                                             (case (:display-mode param-ctx)
-                                              :xray [(:navigate-cmp param-ctx) anchor-props-route "self"]
+                                              :xray [(:navigate-cmp param-ctx) hypercrud-props "self"]
                                               nil)
                                             ; NOTE: this param-ctx logic and structure is the same as the popover branch of browser-request/recurse-request
                                             [hypercrud.browser.core/safe-ui' ; cycle
@@ -169,4 +169,4 @@
                                                  (dissoc :result :db :find-element :entity :attribute :value :layout :field)
                                                  (update :debug #(str % ">popover-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]")))]])})
         anchor-props-hidden {:hidden (not visible?)}]
-    (merge anchor-props-route anchor-props-txfn anchor-props-popover anchor-props-hidden)))
+    (merge hypercrud-props anchor-props-txfn anchor-props-popover anchor-props-hidden)))
