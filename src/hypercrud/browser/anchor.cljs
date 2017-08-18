@@ -11,7 +11,8 @@
             [hypercrud.state.actions.core :as actions]
             [hypercrud.util.branch :as branch]
             [hypercrud.util.monad :refer [exception->either]]
-            [promesa.core :as p]))
+            [promesa.core :as p]
+            [hypercrud.util.core :as util :refer [pprint-str]]))
 
 
 (defn safe-run-user-code-str' [code-str & args]
@@ -34,14 +35,6 @@
              :link-dbid link-dbid
              :query-params query-params})))
 
-(defn anchor-tooltip [route' param-ctx]
-  (case (:display-mode param-ctx)
-    :xray (-> route'
-              (either/branch
-                (fn [e] [:warning (pr-str e)])
-                (fn [route] [nil (pr-str (:query-params route))])))
-    nil))
-
 ; this is same business logic as base/request-for-link
 ; this is currently making assumptions on dbholes
 (defn validated-route' [link route]
@@ -62,17 +55,40 @@
       #_(either/right route) #_"wtf???  \"{:hypercrud/owner {:database/domain nil, :database/ident \"hyperfiddle\"}, :db/id #DbId[[:link/ident :hyperfiddle/new-page-popover] 17592186045422]}\"   ")))
 
 (defn build-anchor-props-raw [unvalidated-route' anchor param-ctx] ; param-ctx is for display-mode
+
+  ; this is a fine place to eval, put error message in the tooltip prop
+  ; each prop might have special rules about his default, for example :visible is default true, does this get handled here?
+
   (let [link (:anchor/link anchor)                          ; can be nil - in which case route is invalid
-        validated-route' (validated-route' link (-> unvalidated-route'
-                                                    (cats/mplus (either/right nil))
-                                                    (cats/extract)))]
-    ; doesn't handle tx-fn - meant for the self-link. Weird and prob bad.
-    {:route (-> unvalidated-route'
-                (cats/mplus (either/right nil))
-                (cats/extract))
-     :style {:color (connection-color/connection-color (-> link :hypercrud/owner :db/id :id))}
-     :tooltip (anchor-tooltip validated-route' param-ctx)
-     :class (if (either/left? validated-route') "invalid")}))
+        route (-> unvalidated-route' (cats/mplus (either/right nil)) (cats/extract))
+        validated-route' (validated-route' link route)
+        user-props' (if-let [code-str (eval/validate-user-code-str (:hypercrud/props anchor))]
+                      (mlet [user-val (eval-str' code-str)]
+                        (if (fn? user-val)                  ; it could be of type {} or (fn [ctx] {})
+                          (exception->either (exception/try-on (user-val param-ctx))) ; returns {...}
+                          (either/right user-val)))
+                      (either/right nil))
+        user-props (-> user-props' (cats/mplus (either/right nil)) (cats/extract))
+
+        errors (->> [user-props' unvalidated-route' validated-route']
+                    (filter either/left?)
+                    (map cats/extract)
+                    (into #{}))]
+    (merge
+      user-props                                            ; e.g. disabled, tooltip, style, class - anything, it gets passed to a renderer maybe user renderer
+      ; doesn't handle tx-fn - meant for the self-link. Weird and prob bad.
+      {:route (-> unvalidated-route' (cats/mplus (either/right nil)) (cats/extract))
+       :style {:color (connection-color/connection-color (-> link :hypercrud/owner :db/id :id))}
+       :tooltip (if-not (empty? errors)
+                  [:warning (pprint-str errors)]
+                  (case (:display-mode param-ctx)
+                    :xray [nil (pr-str (:query-params route))]
+                    :user (:tooltip user-props)))
+       :class (->> [(:class user-props)
+                    (if-not (empty? errors) "invalid")]
+                   (remove nil?)
+                   (interpose " ")
+                   (apply str))})))
 
 (defn anchor-branch-logic [anchor param-ctx]
   (if (:anchor/managed? anchor)
