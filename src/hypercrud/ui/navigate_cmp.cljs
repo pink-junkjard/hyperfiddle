@@ -38,8 +38,11 @@
                                       :class (str (:class hypercrud-props) " hf-auto-nav")))]
           [:span.nav-link.hf-nav-link
            [tooltip/hover-tooltip-managed
-            {:label (-> hypercrud-props :tooltip second)
-             :status (-> hypercrud-props :tooltip first)}
+            (let [tooltip-config (:tooltip hypercrud-props)
+                  [status label] (if (string? tooltip-config)
+                                   [:info tooltip-config]
+                                   [(first tooltip-config) (second tooltip-config)])]
+              {:status status :label label})
             [re-com/popover-anchor-wrapper
              :showing? state-popover
              :position :below-center
