@@ -27,35 +27,52 @@
 ; root isn't parameterized that well
 ; the current hf-src will create a database for root AND hyperfiddle AND hyperfiddle-users
 ; this means 3 databases on top of existing infra :(
-(defn init [transactor-uri hf-schema-src hf-data-src]
-  (assert (.exists (io/file hf-schema-src)))
-  (assert (.exists (io/file hf-data-src)))
-  (let [root-transactor-uri (str transactor-uri "root")]
-    (if-not (d/create-database root-transactor-uri)
-      (throw (new Error "Cannot initialize from existing database"))
+(defn init
+  ([transactor-uri hf-schema]
+   (let [hf-data
+         ; the only reason this root db-record exists in this loader is to satisfy init-datomic
+         ; it can be deleted when hypercrud.server.db-root/root-id is
+         [(generate-db-record "root")]
+         ]
+     (init transactor-uri hf-schema hf-data)))
+  ([transactor-uri hf-schema hf-data]
+   (let [root-transactor-uri (str transactor-uri "root")]
+     (if-not (d/create-database root-transactor-uri)
+       (throw (new Error "Cannot initialize from existing database"))
 
-      (let [root-conn (d/connect root-transactor-uri)]
-        (println "Installing schema")
-        @(d/transact root-conn (-> hf-schema-src slurp read-string))
+       (let [root-conn (d/connect root-transactor-uri)]
+         (println "Installing root schema")
+         @(d/transact root-conn hf-schema)
 
-        (println "Installing hyperfiddle sources")
-        @(d/transact root-conn (-> hf-data-src slurp read-string))
+         (when hf-data
+           (println "Installing hyperfiddle data")
+           @(d/transact root-conn hf-data))
 
-        ; all of the following reflection shouldn't be necessary after removing the root
-        ; user fiddles should execute it on demand
-        (println "Reflecting existing user databases")
-        (let [db-names (->> (d/get-database-names (str transactor-uri "*"))
-                            (remove #(= root-transactor-uri (str transactor-uri %))))]
+         ; all of the following reflection shouldn't be necessary after removing the root
+         ; user fiddles should execute it on demand
+         (println "Reflecting existing user databases")
+         (let [db-names (->> (d/get-database-names (str transactor-uri "*"))
+                             (remove #(= root-transactor-uri (str transactor-uri %))))]
 
-          (println "Registering user databases")
-          @(d/transact root-conn (mapv generate-db-record db-names))
+           (println "Registering user databases")
+           @(d/transact root-conn (mapv generate-db-record db-names))
 
-          (println "Reflecting user schemas")
-          ; this will fail if attributes already exist
-          @(d/transact root-conn (->> db-names
-                                      (mapcat #(reflect-schema (d/connect (str transactor-uri %))))
-                                      (mapv attr->hc-attr)
-                                      (into #{})
-                                      (into []))))
+           (println "Reflecting user schemas")
+           ; this will fail if attributes already exist
+           @(d/transact root-conn (->> db-names
+                                       (mapcat #(reflect-schema (d/connect (str transactor-uri %))))
+                                       (mapv attr->hc-attr)
+                                       (into #{})
+                                       (into []))))
 
-        (println "Finished")))))
+         (println "Finished initializing"))))))
+
+(defn init-from-file
+  ([transactor-uri hf-schema-src]
+   (assert (.exists (io/file hf-schema-src)))
+   (init-from-file transactor-uri hf-schema-src nil))
+  ([transactor-uri hf-schema-src hf-data-src]
+   (assert (.exists (io/file hf-schema-src)))
+   (init transactor-uri
+         (-> hf-schema-src slurp read-string)
+         (some-> hf-data-src slurp read-string))))
