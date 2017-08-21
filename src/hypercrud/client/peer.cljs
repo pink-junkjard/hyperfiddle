@@ -11,12 +11,12 @@
 (defn human-error [e req]
   (let [unfilled-holes (->> (filter (comp nil? val) (.-params req)) (map key))]
     (if-not (empty? unfilled-holes)
-      (either/left {:message "Invalid query" :data {:datomic-error (.-msg e) :query (.-query req) :missing unfilled-holes}})
-      (either/left {:message "Datomic error" :data {:datomic-error (.-msg e)}}))))
+      {:message "Invalid query" :data {:datomic-error (.-msg e) :query (.-query req) :missing unfilled-holes}}
+      {:message "Datomic error" :data {:datomic-error (.-msg e)}})))
 
 (defn process-result [resultset-or-error request]
   (if (instance? DbError resultset-or-error)
-    (human-error resultset-or-error request)
+    (either/left (human-error resultset-or-error request))
     (either/right resultset-or-error)))
 
 (defn hydrate-one! [entry-uri request stage-val]
