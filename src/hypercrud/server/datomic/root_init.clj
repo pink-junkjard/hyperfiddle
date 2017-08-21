@@ -24,6 +24,18 @@
                           :db/id ident
                           (keyword "attribute" (name ident)))))))
 
+(defn reflect-hc-attributes [transactor-uri db-name]
+  (->> (reflect-schema (d/connect (str transactor-uri db-name)))
+       (mapv attr->hc-attr)
+       (into #{})
+       (into [])))
+
+(defn initialize-user-schemas [root-conn transactor-uri db-names]
+  ; this will fail if attributes already exist
+  (doseq [db-name db-names]
+    (println (str "Reflecting schema: " db-name))
+    @(d/transact root-conn (reflect-hc-attributes transactor-uri db-name))))
+
 ; root isn't parameterized that well
 ; the current hf-src will create a database for root AND hyperfiddle AND hyperfiddle-users
 ; this means 3 databases on top of existing infra :(
@@ -48,22 +60,11 @@
            (println "Installing hyperfiddle data")
            @(d/transact root-conn hf-data))
 
-         ; all of the following reflection shouldn't be necessary after removing the root
-         ; user fiddles should execute it on demand
          (println "Reflecting existing user databases")
-         (let [db-names (->> (d/get-database-names (str transactor-uri "*"))
-                             (remove #(= root-transactor-uri (str transactor-uri %))))]
-
-           (println "Registering user databases")
-           @(d/transact root-conn (mapv generate-db-record db-names))
-
-           (println "Reflecting user schemas")
-           ; this will fail if attributes already exist
-           @(d/transact root-conn (->> db-names
-                                       (mapcat #(reflect-schema (d/connect (str transactor-uri %))))
-                                       (mapv attr->hc-attr)
-                                       (into #{})
-                                       (into []))))
+         (doseq [db-name (->> (d/get-database-names (str transactor-uri "*"))
+                              (remove #(= root-transactor-uri (str transactor-uri %))))]
+           (println (str "Registering db: " db-name))
+           @(d/transact root-conn [(generate-db-record db-name)]))
 
          (println "Finished initializing"))))))
 
