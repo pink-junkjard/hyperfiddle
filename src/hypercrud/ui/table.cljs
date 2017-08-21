@@ -1,7 +1,7 @@
 (ns hypercrud.ui.table
   (:require [clojure.string :as string]
             [hypercrud.browser.connection-color :as connection-color]
-            [hypercrud.state.actions.core :as actions]
+            [hypercrud.browser.context :as context]
             [hypercrud.ui.auto-control :refer [auto-table-cell]]
             [hypercrud.ui.form-util :as form-util]
             [hypercrud.ui.renderer :as renderer]
@@ -35,15 +35,12 @@
        (group-by (fn [[dbval fe attr maybe-field]] fe))
        (mapcat (fn [[fe colspec]]
                  (let [db (ffirst colspec)
-                       param-ctx (assoc param-ctx :db db
-                                                  :find-element fe
-                                                  ; todo custom user-dispatch with all the tx-fns as reducers
-                                                  :user-with! (fn [tx] ((:dispatch! param-ctx) (actions/with (.-conn-id db) (.-branch db) tx))))]
+                       param-ctx (context/find-element param-ctx db fe)]
                    (->> colspec
                         (mapv (fn [[db fe attr field]]
                                 (let [fe-name (-> fe :find-element/name)
                                       ident (-> attr :attribute/ident)
-                                      param-ctx (assoc param-ctx :attribute attr)
+                                      param-ctx (context/attribute param-ctx attr)
                                       css-classes [(str "field-element-" (form-util/css-slugify fe-name))
                                                    (str "field-attr-" (form-util/css-slugify (str ident)))] #_"Dustin removed field-id and field-prompt; use a custom renderer"
                                       anchors (->> anchors
@@ -91,9 +88,9 @@
 (defn Value [[db fe attr maybe-field] entity-anchors-lookup param-ctx]
   (let [fe-name (-> fe :find-element/name)
         ident (-> attr :attribute/ident)
-        param-ctx (assoc param-ctx :attribute attr
-                                   :value (get (:entity param-ctx) ident)
-                                   :layout :table)
+        param-ctx (-> (context/attribute param-ctx attr)
+                      (context/value (get (:entity param-ctx) ident))
+                      (assoc :layout :table))
         field (case (:display-mode param-ctx) :xray Field :user (get param-ctx :field Field))
         control (case (:display-mode param-ctx) :xray Control :user (get param-ctx :control Control))
 
@@ -104,12 +101,8 @@
 (defn FindElement [[fe colspec] entity-anchors-lookup param-ctx]
   (let [entity (get (:result param-ctx) (-> fe :find-element/name))
         db (ffirst colspec)
-        param-ctx (-> param-ctx
-                      (assoc :db db
-                             :find-element fe
-                             ; todo custom user-dispatch with all the tx-fns as reducers
-                             :user-with! (fn [tx] ((:dispatch! param-ctx) (actions/with (.-conn-id db) (.-branch db) tx))))
-                      (form-util/entity-param-ctx entity))]
+        param-ctx (-> (context/find-element param-ctx db fe)
+                      (context/entity entity))]
     (->> colspec (mapv #(Value % entity-anchors-lookup param-ctx)))))
 
 (defn Relation [relation colspec fe-anchors-lookup param-ctx]
@@ -118,7 +111,7 @@
        (mapcat #(FindElement % fe-anchors-lookup param-ctx))))
 
 (defn Row [relation colspec anchors param-ctx]
-  (let [param-ctx (assoc param-ctx :result relation) ; todo :result -> :relation
+  (let [param-ctx (context/relation param-ctx relation)
         fe-anchors-lookup (group-by (comp :find-element/name :anchor/find-element) anchors)]
     ^{:key (hash (util/map-values #(or (:db/id %) (-> % :anchor/ident)) relation))}
     [:tr
@@ -130,9 +123,10 @@
                                   (mapcat (fn [[fe colspec]]
                                             (let [fe-name (-> fe :find-element/name)
                                                   entity (get relation fe-name) _ (assert entity)
+                                                  db (ffirst colspec)
                                                   param-ctx (-> param-ctx
-                                                                (assoc :db (ffirst colspec) :find-element fe)
-                                                                (form-util/entity-param-ctx entity))
+                                                                (context/find-element db fe)
+                                                                (context/entity entity))
                                                   fe-anchors (->> (get fe-anchors-lookup fe-name)
                                                                   (filter :anchor/repeating?)
                                                                   (remove :anchor/attribute)
@@ -175,8 +169,8 @@
                                       (group-by (fn [[dbval fe attr maybe-field]] fe))
                                       (mapcat (fn [[fe colspec]]
                                                 (let [form-anchors (get anchors-lookup (-> fe :find-element/name))
-                                                      param-ctx (assoc param-ctx :db (ffirst colspec)
-                                                                                 :find-element fe)]
+                                                      db (ffirst colspec)
+                                                      param-ctx (context/find-element param-ctx db fe)]
                                                   (widget/render-anchors form-anchors param-ctx))))))
             links-index-inline (widget/render-inline-anchors (->> anchors ; busted
                                                                   (remove :anchor/repeating?)

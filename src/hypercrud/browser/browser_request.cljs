@@ -4,6 +4,7 @@
             [hypercrud.browser.anchor :as anchor]
             [hypercrud.browser.auto-link :as auto-link]
             [hypercrud.browser.base :as base]
+            [hypercrud.browser.context :as context]
             [hypercrud.client.core :as hc]
             [hypercrud.client.schema :as schema-util]))
 
@@ -17,8 +18,8 @@
     ; the param-ctx needs to be updated (branched, etc), but NOT BEFORE determining the route
     ; that MUST happen in the parent context
     (let [route' (anchor/build-anchor-route' anchor param-ctx)
-          param-ctx (-> (anchor/anchor-branch-logic anchor param-ctx)
-                        (dissoc :result :db :find-element :entity :attribute :value :layout :field)
+          param-ctx (-> (context/anchor-branch param-ctx anchor)
+                        (context/clean)
                         (update :debug #(str % ">popover-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]")))]
       (either/branch route'
                      (constantly nil)
@@ -54,35 +55,35 @@
       (->> ((:relation-new lookup)) (mapcat #(recurse-request % param-ctx)))
       (->> find-elements                                    ; might have empty results
            (mapcat (fn [fe]
-                     (let [param-ctx (assoc param-ctx
-                                       :db (let [conn-id (-> fe :find-element/connection :db/id :id)]
-                                             (hc/db (:peer param-ctx) conn-id (get-in param-ctx [:branches conn-id])))
-                                       :find-element fe)]
+                     (let [db (let [conn-id (-> fe :find-element/connection :db/id :id)]
+                                (hc/db (:peer param-ctx) conn-id (get-in param-ctx [:branches conn-id])))
+                           param-ctx (context/find-element param-ctx db fe)]
                        (concat
                          (->> ((:entity-f lookup) fe) (mapcat #(recurse-request % param-ctx)))
                          (->> (get-in fe [:find-element/form :form/field])
                               (mapcat (fn [field]
                                         (let [attribute (-> field :field/attribute)
-                                              param-ctx (assoc param-ctx :attribute attribute)]
+                                              param-ctx (context/attribute param-ctx attribute)]
                                           (->> ((:entity-attr-f lookup) fe attribute) (mapcat #(recurse-request % param-ctx))))))))))))
       (->> result
            (mapcat (fn [relation]
-                     (let [param-ctx (assoc param-ctx :result relation)]
+                     (let [param-ctx (context/relation param-ctx relation)]
                        (concat (->> ((:relation lookup)) (mapcat #(recurse-request % param-ctx)))
                                (->> find-elements
                                     (mapcat (fn [fe]
                                               (let [entity (get relation (:find-element/name fe))
-                                                    param-ctx (assoc param-ctx :db (let [conn-id (-> fe :find-element/connection :db/id :id)]
-                                                                                     (hc/db (:peer param-ctx) conn-id (get-in param-ctx [:branches conn-id])))
-                                                                               :find-element fe
-                                                                               :entity entity)]
+                                                    db (let [conn-id (-> fe :find-element/connection :db/id :id)]
+                                                         (hc/db (:peer param-ctx) conn-id (get-in param-ctx [:branches conn-id])))
+                                                    param-ctx (-> param-ctx
+                                                                  (context/find-element db fe)
+                                                                  (context/entity entity))]
                                                 (concat
                                                   (->> ((:entity-t lookup) fe) (mapcat #(recurse-request % param-ctx)))
                                                   (->> (get-in fe [:find-element/form :form/field])
                                                        (mapcat (fn [field]
                                                                  (let [attribute (-> field :field/attribute)
-                                                                       param-ctx (assoc param-ctx :attribute attribute
-                                                                                                  :value (get entity (:attribute/ident attribute)))]
+                                                                       param-ctx (-> (context/attribute param-ctx attribute)
+                                                                                     (context/value (get entity (:attribute/ident attribute))))]
                                                                    (->> ((:entity-attr-t lookup) fe attribute) (mapcat #(recurse-request % param-ctx))))))))
                                                 ))))))))))))
 
@@ -103,23 +104,24 @@
       (cats/extract)))
 
 (defn request' [route param-ctx]
-  (if (auto-link/system-link? (:link-dbid route))
-    (let [system-link-idmap (-> route :link-dbid :id)
-          system-link-requests (auto-link/request-for-system-link (:root-db param-ctx) system-link-idmap)]
-      (concat
-        (remove nil? system-link-requests)
-        (-> (mapv #(if % (hc/hydrate (:peer param-ctx) %) (either/right nil)) system-link-requests)
-            (cats/sequence)
-            (either/branch
-              (constantly nil)
-              (fn [system-link-deps]
-                (let [link (auto-link/hydrate-system-link system-link-idmap system-link-deps param-ctx)]
-                  (requests-for-link link (:query-params route) param-ctx)))))))
-    (let [meta-link-request (base/meta-request-for-link (:root-db param-ctx) (:link-dbid route))]
-      (concat [meta-link-request]
-              (-> (hc/hydrate (:peer param-ctx) meta-link-request)
-                  (either/branch (constantly nil)
-                                 #(requests-for-link % (:query-params route) param-ctx)))))))
+  (let [param-ctx (context/route param-ctx route)]
+    (if (auto-link/system-link? (:link-dbid route))
+      (let [system-link-idmap (-> route :link-dbid :id)
+            system-link-requests (auto-link/request-for-system-link (:root-db param-ctx) system-link-idmap)]
+        (concat
+          (remove nil? system-link-requests)
+          (-> (mapv #(if % (hc/hydrate (:peer param-ctx) %) (either/right nil)) system-link-requests)
+              (cats/sequence)
+              (either/branch
+                (constantly nil)
+                (fn [system-link-deps]
+                  (let [link (auto-link/hydrate-system-link system-link-idmap system-link-deps param-ctx)]
+                    (requests-for-link link (:query-params route) param-ctx)))))))
+      (let [meta-link-request (base/meta-request-for-link (:root-db param-ctx) (:link-dbid route))]
+        (concat [meta-link-request]
+                (-> (hc/hydrate (:peer param-ctx) meta-link-request)
+                    (either/branch (constantly nil)
+                                   #(requests-for-link % (:query-params route) param-ctx))))))))
 
 (defn request [anchor param-ctx]
   (if (:anchor/link anchor)
@@ -129,4 +131,4 @@
           (fn [route]
             (request' route
                       ; entire context must be encoded in the route
-                      (dissoc param-ctx :result :db :find-element :entity :attribute :value)))))))
+                      (context/clean param-ctx)))))))

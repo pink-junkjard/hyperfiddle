@@ -4,6 +4,7 @@
             [hypercrud.browser.anchor :as anchor]
             [hypercrud.browser.auto-link :as auto-link]
             [hypercrud.browser.base :as base]
+            [hypercrud.browser.context :as context]
             [hypercrud.client.core :as hc]
             [hypercrud.client.schema :as schema-util]
             [hypercrud.compile.eval :refer [eval-str']]
@@ -35,7 +36,7 @@
 (defn ui' [{query-params :query-params :as route} param-ctx
            ; hack for first pass on select options
            & [override-get-ui-f]]
-  (let [param-ctx (assoc param-ctx :route route)
+  (let [param-ctx (context/route param-ctx route)
         get-ui-f (or override-get-ui-f get-ui-f)]
     (mlet [link (hydrate-link (:link-dbid route) param-ctx) ; always latest
            request (base/request-for-link link query-params param-ctx)
@@ -51,7 +52,7 @@
       (mlet [route (anchor/build-anchor-route' anchor param-ctx)]
         (ui' route
              ; entire context must be encoded in the route
-             (dissoc param-ctx :result :db :find-element :entity :attribute :value :layout :field))))))
+             (context/clean param-ctx))))))
 
 (defn ui-error-inline [e ctx]
   (let [detail (if (:dev-open ctx) (str " -- " (pr-str (:data e))))]

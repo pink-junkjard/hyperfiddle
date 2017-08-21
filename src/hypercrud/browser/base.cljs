@@ -85,7 +85,7 @@
   (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
         param-ctx (assoc param-ctx                          ; provide defaults before user-bindings run. TODO query side
                     :schema indexed-schema                  ; For tx/entity->statements in userland.
-                    :query-params query-params
+                    :query-params query-params              ; who uses query-params?
                     :read-only (or (:read-only param-ctx) never-read-only))
 
         ; ereq doesn't have a fe yet; wrap with a fe.

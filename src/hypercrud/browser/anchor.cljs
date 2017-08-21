@@ -3,16 +3,14 @@
             [cats.monad.either :as either]
             [cats.monad.exception :as exception]
             [clojure.set :as set]
-            [hypercrud.browser.auto-anchor-formula :refer [auto-entity-dbid]]
             [hypercrud.browser.connection-color :as connection-color]
-            [hypercrud.client.core :as hc]
+            [hypercrud.browser.context :as context]
             [hypercrud.compile.eval :as eval :refer [eval-str']]
             [hypercrud.form.q-util :as q-util]
             [hypercrud.state.actions.core :as actions]
-            [hypercrud.util.branch :as branch]
+            [hypercrud.util.core :refer [pprint-str]]
             [hypercrud.util.monad :refer [exception->either]]
-            [promesa.core :as p]
-            [hypercrud.util.core :refer [pprint-str]]))
+            [promesa.core :as p]))
 
 
 (defn safe-run-user-code-str' [code-str & args]
@@ -93,19 +91,6 @@
                    (interpose " ")
                    (apply str))})))
 
-(defn anchor-branch-logic [anchor param-ctx]
-  (if (:anchor/managed? anchor)
-    (if-let [db (:db param-ctx)]
-      (let [branch (branch/encode-branch-child (.-branch db) (:id (auto-entity-dbid param-ctx)))]
-        (-> param-ctx
-            ; if we are an index link, what are we forking? Provide a binding
-            (assoc-in [:branches (.-conn-id db)] branch)
-            (update :db #(hc/db (:peer param-ctx) (.-conn-id %) branch))))
-      (do
-        (js/console.warn "You are attempting to branch an index-link. We can't deduce the :db to branch, you must explicitly set it in user bindings.")
-        param-ctx))
-    param-ctx))
-
 ; if this is driven by anchor, and not route, it needs memoized.
 ; the route is a fn of the formulas and the formulas can have effects
 ; which have to be run only once.
@@ -127,7 +112,7 @@
                      (cats/extract))
         route' (build-anchor-route' anchor param-ctx)
         hypercrud-props (build-anchor-props-raw route' anchor param-ctx)
-        param-ctx (anchor-branch-logic anchor param-ctx)
+        param-ctx (context/anchor-branch param-ctx anchor)
         anchor-props-txfn (if-let [user-txfn (some-> (eval/validate-user-code-str (:anchor/tx-fn anchor))
                                                      eval-str'
                                                      (cats/mplus (either/right nil))
@@ -166,7 +151,7 @@
                                             [hypercrud.browser.core/safe-ui' ; cycle
                                              route          ; draw the branch
                                              (-> param-ctx
-                                                 (dissoc :result :db :find-element :entity :attribute :value :layout :field)
+                                                 (context/clean)
                                                  (update :debug #(str % ">popover-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]")))]])})
         anchor-props-hidden {:hidden (not visible?)}]
     (merge hypercrud-props anchor-props-txfn anchor-props-popover anchor-props-hidden)))
