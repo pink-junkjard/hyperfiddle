@@ -29,14 +29,13 @@
       hash js/Math.abs - str
       ))
 
-(defn auto-entity-dbid [ctx & [conn-id]]
-  ; second arity should be removed - bind :db in dynamic scope instead.
+(defn auto-entity-dbid [ctx]
   (->DbId (deterministic-ident
             (-> ctx :find-element)
             (-> ctx :entity)
             (-> ctx :attribute)
             (-> ctx :value))
-          (or conn-id (-> ctx :entity :db/id :conn-id))))
+          (-> ctx :db :conn-id)))
 
 (def auto-formula-lookup
   (let [fe-no-create (->> (template/load-resource "auto-formula/fe-no-create.vedn")
