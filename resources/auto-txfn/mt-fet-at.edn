@@ -1,9 +1,6 @@
-(fn [ctx tx-from-modal]
-  (let [new-dbid (hypercrud.browser.auto-anchor-formula/auto-entity-dbid ctx)]
-    {:tx (concat
-           tx-from-modal
-           (hypercrud.client.tx/edit-entity
-             (-> ctx :entity :db/id)
-             (-> ctx :attribute :attribute/ident)
-             []
-             [new-dbid]))}))
+(fn [ctx modal-tx modal-route]
+  (let [modal-entity-dbid (-> modal-route :query-params :entity) ; e.g. table-cell value or form-field value
+        parent-entity-dbid (-> ctx :entity :db/id)          ; e.g. table-row entity or form entity
+        attr (-> ctx :attribute :attribute/ident)
+        parent-child-ref (hypercrud.client.tx/edit-entity parent-entity-dbid attr [] [modal-entity-dbid])]
+    {:tx (concat modal-tx parent-child-ref)}))

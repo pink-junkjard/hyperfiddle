@@ -11,8 +11,7 @@
               (str-and-code' (eval/eval-str-and-throw code-str) code-str)))]
     {{:m true :fe true :a true} (-> (template/load-resource "auto-txfn/mt-fet-at.edn")
                                     process-resource)
-     {:m true :fe true :a false} (-> (template/load-resource "auto-txfn/mt-fet-af.edn")
-                                     process-resource)
+     {:m true :fe true :a false} nil
 
      {:m true :fe false :a true} nil
      {:m true :fe false :a false} nil

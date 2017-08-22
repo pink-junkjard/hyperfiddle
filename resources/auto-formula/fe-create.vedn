@@ -32,7 +32,7 @@
 {:d? false :a false}
 ==
 (fn [ctx]
-  {:entity (hypercrud.browser.auto-anchor-formula/auto-entity-dbid ctx (-> ctx :find-element :find-element/connection :db/id :id))})
+  {:entity (hypercrud.browser.auto-anchor-formula/auto-entity-dbid-from-stage ctx)})
 
 
 ==
@@ -42,5 +42,5 @@
 {:d? false :a true}
 ==
 (fn [ctx]
-  {:entity (hypercrud.browser.auto-anchor-formula/auto-entity-dbid ctx (-> ctx :db .-conn-id))})
+  {:entity (hypercrud.browser.auto-anchor-formula/auto-entity-dbid-from-stage ctx)})
 ==

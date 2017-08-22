@@ -46,7 +46,7 @@
             [re-com/popover-anchor-wrapper
              :showing? state-popover
              :position :below-center
-             :anchor (if (:txfns hypercrud-props)
+             :anchor (if (:popover hypercrud-props)
                        (let [btn-props (assoc anchor-props :on-click #(when-not (:disabled anchor-props)
                                                                         (reset! state-popover true)))]
                          [:button btn-props [:span label]])
@@ -56,7 +56,7 @@
                        [native-listener (select-keys anchor-props [:on-click])
                         [:a (dissoc anchor-props :on-click)
                          [:span label]]])
-             :popover (let [{cancel! :cancel stage! :stage} (:txfns hypercrud-props)]
+             :popover (let [{cancel! :cancel stage! :stage :or {stage! #() cancel! #()}} (:txfns hypercrud-props)]
                         [re-com/popover-content-wrapper
                          :on-cancel (fn []
                                       (reset! state-popover false)

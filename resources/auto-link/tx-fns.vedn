@@ -4,24 +4,27 @@
 ==
 :entity-remove
 ==
-(fn [ctx tx-from-modal]
-  {:tx (concat tx-from-modal
-               [[:db.fn/retractEntity (-> ctx :entity :db/id)]])})
+(fn [ctx modal-tx modal-route]
+  {:tx (concat
+         modal-tx
+         [[:db.fn/retractEntity (-> ctx :entity :db/id)]])})
 ==
 
 
 :value-remove-one
 ==
-(fn [ctx tx-from-modal]
-  {:tx (concat tx-from-modal
-               [[:db.fn/retractEntity (-> ctx :value :db/id)]])})
+(fn [ctx modal-tx modal-route]
+  {:tx (concat
+         modal-tx
+         [[:db.fn/retractEntity (-> ctx :value :db/id)]])})
 ==
 
 
 :value-remove-many
 ==
-(fn [ctx tx-from-modal]
-  {:tx (concat tx-from-modal
-               (->> (:value ctx)
-                    (mapv (fn [e] [:db.fn/retractEntity (:db/id e)]))))})
+(fn [ctx modal-tx modal-route]
+  {:tx (concat
+         modal-tx
+         (->> (:value ctx)
+              (mapv (fn [e] [:db.fn/retractEntity (:db/id e)]))))})
 ==

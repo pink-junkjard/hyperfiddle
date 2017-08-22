@@ -30,10 +30,10 @@
 (defn with [conn-id branch tx]
   (partial hydrating-action {:on-start (constantly [[:with conn-id branch tx]])}))
 
-(defn stage-popover [conn-id branch swap-fn]
+(defn stage-popover [conn-id branch swap-fn-async]
   (fn [dispatch! get-state]
-    (let [tx-from-modal (get-in (get-state) [:stage conn-id branch] [])]
-      (p/then (swap-fn tx-from-modal)
+    (let [modal-tx (get-in (get-state) [:stage conn-id branch] [])]
+      (p/then (swap-fn-async modal-tx)
               (fn [{:keys [tx app-route]}]
                 (let [actions [[:reset-branch conn-id branch tx]
                                [:merge conn-id branch]

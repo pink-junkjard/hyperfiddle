@@ -113,31 +113,28 @@
         route' (build-anchor-route' anchor param-ctx)
         hypercrud-props (build-anchor-props-raw route' anchor param-ctx)
         param-ctx (context/anchor-branch param-ctx anchor)
-        anchor-props-txfn (if-let [user-txfn (some-> (eval/validate-user-code-str (:anchor/tx-fn anchor))
-                                                     eval-str'
-                                                     (cats/mplus (either/right nil))
-                                                     (cats/extract))]
-                            (do
-                              ;(assert (-contains-key? param-ctx :db))
-                              ; do we need to hydrate any dependencies in this chain?
-                              {:txfns {:stage (fn []
-                                                (p/promise (fn [resolve reject]
-                                                             (let [swap-fn (fn [tx-from-modal] ; needs the route's :entity dbid
-                                                                             ; todo why does the user-txfn have access to the parent link's :db :result etc?
-                                                                             (let [result (let [result (user-txfn param-ctx tx-from-modal (:route hypercrud-props))]
-                                                                                            ; txfn may be sync or async
-                                                                                            (if-not (p/promise? result) (p/resolved result) result))]
-                                                                               ; let the caller of this :stage fn know the result
-                                                                               (p/branch result
-                                                                                         (fn [result] (resolve nil))
-                                                                                         (fn [why]
-                                                                                           (reject why)
-                                                                                           (js/console.error why)))
+        anchor-props-txfn {:txfns {:cancel #((:dispatch! param-ctx) (actions/discard (.-conn-id (:db param-ctx)) (.-branch (:db param-ctx))))
+                                   :stage (let [user-txfn (some-> (eval/validate-user-code-str (:anchor/tx-fn anchor)) eval-str' (cats/mplus (either/right nil)) (cats/extract))
+                                                user-txfn (or user-txfn (fn [ctx modal-tx modal-route] {:tx modal-tx}))]
+                                            (fn []
+                                              (p/promise
+                                                (fn [resolve! reject!]
+                                                  (let [swap-fn (fn [modal-tx]
+                                                                  ; todo why does the user-txfn have access to the parent link's :db :result etc?
+                                                                  (let [result (let [result (user-txfn param-ctx modal-tx (:route hypercrud-props))]
+                                                                                 ; txfn may be sync or async
+                                                                                 (if-not (p/promise? result) (p/resolved result) result))]
+                                                                    ; let the caller of this :stage fn know the result
+                                                                    ; This is super funky, a swap-fn should not be effecting, but seems like it would work.
+                                                                    (p/branch result
+                                                                              (fn [v] (resolve! nil))
+                                                                              (fn [e]
+                                                                                (reject! e)
+                                                                                (js/console.warn e)))
 
-                                                                               ; return the result to the action
-                                                                               result))]
-                                                               ((:dispatch! param-ctx) (actions/stage-popover (.-conn-id (:db param-ctx)) (.-branch (:db param-ctx)) swap-fn))))))
-                                       :cancel #((:dispatch! param-ctx) (actions/discard (.-conn-id (:db param-ctx)) (.-branch (:db param-ctx))))}}))
+                                                                    ; return the result to the action, it could be a promise
+                                                                    result))]
+                                                    ((:dispatch! param-ctx) (actions/stage-popover (.-conn-id (:db param-ctx)) (.-branch (:db param-ctx)) swap-fn)))))))}}
 
         ; the whole point of popovers is managed branches
         anchor-props-popover (if-let [route (and (:anchor/managed? anchor) (either/right? route') (cats/extract route'))]
