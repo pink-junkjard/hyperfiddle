@@ -151,4 +151,4 @@
                                                  (context/clean)
                                                  (update :debug #(str % ">popover-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]")))]])})
         anchor-props-hidden {:hidden (not visible?)}]
-    (merge hypercrud-props anchor-props-txfn anchor-props-popover anchor-props-hidden)))
+    (merge anchor-props-hidden hypercrud-props anchor-props-txfn anchor-props-popover)))
