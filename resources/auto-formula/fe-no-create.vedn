@@ -15,6 +15,9 @@
 (fn [ctx]
   (case (-> ctx :attribute :attribute/cardinality :db/ident)
     :db.cardinality/one {:entity (get-in ctx [:value :db/id])}
+
+    ; "find children of parent entity at attr"
+    ; :entity would be better named :parent. See base ->EntityRequest
     :db.cardinality/many {:entity (get-in ctx [:entity :db/id])
                           :a (-> ctx :attribute :attribute/ident)}))
 
