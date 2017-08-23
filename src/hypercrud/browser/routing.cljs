@@ -1,11 +1,7 @@
 (ns hypercrud.browser.routing
   (:require [cljs.reader :as reader]
             [clojure.string :as string]
-            [hypercrud.client.core :as hc]
-            [hypercrud.types.DbId :refer [->DbId]]
             [hypercrud.util.base-64-url-safe :as base64]))
-
-(def ^:dynamic *index-route* nil)
 
 (defn slugify [s] s)
 
@@ -27,4 +23,4 @@
       ;(not (nil? project-name)) {:project (unslugify project-name)}
 
       ; The only way to get to / is if the user types it in. We never ever link to /, and nginx & node should redirect to the canonical.
-      :else *index-route*)))
+      :else nil)))

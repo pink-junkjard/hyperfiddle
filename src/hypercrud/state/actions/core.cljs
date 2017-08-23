@@ -16,10 +16,10 @@
           ((soft-set-route route) dispatch! get-state)
           (hydrating-action {:on-start (constantly [[:hard-set-route route]])} dispatch! get-state))))))
 
-(defn set-route-encoded [encoded-route-str]
+(defn set-route-encoded [encoded-route-str index-route]
   (try
     ; bad urls can throw on decode
-    (set-route (routing/decode encoded-route-str))
+    (set-route (or (routing/decode encoded-route-str) index-route))
     (catch :default e
       ; todo clean up other state values: remove the response, old route, etc
       [:set-error e])))
