@@ -10,7 +10,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          key: project-{{checksum "boot.properties" }}-{{ checksum "build.boot" }}
+          key: project-{{checksum "boot.properties" }}-{{ checksum "build.boot" }}-{{ checksum "platform.boot" }}
 
       - run:
           name: build client
@@ -27,4 +27,4 @@ jobs:
             - ~/.m2
             - ~/.boot/cache/lib
             - ~/.boot/cache/bin
-          key: project-{{checksum "boot.properties" }}-{{ checksum "build.boot" }}
+          key: project-{{checksum "boot.properties" }}-{{ checksum "build.boot" }}-{{ checksum "platform.boot" }}
