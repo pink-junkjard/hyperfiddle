@@ -179,10 +179,12 @@
                                                              (dissoc param-ctx :isComponent))]
         [:div.ui-table-with-links
          links-index
-         [:table.ui-table
-          [:thead [:tr
-                   (build-col-heads colspec anchors sort-col param-ctx)
-                   [:td.link-cell {:key :link-cell} links-fe-no-entity]]]
-          ; Sometimes the leafnode needs all the anchors.
-          [:tbody (apply react-fragment :tbody (Resultset relations colspec anchors sort-col param-ctx))]]
+         (if (empty? colspec)
+           [:div "Can't infer table structure - no resultset and no form. Fix query or model a form."]
+           [:table.ui-table
+            [:thead [:tr
+                     (build-col-heads colspec anchors sort-col param-ctx)
+                     [:td.link-cell {:key :link-cell} links-fe-no-entity]]]
+            ; Sometimes the leafnode needs all the anchors.
+            [:tbody (apply react-fragment :tbody (Resultset relations colspec anchors sort-col param-ctx))]])
          links-index-inline]))))
