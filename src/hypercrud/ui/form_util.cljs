@@ -63,7 +63,7 @@ the find-element level has been flattened out of the columns."
 
                     col-idents (if (or raw-mode? (empty? (keys indexed-fields)))
                                  (let [entities (map second relation-for-fe)]
-                                   (reduce (fn [acc v] (into acc (keys v))) #{} entities))
+                                   (reduce (fn [acc v] (into acc (keys (dissoc v :db/id)))) #{} entities))
                                  (keys indexed-fields))
                     col-idents' (sort-by (fn [k]
                                            (if-let [field (get indexed-fields k)]
@@ -74,6 +74,7 @@ the find-element level has been flattened out of the columns."
                     db (fe->db fe param-ctx)]
                 (mapcat (fn [ident]
                           ; :db/id is missing from schema so fake it here, it has no valueType
+                          ; shouldn't we just remove :db/id entirely?
                           (let [attr (get schema ident {:attribute/ident ident})
                                 field (get indexed-fields ident)]
                             [db fe attr field])) col-idents')))
