@@ -42,8 +42,8 @@
            request (base/request-for-link link query-params param-ctx)
            result (if request (hc/hydrate (:peer param-ctx) request) (either/right nil))
            ; schema is allowed to be nil if the link only has anchors and no data dependencies
-           schema (hc/hydrate (:peer param-ctx) (schema-util/schema-request (:root-db param-ctx) nil))]
-      (base/process-results get-ui-f query-params link request result schema param-ctx))))
+           schemas (schema-util/hydrate-schema link param-ctx)]
+      (base/process-results get-ui-f query-params link request result schemas param-ctx))))
 
 (defn ui [anchor param-ctx]
   (let [anchor-props (anchor/build-anchor-props anchor param-ctx)] ; LOOOOOLLLLLL we are dumb

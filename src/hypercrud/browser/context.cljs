@@ -9,6 +9,7 @@
   ; why not query-params and all the custom ui/render fns?
   (dissoc param-ctx
           :route :result
+          :schemas
           :db :find-element :schema
           :entity :attribute :value
           :layout :field))
@@ -36,6 +37,7 @@
 (defn find-element [param-ctx db fe]
   (assoc param-ctx :db db
                    :find-element fe
+                   :schema (get-in param-ctx [:schemas (:find-element/name fe)])
                    ; todo custom user-dispatch with all the tx-fns as reducers
                    :user-with! (fn [tx] ((:dispatch! param-ctx) (actions/with (.-conn-id db) (.-branch db) tx)))))
 

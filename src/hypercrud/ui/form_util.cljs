@@ -47,7 +47,7 @@ especially consider the '* case, so we need a uniform column set driving the bod
 with the headers but the resultset needs to match this column-fields structure now too; since
 the find-element level has been flattened out of the columns."
   ; Need result only for raw mode.
-  [result link schema param-ctx]
+  [result link schemas param-ctx]
   (let [result (if (map? result) [result] result)           ; unified colspec for table and form
         ordered-find-elements (-> (get-ordered-find-elements link param-ctx)
                                   (strip-forms-in-raw-mode param-ctx))
@@ -71,7 +71,8 @@ the find-element level has been flattened out of the columns."
                                              ; raw mode sort is by namespaced attribute, per find-element
                                              k))
                                          col-idents)
-                    db (fe->db fe param-ctx)]
+                    db (fe->db fe param-ctx)
+                    schema (get schemas (:find-element/name fe))]
                 (mapcat (fn [ident]
                           ; :db/id is missing from schema so fake it here, it has no valueType
                           ; shouldn't we just remove :db/id entirely?

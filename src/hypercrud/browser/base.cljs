@@ -81,10 +81,9 @@
 
     (either/right nil)))
 
-(defn process-results [get-f query-params link request result schema param-ctx]
-  (let [indexed-schema (->> (mapv #(get % "?attr") schema) (util/group-by-assume-unique :attribute/ident))
-        param-ctx (assoc param-ctx                          ; provide defaults before user-bindings run. TODO query side
-                    :schema indexed-schema                  ; For tx/entity->statements in userland.
+(defn process-results [get-f query-params link request result schemas param-ctx]
+  (let [param-ctx (assoc param-ctx                          ; provide defaults before user-bindings run. TODO query side
+                    :schemas schemas                        ; For tx/entity->statements in userland.
                     :query-params query-params              ; who uses query-params?
                     :read-only (or (:read-only param-ctx) never-read-only))
 
@@ -99,12 +98,11 @@
                    (empty? result) (if (.-a request)
                                      ; comes back as [] sometimes if cardinaltiy many request. this is causing problems as nil or {} in different places.
                                      ; Above comment seems backwards, left it as is
-                                     (case (-> (get indexed-schema (.-a request)) :attribute/cardinality :db/ident)
+                                     (case (-> (get-in schemas [fe-conn (.-a request)]) :attribute/cardinality :db/ident)
                                        :db.cardinality/one {}
                                        :db.cardinality/many []))
                    (map? result) {"entity" result}
                    (coll? result) (mapv (fn [relation] {"entity" relation}) result))
-
 
                  :query
                  (cond
@@ -113,7 +111,7 @@
 
                  result)
 
-        colspec (form-util/determine-colspec result link indexed-schema param-ctx)
+        colspec (form-util/determine-colspec result link schemas param-ctx)
         f (get-f link param-ctx)]
     (mlet [param-ctx (user-bindings/user-bindings' link param-ctx)]
       (cats/return
