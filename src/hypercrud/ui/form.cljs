@@ -38,15 +38,14 @@
         ;          [:pre (js/pprint-str (cats/extract maybe-visible'))])
         ]
     [:div.field {:style {:border-color (connection-color/connection-color (:color param-ctx))}}
-     (let [param-ctx (dissoc param-ctx :entity :value)      ; this dissoc is smelly
-           [anchors] (-> (remove :anchor/repeating? anchors)
-                         #_(filter #(= (-> fe :db/id) (-> % :anchor/find-element :db/id))) #_"entity"
-                         (widget/process-option-popover-anchors param-ctx))]
+     (let [[anchors] (as-> anchors $
+                           (remove :anchor/repeating? $)      ; because we're in the label
+                           (widget/process-option-anchors $ param-ctx))]
        [:div.hc-label
         [:label (form-util/field-label maybe-field param-ctx)]
         [:div.anchors
          (widget/render-anchors (->> anchors (remove :anchor/render-inline?)) param-ctx)
-         (widget/render-anchors (->> anchors (filter :anchor/render-inline?)) param-ctx)]])
+         (widget/render-inline-anchors (->> anchors (filter :anchor/render-inline?)) param-ctx)]])
      (control param-ctx)]))
 
 (defn new-field [entity param-ctx]
