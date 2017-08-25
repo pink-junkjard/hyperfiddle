@@ -1,7 +1,5 @@
 (ns hypercrud.ui.form
-  (:require [cats.core :as cats :refer [mlet]]
-            [cats.monad.either :as either]
-            [cats.monad.exception :as exception]
+  (:require [cats.core :refer [mlet]]
             [hypercrud.browser.connection-color :as connection-color]
             [hypercrud.browser.context :as context]
             [hypercrud.compile.eval :refer [eval-str']]
@@ -10,6 +8,7 @@
             [hypercrud.ui.input :as input]
             [hypercrud.ui.renderer :as renderer]
             [hypercrud.ui.widget :as widget]
+            [hypercrud.util.core :as util]
             [hypercrud.util.monad :refer [exception->either]]
             [reagent.core :as r]))
 
@@ -70,14 +69,14 @@
   (let [param-ctx (-> (context/relation param-ctx relation)
                       (assoc :layout (:layout param-ctx :block)))
         anchors (widget/process-popover-anchors anchors param-ctx)
-        anchors-lookup (->> (remove :anchor/attribute anchors)
-                            (group-by (comp :find-element/name :anchor/find-element)))
+        anchors-lookup (->> (group-by (comp :find-element/name :anchor/find-element) anchors)
+                            (util/map-values (partial group-by :anchor/attribute)))
         fields (->> (partition 4 colspec)
                     (group-by (fn [[dbval fe attr maybe-field]] fe))
                     (mapcat
                       (fn [[fe colspec]]
                         (let [fe-name (-> fe :find-element/name)
-                              form-anchors (get anchors-lookup fe-name)
+                              form-anchors (get-in anchors-lookup [fe-name nil])
                               entity-new-anchors (->> form-anchors (remove :anchor/repeating?))
                               entity-anchors (->> form-anchors (filter :anchor/repeating?))
                               db (ffirst colspec)
@@ -98,10 +97,10 @@
                                                                    (if (= ident :db/id) (assoc $ :read-only always-read-only) $))
                                                    field (case (:display-mode param-ctx) :xray field :user (get param-ctx :field field))
                                                    control (case (:display-mode param-ctx) :xray control :user (get param-ctx :control control))
-                                                   anchors (filter #(= (-> param-ctx :attribute :db/ident) (:anchor/attribute %)) anchors)] ; todo filter on conn too, ident isn't unique across dbs
+                                                   attr-anchors (get-in anchors-lookup [fe-name (-> param-ctx :attribute :db/ident)])]
                                                ; What is the user-field allowed to change? The param-ctx. Can it change links or anchors? no.
                                                ^{:key (str ident)}
-                                               [field #(control maybe-field anchors %) maybe-field anchors param-ctx]))))
+                                               [field #(control maybe-field attr-anchors %) maybe-field attr-anchors param-ctx]))))
                                 (widget/render-inline-anchors (filter :anchor/render-inline? entity-anchors) param-ctx)))
                             (widget/render-inline-anchors (filter :anchor/render-inline? entity-new-anchors) param-ctx))))))
         not-splat? (and (not (empty? colspec))

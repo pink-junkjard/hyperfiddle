@@ -31,47 +31,48 @@
                (:db/ident valueType))))
 
 (defn build-col-heads [colspec anchors col-sort param-ctx]
-  (->> (partition 4 colspec)
-       (group-by (fn [[dbval fe attr maybe-field]] fe))
-       (mapcat (fn [[fe colspec]]
-                 (let [db (ffirst colspec)
-                       param-ctx (context/find-element param-ctx db fe)]
-                   (->> colspec
-                        (mapv (fn [[db fe attr field]]
-                                (let [fe-name (-> fe :find-element/name)
-                                      ident (-> attr :db/ident)
-                                      param-ctx (context/attribute param-ctx attr)
-                                      css-classes [(str "field-element-" (form-util/css-slugify fe-name))
-                                                   (str "field-attr-" (form-util/css-slugify (str ident)))] #_"Dustin removed field-id and field-prompt; use a custom renderer"
-                                      anchors (->> anchors
-                                                   (filter #(= (-> attr :db/ident) (:anchor/attribute %))) ; todo filter on conn too ident isn't unique across dbs)
-                                                   #_(filter #(= (-> fe :db/id) (-> % :anchor/find-element :db/id))) #_"entity"
-                                                   (remove :anchor/repeating?))
-                                      [anchors] (widget/process-option-popover-anchors anchors param-ctx)
+  (let [fe-anchors-lookup (->> (group-by (comp :find-element/name :anchor/find-element) anchors)
+                               (util/map-values (partial group-by :anchor/attribute)))]
+    (->> (partition 4 colspec)
+         (group-by (fn [[dbval fe attr maybe-field]] fe))
+         (mapcat (fn [[fe colspec]]
+                   (let [db (ffirst colspec)
+                         param-ctx (context/find-element param-ctx db fe)]
+                     (->> colspec
+                          (mapv (fn [[db fe attr field]]
+                                  (let [fe-name (-> fe :find-element/name)
+                                        ident (-> attr :db/ident)
+                                        param-ctx (context/attribute param-ctx attr)
+                                        css-classes [(str "field-element-" (form-util/css-slugify fe-name))
+                                                     (str "field-attr-" (form-util/css-slugify (str ident)))] #_"Dustin removed field-id and field-prompt; use a custom renderer"
+                                        anchors (->> (get-in fe-anchors-lookup [fe-name (:db/ident attr)])
+                                                     #_(filter #(= (-> fe :db/id) (-> % :anchor/find-element :db/id))) #_"entity"
+                                                     (remove :anchor/repeating?))
+                                        [anchors] (widget/process-option-popover-anchors anchors param-ctx)
 
-                                      [sort-fe-dbid sort-key direction] @col-sort
-                                      with-sort-direction (fn [asc desc no-sort not-sortable]
-                                                            (if (sortable? attr)
-                                                              (if (and (= (:db/id fe) sort-fe-dbid) (= sort-key ident))
-                                                                (case direction
-                                                                  :asc asc
-                                                                  :desc desc)
-                                                                no-sort)
-                                                              not-sortable))
+                                        [sort-fe-dbid sort-key direction] @col-sort
+                                        with-sort-direction (fn [asc desc no-sort not-sortable]
+                                                              (if (sortable? attr)
+                                                                (if (and (= (:db/id fe) sort-fe-dbid) (= sort-key ident))
+                                                                  (case direction
+                                                                    :asc asc
+                                                                    :desc desc)
+                                                                  no-sort)
+                                                                not-sortable))
 
-                                      on-click (with-sort-direction #(reset! col-sort [(:db/id fe) ident :desc])
-                                                                    #(reset! col-sort nil)
-                                                                    #(reset! col-sort [(:db/id fe) ident :asc])
-                                                                    (constantly nil))
-                                      arrow (with-sort-direction " ↓" " ↑" " ↕" nil)]
-                                  [:td {:class (string/join " " css-classes)
-                                        :style {:background-color (connection-color/connection-color (or (:color param-ctx) (.-conn-id db) #_"hack for top tables"))}
-                                        :key (str fe-name "-" ident)
-                                        :on-click on-click}
-                                   [:label (form-util/field-label field param-ctx)]
-                                   [:div.anchors (widget/render-anchors (->> anchors (remove :anchor/render-inline?)) param-ctx)]
-                                   (widget/render-inline-anchors (->> anchors (filter :anchor/render-inline?)) param-ctx)
-                                   [:span.sort-arrow arrow]])))))))))
+                                        on-click (with-sort-direction #(reset! col-sort [(:db/id fe) ident :desc])
+                                                                      #(reset! col-sort nil)
+                                                                      #(reset! col-sort [(:db/id fe) ident :asc])
+                                                                      (constantly nil))
+                                        arrow (with-sort-direction " ↓" " ↑" " ↕" nil)]
+                                    [:td {:class (string/join " " css-classes)
+                                          :style {:background-color (connection-color/connection-color (or (:color param-ctx) (.-conn-id db) #_"hack for top tables"))}
+                                          :key (str fe-name "-" ident)
+                                          :on-click on-click}
+                                     [:label (form-util/field-label field param-ctx)]
+                                     [:div.anchors (widget/render-anchors (->> anchors (remove :anchor/render-inline?)) param-ctx)]
+                                     (widget/render-inline-anchors (->> anchors (filter :anchor/render-inline?)) param-ctx)
+                                     [:span.sort-arrow arrow]]))))))))))
 
 (defn Control [maybe-field anchors param-ctx]
   (let [props (form-util/build-props maybe-field anchors param-ctx)]
@@ -93,8 +94,7 @@
                       (assoc :layout :table))
         field (case (:display-mode param-ctx) :xray Field :user (get param-ctx :field Field))
         control (case (:display-mode param-ctx) :xray Control :user (get param-ctx :control Control))
-        ; todo filter on conn too, ident isn't unique across dbs
-        anchors (filter #(= (-> param-ctx :attribute :db/ident) (:anchor/attribute %)) (get entity-anchors-lookup fe-name))]
+        anchors (get-in entity-anchors-lookup [fe-name (-> param-ctx :attribute :db/ident)])]
     ^{:key (or (:db/id maybe-field) (str fe-name ident))}
     [field #(control maybe-field anchors %) maybe-field anchors param-ctx]))
 
@@ -112,7 +112,8 @@
 
 (defn Row [relation colspec anchors param-ctx]
   (let [param-ctx (context/relation param-ctx relation)
-        fe-anchors-lookup (group-by (comp :find-element/name :anchor/find-element) anchors)]
+        fe-anchors-lookup (->> (group-by (comp :find-element/name :anchor/find-element) anchors)
+                               (util/map-values (partial group-by :anchor/attribute)))]
     ^{:key (hash (util/map-values #(or (:db/id %) (-> % :anchor/ident)) relation))}
     [:tr
      (apply react-fragment :table-row-form (Relation relation colspec fe-anchors-lookup param-ctx))
@@ -127,9 +128,8 @@
                                                   param-ctx (-> param-ctx
                                                                 (context/find-element db fe)
                                                                 (context/entity entity))
-                                                  fe-anchors (->> (get fe-anchors-lookup fe-name)
+                                                  fe-anchors (->> (get-in fe-anchors-lookup [fe-name nil])
                                                                   (filter :anchor/repeating?)
-                                                                  (remove :anchor/attribute)
                                                                   (remove :anchor/render-inline?))]
                                               (mapv vector fe-anchors (repeat param-ctx)))))))]]))
 
