@@ -32,7 +32,6 @@
                     {:anchor/link ['*                       ; hydrate the whole link for validating the anchor by query params
                                    {:hypercrud/owner ['*]}] ; need the link's owner to render the href to it
                      :anchor/find-element [:db/id :find-element/name :find-element/connection]}]
-      ; todo what about anchor/attribute?
       :hypercrud/owner ['*]}]))
 
 (defn meta-request-for-link [root-db link-dbid]             ; always latest
@@ -91,13 +90,15 @@
                    ; order matters here a lot!
                    (nil? result) nil
                    (empty? result) (if (.-a request)
-                                     (do
-                                       (js/console.log (pr-str request))
-                                       ; comes back as [] sometimes if cardinaltiy many request. this is causing problems as nil or {} in different places.
-                                       ; Above comment seems backwards, left it as is
-                                       (case (-> (get-in schemas [(.-e request) (.-a request)]) :db/cardinality :db/ident)
-                                         :db.cardinality/one {}
-                                         :db.cardinality/many [])))
+                                     ; comes back as [] sometimes if cardinaltiy many request. this is causing problems as nil or {} in different places.
+                                     ; Above comment seems backwards, left it as is
+                                     (case (let [fe-name (->> (:link-query/find-element link)
+                                                              (filter #(= (:find-element/name %) "entity"))
+                                                              first
+                                                              :find-element/name)]
+                                             (get-in schemas [fe-name (.-a request) :db/cardinality :db/ident]))
+                                       :db.cardinality/one {}
+                                       :db.cardinality/many []))
                    (map? result) {"entity" result}
                    (coll? result) (mapv (fn [relation] {"entity" relation}) result))
 

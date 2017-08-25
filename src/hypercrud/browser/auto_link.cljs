@@ -25,14 +25,13 @@
 
 (defn link-system-edit-attr [conn owner fe a]
   {:pre [conn fe a]}
-  (assert false "todo a? can we just use ident, why do we need a hydrated dbid?")
   {:db/id (->DbId {:ident :system-edit-attr
                    :owner (-> owner :db/id :id)
                    :conn (-> conn :db/id :id)
                    :fe (-> fe :db/id :id)
-                   :a (-> a :db/id :id)}
+                   :a a}
                   (-> conn :db/id :id))
-   :link/name (str "system-" (:find-element/name fe) "-" (:db/ident a))
+   :link/name (str "system-" (:find-element/name fe) "-" a)
    ;:hypercrud/owner owner
    :request/type :entity
    :link-query/find-element [{:find-element/name "entity"
@@ -40,10 +39,9 @@
 
 (defn link-blank-system-remove [owner fe a]
   {:pre []}
-  (assert false "todo a? can we just use ident, why do we need a hydrated dbid?")
   {:db/id (->DbId {:ident :sys-remove
                    :fe (-> fe :db/id :id)
-                   :a (-> a :db/id :id)} nil)
+                   :a a} nil)
    :link/name "sys-remove"
    ;:hypercrud/owner owner
    :request/type :blank
@@ -150,23 +148,13 @@
 
   [(->EntityRequest (->DbId (:owner system-link-idmap) hc/*root-conn-id*) nil root-db ['*])
    (if-let [conn (:conn system-link-idmap)] (->EntityRequest (->DbId conn hc/*root-conn-id*) nil root-db ['*]))
-   (if-let [fe (:fe system-link-idmap)] (->EntityRequest (->DbId fe hc/*root-conn-id*) nil root-db
-                                                         [:db/id
-                                                          :find-element/name
-                                                          :find-element/connection
-                                                          {:find-element/form ['* {:form/field ['*]}]}]))
-   ; todo why do we need this data? we are fetching schemas already
-   (if-let [a (:a system-link-idmap)] (->EntityRequest (->DbId a (assert false "todo get conn from fe or remove me")) nil root-db
-                                                       ['*
-                                                        {:db/valueType [:db/id :db/ident]
-                                                         :db/cardinality [:db/id :db/ident]
-                                                         :db/unique [:db/id :db/ident]}]))])
+   (if-let [fe (:fe system-link-idmap)] (->EntityRequest (->DbId fe hc/*root-conn-id*) nil root-db [:db/id :find-element/name]))])
 
-(defn hydrate-system-link [system-link-idmap [owner conn fe a] param-ctx]
-  (let [owner-id (:owner system-link-idmap)                 ; hydrate this?
+(defn hydrate-system-link [system-link-idmap [owner conn fe] param-ctx]
+  (let [owner-id (:owner system-link-idmap)
         conn-id (:conn system-link-idmap)
         fe-id (:fe system-link-idmap)
-        attr-id (:a system-link-idmap)]
+        a (:a system-link-idmap)]
 
     (case (:ident system-link-idmap)
       :system-edit (link-system-edit conn owner fe)
