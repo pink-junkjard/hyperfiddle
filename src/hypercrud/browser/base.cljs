@@ -19,12 +19,7 @@
 (def meta-pull-exp-for-link
   (let [form-pull-exp ['*
                        {:hypercrud/owner ['*]
-                        :form/field
-                        ['*
-                         {:field/attribute ['*
-                                            {:attribute/valueType [:db/id :db/ident] ; i doubt we need :db/id here and its really confusing
-                                             :attribute/cardinality [:db/id :db/ident]
-                                             :attribute/unique [:db/id :db/ident]}]}]}]]
+                        :form/field ['*]}]]
     ['*
      :link-query/value
      :link-query/single-result-as-entity?
@@ -36,8 +31,8 @@
       :link/anchor ['*
                     {:anchor/link ['*                       ; hydrate the whole link for validating the anchor by query params
                                    {:hypercrud/owner ['*]}] ; need the link's owner to render the href to it
-                     :anchor/find-element [:db/id :find-element/name :find-element/connection]
-                     :anchor/attribute [:db/id :attribute/ident {:attribute/cardinality [:db/ident]} #_ "auto-anchor-formula"]}]
+                     :anchor/find-element [:db/id :find-element/name :find-element/connection]}]
+      ; todo what about anchor/attribute?
       :hypercrud/owner ['*]}]))
 
 (defn meta-request-for-link [root-db link-dbid]             ; always latest
@@ -96,11 +91,13 @@
                    ; order matters here a lot!
                    (nil? result) nil
                    (empty? result) (if (.-a request)
-                                     ; comes back as [] sometimes if cardinaltiy many request. this is causing problems as nil or {} in different places.
-                                     ; Above comment seems backwards, left it as is
-                                     (case (-> (get-in schemas [fe-conn (.-a request)]) :attribute/cardinality :db/ident)
-                                       :db.cardinality/one {}
-                                       :db.cardinality/many []))
+                                     (do
+                                       (js/console.log (pr-str request))
+                                       ; comes back as [] sometimes if cardinaltiy many request. this is causing problems as nil or {} in different places.
+                                       ; Above comment seems backwards, left it as is
+                                       (case (-> (get-in schemas [(.-e request) (.-a request)]) :db/cardinality :db/ident)
+                                         :db.cardinality/one {}
+                                         :db.cardinality/many [])))
                    (map? result) {"entity" result}
                    (coll? result) (mapv (fn [relation] {"entity" relation}) result))
 

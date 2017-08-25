@@ -92,13 +92,13 @@
                                 (widget/render-anchors (remove :anchor/render-inline? entity-anchors) param-ctx)
                                 (->> colspec
                                      (mapv (fn [[db fe attr maybe-field]]
-                                             (let [ident (-> attr :attribute/ident)
+                                             (let [ident (-> attr :db/ident)
                                                    param-ctx (as-> (context/attribute param-ctx attr) $
                                                                    (context/value $ (get entity ident))
                                                                    (if (= ident :db/id) (assoc $ :read-only always-read-only) $))
                                                    field (case (:display-mode param-ctx) :xray field :user (get param-ctx :field field))
                                                    control (case (:display-mode param-ctx) :xray control :user (get param-ctx :control control))
-                                                   anchors (filter #(= (-> param-ctx :attribute :db/id) (some-> % :anchor/attribute :db/id)) anchors)]
+                                                   anchors (filter #(= (-> param-ctx :attribute :db/ident) (:anchor/attribute %)) anchors)] ; todo filter on conn too, ident isn't unique across dbs
                                                ; What is the user-field allowed to change? The param-ctx. Can it change links or anchors? no.
                                                ^{:key (str ident)}
                                                [field #(control maybe-field anchors %) maybe-field anchors param-ctx]))))

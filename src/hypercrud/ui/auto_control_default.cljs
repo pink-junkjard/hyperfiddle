@@ -9,9 +9,9 @@
   [maybe-field anchors props param-ctx]
   ;(assert (:entity param-ctx))
 
-  (let [isComponent (-> (:attribute param-ctx) :attribute/isComponent)
-        valueType (-> (:attribute param-ctx) :attribute/valueType :db/ident)
-        cardinality (-> (:attribute param-ctx) :attribute/cardinality :db/ident)
+  (let [isComponent (-> (:attribute param-ctx) :db/isComponent)
+        valueType (-> (:attribute param-ctx) :db/valueType :db/ident)
+        cardinality (-> (:attribute param-ctx) :db/cardinality :db/ident)
         widget (cond
                  (and (= valueType :db.type/boolean) (= cardinality :db.cardinality/one)) widget/boolean
                  (and (= valueType :db.type/keyword) (= cardinality :db.cardinality/one)) widget/keyword
@@ -28,9 +28,9 @@
 
 (defmethod auto-control/auto-table-cell :default
   [maybe-field anchors props param-ctx]
-  (let [isComponent (-> (:attribute param-ctx) :attribute/isComponent)
-        valueType (-> (:attribute param-ctx) :attribute/valueType :db/ident)
-        cardinality (-> (:attribute param-ctx) :attribute/cardinality :db/ident)
+  (let [isComponent (-> (:attribute param-ctx) :db/isComponent)
+        valueType (-> (:attribute param-ctx) :db/valueType :db/ident)
+        cardinality (-> (:attribute param-ctx) :db/cardinality :db/ident)
         widget (cond
                  (and (= valueType :db.type/boolean) (= cardinality :db.cardinality/one)) widget/boolean
                  (and (= valueType :db.type/keyword) (= cardinality :db.cardinality/one)) widget/keyword

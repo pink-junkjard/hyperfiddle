@@ -56,7 +56,7 @@ the find-element level has been flattened out of the columns."
         map' (util/map-pad {})]
     (->>
       (map' (fn [relation-for-fe fe]
-              (let [indexed-fields (util/group-by-assume-unique (comp :attribute/ident :field/attribute) (-> fe :find-element/form :form/field))
+              (let [indexed-fields (util/group-by-assume-unique :field/attribute (-> fe :find-element/form :form/field))
 
                     ; find-elements are parsed from the query, so they are known to be good,
                     ; even in raw mode when they haven't been modeled yet.
@@ -74,9 +74,7 @@ the find-element level has been flattened out of the columns."
                     db (fe->db fe param-ctx)
                     schema (get schemas (:find-element/name fe))]
                 (mapcat (fn [ident]
-                          ; :db/id is missing from schema so fake it here, it has no valueType
-                          ; shouldn't we just remove :db/id entirely?
-                          (let [attr (get schema ident {:attribute/ident ident})
+                          (let [attr (get schema ident {:db/ident ident})
                                 field (get indexed-fields ident)]
                             [db fe attr field])) col-idents')))
             result-as-columns
@@ -86,19 +84,20 @@ the find-element level has been flattened out of the columns."
 
 (defn build-props [maybe-field anchors param-ctx]
   ; why does this need the field - it needs the ident for readonly in "Edit Anchors"
+  ; todo clean this interface up
   {:read-only ((get param-ctx :read-only) (:attribute param-ctx) param-ctx)})
 
 (defn attribute-human [attr]
   (-> attr
       (dissoc :db/id)
-      (util/update-existing :attribute/cardinality :db/ident)
-      (util/update-existing :attribute/valueType :db/ident)
-      (util/update-existing :attribute/unique :db/ident)
+      (util/update-existing :db/cardinality :db/ident)
+      (util/update-existing :db/valueType :db/ident)
+      (util/update-existing :db/unique :db/ident)
       (util/update-existing :attribute/hc-type :hc-type/name)))
 
 (defn field-label [maybe-field param-ctx]
   (let [docstring (-> maybe-field :field/doc)
-        field-prompt (util/fallback empty? (get maybe-field :field/prompt) (-> param-ctx :attribute :attribute/ident str))]
+        field-prompt (util/fallback empty? (get maybe-field :field/prompt) (-> param-ctx :attribute :db/ident str))]
     [tooltip/hover-popover-managed
      {:label (case (:display-mode param-ctx)
                ; (auto-control maybe-field anchors props param-ctx)

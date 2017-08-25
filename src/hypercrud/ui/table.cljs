@@ -11,7 +11,7 @@
             [reagent.core :as r]))
 
 
-(defn sortable? [{:keys [:attribute/cardinality :attribute/valueType] :as attr}]
+(defn sortable? [{:keys [:db/cardinality :db/valueType] :as attr}]
   (and
     (= (:db/ident cardinality) :db.cardinality/one)
     ; ref requires more work (inspect label-prop)
@@ -39,12 +39,12 @@
                    (->> colspec
                         (mapv (fn [[db fe attr field]]
                                 (let [fe-name (-> fe :find-element/name)
-                                      ident (-> attr :attribute/ident)
+                                      ident (-> attr :db/ident)
                                       param-ctx (context/attribute param-ctx attr)
                                       css-classes [(str "field-element-" (form-util/css-slugify fe-name))
                                                    (str "field-attr-" (form-util/css-slugify (str ident)))] #_"Dustin removed field-id and field-prompt; use a custom renderer"
                                       anchors (->> anchors
-                                                   (filter #(= (-> attr :db/id) (-> % :anchor/attribute :db/id)))
+                                                   (filter #(= (-> attr :db/ident) (:anchor/attribute %))) ; todo filter on conn too ident isn't unique across dbs)
                                                    #_(filter #(= (-> fe :db/id) (-> % :anchor/find-element :db/id))) #_"entity"
                                                    (remove :anchor/repeating?))
                                       [anchors] (widget/process-option-popover-anchors anchors param-ctx)
@@ -87,14 +87,14 @@
 
 (defn Value [[db fe attr maybe-field] entity-anchors-lookup param-ctx]
   (let [fe-name (-> fe :find-element/name)
-        ident (-> attr :attribute/ident)
+        ident (-> attr :db/ident)
         param-ctx (-> (context/attribute param-ctx attr)
                       (context/value (get (:entity param-ctx) ident))
                       (assoc :layout :table))
         field (case (:display-mode param-ctx) :xray Field :user (get param-ctx :field Field))
         control (case (:display-mode param-ctx) :xray Control :user (get param-ctx :control Control))
-
-        anchors (filter #(= (-> param-ctx :attribute :db/id) (some-> % :anchor/attribute :db/id)) (get entity-anchors-lookup fe-name))]
+        ; todo filter on conn too, ident isn't unique across dbs
+        anchors (filter #(= (-> param-ctx :attribute :db/ident) (:anchor/attribute %)) (get entity-anchors-lookup fe-name))]
     ^{:key (or (:db/id maybe-field) (str fe-name ident))}
     [field #(control maybe-field anchors %) maybe-field anchors param-ctx]))
 
@@ -139,7 +139,7 @@
                   (let [[_ fe attr _] (->> (partition 4 colspec)
                                            (filter (fn [[db fe attr maybe-field]]
                                                      (and (= fe-dbid (:db/id fe))
-                                                          (= (:attribute/ident attr) sort-key))))
+                                                          (= (:db/ident attr) sort-key))))
                                            first)]
                     (if (sortable? attr)
                       (sort-by #(get-in % [(:find-element/name fe) sort-key])

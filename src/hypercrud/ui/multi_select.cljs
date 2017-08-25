@@ -8,9 +8,8 @@
 
 (defn multi-select* [markupfn add-item! field anchors props {:keys [user-with!] :as param-ctx}]
   (assert false "todo readonly and test this")
-  (let [ident (-> field :field/attribute :attribute/ident)
-        control-tuples (seq (mapv (fn [inner-value]
-                                    (let [click-remove! #(user-with! (tx/edit-entity (:db/id (:entity param-ctx)) ident [inner-value] nil))
+  (let [control-tuples (seq (mapv (fn [inner-value]
+                                    (let [click-remove! #(user-with! (tx/edit-entity (:db/id (:entity param-ctx)) (:field/attribute field) [inner-value] nil))
                                           new-field (assoc field :cardinality :db.cardinality/one)
                                           param-ctx (assoc param-ctx :value inner-value) ; or whatever
                                           control [auto-control new-field anchors param-ctx]]

@@ -19,7 +19,7 @@
        (mapv (fn [[conn fe attr maybe-field]]
                ; Custom label renderers? Can't use the attribute renderer, since that
                ; is how we are in a select options in the first place.
-               (let [ident (-> attr :attribute/ident)
+               (let [ident (-> attr :db/ident)
                      value (get-in result [(-> fe :find-element/name) ident])
                      renderer (or (-> param-ctx :fields ident :label-renderer) default-label-renderer)]
                  (-> (exception/try-on (renderer value param-ctx))

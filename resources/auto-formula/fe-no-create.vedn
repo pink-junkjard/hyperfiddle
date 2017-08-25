@@ -13,13 +13,13 @@
 {:d? true :a true}
 ==
 (fn [ctx]
-  (case (-> ctx :attribute :attribute/cardinality :db/ident)
+  (case (-> ctx :attribute :db/cardinality :db/ident)
     :db.cardinality/one {:entity (get-in ctx [:value :db/id])}
 
     ; "find children of parent entity at attr"
     ; :entity would be better named :parent. See base ->EntityRequest
     :db.cardinality/many {:entity (get-in ctx [:entity :db/id])
-                          :a (-> ctx :attribute :attribute/ident)}))
+                          :a (-> ctx :attribute :db/ident)}))
 
 
 ==

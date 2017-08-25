@@ -1,8 +1,8 @@
 (ns hypercrud.client.tx
-  (:require [hypercrud.types.DbId :refer [->DbId]]
+  (:require [clojure.walk :as walk]
+            [hypercrud.types.DbId :refer [->DbId]]
             [hypercrud.util.core :as util]
-            [loom.alg-generic :as loom]
-            [clojure.walk :as walk]))
+            [loom.alg-generic :as loom]))
 
 
 (defn tempid? [dbid] (< (.-id dbid) 0))
@@ -20,7 +20,7 @@
 
 
 (defn update-entity-attr [{:keys [:db/id] :as entity}
-                          {:keys [:attribute/ident :attribute/cardinality :attribute/valueType] :as attribute}
+                          {:keys [:db/ident :db/cardinality :db/valueType] :as attribute}
                           new-val]
   (let [{:keys [old new]} (let [old-val (get entity ident)]
                             (if (= (:db/ident valueType) :db.type/ref)
@@ -91,7 +91,7 @@
 
 (defn entity-components [schema entity]
   (mapcat (fn [[attr v]]
-            (let [{:keys [:attribute/cardinality :attribute/valueType :attribute/isComponent]} (get schema attr)]
+            (let [{:keys [:db/cardinality :db/valueType :db/isComponent]} (get schema attr)]
               (if isComponent
                 (case [(:db/ident valueType) (:db/ident cardinality)]
                   [:db.type/ref :db.cardinality/one] [v]
@@ -112,7 +112,7 @@
   ; Need schema for component. How can you walk a pulled-tree without inspecting component?
   ; If it turns out we don't need component, we can dispatch on map?/coll? and not need schema.
   (mapcat (fn [[attr v]]
-            (let [{:keys [:attribute/cardinality :attribute/valueType]} (get schema attr)]
+            (let [{:keys [:db/cardinality :db/valueType]} (get schema attr)]
               (case [(:db/ident valueType) (:db/ident cardinality)]
                 [:db.type/ref :db.cardinality/one] [v]
                 [:db.type/ref :db.cardinality/many] (vec v)
@@ -144,7 +144,7 @@
   (let [[replace-id!] (clone-id-factory conn-id temp-id!)]
     (mapv (fn [[op e a v]]
             (let [new-e (replace-id! e)
-                  valueType (get-in schema [a :attribute/valueType])
+                  valueType (get-in schema [a :db/valueType])
                   new-v (if (and (not (skip? a)) (= valueType :db.type/ref))
                           (replace-id! v)
                           v)]
@@ -162,7 +162,7 @@
   (->> (f entity)
        (mapv
          (fn [[a v]]
-           (let [{:keys [:attribute/cardinality :attribute/valueType :attribute/isComponent]} (get schema a) ; really just for component, the rest could be polymorphic
+           (let [{:keys [:db/cardinality :db/valueType :db/isComponent]} (get schema a) ; really just for component, the rest could be polymorphic
                  v (if-not (= (:db/ident valueType) :db.type/ref) ; dbid absent from schema, its fine
                      v
                      (if isComponent
@@ -188,23 +188,22 @@
 
 
 (defn export-link [schema link]
-  (let [tempid! (let [temp-id-atom (atom 0)]
+  (assert false "todo redo this fn")
+  #_(let [tempid! (let [temp-id-atom (atom 0)]
                   (fn [conn-id]
                     (->DbId (swap! temp-id-atom dec) conn-id)))
         successors (fn [node]
                      (pulled-tree-children schema node))
         filter-pred (fn [node predecessor depth]
                       ;  also may need (not (:db/ident node)) - attrs ref datomic built-ins
-                      (not (:attribute/ident node)))]
+                      (not (:db/ident node)))]
     (->> (loom/bf-traverse successors link :when filter-pred)
          (mapcat (fn [entity]
                    (if-let [attr (:field/attribute entity)]
                      (let [e (-> (into {} (seq entity))
-                                 (dissoc :field/attribute))
-                           ; we don't necessarily have the attribute ident pulled down?
-                           attr-lookup (->DbId [:attribute/ident (-> attr :attribute/ident)] (-> attr :db/id :conn-id))]
+                                 (dissoc :field/attribute))]
                        (conj (entity->statements e)
-                             [:db/add (:db/id e) :field/attribute attr-lookup]))
+                             [:db/add (:db/id e) :field/attribute attr]))
                      (entity->statements entity))))
          (replace-ids-in-tx schema (-> link :db/id :conn-id)
                             #(contains? #{:field/attribute} %) ; preserve refs to attributes

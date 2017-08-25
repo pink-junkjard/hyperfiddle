@@ -38,7 +38,7 @@
                             (group-by (fn [anchor]
                                         (let [r (or (-> anchor :anchor/repeating?) false)
                                               fe (-> anchor :anchor/find-element :find-element/name)
-                                              attr (-> anchor :anchor/attribute :attribute/ident)]
+                                              attr (-> anchor :anchor/attribute)]
                                           [r fe attr]))))
         find-elements (->> (partition 4 colspec)
                            (map (fn [[dbval fe attr maybe-field]] fe))
@@ -48,8 +48,8 @@
                 :relation-new (constantly [])               ; We haven't implemented them.
                 :entity-t #(get anchors-lookup [true (:find-element/name %1) nil])
                 :entity-f #(get anchors-lookup [false (:find-element/name %1) nil])
-                :entity-attr-t #(get anchors-lookup [true (:find-element/name %1) (:attribute/ident %2)])
-                :entity-attr-f #(get anchors-lookup [false (:find-element/name %1) (:attribute/ident %2)])}]
+                :entity-attr-t #(get anchors-lookup [true (:find-element/name %1) %2])
+                :entity-attr-f #(get anchors-lookup [false (:find-element/name %1) %2])}]
     (concat
       (->> ((:index lookup)) (mapcat #(recurse-request % param-ctx)))
       (->> ((:relation-new lookup)) (mapcat #(recurse-request % param-ctx)))
@@ -62,9 +62,9 @@
                          (->> ((:entity-f lookup) fe) (mapcat #(recurse-request % param-ctx)))
                          (->> (get-in fe [:find-element/form :form/field])
                               (mapcat (fn [field]
-                                        (let [attribute (-> field :field/attribute)
-                                              param-ctx (context/attribute param-ctx attribute)]
-                                          (->> ((:entity-attr-f lookup) fe attribute) (mapcat #(recurse-request % param-ctx))))))))))))
+                                        (let [attr-ident (-> field :field/attribute)
+                                              param-ctx (context/attribute param-ctx (get-in param-ctx [:schema attr-ident]))]
+                                          (->> ((:entity-attr-f lookup) fe attr-ident) (mapcat #(recurse-request % param-ctx))))))))))))
       (->> result
            (mapcat (fn [relation]
                      (let [param-ctx (context/relation param-ctx relation)]
@@ -81,10 +81,10 @@
                                                   (->> ((:entity-t lookup) fe) (mapcat #(recurse-request % param-ctx)))
                                                   (->> (get-in fe [:find-element/form :form/field])
                                                        (mapcat (fn [field]
-                                                                 (let [attribute (-> field :field/attribute)
-                                                                       param-ctx (-> (context/attribute param-ctx attribute)
-                                                                                     (context/value (get entity (:attribute/ident attribute))))]
-                                                                   (->> ((:entity-attr-t lookup) fe attribute) (mapcat #(recurse-request % param-ctx))))))))
+                                                                 (let [attr-ident (-> field :field/attribute)
+                                                                       param-ctx (-> (context/attribute param-ctx (get-in param-ctx [:schema attr-ident]))
+                                                                                     (context/value (get entity attr-ident)))]
+                                                                   (->> ((:entity-attr-t lookup) fe attr-ident) (mapcat #(recurse-request % param-ctx))))))))
                                                 ))))))))))))
 
 (defn requests-for-link [link query-params param-ctx]

@@ -25,13 +25,14 @@
 
 (defn link-system-edit-attr [conn owner fe a]
   {:pre [conn fe a]}
+  (assert false "todo a? can we just use ident, why do we need a hydrated dbid?")
   {:db/id (->DbId {:ident :system-edit-attr
                    :owner (-> owner :db/id :id)
                    :conn (-> conn :db/id :id)
                    :fe (-> fe :db/id :id)
                    :a (-> a :db/id :id)}
                   (-> conn :db/id :id))
-   :link/name (str "system-" (:find-element/name fe) "-" (:attribute/ident a))
+   :link/name (str "system-" (:find-element/name fe) "-" (:db/ident a))
    ;:hypercrud/owner owner
    :request/type :entity
    :link-query/find-element [{:find-element/name "entity"
@@ -39,6 +40,7 @@
 
 (defn link-blank-system-remove [owner fe a]
   {:pre []}
+  (assert false "todo a? can we just use ident, why do we need a hydrated dbid?")
   {:db/id (->DbId {:ident :sys-remove
                    :fe (-> fe :db/id :id)
                    :a (-> a :db/id :id)} nil)
@@ -103,23 +105,23 @@
                      (->> (partition 4 colspec)             ; driven by colspec, not find elements, because what matters is what's there.
                           (mapcat (fn [[db fe attr maybe-field]]
                                     (let [fe-name (-> fe :find-element/name)
-                                          ident (-> attr :attribute/ident)
+                                          ident (-> attr :db/ident)
                                           conn {:db/id (->DbId (.-conn-id db) hc/*root-conn-id*)}
                                           fe (get find-elements fe-name)
                                           _ (assert fe)]
-                                      (if (and (not= ident :db/id) (= :db.type/ref (-> attr :attribute/valueType :db/ident)))
+                                      (if (and (not= ident :db/id) (= :db.type/ref (-> attr :db/valueType :db/ident)))
                                         [{:anchor/prompt (str "edit") ; conserve space in label
                                           :anchor/ident (keyword (str "sys-edit-" fe-name "-" ident))
                                           :anchor/repeating? true
                                           :anchor/find-element fe
-                                          :anchor/attribute attr
+                                          :anchor/attribute ident
                                           :anchor/managed? false
                                           :anchor/link (link-system-edit-attr conn (:hypercrud/owner parent-link) fe attr)}
                                          {:anchor/prompt (str "new") ; conserve space in label
                                           :anchor/ident (keyword (str "sys-new-" fe-name "-" ident))
                                           :anchor/repeating? true ; manged - need parent-child ref
                                           :anchor/find-element fe
-                                          :anchor/attribute attr
+                                          :anchor/attribute ident
                                           :anchor/managed? true
                                           :anchor/create? true
                                           :anchor/render-inline? true
@@ -128,11 +130,11 @@
                                           :anchor/ident (keyword (str "sys-remove-" fe-name "-" ident))
                                           :anchor/link (link-blank-system-remove (:hypercrud/owner parent-link) fe attr)
                                           :anchor/find-element fe
-                                          :anchor/attribute attr
+                                          :anchor/attribute ident
                                           :anchor/repeating? true
                                           :anchor/managed? true
                                           :anchor/render-inline? true
-                                          :anchor/tx-fn (if (= :db.cardinality/one (-> attr :attribute/cardinality :db/ident))
+                                          :anchor/tx-fn (if (= :db.cardinality/one (-> attr :db/cardinality :db/ident))
                                                           (:value-remove-one auto-link-txfn-lookup)
                                                           (:value-remove-many auto-link-txfn-lookup))}]))))
                           doall))]
@@ -152,17 +154,13 @@
                                                          [:db/id
                                                           :find-element/name
                                                           :find-element/connection
-                                                          {:find-element/form ['* {:form/field
-                                                                                   ['*
-                                                                                    {:field/attribute ['*
-                                                                                                       {:attribute/valueType [:db/id :db/ident]}
-                                                                                                       {:attribute/cardinality [:db/id :db/ident]}
-                                                                                                       {:attribute/unique [:db/id :db/ident]}]}]}]}]))
-   (if-let [a (:a system-link-idmap)] (->EntityRequest (->DbId a hc/*root-conn-id*) nil root-db
+                                                          {:find-element/form ['* {:form/field ['*]}]}]))
+   ; todo why do we need this data? we are fetching schemas already
+   (if-let [a (:a system-link-idmap)] (->EntityRequest (->DbId a (assert false "todo get conn from fe or remove me")) nil root-db
                                                        ['*
-                                                        {:attribute/valueType [:db/id :db/ident]
-                                                         :attribute/cardinality [:db/id :db/ident]
-                                                         :attribute/unique [:db/id :db/ident]}]))])
+                                                        {:db/valueType [:db/id :db/ident]
+                                                         :db/cardinality [:db/id :db/ident]
+                                                         :db/unique [:db/id :db/ident]}]))])
 
 (defn hydrate-system-link [system-link-idmap [owner conn fe a] param-ctx]
   (let [owner-id (:owner system-link-idmap)                 ; hydrate this?

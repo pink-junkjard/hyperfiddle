@@ -12,7 +12,7 @@
 (defn user-renderer [param-ctx]
   (let [attr (:attribute param-ctx)]
     (or
-      (empty-string-to-nil (get-in param-ctx [:fields (:attribute/ident attr) :renderer]))
+      (empty-string-to-nil (get-in param-ctx [:fields (:db/ident attr) :renderer]))
       (empty-string-to-nil (-> attr :attribute/renderer))
       (empty-string-to-nil (-> attr :attribute/hc-type :hc-type/renderer)))))
 

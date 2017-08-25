@@ -21,8 +21,8 @@
   ; Why value is only inspected in :many for unique hashing?
   (-> (str (-> fe :find-element/name) "."
            (-> e :db/id :id) "."
-           (-> a :attribute/ident) "."
-           (case (get-in a [:attribute/cardinality :db/ident])
+           (-> a :db/ident) "."
+           (case (get-in a [:db/cardinality :db/ident])
              :db.cardinality/one nil
              :db.cardinality/many (hash (into #{} (mapv :db/id v))) ; todo scalar
              nil nil #_":db/id has a faked attribute with no cardinality, need more thought to make elegant"))

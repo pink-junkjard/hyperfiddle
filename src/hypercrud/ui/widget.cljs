@@ -84,7 +84,7 @@
 
 (defn boolean [maybe-field anchors props param-ctx]
   [:div.value
-   [:div.editable-select {:key (:attribute/ident (:attribute param-ctx))}
+   [:div.editable-select {:key (:db/ident (:attribute param-ctx))}
     [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
     (select-boolean* (:value param-ctx) props param-ctx)]
    (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)])
@@ -185,7 +185,7 @@
             ; todo wire input to up arrow
             #_(dbid props param-ctx))
           [:br]
-          [:button {:on-click #((:user-with! param-ctx) (tx/edit-entity (get-in param-ctx [:entity :db/id]) (-> param-ctx :attribute :attribute/ident) [] [@select-value-atom]))} "⬆"]]
+          [:button {:on-click #((:user-with! param-ctx) (tx/edit-entity (get-in param-ctx [:entity :db/id]) (-> param-ctx :attribute :db/ident) [] [@select-value-atom]))} "⬆"]]
          (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)]))))
 
 (defn ref-many-component-table [maybe-field anchors props param-ctx]
@@ -227,7 +227,7 @@
 
 (defn code [& args]
   (fn [maybe-field anchors props param-ctx]
-    (let [ident (-> param-ctx :attribute :attribute/ident)
+    (let [ident (-> param-ctx :attribute :db/ident)
           change! #((:user-with! param-ctx) (tx/edit-entity (:db/id (:entity param-ctx)) ident [(:value param-ctx)] [%]))]
       ^{:key ident}
       [:div.value
@@ -254,14 +254,14 @@
 (defn text [maybe-field anchors props param-ctx]
   [:div.value
    [:span.text
-    (case (-> (:attribute param-ctx) :attribute/cardinality :db/ident)
+    (case (-> (:attribute param-ctx) :db/cardinality :db/ident)
       :db.cardinality/many (map pr-str (:value param-ctx))
       (pr-str (:value param-ctx)))]
    (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)
    [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]])
 
 (defn default [maybe-field anchors props param-ctx]
-  (let [{:keys [:attribute/valueType :attribute/cardinality :attribute/isComponent]} (:attribute param-ctx)]
+  (let [{:keys [:db/valueType :db/cardinality :db/isComponent]} (:attribute param-ctx)]
     [input/input*
      (str {:valueType (:db/ident valueType)
            :cardinality (:db/ident cardinality)
@@ -270,7 +270,7 @@
      {:read-only true}]))
 
 (defn raw [_ anchors props param-ctx]
-  (let [valueType (-> param-ctx :attribute :attribute/valueType :db/ident)
+  (let [valueType (-> param-ctx :attribute :db/valueType :db/ident)
         value (if (= valueType :db.type/ref) (:db/id (:value param-ctx)) (:value param-ctx))
         on-change! #((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %))]
     [input/edn-input* value on-change! props]))

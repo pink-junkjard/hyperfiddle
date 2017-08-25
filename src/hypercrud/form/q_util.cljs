@@ -50,7 +50,7 @@
     (concat
       [:db/id {:hypercrud/owner ['*]}]
       (->> (:form/field form)
-           (mapv #(-> % :field/attribute :attribute/ident))
+           (mapv :field/attribute)
            (set)
            (remove #{:hypercrud/owner})                     ; in meta-fiddle this is part of the form, but we want to hydrate deeper always.
            (remove nil?)))

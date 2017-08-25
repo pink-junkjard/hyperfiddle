@@ -48,7 +48,7 @@
            (fn [option-records]
              (let [no-options? (empty? option-records)
                    props (update props :disabled #(or % no-options?))
-                   props (if (#{:find-element/connection :dbhole/value :hypercrud/owner} (-> param-ctx :attribute :attribute/ident)) ; lol hack
+                   props (if (#{:find-element/connection :dbhole/value :hypercrud/owner} (-> param-ctx :attribute :db/ident)) ; lol hack
                            (assoc props :style {:background-color (connection-color/connection-color (-> value :db/id :id))})
                            props)
                    ; hack in the selected value if we don't have options hydrated?
