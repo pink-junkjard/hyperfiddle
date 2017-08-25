@@ -43,11 +43,11 @@
                                       param-ctx (context/attribute param-ctx attr)
                                       css-classes [(str "field-element-" (form-util/css-slugify fe-name))
                                                    (str "field-attr-" (form-util/css-slugify (str ident)))] #_"Dustin removed field-id and field-prompt; use a custom renderer"
-                                      anchors (->> anchors
+                                      attr-label-anchors (->> anchors
+                                                   (filter :anchor/attribute)
                                                    (filter #(= (-> attr :db/id) (-> % :anchor/attribute :db/id)))
-                                                   #_(filter #(= (-> fe :db/id) (-> % :anchor/find-element :db/id))) #_"entity"
-                                                   (remove :anchor/repeating?))
-                                      [anchors] (widget/process-option-popover-anchors anchors param-ctx)
+                                                   (remove :anchor/repeating?) #_ "because we're in the label")
+                                      [attr-label-anchors] (widget/process-option-popover-anchors attr-label-anchors param-ctx)
 
                                       [sort-fe-dbid sort-key direction] @col-sort
                                       with-sort-direction (fn [asc desc no-sort not-sortable]
@@ -69,8 +69,9 @@
                                         :key (str fe-name "-" ident)
                                         :on-click on-click}
                                    [:label (form-util/field-label field param-ctx)]
-                                   [:div.anchors (widget/render-anchors (->> anchors (remove :anchor/render-inline?)) param-ctx)]
-                                   (widget/render-inline-anchors (->> anchors (filter :anchor/render-inline?)) param-ctx)
+                                   [:div.anchors
+                                    (widget/render-anchors (remove :anchor/render-inline? attr-label-anchors) param-ctx)
+                                    (widget/render-inline-anchors (filter :anchor/render-inline? attr-label-anchors) param-ctx)]
                                    [:span.sort-arrow arrow]])))))))))
 
 (defn Control [maybe-field anchors param-ctx]
