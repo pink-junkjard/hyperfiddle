@@ -1,6 +1,5 @@
 (ns hypercrud.server.database
-  (:require [clojure.set :as set]
-            [datomic.api :as d]
+  (:require [datomic.api :as d]
             [hypercrud.server.db-root :as db]
             [hypercrud.server.util.datomic-adapter :as datomic-adapter]
             [hypercrud.types.DbId :refer [->DbId]]))
@@ -25,31 +24,14 @@
     (d/create-database database-uri)
     (d/connect database-uri)))
 
-; should root-db just be in dynamic scope? threading it feels dumb but indicates that
-; we may yet resolve a hypercrud lookup ref (in conn-id position)
-(defn get-conn! [root-db conn-id]
-  (if (= db/root-id conn-id)
-    (get-root-conn)
-    (get-db-conn! root-db conn-id)))
-
 (defn resolve-hc-tempid [conn-id {:keys [db-after tempids] :as result} tempid]
   ;(assert (string? tempid) "hypercrud requires string tempids")
   (let [id (d/resolve-tempid db-after tempids tempid)]
     [(->DbId tempid conn-id) (->DbId (str id) conn-id)]))
 
-(defn with-tx [f! read-sec-predicate dtx]
-  (let [{:keys [db-after tempids] :as result} (f! dtx)
-        db (-> db-after
-               ;(d/as-of (d/db root-conn) (d/t->tx root-t))
-               (d/filter read-sec-predicate))
-        id->tempid (->> dtx (mapv second) (into #{}) (filter datomic-adapter/datomic-tempid?)
-                        (mapv (juxt #(d/resolve-tempid db-after tempids %)
-                                    datomic-adapter/did->hid))
-                        (into {}))]
-    {:db db
-     :id->tempid id->tempid
-     :tempid->id (set/map-invert id->tempid)}))
-
-(defn hc-transact-one-color! [root-db hc-tx-uuid conn-id dtx]
-  (let [conn (get-conn! root-db conn-id)]
-    (with-tx (fn [& args] @(apply d/transact conn args)) (constantly true) dtx)))
+(defn build-id->tempid-lookup [db-after tempids dtx]
+  (->> dtx (mapv second) (into #{})
+       (filter datomic-adapter/datomic-tempid?)
+       (mapv (juxt #(d/resolve-tempid db-after tempids %)
+                   datomic-adapter/did->hid))
+       (into {})))
