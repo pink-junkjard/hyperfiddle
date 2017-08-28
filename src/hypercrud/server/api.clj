@@ -116,16 +116,12 @@
                        (mapv datomic-adapter/stmt-dbid->id))
               db (if branch
                    (:db (get-secure-db-with conn-id (branch/decode-parent-branch branch)))
-                   (let [db (d/db (database/get-conn! root-db conn-id))
-                         project-migration-tx (database/migration-tx root-db db)]
-                     (-> (d/with db project-migration-tx)
-                         :db-after)))
+                   (d/db (database/get-conn! root-db conn-id)))
               ; is it a history query? (let [db (if (:history? dbval) (d/history db) db)])
               ; todo look up relevant project tx validator
               _ (assert (root-validate-tx db dtx) (str "staged tx for " conn-id " failed validation"))
               ;todo lookup project sec pred
               read-sec-predicate (constantly true)
-              ;; todo account for new attrs (a migration)
               project-db-with (database/with-tx (partial d/with db) read-sec-predicate dtx)]
           (swap! db-with-lookup assoc-in [conn-id branch] project-db-with)
           project-db-with))))
@@ -171,7 +167,7 @@
       (throw (RuntimeException. "user tx failed validation"))
       (let [hc-tx-uuid (d/squuid)                           ; suitable for cross database - https://groups.google.com/forum/?fromgroups=#!searchin/datomic/unique$20entity$20ids$20across$20databases/datomic/-ZESEw2ee1s/PDWIlwu9PGoJ
 
-            ;; first transact the root - there may be new attributes which means project migrations
+            ;; first transact the root - there may be security changes or database/ident changes
             root-result (database/hc-transact-one-color! root-db hc-tx-uuid db/root-id (get dtx-groups db/root-id))
 
             dtx-groups (->> dtx-groups
@@ -179,33 +175,10 @@
                                              (if (and (not= db/root-id conn-id) (datomic-adapter/hc-tempid? conn-id))
                                                (get (:id->tempid root-result) conn-id)
                                                conn-id))))
-
-            ;; for each project, there may be a migration
-            migration-dtxs (->> (keys dtx-groups)
-                                (mapv (fn [conn-id]
-                                        ; todo this root-db is stale
-                                        (let [conn (database/get-conn! root-db conn-id)]
-                                          (database/migration-tx (:db root-result) (d/db conn)))))
-                                (zipmap (keys dtx-groups))
-                                doall)
-
-            ;; can migrations (attribute changes) can be in the same transaction as the user-tx?
-            ;project-txs (merge-with concat migration-txs project-txs)
-
             ;; project-txs might reference a root tempid in the connection position of a dbid e.g.
             ;;    [:db/add #DbId[-100 -1] :post/title "first post"]
             ;; happens when our samples need fixtures
-
-            hc-tempids (->> (concat (->> migration-dtxs
-                                         (mapv (fn [[conn-id htx]]
-                                                 ; todo this root-db is stale
-                                                 (let [result (database/hc-transact-one-color! root-db hc-tx-uuid conn-id htx)]
-                                                   (->> (:id->tempid result)
-                                                        (mapv (fn [[id tempid]]
-                                                                [(->DbId (str tempid) conn-id) (->DbId id conn-id)]))
-                                                        (into {})))))
-                                         doall)
-                                    (->> (dissoc dtx-groups db/root-id)
+            hc-tempids (->> (concat (->> (dissoc dtx-groups db/root-id)
                                          (mapv (fn [[conn-id htx]]
                                                  ; todo this root-db is stale
                                                  (let [result (database/hc-transact-one-color! root-db hc-tx-uuid conn-id htx)]

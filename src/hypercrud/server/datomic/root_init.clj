@@ -1,7 +1,6 @@
 (ns hypercrud.server.datomic.root-init
   (:require [clojure.java.io :as io]
-            [datomic.api :as d]
-            [hypercrud.util.core :as util]))
+            [datomic.api :as d]))
 
 
 (defn generate-db-record [db-name]
@@ -15,26 +14,6 @@
          (mapv #(d/touch (d/entity $ %)))
          ;filter out datomic attributes, todo this is a huge hack
          (filter #(> (:db/id %) 62)))))
-
-(defn attr->hc-attr [attr]
-  (->> attr
-       (into {})
-       (util/map-keys (fn [ident]
-                        (condp = ident
-                          :db/id ident
-                          (keyword "attribute" (name ident)))))))
-
-(defn reflect-hc-attributes [transactor-uri db-name]
-  (->> (reflect-schema (d/connect (str transactor-uri db-name)))
-       (mapv attr->hc-attr)
-       (into #{})
-       (into [])))
-
-(defn initialize-user-schemas [root-conn transactor-uri db-names]
-  ; this will fail if attributes already exist
-  (doseq [db-name db-names]
-    (println (str "Reflecting schema: " db-name))
-    @(d/transact root-conn (reflect-hc-attributes transactor-uri db-name))))
 
 ; root isn't parameterized that well
 ; the current hf-src will create a database for root AND hyperfiddle AND hyperfiddle-users

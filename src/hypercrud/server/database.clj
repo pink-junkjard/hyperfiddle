@@ -7,8 +7,6 @@
             [hypercrud.types.DbId :refer [->DbId]]))
 
 
-(declare reset-db!)
-
 (defn get-database-uri [root-db database-id]
   (let [db-name (-> (d/entity root-db database-id) d/touch :database/ident)]
     ; todo https://tools.ietf.org/html/rfc3986#section-2
@@ -25,8 +23,7 @@
                       database-id)
         database-uri (get-database-uri root-db database-id)]
     ; hydrate idents in database-id position
-    (if (d/create-database database-uri)
-      (reset-db! (constantly true) database-id))
+    (d/create-database database-uri)
     (d/connect database-uri)))
 
 ; should root-db just be in dynamic scope? threading it feels dumb but indicates that
@@ -36,24 +33,13 @@
     (get-root-conn)
     (get-db-conn! root-db conn-id)))
 
-(defn hc-attr->datomic-schema-attr [attribute]
-  (->> (select-keys attribute [:attribute/ident
-                               :attribute/valueType
-                               :attribute/cardinality
-                               :attribute/id
-                               :attribute/unique
-                               :attribute/doc])
-       (reduce (fn [acc [attr-key v]]
-                 (if-not (nil? v) (assoc acc (keyword "db" (name attr-key)) v)))
-               {:db/id (d/tempid :db.part/db)
-                :db.install/_attribute :db.part/db})))
-
 (defn resolve-hc-tempid [conn-id {:keys [db-after tempids] :as result} tempid]
   ;(assert (string? tempid) "hypercrud requires string tempids")
   (let [id (d/resolve-tempid db-after tempids tempid)]
     [(->DbId tempid conn-id) (->DbId (str id) conn-id)]))
 
 (defn with-tx [f! read-sec-predicate dtx]
+  ; todo hc-dtx needs to be yanked out
   (let [hc-dtx (if context/*user*
                  [{:db/id (d/tempid :db.part/tx)
                    :hypercrud/audit-user context/*user*
@@ -74,38 +60,3 @@
 (defn hc-transact-one-color! [root-db hc-tx-uuid conn-id dtx]
   (let [conn (get-conn! root-db conn-id)]
     (with-tx (fn [& args] @(apply d/transact conn args)) (constantly true) dtx)))
-
-; This function isn't compatible with a staging area with migrating schema.
-; We need to make this happen through hydrates, against a zero-db or something.
-(defn reset-db! [root-sec database-id]
-  (let [root-conn (get-root-conn)
-        root-db (d/filter (d/db root-conn) root-sec)
-        database-record (as-> '[:find ?db . :in $ ?db :where [?db]] $
-                              (d/q $ root-db database-id)
-                              (d/entity root-db $)
-                              (d/touch $))                  ; npe if no db record; e.g. if tempid (the record is staged and we aren't accounting for root staging here)
-        attributes (as-> '[:find [?attr ...] :where [?attr :attribute/ident]] $
-                         (d/q $ root-db)
-                         (map #(d/entity root-db %) $)
-                         (map #(d/touch %) $))
-        _ (assert database-record "no project found - failed security probably") ; would fail
-        db-uri (get-database-uri root-db database-id)
-        _ (d/delete-database db-uri)]
-    (try
-      (let [_ (d/create-database db-uri)
-            schema (->> (remove #(= :db/ident (:attribute/ident %)) attributes)
-                        (mapv hc-attr->datomic-schema-attr))]
-        @(d/transact (d/connect db-uri) schema))
-      (catch Exception e
-        (d/delete-database db-uri)
-        (throw e)))))
-
-(defn migration-tx [root-db project-db #_"could be an empty project database"]
-  (let [attributes (as-> '[:find [?attr ...] :where [?attr :attribute/ident]] $
-                         (d/q $ root-db)
-                         (map #(d/entity root-db %) $)
-                         (map #(d/touch %) $))
-        installed-attribute-idents (set (d/q '[:find [?ident ...] :where [_ :db/ident ?ident]] project-db))]
-    (->> attributes
-         (remove #(contains? installed-attribute-idents (:attribute/ident %)))
-         (mapv hc-attr->datomic-schema-attr))))
