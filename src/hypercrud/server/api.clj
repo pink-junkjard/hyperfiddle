@@ -108,37 +108,39 @@
       (.println *err* (pr-str e))
       (->DbError (str e)))))
 
-(defn build-get-secure-db-with [db-with-lookup root-db hctx-groups root-validate-tx]
-  (fn get-secure-db-with [conn-id branch]
-    ; todo huge issues with lookup refs for conn-ids, they will have misses in the lookup cache and hctx-groups
-    (or (get-in @db-with-lookup [conn-id branch])
-        (let [dtx (->> (get-in hctx-groups [conn-id branch])
-                       (mapv datomic-adapter/stmt-dbid->id))
-              db (if branch
-                   (:db (get-secure-db-with conn-id (branch/decode-parent-branch branch)))
-                   (d/db (database/get-conn! root-db conn-id)))
-              ; is it a history query? (let [db (if (:history? dbval) (d/history db) db)])
-              ; todo look up relevant project tx validator
-              _ (assert (root-validate-tx db dtx) (str "staged tx for " conn-id " failed validation"))
-              ;todo lookup project sec pred
-              read-sec-predicate (constantly true)
-              project-db-with (database/with-tx (partial d/with db) read-sec-predicate dtx)]
-          (swap! db-with-lookup assoc-in [conn-id branch] project-db-with)
-          project-db-with))))
+(defn build-get-secure-db-with [hctx-groups root-read-sec-predicate root-validate-tx]
+  (let [db-with-lookup (atom {})]
+    (fn get-secure-db-with [conn-id branch]
+      ; todo huge issues with lookup refs for conn-ids, they will have misses in the lookup cache and hctx-groups
+      (or (get-in @db-with-lookup [conn-id branch])
+          (let [dtx (->> (get-in hctx-groups [conn-id branch])
+                         (mapv datomic-adapter/stmt-dbid->id))
+                db (if branch
+                     (:db (get-secure-db-with conn-id (branch/decode-parent-branch branch)))
+                     (let [conn (if (= db/root-id conn-id)
+                                  (database/get-root-conn)
+                                  (database/get-db-conn! (:db (get-secure-db-with db/root-id nil)) conn-id))]
+                       (d/db conn)))
+                ; is it a history query? (let [db (if (:history? dbval) (d/history db) db)])
+                _ (let [validate-tx (if (= db/root-id conn-id)
+                                      root-validate-tx
+                                      ; todo look up relevant project tx validator
+                                      (constantly true))]
+                    (assert (validate-tx db dtx) (str "staged tx for " conn-id " failed validation")))
+                project-db-with (let [read-sec-predicate (if (= db/root-id conn-id)
+                                                           root-read-sec-predicate
+                                                           ;todo lookup project sec pred
+                                                           (constantly true))]
+                                  (database/with-tx (partial d/with db) read-sec-predicate dtx))]
+            (swap! db-with-lookup assoc-in [conn-id branch] project-db-with)
+            project-db-with)))))
 
 (defn hydrate [root-security-predicate root-validate-tx hctx-groups request root-t]
-  (let [root-conn (database/get-root-conn)
-        root-t (if root-t (-> (d/db root-conn) d/basis-t))
-        root-dtx (->> (get-in hctx-groups [db/root-id nil])
-                      (mapv datomic-adapter/stmt-dbid->id))
-        root-db (d/db root-conn)                            ; run security here
-        {root-db :db :as root-with} (database/with-tx (partial d/with root-db) root-security-predicate root-dtx)
-        db-with-lookup (atom {db/root-id {nil root-with}})
-        get-secure-db-with (build-get-secure-db-with db-with-lookup root-db hctx-groups root-validate-tx)
+  (let [get-secure-db-with (build-get-secure-db-with hctx-groups root-security-predicate root-validate-tx)
         pulled-trees-map (->> request
                               (mapv (juxt identity #(hydrate* % get-secure-db-with)))
                               (into {}))]
-    {:t root-t
+    {:t (if root-t (-> (database/get-root-conn) d/db d/basis-t))
      :pulled-trees-map pulled-trees-map}))
 
 (defn transact! [root-validate-tx htx]
