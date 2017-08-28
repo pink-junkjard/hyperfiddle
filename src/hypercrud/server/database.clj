@@ -1,7 +1,6 @@
 (ns hypercrud.server.database
   (:require [clojure.set :as set]
             [datomic.api :as d]
-            [hypercrud.server.context :as context]
             [hypercrud.server.db-root :as db]
             [hypercrud.server.util.datomic-adapter :as datomic-adapter]
             [hypercrud.types.DbId :refer [->DbId]]))
@@ -39,13 +38,7 @@
     [(->DbId tempid conn-id) (->DbId (str id) conn-id)]))
 
 (defn with-tx [f! read-sec-predicate dtx]
-  ; todo hc-dtx needs to be yanked out
-  (let [hc-dtx (if context/*user*
-                 [{:db/id (d/tempid :db.part/tx)
-                   :hypercrud/audit-user context/*user*
-                   ;:hypercrud/tx hc-tx-uuid ;todo we need a temp squuid or something
-                   }])
-        {:keys [db-after tempids] :as result} (f! (concat dtx hc-dtx))
+  (let [{:keys [db-after tempids] :as result} (f! dtx)
         db (-> db-after
                ;(d/as-of (d/db root-conn) (d/t->tx root-t))
                (d/filter read-sec-predicate))
