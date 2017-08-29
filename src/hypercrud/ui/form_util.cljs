@@ -2,6 +2,8 @@
   (:require [cljs.reader :as reader]
             [clojure.string :as string]
             [hypercrud.client.core :as hc]
+            [hypercrud.form.q-util :as q-util]
+            [hypercrud.types.DbId :refer [->DbId]]
             [hypercrud.ui.markdown :refer [markdown]]
             [hypercrud.ui.tooltip :as tooltip]
             [hypercrud.util.core :as util]))
@@ -18,27 +20,31 @@
         f (if raw-mode? #(dissoc % :find-element/form) identity)]
     (map f ordered-find-elements)))
 
-(defn find-elements-by-name [link]
-  (->> (mapv (juxt :find-element/name identity) (:link-query/find-element link))
-       (into {})))
-
-(defn get-ordered-find-elements [link param-ctx]
-  (case (:request/type link)
-    ; this could throw, we only run this code after a link has returned successfully, getting lucky here
-    :query (let [q (some-> link :link-query/value reader/read-string)
-                 find-element-lookup (find-elements-by-name link)]
-             (->> (util/parse-query-element q :find)
-                  (mapv str)
-                  (mapv #(get find-element-lookup %))))
-    :entity [(->> (:link-query/find-element link)
-                  (filter #(= (:find-element/name %) "entity"))
-                  first)]
-    []))
+(defn get-ordered-find-elements [link query-params param-ctx]
+  (let [fill-fe-conn-id (fn [fe]
+                          (let [conn-dbid (->DbId (q-util/fe-conn-id query-params fe)
+                                                  ; this conn-id doesn't matter and will be removed anyway
+                                                  hc/*root-conn-id*)]
+                            (assoc-in fe [:find-element/connection :db/id] conn-dbid)))]
+    (case (:request/type link)
+      ; this could throw, we only run this code after a link has returned successfully, getting lucky here
+      :query (let [q (some-> link :link-query/value reader/read-string)
+                   find-element-lookup (->> (:link-query/find-element link)
+                                            (map (juxt :find-element/name fill-fe-conn-id))
+                                            (into {}))]
+               (->> (util/parse-query-element q :find)
+                    (mapv str)
+                    (mapv #(get find-element-lookup %))))
+      :entity [(-> (->> (:link-query/find-element link)
+                        (filter #(= (:find-element/name %) "entity"))
+                        first)
+                   (fill-fe-conn-id))]
+      [])))
 
 (defn fe->db [fe param-ctx]
   (let [fe-conn (:find-element/connection fe)]
     (let [conn-id (-> fe-conn :db/id :id)
-          branch (get-in param-ctx [:branches (-> fe-conn :db/id :id)])]
+          branch (get-in param-ctx [:branches conn-id])]
       (hc/db (:peer param-ctx) conn-id branch))))
 
 (defn determine-colspec "Colspec is what you have when you flatten out the find elements,
@@ -47,9 +53,9 @@ especially consider the '* case, so we need a uniform column set driving the bod
 with the headers but the resultset needs to match this column-fields structure now too; since
 the find-element level has been flattened out of the columns."
   ; Need result only for raw mode.
-  [result link schemas param-ctx]
+  [result link schemas query-params param-ctx]
   (let [result (if (map? result) [result] result)           ; unified colspec for table and form
-        ordered-find-elements (-> (get-ordered-find-elements link param-ctx)
+        ordered-find-elements (-> (get-ordered-find-elements link query-params param-ctx)
                                   (strip-forms-in-raw-mode param-ctx))
         raw-mode? (= (:display-mode param-ctx) :root)
         result-as-columns (util/transpose result)

@@ -41,25 +41,26 @@
 (defn request-for-link [link query-params param-ctx]
   (case (:request/type link)
     :query
-    (let [params-map (merge query-params (q-util/build-dbhole-lookup link param-ctx))
-          pull-exp (->> (-> link :link-query/find-element (form-util/strip-forms-in-raw-mode param-ctx))
-                        (mapv (juxt :find-element/name
-                                    (fn [fe]
-                                      (let [conn-id (-> fe :find-element/connection :db/id :id)]
-                                        [(hc/db (:peer param-ctx) conn-id (get-in param-ctx [:branches conn-id]))
-                                         (q-util/form-pull-exp (:find-element/form fe))]))))
-                        (into {}))]
-      (mlet [q (-> (hc-string/safe-read-string (:link-query/value link)) exception->either)
-             query-holes (-> ((exception/wrap q-util/parse-holes) q) exception->either)]
-        (let [params (->> query-holes (mapv (juxt identity #(get params-map %))) (into {}))
-              missing (->> params (filter (comp nil? second)) (mapv first))]
-          (if (empty? missing)
-            (cats/return (->QueryRequest q params pull-exp))
-            (either/left {:message "missing param" :data {:params params :missing missing}})))))
+    (mlet [q (-> (hc-string/safe-read-string (:link-query/value link)) exception->either)
+           query-holes (-> ((exception/wrap q-util/parse-holes) q) exception->either)]
+      (let [params-map (merge query-params (q-util/build-dbhole-lookup link param-ctx))
+            params (->> query-holes (mapv (juxt identity #(get params-map %))) (into {}))
+            pull-exp (->> (-> link :link-query/find-element (form-util/strip-forms-in-raw-mode param-ctx))
+                          (mapv (juxt :find-element/name
+                                      (fn [fe]
+                                        (let [conn-id (q-util/fe-conn-id query-params fe)]
+                                          [(hc/db (:peer param-ctx) conn-id (get-in param-ctx [:branches conn-id]))
+                                           (q-util/form-pull-exp (:find-element/form fe))]))))
+                          (into {}))
+            ; todo validation of conns for pull-exp
+            missing (->> params (filter (comp nil? second)) (mapv first))]
+        (if (empty? missing)
+          (cats/return (->QueryRequest q params pull-exp))
+          (either/left {:message "missing param" :data {:params params :missing missing}}))))
 
     :entity
     (let [fe (first (filter #(= (:find-element/name %) "entity") (:link-query/find-element link)))
-          conn-id (-> fe :find-element/connection :db/id :id)]
+          conn-id (q-util/fe-conn-id query-params fe)]
       (cond
         (nil? conn-id) (either/left {:message "no connection" :data {:find-element fe}})
         (nil? (:entity query-params)) (either/left {:message "missing param" :data {:params query-params
@@ -78,7 +79,7 @@
 (defn process-results [get-f query-params link request result schemas param-ctx]
   (let [param-ctx (assoc param-ctx                          ; provide defaults before user-bindings run. TODO query side
                     :schemas schemas                        ; For tx/entity->statements in userland.
-                    :query-params query-params              ; who uses query-params?
+                    :query-params query-params
                     :read-only (or (:read-only param-ctx) never-read-only))
 
         ; ereq doesn't have a fe yet; wrap with a fe.
@@ -109,11 +110,11 @@
 
                  result)
 
-        colspec (form-util/determine-colspec result link schemas param-ctx)
+        colspec (form-util/determine-colspec result link schemas query-params param-ctx)
         f (get-f link param-ctx)]
     (mlet [param-ctx (user-bindings/user-bindings' link param-ctx)]
       (cats/return
         (case (:display-mode param-ctx)                     ; default happens higher, it influences queries too
-          :user (f result colspec (auto-anchor/auto-anchors link colspec param-ctx) param-ctx)
-          :xray (f result colspec (auto-anchor/auto-anchors link colspec param-ctx) param-ctx)
-          :root (f result colspec (auto-anchor/auto-anchors link colspec param-ctx {:ignore-user-links true}) param-ctx))))))
+          :user (f result colspec (auto-anchor/auto-anchors link colspec query-params param-ctx) param-ctx)
+          :xray (f result colspec (auto-anchor/auto-anchors link colspec query-params param-ctx) param-ctx)
+          :root (f result colspec (auto-anchor/auto-anchors link colspec query-params param-ctx {:ignore-user-links true}) param-ctx))))))

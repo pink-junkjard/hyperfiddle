@@ -45,6 +45,10 @@
                 [name (hc/db (:peer param-ctx) (-> value :db/id :id) (get-in param-ctx [:branches (-> value :db/id :id)]))])))
        (into {})))
 
+(defn fe-conn-id [query-params fe]
+  (or (get query-params (:find-element/name fe))
+      (-> fe :find-element/connection :db/id :id)))
+
 (defn form-pull-exp [form]
   (if form
     (concat

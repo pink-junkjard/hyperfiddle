@@ -56,9 +56,9 @@
 (defn system-anchors
   "All sys links are :anchor/ident :sys, so they can be matched and merged with user-anchors.
   Matching is determined by [repeat? entity attribute ident]"
-  [parent-link colspec param-ctx]
+  [parent-link colspec query-params param-ctx]
   (let [find-elements (if (not= :blank (:request/type parent-link))
-                        (->> (form-util/get-ordered-find-elements parent-link param-ctx)
+                        (->> (form-util/get-ordered-find-elements parent-link query-params param-ctx)
                              (mapv (juxt :find-element/name identity))
                              (into {})))
 

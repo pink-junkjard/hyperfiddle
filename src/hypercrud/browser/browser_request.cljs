@@ -92,11 +92,11 @@
            (cats/fmap (fn [link-request]
                         (concat
                           (if link-request [link-request])
-                          (schema-util/schema-requests-for-link link param-ctx)
+                          (schema-util/schema-requests-for-link link query-params param-ctx)
                           (-> (mlet [result (if link-request
                                               (hc/hydrate (:peer param-ctx) link-request)
                                               (either/right nil))
-                                     schemas (schema-util/hydrate-schema link param-ctx)]
+                                     schemas (schema-util/hydrate-schema link query-params param-ctx)]
                                 (base/process-results (constantly link-dependent-requests) query-params link link-request result schemas param-ctx))
                               (cats/mplus (either/right nil))
                               (cats/extract))))))

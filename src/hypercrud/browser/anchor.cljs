@@ -40,12 +40,14 @@
   (let [have (set (keys (into {} (remove (comp nil? val) (:query-params route)))))]
     (case (:request/type link)
       :query (mlet [q (either/right (q-util/safe-parse-query-validated link))]
+               ; todo check fe conn
                (let [need (set (q-util/parse-param-holes q))
                      missing (set/difference need have)]
                  (if (empty? missing)
                    (either/right route)
                    (either/left {:message "missing query params" :data {:have have :missing missing}}))))
       :entity (if (not= nil (-> route :query-params :entity)) ; add logic for a
+                ; todo check fe conn
                 (either/right route)
                 (either/left {:message "missing query params" :data {:have have :missing #{:entity}}}))
       :blank (either/right route)

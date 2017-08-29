@@ -22,15 +22,15 @@
                                     :db/cardinality [:db/id :db/ident]
                                     :db/unique [:db/id :db/ident]}]]}))
 
-(defn schema-requests-for-link [link param-ctx]
-  (->> (form-util/get-ordered-find-elements link param-ctx)
+(defn schema-requests-for-link [link query-params param-ctx]
+  (->> (form-util/get-ordered-find-elements link query-params param-ctx)
        (map #(form-util/fe->db % param-ctx))
        (map schema-request)
        ; this hc-attr-request will eventually fall out
        ; until then, we still need to join in renderer and hc-type to the datomic schema
        (concat [(hc-attr-request (:root-db param-ctx))])))
 
-(defn hydrate-schema [link param-ctx]
+(defn hydrate-schema [link query-params param-ctx]
   (-> (hc/hydrate (:peer param-ctx) (hc-attr-request (:root-db param-ctx)))
       (cats/bind
         (fn [root-data]
@@ -38,7 +38,7 @@
                                   (mapv #(get % "?attr"))
                                   (util/group-by-assume-unique :attribute/ident)
                                   (util/map-values #(dissoc % :attribute/ident :db/id)))]
-            (->> (form-util/get-ordered-find-elements link param-ctx)
+            (->> (form-util/get-ordered-find-elements link query-params param-ctx)
                  (mapv (fn [fe]
                          (->> (form-util/fe->db fe param-ctx)
                               (schema-request)
