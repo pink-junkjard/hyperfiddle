@@ -9,7 +9,6 @@
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hypercrud.ui.form-util :as form-util]
-            [hypercrud.util.core :as util]
             [hypercrud.util.monad :refer [exception->either]]
             [hypercrud.util.string :as hc-string]))
 
@@ -43,7 +42,7 @@
     :query
     (mlet [q (-> (hc-string/safe-read-string (:link-query/value link)) exception->either)
            query-holes (-> ((exception/wrap q-util/parse-holes) q) exception->either)]
-      (let [params-map (merge query-params (q-util/build-dbhole-lookup link param-ctx))
+      (let [params-map (merge (q-util/build-dbhole-lookup link param-ctx) query-params)
             params (->> query-holes (mapv (juxt identity #(get params-map %))) (into {}))
             pull-exp (->> (-> link :link-query/find-element (form-util/strip-forms-in-raw-mode param-ctx))
                           (mapv (juxt :find-element/name
