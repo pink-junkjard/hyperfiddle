@@ -114,7 +114,7 @@
     (fn get-secure-db-with [conn-id branch]
       ; todo huge issues with lookup refs for conn-ids, they will have misses in the lookup cache and hctx-groups
       (or (get-in @db-with-lookup [conn-id branch])
-          (let [dtx (->> (get-in hctx-groups [conn-id branch])
+          (let [dtx (->> (get-in hctx-groups [branch conn-id])
                          (mapv datomic-adapter/stmt-dbid->id))
                 db (if branch
                      (:db (get-secure-db-with conn-id (branch/decode-parent-branch branch)))
