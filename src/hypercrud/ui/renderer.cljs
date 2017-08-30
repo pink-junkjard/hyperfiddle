@@ -1,20 +1,17 @@
 (ns hypercrud.ui.renderer
   (:require [cats.monad.either :as either]
-            [hypercrud.platform.safe-render :refer [safe-user-renderer]]
             [hypercrud.browser.anchor :as anchor]
-            [hypercrud.compile.eval :refer [eval-str']]
+            [hypercrud.compile.eval :as eval :refer [eval-str']]
+            [hypercrud.platform.safe-render :refer [safe-user-renderer]]
             [hypercrud.util.core :refer [pprint-str]]))
 
-
-(defn empty-string-to-nil [s]
-  (if (empty? s) nil s))
 
 (defn user-renderer [param-ctx]
   (let [attr (:attribute param-ctx)]
     (or
-      (empty-string-to-nil (get-in param-ctx [:fields (:db/ident attr) :renderer]))
-      (empty-string-to-nil (-> attr :attribute/renderer))
-      (empty-string-to-nil (-> attr :attribute/hc-type :hc-type/renderer)))))
+      (eval/validate-user-code-str (get-in param-ctx [:fields (:db/ident attr) :renderer]))
+      (eval/validate-user-code-str (-> attr :attribute/renderer))
+      (eval/validate-user-code-str (-> attr :attribute/hc-type :hc-type/renderer)))))
 
 (defn user-render [maybe-field anchors props param-ctx]
   [:div.value
