@@ -61,16 +61,19 @@
                                                                       #(reset! col-sort nil)
                                                                       #(reset! col-sort [(:db/id fe) ident :asc])
                                                                       (constantly nil))
-                                        arrow (with-sort-direction " ↓" " ↑" " ↕" nil)]
+                                        arrow (with-sort-direction " ↓" " ↑" " ↕" nil)
+                                        has-popover? (some widget/popover-anchor? attr-label-anchors)]
                                     [:td {:class (string/join " " css-classes)
                                           :style {:background-color (connection-color/connection-color (or (:color param-ctx) (.-conn-id db) #_"hack for top tables"))}
                                           :key (str fe-name "-" ident)
-                                          :on-click on-click}
+                                          ; sorting currently breaks click handling in popovers
+                                          :on-click (if has-popover? #() on-click)}
                                      [:label (form-util/field-label field param-ctx)]
                                      [:div.anchors
                                       (widget/render-anchors (remove :anchor/render-inline? attr-label-anchors) param-ctx)
                                       (widget/render-inline-anchors (filter :anchor/render-inline? attr-label-anchors) param-ctx)]
-                                     [:span.sort-arrow arrow]]))))))))))
+                                     (if-not has-popover?
+                                       [:span.sort-arrow arrow])]))))))))))
 
 (defn Control [maybe-field anchors param-ctx]
   (let [props (form-util/build-props maybe-field anchors param-ctx)]
