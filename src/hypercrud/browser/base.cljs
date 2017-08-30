@@ -49,7 +49,7 @@
                           (mapv (juxt :find-element/name
                                       (fn [fe]
                                         (let [conn-id (q-util/fe-conn-id query-params fe)]
-                                          [(hc/db (:peer param-ctx) conn-id (get-in param-ctx [:branches conn-id]))
+                                          [(hc/db (:peer param-ctx) conn-id (:branch param-ctx))
                                            (q-util/form-pull-exp (:find-element/form fe))]))))
                           (into {}))
             ; todo validation of conns for pull-exp
@@ -69,7 +69,7 @@
                 (->EntityRequest
                   (:entity query-params)
                   (:a query-params)
-                  (hc/db (:peer param-ctx) conn-id (get-in param-ctx [:branches conn-id]))
+                  (hc/db (:peer param-ctx) conn-id (:branch param-ctx))
                   (q-util/form-pull-exp (:find-element/form fe))))))
 
     :blank (either/right nil)

@@ -9,6 +9,7 @@
   (letfn [(process-resource [code-str]
             (let [code-str (string/trim code-str)]
               (str-and-code' (eval/eval-str-and-throw code-str) code-str)))]
+    ; managing parent/child doesn't make sense without dependent true
     {{:m true :fe true :a true} (-> (template/load-resource "auto-txfn/mt-fet-at.edn")
                                     process-resource)
      {:m true :fe true :a false} nil

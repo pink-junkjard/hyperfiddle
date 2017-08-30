@@ -55,9 +55,7 @@
       (->> ((:relation-new lookup)) (mapcat #(recurse-request % param-ctx)))
       (->> find-elements                                    ; might have empty results
            (mapcat (fn [fe]
-                     (let [db (let [conn-id (-> fe :find-element/connection :db/id :id)]
-                                (hc/db (:peer param-ctx) conn-id (get-in param-ctx [:branches conn-id])))
-                           param-ctx (context/find-element param-ctx db fe)]
+                     (let [param-ctx (context/find-element param-ctx fe)]
                        (concat
                          (->> ((:entity-f lookup) fe) (mapcat #(recurse-request % param-ctx)))
                          (->> (get-in fe [:find-element/form :form/field])
@@ -72,10 +70,8 @@
                                (->> find-elements
                                     (mapcat (fn [fe]
                                               (let [entity (get relation (:find-element/name fe))
-                                                    db (let [conn-id (-> fe :find-element/connection :db/id :id)]
-                                                         (hc/db (:peer param-ctx) conn-id (get-in param-ctx [:branches conn-id])))
                                                     param-ctx (-> param-ctx
-                                                                  (context/find-element db fe)
+                                                                  (context/find-element fe)
                                                                   (context/entity entity))]
                                                 (concat
                                                   (->> ((:entity-t lookup) fe) (mapcat #(recurse-request % param-ctx)))

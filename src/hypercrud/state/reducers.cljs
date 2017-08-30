@@ -14,42 +14,43 @@
     (or loading? false)))
 
 (defn stage-reducer [stage action & args]
-  (let [discard (fn [stage conn-id branch]
-                  (update stage conn-id dissoc branch))
-        with (fn [stage conn-id branch tx]
-               (update-in stage [conn-id branch] tx/into-tx tx))
+  (let [discard (fn [stage branch]
+                  (dissoc stage branch))
+        with (fn [stage branch conn-id tx]
+               (update-in stage [branch conn-id] tx/into-tx tx))
         clean (fn [stage]
                 (->> stage
-                     (util/map-values (fn [branches]
-                                        (->> branches
-                                             (remove (fn [[branch tx]] (nil? tx)))
+                     (util/map-values (fn [multi-color-tx]
+                                        (->> multi-color-tx
+                                             (remove (fn [[conn-id tx]] (nil? tx)))
                                              (into {}))))
-                     (remove (fn [[conn-id branches]] (empty? branches)))
+                     (remove (fn [[branch multi-color-tx]] (empty? multi-color-tx)))
                      (into {})))]
     (case action
       :transact!-success nil
 
-      :discard (let [[conn-id branch] args]
+      :discard (let [[branch] args]
                  (-> stage
-                     (discard conn-id branch)
+                     (discard branch)
                      clean))
 
-      :with (let [[conn-id branch tx] args]
+      :with (let [[branch conn-id tx] args]
               (-> stage
-                  (with conn-id branch tx)
+                  (with branch conn-id tx)
                   clean))
 
-      :merge (let [[conn-id branch] args
-                   parent-branch (branch/decode-parent-branch branch)
-                   tx (get-in stage [conn-id branch])]
-               (-> stage
-                   (with conn-id parent-branch tx)
-                   (discard conn-id branch)
+      :merge (let [[branch] args
+                   parent-branch (branch/decode-parent-branch branch)]
+               (-> (reduce (fn [stage [conn-id tx]]
+                             (with stage parent-branch conn-id tx))
+                           stage
+                           (get stage branch))
+                   (discard branch)
                    clean))
 
-      :reset-branch (let [[conn-id branch tx] args]
+      :reset-branch (let [[branch multi-color-tx] args]
                       (-> stage
-                          (assoc-in [conn-id branch] tx)
+                          (assoc branch multi-color-tx)
                           clean))
 
       :reset-stage (first args)

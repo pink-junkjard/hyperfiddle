@@ -55,8 +55,8 @@
         (p/then #(-> % :body :hypercrud)))))
 
 (defn transact! [entry-uri htx-groups]
-  (let [htx-groups (->> (purge-nil-vals htx-groups)
-                        (util/map-values #(get % nil)))]
+  (let [htx-groups (-> (purge-nil-vals htx-groups)
+                       (get nil))]
     (-> (kvlt/request!
           {:url (resolve-relative-uri entry-uri (goog.Uri. "transact"))
            :content-type content-type-edn

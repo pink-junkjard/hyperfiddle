@@ -36,8 +36,7 @@
     (->> (partition 4 colspec)
          (group-by (fn [[dbval fe attr maybe-field]] fe))
          (mapcat (fn [[fe colspec]]
-                   (let [db (ffirst colspec)
-                         param-ctx (context/find-element param-ctx db fe)]
+                   (let [param-ctx (context/find-element param-ctx fe)]
                      (->> colspec
                           (mapv (fn [[db fe attr field]]
                                   (let [fe-name (-> fe :find-element/name)
@@ -100,8 +99,7 @@
 
 (defn FindElement [[fe colspec] entity-anchors-lookup param-ctx]
   (let [entity (get (:result param-ctx) (-> fe :find-element/name))
-        db (ffirst colspec)
-        param-ctx (-> (context/find-element param-ctx db fe)
+        param-ctx (-> (context/find-element param-ctx fe)
                       (context/entity entity))]
     (->> colspec (mapv #(Value % entity-anchors-lookup param-ctx)))))
 
@@ -124,9 +122,8 @@
                                   (mapcat (fn [[fe colspec]]
                                             (let [fe-name (-> fe :find-element/name)
                                                   entity (get relation fe-name) _ (assert entity)
-                                                  db (ffirst colspec)
                                                   param-ctx (-> param-ctx
-                                                                (context/find-element db fe)
+                                                                (context/find-element fe)
                                                                 (context/entity entity))
                                                   fe-anchors (->> (get-in fe-anchors-lookup [fe-name nil])
                                                                   (filter :anchor/repeating?)
@@ -169,8 +166,7 @@
                                       (group-by (fn [[dbval fe attr maybe-field]] fe))
                                       (mapcat (fn [[fe colspec]]
                                                 (let [form-anchors (get anchors-lookup (-> fe :find-element/name))
-                                                      db (ffirst colspec)
-                                                      param-ctx (context/find-element param-ctx db fe)]
+                                                      param-ctx (context/find-element param-ctx fe)]
                                                   (widget/render-anchors form-anchors param-ctx))))))
             links-index-inline (widget/render-inline-anchors (->> anchors ; busted
                                                                   (remove :anchor/repeating?)

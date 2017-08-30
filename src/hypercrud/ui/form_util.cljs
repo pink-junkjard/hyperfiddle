@@ -44,7 +44,7 @@
 (defn fe->db [fe param-ctx]
   (let [fe-conn (:find-element/connection fe)]
     (let [conn-id (-> fe-conn :db/id :id)
-          branch (get-in param-ctx [:branches conn-id])]
+          branch (:branch param-ctx)]
       (hc/db (:peer param-ctx) conn-id branch))))
 
 (defn determine-colspec "Colspec is what you have when you flatten out the find elements,

@@ -115,15 +115,15 @@
         route' (build-anchor-route' anchor param-ctx)
         hypercrud-props (build-anchor-props-raw route' anchor param-ctx)
         param-ctx (context/anchor-branch param-ctx anchor)  ;the ctx above the popover at the anchor (including the branch). Not the ctx in the popover, which is managed as the browser evaluates.
-        anchor-props-txfn {:txfns {:cancel #((:dispatch! param-ctx) (actions/discard (.-conn-id (:db param-ctx)) (.-branch (:db param-ctx))))
+        anchor-props-txfn {:txfns {:cancel #((:dispatch! param-ctx) (actions/discard (:branch param-ctx)))
                                    :stage (let [user-txfn (some-> (eval/validate-user-code-str (:anchor/tx-fn anchor)) eval-str' (cats/mplus (either/right nil)) (cats/extract))
-                                                user-txfn (or user-txfn (fn [ctx modal-tx modal-route] {:tx modal-tx}))]
+                                                user-txfn (or user-txfn (fn [ctx multi-color-tx modal-route] {:tx multi-color-tx}))]
                                             (fn []
                                               (p/promise
                                                 (fn [resolve! reject!]
-                                                  (let [swap-fn (fn [modal-tx]
+                                                  (let [swap-fn (fn [multi-color-tx]
                                                                   ; todo why does the user-txfn have access to the parent link's :db :result etc?
-                                                                  (let [result (let [result (user-txfn param-ctx modal-tx (:route hypercrud-props))]
+                                                                  (let [result (let [result (user-txfn param-ctx multi-color-tx (:route hypercrud-props))]
                                                                                  ; txfn may be sync or async
                                                                                  (if-not (p/promise? result) (p/resolved result) result))]
                                                                     ; let the caller of this :stage fn know the result
@@ -136,7 +136,7 @@
 
                                                                     ; return the result to the action, it could be a promise
                                                                     result))]
-                                                    ((:dispatch! param-ctx) (actions/stage-popover (.-conn-id (:db param-ctx)) (.-branch (:db param-ctx)) swap-fn)))))))}}
+                                                    ((:dispatch! param-ctx) (actions/stage-popover (:branch param-ctx) swap-fn)))))))}}
 
         ; the whole point of popovers is managed branches
         anchor-props-popover (if-let [route (and (:anchor/managed? anchor) (either/right? route') (cats/extract route'))]

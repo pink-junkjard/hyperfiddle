@@ -79,8 +79,7 @@
                               form-anchors (get-in anchors-lookup [fe-name nil])
                               entity-new-anchors (->> form-anchors (remove :anchor/repeating?))
                               entity-anchors (->> form-anchors (filter :anchor/repeating?))
-                              db (ffirst colspec)
-                              param-ctx (context/find-element param-ctx db fe)]
+                              param-ctx (context/find-element param-ctx fe)]
                           (concat
                             ; don't put entity in scope because it messes up formulas which have to be deterministic with request side.
                             (widget/render-anchors (remove :anchor/render-inline? entity-new-anchors) param-ctx)
@@ -110,8 +109,8 @@
         magic-new-field (if-not not-splat?
                           ; can we assert entity? No, bc we could model a link to a single relation without a form.
                           (if-let [entity (get relation "entity")] ; makes sense only for entity links, not query links as entity.
-                            (let [[db fe _ _] (take 4 colspec)
-                                  param-ctx (context/find-element param-ctx db fe)]
+                            (let [[_ fe _ _] (take 4 colspec)
+                                  param-ctx (context/find-element param-ctx fe)]
                               ^{:key (hash (keys entity))} [new-field entity param-ctx])))]
 
     [:div {:class (str "forms-list " (name (:layout param-ctx)))}

@@ -42,7 +42,7 @@
        (map (fn [{:keys [:dbhole/name :dbhole/value]}]
               (if-not (or (empty? name) (nil? value))
                 ; transform project-id into conn-id
-                [name (hc/db (:peer param-ctx) (-> value :db/id :id) (get-in param-ctx [:branches (-> value :db/id :id)]))])))
+                [name (hc/db (:peer param-ctx) (-> value :db/id :id) (:branch param-ctx))])))
        (into {})))
 
 (defn fe-conn-id [query-params fe]

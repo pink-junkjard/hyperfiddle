@@ -14,6 +14,7 @@
                hash js/Math.abs - str)]
     (->DbId id conn-id)))
 
+; todo there are collisions when two anchors share the same 'location'
 (defn deterministic-ident [fe e a v]
   ; Need comment explaining why.
   ; [fe e a v] quad is sufficient to answer "where are we".

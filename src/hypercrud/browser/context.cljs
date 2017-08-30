@@ -1,6 +1,6 @@
 (ns hypercrud.browser.context
-  (:require [hypercrud.client.core :as hc]
-            [hypercrud.browser.auto-anchor-formula :refer [auto-entity-dbid]]
+  (:require [hypercrud.browser.auto-anchor-formula :refer [auto-entity-dbid]]
+            [hypercrud.client.core :as hc]
             [hypercrud.state.actions.core :as actions]
             [hypercrud.util.branch :as branch]))
 
@@ -19,27 +19,26 @@
 
 (defn anchor-branch [param-ctx anchor]
   (if (:anchor/managed? anchor)
-    (if-let [db (:db param-ctx)]
-      (let [branch (branch/encode-branch-child (.-branch db) (:id (auto-entity-dbid param-ctx)))]
-        (-> param-ctx
-            ; if we are an index link, what are we forking? Provide a binding
-            (assoc-in [:branches (.-conn-id db)] branch)
-            (update :db #(hc/db (:peer param-ctx) (.-conn-id %) branch))))
-      (do
-        (js/console.warn "You are attempting to branch an index-link. We can't deduce the :db to branch, you must explicitly set it in user bindings.")
-        param-ctx))
+    ; this auto-entity-dbid call makes no sense, there will be collisions, specifically on index links
+    ; which means queries of unrendered modals are impacted, an unnecessary perf cost at the very least
+    ; we should run the auto-formula logic to determine an appropriate auto-id fn
+    (let [child-id-str (:id (auto-entity-dbid param-ctx))
+          branch (branch/encode-branch-child (:branch param-ctx) child-id-str)]
+      (assoc param-ctx :branch branch))
     param-ctx))
 
 ; todo :result -> :relation
 (defn relation [param-ctx relation]
   (assoc param-ctx :result relation))
 
-(defn find-element [param-ctx db fe]
-  (assoc param-ctx :db db
-                   :find-element fe
-                   :schema (get-in param-ctx [:schemas (:find-element/name fe)])
-                   ; todo custom user-dispatch with all the tx-fns as reducers
-                   :user-with! (fn [tx] ((:dispatch! param-ctx) (actions/with (.-conn-id db) (.-branch db) tx)))))
+(defn find-element [param-ctx fe]
+  (let [conn-id (-> fe :find-element/connection :db/id :id)
+        branch (:branch param-ctx)]
+    (assoc param-ctx :db (hc/db (:peer param-ctx) conn-id branch)
+                     :find-element fe
+                     :schema (get-in param-ctx [:schemas (:find-element/name fe)])
+                     ; todo custom user-dispatch with all the tx-fns as reducers
+                     :user-with! (fn [tx] ((:dispatch! param-ctx) (actions/with branch conn-id tx))))))
 
 (defn entity [param-ctx entity]
   (assoc param-ctx :color (if-let [color-fn (:color-fn param-ctx)]

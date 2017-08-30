@@ -24,19 +24,19 @@
       ; todo clean up other state values: remove the response, old route, etc
       [:set-error e])))
 
-(defn discard [conn-id branch]
-  (partial hydrating-action {:on-start (constantly [[:discard conn-id branch]])}))
+(defn discard [branch]
+  (partial hydrating-action {:on-start (constantly [[:discard branch]])}))
 
-(defn with [conn-id branch tx]
-  (partial hydrating-action {:on-start (constantly [[:with conn-id branch tx]])}))
+(defn with [branch conn-id tx]
+  (partial hydrating-action {:on-start (constantly [[:with branch conn-id tx]])}))
 
-(defn stage-popover [conn-id branch swap-fn-async]
+(defn stage-popover [branch swap-fn-async]
   (fn [dispatch! get-state]
-    (let [modal-tx (get-in (get-state) [:stage conn-id branch] [])]
-      (p/then (swap-fn-async modal-tx)
+    (let [multi-color-tx (get-in (get-state) [:stage branch] {})]
+      (p/then (swap-fn-async multi-color-tx)
               (fn [{:keys [tx app-route]}]
-                (let [actions [[:reset-branch conn-id branch tx]
-                               [:merge conn-id branch]
+                (let [actions [[:reset-branch branch tx]    ; this has to be a map now
+                               [:merge branch]
                                (if app-route [:soft-set-route app-route])]]
                   (hydrating-action {:on-start (constantly actions)} dispatch! get-state)))))))
 
