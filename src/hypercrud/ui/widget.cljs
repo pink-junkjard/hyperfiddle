@@ -269,8 +269,11 @@
      #()
      {:read-only true}]))
 
-(defn raw [_ anchors props param-ctx]
+(defn raw [maybe-field anchors props param-ctx]
   (let [valueType (-> param-ctx :attribute :db/valueType :db/ident)
         value (if (= valueType :db.type/ref) (:db/id (:value param-ctx)) (:value param-ctx))
         on-change! #((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %))]
-    [input/edn-input* value on-change! props]))
+    [:div.value
+     [input/edn-input* value on-change! props]
+     (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)
+     [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]]))
