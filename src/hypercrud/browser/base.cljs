@@ -38,42 +38,46 @@
   (->EntityRequest link-dbid nil root-db meta-pull-exp-for-link))
 
 (defn request-for-link [link query-params param-ctx]
-  (case (:request/type link)
-    :query
-    (mlet [q (-> (hc-string/safe-read-string (:link-query/value link)) exception->either)
-           query-holes (-> ((exception/wrap q-util/parse-holes) q) exception->either)]
-      (let [params-map (merge (q-util/build-dbhole-lookup link param-ctx) query-params)
-            params (->> query-holes (mapv (juxt identity #(get params-map %))) (into {}))
-            pull-exp (->> (-> link :link-query/find-element (form-util/strip-forms-in-raw-mode param-ctx))
-                          (mapv (juxt :find-element/name
-                                      (fn [fe]
-                                        (let [conn-id (q-util/fe-conn-id query-params fe)]
-                                          [(hc/db (:peer param-ctx) conn-id (:branch param-ctx))
-                                           (q-util/form-pull-exp (:find-element/form fe))]))))
-                          (into {}))
-            ; todo validation of conns for pull-exp
-            missing (->> params (filter (comp nil? second)) (mapv first))]
-        (if (empty? missing)
-          (cats/return (->QueryRequest q params pull-exp))
-          (either/left {:message "missing param" :data {:params params :missing missing}}))))
+  (mlet [ordered-find-elements (-> (exception/try-on
+                                     (-> (form-util/get-ordered-find-elements link query-params param-ctx)
+                                         (form-util/strip-forms-in-raw-mode param-ctx)))
+                                   (exception->either))]
+    (case (:request/type link)
+      :query
+      (mlet [q (-> (hc-string/safe-read-string (:link-query/value link)) exception->either)
+             query-holes (-> ((exception/wrap q-util/parse-holes) q) exception->either)]
+        (let [params-map (merge (q-util/build-dbhole-lookup link param-ctx) query-params)
+              params (->> query-holes (mapv (juxt identity #(get params-map %))) (into {}))
+              pull-exp (->> ordered-find-elements
+                            (mapv (juxt :find-element/name
+                                        (fn [fe]
+                                          (let [conn-id (-> fe :find-element/connection :db/id :id)]
+                                            [(hc/db (:peer param-ctx) conn-id (:branch param-ctx))
+                                             (q-util/form-pull-exp (:find-element/form fe))]))))
+                            (into {}))
+              ; todo validation of conns for pull-exp
+              missing (->> params (filter (comp nil? second)) (mapv first))]
+          (if (empty? missing)
+            (cats/return (->QueryRequest q params pull-exp))
+            (either/left {:message "missing param" :data {:params params :missing missing}}))))
 
-    :entity
-    (let [fe (first (filter #(= (:find-element/name %) "entity") (:link-query/find-element link)))
-          conn-id (q-util/fe-conn-id query-params fe)]
-      (cond
-        (nil? conn-id) (either/left {:message "no connection" :data {:find-element fe}})
-        (nil? (:entity query-params)) (either/left {:message "missing param" :data {:params query-params
-                                                                                    :missing #{:entity}}})
-        :else (either/right
-                (->EntityRequest
-                  (:entity query-params)
-                  (:a query-params)
-                  (hc/db (:peer param-ctx) conn-id (:branch param-ctx))
-                  (q-util/form-pull-exp (:find-element/form fe))))))
+      :entity
+      (let [fe (first (filter #(= (:find-element/name %) "entity") ordered-find-elements))
+            conn-id (-> fe :find-element/connection :db/id :id)]
+        (cond
+          (nil? conn-id) (either/left {:message "no connection" :data {:find-element fe}})
+          (nil? (:entity query-params)) (either/left {:message "missing param" :data {:params query-params
+                                                                                      :missing #{:entity}}})
+          :else (either/right
+                  (->EntityRequest
+                    (:entity query-params)
+                    (:a query-params)
+                    (hc/db (:peer param-ctx) conn-id (:branch param-ctx))
+                    (q-util/form-pull-exp (:find-element/form fe))))))
 
-    :blank (either/right nil)
+      :blank (either/right nil)
 
-    (either/right nil)))
+      (either/right nil))))
 
 (defn process-results [get-f query-params link request result schemas param-ctx]
   (let [param-ctx (assoc param-ctx                          ; provide defaults before user-bindings run. TODO query side

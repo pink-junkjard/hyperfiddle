@@ -41,6 +41,7 @@
     (case (:request/type link)
       :query (mlet [q (either/right (q-util/safe-parse-query-validated link))]
                ; todo check fe conn
+               ; todo merge in dbhole lookup, see: hypercrud.browser.base/request-for-link
                (let [need (set (q-util/parse-param-holes q))
                      missing (set/difference need have)]
                  (if (empty? missing)

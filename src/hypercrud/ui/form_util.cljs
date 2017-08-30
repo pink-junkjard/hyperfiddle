@@ -30,14 +30,17 @@
       ; this could throw, we only run this code after a link has returned successfully, getting lucky here
       :query (let [q (some-> link :link-query/value reader/read-string)
                    find-element-lookup (->> (:link-query/find-element link)
-                                            (map (juxt :find-element/name fill-fe-conn-id))
+                                            (map (juxt :find-element/name identity))
                                             (into {}))]
                (->> (util/parse-query-element q :find)
                     (mapv str)
-                    (mapv #(get find-element-lookup %))))
-      :entity [(-> (->> (:link-query/find-element link)
-                        (filter #(= (:find-element/name %) "entity"))
-                        first)
+                    (mapv (fn [fe-name]
+                            (-> (get find-element-lookup fe-name {:find-element/name fe-name})
+                                (fill-fe-conn-id))))))
+      :entity [(-> (or (->> (:link-query/find-element link)
+                            (filter #(= (:find-element/name %) "entity"))
+                            first)
+                       {:find-element/name "entity"})
                    (fill-fe-conn-id))]
       [])))
 
