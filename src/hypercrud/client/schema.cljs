@@ -15,7 +15,7 @@
                                         {:attribute/hc-type ['*]}]]}))
 
 (defn schema-request [dbval]
-  (->QueryRequest '[:find ?attr :in $ :where [?attr :db/ident]]
+  (->QueryRequest '[:find ?attr :in $ :where [:db.part/db :db.install/attribute ?attr]]
                   {"$" dbval}
                   {"?attr" [dbval ['*
                                    {:db/valueType [:db/id :db/ident]
