@@ -228,7 +228,7 @@
 (defn code [& args]
   (fn [maybe-field anchors props param-ctx]
     (let [ident (-> param-ctx :attribute :db/ident)
-          change! #((:user-with! param-ctx) (tx/edit-entity (:db/id (:entity param-ctx)) ident [(:value param-ctx)] [%]))]
+          change! #((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %))]
       ^{:key ident}
       [:div.value
        (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)
