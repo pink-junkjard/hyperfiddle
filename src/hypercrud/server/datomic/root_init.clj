@@ -10,7 +10,7 @@
 
 (defn reflect-schema [conn]
   (let [$ (d/db conn)]
-    (->> (d/q '[:find [?a ...] :in $ :where [?a :db/ident]] $)
+    (->> (d/q '[:find [?attr ...] :in $ :where [:db.part/db :db.install/attribute ?attr]] $)
          (mapv #(d/touch (d/entity $ %)))
          ;filter out datomic attributes, todo this is a huge hack
          (filter #(> (:db/id %) 62)))))
