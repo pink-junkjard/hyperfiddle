@@ -11,9 +11,9 @@
 
 ==
 {:d? true :a true}
+; don't set a because :a is used for card/many, we are create, so we just create one entity
 ==
 (fn [ctx]
-  ; todo why are we not setting :a?
   {:entity (hypercrud.browser.auto-anchor-formula/auto-entity-dbid ctx)})
 
 
@@ -35,8 +35,8 @@
 
 ==
 {:d? false :a true}
+; don't set a because :a is used for card/many, we are create, so we just create one entity
 ==
 (fn [ctx]
-  ; todo why are we not setting :a?
   {:entity (hypercrud.browser.auto-anchor-formula/auto-entity-dbid-from-stage ctx)})
 ==
