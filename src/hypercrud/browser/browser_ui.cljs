@@ -28,10 +28,13 @@
 (declare user-result)
 
 (defn get-ui-f [link param-ctx]
-  (case (:display-mode param-ctx)
-    :user (user-result link param-ctx)
-    :xray auto-control/result
-    :root auto-control/result))
+  (let [f (case (:display-mode param-ctx)
+            :user (user-result link param-ctx)
+            :xray auto-control/result
+            :root auto-control/result)]
+    (fn [relations colspec anchors ctx]
+      (let [anchors (remove :anchor/disabled? anchors)]
+        (f relations colspec anchors ctx)))))
 
 (defn ui' [{query-params :query-params :as route} param-ctx
            ; hack for first pass on select options

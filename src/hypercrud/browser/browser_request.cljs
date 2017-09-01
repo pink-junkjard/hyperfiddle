@@ -33,7 +33,9 @@
                  (map? result) [result]
                  (coll? result) result
                  :else result)
-        anchors (filter :anchor/render-inline? anchors)     ; at this point we only care about inline anchors
+        anchors (->> anchors
+                     (remove :anchor/disabled?)
+                     (filter :anchor/render-inline?))       ; at this point we only care about inline anchors
         anchors-lookup (->> anchors
                             (group-by (fn [anchor]
                                         (let [r (or (-> anchor :anchor/repeating?) false)
