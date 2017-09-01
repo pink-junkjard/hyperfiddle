@@ -55,7 +55,10 @@
 ; todo this belongs in auto-anchor namespace
 (defn system-anchors
   "All sys links are :anchor/ident :sys, so they can be matched and merged with user-anchors.
-  Matching is determined by [repeat? entity attribute ident]"
+  Matching is determined by [repeat? entity attribute ident]
+
+  This function recurses in unexpected abstract way and impacts performance highly
+  "
   [parent-link colspec query-params param-ctx]
   (let [find-elements (if (not= :blank (:request/type parent-link))
                         (->> (form-util/get-ordered-find-elements parent-link query-params param-ctx)
