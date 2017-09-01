@@ -3,6 +3,7 @@
             [cljs.reader :as reader]
             [goog.Uri]
             [hypercrud.client.internal :as internal]
+            [hypercrud.util.branch :as branch]
             [hypercrud.util.core :as util]
             [kvlt.core :as kvlt]
             [kvlt.middleware.params]
@@ -45,12 +46,19 @@
          (util/map-values #(util/map-values (partial filter v-not-nil?) %)))))
 
 (defn hydrate! [entry-uri requests stage-val]
-  (let [stage-val (purge-nil-vals stage-val)]
+  (let [branch-vals (->> stage-val
+                         (mapcat (fn [[branch branch-content]]
+                                   (->> branch-content
+                                        (map (fn [[conn-id tx]]
+                                               (let [tx (branch/db-content conn-id branch stage-val)]
+                                                 [[conn-id (hash tx)] tx]))))))
+                         #_purge-nil-vals
+                         (into {}))]
     (-> (kvlt/request! {:url (resolve-relative-uri entry-uri (goog.Uri. "hydrate"))
                         :content-type content-type-transit  ; helps debugging to view as edn
                         :accept content-type-transit        ; needs to be fast so transit
                         :method :post
-                        :form {:staged-tx stage-val :request requests}
+                        :form {:staged-tx branch-vals :request requests}
                         :as :auto})
         (p/then #(-> % :body :hypercrud)))))
 

@@ -4,6 +4,7 @@
             [hypercrud.client.http :as http]
             [hypercrud.types.DbVal :refer [->DbVal]]
             [hypercrud.types.DbError :refer [DbError]]
+            [hypercrud.util.branch :as branch]
             [promesa.core :as p]
             [reagent.core :as reagent]))
 
@@ -34,7 +35,7 @@
       (either/left {:message "Loading" :data {:request request}})))
 
   (db [this conn-id branch]
-    (->DbVal conn-id branch))
+    (->DbVal conn-id (hash (branch/db-content conn-id branch @(reagent/cursor state-atom [:stage])))))
 
   (hydrate-one! [this request]
     (let [{:keys [entry-uri stage]} @state-atom]
