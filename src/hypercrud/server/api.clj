@@ -114,14 +114,12 @@
     (fn get-secure-db-with [conn-id branch]
       ; todo huge issues with lookup refs for conn-ids, they will have misses in the lookup cache and hctx-groups
       (or (get-in @db-with-lookup [conn-id branch])
-          (let [dtx (->> (get-in hctx-groups [branch conn-id])
+          (let [dtx (->> (get hctx-groups [conn-id branch])
                          (mapv datomic-adapter/stmt-dbid->id))
-                db (if branch
-                     (:db (get-secure-db-with conn-id (branch/decode-parent-branch branch)))
-                     (let [conn (if (= db/root-id conn-id)
-                                  (database/get-root-conn)
-                                  (database/get-db-conn! (:db (get-secure-db-with db/root-id nil)) conn-id))]
-                       (d/db conn)))
+                db (let [conn (if (= db/root-id conn-id)
+                                (database/get-root-conn)
+                                (database/get-db-conn! (:db (get-secure-db-with db/root-id nil)) conn-id))]
+                     (d/db conn))
                 ; is it a history query? (let [db (if (:history? dbval) (d/history db) db)])
                 _ (let [validate-tx (if (= db/root-id conn-id)
                                       root-validate-tx
