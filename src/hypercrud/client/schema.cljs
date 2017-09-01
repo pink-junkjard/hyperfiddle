@@ -5,14 +5,15 @@
             [hypercrud.ui.form-util :as form-util]
             [hypercrud.util.core :as util]))
 
-(defn hc-attr-request [root-dbval]
-  (->QueryRequest '[:find ?attr :in $ :where
-                    (or [?attr :attribute/renderer]
-                        [?attr :attribute/hc-type])]
-                  {"$" root-dbval}
-                  {"?attr" [root-dbval [:attribute/ident
-                                        :attribute/renderer
-                                        {:attribute/hc-type ['*]}]]}))
+(defn hc-attr-request [param-ctx]
+  (let [dbval (hc/db (:peer param-ctx) hc/*root-conn-id* (:branch param-ctx))]
+    (->QueryRequest '[:find ?attr :in $ :where
+                      (or [?attr :attribute/renderer]
+                          [?attr :attribute/hc-type])]
+                    {"$" dbval}
+                    {"?attr" [dbval [:attribute/ident
+                                     :attribute/renderer
+                                     {:attribute/hc-type ['*]}]]})))
 
 (defn schema-request [dbval]
   (->QueryRequest '[:find ?attr :in $ :where [:db.part/db :db.install/attribute ?attr]]
@@ -28,10 +29,10 @@
        (map schema-request)
        ; this hc-attr-request will eventually fall out
        ; until then, we still need to join in renderer and hc-type to the datomic schema
-       (concat [(hc-attr-request (:root-db param-ctx))])))
+       (concat [(hc-attr-request param-ctx)])))
 
 (defn hydrate-schema [link query-params param-ctx]
-  (-> (hc/hydrate (:peer param-ctx) (hc-attr-request (:root-db param-ctx)))
+  (-> (hc/hydrate (:peer param-ctx) (hc-attr-request param-ctx))
       (cats/bind
         (fn [root-data]
           (let [indexed-root (->> root-data

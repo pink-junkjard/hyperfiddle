@@ -142,16 +142,16 @@
     (concat entity-links attr-links)))
 
 
-(defn request-for-system-link [root-db system-link-idmap]   ; always latest
+(defn request-for-system-link [system-link-idmap param-ctx]
   ; connection, owner, fe, attr.
 
   ; all this is in the parent-link, we can just overhydrate and then prune away what we don't need.
   ; That was the plan, but it doesn't work in second layer deep sys links, the parent is a sys link. So we
   ; need to just hydrate what we need.
-
-  [(->EntityRequest (->DbId (:owner system-link-idmap) hc/*root-conn-id*) nil root-db ['*])
-   (if-let [conn (:conn system-link-idmap)] (->EntityRequest (->DbId conn hc/*root-conn-id*) nil root-db ['*]))
-   (if-let [fe (:fe system-link-idmap)] (->EntityRequest (->DbId fe hc/*root-conn-id*) nil root-db [:db/id :find-element/name]))])
+  (let [dbval (hc/db (:peer param-ctx) hc/*root-conn-id* (:branch param-ctx))]
+    [(->EntityRequest (->DbId (:owner system-link-idmap) hc/*root-conn-id*) nil dbval ['*])
+     (if-let [conn (:conn system-link-idmap)] (->EntityRequest (->DbId conn hc/*root-conn-id*) nil dbval ['*]))
+     (if-let [fe (:fe system-link-idmap)] (->EntityRequest (->DbId fe hc/*root-conn-id*) nil dbval [:db/id :find-element/name]))]))
 
 (defn hydrate-system-link [system-link-idmap [owner conn fe] param-ctx]
   (let [owner-id (:owner system-link-idmap)

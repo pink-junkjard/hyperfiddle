@@ -33,9 +33,10 @@
                      :anchor/find-element [:db/id :find-element/name :find-element/connection]}]
       :hypercrud/owner ['*]}]))
 
-(defn meta-request-for-link [root-db link-dbid]             ; always latest
+(defn meta-request-for-link [link-dbid param-ctx]
   (assert link-dbid)
-  (->EntityRequest link-dbid nil root-db meta-pull-exp-for-link))
+  (let [dbval (hc/db (:peer param-ctx) hc/*root-conn-id* (:branch param-ctx))]
+    (->EntityRequest link-dbid nil dbval meta-pull-exp-for-link)))
 
 (defn request-for-link [link query-params param-ctx]
   (mlet [ordered-find-elements (-> (exception/try-on

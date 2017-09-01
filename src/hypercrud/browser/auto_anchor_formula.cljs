@@ -8,8 +8,8 @@
 (defn auto-entity-dbid-from-stage [ctx]
   ; This returns a new value each time the transaction changes - can't call it again later.
   ; So tx-fns must inspect the modal-route, they can't re-create the dbid.
-  (let [{:keys [conn-id branch]} (:db ctx)
-        branch-val (-> ctx :peer .-state-atom deref :stage (get-in [conn-id branch]))
+  (let [conn-id (-> ctx :db :conn-id)
+        branch-val (-> ctx :peer .-state-atom deref :stage (get-in [conn-id (:branch ctx)]))
         id (-> (or branch-val "nil stage")
                hash js/Math.abs - str)]
     (->DbId id conn-id)))
