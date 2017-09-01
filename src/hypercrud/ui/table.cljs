@@ -178,7 +178,7 @@
         [:div.ui-table-with-links
          links-index
          (if (empty? colspec)
-           [:div "Can't infer table structure - no resultset and no form. Fix query or model a form."]
+           [:div "Can't infer table structure - no resultset and blank form. Fix query or model a form."]
            [:table.ui-table
             [:thead [:tr
                      (build-col-heads colspec anchors sort-col param-ctx)
