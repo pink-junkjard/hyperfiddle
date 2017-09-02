@@ -38,12 +38,9 @@
   (-> (.clone entry-uri)
       (.resolve relative-uri)))
 
-(defn purge-nil-vals [hctx-groups]
-  (let [v-not-nil? (fn [[op e a v]]
-                     (not (and (or (= :db/add op) (= :db/retract op))
-                               (nil? v))))]
-    (->> hctx-groups
-         (util/map-values #(util/map-values (partial filter v-not-nil?) %)))))
+(defn v-not-nil? [[op e a v]]
+  (not (and (or (= :db/add op) (= :db/retract op))
+            (nil? v))))
 
 (defn hydrate! [entry-uri requests stage-val]
   (let [branch-vals (->> stage-val
@@ -51,8 +48,7 @@
                                    (->> branch-content
                                         (map (fn [[conn-id tx]]
                                                (let [tx (branch/db-content conn-id branch stage-val)]
-                                                 [[conn-id (hash tx)] tx]))))))
-                         #_purge-nil-vals
+                                                 [[conn-id (hash tx)] (filter v-not-nil? tx)]))))))
                          (into {}))]
     (-> (kvlt/request! {:url (resolve-relative-uri entry-uri (goog.Uri. "hydrate"))
                         :content-type content-type-transit  ; helps debugging to view as edn
@@ -63,8 +59,8 @@
         (p/then #(-> % :body :hypercrud)))))
 
 (defn transact! [entry-uri htx-groups]
-  (let [htx-groups (-> (purge-nil-vals htx-groups)
-                       (get nil))]
+  (let [htx-groups (->> (get htx-groups nil)
+                        (util/map-values (partial filter v-not-nil?)))]
     (-> (kvlt/request!
           {:url (resolve-relative-uri entry-uri (goog.Uri. "transact"))
            :content-type content-type-edn
