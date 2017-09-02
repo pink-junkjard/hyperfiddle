@@ -81,6 +81,14 @@
     :hydrate!-failure (first args)
     error))
 
+(defn popover-reducer [popovers action & args]
+  (case action
+    :open-popover (let [[branch anchor-id] args]
+                    (update popovers branch (fnil conj #{}) anchor-id))
+    :close-popover (let [[branch anchor-id] args]
+                     (update popovers branch disj anchor-id))
+    (or popovers {})))
+
 (defn pressed-keys-reducer [v action & args]
   (or v #{}))
 
@@ -89,6 +97,7 @@
                        :stage stage-reducer
                        :ptm ptm-reducer
                        :error error-reducer
+                       :popovers popover-reducer
                        :pressed-keys pressed-keys-reducer})
 
 (def root-reducer (state/combine-reducers root-reducer-map))

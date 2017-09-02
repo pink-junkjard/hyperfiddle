@@ -10,7 +10,8 @@
             [hypercrud.state.actions.core :as actions]
             [hypercrud.util.core :refer [pprint-str]]
             [hypercrud.util.monad :refer [exception->either]]
-            [promesa.core :as p]))
+            [promesa.core :as p]
+            [reagent.core :as reagent]))
 
 
 (defn safe-run-user-code-str' [code-str & args]
@@ -115,8 +116,12 @@
                      (cats/extract))
         route' (build-anchor-route' anchor param-ctx)
         hypercrud-props (build-anchor-props-raw route' anchor param-ctx)
+        parent-branch (:branch param-ctx)
         param-ctx (context/anchor-branch param-ctx anchor)  ;the ctx above the popover at the anchor (including the branch). Not the ctx in the popover, which is managed as the browser evaluates.
-        anchor-props-txfn {:txfns {:cancel #((:dispatch! param-ctx) (actions/discard (:branch param-ctx)))
+        anchor-id (-> anchor :db/id :id)
+        anchor-props-txfn {:show-popover? (reagent/cursor (-> param-ctx :peer .-state-atom) [:popovers parent-branch anchor-id])
+                           :txfns {:open #((:dispatch! param-ctx) (actions/open-popover parent-branch anchor-id))
+                                   :cancel #((:dispatch! param-ctx) (actions/cancel-popover (:branch param-ctx) anchor-id))
                                    :stage (let [user-txfn (some-> (eval/validate-user-code-str (:anchor/tx-fn anchor)) eval-str' (cats/mplus (either/right nil)) (cats/extract))
                                                 user-txfn (or user-txfn (fn [ctx multi-color-tx modal-route] {:tx multi-color-tx}))]
                                             (fn []
@@ -137,7 +142,7 @@
 
                                                                     ; return the result to the action, it could be a promise
                                                                     result))]
-                                                    ((:dispatch! param-ctx) (actions/stage-popover (:branch param-ctx) swap-fn)))))))}}
+                                                    ((:dispatch! param-ctx) (actions/stage-popover (:branch param-ctx) anchor-id swap-fn)))))))}}
 
         ; the whole point of popovers is managed branches
         anchor-props-popover (if-let [route (and (:anchor/managed? anchor) (either/right? route') (cats/extract route'))]

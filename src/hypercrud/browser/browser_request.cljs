@@ -14,16 +14,17 @@
 
 (defn recurse-request [anchor param-ctx]
   (if (:anchor/managed? anchor)
-    ; if the anchor IS a popover, we need to run the same logic as anchor/build-anchor-props
-    ; the param-ctx needs to be updated (branched, etc), but NOT BEFORE determining the route
-    ; that MUST happen in the parent context
-    (let [route' (anchor/build-anchor-route' anchor param-ctx)
-          param-ctx (-> (context/anchor-branch param-ctx anchor)
-                        (context/clean)
-                        (update :debug #(str % ">popover-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]")))]
-      (either/branch route'
-                     (constantly nil)
-                     #(request' % param-ctx)))
+    (if (get-in (-> param-ctx :peer .-state-atom deref) [:popovers (:branch param-ctx) (-> anchor :db/id :id)])
+      ; if the anchor IS a popover, we need to run the same logic as anchor/build-anchor-props
+      ; the param-ctx needs to be updated (branched, etc), but NOT BEFORE determining the route
+      ; that MUST happen in the parent context
+      (let [route' (anchor/build-anchor-route' anchor param-ctx)
+            param-ctx (-> (context/anchor-branch param-ctx anchor)
+                          (context/clean)
+                          (update :debug #(str % ">popover-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]")))]
+        (either/branch route'
+                       (constantly nil)
+                       #(request' % param-ctx))))
     ; if the anchor IS NOT a popover, this should be the same logic as widget/render-inline-anchors
     (let [param-ctx (update param-ctx :debug #(str % ">inline-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]"))]
       (request anchor param-ctx))))
