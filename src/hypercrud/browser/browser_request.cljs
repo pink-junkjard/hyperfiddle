@@ -14,7 +14,8 @@
 
 (defn recurse-request [anchor param-ctx]
   (if (:anchor/managed? anchor)
-    (if (get-in (-> param-ctx :peer .-state-atom deref) [:popovers (:branch param-ctx) (-> anchor :db/id :id)])
+    (if (let [popover-id (anchor/popover-id anchor param-ctx)]
+          (get-in (-> param-ctx :peer .-state-atom deref) [:popovers popover-id]))
       ; if the anchor IS a popover, we need to run the same logic as anchor/build-anchor-props
       ; the param-ctx needs to be updated (branched, etc), but NOT BEFORE determining the route
       ; that MUST happen in the parent context

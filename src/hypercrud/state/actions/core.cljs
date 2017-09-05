@@ -1,6 +1,5 @@
 (ns hypercrud.state.actions.core
   (:require [hypercrud.state.actions.internal :refer [hydrating-action]]
-            [hypercrud.util.branch :as branch]
             [hypercrud.browser.routing :as routing]
             [hypercrud.client.http :as http]
             [promesa.core :as p]))
@@ -28,14 +27,14 @@
 (defn with [branch conn-id tx]
   (partial hydrating-action {:on-start (constantly [[:with branch conn-id tx]])}))
 
-(defn open-popover [branch anchor-id]
-  (partial hydrating-action {:on-start (constantly [[:open-popover branch anchor-id]])}))
+(defn open-popover [popover-id]
+  (partial hydrating-action {:on-start (constantly [[:open-popover popover-id]])}))
 
-(defn cancel-popover [branch anchor-id]
+(defn cancel-popover [branch popover-id]
   (partial hydrating-action {:on-start (constantly [[:discard branch]
-                                                    [:close-popover (branch/decode-parent-branch branch) anchor-id]])}))
+                                                    [:close-popover popover-id]])}))
 
-(defn stage-popover [branch anchor-id swap-fn-async]
+(defn stage-popover [branch popover-id swap-fn-async]
   (fn [dispatch! get-state]
     (let [multi-color-tx (get-in (get-state) [:stage branch] {})]
       (p/then (swap-fn-async multi-color-tx)
@@ -43,7 +42,7 @@
                 (let [actions [[:reset-branch branch tx]    ; this has to be a map now
                                [:merge branch]
                                (if app-route [:soft-set-route app-route])
-                               [:close-popover (branch/decode-parent-branch branch) anchor-id]]]
+                               [:close-popover popover-id]]]
                   (hydrating-action {:on-start (constantly actions)} dispatch! get-state)))))))
 
 (defn reset-stage [tx]
