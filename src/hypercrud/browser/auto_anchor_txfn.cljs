@@ -12,7 +12,7 @@
     (let [fe-dep-attr (process-resource (template/load-resource "auto-txfn/mt-fet-at.edn"))
 
           fe {{:fe true :c? false :d? true :a false} nil
-              {:fe true :c? false :d? true :a true} fe-dep-attr
+              {:fe true :c? false :d? true :a true} nil
               {:fe true :c? false :d? false :a false} nil
               {:fe true :c? false :d? false :a true} nil
 
