@@ -2,14 +2,15 @@
   (:require-macros [hypercrud.util.template :as template])
   (:require [hypercrud.types.DbId :refer [->DbId]]
             [hypercrud.util.core :as util]
-            [hypercrud.util.vedn :as vedn]))
+            [hypercrud.util.vedn :as vedn]
+            [reagent.core :as reagent]))
 
 
 (defn auto-entity-dbid-from-stage [ctx]
   ; This returns a new value each time the transaction changes - can't call it again later.
   ; So tx-fns must inspect the modal-route, they can't re-create the dbid.
   (let [conn-id (-> ctx :db :conn-id)
-        branch-val (-> ctx :peer .-state-atom deref :stage (get-in [conn-id (:branch ctx)]))
+        branch-val @(reagent/cursor (-> ctx :peer .-state-atom) [:stage conn-id (:branch ctx)])
         id (-> (or branch-val "nil stage")
                hash js/Math.abs - str)]
     (->DbId id conn-id)))
