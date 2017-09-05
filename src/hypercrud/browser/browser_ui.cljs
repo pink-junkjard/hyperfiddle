@@ -80,8 +80,7 @@
   (either/branch
     (try (ui' route ctx) (catch :default e (either/left e))) ; js errors? Why do we need this.
     (fn [e] (ui-error e ctx))                               ; @(r/cursor (-> ctx :peer .-state-atom) [:pressed-keys])
-    (fn [v] (let [pressed @(r/cursor (-> ctx :peer .-state-atom) [:pressed-keys])
-                  c #(if (contains? pressed "alt")
+    (fn [v] (let [c #(if (contains? @(r/cursor (-> ctx :peer .-state-atom) [:pressed-keys]) "alt")
                        (do ((:dispatch! ctx) (actions/set-route route)) (.stopPropagation %)))]
               [native-listener {:on-click c} [:div.ui v]]))))
 
@@ -90,8 +89,7 @@
     (try (ui anchor ctx) (catch :default e (either/left e))) ; js errors? Why do we need this.
     (fn [e] (ui-error e ctx))
     (fn [v] (let [{route :route} (anchor/build-anchor-props anchor ctx)
-                  pressed @(r/cursor (-> ctx :peer .-state-atom) [:pressed-keys])
-                  c #(if (contains? pressed "alt")
+                  c #(if (contains? @(r/cursor (-> ctx :peer .-state-atom) [:pressed-keys]) "alt")
                        (do ((:dispatch! ctx) (actions/set-route route)) (.stopPropagation %)))]
               [native-listener {:on-click c} [:div.ui v]]))))
 
