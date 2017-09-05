@@ -14,7 +14,8 @@
             [hypercrud.types.EntityRequest :refer [EntityRequest]]
             [hypercrud.types.QueryRequest :refer [QueryRequest]]
             [hypercrud.ui.auto-control :as auto-control]
-            [hypercrud.util.core :refer [pprint-str]]))
+            [hypercrud.util.core :refer [pprint-str]]
+            [reagent.core :as r]))
 
 (defn hydrate-link [link-dbid param-ctx]
   (if (auto-link/system-link? link-dbid)
@@ -79,7 +80,8 @@
   (either/branch
     (try (ui' route ctx) (catch :default e (either/left e))) ; js errors? Why do we need this.
     (fn [e] (ui-error e ctx))                               ; @(r/cursor (-> ctx :peer .-state-atom) [:pressed-keys])
-    (fn [v] (let [c #(if (contains? (:pressed-keys @(-> ctx :peer .-state-atom)) "alt")
+    (fn [v] (let [pressed @(r/cursor (-> ctx :peer .-state-atom) [:pressed-keys])
+                  c #(if (contains? pressed "alt")
                        (do ((:dispatch! ctx) (actions/set-route route)) (.stopPropagation %)))]
               [native-listener {:on-click c} [:div.ui v]]))))
 
@@ -88,7 +90,8 @@
     (try (ui anchor ctx) (catch :default e (either/left e))) ; js errors? Why do we need this.
     (fn [e] (ui-error e ctx))
     (fn [v] (let [{route :route} (anchor/build-anchor-props anchor ctx)
-                  c #(if (contains? (:pressed-keys @(-> ctx :peer .-state-atom)) "alt")
+                  pressed @(r/cursor (-> ctx :peer .-state-atom) [:pressed-keys])
+                  c #(if (contains? pressed "alt")
                        (do ((:dispatch! ctx) (actions/set-route route)) (.stopPropagation %)))]
               [native-listener {:on-click c} [:div.ui v]]))))
 
