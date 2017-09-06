@@ -122,8 +122,8 @@
                      (cats/extract))
         route' (build-anchor-route' anchor param-ctx)
         hypercrud-props (build-anchor-props-raw route' anchor param-ctx)
+        popover-id (popover-id anchor param-ctx)            ;we want the context before we branch
         param-ctx (context/anchor-branch param-ctx anchor)  ;the ctx above the popover at the anchor (including the branch). Not the ctx in the popover, which is managed as the browser evaluates.
-        popover-id (popover-id anchor param-ctx)
         anchor-props-txfn {:show-popover? (reagent/cursor (-> param-ctx :peer .-state-atom) [:popovers popover-id])
                            :txfns {:open #((:dispatch! param-ctx) (actions/open-popover popover-id))
                                    :cancel #((:dispatch! param-ctx) (actions/cancel-popover (:branch param-ctx) popover-id))

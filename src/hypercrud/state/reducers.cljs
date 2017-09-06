@@ -84,10 +84,10 @@
 (defn popover-reducer [popovers action & args]
   (case action
     :open-popover (let [[popover-id] args]
-                    (update popovers (fnil conj #{}) popover-id))
+                    (conj popovers popover-id))
     :close-popover (let [[popover-id] args]
-                     (update popovers disj popover-id))
-    (or popovers {})))
+                     (disj popovers popover-id))
+    (or popovers #{})))
 
 (defn pressed-keys-reducer [v action & args]
   (or v #{}))
