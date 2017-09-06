@@ -35,7 +35,7 @@
                                           nil #_"javascript:void 0;")
                                   :class (str (:class hypercrud-props) " hf-auto-nav")))]
       [:span.nav-link.hf-nav-link
-       [tooltip/hover-tooltip-managed
+       [tooltip/fast-hover-tooltip-managed
         (let [tooltip-config (:tooltip hypercrud-props)
               [status label] (if (string? tooltip-config)
                                [:info tooltip-config]

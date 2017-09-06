@@ -43,6 +43,12 @@
                              :on-mouse-leave #(do (if (:label t-props) (reset! state false)) nil)}
                       anchor]}))))))
 
+(defn fast-hover-tooltip-managed [t-props anchor]
+  ; if there is no tooltip, the hovers are such that it will never be shown
+  (if (:label t-props)
+    [hover-tooltip-managed t-props anchor]
+    [:span anchor]))
+
 (defn click-popover* [state t-props anchor]
   (apply
     popover-anchor-wrapper*
