@@ -40,27 +40,26 @@
                                               id (if (< id 0) (str id) id)]
                                           (->DbId id (get-in param-ctx [:entity :db/id :conn-id]))))]
                              ((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) dbid)))
-               :disabled (:read-only props)}]
+               :disabled (:read-only props)}
+        props (if (#{:find-element/connection :dbhole/value :hypercrud/owner} (-> param-ctx :attribute :db/ident)) ; lol hack
+                (assoc props :style {:background-color (connection-color/connection-color (-> value :db/id :id))})
+                props)
+        c #(if (contains? (:pressed-keys @(-> param-ctx :peer .-state-atom)) "alt")
+             (do ((:dispatch! param-ctx) (actions/set-route (:route (anchor/build-anchor-props options-anchor param-ctx)))) (.stopPropagation %)))]
     [:span.select                                           ; helps the weird anchor float left thing
      (-> (option/hydrate-options' options-anchor param-ctx)
          (either/branch
            (fn [e] (browser-ui/ui-error e param-ctx))
            (fn [option-records]
+             ; hack in the selected value if we don't have options hydrated?
+             ; Can't, since we only have the #DbId hydrated, and it gets complicated with relaton vs entity etc
              (let [no-options? (empty? option-records)
-                   props (update props :disabled #(or % no-options?))
-                   props (if (#{:find-element/connection :dbhole/value :hypercrud/owner} (-> param-ctx :attribute :db/ident)) ; lol hack
-                           (assoc props :style {:background-color (connection-color/connection-color (-> value :db/id :id))})
-                           props)
-                   ; hack in the selected value if we don't have options hydrated?
-                   ; Can't, since we only have the #DbId hydrated, and it gets complicated with relaton vs entity etc
-                   ]
-               (let [c #(if (contains? (:pressed-keys @(-> param-ctx :peer .-state-atom)) "alt")
-                          (do ((:dispatch! param-ctx) (actions/set-route (:route (anchor/build-anchor-props options-anchor param-ctx)))) (.stopPropagation %)))]
-                 [native-listener {:on-click c}
-                  [:select.select.ui props
-                   (concat
-                     (->> (sort-by second option-records)
-                          (mapv (fn [[dbid label]]
-                                  ^{:key dbid}
-                                  [:option {:value (.-id dbid)} label])))
-                     [[:option {:key :blank :value ""} "--"]])]])))))]))
+                   props (update props :disabled #(or % no-options?))]
+               [native-listener {:on-click c}
+                [:select.select.ui props
+                 (concat
+                   (->> (sort-by second option-records)
+                        (mapv (fn [[dbid label]]
+                                ^{:key dbid}
+                                [:option {:value (.-id dbid)} label])))
+                   [[:option {:key :blank :value ""} "--"]])]]))))]))

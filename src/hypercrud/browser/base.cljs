@@ -81,7 +81,7 @@
       (either/right nil))))
 
 (defn process-results [get-f query-params link request result schemas param-ctx]
-  (let [param-ctx (assoc param-ctx                          ; provide defaults before user-bindings run. TODO query side
+  (let [param-ctx (assoc param-ctx                          ; provide defaults before user-bindings run.
                     :schemas schemas                        ; For tx/entity->statements in userland.
                     :query-params query-params
                     :read-only (or (:read-only param-ctx) never-read-only))

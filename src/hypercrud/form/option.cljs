@@ -4,6 +4,7 @@
             [cats.monad.exception :as exception]
             [hypercrud.browser.anchor :as anchor]
             [hypercrud.browser.browser-ui :as browser-ui]
+            [hypercrud.browser.context :as context]
             [hypercrud.util.monad :refer [exception->either]]))
 
 (defn default-label-renderer [v ctx]
@@ -30,18 +31,19 @@
                          (interpose ", ")
                          (apply str))))))
 
+(defn options-ui-f [result colspec anchors param-ctx]
+  (->> result
+       (mapv (fn [relation]
+               (let [[conn fe attr maybe-field] (first (partition 4 colspec))
+                     entity (get relation (-> fe :find-element/name))
+                     label (-> (build-label colspec relation param-ctx)
+                               ; It's perfectly possible to properly report this error properly upstream.
+                               (either/branch (fn [e] (pr-str e)) identity))]
+                 [(:db/id entity) label])))))
+
 (defn hydrate-options' [options-anchor param-ctx]           ; needs to return options as [[:db/id label]]
   (assert options-anchor)                                   ;todo this assert should be within the exception monad
   (mlet [route (anchor/build-anchor-route' options-anchor param-ctx)]
-    (let [get-ui-f (fn [result colspec anchors param-ctx]
-                     (->> result
-                          (mapv (fn [relation]
-                                  (let [[conn fe attr maybe-field] (first (partition 4 colspec))
-                                        entity (get relation (-> fe :find-element/name))
-                                        label (-> (build-label colspec relation param-ctx)
-                                                  ; It's perfectly possible to properly report this error properly upstream.
-                                                  (either/branch (fn [e] (pr-str e)) identity))]
-                                    [(:db/id entity) label])))))]
-      ; todo we want to at least invoke ui not ui' (missing param-ctx dissocs)
-      ; probably just want callees to invoke with a custom render fn, and this calls safe-ui
-      (browser-ui/ui' route param-ctx (constantly get-ui-f)))))
+    ; todo we want to at least invoke ui not ui'
+    ; probably just want callees to invoke with a custom render fn, and this calls safe-ui
+    (browser-ui/ui' route (context/clean param-ctx) (constantly options-ui-f))))
