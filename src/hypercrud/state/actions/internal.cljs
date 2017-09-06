@@ -18,10 +18,9 @@
          ; this peer could start returning inconsistent data compared to the state value,
          ; however another hydrating action should have dispatched in that scenario,
          ; so the resulting computation would be thrown away anyway
-         requests (into #{} (request-fn state))
-         hydrated? (set/subset? (set requests) (set (keys ptm)))]
+         requests (into #{} (request-fn state))]
      ; inspect dbvals used in requests see if stage has changed for them
-     (if (or force (not hydrated?))
+     (if (or force (not (set/subset? requests (set (keys ptm)))))
        (p/then (http/hydrate! entry-uri requests stage)
                (fn [{:keys [t pulled-trees-map]}]
                  (when (= hydrate-id (:hydrate-id (get-state)))
