@@ -4,6 +4,9 @@
             [hypercrud.browser.auto-link :as auto-link]))
 
 
+(defn system-anchor? [link-dbid]
+  (map? (:id link-dbid)))
+
 (defn auto-anchor [anchor]
   (let [auto-fn (fn [anchor attr auto-f]
                   (let [v (get anchor attr)]

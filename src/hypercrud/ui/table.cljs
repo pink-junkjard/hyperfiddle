@@ -1,5 +1,6 @@
 (ns hypercrud.ui.table
   (:require [clojure.string :as string]
+            [hypercrud.browser.auto-anchor :as auto-anchor]
             [hypercrud.browser.connection-color :as connection-color]
             [hypercrud.browser.context :as context]
             [hypercrud.ui.auto-control :refer [auto-table-cell]]
@@ -82,7 +83,7 @@
       [auto-table-cell maybe-field anchors props param-ctx])))
 
 (defn Field [control maybe-field anchors param-ctx]
-  (let [shadow-link (not (-> param-ctx :entity :db/id))
+  (let [shadow-link (auto-anchor/system-anchor? (-> param-ctx :entity :db/id))
         style {:border-color (if-not shadow-link (connection-color/connection-color (:color param-ctx)))}]
     [:td.truncate {:style style}
      (control param-ctx)]))
@@ -114,7 +115,7 @@
   (let [param-ctx (context/relation param-ctx relation)
         fe-anchors-lookup (->> (group-by (comp :find-element/name :anchor/find-element) anchors)
                                (util/map-values (partial group-by :anchor/attribute)))]
-    ^{:key (hash (util/map-values #(or (:db/id %) (-> % :anchor/ident)) relation))}
+    ^{:key (hash (util/map-values :db/id relation))}
     [:tr
      (apply react-fragment :table-row-form (Relation relation colspec fe-anchors-lookup param-ctx))
      [:td.link-cell #_{:key :link-cell}
