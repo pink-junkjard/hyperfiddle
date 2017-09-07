@@ -153,15 +153,11 @@
         anchor-props-popover (if-let [route (and (:anchor/managed? anchor) (either/right? route') (cats/extract route'))]
                                ; If no route, there's nothing to draw, and the anchor tooltip shows the error.
                                {:popover (fn []
-                                           [:div
-                                            (case (:display-mode param-ctx)
-                                              :xray [(:navigate-cmp param-ctx) hypercrud-props "self"]
-                                              nil)
-                                            ; NOTE: this param-ctx logic and structure is the same as the popover branch of browser-request/recurse-request
-                                            [hypercrud.browser.core/safe-ui' ; cycle
-                                             route          ; draw the branch
-                                             (-> param-ctx
-                                                 (context/clean)
-                                                 (update :debug #(str % ">popover-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]")))]])})
+                                           ; NOTE: this param-ctx logic and structure is the same as the popover branch of browser-request/recurse-request
+                                           [hypercrud.browser.core/safe-ui' ; cycle
+                                            route           ; draw the branch
+                                            (-> param-ctx
+                                                (context/clean)
+                                                (update :debug #(str % ">popover-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]")))])})
         anchor-props-hidden {:hidden (not visible?)}]
     (merge anchor-props-hidden hypercrud-props anchor-props-txfn anchor-props-popover)))

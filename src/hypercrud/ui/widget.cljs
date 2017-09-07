@@ -40,8 +40,6 @@
         (map (fn [[anchor param-ctx]]
                ; don't test anchor validity, we need to render the failure. If this is a dependent link, use visibility predicate to hide the error.
                [:div {:key (hash anchor)}                   ; extra div bc had trouble getting keys to work
-                (case (:display-mode param-ctx)
-                  :xray (render-anchors [(assoc anchor :anchor/prompt (or (:anchor/prompt anchor) (-> anchor :anchor/link :link/name)))] param-ctx) nil)
                 ; NOTE: this param-ctx logic and structure is the same as the inline branch of browser-request/recurse-request
                 [browser/safe-ui anchor (update param-ctx :debug #(str % ">inline-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]"))]]))
         (remove nil?)
@@ -96,10 +94,7 @@
 
 (defn process-option-anchors [anchors param-ctx]
   (let [[options-anchor] (filter option-anchor? anchors)
-        anchors (remove option-anchor? anchors)
-        anchors (if (and options-anchor (= :xray (:display-mode param-ctx)))
-                  (conj anchors (assoc options-anchor :anchor/render-inline? false))
-                  anchors)]
+        anchors (remove option-anchor? anchors)]
     [anchors options-anchor]))
 
 (defn process-popover-anchor [anchor]
