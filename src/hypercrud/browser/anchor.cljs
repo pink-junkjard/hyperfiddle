@@ -165,6 +165,6 @@
                                             route           ; draw the branch
                                             (-> param-ctx
                                                 (context/clean)
-                                                (update :debug #(str % ">popover-link[" (:db/id anchor) ":" (:anchor/prompt anchor) "]")))])})
+                                                (update :debug #(str % ">popover-link[" (:db/id anchor) ":" (or (:anchor/ident anchor) (:anchor/prompt anchor)) "]")))])})
         anchor-props-hidden {:hidden (not visible?)}]
     (merge anchor-props-hidden hypercrud-props anchor-props-txfn anchor-props-popover)))
