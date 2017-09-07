@@ -28,18 +28,21 @@
                    (hydrate-until-queries-settle! dispatch! get-state hydrate-id false request-fn))))
        (p/resolved nil)))))
 
-(defn hydrating-action [{:keys [on-start]} dispatch! get-state]
-  (let [o-stage (:stage (get-state))
-        hydrate-id (js/Math.random)                         ; todo want to hash state
-        ]
-    ; todo assert on-start is not a thunk
-    (dispatch! (apply batch [:hydrate!-start hydrate-id] (if on-start (on-start get-state))))
-    (let [{n-stage :stage} (get-state)]
-      (-> (hydrate-until-queries-settle! dispatch! get-state hydrate-id (not= o-stage n-stage))
-          (p/then (fn []
+(defn hydrating-action
+  ([aux-actions dispatch! get-state]
+    (hydrating-action aux-actions dispatch! get-state false))
+  ([{:keys [on-start]} dispatch! get-state force]
+   (let [o-stage (:stage (get-state))
+         hydrate-id (js/Math.random)                        ; todo want to hash state
+         ]
+     ; todo assert on-start is not a thunk
+     (dispatch! (apply batch [:hydrate!-start hydrate-id] (if on-start (on-start get-state))))
+     (-> (hydrate-until-queries-settle! dispatch! get-state hydrate-id
+                                        (or force (not= o-stage (:stage (get-state)))))
+         (p/then (fn []
+                   (when (= hydrate-id (:hydrate-id (get-state)))
+                     (dispatch! [:hydrate!-success]))))
+         (p/catch (fn [error]
                     (when (= hydrate-id (:hydrate-id (get-state)))
-                      (dispatch! [:hydrate!-success]))))
-          (p/catch (fn [error]
-                     (when (= hydrate-id (:hydrate-id (get-state)))
-                       (dispatch! [:hydrate!-failure error])))))))
-  nil)
+                      (dispatch! [:hydrate!-failure error]))))))
+   nil))
