@@ -108,6 +108,47 @@
                    (interpose " ")
                    (apply str))})))
 
+(defn managed-popover-body [anchor route param-ctx]
+  (let [stage! (fn []
+                 (let [user-txfn (some-> (eval/validate-user-code-str (:anchor/tx-fn anchor)) eval-str' (cats/mplus (either/right nil)) (cats/extract))
+                       user-txfn (or user-txfn (fn [ctx multi-color-tx modal-route] {:tx multi-color-tx}))]
+                   (-> (p/promise
+                         (fn [resolve! reject!]
+                           (let [swap-fn (fn [multi-color-tx]
+                                           ; todo why does the user-txfn have access to the parent link's :db :result etc?
+                                           (let [result (let [result (user-txfn param-ctx multi-color-tx route)]
+                                                          ; txfn may be sync or async
+                                                          (if-not (p/promise? result) (p/resolved result) result))]
+                                             ; let the caller of this :stage fn know the result
+                                             ; This is super funky, a swap-fn should not be effecting, but seems like it would work.
+                                             (p/branch result
+                                                       (fn [v] (resolve! nil))
+                                                       (fn [e]
+                                                         (reject! e)
+                                                         (js/console.warn e)))
+
+                                             ; return the result to the action, it could be a promise
+                                             result))]
+                             ((:dispatch! param-ctx) (actions/stage-popover (:branch param-ctx) popover-id swap-fn)))))
+                       ; todo something better with these exceptions (could be user error)
+                       (p/catch #(-> % pprint-str js/alert)))))
+        ; NOTE: this param-ctx logic and structure is the same as the popover branch of browser-request/recurse-request
+        param-ctx (-> param-ctx
+                      (context/clean)
+                      (update :debug #(str % ">popover-link[" (:db/id anchor) ":" (or (:anchor/ident anchor) (:anchor/prompt anchor)) "]")))]
+    [:div
+     [hypercrud.browser.core/safe-ui' route param-ctx]      ; cycle
+     [:button {:on-click stage!} "stage"]]))
+
+(defn visible? [anchor ctx]
+  (-> (if-let [code-str (eval/validate-user-code-str (:anchor/visible? anchor))] ; also inline links !
+        (mlet [user-fn (eval-str' code-str)]
+          (-> (exception/try-on (user-fn ctx))
+              exception->either))
+        (either/right true))
+      (cats/mplus (either/right true))
+      (cats/extract)))
+
 ; if this is driven by anchor, and not route, it needs memoized.
 ; the route is a fn of the formulas and the formulas can have effects
 ; which have to be run only once.
@@ -120,51 +161,17 @@
   ; - broken user txfn
   ; - broken user visible fn
   ; If these fns are ommitted (nil), its not an error.
-  (let [visible? (-> (if-let [code-str (eval/validate-user-code-str (:anchor/visible? anchor))] ; also inline links !
-                       (mlet [user-fn (eval-str' code-str)]
-                         (-> (exception/try-on (user-fn param-ctx))
-                             exception->either))
-                       (either/right true))
-                     (cats/mplus (either/right true))
-                     (cats/extract))
+  (let [visible? (visible? anchor param-ctx)
         route' (build-anchor-route' anchor param-ctx)
         hypercrud-props (build-anchor-props-raw route' anchor param-ctx)
-        popover-id (popover-id anchor param-ctx)            ;we want the context before we branch
-        param-ctx (context/anchor-branch param-ctx anchor)  ;the ctx above the popover at the anchor (including the branch). Not the ctx in the popover, which is managed as the browser evaluates.
-        anchor-props-txfn {:show-popover? (reagent/cursor (-> param-ctx :peer .-state-atom) [:popovers popover-id])
-                           :txfns {:open #((:dispatch! param-ctx) (actions/open-popover popover-id))
-                                   :cancel #((:dispatch! param-ctx) (actions/cancel-popover (:branch param-ctx) popover-id))
-                                   :stage (let [user-txfn (some-> (eval/validate-user-code-str (:anchor/tx-fn anchor)) eval-str' (cats/mplus (either/right nil)) (cats/extract))
-                                                user-txfn (or user-txfn (fn [ctx multi-color-tx modal-route] {:tx multi-color-tx}))]
-                                            (fn []
-                                              (p/promise
-                                                (fn [resolve! reject!]
-                                                  (let [swap-fn (fn [multi-color-tx]
-                                                                  ; todo why does the user-txfn have access to the parent link's :db :result etc?
-                                                                  (let [result (let [result (user-txfn param-ctx multi-color-tx (:route hypercrud-props))]
-                                                                                 ; txfn may be sync or async
-                                                                                 (if-not (p/promise? result) (p/resolved result) result))]
-                                                                    ; let the caller of this :stage fn know the result
-                                                                    ; This is super funky, a swap-fn should not be effecting, but seems like it would work.
-                                                                    (p/branch result
-                                                                              (fn [v] (resolve! nil))
-                                                                              (fn [e]
-                                                                                (reject! e)
-                                                                                (js/console.warn e)))
-
-                                                                    ; return the result to the action, it could be a promise
-                                                                    result))]
-                                                    ((:dispatch! param-ctx) (actions/stage-popover (:branch param-ctx) popover-id swap-fn)))))))}}
-
-        ; the whole point of popovers is managed branches
-        anchor-props-popover (if-let [route (and (:anchor/managed? anchor) (either/right? route') (cats/extract route'))]
-                               ; If no route, there's nothing to draw, and the anchor tooltip shows the error.
-                               {:popover (fn []
-                                           ; NOTE: this param-ctx logic and structure is the same as the popover branch of browser-request/recurse-request
-                                           [hypercrud.browser.core/safe-ui' ; cycle
-                                            route           ; draw the branch
-                                            (-> param-ctx
-                                                (context/clean)
-                                                (update :debug #(str % ">popover-link[" (:db/id anchor) ":" (or (:anchor/ident anchor) (:anchor/prompt anchor)) "]")))])})
+        popover-props (if (popover-anchor? anchor)
+                        (if-let [route (and (:anchor/managed? anchor) (either/right? route') (cats/extract route'))]
+                          ; If no route, there's nothing to draw, and the anchor tooltip shows the error.
+                          (let [popover-id (popover-id anchor param-ctx) ;we want the context before we branch
+                                param-ctx (context/anchor-branch param-ctx anchor)]
+                            {:showing? (reagent/cursor (-> param-ctx :peer .-state-atom) [:popovers popover-id])
+                             :body [managed-popover-body anchor route param-ctx]
+                             :open! #((:dispatch! param-ctx) (actions/open-popover popover-id))
+                             :cancel! #((:dispatch! param-ctx) (actions/cancel-popover (:branch param-ctx) popover-id))})))
         anchor-props-hidden {:hidden (not visible?)}]
-    (merge anchor-props-hidden hypercrud-props anchor-props-txfn anchor-props-popover)))
+    (merge anchor-props-hidden hypercrud-props {:popover popover-props})))

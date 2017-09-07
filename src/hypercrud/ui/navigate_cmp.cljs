@@ -2,12 +2,10 @@
   (:require [hypercrud.browser.routing :as routing]
             [hypercrud.platform.native-event-listener :refer [native-listener]]
             [hypercrud.ui.tooltip :as tooltip]
-            [hypercrud.util.core :as util]
-            [promesa.core :as p]
             [re-com.core :as re-com]))
 
 (defn dissoc-non-native-props [hypercrud-props]
-  (dissoc hypercrud-props :route :tooltip :txfns :popover :hidden :show-popover?))
+  (dissoc hypercrud-props :route :tooltip :popover :hidden))
 
 (defn anchor-cmp [hypercrud-props label]
   (let [anchor-props (-> hypercrud-props
@@ -22,33 +20,26 @@
       [:span label]]]))
 
 (defn popover-cmp [hypercrud-props label]
-  [re-com/popover-anchor-wrapper
-   :showing? (or (:show-popover? hypercrud-props) (atom false))
-   :position :below-center
-   :anchor (let [btn-props (-> hypercrud-props
-                               (dissoc-non-native-props)
-                               (assoc :on-click #(when-not (:disabled hypercrud-props) ; todo shouldn't the browser handle this disabled state for us?
-                                                   ((get-in hypercrud-props [:txfns :open])))))]
-             [:button btn-props [:span label]])
-   :popover (let [{cancel! :cancel stage! :stage :or {stage! #() cancel! #()}} (:txfns hypercrud-props)]
-              [re-com/popover-content-wrapper
-               :on-cancel (fn []
-                            ; todo catch exceptions - ... hypercrud bugs, right? Not user errors
-                            (cancel!))
+  (let [{:keys [showing? body open! cancel!]} (:popover hypercrud-props)]
+    [re-com/popover-anchor-wrapper
+     :showing? showing?
+     :position :below-center
+     :anchor (let [btn-props (-> hypercrud-props
+                                 (dissoc-non-native-props)
+                                 (assoc :on-click open!))]
+               [:button btn-props [:span label]])
+     :popover [re-com/popover-content-wrapper
+               :on-cancel cancel!
                :no-clip? true
-               :body [:div
-                      ((:popover hypercrud-props))
-                      [:button {:on-click (fn []
-                                            ; todo something better with these exceptions ... hypercrud bugs, right? Not user errors
-                                            (p/catch (stage!) #(-> % util/pprint-str js/alert)))}
-                       "stage"]]])])
+               :body body]]))
 
 ; props = {
 ;   :route    {:keys [domain project link-dbid query-params]}
 ;   :tooltip  [Keyword Hiccup]
-;   :txfns    {:stage () => Promise[Nil]
-;              :cancel () => ()}
-;   :popover  () => Hiccup
+;   :popover  {:showing?  Atom
+;              :body      Component
+;              :open!     () => ()
+;              :cancel!   () => ()}
 ;   :hidden   Boolean
 ;
 ;   ; any other standard HTML anchor props, e.g.
