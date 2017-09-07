@@ -25,6 +25,22 @@
      [:option {:key false :value "false"} "False"]
      [:option {:key :nil :value ""} "--"]]))
 
+(defn- select-options [options-anchor props param-ctx]
+  (-> (option/hydrate-options' options-anchor param-ctx)
+      (either/branch
+        (fn [e] (browser-ui/ui-error e param-ctx))
+        (fn [option-records]
+          ; hack in the selected value if we don't have options hydrated?
+          ; Can't, since we only have the #DbId hydrated, and it gets complicated with relaton vs entity etc
+          (let [no-options? (empty? option-records)
+                props (update props :disabled #(or % no-options?))]
+            [:select.select.ui props
+             (concat
+               (->> (sort-by second option-records)
+                    (mapv (fn [[dbid label]]
+                            ^{:key dbid}
+                            [:option {:value (.-id dbid)} label])))
+               [[:option {:key :blank :value ""} "--"]])])))))
 
 (defn select* [value options-anchor props param-ctx]
   ; value :: {:db/id #DbId[17592186045891 17592186045422]}
@@ -47,19 +63,5 @@
         c #(if (contains? (:pressed-keys @(-> param-ctx :peer .-state-atom)) "alt")
              (do ((:dispatch! param-ctx) (actions/set-route (:route (anchor/build-anchor-props options-anchor param-ctx)))) (.stopPropagation %)))]
     [:span.select                                           ; helps the weird anchor float left thing
-     (-> (option/hydrate-options' options-anchor param-ctx)
-         (either/branch
-           (fn [e] (browser-ui/ui-error e param-ctx))
-           (fn [option-records]
-             ; hack in the selected value if we don't have options hydrated?
-             ; Can't, since we only have the #DbId hydrated, and it gets complicated with relaton vs entity etc
-             (let [no-options? (empty? option-records)
-                   props (update props :disabled #(or % no-options?))]
-               [native-listener {:on-click c}
-                [:select.select.ui props
-                 (concat
-                   (->> (sort-by second option-records)
-                        (mapv (fn [[dbid label]]
-                                ^{:key dbid}
-                                [:option {:value (.-id dbid)} label])))
-                   [[:option {:key :blank :value ""} "--"]])]]))))]))
+     [native-listener {:on-click c}
+      [select-options options-anchor props param-ctx]]]))
