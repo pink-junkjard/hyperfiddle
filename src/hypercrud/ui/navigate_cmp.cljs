@@ -4,9 +4,44 @@
             [hypercrud.ui.tooltip :as tooltip]
             [hypercrud.util.core :as util]
             [promesa.core :as p]
-            [reagent.core :as r]
             [re-com.core :as re-com]))
 
+(defn dissoc-non-native-props [hypercrud-props]
+  (dissoc hypercrud-props :route :tooltip :txfns :popover :hidden :show-popover?))
+
+(defn anchor-cmp [hypercrud-props label]
+  (let [anchor-props (-> hypercrud-props
+                         (dissoc-non-native-props)
+                         (assoc :href (if (:route hypercrud-props)
+                                        (routing/encode (:route hypercrud-props))
+                                        nil #_"javascript:void 0;")))]
+    ; Why would an anchor have an on-click? Is this historical.
+    ; If legit it needs to respect disabled.
+    [native-listener (select-keys anchor-props [:on-click])
+     [:a (dissoc anchor-props :on-click)
+      [:span label]]]))
+
+(defn popover-cmp [hypercrud-props label]
+  [re-com/popover-anchor-wrapper
+   :showing? (or (:show-popover? hypercrud-props) (atom false))
+   :position :below-center
+   :anchor (let [btn-props (-> hypercrud-props
+                               (dissoc-non-native-props)
+                               (assoc :on-click #(when-not (:disabled hypercrud-props) ; todo shouldn't the browser handle this disabled state for us?
+                                                   ((get-in hypercrud-props [:txfns :open])))))]
+             [:button btn-props [:span label]])
+   :popover (let [{cancel! :cancel stage! :stage :or {stage! #() cancel! #()}} (:txfns hypercrud-props)]
+              [re-com/popover-content-wrapper
+               :on-cancel (fn []
+                            ; todo catch exceptions - ... hypercrud bugs, right? Not user errors
+                            (cancel!))
+               :no-clip? true
+               :body [:div
+                      ((:popover hypercrud-props))
+                      [:button {:on-click (fn []
+                                            ; todo something better with these exceptions ... hypercrud bugs, right? Not user errors
+                                            (p/catch (stage!) #(-> % util/pprint-str js/alert)))}
+                       "stage"]]])])
 
 ; props = {
 ;   :route    {:keys [domain project link-dbid query-params]}
@@ -28,12 +63,7 @@
   ; props (links/build-link-props anchor param-ctx)
   ; and because nested router. Is that even needed now?
   (if-not (:hidden hypercrud-props)
-    (let [anchor-props (-> hypercrud-props
-                           (dissoc :route :tooltip :txfns :popover :hidden :show-popover?)
-                           (assoc :href (if (:route hypercrud-props)
-                                          (routing/encode (:route hypercrud-props))
-                                          nil #_"javascript:void 0;")
-                                  :class (str (:class hypercrud-props) " hf-auto-nav")))]
+    (let [hypercrud-props (update hypercrud-props :class #(str % " hf-auto-nav"))]
       [:span.nav-link.hf-nav-link
        [tooltip/fast-hover-tooltip-managed
         (let [tooltip-config (:tooltip hypercrud-props)
@@ -41,32 +71,9 @@
                                [:info tooltip-config]
                                [(first tooltip-config) (second tooltip-config)])]
           {:status status :label label})
-        [re-com/popover-anchor-wrapper
-         :showing? (or (:show-popover? hypercrud-props) (atom false))
-         :position :below-center
-         :anchor (if (:popover hypercrud-props)
-                   (let [btn-props (assoc anchor-props :on-click #(when-not (:disabled anchor-props)
-                                                                    ((get-in hypercrud-props [:txfns :open]))))]
-                     [:button btn-props [:span label]])
-
-                   ; Why would an anchor have an on-click? Is this historical.
-                   ; If legit it needs to respect disabled.
-                   [native-listener (select-keys anchor-props [:on-click])
-                    [:a (dissoc anchor-props :on-click)
-                     [:span label]]])
-         :popover (let [{cancel! :cancel stage! :stage :or {stage! #() cancel! #()}} (:txfns hypercrud-props)]
-                    [re-com/popover-content-wrapper
-                     :on-cancel (fn []
-                                  ; todo catch exceptions - ... hypercrud bugs, right? Not user errors
-                                  (cancel!))
-                     :no-clip? true
-                     :body (if (:popover hypercrud-props)
-                             [:div
-                              ((:popover hypercrud-props))
-                              [:button {:on-click (fn []
-                                                    ; todo something better with these exceptions ... hypercrud bugs, right? Not user errors
-                                                    (p/catch (stage!) #(-> % util/pprint-str js/alert)))}
-                               "stage"]])])]]])))
+        (if (:popover hypercrud-props)
+          [popover-cmp hypercrud-props label]
+          [anchor-cmp hypercrud-props label])]])))
 
 ; act like a function down-stack
 (defn navigate-cmp [props label]
