@@ -1,5 +1,6 @@
 (ns hypercrud.ui.table
   (:require [clojure.string :as string]
+            [hypercrud.browser.anchor :as anchor]
             [hypercrud.browser.auto-anchor :as auto-anchor]
             [hypercrud.browser.connection-color :as connection-color]
             [hypercrud.browser.context :as context]
@@ -63,7 +64,7 @@
                                                                       #(reset! col-sort [(:db/id fe) ident :asc])
                                                                       (constantly nil))
                                         arrow (with-sort-direction " ↓" " ↑" " ↕" nil)
-                                        has-popover? (some widget/popover-anchor? attr-label-anchors)]
+                                        has-popover? (some anchor/popover-anchor? attr-label-anchors)]
                                     [:td {:class (string/join " " css-classes)
                                           :style {:background-color (connection-color/connection-color (or (:color param-ctx) (.-conn-id db) #_"hack for top tables"))}
                                           :key (str fe-name "-" ident)

@@ -20,6 +20,13 @@
    :branch (:branch ctx)
    :location (auto-entity-dbid ctx)})
 
+(defn option-anchor? [anchor]
+  ; don't care if its inline or not, just do the right thing.
+  (= :options (:anchor/ident anchor)))
+
+(defn popover-anchor? [anchor]
+  (:anchor/managed? anchor))
+
 (defn safe-run-user-code-str' [code-str & args]
   (if-let [code-str (eval/validate-user-code-str code-str)]
     (mlet [user-fn (eval-str' code-str)]

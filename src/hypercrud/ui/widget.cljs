@@ -45,13 +45,6 @@
         (remove nil?)
         (doall))))
 
-(defn option-anchor? [anchor]
-  ; don't care if its inline or not, just do the right thing.
-  (= :options (:anchor/ident anchor)))
-
-(defn popover-anchor? [anchor]
-  (:anchor/managed? anchor))
-
 (defn keyword [maybe-field anchors props param-ctx]
   (let [on-change! #((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %))]
     [input/keyword-input* (:value param-ctx) on-change! props]))
@@ -93,12 +86,12 @@
     (input/dbid-input (:value param-ctx) on-change! props)))
 
 (defn process-option-anchors [anchors param-ctx]
-  (let [[options-anchor] (filter option-anchor? anchors)
-        anchors (remove option-anchor? anchors)]
+  (let [[options-anchor] (filter anchor/option-anchor? anchors)
+        anchors (remove anchor/option-anchor? anchors)]
     [anchors options-anchor]))
 
 (defn process-popover-anchor [anchor]
-  (if (popover-anchor? anchor)
+  (if (anchor/popover-anchor? anchor)
     (assoc anchor :anchor/render-inline? false)
     anchor))
 
@@ -144,7 +137,7 @@
      (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)]))
 
 (defn ref-many [maybe-field anchors props param-ctx]
-  (let [[options-anchor] (filter option-anchor? anchors)
+  (let [[options-anchor] (filter anchor/option-anchor? anchors)
         initial-select (some-> options-anchor               ; not okay to auto-select.
                                (option/hydrate-options' param-ctx)
                                (cats/mplus (either/right nil)) ; todo handle exception
