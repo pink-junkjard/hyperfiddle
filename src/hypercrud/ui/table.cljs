@@ -98,14 +98,16 @@
         field (case (:display-mode param-ctx) :xray Field :user (get param-ctx :field Field))
         control (case (:display-mode param-ctx) :xray Control :user (get param-ctx :control Control))
         anchors (get-in entity-anchors-lookup [fe-name (-> param-ctx :attribute :db/ident)])]
-    ^{:key (or (:db/id maybe-field) (str fe-name ident))}
     [field #(control maybe-field anchors %) maybe-field anchors param-ctx]))
 
 (defn FindElement [[fe colspec] entity-anchors-lookup param-ctx]
   (let [entity (get (:result param-ctx) (-> fe :find-element/name))
         param-ctx (-> (context/find-element param-ctx fe)
                       (context/entity entity))]
-    (->> colspec (mapv #(Value % entity-anchors-lookup param-ctx)))))
+    (->> colspec
+         (mapv (fn [[_ fe attr maybe-field :as col]]
+                 ^{:key (or (:db/id maybe-field) (str (:find-element/name fe) (:db/ident attr)))}
+                 [Value col entity-anchors-lookup param-ctx])))))
 
 (defn Relation [relation colspec fe-anchors-lookup param-ctx]
   (->> (partition 4 colspec)
@@ -116,7 +118,6 @@
   (let [param-ctx (context/relation param-ctx relation)
         fe-anchors-lookup (->> (group-by (comp :find-element/name :anchor/find-element) anchors)
                                (util/map-values (partial group-by :anchor/attribute)))]
-    ^{:key (hash (util/map-values :db/id relation))}
     [:tr
      (apply react-fragment :table-row-form (Relation relation colspec fe-anchors-lookup param-ctx))
      [:td.link-cell #_{:key :link-cell}
@@ -149,7 +150,11 @@
                                  :desc #(compare %2 %1))
                                relations)
                       relations)))]
-    (->> relations sort-fn (map #(Row % colspec anchors param-ctx)))))
+    (->> relations
+         sort-fn
+         (map (fn [relation]
+                ^{:key (hash (util/map-values :db/id relation))}
+                [Row relation colspec anchors param-ctx])))))
 
 (defn Table [& props]
   (let [sort-col (r/atom nil)]
