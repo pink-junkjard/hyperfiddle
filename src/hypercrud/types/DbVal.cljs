@@ -5,7 +5,11 @@
   Object (toString [_] (str "#DbVal" (pr-str [conn-id branch])))
   IPrintWithWriter (-pr-writer [o writer _] (-write writer (.toString o)))
   IHash (-hash [this] (hash [conn-id branch]))
-  IEquiv (-equiv [this other] (= (hash this) (hash other)))
+  IEquiv (-equiv [this other]
+           (or (and (nil? this) (nil? other))
+               (if-not (or (nil? this) (nil? other))
+                 (and (= (.-conn-id this) (.-conn-id other))
+                      (= (.-branch this) (.-branch other))))))
   ILookup
   (-lookup [o k] (get o k nil))
   (-lookup [o k not-found] (case k
