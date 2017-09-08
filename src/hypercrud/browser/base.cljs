@@ -41,7 +41,7 @@
 (defn request-for-link [link query-params ordered-fes param-ctx]
   (case (:request/type link)
     :query
-    (mlet [q (-> (hc-string/safe-read-string (:link-query/value link)) exception->either)
+    (mlet [q (-> (hc-string/memoized-safe-read-string (:link-query/value link)) exception->either)
            query-holes (-> ((exception/wrap q-util/parse-holes) q) exception->either)]
       (let [params-map (merge (q-util/build-dbhole-lookup link param-ctx) query-params)
             params (->> query-holes (mapv (juxt identity #(get params-map %))) (into {}))

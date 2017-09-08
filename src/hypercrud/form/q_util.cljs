@@ -33,7 +33,7 @@
        (remove #(string/starts-with? % "$"))))
 
 (defn safe-parse-query-validated [link]
-  (mlet [q (-> (hc-string/safe-read-string (:link-query/value link)) exception->either)]
+  (mlet [q (-> (hc-string/memoized-safe-read-string (:link-query/value link)) exception->either)]
     (if (vector? q)
       (cats/return q)
       (either/left {:message (str "Invalid query '" (pr-str q) "', only vectors supported")}))))

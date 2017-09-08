@@ -8,3 +8,5 @@
     ; this doesn't handle sharp-lambdas
     (exception/try-on (reader/read-string code-str))
     (exception/success nil)))
+
+(def memoized-safe-read-string (memoize safe-read-string))
