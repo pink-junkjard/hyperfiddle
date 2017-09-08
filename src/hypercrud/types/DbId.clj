@@ -6,7 +6,11 @@
 (deftype DbId [id conn-id]
   Comparable (compareTo [x y] (compare (.id x) (.id y)))
   IHashEq (hasheq [this] (hash [id conn-id]))
-  Object (equals [this other] (= (hash this) (hash other)))
+  Object (equals [this other]
+           (or (and (nil? this) (nil? other))
+               (if-not (or (nil? this) (nil? other))
+                 (and (= (.-id this) (.id other))
+                      (= (.conn-id this) (.conn-id other))))))
   ILookup
   (valAt [o k] (get o k nil))
   (valAt [o k not-found] (case k
