@@ -6,7 +6,8 @@
             [hypercrud.browser.base :as base]
             [hypercrud.browser.context :as context]
             [hypercrud.client.core :as hc]
-            [hypercrud.client.schema :as schema-util]))
+            [hypercrud.client.schema :as schema-util]
+            [hypercrud.ui.form-util :as form-util]))
 
 
 (declare request)
@@ -88,18 +89,19 @@
                                                 ))))))))))))
 
 (defn requests-for-link [link query-params param-ctx]
-  (-> (->> (base/request-for-link link query-params param-ctx)
-           (cats/fmap (fn [link-request]
-                        (concat
-                          (if link-request [link-request])
-                          (schema-util/schema-requests-for-link link query-params param-ctx)
-                          (-> (mlet [result (if link-request
-                                              (hc/hydrate (:peer param-ctx) link-request)
-                                              (either/right nil))
-                                     schemas (schema-util/hydrate-schema link query-params param-ctx)]
-                                (base/process-results (constantly link-dependent-requests) query-params link link-request result schemas param-ctx))
-                              (cats/mplus (either/right nil))
-                              (cats/extract))))))
+  (-> (mlet [ordered-fes (form-util/get-ordered-find-elements-m link query-params param-ctx)
+             link-request (base/request-for-link link query-params ordered-fes param-ctx)]
+        (cats/return
+          (concat
+            (if link-request [link-request])
+            (schema-util/schema-requests-for-link ordered-fes param-ctx)
+            (-> (mlet [result (if link-request
+                                (hc/hydrate (:peer param-ctx) link-request)
+                                (either/right nil))
+                       schemas (schema-util/hydrate-schema ordered-fes param-ctx)]
+                  (base/process-results (constantly link-dependent-requests) query-params link link-request result schemas ordered-fes param-ctx))
+                (cats/mplus (either/right nil))
+                (cats/extract)))))
       (cats/mplus (either/right nil))
       (cats/extract)))
 

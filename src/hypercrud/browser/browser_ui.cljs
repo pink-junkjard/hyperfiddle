@@ -14,6 +14,7 @@
             [hypercrud.types.EntityRequest :refer [EntityRequest]]
             [hypercrud.types.QueryRequest :refer [QueryRequest]]
             [hypercrud.ui.auto-control :as auto-control]
+            [hypercrud.ui.form-util :as form-util]
             [hypercrud.util.core :refer [pprint-str]]
             [reagent.core :as r]))
 
@@ -43,11 +44,12 @@
   (let [param-ctx (context/route param-ctx route)
         get-ui-f (or override-get-ui-f get-ui-f)]
     (mlet [link (hydrate-link (:link-dbid route) param-ctx) ; always latest
-           request (base/request-for-link link query-params param-ctx)
+           ordered-fes (form-util/get-ordered-find-elements-m link query-params param-ctx)
+           request (base/request-for-link link query-params ordered-fes param-ctx)
            result (if request (hc/hydrate (:peer param-ctx) request) (either/right nil))
            ; schema is allowed to be nil if the link only has anchors and no data dependencies
-           schemas (schema-util/hydrate-schema link query-params param-ctx)]
-      (base/process-results get-ui-f query-params link request result schemas param-ctx))))
+           schemas (schema-util/hydrate-schema ordered-fes param-ctx)]
+      (base/process-results get-ui-f query-params link request result schemas ordered-fes param-ctx))))
 
 (defn ui [anchor param-ctx]
   (let [anchor-props (anchor/build-anchor-props anchor param-ctx)] ; LOOOOOLLLLLL we are dumb

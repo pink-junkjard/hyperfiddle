@@ -59,17 +59,13 @@
 
   This function recurses in unexpected abstract way and impacts performance highly
   "
-  [parent-link colspec query-params param-ctx]
-  (let [find-elements (if (not= :blank (:request/type parent-link))
-                        (->> (form-util/get-ordered-find-elements parent-link query-params param-ctx)
-                             (mapv (juxt :find-element/name identity))
-                             (into {})))
-
-        ; entity links for link-query (have fe)
-        ; or, entity links for link-entity
-        entity-links (->> find-elements
-                          (mapcat (fn [[fe-name fe]]
-                                    (let [edit {:db/id (->DbId {:ident :system-anchor-edit
+  [parent-link colspec param-ctx]
+  (let [entity-links (->> (partition 4 colspec)
+                          (map (fn [[_ fe _ _]] fe))
+                          (distinct)
+                          (mapcat (fn [fe]
+                                    (let [fe-name (:find-element/name fe)
+                                          edit {:db/id (->DbId {:ident :system-anchor-edit
                                                                 :fe (-> fe :db/id :id)}
                                                                hc/*root-conn-id*)
                                                 :anchor/prompt (str "edit-" fe-name)
@@ -116,9 +112,7 @@
                           (mapcat (fn [[db fe attr maybe-field]]
                                     (let [fe-name (-> fe :find-element/name)
                                           ident (-> attr :db/ident)
-                                          conn {:db/id (->DbId (.-conn-id db) hc/*root-conn-id*)}
-                                          fe (get find-elements fe-name)
-                                          _ (assert fe)]
+                                          conn {:db/id (->DbId (.-conn-id db) hc/*root-conn-id*)}]
                                       (if (and (not= ident :db/id) (= :db.type/ref (-> attr :db/valueType :db/ident)))
                                         [{:db/id (->DbId {:ident :system-anchor-edit-attr
                                                           :fe (-> fe :db/id :id)

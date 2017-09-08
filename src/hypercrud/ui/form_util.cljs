@@ -1,12 +1,14 @@
 (ns hypercrud.ui.form-util
-  (:require [cljs.reader :as reader]
+  (:require [cats.monad.exception :as exception]
+            [cljs.reader :as reader]
             [clojure.string :as string]
             [hypercrud.client.core :as hc]
             [hypercrud.form.q-util :as q-util]
             [hypercrud.types.DbId :refer [->DbId]]
             [hypercrud.ui.markdown :refer [markdown]]
             [hypercrud.ui.tooltip :as tooltip]
-            [hypercrud.util.core :as util]))
+            [hypercrud.util.core :as util]
+            [hypercrud.util.monad :refer [exception->either]]))
 
 (defn css-slugify [s]
   ; http://stackoverflow.com/a/449000/959627
@@ -15,12 +17,12 @@
       (string/replace "/" "-")
       (string/replace " " "-")))
 
-(defn strip-forms-in-raw-mode [ordered-find-elements param-ctx]
-  (let [raw-mode? (= (:display-mode param-ctx) :root)
-        f (if raw-mode? #(dissoc % :find-element/form) identity)]
-    (map f ordered-find-elements)))
+(defn strip-form-in-raw-mode [fe param-ctx]
+  (if (= (:display-mode param-ctx) :root)
+    (dissoc fe :find-element/form)
+    fe))
 
-(defn get-ordered-find-elements [link query-params param-ctx]
+(defn get-ordered-find-elements [link query-params]
   (let [fill-fe-conn-id (fn [fe]
                           (let [conn-dbid (->DbId (q-util/fe-conn-id query-params fe)
                                                   ; this conn-id doesn't matter and will be removed anyway
@@ -44,6 +46,12 @@
                    (fill-fe-conn-id))]
       [])))
 
+(defn get-ordered-find-elements-m [link query-params param-ctx]
+  (-> (exception/try-on
+        (->> (get-ordered-find-elements link query-params)
+             (map #(strip-form-in-raw-mode % param-ctx))))
+      (exception->either)))
+
 (defn fe->db [fe param-ctx]
   (let [fe-conn (:find-element/connection fe)]
     (let [conn-id (-> fe-conn :db/id :id)
@@ -56,10 +64,8 @@ especially consider the '* case, so we need a uniform column set driving the bod
 with the headers but the resultset needs to match this column-fields structure now too; since
 the find-element level has been flattened out of the columns."
   ; Need result only for raw mode.
-  [result link schemas query-params param-ctx]
+  [result schemas ordered-fes param-ctx]
   (let [result (if (map? result) [result] result)           ; unified colspec for table and form
-        ordered-find-elements (-> (get-ordered-find-elements link query-params param-ctx)
-                                  (strip-forms-in-raw-mode param-ctx))
         raw-mode? (= (:display-mode param-ctx) :root)
         result-as-columns (util/transpose result)
         map' (util/map-pad {})]
@@ -87,7 +93,7 @@ the find-element level has been flattened out of the columns."
                                 field (get indexed-fields ident)]
                             [db fe attr field])) col-idents')))
             result-as-columns
-            ordered-find-elements)
+            ordered-fes)
       (flatten)
       (vec))))
 
