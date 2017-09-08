@@ -1,6 +1,6 @@
 (ns hypercrud.ui.form-util
-  (:require [cats.monad.exception :as exception]
-            [cljs.reader :as reader]
+  (:require [cats.core :as cats :refer [mlet]]
+            [cats.monad.either :as either]
             [clojure.string :as string]
             [hypercrud.client.core :as hc]
             [hypercrud.form.q-util :as q-util]
@@ -8,7 +8,8 @@
             [hypercrud.ui.markdown :refer [markdown]]
             [hypercrud.ui.tooltip :as tooltip]
             [hypercrud.util.core :as util]
-            [hypercrud.util.monad :refer [exception->either]]))
+            [hypercrud.util.monad :refer [exception->either]]
+            [hypercrud.util.string :as hc-string]))
 
 (defn css-slugify [s]
   ; http://stackoverflow.com/a/449000/959627
@@ -22,35 +23,30 @@
     (dissoc fe :find-element/form)
     fe))
 
-(defn get-ordered-find-elements [link query-params]
-  (let [fill-fe-conn-id (fn [fe]
-                          (let [conn-dbid (->DbId (q-util/fe-conn-id query-params fe)
-                                                  ; this conn-id doesn't matter and will be removed anyway
-                                                  hc/*root-conn-id*)]
-                            (assoc-in fe [:find-element/connection :db/id] conn-dbid)))]
-    (case (:request/type link)
-      ; this could throw, we only run this code after a link has returned successfully, getting lucky here
-      :query (let [q (some-> link :link-query/value reader/read-string)
-                   find-element-lookup (->> (:link-query/find-element link)
-                                            (map (juxt :find-element/name identity))
-                                            (into {}))]
-               (->> (util/parse-query-element q :find)
-                    (mapv str)
-                    (mapv (fn [fe-name]
-                            (-> (get find-element-lookup fe-name {:find-element/name fe-name})
-                                (fill-fe-conn-id))))))
-      :entity [(-> (or (->> (:link-query/find-element link)
-                            (filter #(= (:find-element/name %) "entity"))
-                            first)
-                       {:find-element/name "entity"})
-                   (fill-fe-conn-id))]
-      [])))
-
-(defn get-ordered-find-elements-m [link query-params param-ctx]
-  (-> (exception/try-on
-        (->> (get-ordered-find-elements link query-params)
-             (map #(strip-form-in-raw-mode % param-ctx))))
-      (exception->either)))
+(defn get-ordered-find-elements [link query-params param-ctx]
+  (mlet [fes (case (:request/type link)
+               :query (let [find-element-lookup (->> (:link-query/find-element link)
+                                                     (map (juxt :find-element/name identity))
+                                                     (into {}))]
+                        (mlet [q (-> (hc-string/safe-read-string (:link-query/value link)) exception->either)]
+                          (->> (util/parse-query-element q :find)
+                               (mapv str)
+                               (mapv #(get find-element-lookup % {:find-element/name %}))
+                               (cats/return))))
+               :entity (either/right [(or (->> (:link-query/find-element link)
+                                               (filter #(= (:find-element/name %) "entity"))
+                                               first)
+                                          {:find-element/name "entity"})])
+               (either/right []))
+         :let [fill-fe-conn-id (fn [fe]
+                                 (let [conn-dbid (->DbId (q-util/fe-conn-id query-params fe)
+                                                         ; this conn-id doesn't matter and will be removed anyway
+                                                         hc/*root-conn-id*)]
+                                   (assoc-in fe [:find-element/connection :db/id] conn-dbid)))]]
+    (->> fes
+         (map fill-fe-conn-id)
+         (map #(strip-form-in-raw-mode % param-ctx))
+         (cats/return))))
 
 (defn fe->db [fe param-ctx]
   (let [fe-conn (:find-element/connection fe)]
