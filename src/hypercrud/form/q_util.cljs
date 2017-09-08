@@ -1,8 +1,12 @@
 (ns hypercrud.form.q-util
-  (:require [cljs.reader :as reader]
+  (:require [cats.core :as cats :refer [mlet]]
+            [cats.monad.either :as either]
+            [cljs.reader :as reader]
             [clojure.string :as string]
             [hypercrud.client.core :as hc]
-            [hypercrud.util.core :as util]))
+            [hypercrud.util.core :as util]
+            [hypercrud.util.monad :refer [exception->either]]
+            [hypercrud.util.string :as hc-string]))
 
 
 ; deprecated
@@ -28,14 +32,11 @@
   (->> (parse-holes q)
        (remove #(string/starts-with? % "$"))))
 
-(defn safe-parse-query-validated [link]                     ; monad
-  ; return monad and display the error to the widget?
-  ; Should try not to even stage bad queries. If it happens though,
-  ; we can draw the server error. Why can't we even get to server error now?
-  (let [q (some-> link :link-query/value safe-read-string)]
+(defn safe-parse-query-validated [link]
+  (mlet [q (-> (hc-string/safe-read-string (:link-query/value link)) exception->either)]
     (if (vector? q)
-      q
-      [])))
+      (cats/return q)
+      (either/left {:message (str "Invalid query '" (pr-str q) "', only vectors supported")}))))
 
 (defn build-dbhole-lookup [link param-ctx]
   (->> (:link-query/dbhole link)

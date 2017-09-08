@@ -8,8 +8,7 @@
             [hypercrud.ui.markdown :refer [markdown]]
             [hypercrud.ui.tooltip :as tooltip]
             [hypercrud.util.core :as util]
-            [hypercrud.util.monad :refer [exception->either]]
-            [hypercrud.util.string :as hc-string]))
+            [hypercrud.util.monad :refer [exception->either]]))
 
 (defn css-slugify [s]
   ; http://stackoverflow.com/a/449000/959627
@@ -28,7 +27,7 @@
                :query (let [find-element-lookup (->> (:link-query/find-element link)
                                                      (map (juxt :find-element/name identity))
                                                      (into {}))]
-                        (mlet [q (-> (hc-string/safe-read-string (:link-query/value link)) exception->either)]
+                        (mlet [q (q-util/safe-parse-query-validated link)]
                           (->> (util/parse-query-element q :find)
                                (mapv str)
                                (mapv #(get find-element-lookup % {:find-element/name %}))

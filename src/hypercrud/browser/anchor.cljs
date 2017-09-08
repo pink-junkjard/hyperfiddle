@@ -53,14 +53,16 @@
   ; We specifically hydrate this deep just so we can validate anchors like this.
   (let [have (set (keys (into {} (remove (comp nil? val) (:query-params route)))))]
     (case (:request/type link)
-      :query (mlet [q (either/right (q-util/safe-parse-query-validated link))]
-               ; todo check fe conn
-               ; todo merge in dbhole lookup, see: hypercrud.browser.base/request-for-link
-               (let [need (set (q-util/parse-param-holes q))
-                     missing (set/difference need have)]
-                 (if (empty? missing)
-                   (either/right route)
-                   (either/left {:message "missing query params" :data {:have have :missing missing}}))))
+      :query (let [q (-> (q-util/safe-parse-query-validated link)
+                         (cats/mplus (either/right []))
+                         (cats/extract))
+                   ; todo check fe conn
+                   ; todo merge in dbhole lookup, see: hypercrud.browser.base/request-for-link
+                   need (set (q-util/parse-param-holes q))
+                   missing (set/difference need have)]
+               (if (empty? missing)
+                 (either/right route)
+                 (either/left {:message "missing query params" :data {:have have :missing missing}})))
       :entity (if (not= nil (-> route :query-params :entity)) ; add logic for a
                 ; todo check fe conn
                 (either/right route)
