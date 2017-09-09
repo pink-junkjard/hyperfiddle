@@ -37,43 +37,35 @@
    (widget/render-anchors (remove :anchor/render-inline? attr-label-anchors) ctx)
    (widget/render-inline-anchors (filter :anchor/render-inline? attr-label-anchors) ctx)])
 
-(defn col-head [[db fe attr field] anchors-lookup sort-col ctx]
-  (let [fe-name (-> fe :find-element/name)
-        ident (-> attr :db/ident)
+(defn col-head [[db fe {:keys [:db/ident] :as attr} field] anchors-lookup sort-col ctx]
+  (let [fe-name (:find-element/name fe)
         ctx (context/attribute ctx attr)
-        css-classes [(str "field-element-" (form-util/css-slugify fe-name))
-                     (str "field-attr-" (form-util/css-slugify (str ident)))] #_"Dustin removed field-id and field-prompt; use a custom renderer"
-        attr-label-anchors (->> (get-in anchors-lookup [fe-name (:db/ident attr)])
-                                (remove :anchor/repeating?))
-        [attr-label-anchors] (widget/process-option-popover-anchors attr-label-anchors ctx)
-        ; sorting currently breaks click handling in popovers
-        sortable? (and (not-any? anchor/popover-anchor? attr-label-anchors)
+        [attr-label-anchors] (-> (->> (get-in anchors-lookup [fe-name ident])
+                                      (remove :anchor/repeating?))
+                                 (widget/process-option-popover-anchors ctx))
+        sortable? (and (not-any? anchor/popover-anchor? attr-label-anchors) ; sorting currently breaks click handling in popovers
                        (attr-sortable? attr))
-        [sort-fe-dbid sort-key direction] @sort-col
-        with-sort-direction (fn [asc desc no-sort not-sortable]
-                              (if sortable?
-                                (if (and (= (:db/id fe) sort-fe-dbid) (= sort-key ident))
-                                  (case direction
-                                    :asc asc
-                                    :desc desc)
-                                  no-sort)
-                                not-sortable))
-
-        on-click (with-sort-direction #(reset! sort-col [(:db/id fe) ident :desc])
-                                      #(reset! sort-col nil)
-                                      #(reset! sort-col [(:db/id fe) ident :asc])
-                                      (constantly nil))
-        arrow (with-sort-direction " ↓" " ↑" " ↕" nil)]
-    [:td {:class (string/join " " css-classes)
+        sort-direction (let [[sort-fe-dbid sort-key direction] @sort-col]
+                         (if (and (= (:db/id fe) sort-fe-dbid) (= sort-key ident))
+                           direction))
+        on-click (fn []
+                   (if sortable?
+                     (reset! sort-col (case sort-direction
+                                        :asc [(:db/id fe) ident :desc]
+                                        :desc nil
+                                        [(:db/id fe) ident :asc]))))
+        css-classes [(str "field-element-" (form-util/css-slugify fe-name))
+                     (str "field-attr-" (form-util/css-slugify (str ident))) #_"Dustin removed field-id and field-prompt; use a custom renderer"
+                     (if sortable? "sortable")
+                     (some-> sort-direction name)]]
+    [:th {:class (string/join " " css-classes)
           :style {:background-color (connection-color/connection-color (or (:color ctx) (.-conn-id db) #_"hack for top tables"))}
           :on-click on-click}
      [:label (form-util/field-label field ctx)]
-     [col-head-anchors attr-label-anchors ctx]
-     (if sortable?
-       [:span.sort-arrow arrow])]))
+     [col-head-anchors attr-label-anchors ctx]]))
 
 (defn LinkCell [repeating? colspec anchors-lookup ctx]
-  [:td.link-cell
+  [(if repeating? :td.link-cell :th.link-cell)
    (->> (partition 4 colspec)
         (group-by (fn [[dbval fe attr maybe-field]] fe))
         (mapcat (fn [[fe colspec]]
