@@ -55,7 +55,7 @@
   ; and because nested router. Is that even needed now?
   (if-not (:hidden hypercrud-props)
     (let [hypercrud-props (update hypercrud-props :class #(str % " hf-auto-nav"))]
-      [:span.nav-link.hf-nav-link
+      [:span.nav-link
        [tooltip/fast-hover-tooltip-managed
         (let [tooltip-config (:tooltip hypercrud-props)
               [status label] (if (string? tooltip-config)
