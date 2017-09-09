@@ -49,7 +49,7 @@
   [:div.auto-result
    (cond
      (map? result) [form/form result colspec anchors param-ctx]
-     (coll? result) [table/Table result colspec anchors param-ctx]
+     (coll? result) [table/ui-table result colspec anchors param-ctx]
      :else
      [:div.blank
       (widget/render-anchors (->> anchors
