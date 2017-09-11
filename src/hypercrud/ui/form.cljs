@@ -46,65 +46,61 @@
 
 (def always-read-only (constantly true))
 
-(defn form [relation colspec anchors param-ctx]
-  ; all anchors need a find-element at least, because it has a connection affinity.
-  (let [param-ctx (-> (context/relation param-ctx relation)
-                      (assoc :layout (:layout param-ctx :block)))
-        anchors (widget/process-popover-anchors anchors param-ctx)
-        anchors-lookup (->> (group-by (comp :find-element/name :anchor/find-element) anchors)
-                            (util/map-values (partial group-by :anchor/attribute)))
-        not-splat? (and (not (empty? colspec))
-                        (->> (partition 4 colspec)
-                             (mapv (fn [[conn fe-name attr maybe-field]] maybe-field))
-                             (every? #(not= nil %))))
-        magic-new-field (if-not not-splat?
-                          ; can we assert entity? No, bc we could model a link to a single relation without a form.
-                          (if-let [entity (get relation "entity")] ; makes sense only for entity links, not query links as entity.
-                            (let [[_ fe _ _] (take 4 colspec)
-                                  param-ctx (context/find-element param-ctx fe)]
-                              ^{:key (hash (keys entity))} [new-field entity param-ctx])))
-        fields (->> (partition 4 colspec)
-                    (group-by (fn [[dbval fe attr maybe-field]] fe))
-                    (mapcat
-                      (fn [[fe colspec]]
-                        (let [fe-name (-> fe :find-element/name)
-                              form-anchors (get-in anchors-lookup [fe-name nil])
-                              entity-new-anchors (->> form-anchors (remove :anchor/repeating?))
-                              entity-anchors (->> form-anchors (filter :anchor/repeating?))
-                              param-ctx (context/find-element param-ctx fe)]
-                          (concat
-                            ; don't put entity in scope because it messes up formulas which have to be deterministic with request side.
-                            (widget/render-anchors (remove :anchor/render-inline? entity-new-anchors) param-ctx)
-                            (let [entity (get relation fe-name)
-                                  param-ctx (context/entity param-ctx entity)]
-                              #_(assert entity "i think this is true now")
-                              (concat
-                                (widget/render-anchors (remove :anchor/render-inline? entity-anchors) param-ctx)
-                                (->> colspec
-                                     (mapv (fn [[db fe attr maybe-field]]
-                                             (let [ident (-> attr :db/ident)
-                                                   param-ctx (as-> (context/attribute param-ctx attr) $
-                                                                   (context/value $ (get entity ident))
-                                                                   (if (= ident :db/id) (assoc $ :read-only always-read-only) $))
-                                                   field (case (:display-mode param-ctx) :xray field :user (get param-ctx :field field))
-                                                   control (case (:display-mode param-ctx) :xray control :user (get param-ctx :control control))
-                                                   attr-anchors (get-in anchors-lookup [fe-name (-> param-ctx :attribute :db/ident)])]
-                                               ; What is the user-field allowed to change? The param-ctx. Can it change links or anchors? no.
-                                               ^{:key (str ident)}
-                                               [field #(control maybe-field attr-anchors %) maybe-field attr-anchors param-ctx]))))
-                                #_[magic-new-field]
-                                (widget/render-inline-anchors (filter :anchor/render-inline? entity-anchors) param-ctx)))
-                            (widget/render-inline-anchors (filter :anchor/render-inline? entity-new-anchors) param-ctx))))))]
+(defn Attribute [[_ _ attr maybe-field] fe-anchors-lookup param-ctx]
+  (let [ident (-> attr :db/ident)
+        param-ctx (as-> (context/attribute param-ctx attr) $
+                        (context/value $ (get-in param-ctx [:entity ident]))
+                        (if (= ident :db/id) (assoc $ :read-only always-read-only) $))
+        attr-anchors (get fe-anchors-lookup ident)
+        ; What is the user-field allowed to change? The param-ctx. Can it change links or anchors? no.
+        field (case (:display-mode param-ctx) :xray field :user (get param-ctx :field field))
+        control (case (:display-mode param-ctx) :xray control :user (get param-ctx :control control))]
+    ; todo control can have access to repeating contextual values (color, owner, result, entity, value, etc) but field should NOT
+    ; this leads to inconsistent location formulas between non-repeating links in tables vs forms
+    [field #(control maybe-field attr-anchors %) maybe-field attr-anchors param-ctx]))
 
-    [:div {:class (str "forms-list " (name (:layout param-ctx)))}
-     (widget/render-anchors (->> anchors
-                                 (remove :anchor/repeating?)
-                                 (remove :anchor/attribute)
-                                 (remove :anchor/render-inline?))
-                            (dissoc param-ctx :isComponent))
-     (concat fields [magic-new-field])
-     (widget/render-inline-anchors (->> anchors
-                                        (remove :anchor/repeating?)
-                                        (remove :anchor/attribute)
-                                        (filter :anchor/render-inline?))
-                                   (dissoc param-ctx :isComponent))]))
+(defn Entity [entity colspec fe-anchors-lookup param-ctx]
+  (let [param-ctx (context/entity param-ctx entity)
+        {inline-anchors true anchors false} (->> (get fe-anchors-lookup nil)
+                                                 (filter :anchor/repeating?)
+                                                 (group-by :anchor/render-inline?))]
+    (concat
+      (widget/render-anchors anchors param-ctx)
+      (conj
+        (->> colspec
+             (mapv (fn [[_ _ attr maybe-field :as col]]
+                     ^{:key (or (:db/id maybe-field) (str (:db/ident attr)))}
+                     [Attribute col fe-anchors-lookup param-ctx])))
+        #_[magic-new-field])
+      (widget/render-inline-anchors inline-anchors param-ctx))))
+
+(defn FindElement [[fe colspec] anchors-lookup param-ctx]
+  (let [param-ctx (context/find-element param-ctx fe)
+        fe-name (:find-element/name fe)
+        fe-anchors-lookup (get anchors-lookup fe-name)
+        {inline-anchors true anchors false} (->> (get fe-anchors-lookup nil)
+                                                 (remove :anchor/repeating?)
+                                                 (group-by :anchor/render-inline?))]
+    (concat
+      (widget/render-anchors anchors param-ctx)
+      (Entity (get (:result param-ctx) fe-name) colspec fe-anchors-lookup param-ctx)
+      (widget/render-inline-anchors inline-anchors param-ctx))))
+
+(defn Relation [relation colspec anchors-lookup param-ctx]
+  (let [param-ctx (context/relation param-ctx relation)]
+    (->> (partition 4 colspec)
+         (group-by (fn [[dbval fe attr maybe-field]] fe))
+         (mapcat #(FindElement % anchors-lookup param-ctx)))))
+
+(defn form [relation colspec anchors ctx]
+  (let [ctx (assoc ctx :layout (:layout ctx :block))
+        anchors-lookup (->> (widget/process-popover-anchors anchors ctx)
+                            (group-by (comp :find-element/name :anchor/find-element))
+                            (util/map-values (partial group-by :anchor/attribute)))
+        {inline-index-anchors true index-anchors false} (->> (get-in anchors-lookup [nil nil])
+                                                             (group-by :anchor/render-inline?))
+        index-ctx (dissoc ctx :isComponent)]
+    [:div {:class (str "forms-list " (name (:layout ctx)))}
+     (widget/render-anchors index-anchors index-ctx)
+     (Relation relation colspec anchors-lookup ctx)
+     (widget/render-inline-anchors inline-index-anchors index-ctx)]))

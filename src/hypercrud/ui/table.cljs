@@ -115,14 +115,15 @@
     [field #(control maybe-field attr-anchors %) maybe-field attr-anchors param-ctx]))
 
 (defn FindElement [[fe colspec] anchors-lookup param-ctx]
-  (let [entity (get (:result param-ctx) (-> fe :find-element/name))
+  (let [fe-name (:find-element/name fe)
+        entity (get (:result param-ctx) fe-name)
+        entity-anchors-lookup (get anchors-lookup fe-name)
         param-ctx (-> (context/find-element param-ctx fe)
                       (context/entity entity))]
     (->> colspec
          (mapv (fn [[_ fe attr maybe-field :as col]]
-                 (let [entity-anchors-lookup (get anchors-lookup (:find-element/name fe))]
-                   ^{:key (or (:db/id maybe-field) (str (:find-element/name fe) (:db/ident attr)))}
-                   [Value col entity-anchors-lookup param-ctx]))))))
+                 ^{:key (or (:db/id maybe-field) (str fe-name (:db/ident attr)))}
+                 [Value col entity-anchors-lookup param-ctx])))))
 
 (defn Relation [relation colspec anchors-lookup param-ctx]
   (->> (partition 4 colspec)
@@ -168,16 +169,12 @@
   (let [anchors-lookup (->> (widget/process-popover-anchors anchors ctx)
                             (group-by (comp :find-element/name :anchor/find-element))
                             (util/map-values (partial group-by :anchor/attribute)))
-
-        links-index (widget/render-anchors (->> (get-in anchors-lookup [nil nil])
-                                                (remove :anchor/render-inline?))
-                                           (dissoc ctx :isComponent))
-        links-index-inline (widget/render-inline-anchors (->> (get-in anchors-lookup [nil nil])
-                                                              (filter :anchor/render-inline?))
-                                                         (dissoc ctx :isComponent))]
+        {inline-index-anchors true index-anchors false} (->> (get-in anchors-lookup [nil nil])
+                                                             (group-by :anchor/render-inline?))
+        index-ctx (dissoc ctx :isComponent)]
     [:div.ui-table-with-links
-     links-index
+     (widget/render-anchors index-anchors index-ctx)
      (if (empty? colspec)
        [:div "Can't infer table structure - no resultset and blank form. Fix query or model a form."]
        [Table relations colspec anchors-lookup ctx])
-     links-index-inline]))
+     (widget/render-inline-anchors inline-index-anchors index-ctx)]))
