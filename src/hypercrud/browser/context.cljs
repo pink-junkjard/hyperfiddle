@@ -1,6 +1,5 @@
 (ns hypercrud.browser.context
   (:require [hypercrud.browser.auto-anchor-formula :refer [auto-entity-dbid]]
-            [hypercrud.client.core :as hc]
             [hypercrud.state.actions.core :as actions]
             [hypercrud.util.branch :as branch]))
 
@@ -10,7 +9,7 @@
   (dissoc param-ctx
           :route :result
           :schemas
-          :db :find-element :schema
+          :conn-id :find-element :schema
           :entity :attribute :value
           :layout :field))
 
@@ -34,7 +33,7 @@
 (defn find-element [param-ctx fe]
   (let [conn-id (-> fe :find-element/connection :db/id :id)
         branch (:branch param-ctx)]
-    (assoc param-ctx :db (hc/db (:peer param-ctx) conn-id branch)
+    (assoc param-ctx :conn-id conn-id
                      :find-element fe
                      :schema (get-in param-ctx [:schemas (:find-element/name fe)])
                      ; todo custom user-dispatch with all the tx-fns as reducers

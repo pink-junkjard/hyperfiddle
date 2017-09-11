@@ -5,24 +5,21 @@
 :entity-remove
 ==
 (fn [ctx multi-color-tx modal-route]
-  (let [conn-id (-> ctx :db :conn-id)]
-    {:tx (update multi-color-tx conn-id conj [:db.fn/retractEntity (-> ctx :entity :db/id)])}))
+  {:tx (update multi-color-tx (:conn-id ctx) conj [:db.fn/retractEntity (-> ctx :entity :db/id)])})
 ==
 
 
 :value-remove-one
 ==
 (fn [ctx multi-color-tx modal-route]
-  (let [conn-id (-> ctx :db :conn-id)]
-    {:tx (update multi-color-tx conn-id conj [:db.fn/retractEntity (-> ctx :value :db/id)])}))
+  {:tx (update multi-color-tx (:conn-id ctx) conj [:db.fn/retractEntity (-> ctx :value :db/id)])})
 ==
 
 
 :value-remove-many
 ==
 (fn [ctx multi-color-tx modal-route]
-  (let [conn-id (-> ctx :db :conn-id)
-        retracts (->> (:value ctx)
+  (let [retracts (->> (:value ctx)
                       (mapv (fn [e] [:db.fn/retractEntity (:db/id e)])))]
-    {:tx (update multi-color-tx conn-id concat retracts)}))
+    {:tx (update multi-color-tx (:conn-id ctx) concat retracts)}))
 ==

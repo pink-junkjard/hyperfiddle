@@ -9,7 +9,7 @@
 (defn auto-entity-dbid-from-stage [ctx]
   ; This returns a new value each time the transaction changes - can't call it again later.
   ; So tx-fns must inspect the modal-route, they can't re-create the dbid.
-  (let [conn-id (-> ctx :db :conn-id)
+  (let [conn-id (:conn-id ctx)
         branch-val @(reagent/cursor (-> ctx :peer .-state-atom) [:stage (:branch ctx) conn-id])
         id (-> (or branch-val "nil stage")
                hash js/Math.abs - str)]
@@ -37,7 +37,7 @@
             (-> ctx :entity)
             (-> ctx :attribute)
             (-> ctx :value))
-          (-> ctx :db :conn-id)))
+          (-> ctx :conn-id)))
 
 (def auto-formula-lookup
   (let [fe-no-create (->> (template/load-resource "auto-formula/fe-no-create.vedn")
