@@ -80,7 +80,6 @@
                                           (remove :anchor/render-inline?))]
                     (widget/render-anchors form-anchors ctx)))))])
 
-; basically the same type signature and impl as Row
 (defn HeaderRow [colspec anchors-lookup sort-col ctx]
   [:tr
    (->> (partition 4 colspec)
