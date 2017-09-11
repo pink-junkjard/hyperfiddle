@@ -78,6 +78,7 @@
   (let [param-ctx (context/find-element param-ctx fe)
         fe-name (:find-element/name fe)
         fe-anchors-lookup (get anchors-lookup fe-name)
+        ; todo these fe non-repeating anchors should not have relation in its context
         {inline-anchors true anchors false} (->> (get fe-anchors-lookup nil)
                                                  (remove :anchor/repeating?)
                                                  (group-by :anchor/render-inline?))]
