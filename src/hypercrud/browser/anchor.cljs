@@ -110,7 +110,7 @@
                    (interpose " ")
                    (apply str))})))
 
-(defn managed-popover-body [anchor route param-ctx]
+(defn managed-popover-body [anchor route popover-id param-ctx]
   (let [stage! (fn []
                  (let [user-txfn (some-> (eval/validate-user-code-str (:anchor/tx-fn anchor)) eval-str' (cats/mplus (either/right nil)) (cats/extract))
                        user-txfn (or user-txfn (fn [ctx multi-color-tx modal-route] {:tx multi-color-tx}))]
@@ -172,7 +172,7 @@
                           (let [popover-id (popover-id anchor param-ctx) ;we want the context before we branch
                                 param-ctx (context/anchor-branch param-ctx anchor)]
                             {:showing? (reagent/cursor (-> param-ctx :peer .-state-atom) [:popovers popover-id])
-                             :body [managed-popover-body anchor route param-ctx]
+                             :body [managed-popover-body anchor route popover-id param-ctx]
                              :open! #((:dispatch! param-ctx) (actions/open-popover popover-id))
                              :cancel! #((:dispatch! param-ctx) (actions/cancel-popover (:branch param-ctx) popover-id))})))
         anchor-props-hidden {:hidden (not visible?)}]
