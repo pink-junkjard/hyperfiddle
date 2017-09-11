@@ -25,7 +25,7 @@
                (let [prompt (or (:anchor/prompt anchor)
                                 (:anchor/ident anchor)
                                 "_")]
-                 ^{:key (hash anchor)}                      ; not a great key but syslinks don't have much.
+                 ^{:key (hash (:db/id anchor))}
                  [(:navigate-cmp param-ctx) (anchor/build-anchor-props anchor param-ctx) prompt])))
         doall))
   ([anchors param-ctx]
@@ -39,7 +39,7 @@
         ; Don't filter hidden links; because they could be broken or invalid and need to draw error.
         (map (fn [[anchor param-ctx]]
                ; don't test anchor validity, we need to render the failure. If this is a dependent link, use visibility predicate to hide the error.
-               [:div {:key (hash anchor)}                   ; extra div bc had trouble getting keys to work
+               [:div {:key (hash (:db/id anchor))}          ; extra div bc had trouble getting keys to work
                 ; NOTE: this param-ctx logic and structure is the same as the inline branch of browser-request/recurse-request
                 [browser/safe-ui anchor (update param-ctx :debug #(str % ">inline-link[" (:db/id anchor) ":" (or (:anchor/ident anchor) (:anchor/prompt anchor)) "]"))]]))
         (remove nil?)
