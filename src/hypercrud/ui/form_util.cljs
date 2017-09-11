@@ -47,12 +47,6 @@
          (map #(strip-form-in-raw-mode % param-ctx))
          (cats/return))))
 
-(defn fe->db [fe param-ctx]
-  (let [fe-conn (:find-element/connection fe)]
-    (let [conn-id (-> fe-conn :db/id :id)
-          branch (:branch param-ctx)]
-      (hc/db (:peer param-ctx) conn-id branch))))
-
 (defn determine-colspec "Colspec is what you have when you flatten out the find elements,
 but retaining and correlating all information through a join. Not all entities are homogenous,
 especially consider the '* case, so we need a uniform column set driving the body rows in sync
@@ -81,12 +75,11 @@ the find-element level has been flattened out of the columns."
                                              ; raw mode sort is by namespaced attribute, per find-element
                                              k))
                                          col-idents)
-                    db (fe->db fe param-ctx)
                     schema (get schemas (:find-element/name fe))]
                 (mapcat (fn [ident]
                           (let [attr (get schema ident {:db/ident ident})
                                 field (get indexed-fields ident)]
-                            [db fe attr field])) col-idents')))
+                            [nil fe attr field])) col-idents')))
             result-as-columns
             ordered-fes)
       (flatten)

@@ -2,8 +2,13 @@
   (:require [cats.core :as cats]
             [hypercrud.client.core :as hc]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
-            [hypercrud.ui.form-util :as form-util]
             [hypercrud.util.core :as util]))
+
+(defn fe->db [fe param-ctx]
+  (let [fe-conn (:find-element/connection fe)]
+    (let [conn-id (-> fe-conn :db/id :id)
+          branch (:branch param-ctx)]
+      (hc/db (:peer param-ctx) conn-id branch))))
 
 (defn hc-attr-request [param-ctx]
   (let [dbval (hc/db (:peer param-ctx) hc/*root-conn-id* (:branch param-ctx))]
@@ -25,7 +30,7 @@
 
 (defn schema-requests-for-link [ordered-fes param-ctx]
   (->> ordered-fes
-       (map #(form-util/fe->db % param-ctx))
+       (map #(fe->db % param-ctx))
        (map schema-request)
        (concat [(hc-attr-request param-ctx)])))
 
@@ -39,7 +44,7 @@
                                   (util/map-values #(dissoc % :attribute/ident :db/id)))]
             (->> ordered-fes
                  (mapv (fn [fe]
-                         (->> (form-util/fe->db fe param-ctx)
+                         (->> (fe->db fe param-ctx)
                               (schema-request)
                               (hc/hydrate (:peer param-ctx))
                               (cats/fmap (fn [schema]
