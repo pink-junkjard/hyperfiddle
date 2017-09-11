@@ -37,7 +37,7 @@
    (widget/render-anchors (remove :anchor/render-inline? attr-label-anchors) ctx)
    (widget/render-inline-anchors (filter :anchor/render-inline? attr-label-anchors) ctx)])
 
-(defn col-head [[db fe {:keys [:db/ident] :as attr} field] anchors-lookup sort-col ctx]
+(defn col-head [[_ fe {:keys [:db/ident] :as attr} field] anchors-lookup sort-col ctx]
   (let [fe-name (:find-element/name fe)
         ctx (context/attribute ctx attr)
         [attr-label-anchors] (-> (->> (get-in anchors-lookup [fe-name ident])
@@ -59,7 +59,7 @@
                      (if sortable? "sortable")
                      (some-> sort-direction name)]]
     [:th {:class (string/join " " css-classes)
-          :style {:background-color (connection-color/connection-color (or (:color ctx) (.-conn-id db) #_"hack for top tables"))}
+          :style {:background-color (connection-color/connection-color (or (:color ctx) (:conn-id ctx) #_"hack for top tables"))}
           :on-click on-click}
      [:label (form-util/field-label field ctx)]
      [col-head-anchors attr-label-anchors ctx]]))
