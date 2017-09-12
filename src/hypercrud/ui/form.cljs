@@ -63,7 +63,10 @@
   (let [param-ctx (context/entity param-ctx entity)
         {inline-anchors true anchors false} (->> (get fe-anchors-lookup nil)
                                                  (filter :anchor/repeating?)
-                                                 (group-by :anchor/render-inline?))]
+                                                 (group-by :anchor/render-inline?))
+        splat? (->> colspec
+                    (map (fn [[_ _ _ maybe-field]] maybe-field))
+                    (every? nil?))]
     (concat
       (widget/render-anchors anchors param-ctx)
       (conj
@@ -71,7 +74,9 @@
              (mapv (fn [[_ _ attr maybe-field :as col]]
                      ^{:key (or (:db/id maybe-field) (str (:db/ident attr)))}
                      [Attribute col fe-anchors-lookup param-ctx])))
-        #_[magic-new-field])
+        (if splat?
+          ^{:key (hash (keys entity))}
+          [new-field entity param-ctx]))
       (widget/render-inline-anchors inline-anchors param-ctx))))
 
 (defn FindElement [[fe colspec] anchors-lookup param-ctx]
