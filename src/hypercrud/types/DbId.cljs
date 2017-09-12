@@ -8,9 +8,9 @@
   IHash (-hash [this] (hash [id conn-id]))
   IEquiv (-equiv [this other]
            (or (and (nil? this) (nil? other))
-               (if-not (or (nil? this) (nil? other))
-                 (and (= (.-id this) (.-id other))
-                      (= (.-conn-id this) (.-conn-id other))))))
+               (and (not (or (nil? this) (nil? other)))
+                    (= (.-id this) (.-id other))
+                    (= (.-conn-id this) (.-conn-id other)))))
   ILookup
   (-lookup [o k] (get o k nil))
   (-lookup [o k not-found] (case k
