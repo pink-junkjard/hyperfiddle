@@ -67,7 +67,7 @@ the find-element level has been flattened out of the columns."
                    (let [indexed-fields (util/group-by-assume-unique :field/attribute (-> fe :find-element/form :form/field))
                          col-idents (if (or raw-mode? (empty? (keys indexed-fields)))
                                       (let [entities (get results-indexed-by-column (:find-element/name fe))]
-                                        (reduce (fn [acc v] (into acc (keys v))) #{} entities))
+                                        (reduce (fn [acc v] (into acc (keys (dissoc v :db/id)))) #{} entities))
                                       (keys indexed-fields))
                          sort-fn (fn [k]
                                    (if-let [field (get indexed-fields k)]
