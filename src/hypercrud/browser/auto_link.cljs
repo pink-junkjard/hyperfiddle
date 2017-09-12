@@ -9,7 +9,7 @@
 (defn system-link? [link-dbid]
   (map? (:id link-dbid)))
 
-(defn link-system-edit [owner fe]                      ; these need to be thick/hydrated params bc we are manufacturing a pulled tree here.
+(defn link-system-edit [owner fe]                           ; these need to be thick/hydrated params bc we are manufacturing a pulled tree here.
   {:pre [fe]}
   (let [conn (:find-element/connection fe)]
     {:db/id (->DbId {:ident :system-edit
