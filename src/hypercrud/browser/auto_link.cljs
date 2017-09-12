@@ -1,9 +1,7 @@
 (ns hypercrud.browser.auto-link
-  (:require-macros [hypercrud.util.template :as template])
   (:require [hypercrud.client.core :as hc]
             [hypercrud.types.DbId :refer [->DbId]]
-            [hypercrud.types.EntityRequest :refer [->EntityRequest]]
-            [hypercrud.util.vedn :as vedn]))
+            [hypercrud.types.EntityRequest :refer [->EntityRequest]]))
 
 
 (defn system-link? [link-dbid]
@@ -46,115 +44,6 @@
    :request/type :blank
    :link/renderer (pr-str `(fn [result# colspec# anchors# param-ctx#]
                              [:p "Retract entity?"]))})
-
-(def auto-link-txfn-lookup
-  (->> (template/load-resource "auto-link/tx-fns.vedn")
-       (vedn/read-string)))
-
-; todo this belongs in auto-anchor namespace
-(defn system-anchors
-  "All sys links are :anchor/ident :sys, so they can be matched and merged with user-anchors.
-  Matching is determined by [repeat? entity attribute ident]
-
-  This function recurses in unexpected abstract way and impacts performance highly
-  "
-  [parent-link colspec param-ctx]
-  (let [entity-links (->> colspec
-                          (mapcat (fn [{:keys [fe]}]
-                                    (let [fe-name (:find-element/name fe)
-                                          edit {:db/id (->DbId {:ident :system-anchor-edit
-                                                                :fe (-> fe :db/id :id)}
-                                                               hc/*root-conn-id*)
-                                                :anchor/prompt (str "edit-" fe-name)
-                                                :anchor/ident (keyword (str "sys-edit-" fe-name))
-                                                :anchor/link (link-system-edit (:hypercrud/owner parent-link) fe)
-                                                :anchor/repeating? true
-                                                :anchor/managed? false
-                                                :anchor/find-element fe}
-                                          ; create links mirror edit links but repeating false, see auto-formula.
-                                          ; This is because the connection comes from the find-element, and when merging
-                                          ; sys links we match on the find-element.
-                                          new {:db/id (->DbId {:ident :system-anchor-new
-                                                               :fe (-> fe :db/id :id)}
-                                                              hc/*root-conn-id*)
-                                               :anchor/prompt (str "new-" fe-name)
-                                               :anchor/ident (keyword (str "sys-new-" fe-name))
-                                               :anchor/link (link-system-edit (:hypercrud/owner parent-link) fe)
-                                               :anchor/repeating? false ; not managed, no parent-child ref
-                                               :anchor/find-element fe
-                                               :anchor/managed? true
-                                               :anchor/create? true
-                                               :anchor/render-inline? true}
-                                          remove {:db/id (->DbId {:ident :system-anchor-remove
-                                                                  :fe (-> fe :db/id :id)}
-                                                                 hc/*root-conn-id*)
-                                                  :anchor/prompt (str "remove-" fe-name)
-                                                  :anchor/ident (keyword (str "sys-remove-" fe-name))
-                                                  :anchor/link (link-blank-system-remove (:hypercrud/owner parent-link) fe nil)
-                                                  :anchor/repeating? true
-                                                  :anchor/find-element fe
-                                                  :anchor/managed? true
-                                                  :anchor/render-inline? true
-                                                  :anchor/tx-fn (:entity-remove auto-link-txfn-lookup)}]
-                                      (case (:request/type parent-link)
-                                        :entity [remove]
-
-                                        :query [edit new remove]
-
-                                        :blank []))))
-                          doall)
-
-        attr-links (if (not= :blank (:request/type parent-link))
-                     (->> colspec
-                          (mapcat (fn [{:keys [fe fe-colspec]}]
-                                    (let [fe-name (-> fe :find-element/name)]
-                                      (->> fe-colspec
-                                           (filter (fn [{:keys [attr]}]
-                                                     (and (not= (:db/ident attr) :db/id) (= :db.type/ref (-> attr :db/valueType :db/ident)))))
-                                           (mapcat (fn [{:keys [attr]}]
-                                                     (let [ident (-> attr :db/ident)]
-                                                       [{:db/id (->DbId {:ident :system-anchor-edit-attr
-                                                                         :fe (-> fe :db/id :id)
-                                                                         :a ident}
-                                                                        hc/*root-conn-id*)
-                                                         :anchor/prompt (str "edit") ; conserve space in label
-                                                         :anchor/ident (keyword (str "sys-edit-" fe-name "-" ident))
-                                                         :anchor/repeating? true
-                                                         :anchor/find-element fe
-                                                         :anchor/attribute ident
-                                                         :anchor/managed? false
-                                                         :anchor/link (link-system-edit-attr (:hypercrud/owner parent-link) fe attr)}
-                                                        {:db/id (->DbId {:ident :system-anchor-new-attr
-                                                                         :fe (-> fe :db/id :id)
-                                                                         :a ident}
-                                                                        hc/*root-conn-id*)
-                                                         :anchor/prompt (str "new") ; conserve space in label
-                                                         :anchor/ident (keyword (str "sys-new-" fe-name "-" ident))
-                                                         :anchor/repeating? true ; manged - need parent-child ref
-                                                         :anchor/find-element fe
-                                                         :anchor/attribute ident
-                                                         :anchor/managed? true
-                                                         :anchor/create? true
-                                                         :anchor/render-inline? true
-                                                         :anchor/link (link-system-edit-attr (:hypercrud/owner parent-link) fe attr)}
-                                                        {:db/id (->DbId {:ident :system-anchor-remove-attr
-                                                                         :fe (-> fe :db/id :id)
-                                                                         :a ident}
-                                                                        hc/*root-conn-id*)
-                                                         :anchor/prompt (str "remove")
-                                                         :anchor/ident (keyword (str "sys-remove-" fe-name "-" ident))
-                                                         :anchor/link (link-blank-system-remove (:hypercrud/owner parent-link) fe attr)
-                                                         :anchor/find-element fe
-                                                         :anchor/attribute ident
-                                                         :anchor/repeating? true
-                                                         :anchor/managed? true
-                                                         :anchor/render-inline? true
-                                                         :anchor/tx-fn (if (= :db.cardinality/one (-> attr :db/cardinality :db/ident))
-                                                                         (:value-remove-one auto-link-txfn-lookup)
-                                                                         (:value-remove-many auto-link-txfn-lookup))}])))))))
-                          doall))]
-    (concat entity-links attr-links)))
-
 
 (defn request-for-system-link [system-link-idmap param-ctx]
   ; owner, fe, attr.
