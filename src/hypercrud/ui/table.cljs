@@ -37,7 +37,7 @@
    (widget/render-anchors (remove :anchor/render-inline? attr-label-anchors) ctx)
    (widget/render-inline-anchors (filter :anchor/render-inline? attr-label-anchors) ctx)])
 
-(defn col-head [{:keys [fe attr maybe-field]} anchors-lookup sort-col ctx]
+(defn col-head [fe {:keys [attr maybe-field]} anchors-lookup sort-col ctx]
   (let [ident (:db/ident attr)
         fe-name (:find-element/name fe)
         ctx (context/attribute ctx attr)
@@ -67,8 +67,8 @@
 
 (defn LinkCell [repeating? colspec anchors-lookup ctx]
   [(if repeating? :td.link-cell :th.link-cell)
-   (->> (group-by :fe colspec)
-        (mapcat (fn [[fe colspec]]
+   (->> colspec
+        (mapcat (fn [{:keys [fe]}]
                   (let [fe-name (:find-element/name fe)
                         ctx (as-> (context/find-element ctx fe) ctx
                                   (if repeating?
@@ -82,13 +82,13 @@
 
 (defn HeaderRow [colspec anchors-lookup sort-col ctx]
   [:tr
-   (->> (group-by :fe colspec)
-        (mapcat (fn [[fe colspec]]
+   (->> colspec
+        (mapcat (fn [{:keys [fe fe-colspec]}]
                   (let [param-ctx (context/find-element ctx fe)]
-                    (->> colspec
+                    (->> fe-colspec
                          (map (fn [{:keys [attr] :as col}]
                                 ^{:key (str (:find-element/name fe) "-" (:db/ident attr))}
-                                [col-head col anchors-lookup sort-col param-ctx])))))))
+                                [col-head fe col anchors-lookup sort-col param-ctx])))))))
    [LinkCell false colspec anchors-lookup ctx]])
 
 (defn Control [maybe-field anchors param-ctx]
@@ -113,20 +113,19 @@
         attr-anchors (get entity-anchors-lookup ident)]
     [field #(control maybe-field attr-anchors %) maybe-field attr-anchors param-ctx]))
 
-(defn FindElement [[fe colspec] anchors-lookup param-ctx]
+(defn FindElement [{:keys [fe fe-colspec]} anchors-lookup param-ctx]
   (let [fe-name (:find-element/name fe)
         entity (get (:result param-ctx) fe-name)
         entity-anchors-lookup (get anchors-lookup fe-name)
         param-ctx (-> (context/find-element param-ctx fe)
                       (context/entity entity))]
-    (->> colspec
+    (->> fe-colspec
          (mapv (fn [{:keys [attr maybe-field] :as col}]
                  ^{:key (or (:db/id maybe-field) (str fe-name (:db/ident attr)))}
                  [Value col entity-anchors-lookup param-ctx])))))
 
 (defn Relation [relation colspec anchors-lookup param-ctx]
-  (->> (group-by :fe colspec)
-       (mapcat #(FindElement % anchors-lookup param-ctx))))
+  (mapcat #(FindElement % anchors-lookup param-ctx) colspec))
 
 (defn Row [relation colspec anchors-lookup param-ctx]
   (let [param-ctx (context/relation param-ctx relation)]
@@ -138,6 +137,8 @@
   (let [[fe-dbid sort-key direction] @sort-col
         sort-fn (fn [relations]
                   (let [{:keys [fe attr]} (->> colspec
+                                               (mapcat (fn [{:keys [fe fe-colspec]}]
+                                                         (map #(assoc % :fe fe) fe-colspec)))
                                                (filter (fn [{:keys [fe attr]}]
                                                          (and (= fe-dbid (:db/id fe))
                                                               (= (:db/ident attr) sort-key))))
@@ -172,7 +173,7 @@
         index-ctx (dissoc ctx :isComponent)]
     [:div.ui-table-with-links
      (widget/render-anchors index-anchors index-ctx)
-     (if (empty? colspec)
+     (if (every? #(empty? (:fe-colspec %)) colspec)
        [:div "Can't infer table structure - no resultset and blank form. Fix query or model a form."]
        [Table relations colspec anchors-lookup ctx])
      (widget/render-inline-anchors inline-index-anchors index-ctx)]))

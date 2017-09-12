@@ -17,14 +17,16 @@
 
 (defn build-label [colspec result param-ctx]
   (->> colspec
-       (mapv (fn [{:keys [fe attr]}]
-               ; Custom label renderers? Can't use the attribute renderer, since that
-               ; is how we are in a select options in the first place.
-               (let [ident (-> attr :db/ident)
-                     value (get-in result [(-> fe :find-element/name) ident])
-                     renderer (or (-> param-ctx :fields ident :label-renderer) default-label-renderer)]
-                 (-> (exception/try-on (renderer value param-ctx))
-                     exception->either))))
+       (mapcat (fn [{:keys [fe fe-colspec]}]
+                 (->> fe-colspec
+                      (mapv (fn [{:keys [attr]}]
+                              ; Custom label renderers? Can't use the attribute renderer, since that
+                              ; is how we are in a select options in the first place.
+                              (let [ident (-> attr :db/ident)
+                                    value (get-in result [(-> fe :find-element/name) ident])
+                                    renderer (or (-> param-ctx :fields ident :label-renderer) default-label-renderer)]
+                                (-> (exception/try-on (renderer value param-ctx))
+                                    exception->either)))))))
        (cats/sequence)
        (cats/fmap (fn [labels]
                     (->> labels

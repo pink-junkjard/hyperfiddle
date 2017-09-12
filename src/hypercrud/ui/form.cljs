@@ -59,17 +59,17 @@
     ; this leads to inconsistent location formulas between non-repeating links in tables vs forms
     [field #(control maybe-field attr-anchors %) maybe-field attr-anchors param-ctx]))
 
-(defn Entity [entity colspec fe-anchors-lookup param-ctx]
+(defn Entity [entity fe-colspec fe-anchors-lookup param-ctx]
   (let [param-ctx (context/entity param-ctx entity)
         {inline-anchors true anchors false} (->> (get fe-anchors-lookup nil)
                                                  (filter :anchor/repeating?)
                                                  (group-by :anchor/render-inline?))
-        splat? (->> (map :maybe-field colspec)
+        splat? (->> (map :maybe-field fe-colspec)
                     (every? nil?))]
     (concat
       (widget/render-anchors anchors param-ctx)
       (conj
-        (->> colspec
+        (->> fe-colspec
              (mapv (fn [{:keys [attr maybe-field] :as col}]
                      ^{:key (or (:db/id maybe-field) (str (:db/ident attr)))}
                      [Attribute col fe-anchors-lookup param-ctx])))
@@ -78,7 +78,7 @@
           [new-field entity param-ctx]))
       (widget/render-inline-anchors inline-anchors param-ctx))))
 
-(defn FindElement [[fe colspec] anchors-lookup param-ctx]
+(defn FindElement [{:keys [fe fe-colspec]} anchors-lookup param-ctx]
   (let [param-ctx (context/find-element param-ctx fe)
         fe-name (:find-element/name fe)
         fe-anchors-lookup (get anchors-lookup fe-name)
@@ -88,13 +88,12 @@
                                                  (group-by :anchor/render-inline?))]
     (concat
       (widget/render-anchors anchors param-ctx)
-      (Entity (get (:result param-ctx) fe-name) colspec fe-anchors-lookup param-ctx)
+      (Entity (get (:result param-ctx) fe-name) fe-colspec fe-anchors-lookup param-ctx)
       (widget/render-inline-anchors inline-anchors param-ctx))))
 
 (defn Relation [relation colspec anchors-lookup param-ctx]
   (let [param-ctx (context/relation param-ctx relation)]
-    (->> (group-by :fe colspec)
-         (mapcat #(FindElement % anchors-lookup param-ctx)))))
+    (mapcat #(FindElement % anchors-lookup param-ctx) colspec)))
 
 (defn form [relation colspec anchors ctx]
   (let [ctx (assoc ctx :layout (:layout ctx :block))
