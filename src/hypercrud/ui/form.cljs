@@ -46,7 +46,7 @@
 
 (def always-read-only (constantly true))
 
-(defn Attribute [[_ _ attr maybe-field] fe-anchors-lookup param-ctx]
+(defn Attribute [{:keys [attr maybe-field]} fe-anchors-lookup param-ctx]
   (let [ident (-> attr :db/ident)
         param-ctx (as-> (context/attribute param-ctx attr) $
                         (context/value $ (get-in param-ctx [:entity ident]))
@@ -64,14 +64,13 @@
         {inline-anchors true anchors false} (->> (get fe-anchors-lookup nil)
                                                  (filter :anchor/repeating?)
                                                  (group-by :anchor/render-inline?))
-        splat? (->> colspec
-                    (map (fn [[_ _ _ maybe-field]] maybe-field))
+        splat? (->> (map :maybe-field colspec)
                     (every? nil?))]
     (concat
       (widget/render-anchors anchors param-ctx)
       (conj
         (->> colspec
-             (mapv (fn [[_ _ attr maybe-field :as col]]
+             (mapv (fn [{:keys [attr maybe-field] :as col}]
                      ^{:key (or (:db/id maybe-field) (str (:db/ident attr)))}
                      [Attribute col fe-anchors-lookup param-ctx])))
         (if splat?
@@ -94,8 +93,7 @@
 
 (defn Relation [relation colspec anchors-lookup param-ctx]
   (let [param-ctx (context/relation param-ctx relation)]
-    (->> (partition 4 colspec)
-         (group-by (fn [[dbval fe attr maybe-field]] fe))
+    (->> (group-by :fe colspec)
          (mapcat #(FindElement % anchors-lookup param-ctx)))))
 
 (defn form [relation colspec anchors ctx]

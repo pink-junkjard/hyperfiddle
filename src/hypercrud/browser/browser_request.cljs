@@ -45,9 +45,8 @@
                                               fe (-> anchor :anchor/find-element :find-element/name)
                                               attr (-> anchor :anchor/attribute)]
                                           [r fe attr]))))
-        find-elements (->> (partition 4 colspec)
-                           (map (fn [[dbval fe attr maybe-field]] fe))
-                           (distinct))
+        find-elements (map :fe colspec)
+
         lookup {:index #(get anchors-lookup [false nil nil])
                 :relation (constantly [])                   ; Relation links don't make sense to me yet. where would they go?
                 :relation-new (constantly [])               ; We haven't implemented them.

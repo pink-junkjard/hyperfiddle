@@ -37,8 +37,9 @@
    (widget/render-anchors (remove :anchor/render-inline? attr-label-anchors) ctx)
    (widget/render-inline-anchors (filter :anchor/render-inline? attr-label-anchors) ctx)])
 
-(defn col-head [[_ fe {:keys [:db/ident] :as attr} field] anchors-lookup sort-col ctx]
-  (let [fe-name (:find-element/name fe)
+(defn col-head [{:keys [fe attr maybe-field]} anchors-lookup sort-col ctx]
+  (let [ident (:db/ident attr)
+        fe-name (:find-element/name fe)
         ctx (context/attribute ctx attr)
         [attr-label-anchors] (-> (->> (get-in anchors-lookup [fe-name ident])
                                       (remove :anchor/repeating?))
@@ -61,13 +62,12 @@
     [:th {:class (string/join " " css-classes)
           :style {:background-color (connection-color/connection-color (or (:color ctx) (:conn-id ctx) #_"hack for top tables"))}
           :on-click on-click}
-     [:label (form-util/field-label field ctx)]
+     [:label (form-util/field-label maybe-field ctx)]
      [col-head-anchors attr-label-anchors ctx]]))
 
 (defn LinkCell [repeating? colspec anchors-lookup ctx]
   [(if repeating? :td.link-cell :th.link-cell)
-   (->> (partition 4 colspec)
-        (group-by (fn [[dbval fe attr maybe-field]] fe))
+   (->> (group-by :fe colspec)
         (mapcat (fn [[fe colspec]]
                   (let [fe-name (:find-element/name fe)
                         ctx (as-> (context/find-element ctx fe) ctx
@@ -82,12 +82,11 @@
 
 (defn HeaderRow [colspec anchors-lookup sort-col ctx]
   [:tr
-   (->> (partition 4 colspec)
-        (group-by (fn [[dbval fe attr maybe-field]] fe))
+   (->> (group-by :fe colspec)
         (mapcat (fn [[fe colspec]]
                   (let [param-ctx (context/find-element ctx fe)]
                     (->> colspec
-                         (map (fn [[_ fe attr _ :as col]]
+                         (map (fn [{:keys [attr] :as col}]
                                 ^{:key (str (:find-element/name fe) "-" (:db/ident attr))}
                                 [col-head col anchors-lookup sort-col param-ctx])))))))
    [LinkCell false colspec anchors-lookup ctx]])
@@ -104,7 +103,7 @@
     [:td.truncate {:style style}
      (control param-ctx)]))
 
-(defn Value [[db fe attr maybe-field] entity-anchors-lookup param-ctx]
+(defn Value [{:keys [attr maybe-field]} entity-anchors-lookup param-ctx]
   (let [ident (-> attr :db/ident)
         param-ctx (-> (context/attribute param-ctx attr)
                       (context/value (get (:entity param-ctx) ident))
@@ -121,13 +120,12 @@
         param-ctx (-> (context/find-element param-ctx fe)
                       (context/entity entity))]
     (->> colspec
-         (mapv (fn [[_ fe attr maybe-field :as col]]
+         (mapv (fn [{:keys [attr maybe-field] :as col}]
                  ^{:key (or (:db/id maybe-field) (str fe-name (:db/ident attr)))}
                  [Value col entity-anchors-lookup param-ctx])))))
 
 (defn Relation [relation colspec anchors-lookup param-ctx]
-  (->> (partition 4 colspec)
-       (group-by (fn [[db fe ident maybe-field]] fe))
+  (->> (group-by :fe colspec)
        (mapcat #(FindElement % anchors-lookup param-ctx))))
 
 (defn Row [relation colspec anchors-lookup param-ctx]
@@ -139,11 +137,11 @@
 (defn Resultset [relations colspec anchors-lookup sort-col param-ctx]
   (let [[fe-dbid sort-key direction] @sort-col
         sort-fn (fn [relations]
-                  (let [[_ fe attr _] (->> (partition 4 colspec)
-                                           (filter (fn [[db fe attr maybe-field]]
-                                                     (and (= fe-dbid (:db/id fe))
-                                                          (= (:db/ident attr) sort-key))))
-                                           first)]
+                  (let [{:keys [fe attr]} (->> colspec
+                                               (filter (fn [{:keys [fe attr]}]
+                                                         (and (= fe-dbid (:db/id fe))
+                                                              (= (:db/ident attr) sort-key))))
+                                               first)]
                     (if (attr-sortable? attr)
                       (sort-by #(get-in % [(:find-element/name fe) sort-key])
                                (case direction

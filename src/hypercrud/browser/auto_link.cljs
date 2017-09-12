@@ -3,7 +3,6 @@
   (:require [hypercrud.client.core :as hc]
             [hypercrud.types.DbId :refer [->DbId]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
-            [hypercrud.ui.form-util :as form-util]
             [hypercrud.util.vedn :as vedn]))
 
 
@@ -60,8 +59,7 @@
   This function recurses in unexpected abstract way and impacts performance highly
   "
   [parent-link colspec param-ctx]
-  (let [entity-links (->> (partition 4 colspec)
-                          (map (fn [[_ fe _ _]] fe))
+  (let [entity-links (->> (map :fe colspec)
                           (distinct)
                           (mapcat (fn [fe]
                                     (let [fe-name (:find-element/name fe)
@@ -108,10 +106,10 @@
                           doall)
 
         attr-links (if (not= :blank (:request/type parent-link))
-                     (->> (partition 4 colspec)             ; driven by colspec, not find elements, because what matters is what's there.
-                          (filter (fn [[_ _ attr _]]
+                     (->> colspec
+                          (filter (fn [{:keys [attr]}]
                                     (and (not= (:db/ident attr) :db/id) (= :db.type/ref (-> attr :db/valueType :db/ident)))))
-                          (mapcat (fn [[db fe attr maybe-field]]
+                          (mapcat (fn [{:keys [fe attr]}]
                                     (let [fe-name (-> fe :find-element/name)
                                           ident (-> attr :db/ident)]
                                       [{:db/id (->DbId {:ident :system-anchor-edit-attr

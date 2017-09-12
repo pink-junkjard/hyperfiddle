@@ -16,8 +16,8 @@
       (str v)))
 
 (defn build-label [colspec result param-ctx]
-  (->> (partition 4 colspec)
-       (mapv (fn [[conn fe attr maybe-field]]
+  (->> colspec
+       (mapv (fn [{:keys [fe attr]}]
                ; Custom label renderers? Can't use the attribute renderer, since that
                ; is how we are in a select options in the first place.
                (let [ident (-> attr :db/ident)
@@ -34,7 +34,7 @@
 (defn options-ui-f [result colspec anchors param-ctx]
   (->> result
        (mapv (fn [relation]
-               (let [[conn fe attr maybe-field] (first (partition 4 colspec))
+               (let [{:keys [fe]} (first colspec)
                      entity (get relation (-> fe :find-element/name))
                      label (-> (build-label colspec relation param-ctx)
                                ; It's perfectly possible to properly report this error properly upstream.

@@ -56,34 +56,32 @@ the find-element level has been flattened out of the columns."
   [result schemas ordered-fes param-ctx]
   (let [result (if (map? result) [result] result)           ; unified colspec for table and form
         raw-mode? (= (:display-mode param-ctx) :root)
-        result-as-columns (util/transpose result)
-        map' (util/map-pad {})]
-    (->>
-      (map' (fn [relation-for-fe fe]
-              (let [indexed-fields (util/group-by-assume-unique :field/attribute (-> fe :find-element/form :form/field))
+        results-indexed-by-column (->> (apply concat result)
+                                       (group-by first)
+                                       (util/map-values #(map second %)))]
 
-                    ; find-elements are parsed from the query, so they are known to be good,
-                    ; even in raw mode when they haven't been modeled yet.
-
-                    col-idents (if (or raw-mode? (empty? (keys indexed-fields)))
-                                 (let [entities (map second relation-for-fe)]
-                                   (reduce (fn [acc v] (into acc (keys (dissoc v :db/id)))) #{} entities))
-                                 (keys indexed-fields))
-                    col-idents' (sort-by (fn [k]
-                                           (if-let [field (get indexed-fields k)]
-                                             (:field/order field)
-                                             ; raw mode sort is by namespaced attribute, per find-element
-                                             k))
-                                         col-idents)
-                    schema (get schemas (:find-element/name fe))]
-                (mapcat (fn [ident]
-                          (let [attr (get schema ident {:db/ident ident})
-                                field (get indexed-fields ident)]
-                            [nil fe attr field])) col-idents')))
-            result-as-columns
-            ordered-fes)
-      (flatten)
-      (vec))))
+    ; find-elements are parsed from the query, so they are known to be good,
+    ; even in raw mode when they haven't been modeled yet.
+    (->> ordered-fes
+         (mapcat (fn [fe]
+                   (let [indexed-fields (util/group-by-assume-unique :field/attribute (-> fe :find-element/form :form/field))
+                         col-idents (if (or raw-mode? (empty? (keys indexed-fields)))
+                                      (let [entities (get results-indexed-by-column (:find-element/name fe))]
+                                        (reduce (fn [acc v] (into acc (keys (dissoc v :db/id)))) #{} entities))
+                                      (keys indexed-fields))
+                         sort-fn (fn [k]
+                                   (if-let [field (get indexed-fields k)]
+                                     (:field/order field)
+                                     ; raw mode sort is by namespaced attribute, per find-element
+                                     k))
+                         schema (get schemas (:find-element/name fe))]
+                     (->> col-idents
+                          (sort-by sort-fn)
+                          (map (fn [ident]
+                                 {:fe fe
+                                  :attr (get schema ident {:db/ident ident})
+                                  :maybe-field (get indexed-fields ident)}))))))
+         (vec))))
 
 (defn build-props [maybe-field anchors param-ctx]
   ; why does this need the field - it needs the ident for readonly in "Edit Anchors"
