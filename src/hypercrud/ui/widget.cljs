@@ -109,9 +109,10 @@
      ; todo this key is encapsulating other unrelated anchors
      [:div.editable-select {:key (hash (:anchor/link options-anchor))} ; not sure if this is okay in nil field case, might just work
       [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)] ;todo can this be lifted out of editable-select?
-      (if options-anchor
-        (select* (:value param-ctx) options-anchor props param-ctx)
-        (dbid props param-ctx))]
+      [:div.select ; helps the weird anchor float left css thing
+       (if options-anchor
+         (select* (:value param-ctx) options-anchor props param-ctx)
+         (dbid props param-ctx))]]
      (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)]))
 
 

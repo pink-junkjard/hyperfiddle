@@ -62,6 +62,5 @@
                 props)
         c #(if (contains? (:pressed-keys @(-> param-ctx :peer .-state-atom)) "alt")
              (do ((:dispatch! param-ctx) (actions/set-route (:route (anchor/build-anchor-props options-anchor param-ctx)))) (.stopPropagation %)))]
-    [:span.select                                           ; helps the weird anchor float left thing
-     [native-listener {:on-click c}
-      [select-options options-anchor props param-ctx]]]))
+    [native-listener {:on-click c}
+     [select-options options-anchor props param-ctx]]))
