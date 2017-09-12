@@ -138,7 +138,7 @@
         param-ctx (-> param-ctx
                       (context/clean)
                       (update :debug #(str % ">popover-link[" (:db/id anchor) ":" (or (:anchor/ident anchor) (:anchor/prompt anchor)) "]")))]
-    [:div
+    [:div.managed-popover
      [hypercrud.browser.core/safe-ui' route param-ctx]      ; cycle
      [:button {:on-click stage!} "stage"]]))
 
