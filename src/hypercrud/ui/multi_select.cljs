@@ -1,5 +1,6 @@
 (ns hypercrud.ui.multi-select
-  (:require [hypercrud.client.tx :as tx]
+  (:require [hypercrud.browser.context :as context]
+            [hypercrud.client.tx :as tx]
             [hypercrud.ui.auto-control :refer [auto-control]]))
 
 
@@ -9,10 +10,11 @@
 (defn multi-select* [markupfn add-item! field anchors props {:keys [user-with!] :as param-ctx}]
   (assert false "todo readonly and test this")
   (let [control-tuples (seq (mapv (fn [inner-value]
-                                    (let [click-remove! #(user-with! (tx/edit-entity (:db/id (:entity param-ctx)) (:field/attribute field) [inner-value] nil))
-                                          new-field (assoc field :cardinality :db.cardinality/one)
-                                          param-ctx (assoc param-ctx :value inner-value) ; or whatever
-                                          control [auto-control new-field anchors param-ctx]]
+                                    (let [click-remove! #(user-with! (tx/edit-entity (:db/id (:entity param-ctx)) (:attribute param-ctx) [inner-value] nil))
+                                          param-ctx (-> param-ctx
+                                                        (context/value inner-value)
+                                                        (update-in [:attribute :db/cardinality] :db.cardinality/one))
+                                          control [auto-control field anchors param-ctx]]
                                       [inner-value click-remove! control]))
                                   (:value param-ctx)))]
     (markupfn add-item! control-tuples)))
