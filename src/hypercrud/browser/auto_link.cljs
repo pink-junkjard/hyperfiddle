@@ -42,7 +42,7 @@
    :link/name "sys-remove"
    ;:hypercrud/owner owner
    :request/type :blank
-   :link/renderer (pr-str `(fn [result# colspec# anchors# param-ctx#]
+   :link/renderer (pr-str `(fn [result# ordered-fes# anchors# param-ctx#]
                              [:p "Retract entity?"]))})
 
 (defn request-for-system-link [system-link-idmap param-ctx]

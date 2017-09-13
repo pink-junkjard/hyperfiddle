@@ -47,44 +47,7 @@
          (map #(strip-form-in-raw-mode % param-ctx))
          (cats/return))))
 
-(defn determine-colspec "Colspec is what you have when you flatten out the find elements,
-but retaining and correlating all information through a join. Not all entities are homogenous,
-especially consider the '* case, so we need a uniform column set driving the body rows in sync
-with the headers but the resultset needs to match this column-fields structure now too; since
-the find-element level has been flattened out of the columns."
-  ; Need result only for raw mode.
-  [result schemas ordered-fes param-ctx]
-  (let [result (if (map? result) [result] result)           ; unified colspec for table and form
-        raw-mode? (= (:display-mode param-ctx) :root)
-        results-indexed-by-column (->> (apply concat result)
-                                       (group-by first)
-                                       (util/map-values #(map second %)))]
-
-    ; find-elements are parsed from the query, so they are known to be good,
-    ; even in raw mode when they haven't been modeled yet.
-    (->> ordered-fes
-         (map (fn [fe]
-                (let [indexed-fields (util/group-by-assume-unique :field/attribute (-> fe :find-element/form :form/field))
-                      col-idents (if (or raw-mode? (empty? (keys indexed-fields)))
-                                   (let [entities (get results-indexed-by-column (:find-element/name fe))]
-                                     (reduce (fn [acc v] (into acc (keys (dissoc v :db/id)))) #{} entities))
-                                   (keys indexed-fields))
-                      sort-fn (fn [k]
-                                (if-let [field (get indexed-fields k)]
-                                  (:field/order field)
-                                  ; raw mode sort is by namespaced attribute, per find-element
-                                  k))
-                      schema (get schemas (:find-element/name fe))]
-                  {:fe fe
-                   :fe-colspec (->> col-idents
-                                    (sort-by sort-fn)
-                                    (map (fn [ident]
-                                           {:attr (get schema ident {:db/ident ident})
-                                            :maybe-field (get indexed-fields ident)})))})))
-
-         (vec))))
-
-(defn build-props [maybe-field anchors param-ctx]
+(defn build-props [field anchors param-ctx]
   ; why does this need the field - it needs the ident for readonly in "Edit Anchors"
   ; todo clean this interface up
   {:read-only ((get param-ctx :read-only) (:attribute param-ctx) param-ctx)})
@@ -97,9 +60,9 @@ the find-element level has been flattened out of the columns."
       (util/update-existing :db/unique :db/ident)
       (util/update-existing :attribute/hc-type :hc-type/name)))
 
-(defn field-label [maybe-field param-ctx]
-  (let [docstring (-> maybe-field :field/doc)
-        field-prompt (util/fallback empty? (get maybe-field :field/prompt) (-> param-ctx :attribute :db/ident str))]
+(defn field-label [field param-ctx]
+  (let [docstring (:field/doc field)
+        field-prompt (util/fallback empty? (:field/prompt field) (-> param-ctx :attribute :db/ident str))]
     [tooltip/hover-popover-managed
      {:label (case (:display-mode param-ctx)
                ; (auto-control maybe-field anchors props param-ctx)

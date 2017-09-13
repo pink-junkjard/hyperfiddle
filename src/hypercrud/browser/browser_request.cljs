@@ -31,7 +31,7 @@
     (let [param-ctx (update param-ctx :debug #(str % ">inline-link[" (:db/id anchor) ":" (or (:anchor/ident anchor) (:anchor/prompt anchor)) "]"))]
       (request anchor param-ctx))))
 
-(defn link-dependent-requests [result colspec anchors param-ctx]
+(defn link-dependent-requests [result ordered-fes anchors param-ctx]
   (let [result (cond
                  (map? result) [result]
                  (coll? result) result
@@ -45,8 +45,6 @@
                                               fe (-> anchor :anchor/find-element :find-element/name)
                                               attr (-> anchor :anchor/attribute)]
                                           [r fe attr]))))
-        find-elements (map :fe colspec)
-
         lookup {:index #(get anchors-lookup [false nil nil])
                 :relation (constantly [])                   ; Relation links don't make sense to me yet. where would they go?
                 :relation-new (constantly [])               ; We haven't implemented them.
@@ -57,21 +55,20 @@
     (concat
       (->> ((:index lookup)) (mapcat #(recurse-request % param-ctx)))
       (->> ((:relation-new lookup)) (mapcat #(recurse-request % param-ctx)))
-      (->> find-elements                                    ; might have empty results
+      (->> ordered-fes                                      ; might have empty results
            (mapcat (fn [fe]
                      (let [param-ctx (context/find-element param-ctx fe)]
                        (concat
                          (->> ((:entity-f lookup) fe) (mapcat #(recurse-request % param-ctx)))
                          (->> (get-in fe [:find-element/form :form/field])
-                              (mapcat (fn [field]
-                                        (let [attr-ident (-> field :field/attribute)
-                                              param-ctx (context/attribute param-ctx (get-in param-ctx [:schema attr-ident]))]
-                                          (->> ((:entity-attr-f lookup) fe attr-ident) (mapcat #(recurse-request % param-ctx))))))))))))
+                              (mapcat (fn [{:keys [:field/attribute]}]
+                                        (let [param-ctx (context/attribute param-ctx attribute)]
+                                          (->> ((:entity-attr-f lookup) fe attribute) (mapcat #(recurse-request % param-ctx))))))))))))
       (->> result
            (mapcat (fn [relation]
                      (let [param-ctx (context/relation param-ctx relation)]
                        (concat (->> ((:relation lookup)) (mapcat #(recurse-request % param-ctx)))
-                               (->> find-elements
+                               (->> ordered-fes
                                     (mapcat (fn [fe]
                                               (let [entity (get relation (:find-element/name fe))
                                                     param-ctx (-> param-ctx
@@ -80,11 +77,10 @@
                                                 (concat
                                                   (->> ((:entity-t lookup) fe) (mapcat #(recurse-request % param-ctx)))
                                                   (->> (get-in fe [:find-element/form :form/field])
-                                                       (mapcat (fn [field]
-                                                                 (let [attr-ident (-> field :field/attribute)
-                                                                       param-ctx (-> (context/attribute param-ctx (get-in param-ctx [:schema attr-ident]))
-                                                                                     (context/value (get entity attr-ident)))]
-                                                                   (->> ((:entity-attr-t lookup) fe attr-ident) (mapcat #(recurse-request % param-ctx))))))))
+                                                       (mapcat (fn [{:keys [:field/attribute]}]
+                                                                 (let [param-ctx (-> (context/attribute param-ctx attribute)
+                                                                                     (context/value (get entity attribute)))]
+                                                                   (->> ((:entity-attr-t lookup) fe attribute) (mapcat #(recurse-request % param-ctx))))))))
                                                 ))))))))))))
 
 (defn requests-for-link [link query-params param-ctx]

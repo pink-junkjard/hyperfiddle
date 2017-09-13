@@ -1,5 +1,6 @@
 (ns hypercrud.ui.form
   (:require [cats.core :refer [mlet]]
+            [hypercrud.browser.auto-form :as auto-form]
             [hypercrud.browser.connection-color :as connection-color]
             [hypercrud.browser.context :as context]
             [hypercrud.compile.eval :refer [eval-str']]
@@ -12,19 +13,19 @@
             [hypercrud.util.monad :refer [exception->either]]
             [reagent.core :as r]))
 
-(defn control [maybe-field anchors param-ctx]
-  (let [props (form-util/build-props maybe-field anchors param-ctx)]
+(defn Control [field anchors param-ctx]
+  (let [props (form-util/build-props field anchors param-ctx)]
     (if (renderer/user-renderer param-ctx)
-      (renderer/user-render maybe-field anchors props param-ctx)
-      [auto-control maybe-field anchors props param-ctx])))
+      (renderer/user-render field anchors props param-ctx)
+      [auto-control field anchors props param-ctx])))
 
-(defn field [control maybe-field anchors param-ctx]
+(defn Field [control field anchors param-ctx]
   [:div.field {:style {:border-color (connection-color/connection-color (:color param-ctx))}}
    (let [[anchors] (as-> anchors $
                          (remove :anchor/repeating? $)      ; because we're in the label
                          (widget/process-option-anchors $ param-ctx))]
      [:div.hc-label
-      [:label (form-util/field-label maybe-field param-ctx)]
+      [:label (form-util/field-label field param-ctx)]
       [:div.anchors
        (widget/render-anchors (->> anchors (remove :anchor/render-inline?)) param-ctx)
        (widget/render-inline-anchors (->> anchors (filter :anchor/render-inline?)) param-ctx)]])
@@ -46,41 +47,39 @@
 
 (def always-read-only (constantly true))
 
-(defn Attribute [{:keys [attr maybe-field]} fe-anchors-lookup param-ctx]
-  (let [ident (-> attr :db/ident)
-        param-ctx (as-> (context/attribute param-ctx attr) $
-                        (context/value $ (get-in param-ctx [:entity ident]))
-                        (if (= ident :db/id) (assoc $ :read-only always-read-only) $))
-        attr-anchors (get fe-anchors-lookup ident)
+(defn Attribute [{:keys [:field/attribute] :as field} fe-anchors-lookup param-ctx]
+  (let [param-ctx (as-> (context/attribute param-ctx attribute) $
+                        (context/value $ (get-in param-ctx [:entity attribute]))
+                        (if (= attribute :db/id) (assoc $ :read-only always-read-only) $))
+        attr-anchors (get fe-anchors-lookup attribute)
         ; What is the user-field allowed to change? The param-ctx. Can it change links or anchors? no.
-        field (case (:display-mode param-ctx) :xray field :user (get param-ctx :field field))
-        control (case (:display-mode param-ctx) :xray control :user (get param-ctx :control control))]
+        Field (case (:display-mode param-ctx) :xray Field :user (get param-ctx :field Field))
+        Control (case (:display-mode param-ctx) :xray Control :user (get param-ctx :control Control))]
     ; todo control can have access to repeating contextual values (color, owner, result, entity, value, etc) but field should NOT
     ; this leads to inconsistent location formulas between non-repeating links in tables vs forms
-    [field #(control maybe-field attr-anchors %) maybe-field attr-anchors param-ctx]))
+    [Field #(Control field attr-anchors %) field attr-anchors param-ctx]))
 
-(defn Entity [entity fe-colspec fe-anchors-lookup param-ctx]
+(defn Entity [entity form fe-anchors-lookup param-ctx]
   (let [param-ctx (context/entity param-ctx entity)
         {inline-anchors true anchors false} (->> (get fe-anchors-lookup nil)
                                                  (filter :anchor/repeating?)
                                                  (group-by :anchor/render-inline?))
-        splat? (->> (map :maybe-field fe-colspec)
-                    (every? nil?))]
+        splat? (->> (map :form/field form)
+                    (every? auto-form/system-field?))]
     (concat
       (widget/render-anchors anchors param-ctx)
       (conj
-        (->> fe-colspec
-             (mapv (fn [{:keys [attr maybe-field] :as col}]
-                     ^{:key (or (:db/id maybe-field) (str (:db/ident attr)))}
-                     [Attribute col fe-anchors-lookup param-ctx])))
+        (->> (:form/field form)
+             (mapv (fn [field]
+                     ^{:key (:db/id field)}
+                     [Attribute field fe-anchors-lookup param-ctx])))
         (if splat?
           ^{:key (hash (keys entity))}
           [new-field entity param-ctx]))
       (widget/render-inline-anchors inline-anchors param-ctx))))
 
-(defn FindElement [{:keys [fe fe-colspec]} anchors-lookup param-ctx]
+(defn FindElement [{fe-name :find-element/name :as fe} anchors-lookup param-ctx]
   (let [param-ctx (context/find-element param-ctx fe)
-        fe-name (:find-element/name fe)
         fe-anchors-lookup (get anchors-lookup fe-name)
         ; todo these fe non-repeating anchors should not have relation in its context
         {inline-anchors true anchors false} (->> (get fe-anchors-lookup nil)
@@ -88,14 +87,14 @@
                                                  (group-by :anchor/render-inline?))]
     (concat
       (widget/render-anchors anchors param-ctx)
-      (Entity (get (:result param-ctx) fe-name) fe-colspec fe-anchors-lookup param-ctx)
+      (Entity (get (:result param-ctx) fe-name) (:find-element/form fe) fe-anchors-lookup param-ctx)
       (widget/render-inline-anchors inline-anchors param-ctx))))
 
-(defn Relation [relation colspec anchors-lookup param-ctx]
+(defn Relation [relation ordered-fes anchors-lookup param-ctx]
   (let [param-ctx (context/relation param-ctx relation)]
-    (mapcat #(FindElement % anchors-lookup param-ctx) colspec)))
+    (mapcat #(FindElement % anchors-lookup param-ctx) ordered-fes)))
 
-(defn form [relation colspec anchors ctx]
+(defn form [relation ordered-fes anchors ctx]
   (let [ctx (assoc ctx :layout (:layout ctx :block))
         anchors-lookup (->> (widget/process-popover-anchors anchors ctx)
                             (group-by (comp :find-element/name :anchor/find-element))
@@ -105,5 +104,5 @@
         index-ctx (dissoc ctx :isComponent)]
     [:div {:class (str "forms-list " (name (:layout ctx)))}
      (widget/render-anchors index-anchors index-ctx)
-     (Relation relation colspec anchors-lookup ctx)
+     (Relation relation ordered-fes anchors-lookup ctx)
      (widget/render-inline-anchors inline-index-anchors index-ctx)]))

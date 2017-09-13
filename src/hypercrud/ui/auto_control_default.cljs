@@ -6,7 +6,7 @@
             [hypercrud.ui.widget :as widget]))
 
 (defmethod auto-control/auto-control :default
-  [maybe-field anchors props param-ctx]
+  [field anchors props param-ctx]
   ;(assert (:entity param-ctx))
 
   (let [isComponent (-> (:attribute param-ctx) :db/isComponent)
@@ -23,11 +23,11 @@
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many) isComponent) widget/ref-many-table
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) widget/ref-many
                  :else widget/raw)]
-    (widget maybe-field anchors props param-ctx)))
+    (widget field anchors props param-ctx)))
 
 
 (defmethod auto-control/auto-table-cell :default
-  [maybe-field anchors props param-ctx]
+  [field anchors props param-ctx]
   (let [isComponent (-> (:attribute param-ctx) :db/isComponent)
         valueType (-> (:attribute param-ctx) :db/valueType :db/ident)
         cardinality (-> (:attribute param-ctx) :db/cardinality :db/ident)
@@ -43,13 +43,13 @@
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) widget/ref-many
                  (and (= cardinality :db.cardinality/many)) table-cell/other-many
                  :else widget/raw)]
-    (widget maybe-field anchors props param-ctx)))
+    (widget field anchors props param-ctx)))
 
-(defmethod auto-control/result :default [result colspec anchors param-ctx]
+(defmethod auto-control/result :default [result ordered-fes anchors param-ctx]
   [:div.auto-result
    (cond
-     (map? result) [form/form result colspec anchors param-ctx]
-     (coll? result) [table/ui-table result colspec anchors param-ctx]
+     (map? result) [form/form result ordered-fes anchors param-ctx]
+     (coll? result) [table/ui-table result ordered-fes anchors param-ctx]
      :else
      [:div.blank
       (widget/render-anchors (->> anchors

@@ -15,16 +15,15 @@
       cljs.core/Keyword (name v)
       (str v)))
 
-(defn build-label [colspec result param-ctx]
-  (->> colspec
-       (mapcat (fn [{:keys [fe fe-colspec]}]
-                 (->> fe-colspec
-                      (mapv (fn [{:keys [attr]}]
+(defn build-label [ordered-fes result param-ctx]
+  (->> ordered-fes
+       (mapcat (fn [fe]
+                 (->> (-> fe :find-element/form :form/field)
+                      (mapv (fn [{:keys [:field/attribute]}]
                               ; Custom label renderers? Can't use the attribute renderer, since that
                               ; is how we are in a select options in the first place.
-                              (let [ident (-> attr :db/ident)
-                                    value (get-in result [(-> fe :find-element/name) ident])
-                                    renderer (or (-> param-ctx :fields ident :label-renderer) default-label-renderer)]
+                              (let [value (get-in result [(:find-element/name fe) attribute])
+                                    renderer (or (-> param-ctx :fields attribute :label-renderer) default-label-renderer)]
                                 (-> (exception/try-on (renderer value param-ctx))
                                     exception->either)))))))
        (cats/sequence)
@@ -33,12 +32,11 @@
                          (interpose ", ")
                          (apply str))))))
 
-(defn options-ui-f [result colspec anchors param-ctx]
+(defn options-ui-f [result ordered-fes anchors param-ctx]
   (->> result
        (mapv (fn [relation]
-               (let [{:keys [fe]} (first colspec)
-                     entity (get relation (-> fe :find-element/name))
-                     label (-> (build-label colspec relation param-ctx)
+               (let [entity (get relation (:find-element/name (first ordered-fes)))
+                     label (-> (build-label ordered-fes relation param-ctx)
                                ; It's perfectly possible to properly report this error properly upstream.
                                (either/branch (fn [e] (pr-str e)) identity))]
                  [(:db/id entity) label])))))

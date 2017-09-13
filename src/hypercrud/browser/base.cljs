@@ -3,12 +3,12 @@
             [cats.monad.either :as either]
             [cats.monad.exception :as exception]
             [hypercrud.browser.auto-anchor :as auto-anchor]
+            [hypercrud.browser.auto-form :as auto-form]
             [hypercrud.browser.user-bindings :as user-bindings]
             [hypercrud.client.core :as hc]
             [hypercrud.form.q-util :as q-util]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
-            [hypercrud.ui.form-util :as form-util]
             [hypercrud.util.monad :refer [exception->either]]
             [hypercrud.util.string :as hc-string]))
 
@@ -110,11 +110,11 @@
 
                  result)
 
-        colspec (form-util/determine-colspec result schemas ordered-fes param-ctx)
+        ordered-fes (auto-form/auto-find-elements ordered-fes result param-ctx)
         f (get-f link param-ctx)]
     (mlet [param-ctx (user-bindings/user-bindings' link param-ctx)]
       (cats/return
         (case (:display-mode param-ctx)                     ; default happens higher, it influences queries too
-          :user (f result colspec (auto-anchor/auto-anchors link colspec param-ctx) param-ctx)
-          :xray (f result colspec (auto-anchor/auto-anchors link colspec param-ctx) param-ctx)
-          :root (f result colspec (auto-anchor/auto-anchors link colspec param-ctx {:ignore-user-links true}) param-ctx))))))
+          :user (f result ordered-fes (auto-anchor/auto-anchors link ordered-fes param-ctx) param-ctx)
+          :xray (f result ordered-fes (auto-anchor/auto-anchors link ordered-fes param-ctx) param-ctx)
+          :root (f result ordered-fes (auto-anchor/auto-anchors link ordered-fes param-ctx {:ignore-user-links true}) param-ctx))))))

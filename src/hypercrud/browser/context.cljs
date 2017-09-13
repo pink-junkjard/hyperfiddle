@@ -47,7 +47,7 @@
                    :entity entity))
 
 (defn attribute [param-ctx attribute]
-  (assoc param-ctx :attribute attribute))
+  (assoc param-ctx :attribute (get-in param-ctx [:schema attribute])))
 
 (defn value [param-ctx value]
   (assoc param-ctx :value value))
