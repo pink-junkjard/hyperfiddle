@@ -87,7 +87,7 @@
                                                  (group-by :anchor/render-inline?))]
     (concat
       (widget/render-anchors anchors param-ctx)
-      (Entity (get (:result param-ctx) fe-name) (:find-element/form fe) fe-anchors-lookup param-ctx)
+      (Entity (get (:relation param-ctx) fe-name) (:find-element/form fe) fe-anchors-lookup param-ctx)
       (widget/render-inline-anchors inline-anchors param-ctx))))
 
 (defn Relation [relation ordered-fes anchors-lookup param-ctx]

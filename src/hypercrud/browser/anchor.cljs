@@ -118,7 +118,7 @@
                    (-> (p/promise
                          (fn [resolve! reject!]
                            (let [swap-fn (fn [multi-color-tx]
-                                           ; todo why does the user-txfn have access to the parent link's :db :result etc?
+                                           ; todo why does the user-txfn have access to the parent link's context
                                            (let [result (let [result (user-txfn param-ctx multi-color-tx route)]
                                                           ; txfn may be sync or async
                                                           (if-not (p/promise? result) (p/resolved result) result))]

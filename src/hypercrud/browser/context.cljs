@@ -7,7 +7,7 @@
 (defn clean [param-ctx]
   ; why not query-params and all the custom ui/render fns?
   (dissoc param-ctx
-          :route :result
+          :route :relation
           :schemas
           :conn-id :find-element :schema
           :entity :attribute :value
@@ -26,9 +26,8 @@
       (assoc param-ctx :branch branch))
     param-ctx))
 
-; todo :result -> :relation
 (defn relation [param-ctx relation]
-  (assoc param-ctx :result relation))
+  (assoc param-ctx :relation relation))
 
 (defn find-element [param-ctx fe]
   (let [conn-id (-> fe :find-element/connection :db/id :id)

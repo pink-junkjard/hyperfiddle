@@ -72,7 +72,7 @@
                   (let [fe-name (:find-element/name fe)
                         ctx (as-> (context/find-element ctx fe) ctx
                                   (if repeating?
-                                    (context/entity ctx (get-in ctx [:result fe-name]))
+                                    (context/entity ctx (get-in ctx [:relation fe-name]))
                                     ctx))
                         form-anchors (->> (get-in anchors-lookup [fe-name nil])
                                           ((if repeating? filter remove) :anchor/repeating?)
@@ -114,7 +114,7 @@
 
 (defn FindElement [fe anchors-lookup param-ctx]
   (let [fe-name (:find-element/name fe)
-        entity (get (:result param-ctx) fe-name)
+        entity (get (:relation param-ctx) fe-name)
         entity-anchors-lookup (get anchors-lookup fe-name)
         param-ctx (-> (context/find-element param-ctx fe)
                       (context/entity entity))]
