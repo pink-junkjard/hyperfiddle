@@ -33,7 +33,8 @@
       (if user-fn
         (-> (exception/try-on (apply user-fn args))
             exception->either)
-        (return nil)))))
+        (return nil)))
+    (either/right nil)))
 
 (defn ^:export build-anchor-route' [anchor param-ctx]
   (mlet [query-params (if-let [code-str (:anchor/formula anchor)]
