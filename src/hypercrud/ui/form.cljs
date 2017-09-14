@@ -51,14 +51,14 @@
   (let [param-ctx (as-> (context/attribute param-ctx attribute) $
                         (context/value $ (get-in param-ctx [:entity attribute]))
                         (if (= attribute :db/id) (assoc $ :read-only always-read-only) $))
-        attr-anchors (get fe-anchors-lookup attribute)
         display-mode @(:display-mode param-ctx)
         ; What is the user-field allowed to change? The param-ctx. Can it change links or anchors? no.
         Field (case display-mode :xray Field :user (get param-ctx :field Field))
-        Control (case display-mode :xray Control :user (get param-ctx :control Control))]
+        Control (case display-mode :xray Control :user (get param-ctx :control Control))
+        attr-anchors (get fe-anchors-lookup attribute)]
     ; todo control can have access to repeating contextual values (color, owner, result, entity, value, etc) but field should NOT
     ; this leads to inconsistent location formulas between non-repeating links in tables vs forms
-    [Field #(Control field attr-anchors %) field attr-anchors param-ctx]))
+    [Field (r/partial Control field attr-anchors) field attr-anchors param-ctx]))
 
 (defn Entity [entity form fe-anchors-lookup param-ctx]
   (let [param-ctx (context/entity param-ctx entity)

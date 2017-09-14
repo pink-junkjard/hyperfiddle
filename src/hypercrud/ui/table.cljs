@@ -101,28 +101,28 @@
   (let [shadow-link (auto-anchor/system-anchor? (-> param-ctx :entity :db/id))
         style {:border-color (if-not shadow-link (connection-color/connection-color (:color param-ctx)))}]
     [:td.truncate {:style style}
-     (control param-ctx)]))
+     [control param-ctx]]))
 
-(defn Value [{:keys [:field/attribute] :as field} entity-anchors-lookup param-ctx]
+(defn Value [{:keys [:field/attribute] :as field} fe-anchors-lookup param-ctx]
   (let [param-ctx (-> (context/attribute param-ctx attribute)
                       (context/value (get (:entity param-ctx) attribute))
                       (assoc :layout :table))
         display-mode @(:display-mode param-ctx)
         Field (case display-mode :xray Field :user (get param-ctx :field Field))
         Control (case display-mode :xray Control :user (get param-ctx :control Control))
-        attr-anchors (get entity-anchors-lookup attribute)]
-    [Field #(Control field attr-anchors %) field attr-anchors param-ctx]))
+        attr-anchors (get fe-anchors-lookup attribute)]
+    [Field (r/partial Control field attr-anchors) field attr-anchors param-ctx]))
 
 (defn FindElement [fe anchors-lookup param-ctx]
   (let [fe-name (:find-element/name fe)
         entity (get (:relation param-ctx) fe-name)
-        entity-anchors-lookup (get anchors-lookup fe-name)
+        fe-anchors-lookup (get anchors-lookup fe-name)
         param-ctx (-> (context/find-element param-ctx fe)
                       (context/entity entity))]
     (->> (-> fe :find-element/form :form/field)
          (mapv (fn [field]
                  ^{:key (:db/id field)}
-                 [Value field entity-anchors-lookup param-ctx])))))
+                 [Value field fe-anchors-lookup param-ctx])))))
 
 (defn Relation [relation ordered-fes anchors-lookup param-ctx]
   (mapcat #(FindElement % anchors-lookup param-ctx) ordered-fes))
