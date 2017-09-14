@@ -7,10 +7,9 @@
   Comparable (compareTo [x y] (compare (.id x) (.id y)))
   IHashEq (hasheq [this] (hash [id conn-id]))
   Object (equals [this other]
-           (or (and (nil? this) (nil? other))
-               (and (not (or (nil? this) (nil? other)))
-                    (= (.id this) (.id other))
-                    (= (.conn-id this) (.conn-id other)))))
+           (and (instance? DbId other)
+                (= (.id this) (.id other))
+                (= (.conn-id this) (.conn-id other))))
   ILookup
   (valAt [o k] (get o k nil))
   (valAt [o k not-found] (case k
