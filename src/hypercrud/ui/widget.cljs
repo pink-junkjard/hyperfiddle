@@ -1,16 +1,13 @@
 (ns hypercrud.ui.widget
   (:refer-clojure :exclude [keyword long boolean])
-  (:require [cats.core :as cats]
-            [cats.monad.either :as either]
-            [hypercrud.browser.core :as browser]
+  (:require [hypercrud.browser.core :as browser]
             [hypercrud.browser.anchor :as anchor]
             [hypercrud.client.tx :as tx]
-            [hypercrud.form.option :as option]
             [hypercrud.ui.code-editor :refer [code-editor*]]
             [hypercrud.ui.input :as input]
             [hypercrud.ui.multi-select :refer [multi-select* multi-select-markup]]
             [hypercrud.ui.radio :as radio]                  ; used in user renderers
-            [hypercrud.ui.select :refer [select* select-boolean*]]
+            [hypercrud.ui.select :as select :refer [select* select-boolean*]]
             [hypercrud.ui.textarea :refer [textarea*]]
             [hypercrud.types.DbId :refer [->DbId]]
             [re-com.core :as re-com]
@@ -41,7 +38,7 @@
                ; don't test anchor validity, we need to render the failure. If this is a dependent link, use visibility predicate to hide the error.
                [:div {:key (hash (:db/id anchor))}          ; extra div bc had trouble getting keys to work
                 ; NOTE: this param-ctx logic and structure is the same as the inline branch of browser-request/recurse-request
-                [browser/safe-ui anchor (update param-ctx :debug #(str % ">inline-link[" (:db/id anchor) ":" (or (:anchor/ident anchor) (:anchor/prompt anchor)) "]"))]]))
+                [browser/ui anchor (update param-ctx :debug #(str % ">inline-link[" (:db/id anchor) ":" (or (:anchor/ident anchor) (:anchor/prompt anchor)) "]"))]]))
         (remove nil?)
         (doall))))
 
@@ -112,7 +109,7 @@
      ; todo this key is encapsulating other unrelated anchors
      [:div.editable-select {:key (hash (:anchor/link options-anchor))} ; not sure if this is okay in nil field case, might just work
       [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)] ;todo can this be lifted out of editable-select?
-      [:div.select ; helps the weird anchor float left css thing
+      [:div.select                                          ; helps the weird anchor float left css thing
        (if options-anchor
          (select* (:value param-ctx) options-anchor props param-ctx)
          (dbid props param-ctx))]]
@@ -141,14 +138,7 @@
      (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)]))
 
 (defn ref-many [maybe-field anchors props param-ctx]
-  (let [[options-anchor] (filter anchor/option-anchor? anchors)
-        initial-select (some-> options-anchor               ; not okay to auto-select.
-                               (option/hydrate-options' param-ctx)
-                               (cats/mplus (either/right nil)) ; todo handle exception
-                               (cats/extract)
-                               first
-                               first)
-        select-value-atom (r/atom initial-select)]
+  (let [select-value-atom (r/atom "")]
     (fn [maybe-field anchors props param-ctx]
       (let [[anchors options-anchor] (process-option-popover-anchors anchors param-ctx)
             anchors (->> anchors (filter :anchor/repeating?))]
@@ -163,17 +153,10 @@
          [:div.table-controls
           (if options-anchor
             (let [props {:value (-> @select-value-atom :id str)
-                         :on-change #(let [select-value (.-target.value %)
-                                           dbid (when (not= "" select-value)
-                                                  (->DbId (js/parseInt select-value 10) (get-in param-ctx [:entity :db/id :conn-id])))]
-                                       (reset! select-value-atom dbid))}
-                  ; need lower level select component that can be reused here and in select.cljs
-                  select-options (->> (option/hydrate-options' options-anchor param-ctx)
-                                      (cats/mplus (either/right nil)) ;todo handle exception
-                                      (cats/extract)
-                                      (map (fn [[dbid label-prop]]
-                                             [:option {:key (:id dbid) :value (-> dbid :id str)} label-prop])))]
-              [:select props select-options])
+                         :on-change (fn [id]
+                                      (let [dbid (->DbId id (:conn-id param-ctx))]
+                                        (reset! select-value-atom dbid)))}]
+              [select/anchor->select props options-anchor param-ctx])
             ; todo wire input to up arrow
             #_(dbid props param-ctx))
           [:br]

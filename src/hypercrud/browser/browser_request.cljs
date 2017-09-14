@@ -11,7 +11,7 @@
 
 
 (declare request)
-(declare request')
+(declare request-from-route)
 
 (defn recurse-request [anchor param-ctx]
   (if (:anchor/managed? anchor)
@@ -26,7 +26,7 @@
                           (update :debug #(str % ">popover-link[" (:db/id anchor) ":" (or (:anchor/ident anchor) (:anchor/prompt anchor)) "]")))]
         (either/branch route'
                        (constantly nil)
-                       #(request' % param-ctx))))
+                       #(request-from-route % param-ctx))))
     ; if the anchor IS NOT a popover, this should be the same logic as widget/render-inline-anchors
     (let [param-ctx (update param-ctx :debug #(str % ">inline-link[" (:db/id anchor) ":" (or (:anchor/ident anchor) (:anchor/prompt anchor)) "]"))]
       (request anchor param-ctx))))
@@ -94,13 +94,13 @@
                                 (hc/hydrate (:peer param-ctx) link-request)
                                 (either/right nil))
                        schemas (schema-util/hydrate-schema ordered-fes param-ctx)]
-                  (base/process-results (constantly link-dependent-requests) query-params link link-request result schemas ordered-fes param-ctx))
+                  (base/process-results link-dependent-requests query-params link link-request result schemas ordered-fes param-ctx))
                 (cats/mplus (either/right nil))
                 (cats/extract)))))
       (cats/mplus (either/right nil))
       (cats/extract)))
 
-(defn request' [route param-ctx]
+(defn request-from-route [route param-ctx]
   (let [param-ctx (context/route param-ctx route)]
     (if (auto-link/system-link? (:link-dbid route))
       (let [system-link-idmap (-> route :link-dbid :id)
@@ -126,6 +126,5 @@
         (either/branch
           (constantly nil)
           (fn [route]
-            (request' route
-                      ; entire context must be encoded in the route
-                      (context/clean param-ctx)))))))
+            ; entire context must be encoded in the route
+            (request-from-route route (context/clean param-ctx)))))))

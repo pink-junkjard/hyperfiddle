@@ -140,7 +140,7 @@
                       (context/clean)
                       (update :debug #(str % ">popover-link[" (:db/id anchor) ":" (or (:anchor/ident anchor) (:anchor/prompt anchor)) "]")))]
     [:div.managed-popover
-     [hypercrud.browser.core/safe-ui' route param-ctx]      ; cycle
+     [hypercrud.browser.core/ui-from-route route param-ctx] ; cycle
      [:button {:on-click stage!} "stage"]]))
 
 (defn visible? [anchor ctx]

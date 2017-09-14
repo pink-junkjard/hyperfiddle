@@ -76,7 +76,7 @@
 
     (either/right nil)))
 
-(defn process-results [get-f query-params link request result schemas ordered-fes param-ctx]
+(defn process-results [f query-params link request result schemas ordered-fes param-ctx]
   (let [param-ctx (assoc param-ctx                          ; provide defaults before user-bindings run.
                     :schemas schemas                        ; For tx/entity->statements in userland.
                     :query-params query-params
@@ -110,8 +110,7 @@
 
                  result)
 
-        ordered-fes (auto-form/auto-find-elements ordered-fes result param-ctx)
-        f (get-f link param-ctx)]
+        ordered-fes (auto-form/auto-find-elements ordered-fes result param-ctx)]
     (mlet [param-ctx (user-bindings/user-bindings' link param-ctx)]
       (cats/return
         (case @(:display-mode param-ctx)                    ; default happens higher, it influences queries too
