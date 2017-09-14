@@ -7,7 +7,7 @@
   (map? (:id field-dbid)))
 
 (defn auto-find-elements [ordered-fes result param-ctx]
-  (let [raw-mode? (= (:display-mode param-ctx) :root)
+  (let [raw-mode? (= @(:display-mode param-ctx) :root)
         result (if (map? result) [result] result)
         results-indexed-by-column (->> (apply concat result)
                                        (group-by first)

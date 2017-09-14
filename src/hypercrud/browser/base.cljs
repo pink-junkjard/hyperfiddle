@@ -114,7 +114,7 @@
         f (get-f link param-ctx)]
     (mlet [param-ctx (user-bindings/user-bindings' link param-ctx)]
       (cats/return
-        (case (:display-mode param-ctx)                     ; default happens higher, it influences queries too
+        (case @(:display-mode param-ctx)                    ; default happens higher, it influences queries too
           :user (f result ordered-fes (auto-anchor/auto-anchors link ordered-fes param-ctx) param-ctx)
           :xray (f result ordered-fes (auto-anchor/auto-anchors link ordered-fes param-ctx) param-ctx)
           :root (f result ordered-fes (auto-anchor/auto-anchors link ordered-fes param-ctx {:ignore-user-links true}) param-ctx))))))

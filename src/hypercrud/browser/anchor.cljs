@@ -102,7 +102,7 @@
        :style {:color (connection-color/connection-color (-> link :hypercrud/owner :db/id :id))}
        :tooltip (if-not (empty? errors)
                   [:warning (pprint-str errors)]
-                  (case (:display-mode param-ctx)
+                  (case @(:display-mode param-ctx)
                     :xray [nil (pr-str (:query-params route))]
                     :user (:tooltip user-props)))
        :class (->> [(:class user-props)

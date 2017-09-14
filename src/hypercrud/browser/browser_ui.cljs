@@ -30,7 +30,7 @@
 (declare user-result)
 
 (defn get-ui-f [link param-ctx]
-  (let [f (case (:display-mode param-ctx)
+  (let [f (case @(:display-mode param-ctx)
             :user (user-result link param-ctx)
             :xray auto-control/result
             :root auto-control/result)]

@@ -88,7 +88,7 @@
 (defn process-option-anchors [anchors param-ctx]
   (let [[options-anchor] (filter anchor/option-anchor? anchors)
         anchors (remove anchor/option-anchor? anchors)
-        anchors (if (and options-anchor (= :xray (:display-mode param-ctx)))
+        anchors (if (and options-anchor (= :xray @(:display-mode param-ctx)))
                   (conj anchors (assoc options-anchor :anchor/render-inline? false))
                   anchors)]
     [anchors options-anchor]))

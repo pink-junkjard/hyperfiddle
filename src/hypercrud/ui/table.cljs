@@ -62,7 +62,7 @@
     [:th {:class (string/join " " css-classes)
           :style {:background-color (connection-color/connection-color (or (:color ctx) (:conn-id ctx) #_"hack for top tables"))}
           :on-click on-click}
-     [:label (form-util/field-label field ctx)]
+     [:label [form-util/field-label field ctx]]
      [col-head-anchors attr-label-anchors ctx]]))
 
 (defn LinkCell [repeating? ordered-fes anchors-lookup ctx]
@@ -107,8 +107,9 @@
   (let [param-ctx (-> (context/attribute param-ctx attribute)
                       (context/value (get (:entity param-ctx) attribute))
                       (assoc :layout :table))
-        Field (case (:display-mode param-ctx) :xray Field :user (get param-ctx :field Field))
-        Control (case (:display-mode param-ctx) :xray Control :user (get param-ctx :control Control))
+        display-mode @(:display-mode param-ctx)
+        Field (case display-mode :xray Field :user (get param-ctx :field Field))
+        Control (case display-mode :xray Control :user (get param-ctx :control Control))
         attr-anchors (get entity-anchors-lookup attribute)]
     [Field #(Control field attr-anchors %) field attr-anchors param-ctx]))
 

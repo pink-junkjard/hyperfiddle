@@ -25,7 +25,7 @@
                          (remove :anchor/repeating? $)      ; because we're in the label
                          (widget/process-option-anchors $ param-ctx))]
      [:div.hc-label
-      [:label (form-util/field-label field param-ctx)]
+      [:label [form-util/field-label field param-ctx]]
       [:div.anchors
        (widget/render-anchors (->> anchors (remove :anchor/render-inline?)) param-ctx)
        (widget/render-inline-anchors (->> anchors (filter :anchor/render-inline?)) param-ctx)]])
@@ -52,9 +52,10 @@
                         (context/value $ (get-in param-ctx [:entity attribute]))
                         (if (= attribute :db/id) (assoc $ :read-only always-read-only) $))
         attr-anchors (get fe-anchors-lookup attribute)
+        display-mode @(:display-mode param-ctx)
         ; What is the user-field allowed to change? The param-ctx. Can it change links or anchors? no.
-        Field (case (:display-mode param-ctx) :xray Field :user (get param-ctx :field Field))
-        Control (case (:display-mode param-ctx) :xray Control :user (get param-ctx :control Control))]
+        Field (case display-mode :xray Field :user (get param-ctx :field Field))
+        Control (case display-mode :xray Control :user (get param-ctx :control Control))]
     ; todo control can have access to repeating contextual values (color, owner, result, entity, value, etc) but field should NOT
     ; this leads to inconsistent location formulas between non-repeating links in tables vs forms
     [Field #(Control field attr-anchors %) field attr-anchors param-ctx]))
