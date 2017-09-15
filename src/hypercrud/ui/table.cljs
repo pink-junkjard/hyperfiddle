@@ -121,6 +121,7 @@
                       (context/entity entity))]
     (->> (-> fe :find-element/form :form/field)
          (mapv (fn [field]
+                 ; todo this could clash if you use the same form on two findelements
                  ^{:key (:db/id field)}
                  [Value field fe-anchors-lookup param-ctx])))))
 

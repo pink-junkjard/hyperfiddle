@@ -58,19 +58,20 @@
                          :display-mode always-user
                          :user-renderer renderer)]))
 
-(defn select* [value options-anchor props param-ctx]
-  ; value :: {:db/id #DbId[17592186045891 17592186045422]}
-  (let [props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
-               :value (cond
-                        (nil? value) ""
-                        :else (-> value :db/id :id str))
+(let [on-change (fn [param-ctx id]
+                  (let [dbid (->DbId id (:conn-id param-ctx))]
+                    ((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) dbid))))]
+  (defn select* [value options-anchor props param-ctx]
+    ; value :: {:db/id #DbId[17592186045891 17592186045422]}
+    (let [props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
+                 :value (cond
+                          (nil? value) ""
+                          :else (-> value :db/id :id str))
 
-               ;; reconstruct the typed value
-               :on-change (fn [id]
-                            (let [dbid (->DbId id (:conn-id param-ctx))]
-                              ((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) dbid))))
-               :disabled (:read-only props)}
-        props (if (#{:find-element/connection :dbhole/value :hypercrud/owner} (-> param-ctx :attribute :db/ident)) ; lol hack
-                (assoc props :style {:background-color (connection-color/connection-color (-> value :db/id :id))})
-                props)]
-    [anchor->select props options-anchor param-ctx]))
+                 ;; reconstruct the typed value
+                 :on-change (reagent/partial on-change param-ctx)
+                 :disabled (:read-only props)}
+          props (if (#{:find-element/connection :dbhole/value :hypercrud/owner} (-> param-ctx :attribute :db/ident)) ; lol hack
+                  (assoc props :style {:background-color (connection-color/connection-color (-> value :db/id :id))})
+                  props)]
+      [anchor->select props options-anchor param-ctx])))

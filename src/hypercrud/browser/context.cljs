@@ -1,7 +1,8 @@
 (ns hypercrud.browser.context
   (:require [hypercrud.browser.auto-anchor-formula :refer [auto-entity-dbid]]
             [hypercrud.state.actions.core :as actions]
-            [hypercrud.util.branch :as branch]))
+            [hypercrud.util.branch :as branch]
+            [reagent.core :as reagent]))
 
 
 (defn clean [param-ctx]
@@ -29,14 +30,17 @@
 (defn relation [param-ctx relation]
   (assoc param-ctx :relation relation))
 
+(defn user-with [ctx branch conn-id tx]
+  ; todo custom user-dispatch with all the tx-fns as reducers
+  ((:dispatch! ctx) (actions/with branch conn-id tx)))
+
 (defn find-element [param-ctx fe]
   (let [conn-id (-> fe :find-element/connection :db/id :id)
         branch (:branch param-ctx)]
     (assoc param-ctx :conn-id conn-id
                      :find-element fe
                      :schema (get-in param-ctx [:schemas (:find-element/name fe)])
-                     ; todo custom user-dispatch with all the tx-fns as reducers
-                     :user-with! (fn [tx] ((:dispatch! param-ctx) (actions/with branch conn-id tx))))))
+                     :user-with! (reagent/partial user-with param-ctx branch conn-id))))
 
 (defn entity [param-ctx entity]
   (assoc param-ctx :color (if-let [color-fn (:color-fn param-ctx)]

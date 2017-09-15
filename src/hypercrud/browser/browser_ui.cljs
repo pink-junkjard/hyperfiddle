@@ -132,12 +132,20 @@
     [C e ctx]))
 
 (defn wrap-ui [v' route ctx]
-  (let [c #(when (and route (contains? @(r/cursor (-> ctx :peer .-state-atom) [:pressed-keys]) "alt"))
-             ((:dispatch! ctx) (actions/set-route route))
-             (.stopPropagation %))]
-    [native-listener {:on-click c}
-     [:div.ui
-      (either/branch v' (fn [e] (ui-error e ctx)) identity)]]))
+  (let [prev-v (atom nil)]
+    (fn [v' route ctx]
+      (let [c #(when (and route (contains? @(r/cursor (-> ctx :peer .-state-atom) [:pressed-keys]) "alt"))
+                 ((:dispatch! ctx) (actions/set-route route))
+                 (.stopPropagation %))]
+        [native-listener {:on-click c}
+         (either/branch v'
+                        (fn [e]
+                          (if-let [p (and (= "Loading" (:message e)) @prev-v)]
+                            [:div.ui.loading p]
+                            [:div.ui (ui-error e ctx)]))
+                        (fn [v]
+                          (reset! prev-v v)
+                          [:div.ui v]))]))))
 
 (defn ui-from-route [route ctx]
   [wrap-ui (ui-from-route' route ctx) route ctx])
