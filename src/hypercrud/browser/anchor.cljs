@@ -111,30 +111,32 @@
                    (interpose " ")
                    (apply str))})))
 
-(defn managed-popover-body [anchor route popover-id param-ctx]
-  (let [stage! (fn []
-                 (let [user-txfn (some-> (eval/validate-user-code-str (:anchor/tx-fn anchor)) eval-str' (cats/mplus (either/right nil)) (cats/extract))
-                       user-txfn (or user-txfn (fn [ctx multi-color-tx modal-route] {:tx multi-color-tx}))]
-                   (-> (p/promise
-                         (fn [resolve! reject!]
-                           (let [swap-fn (fn [multi-color-tx]
-                                           ; todo why does the user-txfn have access to the parent link's context
-                                           (let [result (let [result (user-txfn param-ctx multi-color-tx route)]
-                                                          ; txfn may be sync or async
-                                                          (if-not (p/promise? result) (p/resolved result) result))]
-                                             ; let the caller of this :stage fn know the result
-                                             ; This is super funky, a swap-fn should not be effecting, but seems like it would work.
-                                             (p/branch result
-                                                       (fn [v] (resolve! nil))
-                                                       (fn [e]
-                                                         (reject! e)
-                                                         (js/console.warn e)))
+(defn stage! [anchor route param-ctx]
+  (let [user-txfn (some-> (eval/validate-user-code-str (:anchor/tx-fn anchor)) eval-str' (cats/mplus (either/right nil)) (cats/extract))
+        user-txfn (or user-txfn (fn [ctx multi-color-tx modal-route] {:tx multi-color-tx}))]
+    (-> (p/promise
+          (fn [resolve! reject!]
+            (let [swap-fn (fn [multi-color-tx]
+                            ; todo why does the user-txfn have access to the parent link's context
+                            (let [result (let [result (user-txfn param-ctx multi-color-tx route)]
+                                           ; txfn may be sync or async
+                                           (if-not (p/promise? result) (p/resolved result) result))]
+                              ; let the caller of this :stage fn know the result
+                              ; This is super funky, a swap-fn should not be effecting, but seems like it would work.
+                              (p/branch result
+                                        (fn [v] (resolve! nil))
+                                        (fn [e]
+                                          (reject! e)
+                                          (js/console.warn e)))
 
-                                             ; return the result to the action, it could be a promise
-                                             result))]
-                             ((:dispatch! param-ctx) (actions/stage-popover (:branch param-ctx) popover-id swap-fn)))))
-                       ; todo something better with these exceptions (could be user error)
-                       (p/catch #(-> % pprint-str js/alert)))))
+                              ; return the result to the action, it could be a promise
+                              result))]
+              ((:dispatch! param-ctx) (actions/stage-popover (:branch param-ctx) popover-id swap-fn)))))
+        ; todo something better with these exceptions (could be user error)
+        (p/catch #(-> % pprint-str js/alert)))))
+
+(defn managed-popover-body [anchor route popover-id param-ctx]
+  (let [stage! (reagent/partial stage! anchor route param-ctx)
         ; NOTE: this param-ctx logic and structure is the same as the popover branch of browser-request/recurse-request
         param-ctx (-> param-ctx
                       (context/clean)
@@ -151,6 +153,12 @@
         (either/right true))
       (cats/mplus (either/right true))
       (cats/extract)))
+
+(defn cancel! [popover-id ctx]
+  ((:dispatch! ctx) (actions/cancel-popover (:branch ctx) popover-id)))
+
+(defn open! [popover-id ctx]
+  ((:dispatch! ctx) (actions/open-popover popover-id)))
 
 ; if this is driven by anchor, and not route, it needs memoized.
 ; the route is a fn of the formulas and the formulas can have effects
@@ -174,7 +182,7 @@
                                 param-ctx (context/anchor-branch param-ctx anchor)]
                             {:showing? (reagent/cursor (-> param-ctx :peer .-state-atom) [:popovers popover-id])
                              :body [managed-popover-body anchor route popover-id param-ctx]
-                             :open! #((:dispatch! param-ctx) (actions/open-popover popover-id))
-                             :cancel! #((:dispatch! param-ctx) (actions/cancel-popover (:branch param-ctx) popover-id))})))
+                             :open! (reagent/partial open! popover-id param-ctx)
+                             :cancel! (reagent/partial cancel! popover-id param-ctx)})))
         anchor-props-hidden {:hidden (not visible?)}]
     (merge anchor-props-hidden hypercrud-props {:popover popover-props})))

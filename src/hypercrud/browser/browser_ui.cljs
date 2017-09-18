@@ -24,32 +24,33 @@
 (declare ui')
 (declare ui)
 
-(defn with-reprocessed-result [ui-fn result ordered-fes anchors param-ctx]
-  (let [anchors (remove :anchor/disabled? anchors)
-        anchor-index (->> anchors
-                          (filter :anchor/ident)            ; cannot lookup nil idents
-                          (mapv (juxt #(-> % :anchor/ident) identity)) ; [ repeating entity attr ident ]
-                          (into {}))
-        browse (fn [ident param-ctx f & args]
-                 [ui (get anchor-index ident) (assoc param-ctx :user-renderer f #_(if f #(apply f %1 %2 %3 %4 args)))])
-        anchor (fn [ident param-ctx label]
-                 (let [props (-> (anchor/build-anchor-props (get anchor-index ident) param-ctx)
-                                 #_(dissoc :style) #_"custom renderers don't want colored links")]
-                   [(:navigate-cmp param-ctx) props label]))
-        browse' (fn [ident ctx]
-                  (ui' (get anchor-index ident) (assoc ctx :user-renderer identity)))
-        anchor* (fn [ident ctx] (anchor/build-anchor-props (get anchor-index ident) ctx))
-        param-ctx (assoc param-ctx
-                    :anchor anchor
-                    :browse browse
-                    :anchor* anchor*
-                    :browse' browse'
+(let [browse (fn [anchor-index ident param-ctx f & args]
+               [ui (get anchor-index ident) (assoc param-ctx :user-renderer f #_(if f #(apply f %1 %2 %3 %4 args)))])
+      anchor (fn [anchor-index ident param-ctx label]
+               (let [props (-> (anchor/build-anchor-props (get anchor-index ident) param-ctx)
+                               #_(dissoc :style) #_"custom renderers don't want colored links")]
+                 [(:navigate-cmp param-ctx) props label]))
+      browse' (fn [anchor-index ident ctx]
+                (ui' (get anchor-index ident) (assoc ctx :user-renderer identity)))
+      anchor* (fn [anchor-index ident ctx] (anchor/build-anchor-props (get anchor-index ident) ctx))
+      link-fn (fn [anchor-index ident label param-ctx] (anchor anchor-index ident param-ctx label))]
+  (defn with-reprocessed-result [ui-fn result ordered-fes anchors param-ctx]
+    (let [anchors (remove :anchor/disabled? anchors)
+          anchor-index (->> anchors
+                            (filter :anchor/ident)          ; cannot lookup nil idents
+                            (mapv (juxt #(-> % :anchor/ident) identity)) ; [ repeating entity attr ident ]
+                            (into {}))
+          param-ctx (assoc param-ctx
+                      :anchor (r/partial anchor anchor-index)
+                      :browse (r/partial browse anchor-index)
+                      :anchor* (r/partial anchor* anchor-index)
+                      :browse' (r/partial browse' anchor-index)
 
-                    ; backwards compat
-                    :with-inline-result browse
-                    :link-fn (fn [ident label param-ctx] (anchor ident param-ctx label)))]
-    ; result is relation or set of relations
-    (ui-fn result ordered-fes anchors param-ctx)))
+                      ; backwards compat
+                      :with-inline-result (r/partial browse anchor-index)
+                      :link-fn (r/partial link-fn anchor-index))]
+      ; result is relation or set of relations
+      (ui-fn result ordered-fes anchors param-ctx))))
 
 (defn link-user-fn [link]
   (if-not (empty? (:link/renderer link))

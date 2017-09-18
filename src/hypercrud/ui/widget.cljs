@@ -17,16 +17,19 @@
             [reagent.core :as r]))
 
 
+(defn render-anchor [anchor ctx]
+  (let [prompt (or (:anchor/prompt anchor)
+                   (:anchor/ident anchor)
+                   "_")]
+    [(:navigate-cmp ctx) (anchor/build-anchor-props anchor ctx) prompt]))
+
 (defn render-anchors
   ([anchor-ctx-pairs]
    (->> anchor-ctx-pairs
         ; Don't filter hidden links; because they could be broken or invalid and need to draw error.
-        (map (fn [[anchor param-ctx]]
-               (let [prompt (or (:anchor/prompt anchor)
-                                (:anchor/ident anchor)
-                                "_")]
-                 ^{:key (hash (:db/id anchor))}
-                 [(:navigate-cmp param-ctx) (anchor/build-anchor-props anchor param-ctx) prompt])))
+        (map (fn [[anchor ctx]]
+               ^{:key (hash (:db/id anchor))}
+               [render-anchor anchor ctx]))
         doall))
   ([anchors param-ctx]
    (render-anchors (map vector anchors (repeat param-ctx)))))
@@ -106,8 +109,7 @@
   (let [[anchors options-anchor] (process-option-popover-anchors anchors param-ctx)
         anchors (->> anchors (filter :anchor/repeating?))]
     [:div.value
-     ; todo this key is encapsulating other unrelated anchors
-     [:div.editable-select {:key (hash (:anchor/link options-anchor))} ; not sure if this is okay in nil field case, might just work
+     [:div.editable-select
       [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)] ;todo can this be lifted out of editable-select?
       [:div.select                                          ; helps the weird anchor float left css thing
        (if options-anchor
