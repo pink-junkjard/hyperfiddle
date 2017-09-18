@@ -9,7 +9,9 @@
             [hypercrud.ui.radio :as radio]                  ; used in user renderers
             [hypercrud.ui.select :as select :refer [select* select-boolean*]]
             [hypercrud.ui.textarea :refer [textarea*]]
+            [hypercrud.util.core :refer [pprint-str]]
             [hypercrud.types.DbId :refer [->DbId]]
+            [cats.core :refer-macros [mlet]]
             [re-com.core :as re-com]
             [reagent.core :as r]))
 
@@ -134,32 +136,6 @@
      [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
      (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)]))
 
-(defn ref-many [maybe-field anchors props param-ctx]
-  (let [select-value-atom (r/atom "")]
-    (fn [maybe-field anchors props param-ctx]
-      (let [[anchors options-anchor] (process-option-popover-anchors anchors param-ctx)
-            anchors (->> anchors (filter :anchor/repeating?))]
-        [:div.value
-         [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
-         [:ul
-          (->> (:value param-ctx)
-               (map (fn [v]
-                      [:li {:key (:db/id v)}
-                       (:db/id v)                           ; todo remove button
-                       ])))]
-         [:div.table-controls
-          (if options-anchor
-            (let [props {:value (-> @select-value-atom :id str)
-                         :on-change (fn [id]
-                                      (let [dbid (->DbId id (:conn-id param-ctx))]
-                                        (reset! select-value-atom dbid)))}]
-              [select/anchor->select props options-anchor param-ctx])
-            ; todo wire input to up arrow
-            #_(dbid props param-ctx))
-          [:br]
-          [:button {:on-click #((:user-with! param-ctx) (tx/edit-entity (get-in param-ctx [:entity :db/id]) (-> param-ctx :attribute :db/ident) [] [@select-value-atom]))} "⬆"]]
-         (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)]))))
-
 (defn ref-many-component-table [maybe-field anchors props param-ctx]
   [:div.value
    (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)
@@ -207,6 +183,21 @@
        (let [widget (case (:layout param-ctx) :block code-block :inline-block code-inline-block :table code-inline-block)]
          [widget props change! param-ctx])
        [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]])))
+
+(defn ref-many [maybe-field anchors props param-ctx]
+  (let [change! (fn [user-edn-str]
+                  (mlet [user-val' (string/safe-read-string [user-edn-str])
+                         :let [rets []                      ; old - new
+                               adds []]]                    ; new - old
+                    ((:user-with! param-ctx) (tx/edit-entity (-> param-ctx :entity :db/id)
+                                                             (:attribute param-ctx)
+                                                             rets adds))))
+        [anchors options-anchor] (process-option-popover-anchors anchors param-ctx)
+        anchors (->> anchors (filter :anchor/repeating?))]
+    [:div.value
+     (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)
+     [code-inline-block props change! (update param-ctx :value pprint-str)]
+     [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]]))
 
 (defn valid-date-str? [s]
   (or (empty? s)
