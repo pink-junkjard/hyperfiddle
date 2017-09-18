@@ -10,6 +10,7 @@
             [hypercrud.ui.select :as select :refer [select* select-boolean*]]
             [hypercrud.ui.textarea :refer [textarea*]]
             [hypercrud.util.core :refer [pprint-str]]
+            [hypercrud.util.string :refer [safe-read-string]]
             [hypercrud.types.DbId :refer [->DbId]]
             [cats.core :refer-macros [mlet]]
             [re-com.core :as re-com]
@@ -186,7 +187,7 @@
 
 (defn ref-many [maybe-field anchors props param-ctx]
   (let [change! (fn [user-edn-str]
-                  (mlet [user-val' (string/safe-read-string [user-edn-str])
+                  (mlet [user-val' (safe-read-string [user-edn-str])
                          :let [rets []                      ; old - new
                                adds []]]                    ; new - old
                     ((:user-with! param-ctx) (tx/edit-entity (-> param-ctx :entity :db/id)
