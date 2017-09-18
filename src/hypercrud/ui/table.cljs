@@ -141,7 +141,8 @@
                                 (filter (fn [fe] (= fe-dbid (:db/id fe))))
                                 first)
                         attr (->> (-> fe :find-element/form :form/field)
-                                  (filter (fn [field] (= (:field/attribute field) sort-key)))
+                                  (map :field/attribute)
+                                  (filter #(= % sort-key))
                                   first)]
                     (if (attr-sortable? fe attr param-ctx)
                       (sort-by #(get-in % [(:find-element/name fe) sort-key])
