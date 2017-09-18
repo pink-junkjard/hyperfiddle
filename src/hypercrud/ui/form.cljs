@@ -65,8 +65,9 @@
         {inline-anchors true anchors false} (->> (get fe-anchors-lookup nil)
                                                  (filter :anchor/repeating?)
                                                  (group-by :anchor/render-inline?))
-        splat? (->> (map :form/field form)
-                    (every? auto-form/system-field?))]
+        splat? (or (empty? (:form/field form))
+                   (->> (map :form/field form)
+                        (every? auto-form/system-field?)))]
     (concat
       (widget/render-anchors anchors param-ctx)
       (conj
