@@ -137,6 +137,7 @@
       (let [c #(when (and route (contains? @(r/cursor (-> ctx :peer .-state-atom) [:pressed-keys]) "alt"))
                  ((:dispatch! ctx) (actions/set-route route))
                  (.stopPropagation %))]
+        ^{:key route}
         [native-listener {:on-click c}
          (either/branch v'
                         (fn [e]
