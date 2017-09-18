@@ -85,6 +85,7 @@
                                                        :anchor/find-element fe
                                                        :anchor/attribute attribute
                                                        :anchor/managed? false
+                                                       :anchor/disabled? true
                                                        :anchor/link (auto-link/link-system-edit-attr (:hypercrud/owner parent-link) fe attribute)}
                                                       {:db/id (->DbId {:ident :system-anchor-new-attr
                                                                        :fe (-> fe :db/id :id)
@@ -98,6 +99,7 @@
                                                        :anchor/managed? true
                                                        :anchor/create? true
                                                        :anchor/render-inline? true
+                                                       :anchor/disabled? true
                                                        :anchor/link (auto-link/link-system-edit-attr (:hypercrud/owner parent-link) fe attribute)}
                                                       {:db/id (->DbId {:ident :system-anchor-remove-attr
                                                                        :fe (-> fe :db/id :id)
@@ -111,6 +113,7 @@
                                                        :anchor/repeating? true
                                                        :anchor/managed? true
                                                        :anchor/render-inline? true
+                                                       :anchor/disabled? true
                                                        :anchor/tx-fn (if (= :db.cardinality/one (get-in schema [attribute :db/cardinality :db/ident]))
                                                                        (:value-remove-one auto-anchor-txfn-lookup)
                                                                        (:value-remove-many auto-anchor-txfn-lookup))}]))))))
