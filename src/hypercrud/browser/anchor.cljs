@@ -111,7 +111,7 @@
                    (interpose " ")
                    (apply str))})))
 
-(defn stage! [anchor route param-ctx]
+(defn stage! [anchor route popover-id param-ctx]
   (let [user-txfn (some-> (eval/validate-user-code-str (:anchor/tx-fn anchor)) eval-str' (cats/mplus (either/right nil)) (cats/extract))
         user-txfn (or user-txfn (fn [ctx multi-color-tx modal-route] {:tx multi-color-tx}))]
     (-> (p/promise
@@ -136,7 +136,7 @@
         (p/catch #(-> % pprint-str js/alert)))))
 
 (defn managed-popover-body [anchor route popover-id param-ctx]
-  (let [stage! (reagent/partial stage! anchor route param-ctx)
+  (let [stage! (reagent/partial stage! anchor route popover-id param-ctx)
         ; NOTE: this param-ctx logic and structure is the same as the popover branch of browser-request/recurse-request
         param-ctx (-> param-ctx
                       (context/clean)
