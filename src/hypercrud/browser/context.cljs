@@ -8,6 +8,7 @@
 (defn clean [param-ctx]
   ; why not query-params and all the custom ui/render fns?
   (dissoc param-ctx
+          :keep-disabled-anchors?
           :route :relation
           :schemas
           :conn-id :find-element :schema

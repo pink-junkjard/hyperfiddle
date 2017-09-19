@@ -35,7 +35,9 @@
       anchor* (fn [anchor-index ident ctx] (anchor/build-anchor-props (get anchor-index ident) ctx))
       link-fn (fn [anchor-index ident label param-ctx] (anchor anchor-index ident param-ctx label))]
   (defn with-reprocessed-result [ui-fn result ordered-fes anchors param-ctx]
-    (let [anchors (remove :anchor/disabled? anchors)
+    (let [anchors (if (:keep-disabled-anchors? param-ctx)
+                    anchors
+                    (remove :anchor/disabled? anchors))
           anchor-index (->> anchors
                             (filter :anchor/ident)          ; cannot lookup nil idents
                             (mapv (juxt #(-> % :anchor/ident) identity)) ; [ repeating entity attr ident ]

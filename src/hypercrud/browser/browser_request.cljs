@@ -36,8 +36,9 @@
                  (map? result) [result]
                  (coll? result) result
                  :else result)
-        anchors (->> anchors
-                     (remove :anchor/disabled?)
+        anchors (->> (if (:keep-disabled-anchors? param-ctx)
+                       anchors
+                       (remove :anchor/disabled? anchors))
                      (filter :anchor/render-inline?))       ; at this point we only care about inline anchors
         anchors-lookup (->> anchors
                             (group-by (fn [anchor]
