@@ -24,7 +24,7 @@ workflows:
   version: 2
   test_and_deploy:
     jobs:
-      - deploy
+      - deploy:
           filters:
             branches:
               only: master
