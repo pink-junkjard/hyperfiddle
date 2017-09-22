@@ -164,7 +164,7 @@
        (let [widget (case (:layout param-ctx) :block code-editor/code-block
                                               :inline-block code-editor/code-inline-block
                                               :table code-editor/code-inline-block)]
-         [widget props change! param-ctx])
+         [widget props (:value param-ctx) change!])
        [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]])))
 
 (defn edn-many [maybe-field anchors props ctx]
