@@ -35,7 +35,8 @@
                            (let [[_ value change! props] (reagent/argv this)
                                  value' (.getValue ref)]
                              (if-not (= value value')
-                               (change! value')))))))
+                               (change! value')))
+                           nil))))
 
      :component-will-unmount
      (fn [this] (.toTextArea (aget this "codeMirrorRef")))

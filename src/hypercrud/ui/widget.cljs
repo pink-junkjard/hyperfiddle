@@ -1,9 +1,12 @@
 (ns hypercrud.ui.widget
   (:refer-clojure :exclude [keyword long boolean])
-  (:require [clojure.set :as set]
+  (:require [cats.core :refer-macros [mlet]]
+            [cats.monad.either :as either]
+            [clojure.set :as set]
             [hypercrud.browser.core :as browser]
             [hypercrud.browser.anchor :as anchor]
             [hypercrud.client.tx :as tx]
+            [hypercrud.types.DbId :refer [->DbId]]
             [hypercrud.ui.code-editor :refer [code-editor*]]
             [hypercrud.ui.input :as input]
             [hypercrud.ui.multi-select :refer [multi-select* multi-select-markup]]
@@ -12,10 +15,8 @@
             [hypercrud.ui.textarea :refer [textarea*]]
             [hypercrud.util.core :refer [pprint-str]]
             [hypercrud.util.string :refer [safe-read-string]]
-            [hypercrud.types.DbId :refer [->DbId]]
-            [cats.core :refer-macros [mlet]]
-            [reagent.core :as r]
-            [hypercrud.ui.code-editor :as code-editor]))
+            [hypercrud.ui.code-editor :as code-editor]
+            [reagent.core :as r]))
 
 
 (defn render-anchor [anchor ctx]
@@ -157,7 +158,7 @@
   (fn [maybe-field anchors props param-ctx]
     (let [ident (-> param-ctx :attribute :db/ident)
           change! #((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %))]
-      ^{:key ident}
+      ;^{:key ident}
       [:div.value
        (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)
        (let [widget (case (:layout param-ctx) :block code-editor/code-block
@@ -173,13 +174,16 @@
                     (:value ctx))
                   set)
         change! (fn [user-edn-str]
-                  (mlet [user-val (safe-read-string user-edn-str)
-                         :let [user-val (set user-val)
-                               rets (set/difference value user-val)
-                               adds (set/difference user-val value)]]
-                    ((:user-with! ctx) (tx/edit-entity (-> ctx :entity :db/id)
-                                                       (-> ctx :attribute :db/ident)
-                                                       rets adds))))
+                  (either/branch
+                    (safe-read-string user-edn-str)
+                    (fn [e] (js/console.error (pr-str e)) nil)
+                    (fn [user-val]
+                      (let [user-val (set user-val)
+                            rets (set/difference value user-val)
+                            adds (set/difference user-val value)]
+                        ((:user-with! ctx) (tx/edit-entity (-> ctx :entity :db/id)
+                                                           (-> ctx :attribute :db/ident)
+                                                           rets adds))))))
         [anchors options-anchor] (process-option-popover-anchors anchors ctx)
         anchors (->> anchors (filter :anchor/repeating?))]
     [:div.value
@@ -190,7 +194,11 @@
 (defn edn [maybe-field anchors props param-ctx]
   (let [valueType (-> param-ctx :attribute :db/valueType :db/ident)
         value (if (= valueType :db.type/ref) (:db/id (:value param-ctx)) (:value param-ctx))
-        change! #((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %))
+        change! (fn [user-edn-str]
+                  (either/branch
+                    (safe-read-string user-edn-str)
+                    (fn [e] (js/console.error (pr-str e)) nil)
+                    #((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %))))
         [anchors options-anchor] (process-option-popover-anchors anchors param-ctx)
         anchors (->> anchors (filter :anchor/repeating?))]
     [:div.value
