@@ -26,15 +26,14 @@
   :resource-paths #{"src" "resources"})
 
 (require '[adzerk.boot-cljs :refer :all]
-         '[adzerk.bootlaces :refer :all]
+         '[adzerk.bootlaces :refer [push-snapshot]]
          '[crisptrutski.boot-cljs-test :refer [test-cljs]]
          'boot.lein)
 
 (def +version+ "0.2.0-SNAPSHOT")
 
-(bootlaces! +version+)
-
 (task-options!
+  push #(into % {:repo "deploy-clojars" :ensure-version +version+})
   pom {:project 'com.hyperfiddle/hypercrud.browser
        :version +version+}
   test-cljs {:js-env :node})

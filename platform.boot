@@ -9,13 +9,12 @@
                   [adzerk/bootlaces "0.1.13" :scope "test"]])
 
 (require '[adzerk.boot-cljs :refer :all]
-         '[adzerk.bootlaces :refer :all])
+         '[adzerk.bootlaces :refer [push-snapshot]])
 
 (def +version+ "0.2.0-SNAPSHOT")
 
-(bootlaces! +version+)
-
 (task-options!
+  push #(into % {:repo "deploy-clojars" :ensure-version +version+})
   pom {:version +version+})
 
 (deftask browser []
