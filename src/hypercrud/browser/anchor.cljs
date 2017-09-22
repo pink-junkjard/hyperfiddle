@@ -1,7 +1,6 @@
 (ns hypercrud.browser.anchor
   (:require [cats.core :as cats :refer [mlet return]]
-            [cats.monad.either :as either]
-            [cats.monad.exception :as exception]
+            [cats.monad.either :as either :refer-macros [try-either]]
             [clojure.set :as set]
             [hypercrud.browser.auto-anchor-formula :refer [auto-entity-dbid]]
             [hypercrud.browser.connection-color :as connection-color]
@@ -10,7 +9,6 @@
             [hypercrud.form.q-util :as q-util]
             [hypercrud.state.actions.core :as actions]
             [hypercrud.util.core :refer [pprint-str]]
-            [hypercrud.util.monad :refer [exception->either]]
             [promesa.core :as p]
             [reagent.core :as reagent]))
 
@@ -31,8 +29,7 @@
   (if-let [code-str (eval/validate-user-code-str code-str)]
     (mlet [user-fn (eval-str' code-str)]
       (if user-fn
-        (-> (exception/try-on (apply user-fn args))
-            exception->either)
+        (try-either (apply user-fn args))
         (return nil)))
     (either/right nil)))
 
@@ -74,7 +71,7 @@
 
 (defn get-or-apply' [expr & args]
   (if (fn? expr)
-    (exception->either (exception/try-on (apply expr args)))
+    (try-either (apply expr args))
     (either/right expr)))
 
 (defn build-anchor-props-raw [unvalidated-route' anchor param-ctx] ; param-ctx is for display-mode
@@ -148,8 +145,7 @@
 (defn visible? [anchor ctx]
   (-> (if-let [code-str (eval/validate-user-code-str (:anchor/visible? anchor))] ; also inline links !
         (mlet [user-fn (eval-str' code-str)]
-          (-> (exception/try-on (user-fn ctx))
-              exception->either))
+          (try-either (user-fn ctx)))
         (either/right true))
       (cats/mplus (either/right true))
       (cats/extract)))

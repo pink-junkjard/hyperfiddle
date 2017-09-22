@@ -7,8 +7,7 @@
             [hypercrud.types.DbId :refer [->DbId]]
             [hypercrud.ui.markdown :refer [markdown]]
             [hypercrud.ui.tooltip :as tooltip]
-            [hypercrud.util.core :as util]
-            [hypercrud.util.monad :refer [exception->either]]))
+            [hypercrud.util.core :as util]))
 
 (defn css-slugify [s]
   ; http://stackoverflow.com/a/449000/959627

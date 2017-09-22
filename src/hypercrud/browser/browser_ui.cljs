@@ -1,7 +1,6 @@
 (ns hypercrud.browser.browser-ui
   (:require [cats.core :as cats :refer-macros [mlet]]
-            [cats.monad.exception :as exception]
-            [cats.monad.either :as either]
+            [cats.monad.either :as either :refer-macros [try-either]]
             [hypercrud.browser.anchor :as anchor]
             [hypercrud.browser.auto-link :as auto-link]
             [hypercrud.browser.base :as base]
@@ -17,7 +16,6 @@
             [hypercrud.ui.auto-control :as auto-control]
             [hypercrud.ui.form-util :as form-util]
             [hypercrud.util.core :refer [pprint-str]]
-            [hypercrud.util.monad :refer [exception->either]]
             [reagent.core :as r]))
 
 
@@ -109,8 +107,7 @@
 
 (defn ui' [anchor ctx]
   ; js errors? Why do we need this exception monad.
-  (-> (exception/try-on (anchor/build-anchor-props anchor ctx)) ; LOOOOOLLLLLL we are dumb
-      (exception->either)
+  (-> (try-either (anchor/build-anchor-props anchor ctx))   ; LOOOOOLLLLLL we are dumb
       (cats/bind #(ui-from-props' anchor % ctx))))
 
 (defn ui-error-inline [e ctx]
@@ -156,8 +153,7 @@
 
 (defn ui [anchor ctx]
   ; js errors? Why do we need this exception monad.
-  (let [anchor-props (-> (exception/try-on (anchor/build-anchor-props anchor ctx)) ; LOOOOOLLLLLL we are dumb
-                         (exception->either))
+  (let [anchor-props (try-either (anchor/build-anchor-props anchor ctx)) ; LOOOOOLLLLLL we are dumb
         v' (mlet [anchor-props anchor-props]
              (ui-from-props' anchor anchor-props ctx))
         route (-> (cats/fmap :route anchor-props)

@@ -1,7 +1,6 @@
 (ns hypercrud.form.option
   (:require [cats.core :as cats]
-            [cats.monad.exception :as exception]
-            [hypercrud.util.monad :refer [exception->either]]))
+            [cats.monad.either :refer-macros [try-either]]))
 
 (defn default-label-renderer [v ctx]
   (cond
@@ -20,8 +19,7 @@
                               ; is how we are in a select options in the first place.
                               (let [value (get-in relation [(:find-element/name fe) attribute])
                                     renderer (or (-> param-ctx :fields attribute :label-renderer) default-label-renderer)]
-                                (-> (exception/try-on (renderer value param-ctx))
-                                    exception->either)))))))
+                                (try-either (renderer value param-ctx))))))))
        (cats/sequence)
        (cats/fmap (fn [labels]
                     (->> labels

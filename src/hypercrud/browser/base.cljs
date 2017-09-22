@@ -1,7 +1,6 @@
 (ns hypercrud.browser.base
   (:require [cats.core :as cats :refer [mlet]]
-            [cats.monad.either :as either]
-            [cats.monad.exception :as exception]
+            [cats.monad.either :as either :refer-macros [try-either]]
             [hypercrud.browser.auto-anchor :as auto-anchor]
             [hypercrud.browser.auto-form :as auto-form]
             [hypercrud.browser.user-bindings :as user-bindings]
@@ -9,7 +8,6 @@
             [hypercrud.form.q-util :as q-util]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
-            [hypercrud.util.monad :refer [exception->either]]
             [hypercrud.util.string :as hc-string]))
 
 
@@ -41,8 +39,8 @@
 (defn request-for-link [link query-params ordered-fes param-ctx]
   (case (:request/type link)
     :query
-    (mlet [q (-> (hc-string/memoized-safe-read-string (:link-query/value link)) exception->either)
-           query-holes (-> ((exception/wrap q-util/parse-holes) q) exception->either)]
+    (mlet [q (hc-string/memoized-safe-read-string (:link-query/value link))
+           query-holes (try-either (q-util/parse-holes q))]
       (let [params-map (merge (q-util/build-dbhole-lookup link param-ctx) query-params)
             params (->> query-holes (mapv (juxt identity #(get params-map %))) (into {}))
             pull-exp (->> ordered-fes

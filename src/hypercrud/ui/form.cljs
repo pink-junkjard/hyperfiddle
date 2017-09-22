@@ -10,7 +10,6 @@
             [hypercrud.ui.renderer :as renderer]
             [hypercrud.ui.widget :as widget]
             [hypercrud.util.core :as util]
-            [hypercrud.util.monad :refer [exception->either]]
             [reagent.core :as r]))
 
 (defn Control [field anchors param-ctx]
