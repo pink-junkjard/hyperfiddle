@@ -1,6 +1,7 @@
 (ns hypercrud.ui.widget
   (:refer-clojure :exclude [keyword long boolean])
-  (:require [hypercrud.browser.core :as browser]
+  (:require [clojure.set :as set]
+            [hypercrud.browser.core :as browser]
             [hypercrud.browser.anchor :as anchor]
             [hypercrud.client.tx :as tx]
             [hypercrud.ui.code-editor :refer [code-editor*]]
@@ -13,8 +14,8 @@
             [hypercrud.util.string :refer [safe-read-string]]
             [hypercrud.types.DbId :refer [->DbId]]
             [cats.core :refer-macros [mlet]]
-            [re-com.core :as re-com]
-            [reagent.core :as r]))
+            [reagent.core :as r]
+            [hypercrud.ui.code-editor :as code-editor]))
 
 
 (defn render-anchor [anchor ctx]
@@ -152,30 +153,6 @@
 ;  (let [add-item! #((:user-swap! param-ctx) {:tx (tx/edit-entity (:db/id (:entity param-ctx)) (:attribute param-ctx) [] [(temp-id!)])})]
 ;    [multi-select* multi-select-markup add-item! maybe-field anchors props param-ctx])) ;add new entity to set
 
-(defn code-block [props change! param-ctx]
-  (let [props (if-not (nil? (:read-only props))
-                (-> props
-                    (dissoc :read-only)
-                    (assoc :readOnly (:read-only props)))
-                props)]
-    [code-editor* (:value param-ctx) change! props]))
-
-(defn code-inline-block [& args]
-  (let [showing? (r/atom false)]
-    (fn [props change! param-ctx]
-      [:div
-       [re-com/popover-anchor-wrapper
-        :showing? showing?
-        :position :below-center
-        :anchor [:a {:href "javascript:void 0;" :on-click #(swap! showing? not)} "edit"]
-        :popover [re-com/popover-content-wrapper
-                  :close-button? true
-                  :on-cancel #(reset! showing? false)
-                  :no-clip? true
-                  :width "600px"
-                  :body (code-block props change! param-ctx)]]
-       " " (:value param-ctx)])))
-
 (defn code [& args]
   (fn [maybe-field anchors props param-ctx]
     (let [ident (-> param-ctx :attribute :db/ident)
@@ -183,23 +160,42 @@
       ^{:key ident}
       [:div.value
        (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)
-       (let [widget (case (:layout param-ctx) :block code-block :inline-block code-inline-block :table code-inline-block)]
+       (let [widget (case (:layout param-ctx) :block code-editor/code-block
+                                              :inline-block code-editor/code-inline-block
+                                              :table code-editor/code-inline-block)]
          [widget props change! param-ctx])
        [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]])))
 
-(defn ref-many [maybe-field anchors props param-ctx]
-  (let [change! (fn [user-edn-str]
-                  (mlet [user-val' (safe-read-string [user-edn-str])
-                         :let [rets []                      ; old - new
-                               adds []]]                    ; new - old
-                    ((:user-with! param-ctx) (tx/edit-entity (-> param-ctx :entity :db/id)
-                                                             (:attribute param-ctx)
-                                                             rets adds))))
+(defn edn-many [maybe-field anchors props ctx]
+  (let [valueType (-> ctx :attribute :db/valueType :db/ident)
+        value (-> (if (= valueType :db.type/ref)
+                    (map :db/id (:value ctx))
+                    (:value ctx))
+                  set)
+        change! (fn [user-edn-str]
+                  (mlet [user-val (safe-read-string user-edn-str)
+                         :let [user-val (set user-val)
+                               rets (set/difference value user-val)
+                               adds (set/difference user-val value)]]
+                    ((:user-with! ctx) (tx/edit-entity (-> ctx :entity :db/id)
+                                                       (-> ctx :attribute :db/ident)
+                                                       rets adds))))
+        [anchors options-anchor] (process-option-popover-anchors anchors ctx)
+        anchors (->> anchors (filter :anchor/repeating?))]
+    [:div.value
+     (render-inline-anchors (filter :anchor/render-inline? anchors) ctx)
+     [code-editor/code-inline-block props (pprint-str value) change!]
+     [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) ctx)]]))
+
+(defn edn [maybe-field anchors props param-ctx]
+  (let [valueType (-> param-ctx :attribute :db/valueType :db/ident)
+        value (if (= valueType :db.type/ref) (:db/id (:value param-ctx)) (:value param-ctx))
+        change! #((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %))
         [anchors options-anchor] (process-option-popover-anchors anchors param-ctx)
         anchors (->> anchors (filter :anchor/repeating?))]
     [:div.value
      (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)
-     [code-inline-block props change! (update param-ctx :value pprint-str)]
+     [code-editor/code-inline-block props (pprint-str value) change!]
      [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]]))
 
 (defn valid-date-str? [s]
@@ -234,12 +230,3 @@
            :isComponent isComponent})
      #()
      {:read-only true}]))
-
-(defn raw [maybe-field anchors props param-ctx]
-  (let [valueType (-> param-ctx :attribute :db/valueType :db/ident)
-        value (if (= valueType :db.type/ref) (:db/id (:value param-ctx)) (:value param-ctx))
-        on-change! #((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %))]
-    [:div.value
-     [input/edn-input* value on-change! props]
-     (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)
-     [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]]))

@@ -1,5 +1,6 @@
 (ns hypercrud.ui.code-editor
-  (:require [reagent.core :as reagent]))
+  (:require [reagent.core :as reagent]
+            [re-com.core :as re-com]))
 
 
 (defn sync-changed-props! [ref props]
@@ -44,3 +45,27 @@
        (let [[_ value change! props] (reagent/argv this)
              ref (aget this "codeMirrorRef")]
          (sync-changed-props! ref (assoc props :value (str value)))))}))
+
+(defn code-block [props value change!]
+  (let [props (if-not (nil? (:read-only props))
+                (-> props
+                    (dissoc :read-only)
+                    (assoc :readOnly (:read-only props)))
+                props)]
+    [code-editor* value change! props]))
+
+(defn code-inline-block [& args]
+  (let [showing? (reagent/atom false)]
+    (fn [props value change!]
+      [:div
+       [re-com/popover-anchor-wrapper
+        :showing? showing?
+        :position :below-center
+        :anchor [:a {:href "javascript:void 0;" :on-click #(swap! showing? not)} "edit"]
+        :popover [re-com/popover-content-wrapper
+                  :close-button? true
+                  :on-cancel #(reset! showing? false)
+                  :no-clip? true
+                  :width "600px"
+                  :body (code-block props value change!)]]
+       " " value])))
