@@ -20,13 +20,13 @@
   ; [com.hyperfiddle/util "0.0.1-SNAPSHOT"]
   :boot.lein/project-clj {:dependencies dependencies})
 
-(require '[adzerk.bootlaces :refer :all]
+(require '[adzerk.bootlaces :refer [push-snapshot]]
          'boot.lein)
 
 (def +version+ "0.2.0-SNAPSHOT")
-(bootlaces! +version+)
 
 (task-options!
+  push #(into % {:repo "deploy-clojars" :ensure-version +version+})
   pom {:project 'com.hyperfiddle/hypercrud.server
        :version +version+})
 

@@ -11,9 +11,7 @@ jobs:
       - restore_cache:
           key: project-{{checksum "boot.properties" }}-{{ checksum "build.boot" }}
 
-      - run:
-          name: build service
-          command: boot pom jar push-snapshot
+      - run: boot pom jar push-snapshot
 
       - save_cache:
           paths:
