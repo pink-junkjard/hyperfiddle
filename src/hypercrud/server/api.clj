@@ -176,7 +176,7 @@
                                           (mapv (fn [[id tempid]]
                                                   [(->DbId (str tempid) conn-id) (->DbId id conn-id)]))
                                           (into {})))
-            ;; first transact the root - there may be security changes or database/ident changes
+            ;; first transact the root - there may be security changes
             root-id->tempid (let [dtx (get dtx-groups db/root-id)
                                   {:keys [db-after tempids]} @(d/transact (database/get-root-conn) dtx)]
                               (database/build-id->tempid-lookup db-after tempids dtx))

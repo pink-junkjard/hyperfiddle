@@ -16,7 +16,7 @@
     ; todo this is no longer necessary, all databases are named by their ident now
     ; the same process to look up a non-root db is the same as to find the root, which can be done on demand
     (if-let [root-id (d/q '[:find ?db . :where
-                            [?a :db/ident :database/ident]
+                            [?a :db/ident :domain/ident]
                             [?db ?a "root"]]
                           (d/db (database/get-root-conn)))]
       (alter-var-root #'db/root-id (constantly root-id))

@@ -6,7 +6,7 @@
 
 
 (defn get-database-uri [root-db database-id]
-  (let [db-name (-> (d/entity root-db database-id) d/touch :database/ident)]
+  (let [db-name (-> (d/entity root-db database-id) d/touch :domain/ident)]
     ; todo https://tools.ietf.org/html/rfc3986#section-2
     (str db/transactor-uri db-name)))
 
