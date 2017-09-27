@@ -42,7 +42,8 @@
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many) isComponent) table-cell/ref-many
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) widget/edn-many
                  (and (= cardinality :db.cardinality/many)) widget/edn-many
-                 (and (= cardinality :db.cardinality/one)) widget/edn)]
+                 (and (= cardinality :db.cardinality/one)) widget/edn
+                 :else widget/edn)]
     (widget field anchors props param-ctx)))
 
 (defmethod auto-control/result :default [result ordered-fes anchors param-ctx]
