@@ -29,7 +29,7 @@
     :find-element/name "?e",
     :find-element/connection
     {:db/id (->DbId 17592186045910 17592186045422),
-     :database/ident "seattle"}}])
+     :domain/ident "seattle"}}])
 (def resultset2
   [{"?e" {:db/id (->DbId 17592186045443 17592186045910),
           :district/name "Southwest",

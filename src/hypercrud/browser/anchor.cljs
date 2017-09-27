@@ -40,8 +40,8 @@
          link-dbid (if-let [page (:anchor/link anchor)]
                      (either/right (:db/id page))
                      (either/left {:message "anchor has no link" :data {:anchor anchor}}))]
-    (return {:domain (-> anchor :anchor/link :hypercrud/owner :database/domain)
-             :project (-> anchor :anchor/link :hypercrud/owner :database/ident)
+    (return {:domain (-> anchor :anchor/link :hypercrud/owner :domain/ident)
+             :project (-> anchor :anchor/link :hypercrud/owner :domain/ident)
              :link-dbid link-dbid
              :query-params query-params})))
 
@@ -66,8 +66,7 @@
                 (either/right route)
                 (either/left {:message "missing query params" :data {:have have :missing #{:entity}}}))
       :blank (either/right route)
-      (either/left {:message "route has no link" :data {:route route}})
-      #_(either/right route) #_"wtf???  \"{:hypercrud/owner {:database/domain nil, :database/ident \"hyperfiddle\"}, :db/id #DbId[[:link/ident :hyperfiddle/new-page-popover] 17592186045422]}\"   ")))
+      (either/left {:message "route has no link" :data {:route route}}))))
 
 (defn get-or-apply' [expr & args]
   (if (fn? expr)

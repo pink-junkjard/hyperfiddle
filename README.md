@@ -215,10 +215,10 @@ Here's the raw edn app-value (truncated, here i don't show the whole thing):
 ```clojure
 {:page/name "Sample Blog"
  :page/query "[:find ?post :in $ :where [?post :post/title]]"
- :page/dbs [{:dbhole/name "$" :dbhole/value {:database/ident "samples-blog"}}]
+ :page/dbs [{:dbhole/name "$" :dbhole/value {:domain/ident "samples-blog"}}]
  :page/renderer "(fn [relations ordered-fes anchors param-ctx] ... )"
  :page/find-elements [{:find-element/name "?post"
-                       :find-element/connection {:database/ident "samples-blog"}
+                       :find-element/connection {:domain/ident "samples-blog"}
                        :find-element/form {:form/name "samples-blog - post"
                                            :form/field [{:field/prompt "title" :field/attribute {:attribute/ident :post/title :attribute/valueType #:db{:ident :db.type/string} :attribute/cardinality #:db{:ident :db.cardinality/one}}}
                                                         {:field/prompt "date" :field/attribute {:attribute/ident :post/date :attribute/valueType #:db{:ident :db.type/instant} :attribute/cardinality #:db{:ident :db.cardinality/one}}}
