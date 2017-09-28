@@ -1,5 +1,6 @@
 (ns hypercrud.browser.auto-form
-  (:require [hypercrud.types.DbId :refer [->DbId]]
+  (:require [hypercrud.client.core :as hc]
+            [hypercrud.types.DbId :refer [->DbId]]
             [hypercrud.util.core :as util]))
 
 
@@ -21,7 +22,7 @@
                                (-> fe :find-element/form :form/field)
                                (->> (get results-indexed-by-column (:find-element/name fe))
                                     (reduce (fn [acc v] (into acc (keys (dissoc v :db/id)))) #{})
-                                    (map (fn [ident] {:db/id (->DbId {:fe (-> fe :db/id :id) :a ident} nil)
+                                    (map (fn [ident] {:db/id (->DbId {:fe (-> fe :db/id :id) :a ident} hc/*root-conn-id*)
                                                       :field/attribute ident}))))
                       ; raw mode sort is by namespaced attribute, per find-element
                       sort-fn (if splat? :field/attribute :field/order)]

@@ -3,7 +3,6 @@
             [cats.monad.either :as either]
             [clojure.string :as string]
             [hypercrud.form.q-util :as q-util]
-            [hypercrud.types.DbId :refer [->DbId]]
             [hypercrud.ui.markdown :refer [markdown]]
             [hypercrud.ui.tooltip :as tooltip]
             [hypercrud.util.core :as util]))

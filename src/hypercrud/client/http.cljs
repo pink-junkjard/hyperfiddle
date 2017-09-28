@@ -1,8 +1,8 @@
 (ns hypercrud.client.http
   (:require [cljs.pprint :as pprint]
             [cljs.reader :as reader]
-            [goog.Uri]
             [hypercrud.client.internal :as internal]
+            [hypercrud.types.URI :refer [->URI]]
             [hypercrud.util.branch :as branch]
             [hypercrud.util.core :as util]
             [kvlt.core :as kvlt]
@@ -33,11 +33,6 @@
   (let [decoded-val (reader/read-string (:body resp))]
     (assoc resp :body decoded-val)))
 
-
-(defn resolve-relative-uri [^goog.Uri entry-uri ^goog.Uri relative-uri]
-  (-> (.clone entry-uri)
-      (.resolve relative-uri)))
-
 (defn v-not-nil? [[op e a v]]
   (not (and (or (= :db/add op) (= :db/retract op))
             (nil? v))))
@@ -50,7 +45,7 @@
                                                (let [tx (branch/db-content uri branch stage-val)]
                                                  [[uri (hash tx)] (filter v-not-nil? tx)]))))))
                          (into {}))]
-    (-> (kvlt/request! {:url (resolve-relative-uri entry-uri (goog.Uri. "hydrate"))
+    (-> (kvlt/request! {:url (str (.-uri-str entry-uri) "hydrate")
                         :content-type content-type-transit  ; helps debugging to view as edn
                         :accept content-type-transit        ; needs to be fast so transit
                         :method :post
@@ -62,9 +57,9 @@
   (let [htx-groups (->> (get htx-groups nil)
                         (util/map-values (partial filter v-not-nil?)))]
     (-> (kvlt/request!
-          {:url (resolve-relative-uri entry-uri (goog.Uri. "transact"))
-           :content-type content-type-edn
-           :accept content-type-edn
+          {:url (str (.-uri-str entry-uri) "transact")
+           :content-type content-type-transit
+           :accept content-type-transit
            :method :post
            :form htx-groups
            :as :auto})
