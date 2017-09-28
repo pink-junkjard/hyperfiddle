@@ -9,11 +9,11 @@
 (defn auto-entity-dbid-from-stage [ctx]
   ; This returns a new value each time the transaction changes - can't call it again later.
   ; So tx-fns must inspect the modal-route, they can't re-create the dbid.
-  (let [conn-id (:conn-id ctx)
-        branch-val @(reagent/cursor (-> ctx :peer .-state-atom) [:stage (:branch ctx) conn-id])
+  (let [uri (:uri ctx)
+        branch-val @(reagent/cursor (-> ctx :peer .-state-atom) [:stage (:branch ctx) uri])
         id (-> (or branch-val "nil stage")
                hash js/Math.abs - str)]
-    (->DbId id conn-id)))
+    (->DbId id uri)))
 
 ; todo there are collisions when two anchors share the same 'location'
 (defn deterministic-ident [fe e a v]
@@ -37,7 +37,7 @@
             (-> ctx :entity)
             (-> ctx :attribute)
             (-> ctx :value))
-          (-> ctx :conn-id)))
+          (-> ctx :uri)))
 
 (def auto-formula-lookup
   (let [fe-no-create (->> (template/load-resource "auto-formula/fe-no-create.vedn")

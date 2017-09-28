@@ -126,12 +126,12 @@
        (mapcat entity->statements)))
 
 
-(defn clone-id-factory [conn-id root-dbid]
+(defn clone-id-factory [uri root-dbid]
   (let [id-map (atom {})
         replace-id! (fn [dbid]
                       (let [new-dbid (get @id-map dbid)]
                         (if (nil? new-dbid)
-                          (let [new-dbid (->DbId (-> (str (:id root-dbid) "." (count (keys @id-map))) hash js/Math.abs - str) conn-id)]
+                          (let [new-dbid (->DbId (-> (str (:id root-dbid) "." (count (keys @id-map))) hash js/Math.abs - str) uri)]
                             (swap! id-map assoc dbid new-dbid)
                             new-dbid)
                           new-dbid)))
@@ -140,8 +140,8 @@
     [replace-id! fix-seen-id!]))
 
 
-(defn replace-ids-in-tx [schema conn-id skip? temp-id! tx]
-  (let [[replace-id!] (clone-id-factory conn-id temp-id!)]
+(defn replace-ids-in-tx [schema uri skip? temp-id! tx]
+  (let [[replace-id!] (clone-id-factory uri temp-id!)]
     (mapv (fn [[op e a v]]
             (let [new-e (replace-id! e)
                   valueType (get-in schema [a :db/valueType])
@@ -179,7 +179,7 @@
 ; rename: clone-pulled-tree
 ; Works by making a copy of the entity with tempids instead of dbids
 (defn clone-entity [schema entity new-dbid]
-  (let [[replace-id! fix-seen-id!] (clone-id-factory (-> entity :db/id :conn-id) new-dbid) ; ew
+  (let [[replace-id! fix-seen-id!] (clone-id-factory (-> entity :db/id :uri) new-dbid) ; ew
         entity' (->> (dissoc entity :db/id)
                      ; Walk twice because of cycles.
                      (walk-entity schema #(util/update-existing % :db/id replace-id!))
@@ -190,21 +190,21 @@
 (defn export-link [schema link]
   (assert false "todo redo this fn")
   #_(let [tempid! (let [temp-id-atom (atom 0)]
-                  (fn [conn-id]
-                    (->DbId (swap! temp-id-atom dec) conn-id)))
-        successors (fn [node]
-                     (pulled-tree-children schema node))
-        filter-pred (fn [node predecessor depth]
-                      ;  also may need (not (:db/ident node)) - attrs ref datomic built-ins
-                      (not (:db/ident node)))]
-    (->> (loom/bf-traverse successors link :when filter-pred)
-         (mapcat (fn [entity]
-                   (if-let [attr (:field/attribute entity)]
-                     (let [e (-> (into {} (seq entity))
-                                 (dissoc :field/attribute))]
-                       (conj (entity->statements e)
-                             [:db/add (:db/id e) :field/attribute attr]))
-                     (entity->statements entity))))
-         (replace-ids-in-tx schema (-> link :db/id :conn-id)
-                            #(contains? #{:field/attribute} %) ; preserve refs to attributes
-                            tempid!))))
+                    (fn [uri]
+                      (->DbId (swap! temp-id-atom dec) uri)))
+          successors (fn [node]
+                       (pulled-tree-children schema node))
+          filter-pred (fn [node predecessor depth]
+                        ;  also may need (not (:db/ident node)) - attrs ref datomic built-ins
+                        (not (:db/ident node)))]
+      (->> (loom/bf-traverse successors link :when filter-pred)
+           (mapcat (fn [entity]
+                     (if-let [attr (:field/attribute entity)]
+                       (let [e (-> (into {} (seq entity))
+                                   (dissoc :field/attribute))]
+                         (conj (entity->statements e)
+                               [:db/add (:db/id e) :field/attribute attr]))
+                       (entity->statements entity))))
+           (replace-ids-in-tx schema (-> link :db/id :uri)
+                              #(contains? #{:field/attribute} %) ; preserve refs to attributes
+                              tempid!))))

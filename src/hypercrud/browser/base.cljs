@@ -21,14 +21,12 @@
      :link-query/value
      :link-query/single-result-as-entity?
      :request/type
-     {:link-query/dbhole ['* {:dbhole/value ['*]}]
-      ; get all our forms for this link
-      :link-query/find-element ['* {:find-element/form form-pull-exp
-                                    :find-element/connection [:db/id :domain/ident]}]
+     ; get all our forms for this link
+     {:link-query/find-element ['* {:find-element/form form-pull-exp}]
       :link/anchor ['*
                     {:anchor/link ['*                       ; hydrate the whole link for validating the anchor by query params
                                    {:hypercrud/owner ['*]}] ; need the link's owner to render the href to it
-                     :anchor/find-element [:db/id :find-element/name :find-element/connection]}]
+                     :anchor/find-element [:db/id :find-element/name :find-element/uri]}]
       :hypercrud/owner ['*]}]))
 
 (defn meta-request-for-link [link-dbid param-ctx]
@@ -41,14 +39,13 @@
     :query
     (mlet [q (hc-string/memoized-safe-read-string (:link-query/value link))
            query-holes (try-either (q-util/parse-holes q))]
-      (let [params-map (merge (q-util/build-dbhole-lookup link param-ctx) query-params)
+      (let [params-map (merge (q-util/build-dbhole-lookup param-ctx) query-params)
             params (->> query-holes (mapv (juxt identity #(get params-map %))) (into {}))
             pull-exp (->> ordered-fes
                           (mapv (juxt :find-element/name
-                                      (fn [fe]
-                                        (let [conn-id (-> fe :find-element/connection :db/id :id)]
-                                          [(hc/db (:peer param-ctx) conn-id (:branch param-ctx))
-                                           (q-util/form-pull-exp (:find-element/form fe))]))))
+                                      (fn [{:keys [:find-element/form :find-element/uri]}]
+                                        [(hc/db (:peer param-ctx) uri (:branch param-ctx))
+                                         (q-util/form-pull-exp form)])))
                           (into {}))
             ; todo validation of conns for pull-exp
             missing (->> params (filter (comp nil? second)) (mapv first))]
@@ -58,16 +55,16 @@
 
     :entity
     (let [fe (first (filter #(= (:find-element/name %) "entity") ordered-fes))
-          conn-id (-> fe :find-element/connection :db/id :id)]
+          uri (:find-element/uri fe)]
       (cond
-        (nil? conn-id) (either/left {:message "no connection" :data {:find-element fe}})
+        (nil? uri) (either/left {:message "no connection" :data {:find-element fe}})
         (nil? (:entity query-params)) (either/left {:message "missing param" :data {:params query-params
                                                                                     :missing #{:entity}}})
         :else (either/right
                 (->EntityRequest
                   (:entity query-params)
                   (:a query-params)
-                  (hc/db (:peer param-ctx) conn-id (:branch param-ctx))
+                  (hc/db (:peer param-ctx) uri (:branch param-ctx))
                   (q-util/form-pull-exp (:find-element/form fe))))))
 
     :blank (either/right nil)

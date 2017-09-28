@@ -4,11 +4,6 @@
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hypercrud.util.core :as util]))
 
-(defn fe->db [fe param-ctx]
-  (let [fe-conn (:find-element/connection fe)]
-    (let [conn-id (-> fe-conn :db/id :id)
-          branch (:branch param-ctx)]
-      (hc/db (:peer param-ctx) conn-id branch))))
 
 (defn hc-attr-request [param-ctx]
   (let [dbval (hc/db (:peer param-ctx) hc/*root-conn-id* (:branch param-ctx))]
@@ -28,14 +23,15 @@
                                     :db/cardinality [:db/id :db/ident]
                                     :db/unique [:db/id :db/ident]}]]}))
 
-(defn schema-requests-for-link [ordered-fes param-ctx]
+(defn schema-requests-for-link [ordered-fes ctx]
   (->> ordered-fes
-       (map #(fe->db % param-ctx))
-       (map schema-request)
-       (concat [(hc-attr-request param-ctx)])))
+       (map (fn [fe]
+              (->> (hc/db (:peer ctx) (:find-element/uri fe) (:branch ctx))
+                   (schema-request))))
+       (concat [(hc-attr-request ctx)])))
 
-(defn hydrate-schema [ordered-fes param-ctx]
-  (-> (hc/hydrate (:peer param-ctx) (hc-attr-request param-ctx))
+(defn hydrate-schema [ordered-fes ctx]
+  (-> (hc/hydrate (:peer ctx) (hc-attr-request ctx))
       (cats/bind
         (fn [root-data]
           (let [indexed-root (->> root-data
@@ -44,9 +40,9 @@
                                   (util/map-values #(dissoc % :attribute/ident :db/id)))]
             (->> ordered-fes
                  (mapv (fn [fe]
-                         (->> (fe->db fe param-ctx)
+                         (->> (hc/db (:peer ctx) (:find-element/uri fe) (:branch ctx))
                               (schema-request)
-                              (hc/hydrate (:peer param-ctx))
+                              (hc/hydrate (:peer ctx))
                               (cats/fmap (fn [schema]
                                            [(:find-element/name fe)
                                             (->> schema

@@ -24,8 +24,8 @@
       ; todo clean up other state values: remove the response, old route, etc
       [:set-error e])))
 
-(defn with [branch conn-id tx]
-  (partial hydrating-action {:on-start (constantly [[:with branch conn-id tx]])}))
+(defn with [branch uri tx]
+  (partial hydrating-action {:on-start (constantly [[:with branch uri tx]])}))
 
 (defn open-popover [popover-id]
   (partial hydrating-action {:on-start (constantly [[:open-popover popover-id]])}))

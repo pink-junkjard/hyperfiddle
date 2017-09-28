@@ -60,7 +60,7 @@
                      (if sortable? "sortable")
                      (some-> sort-direction name)]]
     [:th {:class (string/join " " css-classes)
-          :style {:background-color (connection-color/connection-color (or (:color ctx) (:conn-id ctx) #_"hack for top tables"))}
+          :style {:background-color (connection-color/connection-color (or (:color ctx) (:uri ctx) #_"hack for top tables"))}
           :on-click on-click}
      [:label [form-util/field-label field ctx]]
      [col-head-anchors attr-label-anchors ctx]]))

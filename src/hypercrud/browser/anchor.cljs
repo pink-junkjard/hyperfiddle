@@ -40,7 +40,7 @@
          link-dbid (if-let [page (:anchor/link anchor)]
                      (either/right (:db/id page))
                      (either/left {:message "anchor has no link" :data {:anchor anchor}}))]
-    (return {:domain (-> anchor :anchor/link :hypercrud/owner :domain/ident)
+    (return {:domain nil                                    ; changing this breaks ALL urls
              :project (-> anchor :anchor/link :hypercrud/owner :domain/ident)
              :link-dbid link-dbid
              :query-params query-params})))

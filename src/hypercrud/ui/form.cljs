@@ -33,7 +33,7 @@
 (defn new-field [entity param-ctx]
   (let [attr-ident (r/atom nil)]
     (fn [entity param-ctx]
-      [:div.field {:style {:border-color (connection-color/connection-color (-> entity :db/id :conn-id))}}
+      [:div.field {:style {:border-color (connection-color/connection-color (-> entity :db/id :uri))}}
        [:div.hc-label
         [:label
          (let [on-change! #(reset! attr-ident %)]

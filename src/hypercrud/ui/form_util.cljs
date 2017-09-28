@@ -2,7 +2,6 @@
   (:require [cats.core :as cats :refer [mlet]]
             [cats.monad.either :as either]
             [clojure.string :as string]
-            [hypercrud.client.core :as hc]
             [hypercrud.form.q-util :as q-util]
             [hypercrud.types.DbId :refer [->DbId]]
             [hypercrud.ui.markdown :refer [markdown]]
@@ -35,14 +34,12 @@
                                                (filter #(= (:find-element/name %) "entity"))
                                                first)
                                           {:find-element/name "entity"})])
-               (either/right []))
-         :let [fill-fe-conn-id (fn [fe]
-                                 (let [conn-dbid (->DbId (q-util/fe-conn-id query-params fe)
-                                                         ; this conn-id doesn't matter and will be removed anyway
-                                                         hc/*root-conn-id*)]
-                                   (assoc-in fe [:find-element/connection :db/id] conn-dbid)))]]
+               (either/right []))]
     (->> fes
-         (map fill-fe-conn-id)
+         (map (fn [fe]
+                (update fe :find-element/uri #(or (get query-params (:find-element/name fe))
+                                                  %
+                                                  (get-in param-ctx [:domain-dbs "$"])))))
          (map #(strip-form-in-raw-mode % param-ctx))
          (cats/return))))
 

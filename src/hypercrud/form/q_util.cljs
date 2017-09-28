@@ -37,17 +37,10 @@
       (cats/return q)
       (either/left {:message (str "Invalid query '" (pr-str q) "', only vectors supported")}))))
 
-(defn build-dbhole-lookup [link param-ctx]
-  (->> (:link-query/dbhole link)
-       (map (fn [{:keys [:dbhole/name :dbhole/value]}]
-              (if-not (or (empty? name) (nil? value))
-                ; transform project-id into conn-id
-                [name (hc/db (:peer param-ctx) (-> value :db/id :id) (:branch param-ctx))])))
-       (into {})))
-
-(defn fe-conn-id [query-params fe]
-  (or (get query-params (:find-element/name fe))
-      (-> fe :find-element/connection :db/id :id)))
+(defn build-dbhole-lookup [param-ctx]
+  (->> (:domain-dbs param-ctx)
+       (util/map-values (fn [uri]
+                          (hc/db (:peer param-ctx) uri (:branch param-ctx))))))
 
 (defn form-pull-exp [form]
   (if form

@@ -34,8 +34,8 @@
       (process-result result request)
       (either/left {:message "Loading" :data {:request request}})))
 
-  (db [this conn-id branch]
-    (->DbVal conn-id (hash (branch/db-content conn-id branch @(reagent/cursor state-atom [:stage])))))
+  (db [this uri branch]
+    (->DbVal uri (hash (branch/db-content uri branch @(reagent/cursor state-atom [:stage])))))
 
   (hydrate-one! [this request]
     (let [{:keys [entry-uri stage]} @state-atom]

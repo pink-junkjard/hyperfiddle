@@ -46,9 +46,9 @@
   (let [branch-vals (->> stage-val
                          (mapcat (fn [[branch branch-content]]
                                    (->> branch-content
-                                        (map (fn [[conn-id tx]]
-                                               (let [tx (branch/db-content conn-id branch stage-val)]
-                                                 [[conn-id (hash tx)] (filter v-not-nil? tx)]))))))
+                                        (map (fn [[uri tx]]
+                                               (let [tx (branch/db-content uri branch stage-val)]
+                                                 [[uri (hash tx)] (filter v-not-nil? tx)]))))))
                          (into {}))]
     (-> (kvlt/request! {:url (resolve-relative-uri entry-uri (goog.Uri. "hydrate"))
                         :content-type content-type-transit  ; helps debugging to view as edn

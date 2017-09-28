@@ -9,36 +9,35 @@
 
 (defn link-system-edit [owner fe]                           ; these need to be thick/hydrated params bc we are manufacturing a pulled tree here.
   {:pre [fe]}
-  (let [conn (:find-element/connection fe)]
-    {:db/id (->DbId {:ident :system-edit
-                     :owner (-> owner :db/id :id)
-                     :fe (-> fe :db/id :id)}
-                    (-> conn :db/id :id))                   ; this should be root-conn, bug
-     ;:hypercrud/owner owner
-     :link/name (str "system-" (:find-element/name fe))
-     :request/type :entity
-     :link-query/find-element [{:find-element/name "entity"
-                                :find-element/connection conn}]}))
+  {:db/id (->DbId {:ident :system-edit
+                   :owner (-> owner :db/id :id)
+                   :fe (-> fe :db/id :id)}
+                  hc/*root-conn-id*)
+   ;:hypercrud/owner owner
+   :link/name (str "system-" (:find-element/name fe))
+   :request/type :entity
+   :link-query/find-element [{:find-element/name "entity"
+                              :find-element/uri (:find-element/uri fe)}]})
 
 (defn link-system-edit-attr [owner fe a]
   {:pre [fe a]}
-  (let [conn (:find-element/connection fe)]
-    {:db/id (->DbId {:ident :system-edit-attr
-                     :owner (-> owner :db/id :id)
-                     :fe (-> fe :db/id :id)
-                     :a a}
-                    (-> conn :db/id :id))
-     :link/name (str "system-" (:find-element/name fe) "-" a)
-     ;:hypercrud/owner owner
-     :request/type :entity
-     :link-query/find-element [{:find-element/name "entity"
-                                :find-element/connection conn}]}))
+  {:db/id (->DbId {:ident :system-edit-attr
+                   :owner (-> owner :db/id :id)
+                   :fe (-> fe :db/id :id)
+                   :a a}
+                  hc/*root-conn-id*)
+   :link/name (str "system-" (:find-element/name fe) "-" a)
+   ;:hypercrud/owner owner
+   :request/type :entity
+   :link-query/find-element [{:find-element/name "entity"
+                              :find-element/uri (:find-element/uri fe)}]})
 
 (defn link-blank-system-remove [owner fe a]
   {:pre []}
   {:db/id (->DbId {:ident :sys-remove
                    :fe (-> fe :db/id :id)
-                   :a a} nil)
+                   :a a}
+                  hc/*root-conn-id*)
    :link/name "sys-remove"
    ;:hypercrud/owner owner
    :request/type :blank
@@ -53,8 +52,7 @@
   ; need to just hydrate what we need.
   (let [dbval (hc/db (:peer param-ctx) hc/*root-conn-id* (:branch param-ctx))]
     [(->EntityRequest (->DbId (:owner system-link-idmap) hc/*root-conn-id*) nil dbval ['*])
-     (if-let [fe (:fe system-link-idmap)] (->EntityRequest (->DbId fe hc/*root-conn-id*) nil dbval [:db/id :find-element/name
-                                                                                                    {:find-element/connection ['*]}]))]))
+     (if-let [fe (:fe system-link-idmap)] (->EntityRequest (->DbId fe hc/*root-conn-id*) nil dbval [:db/id :find-element/name :find-element/uri]))]))
 
 (defn hydrate-system-link [system-link-idmap [owner fe] param-ctx]
   (let [owner-id (:owner system-link-idmap)

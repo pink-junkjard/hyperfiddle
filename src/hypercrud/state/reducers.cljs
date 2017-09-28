@@ -16,13 +16,13 @@
 (defn stage-reducer [stage action & args]
   (let [discard (fn [stage branch]
                   (dissoc stage branch))
-        with (fn [stage branch conn-id tx]
-               (update-in stage [branch conn-id] tx/into-tx tx))
+        with (fn [stage branch uri tx]
+               (update-in stage [branch uri] tx/into-tx tx))
         clean (fn [stage]
                 (->> stage
                      (util/map-values (fn [multi-color-tx]
                                         (->> multi-color-tx
-                                             (remove (fn [[conn-id tx]] (nil? tx)))
+                                             (remove (fn [[uri tx]] (nil? tx)))
                                              (into {}))))
                      (remove (fn [[branch multi-color-tx]] (empty? multi-color-tx)))
                      (into {})))]
@@ -34,15 +34,15 @@
                      (discard branch)
                      clean))
 
-      :with (let [[branch conn-id tx] args]
+      :with (let [[branch uri tx] args]
               (-> stage
-                  (with branch conn-id tx)
+                  (with branch uri tx)
                   clean))
 
       :merge (let [[branch] args
                    parent-branch (branch/decode-parent-branch branch)]
-               (-> (reduce (fn [stage [conn-id tx]]
-                             (with stage parent-branch conn-id tx))
+               (-> (reduce (fn [stage [uri tx]]
+                             (with stage parent-branch uri tx))
                            stage
                            (get stage branch))
                    (discard branch)

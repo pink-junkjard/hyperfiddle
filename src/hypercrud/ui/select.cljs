@@ -59,7 +59,7 @@
                          :user-renderer renderer)]))
 
 (let [on-change (fn [param-ctx id]
-                  (let [dbid (->DbId id (:conn-id param-ctx))]
+                  (let [dbid (->DbId id (:uri param-ctx))]
                     ((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) dbid))))]
   (defn select* [value options-anchor props param-ctx]
     ; value :: {:db/id #DbId[17592186045891 17592186045422]}
@@ -71,7 +71,7 @@
                  ;; reconstruct the typed value
                  :on-change (reagent/partial on-change param-ctx)
                  :disabled (:read-only props)}
-          props (if (#{:find-element/connection :dbhole/value :hypercrud/owner} (-> param-ctx :attribute :db/ident)) ; lol hack
+          props (if (#{:dbhole/value :hypercrud/owner} (-> param-ctx :attribute :db/ident)) ; lol hack
                   (assoc props :style {:background-color (connection-color/connection-color (-> value :db/id :id))})
                   props)]
       [anchor->select props options-anchor param-ctx])))

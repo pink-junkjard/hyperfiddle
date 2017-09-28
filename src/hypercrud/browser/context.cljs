@@ -11,7 +11,7 @@
           :keep-disabled-anchors?
           :route :relation
           :schemas
-          :conn-id :find-element :schema
+          :uri :find-element :schema
           :entity :attribute :value
           :layout :field))
 
@@ -31,17 +31,17 @@
 (defn relation [param-ctx relation]
   (assoc param-ctx :relation relation))
 
-(defn user-with [ctx branch conn-id tx]
+(defn user-with [ctx branch uri tx]
   ; todo custom user-dispatch with all the tx-fns as reducers
-  ((:dispatch! ctx) (actions/with branch conn-id tx)))
+  ((:dispatch! ctx) (actions/with branch uri tx)))
 
 (defn find-element [param-ctx fe]
-  (let [conn-id (-> fe :find-element/connection :db/id :id)
+  (let [uri (:find-element/uri fe)
         branch (:branch param-ctx)]
-    (assoc param-ctx :conn-id conn-id
+    (assoc param-ctx :uri uri
                      :find-element fe
                      :schema (get-in param-ctx [:schemas (:find-element/name fe)])
-                     :user-with! (reagent/partial user-with param-ctx branch conn-id))))
+                     :user-with! (reagent/partial user-with param-ctx branch uri))))
 
 (defn entity [param-ctx entity]
   (assoc param-ctx :color (if-let [color-fn (:color-fn param-ctx)]
