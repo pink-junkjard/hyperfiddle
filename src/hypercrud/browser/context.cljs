@@ -44,9 +44,7 @@
                      :user-with! (reagent/partial user-with param-ctx branch uri))))
 
 (defn entity [param-ctx entity]
-  (assoc param-ctx :color (if-let [color-fn (:color-fn param-ctx)]
-                            (color-fn entity param-ctx))
-                   :owner (if-let [owner-fn (:owner-fn param-ctx)]
+  (assoc param-ctx :owner (if-let [owner-fn (:owner-fn param-ctx)]
                             (owner-fn entity param-ctx))
                    :entity entity))
 

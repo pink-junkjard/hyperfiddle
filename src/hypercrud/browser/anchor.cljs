@@ -94,7 +94,6 @@
       user-props                                            ; e.g. disabled, tooltip, style, class - anything, it gets passed to a renderer maybe user renderer
       ; doesn't handle tx-fn - meant for the self-link. Weird and prob bad.
       {:route (-> unvalidated-route' (cats/mplus (either/right nil)) (cats/extract))
-       :style {:color (connection-color/connection-color (-> link :hypercrud/owner :db/id :id))}
        :tooltip (if-not (empty? errors)
                   [:warning (pprint-str errors)]
                   (case @(:display-mode param-ctx)
