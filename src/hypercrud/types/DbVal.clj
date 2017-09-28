@@ -2,16 +2,16 @@
   (:import [com.cognitect.transit WriteHandler ReadHandler]
            [clojure.lang ILookup]))
 
-(deftype DbVal [conn-id branch]
+(deftype DbVal [uri branch]
   ILookup
   (valAt [o k] (get o k nil))
   (valAt [o k not-found] (case k
-                           :conn-id (.conn-id o)
+                           :uri (.uri o)
                            :branch (.branch o)
                            not-found)))
 
 (defmethod print-method DbVal [o ^java.io.Writer w]
-  (.write w (str "#DbVal" (pr-str [(.conn-id o) (.branch o)]))))
+  (.write w (str "#DbVal" (pr-str [(.uri o) (.branch o)]))))
 
 (defmethod print-dup DbVal [o w]
   (print-method o w))
@@ -21,7 +21,7 @@
 (deftype DbValTransitHandler []
   WriteHandler
   (tag [_ v] "DbVal")
-  (rep [_ v] [(.conn-id v) (.branch v)])
+  (rep [_ v] [(.uri v) (.branch v)])
   (stringRep [_ v] nil)
   (getVerboseHandler [_] nil))
 

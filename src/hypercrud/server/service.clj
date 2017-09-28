@@ -1,6 +1,5 @@
 (ns hypercrud.server.service
   (:require [hypercrud.server.api :as api]
-            [hypercrud.server.db-root :as db]
             [hypercrud.server.internal :as internal]
             [hypercrud.server.util.http :as http]
             [io.pedestal.http.body-params :as body-params]
@@ -14,40 +13,28 @@
 (defn http-index [req]
   (ring-resp/response "Hypercrud Server Running!"))
 
-(defn http-hydrate
-  ([req]
-   (http-hydrate req (constantly true) (constantly true)))
-  ([req root-write-sec root-read-sec]
-   (try
-     (let [{:keys [query-params body-params]} req
-           root-t (if (:t query-params) (Long/parseLong (:t query-params)))
-           {hctx-groups :staged-tx request :request} body-params]
-       (ring-resp/response
-         (wrap-hypercrud
-           (api/hydrate root-read-sec root-write-sec hctx-groups request root-t))))
-     (catch Exception e
-       (println e)
-       {:status 500 :headers {} :body (str e)}))))
+(defn http-hydrate [req]
+  (try
+    (let [{:keys [query-params body-params]} req
+          root-t (if (:t query-params) (Long/parseLong (:t query-params)))
+          {hctx-groups :staged-tx request :request} body-params]
+      (ring-resp/response
+        (wrap-hypercrud
+          (api/hydrate hctx-groups request root-t))))
+    (catch Exception e
+      (println e)
+      {:status 500 :headers {} :body (str e)})))
 
-(defn http-transact!
-  ([req]
-   (http-transact! req (constantly true)))
-  ([req root-write-sec]
-   (try
-     (let [{:keys [body-params]} req
-           htx body-params]
-       (ring-resp/response
-         (wrap-hypercrud
-           (api/transact! root-write-sec htx))))
-     (catch Exception e
-       (println e)
-       {:status 500 :headers {} :body (str e)}))))
-
-(defn http-root-latest [req]
-  (ring-resp/response (api/root-latest)))
-
-(defn http-root-conn-id [req]
-  (ring-resp/response db/root-id))
+(defn http-transact! [req]
+  (try
+    (let [{:keys [body-params]} req
+          htx body-params]
+      (ring-resp/response
+        (wrap-hypercrud
+          (api/transact! htx))))
+    (catch Exception e
+      (println e)
+      {:status 500 :headers {} :body (str e)})))
 
 (def routes
   (expand-routes
@@ -59,6 +46,4 @@
                                   http/auto-content-type]
         ["/hydrate" {:post [:hydrate http-hydrate]}]
         ["/transact" {:post [:transact http-transact!]}]
-        ["/latest" {:get [:latest http-root-latest]}]
-        ["/root-conn-id" {:get [:root-conn-id http-root-conn-id]}]
         ]]]))

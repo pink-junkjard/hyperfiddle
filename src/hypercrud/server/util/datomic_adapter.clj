@@ -41,12 +41,12 @@
     :db.fn/retractEntity [op (.id e)]
     (throw (new Error (str "Unable to process op: " op)))))
 
-;(defn datomic-map-to-hc-stmt [maps conn-id]
+;(defn datomic-map-to-hc-stmt [maps uri]
 ;  (->> maps
 ;       (mapcat (fn [m]
-;                 (let [dbid (->DbId (-> m :db/id .idx) conn-id)
+;                 (let [dbid (->DbId (-> m :db/id .idx) uri)
 ;                       ref->v (fn [v] (condp = (class v)
-;                                        datomic.db.DbId (->DbId (.idx v) conn-id)
+;                                        datomic.db.DbId (->DbId (.idx v) uri)
 ;                                        v))]
 ;                   (->> (seq m)
 ;                        (filter (fn [[k v]] (not= :db/id k)))
