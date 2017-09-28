@@ -109,8 +109,7 @@
       (or (get-in @db-with-lookup [uri branch])
           (let [dtx (->> (get hctx-groups [uri branch])
                          (mapv datomic-adapter/stmt-dbid->id))
-                _ (println (.getValue uri))
-                db (d/db (d/connect uri))
+                db (d/db (d/connect (str uri)))
                 ; is it a history query? (let [db (if (:history? dbval) (d/history db) db)])
                 _ (let [validate-tx (constantly true)]
                     ; todo look up tx validator
@@ -136,7 +135,7 @@
 (defn transact! [htx]
   (let [dtx-groups (doall (util/map-values #(mapv datomic-adapter/stmt-dbid->id %) htx))
         valid? (every? (fn [[uri tx]]
-                         (let [db (d/db (d/connect uri))
+                         (let [db (d/db (d/connect (str uri)))
                                ; todo look up tx validator
                                validate-tx (constantly true)]
                            (validate-tx db tx)))
@@ -150,7 +149,7 @@
                                           (into {})))
             hc-tempids (->> dtx-groups
                             (mapv (fn [[uri dtx]]
-                                    (let [{:keys [db-after tempids]} @(d/transact (d/connect uri) dtx)]
+                                    (let [{:keys [db-after tempids]} @(d/transact (d/connect (str uri)) dtx)]
                                       (->> (build-id->tempid-lookup db-after tempids dtx)
                                            (build-hc-tempid-lookup uri)))))
                             (apply merge))]
