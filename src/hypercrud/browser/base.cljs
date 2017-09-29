@@ -26,7 +26,7 @@
       :link/anchor ['*
                     {:anchor/link ['*                       ; hydrate the whole link for validating the anchor by query params
                                    {:hypercrud/owner ['*]}] ; need the link's owner to render the href to it
-                     :anchor/find-element [:db/id :find-element/name :find-element/uri]}]
+                     :anchor/find-element [:db/id :find-element/name :find-element/connection]}]
       :hypercrud/owner ['*]}]))
 
 (defn meta-request-for-link [link-dbid param-ctx]
@@ -43,8 +43,8 @@
             params (->> query-holes (mapv (juxt identity #(get params-map %))) (into {}))
             pull-exp (->> ordered-fes
                           (mapv (juxt :find-element/name
-                                      (fn [{:keys [:find-element/form :find-element/uri]}]
-                                        [(hc/db (:peer param-ctx) uri (:branch param-ctx))
+                                      (fn [{:keys [:find-element/form :find-element/connection]}]
+                                        [(hc/db (:peer param-ctx) (:dbhole/uri connection) (:branch param-ctx))
                                          (q-util/form-pull-exp form)])))
                           (into {}))
             ; todo validation of conns for pull-exp
@@ -55,7 +55,7 @@
 
     :entity
     (let [fe (first (filter #(= (:find-element/name %) "entity") ordered-fes))
-          uri (:find-element/uri fe)]
+          uri (get-in fe [:find-element/connection :dbhole/uri])]
       (cond
         (nil? uri) (either/left {:message "no connection" :data {:find-element fe}})
         (nil? (:entity query-params)) (either/left {:message "missing param" :data {:params query-params

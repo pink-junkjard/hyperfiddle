@@ -40,6 +40,7 @@
          link-dbid (if-let [page (:anchor/link anchor)]
                      (either/right (:db/id page))
                      (either/left {:message "anchor has no link" :data {:anchor anchor}}))]
+    ; should get domain from ctx but can't because that will break topnav links which cross domain etc
     (return {:project (-> anchor :anchor/link :hypercrud/owner :domain/ident)
              :link-dbid link-dbid
              :query-params query-params})))

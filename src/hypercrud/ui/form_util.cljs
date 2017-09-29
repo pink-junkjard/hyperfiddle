@@ -36,9 +36,11 @@
                (either/right []))]
     (->> fes
          (map (fn [fe]
-                (update fe :find-element/uri #(or (get query-params (:find-element/name fe))
-                                                  %
-                                                  (get-in param-ctx [:domain-dbs "$"])))))
+                (update fe :find-element/connection
+                        (fn [conn]
+                          {:dbhole/uri (or (get query-params (:find-element/name fe))
+                                           (:dbhole/uri conn)
+                                           (get-in param-ctx [:domain-dbs "$"]))}))))
          (map #(strip-form-in-raw-mode % param-ctx))
          (cats/return))))
 

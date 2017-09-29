@@ -36,7 +36,7 @@
   ((:dispatch! ctx) (actions/with branch uri tx)))
 
 (defn find-element [param-ctx fe]
-  (let [uri (:find-element/uri fe)
+  (let [uri (get-in fe [:find-element/connection :dbhole/uri])
         branch (:branch param-ctx)]
     (assoc param-ctx :uri uri
                      :find-element fe

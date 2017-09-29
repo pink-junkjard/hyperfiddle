@@ -71,11 +71,7 @@
 
 (defn hydrate-link [link-dbid param-ctx]
   (if (auto-link/system-link? link-dbid)
-    (let [system-link-idmap (-> link-dbid :id)]
-      (->> (auto-link/request-for-system-link system-link-idmap param-ctx)
-           (mapv #(if % (hc/hydrate (:peer param-ctx) %) (either/right nil)))
-           (cats/sequence)
-           (cats/fmap #(auto-link/hydrate-system-link system-link-idmap % param-ctx))))
+    (either/right (auto-link/hydrate-system-link (:id link-dbid) param-ctx))
     (hc/hydrate (:peer param-ctx) (base/meta-request-for-link link-dbid param-ctx))))
 
 (defn ui-from-route' [{query-params :query-params :as route} param-ctx]

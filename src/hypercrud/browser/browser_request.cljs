@@ -104,17 +104,8 @@
 (defn request-from-route [route param-ctx]
   (let [param-ctx (context/route param-ctx route)]
     (if (auto-link/system-link? (:link-dbid route))
-      (let [system-link-idmap (-> route :link-dbid :id)
-            system-link-requests (auto-link/request-for-system-link system-link-idmap param-ctx)]
-        (concat
-          (remove nil? system-link-requests)
-          (-> (mapv #(if % (hc/hydrate (:peer param-ctx) %) (either/right nil)) system-link-requests)
-              (cats/sequence)
-              (either/branch
-                (constantly nil)
-                (fn [system-link-deps]
-                  (let [link (auto-link/hydrate-system-link system-link-idmap system-link-deps param-ctx)]
-                    (requests-for-link link (:query-params route) param-ctx)))))))
+      (let [link (auto-link/hydrate-system-link (-> route :link-dbid :id) param-ctx)]
+        (requests-for-link link (:query-params route) param-ctx))
       (let [meta-link-request (base/meta-request-for-link (:link-dbid route) param-ctx)]
         (concat [meta-link-request]
                 (-> (hc/hydrate (:peer param-ctx) meta-link-request)
