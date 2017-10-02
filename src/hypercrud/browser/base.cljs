@@ -14,23 +14,21 @@
 (def never-read-only (constantly false))
 
 (def meta-pull-exp-for-link
-  (let [form-pull-exp ['*
-                       {:hypercrud/owner ['*]
-                        :form/field ['*]}]]
-    ['*
-     :link-query/value
-     :link-query/single-result-as-entity?
-     :request/type
-     ; get all our forms for this link
-     {:link-query/find-element [:db/id
-                                :find-element/name
-                                :find-element/connection
-                                {:find-element/form form-pull-exp}]
-      :link/anchor ['*
-                    {:anchor/link ['*                       ; hydrate the whole link for validating the anchor by query params
-                                   {:hypercrud/owner ['*]}] ; need the link's owner to render the href to it
-                     :anchor/find-element [:db/id :find-element/name]}]
-      :hypercrud/owner ['*]}]))
+  ['*
+   :link-query/value
+   :request/type
+   ; get all our forms for this link
+   {:link-query/find-element [:db/id
+                              :find-element/name
+                              :find-element/connection
+                              {:find-element/form ['*
+                                                   {:hypercrud/owner ['*]
+                                                    :form/field ['*]}]}]
+    :link/anchor ['*
+                  {:anchor/link ['*                         ; hydrate the whole link for validating the anchor by query params
+                                 {:hypercrud/owner ['*]}]   ; need the link's owner to render the href to it
+                   :anchor/find-element [:db/id :find-element/name]}]
+    :hypercrud/owner ['*]}])
 
 (defn meta-request-for-link [link-dbid param-ctx]
   (assert link-dbid)
@@ -83,8 +81,8 @@
         ; ereq doesn't have a fe yet; wrap with a fe.
         ; Doesn't make sense to do on server since this is going to optimize away anyway.
 
-        result (case (:request/type link)
-                 :entity                                    ; But the ereq might return a vec for cardinality many
+        result (if (= :entity (:request/type link))
+                 ; But the ereq might return a vec for cardinality many
                  (cond
                    ; order matters here a lot!
                    (nil? result) nil
@@ -100,11 +98,6 @@
                                        :db.cardinality/many []))
                    (map? result) {"entity" result}
                    (coll? result) (mapv (fn [relation] {"entity" relation}) result))
-
-                 :query
-                 (cond
-                   (-> link :link-query/single-result-as-entity?) (first result)
-                   :else result)
 
                  result)
 
