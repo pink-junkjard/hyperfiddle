@@ -22,7 +22,9 @@
      :link-query/single-result-as-entity?
      :request/type
      ; get all our forms for this link
-     {:link-query/find-element ['* {:find-element/form form-pull-exp}]
+     {:link-query/find-element ['*
+                                {:find-element/form form-pull-exp}
+                                {:find-element/connection [:db/id :dbhole/name :dbhole/uri]}]
       :link/anchor ['*
                     {:anchor/link ['*                       ; hydrate the whole link for validating the anchor by query params
                                    {:hypercrud/owner ['*]}] ; need the link's owner to render the href to it
