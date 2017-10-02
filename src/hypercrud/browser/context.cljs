@@ -1,5 +1,6 @@
 (ns hypercrud.browser.context
-  (:require [hypercrud.browser.auto-anchor-formula :refer [auto-entity-dbid]]
+  (:require [clojure.string :as string]
+            [hypercrud.browser.auto-anchor-formula :refer [auto-entity-dbid]]
             [hypercrud.state.actions.core :as actions]
             [hypercrud.util.branch :as branch]
             [reagent.core :as reagent]))
@@ -14,6 +15,13 @@
           :uri :find-element :schema
           :entity :attribute :value
           :layout :field))
+
+(defn override-domain-dbs [ctx query-params]
+  (let [domain-dbs (->> query-params
+                        (filter (fn [[k _]] (and (string? k) (string/starts-with? k "$"))))
+                        (into {})
+                        (merge (:domain-dbs ctx)))]
+    (assoc ctx :domain-dbs domain-dbs)))
 
 (defn route [param-ctx route]
   (assoc param-ctx :route route))
@@ -36,7 +44,7 @@
   ((:dispatch! ctx) (actions/with branch uri tx)))
 
 (defn find-element [param-ctx fe]
-  (let [uri (get-in fe [:find-element/connection :dbhole/uri])
+  (let [uri (get-in param-ctx [:domain-dbs (:find-element/connection fe)])
         branch (:branch param-ctx)]
     (assoc param-ctx :uri uri
                      :find-element fe

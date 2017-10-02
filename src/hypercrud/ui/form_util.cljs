@@ -19,7 +19,7 @@
     (dissoc fe :find-element/form)
     fe))
 
-(defn get-ordered-find-elements [link query-params param-ctx]
+(defn get-ordered-find-elements [link param-ctx]
   (mlet [fes (case (:request/type link)
                :query (let [find-element-lookup (->> (:link-query/find-element link)
                                                      (map (juxt :find-element/name identity))
@@ -35,12 +35,7 @@
                                           {:find-element/name "entity"})])
                (either/right []))]
     (->> fes
-         (map (fn [fe]
-                (update fe :find-element/connection
-                        (fn [conn]
-                          {:dbhole/uri (or (get query-params (:find-element/name fe))
-                                           (:dbhole/uri conn)
-                                           (get-in param-ctx [:domain-dbs "$"]))}))))
+         (map (fn [fe] (update fe :find-element/connection #(or % "$"))))
          (map #(strip-form-in-raw-mode % param-ctx))
          (cats/return))))
 

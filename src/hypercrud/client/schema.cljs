@@ -26,7 +26,7 @@
 (defn schema-requests-for-link [ordered-fes ctx]
   (->> ordered-fes
        (map (fn [fe]
-              (->> (hc/db (:peer ctx) (get-in fe [:find-element/connection :dbhole/uri]) (:branch ctx))
+              (->> (hc/db (:peer ctx) (get-in ctx [:domain-dbs (:find-element/connection fe)]) (:branch ctx))
                    (schema-request))))
        (concat [(hc-attr-request ctx)])))
 
@@ -40,7 +40,7 @@
                                   (util/map-values #(dissoc % :attribute/ident :db/id)))]
             (->> ordered-fes
                  (mapv (fn [fe]
-                         (->> (hc/db (:peer ctx) (get-in fe [:find-element/connection :dbhole/uri]) (:branch ctx))
+                         (->> (hc/db (:peer ctx) (get-in ctx [:domain-dbs (:find-element/connection fe)]) (:branch ctx))
                               (schema-request)
                               (hc/hydrate (:peer ctx))
                               (cats/fmap (fn [schema]

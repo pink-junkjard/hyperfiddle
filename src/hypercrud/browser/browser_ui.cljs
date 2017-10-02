@@ -78,7 +78,8 @@
   (try
     (let [param-ctx (context/route param-ctx route)]
       (mlet [link (hydrate-link (:link-dbid route) param-ctx) ; always latest
-             ordered-fes (form-util/get-ordered-find-elements link query-params param-ctx)
+             ordered-fes (form-util/get-ordered-find-elements link param-ctx)
+             :let [param-ctx (context/override-domain-dbs param-ctx query-params)]
              request (base/request-for-link link query-params ordered-fes param-ctx)
              result (if request (hc/hydrate (:peer param-ctx) request) (either/right nil))
              ; schema is allowed to be nil if the link only has anchors and no data dependencies

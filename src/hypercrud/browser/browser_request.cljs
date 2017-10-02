@@ -85,7 +85,8 @@
                                                 ))))))))))))
 
 (defn requests-for-link [link query-params param-ctx]
-  (-> (mlet [ordered-fes (form-util/get-ordered-find-elements link query-params param-ctx)
+  (-> (mlet [ordered-fes (form-util/get-ordered-find-elements link param-ctx)
+             :let [param-ctx (context/override-domain-dbs param-ctx query-params)]
              link-request (base/request-for-link link query-params ordered-fes param-ctx)]
         (cats/return
           (concat
