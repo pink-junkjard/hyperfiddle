@@ -15,6 +15,7 @@
             [hypercrud.types.QueryRequest :refer [QueryRequest]]
             [hypercrud.ui.auto-control :as auto-control]
             [hypercrud.ui.form-util :as form-util]
+            [hypercrud.ui.stale :as stale]
             [hypercrud.util.core :refer [pprint-str]]
             [reagent.core :as r]))
 
@@ -77,7 +78,7 @@
 (defn ui-from-route' [{query-params :query-params :as route} param-ctx]
   (try
     (let [param-ctx (context/route param-ctx route)]
-      (mlet [link (hydrate-link route param-ctx) ; always latest
+      (mlet [link (hydrate-link route param-ctx)            ; always latest
              ordered-fes (form-util/get-ordered-find-elements link param-ctx)
              :let [param-ctx (context/override-domain-dbs param-ctx query-params)]
              request (base/request-for-link link query-params ordered-fes param-ctx)
@@ -129,21 +130,16 @@
     [C e ctx]))
 
 (defn wrap-ui [v' route ctx]
-  (let [prev-v (atom nil)]
-    (fn [v' route ctx]
-      (let [c #(when (and route (contains? @(r/cursor (-> ctx :peer .-state-atom) [:pressed-keys]) "alt"))
-                 ((:dispatch! ctx) (actions/set-route route))
-                 (.stopPropagation %))]
-        ^{:key route}
-        [native-listener {:on-click c}
-         (either/branch v'
-                        (fn [e]
-                          (if-let [p (and (= "Loading" (:message e)) @prev-v)]
-                            [:div.ui.loading p]
-                            [:div.ui (ui-error e ctx)]))
-                        (fn [v]
-                          (reset! prev-v v)
-                          [:div.ui v]))]))))
+  (fn [v' route ctx]
+    (let [c #(when (and route (contains? @(r/cursor (-> ctx :peer .-state-atom) [:pressed-keys]) "alt"))
+               ((:dispatch! ctx) (actions/set-route route))
+               (.stopPropagation %))]
+      ^{:key route}
+      [native-listener {:on-click c}
+       [stale/loading v'
+        (fn [e] [:div.ui (ui-error e ctx)])
+        (fn [v] [:div.ui v])
+        (fn [v] [:div.ui.loading v])]])))
 
 (defn ui-from-route [route ctx]
   [wrap-ui (ui-from-route' route ctx) route ctx])
