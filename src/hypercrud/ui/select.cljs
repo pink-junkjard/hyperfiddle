@@ -59,7 +59,7 @@
                          :user-renderer renderer)]))
 
 (let [on-change (fn [param-ctx id]
-                  (let [dbid (->DbId id (:uri param-ctx))]
+                  (let [dbid (some-> id (->DbId (:uri param-ctx)))]
                     ((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) dbid))))]
   (defn select* [value options-anchor props param-ctx]
     ; value :: {:db/id #DbId[17592186045891 17592186045422]}
