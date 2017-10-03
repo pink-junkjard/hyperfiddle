@@ -65,7 +65,7 @@
                                                  (filter :anchor/repeating?)
                                                  (group-by :anchor/render-inline?))
         splat? (or (empty? (:form/field form))
-                   (->> (map :form/field form)
+                   (->> (map :db/id (:form/field form))
                         (every? auto-form/system-field?)))]
     (concat
       (widget/render-anchors anchors param-ctx)
