@@ -6,6 +6,24 @@
             [reagent.core :as reagent]))
 
 
+;;;;;;;;;;;;;;;;;;;;
+;
+; utility fns
+;
+;;;;;;;;;;;;;;;;;;;;
+
+(defn ident->database-uri [ident ctx]
+  (->> (get-in ctx [:domain :domain/databases])
+       (filter #(= (:dbhole/name %) ident))
+       first
+       :dbhole/uri))
+
+;;;;;;;;;;;;;;;;;;;;
+;
+; core ctx manipulation fns
+;
+;;;;;;;;;;;;;;;;;;;;
+
 (defn clean [param-ctx]
   ; why not query-params and all the custom ui/render fns?
   (dissoc param-ctx
@@ -17,11 +35,13 @@
           :layout :field))
 
 (defn override-domain-dbs [ctx query-params]
-  (let [domain-dbs (->> query-params
-                        (filter (fn [[k _]] (and (string? k) (string/starts-with? k "$"))))
-                        (into {})
-                        (merge (:domain-dbs ctx)))]
-    (assoc ctx :domain-dbs domain-dbs)))
+  (update-in ctx
+             [:domain :domain/databases]
+             (fn [domain-dbs]
+               (->> query-params
+                    (filter (fn [[k _]] (and (string? k) (string/starts-with? k "$"))))
+                    (into {})
+                    (merge domain-dbs)))))
 
 (defn route [param-ctx route]
   (assoc param-ctx
@@ -49,7 +69,7 @@
   ((:dispatch! ctx) (actions/with branch uri tx)))
 
 (defn find-element [param-ctx fe]
-  (let [uri (get-in param-ctx [:domain-dbs (:find-element/connection fe)])
+  (let [uri (ident->database-uri (:find-element/connection fe) param-ctx)
         branch (:branch param-ctx)]
     (assoc param-ctx :uri uri
                      :find-element fe

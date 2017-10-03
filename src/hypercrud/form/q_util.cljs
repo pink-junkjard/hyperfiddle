@@ -38,9 +38,9 @@
       (either/left {:message (str "Invalid query '" (pr-str q) "', only vectors supported")}))))
 
 (defn build-dbhole-lookup [param-ctx]
-  (->> (:domain-dbs param-ctx)
-       (util/map-values (fn [uri]
-                          (hc/db (:peer param-ctx) uri (:branch param-ctx))))))
+  (->> (get-in param-ctx [:domain :domain/databases])
+       (map (juxt :dbhole/name #(hc/db (:peer param-ctx) (:dbhole/uri %) (:branch param-ctx))))
+       (into {})))
 
 (defn form-pull-exp [form]
   (if form

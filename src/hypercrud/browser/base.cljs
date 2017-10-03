@@ -3,6 +3,7 @@
             [cats.monad.either :as either :refer-macros [try-either]]
             [hypercrud.browser.auto-anchor :as auto-anchor]
             [hypercrud.browser.auto-form :as auto-form]
+            [hypercrud.browser.context :as context]
             [hypercrud.browser.user-bindings :as user-bindings]
             [hypercrud.client.core :as hc]
             [hypercrud.form.q-util :as q-util]
@@ -44,8 +45,9 @@
             pull-exp (->> ordered-fes
                           (mapv (juxt :find-element/name
                                       (fn [{:keys [:find-element/form :find-element/connection]}]
-                                        [(hc/db (:peer param-ctx) (get-in param-ctx [:domain-dbs connection]) (:branch param-ctx))
-                                         (q-util/form-pull-exp form)])))
+                                        (let [uri (context/ident->database-uri connection param-ctx)]
+                                          [(hc/db (:peer param-ctx) uri (:branch param-ctx))
+                                           (q-util/form-pull-exp form)]))))
                           (into {}))
             ; todo validation of conns for pull-exp
             missing (->> params (filter (comp nil? second)) (mapv first))]
@@ -55,7 +57,7 @@
 
     :entity
     (let [fe (first (filter #(= (:find-element/name %) "entity") ordered-fes))
-          uri (get-in param-ctx [:domain-dbs (:find-element/connection fe)])]
+          uri (context/ident->database-uri (:find-element/connection fe) param-ctx)]
       (cond
         (nil? uri) (either/left {:message "no connection" :data {:find-element fe}})
         (nil? (:entity query-params)) (either/left {:message "missing param" :data {:params query-params
