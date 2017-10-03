@@ -6,7 +6,7 @@
 
 
 (defn hc-attr-request [param-ctx]
-  (let [dbval (hc/db (:peer param-ctx) hc/*root-conn-id* (:branch param-ctx))]
+  (let [dbval (hc/db (:peer param-ctx) (:code-database-uri param-ctx) (:branch param-ctx))]
     (->QueryRequest '[:find ?attr :in $ :where
                       (or [?attr :attribute/renderer]
                           [?attr :attribute/hc-type])]

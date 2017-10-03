@@ -19,7 +19,7 @@
       [auto-control field anchors props param-ctx])))
 
 (defn Field [control field anchors param-ctx]
-  [:div.field {:style {:border-color (connection-color/connection-color (:uri param-ctx))}}
+  [:div.field {:style {:border-color (connection-color/connection-color (:uri param-ctx) param-ctx)}}
    (let [[anchors] (as-> anchors $
                          (remove :anchor/repeating? $)      ; because we're in the label
                          (widget/process-option-anchors $ param-ctx))]
@@ -33,7 +33,7 @@
 (defn new-field [entity param-ctx]
   (let [attr-ident (r/atom nil)]
     (fn [entity param-ctx]
-      [:div.field {:style {:border-color (connection-color/connection-color (:uri param-ctx))}}
+      [:div.field {:style {:border-color (connection-color/connection-color (:uri param-ctx) param-ctx)}}
        [:div.hc-label
         [:label
          (let [on-change! #(reset! attr-ident %)]

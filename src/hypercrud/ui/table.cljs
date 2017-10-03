@@ -60,7 +60,7 @@
                      (if sortable? "sortable")
                      (some-> sort-direction name)]]
     [:th {:class (string/join " " css-classes)
-          :style {:background-color (connection-color/connection-color (:uri ctx))}
+          :style {:background-color (connection-color/connection-color (:uri ctx) ctx)}
           :on-click on-click}
      [:label [form-util/field-label field ctx]]
      [col-head-anchors attr-label-anchors ctx]]))
@@ -99,7 +99,7 @@
 
 (defn Field [control field anchors param-ctx]
   (let [shadow-link (auto-anchor/system-anchor? (-> param-ctx :entity :db/id))
-        style {:border-color (if-not shadow-link (connection-color/connection-color (:uri param-ctx)))}]
+        style {:border-color (if-not shadow-link (connection-color/connection-color (:uri param-ctx) param-ctx))}]
     [:td.truncate {:style style}
      [control param-ctx]]))
 

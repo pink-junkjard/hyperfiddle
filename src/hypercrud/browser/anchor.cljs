@@ -3,7 +3,6 @@
             [cats.monad.either :as either :refer-macros [try-either]]
             [clojure.set :as set]
             [hypercrud.browser.auto-anchor-formula :refer [auto-entity-dbid]]
-            [hypercrud.browser.connection-color :as connection-color]
             [hypercrud.browser.context :as context]
             [hypercrud.compile.eval :as eval :refer [eval-str']]
             [hypercrud.form.q-util :as q-util]
@@ -40,8 +39,9 @@
          link-dbid (if-let [page (:anchor/link anchor)]
                      (either/right (:db/id page))
                      (either/left {:message "anchor has no link" :data {:anchor anchor}}))]
-    ; should get domain from ctx but can't because that will break topnav links which cross domain etc
-    (return {:project (-> anchor :anchor/link :hypercrud/owner :domain/ident)
+    (return {:project (get-in param-ctx [:domain :domain/ident]) ; todo split project and domain
+             ;:code-database (:anchor/code-database anchor) todo when cross db references are working on anchor/links, don't need to inherit code-db-uri
+             :code-database (:code-database param-ctx)
              :link-dbid link-dbid
              :query-params query-params})))
 

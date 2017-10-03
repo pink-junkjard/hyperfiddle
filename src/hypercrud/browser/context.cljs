@@ -24,7 +24,12 @@
     (assoc ctx :domain-dbs domain-dbs)))
 
 (defn route [param-ctx route]
-  (assoc param-ctx :route route))
+  (assoc param-ctx
+    :route route
+    :code-database-uri (->> (get-in param-ctx [:domain :domain/code-databases])
+                            (filter #(= (:dbhole/name %) (:code-database route)))
+                            first
+                            :dbhole/uri)))
 
 (defn anchor-branch [param-ctx anchor]
   (if (:anchor/managed? anchor)

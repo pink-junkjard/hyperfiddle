@@ -21,18 +21,17 @@
    {:link-query/find-element [:db/id
                               :find-element/name
                               :find-element/connection
-                              {:find-element/form ['*
-                                                   {:hypercrud/owner ['*]
-                                                    :form/field ['*]}]}]
+                              {:find-element/form [:db/id
+                                                   :form/name
+                                                   {:form/field ['*]}]}]
     :link/anchor ['*
-                  {:anchor/link ['*                         ; hydrate the whole link for validating the anchor by query params
-                                 {:hypercrud/owner ['*]}]   ; need the link's owner to render the href to it
-                   :anchor/find-element [:db/id :find-element/name]}]
-    :hypercrud/owner ['*]}])
+                  ; hydrate the whole link for validating the anchor by query params
+                  {:anchor/link ['*]
+                   :anchor/find-element [:db/id :find-element/name]}]}])
 
-(defn meta-request-for-link [link-dbid param-ctx]
-  (assert link-dbid)
-  (let [dbval (hc/db (:peer param-ctx) hc/*root-conn-id* (:branch param-ctx))]
+(defn meta-request-for-link [{:keys [:link-dbid] :as route} {:keys [:code-database-uri] :as param-ctx}]
+  {:pre [code-database-uri link-dbid]}
+  (let [dbval (hc/db (:peer param-ctx) code-database-uri (:branch param-ctx))]
     (->EntityRequest link-dbid nil dbval meta-pull-exp-for-link)))
 
 (defn request-for-link [link query-params ordered-fes param-ctx]

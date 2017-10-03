@@ -1,6 +1,5 @@
 (ns hypercrud.browser.auto-link
-  (:require [hypercrud.client.core :as hc]
-            [hypercrud.types.DbId :refer [->DbId]]
+  (:require [hypercrud.types.DbId :refer [->DbId]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]))
 
 
@@ -12,7 +11,7 @@
   {:db/id (->DbId {:ident :system-edit
                    :fe-name fe-name
                    :fe-conn fe-conn}
-                  hc/*root-conn-id*)
+                  nil)
    :link/name (str "system-" fe-name)
    :request/type :entity
    :link-query/find-element [{:find-element/name "entity"
@@ -24,7 +23,7 @@
                    :fe-name fe-name
                    :fe-conn fe-conn
                    :a a}
-                  hc/*root-conn-id*)
+                  nil)
    :link/name (str "system-" fe-name "-" a)
    :request/type :entity
    :link-query/find-element [{:find-element/name "entity"
@@ -35,7 +34,7 @@
   {:db/id (->DbId {:ident :sys-remove
                    :fe-name fe-name
                    :a a}
-                  hc/*root-conn-id*)
+                  nil)
    :link/name "sys-remove"
    :request/type :blank
    :link/renderer (pr-str `(fn [result# ordered-fes# anchors# param-ctx#]

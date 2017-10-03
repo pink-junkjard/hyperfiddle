@@ -107,7 +107,7 @@
     (if (auto-link/system-link? (:link-dbid route))
       (let [link (auto-link/hydrate-system-link (-> route :link-dbid :id) param-ctx)]
         (requests-for-link link (:query-params route) param-ctx))
-      (let [meta-link-request (base/meta-request-for-link (:link-dbid route) param-ctx)]
+      (let [meta-link-request (base/meta-request-for-link route param-ctx)]
         (concat [meta-link-request]
                 (-> (hc/hydrate (:peer param-ctx) meta-link-request)
                     (either/branch (constantly nil)

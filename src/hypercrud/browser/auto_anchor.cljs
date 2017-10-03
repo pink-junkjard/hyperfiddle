@@ -3,7 +3,6 @@
   (:require [hypercrud.browser.auto-anchor-formula :refer [auto-formula]]
             [hypercrud.browser.auto-anchor-txfn :refer [auto-txfn]]
             [hypercrud.browser.auto-link :as auto-link]
-            [hypercrud.client.core :as hc]
             [hypercrud.types.DbId :refer [->DbId]]
             [hypercrud.util.vedn :as vedn]))
 
@@ -26,7 +25,7 @@
                           (mapcat (fn [{fe-name :find-element/name fe-conn :find-element/connection :as fe}]
                                     (let [edit {:db/id (->DbId {:ident :system-anchor-edit
                                                                 :fe (-> fe :db/id :id)}
-                                                               hc/*root-conn-id*)
+                                                               (:code-database-uri param-ctx))
                                                 :anchor/prompt (str "edit-" fe-name)
                                                 :anchor/ident (keyword (str "sys-edit-" fe-name))
                                                 :anchor/link (auto-link/link-system-edit fe-name fe-conn)
@@ -38,7 +37,7 @@
                                           ; sys links we match on the find-element.
                                           new {:db/id (->DbId {:ident :system-anchor-new
                                                                :fe (-> fe :db/id :id)}
-                                                              hc/*root-conn-id*)
+                                                              (:code-database-uri param-ctx))
                                                :anchor/prompt (str "new-" fe-name)
                                                :anchor/ident (keyword (str "sys-new-" fe-name))
                                                :anchor/link (auto-link/link-system-edit fe-name fe-conn)
@@ -49,7 +48,7 @@
                                                :anchor/render-inline? true}
                                           remove {:db/id (->DbId {:ident :system-anchor-remove
                                                                   :fe (-> fe :db/id :id)}
-                                                                 hc/*root-conn-id*)
+                                                                 (:code-database-uri param-ctx))
                                                   :anchor/prompt (str "remove-" fe-name)
                                                   :anchor/ident (keyword (str "sys-remove-" fe-name))
                                                   :anchor/link (auto-link/link-blank-system-remove fe-name nil)
@@ -78,7 +77,7 @@
                                                      [{:db/id (->DbId {:ident :system-anchor-edit-attr
                                                                        :fe (-> fe :db/id :id)
                                                                        :a attribute}
-                                                                      hc/*root-conn-id*)
+                                                                      (:code-database-uri param-ctx))
                                                        :anchor/prompt (str "edit") ; conserve space in label
                                                        :anchor/ident (keyword (str "sys-edit-" fe-name "-" attribute))
                                                        :anchor/repeating? true
@@ -90,7 +89,7 @@
                                                       {:db/id (->DbId {:ident :system-anchor-new-attr
                                                                        :fe (-> fe :db/id :id)
                                                                        :a attribute}
-                                                                      hc/*root-conn-id*)
+                                                                      (:code-database-uri param-ctx))
                                                        :anchor/prompt (str "new") ; conserve space in label
                                                        :anchor/ident (keyword (str "sys-new-" fe-name "-" attribute))
                                                        :anchor/repeating? true ; manged - need parent-child ref
@@ -104,7 +103,7 @@
                                                       {:db/id (->DbId {:ident :system-anchor-remove-attr
                                                                        :fe (-> fe :db/id :id)
                                                                        :a attribute}
-                                                                      hc/*root-conn-id*)
+                                                                      (:code-database-uri param-ctx))
                                                        :anchor/prompt (str "remove")
                                                        :anchor/ident (keyword (str "sys-remove-" fe-name "-" attribute))
                                                        :anchor/link (auto-link/link-blank-system-remove fe-name attribute)

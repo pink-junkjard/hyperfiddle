@@ -70,8 +70,5 @@
 
                  ;; reconstruct the typed value
                  :on-change (reagent/partial on-change param-ctx)
-                 :disabled (:read-only props)}
-          props (if (#{:dbhole/value :hypercrud/owner} (-> param-ctx :attribute :db/ident)) ; lol hack
-                  (assoc props :style {:background-color (connection-color/connection-color (:uri param-ctx))})
-                  props)]
+                 :disabled (:read-only props)}]
       [anchor->select props options-anchor param-ctx])))

@@ -44,16 +44,9 @@
 
 (defn form-pull-exp [form]
   (if form
-    (concat
-      [:db/id {:hypercrud/owner ['*]}]
-      (->> (:form/field form)
-           (mapv :field/attribute)
-           (set)
-           (remove #{:hypercrud/owner})                     ; in meta-fiddle this is part of the form, but we want to hydrate deeper always.
-           (remove nil?)))
-
-    ; should we hydrate one level deeper for refs in undressed mode? nah
-    ; we don't have the info to know which ref attrs might be used; its not really possible to do this.
-    ; If you want pretty select options, you should model the options query and form.
-    ; Now we are using sys-edit-attr render-inline to hydrate this level accurately with a form.
-    ['* {:hypercrud/owner ['*]}]))
+    (->> (:form/field form)
+         (map :field/attribute)
+         (concat [:db/id])
+         distinct
+         (remove nil?))
+    ['*]))
