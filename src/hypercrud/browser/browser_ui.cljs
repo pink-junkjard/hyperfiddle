@@ -71,7 +71,7 @@
 
 (defn hydrate-link [route param-ctx]
   (if (auto-link/system-link? (:link-dbid route))
-    (either/right (auto-link/hydrate-system-link (get-in route [:ink-dbid :id]) param-ctx))
+    (either/right (auto-link/hydrate-system-link (get-in route [:link-dbid :id]) param-ctx))
     (hc/hydrate (:peer param-ctx) (base/meta-request-for-link route param-ctx))))
 
 (defn ui-from-route' [{query-params :query-params :as route} param-ctx]
