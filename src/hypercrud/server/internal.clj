@@ -3,7 +3,8 @@
             [hypercrud.types.DbVal]
             [hypercrud.types.DbError]
             [hypercrud.types.EntityRequest]
-            [hypercrud.types.QueryRequest])
+            [hypercrud.types.QueryRequest]
+            [hypercrud.types.URI])
   (:import (hypercrud.types.DbId DbId DbIdTransitHandler DbIdTransitReader)
            (hypercrud.types.DbVal DbVal DbValTransitHandler DbValTransitReader)
            (hypercrud.types.DbError DbError DbErrorTransitHandler DbErrorTransitReader)
