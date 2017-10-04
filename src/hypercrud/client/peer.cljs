@@ -2,8 +2,8 @@
   (:require [cats.monad.either :as either]
             [hypercrud.client.core :as hc]
             [hypercrud.client.http :as http]
-            [hypercrud.types.DbVal :refer [->DbVal]]
             [hypercrud.types.DbError :refer [DbError]]
+            [hypercrud.types.DbVal :refer [->DbVal]]
             [hypercrud.util.branch :as branch]
             [promesa.core :as p]
             [reagent.core :as reagent]))

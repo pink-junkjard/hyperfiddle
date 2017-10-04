@@ -1,22 +1,18 @@
 (ns hypercrud.ui.widget
   (:refer-clojure :exclude [keyword long boolean])
-  (:require [cats.core :refer-macros [mlet]]
-            [cats.monad.either :as either]
+  (:require [cats.monad.either :as either]
             [clojure.set :as set]
-            [hypercrud.browser.core :as browser]
             [hypercrud.browser.anchor :as anchor]
+            [hypercrud.browser.core :as browser]
             [hypercrud.client.tx :as tx]
-            [hypercrud.types.DbId :refer [->DbId]]
-            [hypercrud.ui.code-editor :refer [code-editor*]]
+            [hypercrud.ui.code-editor :as code-editor]
             [hypercrud.ui.input :as input]
             [hypercrud.ui.multi-select :refer [multi-select* multi-select-markup]]
-            [hypercrud.ui.radio :as radio]                  ; used in user renderers
-            [hypercrud.ui.select :as select :refer [select* select-boolean*]]
+            [hypercrud.ui.radio]                            ; used in user renderers
+            [hypercrud.ui.select :refer [select* select-boolean*]]
             [hypercrud.ui.textarea :refer [textarea*]]
             [hypercrud.util.core :refer [pprint-str]]
-            [hypercrud.util.string :refer [safe-read-string]]
-            [hypercrud.ui.code-editor :as code-editor]
-            [reagent.core :as r]))
+            [hypercrud.util.string :refer [safe-read-string]]))
 
 
 (defn render-anchor [anchor ctx]
@@ -54,11 +50,9 @@
   (let [on-change! #((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %))]
     [input/keyword-input* (:value param-ctx) on-change! props]))
 
-
 (defn string [maybe-field anchors props param-ctx]
   (let [on-change! #((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %))]
     [input/input* (:value param-ctx) on-change! props]))
-
 
 (defn long [maybe-field anchors props param-ctx]
   [:div.value
@@ -69,7 +63,6 @@
     #(or (integer? (js/parseInt % 10)) (= "nil" %))
     props]
    (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)])
-
 
 (defn textarea [maybe-field anchors props param-ctx]
   (let [set-attr! #((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %))]
@@ -84,7 +77,6 @@
     [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
     (select-boolean* (:value param-ctx) props param-ctx)]
    (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)])
-
 
 (defn dbid [props param-ctx]
   (let [on-change! #((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %))]
@@ -119,7 +111,6 @@
          (dbid props param-ctx))]]
      (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)]))
 
-
 (defn ref-component [maybe-field anchors props param-ctx]
   (let [[anchors options-anchor] (process-option-popover-anchors anchors param-ctx)
         anchors (->> anchors (filter :anchor/repeating?))]
@@ -130,7 +121,6 @@
      #_[:pre (pr-str (:value param-ctx))]
      [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
      (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)]))
-
 
 (defn ref-many-table [maybe-field anchors props param-ctx]
   (let [[anchors options-anchor] (process-option-popover-anchors anchors param-ctx)

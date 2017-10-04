@@ -8,7 +8,6 @@
 (defn adapt-props-to-input [props]
   {:disabled (:read-only props)})
 
-
 (defn- validated-input' [value on-change! parse-string to-string valid? props]
   (let [intermediate-val (reagent/atom (to-string value))]
     (fn [value on-change! parse-string to-string valid? props]
@@ -22,16 +21,13 @@
                                     (if (and valid?' (not= parsed value))
                                       (on-change! parsed)))})]))))
 
-
 (defn validated-input [value on-change! parse-string to-string valid? & [props]]
   ^{:key value}
   [validated-input' value on-change! parse-string to-string valid? props])
 
-
 (defn input* [value on-change! & [props]]
   ^{:key value}
   [validated-input' value on-change! identity identity (constantly true) props])
-
 
 (defn keyword-input* [value on-change! & [props]]
   (let [parse-string q-util/safe-read-string
@@ -41,7 +37,6 @@
     ^{:key value}
     [validated-input' value on-change! parse-string to-string valid? props]))
 
-
 (defn edn-input* [value on-change! & [props]]
   (let [parse-string q-util/safe-read-string
         to-string pr-str
@@ -50,7 +45,6 @@
                      (catch :default e false))]
     ^{:key value}
     [validated-input' value on-change! parse-string to-string valid? props]))
-
 
 (defn dbid-input [value on-change! & [props]]
   ; value :: {:db/id #DbId[17592186045891 17592186045422]}

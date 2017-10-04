@@ -1,7 +1,6 @@
 (ns hypercrud.ui.select
   (:require [cats.monad.either :as either]
             [hypercrud.browser.core :as browser]
-            [hypercrud.browser.connection-color :as connection-color]
             [hypercrud.client.tx :as tx]
             [hypercrud.form.option :as option]
             [hypercrud.types.DbId :refer [->DbId]]

@@ -1,9 +1,7 @@
 (ns hypercrud.ui.form
-  (:require [cats.core :refer [mlet]]
-            [hypercrud.browser.auto-form :as auto-form]
+  (:require [hypercrud.browser.auto-form :as auto-form]
             [hypercrud.browser.connection-color :as connection-color]
             [hypercrud.browser.context :as context]
-            [hypercrud.compile.eval :refer [eval-str']]
             [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.form-util :as form-util]
             [hypercrud.ui.input :as input]

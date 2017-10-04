@@ -9,13 +9,11 @@
            s
            (str (subs s 0 (- c 3)) "..."))))
 
-
 (defn ref-one-component [field anchors props param-ctx]
   [:div
    #_(pr-str (:db/id (:value param-ctx)))
    [:div.anchors (widget/render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
    (widget/render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)])
-
 
 (defn ref-many [field anchors props param-ctx]
   [:div
@@ -24,7 +22,6 @@
           (ellipsis 15))
    [:div.anchors (widget/render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
    (widget/render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)])
-
 
 (defn other-many [field anchors props param-ctx]
   [:div

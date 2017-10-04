@@ -30,7 +30,7 @@
 
 (defn hydrating-action
   ([aux-actions dispatch! get-state]
-    (hydrating-action aux-actions dispatch! get-state false))
+   (hydrating-action aux-actions dispatch! get-state false))
   ([{:keys [on-start]} dispatch! get-state force]
    (let [o-stage (:stage (get-state))
          hydrate-id (js/Math.random)                        ; todo want to hash state

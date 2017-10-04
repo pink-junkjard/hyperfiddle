@@ -5,6 +5,7 @@
             [hypercrud.ui.table-cell :as table-cell]
             [hypercrud.ui.widget :as widget]))
 
+
 (defmethod auto-control/auto-control :default
   [field anchors props param-ctx]
   ;(assert (:entity param-ctx))

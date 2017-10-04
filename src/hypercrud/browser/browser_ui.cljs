@@ -11,8 +11,6 @@
             [hypercrud.platform.native-event-listener :refer [native-listener]]
             [hypercrud.platform.safe-render :refer [safe-user-renderer]]
             [hypercrud.state.actions.core :as actions]
-            [hypercrud.types.EntityRequest :refer [EntityRequest]]
-            [hypercrud.types.QueryRequest :refer [QueryRequest]]
             [hypercrud.ui.auto-control :as auto-control]
             [hypercrud.ui.form-util :as form-util]
             [hypercrud.ui.stale :as stale]

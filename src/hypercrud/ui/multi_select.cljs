@@ -6,7 +6,6 @@
 
 (defmulti multi-select-markup (fn [click-add! control-tuples] :default))
 
-
 (defn multi-select* [markupfn add-item! field anchors props {:keys [user-with!] :as param-ctx}]
   (assert false "todo readonly and test this")
   (let [control-tuples (seq (mapv (fn [inner-value]
@@ -18,7 +17,6 @@
                                       [inner-value click-remove! control]))
                                   (:value param-ctx)))]
     (markupfn add-item! control-tuples)))
-
 
 (defmethod multi-select-markup :default [click-add! control-tuples & [css-class]]
   [:div.value {:class css-class}

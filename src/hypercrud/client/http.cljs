@@ -2,7 +2,6 @@
   (:require [cljs.pprint :as pprint]
             [cljs.reader :as reader]
             [hypercrud.client.internal :as internal]
-            [hypercrud.types.URI :refer [->URI]]
             [hypercrud.util.branch :as branch]
             [hypercrud.util.core :as util]
             [kvlt.core :as kvlt]

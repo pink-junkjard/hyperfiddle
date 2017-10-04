@@ -19,5 +19,5 @@
        (mapv (fn [[k v]]
                (let [code-str (string/trim v)
                      code (eval/eval-str-and-throw code-str)]
-                   [(reader/read-string k) (str-and-code' code code-str)])))
+                 [(reader/read-string k) (str-and-code' code code-str)])))
        (into {})))

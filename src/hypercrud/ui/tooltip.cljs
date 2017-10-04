@@ -36,7 +36,7 @@
           concat
           (merge
             {:showing? state
-             :position :below-left #_ "work around popover flicker"}
+             :position :below-left #_"work around popover flicker"}
             t-props                                         ; label, status
             {:label (or (:label t-props) "")                ; required
              :anchor [:span {:on-mouse-enter #(do (if (:label t-props) (reset! state true)) nil)
@@ -70,7 +70,7 @@
     (fn [& args]
       (apply click-popover* state args))))
 
-(defn- hover-popover* [state t-props anchor]                               ; accept :label instead of :body to standardize
+(defn- hover-popover* [state t-props anchor]                ; accept :label instead of :body to standardize
   (apply
     popover-anchor-wrapper*
     (apply
@@ -78,7 +78,7 @@
       (merge
         {:position :below-center                            ; todo fix flicker
          :showing? state}
-        (dissoc t-props :label :status)                 ; just ignore status, todo fix
+        (dissoc t-props :label :status)                     ; just ignore status, todo fix
 
         ; Delay hide and cancel delay if we enter again.
         ; Track enter and leave on both anchor and content.

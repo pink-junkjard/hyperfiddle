@@ -1,6 +1,5 @@
 (ns hypercrud.browser.auto-link
-  (:require [hypercrud.types.DbId :refer [->DbId]]
-            [hypercrud.types.EntityRequest :refer [->EntityRequest]]))
+  (:require [hypercrud.types.DbId :refer [->DbId]]))
 
 
 (defn system-link? [link-dbid]
