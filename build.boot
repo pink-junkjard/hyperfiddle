@@ -2,6 +2,7 @@
   :dependencies '[[com.hyperfiddle/util "0.0.1-SNAPSHOT"]
                   [com.cognitect/transit-cljs "0.8.239"]
                   [funcool/cats "2.1.0"]
+                  [funcool/promesa "1.8.1"]
                   [io.nervous/kvlt "0.1.4"]
                   [markdown-clj "0.9.88"]
                   [org.clojars.cemerick/loom "0.6.1-SNAPSHOT"] ; see https://github.com/aysylu/loom/pull/91
@@ -9,7 +10,6 @@
                   [re-com "2.0.0"]
 
                   ; provided
-                  [funcool/promesa "1.8.1" :scope "provided"]
                   ; todo this has a provided dependency on a hypercrud platform
                   ; need to create a platform api library that node and browser implement
                   ; platform-api : node/browser :: jaxrs api : jersey
