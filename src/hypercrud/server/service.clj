@@ -28,10 +28,10 @@
 (defn http-transact! [req]
   (try
     (let [{:keys [body-params]} req
-          htx body-params]
+          dtx-groups body-params]
       (ring-resp/response
         (wrap-hypercrud
-          (api/transact! htx))))
+          (api/transact! dtx-groups))))
     (catch Exception e
       (println e)
       {:status 500 :headers {} :body (str e)})))

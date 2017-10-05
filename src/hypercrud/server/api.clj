@@ -2,13 +2,13 @@
   (:require [clojure.set :as set]
             [clojure.walk :as walk]
             [datomic.api :as d]
-            [hypercrud.server.util.datomic-adapter :as datomic-adapter]
             [hypercrud.types.DbId :refer [->DbId]]
-            [hypercrud.types.DbVal :refer [->DbVal]]
+            [hypercrud.types.DbVal]
             [hypercrud.types.DbError :refer [->DbError]]
             [hypercrud.types.EntityRequest]
             [hypercrud.types.QueryRequest]
-            [hypercrud.util.core :as util])
+            [hypercrud.util.core :as util]
+            [hypercrud.util.identity :as identity])
   (:import (hypercrud.types.DbId DbId)
            (hypercrud.types.DbVal DbVal)
            (hypercrud.types.EntityRequest EntityRequest)
@@ -17,58 +17,38 @@
 
 (defn build-id->tempid-lookup [db-after tempids dtx]
   (->> dtx (mapv second) (into #{})
-       (filter datomic-adapter/datomic-tempid?)
-       (mapv (juxt #(d/resolve-tempid db-after tempids %)
-                   datomic-adapter/did->hid))
+       (filter identity/tempid?)
+       (mapv (juxt #(d/resolve-tempid db-after tempids %) identity))
        (into {})))
 
 (defmulti parameter (fn [this & args] (class this)))
 
 (defmethod parameter :default [this & args] this)
 
-(defmethod parameter DbVal [dbval get-secure-db-with & args]
+(defmethod parameter DbVal [dbval get-secure-db-with]
   (-> (get-secure-db-with (:uri dbval) (:branch dbval)) :db))
 
-(defmethod parameter DbId [dbid get-secure-db-with & [dbval]]
-  (let [uri (:uri (or dbval dbid))                  ; this will break when we remove connid from dbid
-        db (get-secure-db-with uri (:branch dbval))
-        hid (:id dbid)]                                     ; htempid (string) or did (num) or lookup ref
-    (if (datomic-adapter/hc-tempid? hid)
-      (get (:tempid->id db)
-           hid                                              ; the with-db has seen this tempid in the staged-tx
-           (Long/parseLong hid))                            ; dangling tempid not yet seen, it will pass through datomic. Due to datomic bug, it has to go through as a long
-      hid)))                                                ; don't parse lookup refs or not-tempids
+(defmethod parameter DbId [dbid get-secure-db-with] (:id dbid))
 
-(defn recursively-replace-ids [pulled-tree uri id->tempid]
-  (let [replace-tempid (fn [did]
-
-                         ; datomic tempid? can't know from the pulled-tree.
-                         ; if we see it in the id->tempid we can fix it.
-                         ; But what about tempids that aren't part of the tx? They should pass through.
-                         ; -1 is still -1 in datomic.
-
-                         ; either we saw it in the tx, fix it
-                         ; or we have a negative id that we didn't see, fix it
-                         ; or its legit
-
-                         (let [hid (or (some-> (get id->tempid did) str)
-                                       (if (> 0 did) (str did))
-                                       did #_"not a tempid")]
-                           (->DbId hid uri)))]
-    (walk/postwalk (fn [o]
-                     (if (map? o)
-                       (util/update-existing o :db/id replace-tempid)
-                       o))
-                   pulled-tree)))
+(defn recursively-add-dbid-types [pulled-tree uri]
+  (walk/postwalk (fn [o]
+                   (if (map? o)
+                     (util/update-existing o :db/id #(->DbId % uri))
+                     o))
+                 pulled-tree))
 
 (defmulti hydrate* (fn [this & args] (class this)))
 
 (defmethod hydrate* EntityRequest [{:keys [e a dbval pull-exp]} get-secure-db-with]
   (try
-    (let [{:keys [id->tempid] pull-db :db} (get-secure-db-with (:uri dbval) (:branch dbval))
+    (let [{pull-db :db} (get-secure-db-with (:uri dbval) (:branch dbval))
           pull-exp (if a [{a pull-exp}] pull-exp)
-          pulled-tree (d/pull pull-db pull-exp (parameter e get-secure-db-with dbval))
-          pulled-tree (recursively-replace-ids pulled-tree (:uri dbval) id->tempid)
+          pulled-tree (if (identity/tempid? e)
+                        (if a
+                          []                                ; hack, return something that is empty for base.cljs
+                          {:db/id e})
+                        (d/pull pull-db pull-exp e))
+          pulled-tree (recursively-add-dbid-types pulled-tree (:uri dbval))
           pulled-tree (if a (get pulled-tree a []) pulled-tree)]
       pulled-tree)
     (catch Throwable e
@@ -92,10 +72,9 @@
            (util/transpose)
            (util/zip ordered-pull-exps)
            (mapv (fn [[[dbval pull-exp] values]]
-                   (let [{:keys [id->tempid] pull-db :db} (get-secure-db-with (:uri dbval) (:branch dbval))]
-                     ; traverse tree, turning pulled :db/id into idents where possible?
+                   (let [{pull-db :db} (get-secure-db-with (:uri dbval) (:branch dbval))]
                      (->> (d/pull-many pull-db pull-exp values)
-                          (mapv #(recursively-replace-ids % (:uri dbval) id->tempid))))))
+                          (mapv #(recursively-add-dbid-types % (:uri dbval)))))))
            (util/transpose)
            (mapv #(zipmap (mapv str ordered-find-element-symbols) %))))
 
@@ -103,38 +82,37 @@
       (.println *err* (pr-str e))
       (->DbError (str e)))))
 
-(defn build-get-secure-db-with [hctx-groups]
-  (let [db-with-lookup (atom {})]
-    (fn get-secure-db-with [uri branch]
-      (or (get-in @db-with-lookup [uri branch])
-          (let [dtx (->> (get hctx-groups [uri branch])
-                         (mapv datomic-adapter/stmt-dbid->id))
-                db (d/db (d/connect (str uri)))
-                ; is it a history query? (let [db (if (:history? dbval) (d/history db) db)])
-                _ (let [validate-tx (constantly true)]
-                    ; todo look up tx validator
-                    (assert (validate-tx db dtx) (str "staged tx for " uri " failed validation")))
-                project-db-with (let [read-sec-predicate (constantly true) ;todo lookup sec pred
-                                      ; todo d/with an unfiltered db
-                                      {:keys [db-after tempids]} (d/with db dtx)
-                                      id->tempid (build-id->tempid-lookup db-after tempids dtx)]
-                                  {:db (d/filter db-after read-sec-predicate)
-                                   :id->tempid id->tempid
-                                   :tempid->id (set/map-invert id->tempid)})]
-            (swap! db-with-lookup assoc-in [uri branch] project-db-with)
-            project-db-with)))))
+(defn build-get-secure-db-with [hctx-groups db-with-lookup]
+  (fn get-secure-db-with [uri branch]
+    (or (get-in @db-with-lookup [uri branch])
+        (let [dtx (get hctx-groups [uri branch])
+              db (d/db (d/connect (str uri)))
+              ; is it a history query? (let [db (if (:history? dbval) (d/history db) db)])
+              _ (let [validate-tx (constantly true)]
+                  ; todo look up tx validator
+                  (assert (validate-tx db dtx) (str "staged tx for " uri " failed validation")))
+              project-db-with (let [read-sec-predicate (constantly true) ;todo lookup sec pred
+                                    ; todo d/with an unfiltered db
+                                    {:keys [db-after tempids]} (d/with db dtx)
+                                    id->tempid (build-id->tempid-lookup db-after tempids dtx)]
+                                {:db (d/filter db-after read-sec-predicate)
+                                 :id->tempid id->tempid})]
+          (swap! db-with-lookup assoc-in [uri branch] project-db-with)
+          project-db-with))))
 
-(defn hydrate [hctx-groups request root-t]
-  (let [get-secure-db-with (build-get-secure-db-with hctx-groups)
+(defn hydrate [dtx-groups request root-t]
+  (let [db-with-lookup (atom {})
+        get-secure-db-with (build-get-secure-db-with dtx-groups db-with-lookup)
         pulled-trees-map (->> request
                               (mapv (juxt identity #(hydrate* % get-secure-db-with)))
                               (into {}))]
     {:t nil
-     :pulled-trees-map pulled-trees-map}))
+     :pulled-trees-map pulled-trees-map
+     :tempid-lookups (->> @db-with-lookup                   ; todo this is broken (need to not be lazy)
+                          (util/map-values #(util/map-values :id->tempid %)))}))
 
-(defn transact! [htx]
-  (let [dtx-groups (doall (util/map-values #(mapv datomic-adapter/stmt-dbid->id %) htx))
-        valid? (every? (fn [[uri tx]]
+(defn transact! [dtx-groups]
+  (let [valid? (every? (fn [[uri tx]]
                          (let [db (d/db (d/connect (str uri)))
                                ; todo look up tx validator
                                validate-tx (constantly true)]
