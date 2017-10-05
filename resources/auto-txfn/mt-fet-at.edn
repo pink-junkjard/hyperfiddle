@@ -3,4 +3,4 @@
         parent-entity-dbid (-> ctx :entity :db/id)          ; e.g. table-row entity or form entity
         attr (-> ctx :attribute :db/ident)
         parent-child-ref (hypercrud.client.tx/edit-entity parent-entity-dbid attr [] [modal-entity-dbid])]
-    {:tx (update multi-color-tx (:uri ctx) concat parent-child-ref)}))
+    {:tx {(:uri ctx) [parent-child-ref]}}))

@@ -3,6 +3,7 @@
             [hypercrud.browser.browser-ui :as browser-ui]
             [hypercrud.util.core :as util]))
 
+; todo migrate transact to routing/invert-dbids
 (defn replace-tempids-in-route [tempid-lookup params-map]
   (let [replace-tempid #(or (get tempid-lookup %) %)]
     (-> params-map

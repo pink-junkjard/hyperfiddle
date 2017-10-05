@@ -38,11 +38,12 @@
   (fn [dispatch! get-state]
     (let [multi-color-tx (get-in (get-state) [:stage branch] {})]
       (p/then (swap-fn-async multi-color-tx)
-              (fn [{:keys [tx app-route]}]
-                (let [actions [[:reset-branch branch tx]    ; this has to be a map now
-                               [:merge branch]
-                               (if app-route [:soft-set-route app-route])
-                               [:close-popover popover-id]]]
+              (fn [{:keys [multi-color-tx app-route]}]
+                (let [actions (concat
+                                (mapv (fn [[uri tx]] [:with branch uri tx]) multi-color-tx)
+                                [[:merge branch]
+                                 (if app-route [:soft-set-route app-route])
+                                 [:close-popover popover-id]])]
                   (hydrating-action {:on-start (constantly actions)} dispatch! get-state)))))))
 
 (defn reset-stage [tx]

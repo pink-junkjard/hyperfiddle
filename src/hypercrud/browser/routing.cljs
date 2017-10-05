@@ -1,7 +1,36 @@
 (ns hypercrud.browser.routing
   (:require [cljs.reader :as reader]
             [clojure.string :as string]
-            [hypercrud.util.base-64-url-safe :as base64]))
+            [hypercrud.client.temp :as temp]
+            [hypercrud.util.base-64-url-safe :as base64]
+            [hypercrud.util.branch :as branch]
+            [hypercrud.util.core :as util]
+            [reagent.core :as reagent]))
+
+
+(defn invert-dbids [invert' route ctx]
+  ; todo tempid-lookups need to be indexed by db-ident not val
+  (let [stage-val @(reagent/cursor (.-state-atom (:peer ctx)) [:stage])
+        invert (fn [dbid]
+                 (let [branch-val (hash (branch/db-content (:uri dbid) (:branch ctx) stage-val))
+                       ; todo what about if the tempid is on a higher branch in the uri?
+                       lookup @(reagent/cursor (.-state-atom (:peer ctx)) [:tempid-lookups (:uri dbid) branch-val])]
+                   (invert' lookup dbid)))]
+    (-> route
+        (update :link-dbid invert)
+        (update :query-params
+                (partial util/map-values
+                         (fn [v]
+                           ; todo support other types of v (map, vector, etc)
+                           (if (instance? hypercrud.types.DbId/DbId v)
+                             (invert v)
+                             v)))))))
+
+(defn dbid->tempdbid [route ctx]
+  (invert-dbids temp/dbid->tempdbid route ctx))
+
+(defn tempdbid->dbid [route ctx]
+  (invert-dbids temp/tempdbid->dbid route ctx))
 
 (defn slugify [s] s)
 

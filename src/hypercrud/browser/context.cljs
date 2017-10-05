@@ -1,6 +1,7 @@
 (ns hypercrud.browser.context
   (:require [clojure.string :as string]
             [hypercrud.browser.auto-anchor-formula :refer [auto-entity-dbid]]
+            [hypercrud.browser.routing :as routing]
             [hypercrud.state.actions.core :as actions]
             [hypercrud.util.branch :as branch]
             [reagent.core :as reagent]))
@@ -25,31 +26,35 @@
 ;;;;;;;;;;;;;;;;;;;;
 
 (defn clean [param-ctx]
-  ; why not query-params and all the custom ui/render fns?
+  ; why not code-database-uri and all the custom ui/render fns?
   (dissoc param-ctx
           :keep-disabled-anchors?
-          :route :relation
-          :schemas
+          :route :query-params
+          :relation :schemas
           :uri :find-element :schema
           :entity :attribute :value
           :layout :field))
 
-(defn override-domain-dbs [ctx query-params]
+(defn override-domain-dbs [ctx]
   (update-in ctx
              [:domain :domain/databases]
              (fn [domain-dbs]
-               (->> query-params
+               (->> (:query-params ctx)
                     (filter (fn [[k _]] (and (string? k) (string/starts-with? k "$"))))
                     (into {})
+                    ; todo domain/databases = dbhole
+                    ; this returns just a lookup
                     (merge domain-dbs)))))
 
 (defn route [param-ctx route]
-  (assoc param-ctx
-    :route route
-    :code-database-uri (->> (get-in param-ctx [:domain :domain/code-databases])
-                            (filter #(= (:dbhole/name %) (:code-database route)))
-                            first
-                            :dbhole/uri)))
+  (let [route (routing/tempdbid->dbid route param-ctx)]
+    (assoc param-ctx
+      :route route
+      :query-params (:query-params route)
+      :code-database-uri (->> (get-in param-ctx [:domain :domain/code-databases])
+                              (filter #(= (:dbhole/name %) (:code-database route)))
+                              first
+                              :dbhole/uri))))
 
 (defn anchor-branch [param-ctx anchor]
   (if (:anchor/managed? anchor)

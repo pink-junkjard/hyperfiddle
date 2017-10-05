@@ -13,9 +13,13 @@
 
     (or loading? false)))
 
-(defn stage-reducer [stage action & args]
+(defn stage-reducer [tempid-lookups stage action & args]
   (let [discard (fn [stage branch]
                   (dissoc stage branch))
+        update-to-tempids (fn [branch uri tx]
+                            (let [branch-val (hash (branch/db-content uri branch stage))
+                                  tempid-lookup (get-in tempid-lookups [uri branch-val])]
+                              (tx/update-to-tempids tempid-lookup tx)))
         with (fn [stage branch uri tx]
                (update-in stage [branch uri] tx/into-tx tx))
         clean (fn [stage]
@@ -36,7 +40,7 @@
 
       :with (let [[branch uri tx] args]
               (-> stage
-                  (with branch uri tx)
+                  (with branch uri (update-to-tempids branch uri tx))
                   clean))
 
       :merge (let [[branch] args
@@ -47,11 +51,6 @@
                            (get stage branch))
                    (discard branch)
                    clean))
-
-      :reset-branch (let [[branch multi-color-tx] args]
-                      (-> stage
-                          (assoc branch multi-color-tx)
-                          clean))
 
       :reset-stage (first args)
 
@@ -67,6 +66,11 @@
     :transact!-success (browser/replace-tempids-in-route (first args) route)
 
     route))
+
+(defn tempid-lookups-reducer [tempid-lookup action & args]
+  (case action
+    :set-ptm (second args)
+    tempid-lookup))
 
 (defn ptm-reducer [ptm action & args]
   (case action
@@ -92,12 +96,16 @@
 (defn pressed-keys-reducer [v action & args]
   (or v #{}))
 
-(def root-reducer-map {:hydrate-id hydrate-id-reducer
-                       :route route-reducer
-                       :stage stage-reducer
-                       :ptm ptm-reducer
-                       :error error-reducer
-                       :popovers popover-reducer
-                       :pressed-keys pressed-keys-reducer})
+(defn build-root-reducer-map [value]
+  {:hydrate-id hydrate-id-reducer
+   :route route-reducer
+   :stage (partial stage-reducer (:tempid-lookups value))
+   :ptm ptm-reducer
+   :error error-reducer
+   :popovers popover-reducer
+   :pressed-keys pressed-keys-reducer
+   :tempid-lookups tempid-lookups-reducer})
 
-(def root-reducer (state/combine-reducers root-reducer-map))
+(defn root-reducer [value action & args]
+  (let [combined (state/combine-reducers (build-root-reducer-map value))]
+    (apply combined value action args)))

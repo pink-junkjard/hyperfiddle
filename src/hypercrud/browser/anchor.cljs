@@ -4,6 +4,8 @@
             [clojure.set :as set]
             [hypercrud.browser.auto-anchor-formula :refer [auto-entity-dbid]]
             [hypercrud.browser.context :as context]
+            [hypercrud.browser.routing :as routing]
+            [hypercrud.client.temp :as temp]
             [hypercrud.compile.eval :as eval :refer [eval-str']]
             [hypercrud.form.q-util :as q-util]
             [hypercrud.state.actions.core :as actions]
@@ -32,6 +34,7 @@
         (return nil)))
     (either/right nil)))
 
+; todo belongs in routing ns
 (defn ^:export build-anchor-route' [anchor param-ctx]
   (mlet [query-params (if-let [code-str (:anchor/formula anchor)]
                         (safe-run-user-code-str' code-str param-ctx)
@@ -39,12 +42,16 @@
          link-dbid (if-let [page (:anchor/link anchor)]
                      (either/right (:db/id page))
                      (either/left {:message "anchor has no link" :data {:anchor anchor}}))]
-    (return {:project (get-in param-ctx [:domain :domain/ident]) ; todo split project and domain
-             ;:code-database (:anchor/code-database anchor) todo when cross db references are working on anchor/links, don't need to inherit code-db-uri
-             :code-database (:code-database param-ctx)
-             :link-dbid link-dbid
-             :query-params query-params})))
+    (return
+      (routing/dbid->tempdbid
+        {:project (get-in param-ctx [:domain :domain/ident]) ; todo split project and domain
+         ;:code-database (:anchor/code-database anchor) todo when cross db references are working on anchor/links, don't need to inherit code-db-uri
+         :code-database (:code-database param-ctx)
+         :link-dbid link-dbid
+         :query-params query-params}
+        param-ctx))))
 
+; todo belongs in routing ns
 ; this is same business logic as base/request-for-link
 ; this is currently making assumptions on dbholes
 (defn validated-route' [link route]

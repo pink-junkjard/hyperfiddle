@@ -6,6 +6,7 @@
             [hypercrud.browser.context :as context]
             [hypercrud.browser.user-bindings :as user-bindings]
             [hypercrud.client.core :as hc]
+            [hypercrud.client.temp :as temp]
             [hypercrud.form.q-util :as q-util]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
@@ -30,23 +31,24 @@
                   {:anchor/link ['*]
                    :anchor/find-element [:db/id :find-element/name]}]}])
 
-(defn meta-request-for-link [{:keys [:link-dbid] :as route} {:keys [:code-database-uri] :as param-ctx}]
-  {:pre [code-database-uri link-dbid]}
-  (let [dbval (hc/db (:peer param-ctx) code-database-uri (:branch param-ctx))]
-    (->EntityRequest link-dbid nil dbval meta-pull-exp-for-link)))
+(defn meta-request-for-link [ctx]
+  (let [link-id (get-in ctx [:route :link-dbid :id])
+        _ (assert link-id "missing link-id")
+        dbval (hc/db (:peer ctx) (:code-database-uri ctx) (:branch ctx))]
+    (->EntityRequest link-id nil dbval meta-pull-exp-for-link)))
 
-(defn request-for-link [link query-params ordered-fes param-ctx]
+(defn request-for-link [link ordered-fes ctx]
   (case (:request/type link)
     :query
     (mlet [q (hc-string/memoized-safe-read-string (:link-query/value link))
            query-holes (try-either (q-util/parse-holes q))]
-      (let [params-map (merge query-params (q-util/build-dbhole-lookup param-ctx))
+      (let [params-map (merge (:query-params ctx) (q-util/build-dbhole-lookup ctx))
             params (->> query-holes (mapv (juxt identity #(get params-map %))) (into {}))
             pull-exp (->> ordered-fes
                           (mapv (juxt :find-element/name
                                       (fn [{:keys [:find-element/form :find-element/connection]}]
-                                        (let [uri (context/ident->database-uri connection param-ctx)]
-                                          [(hc/db (:peer param-ctx) uri (:branch param-ctx))
+                                        (let [uri (context/ident->database-uri connection ctx)]
+                                          [(hc/db (:peer ctx) uri (:branch ctx))
                                            (q-util/form-pull-exp form)]))))
                           (into {}))
             ; todo validation of conns for pull-exp
@@ -57,26 +59,27 @@
 
     :entity
     (let [fe (first (filter #(= (:find-element/name %) "entity") ordered-fes))
-          uri (context/ident->database-uri (:find-element/connection fe) param-ctx)]
+          uri (context/ident->database-uri (:find-element/connection fe) ctx)
+          e (get-in ctx [:query-params :entity :id])]
       (cond
         (nil? uri) (either/left {:message "no connection" :data {:find-element fe}})
-        (nil? (:entity query-params)) (either/left {:message "missing param" :data {:params query-params
-                                                                                    :missing #{:entity}}})
+        (nil? e) (either/left {:message "missing param" :data {:params (:query-params ctx)
+                                                               :missing #{:entity}}})
+
         :else (either/right
                 (->EntityRequest
-                  (:entity query-params)
-                  (:a query-params)
-                  (hc/db (:peer param-ctx) uri (:branch param-ctx))
+                  e
+                  (get-in ctx [:query-params :a])
+                  (hc/db (:peer ctx) uri (:branch ctx))
                   (q-util/form-pull-exp (:find-element/form fe))))))
 
     :blank (either/right nil)
 
     (either/right nil)))
 
-(defn process-results [f query-params link request result schemas ordered-fes param-ctx]
+(defn process-results [f link request result schemas ordered-fes param-ctx]
   (let [param-ctx (assoc param-ctx                          ; provide defaults before user-bindings run.
                     :schemas schemas                        ; For tx/entity->statements in userland.
-                    :query-params query-params
                     :read-only (or (:read-only param-ctx) never-read-only))
 
         ; ereq doesn't have a fe yet; wrap with a fe.

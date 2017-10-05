@@ -68,23 +68,23 @@
                 :root auto-control/result)]
     (with-reprocessed-result ui-fn result ordered-fes anchors ctx)))
 
-(defn hydrate-link [route param-ctx]
-  (if (auto-link/system-link? (:link-dbid route))
-    (either/right (auto-link/hydrate-system-link (get-in route [:link-dbid :id]) param-ctx))
-    (hc/hydrate (:peer param-ctx) (base/meta-request-for-link route param-ctx))))
+(defn hydrate-link [ctx]
+  (if (auto-link/system-link? (get-in ctx [:route :link-dbid]))
+    (either/right (auto-link/hydrate-system-link (get-in ctx [:route :link-dbid :id]) ctx))
+    (hc/hydrate (:peer ctx) (base/meta-request-for-link ctx))))
 
-(defn ui-from-route' [{query-params :query-params :as route} param-ctx]
+(defn ui-from-route' [route param-ctx]
   (try
     (let [param-ctx (context/route param-ctx route)]
-      (mlet [link (hydrate-link route param-ctx)            ; always latest
+      (mlet [link (hydrate-link param-ctx)
              ordered-fes (form-util/get-ordered-find-elements link param-ctx)
-             :let [param-ctx (context/override-domain-dbs param-ctx query-params)]
-             request (base/request-for-link link query-params ordered-fes param-ctx)
+             :let [param-ctx (context/override-domain-dbs param-ctx)]
+             request (base/request-for-link link ordered-fes param-ctx)
              result (if request (hc/hydrate (:peer param-ctx) request) (either/right nil))
              ; schema is allowed to be nil if the link only has anchors and no data dependencies
              schemas (schema-util/hydrate-schema ordered-fes param-ctx)
              :let [f (r/partial result-cmp link param-ctx)]]
-        (base/process-results f query-params link request result schemas ordered-fes param-ctx)))
+        (base/process-results f link request result schemas ordered-fes param-ctx)))
     ; js errors? Why do we need this?
     ; user-renderers can throw, should be caught lower though
     (catch :default e (either/left e))))

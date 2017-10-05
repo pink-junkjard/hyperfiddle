@@ -84,10 +84,10 @@
                                                                    (->> ((:entity-attr-t lookup) fe attribute) (mapcat #(recurse-request % param-ctx))))))))
                                                 ))))))))))))
 
-(defn requests-for-link [link query-params param-ctx]
+(defn requests-for-link [link param-ctx]
   (-> (mlet [ordered-fes (form-util/get-ordered-find-elements link param-ctx)
-             :let [param-ctx (context/override-domain-dbs param-ctx query-params)]
-             link-request (base/request-for-link link query-params ordered-fes param-ctx)]
+             :let [param-ctx (context/override-domain-dbs param-ctx)]
+             link-request (base/request-for-link link ordered-fes param-ctx)]
         (cats/return
           (concat
             (if link-request [link-request])
@@ -96,22 +96,23 @@
                                 (hc/hydrate (:peer param-ctx) link-request)
                                 (either/right nil))
                        schemas (schema-util/hydrate-schema ordered-fes param-ctx)]
-                  (base/process-results link-dependent-requests query-params link link-request result schemas ordered-fes param-ctx))
+                  (base/process-results link-dependent-requests link link-request result schemas ordered-fes param-ctx))
                 (cats/mplus (either/right nil))
                 (cats/extract)))))
       (cats/mplus (either/right nil))
       (cats/extract)))
 
-(defn request-from-route [route param-ctx]
-  (let [param-ctx (context/route param-ctx route)]
+(defn request-from-route [route ctx]
+  (let [ctx (context/route ctx route)
+        route (:route ctx)]
     (if (auto-link/system-link? (:link-dbid route))
-      (let [link (auto-link/hydrate-system-link (-> route :link-dbid :id) param-ctx)]
-        (requests-for-link link (:query-params route) param-ctx))
-      (let [meta-link-request (base/meta-request-for-link route param-ctx)]
+      (let [link (auto-link/hydrate-system-link (-> route :link-dbid :id) ctx)]
+        (requests-for-link link ctx))
+      (let [meta-link-request (base/meta-request-for-link ctx)]
         (concat [meta-link-request]
-                (-> (hc/hydrate (:peer param-ctx) meta-link-request)
+                (-> (hc/hydrate (:peer ctx) meta-link-request)
                     (either/branch (constantly nil)
-                                   #(requests-for-link % (:query-params route) param-ctx))))))))
+                                   #(requests-for-link % ctx))))))))
 
 (defn request [anchor param-ctx]
   (if (:anchor/link anchor)

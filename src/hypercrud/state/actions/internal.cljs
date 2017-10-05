@@ -22,9 +22,9 @@
      ; inspect dbvals used in requests see if stage has changed for them
      (if (or force (not (set/subset? requests (set (keys ptm)))))
        (p/then (http/hydrate! entry-uri requests stage)
-               (fn [{:keys [t pulled-trees-map]}]
+               (fn [{:keys [t pulled-trees-map tempid-lookups]}]
                  (when (= hydrate-id (:hydrate-id (get-state)))
-                   (dispatch! [:set-ptm pulled-trees-map])
+                   (dispatch! [:set-ptm pulled-trees-map tempid-lookups])
                    (hydrate-until-queries-settle! dispatch! get-state hydrate-id false request-fn))))
        (p/resolved nil)))))
 
