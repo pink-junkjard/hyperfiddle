@@ -38,9 +38,9 @@
   (fn [dispatch! get-state]
     (let [multi-color-tx (get-in (get-state) [:stage branch] {})]
       (p/then (swap-fn-async multi-color-tx)
-              (fn [{:keys [multi-color-tx app-route]}]
+              (fn [{:keys [tx app-route]}]
                 (let [actions (concat
-                                (mapv (fn [[uri tx]] [:with branch uri tx]) multi-color-tx)
+                                (mapv (fn [[uri tx]] [:with branch uri tx]) tx)
                                 [[:merge branch]
                                  (if app-route [:soft-set-route app-route])
                                  [:close-popover popover-id]])]
