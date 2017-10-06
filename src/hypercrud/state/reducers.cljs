@@ -97,7 +97,7 @@
 
 (defn build-root-reducer-map [value]
   {:hydrate-id hydrate-id-reducer
-   :route route-reducer
+   :encoded-route route-reducer
    :stage (partial stage-reducer (:tempid-lookups value))
    :ptm ptm-reducer
    :error error-reducer

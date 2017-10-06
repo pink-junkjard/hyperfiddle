@@ -5,6 +5,7 @@
             [hypercrud.browser.auto-link :as auto-link]
             [hypercrud.browser.base :as base]
             [hypercrud.browser.context :as context]
+            [hypercrud.browser.routing :as routing]
             [hypercrud.client.core :as hc]
             [hypercrud.client.schema :as schema-util]
             [hypercrud.compile.eval :refer [eval-str']]
@@ -130,7 +131,7 @@
 (defn wrap-ui [v' route ctx]
   (fn [v' route ctx]
     (let [c #(when (and route (contains? @(r/cursor (-> ctx :peer .-state-atom) [:pressed-keys]) "alt"))
-               ((:dispatch! ctx) (actions/set-route route))
+               ((:dispatch! ctx) (actions/set-route (routing/encode route)))
                (.stopPropagation %))]
       ^{:key route}
       [native-listener {:on-click c}

@@ -8,16 +8,8 @@
 (defn set-route [route]
   (fn [dispatch! get-state]
     (let [state (get-state)]
-      (if (not= route (:route state))
+      (if (not= route (:encoded-route state))
         (hydrating-action {:on-start (constantly [[:set-route route]])} dispatch! get-state)))))
-
-(defn set-route-encoded [encoded-route-str index-route]
-  (try
-    ; bad urls can throw on decode
-    (set-route (or (routing/decode encoded-route-str) index-route))
-    (catch :default e
-      ; todo clean up other state values: remove the response, old route, etc
-      [:set-error e])))
 
 (defn with [branch uri tx]
   (partial hydrating-action {:on-start (constantly [[:with branch uri tx]])}))
@@ -37,7 +29,7 @@
                 (let [actions (concat
                                 (mapv (fn [[uri tx]] [:with branch uri tx]) tx)
                                 [[:merge branch]
-                                 (if app-route [:set-route app-route])
+                                 (if app-route [:set-route (routing/encode app-route)])
                                  [:close-popover popover-id]])]
                   (hydrating-action {:on-start (constantly actions)} dispatch! get-state)))))))
 
