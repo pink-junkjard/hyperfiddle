@@ -50,3 +50,12 @@
 
       ; The only way to get to / is if the user types it in. We never ever link to /, and nginx & node should redirect to the canonical.
       :else nil)))
+
+; todo migrate transact to routing/invert-dbids
+(defn replace-tempids-in-route [tempid-lookup encoded-route]
+  (let [replace-tempid #(or (get tempid-lookup %) %)]
+    (-> (decode encoded-route)
+        (update :link-dbid replace-tempid)
+        ; todo doubtful this works on :entity-dbid-s (now :entity)
+        (update :query-params #(util/map-values replace-tempid %))
+        encode)))
