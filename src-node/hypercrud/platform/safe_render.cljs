@@ -1,5 +1,5 @@
 (ns hypercrud.platform.safe-render
-  (:require [reagent.core :as reagent]))
+  (:require [reagent.dom.server :as reagent-server]))
 
 
 (defn safe-user-renderer [user-fn & props]
@@ -7,6 +7,6 @@
    {:dangerouslySetInnerHTML
     {:__html
      (try
-       (reagent/render-to-string (apply vector user-fn props))
+       (reagent-server/render-to-string (apply vector user-fn props))
        (catch js/Error e
-         (reagent/render-to-string [:pre (pr-str e)])))}}])
+         (reagent-server/render-to-string [:pre (pr-str e)])))}}])

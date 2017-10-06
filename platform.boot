@@ -1,8 +1,8 @@
 (set-env!
   :dependencies '[
                   ; provided
-                  [org.clojure/clojurescript "1.9.36" :scope "provided"]
-                  [reagent "0.6.0-rc" :scope "provided"]
+                  [org.clojure/clojurescript "1.9.946" :scope "provided"]
+                  [reagent "0.7.0" :scope "provided"]
 
                   ; build/test/dev
                   [adzerk/boot-cljs "1.7.228-1" :scope "test"]
