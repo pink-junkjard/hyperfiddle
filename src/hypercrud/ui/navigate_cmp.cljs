@@ -5,13 +5,14 @@
             [re-com.core :as re-com]))
 
 (defn dissoc-non-native-props [hypercrud-props]
-  (dissoc hypercrud-props :route :tooltip :popover :hidden))
+  (dissoc hypercrud-props :route :tooltip :popover :hidden :external-hostname))
 
 (defn anchor-cmp [hypercrud-props label]
   (let [anchor-props (-> hypercrud-props
                          (dissoc-non-native-props)
                          (assoc :href (if (:route hypercrud-props)
-                                        (routing/encode (:route hypercrud-props))
+                                        (str (:external-hostname hypercrud-props)
+                                             (routing/encode (:route hypercrud-props)))
                                         nil #_"javascript:void 0;")))]
     ; Why would an anchor have an on-click? Is this historical.
     ; If legit it needs to respect disabled.
