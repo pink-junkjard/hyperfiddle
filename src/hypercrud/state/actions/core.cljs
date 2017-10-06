@@ -5,16 +5,11 @@
             [promesa.core :as p]))
 
 
-(defn soft-set-route [route]
-  (partial hydrating-action {:on-start (constantly [[:soft-set-route route]])}))
-
 (defn set-route [route]
   (fn [dispatch! get-state]
     (let [state (get-state)]
       (if (not= route (:route state))
-        (if (= (some-> state :route :project) (:project route))
-          ((soft-set-route route) dispatch! get-state)
-          (hydrating-action {:on-start (constantly [[:hard-set-route route]])} dispatch! get-state))))))
+        (hydrating-action {:on-start (constantly [[:set-route route]])} dispatch! get-state)))))
 
 (defn set-route-encoded [encoded-route-str index-route]
   (try
@@ -42,7 +37,7 @@
                 (let [actions (concat
                                 (mapv (fn [[uri tx]] [:with branch uri tx]) tx)
                                 [[:merge branch]
-                                 (if app-route [:soft-set-route app-route])
+                                 (if app-route [:set-route app-route])
                                  [:close-popover popover-id]])]
                   (hydrating-action {:on-start (constantly actions)} dispatch! get-state)))))))
 

@@ -58,8 +58,7 @@
 
 (defn route-reducer [route action & args]
   (case action
-    :soft-set-route (first args)
-    :hard-set-route (first args)
+    :set-route (first args)
 
     ; todo we want to overwrite our current browser location with this new url
     ; currently this new route breaks the back button

@@ -44,7 +44,7 @@
                      (either/left {:message "anchor has no link" :data {:anchor anchor}}))]
     (return
       (routing/dbid->tempdbid
-        {:project (get-in param-ctx [:domain :domain/ident]) ; todo split project and domain
+        {
          ;:code-database (:anchor/code-database anchor) todo when cross db references are working on anchor/links, don't need to inherit code-db-uri
          :code-database (:code-database param-ctx)
          :link-dbid link-dbid
