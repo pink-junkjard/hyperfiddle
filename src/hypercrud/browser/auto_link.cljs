@@ -10,6 +10,7 @@
   {:db/id (->DbId {:ident :system-edit
                    :fe-name fe-name
                    :fe-conn fe-conn}
+                  ; (:code-database-uri ctx)
                   nil)
    :link/name (str "system-" fe-name)
    :request/type :entity
@@ -22,6 +23,7 @@
                    :fe-name fe-name
                    :fe-conn fe-conn
                    :a a}
+                  ; (:code-database-uri ctx)
                   nil)
    :link/name (str "system-" fe-name "-" a)
    :request/type :entity
@@ -33,6 +35,7 @@
   {:db/id (->DbId {:ident :sys-remove
                    :fe-name fe-name
                    :a a}
+                  ; (:code-database-uri ctx)
                   nil)
    :link/name "sys-remove"
    :request/type :blank
