@@ -51,8 +51,11 @@
     [input/keyword-input* (:value param-ctx) on-change! props]))
 
 (defn string [maybe-field anchors props param-ctx]
-  (let [on-change! #((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %))]
-    [input/input* (:value param-ctx) on-change! props]))
+  [:div.value
+   [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
+   (let [on-change! #((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %))]
+     [input/input* (:value param-ctx) on-change! props])
+   (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)])
 
 (defn long [maybe-field anchors props param-ctx]
   [:div.value
