@@ -53,9 +53,15 @@
 
 ; todo migrate transact to routing/invert-dbids
 (defn replace-tempids-in-route [tempid-lookup encoded-route]
-  (let [replace-tempid #(or (get tempid-lookup %) %)]
-    (-> (decode encoded-route)
-        (update :link-dbid replace-tempid)
-        ; todo doubtful this works on :entity-dbid-s (now :entity)
-        (update :query-params #(util/map-values replace-tempid %))
-        encode)))
+  (let [replace-tempid #(or (get tempid-lookup %) %)
+        decoded-route (decode encoded-route)]
+    (if decoded-route
+      (-> decoded-route
+          (update :link-dbid replace-tempid)
+          ; todo doubtful this works on :entity-dbid-s (now :entity)
+          (update :query-params #(util/map-values replace-tempid %))
+          encode)
+      ; todo, no route means this is the home-route (at index)
+      ; tempids in home routes could be supported, but there is no access to the domain record here,
+      ; so we don't know what to replace
+      encoded-route)))
