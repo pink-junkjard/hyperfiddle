@@ -4,6 +4,7 @@
             [hypercrud.browser.routing :as routing]
             [hypercrud.state.actions.core :as actions]
             [hypercrud.util.branch :as branch]
+            [hypercrud.util.core :as util]
             [reagent.core :as reagent]))
 
 
@@ -39,12 +40,16 @@
   (update-in ctx
              [:domain :domain/databases]
              (fn [domain-dbs]
-               (->> (:query-params ctx)
-                    (filter (fn [[k _]] (and (string? k) (string/starts-with? k "$"))))
-                    (into {})
-                    ; todo domain/databases = dbhole
-                    ; this returns just a lookup
-                    (merge domain-dbs)))))
+               (let [existing-db-map (util/group-by-assume-unique :dbhole/name domain-dbs)]
+                 (->> (:query-params ctx)
+                      (filter (fn [[k _]] (and (string? k) (string/starts-with? k "$"))))
+                      (map (fn [[k v]]
+                             [k {:dbhole/name k
+                                 :dbhole/uri v}]))
+                      (into {})
+                      (merge existing-db-map)
+                      (vals)
+                      (into #{}))))))
 
 (defn route [param-ctx route]
   (let [route (routing/tempdbid->dbid route param-ctx)]
