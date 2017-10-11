@@ -15,12 +15,6 @@
            (hypercrud.types.QueryRequest QueryRequest)))
 
 
-(defn build-id->tempid-lookup [db-after tempids dtx]
-  (->> dtx (mapv second) (into #{})
-       (filter identity/tempid?)
-       (mapv (juxt #(d/resolve-tempid db-after tempids %) identity))
-       (into {})))
-
 (defmulti parameter (fn [this & args] (class this)))
 
 (defmethod parameter :default [this & args] this)
@@ -93,10 +87,9 @@
                   (assert (validate-tx db dtx) (str "staged tx for " uri " failed validation")))
               project-db-with (let [read-sec-predicate (constantly true) ;todo lookup sec pred
                                     ; todo d/with an unfiltered db
-                                    {:keys [db-after tempids]} (d/with db dtx)
-                                    id->tempid (build-id->tempid-lookup db-after tempids dtx)]
+                                    {:keys [db-after tempids]} (d/with db dtx)]
                                 {:db (d/filter db-after read-sec-predicate)
-                                 :id->tempid id->tempid})]
+                                 :id->tempid (set/map-invert tempids)})]
           (swap! db-with-lookup assoc-in [uri branch] project-db-with)
           project-db-with))))
 
@@ -127,9 +120,8 @@
                                           (into {})))
             hc-tempids (->> dtx-groups
                             (mapv (fn [[uri dtx]]
-                                    (let [{:keys [db-after tempids]} @(d/transact (d/connect (str uri)) dtx)]
-                                      (->> (build-id->tempid-lookup db-after tempids dtx)
-                                           (build-hc-tempid-lookup uri)))))
+                                    (let [{:keys [tempids]} @(d/transact (d/connect (str uri)) dtx)]
+                                      (build-hc-tempid-lookup uri (set/map-invert tempids)))))
                             (apply merge))]
         {:tempids hc-tempids}))))
 
