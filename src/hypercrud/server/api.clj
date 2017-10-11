@@ -67,7 +67,8 @@
            (util/zip ordered-pull-exps)
            (mapv (fn [[[dbval pull-exp] values]]
                    (let [{pull-db :db} (get-secure-db-with (:uri dbval) (:branch dbval))]
-                     (->> (d/pull-many pull-db pull-exp values)
+                     (->> values
+                          (map #(d/pull pull-db pull-exp %))
                           (mapv #(recursively-add-dbid-types % (:uri dbval)))))))
            (util/transpose)
            (mapv #(zipmap (mapv str ordered-find-element-symbols) %))))
