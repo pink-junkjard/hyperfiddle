@@ -1,6 +1,5 @@
 (ns hypercrud.state.reducers
-  (:require [hypercrud.browser.routing :as routing]
-            [hypercrud.client.tx :as tx]
+  (:require [hypercrud.client.tx :as tx]
             [hypercrud.state.core :as state]
             [hypercrud.util.branch :as branch]
             [hypercrud.util.core :as util]))
@@ -62,7 +61,7 @@
 
     ; todo we want to overwrite our current browser location with this new url
     ; currently this new route breaks the back button
-    :transact!-success (routing/replace-tempids-in-route (first args) route)
+    :transact!-success (first args)
 
     route))
 
