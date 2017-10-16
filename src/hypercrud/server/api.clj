@@ -1,6 +1,5 @@
 (ns hypercrud.server.api
-  (:require [clojure.set :as set]
-            [clojure.walk :as walk]
+  (:require [clojure.walk :as walk]
             [datomic.api :as d]
             [hypercrud.types.DbId :refer [->DbId]]
             [hypercrud.types.DbVal]
@@ -40,6 +39,7 @@
           pulled-tree (if (identity/tempid? e)
                         (if a
                           []                                ; hack, return something that is empty for base.cljs
+                          ; todo return a positive id here
                           {:db/id e})
                         (d/pull pull-db pull-exp e))
           pulled-tree (recursively-add-dbid-types pulled-tree (:uri dbval))
