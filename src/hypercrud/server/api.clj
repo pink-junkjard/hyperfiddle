@@ -1,5 +1,6 @@
 (ns hypercrud.server.api
-  (:require [clojure.walk :as walk]
+  (:require [clojure.set :as set]
+            [clojure.walk :as walk]
             [datomic.api :as d]
             [hypercrud.types.DbId :refer [->DbId]]
             [hypercrud.types.DbVal]
