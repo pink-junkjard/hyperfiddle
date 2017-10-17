@@ -37,6 +37,7 @@
       (let [[op e a v] stmt]
         (not (and (or (= :db/add op) (= :db/retract op))
                   (nil? v))))))
+
 (defn hydrate! [entry-uri requests stage-val]
   (let [branch-vals (->> stage-val
                          (mapcat (fn [[branch branch-content]]
