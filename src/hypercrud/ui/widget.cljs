@@ -160,6 +160,12 @@
          [widget props (:value param-ctx) change!])
        [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]])))
 
+(defn markdown [maybe-field anchors props param-ctx]
+  (let [props (assoc props
+                :mode "markdown"
+                :lineWrapping true)]
+    [code maybe-field anchors props param-ctx]))
+
 (defn edn-many [maybe-field anchors props ctx]
   (let [valueType (-> ctx :attribute :db/valueType :db/ident)
         value (-> (if (= valueType :db.type/ref)
