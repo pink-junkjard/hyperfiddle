@@ -9,12 +9,9 @@
 (defn hc-attr-request [param-ctx]
   (let [dbval (hc/db (:peer param-ctx) (:code-database-uri param-ctx) (:branch param-ctx))]
     (->QueryRequest '[:find ?attr :in $ :where
-                      (or [?attr :attribute/renderer]
-                          [?attr :attribute/hc-type])]
+                      [?attr :attribute/renderer]]
                     {"$" dbval}
-                    {"?attr" [dbval [:attribute/ident
-                                     :attribute/renderer
-                                     {:attribute/hc-type ['*]}]]})))
+                    {"?attr" [dbval [:attribute/ident :attribute/renderer]]})))
 
 (defn schema-request [dbval]
   (->QueryRequest '[:find ?attr :in $ :where [:db.part/db :db.install/attribute ?attr]]

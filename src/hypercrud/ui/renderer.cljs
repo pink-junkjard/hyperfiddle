@@ -10,8 +10,7 @@
   (let [attr (:attribute param-ctx)]
     (or
       (eval/validate-user-code-str (get-in param-ctx [:fields (:db/ident attr) :renderer]))
-      (eval/validate-user-code-str (-> attr :attribute/renderer))
-      (eval/validate-user-code-str (-> attr :attribute/hc-type :hc-type/renderer)))))
+      (eval/validate-user-code-str (-> attr :attribute/renderer)))))
 
 (defn user-render [maybe-field anchors props param-ctx]
   [:div.value

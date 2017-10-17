@@ -49,8 +49,7 @@
       (dissoc :db/id)
       (util/update-existing :db/cardinality :db/ident)
       (util/update-existing :db/valueType :db/ident)
-      (util/update-existing :db/unique :db/ident)
-      (util/update-existing :attribute/hc-type :hc-type/name)))
+      (util/update-existing :db/unique :db/ident)))
 
 (defn field-label [field param-ctx]
   (let [docstring (:field/doc field)
