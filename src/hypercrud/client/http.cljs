@@ -32,10 +32,11 @@
   (let [decoded-val (reader/read-string (:body resp))]
     (assoc resp :body decoded-val)))
 
-(defn v-not-nil? [[op e a v]]
-  (not (and (or (= :db/add op) (= :db/retract op))
-            (nil? v))))
-
+(defn v-not-nil? [stmt]
+  (or (map? stmt)
+      (let [[op e a v] stmt]
+        (not (and (or (= :db/add op) (= :db/retract op))
+                  (nil? v))))))
 (defn hydrate! [entry-uri requests stage-val]
   (let [branch-vals (->> stage-val
                          (mapcat (fn [[branch branch-content]]
