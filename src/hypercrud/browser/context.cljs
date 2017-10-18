@@ -42,6 +42,8 @@
              (fn [domain-dbs]
                (let [existing-db-map (util/group-by-assume-unique :dbhole/name domain-dbs)]
                  (->> (:query-params ctx)
+                      ; todo this is not sufficient for links on the page to inherit this override
+                      ; on navigate, this context is gone
                       (filter (fn [[k _]] (and (string? k) (string/starts-with? k "$"))))
                       (map (fn [[k v]]
                              [k {:dbhole/name k
