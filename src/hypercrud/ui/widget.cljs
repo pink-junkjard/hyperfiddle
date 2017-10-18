@@ -47,8 +47,11 @@
         (doall))))
 
 (defn keyword [maybe-field anchors props param-ctx]
-  (let [on-change! #((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %))]
-    [input/keyword-input* (:value param-ctx) on-change! props]))
+  [:div.value
+   [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
+   (let [on-change! #((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %))]
+     [input/keyword-input* (:value param-ctx) on-change! props])
+   (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)])
 
 (defn string [maybe-field anchors props param-ctx]
   [:div.value
@@ -67,13 +70,6 @@
     props]
    (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)])
 
-(defn textarea [maybe-field anchors props param-ctx]
-  (let [set-attr! #((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %))]
-    [textarea* (merge {:type "text"
-                       :value (:value param-ctx)
-                       :on-change set-attr!}
-                      props)]))
-
 (defn boolean [maybe-field anchors props param-ctx]
   [:div.value
    [:div.editable-select {:key (:db/ident (:attribute param-ctx))}
@@ -81,7 +77,7 @@
     (select-boolean* (:value param-ctx) props param-ctx)]
    (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)])
 
-(defn dbid [props param-ctx]
+(defn dbid* [props param-ctx]
   (let [on-change! #((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %))]
     (input/dbid-input (:value param-ctx) on-change! props)))
 
@@ -111,7 +107,7 @@
       [:div.select                                          ; helps the weird anchor float left css thing
        (if options-anchor
          (select* (:value param-ctx) options-anchor props param-ctx)
-         (dbid props param-ctx))]]
+         (dbid* props param-ctx))]]
      (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)]))
 
 (defn ref-component [maybe-field anchors props param-ctx]
@@ -121,8 +117,8 @@
     #_(assert (> (count (filter :anchor/render-inline? anchors)) 0))
     #_(ref maybe-field anchors props param-ctx)
     [:div.value
-     #_[:pre (pr-str (:value param-ctx))]
      [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
+     #_[:pre (pr-str (:value param-ctx))]
      (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)]))
 
 (defn ref-many-table [maybe-field anchors props param-ctx]
@@ -136,8 +132,8 @@
 
 (defn ref-many-component-table [maybe-field anchors props param-ctx]
   [:div.value
-   (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)
-   [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]])
+   [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
+   (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)])
 
 (defn multi-select-ref [maybe-field anchors props param-ctx]
   (let [add-item! #((:user-with! param-ctx) (tx/edit-entity (:db/id (:entity param-ctx)) (:attribute param-ctx) [] [nil]))]
@@ -147,23 +143,21 @@
 ;  (let [add-item! #((:user-swap! param-ctx) {:tx (tx/edit-entity (:db/id (:entity param-ctx)) (:attribute param-ctx) [] [(temp-id!)])})]
 ;    [multi-select* multi-select-markup add-item! maybe-field anchors props param-ctx])) ;add new entity to set
 
-(defn code [& args]
+(defn ^:export code [& args]
   (fn [maybe-field anchors props param-ctx]
     (let [ident (-> param-ctx :attribute :db/ident)
           change! #((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %))]
       ;^{:key ident}
       [:div.value
-       (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)
+       [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
        (let [widget (case (:layout param-ctx) :block code-editor/code-block
                                               :inline-block code-editor/code-inline-block
                                               :table code-editor/code-inline-block)]
          [widget props (:value param-ctx) change!])
-       [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]])))
+       (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)])))
 
-(defn markdown [maybe-field anchors props param-ctx]
-  (let [props (assoc props
-                :mode "markdown"
-                :lineWrapping true)]
+(defn ^:export markdown [maybe-field anchors props param-ctx]
+  (let [props (assoc props :mode "markdown" :lineWrapping true)]
     [code maybe-field anchors props param-ctx]))
 
 (defn edn-many [maybe-field anchors props ctx]
@@ -186,9 +180,9 @@
         [anchors options-anchor] (process-option-popover-anchors anchors ctx)
         anchors (->> anchors (filter :anchor/repeating?))]
     [:div.value
-     (render-inline-anchors (filter :anchor/render-inline? anchors) ctx)
+     [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) ctx)]
      [code-editor/code-inline-block props (pprint-str value) change!]
-     [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) ctx)]]))
+     (render-inline-anchors (filter :anchor/render-inline? anchors) ctx)]))
 
 (defn edn [maybe-field anchors props param-ctx]
   (let [valueType (-> param-ctx :attribute :db/valueType :db/ident)
@@ -201,9 +195,9 @@
         [anchors options-anchor] (process-option-popover-anchors anchors param-ctx)
         anchors (->> anchors (filter :anchor/repeating?))]
     [:div.value
-     (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)
+     [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
      [code-editor/code-inline-block props (pprint-str value) change!]
-     [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]]))
+     (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)]))
 
 (defn valid-date-str? [s]
   (or (empty? s)
@@ -211,29 +205,23 @@
         (integer? ms))))
 
 (defn instant [maybe-field anchors props param-ctx]
-  (let [on-change! #((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %))
-        parse-string (fn [s]
-                       (if (empty? s)
-                         nil
-                         (let [ms (.parse js/Date s)]
-                           (js/Date. ms))))
-        to-string #(some-> % .toISOString)]
-    [input/validated-input (:value param-ctx) on-change! parse-string to-string valid-date-str? props]))
+  [:div.value
+   [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
+   (let [on-change! #((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %))
+         parse-string (fn [s]
+                        (if (empty? s)
+                          nil
+                          (let [ms (.parse js/Date s)]
+                            (js/Date. ms))))
+         to-string #(some-> % .toISOString)]
+     [input/validated-input (:value param-ctx) on-change! parse-string to-string valid-date-str? props])
+   (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)])
 
 (defn text [maybe-field anchors props param-ctx]
   [:div.value
+   [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
    [:span.text
     (case (-> (:attribute param-ctx) :db/cardinality :db/ident)
       :db.cardinality/many (map pr-str (:value param-ctx))
       (pr-str (:value param-ctx)))]
-   (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)
-   [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]])
-
-(defn default [maybe-field anchors props param-ctx]
-  (let [{:keys [:db/valueType :db/cardinality :db/isComponent]} (:attribute param-ctx)]
-    [input/input*
-     (str {:valueType (:db/ident valueType)
-           :cardinality (:db/ident cardinality)
-           :isComponent isComponent})
-     #()
-     {:read-only true}]))
+   (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)])
