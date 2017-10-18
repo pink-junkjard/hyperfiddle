@@ -47,11 +47,12 @@
         (doall))))
 
 (defn keyword [maybe-field anchors props param-ctx]
-  [:div.value
-   [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
-   (let [on-change! #((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %))]
-     [input/keyword-input* (:value param-ctx) on-change! props])
-   (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)])
+  (let [anchors (filter :anchor/repeating? anchors) #_ "this also has to happen every other thing, problem is that :options need to show up here for ref even if not repeating"]
+    [:div.value
+     [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
+     (let [on-change! #((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %))]
+       [input/keyword-input* (:value param-ctx) on-change! props])
+     (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)]))
 
 (defn string [maybe-field anchors props param-ctx]
   [:div.value
