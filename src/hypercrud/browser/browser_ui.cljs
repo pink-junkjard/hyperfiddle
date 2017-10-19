@@ -108,14 +108,12 @@
       (cats/bind #(ui-from-props' anchor % ctx))))
 
 (defn ui-error-inline [e ctx]
-  (let [dev-open? @(r/cursor (-> ctx :peer .-state-atom) [:dev-open])
-        detail (if dev-open? (str " -- " (pr-str (:data e))))]
+  (let [detail (if @(:dev-open? ctx) (str " -- " (pr-str (:data e))))]
     [:code (:message e) " " detail]))
 
 (defn ui-error-block [e ctx]
   #_(ex-message e) #_(pr-str (ex-data e))
-  (let [dev-open? @(r/cursor (-> ctx :peer .-state-atom) [:dev-open])
-        detail (if dev-open? (pr-str (:data e)))]
+  (let [detail (if @(:dev-open? ctx) (pr-str (:data e)))]
     ; todo we don't always return an error with a message
     [:pre (:message e) "\n" detail]))
 
