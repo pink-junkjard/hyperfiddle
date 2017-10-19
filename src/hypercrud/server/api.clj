@@ -103,8 +103,8 @@
                               (into {}))]
     {:t nil
      :pulled-trees-map pulled-trees-map
-     :tempid-lookups (->> @db-with-lookup                   ; todo this is broken (need to not be lazy)
-                          (util/map-values #(util/map-values :id->tempid %)))}))
+     :id->tempid (->> @db-with-lookup                       ; todo this is broken (cannot be lazy)
+                      (util/map-values #(util/map-values :id->tempid %)))}))
 
 (defn transact! [dtx-groups]
   (let [valid? (every? (fn [[uri tx]]
@@ -115,17 +115,12 @@
                        dtx-groups)]
     (if-not valid?
       (throw (RuntimeException. "user tx failed validation"))
-      (let [build-hc-tempid-lookup (fn [uri id->tempid]
-                                     (->> id->tempid
-                                          (mapv (fn [[id tempid]]
-                                                  [(->DbId (str tempid) uri) (->DbId id uri)]))
-                                          (into {})))
-            hc-tempids (->> dtx-groups
-                            (mapv (fn [[uri dtx]]
-                                    (let [{:keys [tempids]} @(d/transact (d/connect (str uri)) dtx)]
-                                      (build-hc-tempid-lookup uri (set/map-invert tempids)))))
-                            (apply merge))]
-        {:tempids hc-tempids}))))
+      (let [tempid-lookups (->> dtx-groups
+                                (mapv (fn [[uri dtx]]
+                                        (let [{:keys [tempids]} @(d/transact (d/connect (str uri)) dtx)]
+                                          [uri tempids])))
+                                (into {}))]
+        {:tempid->id tempid-lookups}))))
 
 (defn latest [conn]
   (str (-> (d/db conn) d/basis-t)))
