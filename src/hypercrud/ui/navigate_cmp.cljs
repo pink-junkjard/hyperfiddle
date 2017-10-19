@@ -11,8 +11,7 @@
   (let [anchor-props (-> hypercrud-props
                          (dissoc-non-native-props)
                          (assoc :href (if (:route hypercrud-props)
-                                        (str (some->> (:external-hostname hypercrud-props) (str "http://"))
-                                             (routing/encode (:route hypercrud-props)))
+                                        (routing/encode (:route hypercrud-props) (:external-hostname hypercrud-props))
                                         nil #_"javascript:void 0;")))]
     ; Why would an anchor have an on-click? Is this historical.
     ; If legit it needs to respect disabled.

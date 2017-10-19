@@ -38,10 +38,14 @@
                                              (set/map-invert))]
                           (temp/tempdbid->dbid tempid->id temp-dbid)))))
 
-(defn encode [route]
-  (if-not route
-    "/"
-    (str "/" (base64/encode (pr-str route)))))
+(defn encode
+  ([route]
+   (if-not route
+     "/"
+     (str "/" (base64/encode (pr-str route)))))
+  ([route external-hostname]
+   (str (some->> external-hostname (str "http://"))
+        (encode route))))
 
 (defn decode [route-str]
   (assert (string/starts-with? route-str "/"))

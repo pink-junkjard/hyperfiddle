@@ -128,17 +128,21 @@
             :else ui-error-block)]                          ; browser including inline true links
     [C e ctx]))
 
+(defn page-on-click [ctx route event]
+  (when (and route (contains? @(r/cursor (-> ctx :peer .-state-atom) [:pressed-keys]) "alt"))
+    ((:dispatch! ctx) (actions/set-route (routing/encode route)))
+    (.stopPropagation event)))
+
 (defn wrap-ui [v' route ctx]
-  (fn [v' route ctx]
-    (let [c #(when (and route (contains? @(r/cursor (-> ctx :peer .-state-atom) [:pressed-keys]) "alt"))
-               ((:dispatch! ctx) (actions/set-route (routing/encode route)))
-               (.stopPropagation %))]
-      ^{:key route}
-      [native-listener {:on-click c}
-       [stale/loading v'
-        (fn [e] [:div.ui (ui-error e ctx)])
-        (fn [v] [:div.ui v])
-        (fn [v] [:div.ui.loading v])]])))
+  (let [on-click (r/partial (or (:page-on-click ctx)
+                                (r/partial page-on-click ctx))
+                            route)]
+    ^{:key route}
+    [native-listener {:on-click on-click}
+     [stale/loading v'
+      (fn [e] [:div.ui (ui-error e ctx)])
+      (fn [v] [:div.ui v])
+      (fn [v] [:div.ui.loading v])]]))
 
 (defn ui-from-route [route ctx]
   [wrap-ui (ui-from-route' route ctx) route ctx])
