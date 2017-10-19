@@ -6,7 +6,6 @@
             [hypercrud.browser.context :as context]
             [hypercrud.browser.user-bindings :as user-bindings]
             [hypercrud.client.core :as hc]
-            [hypercrud.client.temp :as temp]
             [hypercrud.form.q-util :as q-util]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]

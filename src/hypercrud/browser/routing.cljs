@@ -1,5 +1,6 @@
 (ns hypercrud.browser.routing
   (:require [cljs.reader :as reader]
+            [clojure.set :as set]
             [clojure.string :as string]
             [hypercrud.client.temp :as temp]
             [hypercrud.util.base-64-url-safe :as base64]
@@ -27,10 +28,15 @@
     @(reagent/cursor (.-state-atom (:peer ctx)) [:tempid-lookups uri branch-val])))
 
 (defn dbid->tempdbid [route ctx]
-  (invert-dbids route (fn [dbid] (temp/dbid->tempdbid (ctx->id-lookup (:uri dbid) ctx) dbid))))
+  (invert-dbids route (fn [dbid]
+                        (let [id->tempid (ctx->id-lookup (:uri dbid) ctx)]
+                          (temp/dbid->tempdbid id->tempid dbid)))))
 
 (defn tempdbid->dbid [route ctx]
-  (invert-dbids route (fn [dbid] (temp/tempdbid->dbid (ctx->id-lookup (:uri dbid) ctx) dbid))))
+  (invert-dbids route (fn [temp-dbid]
+                        (let [tempid->id (-> (ctx->id-lookup (:uri temp-dbid) ctx)
+                                             (set/map-invert))]
+                          (temp/tempdbid->dbid tempid->id temp-dbid)))))
 
 (defn encode [route]
   (if-not route

@@ -17,8 +17,8 @@
                   (dissoc stage branch))
         update-to-tempids (fn [branch uri tx]
                             (let [branch-val (hash (branch/db-content uri branch stage))
-                                  tempid-lookup (get-in tempid-lookups [uri branch-val])]
-                              (tx/update-to-tempids tempid-lookup tx)))
+                                  id->tempid (get-in tempid-lookups [uri branch-val])]
+                              (tx/update-to-tempids id->tempid tx)))
         with (fn [stage branch uri tx]
                (update-in stage [branch uri] tx/into-tx tx))
         clean (fn [stage]

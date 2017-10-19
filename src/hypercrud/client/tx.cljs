@@ -1,6 +1,5 @@
 (ns hypercrud.client.tx
   (:require [clojure.walk :as walk]
-            [hypercrud.client.temp :as temp]
             [hypercrud.types.DbId :refer [->DbId]]
             [hypercrud.util.core :as util]
             [loom.alg-generic :as loom]))
@@ -207,15 +206,19 @@
                               #(contains? #{:field/attribute} %) ; preserve refs to attributes
                               tempid!))))
 
-(defn process-add-ret [lookup [op e a v]]
-  [op (temp/id->tempid lookup (:id e)) a (if (instance? hypercrud.types.DbId/DbId v) (temp/id->tempid lookup (:id v)) v)])
+(defn process-add-ret [id->tempid [op e a v]]
+  (let [e (get id->tempid (:id e) (:id e))
+        v  (if (instance? hypercrud.types.DbId/DbId v)
+             (get id->tempid (:id v) (:id v))
+             v)]
+    [op e a v]))
 
-(defn stmt-dbid->tempid [lookup [op e a v :as stmt]]
+(defn stmt-dbid->tempid [id->tempid [op e a v :as stmt]]
   (case op
-    :db/add (process-add-ret lookup stmt)
-    :db/retract (process-add-ret lookup stmt)
-    :db.fn/retractEntity [op (temp/id->tempid lookup (:id e))]
+    :db/add (process-add-ret id->tempid stmt)
+    :db/retract (process-add-ret id->tempid stmt)
+    :db.fn/retractEntity [op (get id->tempid (:id e) (:id e))]
     (throw (js/Error (str "Unable to process op: " op)))))
 
-(defn update-to-tempids [tempid-lookup tx]
-  (map (partial stmt-dbid->tempid tempid-lookup) tx))
+(defn update-to-tempids [id->tempid tx]
+  (map (partial stmt-dbid->tempid id->tempid) tx))

@@ -1,10 +1,8 @@
 (ns hypercrud.state.actions.core
-  (:require [clojure.set :as set]
-            [hypercrud.browser.routing :as routing]
+  (:require [hypercrud.browser.routing :as routing]
             [hypercrud.client.http :as http]
             [hypercrud.client.temp :as temp]
             [hypercrud.state.actions.internal :refer [hydrating-action]]
-            [hypercrud.util.core :as util]
             [promesa.core :as p]))
 
 
@@ -50,19 +48,11 @@
                      (js/alert (pr-str error))
                      (dispatch! [:transact!-failure error])
                      (p/rejected error)))
-          (p/then (fn [{:keys [tempids]}]
+          (p/then (fn [{:keys [tempid->id]}]
                     (let [{:keys [encoded-route]} (get-state)
-                          ; todo this id-lookup-by-conn should be the data structure the server returns
-                          id-lookup-by-conn (->> tempids
-                                                 (group-by (fn [[temp-dbid dbid]] (:uri temp-dbid)))
-                                                 (util/map-values (fn [kvs]
-                                                                    (->> kvs
-                                                                         (map (partial mapv :id))
-                                                                         (into {})
-                                                                         (set/map-invert)))))
                           updated-route (-> (or (routing/decode encoded-route) home-route)
-                                            (routing/invert-dbids (fn [dbid]
-                                                                    (let [id-lookup (get id-lookup-by-conn (:uri dbid))]
-                                                                      (temp/tempdbid->dbid id-lookup dbid))))
+                                            (routing/invert-dbids (fn [temp-dbid]
+                                                                    (let [tempid->id (get tempid->id (:uri temp-dbid))]
+                                                                      (temp/tempdbid->dbid tempid->id temp-dbid))))
                                             (routing/encode))]
                       (hydrating-action {:on-start (constantly [[:transact!-success updated-route]])} dispatch! get-state))))))))
