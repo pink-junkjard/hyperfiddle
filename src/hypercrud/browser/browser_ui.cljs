@@ -22,8 +22,11 @@
 (declare ui')
 (declare ui)
 
-(let [browse (fn [anchor-index ident param-ctx f & args]
-               [ui (get anchor-index ident) (assoc param-ctx :user-renderer f #_(if f #(apply f %1 %2 %3 %4 args)))])
+(let [browse (fn [anchor-index ident ctx & [user-renderer & args]]
+               (let [ctx (if user-renderer
+                           (assoc ctx :user-renderer user-renderer #_(if f #(apply f %1 %2 %3 %4 args)))
+                           ctx)]
+                 [ui (get anchor-index ident) ctx]))
       anchor (fn [anchor-index ident param-ctx label]
                (let [props (-> (anchor/build-anchor-props (get anchor-index ident) param-ctx)
                                #_(dissoc :style) #_"custom renderers don't want colored links")]
