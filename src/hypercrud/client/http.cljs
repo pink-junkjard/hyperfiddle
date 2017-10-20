@@ -38,7 +38,7 @@
         (not (and (or (= :db/add op) (= :db/retract op))
                   (nil? v))))))
 
-(defn hydrate! [entry-uri requests stage-val]
+(defn hydrate! [service-uri requests stage-val]
   (let [branch-vals (->> stage-val
                          (mapcat (fn [[branch branch-content]]
                                    (->> branch-content
@@ -46,7 +46,7 @@
                                                (let [tx (branch/db-content uri branch stage-val)]
                                                  [[uri (hash tx)] (filter v-not-nil? tx)]))))))
                          (into {}))]
-    (-> (kvlt/request! {:url (str (.-uri-str entry-uri) "hydrate")
+    (-> (kvlt/request! {:url (str (.-uri-str service-uri) "hydrate")
                         :content-type content-type-transit  ; helps debugging to view as edn
                         :accept content-type-transit        ; needs to be fast so transit
                         :method :post
@@ -54,11 +54,11 @@
                         :as :auto})
         (p/then #(-> % :body :hypercrud)))))
 
-(defn transact! [entry-uri htx-groups]
+(defn transact! [service-uri htx-groups]
   (let [htx-groups (->> (get htx-groups nil)
                         (util/map-values (partial filter v-not-nil?)))]
     (-> (kvlt/request!
-          {:url (str (.-uri-str entry-uri) "transact")
+          {:url (str (.-uri-str service-uri) "transact")
            :content-type content-type-transit
            :accept content-type-transit
            :method :post

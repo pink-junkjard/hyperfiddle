@@ -6,4 +6,4 @@
   (db [this uri branch])
 
   ; used for clone-link
-  (hydrate-one! [this request]))
+  (hydrate-one! [this service-uri request]))

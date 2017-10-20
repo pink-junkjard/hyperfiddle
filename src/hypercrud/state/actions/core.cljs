@@ -3,6 +3,7 @@
             [hypercrud.client.http :as http]
             [hypercrud.client.temp :as temp]
             [hypercrud.state.actions.internal :refer [hydrating-action]]
+            [hypercrud.state.core :as state]
             [promesa.core :as p]))
 
 
@@ -42,8 +43,8 @@
 (defn transact! [home-route]
   (fn [dispatch! get-state]
     (dispatch! [:transact!-start])
-    (let [{:keys [entry-uri stage]} (get-state)]
-      (-> (http/transact! entry-uri stage)
+    (let [{:keys [stage]} (get-state)]
+      (-> (http/transact! state/*service-uri* stage)
           (p/catch (fn [error]
                      (js/alert (pr-str error))
                      (dispatch! [:transact!-failure error])

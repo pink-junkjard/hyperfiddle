@@ -20,8 +20,8 @@
     (either/left (human-error resultset-or-error request))
     (either/right resultset-or-error)))
 
-(defn hydrate-one! [entry-uri request stage-val]
-  (-> (http/hydrate! entry-uri #{request} stage-val)
+(defn hydrate-one! [service-uri request stage-val]
+  (-> (http/hydrate! service-uri #{request} stage-val)
       (p/then (fn [{:keys [t pulled-trees-map id->tempid]}]
                 (if-let [result (some-> (get pulled-trees-map request) (process-result request))]
                   (either/branch result p/rejected p/resolved)
@@ -37,9 +37,9 @@
   (db [this uri branch]
     (->DbVal uri (hash (branch/db-content uri branch @(reagent/cursor state-atom [:stage])))))
 
-  (hydrate-one! [this request]
-    (let [{:keys [entry-uri stage]} @state-atom]
-      (hydrate-one! entry-uri request stage)))
+  (hydrate-one! [this service-uri request]
+    (let [{:keys [stage]} @state-atom]
+      (hydrate-one! service-uri request stage)))
 
   IHash
   (-hash [this] (goog/getUid this)))

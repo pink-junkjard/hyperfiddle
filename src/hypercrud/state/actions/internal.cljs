@@ -11,9 +11,9 @@
 ; force is a hack to be removed once this function runs in node
 (defn hydrate-until-queries-settle!
   ([dispatch! get-state hydrate-id force]
-   (hydrate-until-queries-settle! dispatch! get-state hydrate-id force state/*request*))
-  ([dispatch! get-state hydrate-id force request-fn]
-   (let [{:keys [entry-uri ptm stage] :as state} (get-state)
+   (hydrate-until-queries-settle! dispatch! get-state hydrate-id force state/*request* state/*service-uri*))
+  ([dispatch! get-state hydrate-id force request-fn service-uri]
+   (let [{:keys [ptm stage] :as state} (get-state)
          ; if the time to compute the requests is long
          ; this peer could start returning inconsistent data compared to the state value,
          ; however another hydrating action should have dispatched in that scenario,
@@ -21,11 +21,11 @@
          requests (into #{} (request-fn state))]
      ; inspect dbvals used in requests see if stage has changed for them
      (if (or force (not (set/subset? requests (set (keys ptm)))))
-       (p/then (http/hydrate! entry-uri requests stage)
+       (p/then (http/hydrate! service-uri requests stage)
                (fn [{:keys [t pulled-trees-map id->tempid]}]
                  (when (= hydrate-id (:hydrate-id (get-state)))
                    (dispatch! [:set-ptm pulled-trees-map id->tempid])
-                   (hydrate-until-queries-settle! dispatch! get-state hydrate-id false request-fn))))
+                   (hydrate-until-queries-settle! dispatch! get-state hydrate-id false request-fn service-uri))))
        (p/resolved nil)))))
 
 (defn hydrating-action
