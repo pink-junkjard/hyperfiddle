@@ -57,22 +57,23 @@
                               (mapv #(get params (str %)))
                               (mapv #(parameter % get-secure-db-with)))
           ordered-find-element-symbols (util/parse-query-element query :find)
-          ordered-pull-exps (->> ordered-find-element-symbols
-                                 (mapv (fn [find-element-symbol]
-                                         ; correlate
-                                         (let [pull-exp (get pull-exps (str find-element-symbol))]
-                                           (assert (not= nil pull-exp) (str "hydrate: missing pull expression for " find-element-symbol))
-                                           pull-exp))))]
+          ordered-fe-names (mapv str ordered-find-element-symbols)
+          pull-exps (->> ordered-fe-names
+                         (map (juxt identity (fn [fe-name]
+                                               (let [pull-exp (get pull-exps fe-name)]
+                                                 (assert (not= nil pull-exp) (str "hydrate: missing pull expression for " fe-name))
+                                                 pull-exp))))
+                         (into {}))]
       (->> (apply d/q query ordered-params)                 ;todo gaping security hole
-           (util/transpose)
-           (util/zip ordered-pull-exps)
-           (mapv (fn [[[dbval pull-exp] values]]
-                   (let [{pull-db :db} (get-secure-db-with (:uri dbval) (:branch dbval))]
-                     (->> values
-                          (map #(d/pull pull-db pull-exp %))
-                          (mapv #(recursively-add-dbid-types % (:uri dbval)))))))
-           (util/transpose)
-           (mapv #(zipmap (mapv str ordered-find-element-symbols) %))))
+           (mapv (fn [relation]
+                   (->> (map (fn [fe-name eid]
+                               (let [[dbval pull-exp] (get pull-exps fe-name)
+                                     {pull-db :db} (get-secure-db-with (:uri dbval) (:branch dbval))
+                                     pulled-tree (-> (d/pull pull-db pull-exp eid)
+                                                     (recursively-add-dbid-types (:uri dbval)))]
+                                 [fe-name pulled-tree]))
+                             ordered-fe-names relation)
+                        (into {}))))))
 
     (catch Throwable e
       (.println *err* (pr-str e))
@@ -82,7 +83,7 @@
   (fn get-secure-db-with [uri branch]
     (or (get-in @db-with-lookup [uri branch])
         (let [dtx (get hctx-groups [uri branch])
-              db (d/db (d/connect (str uri)))
+              db (d/db (d/connect (str uri)))               ; todo fix inconsistent t across branches
               ; is it a history query? (let [db (if (:history? dbval) (d/history db) db)])
               _ (let [validate-tx (constantly true)]
                   ; todo look up tx validator
