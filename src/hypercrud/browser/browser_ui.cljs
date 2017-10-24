@@ -15,7 +15,7 @@
             [hypercrud.ui.auto-control :as auto-control]
             [hypercrud.ui.form-util :as form-util]
             [hypercrud.ui.stale :as stale]
-            [hypercrud.util.core :refer [pprint-str]]
+            [hypercrud.util.core :as util]
             [reagent.core :as r]))
 
 
@@ -59,7 +59,7 @@
   (if-not (empty? (:link/renderer link))
     (-> (eval-str' (:link/renderer link))
         (either/branch
-          (fn [e] (constantly [:pre (pprint-str e)]))
+          (fn [e] (constantly [:pre (util/pprint-str e)]))
           (fn [user-fn]
             (fn [result ordered-fes anchors param-ctx]
               [safe-user-renderer user-fn result ordered-fes anchors param-ctx]))))))
@@ -118,7 +118,7 @@
 (defn ui-error-block [e ctx]
   #_(ex-message e) #_(pr-str (ex-data e))
   (let [dev-open? (some-> (:dev-open? ctx) deref)
-        detail (if dev-open? (pr-str (:data e)))]
+        detail (if dev-open? (util/pprint-str (:data e)))]
     ; todo we don't always return an error with a message
     [:pre (:message e) "\n" detail]))
 
