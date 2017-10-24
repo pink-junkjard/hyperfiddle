@@ -16,8 +16,7 @@
     ; Why would an anchor have an on-click? Is this historical.
     ; If legit it needs to respect disabled.
     [native-listener (select-keys anchor-props [:on-click])
-     [:a (dissoc anchor-props :on-click)
-      [:span label]]]))
+     [:a (dissoc anchor-props :on-click) label]]))
 
 (defn popover-cmp [hypercrud-props label]
   (let [{:keys [showing? body open! cancel!]} (:popover hypercrud-props)]

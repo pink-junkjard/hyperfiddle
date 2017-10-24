@@ -48,7 +48,7 @@
   ; if there is no tooltip, the hovers are such that it will never be shown
   (if (:label t-props)
     [hover-tooltip-managed t-props anchor]
-    [:span anchor]))
+    anchor))
 
 (defn click-popover* [state t-props anchor]
   (apply
