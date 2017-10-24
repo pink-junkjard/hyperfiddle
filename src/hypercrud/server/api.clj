@@ -2,15 +2,14 @@
   (:require [clojure.set :as set]
             [clojure.walk :as walk]
             [datomic.api :as d]
-            [hypercrud.types.DbId :refer [->DbId]]
             [hypercrud.types.DbVal]
             [hypercrud.types.DbError :refer [->DbError]]
+            [hypercrud.types.Entity :refer [->Entity]]
             [hypercrud.types.EntityRequest]
             [hypercrud.types.QueryRequest]
             [hypercrud.util.core :as util]
             [hypercrud.util.identity :as identity])
-  (:import (hypercrud.types.DbId DbId)
-           (hypercrud.types.DbVal DbVal)
+  (:import (hypercrud.types.DbVal DbVal)
            (hypercrud.types.EntityRequest EntityRequest)
            (hypercrud.types.QueryRequest QueryRequest)))
 
@@ -22,12 +21,10 @@
 (defmethod parameter DbVal [dbval get-secure-db-with]
   (-> (get-secure-db-with (:uri dbval) (:branch dbval)) :db))
 
-(defmethod parameter DbId [dbid get-secure-db-with] (:id dbid))
-
-(defn recursively-add-dbid-types [pulled-tree uri]
+(defn recursively-add-entity-types [pulled-tree dbval]
   (walk/postwalk (fn [o]
-                   (if (map? o)
-                     (util/update-existing o :db/id #(->DbId % uri))
+                   (if (:db/id o)
+                     (->Entity dbval o)
                      o))
                  pulled-tree))
 
@@ -43,7 +40,7 @@
                           ; todo return a positive id here
                           {:db/id e})
                         (d/pull pull-db pull-exp e))
-          pulled-tree (recursively-add-dbid-types pulled-tree (:uri dbval))
+          pulled-tree (recursively-add-entity-types pulled-tree dbval)
           pulled-tree (if a (get pulled-tree a []) pulled-tree)]
       pulled-tree)
     (catch Throwable e
@@ -70,7 +67,7 @@
                                (let [[dbval pull-exp] (get pull-exps fe-name)
                                      {pull-db :db} (get-secure-db-with (:uri dbval) (:branch dbval))
                                      pulled-tree (-> (d/pull pull-db pull-exp eid)
-                                                     (recursively-add-dbid-types (:uri dbval)))]
+                                                     (recursively-add-entity-types dbval))]
                                  [fe-name pulled-tree]))
                              ordered-fe-names relation)
                         (into {}))))))
