@@ -1,6 +1,7 @@
 (ns hypercrud.browser.context
   (:require [clojure.string :as string]
-            [hypercrud.browser.auto-anchor-formula :refer [auto-entity-dbid]]
+            [hypercrud.browser.auto-anchor-formula :as auto-anchor-formula]
+            [hypercrud.browser.context-util :as context-util]
             [hypercrud.browser.routing :as routing]
             [hypercrud.state.actions.core :as actions]
             [hypercrud.util.branch :as branch]
@@ -8,23 +9,8 @@
             [reagent.core :as reagent]))
 
 
-;;;;;;;;;;;;;;;;;;;;
-;
-; utility fns
-;
-;;;;;;;;;;;;;;;;;;;;
-
-(defn ident->database-uri [ident ctx]
-  (->> (get-in ctx [:domain :domain/databases])
-       (filter #(= (:dbhole/name %) ident))
-       first
-       :dbhole/uri))
-
-;;;;;;;;;;;;;;;;;;;;
-;
-; core ctx manipulation fns
-;
-;;;;;;;;;;;;;;;;;;;;
+; deprecated. needs migration
+(def ident->database-uri context-util/ident->database-uri)
 
 (defn clean [param-ctx]
   ; why not code-database-uri and all the custom ui/render fns?
@@ -54,7 +40,7 @@
                       (into #{}))))))
 
 (defn route [param-ctx route]
-  (let [route (routing/tempdbid->dbid route param-ctx)]
+  (let [route (routing/tempid->id route param-ctx)]
     (assoc param-ctx
       :route route
       :query-params (:query-params route)
@@ -68,7 +54,7 @@
     ; this auto-entity-dbid call makes no sense, there will be collisions, specifically on index links
     ; which means queries of unrendered modals are impacted, an unnecessary perf cost at the very least
     ; we should run the auto-formula logic to determine an appropriate auto-id fn
-    (let [child-id-str (:id (auto-entity-dbid param-ctx))
+    (let [child-id-str (auto-anchor-formula/deterministic-ident param-ctx)
           branch (branch/encode-branch-child (:branch param-ctx) child-id-str)]
       (assoc param-ctx :branch branch))
     param-ctx))
@@ -81,7 +67,7 @@
   ((:dispatch! ctx) (actions/with branch uri tx)))
 
 (defn find-element [param-ctx fe]
-  (let [uri (ident->database-uri (:find-element/connection fe) param-ctx)
+  (let [uri (context-util/ident->database-uri (:find-element/connection fe) param-ctx)
         branch (:branch param-ctx)]
     (assoc param-ctx :uri uri
                      :find-element fe

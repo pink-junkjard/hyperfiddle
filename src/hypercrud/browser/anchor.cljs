@@ -2,7 +2,7 @@
   (:require [cats.core :as cats :refer [mlet return]]
             [cats.monad.either :as either :refer-macros [try-either]]
             [clojure.set :as set]
-            [hypercrud.browser.auto-anchor-formula :refer [auto-entity-dbid]]
+            [hypercrud.browser.auto-anchor-formula :as auto-anchor-formula]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.routing :as routing]
             [hypercrud.compile.eval :as eval :refer [eval-str']]
@@ -14,9 +14,9 @@
 
 
 (defn popover-id [anchor ctx]
-  {:anchor-id (-> anchor :db/id :id)
+  {:anchor-id (:db/id anchor)
    :branch (:branch ctx)
-   :location (auto-entity-dbid ctx)})
+   :location (auto-anchor-formula/deterministic-ident ctx)})
 
 (defn option-anchor? [anchor]
   ; don't care if its inline or not, just do the right thing.
@@ -38,15 +38,15 @@
   (mlet [query-params (if-let [code-str (:anchor/formula anchor)]
                         (safe-run-user-code-str' code-str param-ctx)
                         (either/right nil))
-         link-dbid (if-let [page (:anchor/link anchor)]
-                     (either/right (:db/id page))
-                     (either/left {:message "anchor has no link" :data {:anchor anchor}}))]
+         link-id (if-let [page (:anchor/link anchor)]
+                   (either/right (:db/id page))
+                   (either/left {:message "anchor has no link" :data {:anchor anchor}}))]
     (return
-      (routing/dbid->tempdbid
+      (routing/id->tempid
         {
          ;:code-database (:anchor/code-database anchor) todo when cross db references are working on anchor/links, don't need to inherit code-db-uri
          :code-database (:code-database param-ctx)
-         :link-dbid link-dbid
+         :link-id link-id
          :query-params query-params}
         param-ctx))))
 

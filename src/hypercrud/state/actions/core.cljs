@@ -1,10 +1,15 @@
 (ns hypercrud.state.actions.core
   (:require [hypercrud.browser.routing :as routing]
             [hypercrud.client.http :as http]
-            [hypercrud.client.temp :as temp]
+            [hypercrud.client.schema :as schema]
+            [hypercrud.client.tx :as tx]
             [hypercrud.state.actions.internal :refer [hydrating-action]]
             [hypercrud.state.core :as state]
-            [promesa.core :as p]))
+            [hypercrud.types.DbVal :refer [->DbVal]]
+            [hypercrud.util.branch :as branch]
+            [promesa.core :as p]
+            [hypercrud.client.peer :as peer]
+            [cats.monad.either :as either]))
 
 
 (defn set-route [route]
@@ -13,8 +18,21 @@
       (if (not= route (:encoded-route state))
         (hydrating-action {:on-start (constantly [[:set-route route]])} dispatch! get-state)))))
 
+(defn update-to-tempids [get-state branch uri tx]
+  (let [{:keys [ptm stage tempid-lookups]} (get-state)
+        branch-val (hash (branch/db-content uri branch stage))
+        dbval (->DbVal uri branch-val)
+        schema (let [schema-request (schema/schema-request dbval)]
+                 (-> (get ptm schema-request)
+                     (peer/process-result schema-request)
+                     (either/branch (fn [e] (throw e)) identity)))
+        id->tempid (get-in tempid-lookups [uri branch-val])]
+    (map (partial tx/stmt-id->tempid id->tempid schema) tx)))
+
 (defn with [branch uri tx]
-  (partial hydrating-action {:on-start (constantly [[:with branch uri tx]])}))
+  (fn [dispatch! get-state]
+    (let [tx (update-to-tempids get-state branch uri tx)]
+      (hydrating-action {:on-start (constantly [[:with branch uri tx]])} dispatch! get-state))))
 
 (defn open-popover [popover-id]
   (partial hydrating-action {:on-start (constantly [[:open-popover popover-id]])}))
@@ -29,7 +47,10 @@
       (p/then (swap-fn-async multi-color-tx)
               (fn [{:keys [tx app-route]}]
                 (let [actions (concat
-                                (mapv (fn [[uri tx]] [:with branch uri tx]) tx)
+                                (mapv (fn [[uri tx]]
+                                        (let [tx (update-to-tempids get-state branch uri tx)]
+                                          [:with branch uri tx]))
+                                      tx)
                                 [[:merge branch]
                                  (if app-route [:set-route (routing/encode app-route)])
                                  [:close-popover popover-id]])]
@@ -40,7 +61,7 @@
     (when (not= tx (:stage (get-state)))
       (hydrating-action {:on-start (constantly [[:reset-stage tx]])} dispatch! get-state))))
 
-(defn transact! [home-route]
+(defn transact! [home-route ctx]
   (fn [dispatch! get-state]
     (dispatch! [:transact!-start])
     (let [{:keys [stage]} (get-state)]
@@ -51,9 +72,9 @@
                      (p/rejected error)))
           (p/then (fn [{:keys [tempid->id]}]
                     (let [{:keys [encoded-route]} (get-state)
+                          invert-id (fn [temp-id uri]
+                                      (get-in tempid->id [uri temp-id] temp-id))
                           updated-route (-> (or (routing/decode encoded-route) home-route)
-                                            (routing/invert-dbids (fn [temp-dbid]
-                                                                    (let [tempid->id (get tempid->id (:uri temp-dbid))]
-                                                                      (temp/tempdbid->dbid tempid->id temp-dbid))))
+                                            (routing/invert-ids invert-id ctx)
                                             (routing/encode))]
                       (hydrating-action {:on-start (constantly [[:transact!-success updated-route]])} dispatch! get-state))))))))

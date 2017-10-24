@@ -35,6 +35,7 @@
                                           {:find-element/name "entity"})])
                (either/right []))]
     (->> fes
+         (map #(into {} %))
          (map (fn [fe] (update fe :find-element/connection #(or % "$"))))
          (map #(strip-form-in-raw-mode % param-ctx))
          (cats/return))))

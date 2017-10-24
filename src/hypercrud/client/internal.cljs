@@ -1,8 +1,8 @@
 (ns hypercrud.client.internal
   (:require [cognitect.transit :as t]
-            [hypercrud.types.DbId :refer [DbId DbIdTransitReader DbIdTransitHandler]]
             [hypercrud.types.DbVal :refer [DbVal DbValTransitReader DbValTransitHandler]]
             [hypercrud.types.DbError :refer [DbError DbErrorTransitReader DbErrorTransitHandler]]
+            [hypercrud.types.Entity :refer [Entity EntityTransitHandler read-Entity]]
             [hypercrud.types.QueryRequest :refer [QueryRequest read-QueryRequest QueryRequestTransitHandler]]
             [hypercrud.types.EntityRequest :refer [EntityRequest read-EntityRequest EntityRequestTransitHandler]]
             [hypercrud.types.URI :refer [URI URITransitReader URITransitHandler]]))
@@ -10,17 +10,17 @@
 
 (def transit-read-handlers
   {"r" URITransitReader
-   "DbId" DbIdTransitReader
    "DbVal" DbValTransitReader
    "DbError" DbErrorTransitReader
+   "Entity" read-Entity
    "QReq" read-QueryRequest
    "EReq" read-EntityRequest})
 
 (def transit-write-handlers
   {URI (URITransitHandler.)
-   DbId (DbIdTransitHandler.)
    DbVal (DbValTransitHandler.)
    DbError (DbErrorTransitHandler.)
+   Entity (EntityTransitHandler.)
    QueryRequest (QueryRequestTransitHandler.)
    EntityRequest (EntityRequestTransitHandler.)})
 

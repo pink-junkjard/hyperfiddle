@@ -1,43 +1,42 @@
 (ns hypercrud.browser.auto-anchor-formula
   (:require-macros [hypercrud.util.template :as template])
-  (:require [hypercrud.types.DbId :refer [->DbId]]
+  (:require [hypercrud.client.core :as hc]
+            [hypercrud.types.Entity :refer [->Entity]]
             [hypercrud.util.core :as util]
-            [hypercrud.util.vedn :as vedn]
-            [reagent.core :as reagent]))
+            [hypercrud.util.vedn :as vedn]))
 
 
-(defn auto-entity-dbid-from-stage [ctx]
+(defn auto-entity-from-stage [ctx]
   ; This returns a new value each time the transaction changes - can't call it again later.
   ; So tx-fns must inspect the modal-route, they can't re-create the dbid.
-  (let [uri (:uri ctx)
-        branch-val @(reagent/cursor (-> ctx :peer .-state-atom) [:stage (:branch ctx) uri])
-        id (-> (or branch-val "nil stage")
-               hash js/Math.abs - str)]
-    (->DbId id uri)))
+  (let [dbval (hc/db (:peer ctx) (:uri ctx) (:branch ctx))
+        id (-> (:branch dbval) js/Math.abs - str)]
+    (->Entity dbval {:db/id id})))
 
 ; todo there are collisions when two anchors share the same 'location'
-(defn deterministic-ident [fe e a v]
-  ; Need comment explaining why.
-  ; [fe e a v] quad is sufficient to answer "where are we".
-  ; Why Db is omitted?
-  ; Why value is only inspected in :many for unique hashing?
-  (-> (str (-> fe :find-element/name) "."
-           (-> e :db/id :id) "."
-           (-> a :db/ident) "."
-           (case (get-in a [:db/cardinality :db/ident])
-             :db.cardinality/one nil
-             :db.cardinality/many (hash (into #{} (mapv :db/id v))) ; todo scalar
-             nil nil #_":db/id has a faked attribute with no cardinality, need more thought to make elegant"))
-      hash js/Math.abs - str
-      ))
+(defn deterministic-ident
+  ([ctx]
+   (deterministic-ident
+     (:find-element ctx)
+     (:entity ctx)
+     (:attribute ctx)
+     (:value ctx)))
+  ([fe e a v]
+    ; Need comment explaining why.
+    ; [fe e a v] quad is sufficient to answer "where are we".
+    ; Why Db is omitted?
+    ; Why value is only inspected in :many for unique hashing?
+   (-> (str (-> fe :find-element/name) "."
+            (-> e :db/id) "."
+            (-> a :db/ident) "."
+            (case (get-in a [:db/cardinality :db/ident])
+              :db.cardinality/one nil
+              :db.cardinality/many (hash (into #{} (mapv :db/id v))) ; todo scalar
+              nil nil #_":db/id has a faked attribute with no cardinality, need more thought to make elegant"))
+       hash js/Math.abs - str)))
 
-(defn auto-entity-dbid [ctx]
-  (->DbId (deterministic-ident
-            (-> ctx :find-element)
-            (-> ctx :entity)
-            (-> ctx :attribute)
-            (-> ctx :value))
-          (-> ctx :uri)))
+(defn auto-entity [ctx]
+  (->Entity (.-dbval (:entity ctx)) {:db/id (deterministic-ident ctx)}))
 
 (def auto-formula-lookup
   (let [fe-no-create (->> (template/load-resource "auto-formula/fe-no-create.vedn")

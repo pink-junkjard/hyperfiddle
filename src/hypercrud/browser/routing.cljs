@@ -2,22 +2,26 @@
   (:require [cljs.reader :as reader]
             [clojure.set :as set]
             [clojure.string :as string]
-            [hypercrud.client.temp :as temp]
+            [hypercrud.browser.context-util :as context-util]
+            [hypercrud.types.Entity :refer [->Entity Entity]]
             [hypercrud.util.base-64-url-safe :as base64]
             [hypercrud.util.branch :as branch]
             [hypercrud.util.core :as util]
             [reagent.core :as reagent]))
 
 
-(defn invert-dbids [route invert-dbid]
+(defn invert-ids [route invert-id ctx]
   (-> route
-      (update :link-dbid invert-dbid)
+      (update :link-id (let [uri (context-util/code-ident->database-uri (:code-database route) ctx)]
+                         #(invert-id % uri)))
       (update :query-params
               (partial util/map-values
+                       ; todo support other types of v (map, vector, etc)
                        (fn [v]
-                         ; todo support other types of v (map, vector, etc)
-                         (if (instance? hypercrud.types.DbId/DbId v)
-                           (invert-dbid v)
+                         (if (instance? Entity v)
+                           (let [uri (:uri (.-dbval v))
+                                 id (invert-id (:db/id v) uri)]
+                             (->Entity (.-dbval v) (assoc (.-coll v) :db/id id)))
                            v))))))
 
 (defn ctx->id-lookup [uri ctx]
@@ -27,22 +31,32 @@
     ; todo what about if the tempid is on a higher branch in the uri?
     @(reagent/cursor (.-state-atom (:peer ctx)) [:tempid-lookups uri branch-val])))
 
-(defn dbid->tempdbid [route ctx]
-  (invert-dbids route (fn [dbid]
-                        (let [id->tempid (ctx->id-lookup (:uri dbid) ctx)]
-                          (temp/dbid->tempdbid id->tempid dbid)))))
+(defn id->tempid [route ctx]
+  (let [invert-id (fn [id uri]
+                    (let [id->tempid (ctx->id-lookup uri ctx)]
+                      (get id->tempid id id)))]
+    (invert-ids route invert-id ctx)))
 
-(defn tempdbid->dbid [route ctx]
-  (invert-dbids route (fn [temp-dbid]
-                        (let [tempid->id (-> (ctx->id-lookup (:uri temp-dbid) ctx)
-                                             (set/map-invert))]
-                          (temp/tempdbid->dbid tempid->id temp-dbid)))))
+(defn tempid->id [route ctx]
+  (let [invert-id (fn [temp-id uri]
+                    (let [tempid->id (-> (ctx->id-lookup uri ctx)
+                                         (set/map-invert))]
+                      (get tempid->id temp-id temp-id)))]
+    (invert-ids route invert-id ctx)))
+
+(defn trim-entities [route]
+  (update route :query-params (partial util/map-values
+                                       ; todo support other types of v (map, vector, etc)
+                                       (fn [v]
+                                         (if (instance? Entity v)
+                                           (->Entity (.-dbval v) (select-keys (.-coll v) [:db/id]))
+                                           v)))))
 
 (defn encode
   ([route]
    (if-not route
      "/"
-     (str "/" (base64/encode (pr-str route)))))
+     (str "/" (-> route trim-entities pr-str base64/encode))))
   ([route external-hostname]
    (str (some->> external-hostname (str "http://"))
         (encode route))))

@@ -2,16 +2,18 @@
   (:require [clojure.walk :as walk]))
 
 
-(defn retract [dbid a dbids]
-  (map (fn [v] [:db/retract dbid a v]) dbids))
+(defn retract [id a ids]
+  (map (fn [v] [:db/retract id a v]) ids))
 
-(defn add [dbid a dbids]
-  (map (fn [v] [:db/add dbid a v]) dbids))
+(defn add [id a ids]
+  (map (fn [v] [:db/add id a v]) ids))
 
-(defn edit-entity [dbid a rets adds]
-  (vec (concat (retract dbid a rets)
-               (add dbid a adds))))
+(defn edit-entity [id a rets adds]
+  (vec (concat (retract id a rets)
+               (add id a adds))))
 
+; this fn blasts away previous values
+; in cardinality/many case you may not want that behaviour
 (defn update-entity-attr [{:keys [:db/id] :as entity}
                           {:keys [:db/ident :db/cardinality :db/valueType] :as attribute}
                           new-val]
@@ -135,19 +137,16 @@
              [a v])))
        (into {})))
 
-(defn process-add-ret [id->tempid [op e a v]]
-  (let [e (get id->tempid (:id e) (:id e))
-        v  (if (instance? hypercrud.types.DbId/DbId v)
-             (get id->tempid (:id v) (:id v))
-             v)]
+(defn process-add-ret [id->tempid schema [op e a v]]
+  (let [e (get id->tempid e e)
+        v (if (= :db.type/ref (get-in schema [a :db/valueType :db/ident]))
+            (get id->tempid v v)
+            v)]
     [op e a v]))
 
-(defn stmt-dbid->tempid [id->tempid [op e a v :as stmt]]
+(defn stmt-id->tempid [id->tempid schema [op e a v :as stmt]]
   (case op
-    :db/add (process-add-ret id->tempid stmt)
-    :db/retract (process-add-ret id->tempid stmt)
-    :db.fn/retractEntity [op (get id->tempid (:id e) (:id e))]
+    :db/add (process-add-ret schema id->tempid stmt)
+    :db/retract (process-add-ret schema id->tempid stmt)
+    :db.fn/retractEntity [op (get id->tempid e e)]
     (throw (js/Error (str "Unable to process op: " op)))))
-
-(defn update-to-tempids [id->tempid tx]
-  (map (partial stmt-dbid->tempid id->tempid) tx))

@@ -3,10 +3,11 @@
             [cats.monad.either :as either :refer-macros [try-either]]
             [hypercrud.browser.auto-anchor :as auto-anchor]
             [hypercrud.browser.auto-form :as auto-form]
-            [hypercrud.browser.context :as context]
+            [hypercrud.browser.context-util :as context-util]
             [hypercrud.browser.user-bindings :as user-bindings]
             [hypercrud.client.core :as hc]
             [hypercrud.form.q-util :as q-util]
+            [hypercrud.types.Entity :refer [Entity]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hypercrud.util.string :as hc-string]))
@@ -32,7 +33,7 @@
                    :anchor/find-element [:db/id :find-element/name]}]}])
 
 (defn meta-request-for-link [ctx]
-  (let [link-id (get-in ctx [:route :link-dbid :id])
+  (let [link-id (get-in ctx [:route :link-id])
         _ (assert link-id "missing link-id")
         dbval (hc/db (:peer ctx) (:code-database-uri ctx) (:branch ctx))]
     (->EntityRequest link-id nil dbval meta-pull-exp-for-link)))
@@ -43,11 +44,15 @@
     (mlet [q (hc-string/memoized-safe-read-string (:link-query/value link))
            query-holes (try-either (q-util/parse-holes q))]
       (let [params-map (merge (:query-params ctx) (q-util/build-dbhole-lookup ctx))
-            params (->> query-holes (mapv (juxt identity #(get params-map %))) (into {}))
+            params (->> query-holes
+                        (mapv (juxt identity (fn [hole-name]
+                                               (let [param (get params-map hole-name)]
+                                                 (if (instance? Entity param) (:db/id param) param)))))
+                        (into {}))
             pull-exp (->> ordered-fes
                           (mapv (juxt :find-element/name
                                       (fn [{:keys [:find-element/form :find-element/connection]}]
-                                        (let [uri (context/ident->database-uri connection ctx)]
+                                        (let [uri (context-util/ident->database-uri connection ctx)]
                                           [(hc/db (:peer ctx) uri (:branch ctx))
                                            (q-util/form-pull-exp form)]))))
                           (into {}))
@@ -59,8 +64,8 @@
 
     :entity
     (let [fe (first (filter #(= (:find-element/name %) "entity") ordered-fes))
-          uri (context/ident->database-uri (:find-element/connection fe) ctx)
-          e (get-in ctx [:query-params :entity :id])]
+          uri (context-util/ident->database-uri (:find-element/connection fe) ctx)
+          e (get-in ctx [:query-params :entity])]
       (cond
         (nil? uri) (either/left {:message "no connection" :data {:find-element fe}})
         (nil? e) (either/left {:message "missing param" :data {:params (:query-params ctx)
@@ -68,7 +73,7 @@
 
         :else (either/right
                 (->EntityRequest
-                  e
+                  (if (instance? Entity e) (:db/id e) e)
                   (get-in ctx [:query-params :a])
                   (hc/db (:peer ctx) uri (:branch ctx))
                   (q-util/form-pull-exp (:find-element/form fe))))))
@@ -101,7 +106,7 @@
                                              (get-in schemas [fe-name (.-a request) :db/cardinality :db/ident]))
                                        :db.cardinality/one {}
                                        :db.cardinality/many []))
-                   (map? result) {"entity" result}
+                   (instance? Entity result) {"entity" result}
                    (coll? result) (mapv (fn [relation] {"entity" relation}) result))
 
                  result)

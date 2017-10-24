@@ -12,13 +12,9 @@
 
     (or loading? false)))
 
-(defn stage-reducer [tempid-lookups stage action & args]
+(defn stage-reducer [stage action & args]
   (let [discard (fn [stage branch]
                   (dissoc stage branch))
-        update-to-tempids (fn [branch uri tx]
-                            (let [branch-val (hash (branch/db-content uri branch stage))
-                                  id->tempid (get-in tempid-lookups [uri branch-val])]
-                              (tx/update-to-tempids id->tempid tx)))
         with (fn [stage branch uri tx]
                (update-in stage [branch uri] tx/into-tx tx))
         clean (fn [stage]
@@ -39,7 +35,7 @@
 
       :with (let [[branch uri tx] args]
               (-> stage
-                  (with branch uri (update-to-tempids branch uri tx))
+                  (with branch uri tx)
                   clean))
 
       :merge (let [[branch] args
@@ -94,16 +90,14 @@
 (defn pressed-keys-reducer [v action & args]
   (or v #{}))
 
-(defn build-root-reducer-map [value]
+(def root-reducer-map
   {:hydrate-id hydrate-id-reducer
    :encoded-route route-reducer
-   :stage (partial stage-reducer (:tempid-lookups value))
+   :stage stage-reducer
    :ptm ptm-reducer
    :error error-reducer
    :popovers popover-reducer
    :pressed-keys pressed-keys-reducer
    :tempid-lookups tempid-lookups-reducer})
 
-(defn root-reducer [value action & args]
-  (let [combined (state/combine-reducers (build-root-reducer-map value))]
-    (apply combined value action args)))
+(def root-reducer (state/combine-reducers root-reducer-map))

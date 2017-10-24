@@ -1,7 +1,6 @@
 (ns hypercrud.ui.input
   (:require [cljs.reader :as reader]
             [hypercrud.form.q-util :as q-util]
-            [hypercrud.types.DbId :refer [DbId]]
             [reagent.core :as reagent]))
 
 
@@ -11,6 +10,7 @@
 (defn- validated-input' [value on-change! parse-string to-string valid? props]
   (let [intermediate-val (reagent/atom (to-string value))]
     (fn [value on-change! parse-string to-string valid? props]
+      ; todo this valid check should NOT be nil punning
       (let [valid?' (valid? @intermediate-val)]
         [:input (merge (adapt-props-to-input props)
                        {:type "text"
@@ -46,9 +46,8 @@
     ^{:key value}
     [validated-input' value on-change! parse-string to-string valid? props]))
 
-(defn dbid-input [value on-change! & [props]]
-  ; value :: {:db/id #DbId[17592186045891 17592186045422]}
+(defn id-input [value on-change! & [props]]
   ^{:key (:db/id value)}
   [validated-input' (:db/id value) on-change! q-util/safe-read-string pr-str
-   #(instance? DbId (q-util/safe-read-string %))
+   q-util/safe-read-string
    props])

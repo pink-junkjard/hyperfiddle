@@ -78,9 +78,9 @@
     (select-boolean* (:value param-ctx) props param-ctx)]
    (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)])
 
-(defn dbid* [props param-ctx]
+(defn id* [props param-ctx]
   (let [on-change! #((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) %))]
-    (input/dbid-input (:value param-ctx) on-change! props)))
+    (input/id-input (:value param-ctx) on-change! props)))
 
 (defn process-option-anchors [anchors param-ctx]
   (let [[options-anchor] (filter anchor/option-anchor? anchors)
@@ -108,7 +108,7 @@
       [:div.select                                          ; helps the weird anchor float left css thing
        (if options-anchor
          (select* (:value param-ctx) options-anchor props param-ctx)
-         (dbid* props param-ctx))]]
+         (id* props param-ctx))]]
      (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)]))
 
 (defn ref-component [maybe-field anchors props param-ctx]

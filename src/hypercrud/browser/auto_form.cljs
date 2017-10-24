@@ -1,6 +1,5 @@
 (ns hypercrud.browser.auto-form
-  (:require [hypercrud.types.DbId :refer [->DbId]]
-            [hypercrud.util.core :as util]))
+  (:require [hypercrud.util.core :as util]))
 
 
 (defn system-field? [field-dbid]
@@ -16,16 +15,23 @@
     ; even in raw mode when they haven't been modeled yet.
     (->> ordered-fes
          (map (fn [fe]
-                (let [splat? (or raw-mode? (empty? (-> fe :find-element/form :form/field)))
-                      fields (if-not splat?
-                               (-> fe :find-element/form :form/field)
-                               (->> (get results-indexed-by-column (:find-element/name fe))
-                                    (reduce (fn [acc v] (into acc (keys (dissoc v :db/id)))) #{})
-                                    (map (fn [ident] {:db/id (->DbId {:fe (-> fe :db/id :id) :a ident} (:code-database-uri param-ctx))
-                                                      :field/attribute ident}))))
-                      ; raw mode sort is by namespaced attribute, per find-element
-                      sort-fn (if splat? :field/attribute :field/order)]
-                  (->> fields
-                       (sort-by sort-fn)
-                       (assoc-in fe [:find-element/form :form/field])))))
+                (let [splat? (or raw-mode? (empty? (get-in fe [:find-element/form :form/field])))]
+                  (update fe :find-element/form
+                          (fn [form]
+                            (-> (into {} form)
+                                (update :form/field
+                                        (fn [fields]
+                                          (if-not splat?
+                                            (sort-by :field/order fields)
+                                            (->> (get results-indexed-by-column (:find-element/name fe))
+                                                 (reduce (fn [acc v]
+                                                           (-> (keys v)
+                                                               (set)
+                                                               (disj :db/id)
+                                                               (into acc)))
+                                                         #{})
+                                                 (map (fn [ident] {:db/id {:fe (get-in fe [:db/id :id]) :a ident}
+                                                                   :field/attribute ident}))
+                                                 ; raw mode sort is by namespaced attribute, per find-element
+                                                 (sort-by :field/attribute)))))))))))
          (vec))))

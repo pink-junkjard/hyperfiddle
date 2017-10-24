@@ -3,7 +3,6 @@
             [hypercrud.browser.core :as browser]
             [hypercrud.client.tx :as tx]
             [hypercrud.form.option :as option]
-            [hypercrud.types.DbId :refer [->DbId]]
             [reagent.core :as reagent]))
 
 
@@ -45,8 +44,8 @@
                                     (either/branch (fn [e] (pr-str e)) identity))]
                       [(:db/id entity) label])))
             (sort-by second)
-            (map (fn [[dbid label]]
-                   [:option {:key (str dbid) :value (.-id dbid)} label])))
+            (map (fn [[id label]]
+                   [:option {:key (str id) :value id} label])))
        [:option {:key :blank :value ""} "--"])]))
 
 (def always-user (atom :user))
@@ -58,14 +57,12 @@
                          :user-renderer renderer)]))
 
 (let [on-change (fn [param-ctx id]
-                  (let [dbid (some-> id (->DbId (:uri param-ctx)))]
-                    ((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) dbid))))]
+                  ((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) id)))]
   (defn select* [value options-anchor props param-ctx]
-    ; value :: {:db/id #DbId[17592186045891 17592186045422]}
     (let [props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
                  :value (cond
                           (nil? value) ""
-                          :else (-> value :db/id :id str))
+                          :else (str (:db/id value)))
 
                  ;; reconstruct the typed value
                  :on-change (reagent/partial on-change param-ctx)

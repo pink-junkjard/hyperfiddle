@@ -105,8 +105,8 @@
 (defn request-from-route [route ctx]
   (let [ctx (context/route ctx route)
         route (:route ctx)]
-    (if (auto-link/system-link? (:link-dbid route))
-      (let [link (auto-link/hydrate-system-link (-> route :link-dbid :id) ctx)]
+    (if (auto-link/system-link? (:link-id route))
+      (let [link (auto-link/hydrate-system-link (:link-id route) ctx)]
         (requests-for-link link ctx))
       (let [meta-link-request (base/meta-request-for-link ctx)]
         (concat [meta-link-request]

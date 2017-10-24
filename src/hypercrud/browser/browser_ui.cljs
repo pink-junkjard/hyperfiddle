@@ -73,8 +73,8 @@
     (with-reprocessed-result ui-fn result ordered-fes anchors ctx)))
 
 (defn hydrate-link [ctx]
-  (if (auto-link/system-link? (get-in ctx [:route :link-dbid]))
-    (either/right (auto-link/hydrate-system-link (get-in ctx [:route :link-dbid :id]) ctx))
+  (if (auto-link/system-link? (get-in ctx [:route :link-id]))
+    (either/right (auto-link/hydrate-system-link (get-in ctx [:route :link-id]) ctx))
     (hc/hydrate (:peer ctx) (base/meta-request-for-link ctx))))
 
 (defn ui-from-route' [route param-ctx]

@@ -3,12 +3,11 @@
   (:require [hypercrud.browser.auto-anchor-formula :refer [auto-formula]]
             [hypercrud.browser.auto-anchor-txfn :refer [auto-txfn]]
             [hypercrud.browser.auto-link :as auto-link]
-            [hypercrud.types.DbId :refer [->DbId]]
             [hypercrud.util.vedn :as vedn]))
 
 
-(defn system-anchor? [link-dbid]
-  (map? (:id link-dbid)))
+(defn system-anchor? [link-id]
+  (map? link-id))
 
 (def auto-anchor-txfn-lookup
   (->> (template/load-resource "auto-anchor/tx-fns.vedn")
@@ -23,9 +22,8 @@
   [parent-link ordered-fes param-ctx]
   (let [entity-links (->> ordered-fes
                           (mapcat (fn [{fe-name :find-element/name fe-conn :find-element/connection :as fe}]
-                                    (let [edit {:db/id (->DbId {:ident :system-anchor-edit
-                                                                :fe (-> fe :db/id :id)}
-                                                               (:code-database-uri param-ctx))
+                                    (let [edit {:db/id {:ident :system-anchor-edit
+                                                        :fe (-> fe :db/id :id)}
                                                 :anchor/prompt (str "edit-" fe-name)
                                                 :anchor/ident (keyword (str "sys-edit-" fe-name))
                                                 :anchor/link (auto-link/link-system-edit fe-name fe-conn)
@@ -35,9 +33,8 @@
                                           ; create links mirror edit links but repeating false, see auto-formula.
                                           ; This is because the connection comes from the find-element, and when merging
                                           ; sys links we match on the find-element.
-                                          new {:db/id (->DbId {:ident :system-anchor-new
-                                                               :fe (-> fe :db/id :id)}
-                                                              (:code-database-uri param-ctx))
+                                          new {:db/id {:ident :system-anchor-new
+                                                       :fe (-> fe :db/id :id)}
                                                :anchor/prompt (str "new-" fe-name)
                                                :anchor/ident (keyword (str "sys-new-" fe-name))
                                                :anchor/link (auto-link/link-system-edit fe-name fe-conn)
@@ -46,9 +43,8 @@
                                                :anchor/managed? true
                                                :anchor/create? true
                                                :anchor/render-inline? true}
-                                          remove {:db/id (->DbId {:ident :system-anchor-remove
-                                                                  :fe (-> fe :db/id :id)}
-                                                                 (:code-database-uri param-ctx))
+                                          remove {:db/id {:ident :system-anchor-remove
+                                                          :fe (-> fe :db/id :id)}
                                                   :anchor/prompt (str "remove-" fe-name)
                                                   :anchor/ident (keyword (str "sys-remove-" fe-name))
                                                   :anchor/link (auto-link/link-blank-system-remove fe-name nil)
@@ -74,10 +70,9 @@
                                                      (and (not= attribute :db/id)
                                                           (= :db.type/ref (get-in schema [attribute :db/valueType :db/ident])))))
                                            (mapcat (fn [{:keys [:field/attribute]}]
-                                                     [{:db/id (->DbId {:ident :system-anchor-edit-attr
-                                                                       :fe (-> fe :db/id :id)
-                                                                       :a attribute}
-                                                                      (:code-database-uri param-ctx))
+                                                     [{:db/id {:ident :system-anchor-edit-attr
+                                                               :fe (-> fe :db/id :id)
+                                                               :a attribute}
                                                        :anchor/prompt (str "edit") ; conserve space in label
                                                        :anchor/ident (keyword (str "sys-edit-" fe-name "-" attribute))
                                                        :anchor/repeating? true
@@ -86,10 +81,9 @@
                                                        :anchor/managed? false
                                                        :anchor/disabled? true
                                                        :anchor/link (auto-link/link-system-edit-attr fe-name fe-conn attribute)}
-                                                      {:db/id (->DbId {:ident :system-anchor-new-attr
-                                                                       :fe (-> fe :db/id :id)
-                                                                       :a attribute}
-                                                                      (:code-database-uri param-ctx))
+                                                      {:db/id {:ident :system-anchor-new-attr
+                                                               :fe (-> fe :db/id :id)
+                                                               :a attribute}
                                                        :anchor/prompt (str "new") ; conserve space in label
                                                        :anchor/ident (keyword (str "sys-new-" fe-name "-" attribute))
                                                        :anchor/repeating? true ; manged - need parent-child ref
@@ -100,10 +94,9 @@
                                                        :anchor/render-inline? true
                                                        :anchor/disabled? true
                                                        :anchor/link (auto-link/link-system-edit-attr fe-name fe-conn attribute)}
-                                                      {:db/id (->DbId {:ident :system-anchor-remove-attr
-                                                                       :fe (-> fe :db/id :id)
-                                                                       :a attribute}
-                                                                      (:code-database-uri param-ctx))
+                                                      {:db/id {:ident :system-anchor-remove-attr
+                                                               :fe (-> fe :db/id :id)
+                                                               :a attribute}
                                                        :anchor/prompt (str "remove")
                                                        :anchor/ident (keyword (str "sys-remove-" fe-name "-" attribute))
                                                        :anchor/link (auto-link/link-blank-system-remove fe-name attribute)
@@ -137,7 +130,9 @@
                            (if maybe-link-anchors
                              (map (partial merge sys-anchor) maybe-link-anchors)
                              [sys-anchor]))))
-               (group-by #(or (:anchor/ident %) (:db/id %)) link-anchors)
+               (->> link-anchors
+                    (map #(into {} %))
+                    (group-by #(or (:anchor/ident %) (:db/id %))))
                sys-anchors)
        vals
        flatten
