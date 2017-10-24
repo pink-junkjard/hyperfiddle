@@ -36,7 +36,8 @@
           concat
           (merge
             {:showing? state
-             :position :below-left #_"work around popover flicker"}
+             ;:position :below-left #_"work around popover flicker" ; wtf is going on, its not needed now
+             }
             t-props                                         ; label, status
             {:label (or (:label t-props) "")                ; required
              :anchor [:span {:on-mouse-enter #(do (if (:label t-props) (reset! state true)) nil)
