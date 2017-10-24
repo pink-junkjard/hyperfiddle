@@ -1,8 +1,5 @@
 (ns hypercrud.client.tx
-  (:require [clojure.walk :as walk]
-            [hypercrud.types.DbId :refer [->DbId]]
-            [hypercrud.util.core :as util]
-            [loom.alg-generic :as loom]))
+  (:require [clojure.walk :as walk]))
 
 
 (defn retract [dbid a dbids]
@@ -14,7 +11,6 @@
 (defn edit-entity [dbid a rets adds]
   (vec (concat (retract dbid a rets)
                (add dbid a adds))))
-
 
 (defn update-entity-attr [{:keys [:db/id] :as entity}
                           {:keys [:db/ident :db/cardinality :db/valueType] :as attribute}
@@ -34,7 +30,6 @@
                                                       :new new-val})))]
     (edit-entity id ident old new)))
 
-
 (defn simplify [simplified-tx next-stmt]
   (let [[op e a v] next-stmt
         g (group-by (fn [[op' e' a' v']] (and (= e' e) (= a' a) (= v' v)))
@@ -52,7 +47,6 @@
       ; else probably a :db.fn
       (conj non-related next-stmt))))
 
-
 (defn into-tx [tx more-statements]
   "We don't care about the cardinality (schema) because the UI code is always
   retracting values before adding new value, even in cardinality one case. This is a very
@@ -60,14 +54,12 @@
   us to re-assert datoms needlessly in datomic"
   (reduce simplify tx more-statements))
 
-
 (defn any-ref->dbid
   "Safe for ref and primitive vals"
   [v]
   (cond (map? v) (:db/id v)
         ; #DbId will just work, its already right
         :else v))
-
 
 ; Internal
 (defn entity->statements
@@ -85,7 +77,6 @@
                    (mapv (fn [v] [:db/add dbid attr (any-ref->dbid v)]) v)
                    [[:db/add dbid attr (any-ref->dbid v)]])))))
 
-
 (defn entity-components [schema entity]
   (mapcat (fn [[attr v]]
             (let [{:keys [:db/cardinality :db/valueType :db/isComponent]} (get schema attr)]
@@ -96,13 +87,11 @@
                   []))))
           entity))
 
-
 ; pulled-tree->statements, respect component
 (defn entity-and-components->statements [schema e]
   ; tree-seq lets us get component entities too
   (->> (tree-seq map? #(entity-components schema %) e)
        (mapcat entity->statements)))
-
 
 ; ignores component, not useful imo
 (defn pulled-tree-children [schema entity]
@@ -116,37 +105,10 @@
                 [])))
           entity))
 
-
 ; ignore component - pretty useless imo
 (defn pulled-tree->statements [schema pulled-tree]
   (->> (tree-seq map? #(pulled-tree-children schema %) pulled-tree)
        (mapcat entity->statements)))
-
-
-(defn clone-id-factory [uri root-dbid]
-  (let [id-map (atom {})
-        replace-id! (fn [dbid]
-                      (let [new-dbid (get @id-map dbid)]
-                        (if (nil? new-dbid)
-                          (let [new-dbid (->DbId (-> (str (:id root-dbid) "." (count (keys @id-map))) hash js/Math.abs - str) uri)]
-                            (swap! id-map assoc dbid new-dbid)
-                            new-dbid)
-                          new-dbid)))
-        fix-seen-id! (fn [dbid]
-                       (get @id-map dbid dbid))]
-    [replace-id! fix-seen-id!]))
-
-
-(defn replace-ids-in-tx [schema uri skip? temp-id! tx]
-  (let [[replace-id!] (clone-id-factory uri temp-id!)]
-    (mapv (fn [[op e a v]]
-            (let [new-e (replace-id! e)
-                  valueType (get-in schema [a :db/valueType])
-                  new-v (if (and (not (skip? a)) (= valueType :db.type/ref))
-                          (replace-id! v)
-                          v)]
-              [op new-e a new-v]))
-          tx)))
 
 ; don't know what this is
 (defn walk-pulled-tree [schema f tree]                      ; don't actually need schema for anything but component which is ignored here
@@ -172,39 +134,6 @@
                          :db.cardinality/many (mapv #(select-keys % [:db/id]) v))))]
              [a v])))
        (into {})))
-
-; rename: clone-pulled-tree
-; Works by making a copy of the entity with tempids instead of dbids
-(defn clone-entity [schema entity new-dbid]
-  (let [[replace-id! fix-seen-id!] (clone-id-factory (-> entity :db/id :uri) new-dbid) ; ew
-        entity' (->> (dissoc entity :db/id)
-                     ; Walk twice because of cycles.
-                     (walk-entity schema #(util/update-existing % :db/id replace-id!))
-                     (walk-entity schema #(util/update-existing % :db/id fix-seen-id!)))]
-    (assoc entity' :db/id new-dbid)))
-
-
-(defn export-link [schema link]
-  (assert false "todo redo this fn")
-  #_(let [tempid! (let [temp-id-atom (atom 0)]
-                    (fn [uri]
-                      (->DbId (swap! temp-id-atom dec) uri)))
-          successors (fn [node]
-                       (pulled-tree-children schema node))
-          filter-pred (fn [node predecessor depth]
-                        ;  also may need (not (:db/ident node)) - attrs ref datomic built-ins
-                        (not (:db/ident node)))]
-      (->> (loom/bf-traverse successors link :when filter-pred)
-           (mapcat (fn [entity]
-                     (if-let [attr (:field/attribute entity)]
-                       (let [e (-> (into {} (seq entity))
-                                   (dissoc :field/attribute))]
-                         (conj (entity->statements e)
-                               [:db/add (:db/id e) :field/attribute attr]))
-                       (entity->statements entity))))
-           (replace-ids-in-tx schema (-> link :db/id :uri)
-                              #(contains? #{:field/attribute} %) ; preserve refs to attributes
-                              tempid!))))
 
 (defn process-add-ret [id->tempid [op e a v]]
   (let [e (get id->tempid (:id e) (:id e))
