@@ -16,6 +16,7 @@
 
 (def meta-pull-exp-for-link
   ['*
+   :db/doc
    :link-query/value
    :request/type
    ; get all our forms for this link
@@ -79,6 +80,7 @@
 (defn process-results [f link request result schemas ordered-fes param-ctx]
   (let [param-ctx (assoc param-ctx                          ; provide defaults before user-bindings run.
                     :schemas schemas                        ; For tx/entity->statements in userland.
+                    :fiddle link                            ; for :db/doc
                     :read-only (or (:read-only param-ctx) never-read-only))
 
         ; ereq doesn't have a fe yet; wrap with a fe.
