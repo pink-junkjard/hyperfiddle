@@ -64,6 +64,7 @@
 
     :entity
     (let [fe (first (filter #(= (:find-element/name %) "entity") ordered-fes))
+          ; todo if :entity query-param is a typed Entity, the connection is already provided. why are we ignoring?
           uri (context-util/ident->database-uri (:find-element/connection fe) ctx)
           e (get-in ctx [:query-params :entity])]
       (cond

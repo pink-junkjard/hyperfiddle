@@ -36,6 +36,7 @@
                (either/right []))]
     (->> fes
          (map #(into {} %))
+         ; todo query-params should be inspected for Entity's and their conns
          (map (fn [fe] (update fe :find-element/connection #(or % "$"))))
          (map #(strip-form-in-raw-mode % param-ctx))
          (cats/return))))
