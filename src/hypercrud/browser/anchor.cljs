@@ -4,11 +4,13 @@
             [clojure.set :as set]
             [hypercrud.browser.auto-anchor-formula :as auto-anchor-formula]
             [hypercrud.browser.context :as context]
+            [hypercrud.browser.context-util :as context-util]
             [hypercrud.browser.routing :as routing]
             [hypercrud.compile.eval :as eval :refer [eval-str']]
             [hypercrud.form.q-util :as q-util]
             [hypercrud.state.actions.core :as actions]
-            [hypercrud.util.core :refer [pprint-str]]
+            [hypercrud.types.Entity :refer [Entity ->ThinEntity]]
+            [hypercrud.util.core :as util :refer [pprint-str]]
             [promesa.core :as p]
             [reagent.core :as reagent]))
 
@@ -35,9 +37,16 @@
 
 ; todo belongs in routing ns
 (defn ^:export build-anchor-route' [anchor param-ctx]
-  (mlet [query-params (if-let [code-str (:anchor/formula anchor)]
-                        (safe-run-user-code-str' code-str param-ctx)
-                        (either/right nil))
+  (mlet [query-params (->> (if-let [code-str (:anchor/formula anchor)]
+                             (safe-run-user-code-str' code-str param-ctx)
+                             (either/right nil))
+                           (cats/fmap (partial util/map-values
+                                               (fn [v]
+                                                 ; todo support other types of v (map, vector, etc)
+                                                 (if (instance? Entity v)
+                                                   (let [dbname (context-util/uri->ident (some-> v .-dbval .-uri) param-ctx)]
+                                                     (->ThinEntity dbname (:db/id v)))
+                                                   v)))))
          link-id (if-let [page (:anchor/link anchor)]
                    (either/right (:db/id page))
                    (either/left {:message "anchor has no link" :data {:anchor anchor}}))]

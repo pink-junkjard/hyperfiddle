@@ -3,7 +3,7 @@
             [clojure.set :as set]
             [clojure.string :as string]
             [hypercrud.browser.context-util :as context-util]
-            [hypercrud.types.Entity :refer [->Entity Entity]]
+            [hypercrud.types.Entity :refer [->Entity Entity ->ThinEntity ThinEntity]]
             [hypercrud.util.base-64-url-safe :as base64]
             [hypercrud.util.branch :as branch]
             [hypercrud.util.core :as util]
@@ -16,13 +16,19 @@
                          #(invert-id % uri)))
       (update :query-params
               (partial util/map-values
-                       ; todo support other types of v (map, vector, etc)
                        (fn [v]
-                         (if (instance? Entity v)
-                           (let [uri (:uri (.-dbval v))
-                                 id (invert-id (:db/id v) uri)]
+                         ; todo support other types of v (map, vector, etc)
+                         (cond
+                           (instance? Entity v)
+                           (let [id (invert-id (:db/id v) (-> v .-dbval .-uri))]
                              (->Entity (.-dbval v) (assoc (.-coll v) :db/id id)))
-                           v))))))
+
+                           (instance? ThinEntity v)
+                           (let [uri (context-util/ident->database-uri (.-dbname v) ctx)
+                                 id (invert-id (.-id v) uri)]
+                             (->ThinEntity (.-dbname v) id))
+
+                           :else v))))))
 
 (defn ctx->id-lookup [uri ctx]
   ; todo tempid-lookups need to be indexed by db-ident not val
@@ -44,19 +50,9 @@
                       (get tempid->id temp-id temp-id)))]
     (invert-ids route invert-id ctx)))
 
-(defn trim-entities [route]
-  (update route :query-params (partial util/map-values
-                                       ; todo support other types of v (map, vector, etc)
-                                       (fn [v]
-                                         (if (instance? Entity v)
-                                           (->Entity (.-dbval v) (select-keys (.-coll v) [:db/id]))
-                                           v)))))
-
 (defn encode
   ([route]
-   (if-not route
-     "/"
-     (str "/" (-> route trim-entities pr-str base64/encode))))
+   (str "/" (some-> route pr-str base64/encode)))
   ([route external-hostname]
    (str (some->> external-hostname (str "http://"))
         (encode route))))

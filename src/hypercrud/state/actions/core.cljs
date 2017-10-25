@@ -1,15 +1,15 @@
 (ns hypercrud.state.actions.core
-  (:require [hypercrud.browser.routing :as routing]
+  (:require [cats.monad.either :as either]
+            [hypercrud.browser.routing :as routing]
             [hypercrud.client.http :as http]
+            [hypercrud.client.peer :as peer]
             [hypercrud.client.schema :as schema]
             [hypercrud.client.tx :as tx]
             [hypercrud.state.actions.internal :refer [hydrating-action]]
             [hypercrud.state.core :as state]
             [hypercrud.types.DbVal :refer [->DbVal]]
             [hypercrud.util.branch :as branch]
-            [promesa.core :as p]
-            [hypercrud.client.peer :as peer]
-            [cats.monad.either :as either]))
+            [promesa.core :as p]))
 
 
 (defn set-route [route]

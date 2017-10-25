@@ -7,7 +7,7 @@
             [hypercrud.browser.user-bindings :as user-bindings]
             [hypercrud.client.core :as hc]
             [hypercrud.form.q-util :as q-util]
-            [hypercrud.types.Entity :refer [Entity]]
+            [hypercrud.types.Entity :refer [Entity ThinEntity]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hypercrud.util.string :as hc-string]))
@@ -47,7 +47,10 @@
             params (->> query-holes
                         (mapv (juxt identity (fn [hole-name]
                                                (let [param (get params-map hole-name)]
-                                                 (if (instance? Entity param) (:db/id param) param)))))
+                                                 (cond
+                                                   (instance? Entity param) (:db/id param)
+                                                   (instance? ThinEntity param) (:db/id param)
+                                                   :else param)))))
                         (into {}))
             pull-exp (->> ordered-fes
                           (mapv (juxt :find-element/name
@@ -74,7 +77,10 @@
 
         :else (either/right
                 (->EntityRequest
-                  (if (instance? Entity e) (:db/id e) e)
+                  (cond
+                    (instance? Entity e) (:db/id e)
+                    (instance? ThinEntity e) (:db/id e)
+                    :else e)
                   (get-in ctx [:query-params :a])
                   (hc/db (:peer ctx) uri (:branch ctx))
                   (q-util/form-pull-exp (:find-element/form fe))))))
@@ -108,6 +114,7 @@
                                        :db.cardinality/one {}
                                        :db.cardinality/many []))
                    (instance? Entity result) {"entity" result}
+                   (instance? ThinEntity result) {"entity" result}
                    (coll? result) (mapv (fn [relation] {"entity" relation}) result))
 
                  result)

@@ -7,6 +7,12 @@
        first
        :dbhole/uri))
 
+(defn uri->ident [uri dbholes]
+  (->> dbholes
+       (filter #(= (:dbhole/uri %) uri))
+       first
+       :dbhole/name))
+
 (defn code-ident->database-uri [ident ctx]
   (->> (get-in ctx [:domain :domain/code-databases])
        (ident->uri ident)))

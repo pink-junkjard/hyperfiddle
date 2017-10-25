@@ -2,7 +2,7 @@
   (:require [cognitect.transit :as t]
             [hypercrud.types.DbVal :refer [DbVal DbValTransitReader DbValTransitHandler]]
             [hypercrud.types.DbError :refer [DbError DbErrorTransitReader DbErrorTransitHandler]]
-            [hypercrud.types.Entity :refer [Entity EntityTransitHandler read-Entity]]
+            [hypercrud.types.Entity :refer [Entity EntityTransitHandler ThinEntity ThinEntityTransitHandler read-Entity read-ThinEntity]]
             [hypercrud.types.QueryRequest :refer [QueryRequest read-QueryRequest QueryRequestTransitHandler]]
             [hypercrud.types.EntityRequest :refer [EntityRequest read-EntityRequest EntityRequestTransitHandler]]
             [hypercrud.types.URI :refer [URI URITransitReader URITransitHandler]]))
@@ -13,6 +13,7 @@
    "DbVal" DbValTransitReader
    "DbError" DbErrorTransitReader
    "Entity" read-Entity
+   "->entity" read-ThinEntity
    "QReq" read-QueryRequest
    "EReq" read-EntityRequest})
 
@@ -21,6 +22,7 @@
    DbVal (DbValTransitHandler.)
    DbError (DbErrorTransitHandler.)
    Entity (EntityTransitHandler.)
+   ThinEntity (ThinEntityTransitHandler.)
    QueryRequest (QueryRequestTransitHandler.)
    EntityRequest (EntityRequestTransitHandler.)})
 
