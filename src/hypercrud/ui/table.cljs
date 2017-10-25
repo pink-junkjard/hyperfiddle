@@ -172,7 +172,7 @@
         {inline-index-anchors true index-anchors false} (->> (get-in anchors-lookup [nil nil])
                                                              (group-by :anchor/render-inline?))
         index-ctx (dissoc ctx :isComponent)]
-    [:div.ui-table-with-links
+    [:div
      (widget/render-anchors index-anchors index-ctx)
      (if (every? #(empty? (-> % :find-element/form :form/field)) ordered-fes)
        [:div "Can't infer table structure - no resultset and blank form. Fix query or model a form."]
