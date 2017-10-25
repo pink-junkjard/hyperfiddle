@@ -4,4 +4,5 @@
 
 (defn markdown [value change! & [props]]
   [:div.markdown
-   {:dangerouslySetInnerHTML {:__html (md->html value)}}])
+   {:class (:class props)
+    :dangerouslySetInnerHTML {:__html (md->html value)}}])

@@ -8,7 +8,8 @@
             [hypercrud.ui.renderer :as renderer]
             [hypercrud.ui.widget :as widget]
             [hypercrud.util.core :as util]
-            [reagent.core :as r]))
+            [reagent.core :as r]
+            [hypercrud.ui.markdown :as markdown]))
 
 (defn Control [field anchors param-ctx]
   (let [props (form-util/build-props field anchors param-ctx)]
@@ -26,7 +27,8 @@
       [:div.anchors
        (widget/render-anchors (->> anchors (remove :anchor/render-inline?)) param-ctx)
        (widget/render-inline-anchors (->> anchors (filter :anchor/render-inline?)) param-ctx)]])
-   (control param-ctx)])
+   (control param-ctx)
+   [markdown/markdown (:db/doc field) #() {:class "hypercrud-doc"}]])
 
 (defn new-field [entity param-ctx]
   (let [attr-ident (r/atom nil)]
