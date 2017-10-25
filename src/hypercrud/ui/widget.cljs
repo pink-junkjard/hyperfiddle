@@ -197,7 +197,7 @@
         anchors (->> anchors (filter :anchor/repeating?))]
     [:div.value
      [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
-     [code-editor/code-inline-block props (pprint-str value) change!]
+     [:div.control [code-editor/code-inline-block props (pprint-str value) change!]]
      (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)]))
 
 (defn valid-date-str? [s]
