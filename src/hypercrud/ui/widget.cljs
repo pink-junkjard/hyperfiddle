@@ -7,7 +7,6 @@
             [hypercrud.client.tx :as tx]
             [hypercrud.ui.code-editor :as code-editor]
             [hypercrud.ui.input :as input]
-            [hypercrud.ui.multi-select :refer [multi-select* multi-select-markup]]
             [hypercrud.ui.radio]                            ; used in user renderers
             [hypercrud.ui.select :refer [select* select-boolean*]]
             [hypercrud.ui.textarea :refer [textarea*]]
@@ -137,7 +136,8 @@
    (render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)])
 
 (defn multi-select-ref [maybe-field anchors props param-ctx]
-  (let [add-item! #((:user-with! param-ctx) (tx/edit-entity (:db/id (:entity param-ctx)) (:attribute param-ctx) [] [nil]))]
+  (assert false "todo")
+  #_(let [add-item! #((:user-with! param-ctx) (tx/edit-entity (:db/id (:entity param-ctx)) (:attribute param-ctx) [] [nil]))]
     (multi-select* multi-select-markup add-item! maybe-field anchors props param-ctx))) ;add-item! is: add nil to set
 
 ;(defn multi-select-ref-component [maybe-field anchors props param-ctx]

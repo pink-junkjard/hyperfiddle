@@ -12,7 +12,6 @@
             [hypercrud.platform.native-event-listener :refer [native-listener]]
             [hypercrud.platform.safe-render :refer [safe-user-renderer]]
             [hypercrud.state.actions.core :as actions]
-            [hypercrud.ui.auto-control :as auto-control]
             [hypercrud.ui.form-util :as form-util]
             [hypercrud.ui.stale :as stale]
             [hypercrud.util.core :as util]
@@ -67,9 +66,9 @@
 (defn result-cmp [link pre-binding-ctx result ordered-fes anchors ctx]
   (let [ui-fn (case @(:display-mode pre-binding-ctx)
                 ; todo executing this user-renderer is potentially unsafe
-                :user (or (:user-renderer pre-binding-ctx) (link-user-fn link) auto-control/result)
-                :xray auto-control/result
-                :root auto-control/result)]
+                :user (or (:user-renderer pre-binding-ctx) (link-user-fn link) hypercrud.ui.result/view)
+                :xray hypercrud.ui.result/view
+                :root hypercrud.ui.result/view)]
     (with-reprocessed-result ui-fn result ordered-fes anchors ctx)))
 
 (defn hydrate-link [ctx]
