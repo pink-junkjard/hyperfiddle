@@ -1,6 +1,6 @@
 (set-env!
   :dependencies '[[com.hyperfiddle/util "0.0.1-SNAPSHOT"]
-                  [com.cognitect/transit-cljs "0.8.239"]
+                  [com.cognitect/transit-cljs "0.8.243"]
                   [funcool/cats "2.1.0"]
                   [funcool/promesa "1.8.1"]
                   [io.nervous/kvlt "0.1.4"]
