@@ -4,8 +4,6 @@
             [hypercrud.ui.auto-control :refer [auto-control]]))
 
 
-(defmulti multi-select-markup (fn [click-add! control-tuples] :default))
-
 (defn multi-select* [markupfn add-item! field anchors props {:keys [user-with!] :as param-ctx}]
   (assert false "todo readonly and test this")
   (let [control-tuples (seq (mapv (fn [inner-value]
@@ -18,7 +16,7 @@
                                   (:value param-ctx)))]
     (markupfn add-item! control-tuples)))
 
-(defmethod multi-select-markup :default [click-add! control-tuples & [css-class]]
+(defn multi-select-markup [click-add! control-tuples & [css-class]]
   [:div.value {:class css-class}
    (map (fn [[eid click-remove! control]]
           ^{:key (str eid)}                                 ;(str eid) so this works when eid is nil

@@ -1,16 +1,13 @@
-(ns hypercrud.ui.auto-control-default
-  (:require [hypercrud.ui.auto-control :as auto-control]
-            [hypercrud.ui.form :as form]
+(ns hypercrud.ui.auto-control
+  (:require [hypercrud.ui.form :as form]
             [hypercrud.ui.markdown :as markdown]
             [hypercrud.ui.table :as table]
             [hypercrud.ui.table-cell :as table-cell]
             [hypercrud.ui.widget :as widget]))
 
 
-(defmethod auto-control/auto-control :default
-  [field anchors props param-ctx]
+(defn auto-control [field anchors props param-ctx]
   ;(assert (:entity param-ctx))
-
   (let [isComponent (-> (:attribute param-ctx) :db/isComponent)
         valueType (-> (:attribute param-ctx) :db/valueType :db/ident)
         cardinality (-> (:attribute param-ctx) :db/cardinality :db/ident)
@@ -28,8 +25,7 @@
     (widget field anchors props param-ctx)))
 
 
-(defmethod auto-control/auto-table-cell :default
-  [field anchors props param-ctx]
+(defn auto-table-cell [field anchors props param-ctx]
   (let [isComponent (-> (:attribute param-ctx) :db/isComponent)
         valueType (-> (:attribute param-ctx) :db/valueType :db/ident)
         cardinality (-> (:attribute param-ctx) :db/cardinality :db/ident)
@@ -48,7 +44,7 @@
                  :else widget/edn)]
     (widget field anchors props param-ctx)))
 
-(defmethod auto-control/result :default [result ordered-fes anchors param-ctx]
+(defn result [result ordered-fes anchors param-ctx]
   [:div.auto-result
    [markdown/markdown (str (-> param-ctx :fiddle :db/doc)) #() {:class "hypercrud-doc"}]
    (cond
