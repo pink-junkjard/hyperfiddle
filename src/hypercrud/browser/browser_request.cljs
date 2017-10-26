@@ -6,8 +6,7 @@
             [hypercrud.browser.base :as base]
             [hypercrud.browser.context :as context]
             [hypercrud.client.core :as hc]
-            [hypercrud.client.schema :as schema-util]
-            [hypercrud.ui.form-util :as form-util]))
+            [hypercrud.client.schema :as schema-util]))
 
 
 (declare request)
@@ -85,7 +84,7 @@
                                                 ))))))))))))
 
 (defn requests-for-link [link param-ctx]
-  (-> (mlet [ordered-fes (form-util/get-ordered-find-elements link param-ctx)
+  (-> (mlet [ordered-fes (base/get-ordered-find-elements link param-ctx)
              :let [param-ctx (context/override-domain-dbs param-ctx)]
              link-request (base/request-for-link link ordered-fes param-ctx)]
         (cats/return

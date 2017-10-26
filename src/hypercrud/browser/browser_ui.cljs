@@ -12,7 +12,6 @@
             [hypercrud.platform.native-event-listener :refer [native-listener]]
             [hypercrud.platform.safe-render :refer [safe-user-renderer]]
             [hypercrud.state.actions.core :as actions]
-            [hypercrud.ui.form-util :as form-util]
             [hypercrud.ui.stale :as stale]
             [hypercrud.util.core :as util]
             [reagent.core :as r]))
@@ -80,7 +79,7 @@
   (try
     (let [param-ctx (context/route param-ctx route)]
       (mlet [link (hydrate-link param-ctx)
-             ordered-fes (form-util/get-ordered-find-elements link param-ctx)
+             ordered-fes (base/get-ordered-find-elements link param-ctx)
              :let [param-ctx (context/override-domain-dbs param-ctx)]
              request (base/request-for-link link ordered-fes param-ctx)
              result (if request (hc/hydrate (:peer param-ctx) request) (either/right nil))
