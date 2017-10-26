@@ -26,6 +26,3 @@
   (rep [_ v] [(.-uri v) (.-branch v)])
   (stringRep [_ v] nil)
   (getVerboseHandler [_] nil))
-
-
-(defn DbValTransitReader [v] (apply ->DbVal v))

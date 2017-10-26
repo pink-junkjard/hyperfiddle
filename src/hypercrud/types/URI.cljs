@@ -20,5 +20,3 @@
   (rep [_ v] (.-uri-str v))
   (stringRep [_ v] nil)
   (getVerboseHandler [_] nil))
-
-(defn URITransitReader [v] (->URI v))

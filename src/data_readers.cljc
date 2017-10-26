@@ -1,5 +1,7 @@
-{DbVal hypercrud.types.DbVal/read-DbVal
- DbError hypercrud.types.DbError/read-DbError
- Entity hypercrud.types.Entity/read-Entity
- ->entity hypercrud.types.Entity/read-ThinEntity
- URI hypercrud.types.URI/read-URI}
+{DbError hypercrud.readers/DbError
+ DbVal hypercrud.readers/DbVal
+ Entity hypercrud.readers/Entity
+ ->entity hypercrud.readers/->entity
+ EReq hypercrud.readers/EReq
+ QReq hypercrud.readers/QReq
+ URI hypercrud.readers/URI}

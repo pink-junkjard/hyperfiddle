@@ -3,7 +3,11 @@
 
 (deftype DbError [msg]
   Object (toString [_] (str "#DbError" (pr-str msg)))
-  IPrintWithWriter (-pr-writer [o writer _] (-write writer (.toString o))))
+  IPrintWithWriter (-pr-writer [o writer _] (-write writer (.toString o)))
+  IHash (-hash [this] (hash msg))
+  IEquiv (-equiv [this other]
+           (and (instance? DbError other)
+                (= (.-msg this) (.-msg other)))))
 
 (def read-DbError #(->DbError %))
 
@@ -15,5 +19,3 @@
   (rep [_ v] (.-msg v))
   (stringRep [_ v] nil)
   (getVerboseHandler [_] nil))
-
-(defn DbErrorTransitReader [v] (->DbError v))

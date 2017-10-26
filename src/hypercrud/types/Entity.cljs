@@ -93,11 +93,11 @@
 
 (def read-ThinEntity #(apply ->ThinEntity %))
 
-(reader/register-tag-parser! 'ThinEntity read-ThinEntity)
+(reader/register-tag-parser! '->entity read-ThinEntity)
 
 (deftype ThinEntityTransitHandler []
   Object
-  (tag [_ v] "#->entity")
+  (tag [_ v] "->entity")
   (rep [_ v] [(.-dbname v) (.-id v)])
   (stringRep [_ v] nil)
   (getVerboseHandler [_] nil))

@@ -1,7 +1,9 @@
 (ns hypercrud.compile.eval
   (:require [cats.monad.either :as either]
             [cljs.analyzer :as analyzer]
+            [cljs.tagged-literals :as tags]
             [cljs.js :as cljs]
+            [hypercrud.readers :as hc-readers]
             [markdown.core]))
 
 
@@ -11,7 +13,15 @@
              ;; Hack - we don't understand why cljs compiler doesn't handle top level forms naturally
              ;; but wrapping in identity fixes the problem
              (let [code-str' (str "(identity\n" code-str "\n)")]
-               (binding [analyzer/*cljs-warning-handlers* []]
+               (binding [analyzer/*cljs-warning-handlers* []
+                         tags/*cljs-data-readers* (merge tags/*cljs-data-readers*
+                                                         {'DbError hc-readers/DbError
+                                                          'DbVal hc-readers/DbVal
+                                                          'Entity hc-readers/Entity
+                                                          '->entity hc-readers/->entity
+                                                          'EReq hc-readers/EReq
+                                                          'QReq hc-readers/QReq
+                                                          'URI hc-readers/URI})]
                  (cljs/eval-str (cljs/empty-state)
                                 code-str'
                                 nil

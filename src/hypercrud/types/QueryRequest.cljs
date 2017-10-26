@@ -20,6 +20,6 @@
   (rep [this v] [(.-query v) (.-params v) (.-pull-exps v)])
   (stringRep [this v] nil))
 
-(def read-QueryRequest #(apply ->QueryRequest %))           ; dedup
+(def read-QueryRequest #(apply ->QueryRequest %))
 
 (reader/register-tag-parser! 'QReq read-QueryRequest)

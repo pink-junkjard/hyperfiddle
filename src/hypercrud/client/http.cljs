@@ -1,7 +1,7 @@
 (ns hypercrud.client.http
   (:require [cljs.pprint :as pprint]
             [cljs.reader :as reader]
-            [hypercrud.client.internal :as internal]
+            [hypercrud.client.transit :as transit]
             [hypercrud.util.branch :as branch]
             [hypercrud.util.core :as util]
             [kvlt.core :as kvlt]
@@ -14,11 +14,11 @@
 
 
 (defmethod kvlt.middleware.params/coerce-form-params (keyword content-type-transit) [{:keys [form-params]}]
-  (internal/transit-encode form-params))
+  (transit/encode form-params))
 
 
 (defmethod kvlt.middleware/from-content-type (keyword content-type-transit) [resp]
-  (let [decoded-val (internal/transit-decode (:body resp))]
+  (let [decoded-val (transit/decode (:body resp))]
     (assoc resp :body decoded-val)))
 
 
