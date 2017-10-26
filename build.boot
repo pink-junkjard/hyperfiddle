@@ -6,7 +6,6 @@
                   [io.nervous/kvlt "0.1.4"]
                   [markdown-clj "0.9.88"]
                   [org.clojars.cemerick/loom "0.6.1-SNAPSHOT"] ; see https://github.com/aysylu/loom/pull/91
-                  [org.clojure/tools.namespace "0.3.0-alpha3"] ; eval
                   [re-com "2.0.0"]
 
                   ; provided
@@ -18,10 +17,10 @@
                   [reagent "0.7.0" :scope "provided"]
 
                   ; build/test/dev
-                  [adzerk/boot-cljs "1.7.228-1" :scope "test"]
+                  [adzerk/boot-cljs "2.1.4" :scope "test"]
                   [adzerk/bootlaces "0.1.13" :scope "test"]
-                  [adzerk/boot-test "1.1.1" :scope "test"]
-                  [crisptrutski/boot-cljs-test "0.2.2-SNAPSHOT" :scope "test"]
+                  [adzerk/boot-test "1.2.0" :scope "test"]
+                  [crisptrutski/boot-cljs-test "0.3.4" :scope "test"]
                   [sparkfund/boot-lein-generate "0.3.0" :scope "test"]]
   :resource-paths #{"src" "resources"})
 
@@ -38,10 +37,10 @@
        :version +version+}
   test-cljs {:js-env :node})
 
-(deftask test []
+(deftask testing []
          ; cljs tests have to have _test in the filename
-         #_(merge-env! :source-paths #{"test"})
-         #_(test-cljs))
+         (merge-env! :source-paths #{"test"})
+         identity)
 
 (when (> (.lastModified (clojure.java.io/file "build.boot"))
          (.lastModified (clojure.java.io/file "project.clj")))
