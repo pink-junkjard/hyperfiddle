@@ -137,16 +137,30 @@
              [a v])))
        (into {})))
 
-(defn process-add-ret [id->tempid schema [op e a v]]
-  (let [e (get id->tempid e e)
-        v (if (= :db.type/ref (get-in schema [a :db/valueType :db/ident]))
+(letfn [(update-v [id->tempid schema a v]
+          (if (= :db.type/ref (get-in schema [a :db/valueType :db/ident]))
             (get id->tempid v v)
-            v)]
-    [op e a v]))
+            v))
+        (add-ret [id->tempid schema [op e a v]]
+          (let [e (get id->tempid e e)
+                v (update-v id->tempid schema a v)]
+            [op e a v]))
+        (retractEntity [id->tempid schema [op e]]
+          [op (get id->tempid e e)])
+        (cas [id->tempid schema [op e a ov nv]]
+          [op
+           (get id->tempid e e)
+           a
+           (update-v id->tempid schema a ov)
+           (update-v id->tempid schema a nv)])]
+  (def op-lookup
+    {:db/add add-ret
+     :db/retract add-ret
+     :db/retractEntity retractEntity
+     :db.fn/retractEntity retractEntity
+     :db/cas cas
+     :db.fn/cas cas}))
 
-(defn stmt-id->tempid [id->tempid schema [op e a v :as stmt]]
-  (case op
-    :db/add (process-add-ret schema id->tempid stmt)
-    :db/retract (process-add-ret schema id->tempid stmt)
-    :db.fn/retractEntity [op (get id->tempid e e)]
-    (throw (js/Error (str "Unable to process op: " op)))))
+(defn stmt-id->tempid [id->tempid schema [op :as stmt]]
+  ((get op-lookup op #(throw (js/Error (str "Unable to process op: " op))))
+    id->tempid schema stmt))
