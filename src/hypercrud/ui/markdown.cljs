@@ -1,8 +1,9 @@
-(ns hypercrud.ui.markdown)
+(ns hypercrud.ui.markdown
+  (:require [reagent.core :as r]))
 
-(def showdown (delay (js/showdown.Converter.)))
+(def MyComponent (r/as-element [:pre.bambi "hello world"]))
+(def showdown (delay (js/ReactShowdown.Converter. #js {"MyComponent" MyComponent})))
 
 (defn markdown [value change! & [props]]
-  [:div.markdown
-   {:class (:class props)
-    :dangerouslySetInnerHTML {:__html (.makeHtml @showdown value)}}])
+  ; :dangerouslySetInnerHTML {:__html (.convert @showdown value)}
+  [:div.markdown {:class (:class props)} (.convert @showdown value)])
