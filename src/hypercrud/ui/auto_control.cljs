@@ -39,7 +39,3 @@
                  (and (= cardinality :db.cardinality/one)) widget/edn
                  :else widget/edn)]
     (widget field anchors props param-ctx)))
-
-(defn result [result ordered-fes anchors param-ctx]
-  [:div.auto-result
-   [:h1 "This interface is no longer supported. Please use hypercrud.ui.result/view"]])

@@ -9,9 +9,6 @@
             [reagent.core :as reagent]))
 
 
-; deprecated. needs migration
-(def ident->database-uri context-util/ident->database-uri)
-
 (defn clean [param-ctx]
   ; why not code-database-uri and all the custom ui/render fns?
   (dissoc param-ctx
