@@ -1,8 +1,8 @@
-(ns hypercrud.ui.markdown
-  (:require [markdown.core :refer [md->html]]))
+(ns hypercrud.ui.markdown)
 
+(def showdown (delay (js/showdown.Converter.)))
 
 (defn markdown [value change! & [props]]
   [:div.markdown
    {:class (:class props)
-    :dangerouslySetInnerHTML {:__html (md->html value)}}])
+    :dangerouslySetInnerHTML {:__html (.makeHtml @showdown value)}}])

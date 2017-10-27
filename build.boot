@@ -4,7 +4,6 @@
                   [funcool/cats "2.1.0"]
                   [funcool/promesa "1.8.1"]
                   [io.nervous/kvlt "0.1.4"]
-                  [markdown-clj "0.9.88"]
                   [org.clojars.cemerick/loom "0.6.1-SNAPSHOT"] ; see https://github.com/aysylu/loom/pull/91
                   [re-com "2.0.0"]
 
