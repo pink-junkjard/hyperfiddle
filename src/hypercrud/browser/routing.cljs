@@ -33,7 +33,7 @@
 (defn ctx->id-lookup [uri ctx]
   ; todo tempid-lookups need to be indexed by db-ident not val
   (let [stage-val @(reagent/cursor (.-state-atom (:peer ctx)) [:stage])
-        branch-val (hash (branch/db-content uri (:branch ctx) stage-val))]
+        branch-val (branch/branch-val uri (:branch ctx) stage-val)]
     ; todo what about if the tempid is on a higher branch in the uri?
     @(reagent/cursor (.-state-atom (:peer ctx)) [:tempid-lookups uri branch-val])))
 

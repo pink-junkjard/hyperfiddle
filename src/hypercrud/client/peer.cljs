@@ -35,7 +35,7 @@
       (either/left {:message "Loading" :data {:request request}})))
 
   (db [this uri branch]
-    (->DbVal uri (hash (branch/db-content uri branch @(reagent/cursor state-atom [:stage])))))
+    (->DbVal uri (branch/branch-val uri branch @(reagent/cursor state-atom [:stage]))))
 
   (hydrate-one! [this service-uri request]
     (let [{:keys [stage]} @state-atom]

@@ -20,7 +20,7 @@
 
 (defn update-to-tempids [get-state branch uri tx]
   (let [{:keys [ptm stage tempid-lookups]} (get-state)
-        branch-val (hash (branch/db-content uri branch stage))
+        branch-val (branch/branch-val uri branch stage)
         dbval (->DbVal uri branch-val)
         schema (let [schema-request (schema/schema-request dbval)]
                  (-> (get ptm schema-request)

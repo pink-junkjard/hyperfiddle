@@ -39,18 +39,21 @@
                   (nil? v))))))
 
 (defn hydrate! [service-uri requests stage-val]
-  (let [branch-vals (->> stage-val
-                         (mapcat (fn [[branch branch-content]]
-                                   (->> branch-content
-                                        (map (fn [[uri tx]]
-                                               (let [tx (branch/db-content uri branch stage-val)]
-                                                 [[uri (hash tx)] (filter v-not-nil? tx)]))))))
-                         (into {}))]
+  (let [staged-branches (->> stage-val
+                             (mapcat (fn [[branch-ident branch-content]]
+                                       (->> branch-content
+                                            (map (fn [[uri tx]]
+                                                   (let [branch-val (branch/branch-val uri branch-ident stage-val)]
+                                                     {:branch-ident branch-ident
+                                                      :branch-val branch-val
+                                                      :uri uri
+                                                      :tx (filter v-not-nil? tx)})))))))]
     (-> (kvlt/request! {:url (str (.-uri-str service-uri) "hydrate")
                         :content-type content-type-transit  ; helps debugging to view as edn
                         :accept content-type-transit        ; needs to be fast so transit
                         :method :post
-                        :form {:staged-tx branch-vals :request requests}
+                        :form {:staged-branches staged-branches
+                               :request requests}
                         :as :auto})
         (p/then #(-> % :body :hypercrud)))))
 
