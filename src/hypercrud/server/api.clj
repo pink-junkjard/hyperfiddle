@@ -7,6 +7,7 @@
             [hypercrud.types.Entity :refer [->Entity]]
             [hypercrud.types.EntityRequest]
             [hypercrud.types.QueryRequest]
+            [hypercrud.util.branch :as branch]
             [hypercrud.util.core :as util]
             [hypercrud.util.identity :as identity])
   (:import (hypercrud.types.DbVal DbVal)
@@ -76,33 +77,52 @@
       (.println *err* (pr-str e))
       (->DbError (str e)))))
 
-(defn build-get-secure-db-with [hctx-groups db-with-lookup]
-  (fn get-secure-db-with [uri branch]
-    (or (get-in @db-with-lookup [uri branch])
-        (let [dtx (get hctx-groups [uri branch])
-              db (d/db (d/connect (str uri)))               ; todo fix inconsistent t across branches
-              ; is it a history query? (let [db (if (:history? dbval) (d/history db) db)])
-              _ (let [validate-tx (constantly true)]
-                  ; todo look up tx validator
-                  (assert (validate-tx db dtx) (str "staged tx for " uri " failed validation")))
-              project-db-with (let [read-sec-predicate (constantly true) ;todo lookup sec pred
-                                    ; todo d/with an unfiltered db
-                                    {:keys [db-after tempids]} (d/with db dtx)]
-                                {:db (d/filter db-after read-sec-predicate)
-                                 :id->tempid (set/map-invert tempids)})]
-          (swap! db-with-lookup assoc-in [uri branch] project-db-with)
-          project-db-with))))
+(defn build-get-secure-db-with [staged-branches db-with-lookup]
+  (letfn [(get-secure-db-from-branch [{:keys [branch-ident uri tx] :as branch}]
+            (or (get @db-with-lookup branch)
+                (let [{:keys [db id->tempid]} (if branch-ident
+                                                (let [parent-ident (branch/decode-parent-branch branch-ident)
+                                                      parent-branch (or (->> staged-branches
+                                                                             (filter #(and (= parent-ident (:branch-ident %))
+                                                                                           (= uri (:uri %))))
+                                                                             first)
+                                                                        {:branch-ident parent-ident
+                                                                         :uri uri})]
+                                                  (get-secure-db-from-branch parent-branch))
+                                                {:db (d/db (d/connect (str uri)))})
+                      ; is it a history query? (let [db (if (:history? dbval) (d/history db) db)])
+                      _ (let [validate-tx (constantly true)]
+                          ; todo look up tx validator
+                          (assert (validate-tx db tx) (str "staged tx for " uri " failed validation")))
+                      project-db-with (let [read-sec-predicate (constantly true) ;todo lookup sec pred
+                                            ; todo d/with an unfiltered db
+                                            {:keys [db-after tempids]} (d/with db tx)]
+                                        {:db (d/filter db-after read-sec-predicate)
+                                         ; todo this merge is excessively duplicating data to send to the client
+                                         :id->tempid (merge id->tempid (set/map-invert tempids))})]
+                  (swap! db-with-lookup assoc branch project-db-with)
+                  project-db-with)))]
+    (fn [uri branch-val]
+      (let [branch (or (->> staged-branches
+                            (filter #(and (= branch-val (:branch-val %))
+                                          (= uri (:uri %))))
+                            first)
+                       {:branch-val branch-val
+                        :uri uri})]
+        (get-secure-db-from-branch branch)))))
 
-(defn hydrate [dtx-groups request root-t]
+(defn hydrate [staged-branches request root-t]
   (let [db-with-lookup (atom {})
-        get-secure-db-with (build-get-secure-db-with dtx-groups db-with-lookup)
+        get-secure-db-with (build-get-secure-db-with staged-branches db-with-lookup)
         pulled-trees-map (->> request
                               (mapv (juxt identity #(hydrate* % get-secure-db-with)))
                               (into {}))]
     {:t nil
      :pulled-trees-map pulled-trees-map
-     :id->tempid (->> @db-with-lookup                       ; todo this is broken (cannot be lazy)
-                      (util/map-values #(util/map-values :id->tempid %)))}))
+     :id->tempid (reduce (fn [acc [branch db]]
+                           (assoc-in acc [(:uri branch) (:branch-val branch)] (:id->tempid db)))
+                         {}
+                         @db-with-lookup)}))
 
 (defn transact! [dtx-groups]
   (let [valid? (every? (fn [[uri tx]]

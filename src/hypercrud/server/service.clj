@@ -17,10 +17,10 @@
   (try
     (let [{:keys [query-params body-params]} req
           root-t (if (:t query-params) (Long/parseLong (:t query-params)))
-          {hctx-groups :staged-tx request :request} body-params]
+          {staged-branches :staged-branches request :request} body-params]
       (ring-resp/response
         (wrap-hypercrud
-          (api/hydrate hctx-groups request root-t))))
+          (api/hydrate staged-branches request root-t))))
     (catch Exception e
       (println e)
       {:status 500 :headers {} :body (str e)})))
