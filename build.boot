@@ -2,6 +2,7 @@
   :dependencies '[[com.hyperfiddle/util "0.0.1-SNAPSHOT"]
                   [com.cognitect/transit-cljs "0.8.243"]
                   [funcool/cats "2.1.0"]
+                  [funcool/cuerdas "2.0.4"]
                   [funcool/promesa "1.8.1"]
                   [io.nervous/kvlt "0.1.4"]
                   [org.clojars.cemerick/loom "0.6.1-SNAPSHOT"] ; see https://github.com/aysylu/loom/pull/91
