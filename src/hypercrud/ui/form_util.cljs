@@ -24,17 +24,12 @@
       (util/update-existing :db/unique :db/ident)))
 
 (defn field-label [field param-ctx]
-  (let [docstring (:field/doc field)
-        field-prompt (util/fallback empty? (:field/prompt field) (-> param-ctx :attribute :db/ident str))
-        display-mode @(:display-mode param-ctx)]
+  (let [label (util/fallback empty? "" #_ (:field/prompt field) ; hook into i18n for this, can't store english in database
+                                    (-> param-ctx :attribute :db/ident str))
+        help-text (util/pprint-str (attribute-human (:attribute param-ctx)) 50)]
     [tooltip/hover-popover-managed
-     {:label (case display-mode
-               ; (auto-control maybe-field anchors props param-ctx)
-               :user (if-not (empty? docstring) (markdown docstring #()))
-               :xray [:pre (util/pprint-str (attribute-human (:attribute param-ctx)) 50)])}
-     [:span {:class (case display-mode
-                      :user (if-not (empty? docstring) "help")
-                      :xray "help")} field-prompt]]
+     {:label [:pre help-text]}
+     [:span.help label]]
     #_[:div
        (let [is-ref? (coll? value)]
          (if is-ref?
