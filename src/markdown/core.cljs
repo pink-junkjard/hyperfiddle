@@ -1,5 +1,4 @@
-(ns markdown.core
-  (:require [reagent.core :as r]))
+(ns markdown.core)
 
 (def showdown (delay (js/showdown.Converter.)))
 
