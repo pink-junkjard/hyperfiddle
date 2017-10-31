@@ -44,7 +44,8 @@
                                                (fn [v]
                                                  ; todo support other types of v (map, vector, etc)
                                                  (if (instance? Entity v)
-                                                   (let [dbname (context-util/uri->ident (some-> v .-dbval .-uri) param-ctx)]
+                                                   (let [dbname (->> (get-in param-ctx [:domain :domain/databases])
+                                                                     (context-util/uri->ident (some-> v .-dbval .-uri)))]
                                                      (->ThinEntity dbname (:db/id v)))
                                                    v)))))
          link-id (if-let [page (:anchor/link anchor)]
