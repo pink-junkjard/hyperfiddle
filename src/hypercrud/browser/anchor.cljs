@@ -146,15 +146,20 @@
         ; todo something better with these exceptions (could be user error)
         (p/catch #(-> % pprint-str js/alert)))))
 
-(defn managed-popover-body [anchor route popover-id param-ctx]
-  (let [stage! (reagent/partial stage! anchor route popover-id param-ctx)
+(defn cancel! [popover-id ctx]
+  ((:dispatch! ctx) (actions/cancel-popover (:branch ctx) popover-id)))
+
+(defn managed-popover-body [anchor route popover-id ctx]
+  (let [stage! (reagent/partial stage! anchor route popover-id ctx)
+        cancel! (reagent/partial cancel! popover-id ctx)
         ; NOTE: this param-ctx logic and structure is the same as the popover branch of browser-request/recurse-request
-        param-ctx (-> param-ctx
+        param-ctx (-> ctx
                       (context/clean)
                       (update :debug #(str % ">popover-link[" (:db/id anchor) ":" (or (:anchor/ident anchor) (:anchor/prompt anchor)) "]")))]
     [:div.managed-popover
      [hypercrud.browser.core/ui-from-route route param-ctx] ; cycle
-     [:button {:on-click stage!} "stage"]]))
+     [:button {:on-click stage!} "stage"]
+     [:button {:on-click cancel!} "cancel"]]))
 
 (defn visible? [anchor ctx]
   (-> (if-let [code-str (eval/validate-user-code-str (:anchor/visible? anchor))] ; also inline links !
@@ -163,9 +168,6 @@
         (either/right true))
       (cats/mplus (either/right true))
       (cats/extract)))
-
-(defn cancel! [popover-id ctx]
-  ((:dispatch! ctx) (actions/cancel-popover (:branch ctx) popover-id)))
 
 (defn open! [popover-id ctx]
   ((:dispatch! ctx) (actions/open-popover popover-id)))
@@ -192,7 +194,6 @@
                                 param-ctx (context/anchor-branch param-ctx anchor)]
                             {:showing? (reagent/cursor (-> param-ctx :peer .-state-atom) [:popovers popover-id])
                              :body [managed-popover-body anchor route popover-id param-ctx]
-                             :open! (reagent/partial open! popover-id param-ctx)
-                             :cancel! (reagent/partial cancel! popover-id param-ctx)})))
+                             :open! (reagent/partial open! popover-id param-ctx)})))
         anchor-props-hidden {:hidden (not visible?)}]
     (merge anchor-props-hidden hypercrud-props {:popover popover-props})))

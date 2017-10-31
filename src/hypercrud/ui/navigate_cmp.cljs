@@ -28,7 +28,6 @@
                                  (assoc :on-click open!))]
                [:button btn-props [:span label]])
      :popover [re-com/popover-content-wrapper
-               :on-cancel cancel!
                :no-clip? true
                :body body]]))
 
