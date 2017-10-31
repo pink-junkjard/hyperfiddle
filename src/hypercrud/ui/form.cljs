@@ -28,7 +28,10 @@
        (widget/render-anchors (->> anchors (remove :anchor/render-inline?)) param-ctx)
        (widget/render-inline-anchors (->> anchors (filter :anchor/render-inline?)) param-ctx)]])
    (control param-ctx)
-   [markdown/markdown (:db/doc field) #() {:class "hypercrud-doc"}]])
+   (let [docstring (util/fallback empty?
+                                  (:db/doc field)           ; Nice string for end users. In future this is an i18n id.
+                                  (-> param-ctx :attribute :db/doc) #_ "english string for developers")]
+     [markdown/markdown docstring #() {:class "hypercrud-doc"}])])
 
 (defn new-field [entity param-ctx]
   (let [attr-ident (r/atom nil)]

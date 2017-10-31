@@ -18,7 +18,7 @@
 
 (defn attribute-human [attr]
   (-> attr
-      (dissoc :db/id)
+      (dissoc :db/id :db/doc)
       (util/update-existing :db/cardinality :db/ident)
       (util/update-existing :db/valueType :db/ident)
       (util/update-existing :db/unique :db/ident)))
