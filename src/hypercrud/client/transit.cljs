@@ -1,6 +1,6 @@
 (ns hypercrud.client.transit
   (:require [cognitect.transit :as t]
-            [hypercrud.types.DbError :refer [DbError read-DbError DbErrorTransitHandler]]
+            [hypercrud.transit :as hc-t]
             [hypercrud.types.DbVal :refer [DbVal read-DbVal DbValTransitHandler]]
             [hypercrud.types.Entity :refer [Entity EntityTransitHandler ThinEntity ThinEntityTransitHandler read-Entity read-ThinEntity]]
             [hypercrud.types.QueryRequest :refer [QueryRequest read-QueryRequest QueryRequestTransitHandler]]
@@ -9,22 +9,22 @@
 
 
 (def transit-read-handlers
-  {"DbError" read-DbError
-   "DbVal" read-DbVal
-   "Entity" read-Entity
-   "->entity" read-ThinEntity
-   "EReq" read-EntityRequest
-   "QReq" read-QueryRequest
-   "r" read-URI})
+  (merge hc-t/read-handlers
+         {"DbVal" read-DbVal
+          "Entity" read-Entity
+          "->entity" read-ThinEntity
+          "EReq" read-EntityRequest
+          "QReq" read-QueryRequest
+          "r" read-URI}))
 
 (def transit-write-handlers
-  {URI (URITransitHandler.)
-   DbVal (DbValTransitHandler.)
-   DbError (DbErrorTransitHandler.)
-   Entity (EntityTransitHandler.)
-   ThinEntity (ThinEntityTransitHandler.)
-   QueryRequest (QueryRequestTransitHandler.)
-   EntityRequest (EntityRequestTransitHandler.)})
+  (merge hc-t/write-handlers
+         {URI (URITransitHandler.)
+          DbVal (DbValTransitHandler.)
+          Entity (EntityTransitHandler.)
+          ThinEntity (ThinEntityTransitHandler.)
+          QueryRequest (QueryRequestTransitHandler.)
+          EntityRequest (EntityRequestTransitHandler.)}))
 
 (def transit-encoding-opts {:handlers transit-write-handlers})
 (def transit-decoding-opts {:handlers transit-read-handlers})

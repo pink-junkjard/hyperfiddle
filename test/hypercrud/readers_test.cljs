@@ -4,7 +4,6 @@
             [cljs.reader :as reader]
             [hypercrud.client.transit :as transit]
             [hypercrud.compile.eval :as eval]
-            [hypercrud.types.DbError :refer [->DbError]]
             [hypercrud.types.DbVal :refer [->DbVal]]
             [hypercrud.types.Entity :refer [->Entity ->ThinEntity]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
@@ -19,12 +18,6 @@
          (eval/eval-str-and-throw strd)
          (transit/decode (transit/encode control))
          (transit/decode transit-strd))))
-
-(deftest DbError []
-  (test-all-forms (->DbError "foo")
-                  #DbError "foo"
-                  "#DbError\"foo\""
-                  "{\"~#DbError\":\"foo\"}"))
 
 (deftest DbVal []
   (test-all-forms (->DbVal "foo" "bar")

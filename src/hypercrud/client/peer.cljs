@@ -2,8 +2,8 @@
   (:require [cats.monad.either :as either]
             [hypercrud.client.core :as hc]
             [hypercrud.client.http :as http]
-            [hypercrud.types.DbError :refer [DbError]]
             [hypercrud.types.DbVal :refer [->DbVal]]
+            [hypercrud.types.Err :refer [Err]]
             [hypercrud.util.branch :as branch]
             [promesa.core :as p]
             [reagent.core :as reagent]))
@@ -16,7 +16,7 @@
       {:message "Datomic error" :data {:datomic-error (.-msg e)}})))
 
 (defn process-result [resultset-or-error request]
-  (if (instance? DbError resultset-or-error)
+  (if (instance? Err resultset-or-error)
     (either/left (human-error resultset-or-error request))
     (either/right resultset-or-error)))
 

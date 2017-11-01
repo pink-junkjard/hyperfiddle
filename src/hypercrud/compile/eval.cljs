@@ -15,8 +15,7 @@
              (let [code-str' (str "(identity\n" code-str "\n)")]
                (binding [analyzer/*cljs-warning-handlers* []
                          tags/*cljs-data-readers* (merge tags/*cljs-data-readers*
-                                                         {'DbError hc-readers/DbError
-                                                          'DbVal hc-readers/DbVal
+                                                         {'DbVal hc-readers/DbVal
                                                           'Entity hc-readers/Entity
                                                           '->entity hc-readers/->entity
                                                           'EReq hc-readers/EReq
