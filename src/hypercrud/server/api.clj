@@ -3,9 +3,9 @@
             [clojure.walk :as walk]
             [datomic.api :as d]
             [hypercrud.types.DbVal]
-            [hypercrud.types.DbError :refer [->DbError]]
             [hypercrud.types.Entity :refer [->Entity]]
             [hypercrud.types.EntityRequest]
+            [hypercrud.types.Err :refer [->Err]]
             [hypercrud.types.QueryRequest]
             [hypercrud.util.branch :as branch]
             [hypercrud.util.core :as util]
@@ -46,7 +46,7 @@
       pulled-tree)
     (catch Throwable e
       (.println *err* (pr-str e))
-      (->DbError (str e)))))
+      (->Err (str e)))))
 
 (defmethod hydrate* QueryRequest [{:keys [query params pull-exps]} get-secure-db-with]
   (try
@@ -75,7 +75,7 @@
 
     (catch Throwable e
       (.println *err* (pr-str e))
-      (->DbError (str e)))))
+      (->Err (str e)))))
 
 (defn build-get-secure-db-with [staged-branches db-with-lookup]
   (letfn [(get-secure-db-from-branch [{:keys [branch-ident uri tx] :as branch}]
