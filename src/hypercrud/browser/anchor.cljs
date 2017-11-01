@@ -2,7 +2,6 @@
   (:require [cats.core :as cats :refer [mlet return]]
             [cats.monad.either :as either :refer-macros [try-either]]
             [clojure.set :as set]
-            [hypercrud.browser.auto-anchor-formula :as auto-anchor-formula]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.context-util :as context-util]
             [hypercrud.browser.q-util :as q-util]
@@ -14,11 +13,6 @@
             [promesa.core :as p]
             [reagent.core :as reagent]))
 
-
-(defn popover-id [anchor ctx]
-  {:anchor-id (:db/id anchor)
-   :branch (:branch ctx)
-   :location (auto-anchor-formula/deterministic-ident ctx)})
 
 (defn option-anchor? [anchor]
   ; don't care if its inline or not, just do the right thing.
@@ -122,7 +116,7 @@
                    (interpose " ")
                    (apply str))})))
 
-(defn stage! [anchor route popover-id param-ctx]
+(defn stage! [anchor route param-ctx]
   (let [user-txfn (some-> (eval/validate-user-code-str (:anchor/tx-fn anchor)) eval-str' (cats/mplus (either/right nil)) (cats/extract))
         user-txfn (or user-txfn (constantly nil))]
     (-> (p/promise
@@ -142,16 +136,16 @@
 
                               ; return the result to the action, it could be a promise
                               result))]
-              ((:dispatch! param-ctx) (actions/stage-popover (:branch param-ctx) popover-id swap-fn)))))
+              ((:dispatch! param-ctx) (actions/stage-popover (:branch param-ctx) swap-fn)))))
         ; todo something better with these exceptions (could be user error)
         (p/catch #(-> % pprint-str js/alert)))))
 
-(defn cancel! [popover-id ctx]
-  ((:dispatch! ctx) (actions/cancel-popover (:branch ctx) popover-id)))
+(defn cancel! [ctx]
+  ((:dispatch! ctx) (actions/cancel-popover (:branch ctx))))
 
-(defn managed-popover-body [anchor route popover-id ctx]
-  (let [stage! (reagent/partial stage! anchor route popover-id ctx)
-        cancel! (reagent/partial cancel! popover-id ctx)
+(defn managed-popover-body [anchor route ctx]
+  (let [stage! (reagent/partial stage! anchor route ctx)
+        cancel! (reagent/partial cancel! ctx)
         ; NOTE: this param-ctx logic and structure is the same as the popover branch of browser-request/recurse-request
         param-ctx (-> ctx
                       (context/clean)
@@ -169,8 +163,8 @@
       (cats/mplus (either/right true))
       (cats/extract)))
 
-(defn open! [popover-id ctx]
-  ((:dispatch! ctx) (actions/open-popover popover-id)))
+(defn open! [ctx]
+  ((:dispatch! ctx) (actions/open-popover (:branch ctx))))
 
 ; if this is driven by anchor, and not route, it needs memoized.
 ; the route is a fn of the formulas and the formulas can have effects
@@ -190,10 +184,9 @@
         popover-props (if (popover-anchor? anchor)
                         (if-let [route (and (:anchor/managed? anchor) (either/right? route') (cats/extract route'))]
                           ; If no route, there's nothing to draw, and the anchor tooltip shows the error.
-                          (let [popover-id (popover-id anchor param-ctx) ;we want the context before we branch
-                                param-ctx (context/anchor-branch param-ctx anchor)]
-                            {:showing? (reagent/cursor (-> param-ctx :peer .-state-atom) [:popovers popover-id])
-                             :body [managed-popover-body anchor route popover-id param-ctx]
-                             :open! (reagent/partial open! popover-id param-ctx)})))
+                          (let [param-ctx (context/anchor-branch param-ctx anchor)]
+                            {:showing? (reagent/cursor (-> param-ctx :peer .-state-atom) [:popovers (:branch param-ctx)])
+                             :body [managed-popover-body anchor route param-ctx]
+                             :open! (reagent/partial open! param-ctx)})))
         anchor-props-hidden {:hidden (not visible?)}]
     (merge anchor-props-hidden hypercrud-props {:popover popover-props})))

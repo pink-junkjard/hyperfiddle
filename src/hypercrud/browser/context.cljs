@@ -48,10 +48,9 @@
 
 (defn anchor-branch [param-ctx anchor]
   (if (:anchor/managed? anchor)
-    ; this auto-entity-dbid call makes no sense, there will be collisions, specifically on index links
-    ; which means queries of unrendered modals are impacted, an unnecessary perf cost at the very least
     ; we should run the auto-formula logic to determine an appropriate auto-id fn
-    (let [child-id-str (auto-anchor-formula/deterministic-ident param-ctx)
+    (let [child-id-str (-> [(auto-anchor-formula/deterministic-ident param-ctx) (:db/id anchor)]
+                           hash js/Math.abs - str)
           branch (branch/encode-branch-child (:branch param-ctx) child-id-str)]
       (assoc param-ctx :branch branch))
     param-ctx))

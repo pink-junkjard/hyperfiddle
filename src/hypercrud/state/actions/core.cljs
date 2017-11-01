@@ -12,11 +12,13 @@
             [promesa.core :as p]))
 
 
-(defn set-route [route]
-  (fn [dispatch! get-state]
-    (let [state (get-state)]
-      (if (not= route (:encoded-route state))
-        (hydrating-action {:on-start (constantly [[:set-route route]])} dispatch! get-state)))))
+(defn set-route [encoded-route dispatch! get-state]
+  (let [actions (->> (:popovers (get-state))
+                     (mapcat (fn [branch]
+                               [[:discard branch]
+                                [:close-popover branch]]))
+                     (cons [:set-route encoded-route]))]
+    (hydrating-action {:on-start (constantly actions)} dispatch! get-state)))
 
 (defn update-to-tempids [get-state branch uri tx]
   (let [{:keys [ptm stage tempid-lookups]} (get-state)
@@ -34,14 +36,14 @@
     (let [tx (update-to-tempids get-state branch uri tx)]
       (hydrating-action {:on-start (constantly [[:with branch uri tx]])} dispatch! get-state))))
 
-(defn open-popover [popover-id]
-  (partial hydrating-action {:on-start (constantly [[:open-popover popover-id]])}))
+(defn open-popover [branch]
+  (partial hydrating-action {:on-start (constantly [[:open-popover branch]])}))
 
-(defn cancel-popover [branch popover-id]
+(defn cancel-popover [branch]
   (partial hydrating-action {:on-start (constantly [[:discard branch]
-                                                    [:close-popover popover-id]])}))
+                                                    [:close-popover branch]])}))
 
-(defn stage-popover [branch popover-id swap-fn-async]
+(defn stage-popover [branch swap-fn-async]
   (fn [dispatch! get-state]
     (let [multi-color-tx (get-in (get-state) [:stage branch] {})]
       (p/then (swap-fn-async multi-color-tx)
@@ -53,7 +55,7 @@
                                       tx)
                                 [[:merge branch]
                                  (if app-route [:set-route (routing/encode app-route)])
-                                 [:close-popover popover-id]])]
+                                 [:close-popover branch]])]
                   (hydrating-action {:on-start (constantly actions)} dispatch! get-state)))))))
 
 (defn reset-stage [tx]

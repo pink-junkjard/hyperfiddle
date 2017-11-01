@@ -81,10 +81,10 @@
 
 (defn popover-reducer [popovers action & args]
   (case action
-    :open-popover (let [[popover-id] args]
-                    (conj popovers popover-id))
-    :close-popover (let [[popover-id] args]
-                     (disj popovers popover-id))
+    :open-popover (let [[branch] args]
+                    (conj popovers branch))
+    :close-popover (let [[branch] args]
+                     (disj popovers branch))
     (or popovers #{})))
 
 (defn pressed-keys-reducer [v action & args]

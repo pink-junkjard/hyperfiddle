@@ -12,6 +12,7 @@
             [hypercrud.platform.native-event-listener :refer [native-listener]]
             [hypercrud.platform.safe-render :refer [safe-user-renderer]]
             [hypercrud.state.actions.core :as actions]
+            [hypercrud.state.actions.util :as actions-util]
             [hypercrud.ui.stale :as stale]
             [hypercrud.util.core :as util]
             [reagent.core :as r]))
@@ -131,7 +132,10 @@
 
 (defn page-on-click [ctx route event]
   (when (and route (contains? @(r/cursor (-> ctx :peer .-state-atom) [:pressed-keys]) "alt"))
-    ((:dispatch! ctx) (actions/set-route (routing/encode route)))
+    ((:dispatch! ctx) (fn [dispatch! get-state]
+                        (let [encoded-route (routing/encode route)]
+                          (when (actions-util/navigable? encoded-route (get-state))
+                            (actions/set-route encoded-route dispatch! get-state)))))
     (.stopPropagation event)))
 
 (defn wrap-ui [v' route ctx]
