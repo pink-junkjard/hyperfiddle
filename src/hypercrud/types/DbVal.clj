@@ -1,6 +1,6 @@
 (ns hypercrud.types.DbVal
-  (:import [com.cognitect.transit WriteHandler ReadHandler]
-           [clojure.lang ILookup]))
+  (:import [clojure.lang ILookup]))
+
 
 (deftype DbVal [uri branch]
   ILookup
@@ -17,15 +17,3 @@
   (print-method o w))
 
 (def read-DbVal #(apply ->DbVal %))
-
-(deftype DbValTransitHandler []
-  WriteHandler
-  (tag [_ v] "DbVal")
-  (rep [_ v] [(.uri v) (.branch v)])
-  (stringRep [_ v] nil)
-  (getVerboseHandler [_] nil))
-
-
-(deftype DbValTransitReader []
-  ReadHandler
-  (fromRep [_ v] (apply ->DbVal v)))

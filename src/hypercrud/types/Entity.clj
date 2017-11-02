@@ -1,6 +1,5 @@
 (ns hypercrud.types.Entity
-  (:import [com.cognitect.transit WriteHandler ReadHandler]
-           [clojure.lang ILookup IHashEq]))
+  (:import [clojure.lang ILookup IHashEq]))
 
 
 (deftype Entity [dbval coll]
@@ -20,15 +19,3 @@
   (print-method o w))
 
 (def read-Entity #(apply ->Entity %))
-
-(deftype EntityTransitHandler []
-  WriteHandler
-  (tag [_ v] "Entity")
-  (rep [_ v] [(.dbval v) (.coll v)])
-  (stringRep [_ v] nil)
-  (getVerboseHandler [_] nil))
-
-
-(deftype EntityTransitReader []
-  ReadHandler
-  (fromRep [_ v] (apply ->Entity v)))
