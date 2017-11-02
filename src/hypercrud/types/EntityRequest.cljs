@@ -1,6 +1,8 @@
 (ns hypercrud.types.EntityRequest
   (:require [cljs.reader :as reader]))
 
+
+; todo fix db <-> dbval naming between server/client
 (deftype EntityRequest [e a db pull-exp]
   Object (toString [_] (str "#EReq" (pr-str [e a db pull-exp])))
   IPrintWithWriter (-pr-writer [o writer _] (-write writer (.toString o)))
