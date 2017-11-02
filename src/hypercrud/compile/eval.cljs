@@ -19,9 +19,9 @@
                                                          {'DbVal hc-readers/DbVal
                                                           'Entity hc-readers/Entity
                                                           '->entity hc-readers/->entity
-                                                          'EReq hc-readers/EReq
+                                                          'hypercrud.types.EntityRequest.EntityRequest hypercrud.types.EntityRequest/read-EntityRequest
                                                           'hypercrud.types.Err.Err read-Err
-                                                          'QReq hc-readers/QReq
+                                                          'hypercrud.types.QueryRequest.QueryRequest hypercrud.types.QueryRequest/read-QueryRequest
                                                           'URI hc-readers/URI})]
                  (cljs/eval-str (cljs/empty-state)
                                 code-str'

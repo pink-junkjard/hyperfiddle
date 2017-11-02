@@ -56,8 +56,8 @@
 
 (deftest EReq []
   (test-all-forms (->EntityRequest "foo" "bar" "fizz" "buzz")
-                  #EReq["foo" "bar" "fizz" "buzz"]
-                  "#EReq[\"foo\" \"bar\" \"fizz\" \"buzz\"]"
+                  #hypercrud.types.EntityRequest.EntityRequest{:e "foo" :a "bar" :db "fizz" :pull-exp "buzz"}
+                  "#hypercrud.types.EntityRequest.EntityRequest{:e \"foo\" :a \"bar\" :db \"fizz\" :pull-exp \"buzz\"}"
                   "{\"~#EReq\":[\"foo\",\"bar\",\"fizz\",\"buzz\"]}"))
 
 (deftest Err-test []
@@ -68,8 +68,8 @@
 
 (deftest QReq []
   (test-all-forms (->QueryRequest "foo" "bar" "fizz")
-                  #QReq["foo" "bar" "fizz"]
-                  "#QReq[\"foo\" \"bar\" \"fizz\"]"
+                  #hypercrud.types.QueryRequest.QueryRequest{:query "foo" :params "bar" :pull-exps "fizz"}
+                  "#hypercrud.types.QueryRequest.QueryRequest{:query \"foo\" :params \"bar\" :pull-exps \"fizz\"}"
                   "{\"~#QReq\":[\"foo\",\"bar\",\"fizz\"]}"))
 
 (deftest URI []

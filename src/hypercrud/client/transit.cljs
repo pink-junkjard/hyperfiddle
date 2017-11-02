@@ -3,8 +3,6 @@
             [hypercrud.transit :as hc-t]
             [hypercrud.types.DbVal :refer [DbVal read-DbVal]]
             [hypercrud.types.Entity :refer [Entity ThinEntity read-Entity read-ThinEntity]]
-            [hypercrud.types.QueryRequest :refer [QueryRequest read-QueryRequest]]
-            [hypercrud.types.EntityRequest :refer [EntityRequest read-EntityRequest]]
             [hypercrud.types.URI :refer [URI read-URI]]))
 
 
@@ -13,8 +11,6 @@
          {"DbVal" (t/read-handler read-DbVal)
           "Entity" (t/read-handler read-Entity)
           "->entity" (t/read-handler read-ThinEntity)
-          "EReq" (t/read-handler read-EntityRequest)
-          "QReq" (t/read-handler read-QueryRequest)
           "r" (t/read-handler read-URI)}))
 
 (def transit-write-handlers
@@ -29,13 +25,7 @@
           (t/write-handler (constantly "Entity") (fn [v] [(.-dbval v) (.-coll v)]))
 
           ThinEntity
-          (t/write-handler (constantly "->entity") (fn [v] [(.-dbname v) (.-id v)]))
-
-          QueryRequest
-          (t/write-handler (constantly "QReq") (fn [v] [(.-query v) (.-params v) (.-pull-exps v)]))
-
-          EntityRequest
-          (t/write-handler (constantly "EReq") (fn [v] [(.-e v) (.-a v) (.-db v) (.-pull-exp v)]))}))
+          (t/write-handler (constantly "->entity") (fn [v] [(.-dbname v) (.-id v)]))}))
 
 (def transit-encoding-opts {:handlers transit-write-handlers})
 (def transit-decoding-opts {:handlers transit-read-handlers})
