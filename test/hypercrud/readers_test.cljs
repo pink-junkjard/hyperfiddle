@@ -1,3 +1,4 @@
+; todo this test belongs in hypecrud.util, should be cljc, and tested on both platforms
 (ns hypercrud.readers-test
   (:require-macros [cljs.test :refer [deftest is]])
   (:require [cljs.test]
@@ -7,17 +8,33 @@
             [hypercrud.types.DbVal :refer [->DbVal]]
             [hypercrud.types.Entity :refer [->Entity ->ThinEntity]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
+            [hypercrud.types.Err :refer [->Err]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hypercrud.types.URI :refer [->URI]]))
 
-(defn test-all-forms [control literal-read strd transit-strd]
-  (is (= control literal-read
-         (reader/read-string (str control))
-         (reader/read-string strd)
-         (eval/eval-str-and-throw (str control))
-         (eval/eval-str-and-throw strd)
+(defn test-compile-read [control literal-read]
+  (is (= control literal-read)))
+
+(defn test-runtime-read [control strd]
+  (is (= control
+         (reader/read-string (pr-str control))
+         (reader/read-string strd))))
+
+(defn test-eval [control strd]
+  (is (= control
+         (eval/eval-str-and-throw (pr-str control))
+         (eval/eval-str-and-throw strd))))
+
+(defn test-transit [control transit-strd]
+  (is (= control
          (transit/decode (transit/encode control))
          (transit/decode transit-strd))))
+
+(defn test-all-forms [control literal-read strd transit-strd]
+  (test-compile-read control literal-read)
+  (test-runtime-read control strd)
+  (test-eval control strd)
+  (test-transit control transit-strd))
 
 (deftest DbVal []
   (test-all-forms (->DbVal "foo" "bar")
@@ -42,6 +59,12 @@
                   #EReq["foo" "bar" "fizz" "buzz"]
                   "#EReq[\"foo\" \"bar\" \"fizz\" \"buzz\"]"
                   "{\"~#EReq\":[\"foo\",\"bar\",\"fizz\",\"buzz\"]}"))
+
+(deftest Err-test []
+  (test-all-forms (->Err "foo")
+                  #hypercrud.types.Err.Err{:msg "foo"}
+                  "#hypercrud.types.Err.Err{:msg \"foo\"}"
+                  "{\"~#err\":\"foo\"}"))
 
 (deftest QReq []
   (test-all-forms (->QueryRequest "foo" "bar" "fizz")

@@ -4,6 +4,7 @@
             [cljs.tagged-literals :as tags]
             [cljs.js :as cljs]
             [hypercrud.readers :as hc-readers]
+            [hypercrud.types.Err :refer [read-Err]]
             [markdown.core]))
 
 
@@ -19,6 +20,7 @@
                                                           'Entity hc-readers/Entity
                                                           '->entity hc-readers/->entity
                                                           'EReq hc-readers/EReq
+                                                          'hypercrud.types.Err.Err read-Err
                                                           'QReq hc-readers/QReq
                                                           'URI hc-readers/URI})]
                  (cljs/eval-str (cljs/empty-state)
