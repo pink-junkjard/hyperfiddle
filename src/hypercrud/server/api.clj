@@ -31,9 +31,9 @@
 
 (defmulti hydrate* (fn [this & args] (class this)))
 
-(defmethod hydrate* EntityRequest [{:keys [e a dbval pull-exp]} get-secure-db-with]
+(defmethod hydrate* EntityRequest [{:keys [e a db pull-exp]} get-secure-db-with]
   (try
-    (let [{pull-db :db} (get-secure-db-with (:uri dbval) (:branch dbval))
+    (let [{pull-db :db} (get-secure-db-with (:uri db) (:branch db))
           pull-exp (if a [{a pull-exp}] pull-exp)
           pulled-tree (if (identity/tempid? e)
                         (if a
@@ -41,7 +41,7 @@
                           ; todo return a positive id here
                           {:db/id e})
                         (d/pull pull-db pull-exp e))
-          pulled-tree (recursively-add-entity-types pulled-tree dbval)
+          pulled-tree (recursively-add-entity-types pulled-tree db)
           pulled-tree (if a (get pulled-tree a []) pulled-tree)]
       pulled-tree)
     (catch Throwable e
