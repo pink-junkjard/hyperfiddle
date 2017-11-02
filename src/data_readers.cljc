@@ -1,2 +1,1 @@
-{->entity hypercrud.readers/->entity
- URI hypercrud.readers/URI}
+{URI hypercrud.client.readers/URI}

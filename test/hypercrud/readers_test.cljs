@@ -49,11 +49,21 @@
     (is (= (pr-str control) "\"bar\""))
     (test-transit control transit-strd)))
 
-(deftest ->entity []
+(deftest entity []
   (test-all-forms (->ThinEntity "foo" "bar")
-                  #->entity["foo" "bar"]
-                  "#->entity[\"foo\" \"bar\"]"
-                  "{\"~#->entity\":[\"foo\",\"bar\"]}"))
+                  #entity["foo" "bar"]
+                  "#entity[\"foo\" \"bar\"]"
+                  "{\"~#entity\":[\"foo\",\"bar\"]}"))
+
+; deprecated
+(deftest ->entity []
+  ; we no longer serialize to `->entity`, but we need to still support reading from it
+  (let [control (->ThinEntity "foo" "bar")
+        literal-read #->entity["foo" "bar"]
+        strd "#->entity[\"foo\" \"bar\"]"]
+    (test-compile-read control literal-read)
+    (is (= control (reader/read-string strd)))
+    (is (= control (eval/eval-str-and-throw strd)))))
 
 (deftest EReq []
   (test-all-forms (->EntityRequest "foo" "bar" "fizz" "buzz")

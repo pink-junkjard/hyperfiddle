@@ -3,6 +3,7 @@
             [cljs.analyzer :as analyzer]
             [cljs.tagged-literals :as tags]
             [cljs.js :as cljs]
+            [hypercrud.client.readers :as client-readers]
             [hypercrud.readers :as hc-readers]
             [hypercrud.types.DbVal :refer [read-DbVal]]
             [hypercrud.types.EntityRequest :refer [read-EntityRequest]]
@@ -19,12 +20,16 @@
              (let [code-str' (str "(identity\n" code-str "\n)")]
                (binding [analyzer/*cljs-warning-handlers* []
                          tags/*cljs-data-readers* (merge tags/*cljs-data-readers*
-                                                         {'->entity hc-readers/->entity
+                                                         {'entity hc-readers/entity
+                                                          'URI client-readers/URI
                                                           'hypercrud.types.DbVal.DbVal read-DbVal
                                                           'hypercrud.types.EntityRequest.EntityRequest read-EntityRequest
                                                           'hypercrud.types.Err.Err read-Err
                                                           'hypercrud.types.QueryRequest.QueryRequest read-QueryRequest
-                                                          'URI hc-readers/URI})]
+
+                                                          ; deprecated
+                                                          ; we no longer serialize to `->entity`but we need to still support reading from it
+                                                          '->entity hc-readers/->entity})]
                  (cljs/eval-str (cljs/empty-state)
                                 code-str'
                                 nil
