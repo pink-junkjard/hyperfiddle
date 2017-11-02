@@ -15,12 +15,6 @@
                              :pull-exp pull-exp
                              not-found)))
 
-(deftype EntityRequestTransitHandler []
-  Object
-  (tag [this v] "EReq")
-  (rep [this v] [(.-e v) (.-a v) (.-db v) (.-pull-exp v)])
-  (stringRep [this v] nil))
-
 (def read-EntityRequest #(apply ->EntityRequest %))
 
 (reader/register-tag-parser! 'EReq read-EntityRequest)

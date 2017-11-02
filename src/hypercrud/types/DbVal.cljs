@@ -19,10 +19,3 @@
 (def read-DbVal #(apply ->DbVal %))
 
 (reader/register-tag-parser! 'DbVal read-DbVal)
-
-(deftype DbValTransitHandler []
-  Object
-  (tag [_ v] "DbVal")
-  (rep [_ v] [(.-uri v) (.-branch v)])
-  (stringRep [_ v] nil)
-  (getVerboseHandler [_] nil))

@@ -1,30 +1,41 @@
 (ns hypercrud.client.transit
   (:require [cognitect.transit :as t]
             [hypercrud.transit :as hc-t]
-            [hypercrud.types.DbVal :refer [DbVal read-DbVal DbValTransitHandler]]
-            [hypercrud.types.Entity :refer [Entity EntityTransitHandler ThinEntity ThinEntityTransitHandler read-Entity read-ThinEntity]]
-            [hypercrud.types.QueryRequest :refer [QueryRequest read-QueryRequest QueryRequestTransitHandler]]
-            [hypercrud.types.EntityRequest :refer [EntityRequest read-EntityRequest EntityRequestTransitHandler]]
-            [hypercrud.types.URI :refer [URI read-URI URITransitHandler]]))
+            [hypercrud.types.DbVal :refer [DbVal read-DbVal]]
+            [hypercrud.types.Entity :refer [Entity ThinEntity read-Entity read-ThinEntity]]
+            [hypercrud.types.QueryRequest :refer [QueryRequest read-QueryRequest]]
+            [hypercrud.types.EntityRequest :refer [EntityRequest read-EntityRequest]]
+            [hypercrud.types.URI :refer [URI read-URI]]))
 
 
 (def transit-read-handlers
   (merge hc-t/read-handlers
-         {"DbVal" read-DbVal
-          "Entity" read-Entity
-          "->entity" read-ThinEntity
-          "EReq" read-EntityRequest
-          "QReq" read-QueryRequest
-          "r" read-URI}))
+         {"DbVal" (t/read-handler read-DbVal)
+          "Entity" (t/read-handler read-Entity)
+          "->entity" (t/read-handler read-ThinEntity)
+          "EReq" (t/read-handler read-EntityRequest)
+          "QReq" (t/read-handler read-QueryRequest)
+          "r" (t/read-handler read-URI)}))
 
 (def transit-write-handlers
   (merge hc-t/write-handlers
-         {URI (URITransitHandler.)
-          DbVal (DbValTransitHandler.)
-          Entity (EntityTransitHandler.)
-          ThinEntity (ThinEntityTransitHandler.)
-          QueryRequest (QueryRequestTransitHandler.)
-          EntityRequest (EntityRequestTransitHandler.)}))
+         {URI
+          (t/write-handler (constantly "r") (fn [v] (.-uri-str v)))
+
+          DbVal
+          (t/write-handler (constantly "DbVal") (fn [v] [(.-uri v) (.-branch v)]))
+
+          Entity
+          (t/write-handler (constantly "Entity") (fn [v] [(.-dbval v) (.-coll v)]))
+
+          ThinEntity
+          (t/write-handler (constantly "->entity") (fn [v] [(.-dbname v) (.-id v)]))
+
+          QueryRequest
+          (t/write-handler (constantly "QReq") (fn [v] [(.-query v) (.-params v) (.-pull-exps v)]))
+
+          EntityRequest
+          (t/write-handler (constantly "EReq") (fn [v] [(.-e v) (.-a v) (.-db v) (.-pull-exp v)]))}))
 
 (def transit-encoding-opts {:handlers transit-write-handlers})
 (def transit-decoding-opts {:handlers transit-read-handlers})

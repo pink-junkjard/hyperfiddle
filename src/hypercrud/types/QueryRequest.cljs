@@ -14,12 +14,6 @@
                              :pull-exps pull-exps
                              not-found)))
 
-(deftype QueryRequestTransitHandler []
-  Object
-  (tag [this v] "QReq")
-  (rep [this v] [(.-query v) (.-params v) (.-pull-exps v)])
-  (stringRep [this v] nil))
-
 (def read-QueryRequest #(apply ->QueryRequest %))
 
 (reader/register-tag-parser! 'QReq read-QueryRequest)

@@ -13,10 +13,3 @@
 (def read-URI ->URI)
 
 (reader/register-tag-parser! 'URI read-URI)
-
-(deftype URITransitHandler []
-  Object
-  (tag [_ v] "r")
-  (rep [_ v] (.-uri-str v))
-  (stringRep [_ v] nil)
-  (getVerboseHandler [_] nil))

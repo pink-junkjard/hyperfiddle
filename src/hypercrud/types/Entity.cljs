@@ -45,13 +45,6 @@
 
 (reader/register-tag-parser! 'Entity read-Entity)
 
-(deftype EntityTransitHandler []
-  Object
-  (tag [_ v] "Entity")
-  (rep [_ v] [(.-dbval v) (.-coll v)])
-  (stringRep [_ v] nil)
-  (getVerboseHandler [_] nil))
-
 (deftype ThinEntity [dbname id]
   Object
   (toString [o] (str "#->entity" (pr-str [dbname id])))
@@ -94,10 +87,3 @@
 (def read-ThinEntity #(apply ->ThinEntity %))
 
 (reader/register-tag-parser! '->entity read-ThinEntity)
-
-(deftype ThinEntityTransitHandler []
-  Object
-  (tag [_ v] "->entity")
-  (rep [_ v] [(.-dbname v) (.-id v)])
-  (stringRep [_ v] nil)
-  (getVerboseHandler [_] nil))
