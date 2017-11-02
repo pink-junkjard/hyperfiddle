@@ -3,7 +3,6 @@
             [cljs.analyzer :as analyzer]
             [cljs.tagged-literals :as tags]
             [cljs.js :as cljs]
-            [hypercrud.client.readers :as client-readers]
             [hypercrud.readers :as hc-readers]
             [hypercrud.types.DbVal :refer [read-DbVal]]
             [hypercrud.types.EntityRequest :refer [read-EntityRequest]]
@@ -21,7 +20,7 @@
                (binding [analyzer/*cljs-warning-handlers* []
                          tags/*cljs-data-readers* (merge tags/*cljs-data-readers*
                                                          {'entity hc-readers/entity
-                                                          'URI client-readers/URI
+                                                          'uri hc-readers/uri
                                                           'hypercrud.types.DbVal.DbVal read-DbVal
                                                           'hypercrud.types.EntityRequest.EntityRequest read-EntityRequest
                                                           'hypercrud.types.Err.Err read-Err

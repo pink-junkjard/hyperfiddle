@@ -83,8 +83,8 @@
                   "#hypercrud.types.QueryRequest.QueryRequest{:query \"foo\" :params \"bar\" :pull-exps \"fizz\"}"
                   "{\"~#QReq\":[\"foo\",\"bar\",\"fizz\"]}"))
 
-(deftest URI []
+(deftest uri []
   (test-all-forms (->URI "foo")
-                  #URI "foo"
-                  "#URI \"foo\""
+                  #uri "foo"
+                  "#uri \"foo\""
                   "{\"~#'\":\"~rfoo\"}"))
