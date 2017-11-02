@@ -38,8 +38,8 @@
 
 (deftest DbVal []
   (test-all-forms (->DbVal "foo" "bar")
-                  #DbVal ["foo" "bar"]
-                  "#DbVal[\"foo\" \"bar\"]"
+                  #hypercrud.types.DbVal.DbVal{:uri "foo" :branch "bar"}
+                  "#hypercrud.types.DbVal.DbVal{:uri \"foo\" :branch \"bar\"}"
                   "{\"~#DbVal\":[\"foo\",\"bar\"]}"))
 
 (deftest Entity []

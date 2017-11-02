@@ -1,15 +1,13 @@
 (ns hypercrud.client.transit
   (:require [cognitect.transit :as t]
             [hypercrud.transit :as hc-t]
-            [hypercrud.types.DbVal :refer [DbVal read-DbVal]]
             [hypercrud.types.Entity :refer [Entity ThinEntity read-Entity read-ThinEntity]]
             [hypercrud.types.URI :refer [URI read-URI]]))
 
 
 (def transit-read-handlers
   (merge hc-t/read-handlers
-         {"DbVal" (t/read-handler read-DbVal)
-          "Entity" (t/read-handler read-Entity)
+         {"Entity" (t/read-handler read-Entity)
           "->entity" (t/read-handler read-ThinEntity)
           "r" (t/read-handler read-URI)}))
 
@@ -17,9 +15,6 @@
   (merge hc-t/write-handlers
          {URI
           (t/write-handler (constantly "r") (fn [v] (.-uri-str v)))
-
-          DbVal
-          (t/write-handler (constantly "DbVal") (fn [v] [(.-uri v) (.-branch v)]))
 
           Entity
           (t/write-handler (constantly "Entity") (fn [v] [(.-dbval v) (.-coll v)]))

@@ -4,7 +4,10 @@
             [cljs.tagged-literals :as tags]
             [cljs.js :as cljs]
             [hypercrud.readers :as hc-readers]
+            [hypercrud.types.DbVal :refer [read-DbVal]]
+            [hypercrud.types.EntityRequest :refer [read-EntityRequest]]
             [hypercrud.types.Err :refer [read-Err]]
+            [hypercrud.types.QueryRequest :refer [read-QueryRequest]]
             [markdown.core]))
 
 
@@ -16,12 +19,12 @@
              (let [code-str' (str "(identity\n" code-str "\n)")]
                (binding [analyzer/*cljs-warning-handlers* []
                          tags/*cljs-data-readers* (merge tags/*cljs-data-readers*
-                                                         {'DbVal hc-readers/DbVal
-                                                          'Entity hc-readers/Entity
+                                                         {'Entity hc-readers/Entity
                                                           '->entity hc-readers/->entity
-                                                          'hypercrud.types.EntityRequest.EntityRequest hypercrud.types.EntityRequest/read-EntityRequest
+                                                          'hypercrud.types.DbVal.DbVal read-DbVal
+                                                          'hypercrud.types.EntityRequest.EntityRequest read-EntityRequest
                                                           'hypercrud.types.Err.Err read-Err
-                                                          'hypercrud.types.QueryRequest.QueryRequest hypercrud.types.QueryRequest/read-QueryRequest
+                                                          'hypercrud.types.QueryRequest.QueryRequest read-QueryRequest
                                                           'URI hc-readers/URI})]
                  (cljs/eval-str (cljs/empty-state)
                                 code-str'
