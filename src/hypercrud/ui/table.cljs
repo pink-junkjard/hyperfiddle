@@ -13,8 +13,8 @@
             [reagent.core :as r]))
 
 
-(defn attr-sortable? [fe attribute param-ctx]
-  (let [{:keys [:db/cardinality :db/valueType]} (get-in param-ctx [:schemas (:find-element/name fe) attribute])]
+(defn attr-sortable? [fe attribute ctx]
+  (let [{:keys [:db/cardinality :db/valueType]} (get-in ctx [:schemas (:find-element/name fe) attribute])]
     (and
       (= (:db/ident cardinality) :db.cardinality/one)
       ; ref requires more work (inspect label-prop)
@@ -84,57 +84,57 @@
   [:tr
    (->> ordered-fes
         (mapcat (fn [{:keys [] :as fe}]
-                  (let [param-ctx (context/find-element ctx fe)]
+                  (let [ctx (context/find-element ctx fe)]
                     (->> (-> fe :find-element/form :form/field)
                          (map (fn [field]
                                 ^{:key (str (:find-element/name fe) "-" (:field/attribute field))}
-                                [col-head fe field anchors-lookup sort-col param-ctx])))))))
+                                [col-head fe field anchors-lookup sort-col ctx])))))))
    [LinkCell false ordered-fes anchors-lookup ctx]])
 
-(defn Control [field anchors param-ctx]
-  (let [props (form-util/build-props field anchors param-ctx)]
-    (if (renderer/user-renderer param-ctx)
-      (renderer/user-render field anchors props param-ctx)
-      [auto-table-cell field anchors props param-ctx])))
+(defn Control [field anchors ctx]
+  (let [props (form-util/build-props field anchors ctx)]
+    (if (renderer/user-renderer ctx)
+      (renderer/user-render field anchors props ctx)
+      [auto-table-cell field anchors props ctx])))
 
-(defn Field [control field anchors param-ctx]
-  (let [shadow-link (auto-anchor/system-anchor? (-> param-ctx :entity :db/id))
-        style {:border-color (if-not shadow-link (connection-color/connection-color (:uri param-ctx) param-ctx))}]
+(defn Field [control field anchors ctx]
+  (let [shadow-link (auto-anchor/system-anchor? (-> ctx :entity :db/id))
+        style {:border-color (if-not shadow-link (connection-color/connection-color (:uri ctx) ctx))}]
     [:td.truncate {:style style}
-     [control param-ctx]]))
+     [control ctx]]))
 
-(defn Value [{:keys [:field/attribute] :as field} fe-anchors-lookup param-ctx]
-  (let [param-ctx (-> (context/attribute param-ctx attribute)
-                      (context/value (get (:entity param-ctx) attribute))
-                      (assoc :layout :table))
-        display-mode @(:display-mode param-ctx)
-        Field (case display-mode :xray Field :user (get param-ctx :field Field))
-        Control (case display-mode :xray Control :user (get param-ctx :control Control))
+(defn Value [{:keys [:field/attribute] :as field} fe-anchors-lookup ctx]
+  (let [ctx (-> (context/attribute ctx attribute)
+                (context/value (get (:entity ctx) attribute))
+                (assoc :layout :table))
+        display-mode @(:display-mode ctx)
+        Field (case display-mode :xray Field :user (get ctx :field Field))
+        Control (case display-mode :xray Control :user (get ctx :control Control))
         attr-anchors (get fe-anchors-lookup attribute)]
-    [Field (r/partial Control field attr-anchors) field attr-anchors param-ctx]))
+    [Field (r/partial Control field attr-anchors) field attr-anchors ctx]))
 
-(defn FindElement [fe anchors-lookup param-ctx]
+(defn FindElement [fe anchors-lookup ctx]
   (let [fe-name (:find-element/name fe)
-        entity (get (:relation param-ctx) fe-name)
+        entity (get (:relation ctx) fe-name)
         fe-anchors-lookup (get anchors-lookup fe-name)
-        param-ctx (-> (context/find-element param-ctx fe)
-                      (context/entity entity))]
+        ctx (-> (context/find-element ctx fe)
+                (context/entity entity))]
     (->> (-> fe :find-element/form :form/field)
          (mapv (fn [field]
                  ; todo this could clash if you use the same form on two findelements
                  ^{:key (:db/id field)}
-                 [Value field fe-anchors-lookup param-ctx])))))
+                 [Value field fe-anchors-lookup ctx])))))
 
-(defn Relation [relation ordered-fes anchors-lookup param-ctx]
-  (mapcat #(FindElement % anchors-lookup param-ctx) ordered-fes))
+(defn Relation [relation ordered-fes anchors-lookup ctx]
+  (mapcat #(FindElement % anchors-lookup ctx) ordered-fes))
 
-(defn Row [relation ordered-fes anchors-lookup param-ctx]
-  (let [param-ctx (context/relation param-ctx relation)]
+(defn Row [relation ordered-fes anchors-lookup ctx]
+  (let [ctx (context/relation ctx relation)]
     [:tr
-     (apply react-fragment :table-row-form (Relation relation ordered-fes anchors-lookup param-ctx))
-     (LinkCell true ordered-fes anchors-lookup param-ctx)]))
+     (apply react-fragment :table-row-form (Relation relation ordered-fes anchors-lookup ctx))
+     (LinkCell true ordered-fes anchors-lookup ctx)]))
 
-(defn Resultset [relations ordered-fes anchors-lookup sort-col param-ctx]
+(defn Resultset [relations ordered-fes anchors-lookup sort-col ctx]
   (let [[fe-dbid sort-key direction] @sort-col
         sort-fn (fn [relations]
                   (let [fe (->> ordered-fes
@@ -144,7 +144,7 @@
                                   (map :field/attribute)
                                   (filter #(= % sort-key))
                                   first)]
-                    (if (attr-sortable? fe attr param-ctx)
+                    (if (attr-sortable? fe attr ctx)
                       (sort-by #(get-in % [(:find-element/name fe) sort-key])
                                (case direction
                                  :asc #(compare %1 %2)
@@ -155,7 +155,7 @@
          sort-fn
          (map (fn [relation]
                 ^{:key (hash (util/map-values :db/id relation))}
-                [Row relation ordered-fes anchors-lookup param-ctx])))))
+                [Row relation ordered-fes anchors-lookup ctx])))))
 
 (defn Table [& props]
   (let [sort-col (r/atom nil)]

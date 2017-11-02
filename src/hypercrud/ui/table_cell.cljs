@@ -9,23 +9,23 @@
            s
            (str (subs s 0 (- c 3)) "..."))))
 
-(defn ref-one-component [field anchors props param-ctx]
+(defn ref-one-component [field anchors props ctx]
   [:div
-   #_(pr-str (:db/id (:value param-ctx)))
-   [:div.anchors (widget/render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
-   (widget/render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)])
+   #_(pr-str (:db/id (:value ctx)))
+   [:div.anchors (widget/render-anchors (remove :anchor/render-inline? anchors) ctx)]
+   (widget/render-inline-anchors (filter :anchor/render-inline? anchors) ctx)])
 
-(defn ref-many [field anchors props param-ctx]
+(defn ref-many [field anchors props ctx]
   [:div
-   #_(->> (mapv :db/id (:value param-ctx))
+   #_(->> (mapv :db/id (:value ctx))
           (pr-str)
           (ellipsis 15))
-   [:div.anchors (widget/render-anchors (remove :anchor/render-inline? anchors) param-ctx)]
-   (widget/render-inline-anchors (filter :anchor/render-inline? anchors) param-ctx)])
+   [:div.anchors (widget/render-anchors (remove :anchor/render-inline? anchors) ctx)]
+   (widget/render-inline-anchors (filter :anchor/render-inline? anchors) ctx)])
 
-(defn other-many [field anchors props param-ctx]
+(defn other-many [field anchors props ctx]
   [:div
    [:button {:on-click #(js/alert "todo")} "Edit"]
    " "
-   (->> (map pr-str (:value param-ctx))                     ;todo account for many different types of values
+   (->> (map pr-str (:value ctx))                     ;todo account for many different types of values
         (string/join ", "))])

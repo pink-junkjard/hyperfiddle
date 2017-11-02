@@ -6,8 +6,8 @@
             [hypercrud.util.core :as util]))
 
 
-(defn hc-attr-request [param-ctx]
-  (let [dbval (hc/db (:peer param-ctx) (:code-database-uri param-ctx) (:branch param-ctx))]
+(defn hc-attr-request [ctx]
+  (let [dbval (hc/db (:peer ctx) (:code-database-uri ctx) (:branch ctx))]
     (->QueryRequest '[:find ?attr :in $ :where
                       [?attr :attribute/renderer]]
                     {"$" dbval}

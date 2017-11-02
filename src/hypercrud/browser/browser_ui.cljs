@@ -26,33 +26,33 @@
                            (assoc ctx :user-renderer user-renderer #_(if f #(apply f %1 %2 %3 %4 args)))
                            ctx)]
                  [ui (get anchor-index ident) ctx]))
-      anchor (fn [anchor-index ident param-ctx label]
-               (let [props (-> (anchor/build-anchor-props (get anchor-index ident) param-ctx)
+      anchor (fn [anchor-index ident ctx label]
+               (let [props (-> (anchor/build-anchor-props (get anchor-index ident) ctx)
                                #_(dissoc :style) #_"custom renderers don't want colored links")]
-                 [(:navigate-cmp param-ctx) props label]))
+                 [(:navigate-cmp ctx) props label]))
       browse' (fn [anchor-index ident ctx]
                 (ui' (get anchor-index ident) (assoc ctx :user-renderer identity)))
       anchor* (fn [anchor-index ident ctx] (anchor/build-anchor-props (get anchor-index ident) ctx))
-      link-fn (fn [anchor-index ident label param-ctx] (anchor anchor-index ident param-ctx label))]
-  (defn with-reprocessed-result [ui-fn result ordered-fes anchors param-ctx]
-    (let [anchors (if (:keep-disabled-anchors? param-ctx)
+      link-fn (fn [anchor-index ident label ctx] (anchor anchor-index ident ctx label))]
+  (defn with-reprocessed-result [ui-fn result ordered-fes anchors ctx]
+    (let [anchors (if (:keep-disabled-anchors? ctx)
                     anchors
                     (remove :anchor/disabled? anchors))
           anchor-index (->> anchors
                             (filter :anchor/ident)          ; cannot lookup nil idents
                             (mapv (juxt #(-> % :anchor/ident) identity)) ; [ repeating entity attr ident ]
                             (into {}))
-          param-ctx (assoc param-ctx
-                      :anchor (r/partial anchor anchor-index)
-                      :browse (r/partial browse anchor-index)
-                      :anchor* (r/partial anchor* anchor-index)
-                      :browse' (r/partial browse' anchor-index)
+          ctx (assoc ctx
+                :anchor (r/partial anchor anchor-index)
+                :browse (r/partial browse anchor-index)
+                :anchor* (r/partial anchor* anchor-index)
+                :browse' (r/partial browse' anchor-index)
 
-                      ; backwards compat
-                      :with-inline-result (r/partial browse anchor-index)
-                      :link-fn (r/partial link-fn anchor-index))]
+                ; backwards compat
+                :with-inline-result (r/partial browse anchor-index)
+                :link-fn (r/partial link-fn anchor-index))]
       ; result is relation or set of relations
-      (ui-fn result ordered-fes anchors param-ctx))))
+      (ui-fn result ordered-fes anchors ctx))))
 
 (defn link-user-fn [link]
   (if-not (empty? (:link/renderer link))
@@ -60,8 +60,8 @@
         (either/branch
           (fn [e] (constantly [:pre (util/pprint-str e)]))
           (fn [user-fn]
-            (fn [result ordered-fes anchors param-ctx]
-              [safe-user-renderer user-fn result ordered-fes anchors param-ctx]))))))
+            (fn [result ordered-fes anchors ctx]
+              [safe-user-renderer user-fn result ordered-fes anchors ctx]))))))
 
 (defn result-cmp [link pre-binding-ctx result ordered-fes anchors ctx]
   (let [ui-fn (case @(:display-mode pre-binding-ctx)
@@ -76,18 +76,18 @@
     (either/right (auto-link/hydrate-system-link (get-in ctx [:route :link-id]) ctx))
     (hc/hydrate (:peer ctx) (base/meta-request-for-link ctx))))
 
-(defn ui-from-route' [route param-ctx]
+(defn ui-from-route' [route ctx]
   (try
-    (let [param-ctx (context/route param-ctx route)]
-      (mlet [link (hydrate-link param-ctx)
-             ordered-fes (base/get-ordered-find-elements link param-ctx)
-             :let [param-ctx (context/override-domain-dbs param-ctx)]
-             request (base/request-for-link link ordered-fes param-ctx)
-             result (if request (hc/hydrate (:peer param-ctx) request) (either/right nil))
+    (let [ctx (context/route ctx route)]
+      (mlet [link (hydrate-link ctx)
+             ordered-fes (base/get-ordered-find-elements link ctx)
+             :let [ctx (context/override-domain-dbs ctx)]
+             request (base/request-for-link link ordered-fes ctx)
+             result (if request (hc/hydrate (:peer ctx) request) (either/right nil))
              ; schema is allowed to be nil if the link only has anchors and no data dependencies
-             schemas (schema-util/hydrate-schema ordered-fes param-ctx)
-             :let [f (r/partial result-cmp link param-ctx)]]
-        (base/process-results f link request result schemas ordered-fes param-ctx)))
+             schemas (schema-util/hydrate-schema ordered-fes ctx)
+             :let [f (r/partial result-cmp link ctx)]]
+        (base/process-results f link request result schemas ordered-fes ctx)))
     ; js errors? Why do we need this?
     ; user-renderers can throw, should be caught lower though
     (catch :default e (either/left e))))

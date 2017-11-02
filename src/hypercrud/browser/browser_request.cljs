@@ -12,30 +12,30 @@
 (declare request)
 (declare request-from-route)
 
-(defn recurse-request [anchor param-ctx]
+(defn recurse-request [anchor ctx]
   (if (:anchor/managed? anchor)
-    (let [route' (anchor/build-anchor-route' anchor param-ctx)
-          param-ctx (context/anchor-branch param-ctx anchor)]
-      (if (get-in (-> param-ctx :peer .-state-atom deref) [:popovers (:branch param-ctx)])
+    (let [route' (anchor/build-anchor-route' anchor ctx)
+          ctx (context/anchor-branch ctx anchor)]
+      (if (get-in (-> ctx :peer .-state-atom deref) [:popovers (:branch ctx)])
         ; if the anchor IS a popover, we need to run the same logic as anchor/build-anchor-props
-        ; the param-ctx needs to be updated (branched, etc), but NOT BEFORE determining the route
+        ; the ctx needs to be updated (branched, etc), but NOT BEFORE determining the route
         ; that MUST happen in the parent context
-        (let [param-ctx (-> param-ctx
-                            (context/clean)
-                            (update :debug #(str % ">popover-link[" (:db/id anchor) ":" (or (:anchor/ident anchor) (:anchor/prompt anchor)) "]")))]
+        (let [ctx (-> ctx
+                      (context/clean)
+                      (update :debug #(str % ">popover-link[" (:db/id anchor) ":" (or (:anchor/ident anchor) (:anchor/prompt anchor)) "]")))]
           (either/branch route'
                          (constantly nil)
-                         #(request-from-route % param-ctx)))))
+                         #(request-from-route % ctx)))))
     ; if the anchor IS NOT a popover, this should be the same logic as widget/render-inline-anchors
-    (let [param-ctx (update param-ctx :debug #(str % ">inline-link[" (:db/id anchor) ":" (or (:anchor/ident anchor) (:anchor/prompt anchor)) "]"))]
-      (request anchor param-ctx))))
+    (let [ctx (update ctx :debug #(str % ">inline-link[" (:db/id anchor) ":" (or (:anchor/ident anchor) (:anchor/prompt anchor)) "]"))]
+      (request anchor ctx))))
 
-(defn link-dependent-requests [result ordered-fes anchors param-ctx]
+(defn link-dependent-requests [result ordered-fes anchors ctx]
   (let [result (cond
                  (map? result) [result]
                  (coll? result) result
                  :else result)
-        anchors (->> (if (:keep-disabled-anchors? param-ctx)
+        anchors (->> (if (:keep-disabled-anchors? ctx)
                        anchors
                        (remove :anchor/disabled? anchors))
                      (filter :anchor/render-inline?))       ; at this point we only care about inline anchors
@@ -53,49 +53,49 @@
                 :entity-attr-t #(get anchors-lookup [true (:find-element/name %1) %2])
                 :entity-attr-f #(get anchors-lookup [false (:find-element/name %1) %2])}]
     (concat
-      (->> ((:index lookup)) (mapcat #(recurse-request % param-ctx)))
-      (->> ((:relation-new lookup)) (mapcat #(recurse-request % param-ctx)))
+      (->> ((:index lookup)) (mapcat #(recurse-request % ctx)))
+      (->> ((:relation-new lookup)) (mapcat #(recurse-request % ctx)))
       (->> ordered-fes                                      ; might have empty results
            (mapcat (fn [fe]
-                     (let [param-ctx (context/find-element param-ctx fe)]
+                     (let [ctx (context/find-element ctx fe)]
                        (concat
-                         (->> ((:entity-f lookup) fe) (mapcat #(recurse-request % param-ctx)))
+                         (->> ((:entity-f lookup) fe) (mapcat #(recurse-request % ctx)))
                          (->> (get-in fe [:find-element/form :form/field])
                               (mapcat (fn [{:keys [:field/attribute]}]
-                                        (let [param-ctx (context/attribute param-ctx attribute)]
-                                          (->> ((:entity-attr-f lookup) fe attribute) (mapcat #(recurse-request % param-ctx))))))))))))
+                                        (let [ctx (context/attribute ctx attribute)]
+                                          (->> ((:entity-attr-f lookup) fe attribute) (mapcat #(recurse-request % ctx))))))))))))
       (->> result
            (mapcat (fn [relation]
-                     (let [param-ctx (context/relation param-ctx relation)]
-                       (concat (->> ((:relation lookup)) (mapcat #(recurse-request % param-ctx)))
+                     (let [ctx (context/relation ctx relation)]
+                       (concat (->> ((:relation lookup)) (mapcat #(recurse-request % ctx)))
                                (->> ordered-fes
                                     (mapcat (fn [fe]
                                               (let [entity (get relation (:find-element/name fe))
-                                                    param-ctx (-> param-ctx
-                                                                  (context/find-element fe)
-                                                                  (context/entity entity))]
+                                                    ctx (-> ctx
+                                                            (context/find-element fe)
+                                                            (context/entity entity))]
                                                 (concat
-                                                  (->> ((:entity-t lookup) fe) (mapcat #(recurse-request % param-ctx)))
+                                                  (->> ((:entity-t lookup) fe) (mapcat #(recurse-request % ctx)))
                                                   (->> (get-in fe [:find-element/form :form/field])
                                                        (mapcat (fn [{:keys [:field/attribute]}]
-                                                                 (let [param-ctx (-> (context/attribute param-ctx attribute)
-                                                                                     (context/value (get entity attribute)))]
-                                                                   (->> ((:entity-attr-t lookup) fe attribute) (mapcat #(recurse-request % param-ctx))))))))
+                                                                 (let [ctx (-> (context/attribute ctx attribute)
+                                                                               (context/value (get entity attribute)))]
+                                                                   (->> ((:entity-attr-t lookup) fe attribute) (mapcat #(recurse-request % ctx))))))))
                                                 ))))))))))))
 
-(defn requests-for-link [link param-ctx]
-  (-> (mlet [ordered-fes (base/get-ordered-find-elements link param-ctx)
-             :let [param-ctx (context/override-domain-dbs param-ctx)]
-             link-request (base/request-for-link link ordered-fes param-ctx)]
+(defn requests-for-link [link ctx]
+  (-> (mlet [ordered-fes (base/get-ordered-find-elements link ctx)
+             :let [ctx (context/override-domain-dbs ctx)]
+             link-request (base/request-for-link link ordered-fes ctx)]
         (cats/return
           (concat
             (if link-request [link-request])
-            (schema-util/schema-requests-for-link ordered-fes param-ctx)
+            (schema-util/schema-requests-for-link ordered-fes ctx)
             (-> (mlet [result (if link-request
-                                (hc/hydrate (:peer param-ctx) link-request)
+                                (hc/hydrate (:peer ctx) link-request)
                                 (either/right nil))
-                       schemas (schema-util/hydrate-schema ordered-fes param-ctx)]
-                  (base/process-results link-dependent-requests link link-request result schemas ordered-fes param-ctx))
+                       schemas (schema-util/hydrate-schema ordered-fes ctx)]
+                  (base/process-results link-dependent-requests link link-request result schemas ordered-fes ctx))
                 (cats/mplus (either/right nil))
                 (cats/extract)))))
       (cats/mplus (either/right nil))
@@ -113,11 +113,11 @@
                     (either/branch (constantly nil)
                                    #(requests-for-link % ctx))))))))
 
-(defn request [anchor param-ctx]
+(defn request [anchor ctx]
   (if (:anchor/link anchor)
-    (-> (anchor/build-anchor-route' anchor param-ctx)
+    (-> (anchor/build-anchor-route' anchor ctx)
         (either/branch
           (constantly nil)
           (fn [route]
             ; entire context must be encoded in the route
-            (request-from-route route (context/clean param-ctx)))))))
+            (request-from-route route (context/clean ctx)))))))

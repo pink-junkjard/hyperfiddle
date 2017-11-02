@@ -48,8 +48,8 @@
 ; todo all HF prop values should be monads and
 ; tooltip can be generated within navigate-cmp by mapping over them
 (defn navigate-cmp* [hypercrud-props label]
-  ; why doesn't this just take anchor? - param-ctx should not leak up this high.
-  ; props (links/build-link-props anchor param-ctx)
+  ; why doesn't this just take anchor? - ctx should not leak up this high.
+  ; props (links/build-link-props anchor ctx)
   ; and because nested router. Is that even needed now?
   (if-not (:hidden hypercrud-props)
     (let [hypercrud-props (update hypercrud-props :class #(str % " hf-auto-nav"))]

@@ -19,7 +19,7 @@
 
   This function recurses in unexpected abstract way and impacts performance highly
   "
-  [parent-link ordered-fes param-ctx]
+  [parent-link ordered-fes ctx]
   (let [entity-links (->> ordered-fes
                           (mapcat (fn [{fe-name :find-element/name fe-conn :find-element/connection :as fe}]
                                     (let [edit {:db/id {:ident :system-anchor-edit
@@ -67,7 +67,7 @@
         attr-links (if (not= :blank (:request/type parent-link))
                      (->> ordered-fes
                           (mapcat (fn [{fe-name :find-element/name fe-conn :find-element/connection :as fe}]
-                                    (let [schema (get-in param-ctx [:schemas fe-name])]
+                                    (let [schema (get-in ctx [:schemas fe-name])]
                                       (->> (-> fe :find-element/form :form/field)
                                            (filter (fn [{:keys [:field/attribute]}]
                                                      (and (not= attribute :db/id)
@@ -144,8 +144,8 @@
        flatten
        doall))
 
-(defn auto-anchors [link ordered-fes param-ctx & [{:keys [ignore-user-links]}]]
-  (let [sys-anchors (system-anchors link ordered-fes param-ctx)]
+(defn auto-anchors [link ordered-fes ctx & [{:keys [ignore-user-links]}]]
+  (let [sys-anchors (system-anchors link ordered-fes ctx)]
     (->> (if ignore-user-links
            sys-anchors
            (merge-anchors sys-anchors (:link/anchor link)))

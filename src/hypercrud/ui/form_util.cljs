@@ -11,10 +11,10 @@
       (str/replace "/" "-")
       (str/replace " " "-")))
 
-(defn build-props [field anchors param-ctx]
+(defn build-props [field anchors ctx]
   ; why does this need the field - it needs the ident for readonly in "Edit Anchors"
   ; todo clean this interface up
-  {:read-only ((get param-ctx :read-only) (:attribute param-ctx) param-ctx)})
+  {:read-only ((get ctx :read-only) (:attribute ctx) ctx)})
 
 (defn attribute-human [attr]
   (-> attr
@@ -24,10 +24,10 @@
       (util/update-existing :db/unique :db/ident)
       (util/update-existing :attribute/renderer str/prune 30)))
 
-(defn field-label [field param-ctx]
+(defn field-label [field ctx]
   (let [label (util/fallback empty? "" #_ (:field/prompt field) ; hook into i18n for this, can't store english in database
-                                    (-> param-ctx :attribute :db/ident str))
-        help-text (util/pprint-str (attribute-human (:attribute param-ctx)) 60)]
+                                    (-> ctx :attribute :db/ident str))
+        help-text (util/pprint-str (attribute-human (:attribute ctx)) 60)]
     [tooltip/hover-popover-managed
      {:label [:pre help-text]}
      [:span.help label]]

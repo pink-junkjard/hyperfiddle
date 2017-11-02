@@ -216,7 +216,7 @@ Here's the raw edn app-value (truncated, here i don't show the whole thing):
 {:page/name "Sample Blog"
  :page/query "[:find ?post :in $ :where [?post :post/title]]"
  :page/dbs [{:dbhole/name "$" :dbhole/value {:domain/ident "samples-blog"}}]
- :page/renderer "(fn [relations ordered-fes anchors param-ctx] ... )"
+ :page/renderer "(fn [relations ordered-fes anchors ctx] ... )"
  :page/find-elements [{:find-element/name "?post"
                        :find-element/connection {:domain/ident "samples-blog"}
                        :find-element/form {:form/name "samples-blog - post"

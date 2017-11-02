@@ -5,21 +5,21 @@
             [hypercrud.ui.widget :as widget]))
 
 
-(defn view [result ordered-fes anchors param-ctx]
+(defn view [result ordered-fes anchors ctx]
   [:div.auto-result
-   [markdown/markdown (str (-> param-ctx :fiddle :db/doc)) #() {:class "hypercrud-doc"}]
+   [markdown/markdown (str (-> ctx :fiddle :db/doc)) #() {:class "hypercrud-doc"}]
    (cond
-     (map? result) [form/form result ordered-fes anchors param-ctx]
-     (coll? result) [table/ui-table result ordered-fes anchors param-ctx]
+     (map? result) [form/form result ordered-fes anchors ctx]
+     (coll? result) [table/ui-table result ordered-fes anchors ctx]
      :else
      [:div.blank
       (widget/render-anchors (->> anchors
                                   (remove :anchor/find-element)
                                   (remove :anchor/attribute)
                                   (remove :anchor/render-inline?))
-                             param-ctx)
+                             ctx)
       (widget/render-inline-anchors (->> anchors
                                          (remove :anchor/find-element)
                                          (remove :anchor/attribute)
                                          (filter :anchor/render-inline?))
-                                    (dissoc param-ctx :isComponent))])])
+                                    (dissoc ctx :isComponent))])])

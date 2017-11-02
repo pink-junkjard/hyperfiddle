@@ -9,9 +9,9 @@
             [reagent.core :as reagent]))
 
 
-(defn clean [param-ctx]
+(defn clean [ctx]
   ; why not code-database-uri and all the custom ui/render fns?
-  (dissoc param-ctx
+  (dissoc ctx
           :keep-disabled-anchors?
           :route :query-params
           :relation :schemas
@@ -36,47 +36,47 @@
                       (vals)
                       (into #{}))))))
 
-(defn route [param-ctx route]
-  (let [route (routing/tempid->id route param-ctx)]
-    (assoc param-ctx
+(defn route [ctx route]
+  (let [route (routing/tempid->id route ctx)]
+    (assoc ctx
       :route route
       :query-params (:query-params route)
-      :code-database-uri (->> (get-in param-ctx [:domain :domain/code-databases])
+      :code-database-uri (->> (get-in ctx [:domain :domain/code-databases])
                               (filter #(= (:dbhole/name %) (:code-database route)))
                               first
                               :dbhole/uri))))
 
-(defn anchor-branch [param-ctx anchor]
+(defn anchor-branch [ctx anchor]
   (if (:anchor/managed? anchor)
     ; we should run the auto-formula logic to determine an appropriate auto-id fn
-    (let [child-id-str (-> [(auto-anchor-formula/deterministic-ident param-ctx) (:db/id anchor)]
+    (let [child-id-str (-> [(auto-anchor-formula/deterministic-ident ctx) (:db/id anchor)]
                            hash js/Math.abs - str)
-          branch (branch/encode-branch-child (:branch param-ctx) child-id-str)]
-      (assoc param-ctx :branch branch))
-    param-ctx))
+          branch (branch/encode-branch-child (:branch ctx) child-id-str)]
+      (assoc ctx :branch branch))
+    ctx))
 
-(defn relation [param-ctx relation]
-  (assoc param-ctx :relation relation))
+(defn relation [ctx relation]
+  (assoc ctx :relation relation))
 
 (defn user-with [ctx branch uri tx]
   ; todo custom user-dispatch with all the tx-fns as reducers
   ((:dispatch! ctx) (actions/with branch uri tx)))
 
-(defn find-element [param-ctx fe]
-  (let [uri (context-util/ident->database-uri (:find-element/connection fe) param-ctx)
-        branch (:branch param-ctx)]
-    (assoc param-ctx :uri uri
-                     :find-element fe
-                     :schema (get-in param-ctx [:schemas (:find-element/name fe)])
-                     :user-with! (reagent/partial user-with param-ctx branch uri))))
+(defn find-element [ctx fe]
+  (let [uri (context-util/ident->database-uri (:find-element/connection fe) ctx)
+        branch (:branch ctx)]
+    (assoc ctx :uri uri
+               :find-element fe
+               :schema (get-in ctx [:schemas (:find-element/name fe)])
+               :user-with! (reagent/partial user-with ctx branch uri))))
 
-(defn entity [param-ctx entity]
-  (assoc param-ctx :owner (if-let [owner-fn (:owner-fn param-ctx)]
-                            (owner-fn entity param-ctx))
-                   :entity entity))
+(defn entity [ctx entity]
+  (assoc ctx :owner (if-let [owner-fn (:owner-fn ctx)]
+                      (owner-fn entity ctx))
+             :entity entity))
 
-(defn attribute [param-ctx attribute]
-  (assoc param-ctx :attribute (get-in param-ctx [:schema attribute])))
+(defn attribute [ctx attribute]
+  (assoc ctx :attribute (get-in ctx [:schema attribute])))
 
-(defn value [param-ctx value]
-  (assoc param-ctx :value value))
+(defn value [ctx value]
+  (assoc ctx :value value))

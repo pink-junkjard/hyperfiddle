@@ -38,11 +38,11 @@
         dbval (hc/db (:peer ctx) (:code-database-uri ctx) (:branch ctx))]
     (->EntityRequest link-id nil dbval meta-pull-exp-for-link)))
 
-(letfn [(strip-form-in-raw-mode [fe param-ctx]
-          (if (= @(:display-mode param-ctx) :root)
+(letfn [(strip-form-in-raw-mode [fe ctx]
+          (if (= @(:display-mode ctx) :root)
             (dissoc fe :find-element/form)
             fe))]
-  (defn get-ordered-find-elements [link param-ctx]
+  (defn get-ordered-find-elements [link ctx]
     (mlet [fes (case (:request/type link)
                  :query (let [find-element-lookup (->> (:link-query/find-element link)
                                                        (map (juxt :find-element/name identity))
@@ -61,7 +61,7 @@
            (map #(into {} %))
            ; todo query-params should be inspected for Entity's and their conns
            (map (fn [fe] (update fe :find-element/connection #(or % "$"))))
-           (map #(strip-form-in-raw-mode % param-ctx))
+           (map #(strip-form-in-raw-mode % ctx))
            (cats/return)))))
 
 (defn request-for-link [link ordered-fes ctx]
@@ -116,11 +116,11 @@
     (either/right nil)))
 
 (let [never-read-only (constantly false)]
-  (defn process-results [f link request result schemas ordered-fes param-ctx]
-    (let [param-ctx (assoc param-ctx                        ; provide defaults before user-bindings run.
+  (defn process-results [f link request result schemas ordered-fes ctx]
+    (let [ctx (assoc ctx                        ; provide defaults before user-bindings run.
                       :schemas schemas                      ; For tx/entity->statements in userland.
                       :fiddle link                          ; for :db/doc
-                      :read-only (or (:read-only param-ctx) never-read-only))
+                      :read-only (or (:read-only ctx) never-read-only))
 
           ; ereq doesn't have a fe yet; wrap with a fe.
           ; Doesn't make sense to do on server since this is going to optimize away anyway.
@@ -146,10 +146,10 @@
 
                    result)
 
-          ordered-fes (auto-form/auto-find-elements ordered-fes result param-ctx)]
-      (mlet [param-ctx (user-bindings/user-bindings' link param-ctx)]
+          ordered-fes (auto-form/auto-find-elements ordered-fes result ctx)]
+      (mlet [ctx (user-bindings/user-bindings' link ctx)]
         (cats/return
-          (case @(:display-mode param-ctx)                  ; default happens higher, it influences queries too
-            :user (f result ordered-fes (auto-anchor/auto-anchors link ordered-fes param-ctx) param-ctx)
-            :xray (f result ordered-fes (auto-anchor/auto-anchors link ordered-fes param-ctx) param-ctx)
-            :root (f result ordered-fes (auto-anchor/auto-anchors link ordered-fes param-ctx {:ignore-user-links true}) param-ctx)))))))
+          (case @(:display-mode ctx)                  ; default happens higher, it influences queries too
+            :user (f result ordered-fes (auto-anchor/auto-anchors link ordered-fes ctx) ctx)
+            :xray (f result ordered-fes (auto-anchor/auto-anchors link ordered-fes ctx) ctx)
+            :root (f result ordered-fes (auto-anchor/auto-anchors link ordered-fes ctx {:ignore-user-links true}) ctx)))))))

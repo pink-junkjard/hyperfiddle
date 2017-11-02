@@ -31,15 +31,15 @@
     (either/right nil)))
 
 ; todo belongs in routing ns
-(defn ^:export build-anchor-route' [anchor param-ctx]
+(defn ^:export build-anchor-route' [anchor ctx]
   (mlet [query-params (->> (if-let [code-str (:anchor/formula anchor)]
-                             (safe-run-user-code-str' code-str param-ctx)
+                             (safe-run-user-code-str' code-str ctx)
                              (either/right nil))
                            (cats/fmap (partial util/map-values
                                                (fn [v]
                                                  ; todo support other types of v (map, vector, etc)
                                                  (if (instance? Entity v)
-                                                   (let [dbname (->> (get-in param-ctx [:domain :domain/databases])
+                                                   (let [dbname (->> (get-in ctx [:domain :domain/databases])
                                                                      (context-util/uri->ident (some-> v .-dbval .-uri)))]
                                                      (->ThinEntity dbname (:db/id v)))
                                                    v)))))
@@ -50,10 +50,10 @@
       (routing/id->tempid
         {
          ;:code-database (:anchor/code-database anchor) todo when cross db references are working on anchor/links, don't need to inherit code-db-uri
-         :code-database (:code-database param-ctx)
+         :code-database (:code-database ctx)
          :link-id link-id
          :query-params query-params}
-        param-ctx))))
+        ctx))))
 
 ; todo belongs in routing ns
 ; this is same business logic as base/request-for-link
@@ -84,7 +84,7 @@
     (try-either (apply expr args))
     (either/right expr)))
 
-(defn build-anchor-props-raw [unvalidated-route' anchor param-ctx] ; param-ctx is for display-mode
+(defn build-anchor-props-raw [unvalidated-route' anchor ctx] ; ctx is for display-mode
 
   ; this is a fine place to eval, put error message in the tooltip prop
   ; each prop might have special rules about his default, for example :visible is default true, does this get handled here?
@@ -94,10 +94,10 @@
         validated-route' (validated-route' link route)
         user-props' (if-let [user-code-str (eval/validate-user-code-str (:hypercrud/props anchor))]
                       (mlet [user-expr (eval-str' user-code-str)]
-                        (get-or-apply' user-expr param-ctx))
+                        (get-or-apply' user-expr ctx))
                       (either/right nil))
         user-props-map-raw (cats/extract (cats/mplus user-props' (either/right nil)))
-        user-prop-val's (map #(get-or-apply' % param-ctx) (vals user-props-map-raw))
+        user-prop-val's (map #(get-or-apply' % ctx) (vals user-props-map-raw))
         user-prop-vals (map #(cats/extract (cats/mplus % (either/right nil))) user-prop-val's)
         errors (->> (concat [user-props' unvalidated-route' validated-route'] user-prop-val's)
                     (filter either/left?) (map cats/extract) (into #{}))
@@ -108,7 +108,7 @@
       {:route (-> unvalidated-route' (cats/mplus (either/right nil)) (cats/extract))
        :tooltip (if-not (empty? errors)
                   [:warning (pprint-str errors)]
-                  (case @(:display-mode param-ctx)
+                  (case @(:display-mode ctx)
                     :xray [nil (pr-str (:query-params route))]
                     :user (:tooltip user-props)))
        :class (->> [(:class user-props)
@@ -117,14 +117,14 @@
                    (interpose " ")
                    (apply str))})))
 
-(defn stage! [anchor route param-ctx]
+(defn stage! [anchor route ctx]
   (let [user-txfn (some-> (eval/validate-user-code-str (:anchor/tx-fn anchor)) eval-str' (cats/mplus (either/right nil)) (cats/extract))
         user-txfn (or user-txfn (constantly nil))]
     (-> (p/promise
           (fn [resolve! reject!]
             (let [swap-fn (fn [multi-color-tx]
                             ; todo why does the user-txfn have access to the parent link's context
-                            (let [result (let [result (user-txfn param-ctx multi-color-tx route)]
+                            (let [result (let [result (user-txfn ctx multi-color-tx route)]
                                            ; txfn may be sync or async
                                            (if-not (p/promise? result) (p/resolved result) result))]
                               ; let the caller of this :stage fn know the result
@@ -137,7 +137,7 @@
 
                               ; return the result to the action, it could be a promise
                               result))]
-              ((:dispatch! param-ctx) (actions/stage-popover (:branch param-ctx) swap-fn)))))
+              ((:dispatch! ctx) (actions/stage-popover (:branch ctx) swap-fn)))))
         ; todo something better with these exceptions (could be user error)
         (p/catch #(-> % pprint-str js/alert)))))
 
@@ -147,12 +147,12 @@
 (defn managed-popover-body [anchor route ctx]
   (let [stage! (reagent/partial stage! anchor route ctx)
         cancel! (reagent/partial cancel! ctx)
-        ; NOTE: this param-ctx logic and structure is the same as the popover branch of browser-request/recurse-request
-        param-ctx (-> ctx
-                      (context/clean)
-                      (update :debug #(str % ">popover-link[" (:db/id anchor) ":" (or (:anchor/ident anchor) (:anchor/prompt anchor)) "]")))]
+        ; NOTE: this ctx logic and structure is the same as the popover branch of browser-request/recurse-request
+        ctx (-> ctx
+                (context/clean)
+                (update :debug #(str % ">popover-link[" (:db/id anchor) ":" (or (:anchor/ident anchor) (:anchor/prompt anchor)) "]")))]
     [:div.managed-popover
-     [hypercrud.browser.core/ui-from-route route param-ctx] ; cycle
+     [hypercrud.browser.core/ui-from-route route ctx]       ; cycle
      [:button {:on-click stage!} "stage"]
      [:button {:on-click cancel!} "cancel"]]))
 
@@ -170,7 +170,7 @@
 ; if this is driven by anchor, and not route, it needs memoized.
 ; the route is a fn of the formulas and the formulas can have effects
 ; which have to be run only once.
-(defn build-anchor-props [anchor param-ctx]
+(defn build-anchor-props [anchor ctx]
   ; Draw as much as possible even in the presence of errors, still draw the link, collect all errors in a tooltip.
   ; Error states:
   ; - no route
@@ -179,15 +179,15 @@
   ; - broken user txfn
   ; - broken user visible fn
   ; If these fns are ommitted (nil), its not an error.
-  (let [visible? (visible? anchor param-ctx)
-        route' (build-anchor-route' anchor param-ctx)
-        hypercrud-props (build-anchor-props-raw route' anchor param-ctx)
+  (let [visible? (visible? anchor ctx)
+        route' (build-anchor-route' anchor ctx)
+        hypercrud-props (build-anchor-props-raw route' anchor ctx)
         popover-props (if (popover-anchor? anchor)
                         (if-let [route (and (:anchor/managed? anchor) (either/right? route') (cats/extract route'))]
                           ; If no route, there's nothing to draw, and the anchor tooltip shows the error.
-                          (let [param-ctx (context/anchor-branch param-ctx anchor)]
-                            {:showing? (reagent/cursor (-> param-ctx :peer .-state-atom) [:popovers (:branch param-ctx)])
-                             :body [managed-popover-body anchor route param-ctx]
-                             :open! (reagent/partial open! param-ctx)})))
+                          (let [ctx (context/anchor-branch ctx anchor)]
+                            {:showing? (reagent/cursor (-> ctx :peer .-state-atom) [:popovers (:branch ctx)])
+                             :body [managed-popover-body anchor route ctx]
+                             :open! (reagent/partial open! ctx)})))
         anchor-props-hidden {:hidden (not visible?)}]
     (merge anchor-props-hidden hypercrud-props {:popover popover-props})))

@@ -32,10 +32,10 @@
            :a a}
    :link/name "sys-remove"
    :request/type :blank
-   :link/renderer (pr-str `(fn [result# ordered-fes# anchors# param-ctx#]
+   :link/renderer (pr-str `(fn [result# ordered-fes# anchors# ctx#]
                              [:p "Retract entity?"]))})
 
-(defn hydrate-system-link [{:keys [fe-name fe-conn a ident]} param-ctx]
+(defn hydrate-system-link [{:keys [fe-name fe-conn a ident]} ctx]
   (case ident
     :system-edit (link-system-edit fe-name fe-conn)
     :system-edit-attr (link-system-edit-attr fe-name fe-conn a)

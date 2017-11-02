@@ -14,7 +14,7 @@
       cljs.core/Keyword (name v)
       (str v)))
 
-(defn build-label [ordered-fes relation param-ctx]
+(defn build-label [ordered-fes relation ctx]
   (->> ordered-fes
        (mapcat (fn [fe]
                  (->> (-> fe :find-element/form :form/field)
@@ -22,15 +22,15 @@
                               ; Custom label renderers? Can't use the attribute renderer, since that
                               ; is how we are in a select options in the first place.
                               (let [value (get-in relation [(:find-element/name fe) attribute])
-                                    renderer (or (-> param-ctx :fields attribute :label-renderer) default-label-renderer)]
-                                (try-either (renderer value param-ctx))))))))
+                                    renderer (or (-> ctx :fields attribute :label-renderer) default-label-renderer)]
+                                (try-either (renderer value ctx))))))))
        (cats/sequence)
        (cats/fmap (fn [labels]
                     (->> labels
                          (interpose ", ")
                          (apply str))))))
 
-(defn select-boolean* [value props param-ctx]
+(defn select-boolean* [value props ctx]
   (let [props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
                :value (if (nil? value) "" (str value))
                ;; reconstruct the typed value
@@ -38,14 +38,14 @@
                                      "" nil
                                      "true" true
                                      "false" false)]
-                             ((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) v)))
+                             ((:user-with! ctx) (tx/update-entity-attr (:entity ctx) (:attribute ctx) v)))
                :disabled (if (:read-only props) true false)}]
     [:select props
      [:option {:key true :value "true"} "True"]
      [:option {:key false :value "false"} "False"]
      [:option {:key :nil :value ""} "--"]]))
 
-(defn select-anchor-renderer [props result ordered-fes anchors param-ctx]
+(defn select-anchor-renderer [props result ordered-fes anchors ctx]
   ; hack in the selected value if we don't have options hydrated?
   ; Can't, since we only have the #DbId hydrated, and it gets complicated with relaton vs entity etc
   (let [no-options? (empty? result)
@@ -63,7 +63,7 @@
        (->> result
             (mapv (fn [relation]
                     (let [entity (get relation (:find-element/name (first ordered-fes)))
-                          label (-> (build-label ordered-fes relation param-ctx)
+                          label (-> (build-label ordered-fes relation ctx)
                                     ; It's perfectly possible to properly report this error properly upstream.
                                     (either/branch (fn [e] (pr-str e)) identity))]
                       [(:db/id entity) label])))
@@ -74,21 +74,21 @@
 
 (def always-user (atom :user))
 
-(defn anchor->select [props anchor param-ctx]
+(defn anchor->select [props anchor ctx]
   (let [renderer (reagent/partial select-anchor-renderer props)]
-    [browser/ui anchor (assoc param-ctx
+    [browser/ui anchor (assoc ctx
                          :display-mode always-user
                          :user-renderer renderer)]))
 
-(let [on-change (fn [param-ctx id]
-                  ((:user-with! param-ctx) (tx/update-entity-attr (:entity param-ctx) (:attribute param-ctx) id)))]
-  (defn select* [value options-anchor props param-ctx]
+(let [on-change (fn [ctx id]
+                  ((:user-with! ctx) (tx/update-entity-attr (:entity ctx) (:attribute ctx) id)))]
+  (defn select* [value options-anchor props ctx]
     (let [props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
                  :value (cond
                           (nil? value) ""
                           :else (str (:db/id value)))
 
                  ;; reconstruct the typed value
-                 :on-change (reagent/partial on-change param-ctx)
+                 :on-change (reagent/partial on-change ctx)
                  :disabled (:read-only props)}]
-      [anchor->select props options-anchor param-ctx])))
+      [anchor->select props options-anchor ctx])))
