@@ -7,8 +7,9 @@
             [hypercrud.browser.q-util :as q-util]
             [hypercrud.browser.user-bindings :as user-bindings]
             [hypercrud.client.core :as hc]
-            [hypercrud.types.Entity :refer [Entity ThinEntity]]
+            [hypercrud.types.Entity :refer [Entity]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
+            [hypercrud.types.ThinEntity :refer [ThinEntity]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hypercrud.util.core :as util]
             [hypercrud.util.string :as hc-string]))

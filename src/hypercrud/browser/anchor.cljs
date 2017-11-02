@@ -8,7 +8,8 @@
             [hypercrud.browser.routing :as routing]
             [hypercrud.compile.eval :as eval :refer [eval-str']]
             [hypercrud.state.actions.core :as actions]
-            [hypercrud.types.Entity :refer [Entity ->ThinEntity]]
+            [hypercrud.types.Entity :refer [Entity]]
+            [hypercrud.types.ThinEntity :refer [->ThinEntity]]
             [hypercrud.util.core :as util :refer [pprint-str]]
             [promesa.core :as p]
             [reagent.core :as reagent]))

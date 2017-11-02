@@ -6,7 +6,8 @@
             [hypercrud.client.transit :as transit]
             [hypercrud.compile.eval :as eval]
             [hypercrud.types.DbVal :refer [->DbVal]]
-            [hypercrud.types.Entity :refer [->Entity ->ThinEntity]]
+            [hypercrud.types.Entity :refer [->Entity]]
+            [hypercrud.types.ThinEntity :refer [->ThinEntity]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.Err :refer [->Err]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
@@ -43,10 +44,10 @@
                   "{\"~#DbVal\":[\"foo\",\"bar\"]}"))
 
 (deftest Entity []
-  (test-all-forms (->Entity "foo" "bar")
-                  #Entity ["foo" "bar"]
-                  "#Entity[\"foo\" \"bar\"]"
-                  "{\"~#Entity\":[\"foo\",\"bar\"]}"))
+  (let [control (->Entity "foo" "bar")
+        transit-strd "{\"~#Entity\":[\"foo\",\"bar\"]}"]
+    (is (= (pr-str control) "\"bar\""))
+    (test-transit control transit-strd)))
 
 (deftest ->entity []
   (test-all-forms (->ThinEntity "foo" "bar")

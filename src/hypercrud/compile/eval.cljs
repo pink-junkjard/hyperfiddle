@@ -19,8 +19,7 @@
              (let [code-str' (str "(identity\n" code-str "\n)")]
                (binding [analyzer/*cljs-warning-handlers* []
                          tags/*cljs-data-readers* (merge tags/*cljs-data-readers*
-                                                         {'Entity hc-readers/Entity
-                                                          '->entity hc-readers/->entity
+                                                         {'->entity hc-readers/->entity
                                                           'hypercrud.types.DbVal.DbVal read-DbVal
                                                           'hypercrud.types.EntityRequest.EntityRequest read-EntityRequest
                                                           'hypercrud.types.Err.Err read-Err
