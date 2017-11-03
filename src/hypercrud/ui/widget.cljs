@@ -6,6 +6,7 @@
             [hypercrud.browser.core :as browser]
             [hypercrud.client.tx :as tx]
             [hypercrud.ui.code-editor :as code-editor]
+            [hypercrud.ui.edn :refer [edn*]]
             [hypercrud.ui.input :as input]
             [hypercrud.ui.instant :refer [date* iso8601-string*]]
             [hypercrud.ui.radio]                            ; used in user renderers
@@ -168,44 +169,36 @@
                     (map :db/id (:value ctx))
                     (:value ctx))
                   set)
-        change! (fn [user-edn-str]
-                  (either/branch
-                    (safe-read-string user-edn-str)
-                    (fn [e] (js/console.error (pr-str e)) nil)
-                    (fn [user-val]
-                      (let [user-val (set user-val)
-                            rets (set/difference value user-val)
-                            adds (set/difference user-val value)]
-                        ((:user-with! ctx) (tx/edit-entity (-> ctx :entity :db/id)
-                                                           (-> ctx :attribute :db/ident)
-                                                           rets adds))))))
+        change! (fn [user-val]
+                  (let [user-val (set user-val)
+                        rets (set/difference value user-val)
+                        adds (set/difference user-val value)]
+                    ((:user-with! ctx) (tx/edit-entity (-> ctx :entity :db/id)
+                                                       (-> ctx :attribute :db/ident)
+                                                       rets adds))))
         [anchors options-anchor] (process-option-popover-anchors anchors ctx)
         anchors (->> anchors (filter :anchor/repeating?))]
     [:div.value
      [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) ctx)]
-     [code-editor/code-inline-block props (pprint-str value) change!]
+     [edn* (pprint-str value) change! props]
      (render-inline-anchors (filter :anchor/render-inline? anchors) ctx)]))
 
 (defn edn [maybe-field anchors props ctx]
   (let [valueType (-> ctx :attribute :db/valueType :db/ident)
         value (if (= valueType :db.type/ref) (:db/id (:value ctx)) (:value ctx))
-        change! (fn [user-edn-str]
-                  (either/branch
-                    (safe-read-string user-edn-str)
-                    (fn [e] (js/console.error (pr-str e)) nil)
-                    #((:user-with! ctx) (tx/update-entity-attr (:entity ctx) (:attribute ctx) %))))
+        change! #((:user-with! ctx) (tx/update-entity-attr (:entity ctx) (:attribute ctx) %))
         [anchors options-anchor] (process-option-popover-anchors anchors ctx)
         anchors (->> anchors (filter :anchor/repeating?))]
     [:div.value
      [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) ctx)]
-     [:div.control [code-editor/code-inline-block props (pprint-str value) change!]]
+     [edn* (:value ctx) change! props]
      (render-inline-anchors (filter :anchor/render-inline? anchors) ctx)]))
 
 (defn instant [maybe-field anchors props ctx]
   [:div.value
    [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) ctx)]
    (let [change! #((:user-with! ctx) (tx/update-entity-attr (:entity ctx) (:attribute ctx) %))]
-     [date* (:value ctx) change! props])
+     [edn* (:value ctx) change! props])
    (render-inline-anchors (filter :anchor/render-inline? anchors) ctx)])
 
 (defn text [maybe-field anchors props ctx]
