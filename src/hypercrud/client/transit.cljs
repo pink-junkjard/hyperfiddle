@@ -1,20 +1,10 @@
 (ns hypercrud.client.transit
   (:require [cognitect.transit :as t]
-            [hypercrud.transit :as hc-t]
-            [hypercrud.types.URI :refer [URI read-URI]]))
+            [hypercrud.transit :as hc-t]))
 
 
-(def transit-read-handlers
-  (merge hc-t/read-handlers
-         {"r" (t/read-handler read-URI)}))
-
-(def transit-write-handlers
-  (merge hc-t/write-handlers
-         {URI
-          (t/write-handler (constantly "r") (fn [v] (.-uri-str v)))}))
-
-(def transit-encoding-opts {:handlers transit-write-handlers})
-(def transit-decoding-opts {:handlers transit-read-handlers})
+(def transit-encoding-opts {:handlers hc-t/write-handlers})
+(def transit-decoding-opts {:handlers hc-t/read-handlers})
 
 (defn decode
   "Transit decode an object from `s`."
