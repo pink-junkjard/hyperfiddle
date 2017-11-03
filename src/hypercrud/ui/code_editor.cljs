@@ -1,6 +1,9 @@
 (ns hypercrud.ui.code-editor
-  (:require [reagent.core :as reagent]
-            [re-com.core :as re-com]))
+  (:require [cuerdas.core :as str]
+            [hypercrud.util.string :refer [safe-read-cljs-string]]
+            [reagent.core :as reagent]
+            [re-com.core :as re-com]
+            [cats.monad.either :as either]))
 
 
 (defn sync-changed-props! [ref props]
@@ -8,7 +11,7 @@
     (if-not (= val (.getOption ref (name prop)))
       (.setOption ref (name prop) val))))
 
-(def code-editor*
+(def codemirror*
 
   ;; all usages of value (from react lifecycle) need to be (str value), because
   ;; codemirror throws NPE if value is nil
@@ -16,20 +19,12 @@
   (reagent/create-class
     {:reagent-render
      (fn [value change! props]
-       [:div.code-editor-wrapper {:class (if (:readOnly props) "read-only")}
-        [:textarea {:default-value (str value) :auto-complete "off" :class "text"}]])
+       [:textarea {:default-value (str value) :auto-complete "off" :class "text"}])
 
      :component-did-mount
      (fn [this]
        (let [[_ value change! props] (reagent/argv this)    ;[value change! props] (reagent/props this)
-             div (.querySelector (reagent/dom-node this) "textarea")
-             ref (.fromTextArea js/CodeMirror div
-                                (clj->js (merge {:mode "clojure"
-                                                 :lineNumbers true
-                                                 :matchBrackets true
-                                                 :autoCloseBrackets true
-                                                 :viewportMargin js/Infinity}
-                                                props)))]
+             ref (.fromTextArea js/CodeMirror (reagent/dom-node this) (clj->js props))]
          (aset this "codeMirrorRef" ref)
          (.on ref "blur" (fn [_ e]
                            (let [[_ value change! props] (reagent/argv this)
@@ -46,6 +41,21 @@
        (let [[_ value change! props] (reagent/argv this)
              ref (aget this "codeMirrorRef")]
          (sync-changed-props! ref (assoc props :value (str value)))))}))
+
+(def validators {"clojure" #(-> (safe-read-cljs-string %) (either/right?))})
+
+(defn code-editor* [value change! props]
+  (let [defaults {:mode "clojure"
+                  :lineNumbers true
+                  :matchBrackets true
+                  :autoCloseBrackets true
+                  :viewportMargin js/Infinity}
+        props (merge defaults props)
+        valid? ((get validators (:mode props) (constantly true)))
+        class (str/join " " (list (if (:readOnly props) "read-only")
+                                  (if (not valid?) "invalid")))]
+    [:div.code-editor-wrapper {:class class}
+     [codemirror* value change! props]]))
 
 (defn code-block [props value change!]
   (let [props (if-not (nil? (:read-only props))

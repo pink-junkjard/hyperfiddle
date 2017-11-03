@@ -13,7 +13,7 @@
             [hypercrud.ui.select :refer [select* select-boolean*]]
             [hypercrud.ui.textarea :refer [textarea*]]
             [hypercrud.util.core :refer [pprint-str]]
-            [hypercrud.util.string :refer [safe-read-string]]))
+            [hypercrud.util.string :refer [safe-read-cljs-string]]))
 
 
 (defn render-anchor [anchor ctx]
@@ -154,9 +154,9 @@
       [:div.value
        [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) ctx)]
        (let [widget (case (:layout ctx) :block code-editor/code-block
-                                        :inline-block code-editor/code-inline-block
-                                        :table code-editor/code-inline-block)]
-         [widget props (:value ctx) change!])
+                                              :inline-block code-editor/code-inline-block
+                                              :table code-editor/code-inline-block)]
+         [widget props (:value ctx) change!])         ; backwards args - props last
        (render-inline-anchors (filter :anchor/render-inline? anchors) ctx)])))
 
 (defn ^:export markdown [maybe-field anchors props ctx]

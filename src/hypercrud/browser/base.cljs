@@ -67,7 +67,7 @@
 (defn request-for-link [link ordered-fes ctx]
   (case (:request/type link)
     :query
-    (mlet [q (hc-string/memoized-safe-read-string (:link-query/value link))
+    (mlet [q (hc-string/memoized-safe-read-cljs-string (:link-query/value link))
            query-holes (try-either (q-util/parse-holes q))]
       (let [params-map (merge (:query-params ctx) (q-util/build-dbhole-lookup ctx))
             params (->> query-holes
