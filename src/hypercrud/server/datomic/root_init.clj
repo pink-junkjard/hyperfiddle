@@ -7,10 +7,7 @@
 (defn generate-domain-record [transactor-uri db-name]
   {:db/id (d/tempid :db.part/user)
    ; todo https://tools.ietf.org/html/rfc3986#section-2
-   :domain/ident db-name
-   :domain/databases #{{:db/id (d/tempid :db.part/user)
-                        :dbhole/name "$"
-                        :dbhole/uri (URI. (str transactor-uri db-name))}}})
+   :domain/ident db-name})
 
 (defn reflect-schema [conn]
   (let [$ (d/db conn)]
