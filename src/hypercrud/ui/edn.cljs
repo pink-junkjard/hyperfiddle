@@ -1,5 +1,5 @@
 (ns hypercrud.ui.edn
-  (:require [hypercrud.util.string :refer [safe-read-cljs-string]]
+  (:require [hypercrud.util.string :refer [safe-read-edn-string]]
             [hypercrud.util.core :refer [pprint-str]]
             [hypercrud.ui.code-editor :as code-editor]
             [cats.monad.either :as either]))
@@ -9,8 +9,11 @@
 ; Code editors are different since you are permitted to stage broken code (and see the error and fix it)
 (defn edn* [value change! props]
   (let [change! (fn [user-edn-str]
-                  (-> (safe-read-cljs-string user-edn-str)  ; not the right validator - should be edn
+                  (-> (safe-read-edn-string user-edn-str)
                       (either/branch
-                        (fn [e] (js/alert (pr-str e)) nil)  ; report error
-                        #(change! %))))])
-  [code-editor/code-inline-block props (pprint-str value) change!]) ; not reactive
+                        (fn [e]
+                          (js/alert (pr-str e))
+                          nil)                              ; report error
+                        (fn [v]
+                          (change! v)))))]
+    [code-editor/code-inline-block props (pprint-str value) change!])) ; not reactive

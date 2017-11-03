@@ -11,9 +11,7 @@
             [hypercrud.ui.instant :refer [date* iso8601-string*]]
             [hypercrud.ui.radio]                            ; used in user renderers
             [hypercrud.ui.select :refer [select* select-boolean*]]
-            [hypercrud.ui.textarea :refer [textarea*]]
-            [hypercrud.util.core :refer [pprint-str]]
-            [hypercrud.util.string :refer [safe-read-cljs-string]]))
+            [hypercrud.ui.textarea :refer [textarea*]]))
 
 
 (defn render-anchor [anchor ctx]
@@ -180,7 +178,7 @@
         anchors (->> anchors (filter :anchor/repeating?))]
     [:div.value
      [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) ctx)]
-     [edn* (pprint-str value) change! props]
+     [edn* value change! props]
      (render-inline-anchors (filter :anchor/render-inline? anchors) ctx)]))
 
 (defn edn [maybe-field anchors props ctx]

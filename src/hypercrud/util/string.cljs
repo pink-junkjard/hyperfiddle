@@ -1,12 +1,12 @@
 (ns hypercrud.util.string
   (:require [cats.monad.either :as either :refer-macros [try-either]]
-            [cljs.reader :as reader]))
+            [cljs.reader]))
 
-; This is not an edn reader; this is the clojurescript reader
-(defn safe-read-cljs-string [code-str]
-  (if code-str
+(defn safe-read-edn-string [user-edn-str]
+  (if user-edn-str
     ; this doesn't handle sharp-lambdas
-    (try-either (reader/read-string code-str))
+    ; yes, cljs.reader is the edn reader, not the clojurescript reader
+    (try-either (cljs.reader/read-string user-edn-str))
     (either/right nil)))
 
-(def memoized-safe-read-cljs-string (memoize safe-read-cljs-string))
+(def memoized-safe-read-edn-string (memoize safe-read-edn-string))

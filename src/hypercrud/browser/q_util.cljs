@@ -19,7 +19,7 @@
        (remove #(string/starts-with? % "$"))))
 
 (defn safe-parse-query-validated [link]
-  (mlet [q (hc-string/memoized-safe-read-cljs-string (:link-query/value link))]
+  (mlet [q (hc-string/memoized-safe-read-edn-string (:link-query/value link))]
     (if (vector? q)
       (cats/return q)
       (either/left {:message (str "Invalid query '" (pr-str q) "', only vectors supported")}))))

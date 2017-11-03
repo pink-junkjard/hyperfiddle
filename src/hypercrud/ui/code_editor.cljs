@@ -1,6 +1,6 @@
 (ns hypercrud.ui.code-editor
   (:require [cuerdas.core :as str]
-            [hypercrud.util.string :refer [safe-read-cljs-string]]
+            [hypercrud.util.string :refer [safe-read-edn-string]]
             [reagent.core :as reagent]
             [re-com.core :as re-com]
             [cats.monad.either :as either]))
@@ -42,7 +42,7 @@
              ref (aget this "codeMirrorRef")]
          (sync-changed-props! ref (assoc props :value (str value)))))}))
 
-(def validators {"clojure" #(-> (safe-read-cljs-string %) (either/right?))})
+(def validators {"clojure" #(-> (safe-read-edn-string %) (either/right?))})
 
 (defn code-editor* [value change! props]
   (let [defaults {:mode "clojure"
