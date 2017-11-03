@@ -30,7 +30,7 @@
                            (let [[_ value change! props] (reagent/argv this)
                                  value' (.getValue ref)]
                              (if-not (= value value')
-                               (change! value')))
+                               (if change! (change! value'))))
                            nil))))
 
      :component-will-unmount
