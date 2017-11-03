@@ -53,16 +53,15 @@
   ; and because nested router. Is that even needed now?
   (if-not (:hidden hypercrud-props)
     (let [hypercrud-props (update hypercrud-props :class #(str % " hf-auto-nav"))]
-      [:span.nav-link
-       [tooltip/fast-hover-tooltip-managed
-        (let [tooltip-config (:tooltip hypercrud-props)
-              [status label] (if (string? tooltip-config)
-                               [:info tooltip-config]
-                               [(first tooltip-config) (second tooltip-config)])]
-          {:status status :label label})
-        (if (:popover hypercrud-props)
-          [popover-cmp hypercrud-props label]
-          [anchor-cmp hypercrud-props label])]])))
+      [tooltip/fast-hover-tooltip-managed
+       (let [tooltip-config (:tooltip hypercrud-props)
+             [status label] (if (string? tooltip-config)
+                              [:info tooltip-config]
+                              [(first tooltip-config) (second tooltip-config)])]
+         {:status status :label label})
+       (if (:popover hypercrud-props)
+         [popover-cmp hypercrud-props label]
+         [anchor-cmp hypercrud-props label])])))
 
 ; act like a function down-stack
 (defn navigate-cmp [props label]
