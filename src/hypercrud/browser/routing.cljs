@@ -13,7 +13,7 @@
 
 (defn invert-ids [route invert-id ctx]
   (-> route
-      (update :link-id (let [uri (context-util/code-ident->database-uri (:code-database route) ctx)]
+      (update :link-id (let [uri (get-in ctx [:respository :dbhole/uri])]
                          #(invert-id % uri)))
       (update :query-params
               (partial util/map-values

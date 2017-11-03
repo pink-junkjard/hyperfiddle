@@ -19,32 +19,35 @@
           :entity :attribute :value
           :layout :field))
 
-(defn override-domain-dbs [ctx]
-  (update-in ctx
-             [:domain :domain/databases]
-             (fn [domain-dbs]
-               (let [existing-db-map (util/group-by-assume-unique :dbhole/name domain-dbs)]
-                 (->> (:query-params ctx)
-                      ; todo this is not sufficient for links on the page to inherit this override
-                      ; on navigate, this context is gone
-                      (filter (fn [[k _]] (and (string? k) (string/starts-with? k "$"))))
-                      (map (fn [[k v]]
-                             [k {:dbhole/name k
-                                 :dbhole/uri v}]))
-                      (into {})
-                      (merge existing-db-map)
-                      (vals)
-                      (into #{}))))))
-
 (defn route [ctx route]
-  (let [route (routing/tempid->id route ctx)]
-    (assoc ctx
-      :route route
-      :query-params (:query-params route)
-      :code-database-uri (->> (get-in ctx [:domain :domain/code-databases])
-                              (filter #(= (:dbhole/name %) (:code-database route)))
-                              first
-                              :dbhole/uri))))
+  (let [route (routing/tempid->id route ctx)
+        initial-repository (->> (get-in ctx [:domain :domain/code-databases])
+                                (filter #(= (:dbhole/name %) (:code-database route)))
+                                first
+                                (into {}))
+        ;_ (js/console.log (str (:debug ctx) (pr-str (:domain ctx))))
+        respository (-> initial-repository
+                        (update :source/databases
+                                (fn [dbholes]
+                                  (let [existing-db-map (util/group-by-assume-unique :dbhole/name dbholes)]
+                                    (->> (:query-params ctx)
+                                         ; todo this is not sufficient for links on the page to inherit this override
+                                         ; on navigate, this context is gone
+                                         (filter (fn [[k _]] (and (string? k) (string/starts-with? k "$"))))
+                                         (map (fn [[k v]]
+                                                [k {:dbhole/name k
+                                                    :dbhole/uri v}]))
+                                         (into {})
+                                         (merge existing-db-map)
+                                         (vals)
+                                         (into #{}))))))]
+    (-> ctx
+        (update-in [:domain :domain/code-databases]
+                   (fn [repos]
+                     (map #(if (= initial-repository) respository %) repos)))
+        (assoc :query-params (:query-params route)
+               :route route
+               :respository respository))))
 
 (defn anchor-branch [ctx anchor]
   (if (:anchor/managed? anchor)

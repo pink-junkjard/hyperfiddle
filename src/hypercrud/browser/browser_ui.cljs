@@ -81,7 +81,6 @@
     (let [ctx (context/route ctx route)]
       (mlet [link (hydrate-link ctx)
              ordered-fes (base/get-ordered-find-elements link ctx)
-             :let [ctx (context/override-domain-dbs ctx)]
              request (base/request-for-link link ordered-fes ctx)
              result (if request (hc/hydrate (:peer ctx) request) (either/right nil))
              ; schema is allowed to be nil if the link only has anchors and no data dependencies

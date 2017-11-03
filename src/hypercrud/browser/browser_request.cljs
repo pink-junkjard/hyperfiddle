@@ -85,7 +85,6 @@
 
 (defn requests-for-link [link ctx]
   (-> (mlet [ordered-fes (base/get-ordered-find-elements link ctx)
-             :let [ctx (context/override-domain-dbs ctx)]
              link-request (base/request-for-link link ordered-fes ctx)]
         (cats/return
           (concat

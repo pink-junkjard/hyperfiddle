@@ -25,7 +25,7 @@
       (either/left {:message (str "Invalid query '" (pr-str q) "', only vectors supported")}))))
 
 (defn build-dbhole-lookup [ctx]
-  (->> (get-in ctx [:domain :domain/databases])
+  (->> (get-in ctx [:respository :source/databases])
        (map (juxt :dbhole/name #(hc/db (:peer ctx) (:dbhole/uri %) (:branch ctx))))
        (into {})))
 

@@ -18,5 +18,5 @@
        (ident->uri ident)))
 
 (defn ident->database-uri [ident ctx]
-  (->> (get-in ctx [:domain :domain/databases])
+  (->> (get-in ctx [:respository :source/databases])
        (ident->uri ident)))

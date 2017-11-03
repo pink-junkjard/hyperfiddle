@@ -39,7 +39,7 @@
                                                (fn [v]
                                                  ; todo support other types of v (map, vector, etc)
                                                  (if (instance? Entity v)
-                                                   (let [dbname (->> (get-in ctx [:domain :domain/databases])
+                                                   (let [dbname (->> (get-in ctx [:respository :source/databases])
                                                                      (context-util/uri->ident (some-> v .-dbval .-uri)))]
                                                      (->ThinEntity dbname (:db/id v)))
                                                    v)))))
@@ -50,7 +50,7 @@
       (routing/id->tempid
         {
          ;:code-database (:anchor/code-database anchor) todo when cross db references are working on anchor/links, don't need to inherit code-db-uri
-         :code-database (:code-database ctx)
+         :code-database (get-in ctx [:respository :dbhole/name])
          :link-id link-id
          :query-params query-params}
         ctx))))

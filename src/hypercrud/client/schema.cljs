@@ -7,7 +7,7 @@
 
 
 (defn hc-attr-request [ctx]
-  (let [dbval (hc/db (:peer ctx) (:code-database-uri ctx) (:branch ctx))]
+  (let [dbval (hc/db (:peer ctx) (get-in ctx [:respository :dbhole/uri] ctx) (:branch ctx))]
     (->QueryRequest '[:find ?attr :in $ :where
                       [?attr :attribute/renderer]]
                     {"$" dbval}

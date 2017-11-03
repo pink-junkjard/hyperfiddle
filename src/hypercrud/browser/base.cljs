@@ -35,7 +35,7 @@
 (defn meta-request-for-link [ctx]
   (let [link-id (get-in ctx [:route :link-id])
         _ (assert link-id "missing link-id")
-        dbval (hc/db (:peer ctx) (:code-database-uri ctx) (:branch ctx))]
+        dbval (hc/db (:peer ctx) (get-in ctx [:respository :dbhole/uri]) (:branch ctx))]
     (->EntityRequest link-id nil dbval meta-pull-exp-for-link)))
 
 (letfn [(strip-form-in-raw-mode [fe ctx]
