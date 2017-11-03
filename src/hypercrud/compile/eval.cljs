@@ -7,8 +7,7 @@
             [hypercrud.types.DbVal :refer [read-DbVal]]
             [hypercrud.types.EntityRequest :refer [read-EntityRequest]]
             [hypercrud.types.Err :refer [read-Err]]
-            [hypercrud.types.QueryRequest :refer [read-QueryRequest]]
-            [markdown.core]))
+            [hypercrud.types.QueryRequest :refer [read-QueryRequest]]))
 
 
 (def eval-str-
