@@ -27,3 +27,5 @@
    :model (atom (goog.date.UtcDateTime. value))             ; not reactive
    :disabled? (:disabled props)
    :on-change #(change! (.-date %))])
+
+;(defn date-inline-block [value change! props])

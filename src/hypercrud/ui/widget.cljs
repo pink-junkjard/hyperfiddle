@@ -6,7 +6,7 @@
             [hypercrud.browser.core :as browser]
             [hypercrud.client.tx :as tx]
             [hypercrud.ui.code-editor :as code-editor]
-            [hypercrud.ui.edn :refer [edn*]]
+            [hypercrud.ui.edn :refer [edn-block edn-inline-block]]
             [hypercrud.ui.input :as input]
             [hypercrud.ui.instant :refer [date* iso8601-string*]]
             [hypercrud.ui.radio]                            ; used in user renderers
@@ -152,9 +152,9 @@
       [:div.value
        [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) ctx)]
        (let [widget (case (:layout ctx) :block code-editor/code-block
-                                              :inline-block code-editor/code-inline-block
-                                              :table code-editor/code-inline-block)]
-         [widget props (:value ctx) change!])         ; backwards args - props last
+                                        :inline-block code-editor/code-inline-block
+                                        :table code-editor/code-inline-block)]
+         [widget props (:value ctx) change!])               ; backwards args - props last
        (render-inline-anchors (filter :anchor/render-inline? anchors) ctx)])))
 
 (defn ^:export markdown [maybe-field anchors props ctx]
@@ -174,29 +174,38 @@
                     ((:user-with! ctx) (tx/edit-entity (-> ctx :entity :db/id)
                                                        (-> ctx :attribute :db/ident)
                                                        rets adds))))
+        widget (case (:layout ctx) :block edn-block
+                                   :inline-block edn-inline-block
+                                   :table edn-inline-block)
         [anchors options-anchor] (process-option-popover-anchors anchors ctx)
         anchors (->> anchors (filter :anchor/repeating?))]
     [:div.value
      [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) ctx)]
-     [edn* value change! props]
+     [widget value change! props]
      (render-inline-anchors (filter :anchor/render-inline? anchors) ctx)]))
 
 (defn edn [maybe-field anchors props ctx]
   (let [valueType (-> ctx :attribute :db/valueType :db/ident)
         value (if (= valueType :db.type/ref) (:db/id (:value ctx)) (:value ctx))
         change! #((:user-with! ctx) (tx/update-entity-attr (:entity ctx) (:attribute ctx) %))
+        widget (case (:layout ctx) :block edn-block
+                                   :inline-block edn-inline-block
+                                   :table edn-inline-block)
         [anchors options-anchor] (process-option-popover-anchors anchors ctx)
         anchors (->> anchors (filter :anchor/repeating?))]
     [:div.value
      [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) ctx)]
-     [edn* (:value ctx) change! props]
+     [widget (:value ctx) change! props]
      (render-inline-anchors (filter :anchor/render-inline? anchors) ctx)]))
 
 (defn instant [maybe-field anchors props ctx]
   [:div.value
    [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) ctx)]
-   (let [change! #((:user-with! ctx) (tx/update-entity-attr (:entity ctx) (:attribute ctx) %))]
-     [edn* (:value ctx) change! props])
+   (let [change! #((:user-with! ctx) (tx/update-entity-attr (:entity ctx) (:attribute ctx) %))
+         widget (case (:layout ctx) :block date*
+                                    :inline-block edn-inline-block
+                                    :table edn-inline-block)]
+     [widget (:value ctx) change! props])
    (render-inline-anchors (filter :anchor/render-inline? anchors) ctx)])
 
 (defn text [maybe-field anchors props ctx]

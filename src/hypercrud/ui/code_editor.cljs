@@ -45,8 +45,7 @@
 (def validators {"clojure" #(-> (safe-read-edn-string %) (either/right?))})
 
 (defn code-editor* [value change! props]
-  (let [defaults {:mode "clojure"
-                  :lineNumbers true
+  (let [defaults {:lineNumbers true
                   :matchBrackets true
                   :autoCloseBrackets true
                   :viewportMargin js/Infinity}
