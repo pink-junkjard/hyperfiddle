@@ -1,7 +1,7 @@
 (ns hypercrud.server.util.http
   (:require [clojure.string :as string]
             [cognitect.transit :as transit]
-            [hypercrud.server.internal :as internal]
+            [hypercrud.transit :as hc-t]
             [io.pedestal.http :as http]
             [io.pedestal.interceptor.helpers :as interceptor])
   (:import (java.io OutputStreamWriter OutputStream)
@@ -37,7 +37,7 @@
    (fn [body]
      (fn [^OutputStream output-stream]
        (transit/write (transit/writer output-stream :json-verbose
-                                      {:handlers internal/transit-write-handlers}) body)
+                                      {:handlers hc-t/write-handlers}) body)
        (.flush output-stream)))
 
    "application/transit+msgpack;charset=UTF-8"
