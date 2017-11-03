@@ -2,8 +2,8 @@
   (:require [cats.core :as cats :refer [mlet return]]
             [cats.monad.either :as either :refer-macros [try-either]]
             [clojure.set :as set]
+            [clojure.string :as string]
             [hypercrud.browser.context :as context]
-            [hypercrud.browser.context-util :as context-util]
             [hypercrud.browser.q-util :as q-util]
             [hypercrud.browser.routing :as routing]
             [hypercrud.compile.eval :as eval :refer [eval-str']]
@@ -39,8 +39,11 @@
                                                (fn [v]
                                                  ; todo support other types of v (map, vector, etc)
                                                  (if (instance? Entity v)
-                                                   (let [dbname (->> (get-in ctx [:respository :source/databases])
-                                                                     (context-util/uri->ident (some-> v .-dbval .-uri)))]
+                                                   (let [dbname (->> (get-in ctx [:repository :repository/environment])
+                                                                     (filter (fn [[k env-v]]
+                                                                               (and (string? k) (string/starts-with? k "$")
+                                                                                    (= env-v (some-> v .-dbval .-uri)))))
+                                                                     first)]
                                                      (->ThinEntity dbname (:db/id v)))
                                                    v)))))
          link-id (if-let [page (:anchor/link anchor)]
@@ -50,7 +53,7 @@
       (routing/id->tempid
         {
          ;:code-database (:anchor/code-database anchor) todo when cross db references are working on anchor/links, don't need to inherit code-db-uri
-         :code-database (get-in ctx [:respository :dbhole/name])
+         :code-database (get-in ctx [:repository :dbhole/name])
          :link-id link-id
          :query-params query-params}
         ctx))))

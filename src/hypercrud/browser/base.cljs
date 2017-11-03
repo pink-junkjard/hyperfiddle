@@ -3,7 +3,6 @@
             [cats.monad.either :as either :refer-macros [try-either]]
             [hypercrud.browser.auto-anchor :as auto-anchor]
             [hypercrud.browser.auto-form :as auto-form]
-            [hypercrud.browser.context-util :as context-util]
             [hypercrud.browser.q-util :as q-util]
             [hypercrud.browser.user-bindings :as user-bindings]
             [hypercrud.client.core :as hc]
@@ -35,7 +34,7 @@
 (defn meta-request-for-link [ctx]
   (let [link-id (get-in ctx [:route :link-id])
         _ (assert link-id "missing link-id")
-        dbval (hc/db (:peer ctx) (get-in ctx [:respository :dbhole/uri]) (:branch ctx))]
+        dbval (hc/db (:peer ctx) (get-in ctx [:repository :dbhole/uri]) (:branch ctx))]
     (->EntityRequest link-id nil dbval meta-pull-exp-for-link)))
 
 (letfn [(strip-form-in-raw-mode [fe ctx]
@@ -81,7 +80,7 @@
             pull-exp (->> ordered-fes
                           (mapv (juxt :find-element/name
                                       (fn [{:keys [:find-element/form :find-element/connection]}]
-                                        (let [uri (context-util/ident->database-uri connection ctx)]
+                                        (let [uri (get-in ctx [:repository :repository/environment connection])]
                                           [(hc/db (:peer ctx) uri (:branch ctx))
                                            (q-util/form-pull-exp form)]))))
                           (into {}))
@@ -94,7 +93,7 @@
     :entity
     (let [fe (first (filter #(= (:find-element/name %) "entity") ordered-fes))
           ; todo if :entity query-param is a typed Entity, the connection is already provided. why are we ignoring?
-          uri (context-util/ident->database-uri (:find-element/connection fe) ctx)
+          uri (get-in ctx [:repository :repository/environment (:find-element/connection fe)])
           e (get-in ctx [:query-params :entity])]
       (cond
         (nil? uri) (either/left {:message "no connection" :data {:find-element fe}})

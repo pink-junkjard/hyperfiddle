@@ -1,13 +1,12 @@
 (ns hypercrud.client.schema
   (:require [cats.core :as cats]
-            [hypercrud.browser.context-util :as context-util]
             [hypercrud.client.core :as hc]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hypercrud.util.core :as util]))
 
 
 (defn hc-attr-request [ctx]
-  (let [dbval (hc/db (:peer ctx) (get-in ctx [:respository :dbhole/uri] ctx) (:branch ctx))]
+  (let [dbval (hc/db (:peer ctx) (get-in ctx [:repository :dbhole/uri] ctx) (:branch ctx))]
     (->QueryRequest '[:find ?attr :in $ :where
                       [?attr :attribute/renderer]]
                     {"$" dbval}
@@ -24,7 +23,7 @@
 (defn schema-requests-for-link [ordered-fes ctx]
   (->> ordered-fes
        (map (fn [fe]
-              (let [uri (context-util/ident->database-uri (:find-element/connection fe) ctx)]
+              (let [uri (get-in ctx [:repository :repository/environment (:find-element/connection fe)])]
                 (->> (hc/db (:peer ctx) uri (:branch ctx))
                      (schema-request)))))
        (concat [(hc-attr-request ctx)])))
@@ -39,7 +38,7 @@
                                   (util/map-values #(dissoc % :attribute/ident :db/id)))]
             (->> ordered-fes
                  (mapv (fn [fe]
-                         (let [uri (context-util/ident->database-uri (:find-element/connection fe) ctx)]
+                         (let [uri (get-in ctx [:repository :repository/environment (:find-element/connection fe)])]
                            (->> (hc/db (:peer ctx) uri (:branch ctx))
                                 (schema-request)
                                 (hc/hydrate (:peer ctx))

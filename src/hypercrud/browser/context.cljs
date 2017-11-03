@@ -1,7 +1,6 @@
 (ns hypercrud.browser.context
   (:require [clojure.string :as string]
             [hypercrud.browser.auto-anchor-formula :as auto-anchor-formula]
-            [hypercrud.browser.context-util :as context-util]
             [hypercrud.browser.routing :as routing]
             [hypercrud.state.actions.core :as actions]
             [hypercrud.util.branch :as branch]
@@ -25,29 +24,19 @@
                                 (filter #(= (:dbhole/name %) (:code-database route)))
                                 first
                                 (into {}))
-        ;_ (js/console.log (str (:debug ctx) (pr-str (:domain ctx))))
-        respository (-> initial-repository
-                        (update :source/databases
-                                (fn [dbholes]
-                                  (let [existing-db-map (util/group-by-assume-unique :dbhole/name dbholes)]
-                                    (->> (:query-params ctx)
+        repository (let [overrides (->> (:query-params ctx)
                                          ; todo this is not sufficient for links on the page to inherit this override
                                          ; on navigate, this context is gone
                                          (filter (fn [[k _]] (and (string? k) (string/starts-with? k "$"))))
-                                         (map (fn [[k v]]
-                                                [k {:dbhole/name k
-                                                    :dbhole/uri v}]))
-                                         (into {})
-                                         (merge existing-db-map)
-                                         (vals)
-                                         (into #{}))))))]
+                                         (into {}))]
+                      (update initial-repository :repository/environment merge overrides))]
     (-> ctx
         (update-in [:domain :domain/code-databases]
                    (fn [repos]
-                     (map #(if (= initial-repository) respository %) repos)))
+                     (map #(if (= initial-repository) repository %) repos)))
         (assoc :query-params (:query-params route)
                :route route
-               :respository respository))))
+               :repository repository))))
 
 (defn anchor-branch [ctx anchor]
   (if (:anchor/managed? anchor)
@@ -66,7 +55,7 @@
   ((:dispatch! ctx) (actions/with branch uri tx)))
 
 (defn find-element [ctx fe]
-  (let [uri (context-util/ident->database-uri (:find-element/connection fe) ctx)
+  (let [uri (get-in ctx [:repository :repository/environment (:find-element/connection fe)])
         branch (:branch ctx)]
     (assoc ctx :uri uri
                :find-element fe

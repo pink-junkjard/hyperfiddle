@@ -2,7 +2,6 @@
   (:require [cljs.reader :as reader]
             [clojure.set :as set]
             [clojure.string :as string]
-            [hypercrud.browser.context-util :as context-util]
             [hypercrud.types.Entity :refer [->Entity Entity]]
             [hypercrud.types.ThinEntity :refer [->ThinEntity ThinEntity]]
             [hypercrud.util.base-64-url-safe :as base64]
@@ -13,7 +12,7 @@
 
 (defn invert-ids [route invert-id ctx]
   (-> route
-      (update :link-id (let [uri (get-in ctx [:respository :dbhole/uri])]
+      (update :link-id (let [uri (get-in ctx [:repository :dbhole/uri])]
                          #(invert-id % uri)))
       (update :query-params
               (partial util/map-values
@@ -25,7 +24,7 @@
                              (->Entity (.-dbval v) (assoc (.-coll v) :db/id id)))
 
                            (instance? ThinEntity v)
-                           (let [uri (context-util/ident->database-uri (.-dbname v) ctx)
+                           (let [uri (get-in ctx [:repository :repository/environment (.-dbname v)])
                                  id (invert-id (.-id v) uri)]
                              (->ThinEntity (.-dbname v) id))
 

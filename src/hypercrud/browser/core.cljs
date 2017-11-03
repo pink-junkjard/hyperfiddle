@@ -1,6 +1,9 @@
 (ns hypercrud.browser.core
   (:require [hypercrud.browser.browser-request :as browser-request]
-            [hypercrud.browser.browser-ui :as browser-ui]))
+            [hypercrud.browser.browser-ui :as browser-ui]
+
+    ; deprecated file
+            [hypercrud.browser.context-util]))
 
 
 (def ui browser-ui/ui)
