@@ -7,6 +7,7 @@
             [hypercrud.client.tx :as tx]
             [hypercrud.ui.code-editor :as code-editor]
             [hypercrud.ui.input :as input]
+            [hypercrud.ui.instant :refer [date* iso8601-string*]]
             [hypercrud.ui.radio]                            ; used in user renderers
             [hypercrud.ui.select :refer [select* select-boolean*]]
             [hypercrud.ui.textarea :refer [textarea*]]
@@ -200,22 +201,11 @@
      [:div.control [code-editor/code-inline-block props (pprint-str value) change!]]
      (render-inline-anchors (filter :anchor/render-inline? anchors) ctx)]))
 
-(defn valid-date-str? [s]
-  (or (empty? s)
-      (let [ms (.parse js/Date s)]                          ; NaN if not valid string
-        (integer? ms))))
-
 (defn instant [maybe-field anchors props ctx]
   [:div.value
    [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) ctx)]
-   (let [on-change! #((:user-with! ctx) (tx/update-entity-attr (:entity ctx) (:attribute ctx) %))
-         parse-string (fn [s]
-                        (if (empty? s)
-                          nil
-                          (let [ms (.parse js/Date s)]
-                            (js/Date. ms))))
-         to-string #(some-> % .toISOString)]
-     [input/validated-input (:value ctx) on-change! parse-string to-string valid-date-str? props])
+   (let [change! #((:user-with! ctx) (tx/update-entity-attr (:entity ctx) (:attribute ctx) %))]
+     [date* (:value ctx) change! props])
    (render-inline-anchors (filter :anchor/render-inline? anchors) ctx)])
 
 (defn text [maybe-field anchors props ctx]
