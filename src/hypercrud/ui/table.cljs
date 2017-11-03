@@ -105,7 +105,7 @@
 
 (defn Value [{:keys [:field/attribute] :as field} fe-anchors-lookup ctx]
   (let [ctx (-> (context/attribute ctx attribute)
-                (context/value (get (:entity ctx) attribute))
+                (context/value (get (:entity ctx) attribute)) ; Not reactive
                 (assoc :layout :table))
         display-mode @(:display-mode ctx)
         Field (case display-mode :xray Field :user (get ctx :field Field))

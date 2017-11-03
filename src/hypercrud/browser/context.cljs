@@ -79,4 +79,5 @@
   (assoc ctx :attribute (get-in ctx [:schema attribute])))
 
 (defn value [ctx value]
+  ; this is not reactive
   (assoc ctx :value value))
