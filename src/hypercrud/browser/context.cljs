@@ -24,12 +24,12 @@
                                 (filter #(= (:dbhole/name %) (:code-database route)))
                                 first
                                 (into {}))
-        repository (let [overrides (->> (:query-params ctx)
-                                         ; todo this is not sufficient for links on the page to inherit this override
-                                         ; on navigate, this context is gone
-                                         (filter (fn [[k _]] (and (string? k) (string/starts-with? k "$"))))
-                                         (into {}))]
-                      (update initial-repository :repository/environment merge overrides))]
+        repository (let [overrides (->> (:query-params route)
+                                        ; todo this is not sufficient for links on the page to inherit this override
+                                        ; on navigate, this context is gone
+                                        (filter (fn [[k _]] (and (string? k) (string/starts-with? k "$"))))
+                                        (into {}))]
+                     (update initial-repository :repository/environment merge overrides))]
     (-> ctx
         (update-in [:domain :domain/code-databases]
                    (fn [repos]
