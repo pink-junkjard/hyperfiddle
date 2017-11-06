@@ -43,7 +43,7 @@
                                                                      (filter (fn [[k env-v]]
                                                                                (and (string? k) (string/starts-with? k "$")
                                                                                     (= env-v (some-> v .-dbval .-uri)))))
-                                                                     first)]
+                                                                     ffirst)]
                                                      (->ThinEntity dbname (:db/id v)))
                                                    v)))))
          link-id (if-let [page (:anchor/link anchor)]
