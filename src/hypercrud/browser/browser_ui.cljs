@@ -130,7 +130,7 @@
     [C e ctx]))
 
 (defn page-on-click [ctx route event]
-  (when (and route (contains? @(r/cursor (-> ctx :peer .-state-atom) [:pressed-keys]) "alt"))
+  (when (and route (.-altKey event))
     ((:dispatch! ctx) (fn [dispatch! get-state]
                         (let [encoded-route (routing/encode route)]
                           (when (actions-util/navigable? encoded-route (get-state))
