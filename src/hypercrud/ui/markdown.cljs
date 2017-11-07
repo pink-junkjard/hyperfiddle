@@ -8,10 +8,13 @@
   [hypercrud.ui.code-editor/code-editor* value change! props])
 
 (def whitelist
-  {"CodeEditor" code-editor-wrap-argv
-   "Bambi" (fn [props] [:div
-                        [:h3.bambi "bambi"]
-                        [:code (pr-str props)]])})
+  {"span" (fn [props] [:span (dissoc props :children :value) (:value props)])
+   "div1" (fn [props] [:div (dissoc props :children :value) (:value props)])
+   "CodeEditor" code-editor-wrap-argv
+   "Bambi" (fn [props] [:div [:h3.bambi "bambi"]
+                        [:ul [:li [:code (pr-str props)]]]])})
+
+; https://github.com/medfreeman/remark-generic-extensions
 
 (defn markdown [value change! & [props]]
   (let [children
@@ -20,10 +23,13 @@
           (.use
             js/remarkGenericExtensions
             (clj->js
-              {"elements" {"Bambi" {"propsDefaultValues" {}
-                                    "html" {"properties" {"icon" "::content::"
-                                                          "tooltip" "::argument::"}}}
-                           "CodeEditor" {"html" {"properties" {"value" "::content::"}}}}}))
+              {"elements"
+               {"span" {"html" {"properties" {"value" "::content::"}}}
+                "div1" {"html" {"properties" {"value" "::content::"}}}
+                "CodeEditor" {"html" {"properties" {"value" "::content::"}}}
+                "Bambi" {"propsDefaultValues" {}
+                         "html" {"properties" {"icon" "::content::"
+                                               "tooltip" "::argument::"}}}}}))
           (.use
             js/remarkReact
             (clj->js
