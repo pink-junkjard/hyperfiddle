@@ -1,15 +1,16 @@
 (ns hypercrud.ui.form
-  (:require [hypercrud.browser.auto-form :as auto-form]
+  (:require [cuerdas.core :as str]
+            [hypercrud.browser.auto-form :as auto-form]
             [hypercrud.browser.connection-color :as connection-color]
             [hypercrud.browser.context :as context]
             [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.form-util :as form-util]
             [hypercrud.ui.input :as input]
+            [hypercrud.ui.markdown :as markdown]
             [hypercrud.ui.renderer :as renderer]
             [hypercrud.ui.widget :as widget]
             [hypercrud.util.core :as util]
-            [reagent.core :as r]
-            [hypercrud.ui.markdown :as markdown]))
+            [reagent.core :as r]))
 
 (defn Control [field anchors ctx]
   (let [props (form-util/build-props field anchors ctx)]
@@ -18,7 +19,8 @@
       [auto-control field anchors props ctx])))
 
 (defn Field [control field anchors ctx]
-  [:div.field {:style {:border-color (connection-color/connection-color (:uri ctx) ctx)}}
+  [:div {:class (str/join " " ["field" (-> ctx :attribute :db/ident str form-util/css-slugify)])
+         :style {:border-color (connection-color/connection-color (:uri ctx) ctx)}}
    (let [[anchors] (as-> anchors $
                          (remove :anchor/repeating? $)      ; because we're in the label
                          (widget/process-option-anchors $ ctx))]
@@ -30,7 +32,7 @@
    (control ctx)
    (let [docstring (util/fallback empty?
                                   (:db/doc field)           ; Nice string for end users. In future this is an i18n id.
-                                  (-> ctx :attribute :db/doc) #_ "english string for developers")]
+                                  (-> ctx :attribute :db/doc) #_"english string for developers")]
      [markdown/markdown docstring #() {:class "hypercrud-doc"}])])
 
 (defn new-field [entity ctx]
@@ -51,8 +53,8 @@
 
 (defn Attribute [{:keys [:field/attribute] :as field} fe-anchors-lookup ctx]
   (let [ctx (as-> (context/attribute ctx attribute) $
-                        (context/value $ (get-in ctx [:entity attribute]))
-                        (if (= attribute :db/id) (assoc $ :read-only always-read-only) $))
+                  (context/value $ (get-in ctx [:entity attribute]))
+                  (if (= attribute :db/id) (assoc $ :read-only always-read-only) $))
         display-mode @(:display-mode ctx)
         ; What is the user-field allowed to change? The ctx. Can it change links or anchors? no.
         Field (case display-mode :xray Field :user (get ctx :field Field))
