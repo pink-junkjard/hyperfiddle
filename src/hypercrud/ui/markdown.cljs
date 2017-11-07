@@ -25,7 +25,7 @@
             (clj->js
               {"elements"
                {"span" {"html" {"properties" {"value" "::content::"}}}
-                "div1" {"html" {"properties" {"value" "::content::"}}}
+                "div1" {"html" {"properties" {"value" "::content::"}}} ; "div" causes silent failures: https://github.com/medfreeman/remark-generic-extensions/issues/30
                 "CodeEditor" {"html" {"properties" {"value" "::content::"}}}
                 "Bambi" {"propsDefaultValues" {}
                          "html" {"properties" {"icon" "::content::"
