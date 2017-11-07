@@ -19,6 +19,7 @@
    :db/doc
    :link-query/value
    :request/type
+   :fiddle/request
    ; get all our forms for this link
    {:link-query/find-element [:db/id
                               :find-element/name

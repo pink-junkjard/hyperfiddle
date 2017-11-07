@@ -6,7 +6,8 @@
             [hypercrud.browser.base :as base]
             [hypercrud.browser.context :as context]
             [hypercrud.client.core :as hc]
-            [hypercrud.client.schema :as schema-util]))
+            [hypercrud.client.schema :as schema-util]
+            [hypercrud.compile.eval :as eval]))
 
 
 (declare request)
@@ -83,6 +84,22 @@
                                                                    (->> ((:entity-attr-t lookup) fe attribute) (mapcat #(recurse-request % ctx))))))))
                                                 ))))))))))))
 
+(defn request-fn [link ctx]
+  ; todo report eval and invocation errors back to the user
+  (case @(:display-mode ctx)
+    :user (or (some->> (or (some-> (:user-request ctx) either/right)
+                           (if-not (empty? (:link/request link))
+                             (eval/eval-str' (:link/request link))))
+                       (cats/fmap (fn [user-fn]
+                                    (fn [result ordered-fes anchors ctx]
+                                      (try (user-fn result ordered-fes anchors ctx)
+                                           (catch :default e
+                                             (js/console.error (pr-str e))
+                                             nil))))))
+              (either/right link-dependent-requests))
+    :xray (either/right link-dependent-requests)
+    :root (either/right link-dependent-requests)))
+
 (defn requests-for-link [link ctx]
   (-> (mlet [ordered-fes (base/get-ordered-find-elements link ctx)
              link-request (base/request-for-link link ordered-fes ctx)]
@@ -93,8 +110,9 @@
             (-> (mlet [result (if link-request
                                 (hc/hydrate (:peer ctx) link-request)
                                 (either/right nil))
-                       schemas (schema-util/hydrate-schema ordered-fes ctx)]
-                  (base/process-results link-dependent-requests link link-request result schemas ordered-fes ctx))
+                       schemas (schema-util/hydrate-schema ordered-fes ctx)
+                       f (request-fn link ctx)]
+                  (base/process-results f link link-request result schemas ordered-fes ctx))
                 (cats/mplus (either/right nil))
                 (cats/extract)))))
       (cats/mplus (either/right nil))
