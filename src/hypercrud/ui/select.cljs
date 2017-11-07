@@ -28,6 +28,7 @@
        (cats/fmap (fn [labels]
                     (->> labels
                          (interpose ", ")
+                         (remove nil?)
                          (apply str))))))
 
 (defn select-boolean* [value props ctx]
