@@ -9,10 +9,9 @@
 
 (def whitelist
   {"span" (fn [props] [:span (dissoc props :children :value) (:value props)])
-   "div1" (fn [props] [:div (dissoc props :children :value) (:value props)])
-   "CodeEditor" code-editor-wrap-argv
-   "Bambi" (fn [props] [:div [:h3.bambi "bambi"]
-                        [:ul [:li [:code (pr-str props)]]]])})
+   ; Div is not needed, use it with block syntax and it hits React.createElement and works
+   ; see https://github.com/medfreeman/remark-generic-extensions/issues/30
+   "CodeEditor" code-editor-wrap-argv})
 
 ; https://github.com/medfreeman/remark-generic-extensions
 
@@ -25,11 +24,7 @@
             (clj->js
               {"elements"
                {"span" {"html" {"properties" {"value" "::content::"}}}
-                "div1" {"html" {"properties" {"value" "::content::"}}} ; "div" causes silent failures: https://github.com/medfreeman/remark-generic-extensions/issues/30
-                "CodeEditor" {"html" {"properties" {"value" "::content::"}}}
-                "Bambi" {"propsDefaultValues" {}
-                         "html" {"properties" {"icon" "::content::"
-                                               "tooltip" "::argument::"}}}}}))
+                "CodeEditor" {"html" {"properties" {"value" "::content::"}}}}}))
           (.use
             js/remarkReact
             (clj->js
