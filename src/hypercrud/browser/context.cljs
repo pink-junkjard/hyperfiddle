@@ -11,8 +11,7 @@
 (defn clean [ctx]
   ; why not code-database-uri and all the custom ui/render fns?
   (dissoc ctx
-          :keep-disabled-anchors?
-          :route :query-params
+          :keep-disabled-anchors? :route
           :relation :schemas
           :uri :find-element :schema
           :entity :attribute :value
@@ -34,8 +33,7 @@
         (update-in [:domain :domain/code-databases]
                    (fn [repos]
                      (map #(if (= initial-repository) repository %) repos)))
-        (assoc :query-params (:query-params route)
-               :route route
+        (assoc :route route
                :repository repository))))
 
 (defn anchor-branch [ctx anchor]
