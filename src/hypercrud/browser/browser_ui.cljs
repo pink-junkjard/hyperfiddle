@@ -35,7 +35,8 @@
                           #_(dissoc :style) #_"custom renderers don't want colored links")]
             [(:navigate-cmp ctx) props label]))
         (browse' [anchor-index ident ctx]
-          (base/data-from-anchor (get anchor-index ident) ctx))
+          (->> (base/data-from-anchor (get anchor-index ident) ctx)
+               (cats/fmap :result)))
         (anchor* [anchor-index ident ctx]
           (anchor/build-anchor-props (get anchor-index ident) ctx))
         (link-fn [anchor-index ident label ctx]
