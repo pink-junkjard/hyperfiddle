@@ -32,50 +32,41 @@
 (defmulti hydrate* (fn [this & args] (class this)))
 
 (defmethod hydrate* EntityRequest [{:keys [e a db pull-exp]} get-secure-db-with]
-  (try
-    (let [{pull-db :db} (get-secure-db-with (:uri db) (:branch db))
-          pull-exp (if a [{a pull-exp}] pull-exp)
-          pulled-tree (if (identity/tempid? e)
-                        (if a
-                          []                                ; hack, return something that is empty for base.cljs
-                          ; todo return a positive id here
-                          {:db/id e})
-                        (d/pull pull-db pull-exp e))
-          pulled-tree (recursively-add-entity-types pulled-tree db)
-          pulled-tree (if a (get pulled-tree a []) pulled-tree)]
-      pulled-tree)
-    (catch Throwable e
-      (.println *err* (pr-str e))
-      (->Err (str e)))))
+  (let [{pull-db :db} (get-secure-db-with (:uri db) (:branch db))
+        pull-exp (if a [{a pull-exp}] pull-exp)
+        pulled-tree (if (identity/tempid? e)
+                      (if a
+                        []                                  ; hack, return something that is empty for base.cljs
+                        ; todo return a positive id here
+                        {:db/id e})
+                      (d/pull pull-db pull-exp e))
+        pulled-tree (recursively-add-entity-types pulled-tree db)
+        pulled-tree (if a (get pulled-tree a []) pulled-tree)]
+    pulled-tree))
 
 (defmethod hydrate* QueryRequest [{:keys [query params pull-exps]} get-secure-db-with]
-  (try
-    (assert query "hydrate: missing query")
-    (let [ordered-params (->> (util/parse-query-element query :in)
-                              (mapv #(get params (str %)))
-                              (mapv #(parameter % get-secure-db-with)))
-          ordered-find-element-symbols (util/parse-query-element query :find)
-          ordered-fe-names (mapv str ordered-find-element-symbols)
-          pull-exps (->> ordered-fe-names
-                         (map (juxt identity (fn [fe-name]
-                                               (let [pull-exp (get pull-exps fe-name)]
-                                                 (assert (not= nil pull-exp) (str "hydrate: missing pull expression for " fe-name))
-                                                 pull-exp))))
-                         (into {}))]
-      (->> (apply d/q query ordered-params)                 ;todo gaping security hole
-           (mapv (fn [relation]
-                   (->> (map (fn [fe-name eid]
-                               (let [[dbval pull-exp] (get pull-exps fe-name)
-                                     {pull-db :db} (get-secure-db-with (:uri dbval) (:branch dbval))
-                                     pulled-tree (-> (d/pull pull-db pull-exp eid)
-                                                     (recursively-add-entity-types dbval))]
-                                 [fe-name pulled-tree]))
-                             ordered-fe-names relation)
-                        (into {}))))))
-
-    (catch Throwable e
-      (.println *err* (pr-str e))
-      (->Err (str e)))))
+  (assert query "hydrate: missing query")
+  (let [ordered-params (->> (util/parse-query-element query :in)
+                            (mapv #(get params (str %)))
+                            (mapv #(parameter % get-secure-db-with)))
+        ordered-find-element-symbols (util/parse-query-element query :find)
+        ordered-fe-names (mapv str ordered-find-element-symbols)
+        pull-exps (->> ordered-fe-names
+                       (map (juxt identity (fn [fe-name]
+                                             (let [pull-exp (get pull-exps fe-name)]
+                                               (assert (not= nil pull-exp) (str "hydrate: missing pull expression for " fe-name))
+                                               pull-exp))))
+                       (into {}))]
+    (->> (apply d/q query ordered-params)                   ;todo gaping security hole
+         (mapv (fn [relation]
+                 (->> (map (fn [fe-name eid]
+                             (let [[dbval pull-exp] (get pull-exps fe-name)
+                                   {pull-db :db} (get-secure-db-with (:uri dbval) (:branch dbval))
+                                   pulled-tree (-> (d/pull pull-db pull-exp eid)
+                                                   (recursively-add-entity-types dbval))]
+                               [fe-name pulled-tree]))
+                           ordered-fe-names relation)
+                      (into {})))))))
 
 (defn build-get-secure-db-with [staged-branches db-with-lookup]
   (letfn [(get-secure-db-from-branch [{:keys [branch-ident uri tx] :as branch}]
@@ -115,7 +106,11 @@
   (let [db-with-lookup (atom {})
         get-secure-db-with (build-get-secure-db-with staged-branches db-with-lookup)
         pulled-trees-map (->> request
-                              (mapv (juxt identity #(hydrate* % get-secure-db-with)))
+                              (mapv (juxt identity
+                                          #(try (hydrate* % get-secure-db-with)
+                                                (catch Throwable e
+                                                  (.println *err* (pr-str e))
+                                                  (->Err (str e))))))
                               (into {}))]
     {:t nil
      :pulled-trees-map pulled-trees-map
