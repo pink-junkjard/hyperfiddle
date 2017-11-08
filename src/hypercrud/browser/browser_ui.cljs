@@ -37,7 +37,9 @@
         (browse' [anchor-index ident ctx]
           (base/data-from-anchor (get anchor-index ident) ctx))
         (anchor* [anchor-index ident ctx]
-          (anchor/build-anchor-props (get anchor-index ident) ctx))]
+          (anchor/build-anchor-props (get anchor-index ident) ctx))
+        (link-fn [anchor-index ident label ctx]
+          (anchor anchor-index ident ctx label))]
   ; process-data returns an Either[Error, DOM]
   (defn process-data [{:keys [result ordered-fes anchors ctx]}]
     (mlet [ui-fn (base/fn-from-mode (f-mode-config) (:fiddle ctx) ctx)
@@ -53,7 +55,7 @@
 
                        ; backwards compat
                        :with-inline-result (r/partial browse anchor-index)
-                       :link-fn (r/partial anchor anchor-index))]]
+                       :link-fn (r/partial link-fn anchor-index))]]
       (cats/return (ui-fn result ordered-fes anchors ctx)))))
 
 (defn ui-error-inline [e ctx]
