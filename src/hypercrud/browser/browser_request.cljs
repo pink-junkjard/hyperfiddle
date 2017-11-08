@@ -84,7 +84,9 @@
    :with-user-fn (fn [user-fn]
                    (fn [result ordered-fes anchors ctx]
                      ; todo report invocation errors back to the user
-                     (try (user-fn result ordered-fes anchors ctx)
+                     (try (->> (user-fn result ordered-fes anchors ctx)
+                               ; user-fn HAS to return a seqable value, we want to throw right here if it doesn't
+                               seq)
                           (catch :default e
                             (js/console.error (pr-str e))
                             nil))))
