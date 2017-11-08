@@ -145,8 +145,11 @@
        doall))
 
 (defn auto-anchors [link ordered-fes ctx & [{:keys [ignore-user-links]}]]
-  (let [sys-anchors (system-anchors link ordered-fes ctx)]
-    (->> (if ignore-user-links
-           sys-anchors
-           (merge-anchors sys-anchors (:link/anchor link)))
-         (map auto-anchor))))
+  (let [sys-anchors (system-anchors link ordered-fes ctx)
+        anchors (->> (if ignore-user-links
+                       sys-anchors
+                       (merge-anchors sys-anchors (:link/anchor link)))
+                     (map auto-anchor))]
+    (if (:keep-disabled-anchors? ctx)
+      anchors
+      (remove :anchor/disabled? anchors))))

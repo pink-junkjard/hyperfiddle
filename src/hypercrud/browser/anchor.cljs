@@ -70,6 +70,7 @@
                          (cats/extract))
                    ; todo check fe conn
                    ; todo merge in dbhole lookup, see: hypercrud.browser.base/request-for-link
+                   ; todo parse-param-holes can throw
                    need (set (q-util/parse-param-holes q))
                    missing (set/difference need have)]
                (if (empty? missing)

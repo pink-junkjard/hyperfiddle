@@ -2,16 +2,13 @@
   (:require [cats.core :as cats :refer [mlet]]
             [cats.monad.either :as either]
             [hypercrud.browser.anchor :as anchor]
-            [hypercrud.browser.auto-link :as auto-link]
             [hypercrud.browser.base :as base]
             [hypercrud.browser.context :as context]
-            [hypercrud.client.core :as hc]
-            [hypercrud.client.schema :as schema-util]
-            [hypercrud.compile.eval :as eval]))
+            [hypercrud.client.schema :as schema-util]))
 
 
-(declare request)
 (declare request-from-route)
+(declare request-from-anchor)
 
 (defn recurse-request [anchor ctx]
   (if (:anchor/managed? anchor)
@@ -29,17 +26,14 @@
                          #(request-from-route % ctx)))))
     ; if the anchor IS NOT a popover, this should be the same logic as widget/render-inline-anchors
     (let [ctx (update ctx :debug #(str % ">inline-link[" (:db/id anchor) ":" (or (:anchor/ident anchor) (:anchor/prompt anchor)) "]"))]
-      (request anchor ctx))))
+      (request-from-anchor anchor ctx))))
 
 (defn link-dependent-requests [result ordered-fes anchors ctx]
   (let [result (cond
                  (map? result) [result]
                  (coll? result) result
                  :else result)
-        anchors (->> (if (:keep-disabled-anchors? ctx)
-                       anchors
-                       (remove :anchor/disabled? anchors))
-                     (filter :anchor/render-inline?))       ; at this point we only care about inline anchors
+        anchors (filter :anchor/render-inline? anchors)     ; at this point we only care about inline anchors
         anchors-lookup (->> anchors
                             (group-by (fn [anchor]
                                         (let [r (or (-> anchor :anchor/repeating?) false)
@@ -84,57 +78,45 @@
                                                                    (->> ((:entity-attr-t lookup) fe attribute) (mapcat #(recurse-request % ctx))))))))
                                                 ))))))))))))
 
-(defn request-fn [link ctx]
-  ; todo report eval and invocation errors back to the user
-  (case @(:display-mode ctx)
-    :user (or (some->> (or (some-> (:user-request ctx) either/right)
-                           (if-not (empty? (:link/request link))
-                             (eval/eval-str' (:link/request link))))
-                       (cats/fmap (fn [user-fn]
-                                    (fn [result ordered-fes anchors ctx]
-                                      (try (user-fn result ordered-fes anchors ctx)
-                                           (catch :default e
-                                             (js/console.error (pr-str e))
-                                             nil))))))
-              (either/right link-dependent-requests))
-    :xray (either/right link-dependent-requests)
-    :root (either/right link-dependent-requests)))
+(defn f-mode-config []
+  {:from-ctx :user-request
+   :from-link :fiddle/request
+   :with-user-fn (fn [user-fn]
+                   (fn [result ordered-fes anchors ctx]
+                     ; todo report invocation errors back to the user
+                     (try (user-fn result ordered-fes anchors ctx)
+                          (catch :default e
+                            (js/console.error (pr-str e))
+                            nil))))
+   :default link-dependent-requests})
 
-(defn requests-for-link [link ctx]
-  (-> (mlet [ordered-fes (base/get-ordered-find-elements link ctx)
-             link-request (base/request-for-link link ordered-fes ctx)]
-        (cats/return
-          (concat
-            (if link-request [link-request])
-            (schema-util/schema-requests-for-link ordered-fes ctx)
-            (-> (mlet [result (if link-request
-                                (hc/hydrate (:peer ctx) link-request)
-                                (either/right nil))
-                       schemas (schema-util/hydrate-schema ordered-fes ctx)
-                       f (request-fn link ctx)]
-                  (base/process-results f link link-request result schemas ordered-fes ctx))
-                (cats/mplus (either/right nil))
-                (cats/extract)))))
-      (cats/mplus (either/right nil))
-      (cats/extract)))
+(defn process-data [{:keys [result ordered-fes anchors ctx]}]
+  (mlet [request-fn (base/fn-from-mode (f-mode-config) (:fiddle ctx) ctx)]
+    (cats/return (request-fn result ordered-fes anchors ctx))))
 
 (defn request-from-route [route ctx]
   (let [ctx (context/route ctx route)
-        route (:route ctx)]
-    (if (auto-link/system-link? (:link-id route))
-      (let [link (auto-link/hydrate-system-link (:link-id route) ctx)]
-        (requests-for-link link ctx))
-      (let [meta-link-request (base/meta-request-for-link ctx)]
-        (concat [meta-link-request]
-                (-> (hc/hydrate (:peer ctx) meta-link-request)
-                    (either/branch (constantly nil)
-                                   #(requests-for-link % ctx))))))))
+        {:keys [meta-link-req' link']} (base/hydrate-link ctx)]
+    (concat (if-let [meta-link-req (-> meta-link-req'
+                                       (cats/mplus (either/right nil))
+                                       (cats/extract))]
+              [meta-link-req])
+            (-> (mlet [link link'
+                       ordered-fes (base/get-ordered-find-elements link ctx)
+                       link-request (base/request-for-link link ordered-fes ctx)]
+                  (cats/return
+                    (concat
+                      (if link-request [link-request])
+                      (schema-util/schema-requests-for-link ordered-fes ctx)
+                      (-> (base/process-results link link-request ordered-fes ctx)
+                          (cats/bind process-data)
+                          (cats/mplus (either/right nil))
+                          (cats/extract)))))
+                (cats/mplus (either/right nil))
+                (cats/extract)))))
 
-(defn request [anchor ctx]
-  (if (:anchor/link anchor)
-    (-> (anchor/build-anchor-route' anchor ctx)
-        (either/branch
-          (constantly nil)
-          (fn [route]
-            ; entire context must be encoded in the route
-            (request-from-route route (context/clean ctx)))))))
+(defn request-from-anchor [anchor ctx]
+  (-> (base/from-anchor anchor ctx (fn [route ctx]
+                                     (either/right (request-from-route route ctx))))
+      (cats/mplus (either/right nil))
+      (cats/extract)))

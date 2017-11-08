@@ -1,4 +1,5 @@
-(ns hypercrud.browser.auto-link)
+(ns hypercrud.browser.auto-link
+  (:require [cats.monad.either :refer-macros [try-either]]))
 
 
 (defn system-link? [link-id]
@@ -36,7 +37,9 @@
                              [:p "Retract entity?"]))})
 
 (defn hydrate-system-link [{:keys [fe-name fe-conn a ident]} ctx]
-  (case ident
-    :system-edit (link-system-edit fe-name fe-conn)
-    :system-edit-attr (link-system-edit-attr fe-name fe-conn a)
-    :sys-remove (link-blank-system-remove fe-name a)))
+  (try-either
+    ; catch all the pre assertions
+    (case ident
+      :system-edit (link-system-edit fe-name fe-conn)
+      :system-edit-attr (link-system-edit-attr fe-name fe-conn a)
+      :sys-remove (link-blank-system-remove fe-name a))))
