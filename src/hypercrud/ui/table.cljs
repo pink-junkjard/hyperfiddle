@@ -9,7 +9,6 @@
             [hypercrud.ui.renderer :as renderer]
             [hypercrud.ui.widget :as widget]
             [hypercrud.util.core :as util]
-            [hypercrud.react.react-fragment :refer [react-fragment]]
             [reagent.core :as r]))
 
 
@@ -131,7 +130,7 @@
 (defn Row [relation ordered-fes anchors-lookup ctx]
   (let [ctx (context/relation ctx relation)]
     [:tr
-     (apply react-fragment :table-row-form (Relation relation ordered-fes anchors-lookup ctx))
+     (Relation relation ordered-fes anchors-lookup ctx)
      (LinkCell true ordered-fes anchors-lookup ctx)]))
 
 (defn Resultset [relations ordered-fes anchors-lookup sort-col ctx]
@@ -163,7 +162,7 @@
       [:table.ui-table
        [:thead [HeaderRow ordered-fes anchors-lookup sort-col ctx]]
        ; Sometimes the leafnode needs all the anchors.
-       [:tbody (apply react-fragment :tbody (Resultset relations ordered-fes anchors-lookup sort-col ctx))]])))
+       [:tbody (Resultset relations ordered-fes anchors-lookup sort-col ctx)]])))
 
 (defn ui-table [relations ordered-fes anchors ctx]
   (let [anchors-lookup (->> (widget/process-popover-anchors anchors ctx)
