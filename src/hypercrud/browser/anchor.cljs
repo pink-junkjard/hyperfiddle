@@ -95,13 +95,7 @@
           (fn [resolve! reject!]
             (let [swap-fn (fn [multi-color-tx]
                             ; todo why does the user-txfn have access to the parent link's context
-                            (let [result (let [result (user-txfn ctx multi-color-tx
-                                                                 ; support legacy routing
-                                                                 ; this route is guaranteed to be a v2 route,
-                                                                 ; so only need to adapt it backwards, not forwards
-                                                                 (->> (dissoc route :code-database :link-id :request-params)
-                                                                      (merge (:request-params route))
-                                                                      (assoc route :query-params)))]
+                            (let [result (let [result (user-txfn ctx multi-color-tx route)]
                                            ; txfn may be sync or async
                                            (if-not (p/promise? result) (p/resolved result) result))]
                               ; let the caller of this :stage fn know the result
