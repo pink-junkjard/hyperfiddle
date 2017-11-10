@@ -1,34 +1,34 @@
 (ns hypercrud.browser.routing
-  (:require [cljs.reader :as reader]
+  (:require [cats.core :as cats :refer [mlet]]
+            [cats.monad.either :as either :refer-macros [try-either]]
+            [cljs.reader :as reader]
             [clojure.set :as set]
             [clojure.string :as string]
+            [clojure.walk :as walk]
+            [hypercrud.compile.eval :as eval]
             [hypercrud.types.Entity :refer [->Entity Entity]]
             [hypercrud.types.ThinEntity :refer [->ThinEntity ThinEntity]]
             [hypercrud.util.base-64-url-safe :as base64]
             [hypercrud.util.branch :as branch]
-            [hypercrud.util.core :as util]
             [reagent.core :as reagent]))
 
 
 (defn invert-ids [route invert-id ctx]
-  (-> route
+  (-> (walk/postwalk (fn [v]
+                       (cond
+                         (instance? Entity v)
+                         (let [id (invert-id (:db/id v) (-> v .-dbval .-uri))]
+                           (->Entity (.-dbval v) (assoc (.-coll v) :db/id id)))
+
+                         (instance? ThinEntity v)
+                         (let [uri (get-in ctx [:repository :repository/environment (.-dbname v)])
+                               id (invert-id (.-id v) uri)]
+                           (->ThinEntity (.-dbname v) id))
+
+                         :else v))
+                     route)
       (update :link-id (let [uri (get-in ctx [:repository :dbhole/uri])]
-                         #(invert-id % uri)))
-      (update :query-params
-              (partial util/map-values
-                       (fn [v]
-                         ; todo support other types of v (map, vector, etc)
-                         (cond
-                           (instance? Entity v)
-                           (let [id (invert-id (:db/id v) (-> v .-dbval .-uri))]
-                             (->Entity (.-dbval v) (assoc (.-coll v) :db/id id)))
-
-                           (instance? ThinEntity v)
-                           (let [uri (get-in ctx [:repository :repository/environment (.-dbname v)])
-                                 id (invert-id (.-id v) uri)]
-                             (->ThinEntity (.-dbname v) id))
-
-                           :else v))))))
+                         #(invert-id % uri)))))
 
 (defn ctx->id-lookup [uri ctx]
   ; todo tempid-lookups need to be indexed by db-ident not val
@@ -49,6 +49,48 @@
                                          (set/map-invert))]
                       (get tempid->id temp-id temp-id)))]
     (invert-ids route invert-id ctx)))
+
+(defn ^:export build-route' [anchor ctx]
+  (mlet [link-id (if-let [page (:anchor/link anchor)]
+                   (either/right (:db/id page))
+                   (either/left {:message "anchor has no link" :data {:anchor anchor}}))
+         user-route-params (cond
+                             ; legacy support for old formulas
+                             (eval/validate-user-code-str (:anchor/formula anchor))
+                             (do
+                               #_(js/console.warn "Warning: :anchor/formula has been deprecated for :link/formula and will be removed in the future")
+                               (mlet [user-fn (eval/eval-str' (:anchor/formula anchor))]
+                                 (if user-fn
+                                   (try-either {:request-params (user-fn ctx)})
+                                   (cats/return nil))))
+
+                             (eval/validate-user-code-str (:link/formula anchor))
+                             (mlet [user-fn (eval/eval-str' (:link/formula anchor))]
+                               (if user-fn
+                                 (try-either (user-fn ctx))
+                                 (cats/return nil)))
+
+                             :else (either/right nil))
+         :let [uri->dbname (->> (get-in ctx [:repository :repository/environment])
+                                (filter (fn [[k v]]
+                                          (and (string? k) (string/starts-with? k "$"))))
+                                (map (fn [[k v]]
+                                       [v k]))
+                                (into {}))
+               route-params (->> user-route-params
+                                 (walk/postwalk (fn [v]
+                                                  (if (instance? Entity v)
+                                                    (let [dbname (some-> v .-dbval .-uri uri->dbname)]
+                                                      (->ThinEntity dbname (:db/id v)))
+                                                    v))))]]
+    (cats/return
+      (id->tempid
+        (merge (into {} route-params)
+               {
+                ;:code-database (:anchor/code-database anchor) todo when cross db references are working on anchor/links, don't need to inherit code-db-uri
+                :code-database (get-in ctx [:repository :dbhole/name])
+                :link-id link-id})
+        ctx))))
 
 (defn encode
   ([route]

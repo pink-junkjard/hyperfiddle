@@ -6,7 +6,8 @@
 {:d? true :a false}
 ==
 (fn [ctx]
-  {:entity (hypercrud.browser.auto-anchor-formula/auto-entity ctx)})
+  {:request-params
+   {:entity (hypercrud.browser.auto-anchor-formula/auto-entity ctx)}})
 
 
 ==
@@ -14,7 +15,8 @@
 ; don't set a because :a is used for card/many, we are create, so we just create one entity
 ==
 (fn [ctx]
-  {:entity (hypercrud.browser.auto-anchor-formula/auto-entity ctx)})
+  {:request-params
+   {:entity (hypercrud.browser.auto-anchor-formula/auto-entity ctx)}})
 
 
 ==
@@ -30,7 +32,8 @@
 {:d? false :a false}
 ==
 (fn [ctx]
-  {:entity (hypercrud.browser.auto-anchor-formula/auto-entity-from-stage ctx)})
+  {:request-params
+   {:entity (hypercrud.browser.auto-anchor-formula/auto-entity-from-stage ctx)}})
 
 
 ==
@@ -38,5 +41,6 @@
 ; don't set a because :a is used for card/many, we are create, so we just create one entity
 ==
 (fn [ctx]
-  {:entity (hypercrud.browser.auto-anchor-formula/auto-entity-from-stage ctx)})
+  {:request-params
+   {:entity (hypercrud.browser.auto-anchor-formula/auto-entity-from-stage ctx)}})
 ==

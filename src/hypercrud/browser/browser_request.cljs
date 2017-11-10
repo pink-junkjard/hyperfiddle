@@ -1,9 +1,9 @@
 (ns hypercrud.browser.browser-request
   (:require [cats.core :as cats :refer [mlet]]
             [cats.monad.either :as either]
-            [hypercrud.browser.anchor :as anchor]
             [hypercrud.browser.base :as base]
             [hypercrud.browser.context :as context]
+            [hypercrud.browser.routing :as routing]
             [hypercrud.client.schema :as schema-util]))
 
 
@@ -12,7 +12,7 @@
 
 (defn recurse-request [anchor ctx]
   (if (:anchor/managed? anchor)
-    (let [route' (anchor/build-anchor-route' anchor ctx)
+    (let [route' (routing/build-route' anchor ctx)
           ctx (context/anchor-branch ctx anchor)]
       (if true #_(get-in (-> ctx :peer .-state-atom deref) [:popovers (:branch ctx)])
         ; if the anchor IS a popover, we need to run the same logic as anchor/build-anchor-props

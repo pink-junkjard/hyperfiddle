@@ -126,7 +126,7 @@
                       anchor)))]
     (-> anchor
         (auto-fn :anchor/tx-fn auto-txfn)
-        (auto-fn :anchor/formula auto-formula))))
+        (auto-fn :link/formula auto-formula))))
 
 (defn merge-anchors [sys-anchors link-anchors]
   (->> (reduce (fn [grouped-link-anchors sys-anchor]

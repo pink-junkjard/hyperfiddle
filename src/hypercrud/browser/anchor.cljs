@@ -2,7 +2,6 @@
   (:require [cats.core :as cats :refer [mlet return]]
             [cats.monad.either :as either :refer-macros [try-either]]
             [clojure.set :as set]
-            [clojure.string :as string]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.q-util :as q-util]
             [hypercrud.browser.routing :as routing]
@@ -10,7 +9,7 @@
             [hypercrud.state.actions.core :as actions]
             [hypercrud.types.Entity :refer [Entity]]
             [hypercrud.types.ThinEntity :refer [->ThinEntity]]
-            [hypercrud.util.core :as util :refer [pprint-str]]
+            [hypercrud.util.core :refer [pprint-str]]
             [promesa.core :as p]
             [reagent.core :as reagent]))
 
@@ -22,48 +21,16 @@
 (defn popover-anchor? [anchor]
   (:anchor/managed? anchor))
 
-(defn safe-run-user-code-str' [code-str & args]
-  (if-let [code-str (eval/validate-user-code-str code-str)]
-    (mlet [user-fn (eval-str' code-str)]
-      (if user-fn
-        (try-either (apply user-fn args))
-        (return nil)))
-    (either/right nil)))
-
-; todo belongs in routing ns
-(defn ^:export build-anchor-route' [anchor ctx]
-  (mlet [query-params (->> (if-let [code-str (:anchor/formula anchor)]
-                             (safe-run-user-code-str' code-str ctx)
-                             (either/right nil))
-                           (cats/fmap (partial util/map-values
-                                               (fn [v]
-                                                 ; todo support other types of v (map, vector, etc)
-                                                 (if (instance? Entity v)
-                                                   (let [dbname (->> (get-in ctx [:repository :repository/environment])
-                                                                     (filter (fn [[k env-v]]
-                                                                               (and (string? k) (string/starts-with? k "$")
-                                                                                    (= env-v (some-> v .-dbval .-uri)))))
-                                                                     ffirst)]
-                                                     (->ThinEntity dbname (:db/id v)))
-                                                   v)))))
-         link-id (if-let [page (:anchor/link anchor)]
-                   (either/right (:db/id page))
-                   (either/left {:message "anchor has no link" :data {:anchor anchor}}))]
-    (return
-      (routing/id->tempid
-        {
-         ;:code-database (:anchor/code-database anchor) todo when cross db references are working on anchor/links, don't need to inherit code-db-uri
-         :code-database (get-in ctx [:repository :dbhole/name])
-         :link-id link-id
-         :query-params query-params}
-        ctx))))
+(defn build-anchor-route' [anchor ctx]
+  (js/console.warn "Warning: hypercrud.browser.anchor/build-anchor-route' is deprecated for hypercrud.browser.routing/build-route' and will be removed in the future.")
+  (hypercrud.browser.routing/build-route' anchor ctx))
 
 ; todo belongs in routing ns
 ; this is same business logic as base/request-for-link
 ; this is currently making assumptions on dbholes
 (defn validated-route' [link route]
   ; We specifically hydrate this deep just so we can validate anchors like this.
-  (let [have (set (keys (into {} (remove (comp nil? val) (:query-params route)))))]
+  (let [have (set (keys (into {} (remove (comp nil? val) (or (:request-params route) (:query-params route))))))]
     (case (:request/type link)
       :query (let [q (-> (q-util/safe-parse-query-validated link)
                          (cats/mplus (either/right []))
@@ -76,10 +43,10 @@
                (if (empty? missing)
                  (either/right route)
                  (either/left {:message "missing query params" :data {:have have :missing missing}})))
-      :entity (if (not= nil (-> route :query-params :entity)) ; add logic for a
+      :entity (if (not= nil (-> (or (:request-params route) (:query-params route)) :entity)) ; add logic for a
                 ; todo check fe conn
                 (either/right route)
-                (either/left {:message "missing query params" :data {:have have :missing #{:entity}}}))
+                (either/left {:message "missing query params" :data {:x route :have have :missing #{:entity}}}))
       :blank (either/right route)
       (either/left {:message "route has no link" :data {:route route}}))))
 
@@ -113,7 +80,7 @@
        :tooltip (if-not (empty? errors)
                   [:warning (pprint-str errors)]
                   (case @(:display-mode ctx)
-                    :xray [nil (pr-str (:query-params route))]
+                    :xray [nil (pr-str (dissoc route :code-database :link-id))]
                     :user (:tooltip user-props)))
        :class (->> [(:class user-props)
                     (if-not (empty? errors) "invalid")]
@@ -128,7 +95,13 @@
           (fn [resolve! reject!]
             (let [swap-fn (fn [multi-color-tx]
                             ; todo why does the user-txfn have access to the parent link's context
-                            (let [result (let [result (user-txfn ctx multi-color-tx route)]
+                            (let [result (let [result (user-txfn ctx multi-color-tx
+                                                                 ; support legacy routing
+                                                                 ; this route is guaranteed to be a v2 route,
+                                                                 ; so only need to adapt it backwards, not forwards
+                                                                 (->> (dissoc route :code-database :link-id :request-params)
+                                                                      (merge (:request-params route))
+                                                                      (assoc route :query-params)))]
                                            ; txfn may be sync or async
                                            (if-not (p/promise? result) (p/resolved result) result))]
                               ; let the caller of this :stage fn know the result
@@ -184,7 +157,7 @@
   ; - broken user visible fn
   ; If these fns are ommitted (nil), its not an error.
   (let [visible? (visible? anchor ctx)
-        route' (build-anchor-route' anchor ctx)
+        route' (routing/build-route' anchor ctx)
         hypercrud-props (build-anchor-props-raw route' anchor ctx)
         popover-props (if (popover-anchor? anchor)
                         (if-let [route (and (:anchor/managed? anchor) (either/right? route') (cats/extract route'))]

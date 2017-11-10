@@ -32,7 +32,7 @@
                :body body]]))
 
 ; props = {
-;   :route    {:keys [domain project link-dbid query-params]}
+;   :route    {:keys [code-database link-id request-params ...]}
 ;   :tooltip  [Keyword Hiccup]
 ;   :popover  {:showing?  Atom
 ;              :body      Component

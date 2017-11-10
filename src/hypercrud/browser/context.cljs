@@ -4,7 +4,6 @@
             [hypercrud.browser.routing :as routing]
             [hypercrud.state.actions.core :as actions]
             [hypercrud.util.branch :as branch]
-            [hypercrud.util.core :as util]
             [reagent.core :as reagent]))
 
 
@@ -18,12 +17,18 @@
           :layout :field))
 
 (defn route [ctx route]
-  (let [route (routing/tempid->id route ctx)
+  (let [route (-> (if (:request-params route)               ; support for legacy routing
+                    (->> (dissoc route :code-database :link-id :request-params)
+                         (merge (:request-params route))
+                         (assoc route :query-params))
+                    (-> (into route (:query-params route))
+                        (assoc route :request-params (:query-params route))))
+                  (routing/tempid->id ctx))
         initial-repository (->> (get-in ctx [:domain :domain/code-databases])
                                 (filter #(= (:dbhole/name %) (:code-database route)))
                                 first
                                 (into {}))
-        repository (let [overrides (->> (:query-params route)
+        repository (let [overrides (->> route
                                         ; todo this is not sufficient for links on the page to inherit this override
                                         ; on navigate, this context is gone
                                         (filter (fn [[k _]] (and (string? k) (string/starts-with? k "$"))))

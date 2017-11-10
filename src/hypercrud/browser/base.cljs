@@ -7,6 +7,7 @@
             [hypercrud.browser.auto-link :as auto-link]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.q-util :as q-util]
+            [hypercrud.browser.routing :as routing]
             [hypercrud.browser.user-bindings :as user-bindings]
             [hypercrud.client.core :as hc]
             [hypercrud.client.schema :as schema-util]
@@ -83,7 +84,8 @@
     :query
     (mlet [q (hc-string/memoized-safe-read-edn-string (:link-query/value link))
            query-holes (try-either (q-util/parse-holes q))]
-      (let [params-map (merge (get-in ctx [:route :query-params]) (q-util/build-dbhole-lookup ctx))
+      (let [route (:route ctx)
+            params-map (merge (or (:request-params route) (:query-params route)) (q-util/build-dbhole-lookup ctx))
             params (->> query-holes
                         (mapv (juxt identity (fn [hole-name]
                                                (let [param (get params-map hole-name)]
@@ -109,10 +111,11 @@
     (let [fe (first (filter #(= (:find-element/name %) "entity") ordered-fes))
           ; todo if :entity query-param is a typed Entity, the connection is already provided. why are we ignoring?
           uri (get-in ctx [:repository :repository/environment (:find-element/connection fe)])
-          e (get-in ctx [:route :query-params :entity])]
+          route (:route ctx)
+          e (:entity (or (:request-params route) (:query-params route)))]
       (cond
         (nil? uri) (either/left {:message "no connection" :data {:find-element fe}})
-        (nil? e) (either/left {:message "missing param" :data {:params (get-in ctx [:route :query-params])
+        (nil? e) (either/left {:message "missing param" :data {:params (or (:request-params route) (:query-params route))
                                                                :missing #{:entity}}})
 
         :else (either/right
@@ -121,7 +124,7 @@
                     (instance? Entity e) (:db/id e)
                     (instance? ThinEntity e) (:db/id e)
                     :else e)
-                  (get-in ctx [:route :query-params :a])
+                  (:a (or (:request-params route) (:query-params route)))
                   (hc/db (:peer ctx) uri (:branch ctx))
                   (q-util/form-pull-exp (:find-element/form fe))))))
 
@@ -195,7 +198,7 @@
       (process-results link link-request ordered-fes ctx))))
 
 (defn from-anchor [anchor ctx with-route]
-  (mlet [route (anchor/build-anchor-route' anchor ctx)]
+  (mlet [route (routing/build-route' anchor ctx)]
     ; entire context must be encoded in the route
     (with-route route (context/clean ctx))))
 
