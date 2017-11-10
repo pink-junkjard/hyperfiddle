@@ -36,6 +36,16 @@
       (println e)
       {:status 500 :headers {} :body (str e)})))
 
+(defn http-latest [req]
+  (try
+    (let [dbs (:body-params req)]
+      (ring-resp/response
+        (wrap-hypercrud
+          (api/latest dbs))))
+    (catch Exception e
+      (println e)
+      {:status 500 :headers {} :body (str e)})))
+
 (def routes
   (expand-routes
     `[[["/" {:get [:index http-index]}]

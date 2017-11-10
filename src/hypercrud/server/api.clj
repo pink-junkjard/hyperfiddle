@@ -135,5 +135,7 @@
                                 (into {}))]
         {:tempid->id tempid-lookups}))))
 
-(defn latest [conn]
-  (str (-> (d/db conn) d/basis-t)))
+(defn latest [dbs]
+  (->> dbs
+       (map (juxt identity #(-> % d/connect d/db d/basis-t)))
+       (into {})))
