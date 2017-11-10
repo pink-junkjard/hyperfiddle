@@ -21,10 +21,6 @@
 (defn popover-anchor? [anchor]
   (:anchor/managed? anchor))
 
-(defn build-anchor-route' [anchor ctx]
-  (js/console.warn "Warning: hypercrud.browser.anchor/build-anchor-route' is deprecated for hypercrud.browser.routing/build-route' and will be removed in the future.")
-  (hypercrud.browser.routing/build-route' anchor ctx))
-
 ; todo belongs in routing ns
 ; this is same business logic as base/request-for-link
 ; this is currently making assumptions on dbholes
