@@ -58,7 +58,7 @@
                              ; legacy support for old formulas
                              (eval/validate-user-code-str (:anchor/formula anchor))
                              (do
-                               #_(js/console.warn "Warning: :anchor/formula has been deprecated for :link/formula and will be removed in the future")
+                               (js/console.warn "Warning: :anchor/formula has been deprecated for :link/formula and will be removed in the future")
                                (mlet [user-fn (eval/eval-str' (:anchor/formula anchor))]
                                  (if user-fn
                                    (try-either {:request-params (user-fn ctx)})
