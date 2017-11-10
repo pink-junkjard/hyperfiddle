@@ -137,5 +137,5 @@
 
 (defn latest [dbs]
   (->> dbs
-       (map (juxt identity #(-> % d/connect d/db d/basis-t)))
+       (map (juxt identity #(-> % str d/connect d/db d/basis-t)))
        (into {})))
