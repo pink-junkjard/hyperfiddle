@@ -5,7 +5,7 @@
             [hypercrud.client.peer :as peer]
             [hypercrud.client.schema :as schema]
             [hypercrud.client.tx :as tx]
-            [hypercrud.state.actions.internal :refer [hydrating-action]]
+            [hypercrud.hydrating-action :refer [hydrating-action]] ; platform injected
             [hypercrud.state.core :as state]
             [hypercrud.types.DbVal :refer [->DbVal]]
             [hypercrud.util.branch :as branch]

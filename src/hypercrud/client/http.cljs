@@ -38,7 +38,7 @@
         (not (and (or (= :db/add op) (= :db/retract op))
                   (nil? v))))))
 
-(defn hydrate! [service-uri requests stage-val]
+(defn hydrate! [service-uri requests stage-val]             ; node only; browser hydrates route
   (let [staged-branches (->> stage-val
                              (mapcat (fn [[branch-ident branch-content]]
                                        (->> branch-content
@@ -49,13 +49,31 @@
                                                       :uri uri
                                                       :tx (filter v-not-nil? tx)})))))))]
     (-> (kvlt/request! {:url (str (.-uri-str service-uri) "hydrate")
-                        :content-type content-type-transit  ; helps debugging to view as edn
-                        :accept content-type-transit        ; needs to be fast so transit
-                        :method :post
-                        :form {:staged-branches staged-branches
-                               :request requests}
-                        :as :auto})
+                        :accept content-type-transit :as :auto
+                        :content-type content-type-transit
+                        :method :post :form {:staged-branches staged-branches :request requests}})
         (p/then #(-> % :body :hypercrud)))))
+
+(defn hydrate-route! [service-uri route stage-val]
+  (let [staged-branches (->> stage-val
+                             (mapcat (fn [[branch-ident branch-content]]
+                                       (->> branch-content
+                                            (map (fn [[uri tx]]
+                                                   (let [branch-val (branch/branch-val uri branch-ident stage-val)]
+                                                     {:branch-ident branch-ident
+                                                      :branch-val branch-val
+                                                      :uri uri
+                                                      :tx (filter v-not-nil? tx)})))))))]
+    (if-not (empty? stage-val)
+      (-> (kvlt/request! {:url (str (.-uri-str service-uri) "hydrate-route" route)
+                          :accept content-type-transit :as :auto
+                          :content-type content-type-transit
+                          :method :post :form {:staged-branches staged-branches}}))
+      ; Try to hit CDN
+      (-> (kvlt/request! {:url (str (.-uri-str service-uri) "hydrate-route" route)
+                          :accept content-type-transit :as :auto
+                          :method :get})
+          (p/then #(-> % :body :hypercrud))))))
 
 (defn transact! [service-uri htx-groups]
   (let [htx-groups (->> (get htx-groups nil)
