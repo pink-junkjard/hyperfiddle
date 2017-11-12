@@ -41,6 +41,7 @@
 
 (defn hydrate! [service-uri requests stage-val]             ; node only; browser hydrates route
   ; Note the UI-facing interface is stage-val; server accepts staged-branches
+  (js/console.log "...hydrate!; top; stage-val= " (pr-str stage-val))
   (let [staged-branches (->> stage-val
                              (mapcat (fn [[branch-ident branch-content]]
                                        (->> branch-content
@@ -49,11 +50,13 @@
                                                      {:branch-ident branch-ident
                                                       :branch-val branch-val
                                                       :uri uri
-                                                      :tx (filter v-not-nil? tx)})))))))]
+                                                      :tx (filter v-not-nil? tx)})))))))
+        form {:staged-branches staged-branches :request requests}]
+    (js/console.log "...hydrate!; kvlt/request!; form= " (pr-str form))
     (-> (kvlt/request! {:url (str (.-uri-str service-uri) "hydrate")
                         :accept content-type-transit :as :auto
                         :content-type content-type-transit
-                        :method :post :form {:staged-branches staged-branches :request requests}})
+                        :method :post :form form})
         (p/then #(-> % :body :hypercrud)))))
 
 (defn hydrate-route! [service-uri route stage-val]
@@ -62,7 +65,7 @@
                    (if (empty? stage-val)
                      {:method :get}                         ; Try to hit CDN
                      {:method :post
-                      :form {:stage stage-val}              ; UI-facing interface is stage-val
+                      :form stage-val                       ; UI-facing interface is stage-val
                       :content-type content-type-transit}))]
     (-> (kvlt/request! req) (p/then :body))))
 
