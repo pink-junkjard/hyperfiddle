@@ -25,22 +25,22 @@
 
 ;; Used for serializing the response body only; not used for parsing the request
 (def content-types
-  {"application/json;charset=UTF-8"
+  {"application/json; charset=utf-8"
    (fn [body]
      (print-fn #(http/json-print body)))
 
-   "application/edn;charset=UTF-8"
+   "application/edn; charset=utf-8"
    (fn [body]
      (print-fn #(clojure.pprint/pprint body)))
 
-   "application/transit+json;charset=UTF-8"
+   "application/transit+json; charset=utf-8"
    (fn [body]
      (fn [^OutputStream output-stream]
        (transit/write (transit/writer output-stream :json-verbose
                                       {:handlers hc-t/write-handlers}) body)
        (.flush output-stream)))
 
-   "application/transit+msgpack;charset=UTF-8"
+   "application/transit+msgpack; charset=utf-8"
    (fn [body]
      (fn [^OutputStream output-stream]
        (transit/write (transit/writer output-stream :msgpack) body)
@@ -62,7 +62,7 @@
                         (string/split #",")
                         (#(into #{} %)))
             accept (-> (some accepts (keys content-types))
-                       #_(or "application/transit+json;charset=UTF-8"))
+                       #_(or "application/transit+json; charset=utf-8"))
             content-renderer (get content-types accept)]
         #_(assert content-renderer (str "invalid Accept " (get-in request [:headers "accept"])))
         (-> context
