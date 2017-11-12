@@ -10,8 +10,8 @@
             [clojure.string :as string]))
 
 
-(def content-type-transit "application/transit+json; charset=utf-8")
-(def content-type-edn "application/edn; charset=utf-8")
+(def content-type-transit "application/transit+json")
+(def content-type-edn "application/edn")
 
 
 (defmethod kvlt.middleware.params/coerce-form-params (keyword content-type-transit) [{:keys [form-params]}]
@@ -40,6 +40,7 @@
                   (nil? v))))))
 
 (defn hydrate! [service-uri requests stage-val]             ; node only; browser hydrates route
+  ; Note the UI-facing interface is stage-val; server accepts staged-branches
   (let [staged-branches (->> stage-val
                              (mapcat (fn [[branch-ident branch-content]]
                                        (->> branch-content
@@ -56,21 +57,12 @@
         (p/then #(-> % :body :hypercrud)))))
 
 (defn hydrate-route! [service-uri route stage-val]
-  (let [staged-branches (->> stage-val
-                             (mapcat (fn [[branch-ident branch-content]]
-                                       (->> branch-content
-                                            (map (fn [[uri tx]]
-                                                   (let [branch-val (branch/branch-val uri branch-ident stage-val)]
-                                                     {:branch-ident branch-ident
-                                                      :branch-val branch-val
-                                                      :uri uri
-                                                      :tx (filter v-not-nil? tx)})))))))
-        req (merge {:url (str (.-uri-str service-uri) "hydrate-route" route)
+  (let [req (merge {:url (str (.-uri-str service-uri) "hydrate-route" route)
                     :accept content-type-transit :as :auto}
                    (if (empty? stage-val)
                      {:method :get}                         ; Try to hit CDN
                      {:method :post
-                      :form {:staged-branches staged-branches}
+                      :form {:stage stage-val}              ; UI-facing interface is stage-val
                       :content-type content-type-transit}))]
     (-> (kvlt/request! req) (p/then :body))))
 
