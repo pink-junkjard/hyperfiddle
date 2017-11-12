@@ -64,16 +64,15 @@
                                                      {:branch-ident branch-ident
                                                       :branch-val branch-val
                                                       :uri uri
-                                                      :tx (filter v-not-nil? tx)})))))))]
-    (-> (if (empty? stage-val)
-          ; Try to hit CDN
-          (kvlt/request! {:method :get :url (str (.-uri-str service-uri) "hydrate-route" route)
-                          :accept content-type-transit :as :auto})
-          (kvlt/request! {:method :post :url (str (.-uri-str service-uri) "hydrate-route" route)
-                          :accept content-type-transit :as :auto
-                          :form {:staged-branches staged-branches}
-                          :content-type content-type-transit}))
-        (p/then :body))))
+                                                      :tx (filter v-not-nil? tx)})))))))
+        req (merge {:url (str (.-uri-str service-uri) "hydrate-route" route)
+                    :accept content-type-transit :as :auto}
+                   (if (empty? stage-val)
+                     {:method :get}                         ; Try to hit CDN
+                     {:method :post
+                      :form {:staged-branches staged-branches}
+                      :content-type content-type-transit}))]
+    (-> (kvlt/request! req) (p/then :body))))
 
 (defn transact! [service-uri htx-groups]
   (let [htx-groups (->> (get htx-groups nil)
