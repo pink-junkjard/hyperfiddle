@@ -6,11 +6,12 @@
             [hypercrud.util.core :as util]
             [kvlt.core :as kvlt]
             [kvlt.middleware.params]
-            [promesa.core :as p]))
+            [promesa.core :as p]
+            [clojure.string :as string]))
 
 
-(def content-type-transit "application/transit+json;charset=UTF-8")
-(def content-type-edn "application/edn;charset=UTF-8")
+(def content-type-transit "application/transit+json; charset=utf-8")
+(def content-type-edn "application/edn; charset=utf-8")
 
 
 (defmethod kvlt.middleware.params/coerce-form-params (keyword content-type-transit) [{:keys [form-params]}]
@@ -64,16 +65,15 @@
                                                       :branch-val branch-val
                                                       :uri uri
                                                       :tx (filter v-not-nil? tx)})))))))]
-    (if-not (empty? stage-val)
-      (-> (kvlt/request! {:url (str (.-uri-str service-uri) "hydrate-route" route)
+    (-> (if (empty? stage-val)
+          ; Try to hit CDN
+          (kvlt/request! {:method :get :url (str (.-uri-str service-uri) "hydrate-route" route)
+                          :accept content-type-transit :as :auto})
+          (kvlt/request! {:method :post :url (str (.-uri-str service-uri) "hydrate-route" route)
                           :accept content-type-transit :as :auto
-                          :content-type content-type-transit
-                          :method :post :form {:staged-branches staged-branches}}))
-      ; Try to hit CDN
-      (-> (kvlt/request! {:url (str (.-uri-str service-uri) "hydrate-route" route)
-                          :accept content-type-transit :as :auto
-                          :method :get})
-          (p/then #(-> % :body :hypercrud))))))
+                          :form {:staged-branches staged-branches}
+                          :content-type content-type-transit}))
+        (p/then :body))))
 
 (defn transact! [service-uri htx-groups]
   (let [htx-groups (->> (get htx-groups nil)
