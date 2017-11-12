@@ -25,22 +25,22 @@
 
 ;; Used for serializing the response body only; not used for parsing the request
 (def content-types
-  {"application/json; charset=utf-8"
+  {"application/json"
    (fn [body]
      (print-fn #(http/json-print body)))
 
-   "application/edn; charset=utf-8"
+   "application/edn"
    (fn [body]
      (print-fn #(clojure.pprint/pprint body)))
 
-   "application/transit+json; charset=utf-8"
+   "application/transit+json"
    (fn [body]
      (fn [^OutputStream output-stream]
        (transit/write (transit/writer output-stream :json-verbose
                                       {:handlers hc-t/write-handlers}) body)
        (.flush output-stream)))
 
-   "application/transit+msgpack; charset=utf-8"
+   "application/transit+msgpack"
    (fn [body]
      (fn [^OutputStream output-stream]
        (transit/write (transit/writer output-stream :msgpack) body)
