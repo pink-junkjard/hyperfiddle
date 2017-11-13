@@ -37,12 +37,9 @@
    (widget/render-anchors (remove :anchor/render-inline? attr-label-anchors) ctx)
    (widget/render-inline-anchors (filter :anchor/render-inline? attr-label-anchors) ctx)])
 
-(defn col-head [fe {:keys [:field/attribute] :as field} anchors-lookup sort-col ctx]
-  (let [fe-name (:find-element/name fe)
-        ctx (context/attribute ctx attribute)
-        [attr-label-anchors] (-> (->> (get-in anchors-lookup [fe-name attribute])
-                                      (remove :anchor/repeating?))
-                                 (widget/process-option-popover-anchors ctx))
+(defn col-head [fe {:keys [:field/attribute] :as field} col-anchors sort-col ctx]
+  (let [ctx (context/attribute ctx attribute)
+        [attr-label-anchors] (widget/process-option-anchors col-anchors ctx)
         sortable? (and (not-any? anchor/popover-anchor? attr-label-anchors) ; sorting currently breaks click handling in popovers
                        (attr-sortable? fe attribute ctx))
         sort-direction (let [[sort-fe-dbid sort-key direction] @sort-col]
@@ -54,8 +51,7 @@
                                         :asc [(:db/id fe) attribute :desc]
                                         :desc nil
                                         [(:db/id fe) attribute :asc]))))
-        css-classes [(str "field-element-" (form-util/css-slugify fe-name))
-                     (str "field-attr-" (form-util/css-slugify (str attribute))) #_"Dustin removed field-id and field-prompt; use a custom renderer"
+        css-classes [(str "field-attr-" (form-util/css-slugify (str attribute))) #_"Dustin removed field-id and field-prompt; use a custom renderer"
                      (if sortable? "sortable")
                      (some-> sort-direction name)]]
     [:th {:class (string/join " " css-classes)
@@ -67,27 +63,31 @@
 (defn LinkCell [repeating? ordered-fes anchors-lookup ctx]
   [(if repeating? :td.link-cell :th.link-cell)
    (->> ordered-fes
-        (mapcat (fn [fe]
-                  (let [fe-name (:find-element/name fe)
-                        ctx (as-> (context/find-element ctx fe) ctx
-                                  (if repeating?
-                                    (context/entity ctx (get-in ctx [:relation fe-name]))
-                                    ctx))
-                        form-anchors (->> (get-in anchors-lookup [fe-name nil])
-                                          ((if repeating? filter remove) :anchor/repeating?)
-                                          ; inline entity-anchors are not yet implemented, what does that mean.
-                                          (remove :anchor/render-inline?))]
-                    (widget/render-anchors form-anchors ctx)))))])
+        (map-indexed (fn [fe-pos fe]
+                       (let [fe-name (:find-element/name fe)
+                             ctx (as-> (context/find-element ctx fe) ctx
+                                       (if repeating?
+                                         (context/entity ctx (get-in ctx [:relation fe-name]))
+                                         ctx))
+                             form-anchors (->> (get-in anchors-lookup [fe-pos :links])
+                                               ((if repeating? filter remove) :anchor/repeating?)
+                                               ; inline entity-anchors are not yet implemented, what does that mean.
+                                               (remove :anchor/render-inline?))]
+                         (widget/render-anchors form-anchors ctx))))
+        (apply concat))])
 
 (defn HeaderRow [ordered-fes anchors-lookup sort-col ctx]
   [:tr
    (->> ordered-fes
-        (mapcat (fn [{:keys [] :as fe}]
-                  (let [ctx (context/find-element ctx fe)]
-                    (->> (-> fe :find-element/form :form/field)
-                         (map (fn [field]
-                                ^{:key (str (:find-element/name fe) "-" (:field/attribute field))}
-                                [col-head fe field anchors-lookup sort-col ctx])))))))
+        (map-indexed (fn [fe-pos fe]
+                       (let [ctx (context/find-element ctx fe)]
+                         (->> (get-in fe [:find-element/form :form/field])
+                              (map (fn [field]
+                                     (let [col-anchors (->> (get-in anchors-lookup [fe-pos (:field/attribute field) :links])
+                                                            (remove :anchor/repeating?))]
+                                       ^{:key (str (:find-element/name fe) "-" (:field/attribute field))}
+                                       [col-head fe field col-anchors sort-col ctx])))))))
+        (apply concat))
    [LinkCell false ordered-fes anchors-lookup ctx]])
 
 (defn Control [field anchors ctx]
@@ -109,13 +109,12 @@
         display-mode @(:display-mode ctx)
         Field (case display-mode :xray Field :user (get ctx :field Field))
         Control (case display-mode :xray Control :user (get ctx :control Control))
-        attr-anchors (get fe-anchors-lookup attribute)]
+        attr-anchors (get-in fe-anchors-lookup [attribute :links])]
     [Field (r/partial Control field attr-anchors) field attr-anchors ctx]))
 
-(defn FindElement [fe anchors-lookup ctx]
+(defn FindElement [fe fe-anchors-lookup ctx]
   (let [fe-name (:find-element/name fe)
         entity (get (:relation ctx) fe-name)
-        fe-anchors-lookup (get anchors-lookup fe-name)
         ctx (-> (context/find-element ctx fe)
                 (context/entity entity))]
     (->> (-> fe :find-element/form :form/field)
@@ -125,7 +124,10 @@
                  [Value field fe-anchors-lookup ctx])))))
 
 (defn Relation [relation ordered-fes anchors-lookup ctx]
-  (mapcat #(FindElement % anchors-lookup ctx) ordered-fes))
+  (->> ordered-fes
+       (map-indexed (fn [fe-pos fe]
+                      (FindElement fe (get anchors-lookup fe-pos) ctx)))
+       (apply concat)))
 
 (defn Row [relation ordered-fes anchors-lookup ctx]
   (let [ctx (context/relation ctx relation)]
@@ -164,16 +166,8 @@
        ; Sometimes the leafnode needs all the anchors.
        [:tbody (Resultset relations ordered-fes anchors-lookup sort-col ctx)]])))
 
-(defn ui-table [relations ordered-fes anchors ctx]
-  (let [anchors-lookup (->> (widget/process-popover-anchors anchors ctx)
-                            (group-by (comp :find-element/name :anchor/find-element))
-                            (util/map-values (partial group-by :anchor/attribute)))
-        {inline-index-anchors true index-anchors false} (->> (get-in anchors-lookup [nil nil])
-                                                             (group-by :anchor/render-inline?))
-        index-ctx (dissoc ctx :isComponent)]
-    [:div
-     (widget/render-anchors index-anchors index-ctx)
-     (if (every? #(empty? (-> % :find-element/form :form/field)) ordered-fes)
-       [:div "Can't infer table structure - no resultset and blank form. Fix query or model a form."]
-       [Table relations ordered-fes anchors-lookup ctx])
-     (widget/render-inline-anchors inline-index-anchors index-ctx)]))
+(defn ui-table [relations ordered-fes anchors-lookup ctx]
+  (if (every? #(empty? (-> % :find-element/form :form/field)) ordered-fes)
+    ; todo this error message is applicable for forms too, this should be raised up to hc.ui.result/view
+    [:div "Can't infer table structure - no resultset and blank form. Fix query or model a form."]
+    [Table relations ordered-fes anchors-lookup ctx]))

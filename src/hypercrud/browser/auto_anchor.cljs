@@ -21,7 +21,7 @@
   "
   [parent-link ordered-fes ctx]
   (let [entity-links (->> ordered-fes
-                          (map-indexed (fn [i {fe-name :find-element/name fe-conn :find-element/connection :as fe}]
+                          (map-indexed (fn [fe-pos {fe-name :find-element/name fe-conn :find-element/connection :as fe}]
                                          (let [edit {:db/id {:ident :system-anchor-edit
                                                              :fe (-> fe :db/id :id)}
                                                      :hypercrud/sys? true
@@ -30,8 +30,7 @@
                                                      :anchor/link (auto-link/link-system-edit fe-name fe-conn)
                                                      :anchor/repeating? true
                                                      :anchor/managed? false
-                                                     :link/path (str i)
-                                                     :anchor/find-element fe}
+                                                     :link/path (str fe-pos)}
                                                ; create links mirror edit links but repeating false, see auto-formula.
                                                ; This is because the connection comes from the find-element, and when merging
                                                ; sys links we match on the find-element.
@@ -42,8 +41,7 @@
                                                     :anchor/ident (keyword (str "sys-new-" fe-name))
                                                     :anchor/link (auto-link/link-system-edit fe-name fe-conn)
                                                     :anchor/repeating? false ; not managed, no parent-child ref
-                                                    :link/path (str i)
-                                                    :anchor/find-element fe
+                                                    :link/path (str fe-pos)
                                                     :anchor/managed? true
                                                     :anchor/create? true
                                                     :anchor/render-inline? true}
@@ -54,8 +52,7 @@
                                                        :anchor/ident (keyword (str "sys-remove-" fe-name))
                                                        :anchor/link (auto-link/link-blank-system-remove fe-name nil)
                                                        :anchor/repeating? true
-                                                       :link/path (str i)
-                                                       :anchor/find-element fe
+                                                       :link/path (str fe-pos)
                                                        :anchor/managed? true
                                                        :anchor/render-inline? true
                                                        :anchor/tx-fn (:entity-remove auto-anchor-txfn-lookup)}]
@@ -70,7 +67,7 @@
 
         attr-links (if (not= :blank (:request/type parent-link))
                      (->> ordered-fes
-                          (map-indexed (fn [i {fe-name :find-element/name fe-conn :find-element/connection :as fe}]
+                          (map-indexed (fn [fe-pos {fe-name :find-element/name fe-conn :find-element/connection :as fe}]
                                          (let [schema (get-in ctx [:schemas fe-name])]
                                            (->> (-> fe :find-element/form :form/field)
                                                 (filter (fn [{:keys [:field/attribute]}]
@@ -84,9 +81,7 @@
                                                             :anchor/prompt (str "edit") ; conserve space in label
                                                             :anchor/ident (keyword (str "sys-edit-" fe-name "-" attribute))
                                                             :anchor/repeating? true
-                                                            :link/path (str i " " attribute)
-                                                            :anchor/find-element fe
-                                                            :anchor/attribute attribute
+                                                            :link/path (str fe-pos " " attribute)
                                                             :anchor/managed? false
                                                             :anchor/disabled? true
                                                             :anchor/link (auto-link/link-system-edit-attr fe-name fe-conn attribute)}
@@ -97,9 +92,7 @@
                                                             :anchor/prompt (str "new") ; conserve space in label
                                                             :anchor/ident (keyword (str "sys-new-" fe-name "-" attribute))
                                                             :anchor/repeating? true ; manged - need parent-child ref
-                                                            :link/path (str i " " attribute)
-                                                            :anchor/find-element fe
-                                                            :anchor/attribute attribute
+                                                            :link/path (str fe-pos " " attribute)
                                                             :anchor/managed? true
                                                             :anchor/create? true
                                                             :anchor/render-inline? true
@@ -112,9 +105,7 @@
                                                             :anchor/prompt (str "remove")
                                                             :anchor/ident (keyword (str "sys-remove-" fe-name "-" attribute))
                                                             :anchor/link (auto-link/link-blank-system-remove fe-name attribute)
-                                                            :link/path (str i " " attribute)
-                                                            :anchor/find-element fe
-                                                            :anchor/attribute attribute
+                                                            :link/path (str fe-pos " " attribute)
                                                             :anchor/repeating? true
                                                             :anchor/managed? true
                                                             :anchor/render-inline? true

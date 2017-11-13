@@ -90,15 +90,9 @@
     (assoc anchor :anchor/render-inline? false)
     anchor))
 
-(defn process-popover-anchors [anchors ctx]
-  (mapv process-popover-anchor anchors))
-
-(defn process-option-popover-anchors [anchors ctx]
-  (process-option-anchors (process-popover-anchors anchors ctx) ctx))
-
 ; this can be used sometimes, on the entity page, but not the query page
 (defn ref [maybe-field anchors props ctx]
-  (let [[anchors options-anchor] (process-option-popover-anchors anchors ctx)
+  (let [[anchors options-anchor] (process-option-anchors anchors ctx)
         anchors (->> anchors (filter :anchor/repeating?))]
     [:div.value
      [:div.editable-select
@@ -110,7 +104,7 @@
      (render-inline-anchors (filter :anchor/render-inline? anchors) ctx)]))
 
 (defn ref-component [maybe-field anchors props ctx]
-  (let [[anchors options-anchor] (process-option-popover-anchors anchors ctx)
+  (let [[anchors options-anchor] (process-option-anchors anchors ctx)
         anchors (->> anchors (filter :anchor/repeating?))]
     (assert (not options-anchor) "ref-components don't have options; todo handle gracefully")
     #_(assert (> (count (filter :anchor/render-inline? anchors)) 0))
@@ -121,7 +115,7 @@
      (render-inline-anchors (filter :anchor/render-inline? anchors) ctx)]))
 
 (defn ref-many-table [maybe-field anchors props ctx]
-  (let [[anchors options-anchor] (process-option-popover-anchors anchors ctx)
+  (let [[anchors options-anchor] (process-option-anchors anchors ctx)
         anchors (->> anchors (filter :anchor/repeating?))]
     (assert (not options-anchor) "ref-component-many don't have options; todo handle gracefully")
     [:div.value
@@ -176,7 +170,7 @@
         widget (case (:layout ctx) :block edn-block
                                    :inline-block edn-inline-block
                                    :table edn-inline-block)
-        [anchors options-anchor] (process-option-popover-anchors anchors ctx)
+        [anchors options-anchor] (process-option-anchors anchors ctx)
         anchors (->> anchors (filter :anchor/repeating?))]
     [:div.value
      [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) ctx)]
@@ -190,7 +184,7 @@
         widget (case (:layout ctx) :block edn-block
                                    :inline-block edn-inline-block
                                    :table edn-inline-block)
-        [anchors options-anchor] (process-option-popover-anchors anchors ctx)
+        [anchors options-anchor] (process-option-anchors anchors ctx)
         anchors (->> anchors (filter :anchor/repeating?))]
     [:div.value
      [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) ctx)]

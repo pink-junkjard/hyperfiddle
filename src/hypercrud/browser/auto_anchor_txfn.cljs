@@ -1,8 +1,10 @@
 (ns hypercrud.browser.auto-anchor-txfn
   (:require-macros [hypercrud.util.template :as template])
-  (:require [clojure.string :as string]
+  (:require [cats.monad.either :as either]
+            [clojure.string :as string]
             [hypercrud.compile.eval :as eval]
-            [hypercrud.compile.macros :refer [str-and-code']]))
+            [hypercrud.compile.macros :refer [str-and-code']]
+            [hypercrud.util.string :as hc-string]))
 
 
 (def auto-tx-fn-lookup
@@ -34,10 +36,16 @@
       (merge fe no-fe))))
 
 (defn auto-txfn [anchor]
-  (let [anchor-key {:fe (not (nil? (:anchor/find-element anchor)))
-                    :c? (or (:anchor/create? anchor) false)
-                    :d? (or (:anchor/repeating? anchor) false)
-                    :a (not (nil? (:anchor/attribute anchor)))}]
-    ; tx-fn is not applicable if the anchor is not managed
-    (if (or (:anchor/managed? anchor) false)
-      (get auto-tx-fn-lookup anchor-key))))
+  ; tx-fn is not applicable if the anchor is not managed
+  (if (or (:anchor/managed? anchor) false)
+    (-> (hc-string/memoized-safe-read-edn-string (str "[" (:link/path anchor) "]"))
+        (either/branch
+          (fn [e]
+            (js/console.error (pr-str e))
+            nil)
+          (fn [path]
+            (get auto-tx-fn-lookup
+                 {:fe (not (nil? (first path)))
+                  :c? (or (:anchor/create? anchor) false)
+                  :d? (or (:anchor/repeating? anchor) false)
+                  :a (not (nil? (second path)))}))))))

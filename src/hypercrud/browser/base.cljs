@@ -1,7 +1,6 @@
 (ns hypercrud.browser.base
   (:require [cats.core :as cats :refer [mlet]]
             [cats.monad.either :as either :refer-macros [try-either]]
-            [hypercrud.browser.anchor :as anchor]
             [hypercrud.browser.auto-anchor :as auto-anchor]
             [hypercrud.browser.auto-form :as auto-form]
             [hypercrud.browser.auto-link :as auto-link]
@@ -20,6 +19,19 @@
             [hypercrud.util.string :as hc-string]))
 
 
+(defn build-pathed-anchors-lookup [anchors]
+  (reduce (fn [acc anchor]
+            (-> (hc-string/memoized-safe-read-edn-string (str "[" (:link/path anchor) "]"))
+                (either/branch
+                  (fn [e]
+                    (js/console.error (pr-str e))
+                    ; swallow the error
+                    acc)
+                  (fn [path]
+                    (update-in acc (conj path :links) conj anchor)))))
+          {}
+          anchors))
+
 (def meta-pull-exp-for-link
   ['*
    :db/doc
@@ -35,8 +47,7 @@
                                                    {:form/field ['*]}]}]
     :link/anchor ['*
                   ; hydrate the whole link for validating the anchor by query params
-                  {:anchor/link ['*]
-                   :anchor/find-element [:db/id :find-element/name]}]}])
+                  {:anchor/link ['*]}]}])
 
 (defn meta-request-for-link [ctx]
   (try-either
