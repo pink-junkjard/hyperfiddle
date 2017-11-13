@@ -9,27 +9,23 @@
             [promesa.core :as p]
             [clojure.string :as string]))
 
-
-(def content-type-transit "application/transit+json")
-(def content-type-edn "application/edn")
-
-
-(defmethod kvlt.middleware.params/coerce-form-params (keyword content-type-transit) [{:keys [form-params]}]
+(defmethod kvlt.middleware.params/coerce-form-params
+  (keyword "application/transit+json")
+  [{:keys [form-params]}]
   (transit/encode form-params))
 
-
-(defmethod kvlt.middleware/from-content-type (keyword content-type-transit) [resp]
+(defmethod kvlt.middleware/from-content-type
+  (keyword "application/transit+json; charset=utf-8")
+  [resp]
   (let [decoded-val (transit/decode (:body resp))]
     (assoc resp :body decoded-val)))
 
-
-(defmethod kvlt.middleware.params/coerce-form-params (keyword content-type-edn) [{:keys [form-params]}]
+(defmethod kvlt.middleware.params/coerce-form-params :application/edn [{:keys [form-params]}]
   (binding [pprint/*print-miser-width* nil
             pprint/*print-right-margin* 200]
     (with-out-str (pprint/pprint form-params))))
 
-
-(defmethod kvlt.middleware/from-content-type (keyword content-type-edn) [resp]
+(defmethod kvlt.middleware/from-content-type :application/edn [resp]
   (let [decoded-val (reader/read-string (:body resp))]
     (assoc resp :body decoded-val)))
 
@@ -54,19 +50,19 @@
         form {:staged-branches staged-branches :request requests}]
     (js/console.log "...hydrate!; kvlt/request!; form= " (pr-str form))
     (-> (kvlt/request! {:url (str (.-uri-str service-uri) "hydrate")
-                        :accept content-type-transit :as :auto
-                        :content-type content-type-transit
+                        :accept :application/transit+json :as :auto
+                        :content-type :application/transit+json
                         :method :post :form form})
         (p/then #(-> % :body :hypercrud)))))
 
 (defn hydrate-route! [service-uri route stage-val]
   (let [req (merge {:url (str (.-uri-str service-uri) "hydrate-route" route)
-                    :accept content-type-transit :as :auto}
+                    :accept :application/transit+json :as :auto}
                    (if (empty? stage-val)
                      {:method :get}                         ; Try to hit CDN
                      {:method :post
                       :form stage-val                       ; UI-facing interface is stage-val
-                      :content-type content-type-transit}))]
+                      :content-type :application/transit+json}))]
     (-> (kvlt/request! req) (p/then :body))))
 
 (defn transact! [service-uri htx-groups]
@@ -74,8 +70,8 @@
                         (util/map-values (partial filter v-not-nil?)))]
     (-> (kvlt/request!
           {:url (str (.-uri-str service-uri) "transact")
-           :content-type content-type-transit
-           :accept content-type-transit
+           :content-type :application/transit+json
+           :accept :application/transit+json
            :method :post
            :form htx-groups
            :as :auto})
