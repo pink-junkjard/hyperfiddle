@@ -42,7 +42,7 @@
       :entity (if (not= nil (-> (or (:request-params route) (:query-params route)) :entity)) ; add logic for a
                 ; todo check fe conn
                 (either/right route)
-                (either/left {:message "missing query params" :data {:x route :have have :missing #{:entity}}}))
+                (either/left {:message "missing query params" :data {:have have :missing #{:entity}}}))
       :blank (either/right route)
       (either/left {:message "route has no link" :data {:route route}}))))
 
