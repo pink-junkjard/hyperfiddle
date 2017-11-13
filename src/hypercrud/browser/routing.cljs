@@ -54,23 +54,12 @@
   (mlet [link-id (if-let [page (:anchor/link anchor)]
                    (either/right (:db/id page))
                    (either/left {:message "anchor has no link" :data {:anchor anchor}}))
-         user-route-params (cond
-                             ; legacy support for old formulas
-                             (eval/validate-user-code-str (:anchor/formula anchor))
-                             (do
-                               (js/console.warn "Warning: :anchor/formula has been deprecated for :link/formula and will be removed in the future")
-                               (mlet [user-fn (eval/eval-str' (:anchor/formula anchor))]
-                                 (if user-fn
-                                   (try-either {:request-params (user-fn ctx)})
-                                   (cats/return nil))))
-
-                             (eval/validate-user-code-str (:link/formula anchor))
+         user-route-params (if (eval/validate-user-code-str (:link/formula anchor))
                              (mlet [user-fn (eval/eval-str' (:link/formula anchor))]
                                (if user-fn
                                  (try-either (user-fn ctx))
                                  (cats/return nil)))
-
-                             :else (either/right nil))
+                             (either/right nil))
          :let [uri->dbname (->> (get-in ctx [:repository :repository/environment])
                                 (filter (fn [[k v]]
                                           (and (string? k) (string/starts-with? k "$"))))
