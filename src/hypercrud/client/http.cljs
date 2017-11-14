@@ -7,7 +7,8 @@
             [kvlt.core :as kvlt]
             [kvlt.middleware.params]
             [promesa.core :as p]
-            [clojure.string :as string]))
+            [clojure.string :as string]
+            [cuerdas.core :as str]))
 
 (defmethod kvlt.middleware.params/coerce-form-params
   (keyword "application/transit+json")
@@ -52,13 +53,13 @@
                                                       :uri uri
                                                       :tx (filter v-not-nil? tx)})))))))
         form {:staged-branches staged-branches :request requests}]
-    (js/console.log "...hydrate!; kvlt/request!; form= " (util/pprint-str form 100))
+    (js/console.log "...hydrate!; kvlt/request!; form= " (str/prune (pr-str form) 100))
     (-> (kvlt/request! {:url (str (.-uri-str service-uri) "hydrate")
                         :accept :application/transit+json :as :auto
                         :content-type :application/transit+json
                         :method :post :form form})
         (p/then (util/tee #(-> % :body :hypercrud)
-                          #(js/console.log "...hydrate!; response= " (util/pprint-str % 100)))))))
+                          #(js/console.log "...hydrate!; response= " (str/prune (pr-str %) 100)))))))
 
 (defn hydrate-route! [service-uri route stage-val]
   (let [req (merge {:url (str (.-uri-str service-uri) "hydrate-route" route)

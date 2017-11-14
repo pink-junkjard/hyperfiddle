@@ -1,13 +1,14 @@
 (ns hypercrud.client.peer
   (:require [cats.monad.either :as either]
+            [cuerdas.core :as str]
             [hypercrud.client.core :as hc]
             [hypercrud.client.http :as http]
             [hypercrud.types.DbVal :refer [->DbVal]]
             [hypercrud.types.Err :refer [Err]]
             [hypercrud.util.branch :as branch]
+            [hypercrud.util.core :as util]
             [promesa.core :as p]
-            [reagent.core :as reagent]
-            [hypercrud.util.core :as util]))
+            [reagent.core :as reagent]))
 
 
 (defn human-error [e req]
@@ -17,20 +18,21 @@
       {:message "Datomic error" :data {:datomic-error (.-msg e)}})))
 
 (defn process-result [resultset-or-error request]
-  (js/console.log "...process-result; r=" (pr-str resultset-or-error))
+  #_(js/console.log "...process-result; r=" (pr-str resultset-or-error))
   (if (instance? Err resultset-or-error)
     (either/left (human-error resultset-or-error request))
     (either/right resultset-or-error)))
 
 (defn hydrate-one! [service-uri request stage-val]
   (js/console.log "...hydrate-one!; request count= " (count request))
-  (-> (http/hydrate! service-uri #{request} stage-val)
-      (p/then (fn [{:keys [pulled-trees-map id->tempid] :as result}]
-                (js/console.log "...hydrate-one!; ptm count= " (count pulled-trees-map))
+  (-> (http/hydrate! service-uri [request] stage-val)
+      (p/then (fn [{:keys [pulled-trees id->tempid] :as result}]
+                (js/console.log "...hydrate-one!; pulled-trees count= " (count pulled-trees))
                 (js/console.log "...hydrate-one!; result= " (util/pprint-str result 100))
-                (if-let [result' (some-> (get pulled-trees-map request) (process-result request))]
-                  (either/branch result' p/rejected p/resolved)
-                  (p/rejected {:message "Server failure - i think request not in ptm"}))))))
+                (if-not (= 1 (count pulled-trees))
+                  (p/rejected (str/format "Server contract violation; count request= 1 count result= %s" (count pulled-trees)))
+                  (-> (some-> (nth pulled-trees 0) (process-result request))
+                      (either/branch p/rejected p/resolved)))))))
 
 (deftype Peer [state-atom]
   hc/Peer
