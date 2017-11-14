@@ -111,13 +111,15 @@
                                                 (catch Throwable e
                                                   (.println *err* (pr-str e))
                                                   (->Err (str e))))))
-                              (into {}))]
-    {:t nil
-     :pulled-trees-map pulled-trees-map
-     :id->tempid (reduce (fn [acc [branch db]]
-                           (assoc-in acc [(:uri branch) (:branch-val branch)] (:id->tempid db)))
-                         {}
-                         @db-with-lookup)}))
+                              (into {}))
+        result {:t nil
+           :pulled-trees-map pulled-trees-map
+           :id->tempid (reduce (fn [acc [branch db]]
+                                 (assoc-in acc [(:uri branch) (:branch-val branch)] (:id->tempid db)))
+                               {}
+                               @db-with-lookup)}]
+    (println "...api/hydrate; result=" result)
+    result))
 
 (defn transact! [dtx-groups]
   (let [valid? (every? (fn [[uri tx]]

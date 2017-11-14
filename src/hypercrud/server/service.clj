@@ -17,12 +17,12 @@
   (try
     (let [{:keys [query-params body-params]} req
           root-t (if (:t query-params) (Long/parseLong (:t query-params)))
-          {staged-branches :staged-branches request :request} body-params]
-      (ring-resp/response
-        (wrap-hypercrud
-          (api/hydrate staged-branches request root-t))))
+          {staged-branches :staged-branches request :request} body-params
+          r (api/hydrate staged-branches request root-t)]
+      (println "...http-hydrate; hydrate=" r)
+      (ring-resp/response (wrap-hypercrud r)))
     (catch Exception e
-      (println e)
+      (println "...http-hydrate; exception=" e)
       {:status 500 :headers {} :body (str e)})))
 
 (defn http-transact! [req]
