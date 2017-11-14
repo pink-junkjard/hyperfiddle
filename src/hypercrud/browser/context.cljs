@@ -17,13 +17,7 @@
           :layout :field))
 
 (defn route [ctx route]
-  (let [route (-> (if (:request-params route)               ; support for legacy routing
-                    (->> (dissoc route :code-database :link-id :request-params)
-                         (merge (:request-params route))
-                         (assoc route :query-params))
-                    (-> (into route (:query-params route))
-                        (assoc route :request-params (:query-params route))))
-                  (routing/tempid->id ctx))
+  (let [route (routing/tempid->id route ctx)
         initial-repository (->> (get-in ctx [:domain :domain/code-databases])
                                 (filter #(= (:dbhole/name %) (:code-database route)))
                                 first

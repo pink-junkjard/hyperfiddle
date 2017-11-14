@@ -26,7 +26,7 @@
 ; this is currently making assumptions on dbholes
 (defn validated-route' [link route]
   ; We specifically hydrate this deep just so we can validate anchors like this.
-  (let [have (set (keys (into {} (remove (comp nil? val) (or (:request-params route) (:query-params route))))))]
+  (let [have (set (keys (into {} (remove (comp nil? val) (:request-params route)))))]
     (case (:request/type link)
       :query (let [q (-> (q-util/safe-parse-query-validated link)
                          (cats/mplus (either/right []))
@@ -39,7 +39,7 @@
                (if (empty? missing)
                  (either/right route)
                  (either/left {:message "missing query params" :data {:have have :missing missing}})))
-      :entity (if (not= nil (-> (or (:request-params route) (:query-params route)) :entity)) ; add logic for a
+      :entity (if (not= nil (get-in route [:request-params :entity])) ; add logic for a
                 ; todo check fe conn
                 (either/right route)
                 (either/left {:message "missing query params" :data {:have have :missing #{:entity}}}))

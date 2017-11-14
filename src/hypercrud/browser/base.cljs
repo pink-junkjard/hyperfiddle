@@ -85,7 +85,7 @@
                  (either/right []))]
       (->> fes
            (map #(into {} %))
-           ; todo query-params should be inspected for Entity's and their conns
+           ; todo request-params should be inspected for Entity's and their conns
            (map (fn [fe] (update fe :find-element/connection #(or % "$"))))
            (map #(strip-form-in-raw-mode % ctx))
            (cats/return)))))
@@ -96,7 +96,7 @@
     (mlet [q (hc-string/memoized-safe-read-edn-string (:link-query/value link))
            query-holes (try-either (q-util/parse-holes q))]
       (let [route (:route ctx)
-            params-map (merge (or (:request-params route) (:query-params route)) (q-util/build-dbhole-lookup ctx))
+            params-map (merge (:request-params route) (q-util/build-dbhole-lookup ctx))
             params (->> query-holes
                         (mapv (juxt identity (fn [hole-name]
                                                (let [param (get params-map hole-name)]
@@ -123,10 +123,10 @@
           ; todo if :entity query-param is a typed Entity, the connection is already provided. why are we ignoring?
           uri (get-in ctx [:repository :repository/environment (:find-element/connection fe)])
           route (:route ctx)
-          e (:entity (or (:request-params route) (:query-params route)))]
+          e (get-in route [:request-params :entity])]
       (cond
         (nil? uri) (either/left {:message "no connection" :data {:find-element fe}})
-        (nil? e) (either/left {:message "missing param" :data {:params (or (:request-params route) (:query-params route))
+        (nil? e) (either/left {:message "missing param" :data {:params (:request-params route)
                                                                :missing #{:entity}}})
 
         :else (either/right
@@ -135,7 +135,7 @@
                     (instance? Entity e) (:db/id e)
                     (instance? ThinEntity e) (:db/id e)
                     :else e)
-                  (:a (or (:request-params route) (:query-params route)))
+                  (get-in route [:request-params :a])
                   (hc/db (:peer ctx) uri (:branch ctx))
                   (q-util/form-pull-exp (:find-element/form fe))))))
 
