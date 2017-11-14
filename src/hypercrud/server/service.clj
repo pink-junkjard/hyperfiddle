@@ -1,5 +1,6 @@
 (ns hypercrud.server.service
-  (:require [hypercrud.server.api :as api]
+  (:require [cuerdas.core :as str]
+            [hypercrud.server.api :as api]
             [hypercrud.server.util.http :as http]
             [hypercrud.transit :as hc-t]
             [io.pedestal.http.body-params :as body-params]
@@ -19,7 +20,7 @@
           root-t (if (:t query-params) (Long/parseLong (:t query-params)))
           {staged-branches :staged-branches request :request} body-params
           r (api/hydrate staged-branches request root-t)]
-      (println "...http-hydrate; hydrate=" r)
+      (println "...http-hydrate; hydrate=" (str/prune (pr-str r) 100))
       (ring-resp/response (wrap-hypercrud r)))
     (catch Exception e
       (println "...http-hydrate; exception=" e)

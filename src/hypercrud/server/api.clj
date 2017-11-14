@@ -1,6 +1,7 @@
 (ns hypercrud.server.api
   (:require [clojure.set :as set]
             [clojure.walk :as walk]
+            [cuerdas.core :as str]
             [datomic.api :as d]
             [hypercrud.types.DbVal]
             [hypercrud.types.Entity :refer [->Entity]]
@@ -116,7 +117,7 @@
         ;result (concat pulled-trees id->tempid)
         result {:pulled-trees pulled-trees
                 :id->tempid id->tempid}]
-    (println "...api/hydrate; result=" result)
+    (println "...api/hydrate; result=" (str/prune (pr-str result) 100))
     result))
 
 (defn transact! [dtx-groups]
