@@ -6,7 +6,8 @@
             [hypercrud.types.Err :refer [Err]]
             [hypercrud.util.branch :as branch]
             [promesa.core :as p]
-            [reagent.core :as reagent]))
+            [reagent.core :as reagent]
+            [hypercrud.util.core :as util]))
 
 
 (defn human-error [e req]
@@ -16,16 +17,20 @@
       {:message "Datomic error" :data {:datomic-error (.-msg e)}})))
 
 (defn process-result [resultset-or-error request]
+  (js/console.log "...process-result; r=" (pr-str resultset-or-error))
   (if (instance? Err resultset-or-error)
     (either/left (human-error resultset-or-error request))
     (either/right resultset-or-error)))
 
 (defn hydrate-one! [service-uri request stage-val]
+  (js/console.log "...hydrate-one!; request count= " (count request))
   (-> (http/hydrate! service-uri #{request} stage-val)
-      (p/then (fn [{:keys [t pulled-trees-map id->tempid]}]
-                (if-let [result (some-> (get pulled-trees-map request) (process-result request))]
-                  (either/branch result p/rejected p/resolved)
-                  (p/rejected {:message "Server failure"}))))))
+      (p/then (fn [{:keys [pulled-trees-map id->tempid] :as result}]
+                (js/console.log "...hydrate-one!; ptm count= " (count pulled-trees-map))
+                (js/console.log "...hydrate-one!; result= " (util/pprint-str result 100))
+                (if-let [result' (some-> (get pulled-trees-map request) (process-result request))]
+                  (either/branch result' p/rejected p/resolved)
+                  (p/rejected {:message "Server failure - i think request not in ptm"}))))))
 
 (deftype Peer [state-atom]
   hc/Peer

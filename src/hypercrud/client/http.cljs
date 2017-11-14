@@ -17,8 +17,12 @@
 (defmethod kvlt.middleware/from-content-type
   (keyword "application/transit+json; charset=utf-8")
   [resp]
-  (let [decoded-val (transit/decode (:body resp))]
-    (assoc resp :body decoded-val)))
+  (update resp :body transit/decode))
+
+(defmethod kvlt.middleware/from-content-type
+  (keyword "application/transit+json")
+  [resp]
+  (update resp :body transit/decode))
 
 (defmethod kvlt.middleware.params/coerce-form-params :application/edn [{:keys [form-params]}]
   (binding [pprint/*print-miser-width* nil
@@ -48,12 +52,13 @@
                                                       :uri uri
                                                       :tx (filter v-not-nil? tx)})))))))
         form {:staged-branches staged-branches :request requests}]
-    (js/console.log "...hydrate!; kvlt/request!; form= " (pr-str form))
+    (js/console.log "...hydrate!; kvlt/request!; form= " (util/pprint-str form 100))
     (-> (kvlt/request! {:url (str (.-uri-str service-uri) "hydrate")
                         :accept :application/transit+json :as :auto
                         :content-type :application/transit+json
                         :method :post :form form})
-        (p/then #(-> % :body :hypercrud)))))
+        (p/then (util/tee #(-> % :body :hypercrud)
+                          #(js/console.log "...hydrate!; response= " (util/pprint-str % 100)))))))
 
 (defn hydrate-route! [service-uri route stage-val]
   (let [req (merge {:url (str (.-uri-str service-uri) "hydrate-route" route)
