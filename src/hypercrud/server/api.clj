@@ -105,19 +105,17 @@
 (defn hydrate [staged-branches request root-t]
   (let [db-with-lookup (atom {})
         get-secure-db-with (build-get-secure-db-with staged-branches db-with-lookup)
-        pulled-trees-map (->> request
-                              (mapv (juxt identity
-                                          #(try (hydrate* % get-secure-db-with)
-                                                (catch Throwable e
-                                                  (.println *err* (pr-str e))
-                                                  (->Err (str e))))))
-                              (into {}))
-        result {:t nil
-           :pulled-trees-map pulled-trees-map
-           :id->tempid (reduce (fn [acc [branch db]]
-                                 (assoc-in acc [(:uri branch) (:branch-val branch)] (:id->tempid db)))
-                               {}
-                               @db-with-lookup)}]
+        pulled-trees (->> request
+                          (map #(try (hydrate* % get-secure-db-with)
+                                     (catch Throwable e (.println *err* (pr-str e)) (->Err (str e))))))
+        ; this can also stream, as the request hydrates.
+        id->tempid (reduce (fn [acc [branch db]]
+                             (assoc-in acc [(:uri branch) (:branch-val branch)] (:id->tempid db)))
+                           {}
+                           @db-with-lookup)
+        ;result (concat pulled-trees id->tempid)
+        result {:pulled-trees pulled-trees
+                :id->tempid id->tempid}]
     (println "...api/hydrate; result=" result)
     result))
 
