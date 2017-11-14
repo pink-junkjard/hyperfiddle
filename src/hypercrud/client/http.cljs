@@ -58,7 +58,7 @@
                         :accept :application/transit+json :as :auto
                         :content-type :application/transit+json
                         :method :post :form form})
-        (p/then (util/tee #(-> % :body :hypercrud)
+        (p/then (util/tee :body
                           #(js/console.log "...hydrate!; response= " (str/prune (pr-str %) 100)))))))
 
 (defn hydrate-route! [service-uri route stage-val]
@@ -76,14 +76,12 @@
                         (util/map-values (partial filter v-not-nil?)))]
     (-> (kvlt/request!
           {:url (str (.-uri-str service-uri) "transact")
-           :content-type :application/transit+json
-           :accept :application/transit+json
-           :method :post
-           :form htx-groups
-           :as :auto})
+           :accept :application/transit+json :as :auto
+           :method :post :form htx-groups
+           :content-type :application/transit+json})
         (p/then (fn [resp]
                   (if (= 200 (:status resp))
                     ; clear master stage
                     ; but that has to be transactional with a redirect???
-                    (p/resolved (-> resp :body :hypercrud))
+                    (p/resolved (:body resp))
                     (p/rejected resp)))))))
