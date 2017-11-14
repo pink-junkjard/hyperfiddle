@@ -59,14 +59,14 @@
         ; What is the user-field allowed to change? The ctx. Can it change links or anchors? no.
         Field (case display-mode :xray Field :user (get ctx :field Field))
         Control (case display-mode :xray Control :user (get ctx :control Control))
-        attr-anchors (get fe-anchors-lookup attribute)]
+        attr-anchors (get-in fe-anchors-lookup [attribute :links])]
     ; todo control can have access to repeating contextual values (color, owner, result, entity, value, etc) but field should NOT
     ; this leads to inconsistent location formulas between non-repeating links in tables vs forms
     [Field (r/partial Control field attr-anchors) field attr-anchors ctx]))
 
 (defn Entity [entity form fe-anchors-lookup ctx]
   (let [ctx (context/entity ctx entity)
-        {inline-anchors true anchors false} (->> (get fe-anchors-lookup nil)
+        {inline-anchors true anchors false} (->> (get fe-anchors-lookup :links)
                                                  (filter :anchor/repeating?)
                                                  (group-by :anchor/render-inline?))
         splat? (or (empty? (:form/field form))
@@ -84,11 +84,10 @@
           [new-field entity ctx]))
       (widget/render-inline-anchors inline-anchors ctx))))
 
-(defn FindElement [{fe-name :find-element/name :as fe} anchors-lookup ctx]
+(defn FindElement [{fe-name :find-element/name :as fe} fe-anchors-lookup ctx]
   (let [ctx (context/find-element ctx fe)
-        fe-anchors-lookup (get anchors-lookup fe-name)
         ; todo these fe non-repeating anchors should not have relation in its context
-        {inline-anchors true anchors false} (->> (get fe-anchors-lookup nil)
+        {inline-anchors true anchors false} (->> (get fe-anchors-lookup :links)
                                                  (remove :anchor/repeating?)
                                                  (group-by :anchor/render-inline?))]
     (concat
@@ -98,17 +97,7 @@
 
 (defn Relation [relation ordered-fes anchors-lookup ctx]
   (let [ctx (context/relation ctx relation)]
-    (mapcat #(FindElement % anchors-lookup ctx) ordered-fes)))
-
-(defn form [relation ordered-fes anchors ctx]
-  (let [ctx (assoc ctx :layout (:layout ctx :block))
-        anchors-lookup (->> (widget/process-popover-anchors anchors ctx)
-                            (group-by (comp :find-element/name :anchor/find-element))
-                            (util/map-values (partial group-by :anchor/attribute)))
-        {inline-index-anchors true index-anchors false} (->> (get-in anchors-lookup [nil nil])
-                                                             (group-by :anchor/render-inline?))
-        index-ctx (dissoc ctx :isComponent)]
-    [:div {:class (str "forms-list " (name (:layout ctx)))}
-     (widget/render-anchors index-anchors index-ctx)
-     (Relation relation ordered-fes anchors-lookup ctx)
-     (widget/render-inline-anchors inline-index-anchors index-ctx)]))
+    (->> ordered-fes
+         (map-indexed (fn [fe-pos fe]
+                        (FindElement fe (get anchors-lookup fe-pos) ctx)))
+         (apply concat))))

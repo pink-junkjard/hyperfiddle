@@ -1,12 +1,12 @@
 (ns hypercrud.browser.base
   (:require [cats.core :as cats :refer [mlet]]
             [cats.monad.either :as either :refer-macros [try-either]]
-            [hypercrud.browser.anchor :as anchor]
             [hypercrud.browser.auto-anchor :as auto-anchor]
             [hypercrud.browser.auto-form :as auto-form]
             [hypercrud.browser.auto-link :as auto-link]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.q-util :as q-util]
+            [hypercrud.browser.routing :as routing]
             [hypercrud.browser.user-bindings :as user-bindings]
             [hypercrud.client.core :as hc]
             [hypercrud.client.schema :as schema-util]
@@ -18,6 +18,19 @@
             [hypercrud.util.core :as util]
             [hypercrud.util.string :as hc-string]))
 
+
+(defn build-pathed-anchors-lookup [anchors]
+  (reduce (fn [acc anchor]
+            (-> (hc-string/memoized-safe-read-edn-string (str "[" (:link/path anchor) "]"))
+                (either/branch
+                  (fn [e]
+                    (js/console.error (pr-str e))
+                    ; swallow the error
+                    acc)
+                  (fn [path]
+                    (update-in acc (conj path :links) conj anchor)))))
+          {}
+          anchors))
 
 (def meta-pull-exp-for-link
   ['*
@@ -34,8 +47,7 @@
                                                    {:form/field ['*]}]}]
     :link/anchor ['*
                   ; hydrate the whole link for validating the anchor by query params
-                  {:anchor/link ['*]
-                   :anchor/find-element [:db/id :find-element/name]}]}])
+                  {:anchor/link ['*]}]}])
 
 (defn meta-request-for-link [ctx]
   (try-either
@@ -73,7 +85,7 @@
                  (either/right []))]
       (->> fes
            (map #(into {} %))
-           ; todo query-params should be inspected for Entity's and their conns
+           ; todo request-params should be inspected for Entity's and their conns
            (map (fn [fe] (update fe :find-element/connection #(or % "$"))))
            (map #(strip-form-in-raw-mode % ctx))
            (cats/return)))))
@@ -83,7 +95,8 @@
     :query
     (mlet [q (hc-string/memoized-safe-read-edn-string (:link-query/value link))
            query-holes (try-either (q-util/parse-holes q))]
-      (let [params-map (merge (get-in ctx [:route :query-params]) (q-util/build-dbhole-lookup ctx))
+      (let [route (:route ctx)
+            params-map (merge (:request-params route) (q-util/build-dbhole-lookup ctx))
             params (->> query-holes
                         (mapv (juxt identity (fn [hole-name]
                                                (let [param (get params-map hole-name)]
@@ -109,10 +122,11 @@
     (let [fe (first (filter #(= (:find-element/name %) "entity") ordered-fes))
           ; todo if :entity query-param is a typed Entity, the connection is already provided. why are we ignoring?
           uri (get-in ctx [:repository :repository/environment (:find-element/connection fe)])
-          e (get-in ctx [:route :query-params :entity])]
+          route (:route ctx)
+          e (get-in route [:request-params :entity])]
       (cond
         (nil? uri) (either/left {:message "no connection" :data {:find-element fe}})
-        (nil? e) (either/left {:message "missing param" :data {:params (get-in ctx [:route :query-params])
+        (nil? e) (either/left {:message "missing param" :data {:params (:request-params route)
                                                                :missing #{:entity}}})
 
         :else (either/right
@@ -121,7 +135,7 @@
                     (instance? Entity e) (:db/id e)
                     (instance? ThinEntity e) (:db/id e)
                     :else e)
-                  (get-in ctx [:route :query-params :a])
+                  (get-in route [:request-params :a])
                   (hc/db (:peer ctx) uri (:branch ctx))
                   (q-util/form-pull-exp (:find-element/form fe))))))
 
@@ -195,7 +209,7 @@
       (process-results link link-request ordered-fes ctx))))
 
 (defn from-anchor [anchor ctx with-route]
-  (mlet [route (anchor/build-anchor-route' anchor ctx)]
+  (mlet [route (routing/build-route' anchor ctx)]
     ; entire context must be encoded in the route
     (with-route route (context/clean ctx))))
 

@@ -1,10 +1,7 @@
 (ns hypercrud.browser.core
   (:require [hypercrud.browser.base :as base]
             [hypercrud.browser.browser-request :as browser-request]
-            [hypercrud.browser.browser-ui :as browser-ui]
-
-    ; deprecated file
-            [hypercrud.browser.context-util]))
+            [hypercrud.browser.browser-ui :as browser-ui]))
 
 
 (def data base/data-from-anchor)

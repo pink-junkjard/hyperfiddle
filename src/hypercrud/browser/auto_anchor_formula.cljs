@@ -1,9 +1,11 @@
 (ns hypercrud.browser.auto-anchor-formula
   (:require-macros [hypercrud.util.template :as template])
-  (:require [hypercrud.client.core :as hc]
+  (:require [cats.monad.either :as either]
+            [hypercrud.client.core :as hc]
             [hypercrud.types.Entity :refer [->Entity]]
             [hypercrud.util.core :as util]
-            [hypercrud.util.vedn :as vedn]))
+            [hypercrud.util.vedn :as vedn]
+            [hypercrud.util.string :as hc-string]))
 
 
 (defn auto-entity-from-stage [ctx]
@@ -57,11 +59,15 @@
                {:fe false :c? true :d? false :a true} nil}]
     (merge fe-create fe-no-create no-fe)))
 
-; anchors MUST have a find-element, if they have an attribute or are create? or repeating?
-;(assert (not (and (not fe) (or a create? (:anchor/repeating? anchor)))) "missing find-element")
-(defn auto-formula [anchor]                                 ; what about long-coersion?
-  (get auto-formula-lookup
-       {:fe (not (nil? (:anchor/find-element anchor)))
-        :c? (or (:anchor/create? anchor) false)
-        :d? (or (:anchor/repeating? anchor) false)
-        :a (not (nil? (:anchor/attribute anchor)))}))
+(defn auto-formula [anchor]
+  (-> (hc-string/memoized-safe-read-edn-string (str "[" (:link/path anchor) "]"))
+      (either/branch
+        (fn [e]
+          (js/console.error (pr-str e))
+          nil)
+        (fn [path]
+          (get auto-formula-lookup
+               {:fe (not (nil? (first path)))
+                :c? (or (:anchor/create? anchor) false)
+                :d? (or (:anchor/repeating? anchor) false)
+                :a (not (nil? (second path)))})))))

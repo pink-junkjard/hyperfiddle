@@ -108,7 +108,7 @@
              ; todo should filter hidden anchors out before recursing (in widget/render-inline-anchors)
              (if (:hidden anchor-props)
                (either/right [:noscript])
-               (mlet [route (anchor/build-anchor-route' anchor ctx)
+               (mlet [route (routing/build-route' anchor ctx)
                       ; entire context must be encoded in the route
                       data (base/data-from-route route (context/clean ctx))]
                  (process-data data))))

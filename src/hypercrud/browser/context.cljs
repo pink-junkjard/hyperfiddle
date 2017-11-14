@@ -4,7 +4,6 @@
             [hypercrud.browser.routing :as routing]
             [hypercrud.state.actions.core :as actions]
             [hypercrud.util.branch :as branch]
-            [hypercrud.util.core :as util]
             [reagent.core :as reagent]))
 
 
@@ -23,7 +22,7 @@
                                 (filter #(= (:dbhole/name %) (:code-database route)))
                                 first
                                 (into {}))
-        repository (let [overrides (->> (:query-params route)
+        repository (let [overrides (->> route
                                         ; todo this is not sufficient for links on the page to inherit this override
                                         ; on navigate, this context is gone
                                         (filter (fn [[k _]] (and (string? k) (string/starts-with? k "$"))))
