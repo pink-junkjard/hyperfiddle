@@ -9,7 +9,7 @@
 
 
 (defn wrap-hypercrud [m]
-  {:hypercrud m})
+  m)
 
 (defn http-index [req]
   (ring-resp/response "Hypercrud Server Running!"))
