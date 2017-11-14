@@ -16,16 +16,21 @@
          ; this peer could start returning inconsistent data compared to the state value,
          ; however another hydrating action should have dispatched in that scenario,
          ; so the resulting computation would be thrown away anyway
-         requests (into #{} (request-fn state))]
-     (js/console.log "...hydrate-until-queries-settle!; got requests " (count requests))
+         requests (->> (request-fn state) (into #{}))
+
+         ; subtract out requests we already have
+         have-requests (set (keys ptm))
+         new-requests (set/difference requests have-requests)
+         new-requests-vec (into [] new-requests)]
+     (js/console.log "...hydrate-until-queries-settle!; got requests " (count new-requests))
      ; inspect dbvals used in requests see if stage has changed for them
-     (if (or force (not (set/subset? requests (set (keys ptm)))))
-       (p/then (http/hydrate! service-uri requests stage)
+     (if (or force (not (set/subset? new-requests have-requests)))
+       (p/then (http/hydrate! service-uri new-requests-vec stage)
                (fn [{:keys [pulled-trees id->tempid]}]
                  (js/console.log "...hydrate-until-queries-settle!; http! response")
                  (when (= hydrate-id (:hydrate-id (get-state)))
                    (js/console.log "...hydrate-until-queries-settle!; dispatching :ptm")
-                   (dispatch! [:set-ptm (zipmap requests pulled-trees) id->tempid])
+                   (dispatch! [:set-ptm (zipmap new-requests-vec pulled-trees) id->tempid])
                    (js/console.log "...hydrate-until-queries-settle!; loop")
                    (hydrate-until-queries-settle! dispatch! get-state hydrate-id false request-fn service-uri))))
        (p/resolved nil)))))

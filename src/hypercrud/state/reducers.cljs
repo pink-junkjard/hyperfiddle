@@ -68,7 +68,7 @@
 
 (defn ptm-reducer [ptm action & args]
   (case action
-    :set-ptm (first args)
+    :set-ptm (merge ptm (first args))
 
     (or ptm nil)))
 
