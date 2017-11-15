@@ -5,9 +5,8 @@
 (defn system-field? [field-dbid]
   (map? (:id field-dbid)))
 
-(defn auto-find-elements [ordered-fes result ctx]
-  (let [raw-mode? (= @(:display-mode ctx) :root)
-        result (if (map? result) [result] result)
+(defn auto-find-elements [ordered-fes result]
+  (let [result (if (map? result) [result] result)
         results-indexed-by-column (->> (apply concat result)
                                        (group-by first)
                                        (util/map-values #(map second %)))]
@@ -15,7 +14,7 @@
     ; even in raw mode when they haven't been modeled yet.
     (->> ordered-fes
          (map (fn [fe]
-                (let [splat? (or raw-mode? (empty? (get-in fe [:find-element/form :form/field])))]
+                (let [splat? (empty? (get-in fe [:find-element/form :form/field]))]
                   (update fe :find-element/form
                           (fn [form]
                             (-> (into {} form)

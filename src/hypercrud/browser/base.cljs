@@ -64,31 +64,26 @@
       {:meta-link-req' meta-link-request
        :link' (cats/bind meta-link-request #(hc/hydrate (:peer ctx) %))})))
 
-(letfn [(strip-form-in-raw-mode [fe ctx]
-          (if (= @(:display-mode ctx) :root)
-            (dissoc fe :find-element/form)
-            fe))]
-  (defn get-ordered-find-elements [link ctx]
-    (mlet [fes (case (:request/type link)
-                 :query (let [find-element-lookup (->> (:link-query/find-element link)
-                                                       (map (juxt :find-element/name identity))
-                                                       (into {}))]
-                          (mlet [q (q-util/safe-parse-query-validated link)]
-                            (->> (util/parse-query-element q :find)
-                                 (mapv str)
-                                 (mapv #(get find-element-lookup % {:find-element/name %}))
-                                 (cats/return))))
-                 :entity (either/right [(or (->> (:link-query/find-element link)
-                                                 (filter #(= (:find-element/name %) "entity"))
-                                                 first)
-                                            {:find-element/name "entity"})])
-                 (either/right []))]
-      (->> fes
-           (map #(into {} %))
-           ; todo request-params should be inspected for Entity's and their conns
-           (map (fn [fe] (update fe :find-element/connection #(or % "$"))))
-           (map #(strip-form-in-raw-mode % ctx))
-           (cats/return)))))
+(defn get-ordered-find-elements [link ctx]
+  (mlet [fes (case (:request/type link)
+               :query (let [find-element-lookup (->> (:link-query/find-element link)
+                                                     (map (juxt :find-element/name identity))
+                                                     (into {}))]
+                        (mlet [q (q-util/safe-parse-query-validated link)]
+                          (->> (util/parse-query-element q :find)
+                               (mapv str)
+                               (mapv #(get find-element-lookup % {:find-element/name %}))
+                               (cats/return))))
+               :entity (either/right [(or (->> (:link-query/find-element link)
+                                               (filter #(= (:find-element/name %) "entity"))
+                                               first)
+                                          {:find-element/name "entity"})])
+               (either/right []))]
+    (->> fes
+         (map #(into {} %))
+         ; todo request-params should be inspected for Entity's and their conns
+         (map (fn [fe] (update fe :find-element/connection #(or % "$"))))
+         (cats/return))))
 
 (defn request-for-link [link ordered-fes ctx]
   (case (:request/type link)
@@ -188,7 +183,7 @@
                        :schemas schemas                     ; For tx/entity->statements in userland.
                        :fiddle link                         ; for :db/doc
                        :read-only (or (:read-only ctx) never-read-only))
-                 ordered-fes (auto-form/auto-find-elements ordered-fes result ctx)]
+                 ordered-fes (auto-form/auto-find-elements ordered-fes result)]
            ctx (user-bindings/user-bindings' link ctx)
            :let [anchors (let [opts (case @(:display-mode ctx)
                                       :user nil
