@@ -9,6 +9,7 @@
 
 
 (defn wrap-hypercrud [m]
+  ; (concat [[:hypercrud "0.0.1-SNAPSHOT"]] m)
   m)
 
 (defn http-index [req]
@@ -37,12 +38,12 @@
       (println e)
       {:status 500 :headers {} :body (str e)})))
 
-(defn http-latest [req]
+(defn http-sync [req]
   (try
     (let [dbs (:body-params req)]
       (ring-resp/response
         (wrap-hypercrud
-          (api/latest dbs))))
+          (api/sync dbs))))
     (catch Exception e
       (println e)
       {:status 500 :headers {} :body (str e)})))
@@ -55,6 +56,7 @@
                                                                      :transit-options [{:handlers hc-t/read-handlers}]))
                                   http/combine-body-params
                                   http/auto-content-type]
-        ["/hydrate" {:post [:hydrate http-hydrate]}]
+        ["/hydrate" {:any [:hydrate http-hydrate]}]
         ["/transact" {:post [:transact http-transact!]}]
+        ["/sync" {:post [:transact http-sync]}]
         ]]]))

@@ -136,7 +136,6 @@
                                 (into {}))]
         {:tempid->id tempid-lookups}))))
 
-(defn latest [dbs]
-  (->> dbs
-       (map (juxt identity #(-> % str d/connect d/db d/basis-t)))
-       (into {})))
+(defn sync [dbs]                                            ; sync is the low level datomic call
+  ; ordered kv seq
+  (->> dbs (map (juxt identity #(-> % str d/connect d/sync deref d/basis-t)))))
