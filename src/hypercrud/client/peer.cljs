@@ -44,9 +44,5 @@
   (db [this uri branch]
     (->DbVal uri (branch/branch-val uri branch @(reagent/cursor state-atom [:stage]))))
 
-  (hydrate-one! [this service-uri request]
-    (let [{:keys [stage]} @state-atom]
-      (hydrate-one! service-uri request stage)))
-
   IHash
   (-hash [this] (goog/getUid this)))
