@@ -1,8 +1,9 @@
 (ns hypercrud.state.hydrating-action-loop                   ; node
   (:require [clojure.set :as set]
-            [hypercrud.client.http :as http]
+            [hypercrud.client.origin :as origin]
             [hypercrud.state.core :as state]
-            [promesa.core :as p]))
+            [promesa.core :as p]
+            [hyperfiddle.hypercrud :as upstream]))
 
 ; force is a hack to be removed once this function runs in node
 ; TODO: this only runs in Node now, so it can be simplified
@@ -25,7 +26,7 @@
      (js/console.log "...hydrate-until-queries-settle!; got requests " (count new-requests))
      ; inspect dbvals used in requests see if stage has changed for them
      (if (or force (not (set/subset? new-requests have-requests)))
-       (p/then (http/hydrate! service-uri new-requests-vec stage)
+       (p/then (upstream/hydrate-unprocessed! service-uri new-requests-vec stage)
                (fn [{:keys [pulled-trees id->tempid]}]
                  (js/console.log "...hydrate-until-queries-settle!; http! response")
                  (when (= hydrate-id (:hydrate-id (get-state)))

@@ -1,6 +1,6 @@
 (ns hypercrud.state.hydrating-action-batched                              ; browser
   (:require [clojure.set :as set]
-            [hypercrud.client.http :as http]
+            [hypercrud.client.origin :as origin]
             [hypercrud.state.core :as state]
             [promesa.core :as p]))
 
@@ -12,7 +12,7 @@
 (defn hydrating-action-batched [{:keys [on-start]} dispatch! get-state]
   (dispatch! (apply batch [:hydrate!-start (js/Math.random)] (if on-start (on-start get-state))))
   (let [{:keys [stage encoded-route] :as state} (get-state)]
-    (-> (http/hydrate-route! #uri "/" encoded-route stage)
+    (-> (origin/hydrate-route! #uri "/" encoded-route stage)
         (p/then (fn [{:keys [pulled-trees-map id->tempid]}]
                   (dispatch! [:set-ptm pulled-trees-map id->tempid])
                   (p/resolved nil)

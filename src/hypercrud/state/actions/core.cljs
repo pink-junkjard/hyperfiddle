@@ -1,8 +1,7 @@
 (ns hypercrud.state.actions.core
   (:require [cats.monad.either :as either]
             [hypercrud.browser.routing :as routing]
-            [hypercrud.client.http :as http]
-            [hypercrud.client.peer :as peer]
+            [hypercrud.client.origin :as origin]
             [hypercrud.client.schema :as schema]
             [hypercrud.client.tx :as tx]
             [hypercrud.hydrating-action :refer [hydrating-action]] ; platform injected
@@ -26,7 +25,7 @@
         dbval (->DbVal uri branch-val)
         schema (let [schema-request (schema/schema-request dbval)]
                  (-> (get ptm schema-request)
-                     (peer/process-result schema-request)
+                     (origin/process-result schema-request)
                      (either/branch (fn [e] (throw e)) identity)))
         id->tempid (get-in tempid-lookups [uri branch-val])]
     (map (partial tx/stmt-id->tempid id->tempid schema) tx)))
@@ -67,7 +66,7 @@
   (fn [dispatch! get-state]
     (dispatch! [:transact!-start])
     (let [{:keys [stage]} (get-state)]
-      (-> (http/transact! state/*service-uri* stage)
+      (-> (origin/transact! state/*service-uri* stage)
           (p/catch (fn [error]
                      (js/alert (pr-str error))
                      (dispatch! [:transact!-failure error])
