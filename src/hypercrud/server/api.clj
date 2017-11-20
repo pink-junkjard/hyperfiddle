@@ -1,6 +1,7 @@
 (ns hypercrud.server.api
   (:require [clojure.set :as set]
             [clojure.walk :as walk]
+            [datascript.parser :as parser]
             [datomic.api :as d]
             [hypercrud.types.DbVal]
             [hypercrud.types.Entity :refer [->Entity]]
@@ -36,37 +37,45 @@
         pull-exp (if a [{a pull-exp}] pull-exp)
         pulled-tree (if (identity/tempid? e)
                       (if a
-                        []                                  ; hack, return something that is empty for base.cljs
+                        nil
                         ; todo return a positive id here
                         {:db/id e})
                       (d/pull pull-db pull-exp e))
         pulled-tree (recursively-add-entity-types pulled-tree db)
-        pulled-tree (if a (get pulled-tree a []) pulled-tree)]
+        pulled-tree (if a (get pulled-tree a) pulled-tree)]
     pulled-tree))
 
-(defmethod hydrate* QueryRequest [{:keys [query params pull-exps]} get-secure-db-with]
+(defn process-result [user-params fe result]
+  (condp = (type fe)
+    datascript.parser.Variable result
+    datascript.parser.Pull (let [dbval (->> (get-in fe [:source :symbol])
+                                            str
+                                            (get user-params))]
+                             (recursively-add-entity-types result dbval))
+    datascript.parser.Aggregate result))
+
+(defn process-scalar [user-params qfind result]
+  (process-result user-params (:element qfind) result))
+
+(defn process-tuple [user-params qfind result]
+  (map (partial process-result user-params)
+       (:elements qfind)
+       result))
+
+(defmethod hydrate* QueryRequest [{:keys [query params]} get-secure-db-with]
   (assert query "hydrate: missing query")
-  (let [ordered-params (->> (util/parse-query-element query :in)
+  (let [{:keys [qfind]} (parser/parse-query query)
+        ordered-params (->> (util/parse-query-element query :in)
                             (mapv #(get params (str %)))
                             (mapv #(parameter % get-secure-db-with)))
-        ordered-find-element-symbols (util/parse-query-element query :find)
-        ordered-fe-names (mapv str ordered-find-element-symbols)
-        pull-exps (->> ordered-fe-names
-                       (map (juxt identity (fn [fe-name]
-                                             (let [pull-exp (get pull-exps fe-name)]
-                                               (assert (not= nil pull-exp) (str "hydrate: missing pull expression for " fe-name))
-                                               pull-exp))))
-                       (into {}))]
-    (->> (apply d/q query ordered-params)                   ;todo gaping security hole
-         (mapv (fn [relation]
-                 (->> (map (fn [fe-name eid]
-                             (let [[dbval pull-exp] (get pull-exps fe-name)
-                                   {pull-db :db} (get-secure-db-with (:uri dbval) (:branch dbval))
-                                   pulled-tree (-> (d/pull pull-db pull-exp eid)
-                                                   (recursively-add-entity-types dbval))]
-                               [fe-name pulled-tree]))
-                           ordered-fe-names relation)
-                      (into {})))))))
+        ;todo gaping security hole
+        result (apply d/q query ordered-params)]
+    (condp = (type qfind)
+      ; todo preserve set results
+      datascript.parser.FindRel (mapv #(process-tuple params qfind %) result)
+      datascript.parser.FindColl (mapv #(process-scalar params qfind %) result)
+      datascript.parser.FindTuple (process-tuple params qfind result)
+      datascript.parser.FindScalar (process-scalar params qfind result))))
 
 (defn build-get-secure-db-with [staged-branches db-with-lookup]
   (letfn [(get-secure-db-from-branch [{:keys [branch-ident uri tx] :as branch}]
