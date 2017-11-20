@@ -128,8 +128,8 @@
                        :read-only (or (:read-only ctx) never-read-only))]
            ctx (user-bindings/user-bindings' fiddle ctx)
            ; todo why are we imposing these auto-fns on everyone?
-           :let [ordered-fes (find-element/auto-find-elements result ctx)
-                 anchors (auto-anchor/auto-anchors ordered-fes ctx)]]
+           ordered-fes (find-element/auto-find-elements result ctx)
+           :let [anchors (auto-anchor/auto-anchors ordered-fes ctx)]]
       (cats/return {:result result
                     :ordered-fes ordered-fes
                     :anchors anchors

@@ -1,5 +1,7 @@
 (ns hypercrud.browser.find-element
-  (:require [clojure.set :as set]
+  (:require [cats.core :as cats :refer [mlet]]
+            [cats.monad.either :as either :refer-macros [try-either]]
+            [clojure.set :as set]
             [datascript.parser :as parser]))
 
 
@@ -119,25 +121,27 @@
 
 (defn auto-find-elements [result ctx]
   (case (get-in ctx [:fiddle :request/type])
-    :entity (let [source-symbol (.-dbname (get-in ctx [:route :request-params :entity]))
-                  fe-name "entity"
-                  pull-pattern (get-in ctx [:request :pull-exp])]
-              (if-let [a (get-in ctx [:request :a])]
-                (case (get-in ctx [:schemas (str source-symbol) a :db/cardinality :db/ident])
-                  :db.cardinality/one
-                  [(pull-cell->fe result source-symbol fe-name pull-pattern)]
+    :entity (mlet [source-symbol (try-either (.-dbname (get-in ctx [:route :request-params :entity])))
+                   :let [fe-name "entity"
+                         pull-pattern (get-in ctx [:request :pull-exp])]]
+              (cats/return
+                (if-let [a (get-in ctx [:request :a])]
+                  (case (get-in ctx [:schemas (str source-symbol) a :db/cardinality :db/ident])
+                    :db.cardinality/one
+                    [(pull-cell->fe result source-symbol fe-name pull-pattern)]
 
-                  :db.cardinality/many
-                  [(pull-many-cells->fe result source-symbol fe-name pull-pattern)])
-                [(pull-cell->fe result source-symbol fe-name pull-pattern)]))
+                    :db.cardinality/many
+                    [(pull-many-cells->fe result source-symbol fe-name pull-pattern)])
+                  [(pull-cell->fe result source-symbol fe-name pull-pattern)])))
 
-    :query (let [{:keys [qfind]} (parser/parse-query (get-in ctx [:request :query]))]
-             (condp = (type qfind)
-               datascript.parser.FindRel (mapv auto-fe-many-cells (:elements qfind) (apply map vector result))
-               datascript.parser.FindColl [(auto-fe-many-cells (:element qfind) result)]
-               datascript.parser.FindTuple (mapv auto-fe-one-cell (:elements qfind) result)
-               datascript.parser.FindScalar [(auto-fe-one-cell (:element qfind) result)]))
+    :query (mlet [{:keys [qfind]} (try-either (parser/parse-query (get-in ctx [:request :query])))]
+             (cats/return
+               (condp = (type qfind)
+                 datascript.parser.FindRel (mapv auto-fe-many-cells (:elements qfind) (apply map vector result))
+                 datascript.parser.FindColl [(auto-fe-many-cells (:element qfind) result)]
+                 datascript.parser.FindTuple (mapv auto-fe-one-cell (:elements qfind) result)
+                 datascript.parser.FindScalar [(auto-fe-one-cell (:element qfind) result)])))
 
-    :blank []
+    :blank (either/right [])
 
-    []))
+    (either/right [])))

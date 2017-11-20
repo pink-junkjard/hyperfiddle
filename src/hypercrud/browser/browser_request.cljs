@@ -1,6 +1,6 @@
 (ns hypercrud.browser.browser-request
   (:require [cats.core :as cats :refer [mlet]]
-            [cats.monad.either :as either]
+            [cats.monad.either :as either :refer-macros [try-either]]
             [datascript.parser :as parser]
             [hypercrud.browser.base :as base]
             [hypercrud.browser.context :as context]
@@ -75,28 +75,34 @@
            (apply concat))
       (case (get-in ctx [:fiddle :request/type])
         :entity (if-let [a (get-in ctx [:request :a])]
-                  (case (let [source-symbol (.-dbname (get-in ctx [:route :request-params :entity]))]
-                          (get-in ctx [:schemas (str source-symbol) a :db/cardinality :db/ident]))
-                    :db.cardinality/one
-                    (cell-dependent-requests result (first ordered-fes) (get anchors-lookup 0) ctx)
+                  (either/branch
+                    (try-either (.-dbname (get-in ctx [:route :request-params :entity])))
+                    (constantly nil)
+                    (fn [source-symbol]
+                      (case (get-in ctx [:schemas (str source-symbol) a :db/cardinality :db/ident])
+                        :db.cardinality/one
+                        (cell-dependent-requests result (first ordered-fes) (get anchors-lookup 0) ctx)
 
-                    :db.cardinality/many
-                    (mapcat #(cell-dependent-requests % (first ordered-fes) (get anchors-lookup 0) ctx) result))
+                        :db.cardinality/many
+                        (mapcat #(cell-dependent-requests % (first ordered-fes) (get anchors-lookup 0) ctx) result))))
                   (cell-dependent-requests result (first ordered-fes) (get anchors-lookup 0) ctx))
 
-        :query (let [{:keys [qfind]} (parser/parse-query (get-in ctx [:request :query]))]
-                 (condp = (type qfind)
-                   datascript.parser.FindRel
-                   (mapcat #(relation-dependent-requests % ordered-fes anchors-lookup ctx) result)
+        :query (either/branch
+                 (try-either (parser/parse-query (get-in ctx [:request :query])))
+                 (constantly nil)
+                 (fn [{:keys [qfind]}]
+                   (condp = (type qfind)
+                     datascript.parser.FindRel
+                     (mapcat #(relation-dependent-requests % ordered-fes anchors-lookup ctx) result)
 
-                   datascript.parser.FindColl
-                   (mapcat #(cell-dependent-requests % (first ordered-fes) (get anchors-lookup 0) ctx) result)
+                     datascript.parser.FindColl
+                     (mapcat #(cell-dependent-requests % (first ordered-fes) (get anchors-lookup 0) ctx) result)
 
-                   datascript.parser.FindTuple
-                   (relation-dependent-requests result ordered-fes anchors-lookup ctx)
+                     datascript.parser.FindTuple
+                     (relation-dependent-requests result ordered-fes anchors-lookup ctx)
 
-                   datascript.parser.FindScalar
-                   (cell-dependent-requests result (first ordered-fes) (get anchors-lookup 0) ctx)))
+                     datascript.parser.FindScalar
+                     (cell-dependent-requests result (first ordered-fes) (get anchors-lookup 0) ctx))))
 
         :blank nil
 

@@ -83,6 +83,7 @@
     :entity [select-error-cmp "Only fiddle type `query` is supported for select options"]
     :blank [select-error-cmp "Only fiddle type `query` is supported for select options"]
     :query (case (get-in ctx [:fiddle :request/type])
+             ; parser can throw, but this is always embedded in a safe-user-renderer, so it surfaces safely
              (let [{:keys [qfind]} (parser/parse-query (get-in ctx [:request :query]))]
                (condp = (type qfind)
                  datascript.parser.FindRel [select-anchor-renderer' props result ordered-fes ctx]
