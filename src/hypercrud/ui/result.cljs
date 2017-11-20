@@ -30,7 +30,7 @@
               (form/Relation [result] ordered-fes anchors-lookup ctx))
 
     :query (either/branch
-             (parser/parse-query (get-in ctx [:request :query]))
+             (try-either (parser/parse-query (get-in ctx [:request :query])))
              (fn [e]
                [:pre (util/pprint-str e)])
              (fn [{:keys [qfind]}]
