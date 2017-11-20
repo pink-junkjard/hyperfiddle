@@ -58,9 +58,9 @@
   (process-result user-params (:element qfind) result))
 
 (defn process-tuple [user-params qfind result]
-  (map (partial process-result user-params)
-       (:elements qfind)
-       result))
+  (mapv (partial process-result user-params)
+        (:elements qfind)
+        result))
 
 (defmethod hydrate* QueryRequest [{:keys [query params]} get-secure-db-with]
   (assert query "hydrate: missing query")
