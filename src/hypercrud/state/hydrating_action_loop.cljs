@@ -3,37 +3,31 @@
             [hypercrud.client.origin :as origin]
             [hypercrud.state.core :as state]
             [promesa.core :as p]
-            [hyperfiddle.hypercrud :as upstream]))
+            [hypercrud.client.upstream :as upstream]))
 
 ; force is a hack to be removed once this function runs in node
 ; TODO: this only runs in Node now, so it can be simplified
 (defn hydrate-until-queries-settle!
   ([dispatch! get-state hydrate-id force]
-   (hydrate-until-queries-settle! dispatch! get-state hydrate-id force state/*request* state/*service-uri*))
-  ([dispatch! get-state hydrate-id force request-fn service-uri]
+   (hydrate-until-queries-settle! dispatch! get-state hydrate-id force state/*request* state/*service-uri* state/*basis*))
+  ([dispatch! get-state hydrate-id force request-fn service-uri basis]
    (js/console.log "...hydrate-until-queries-settle!; top")
    (let [{:keys [ptm stage] :as state} (get-state)
-         ; if the time to compute the requests is long
-         ; this peer could start returning inconsistent data compared to the state value,
-         ; however another hydrating action should have dispatched in that scenario,
-         ; so the resulting computation would be thrown away anyway
          requests (->> (request-fn state) (into #{}))
-
-         ; subtract out requests we already have
          have-requests (set (keys ptm))
          new-requests (set/difference requests have-requests)
          new-requests-vec (into [] new-requests)]
      (js/console.log "...hydrate-until-queries-settle!; got requests " (count new-requests))
      ; inspect dbvals used in requests see if stage has changed for them
      (if (or force (not (set/subset? new-requests have-requests)))
-       (p/then (upstream/hydrate-unprocessed! service-uri new-requests-vec stage)
+       (p/then (upstream/hydrate! service-uri new-requests-vec basis stage)
                (fn [{:keys [pulled-trees id->tempid]}]
                  (js/console.log "...hydrate-until-queries-settle!; http! response")
                  (when (= hydrate-id (:hydrate-id (get-state)))
                    (js/console.log "...hydrate-until-queries-settle!; dispatching :ptm")
                    (dispatch! [:set-ptm (zipmap new-requests-vec pulled-trees) id->tempid])
                    (js/console.log "...hydrate-until-queries-settle!; loop")
-                   (hydrate-until-queries-settle! dispatch! get-state hydrate-id false request-fn service-uri))))
+                   (hydrate-until-queries-settle! dispatch! get-state hydrate-id false request-fn service-uri basis))))
        (p/resolved nil)))))
 
 ; batch doesn't make sense with thunks (can be sync or async dispatches in a thunk),

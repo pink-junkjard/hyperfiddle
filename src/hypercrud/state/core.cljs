@@ -4,6 +4,7 @@
 ; IFn[state-value => List[Request]]
 (def ^:dynamic *request*)
 (def ^:dynamic *service-uri*)
+(def ^:dynamic *basis*)
 
 (defn combine-reducers [reducer-map]
   (fn [value action & args]

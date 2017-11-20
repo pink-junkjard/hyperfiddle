@@ -1,7 +1,7 @@
 (ns hypercrud.client.peer
   (:require [cats.monad.either :as either]
             [hypercrud.client.core :as hypercrud]
-            [hypercrud.client.origin :as origin]
+            [hypercrud.client.upstream :as upstream]
             [hypercrud.util.branch :as branch]
             [reagent.core :as reagent]
 
@@ -12,7 +12,7 @@
   hypercrud/Peer
   (hydrate [this request]
     (if-let [result @(reagent/cursor state-atom [:ptm request])]
-      (origin/process-result result request)
+      (upstream/process-result result request)
       (either/left {:message "Loading" :data {:request request}})))
 
   (db [this uri branch]
