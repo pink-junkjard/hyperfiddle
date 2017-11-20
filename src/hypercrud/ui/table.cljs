@@ -67,7 +67,7 @@
         (map-indexed (fn [fe-pos fe]
                        (let [ctx (as-> (context/find-element ctx fe) ctx
                                        (if repeating?
-                                         (context/cell-data ctx (get (vec relation) fe-pos))
+                                         (context/cell-data ctx (get relation fe-pos))
                                          ctx))
                              form-anchors (->> (get-in anchors-lookup [fe-pos :links])
                                                ((if repeating? filter remove) :anchor/repeating?)
@@ -123,7 +123,7 @@
 (defn Relation [relation ordered-fes anchors-lookup ctx]
   (->> ordered-fes
        (map-indexed (fn [fe-pos fe]
-                      (let [cell-data (get (vec relation) fe-pos)
+                      (let [cell-data (get relation fe-pos)
                             fe-anchors-lookup (get anchors-lookup fe-pos)
                             ctx (context/find-element ctx fe)]
                         (result-cell fe cell-data fe-anchors-lookup ctx))))
