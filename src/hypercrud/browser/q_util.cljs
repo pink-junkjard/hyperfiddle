@@ -29,12 +29,3 @@
        (filter (fn [[k _]] (and (string? k) (string/starts-with? k "$"))))
        (map (juxt #(first %) #(hc/db (:peer ctx) (second %) (:branch ctx))))
        (into {})))
-
-(defn form-pull-exp [form]
-  (if form
-    (->> (:form/field form)
-         (map :field/attribute)
-         (concat [:db/id])
-         distinct
-         (remove nil?))
-    ['*]))

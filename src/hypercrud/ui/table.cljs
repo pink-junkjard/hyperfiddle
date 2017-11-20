@@ -8,50 +8,51 @@
             [hypercrud.ui.form-util :as form-util]
             [hypercrud.ui.renderer :as renderer]
             [hypercrud.ui.widget :as widget]
-            [hypercrud.util.core :as util]
             [reagent.core :as r]))
 
 
 (defn attr-sortable? [fe attribute ctx]
-  (let [{:keys [:db/cardinality :db/valueType]} (get-in ctx [:schemas (:find-element/name fe) attribute])]
-    (and
-      (= (:db/ident cardinality) :db.cardinality/one)
-      ; ref requires more work (inspect label-prop)
-      (contains? #{:db.type/keyword
-                   :db.type/string
-                   :db.type/boolean
-                   :db.type/long
-                   :db.type/bigint
-                   :db.type/float
-                   :db.type/double
-                   :db.type/bigdec
-                   :db.type/instant
-                   :db.type/uuid
-                   :db.type/uri
-                   :db.type/bytes
-                   :db.type/code}
-                 (:db/ident valueType)))))
+  (if-let [source-symbol (:source-symbol fe)]
+    (let [{:keys [:db/cardinality :db/valueType]} (get-in ctx [:schemas (str source-symbol) attribute])]
+      (and
+        (= (:db/ident cardinality) :db.cardinality/one)
+        ; ref requires more work (inspect label-prop)
+        (contains? #{:db.type/keyword
+                     :db.type/string
+                     :db.type/boolean
+                     :db.type/long
+                     :db.type/bigint
+                     :db.type/float
+                     :db.type/double
+                     :db.type/bigdec
+                     :db.type/instant
+                     :db.type/uuid
+                     :db.type/uri
+                     :db.type/bytes
+                     :db.type/code}
+                   (:db/ident valueType))))
+    (not (nil? fe))))
 
 (defn col-head-anchors [attr-label-anchors ctx]
   [:div.anchors
    (widget/render-anchors (remove :anchor/render-inline? attr-label-anchors) ctx)
    (widget/render-inline-anchors (filter :anchor/render-inline? attr-label-anchors) ctx)])
 
-(defn col-head [fe {:keys [:field/attribute] :as field} col-anchors sort-col ctx]
-  (let [ctx (context/attribute ctx attribute)
+(defn col-head [fe fe-pos field col-anchors sort-col ctx]
+  (let [ctx (context/attribute ctx (:attribute field))
         [attr-label-anchors] (widget/process-option-anchors col-anchors ctx)
         sortable? (and (not-any? anchor/popover-anchor? attr-label-anchors) ; sorting currently breaks click handling in popovers
-                       (attr-sortable? fe attribute ctx))
-        sort-direction (let [[sort-fe-dbid sort-key direction] @sort-col]
-                         (if (and (= (:db/id fe) sort-fe-dbid) (= sort-key attribute))
+                       (attr-sortable? fe (:attribute field) ctx))
+        sort-direction (let [[sort-fe-pos sort-attr direction] @sort-col]
+                         (if (and (= fe-pos sort-fe-pos) (= sort-attr (:attribute field)))
                            direction))
         on-click (fn []
                    (if sortable?
                      (reset! sort-col (case sort-direction
-                                        :asc [(:db/id fe) attribute :desc]
+                                        :asc [fe-pos (:attribute field) :desc]
                                         :desc nil
-                                        [(:db/id fe) attribute :asc]))))
-        css-classes [(str "field-attr-" (form-util/css-slugify (str attribute))) #_"Dustin removed field-id and field-prompt; use a custom renderer"
+                                        [fe-pos (:attribute field) :asc]))))
+        css-classes [(str "field-attr-" (form-util/css-slugify (str (:attribute field)))) #_"Dustin removed field-id and field-prompt; use a custom renderer"
                      (if sortable? "sortable")
                      (some-> sort-direction name)]]
     [:th {:class (string/join " " css-classes)
@@ -60,14 +61,13 @@
      [:label [form-util/field-label field ctx]]
      [col-head-anchors attr-label-anchors ctx]]))
 
-(defn LinkCell [repeating? ordered-fes anchors-lookup ctx]
+(defn LinkCell [relation repeating? ordered-fes anchors-lookup ctx]
   [(if repeating? :td.link-cell :th.link-cell)
    (->> ordered-fes
         (map-indexed (fn [fe-pos fe]
-                       (let [fe-name (:find-element/name fe)
-                             ctx (as-> (context/find-element ctx fe) ctx
+                       (let [ctx (as-> (context/find-element ctx fe) ctx
                                        (if repeating?
-                                         (context/entity ctx (get-in ctx [:relation fe-name]))
+                                         (context/cell-data ctx (get (vec relation) fe-pos))
                                          ctx))
                              form-anchors (->> (get-in anchors-lookup [fe-pos :links])
                                                ((if repeating? filter remove) :anchor/repeating?)
@@ -76,19 +76,20 @@
                          (widget/render-anchors form-anchors ctx))))
         (apply concat))])
 
-(defn HeaderRow [ordered-fes anchors-lookup sort-col ctx]
+(defn THead [ordered-fes anchors-lookup sort-col ctx]
   [:tr
    (->> ordered-fes
         (map-indexed (fn [fe-pos fe]
                        (let [ctx (context/find-element ctx fe)]
-                         (->> (get-in fe [:find-element/form :form/field])
+                         (->> (:fields fe)
                               (map (fn [field]
-                                     (let [col-anchors (->> (get-in anchors-lookup [fe-pos (:field/attribute field) :links])
+                                     (let [col-anchors (->> (get-in anchors-lookup [fe-pos (:attribute field) :links])
                                                             (remove :anchor/repeating?))]
-                                       ^{:key (str (:find-element/name fe) "-" (:field/attribute field))}
-                                       [col-head fe field col-anchors sort-col ctx])))))))
+                                       ^{:key (str (hash fe) "-" (:attribute field))}
+                                       [col-head fe fe-pos field col-anchors sort-col ctx])))))))
         (apply concat))
-   [LinkCell false ordered-fes anchors-lookup ctx]])
+   ; no need for a relation for non-repeating, todo fix this crap
+   [LinkCell nil false ordered-fes anchors-lookup ctx]])
 
 (defn Control [field anchors ctx]
   (let [props (form-util/build-props field anchors ctx)]
@@ -97,77 +98,69 @@
       [auto-table-cell field anchors props ctx])))
 
 (defn Field [control field anchors ctx]
-  (let [shadow-link (auto-anchor/system-anchor? (-> ctx :entity :db/id))
+  (let [shadow-link (auto-anchor/system-anchor? (get-in ctx [:cell-data :db/id]))
         style {:border-color (if-not shadow-link (connection-color/connection-color (:uri ctx) ctx))}]
     [:td.truncate {:style style}
      [control ctx]]))
 
-(defn Value [{:keys [:field/attribute] :as field} fe-anchors-lookup ctx]
-  (let [ctx (-> (context/attribute ctx attribute)
-                (context/value (get (:entity ctx) attribute)) ; Not reactive
+(defn Value [field fe-anchors-lookup ctx]
+  (let [ctx (-> (context/attribute ctx (:attribute field))
+                (context/value ((:cell-data->value field) (:cell-data ctx))) ; Not reactive
                 (assoc :layout :table))
         display-mode @(:display-mode ctx)
         Field (case display-mode :xray Field :user (get ctx :field Field))
         Control (case display-mode :xray Control :user (get ctx :control Control))
-        attr-anchors (get-in fe-anchors-lookup [attribute :links])]
+        attr-anchors (get-in fe-anchors-lookup [(:attribute field) :links])]
     [Field (r/partial Control field attr-anchors) field attr-anchors ctx]))
 
-(defn FindElement [fe fe-anchors-lookup ctx]
-  (let [fe-name (:find-element/name fe)
-        entity (get (:relation ctx) fe-name)
-        ctx (-> (context/find-element ctx fe)
-                (context/entity entity))]
-    (->> (-> fe :find-element/form :form/field)
+(defn result-cell [fe cell-data fe-anchors-lookup ctx]
+  (let [ctx (context/cell-data ctx cell-data)]
+    (->> (:fields fe)
          (mapv (fn [field]
-                 ; todo this could clash if you use the same form on two findelements
-                 ^{:key (:db/id field)}
+                 ^{:key (:id field)}
                  [Value field fe-anchors-lookup ctx])))))
 
 (defn Relation [relation ordered-fes anchors-lookup ctx]
   (->> ordered-fes
        (map-indexed (fn [fe-pos fe]
-                      (FindElement fe (get anchors-lookup fe-pos) ctx)))
+                      (let [cell-data (get (vec relation) fe-pos)
+                            fe-anchors-lookup (get anchors-lookup fe-pos)
+                            ctx (context/find-element ctx fe)]
+                        (result-cell fe cell-data fe-anchors-lookup ctx))))
        (apply concat)))
 
 (defn Row [relation ordered-fes anchors-lookup ctx]
-  (let [ctx (context/relation ctx relation)]
-    [:tr
-     (Relation relation ordered-fes anchors-lookup ctx)
-     (LinkCell true ordered-fes anchors-lookup ctx)]))
+  [:tr
+   (Relation relation ordered-fes anchors-lookup ctx)
+   (LinkCell relation true ordered-fes anchors-lookup ctx)])
 
-(defn Resultset [relations ordered-fes anchors-lookup sort-col ctx]
-  (let [[fe-dbid sort-key direction] @sort-col
+(defn TBody [relations ordered-fes anchors-lookup sort-col ctx]
+  (let [[sort-fe-pos sort-attr direction] @sort-col
         sort-fn (fn [relations]
-                  (let [fe (->> ordered-fes
-                                (filter (fn [fe] (= fe-dbid (:db/id fe))))
-                                first)
-                        attr (->> (-> fe :find-element/form :form/field)
-                                  (map :field/attribute)
-                                  (filter #(= % sort-key))
+                  (let [fe (get ordered-fes sort-fe-pos)
+                        attr (->> (map :attribute (:fields fe))
+                                  (filter #(= % sort-attr))
                                   first)]
                     (if (attr-sortable? fe attr ctx)
-                      (sort-by #(get-in % [(:find-element/name fe) sort-key])
-                               (case direction
-                                 :asc #(compare %1 %2)
-                                 :desc #(compare %2 %1))
-                               relations)
+                      (let [sort-fn (if sort-attr
+                                      #(get-in % [sort-fe-pos sort-attr])
+                                      #(get % sort-fe-pos))]
+                        (sort-by sort-fn
+                                 (case direction
+                                   :asc #(compare %1 %2)
+                                   :desc #(compare %2 %1))
+                                 relations))
                       relations)))]
     (->> relations
          sort-fn
          (map (fn [relation]
-                ^{:key (hash (util/map-values :db/id relation))}
+                ^{:key (hash (map #(or (:db/id %) %) relation))}
                 [Row relation ordered-fes anchors-lookup ctx])))))
 
 (defn Table [& props]
   (let [sort-col (r/atom nil)]
     (fn [relations ordered-fes anchors-lookup ctx]
       [:table.ui-table
-       [:thead [HeaderRow ordered-fes anchors-lookup sort-col ctx]]
+       [:thead [THead ordered-fes anchors-lookup sort-col ctx]]
        ; Sometimes the leafnode needs all the anchors.
-       [:tbody (Resultset relations ordered-fes anchors-lookup sort-col ctx)]])))
-
-(defn ui-table [relations ordered-fes anchors-lookup ctx]
-  (if (every? #(empty? (-> % :find-element/form :form/field)) ordered-fes)
-    ; todo this error message is applicable for forms too, this should be raised up to hc.ui.result/view
-    [:div "Can't infer table structure - no resultset and blank form. Fix query or model a form."]
-    [Table relations ordered-fes anchors-lookup ctx]))
+       [:tbody (TBody relations ordered-fes anchors-lookup sort-col ctx)]])))

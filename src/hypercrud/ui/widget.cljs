@@ -48,14 +48,14 @@
   (let [anchors (filter :anchor/repeating? anchors) #_"this also has to happen every other thing, problem is that :options need to show up here for ref even if not repeating"]
     [:div.value
      [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) ctx)]
-     (let [on-change! #((:user-with! ctx) (tx/update-entity-attr (:entity ctx) (:attribute ctx) %))]
+     (let [on-change! #((:user-with! ctx) (tx/update-entity-attr (:cell-data ctx) (:attribute ctx) %))]
        [input/keyword-input* (:value ctx) on-change! props])
      (render-inline-anchors (filter :anchor/render-inline? anchors) ctx)]))
 
 (defn string [maybe-field anchors props ctx]
   [:div.value
    [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) ctx)]
-   (let [on-change! #((:user-with! ctx) (tx/update-entity-attr (:entity ctx) (:attribute ctx) %))]
+   (let [on-change! #((:user-with! ctx) (tx/update-entity-attr (:cell-data ctx) (:attribute ctx) %))]
      [input/input* (:value ctx) on-change! props])
    (render-inline-anchors (filter :anchor/render-inline? anchors) ctx)])
 
@@ -63,7 +63,7 @@
   [:div.value
    [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) ctx)]
    [input/validated-input
-    (:value ctx) #((:user-with! ctx) (tx/update-entity-attr (:entity ctx) (:attribute ctx) %))
+    (:value ctx) #((:user-with! ctx) (tx/update-entity-attr (:cell-data ctx) (:attribute ctx) %))
     #(js/parseInt % 10) pr-str
     #(or (integer? (js/parseInt % 10)) (= "nil" %))
     props]
@@ -77,7 +77,7 @@
    (render-inline-anchors (filter :anchor/render-inline? anchors) ctx)])
 
 (defn id* [props ctx]
-  (let [on-change! #((:user-with! ctx) (tx/update-entity-attr (:entity ctx) (:attribute ctx) %))]
+  (let [on-change! #((:user-with! ctx) (tx/update-entity-attr (:cell-data ctx) (:attribute ctx) %))]
     (input/id-input (:value ctx) on-change! props)))
 
 (defn process-option-anchors [anchors ctx]
@@ -130,17 +130,16 @@
 
 (defn multi-select-ref [maybe-field anchors props ctx]
   (assert false "todo")
-  #_(let [add-item! #((:user-with! ctx) (tx/edit-entity (:db/id (:entity ctx)) (:attribute ctx) [] [nil]))]
+  #_(let [add-item! #((:user-with! ctx) (tx/edit-entity (:db/id (:cell-data ctx)) (:attribute ctx) [] [nil]))]
       (multi-select* multi-select-markup add-item! maybe-field anchors props ctx))) ;add-item! is: add nil to set
 
 ;(defn multi-select-ref-component [maybe-field anchors props ctx]
-;  (let [add-item! #((:user-swap! ctx) {:tx (tx/edit-entity (:db/id (:entity ctx)) (:attribute ctx) [] [(temp-id!)])})]
+;  (let [add-item! #((:user-swap! ctx) {:tx (tx/edit-entity (:db/id (:cell-data ctx)) (:attribute ctx) [] [(temp-id!)])})]
 ;    [multi-select* multi-select-markup add-item! maybe-field anchors props ctx])) ;add new entity to set
 
 (defn ^:export code [& args]
   (fn [maybe-field anchors props ctx]
-    (let [ident (-> ctx :attribute :db/ident)
-          change! #((:user-with! ctx) (tx/update-entity-attr (:entity ctx) (:attribute ctx) %))]
+    (let [change! #((:user-with! ctx) (tx/update-entity-attr (:cell-data ctx) (:attribute ctx) %))]
       ;^{:key ident}
       [:div.value
        [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) ctx)]
@@ -164,7 +163,7 @@
                   (let [user-val (set user-val)
                         rets (set/difference value user-val)
                         adds (set/difference user-val value)]
-                    ((:user-with! ctx) (tx/edit-entity (-> ctx :entity :db/id)
+                    ((:user-with! ctx) (tx/edit-entity (-> ctx :cell-data :db/id)
                                                        (-> ctx :attribute :db/ident)
                                                        rets adds))))
         widget (case (:layout ctx) :block edn-block
@@ -180,7 +179,7 @@
 (defn edn [maybe-field anchors props ctx]
   (let [valueType (-> ctx :attribute :db/valueType :db/ident)
         value (if (= valueType :db.type/ref) (:db/id (:value ctx)) (:value ctx))
-        change! #((:user-with! ctx) (tx/update-entity-attr (:entity ctx) (:attribute ctx) %))
+        change! #((:user-with! ctx) (tx/update-entity-attr (:cell-data ctx) (:attribute ctx) %))
         widget (case (:layout ctx) :block edn-block
                                    :inline-block edn-inline-block
                                    :table edn-inline-block)
@@ -194,7 +193,7 @@
 (defn instant [maybe-field anchors props ctx]
   [:div.value
    [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) ctx)]
-   (let [change! #((:user-with! ctx) (tx/update-entity-attr (:entity ctx) (:attribute ctx) %))
+   (let [change! #((:user-with! ctx) (tx/update-entity-attr (:cell-data ctx) (:attribute ctx) %))
          widget (case (:layout ctx) :block date*
                                     :inline-block edn-inline-block
                                     :table edn-inline-block)]

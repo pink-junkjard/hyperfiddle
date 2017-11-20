@@ -2,7 +2,8 @@
   (:require-macros [hypercrud.util.template :as template])
   (:require [cats.monad.either :as either]
             [hypercrud.client.core :as hc]
-            [hypercrud.types.Entity :refer [->Entity]]
+            [hypercrud.types.Entity :refer [->Entity Entity]]
+            [hypercrud.types.ThinEntity :refer [ThinEntity]]
             [hypercrud.util.core :as util]
             [hypercrud.util.vedn :as vedn]
             [hypercrud.util.string :as hc-string]))
@@ -20,16 +21,16 @@
   ([ctx]
    (deterministic-ident
      (:find-element ctx)
-     (:entity ctx)
+     (:cell-data ctx)
      (:attribute ctx)
      (:value ctx)))
-  ([fe e a v]
+  ([fe cell-data a v]
     ; Need comment explaining why.
     ; [fe e a v] quad is sufficient to answer "where are we".
     ; Why Db is omitted?
     ; Why value is only inspected in :many for unique hashing?
-   (-> (str (-> fe :find-element/name) "."
-            (-> e :db/id) "."
+   (-> (str (:name fe) "."
+            (or (:db/id cell-data) (hash cell-data)) "."
             (-> a :db/ident) "."
             (case (get-in a [:db/cardinality :db/ident])
               :db.cardinality/one nil
@@ -38,7 +39,11 @@
        hash js/Math.abs - str)))
 
 (defn auto-entity [ctx]
-  (->Entity (.-dbval (:entity ctx)) {:db/id (deterministic-ident ctx)}))
+  (let [cell-data (:cell-data ctx)
+        dbval (if (instance? Entity cell-data)
+                  (.-dbval cell-data)
+                  (hc/db (:peer ctx) (:uri ctx) (:branch ctx)))]
+    (->Entity dbval {:db/id (deterministic-ident ctx)})))
 
 (def auto-formula-lookup
   (let [fe-no-create (->> (template/load-resource "auto-formula/fe-no-create.vedn")

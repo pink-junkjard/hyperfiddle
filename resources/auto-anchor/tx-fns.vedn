@@ -5,7 +5,7 @@
 :entity-remove
 ==
 (fn [ctx multi-color-tx modal-route]
-  {:tx {(:uri ctx) [[:db.fn/retractEntity (-> ctx :entity :db/id)]]}})
+  {:tx {(:uri ctx) [[:db.fn/retractEntity (get-in ctx :cell-data :db/id)]]}})
 ==
 
 
