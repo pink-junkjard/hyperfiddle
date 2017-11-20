@@ -105,8 +105,7 @@
 
 (defn Value [field fe-anchors-lookup ctx]
   (let [ctx (-> (context/attribute ctx (:attribute field))
-                (context/value ((:cell-data->value field) (:cell-data ctx))) ; Not reactive
-                (assoc :layout :table))
+                (context/value ((:cell-data->value field) (:cell-data ctx)))) ; Not reactive
         display-mode @(:display-mode ctx)
         Field (case display-mode :xray Field :user (get ctx :field Field))
         Control (case display-mode :xray Control :user (get ctx :control Control))
@@ -160,7 +159,8 @@
 (defn Table [& props]
   (let [sort-col (r/atom nil)]
     (fn [relations ordered-fes anchors-lookup ctx]
-      [:table.ui-table
-       [:thead [THead ordered-fes anchors-lookup sort-col ctx]]
-       ; Sometimes the leafnode needs all the anchors.
-       [:tbody (TBody relations ordered-fes anchors-lookup sort-col ctx)]])))
+      (let [ctx (assoc ctx :layout (:layout ctx :table))]
+        [:table.ui-table
+         [:thead [THead ordered-fes anchors-lookup sort-col ctx]]
+         ; Sometimes the leafnode needs all the anchors.
+         [:tbody (TBody relations ordered-fes anchors-lookup sort-col ctx)]]))))

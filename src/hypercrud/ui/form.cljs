@@ -94,10 +94,11 @@
 
 (defn Relation [relation ordered-fes anchors-lookup ctx]
   (let [ctx (assoc ctx :layout (:layout ctx :block))]
-    (->> ordered-fes
-         (map-indexed (fn [fe-pos fe]
-                        (let [cell-data (get relation fe-pos)
-                              fe-anchors-lookup (get anchors-lookup fe-pos)
-                              ctx (context/find-element ctx fe)]
-                          (result-cell fe cell-data fe-anchors-lookup ctx))))
-         (apply concat))))
+    [:div {:class (name (:layout ctx))}
+     (->> ordered-fes
+          (map-indexed (fn [fe-pos fe]
+                         (let [cell-data (get relation fe-pos)
+                               fe-anchors-lookup (get anchors-lookup fe-pos)
+                               ctx (context/find-element ctx fe)]
+                           (result-cell fe cell-data fe-anchors-lookup ctx))))
+          (apply concat))]))
