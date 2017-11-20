@@ -2,7 +2,8 @@
   (:require [clojure.set :as set]
             [hypercrud.client.origin :as origin]
             [hypercrud.state.core :as state]
-            [promesa.core :as p]))
+            [promesa.core :as p]
+            [hypercrud.types.URI]))
 
 ; batch doesn't make sense with thunks (can be sync or async dispatches in a thunk),
 ; user beware
