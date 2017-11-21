@@ -23,16 +23,22 @@
 (defn hydrate-one! [service-uri request stage-val]
   (-> (http/hydrate! service-uri #{request} stage-val)
       (p/then (fn [{:keys [t pulled-trees-map id->tempid]}]
-                (if-let [result (some-> (get pulled-trees-map request) (process-result request))]
-                  (either/branch result p/rejected p/resolved)
+                (if (contains? pulled-trees-map request)
+                  (-> (get pulled-trees-map request)
+                      (process-result request)
+                      (either/branch p/rejected p/resolved))
                   (p/rejected {:message "Server failure"}))))))
+
+(defn trackable-hydrate [state-atom request]
+  (let [ptm @(reagent/cursor state-atom [:ptm])]
+    (if (contains? ptm request)
+      (process-result (get ptm request) request)
+      (either/left {:message "Loading" :data {:request request}}))))
 
 (deftype Peer [state-atom]
   hc/Peer
   (hydrate [this request]
-    (if-let [result @(reagent/cursor state-atom [:ptm request])]
-      (process-result result request)
-      (either/left {:message "Loading" :data {:request request}})))
+    @(reagent/track trackable-hydrate state-atom request))
 
   (db [this uri branch]
     (->DbVal uri (branch/branch-val uri branch @(reagent/cursor state-atom [:stage]))))
