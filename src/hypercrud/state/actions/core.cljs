@@ -37,7 +37,7 @@
       (hydrating-action {:on-start (constantly [[:with branch uri tx]])} dispatch! get-state))))
 
 (defn open-popover [branch]
-  (partial hydrating-action {:on-start (constantly [[:open-popover branch]])}))
+  [:open-popover branch])
 
 (defn cancel-popover [branch]
   (partial hydrating-action {:on-start (constantly [[:discard branch]
