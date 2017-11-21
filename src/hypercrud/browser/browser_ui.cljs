@@ -72,7 +72,7 @@
     [:pre (:message e) "\n" detail]))
 
 (defn ui-error [e ctx]
-  ; :find-element :entity :attribute :value
+  ; :find-element :attribute :value
   (let [C (cond
             (:ui-error ctx) (:ui-error ctx)                 ; botnav
             (:attribute ctx) ui-error-inline                ; table: header or cell, form: header or cell
