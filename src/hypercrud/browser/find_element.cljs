@@ -2,7 +2,8 @@
   (:require [cats.core :as cats :refer [mlet]]
             [cats.monad.either :as either :refer-macros [try-either]]
             [clojure.set :as set]
-            [datascript.parser :as parser]))
+            [datascript.parser :as parser]
+            [hypercrud.util.core :as util]))
 
 
 (defrecord FindElement [name fields source-symbol splat? type])
@@ -148,7 +149,7 @@
                   :let [docs-lookup (build-docs-lookup ctx)]]
              (cats/return
                (condp = (type qfind)
-                 datascript.parser.FindRel (mapv (partial auto-fe-many-cells docs-lookup) (:elements qfind) (apply map vector result))
+                 datascript.parser.FindRel (mapv (partial auto-fe-many-cells docs-lookup) (:elements qfind) (util/transpose result))
                  datascript.parser.FindColl [(auto-fe-many-cells docs-lookup (:element qfind) result)]
                  datascript.parser.FindTuple (mapv (partial auto-fe-one-cell docs-lookup) (:elements qfind) result)
                  datascript.parser.FindScalar [(auto-fe-one-cell docs-lookup (:element qfind) result)])))
