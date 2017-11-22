@@ -16,9 +16,9 @@
 
 (defn schema-request [dbval]
   (->QueryRequest '[:find [(pull ?attr [*
-                                        {:db/valueType [:db/id :db/ident]
-                                         :db/cardinality [:db/id :db/ident]
-                                         :db/unique [:db/id :db/ident]}]) ...]
+                                        {:db/valueType [:db/ident]
+                                         :db/cardinality [:db/ident]
+                                         :db/unique [:db/ident]}]) ...]
                     :in $ :where [:db.part/db :db.install/attribute ?attr]]
                   {"$" dbval}
                   nil))
