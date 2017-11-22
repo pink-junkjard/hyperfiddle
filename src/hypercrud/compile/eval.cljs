@@ -23,11 +23,7 @@
                                                           'hypercrud.types.DbVal.DbVal read-DbVal
                                                           'hypercrud.types.EntityRequest.EntityRequest read-EntityRequest
                                                           'hypercrud.types.Err.Err read-Err
-                                                          'hypercrud.types.QueryRequest.QueryRequest read-QueryRequest
-
-                                                          ; deprecated
-                                                          ; we no longer serialize to `->entity`but we need to still support reading from it
-                                                          '->entity hc-readers/->entity})]
+                                                          'hypercrud.types.QueryRequest.QueryRequest read-QueryRequest})]
                  (cljs/eval-str (cljs/empty-state)
                                 code-str'
                                 nil
