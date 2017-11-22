@@ -55,7 +55,6 @@
                        :browse' (r/partial browse' anchor-index)
 
                        ; backwards compat
-                       :with-inline-result (r/partial browse anchor-index)
                        :link-fn (r/partial link-fn anchor-index))]]
       (cats/return (ui-fn result ordered-fes anchors ctx)))))
 
