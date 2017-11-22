@@ -40,6 +40,7 @@
         (anchor* [anchor-index ident ctx]
           (anchor/build-anchor-props (get anchor-index ident) ctx))
         (link-fn [anchor-index ident label ctx]
+          (js/console.error "Warning: :link-fn is deprecated, and will be removed in a future release. Use :anchor instead")
           (anchor anchor-index ident ctx label))]
   ; process-data returns an Either[Error, DOM]
   (defn process-data [{:keys [result ordered-fes anchors ctx]}]
@@ -53,8 +54,6 @@
                        :browse (r/partial browse anchor-index)
                        :anchor* (r/partial anchor* anchor-index)
                        :browse' (r/partial browse' anchor-index)
-
-                       ; backwards compat
                        :link-fn (r/partial link-fn anchor-index))]]
       (cats/return (ui-fn result ordered-fes anchors ctx)))))
 
