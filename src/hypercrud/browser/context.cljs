@@ -62,9 +62,7 @@
 (defn cell-data [ctx cell-data]
   (assoc ctx :owner (if-let [owner-fn (:owner-fn ctx)]
                       (owner-fn cell-data ctx))
-             :cell-data cell-data
-             ; entity is deprecated
-             :entity cell-data))
+             :cell-data cell-data))
 
 (defn attribute [ctx attr-ident]
   (assoc ctx :attribute (get-in ctx [:schema attr-ident])))
