@@ -1,4 +1,5 @@
 (ns hypercrud.server.api
+  (:refer-clojure :exclude [sync])
   (:require [clojure.set :as set]
             [clojure.walk :as walk]
             [cuerdas.core :as str]
@@ -30,9 +31,9 @@
                      o))
                  pulled-tree))
 
-(defmulti hydrate* (fn [this & args] (class this)))
+(defmulti hydrate-request* (fn [this & args] (class this)))
 
-(defmethod hydrate* EntityRequest [{:keys [e a db pull-exp]} get-secure-db-with]
+(defmethod hydrate-request* EntityRequest [{:keys [e a db pull-exp]} get-secure-db-with]
   (let [{pull-db :db} (get-secure-db-with (:uri db) (:branch db))
         pull-exp (if a [{a pull-exp}] pull-exp)
         pulled-tree (if (identity/tempid? e)
@@ -45,7 +46,7 @@
         pulled-tree (if a (get pulled-tree a []) pulled-tree)]
     pulled-tree))
 
-(defmethod hydrate* QueryRequest [{:keys [query params pull-exps]} get-secure-db-with]
+(defmethod hydrate-request* QueryRequest [{:keys [query params pull-exps]} get-secure-db-with]
   (assert query "hydrate: missing query")
   (let [ordered-params (->> (util/parse-query-element query :in)
                             (mapv #(get params (str %)))
@@ -69,7 +70,7 @@
                            ordered-fe-names relation)
                       (into {})))))))
 
-(defn build-get-secure-db-with [staged-branches db-with-lookup]
+(defn build-get-secure-db-with [staged-branches db-with-lookup local-basis]
   (letfn [(get-secure-db-from-branch [{:keys [branch-ident uri tx] :as branch}]
             (or (get @db-with-lookup branch)
                 (let [{:keys [db id->tempid]} (if branch-ident
@@ -81,7 +82,9 @@
                                                                         {:branch-ident parent-ident
                                                                          :uri uri})]
                                                   (get-secure-db-from-branch parent-branch))
-                                                {:db (d/db (d/connect (str uri)))})
+                                                {:db (-> (d/connect (str uri))
+                                                         (d/db)
+                                                         (d/as-of (get local-basis uri)))})
                       ; is it a history query? (let [db (if (:history? dbval) (d/history db) db)])
                       _ (let [validate-tx (constantly true)]
                           ; todo look up tx validator
@@ -103,11 +106,11 @@
                         :uri uri})]
         (get-secure-db-from-branch branch)))))
 
-(defn hydrate [staged-branches request root-t]
+(defn hydrate-requests [staged-branches requests local-basis]     ; theoretically, requests are grouped by basis for cache locality
   (let [db-with-lookup (atom {})
-        get-secure-db-with (build-get-secure-db-with staged-branches db-with-lookup)
-        pulled-trees (->> request
-                          (map #(try (hydrate* % get-secure-db-with)
+        get-secure-db-with (build-get-secure-db-with staged-branches db-with-lookup local-basis)
+        pulled-trees (->> requests
+                          (map #(try (hydrate-request* % get-secure-db-with)
                                      (catch Throwable e (.println *err* (pr-str e)) (->Err (str e))))))
         ; this can also stream, as the request hydrates.
         id->tempid (reduce (fn [acc [branch db]]
@@ -138,4 +141,5 @@
 
 (defn sync [dbs]                                            ; sync is the low level datomic call
   ; ordered kv seq
+  (println (pr-str dbs))
   (->> dbs (map (juxt identity #(-> % str d/connect d/sync deref d/basis-t)))))

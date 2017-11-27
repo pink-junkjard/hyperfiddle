@@ -1,8 +1,10 @@
 (ns hypercrud.server.service
   (:require [cuerdas.core :as str]
+            [hypercrud.readers]
             [hypercrud.server.api :as api]
             [hypercrud.server.util.http :as http]
             [hypercrud.transit :as hc-t]
+            [hypercrud.util.base-64-url-safe :as base-64-url-safe]
             [io.pedestal.http.body-params :as body-params]
             [io.pedestal.http.route :refer [expand-routes]]
             [ring.util.response :as ring-resp]))
@@ -15,12 +17,13 @@
 (defn http-index [req]
   (ring-resp/response "Hypercrud Server Running!"))
 
-(defn http-hydrate [req]
+(defn http-hydrate-requests [req]
   (try
-    (let [{:keys [query-params body-params]} req
-          root-t (if (:t query-params) (Long/parseLong (:t query-params)))
+    (let [{:keys [query-params body-params path-params]} req
+          local-basis (binding [*data-readers* (merge *data-readers* {'uri #'hypercrud.types.URI/read-URI})]
+                        ((comp read-string base-64-url-safe/decode) (:local-basis path-params)))
           {staged-branches :staged-branches request :request} body-params
-          r (api/hydrate staged-branches request root-t)]
+          r (api/hydrate-requests staged-branches request local-basis)]
       (println "...http-hydrate; hydrate=" (str/prune (pr-str r) 100))
       (ring-resp/response (wrap-hypercrud r)))
     (catch Exception e
@@ -48,15 +51,15 @@
       (println e)
       {:status 500 :headers {} :body (str e)})))
 
-(def routes
-  (expand-routes
-    `[[["/" {:get [:index http-index]}]
-       ["/api" {} ^:interceptors [~(body-params/body-params
-                                     (body-params/default-parser-map :edn-options {:readers *data-readers*}
-                                                                     :transit-options [{:handlers hc-t/read-handlers}]))
-                                  http/combine-body-params
-                                  http/auto-content-type]
-        ["/hydrate" {:any [:hydrate http-hydrate]}]
-        ["/transact" {:post [:transact http-transact!]}]
-        ["/sync" {:post [:transact http-sync]}]
-        ]]]))
+#_(def routes
+    (expand-routes
+      `[[["/" {:get [:index http-index]}]
+         ["/api" {} ^:interceptors [~(body-params/body-params
+                                       (body-params/default-parser-map :edn-options {:readers *data-readers*}
+                                                                       :transit-options [{:handlers hc-t/read-handlers}]))
+                                    http/combine-body-params
+                                    http/auto-content-type]
+          ["/hydrate-requests/:basis" {:post [:hydrate http-hydrate-requests]}] ; this is not cachable as it has a body
+          ["/transact" {:post [:transact http-transact!]}]
+          ["/sync" {:post [:transact http-sync]}]
+          ]]]))
