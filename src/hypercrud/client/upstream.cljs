@@ -5,6 +5,7 @@
             [kvlt.core :as kvlt]
             [hypercrud.client.origin :refer [v-not-nil?]]
             [hypercrud.types.Err :refer [Err]]
+            [hypercrud.util.base-64-url-safe :as base-64-url-safe]
             [hypercrud.util.branch :as branch]
             [hypercrud.util.core :as util]
             [promesa.core :as p]))
@@ -13,9 +14,12 @@
 (defn sync [env uri-seq]
   (mlet [{:keys [body]} (kvlt/request! {:url (str (.-uri-str (:service-root-node env)) "sync")
                                         :accept :application/transit+json :as :auto
-                                        :method :post :form uri-seq :content-type :application/transit+json})]
+                                        :method :post :form (sort uri-seq)
+                                        :content-type :application/transit+json})]
     (js/console.log "...global-basis!; response= " (str/prune (pr-str body) 100))
-    body))
+    (->> body
+         (apply concat)
+         (apply sorted-map))))
 
 (defn- adapt-to-service-payload [requests stage-val]
   (let [staged-branches (->> stage-val
@@ -29,17 +33,15 @@
                                                       :tx (filter v-not-nil? tx)})))))))]
     {:staged-branches staged-branches :request requests}))
 
-(defn hydrate! [service-uri requests basis stage-val]       ; node only; browser hydrates by route
+(defn hydrate-requests! [service-uri requests local-basis stage-val]       ; node only; browser hydrates by route
   ; Note the UI-facing interface is stage-val; hypercrud service accepts staged-branches
-  (js/console.log "...hydrate!; top; stage-val= " (pr-str stage-val))
-  (let [req (merge {:url (str (.-uri-str service-uri) "hydrate/" basis)
+  (let [req (merge {:url (str (.-uri-str service-uri) "hydrate-requests/" ((comp base-64-url-safe/encode pr-str) local-basis)) ; serialize kvseq
                     :accept :application/transit+json :as :auto}
-                   (if (empty? stage-val)
-                     {:method :get}
-                     {:method :post
-                      :form (adapt-to-service-payload requests stage-val)
-                      :content-type :application/transit+json}))]
-    (js/console.log (str/format "...hydrate!; request count= %s basis= %s form= %s" (count requests) basis (str/prune (pr-str (:form req)) 100)))
+                   ; hydrate-requests always has a POST body, though it has a basis and is cachable
+                   {:method :post
+                    :form (adapt-to-service-payload requests stage-val)
+                    :content-type :application/transit+json})]
+    (js/console.log (str/format "...hydrate!; request count= %s basis= %s form= %s" (count requests) (pr-str local-basis) (str/prune (pr-str (:form req)) 100)))
     (-> (kvlt/request! req)
         (p/then (util/tee (fn [{:keys [body]}]
                             (js/console.log "...hydrate!; pulled-trees count= " (count (:pulled-trees body)))
@@ -54,15 +56,27 @@
       {:message "Invalid query" :data {:datomic-error (.-msg e) :query (.-query req) :missing unfilled-holes}}
       {:message "Datomic error" :data {:datomic-error (.-msg e)}})))
 
+; this can be removed; #err can natively be Either
 (defn process-result [resultset-or-error request]
   (if (instance? Err resultset-or-error)
     (either/left (human-error resultset-or-error request))
     (either/right resultset-or-error)))
 
-(defn hydrate-all! [service-uri requests basis stage-val]
-  (mlet [{:keys [pulled-trees id->tempid]} (hydrate! service-uri requests basis stage-val)]
-    (let [result (->> pulled-trees (map #(process-result % requests)) sequence)]
-      (either/branch result p/rejected p/resolved))))
+; Promise[List[Response]]
+(defn hydrate-requests!* [service-uri requests basis stage-val]
+  (-> (hydrate-requests! service-uri requests basis stage-val)
+      (p/then (fn [{:keys [pulled-trees id->tempid]}]
+                (either/branch
+                  (->> pulled-trees (map #(process-result % requests)) cats/sequence)
+                  p/rejected
+                  p/resolved))))
+
+
+  #_(mlet [{:keys [pulled-trees id->tempid]} (hydrate-requests! service-uri requests basis stage-val)]
+    (->> pulled-trees (map #(process-result % requests))))
+
+  #_(->> x cats/sequence
+       (either/branch result p/rejected p/resolved)))
 
 (defn hydrate-one! [service-uri request basis stage-val]
-  (hydrate-all! service-uri [request] stage-val basis))
+  (hydrate-requests!* service-uri [request] stage-val basis))

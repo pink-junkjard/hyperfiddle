@@ -10,7 +10,7 @@
 (defn hydrate-until-queries-settle!
   ([dispatch! get-state hydrate-id force]
    (hydrate-until-queries-settle! dispatch! get-state hydrate-id force state/*request* state/*service-uri* state/*basis*))
-  ([dispatch! get-state hydrate-id force request-fn service-uri basis]
+  ([dispatch! get-state hydrate-id force request-fn service-uri local-basis]
    (js/console.log "...hydrate-until-queries-settle!; top")
    (let [{:keys [ptm stage] :as state} (get-state)
          requests (->> (request-fn state) (into #{}))
@@ -20,14 +20,14 @@
      (js/console.log "...hydrate-until-queries-settle!; got requests " (count new-requests))
      ; inspect dbvals used in requests see if stage has changed for them
      (if (or force (not (set/subset? new-requests have-requests)))
-       (p/then (upstream/hydrate! service-uri new-requests-vec basis stage)
+       (p/then (upstream/hydrate-requests! service-uri new-requests-vec local-basis stage)
                (fn [{:keys [pulled-trees id->tempid]}]
                  (js/console.log "...hydrate-until-queries-settle!; http! response")
                  (when (= hydrate-id (:hydrate-id (get-state)))
                    (js/console.log "...hydrate-until-queries-settle!; dispatching :ptm")
                    (dispatch! [:set-ptm (zipmap new-requests-vec pulled-trees) id->tempid])
                    (js/console.log "...hydrate-until-queries-settle!; loop")
-                   (hydrate-until-queries-settle! dispatch! get-state hydrate-id false request-fn service-uri basis))))
+                   (hydrate-until-queries-settle! dispatch! get-state hydrate-id false request-fn service-uri local-basis))))
        (p/resolved nil)))))
 
 ; batch doesn't make sense with thunks (can be sync or async dispatches in a thunk),
