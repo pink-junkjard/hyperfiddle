@@ -5,6 +5,7 @@
             [hypercrud.browser.core :as browser]
             [hypercrud.client.tx :as tx]
             [hypercrud.ui.code-editor :as code-editor]
+            [hypercrud.ui.datalist :refer [datalist-input]]
             [hypercrud.ui.edn :refer [edn-block edn-inline-block]]
             [hypercrud.ui.input :as input]
             [hypercrud.ui.instant :refer [date* iso8601-string*]]
@@ -98,9 +99,10 @@
      [:div.editable-select
       [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) ctx)] ;todo can this be lifted out of editable-select?
       [:div.select                                          ; helps the weird anchor float left css thing
-       (if options-anchor
-         (select* (:value ctx) options-anchor props ctx)
-         (id* props ctx))]]
+       (cond
+         (:anchor/repeating? options-anchor) (select* (:value ctx) options-anchor props ctx)
+         options-anchor (datalist-input (:value ctx) options-anchor props ctx)
+         :else (id* props ctx))]]
      (render-inline-anchors (filter :anchor/render-inline? anchors) ctx)]))
 
 (defn ref-component [maybe-field anchors props ctx]

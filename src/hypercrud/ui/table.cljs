@@ -5,6 +5,7 @@
             [hypercrud.browser.connection-color :as connection-color]
             [hypercrud.browser.context :as context]
             [hypercrud.ui.auto-control :refer [auto-table-cell]]
+            [hypercrud.ui.datalist :refer [datalist]]
             [hypercrud.ui.form-util :as form-util]
             [hypercrud.ui.renderer :as renderer]
             [hypercrud.ui.widget :as widget]
@@ -34,14 +35,17 @@
     (not (nil? fe))))
 
 (defn col-head-anchors [attr-label-anchors ctx]
-  [:div.anchors
-   (widget/render-anchors (remove :anchor/render-inline? attr-label-anchors) ctx)
-   (widget/render-inline-anchors (filter :anchor/render-inline? attr-label-anchors) ctx)])
+  (let [{anchors false option-anchors true} (group-by anchor/option-anchor? attr-label-anchors)]
+    [:div.anchors
+     (widget/render-anchors (remove :anchor/render-inline? anchors) ctx)
+     (widget/render-inline-anchors (filter :anchor/render-inline? anchors) ctx)
+     (->> option-anchors
+          (map (fn [anchor]
+                 [datalist anchor ctx])))]))
 
 (defn col-head [fe fe-pos field col-anchors sort-col ctx]
   (let [ctx (context/attribute ctx (:attribute field))
-        [attr-label-anchors] (widget/process-option-anchors col-anchors ctx)
-        sortable? (and (not-any? anchor/popover-anchor? attr-label-anchors) ; sorting currently breaks click handling in popovers
+        sortable? (and (not-any? anchor/popover-anchor? col-anchors) ; sorting currently breaks click handling in popovers
                        (attr-sortable? fe (:attribute field) ctx))
         sort-direction (let [[sort-fe-pos sort-attr direction] @sort-col]
                          (if (and (= fe-pos sort-fe-pos) (= sort-attr (:attribute field)))
@@ -59,7 +63,7 @@
           :style {:background-color (connection-color/connection-color (:uri ctx) ctx)}
           :on-click on-click}
      [:label [form-util/field-label field ctx]]
-     [col-head-anchors attr-label-anchors ctx]]))
+     [col-head-anchors col-anchors ctx]]))
 
 (defn LinkCell [relation repeating? ordered-fes anchors-lookup ctx]
   [(if repeating? :td.link-cell :th.link-cell)

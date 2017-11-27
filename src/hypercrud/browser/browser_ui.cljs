@@ -11,7 +11,7 @@
             [hypercrud.state.actions.util :as actions-util]
             [hypercrud.ui.stale :as stale]
             [hypercrud.util.core :as util]
-            [reagent.core :as r]))
+            [reagent.core :as reagent]))
 
 
 (declare ui-from-anchor)
@@ -50,11 +50,11 @@
                                    (mapv (juxt #(-> % :anchor/ident) identity)) ; [ repeating entity attr ident ]
                                    (into {}))
                  ctx (assoc ctx
-                       :anchor (r/partial anchor anchor-index)
-                       :browse (r/partial browse anchor-index)
-                       :anchor* (r/partial anchor* anchor-index)
-                       :browse' (r/partial browse' anchor-index)
-                       :link-fn (r/partial link-fn anchor-index))]]
+                       :anchor (reagent/partial anchor anchor-index)
+                       :browse (reagent/partial browse anchor-index)
+                       :anchor* (reagent/partial anchor* anchor-index)
+                       :browse' (reagent/partial browse' anchor-index)
+                       :link-fn (reagent/partial link-fn anchor-index))]]
       (cats/return (ui-fn result ordered-fes anchors ctx)))))
 
 (defn ui-error-inline [e ctx]
@@ -72,7 +72,7 @@
 (defn ui-error [e ctx]
   ; :find-element :attribute :value
   (let [C (cond
-            (:ui-error ctx) (:ui-error ctx)                 ; botnav
+            (:ui-error ctx) (:ui-error ctx)                 ; botnav; todo this could throw: hyperfiddle/hyperfiddle#86
             (:attribute ctx) ui-error-inline                ; table: header or cell, form: header or cell
             (:find-element ctx) ui-error-inline             ;
             :else ui-error-block)]                          ; browser including inline true links
@@ -86,31 +86,50 @@
                             (actions/set-route encoded-route dispatch! get-state)))))
     (.stopPropagation event)))
 
-(defn wrap-ui [v' route ctx]
-  (let [on-click (r/partial (or (:page-on-click ctx)
-                                (r/partial page-on-click ctx))
-                            route)]
+(defn alt-clickable [route ctx cmp]
+  (let [on-click (reagent/partial (or (:page-on-click ctx)
+                                      (reagent/partial page-on-click ctx))
+                                  route)]
     ^{:key route}
-    [native-listener {:on-click on-click}
-     [stale/loading v'
-      (fn [e] [:div.ui (ui-error e ctx)])
-      (fn [v] [:div.ui v])
-      (fn [v] [:div.ui.loading v])]]))
+    [native-listener {:on-click on-click} cmp]))
 
-(defn ui-from-route [route ctx]
-  [wrap-ui (cats/bind (base/data-from-route route ctx) process-data) route ctx])
+; f :: Either[data] -> Hiccup/Component
+(defn clickable-from-route [route ctx f]
+  [alt-clickable route ctx
+   (f (base/data-from-route route ctx))])
 
-(defn ui-from-anchor [anchor ctx]
+; f :: Either[data] -> Hiccup/Component
+(defn clickable-from-anchor [anchor ctx f]
   (let [anchor-props' (try-either (anchor/build-anchor-props anchor ctx)) ; LOOOOOLLLLLL we are dumb
-        v' (mlet [anchor-props anchor-props']
-             ; todo should filter hidden anchors out before recursing (in widget/render-inline-anchors)
-             (if (:hidden anchor-props)
-               (either/right [:noscript])
-               (mlet [route (routing/build-route' anchor ctx)
-                      ; entire context must be encoded in the route
-                      data (base/data-from-route route (context/clean ctx))]
-                 (process-data data))))
         route (-> (cats/fmap :route anchor-props')
                   (cats/mplus (either/right nil))
                   (cats/extract))]
-    [wrap-ui v' route ctx]))
+    [alt-clickable route ctx
+     (if (either/left? anchor-props')
+       (f anchor-props')
+       (let [anchor-props @anchor-props']
+         ; todo should filter hidden anchors out before recursing (in widget/render-inline-anchors)
+         (if (:hidden anchor-props)
+           [:noscript]                                      ; this is WRONGGGGGGG
+           (f (mlet [route (routing/build-route' anchor ctx)]
+                (base/data-from-route route (context/clean ctx)))))))
+
+
+     #_(f (mlet [anchor-props anchor-props']
+          ; todo should filter hidden anchors out before recursing (in widget/render-inline-anchors)
+          (if (:hidden anchor-props)
+            (either/right [:noscript])
+            (mlet [route (routing/build-route' anchor ctx)]
+              (base/data-from-route route (context/clean ctx))))))]))
+
+(defn f [ctx either-v]
+  [stale/loading (cats/bind either-v process-data)
+   (fn [e] [:div.ui (ui-error e ctx)])
+   (fn [v] [:div.ui v])
+   (fn [v] [:div.ui.loading v])])
+
+(defn ui-from-route [route ctx]
+  (clickable-from-route route ctx (reagent/partial f ctx)))
+
+(defn ui-from-anchor [anchor ctx]
+  (clickable-from-anchor anchor ctx (reagent/partial f ctx)))
