@@ -1,6 +1,5 @@
 (ns hypercrud.state.hydrating-action-loop                   ; node
   (:require [clojure.set :as set]
-            [hypercrud.client.origin :as origin]
             [hypercrud.state.core :as state]
             [promesa.core :as p]
             [hypercrud.client.upstream :as upstream]))
@@ -9,7 +8,7 @@
 ; TODO: this only runs in Node now, so it can be simplified
 (defn hydrate-until-queries-settle!
   ([dispatch! get-state hydrate-id force]
-   (hydrate-until-queries-settle! dispatch! get-state hydrate-id force state/*request* state/*service-uri* state/*basis*))
+   (hydrate-until-queries-settle! dispatch! get-state hydrate-id force state/*request* state/*service-uri* state/*local-basis*))
   ([dispatch! get-state hydrate-id force request-fn service-uri local-basis]
    (js/console.log "...hydrate-until-queries-settle!; top")
    (let [{:keys [ptm stage] :as state} (get-state)

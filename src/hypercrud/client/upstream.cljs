@@ -3,11 +3,11 @@
             [cats.monad.either :as either]
             [cuerdas.core :as str]
             [kvlt.core :as kvlt]
-            [hypercrud.client.origin :refer [v-not-nil?]]
-            [hypercrud.types.Err :refer [Err]]
+            [hypercrud.client.v-not-nil :refer [v-not-nil?]]
             [hypercrud.util.base-64-url-safe :as base-64-url-safe]
             [hypercrud.util.branch :as branch]
             [hypercrud.util.core :as util]
+            [hypercrud.client.process-result :as process-result]
             [promesa.core :as p]))
 
 
@@ -49,25 +49,12 @@
                             body)
                           #(js/console.log "...hydrate!; response= " (str/prune (pr-str %) 100)))))))
 
-
-(defn human-error [e req]
-  (let [unfilled-holes (->> (filter (comp nil? val) (.-params req)) (map key))]
-    (if-not (empty? unfilled-holes)
-      {:message "Invalid query" :data {:datomic-error (.-msg e) :query (.-query req) :missing unfilled-holes}}
-      {:message "Datomic error" :data {:datomic-error (.-msg e)}})))
-
-; this can be removed; #err can natively be Either
-(defn process-result [resultset-or-error request]
-  (if (instance? Err resultset-or-error)
-    (either/left (human-error resultset-or-error request))
-    (either/right resultset-or-error)))
-
 ; Promise[List[Response]]
 (defn hydrate-requests!* [service-uri requests local-basis stage-val]
   (-> (hydrate-requests! service-uri requests local-basis stage-val)
       (p/then (fn [{:keys [pulled-trees id->tempid]}]
                 (either/branch
-                  (->> pulled-trees (map #(process-result % requests)) cats/sequence)
+                  (->> pulled-trees (map #(process-result/process-result % requests)) cats/sequence)
                   p/rejected
                   p/resolved)))))
 

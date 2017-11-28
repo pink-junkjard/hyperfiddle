@@ -4,7 +4,8 @@
 ; IFn[state-value => List[Request]]
 (def ^:dynamic *request*)
 (def ^:dynamic *service-uri*)
-(def ^:dynamic *basis*)
+(def ^:dynamic *global-basis*)                              ; opposite
+(def ^:dynamic *local-basis*)                               ; only used in hydrating-action-loop; otherwise never exposed to browser
 
 (defn combine-reducers [reducer-map]
   (fn [value action & args]
