@@ -24,7 +24,6 @@
                         ((comp read-string base-64-url-safe/decode) (:local-basis path-params)))
           {staged-branches :staged-branches request :request} body-params
           r (api/hydrate-requests staged-branches request local-basis)]
-      (println "...http-hydrate; hydrate=" (str/prune (pr-str r) 100))
       (ring-resp/response (wrap-hypercrud r)))
     (catch Exception e
       (println "...http-hydrate; exception=" e)

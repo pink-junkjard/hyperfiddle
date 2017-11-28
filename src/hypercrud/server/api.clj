@@ -107,6 +107,7 @@
         (get-secure-db-from-branch branch)))))
 
 (defn hydrate-requests [staged-branches requests local-basis]     ; theoretically, requests are grouped by basis for cache locality
+  (println (->> (map (comp #(str/prune % 40) pr-str) [local-basis staged-branches (count requests)]) (interpose ", ") (apply str "hydrate-requests: ")))
   (let [db-with-lookup (atom {})
         get-secure-db-with (build-get-secure-db-with staged-branches db-with-lookup local-basis)
         pulled-trees (->> requests
@@ -120,7 +121,6 @@
         ;result (concat pulled-trees id->tempid)
         result {:pulled-trees pulled-trees
                 :id->tempid id->tempid}]
-    (println "...api/hydrate; result=" (str/prune (pr-str result) 100))
     result))
 
 (defn transact! [dtx-groups]
@@ -141,5 +141,4 @@
 
 (defn sync [dbs]                                            ; sync is the low level datomic call
   ; ordered kv seq
-  (println (pr-str dbs))
   (->> dbs (map (juxt identity #(-> % str d/connect d/sync deref d/basis-t)))))
