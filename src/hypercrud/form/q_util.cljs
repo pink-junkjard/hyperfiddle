@@ -6,6 +6,7 @@
 ; deprecated
 ; use hypercrud.util.string/safe-read-string
 (defn safe-read-string [code-str]
+  (js/console.error "Warning: hypercrud.form.q-util is deprecated and will be removed in the future.  Please use hypercrud.util.string/safe-read-string")
   (try
     (if code-str (reader/read-string code-str))             ; this doesn't handle sharp-lambdas
     (catch :default e

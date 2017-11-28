@@ -9,6 +9,7 @@
   (map (fn [v] [:db/add id a v]) ids))
 
 (defn edit-entity [id a rets adds]
+  {:pre [id a]}
   (vec (concat (retract id a rets)
                (add id a adds))))
 

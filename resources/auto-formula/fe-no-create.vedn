@@ -7,22 +7,22 @@
 ==
 (fn [ctx]
   {:request-params
-   {:entity (:entity ctx)}})
+   {:entity (:cell-data ctx)}})
 
 
 ==
 {:d? true :a true}
 ==
 (fn [ctx]
-  (case (-> ctx :attribute :db/cardinality :db/ident)
+  (case (get-in ctx [:attribute :db/cardinality :db/ident])
     :db.cardinality/one {:request-params
                          {:entity (:value ctx)}}
 
     ; "find children of parent entity at attr"
     ; :entity would be better named :parent. See base ->EntityRequest
     :db.cardinality/many {:request-params
-                          {:entity (:entity ctx)
-                           :a (-> ctx :attribute :db/ident)}}))
+                          {:entity (:cell-data ctx)
+                           :a (get-in ctx [:attribute :db/ident])}}))
 
 
 ==

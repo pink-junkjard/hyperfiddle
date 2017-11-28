@@ -11,9 +11,9 @@
   ; why not code-database-uri and all the custom ui/render fns?
   (dissoc ctx
           :keep-disabled-anchors? :route
-          :relation :schemas
-          :uri :find-element :schema
-          :entity :attribute :value
+          :schemas :request :fiddle
+          :uri :schema :user-with!
+          :find-element :attribute :value
           :layout :field))
 
 (defn route [ctx route]
@@ -44,28 +44,28 @@
       (assoc ctx :branch branch))
     ctx))
 
-(defn relation [ctx relation]
-  (assoc ctx :relation relation))
-
 (defn user-with [ctx branch uri tx]
   ; todo custom user-dispatch with all the tx-fns as reducers
   ((:dispatch! ctx) (actions/with branch uri tx)))
 
 (defn find-element [ctx fe]
-  (let [uri (get-in ctx [:repository :repository/environment (:find-element/connection fe)])
-        branch (:branch ctx)]
-    (assoc ctx :uri uri
-               :find-element fe
-               :schema (get-in ctx [:schemas (:find-element/name fe)])
-               :user-with! (reagent/partial user-with ctx branch uri))))
+  (-> (if-let [dbname (some-> (:source-symbol fe) str)]
+        (let [uri (get-in ctx [:repository :repository/environment dbname])]
+          (assoc ctx :uri uri
+                     :schema (get-in ctx [:schemas dbname])
+                     :user-with! (reagent/partial user-with ctx (:branch ctx) uri)))
+        ctx)
 
-(defn entity [ctx entity]
+      ; todo why is fe necessary in the ctx?
+      (assoc ctx :find-element fe)))
+
+(defn cell-data [ctx cell-data]
   (assoc ctx :owner (if-let [owner-fn (:owner-fn ctx)]
-                      (owner-fn entity ctx))
-             :entity entity))
+                      (owner-fn cell-data ctx))
+             :cell-data cell-data))
 
-(defn attribute [ctx attribute]
-  (assoc ctx :attribute (get-in ctx [:schema attribute])))
+(defn attribute [ctx attr-ident]
+  (assoc ctx :attribute (get-in ctx [:schema attr-ident])))
 
 (defn value [ctx value]
   ; this is not reactive

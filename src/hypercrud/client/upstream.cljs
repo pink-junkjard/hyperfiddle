@@ -59,4 +59,12 @@
                   p/resolved)))))
 
 (defn hydrate-one! [service-uri request local-basis stage-val]
+  #_ (defn hydrate-one! [service-uri request stage-val]
+       (-> (http/hydrate! service-uri #{request} stage-val)
+           (p/then (fn [{:keys [t pulled-trees-map id->tempid]}]
+                     (if (contains? pulled-trees-map request)
+                       (-> (get pulled-trees-map request)
+                           (process-result request)
+                           (either/branch p/rejected p/resolved))
+                       (p/rejected {:message "Server failure"}))))))
   (hydrate-requests!* service-uri [request] local-basis stage-val))

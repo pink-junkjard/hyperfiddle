@@ -4,7 +4,6 @@
 
 
 (defn auto-control [field anchors props ctx]
-  ;(assert (:entity ctx))
   (let [isComponent (-> (:attribute ctx) :db/isComponent)
         valueType (-> (:attribute ctx) :db/valueType :db/ident)
         cardinality (-> (:attribute ctx) :db/cardinality :db/ident)

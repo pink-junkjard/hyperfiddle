@@ -1,6 +1,5 @@
 (ns hypercrud.ui.form
   (:require [cuerdas.core :as str]
-            [hypercrud.browser.auto-form :as auto-form]
             [hypercrud.browser.connection-color :as connection-color]
             [hypercrud.browser.context :as context]
             [hypercrud.ui.auto-control :refer [auto-control]]
@@ -31,7 +30,7 @@
        (widget/render-inline-anchors (->> anchors (filter :anchor/render-inline?)) ctx)]])
    (control ctx)
    (let [docstring (util/fallback empty?
-                                  (:db/doc field)           ; Nice string for end users. In future this is an i18n id.
+                                  (:doc field)              ; Nice string for end users. In future this is an i18n id.
                                   (-> ctx :attribute :db/doc) #_"english string for developers")]
      [markdown/markdown docstring #() {:class "hypercrud-doc"}])])
 
@@ -51,53 +50,55 @@
 
 (def always-read-only (constantly true))
 
-(defn Attribute [{:keys [:field/attribute] :as field} fe-anchors-lookup ctx]
-  (let [ctx (as-> (context/attribute ctx attribute) $
-                  (context/value $ (get-in ctx [:entity attribute]))
-                  (if (= attribute :db/id) (assoc $ :read-only always-read-only) $))
+(defn Attribute [field fe-anchors-lookup ctx]
+  (let [ctx (as-> (context/attribute ctx (:attribute field)) $
+                  (context/value $ ((:cell-data->value field) (:cell-data ctx)))
+                  (if (or (nil? (:attribute field))
+                          (= (:attribute field) :db/id))
+                    (assoc $ :read-only always-read-only)
+                    $))
         display-mode @(:display-mode ctx)
         ; What is the user-field allowed to change? The ctx. Can it change links or anchors? no.
         Field (case display-mode :xray Field :user (get ctx :field Field))
         Control (case display-mode :xray Control :user (get ctx :control Control))
-        attr-anchors (get-in fe-anchors-lookup [attribute :links])]
+        attr-anchors (get-in fe-anchors-lookup [(:attribute field) :links])]
     ; todo control can have access to repeating contextual values (color, owner, result, entity, value, etc) but field should NOT
     ; this leads to inconsistent location formulas between non-repeating links in tables vs forms
     [Field (r/partial Control field attr-anchors) field attr-anchors ctx]))
 
-(defn Entity [entity form fe-anchors-lookup ctx]
-  (let [ctx (context/entity ctx entity)
+(defn cell-data-fields [fe cell-data fe-anchors-lookup ctx]
+  (let [ctx (context/cell-data ctx cell-data)
         {inline-anchors true anchors false} (->> (get fe-anchors-lookup :links)
                                                  (filter :anchor/repeating?)
-                                                 (group-by :anchor/render-inline?))
-        splat? (or (empty? (:form/field form))
-                   (->> (map :db/id (:form/field form))
-                        (every? auto-form/system-field?)))]
+                                                 (group-by :anchor/render-inline?))]
     (concat
       (widget/render-anchors anchors ctx)
       (conj
-        (->> (:form/field form)
+        (->> (:fields fe)
              (mapv (fn [field]
-                     ^{:key (:db/id field)}
+                     ^{:key (:id field)}
                      [Attribute field fe-anchors-lookup ctx])))
-        (if splat?
-          ^{:key (hash (keys entity))}
-          [new-field entity ctx]))
+        (if (:splat? fe)
+          ^{:key (hash (keys cell-data))}
+          [new-field cell-data ctx]))
       (widget/render-inline-anchors inline-anchors ctx))))
 
-(defn FindElement [{fe-name :find-element/name :as fe} fe-anchors-lookup ctx]
-  (let [ctx (context/find-element ctx fe)
-        ; todo these fe non-repeating anchors should not have relation in its context
-        {inline-anchors true anchors false} (->> (get fe-anchors-lookup :links)
+(defn result-cell [fe cell-data fe-anchors-lookup ctx]
+  (let [{inline-anchors true anchors false} (->> (get fe-anchors-lookup :links)
                                                  (remove :anchor/repeating?)
                                                  (group-by :anchor/render-inline?))]
     (concat
       (widget/render-anchors anchors ctx)
-      (Entity (get (:relation ctx) fe-name) (:find-element/form fe) fe-anchors-lookup ctx)
+      (cell-data-fields fe cell-data fe-anchors-lookup ctx)
       (widget/render-inline-anchors inline-anchors ctx))))
 
 (defn Relation [relation ordered-fes anchors-lookup ctx]
-  (let [ctx (context/relation ctx relation)]
-    (->> ordered-fes
-         (map-indexed (fn [fe-pos fe]
-                        (FindElement fe (get anchors-lookup fe-pos) ctx)))
-         (apply concat))))
+  (let [ctx (assoc ctx :layout (:layout ctx :block))]
+    [:div {:class (name (:layout ctx))}
+     (->> ordered-fes
+          (map-indexed (fn [fe-pos fe]
+                         (let [cell-data (get relation fe-pos)
+                               fe-anchors-lookup (get anchors-lookup fe-pos)
+                               ctx (context/find-element ctx fe)]
+                           (result-cell fe cell-data fe-anchors-lookup ctx))))
+          (apply concat))]))

@@ -2,7 +2,7 @@
   (:require [cats.core :as cats :refer [mlet]]
             [cats.monad.either :as either :refer-macros [try-either]]
             [hypercrud.browser.auto-anchor :as auto-anchor]
-            [hypercrud.browser.auto-form :as auto-form]
+            [hypercrud.browser.find-element :as find-element]
             [hypercrud.browser.auto-link :as auto-link]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.q-util :as q-util]
@@ -15,7 +15,6 @@
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.ThinEntity :refer [ThinEntity]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
-            [hypercrud.util.core :as util]
             [hypercrud.util.string :as hc-string]))
 
 
@@ -38,13 +37,8 @@
    :link-query/value
    :request/type
    :fiddle/request
-   ; get all our forms for this link
-   {:link-query/find-element [:db/id
-                              :find-element/name
-                              :find-element/connection
-                              {:find-element/form [:db/id
-                                                   :form/name
-                                                   {:form/field ['*]}]}]
+   :fiddle/pull
+   {:link-query/find-element [{:find-element/form [{:form/field [:field/attribute :db/doc]}]}]
     :link/anchor ['*
                   ; hydrate the whole link for validating the anchor by query params
                   {:anchor/link ['*]}]}])
@@ -64,39 +58,12 @@
       {:meta-link-req' meta-link-request
        :link' (cats/bind meta-link-request #(hc/hydrate (:peer ctx) %))})))
 
-(letfn [(strip-form-in-raw-mode [fe ctx]
-          (if (= @(:display-mode ctx) :root)
-            (dissoc fe :find-element/form)
-            fe))]
-  (defn get-ordered-find-elements [link ctx]
-    (mlet [fes (case (:request/type link)
-                 :query (let [find-element-lookup (->> (:link-query/find-element link)
-                                                       (map (juxt :find-element/name identity))
-                                                       (into {}))]
-                          (mlet [q (q-util/safe-parse-query-validated link)]
-                            (->> (util/parse-query-element q :find)
-                                 (mapv str)
-                                 (mapv #(get find-element-lookup % {:find-element/name %}))
-                                 (cats/return))))
-                 :entity (either/right [(or (->> (:link-query/find-element link)
-                                                 (filter #(= (:find-element/name %) "entity"))
-                                                 first)
-                                            {:find-element/name "entity"})])
-                 (either/right []))]
-      (->> fes
-           (map #(into {} %))
-           ; todo request-params should be inspected for Entity's and their conns
-           (map (fn [fe] (update fe :find-element/connection #(or % "$"))))
-           (map #(strip-form-in-raw-mode % ctx))
-           (cats/return)))))
-
-(defn request-for-link [link ordered-fes ctx]
+(defn request-for-link [link ctx]
   (case (:request/type link)
     :query
     (mlet [q (hc-string/memoized-safe-read-edn-string (:link-query/value link))
            query-holes (try-either (q-util/parse-holes q))]
-      (let [route (:route ctx)
-            params-map (merge (:request-params route) (q-util/build-dbhole-lookup ctx))
+      (let [params-map (merge (get-in ctx [:route :request-params]) (q-util/build-dbhole-lookup ctx))
             params (->> query-holes
                         (mapv (juxt identity (fn [hole-name]
                                                (let [param (get params-map hole-name)]
@@ -105,39 +72,33 @@
                                                    (instance? ThinEntity param) (:db/id param)
                                                    :else param)))))
                         (into {}))
-            pull-exp (->> ordered-fes
-                          (mapv (juxt :find-element/name
-                                      (fn [{:keys [:find-element/form :find-element/connection]}]
-                                        (let [uri (get-in ctx [:repository :repository/environment connection])]
-                                          [(hc/db (:peer ctx) uri (:branch ctx))
-                                           (q-util/form-pull-exp form)]))))
-                          (into {}))
-            ; todo validation of conns for pull-exp
+            ;pull-exp
+            #_(-> (hc-string/memoized-safe-read-edn-string (:fiddle/pull link))
+                  (either/branch (constantly nil) identity))
             missing (->> params (filter (comp nil? second)) (mapv first))]
         (if (empty? missing)
-          (cats/return (->QueryRequest q params pull-exp))
+          (cats/return (->QueryRequest q params nil))
           (either/left {:message "missing param" :data {:params params :missing missing}}))))
 
     :entity
-    (let [fe (first (filter #(= (:find-element/name %) "entity") ordered-fes))
-          ; todo if :entity query-param is a typed Entity, the connection is already provided. why are we ignoring?
-          uri (get-in ctx [:repository :repository/environment (:find-element/connection fe)])
-          route (:route ctx)
-          e (get-in route [:request-params :entity])]
-      (cond
-        (nil? uri) (either/left {:message "no connection" :data {:find-element fe}})
-        (nil? e) (either/left {:message "missing param" :data {:params (:request-params route)
-                                                               :missing #{:entity}}})
-
-        :else (either/right
-                (->EntityRequest
-                  (cond
-                    (instance? Entity e) (:db/id e)
-                    (instance? ThinEntity e) (:db/id e)
-                    :else e)
-                  (get-in route [:request-params :a])
-                  (hc/db (:peer ctx) uri (:branch ctx))
-                  (q-util/form-pull-exp (:find-element/form fe))))))
+    (let [request-params (get-in ctx [:route :request-params])
+          e (:entity request-params)
+          uri (try (let [dbname (.-dbname e)]               ;todo report this exception better
+                     (get-in ctx [:repository :repository/environment dbname]))
+                   (catch :default e nil))
+          pull-exp (or (-> (hc-string/memoized-safe-read-edn-string (:fiddle/pull link))
+                           (either/branch (constantly nil) identity)
+                           first)
+                       ['*])]
+      (if (or (nil? uri) (nil? (:db/id e)))
+        (either/left {:message "missing param" :data {:params request-params
+                                                      :missing #{:entity}}})
+        (either/right
+          (->EntityRequest
+            (:db/id e)
+            (:a request-params)
+            (hc/db (:peer ctx) uri (:branch ctx))
+            pull-exp))))
 
     :blank (either/right nil)
 
@@ -152,49 +113,23 @@
                                (eval/eval-str' (from-link link))))
                          (cats/fmap with-user-fn))
                 (either/right default))
-      :xray (either/right default)
-      :root (either/right default))))
+      :xray (either/right default))))
 
 (let [never-read-only (constantly false)]
-  (defn process-results [link request ordered-fes ctx]
-    (mlet [schemas (schema-util/hydrate-schema ordered-fes ctx) ; schema is allowed to be nil if the link only has anchors and no data dependencies
+  (defn process-results [fiddle request ctx]
+    (mlet [schemas (schema-util/hydrate-schema ctx)         ; schema is allowed to be nil if the link only has anchors and no data dependencies
            result (->> (if request
                          (hc/hydrate (:peer ctx) request)
-                         (either/right nil))
-                       (cats/fmap (fn [result]
-                                    ; ereq doesn't have a fe yet; wrap with a fe.
-                                    ; Doesn't make sense to do on server since this is going to optimize away anyway.
-                                    (if (= :entity (:request/type link))
-                                      ; But the ereq might return a vec for cardinality many
-                                      (cond
-                                        ; order matters here a lot!
-                                        (nil? result) nil
-                                        (empty? result) (if (.-a request)
-                                                          ; comes back as [] sometimes if cardinaltiy many request. this is causing problems as nil or {} in different places.
-                                                          ; Above comment seems backwards, left it as is
-                                                          (case (let [fe-name (->> (:link-query/find-element link)
-                                                                                   (filter #(= (:find-element/name %) "entity"))
-                                                                                   first
-                                                                                   :find-element/name)]
-                                                                  (get-in schemas [fe-name (.-a request) :db/cardinality :db/ident]))
-                                                            :db.cardinality/one {}
-                                                            :db.cardinality/many []))
-                                        (instance? Entity result) {"entity" result}
-                                        (instance? ThinEntity result) {"entity" result}
-                                        (coll? result) (mapv (fn [relation] {"entity" relation}) result))
-
-                                      result))))
+                         (either/right nil)))
            :let [ctx (assoc ctx                             ; provide defaults before user-bindings run.
+                       :request request
                        :schemas schemas                     ; For tx/entity->statements in userland.
-                       :fiddle link                         ; for :db/doc
-                       :read-only (or (:read-only ctx) never-read-only))
-                 ordered-fes (auto-form/auto-find-elements ordered-fes result ctx)]
-           ctx (user-bindings/user-bindings' link ctx)
-           :let [anchors (let [opts (case @(:display-mode ctx)
-                                      :user nil
-                                      :xray nil
-                                      :root {:ignore-user-links true})]
-                           (auto-anchor/auto-anchors link ordered-fes ctx opts))]]
+                       :fiddle fiddle                       ; for :db/doc
+                       :read-only (or (:read-only ctx) never-read-only))]
+           ctx (user-bindings/user-bindings' fiddle ctx)
+           ; todo why are we imposing these auto-fns on everyone?
+           ordered-fes (find-element/auto-find-elements result ctx)
+           :let [anchors (auto-anchor/auto-anchors ordered-fes ctx)]]
       (cats/return {:result result
                     :ordered-fes ordered-fes
                     :anchors anchors
@@ -204,9 +139,8 @@
   (let [ctx (context/route ctx route)
         {:keys [link']} (hydrate-link ctx)]
     (mlet [link link'
-           ordered-fes (get-ordered-find-elements link ctx)
-           link-request (request-for-link link ordered-fes ctx)]
-      (process-results link link-request ordered-fes ctx))))
+           link-request (request-for-link link ctx)]
+      (process-results link link-request ctx))))
 
 (defn from-anchor [anchor ctx with-route]
   (mlet [route (routing/build-route' anchor ctx)]

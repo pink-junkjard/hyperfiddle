@@ -9,6 +9,7 @@
 (defn user-renderer [ctx]
   (let [attr (:attribute ctx)]
     (or
+      ; todo binding renderers should be pathed for aggregates and values
       (eval/validate-user-code-str (get-in ctx [:fields (:db/ident attr) :renderer]))
       (eval/validate-user-code-str (-> attr :attribute/renderer)))))
 
