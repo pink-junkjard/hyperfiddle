@@ -63,20 +63,13 @@
     (either/right resultset-or-error)))
 
 ; Promise[List[Response]]
-(defn hydrate-requests!* [service-uri requests basis stage-val]
-  (-> (hydrate-requests! service-uri requests basis stage-val)
+(defn hydrate-requests!* [service-uri requests local-basis stage-val]
+  (-> (hydrate-requests! service-uri requests local-basis stage-val)
       (p/then (fn [{:keys [pulled-trees id->tempid]}]
                 (either/branch
                   (->> pulled-trees (map #(process-result % requests)) cats/sequence)
                   p/rejected
-                  p/resolved))))
+                  p/resolved)))))
 
-
-  #_(mlet [{:keys [pulled-trees id->tempid]} (hydrate-requests! service-uri requests basis stage-val)]
-    (->> pulled-trees (map #(process-result % requests))))
-
-  #_(->> x cats/sequence
-       (either/branch result p/rejected p/resolved)))
-
-(defn hydrate-one! [service-uri request basis stage-val]
-  (hydrate-requests!* service-uri [request] stage-val basis))
+(defn hydrate-one! [service-uri request local-basis stage-val]
+  (hydrate-requests!* service-uri [request] local-basis stage-val))
