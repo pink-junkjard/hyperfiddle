@@ -1,6 +1,7 @@
 (def dependencies '[[com.cognitect/transit-clj "0.8.285"]
                     [com.hyperfiddle/util "0.0.1-SNAPSHOT"]
                     ;[com.hyperfiddle/hypercrud.platform.jvm "0.0.1-SNAPSHOT"]
+                    [datascript "0.16.2"]
                     [funcool/cuerdas "2.0.4"]
                     [io.pedestal/pedestal.service "0.5.1"]
                     [org.apache.commons/commons-lang3 "3.4"]
