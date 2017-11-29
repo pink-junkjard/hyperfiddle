@@ -1,6 +1,5 @@
 (ns hypercrud.state.hydrating-action-batched                ; browser
   (:require [cats.core :refer [mlet]]
-            [clojure.set :as set]
             [hypercrud.state.core :as state]
             [hypercrud.util.base-64-url-safe :as base-64-url-safe]
             [hypercrud.types.URI]
@@ -42,7 +41,7 @@
 (defn hydrating-action-batched [{:keys [on-start]} dispatch! get-state]
   (dispatch! (apply batch [:hydrate!-start (js/Math.random)] (if on-start (on-start get-state))))
   (let [{:keys [stage encoded-route] :as state} (get-state)]
-    (mlet [local-basis (local-basis! state/*global-basis* "page" encoded-route #_ "has leading slash" stage)]
+    (mlet [local-basis (local-basis! state/*global-basis* "page" encoded-route #_"has leading slash" stage)]
       (-> (local-hydrate! encoded-route local-basis stage)
           (p/then (fn [{:keys [pulled-trees-map id->tempid]}]
                     (dispatch! [:set-ptm pulled-trees-map id->tempid])

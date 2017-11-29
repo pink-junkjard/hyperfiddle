@@ -3,11 +3,11 @@
             [cats.monad.either :as either]
             [cuerdas.core :as str]
             [kvlt.core :as kvlt]
+            [hypercrud.client.process-result :as process-result]
             [hypercrud.client.v-not-nil :refer [v-not-nil?]]
             [hypercrud.util.base-64-url-safe :as base-64-url-safe]
             [hypercrud.util.branch :as branch]
             [hypercrud.util.core :as util]
-            [hypercrud.client.process-result :as process-result]
             [promesa.core :as p]))
 
 
@@ -33,7 +33,7 @@
                                                       :tx (filter v-not-nil? tx)})))))))]
     {:staged-branches staged-branches :request requests}))
 
-(defn hydrate-requests! [service-uri requests local-basis stage-val]       ; node only; browser hydrates by route
+(defn hydrate-requests! [service-uri requests local-basis stage-val] ; node only; browser hydrates by route
   ; Note the UI-facing interface is stage-val; hypercrud service accepts staged-branches
   (let [req (merge {:url (str (.-uri-str service-uri) "hydrate-requests/" ((comp base-64-url-safe/encode pr-str) local-basis)) ; serialize kvseq
                     :accept :application/transit+json :as :auto}
@@ -59,12 +59,12 @@
                   p/resolved)))))
 
 (defn hydrate-one! [service-uri request local-basis stage-val]
-  #_ (defn hydrate-one! [service-uri request stage-val]
-       (-> (http/hydrate! service-uri #{request} stage-val)
-           (p/then (fn [{:keys [t pulled-trees-map id->tempid]}]
-                     (if (contains? pulled-trees-map request)
-                       (-> (get pulled-trees-map request)
-                           (process-result request)
-                           (either/branch p/rejected p/resolved))
-                       (p/rejected {:message "Server failure"}))))))
+  #_(defn hydrate-one! [service-uri request stage-val]
+      (-> (http/hydrate! service-uri #{request} stage-val)
+          (p/then (fn [{:keys [t pulled-trees-map id->tempid]}]
+                    (if (contains? pulled-trees-map request)
+                      (-> (get pulled-trees-map request)
+                          (process-result request)
+                          (either/branch p/rejected p/resolved))
+                      (p/rejected {:message "Server failure"}))))))
   (hydrate-requests!* service-uri [request] local-basis stage-val))

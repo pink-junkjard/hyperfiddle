@@ -1,16 +1,8 @@
 (ns hypercrud.client.transact
-  (:require [cljs.pprint :as pprint]
-            [cljs.reader :as reader]
-            [hypercrud.client.v-not-nil :refer [v-not-nil?]]
-            [hypercrud.client.transit :as transit]
-            [hypercrud.util.branch :as branch]
+  (:require [hypercrud.client.v-not-nil :refer [v-not-nil?]]
             [hypercrud.util.core :as util]
             [kvlt.core :as kvlt]
-            [promesa.core :as p]
-            [clojure.string :as string]
-            [cuerdas.core :as str]
-            [cats.monad.either :as either]
-            [hypercrud.util.base-64-url-safe :as base-64-url-safe]))
+            [promesa.core :as p]))
 
 
 ; still weird complected as called from browser and node with different service-uri

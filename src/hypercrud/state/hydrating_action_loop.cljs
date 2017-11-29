@@ -1,8 +1,8 @@
 (ns hypercrud.state.hydrating-action-loop                   ; node
   (:require [clojure.set :as set]
+            [hypercrud.client.upstream :as upstream]
             [hypercrud.state.core :as state]
-            [promesa.core :as p]
-            [hypercrud.client.upstream :as upstream]))
+            [promesa.core :as p]))
 
 ; force is a hack to be removed once this function runs in node
 ; TODO: this only runs in Node now, so it can be simplified
