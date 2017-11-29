@@ -1,6 +1,5 @@
 (ns hypercrud.server.service
-  (:require [cuerdas.core :as str]
-            [hypercrud.readers]
+  (:require [hypercrud.readers]
             [hypercrud.server.api :as api]
             [hypercrud.server.util.http :as http]
             [hypercrud.transit :as hc-t]
@@ -11,7 +10,6 @@
 
 
 (defn wrap-hypercrud [m]
-  ; (concat [[:hypercrud "0.0.1-SNAPSHOT"]] m)
   m)
 
 (defn http-index [req]
@@ -19,7 +17,7 @@
 
 (defn http-hydrate-requests [req]
   (try
-    (let [{:keys [query-params body-params path-params]} req
+    (let [{:keys [body-params path-params]} req
           local-basis (binding [*data-readers* (merge *data-readers* {'uri #'hypercrud.types.URI/read-URI})]
                         ((comp read-string base-64-url-safe/decode) (:local-basis path-params)))
           {staged-branches :staged-branches request :request} body-params
@@ -50,15 +48,15 @@
       (println e)
       {:status 500 :headers {} :body (str e)})))
 
-#_(def routes
-    (expand-routes
-      `[[["/" {:get [:index http-index]}]
-         ["/api" {} ^:interceptors [~(body-params/body-params
-                                       (body-params/default-parser-map :edn-options {:readers *data-readers*}
-                                                                       :transit-options [{:handlers hc-t/read-handlers}]))
-                                    http/combine-body-params
-                                    http/auto-content-type]
-          ["/hydrate-requests/:basis" {:post [:hydrate http-hydrate-requests]}] ; this is not cachable as it has a body
-          ["/transact" {:post [:transact http-transact!]}]
-          ["/sync" {:post [:transact http-sync]}]
-          ]]]))
+(def routes
+  (expand-routes
+    `[[["/" {:get [:index http-index]}]
+       ["/api" {} ^:interceptors [(body-params/body-params
+                                    (body-params/default-parser-map :edn-options {:readers *data-readers*}
+                                                                    :transit-options [{:handlers hc-t/read-handlers}]))
+                                  http/combine-body-params
+                                  http/auto-content-type]
+        ["/hydrate-requests/:local-basis" {:post [:hydrate http-hydrate-requests]}] ; this is not cachable as it has a body
+        ["/transact" {:post [:transact http-transact!]}]
+        ["/sync" {:post [:latest http-sync]}]
+        ]]]))

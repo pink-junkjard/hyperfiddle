@@ -115,7 +115,7 @@
                         :uri uri})]
         (get-secure-db-from-branch branch)))))
 
-(defn hydrate-requests [staged-branches requests local-basis]     ; theoretically, requests are grouped by basis for cache locality
+(defn hydrate-requests [staged-branches requests local-basis] ; theoretically, requests are grouped by basis for cache locality
   (println (->> (map (comp #(str/prune % 40) pr-str) [local-basis staged-branches (count requests)]) (interpose ", ") (apply str "hydrate-requests: ")))
   (let [db-with-lookup (atom {})
         get-secure-db-with (build-get-secure-db-with staged-branches db-with-lookup local-basis)
