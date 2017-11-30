@@ -1,25 +1,25 @@
 version: 2
 jobs:
   test:
-    build:
-      docker:
-        - image: clojure:boot-2.7.1-alpine
-          environment:
-            BOOT_JVM_OPTIONS: "-Xms1024m -Xmx2048m"
-            BOOT_WATCHERS_DISABLE: "yes"
-      steps:
-        - checkout
-        - restore_cache:
-            key: test-{{checksum "boot.properties" }}-{{ checksum "build.boot" }}
+    docker:
+      - image: clojure:boot-2.7.1-alpine
+        environment:
+          BOOT_JVM_OPTIONS: "-Xms1024m -Xmx2048m"
+          BOOT_WATCHERS_DISABLE: "yes"
+    steps:
+      - checkout
+      - restore_cache:
+          key: test-{{checksum "boot.properties" }}-{{ checksum "build.boot" }}
 
-        - run: boot test
+      - run: boot test
 
-        - save_cache:
-            paths:
-              - ~/.m2
-              - ~/.boot/cache/lib
-              - ~/.boot/cache/bin
-            key: test-{{checksum "boot.properties" }}-{{ checksum "build.boot" }}
+      - save_cache:
+          paths:
+            - ~/.m2
+            - ~/.boot/cache/lib
+            - ~/.boot/cache/bin
+          key: test-{{checksum "boot.properties" }}-{{ checksum "build.boot" }}
+
   build:
     docker:
       - image: clojure:boot-2.7.1-alpine
