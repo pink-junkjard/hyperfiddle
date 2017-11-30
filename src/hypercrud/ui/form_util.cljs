@@ -17,25 +17,17 @@
   {:read-only ((get ctx :read-only) (:attribute ctx) ctx)})
 
 (defn attribute-human [attr]
-  (-> attr
-      (dissoc :db/id :db/doc)
-      (util/update-existing :db/cardinality :db/ident)
-      (util/update-existing :db/valueType :db/ident)
-      (util/update-existing :db/unique :db/ident)
-      (util/update-existing :attribute/renderer str/prune 30)))
+  (->> (-> attr
+           (util/update-existing :db/cardinality :db/ident)
+           (util/update-existing :db/valueType :db/ident)
+           (util/update-existing :db/unique :db/ident)
+           (select-keys [:db/valueType :db/cardinality :db/unique]))
+       (reduce-kv (fn [acc k v] (conj acc v)) [])))
 
 (defn field-label [field ctx]
-  (let [label (util/fallback empty? "" #_ (:field/prompt field) ; hook into i18n for this, can't store english in database
-                                    (-> ctx :attribute :db/ident str))
-        help-text (util/pprint-str (attribute-human (:attribute ctx)) 60)]
-    [tooltip/hover-popover-managed
-     {:label [:pre help-text]}
-     [:span.help label]]
-    #_[:div
-       (let [is-ref? (coll? value)]
-         (if is-ref?
-           [tooltip/click-popover-managed
-            {:body [code-editor/code-editor* (util/pprint-str value 100) nil {:readOnly true}]}
-            [:a {:href "javascript:void 0;"} "§"]]))
-       " "
-       ]))
+  (let [label (-> ctx :attribute :db/ident str)
+        help-text (apply str (interpose " " (attribute-human (:attribute ctx))))]
+    [tooltip/fast-hover-tooltip-managed
+     {:label help-text
+      :position :below-right}
+     [:span.help label]]))

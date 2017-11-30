@@ -29,10 +29,7 @@
        (widget/render-anchors (->> anchors (remove :anchor/render-inline?)) ctx)
        (widget/render-inline-anchors (->> anchors (filter :anchor/render-inline?)) ctx)]])
    (control ctx)
-   (let [docstring (util/fallback empty?
-                                  (:doc field)              ; Nice string for end users. In future this is an i18n id.
-                                  (-> ctx :attribute :db/doc) #_"english string for developers")]
-     [markdown/markdown docstring #() {:class "hypercrud-doc"}])])
+   [markdown/markdown (-> ctx :attribute :db/doc) #() {:class "hypercrud-doc"}]])
 
 (defn new-field [entity ctx]
   (let [attr-ident (r/atom nil)]
