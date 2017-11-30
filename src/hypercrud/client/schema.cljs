@@ -8,9 +8,9 @@
 
 
 (defn hc-attr-request [ctx]
-  (->QueryRequest '[:find [(pull ?attr [:attribute/ident :attribute/renderer]) ...]
+  (->QueryRequest '[:find [(pull ?attr [:attribute/ident :attribute/renderer :db/doc]) ...]
                     :in $ :where
-                    [?attr :attribute/renderer]]
+                    [?attr :attribute/ident]]
                   {"$" (hc/db (:peer ctx) (get-in ctx [:repository :dbhole/uri] ctx) (:branch ctx))}
                   nil))
 
@@ -51,6 +51,6 @@
                                             (->> schema
                                                  (map #(into {} %))
                                                  (util/group-by-assume-unique :db/ident)
-                                                 (merge-with merge indexed-root))])))))
+                                                 (merge-with #(merge %2 %1) indexed-root))])))))
                  (cats/sequence)
                  (cats/fmap #(into {} %))))))))
