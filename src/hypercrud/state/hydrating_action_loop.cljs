@@ -10,22 +10,17 @@
   ([dispatch! get-state hydrate-id force]
    (hydrate-until-queries-settle! dispatch! get-state hydrate-id force state/*request* state/*service-uri* state/*local-basis*))
   ([dispatch! get-state hydrate-id force request-fn service-uri local-basis]
-   (js/console.log "...hydrate-until-queries-settle!; top")
    (let [{:keys [ptm stage] :as state} (get-state)
          requests (->> (request-fn state) (into #{}))
          have-requests (set (keys ptm))
          new-requests (set/difference requests have-requests)
          new-requests-vec (into [] new-requests)]
-     (js/console.log "...hydrate-until-queries-settle!; got requests " (count new-requests))
      ; inspect dbvals used in requests see if stage has changed for them
      (if (or force (not (set/subset? new-requests have-requests)))
        (p/then (upstream/hydrate-requests! service-uri new-requests-vec local-basis stage)
                (fn [{:keys [pulled-trees id->tempid]}]
-                 (js/console.log "...hydrate-until-queries-settle!; http! response")
                  (when (= hydrate-id (:hydrate-id (get-state)))
-                   (js/console.log "...hydrate-until-queries-settle!; dispatching :ptm")
                    (dispatch! [:set-ptm (zipmap new-requests-vec pulled-trees) id->tempid])
-                   (js/console.log "...hydrate-until-queries-settle!; loop")
                    (hydrate-until-queries-settle! dispatch! get-state hydrate-id false request-fn service-uri local-basis))))
        (p/resolved nil)))))
 
@@ -46,11 +41,9 @@
      (-> (hydrate-until-queries-settle! dispatch! get-state hydrate-id
                                         (or force (not= o-stage (:stage (get-state)))))
          (p/then (fn []
-                   (js/console.log "...hydrating-action; success ")
                    (when (= hydrate-id (:hydrate-id (get-state)))
                      (dispatch! [:hydrate!-success]))))
          (p/catch (fn [error]
-                    (js/console.log "...hydrating-action; error= " error)
                     (when (= hydrate-id (:hydrate-id (get-state)))
                       (dispatch! [:hydrate!-failure error]))))))
    nil))
