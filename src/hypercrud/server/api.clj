@@ -79,31 +79,47 @@
       datascript.parser.FindTuple (process-tuple params qfind result)
       datascript.parser.FindScalar (process-scalar params qfind result))))
 
+; todo i18n
+(def ERROR-BRANCH-PAST "Branching the past is currently unsupported, please update your basis")
+
 (defn build-get-secure-db-with [staged-branches db-with-lookup local-basis]
   (letfn [(get-secure-db-from-branch [{:keys [branch-ident uri tx] :as branch}]
             (or (get @db-with-lookup branch)
-                (let [{:keys [db id->tempid]} (if branch-ident
-                                                (let [parent-ident (branch/decode-parent-branch branch-ident)
-                                                      parent-branch (or (->> staged-branches
-                                                                             (filter #(and (= parent-ident (:branch-ident %))
-                                                                                           (= uri (:uri %))))
-                                                                             first)
-                                                                        {:branch-ident parent-ident
-                                                                         :uri uri})]
-                                                  (get-secure-db-from-branch parent-branch))
-                                                {:db (-> (d/connect (str uri))
-                                                         (d/db)
-                                                         (d/as-of (get local-basis uri)))})
+                (let [t (get local-basis uri)
+                      init-db-with (if branch-ident
+                                     (let [parent-ident (branch/decode-parent-branch branch-ident)
+                                           parent-branch (or (->> staged-branches
+                                                                  (filter #(and (= parent-ident (:branch-ident %))
+                                                                                (= uri (:uri %))))
+                                                                  first)
+                                                             {:branch-ident parent-ident
+                                                              :uri uri})]
+                                       (get-secure-db-from-branch parent-branch))
+                                     {:db (-> (d/connect (str uri))
+                                              (d/db)
+                                              (d/as-of t))})
                       ; is it a history query? (let [db (if (:history? dbval) (d/history db) db)])
-                      _ (let [validate-tx (constantly true)]
-                          ; todo look up tx validator
-                          (assert (validate-tx db tx) (str "staged tx for " uri " failed validation")))
-                      project-db-with (let [read-sec-predicate (constantly true) ;todo lookup sec pred
-                                            ; todo d/with an unfiltered db
-                                            {:keys [db-after tempids]} (d/with db tx)]
-                                        {:db (d/filter db-after read-sec-predicate)
-                                         ; todo this merge is excessively duplicating data to send to the client
-                                         :id->tempid (merge id->tempid (set/map-invert tempids))})]
+                      project-db-with (-> (if (empty? tx)
+                                            init-db-with
+                                            (let [{:keys [db id->tempid with?]} init-db-with
+                                                  _ (when (and (not with?) (not= t (d/basis-t db)))
+                                                      ; can only run this assert once, on the first time a user d/with's
+                                                      ; every subsequent d/with, the new db's basis will never again match the user submitted basis
+                                                      ; however this is fine, since the original t is already known good
+                                                      (throw (RuntimeException. ERROR-BRANCH-PAST)))
+                                                  _ (let [validate-tx (constantly true)] ; todo look up tx validator
+                                                      (assert (validate-tx db tx) (str "staged tx for " uri " failed validation")))
+                                                  ; todo d/with an unfiltered db
+                                                  {:keys [db-after tempids]} (d/with db tx)]
+                                              ; as-of/basis-t gymnastics:
+                                              ; https://gist.github.com/dustingetz/39f28f148942728c13edef1c7d8baebf/ee35a6af327feba443339176d371d9c7eaff4e51#file-datomic-d-with-interactions-with-d-as-of-clj-L35
+                                              ; https://forum.datomic.com/t/interactions-of-d-basis-t-d-as-of-d-with/219
+                                              {:db (d/as-of db-after (d/basis-t db-after))
+                                               :with? true
+                                               ; todo this merge is excessively duplicating data to send to the client
+                                               :id->tempid (merge id->tempid (set/map-invert tempids))}))
+                                          (update :db (let [read-sec-predicate (constantly true)] ;todo look up sec pred
+                                                        #(d/filter % read-sec-predicate))))]
                   (swap! db-with-lookup assoc branch project-db-with)
                   project-db-with)))]
     (fn [uri branch-val]

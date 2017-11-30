@@ -9,7 +9,10 @@
                     [org.clojure/core.incubator "0.1.4"]    ; transitive - override pedestal
 
                     ; build/test/dev
+                    [adzerk/boot-test "1.2.0" :scope "test"]
                     [adzerk/bootlaces "0.1.13" :scope "test"]
+                    [com.datomic/datomic-free "0.9.5561" :scope "test"]
+                    [io.pedestal/pedestal.jetty "0.5.1" :scope "test"]
                     [sparkfund/boot-lein-generate "0.3.0" :scope "test"]
                     ])
 
@@ -23,6 +26,7 @@
   :boot.lein/project-clj {:dependencies dependencies})
 
 (require '[adzerk.bootlaces :refer [push-snapshot]]
+         '[adzerk.boot-test :as boot-test]
          'boot.lein)
 
 (def +version+ "0.2.0-SNAPSHOT")
@@ -31,6 +35,10 @@
   push #(into % {:repo "deploy-clojars" :ensure-version +version+})
   pom {:project 'com.hyperfiddle/hypercrud.server
        :version +version+})
+
+(deftask test []
+         (merge-env! :source-paths #{"test"})
+         (boot-test/test :include  #"^hypercrud.server.test"))
 
 (when (> (.lastModified (clojure.java.io/file "build.boot"))
          (.lastModified (clojure.java.io/file "project.clj")))
