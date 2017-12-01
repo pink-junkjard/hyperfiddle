@@ -7,11 +7,18 @@
             [promesa.core :as p]))
 
 
+; todo the *service-uri* binding should be used instead,
+; but node api and service endpoints are different still
+; https://github.com/hyperfiddle/hyperfiddle/issues/96
 (def service-uri #uri "/")
 
 (defn local-hydrate! [root-rel-path local-basis stage-val]
   (let [local-basis-encoded ((comp base-64-url-safe/encode pr-str) local-basis)
         foo "page"
+        ; todo what about the rest of the state?
+        ; display-mode impacts bindings & request-fn
+        ; popovers will eventually need to be included
+        ; is the tempid lookup needed?
         req (merge {:url (str (.-uri-str service-uri) "local-hydrate/" local-basis-encoded "/" foo root-rel-path)
                     :accept :application/transit+json :as :auto}
                    (if (empty? stage-val)
@@ -23,7 +30,6 @@
 
 (defn local-basis! [global-basis foo root-rel-path stage-val]
   (let [global-basis' ((comp base-64-url-safe/encode pr-str) global-basis)
-        foo "page"
         req (merge {:url (str (.-uri-str service-uri) "local-basis/" global-basis' "/" foo root-rel-path)
                     :accept :application/transit+json :as :auto}
                    (if (empty? stage-val)
@@ -44,12 +50,8 @@
     (mlet [local-basis (local-basis! state/*global-basis* "page" encoded-route #_"has leading slash" stage)]
       (-> (local-hydrate! encoded-route local-basis stage)
           (p/then (fn [{:keys [pulled-trees-map id->tempid]}]
-                    (dispatch! [:set-ptm pulled-trees-map id->tempid])
-                    (p/resolved nil)
-                    #_(dispatch! [:batch
-                                  [:set-ptm pulled-trees-map id->tempid]
-                                  [:hydrate!-success]])))
-          (p/then (fn [] (dispatch! [:hydrate!-success])
-                    (p/resolved nil)))
+                    (dispatch! [:batch
+                                [:set-ptm pulled-trees-map id->tempid]
+                                [:hydrate!-success]])))
           (p/catch #(dispatch! [:hydrate!-failure %])))))
   nil)

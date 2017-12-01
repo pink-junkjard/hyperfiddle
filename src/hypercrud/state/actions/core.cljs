@@ -79,4 +79,6 @@
                           updated-route (-> (or (routing/decode encoded-route) home-route)
                                             (routing/invert-ids invert-id ctx)
                                             (routing/encode))]
-                      (hydrating-action {:on-start (constantly [[:transact!-success updated-route]])} dispatch! get-state))))))))
+                      (hydrating-action {:on-start (constantly [[:transact!-success updated-route]])} dispatch! get-state)
+                      ; todo update global basis and rehydrate
+                      )))))))
