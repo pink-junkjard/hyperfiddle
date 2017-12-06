@@ -21,7 +21,7 @@
           local-basis (binding [*data-readers* (merge *data-readers* {'uri #'hypercrud.types.URI/read-URI})]
                         ((comp read-string base-64-url-safe/decode) (:local-basis path-params)))
           {staged-branches :staged-branches request :request} body-params
-          r (api/hydrate-requests staged-branches request local-basis)]
+          r (api/hydrate-requests local-basis request staged-branches)]
       (ring-resp/response (wrap-hypercrud r)))
     (catch Exception e
       (println "...http-hydrate; exception=" e)
@@ -57,6 +57,6 @@
                                   http/combine-body-params
                                   http/auto-content-type]
         ["/hydrate-requests/:local-basis" {:post [:hydrate http-hydrate-requests]}] ; this is not cachable as it has a body
-        ["/transact" {:post [:transact http-transact!]}]
+        ["/transact" {:post [:transact! http-transact!]}]
         ["/sync" {:post [:latest http-sync]}]
         ]]]))

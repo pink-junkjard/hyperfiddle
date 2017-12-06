@@ -131,7 +131,7 @@
                         :uri uri})]
         (get-secure-db-from-branch branch)))))
 
-(defn hydrate-requests [staged-branches requests local-basis] ; theoretically, requests are grouped by basis for cache locality
+(defn hydrate-requests [local-basis requests staged-branches] ; theoretically, requests are grouped by basis for cache locality
   (println (->> (map (comp #(str/prune % 40) pr-str) [local-basis staged-branches (count requests)]) (interpose ", ") (apply str "hydrate-requests: ")))
   (let [db-with-lookup (atom {})
         get-secure-db-with (build-get-secure-db-with staged-branches db-with-lookup local-basis)
@@ -148,16 +148,16 @@
                 :id->tempid id->tempid}]
     result))
 
-(defn transact! [dtx-groups]
+(defn transact! [tx-groups]
   (let [valid? (every? (fn [[uri tx]]
                          (let [db (d/db (d/connect (str uri)))
                                ; todo look up tx validator
                                validate-tx (constantly true)]
                            (validate-tx db tx)))
-                       dtx-groups)]
+                       tx-groups)]
     (if-not valid?
       (throw (RuntimeException. "user tx failed validation"))
-      (let [tempid-lookups (->> dtx-groups
+      (let [tempid-lookups (->> tx-groups
                                 (mapv (fn [[uri dtx]]
                                         (let [{:keys [tempids]} @(d/transact (d/connect (str uri)) dtx)]
                                           [uri tempids])))
