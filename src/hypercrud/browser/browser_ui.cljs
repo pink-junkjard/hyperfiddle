@@ -83,7 +83,7 @@
     ((:dispatch! ctx) (fn [dispatch! get-state]
                         (let [encoded-route (routing/encode route)]
                           (when (actions-util/navigable? encoded-route (get-state))
-                            (actions/set-route encoded-route dispatch! get-state)))))
+                            (actions/set-route (:peer ctx) encoded-route dispatch! get-state)))))
     (.stopPropagation event)))
 
 (defn wrap-ui [v' route ctx]

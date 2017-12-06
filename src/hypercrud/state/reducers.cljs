@@ -68,8 +68,7 @@
 
 (defn ptm-reducer [ptm action & args]
   (case action
-    :set-ptm (merge ptm (first args))
-
+    :set-ptm (first args)
     (or ptm nil)))
 
 (defn error-reducer [error action & args]
@@ -90,9 +89,21 @@
 (defn pressed-keys-reducer [v action & args]
   (or v #{}))
 
+(defn global-basis-reducer [global-basis action & args]
+  (case action
+    :set-global-basis (first args)
+    global-basis))
+
+(defn local-basis-reducer [local-basis action & args]
+  (case action
+    :set-local-basis (first args)
+    local-basis))
+
 (def root-reducer-map
   {:hydrate-id hydrate-id-reducer
    :encoded-route route-reducer
+   :global-basis global-basis-reducer
+   :local-basis local-basis-reducer
    :stage stage-reducer
    :ptm ptm-reducer
    :error error-reducer

@@ -104,12 +104,12 @@
 
                               ; return the result to the action, it could be a promise
                               result))]
-              ((:dispatch! ctx) (actions/stage-popover (:branch ctx) swap-fn)))))
+              ((:dispatch! ctx) (actions/stage-popover (:peer ctx) (:branch ctx) swap-fn)))))
         ; todo something better with these exceptions (could be user error)
         (p/catch #(-> % pprint-str js/alert)))))
 
 (defn cancel! [ctx]
-  ((:dispatch! ctx) (actions/cancel-popover (:branch ctx))))
+  ((:dispatch! ctx) (actions/cancel-popover (:peer ctx) (:branch ctx))))
 
 (defn managed-popover-body [anchor route ctx]
   (let [stage! (reagent/partial stage! anchor route ctx)

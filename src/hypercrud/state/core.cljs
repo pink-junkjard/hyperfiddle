@@ -1,12 +1,6 @@
 (ns hypercrud.state.core)
 
 
-; IFn[state-value => List[Request]]
-(def ^:dynamic *request*)
-(def ^:dynamic *service-uri*)
-(def ^:dynamic *global-basis*)                              ; opposite
-(def ^:dynamic *local-basis*)                               ; only used in hydrating-action-loop; otherwise never exposed to browser
-
 (defn combine-reducers [reducer-map]
   (fn [value action & args]
     (reduce (fn [state [k reducer]]
