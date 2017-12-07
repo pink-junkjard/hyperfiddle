@@ -26,20 +26,15 @@
                   (nil? v))))))
 
 (defn hydrate-one! [rt local-basis stage request]
-  (-> (api/hydrate-requests rt local-basis stage #{request})
-      (p/then (fn [{:keys [pulled-trees-map]}]
-                (if (contains? pulled-trees-map request)
-                  (-> (get pulled-trees-map request)
-                      (process-result request)
-                      (either/branch p/rejected p/resolved))
-                  (p/rejected {:message "Server failure"}))))))
+  (-> (api/hydrate-requests rt local-basis stage [request])
+      (p/then (fn [{:keys [pulled-trees]}]
+                (-> (process-result (first pulled-trees) request)
+                    (either/branch p/rejected p/resolved))))))
 
 ; Promise[List[Response]]
 (defn hydrate-all-or-nothing! [rt local-basis stage requests]
   (-> (api/hydrate-requests rt local-basis stage requests)
       (p/then (fn [{:keys [pulled-trees]}]
-                (either/branch
-                  (->> pulled-trees
-                       (map #(process-result % requests)) cats/sequence)
-                  p/rejected
-                  p/resolved)))))
+                (-> (map process-result pulled-trees requests)
+                    (cats/sequence)
+                    (either/branch p/rejected p/resolved))))))
