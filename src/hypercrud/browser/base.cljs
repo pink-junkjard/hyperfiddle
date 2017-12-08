@@ -38,8 +38,7 @@
    :request/type
    :fiddle/request
    :fiddle/pull
-   {:link-query/find-element [{:find-element/form [{:form/field [:field/attribute :db/doc]}]}]
-    :link/anchor ['*
+   {:link/anchor ['*
                   ; hydrate the whole link for validating the anchor by query params
                   {:anchor/link ['*]}]}])
 
