@@ -1,11 +1,10 @@
 (ns hypercrud.api.http
   (:require [cuerdas.core :as str]
-            [hypercrud.api.kvlt-config]
             [hypercrud.api.util :as api-util]
+            [hypercrud.http.core :refer [request!]]
             [hypercrud.types.URI]                           ; hyperfiddle/hyperfiddle#101
             [hypercrud.util.base-64-url-safe :as base-64-url-safe]
             [hypercrud.util.branch :as branch]
-            [kvlt.core :as kvlt]
             [promesa.core :as p]))
 
 
@@ -27,19 +26,19 @@
             :content-type :application/transit+json})))
 
 (defn global-basis! [service-uri]
-  (-> (kvlt/request! {:url (str (.-uri-str service-uri) "global-basis")
-                      :accept :application/transit+json :as :auto
-                      :method :get})
+  (-> (request! {:url (str (.-uri-str service-uri) "global-basis")
+                 :accept :application/transit+json :as :auto
+                 :method :get})
       (p/then :body)))
 
 (defn local-basis! [service-uri state-val & [path-params]]
   (-> (stateful-req service-uri "local-basis" state-val path-params)
-      (kvlt/request!)
+      (request!)
       (p/then :body)))
 
 (defn hydrate-route! [service-uri state-val & [path-params]]
   (-> (stateful-req service-uri "hydrate-route" state-val path-params)
-      (kvlt/request!)
+      (request!)
       (p/then :body)))
 
 (defn hydrate-requests! [service-uri local-basis stage-val requests]
@@ -59,14 +58,14 @@
              :form {:staged-branches staged-branches :request requests}
              :content-type :application/transit+json}]
     #_(js/console.log (str/format "...hydrate!; request count= %s basis= %s form= %s" (count requests) (pr-str local-basis) (str/prune (pr-str (:form req)) 100)))
-    (-> (kvlt/request! req)
+    (-> (request! req)
         (p/then (fn [{:keys [body]}]
                   #_(js/console.log "...hydrate!; pulled-trees count= " (count (:pulled-trees body)))
                   (assert (= (count requests) (count (:pulled-trees body))) "Server contract violation; mismatched counts")
                   body)))))
 
 (defn transact!! [service-uri tx-groups]
-  (-> (kvlt/request!
+  (-> (request!
         {:url (str (.-uri-str service-uri) "transact")
          :accept :application/transit+json :as :auto
          :method :post :form tx-groups
@@ -79,10 +78,10 @@
                   (p/rejected resp))))))
 
 (defn sync! [service-uri dbs]
-  (-> (kvlt/request! {:url (str (.-uri-str service-uri) "sync")
-                      :accept :application/transit+json :as :auto
-                      :method :post :form dbs
-                      :content-type :application/transit+json})
+  (-> (request! {:url (str (.-uri-str service-uri) "sync")
+                 :accept :application/transit+json :as :auto
+                 :method :post :form dbs
+                 :content-type :application/transit+json})
       (p/then (fn [{:keys [body]}]
                 #_(js/console.log "...global-basis!; response= " (str/prune (pr-str body) 100))
                 (->> body

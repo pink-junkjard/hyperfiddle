@@ -1,4 +1,4 @@
-(ns hypercrud.api.kvlt-config
+(ns hypercrud.http.kvlt-config
   (:require
     #?(:cljs [cljs.reader :as reader])
     #?(:cljs [cljs.pprint :as pprint])
