@@ -74,8 +74,9 @@
 (defn error-reducer [error action & args]
   (case action
     :set-ptm nil
-    :set-error (first args)
-    :hydrate!-failure (first args)
+    ; need errors to be serializable, so crapily pr-str
+    :set-error (pr-str (first args))
+    :hydrate!-failure (pr-str (first args))
     error))
 
 (defn popover-reducer [popovers action & args]
