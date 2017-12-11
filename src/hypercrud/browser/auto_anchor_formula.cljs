@@ -6,7 +6,8 @@
             [hypercrud.types.ThinEntity :refer [ThinEntity]]
             [hypercrud.util.core :as util]
             [hypercrud.util.vedn :as vedn]
-            [hypercrud.util.string :as hc-string]))
+            [hypercrud.util.string :as hc-string]
+            [taoensso.timbre :as timbre]))
 
 
 (defn auto-entity-from-stage [ctx]
@@ -41,8 +42,8 @@
 (defn auto-entity [ctx]
   (let [cell-data (:cell-data ctx)
         dbval (if (instance? Entity cell-data)
-                  (.-dbval cell-data)
-                  (hc/db (:peer ctx) (:uri ctx) (:branch ctx)))]
+                (.-dbval cell-data)
+                (hc/db (:peer ctx) (:uri ctx) (:branch ctx)))]
     (->Entity dbval {:db/id (deterministic-ident ctx)})))
 
 (def auto-formula-lookup
@@ -68,7 +69,7 @@
   (-> (hc-string/memoized-safe-read-edn-string (str "[" (:link/path anchor) "]"))
       (either/branch
         (fn [e]
-          (js/console.error (pr-str e))
+          (timbre/error e)
           nil)
         (fn [path]
           (get auto-formula-lookup

@@ -5,7 +5,8 @@
             [hypercrud.types.URI]                           ; hyperfiddle/hyperfiddle#101
             [hypercrud.util.base-64-url-safe :as base-64-url-safe]
             [hypercrud.util.branch :as branch]
-            [promesa.core :as p]))
+            [promesa.core :as p]
+            [taoensso.timbre :as timbre]))
 
 
 (defn stateful-req [service-uri path state-val path-params]
@@ -57,10 +58,9 @@
              :method :post                                  ; hydrate-requests always has a POST body, though it has a basis and is cachable
              :form {:staged-branches staged-branches :request requests}
              :content-type :application/transit+json}]
-    #_(js/console.log (str/format "...hydrate!; request count= %s basis= %s form= %s" (count requests) (pr-str local-basis) (str/prune (pr-str (:form req)) 100)))
+    (timbre/debugf "hydrate-requests! request count= %s basis= %s form= %s" (count requests) (pr-str local-basis) (str/prune (pr-str (:form req)) 100))
     (-> (request! req)
         (p/then (fn [{:keys [body]}]
-                  #_(js/console.log "...hydrate!; pulled-trees count= " (count (:pulled-trees body)))
                   (assert (= (count requests) (count (:pulled-trees body))) "Server contract violation; mismatched counts")
                   body)))))
 
@@ -83,7 +83,6 @@
                  :method :post :form dbs
                  :content-type :application/transit+json})
       (p/then (fn [{:keys [body]}]
-                #_(js/console.log "...global-basis!; response= " (str/prune (pr-str body) 100))
                 (->> body
                      (apply concat)
                      (apply sorted-map))))))

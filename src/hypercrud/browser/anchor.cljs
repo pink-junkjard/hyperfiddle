@@ -11,7 +11,8 @@
             [hypercrud.types.ThinEntity :refer [->ThinEntity]]
             [hypercrud.util.core :refer [pprint-str]]
             [promesa.core :as p]
-            [reagent.core :as reagent]))
+            [reagent.core :as reagent]
+            [taoensso.timbre :as timbre]))
 
 
 (defn option-anchor? [anchor]
@@ -100,7 +101,7 @@
                                         (fn [v] (resolve! nil))
                                         (fn [e]
                                           (reject! e)
-                                          (js/console.warn e)))
+                                          (timbre/warn e)))
 
                               ; return the result to the action, it could be a promise
                               result))]

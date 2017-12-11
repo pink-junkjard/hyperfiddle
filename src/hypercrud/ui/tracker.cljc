@@ -1,9 +1,10 @@
-(ns hypercrud.ui.tracker)
+(ns hypercrud.ui.tracker
+  (:require [taoensso.timbre :as timbre]))
 
 
 #?(:cljs
    (defn track-cmp [c-name c & args]
-     (js/console.log (str "tracker[" c-name "]:mount"))
+     (timbre/debug (str "tracker[" c-name "]:mount"))
      (let [state (atom nil)
            f (fn x [path v]
                (cond
@@ -18,10 +19,10 @@
                  :else (swap! state update-in path
                               (fn [o]
                                 (when-not (= o v)
-                                  (js/console.log (str (pr-str path) ":\n\told:" (pr-str o) "\n\tnew:" (pr-str v))))
+                                  (timbre/debug (str (pr-str path) ":\n\told:" (pr-str o) "\n\tnew:" (pr-str v))))
                                 v))))]
        (fn [c-name c & args]
-         (js/console.log (str "tracker[" c-name "]:render"))
+         (timbre/debug (str "tracker[" c-name "]:render"))
          (f [] args)
          ; return comp
          (into [c] args)))))

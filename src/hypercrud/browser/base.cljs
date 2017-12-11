@@ -15,7 +15,8 @@
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.ThinEntity :refer [ThinEntity]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
-            [hypercrud.util.string :as hc-string]))
+            [hypercrud.util.string :as hc-string]
+            [taoensso.timbre :as timbre]))
 
 
 (defn build-pathed-anchors-lookup [anchors]
@@ -23,7 +24,7 @@
             (-> (hc-string/memoized-safe-read-edn-string (str "[" (:link/path anchor) "]"))
                 (either/branch
                   (fn [e]
-                    (js/console.error (pr-str e))
+                    (timbre/error e)
                     ; swallow the error
                     acc)
                   (fn [path]

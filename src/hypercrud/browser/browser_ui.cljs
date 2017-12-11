@@ -11,7 +11,8 @@
             [hypercrud.state.actions.util :as actions-util]
             [hypercrud.ui.stale :as stale]
             [hypercrud.util.core :as util]
-            [reagent.core :as r]))
+            [reagent.core :as r]
+            [taoensso.timbre :as timbre]))
 
 
 (declare ui-from-anchor)
@@ -40,7 +41,7 @@
         (anchor* [anchor-index ident ctx]
           (anchor/build-anchor-props (get anchor-index ident) ctx))
         (link-fn [anchor-index ident label ctx]
-          (js/console.error "Warning: :link-fn is deprecated, and will be removed in a future release. Use :anchor instead")
+          (timbre/error "Warning: :link-fn is deprecated, and will be removed in a future release. Use :anchor instead")
           (anchor anchor-index ident ctx label))]
   ; process-data returns an Either[Error, DOM]
   (defn process-data [{:keys [result ordered-fes anchors ctx]}]

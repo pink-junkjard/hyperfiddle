@@ -1,6 +1,7 @@
 (set-env!
   :dependencies '[[com.hyperfiddle/util "0.0.1-SNAPSHOT"]
                   [com.cognitect/transit-cljs "0.8.243"]
+                  [com.taoensso/timbre "4.10.0"]
                   [datascript "0.16.2"]
                   [funcool/cats "2.1.0"]
                   [funcool/cuerdas "2.0.4"]

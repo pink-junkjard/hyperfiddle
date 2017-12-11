@@ -5,7 +5,8 @@
             [hypercrud.browser.base :as base]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.routing :as routing]
-            [hypercrud.client.schema :as schema-util]))
+            [hypercrud.client.schema :as schema-util]
+            [taoensso.timbre :as timbre]))
 
 
 (declare request-from-route)
@@ -118,7 +119,7 @@
                                ; user-fn HAS to return a seqable value, we want to throw right here if it doesn't
                                seq)
                           (catch :default e
-                            (js/console.error (pr-str e))
+                            (timbre/error e)
                             nil))))
    :default link-dependent-requests})
 

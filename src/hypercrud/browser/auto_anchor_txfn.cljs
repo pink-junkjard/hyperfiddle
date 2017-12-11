@@ -4,7 +4,8 @@
             [clojure.string :as string]
             [hypercrud.compile.eval :as eval]
             [hypercrud.compile.macros :refer [str-and-code']]
-            [hypercrud.util.string :as hc-string]))
+            [hypercrud.util.string :as hc-string]
+            [taoensso.timbre :as timbre]))
 
 
 (def auto-tx-fn-lookup
@@ -40,9 +41,7 @@
   (if (or (:anchor/managed? anchor) false)
     (-> (hc-string/memoized-safe-read-edn-string (str "[" (:link/path anchor) "]"))
         (either/branch
-          (fn [e]
-            (js/console.error (pr-str e))
-            nil)
+          (fn [e] (timbre/error e))
           (fn [path]
             (get auto-tx-fn-lookup
                  {:fe (not (nil? (first path)))

@@ -1,8 +1,9 @@
 (ns hypercrud.ui.edn
-  (:require [hypercrud.util.string :refer [safe-read-edn-string]]
-            [hypercrud.util.core :refer [pprint-str]]
+  (:require [cats.monad.either :as either]
             [hypercrud.ui.code-editor :as code-editor]
-            [cats.monad.either :as either]))
+            [hypercrud.util.core :refer [pprint-str]]
+            [hypercrud.util.string :refer [safe-read-edn-string]]
+            [taoensso.timbre :as timbre]))
 
 
 ; Must validate since invalid edn means there's no value to stage.
@@ -11,7 +12,7 @@
   (let [change! (fn [user-edn-str]
                   (-> (safe-read-edn-string user-edn-str)
                       (either/branch
-                        (fn [e] (js/console.warn (pr-str e)) nil)  ; report error
+                        (fn [e] (timbre/warn (pr-str e)) nil)  ; report error
                         (fn [v] (change! v)))))]
     [code-control props (pprint-str value) change!])) ; not reactive
 
