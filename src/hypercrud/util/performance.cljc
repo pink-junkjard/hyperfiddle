@@ -1,12 +1,30 @@
 (ns hypercrud.util.performance
-  (:refer-clojure :exclude [time]))
+  #?(:cljs (:require-macros [hypercrud.util.performance :refer [time time-promise]]))
+  (:refer-clojure :exclude [time])
+  (:require [promesa.core :as p]))
+
+
+(defn total-time-fn-builder [& [precision]]
+  #?(:clj  (assert false "todo")
+     :cljs (let [start (system-time)]
+             #(-> (- (system-time) start)
+                  (.toFixed (or precision 1))
+                  (str "ms")))))
+
+(defmacro time-promise [p error-fn success-fn]
+  `(let [total-time-fn# (hypercrud.util.performance/total-time-fn-builder)]
+     (-> ~p
+         (p/then (fn [resp#]
+                   (~success-fn resp# total-time-fn#)
+                   (p/resolved resp#)))
+         (p/catch (fn [err#]
+                    (~error-fn err# total-time-fn#)
+                    (p/rejected err#))))))
 
 (defmacro time
   "Evaluates expr and prints the time it took. Returns the value of expr."
-  ([expr]
-   `(time "Elapsed time" expr))
-  ([label expr]
-   `(let [start# (cljs.core/system-time)
-          ret# ~expr]
-      (.log js/console (str ~label ": " (.toFixed (- (cljs.core/system-time) start#) 3) " msecs"))
-      ret#)))
+  [with-time expr]
+  `(let [total-time-fn# (hypercrud.util.performance/total-time-fn-builder 3)
+         ret# ~expr]
+     (~with-time total-time-fn#)
+     ret#))
