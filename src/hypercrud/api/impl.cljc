@@ -51,7 +51,7 @@
 (defn hydrate-loop [rt request-fn local-basis stage id->tempid ptm]
   (let [hydrate-loop-id #?(:cljs (js/Math.random)
                            :clj  (assert false "todo"))]
-    (timbre/debug "Starting hydrate-loop" hydrate-loop-id)
+    (timbre/debug "Starting hydrate-loop" (str "[" hydrate-loop-id "]"))
     (-> (perf/time-promise (hydrate-loop-impl rt request-fn local-basis stage id->tempid ptm 0)
                            (fn [err get-total-time]
                              (timbre/debug "Finished hydrate-loop" (str "[" hydrate-loop-id "]") "total time:" (get-total-time)))
