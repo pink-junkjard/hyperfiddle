@@ -26,7 +26,7 @@
      :anchor (let [btn-props (-> hypercrud-props
                                  (dissoc-non-native-props)
                                  (assoc :on-click open!))]
-               [:button btn-props [:span label]])
+               [:button btn-props [:span (str label "▾")]])
      :popover [re-com/popover-content-wrapper
                :no-clip? true
                :body body]]))
