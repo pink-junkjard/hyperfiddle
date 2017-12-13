@@ -1,8 +1,14 @@
 (ns hypercrud.ui.input
-  (:require [cljs.reader :as reader]
-            [hypercrud.form.q-util :as q-util]
+  (:require [cats.monad.either :as either]
+            [cljs.reader :as reader]
+            [hypercrud.util.string :as hc-string]
             [reagent.core :as reagent]))
 
+
+(defn read-string-or-nil [code-str]
+  (either/branch (hc-string/safe-read-edn-string code-str)
+                 (constantly nil)
+                 identity))
 
 (defn adapt-props-to-input [props]
   {:disabled (:read-only props)})
@@ -30,15 +36,15 @@
   [validated-input' value on-change! identity identity (constantly true) props])
 
 (defn keyword-input* [value on-change! & [props]]
-  (let [parse-string q-util/safe-read-string
+  (let [parse-string read-string-or-nil
         to-string pr-str
-        valid? #(let [value (q-util/safe-read-string %)]
+        valid? #(let [value (read-string-or-nil %)]
                   (or (nil? value) (keyword? value)))]
     ^{:key value}
     [validated-input' value on-change! parse-string to-string valid? props]))
 
 (defn edn-input* [value on-change! & [props]]
-  (let [parse-string q-util/safe-read-string
+  (let [parse-string read-string-or-nil
         to-string pr-str
         valid? #(try (let [_ (reader/read-string %)]        ; differentiate between read `nil` and error
                        true)
@@ -48,6 +54,6 @@
 
 (defn id-input [value on-change! & [props]]
   ^{:key (:db/id value)}
-  [validated-input' (:db/id value) on-change! q-util/safe-read-string pr-str
-   q-util/safe-read-string
+  [validated-input' (:db/id value) on-change! read-string-or-nil pr-str
+   read-string-or-nil
    props])
