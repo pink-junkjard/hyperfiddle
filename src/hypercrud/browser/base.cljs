@@ -53,10 +53,10 @@
 (defn hydrate-fiddle [ctx]
   (if (auto-fiddle/system-fiddle? (get-in ctx [:route :link-id]))
     {:meta-fiddle-req' (either/right nil)
-     :fiddle' (auto-fiddle/hydrate-system-link (get-in ctx [:route :link-id]) ctx)}
-    (let [meta-link-request (meta-request-for-fiddle ctx)]
-      {:meta-fiddle-req' meta-link-request
-       :fiddle' (cats/bind meta-link-request #(hc/hydrate (:peer ctx) %))})))
+     :fiddle' (auto-fiddle/hydrate-system-fiddle (get-in ctx [:route :link-id]) ctx)}
+    (let [meta-fiddle-request (meta-request-for-fiddle ctx)]
+      {:meta-fiddle-req' meta-fiddle-request
+       :fiddle' (cats/bind meta-fiddle-request #(hc/hydrate (:peer ctx) %))})))
 
 (defn request-for-fiddle [fiddle ctx]
   (case (:fiddle/type fiddle)

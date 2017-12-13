@@ -29,7 +29,7 @@
    :fiddle/renderer (pr-str `(fn [result# ordered-fes# anchors# ctx#]
                                [:p "Retract entity?"]))})
 
-(defn hydrate-system-link [{:keys [fe-name a ident]} ctx]
+(defn hydrate-system-fiddle [{:keys [fe-name a ident]} ctx]
   (try-either
     ; catch all the pre assertions
     (case ident
