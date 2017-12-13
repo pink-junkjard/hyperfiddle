@@ -9,7 +9,8 @@
             [hypercrud.types.DbVal :refer [->DbVal]]
             [hypercrud.util.branch :as branch]
             [hypercrud.util.core :as util]
-            [promesa.core :as p]))
+            [promesa.core :as p]
+            [taoensso.timbre :as timbre]))
 
 
 ; batch doesn't make sense with thunks (can be sync or async dispatches in a thunk),
@@ -17,15 +18,20 @@
 (defn batch [& action-list] (cons :batch action-list))
 
 (defn rehydrate [rt on-start dispatch! get-state]
-  (dispatch! (apply batch [:hydrate!-start (js/Math.random)] on-start))
-  (-> (api/hydrate-route rt)
-      (p/then (fn [{:keys [ptm id->tempid]}]
-                (dispatch! [:batch
-                            [:set-ptm ptm id->tempid]
-                            [:hydrate!-success]])))
-      (p/catch (fn [error]
-                 (dispatch! [:hydrate!-failure error])
-                 (p/rejected error)))))
+  (let [hydrate-id (js/Math.random)]
+    (dispatch! (apply batch [:hydrate!-start hydrate-id] on-start))
+    (-> (api/hydrate-route rt)
+        (p/then (fn [{:keys [ptm id->tempid]}]
+                  (if (= hydrate-id (:hydrate-id (get-state)))
+                    (dispatch! [:batch
+                                [:set-ptm ptm id->tempid]
+                                [:hydrate!-success]])
+                    (timbre/info (str "Ignoring response for " hydrate-id)))))
+        (p/catch (fn [error]
+                   (if (= hydrate-id (:hydrate-id (get-state)))
+                     (dispatch! [:hydrate!-failure error])
+                     (timbre/info (str "Ignoring response for " hydrate-id)))
+                   (p/rejected error))))))
 
 (defn refresh-global-basis [rt dispatch! get-state]
   (-> (api/global-basis rt)
