@@ -39,9 +39,9 @@
    :fiddle/type
    :fiddle/request
    :fiddle/pull
-   {:fiddle/link ['*
-                  ; hydrate the whole fiddle for validating the anchor by query params
-                  {:link/fiddle ['*]}]}])
+   {:fiddle/links ['*
+                   ; hydrate the whole fiddle for validating the anchor by query params
+                   {:link/fiddle ['*]}]}])
 
 (defn meta-request-for-fiddle [ctx]
   (try-either
