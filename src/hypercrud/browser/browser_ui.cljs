@@ -1,5 +1,5 @@
 (ns hypercrud.browser.browser-ui
-  (:require [cats.core :as cats :refer-macros [mlet]]
+  (:require [cats.core :as cats :refer [mlet]]
             [cats.monad.either :as either :refer-macros [try-either]]
             [hypercrud.browser.anchor :as anchor]
             [hypercrud.browser.base :as base]
