@@ -29,24 +29,21 @@
 (defn local-basis [rt global-basis]
   (p/resolved global-basis))
 
-(defn- needed-requests [request-fn id->tempid ptm]
-  (let [requests (->> (request-fn id->tempid ptm) (into #{}))
-        have-requests (set (keys ptm))
-        new-requests (set/difference requests have-requests)]
-    (when-not (set/subset? new-requests have-requests)
-      (into [] new-requests))))
-
 (defn- hydrate-loop-impl [rt request-fn local-basis stage id->tempid ptm total-loops]
-  (if-let [new-requests (perf/time (fn [get-total-time] (timbre/debug "Computing needed requests" "total time: " (get-total-time)))
-                                   (needed-requests request-fn id->tempid ptm))]
-    (p/then (api/hydrate-requests rt local-basis stage new-requests)
-            (fn [{:keys [pulled-trees id->tempid]}]
-              (let [new-ptm (zipmap new-requests pulled-trees)
-                    ptm (merge ptm new-ptm)]                ; todo this is a memory leak
-                (hydrate-loop-impl rt request-fn local-basis stage id->tempid ptm (inc total-loops)))))
-    (p/resolved {:id->tempid id->tempid
-                 :ptm ptm
-                 :total-loops total-loops})))
+  (let [all-requests (perf/time (fn [get-total-time] (timbre/debug "Computing needed requests" "total time: " (get-total-time)))
+                                (->> (request-fn id->tempid ptm) (into #{})))
+        missing-requests (let [have-requests (set (keys ptm))]
+                           (->> (set/difference all-requests have-requests)
+                                (into [])))]
+    (if (empty? missing-requests)
+      (p/resolved {:id->tempid id->tempid
+                   :ptm (select-keys ptm all-requests)      ; prevent memory leak by returning exactly what is needed
+                   :total-loops total-loops})
+      (p/then (api/hydrate-requests rt local-basis stage missing-requests)
+              (fn [{:keys [pulled-trees id->tempid]}]
+                (let [new-ptm (zipmap missing-requests pulled-trees)
+                      ptm (merge ptm new-ptm)]
+                  (hydrate-loop-impl rt request-fn local-basis stage id->tempid ptm (inc total-loops))))))))
 
 (defn hydrate-loop [rt request-fn local-basis stage id->tempid ptm]
   (let [hydrate-loop-id #?(:cljs (js/Math.random)
