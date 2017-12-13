@@ -1,8 +1,8 @@
 (ns hypercrud.browser.auto-anchor
-  (:require-macros [hypercrud.util.template :as template])
   (:require [hypercrud.browser.auto-anchor-formula :refer [auto-formula]]
             [hypercrud.browser.auto-anchor-txfn :refer [auto-txfn]]
             [hypercrud.browser.auto-fiddle :as auto-fiddle]
+            [hypercrud.util.template :as template]
             [hypercrud.util.vedn :as vedn]))
 
 

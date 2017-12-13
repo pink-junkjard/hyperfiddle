@@ -1,12 +1,12 @@
 (ns hypercrud.browser.auto-anchor-formula
-  (:require-macros [hypercrud.util.template :as template])
   (:require [cats.monad.either :as either]
             [hypercrud.client.core :as hc]
             [hypercrud.types.Entity :refer [->Entity Entity]]
             [hypercrud.types.ThinEntity :refer [ThinEntity]]
             [hypercrud.util.core :as util]
-            [hypercrud.util.vedn :as vedn]
             [hypercrud.util.string :as hc-string]
+            [hypercrud.util.template :as template]
+            [hypercrud.util.vedn :as vedn]
             [taoensso.timbre :as timbre]))
 
 

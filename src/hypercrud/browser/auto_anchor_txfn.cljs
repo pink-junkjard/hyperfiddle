@@ -1,10 +1,10 @@
 (ns hypercrud.browser.auto-anchor-txfn
-  (:require-macros [hypercrud.util.template :as template])
   (:require [cats.monad.either :as either]
             [clojure.string :as string]
             [hypercrud.compile.eval :as eval]
             [hypercrud.compile.macros :refer [str-and-code']]
             [hypercrud.util.string :as hc-string]
+            [hypercrud.util.template :as template]
             [taoensso.timbre :as timbre]))
 
 
