@@ -3,7 +3,7 @@
             [cats.monad.either :as either :refer-macros [try-either]]
             [hypercrud.browser.auto-anchor :as auto-anchor]
             [hypercrud.browser.find-element :as find-element]
-            [hypercrud.browser.auto-link :as auto-link]
+            [hypercrud.browser.auto-fiddle :as auto-fiddle]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.q-util :as q-util]
             [hypercrud.browser.routing :as routing]
@@ -51,9 +51,9 @@
       (->EntityRequest fiddle-id nil dbval meta-pull-exp-for-link))))
 
 (defn hydrate-fiddle [ctx]
-  (if (auto-link/system-link? (get-in ctx [:route :link-id]))
+  (if (auto-fiddle/system-fiddle? (get-in ctx [:route :link-id]))
     {:meta-fiddle-req' (either/right nil)
-     :fiddle' (auto-link/hydrate-system-link (get-in ctx [:route :link-id]) ctx)}
+     :fiddle' (auto-fiddle/hydrate-system-link (get-in ctx [:route :link-id]) ctx)}
     (let [meta-link-request (meta-request-for-fiddle ctx)]
       {:meta-fiddle-req' meta-link-request
        :fiddle' (cats/bind meta-link-request #(hc/hydrate (:peer ctx) %))})))
