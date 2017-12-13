@@ -11,7 +11,8 @@
 (defn build-dispatch [state-atom root-reducer]
   (let [get-state (fn [] @state-atom)]
     (fn dispatch! [action-or-func]
-      (if (goog/isFunction action-or-func)
+      (if #?(:clj  (fn? action-or-func)
+             :cljs (goog/isFunction action-or-func))
         (action-or-func dispatch! get-state)
 
         (let [[action & args] action-or-func]

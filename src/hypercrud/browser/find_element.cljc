@@ -1,6 +1,6 @@
 (ns hypercrud.browser.find-element
   (:require [cats.core :as cats :refer [mlet]]
-            [cats.monad.either :as either :refer-macros [try-either]]
+            [cats.monad.either :as either :refer [try-either]]
             [clojure.set :as set]
             [datascript.parser :as parser]
             [hypercrud.util.core :as util]))

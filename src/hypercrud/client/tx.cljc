@@ -154,14 +154,12 @@
            a
            (update-v id->tempid schema a ov)
            (update-v id->tempid schema a nv)])]
-  (def op-lookup
-    {:db/add add-ret
-     :db/retract add-ret
-     :db/retractEntity retractEntity
-     :db.fn/retractEntity retractEntity
-     :db/cas cas
-     :db.fn/cas cas}))
-
-(defn stmt-id->tempid [id->tempid schema [op :as stmt]]
-  ((get op-lookup op #(throw (js/Error (str "Unable to process op: " op))))
-    id->tempid schema stmt))
+  (defn stmt-id->tempid [id->tempid schema [op :as stmt]]
+    (let [f (case op
+              :db/add add-ret
+              :db/retract add-ret
+              :db/retractEntity retractEntity
+              :db.fn/retractEntity retractEntity
+              :db/cas cas
+              :db.fn/cas cas)]
+      (f id->tempid schema stmt))))
