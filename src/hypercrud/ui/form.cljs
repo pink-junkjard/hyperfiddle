@@ -21,13 +21,13 @@
   [:div {:class (str/join " " ["field" (-> ctx :attribute :db/ident str form-util/css-slugify)])
          :style {:border-color (connection-color/connection-color (:uri ctx) ctx)}}
    (let [[anchors] (as-> anchors $
-                         (remove :anchor/repeating? $)      ; because we're in the label
+                         (remove :link/dependent? $)        ; because we're in the label
                          (widget/process-option-anchors $ ctx))]
      [:div.hc-label
       [:label [form-util/field-label field ctx]]
       [:div.anchors
-       (widget/render-anchors (->> anchors (remove :anchor/render-inline?)) ctx)
-       (widget/render-inline-anchors (->> anchors (filter :anchor/render-inline?)) ctx)]])
+       (widget/render-anchors (->> anchors (remove :link/render-inline?)) ctx)
+       (widget/render-inline-anchors (->> anchors (filter :link/render-inline?)) ctx)]])
    (control ctx)
    [markdown/markdown (-> ctx :attribute :db/doc) #() {:class "hypercrud-doc"}]])
 
@@ -66,8 +66,8 @@
 (defn cell-data-fields [fe cell-data fe-anchors-lookup ctx]
   (let [ctx (context/cell-data ctx cell-data)
         {inline-anchors true anchors false} (->> (get fe-anchors-lookup :links)
-                                                 (filter :anchor/repeating?)
-                                                 (group-by :anchor/render-inline?))]
+                                                 (filter :link/dependent?)
+                                                 (group-by :link/render-inline?))]
     (concat
       (widget/render-anchors anchors ctx)
       (conj
@@ -82,8 +82,8 @@
 
 (defn result-cell [fe cell-data fe-anchors-lookup ctx]
   (let [{inline-anchors true anchors false} (->> (get fe-anchors-lookup :links)
-                                                 (remove :anchor/repeating?)
-                                                 (group-by :anchor/render-inline?))]
+                                                 (remove :link/dependent?)
+                                                 (group-by :link/render-inline?))]
     (concat
       (widget/render-anchors anchors ctx)
       (cell-data-fields fe cell-data fe-anchors-lookup ctx)

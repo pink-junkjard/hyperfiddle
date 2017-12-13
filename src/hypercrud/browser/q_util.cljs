@@ -18,8 +18,8 @@
   (->> (parse-holes q)
        (remove #(string/starts-with? % "$"))))
 
-(defn safe-parse-query-validated [link]
-  (mlet [q (hc-string/memoized-safe-read-edn-string (:link-query/value link))]
+(defn safe-parse-query-validated [fiddle]
+  (mlet [q (hc-string/memoized-safe-read-edn-string (:fiddle/query fiddle))]
     (if (vector? q)
       (cats/return q)
       (either/left {:message (str "Invalid query '" (pr-str q) "', only vectors supported")}))))

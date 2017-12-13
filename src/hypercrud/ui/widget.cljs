@@ -15,7 +15,7 @@
 
 (defn render-anchor [anchor ctx]
   (let [prompt (or (:anchor/prompt anchor)
-                   (:anchor/ident anchor)
+                   (:link/rel anchor)
                    "_")]
     [(:navigate-cmp ctx) (anchor/build-anchor-props anchor ctx) prompt]))
 
@@ -40,41 +40,41 @@
                ; don't test anchor validity, we need to render the failure. If this is a dependent link, use visibility predicate to hide the error.
                [:div {:key (hash (:db/id anchor))}          ; extra div bc had trouble getting keys to work
                 ; NOTE: this ctx logic and structure is the same as the inline branch of browser-request/recurse-request
-                [browser/ui anchor (update ctx :debug #(str % ">inline-link[" (:db/id anchor) ":" (or (:anchor/ident anchor) (:anchor/prompt anchor)) "]"))]]))
+                [browser/ui anchor (update ctx :debug #(str % ">inline-link[" (:db/id anchor) ":" (or (:link/rel anchor) (:anchor/prompt anchor)) "]"))]]))
         (remove nil?)
         (doall))))
 
 (defn keyword [maybe-field anchors props ctx]
-  (let [anchors (filter :anchor/repeating? anchors) #_"this also has to happen every other thing, problem is that :options need to show up here for ref even if not repeating"]
+  (let [anchors (filter :link/dependent? anchors) #_"this also has to happen every other thing, problem is that :options need to show up here for ref even if not repeating"]
     [:div.value
-     [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) ctx)]
+     [:div.anchors (render-anchors (remove :link/render-inline? anchors) ctx)]
      (let [on-change! #((:user-with! ctx) (tx/update-entity-attr (:cell-data ctx) (:attribute ctx) %))]
        [input/keyword-input* (:value ctx) on-change! props])
-     (render-inline-anchors (filter :anchor/render-inline? anchors) ctx)]))
+     (render-inline-anchors (filter :link/render-inline? anchors) ctx)]))
 
 (defn string [maybe-field anchors props ctx]
   [:div.value
-   [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) ctx)]
+   [:div.anchors (render-anchors (remove :link/render-inline? anchors) ctx)]
    (let [on-change! #((:user-with! ctx) (tx/update-entity-attr (:cell-data ctx) (:attribute ctx) %))]
      [input/input* (:value ctx) on-change! props])
-   (render-inline-anchors (filter :anchor/render-inline? anchors) ctx)])
+   (render-inline-anchors (filter :link/render-inline? anchors) ctx)])
 
 (defn long [maybe-field anchors props ctx]
   [:div.value
-   [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) ctx)]
+   [:div.anchors (render-anchors (remove :link/render-inline? anchors) ctx)]
    [input/validated-input
     (:value ctx) #((:user-with! ctx) (tx/update-entity-attr (:cell-data ctx) (:attribute ctx) %))
     #(js/parseInt % 10) pr-str
     #(or (integer? (js/parseInt % 10)) (= "nil" %))
     props]
-   (render-inline-anchors (filter :anchor/render-inline? anchors) ctx)])
+   (render-inline-anchors (filter :link/render-inline? anchors) ctx)])
 
 (defn boolean [maybe-field anchors props ctx]
   [:div.value
    [:div.editable-select {:key (:db/ident (:attribute ctx))}
-    [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) ctx)]
+    [:div.anchors (render-anchors (remove :link/render-inline? anchors) ctx)]
     (select-boolean* (:value ctx) props ctx)]
-   (render-inline-anchors (filter :anchor/render-inline? anchors) ctx)])
+   (render-inline-anchors (filter :link/render-inline? anchors) ctx)])
 
 (defn id* [props ctx]
   (let [on-change! #((:user-with! ctx) (tx/update-entity-attr (:cell-data ctx) (:attribute ctx) %))]
@@ -87,46 +87,46 @@
 
 (defn process-popover-anchor [anchor]
   (if (anchor/popover-anchor? anchor)
-    (assoc anchor :anchor/render-inline? false)
+    (assoc anchor :link/render-inline? false)
     anchor))
 
 ; this can be used sometimes, on the entity page, but not the query page
 (defn ref [maybe-field anchors props ctx]
   (let [[anchors options-anchor] (process-option-anchors anchors ctx)
-        anchors (->> anchors (filter :anchor/repeating?))]
+        anchors (->> anchors (filter :link/dependent?))]
     [:div.value
      [:div.editable-select
-      [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) ctx)] ;todo can this be lifted out of editable-select?
+      [:div.anchors (render-anchors (remove :link/render-inline? anchors) ctx)] ;todo can this be lifted out of editable-select?
       [:div.select                                          ; helps the weird anchor float left css thing
        (if options-anchor
          (select* (:value ctx) options-anchor props ctx)
          (id* props ctx))]]
-     (render-inline-anchors (filter :anchor/render-inline? anchors) ctx)]))
+     (render-inline-anchors (filter :link/render-inline? anchors) ctx)]))
 
 (defn ref-component [maybe-field anchors props ctx]
   (let [[anchors options-anchor] (process-option-anchors anchors ctx)
-        anchors (->> anchors (filter :anchor/repeating?))]
+        anchors (->> anchors (filter :link/dependent?))]
     (assert (not options-anchor) "ref-components don't have options; todo handle gracefully")
-    #_(assert (> (count (filter :anchor/render-inline? anchors)) 0))
+    #_(assert (> (count (filter :link/render-inline? anchors)) 0))
     #_(ref maybe-field anchors props ctx)
     [:div.value
-     [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) ctx)]
+     [:div.anchors (render-anchors (remove :link/render-inline? anchors) ctx)]
      #_[:pre (pr-str (:value ctx))]
-     (render-inline-anchors (filter :anchor/render-inline? anchors) ctx)]))
+     (render-inline-anchors (filter :link/render-inline? anchors) ctx)]))
 
 (defn ref-many-table [maybe-field anchors props ctx]
   (let [[anchors options-anchor] (process-option-anchors anchors ctx)
-        anchors (->> anchors (filter :anchor/repeating?))]
+        anchors (->> anchors (filter :link/dependent?))]
     (assert (not options-anchor) "ref-component-many don't have options; todo handle gracefully")
     [:div.value
      #_[:pre (pr-str maybe-field)]
-     [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) ctx)]
-     (render-inline-anchors (filter :anchor/render-inline? anchors) ctx)]))
+     [:div.anchors (render-anchors (remove :link/render-inline? anchors) ctx)]
+     (render-inline-anchors (filter :link/render-inline? anchors) ctx)]))
 
 (defn ref-many-component-table [maybe-field anchors props ctx]
   [:div.value
-   [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) ctx)]
-   (render-inline-anchors (filter :anchor/render-inline? anchors) ctx)])
+   [:div.anchors (render-anchors (remove :link/render-inline? anchors) ctx)]
+   (render-inline-anchors (filter :link/render-inline? anchors) ctx)])
 
 (defn multi-select-ref [maybe-field anchors props ctx]
   (assert false "todo")
@@ -142,12 +142,12 @@
     (let [change! #((:user-with! ctx) (tx/update-entity-attr (:cell-data ctx) (:attribute ctx) %))]
       ;^{:key ident}
       [:div.value
-       [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) ctx)]
+       [:div.anchors (render-anchors (remove :link/render-inline? anchors) ctx)]
        (let [widget (case (:layout ctx) :block code-editor/code-block
                                         :inline-block code-editor/code-inline-block
                                         :table code-editor/code-inline-block)]
          [widget props (:value ctx) change!])               ; backwards args - props last
-       (render-inline-anchors (filter :anchor/render-inline? anchors) ctx)])))
+       (render-inline-anchors (filter :link/render-inline? anchors) ctx)])))
 
 (defn ^:export markdown [maybe-field anchors props ctx]
   (let [props (assoc props :mode "markdown" :lineWrapping true)]
@@ -170,11 +170,11 @@
                                    :inline-block edn-inline-block
                                    :table edn-inline-block)
         [anchors options-anchor] (process-option-anchors anchors ctx)
-        anchors (->> anchors (filter :anchor/repeating?))]
+        anchors (->> anchors (filter :link/dependent?))]
     [:div.value
-     [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) ctx)]
+     [:div.anchors (render-anchors (remove :link/render-inline? anchors) ctx)]
      [widget value change! props]
-     (render-inline-anchors (filter :anchor/render-inline? anchors) ctx)]))
+     (render-inline-anchors (filter :link/render-inline? anchors) ctx)]))
 
 (defn edn [maybe-field anchors props ctx]
   (let [valueType (-> ctx :attribute :db/valueType :db/ident)
@@ -184,27 +184,27 @@
                                    :inline-block edn-inline-block
                                    :table edn-inline-block)
         [anchors options-anchor] (process-option-anchors anchors ctx)
-        anchors (->> anchors (filter :anchor/repeating?))]
+        anchors (->> anchors (filter :link/dependent?))]
     [:div.value
-     [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) ctx)]
+     [:div.anchors (render-anchors (remove :link/render-inline? anchors) ctx)]
      [widget (:value ctx) change! props]
-     (render-inline-anchors (filter :anchor/render-inline? anchors) ctx)]))
+     (render-inline-anchors (filter :link/render-inline? anchors) ctx)]))
 
 (defn instant [maybe-field anchors props ctx]
   [:div.value
-   [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) ctx)]
+   [:div.anchors (render-anchors (remove :link/render-inline? anchors) ctx)]
    (let [change! #((:user-with! ctx) (tx/update-entity-attr (:cell-data ctx) (:attribute ctx) %))
          widget (case (:layout ctx) :block date*
                                     :inline-block edn-inline-block
                                     :table edn-inline-block)]
      [widget (:value ctx) change! props])
-   (render-inline-anchors (filter :anchor/render-inline? anchors) ctx)])
+   (render-inline-anchors (filter :link/render-inline? anchors) ctx)])
 
 (defn text [maybe-field anchors props ctx]
   [:div.value
-   [:div.anchors (render-anchors (remove :anchor/render-inline? anchors) ctx)]
+   [:div.anchors (render-anchors (remove :link/render-inline? anchors) ctx)]
    [:span.text
     (case (-> (:attribute ctx) :db/cardinality :db/ident)
       :db.cardinality/many (map pr-str (:value ctx))
       (pr-str (:value ctx)))]
-   (render-inline-anchors (filter :anchor/render-inline? anchors) ctx)])
+   (render-inline-anchors (filter :link/render-inline? anchors) ctx)])

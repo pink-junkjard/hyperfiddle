@@ -20,7 +20,7 @@
 ; defn because hypercrud.ui.result/view cannot be required from this ns
 (defn f-mode-config []
   {:from-ctx :user-renderer
-   :from-link :link/renderer
+   :from-link :fiddle/renderer
    :with-user-fn (fn [user-fn]
                    (fn [result ordered-fes anchors ctx]
                      [safe-user-renderer user-fn result ordered-fes anchors ctx]))
@@ -47,8 +47,8 @@
   (defn process-data [{:keys [result ordered-fes anchors ctx]}]
     (mlet [ui-fn (base/fn-from-mode (f-mode-config) (:fiddle ctx) ctx)
            :let [anchor-index (->> anchors
-                                   (filter :anchor/ident)   ; cannot lookup nil idents
-                                   (mapv (juxt #(-> % :anchor/ident) identity)) ; [ repeating entity attr ident ]
+                                   (filter :link/rel)       ; cannot lookup nil idents
+                                   (mapv (juxt #(-> % :link/rel) identity)) ; [ repeating entity attr ident ]
                                    (into {}))
                  ctx (assoc ctx
                        :anchor (r/partial anchor anchor-index)

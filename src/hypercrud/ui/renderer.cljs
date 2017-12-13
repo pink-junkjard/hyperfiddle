@@ -22,8 +22,8 @@
          (fn [e] [:pre (pprint-str e)])
          (fn [user-fn]
            (let [anchor-lookup (->> anchors
-                                    (filter :anchor/ident)  ; cannot lookup nil idents
-                                    (mapv (juxt #(-> % :anchor/ident) identity))
+                                    (filter :link/rel)      ; cannot lookup nil idents
+                                    (mapv (juxt #(-> % :link/rel) identity))
                                     (into {}))
                  ctx (assoc ctx                             ; Todo unify link-fn with widget interface or something
                        :link-fn

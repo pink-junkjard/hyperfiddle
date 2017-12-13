@@ -117,7 +117,7 @@
     (aggregate->fe element)))
 
 (defn auto-find-elements [result ctx]
-  (case (get-in ctx [:fiddle :request/type])
+  (case (get-in ctx [:fiddle :fiddle/type])
     :entity (mlet [source-symbol (try-either (.-dbname (get-in ctx [:route :request-params :entity])))
                    :let [fe-name "entity"
                          pull-pattern (get-in ctx [:request :pull-exp])]]

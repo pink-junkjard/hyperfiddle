@@ -10,7 +10,7 @@
 
 
 (defn result-renderer [result ordered-fes anchors-lookup ctx]
-  (case (get-in ctx [:fiddle :request/type])
+  (case (get-in ctx [:fiddle :fiddle/type])
     :entity (if-let [a (get-in ctx [:request :a])]
               (either/branch
                 (try-either (.-dbname (get-in ctx [:route :request-params :entity])))
@@ -45,8 +45,8 @@
                             (map widget/process-popover-anchor)
                             (base/build-pathed-anchors-lookup))
         {inline-index-anchors true index-anchors false} (->> (get anchors-lookup :links)
-                                                             (remove :anchor/repeating?) ; anchor/repeating? true = relation link
-                                                             (group-by :anchor/render-inline?))
+                                                             (remove :link/dependent?) ; link/dependent? true = relation link
+                                                             (group-by :link/render-inline?))
         index-ctx (dissoc ctx :isComponent)]
     [:div.auto-result
      [markdown/markdown (str (-> ctx :fiddle :db/doc)) #() {:class "hypercrud-doc"}]

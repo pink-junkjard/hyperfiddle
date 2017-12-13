@@ -35,10 +35,10 @@
         (assoc :route route
                :repository repository))))
 
-(defn anchor-branch [ctx anchor]
-  (if (:anchor/managed? anchor)
+(defn anchor-branch [ctx link]
+  (if (:link/managed? link)
     ; we should run the auto-formula logic to determine an appropriate auto-id fn
-    (let [child-id-str (-> [(auto-anchor-formula/deterministic-ident ctx) (:db/id anchor)]
+    (let [child-id-str (-> [(auto-anchor-formula/deterministic-ident ctx) (:db/id link)]
                            hash js/Math.abs - str)
           branch (branch/encode-branch-child (:branch ctx) child-id-str)]
       (assoc ctx :branch branch))

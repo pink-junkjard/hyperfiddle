@@ -17,7 +17,7 @@
         id (-> (:branch dbval) js/Math.abs - str)]
     (->Entity dbval {:db/id id})))
 
-; todo there are collisions when two anchors share the same 'location'
+; todo there are collisions when two links share the same 'location'
 (defn deterministic-ident
   ([ctx]
    (deterministic-ident
@@ -65,8 +65,8 @@
                {:fe false :c? true :d? false :a true} nil}]
     (merge fe-create fe-no-create no-fe)))
 
-(defn auto-formula [anchor]
-  (-> (hc-string/memoized-safe-read-edn-string (str "[" (:link/path anchor) "]"))
+(defn auto-formula [link]
+  (-> (hc-string/memoized-safe-read-edn-string (str "[" (:link/path link) "]"))
       (either/branch
         (fn [e]
           (timbre/error e)
@@ -74,6 +74,6 @@
         (fn [path]
           (get auto-formula-lookup
                {:fe (not (nil? (first path)))
-                :c? (or (:anchor/create? anchor) false)
-                :d? (or (:anchor/repeating? anchor) false)
+                :c? (or (:link/create? link) false)
+                :d? (or (:link/dependent? link) false)
                 :a (not (nil? (second path)))})))))

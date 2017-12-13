@@ -5,7 +5,7 @@
 
 (defn user-bindings' [link ctx]
   {:post [(not (nil? %))]}
-  (if-let [code-str (eval/validate-user-code-str (:link/bindings link))]
+  (if-let [code-str (eval/validate-user-code-str (:fiddle/bindings link))]
     (mlet [user-fn (eval-str' code-str)
            ctx (try-either (user-fn ctx))]
       (if (and (not= nil ctx) (map? ctx))

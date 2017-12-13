@@ -15,21 +15,21 @@
             [taoensso.timbre :as timbre]))
 
 
-(defn option-anchor? [anchor]
+(defn option-anchor? [link]
   ; don't care if its inline or not, just do the right thing.
-  (= :options (:anchor/ident anchor)))
+  (= :options (:link/rel link)))
 
-(defn popover-anchor? [anchor]
-  (:anchor/managed? anchor))
+(defn popover-anchor? [link]
+  (:link/managed? link))
 
 ; todo belongs in routing ns
 ; this is same business logic as base/request-for-link
 ; this is currently making assumptions on dbholes
-(defn validated-route' [link route]
+(defn validated-route' [fiddle route]
   ; We specifically hydrate this deep just so we can validate anchors like this.
   (let [have (set (keys (into {} (remove (comp nil? val) (:request-params route)))))]
-    (case (:request/type link)
-      :query (let [q (-> (q-util/safe-parse-query-validated link)
+    (case (:fiddle/type fiddle)
+      :query (let [q (-> (q-util/safe-parse-query-validated fiddle)
                          (cats/mplus (either/right []))
                          (cats/extract))
                    ; todo check fe conn
@@ -45,22 +45,22 @@
                 (either/right route)
                 (either/left {:message "missing query params" :data {:have have :missing #{:entity}}}))
       :blank (either/right route)
-      (either/left {:message "route has no link" :data {:route route}}))))
+      (either/left {:message "route has no fiddle" :data {:route route}}))))
 
 (defn get-or-apply' [expr & args]
   (if (fn? expr)
     (try-either (apply expr args))
     (either/right expr)))
 
-(defn build-anchor-props-raw [unvalidated-route' anchor ctx] ; ctx is for display-mode
+(defn build-anchor-props-raw [unvalidated-route' link ctx]  ; ctx is for display-mode
 
   ; this is a fine place to eval, put error message in the tooltip prop
   ; each prop might have special rules about his default, for example :visible is default true, does this get handled here?
 
-  (let [link (:anchor/link anchor)                          ; can be nil - in which case route is invalid
+  (let [fiddle (:link/fiddle link)                          ; can be nil - in which case route is invalid
         route (-> unvalidated-route' (cats/mplus (either/right nil)) (cats/extract))
-        validated-route' (validated-route' link route)
-        user-props' (if-let [user-code-str (eval/validate-user-code-str (:hypercrud/props anchor))]
+        validated-route' (validated-route' fiddle route)
+        user-props' (if-let [user-code-str (eval/validate-user-code-str (:hypercrud/props link))]
                       (mlet [user-expr (eval-str' user-code-str)]
                         (get-or-apply' user-expr ctx))
                       (either/right nil))
@@ -85,13 +85,13 @@
                    (interpose " ")
                    (apply str))})))
 
-(defn stage! [anchor route ctx]
-  (let [user-txfn (some-> (eval/validate-user-code-str (:anchor/tx-fn anchor)) eval-str' (cats/mplus (either/right nil)) (cats/extract))
+(defn stage! [link route ctx]
+  (let [user-txfn (some-> (eval/validate-user-code-str (:link/tx-fn link)) eval-str' (cats/mplus (either/right nil)) (cats/extract))
         user-txfn (or user-txfn (constantly nil))]
     (-> (p/promise
           (fn [resolve! reject!]
             (let [swap-fn (fn [multi-color-tx]
-                            ; todo why does the user-txfn have access to the parent link's context
+                            ; todo why does the user-txfn have access to the parent fiddle's context
                             (let [result (let [result (user-txfn ctx multi-color-tx route)]
                                            ; txfn may be sync or async
                                            (if-not (p/promise? result) (p/resolved result) result))]
@@ -112,20 +112,20 @@
 (defn cancel! [ctx]
   ((:dispatch! ctx) (actions/cancel-popover (:peer ctx) (:branch ctx))))
 
-(defn managed-popover-body [anchor route ctx]
-  (let [stage! (reagent/partial stage! anchor route ctx)
+(defn managed-popover-body [link route ctx]
+  (let [stage! (reagent/partial stage! link route ctx)
         cancel! (reagent/partial cancel! ctx)
         ; NOTE: this ctx logic and structure is the same as the popover branch of browser-request/recurse-request
         ctx (-> ctx
                 (context/clean)
-                (update :debug #(str % ">popover-link[" (:db/id anchor) ":" (or (:anchor/ident anchor) (:anchor/prompt anchor)) "]")))]
+                (update :debug #(str % ">popover-link[" (:db/id link) ":" (or (:link/rel link) (:anchor/prompt link)) "]")))]
     [:div.managed-popover
      [hypercrud.browser.core/ui-from-route route ctx]       ; cycle
      [:button {:on-click stage!} "stage"]
      [:button {:on-click cancel!} "cancel"]]))
 
-(defn visible? [anchor ctx]
-  (-> (if-let [code-str (eval/validate-user-code-str (:anchor/visible? anchor))] ; also inline links !
+(defn visible? [link ctx]
+  (-> (if-let [code-str (eval/validate-user-code-str (:anchor/visible? link))] ; also inline links !
         (mlet [user-fn (eval-str' code-str)]
           (try-either (user-fn ctx)))
         (either/right true))
@@ -135,10 +135,10 @@
 (defn open! [ctx]
   ((:dispatch! ctx) (actions/open-popover (:branch ctx))))
 
-; if this is driven by anchor, and not route, it needs memoized.
+; if this is driven by link, and not route, it needs memoized.
 ; the route is a fn of the formulas and the formulas can have effects
 ; which have to be run only once.
-(defn build-anchor-props [anchor ctx]
+(defn build-anchor-props [link ctx]
   ; Draw as much as possible even in the presence of errors, still draw the link, collect all errors in a tooltip.
   ; Error states:
   ; - no route
@@ -147,15 +147,15 @@
   ; - broken user txfn
   ; - broken user visible fn
   ; If these fns are ommitted (nil), its not an error.
-  (let [visible? (visible? anchor ctx)
-        route' (routing/build-route' anchor ctx)
-        hypercrud-props (build-anchor-props-raw route' anchor ctx)
-        popover-props (if (popover-anchor? anchor)
-                        (if-let [route (and (:anchor/managed? anchor) (either/right? route') (cats/extract route'))]
+  (let [visible? (visible? link ctx)
+        route' (routing/build-route' link ctx)
+        hypercrud-props (build-anchor-props-raw route' link ctx)
+        popover-props (if (popover-anchor? link)
+                        (if-let [route (and (:link/managed? link) (either/right? route') (cats/extract route'))]
                           ; If no route, there's nothing to draw, and the anchor tooltip shows the error.
-                          (let [ctx (context/anchor-branch ctx anchor)]
+                          (let [ctx (context/anchor-branch ctx link)]
                             {:showing? (reagent/cursor (-> ctx :peer .-state-atom) [:popovers (:branch ctx)])
-                             :body [managed-popover-body anchor route ctx]
+                             :body [managed-popover-body link route ctx]
                              :open! (reagent/partial open! ctx)})))
         anchor-props-hidden {:hidden (not visible?)}]
     (merge anchor-props-hidden hypercrud-props {:popover popover-props})))

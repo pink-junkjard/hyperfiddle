@@ -50,12 +50,12 @@
                       (get tempid->id temp-id temp-id)))]
     (invert-ids route invert-id ctx)))
 
-(defn ^:export build-route' [anchor ctx]
-  (mlet [link-id (if-let [page (:anchor/link anchor)]
+(defn ^:export build-route' [link ctx]
+  (mlet [fiddle-id (if-let [page (:link/fiddle link)]
                    (either/right (:db/id page))
-                   (either/left {:message "anchor has no link" :data {:anchor anchor}}))
-         user-route-params (if (eval/validate-user-code-str (:link/formula anchor))
-                             (mlet [user-fn (eval/eval-str' (:link/formula anchor))]
+                   (either/left {:message "link has no fiddle" :data {:link link}}))
+         user-route-params (if (eval/validate-user-code-str (:link/formula link))
+                             (mlet [user-fn (eval/eval-str' (:link/formula link))]
                                (if user-fn
                                  (try-either (user-fn ctx))
                                  (cats/return nil)))
@@ -76,9 +76,9 @@
       (id->tempid
         (merge (into {} route-params)
                {
-                ;:code-database (:anchor/code-database anchor) todo when cross db references are working on anchor/links, don't need to inherit code-db-uri
+                ;:code-database (:link/code-database link) todo when cross db references are working on links, don't need to inherit code-db-uri
                 :code-database (get-in ctx [:repository :dbhole/name])
-                :link-id link-id})
+                :link-id fiddle-id})
         ctx))))
 
 (defn encode

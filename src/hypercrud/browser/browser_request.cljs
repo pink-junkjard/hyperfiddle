@@ -12,23 +12,23 @@
 (declare request-from-route)
 (declare request-from-anchor)
 
-(defn recurse-request [anchor ctx]
-  (if (:anchor/managed? anchor)
-    (let [route' (routing/build-route' anchor ctx)
-          ctx (context/anchor-branch ctx anchor)]
+(defn recurse-request [link ctx]
+  (if (:link/managed? link)
+    (let [route' (routing/build-route' link ctx)
+          ctx (context/anchor-branch ctx link)]
       (if true #_(get-in (-> ctx :peer .-state-atom deref) [:popovers (:branch ctx)])
         ; if the anchor IS a popover, we need to run the same logic as anchor/build-anchor-props
         ; the ctx needs to be updated (branched, etc), but NOT BEFORE determining the route
         ; that MUST happen in the parent context
         (let [ctx (-> ctx
                       (context/clean)
-                      (update :debug #(str % ">popover-link[" (:db/id anchor) ":" (or (:anchor/ident anchor) (:anchor/prompt anchor)) "]")))]
+                      (update :debug #(str % ">popover-link[" (:db/id link) ":" (or (:link/rel link) (:anchor/prompt link)) "]")))]
           (either/branch route'
                          (constantly nil)
                          #(request-from-route % ctx)))))
     ; if the anchor IS NOT a popover, this should be the same logic as widget/render-inline-anchors
-    (let [ctx (update ctx :debug #(str % ">inline-link[" (:db/id anchor) ":" (or (:anchor/ident anchor) (:anchor/prompt anchor)) "]"))]
-      (request-from-anchor anchor ctx))))
+    (let [ctx (update ctx :debug #(str % ">inline-link[" (:db/id link) ":" (or (:link/rel link) (:anchor/prompt link)) "]"))]
+      (request-from-anchor link ctx))))
 
 (defn cell-dependent-requests [cell fe fe-anchors-lookup ctx]
   (let [ctx (-> ctx
@@ -36,14 +36,14 @@
                 (context/cell-data cell))]
     (concat
       (->> (get fe-anchors-lookup :links)
-           (filter :anchor/repeating?)
+           (filter :link/dependent?)
            (mapcat #(recurse-request % ctx)))
       (->> (:fields fe)
            (mapcat (fn [field]
                      (let [ctx (-> (context/attribute ctx (:attribute field))
                                    (context/value ((:cell-data->value field) (:cell-data ctx))))]
                        (->> (get-in fe-anchors-lookup [(:attribute field) :links])
-                            (filter :anchor/repeating?)
+                            (filter :link/dependent?)
                             (mapcat #(recurse-request % ctx))))))))))
 
 (defn relation-dependent-requests [relation ordered-fes anchors-lookup ctx]
@@ -52,29 +52,29 @@
                       (cell-dependent-requests cell fe (get anchors-lookup pos) ctx)))
        (apply concat)))
 
-(defn link-dependent-requests [result ordered-fes anchors ctx]
+(defn fiddle-dependent-requests [result ordered-fes anchors ctx]
   (let [anchors-lookup (->> anchors
-                            (filter :anchor/render-inline?) ; at this point we only care about inline anchors
+                            (filter :link/render-inline?)   ; at this point we only care about inline links
                             (base/build-pathed-anchors-lookup))]
     (concat
       (->> (mapcat #(recurse-request % ctx) (->> (get anchors-lookup :links)
-                                                 (remove :anchor/repeating?))))
+                                                 (remove :link/dependent?))))
       (->> ordered-fes                                      ; might have empty results
            (map-indexed (fn [fe-pos fe]
                           (let [ctx (context/find-element ctx fe)
                                 fe-anchors-lookup (get anchors-lookup fe-pos)]
                             (concat
                               (->> (get fe-anchors-lookup :links)
-                                   (remove :anchor/repeating?)
+                                   (remove :link/dependent?)
                                    (mapcat #(recurse-request % ctx)))
                               (->> (:fields fe)
                                    (mapcat (fn [{:keys [attribute]}]
                                              (let [ctx (context/attribute ctx attribute)]
                                                (->> (get-in fe-anchors-lookup [attribute :links])
-                                                    (remove :anchor/repeating?)
+                                                    (remove :link/dependent?)
                                                     (mapcat #(recurse-request % ctx)))))))))))
            (apply concat))
-      (case (get-in ctx [:fiddle :request/type])
+      (case (get-in ctx [:fiddle :fiddle/type])
         :entity (if-let [a (get-in ctx [:request :a])]
                   (either/branch
                     (try-either (.-dbname (get-in ctx [:route :request-params :entity])))
@@ -121,7 +121,7 @@
                           (catch :default e
                             (timbre/error e)
                             nil))))
-   :default link-dependent-requests})
+   :default fiddle-dependent-requests})
 
 (defn process-data [{:keys [result ordered-fes anchors ctx]}]
   (mlet [request-fn (base/fn-from-mode (f-mode-config) (:fiddle ctx) ctx)]
@@ -129,18 +129,18 @@
 
 (defn request-from-route [route ctx]
   (let [ctx (context/route ctx route)
-        {:keys [meta-link-req' link']} (base/hydrate-link ctx)]
-    (concat (if-let [meta-link-req (-> meta-link-req'
-                                       (cats/mplus (either/right nil))
-                                       (cats/extract))]
-              [meta-link-req])
-            (-> (mlet [link link'
-                       link-request (base/request-for-link link ctx)]
+        {:keys [meta-fiddle-req' fiddle']} (base/hydrate-fiddle ctx)]
+    (concat (if-let [meta-fiddle-req (-> meta-fiddle-req'
+                                         (cats/mplus (either/right nil))
+                                         (cats/extract))]
+              [meta-fiddle-req])
+            (-> (mlet [fiddle fiddle'
+                       fiddle-request (base/request-for-fiddle fiddle ctx)]
                   (cats/return
                     (concat
-                      (if link-request [link-request])
+                      (if fiddle-request [fiddle-request])
                       (schema-util/schema-requests-for-link ctx)
-                      (-> (base/process-results link link-request ctx)
+                      (-> (base/process-results fiddle fiddle-request ctx)
                           (cats/bind process-data)
                           (cats/mplus (either/right nil))
                           (cats/extract)))))

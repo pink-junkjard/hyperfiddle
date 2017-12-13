@@ -36,15 +36,15 @@
                  {:fe false :c? true :d? false :a true} nil}]
       (merge fe no-fe))))
 
-(defn auto-txfn [anchor]
-  ; tx-fn is not applicable if the anchor is not managed
-  (if (or (:anchor/managed? anchor) false)
-    (-> (hc-string/memoized-safe-read-edn-string (str "[" (:link/path anchor) "]"))
+(defn auto-txfn [link]
+  ; tx-fn is not applicable if the link is not managed
+  (if (or (:link/managed? link) false)
+    (-> (hc-string/memoized-safe-read-edn-string (str "[" (:link/path link) "]"))
         (either/branch
           (fn [e] (timbre/error e))
           (fn [path]
             (get auto-tx-fn-lookup
                  {:fe (not (nil? (first path)))
-                  :c? (or (:anchor/create? anchor) false)
-                  :d? (or (:anchor/repeating? anchor) false)
+                  :c? (or (:link/create? link) false)
+                  :d? (or (:link/dependent? link) false)
                   :a (not (nil? (second path)))}))))))

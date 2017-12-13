@@ -13,8 +13,8 @@
             [hypercrud.compile.eval :as eval]
             [hypercrud.types.Entity :refer [Entity]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
-            [hypercrud.types.ThinEntity :refer [ThinEntity]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
+            [hypercrud.types.ThinEntity :refer [ThinEntity]]
             [hypercrud.util.string :as hc-string]
             [taoensso.timbre :as timbre]))
 
@@ -35,33 +35,33 @@
 (def meta-pull-exp-for-link
   ['*
    :db/doc
-   :link-query/value
-   :request/type
+   :fiddle/query
+   :fiddle/type
    :fiddle/request
    :fiddle/pull
-   {:link/anchor ['*
-                  ; hydrate the whole link for validating the anchor by query params
-                  {:anchor/link ['*]}]}])
+   {:fiddle/link ['*
+                  ; hydrate the whole fiddle for validating the anchor by query params
+                  {:link/fiddle ['*]}]}])
 
-(defn meta-request-for-link [ctx]
+(defn meta-request-for-fiddle [ctx]
   (try-either
-    (let [link-id (get-in ctx [:route :link-id])
-          _ (assert link-id "missing link-id")
+    (let [fiddle-id (get-in ctx [:route :link-id])
+          _ (assert fiddle-id "missing link-id")
           dbval (hc/db (:peer ctx) (get-in ctx [:repository :dbhole/uri]) (:branch ctx))]
-      (->EntityRequest link-id nil dbval meta-pull-exp-for-link))))
+      (->EntityRequest fiddle-id nil dbval meta-pull-exp-for-link))))
 
-(defn hydrate-link [ctx]
+(defn hydrate-fiddle [ctx]
   (if (auto-link/system-link? (get-in ctx [:route :link-id]))
-    {:meta-link-req' (either/right nil)
-     :link' (auto-link/hydrate-system-link (get-in ctx [:route :link-id]) ctx)}
-    (let [meta-link-request (meta-request-for-link ctx)]
-      {:meta-link-req' meta-link-request
-       :link' (cats/bind meta-link-request #(hc/hydrate (:peer ctx) %))})))
+    {:meta-fiddle-req' (either/right nil)
+     :fiddle' (auto-link/hydrate-system-link (get-in ctx [:route :link-id]) ctx)}
+    (let [meta-link-request (meta-request-for-fiddle ctx)]
+      {:meta-fiddle-req' meta-link-request
+       :fiddle' (cats/bind meta-link-request #(hc/hydrate (:peer ctx) %))})))
 
-(defn request-for-link [link ctx]
-  (case (:request/type link)
+(defn request-for-fiddle [fiddle ctx]
+  (case (:fiddle/type fiddle)
     :query
-    (mlet [q (hc-string/memoized-safe-read-edn-string (:link-query/value link))
+    (mlet [q (hc-string/memoized-safe-read-edn-string (:fiddle/query fiddle))
            query-holes (try-either (q-util/parse-holes q))]
       (let [params-map (merge (get-in ctx [:route :request-params]) (q-util/build-dbhole-lookup ctx))
             params (->> query-holes
@@ -73,7 +73,7 @@
                                                    :else param)))))
                         (into {}))
             ;pull-exp
-            #_(-> (hc-string/memoized-safe-read-edn-string (:fiddle/pull link))
+            #_(-> (hc-string/memoized-safe-read-edn-string (:fiddle/pull fiddle))
                   (either/branch (constantly nil) identity))
             missing (->> params (filter (comp nil? second)) (mapv first))]
         (if (empty? missing)
@@ -86,7 +86,7 @@
           uri (try (let [dbname (.-dbname e)]               ;todo report this exception better
                      (get-in ctx [:repository :repository/environment dbname]))
                    (catch :default e nil))
-          pull-exp (or (-> (hc-string/memoized-safe-read-edn-string (:fiddle/pull link))
+          pull-exp (or (-> (hc-string/memoized-safe-read-edn-string (:fiddle/pull fiddle))
                            (either/branch (constantly nil) identity)
                            first)
                        ['*])]
@@ -137,10 +137,10 @@
 
 (defn data-from-route [route ctx]
   (let [ctx (context/route ctx route)
-        {:keys [link']} (hydrate-link ctx)]
-    (mlet [link link'
-           link-request (request-for-link link ctx)]
-      (process-results link link-request ctx))))
+        {:keys [fiddle']} (hydrate-fiddle ctx)]
+    (mlet [fiddle fiddle'
+           fiddle-request (request-for-fiddle fiddle ctx)]
+      (process-results fiddle fiddle-request ctx))))
 
 (defn from-anchor [anchor ctx with-route]
   (mlet [route (routing/build-route' anchor ctx)]

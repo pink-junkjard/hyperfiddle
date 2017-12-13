@@ -35,8 +35,8 @@
 
 (defn col-head-anchors [attr-label-anchors ctx]
   [:div.anchors
-   (widget/render-anchors (remove :anchor/render-inline? attr-label-anchors) ctx)
-   (widget/render-inline-anchors (filter :anchor/render-inline? attr-label-anchors) ctx)])
+   (widget/render-anchors (remove :link/render-inline? attr-label-anchors) ctx)
+   (widget/render-inline-anchors (filter :link/render-inline? attr-label-anchors) ctx)])
 
 (defn col-head [fe fe-pos field col-anchors sort-col ctx]
   (let [ctx (context/attribute ctx (:attribute field))
@@ -70,9 +70,9 @@
                                          (context/cell-data ctx (get relation fe-pos))
                                          ctx))
                              form-anchors (->> (get-in anchors-lookup [fe-pos :links])
-                                               ((if repeating? filter remove) :anchor/repeating?)
+                                               ((if repeating? filter remove) :link/dependent?)
                                                ; inline entity-anchors are not yet implemented, what does that mean.
-                                               (remove :anchor/render-inline?))]
+                                               (remove :link/render-inline?))]
                          (widget/render-anchors form-anchors ctx))))
         (apply concat))])
 
@@ -84,7 +84,7 @@
                          (->> (:fields fe)
                               (map (fn [field]
                                      (let [col-anchors (->> (get-in anchors-lookup [fe-pos (:attribute field) :links])
-                                                            (remove :anchor/repeating?))]
+                                                            (remove :link/dependent?))]
                                        ^{:key (str (hash fe) "-" (:attribute field))}
                                        [col-head fe fe-pos field col-anchors sort-col ctx])))))))
         (apply concat))

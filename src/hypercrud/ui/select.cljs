@@ -79,10 +79,10 @@
   [:span msg])
 
 (defn select-anchor-renderer [props result ordered-fes anchors ctx]
-  (case (get-in ctx [:fiddle :request/type])
+  (case (get-in ctx [:fiddle :fiddle/type])
     :entity [select-error-cmp "Only fiddle type `query` is supported for select options"]
     :blank [select-error-cmp "Only fiddle type `query` is supported for select options"]
-    :query (case (get-in ctx [:fiddle :request/type])
+    :query (case (get-in ctx [:fiddle :fiddle/type])
              ; parser can throw, but this is always embedded in a safe-user-renderer, so it surfaces safely
              (let [{:keys [qfind]} (parser/parse-query (get-in ctx [:request :query]))]
                (condp = (type qfind)

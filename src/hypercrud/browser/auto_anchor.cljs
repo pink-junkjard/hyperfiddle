@@ -14,12 +14,12 @@
        (vedn/read-string)))
 
 (defn system-anchors
-  "All sys links are :anchor/ident :sys, so they can be matched and merged with user-anchors.
+  "All sys links are :link/rel :sys, so they can be matched and merged with user-anchors.
   Matching is determined by [repeat? entity attribute ident]
 
   This function recurses in unexpected abstract way and impacts performance highly
   "
-  [parent-link ordered-fes ctx]
+  [parent-fiddle ordered-fes ctx]
   (let [entity-links (->> ordered-fes
                           (filter :source-symbol)
                           (map-indexed (fn [fe-pos fe]
@@ -27,10 +27,10 @@
                                                              :fe fe}
                                                      :hypercrud/sys? true
                                                      :anchor/prompt (str "edit-" (:name fe))
-                                                     :anchor/ident (keyword (str "sys-edit-" (:name fe)))
-                                                     :anchor/link (auto-link/link-system-edit (:name fe))
-                                                     :anchor/repeating? true
-                                                     :anchor/managed? false
+                                                     :link/rel (keyword (str "sys-edit-" (:name fe)))
+                                                     :link/fiddle (auto-link/link-system-edit (:name fe))
+                                                     :link/dependent? true
+                                                     :link/managed? false
                                                      :link/path (str fe-pos)}
                                                ; create links mirror edit links but repeating false, see auto-formula.
                                                ; This is because the connection comes from the find-element, and when merging
@@ -39,25 +39,25 @@
                                                             :fe fe}
                                                     :hypercrud/sys? true
                                                     :anchor/prompt (str "new-" (:name fe))
-                                                    :anchor/ident (keyword (str "sys-new-" (:name fe)))
-                                                    :anchor/link (auto-link/link-system-edit (:name fe))
-                                                    :anchor/repeating? false ; not managed, no parent-child ref
+                                                    :link/rel (keyword (str "sys-new-" (:name fe)))
+                                                    :link/fiddle (auto-link/link-system-edit (:name fe))
+                                                    :link/dependent? false ; not managed, no parent-child ref
                                                     :link/path (str fe-pos)
-                                                    :anchor/managed? true
-                                                    :anchor/create? true
-                                                    :anchor/render-inline? true}
+                                                    :link/managed? true
+                                                    :link/create? true
+                                                    :link/render-inline? true}
                                                remove {:db/id {:ident :system-anchor-remove
                                                                :fe fe}
                                                        :hypercrud/sys? true
                                                        :anchor/prompt (str "remove-" (:name fe))
-                                                       :anchor/ident (keyword (str "sys-remove-" (:name fe)))
-                                                       :anchor/link (auto-link/link-blank-system-remove (:name fe) nil)
-                                                       :anchor/repeating? true
+                                                       :link/rel (keyword (str "sys-remove-" (:name fe)))
+                                                       :link/fiddle (auto-link/link-blank-system-remove (:name fe) nil)
+                                                       :link/dependent? true
                                                        :link/path (str fe-pos)
-                                                       :anchor/managed? true
-                                                       :anchor/render-inline? true
-                                                       :anchor/tx-fn (:entity-remove auto-anchor-txfn-lookup)}]
-                                           (case (:request/type parent-link)
+                                                       :link/managed? true
+                                                       :link/render-inline? true
+                                                       :link/tx-fn (:entity-remove auto-anchor-txfn-lookup)}]
+                                           (case (:fiddle/type parent-fiddle)
                                              :entity [remove]
 
                                              :query [edit new remove]
@@ -66,7 +66,7 @@
                           (apply concat)
                           doall)
 
-        attr-links (if (not= :blank (:request/type parent-link))
+        attr-links (if (not= :blank (:fiddle/type parent-fiddle))
                      (->> ordered-fes
                           (filter :source-symbol)
                           (map-indexed (fn [fe-pos fe]
@@ -81,74 +81,74 @@
                                                                     :a attribute}
                                                             :hypercrud/sys? true
                                                             :anchor/prompt (str "edit") ; conserve space in label
-                                                            :anchor/ident (keyword (str "sys-edit-" (:name fe) "-" attribute))
-                                                            :anchor/repeating? true
+                                                            :link/rel (keyword (str "sys-edit-" (:name fe) "-" attribute))
+                                                            :link/dependent? true
                                                             :link/path (str fe-pos " " attribute)
-                                                            :anchor/managed? false
-                                                            :anchor/disabled? true
-                                                            :anchor/link (auto-link/link-system-edit-attr (:name fe) attribute)}
+                                                            :link/managed? false
+                                                            :link/disabled? true
+                                                            :link/fiddle (auto-link/link-system-edit-attr (:name fe) attribute)}
                                                            {:db/id {:ident :system-anchor-new-attr
                                                                     :fe fe
                                                                     :a attribute}
                                                             :hypercrud/sys? true
                                                             :anchor/prompt (str "new") ; conserve space in label
-                                                            :anchor/ident (keyword (str "sys-new-" (:name fe) "-" attribute))
-                                                            :anchor/repeating? true ; manged - need parent-child ref
+                                                            :link/rel (keyword (str "sys-new-" (:name fe) "-" attribute))
+                                                            :link/dependent? true ; manged - need parent-child ref
                                                             :link/path (str fe-pos " " attribute)
-                                                            :anchor/managed? true
-                                                            :anchor/create? true
-                                                            :anchor/render-inline? true
-                                                            :anchor/disabled? true
-                                                            :anchor/link (auto-link/link-system-edit-attr (:name fe) attribute)}
+                                                            :link/managed? true
+                                                            :link/create? true
+                                                            :link/render-inline? true
+                                                            :link/disabled? true
+                                                            :link/fiddle (auto-link/link-system-edit-attr (:name fe) attribute)}
                                                            {:db/id {:ident :system-anchor-remove-attr
                                                                     :fe fe
                                                                     :a attribute}
                                                             :hypercrud/sys? true
                                                             :anchor/prompt (str "remove")
-                                                            :anchor/ident (keyword (str "sys-remove-" (:name fe) "-" attribute))
-                                                            :anchor/link (auto-link/link-blank-system-remove (:name fe) attribute)
+                                                            :link/rel (keyword (str "sys-remove-" (:name fe) "-" attribute))
+                                                            :link/fiddle (auto-link/link-blank-system-remove (:name fe) attribute)
                                                             :link/path (str fe-pos " " attribute)
-                                                            :anchor/repeating? true
-                                                            :anchor/managed? true
-                                                            :anchor/render-inline? true
-                                                            :anchor/disabled? true
-                                                            :anchor/tx-fn (if (= :db.cardinality/one (get-in schema [attribute :db/cardinality :db/ident]))
+                                                            :link/dependent? true
+                                                            :link/managed? true
+                                                            :link/render-inline? true
+                                                            :link/disabled? true
+                                                            :link/tx-fn (if (= :db.cardinality/one (get-in schema [attribute :db/cardinality :db/ident]))
                                                                             (:value-remove-one auto-anchor-txfn-lookup)
                                                                             (:value-remove-many auto-anchor-txfn-lookup))}]))))))
                           (apply concat)
                           doall))]
     (concat entity-links attr-links)))
 
-(defn auto-anchor [anchor]
-  (let [auto-fn (fn [anchor attr auto-f]
-                  (let [v (get anchor attr)]
+(defn auto-anchor [link]
+  (let [auto-fn (fn [link attr auto-f]
+                  (let [v (get link attr)]
                     (if (or (not v) (and (string? v) (empty? v)))
-                      (assoc anchor attr (auto-f anchor))
-                      anchor)))]
-    (-> anchor
-        (auto-fn :anchor/tx-fn auto-txfn)
+                      (assoc link attr (auto-f link))
+                      link)))]
+    (-> link
+        (auto-fn :link/tx-fn auto-txfn)
         (auto-fn :link/formula auto-formula))))
 
-(defn merge-anchors [sys-anchors link-anchors]
-  (->> (reduce (fn [grouped-link-anchors sys-anchor]
-                 (update grouped-link-anchors
-                         (:anchor/ident sys-anchor)
+(defn merge-anchors [sys-links links]
+  (->> (reduce (fn [grouped-links sys-link]
+                 (update grouped-links
+                         (:link/rel sys-link)
                          (fn [maybe-link-anchors]
                            (if maybe-link-anchors
-                             (map (partial merge sys-anchor) maybe-link-anchors)
-                             [sys-anchor]))))
-               (->> link-anchors
+                             (map (partial merge sys-link) maybe-link-anchors)
+                             [sys-link]))))
+               (->> links
                     (map #(into {} %))
-                    (group-by #(or (:anchor/ident %) (:db/id %))))
-               sys-anchors)
+                    (group-by #(or (:link/rel %) (:db/id %))))
+               sys-links)
        vals
        flatten
        doall))
 
 (defn auto-anchors [ordered-fes ctx]
-  (let [sys-anchors (system-anchors (:fiddle ctx) ordered-fes ctx)
-        anchors (->> (merge-anchors sys-anchors (get-in ctx [:fiddle :link/anchor]))
-                     (map auto-anchor))]
+  (let [sys-links (system-anchors (:fiddle ctx) ordered-fes ctx)
+        links (->> (merge-anchors sys-links (get-in ctx [:fiddle :fiddle/links]))
+                   (map auto-anchor))]
     (if (:keep-disabled-anchors? ctx)
-      anchors
-      (remove :anchor/disabled? anchors))))
+      links
+      (remove :link/disabled? links))))
