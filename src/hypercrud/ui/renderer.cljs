@@ -2,7 +2,7 @@
   (:require [cats.monad.either :as either]
             [hypercrud.browser.anchor :as anchor]
             [hypercrud.compile.eval :as eval :refer [eval-str']]
-            [hypercrud.platform.safe-render :refer [safe-user-renderer]]
+            [hypercrud.ui.safe-render :refer [safe-user-renderer]]
             [hypercrud.util.core :refer [pprint-str]]))
 
 
