@@ -16,21 +16,9 @@
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hypercrud.types.ThinEntity :refer [ThinEntity]]
             [hypercrud.util.string :as hc-string]
-            [taoensso.timbre :as timbre]))
+            [taoensso.timbre :as timbre]
+            [hypercrud.browser.anchor :as anchor]))
 
-
-(defn build-pathed-anchors-lookup [anchors]
-  (reduce (fn [acc anchor]
-            (-> (hc-string/memoized-safe-read-edn-string (str "[" (:link/path anchor) "]"))
-                (either/branch
-                  (fn [e]
-                    (timbre/error e)
-                    ; swallow the error
-                    acc)
-                  (fn [path]
-                    (update-in acc (conj path :links) conj anchor)))))
-          {}
-          anchors))
 
 (def meta-pull-exp-for-link
   ['*
@@ -128,11 +116,10 @@
                        :read-only (or (:read-only ctx) never-read-only))]
            ctx (user-bindings/user-bindings' fiddle ctx)
            ; todo why are we imposing these auto-fns on everyone?
-           ordered-fes (find-element/auto-find-elements result ctx)
-           :let [anchors (auto-anchor/auto-anchors ordered-fes ctx)]]
+           ordered-fes (find-element/auto-find-elements result ctx)]
       (cats/return {:result result
                     :ordered-fes ordered-fes
-                    :anchors anchors
+                    :anchors (auto-anchor/auto-anchors ordered-fes ctx)
                     :ctx ctx}))))
 
 (defn data-from-route [route ctx]

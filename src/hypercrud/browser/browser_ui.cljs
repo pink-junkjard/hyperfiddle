@@ -32,14 +32,14 @@
                       ctx)]
             [ui-from-anchor (get anchor-index ident) ctx]))
         (anchor [anchor-index ident ctx label]
-          (let [props (-> (anchor/build-anchor-props (get anchor-index ident) ctx)
+          (let [props (-> (anchor/build-link-props (get anchor-index ident) ctx)
                           #_(dissoc :style) #_"custom renderers don't want colored links")]
             [(:navigate-cmp ctx) props label]))
         (browse' [anchor-index ident ctx]
           (->> (base/data-from-anchor (get anchor-index ident) ctx)
                (cats/fmap :result)))
         (anchor* [anchor-index ident ctx]
-          (anchor/build-anchor-props (get anchor-index ident) ctx))
+          (anchor/build-link-props (get anchor-index ident) ctx))
         (link-fn [anchor-index ident label ctx]
           (timbre/error "Warning: :link-fn is deprecated, and will be removed in a future release. Use :anchor instead")
           (anchor anchor-index ident ctx label))]
@@ -102,7 +102,7 @@
   [wrap-ui (cats/bind (base/data-from-route route ctx) process-data) route ctx])
 
 (defn ui-from-anchor [anchor ctx]
-  (let [anchor-props' (try-either (anchor/build-anchor-props anchor ctx)) ; LOOOOOLLLLLL we are dumb
+  (let [anchor-props' (try-either (anchor/build-link-props anchor ctx)) ; LOOOOOLLLLLL we are dumb
         v' (mlet [anchor-props anchor-props']
              ; todo should filter hidden anchors out before recursing (in widget/render-inline-anchors)
              (if (:hidden anchor-props)

@@ -11,7 +11,7 @@
       (str/replace "/" "-")
       (str/replace " " "-")))
 
-(defn build-props [field anchors ctx]
+(defn build-props [field links ctx]
   ; why does this need the field - it needs the ident for readonly in "Edit Anchors"
   ; todo clean this interface up
   {:read-only ((get ctx :read-only) (:attribute ctx) ctx)})

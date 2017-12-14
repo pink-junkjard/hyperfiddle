@@ -1,4 +1,4 @@
-(ns hypercrud.browser.anchor
+(ns hypercrud.browser.anchor                                ; link
   (:require [cats.core :as cats :refer [mlet return]]
             [cats.monad.either :as either :refer-macros [try-either]]
             [clojure.set :as set]
@@ -10,17 +10,54 @@
             [hypercrud.types.Entity :refer [Entity]]
             [hypercrud.types.ThinEntity :refer [->ThinEntity]]
             [hypercrud.util.core :refer [pprint-str]]
+            [hypercrud.util.string :as hc-string]
             [promesa.core :as p]
             [reagent.core :as reagent]
             [taoensso.timbre :as timbre]))
 
 
-(defn option-anchor? [link]
+(defn option-link? [link]
   ; don't care if its inline or not, just do the right thing.
   (= :options (:link/rel link)))
 
-(defn popover-anchor? [link]
+(defn popover-link? [link]
   (:link/managed? link))
+
+(defn build-pathed-links-lookup [anchors]
+  (reduce (fn [acc anchor]
+            (-> (hc-string/memoized-safe-read-edn-string (str "[" (:link/path anchor) "]"))
+                (either/branch
+                  (fn [e]
+                    (timbre/error e)
+                    ; swallow the error
+                    acc)
+                  (fn [path]
+                    (update-in acc (conj path :links) conj anchor)))))
+          {}
+          anchors))
+
+(defn process-popover-link [link]
+  (if (popover-link? link)
+    (assoc link :link/render-inline? false)
+    link))
+
+(defn process-option-links [links ctx]
+  (let [[options-link] (filter option-link? links)
+        links (remove option-link? links)]
+    [links options-link]))
+
+(def links-lookup'                                          ; cosmetic UI side because popover hacks. If popovers hydrate seperate, this goes away
+  (memoize                                                  ; memory leak; should back by local ratom
+    (fn [links path]
+      (-> (map process-popover-link links)                  ; the cosmetic change
+          (build-pathed-links-lookup)
+          (get-in (conj path :links))))))
+
+(def links-lookup                                           ; the real one used by request side
+  (memoize
+    (fn [links path]
+      (-> (build-pathed-links-lookup links)
+          (get-in (conj path :links))))))
 
 ; todo belongs in routing ns
 ; this is same business logic as base/request-for-link
@@ -52,7 +89,7 @@
     (try-either (apply expr args))
     (either/right expr)))
 
-(defn build-anchor-props-raw [unvalidated-route' link ctx]  ; ctx is for display-mode
+(defn ^:export build-link-props-raw [unvalidated-route' link ctx]    ; ctx is for display-mode
 
   ; this is a fine place to eval, put error message in the tooltip prop
   ; each prop might have special rules about his default, for example :visible is default true, does this get handled here?
@@ -84,6 +121,8 @@
                    (remove nil?)
                    (interpose " ")
                    (apply str))})))
+
+(def ^:export build-anchor-props-raw build-link-props-raw)
 
 (defn stage! [link route ctx]
   (let [user-txfn (some-> (eval/validate-user-code-str (:link/tx-fn link)) eval-str' (cats/mplus (either/right nil)) (cats/extract))
@@ -138,7 +177,7 @@
 ; if this is driven by link, and not route, it needs memoized.
 ; the route is a fn of the formulas and the formulas can have effects
 ; which have to be run only once.
-(defn build-anchor-props [link ctx]
+(defn build-link-props [link ctx]
   ; Draw as much as possible even in the presence of errors, still draw the link, collect all errors in a tooltip.
   ; Error states:
   ; - no route
@@ -149,13 +188,13 @@
   ; If these fns are ommitted (nil), its not an error.
   (let [visible? (visible? link ctx)
         route' (routing/build-route' link ctx)
-        hypercrud-props (build-anchor-props-raw route' link ctx)
-        popover-props (if (popover-anchor? link)
+        hypercrud-props (build-link-props-raw route' link ctx)
+        popover-props (if (popover-link? link)
                         (if-let [route (and (:link/managed? link) (either/right? route') (cats/extract route'))]
                           ; If no route, there's nothing to draw, and the anchor tooltip shows the error.
                           (let [ctx (context/anchor-branch ctx link)]
                             {:showing? (reagent/cursor (-> ctx :peer .-state-atom) [:popovers (:branch ctx)])
                              :body [managed-popover-body link route ctx]
                              :open! (reagent/partial open! ctx)})))
-        anchor-props-hidden {:hidden (not visible?)}]
-    (merge anchor-props-hidden hypercrud-props {:popover popover-props})))
+        link-props {:hidden (not visible?)}]
+    (merge link-props hypercrud-props {:popover popover-props})))

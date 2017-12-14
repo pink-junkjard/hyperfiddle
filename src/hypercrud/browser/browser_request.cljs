@@ -6,7 +6,8 @@
             [hypercrud.browser.context :as context]
             [hypercrud.browser.routing :as routing]
             [hypercrud.client.schema :as schema-util]
-            [taoensso.timbre :as timbre]))
+            [taoensso.timbre :as timbre]
+            [hypercrud.browser.anchor :as link]))
 
 
 (declare request-from-route)
@@ -30,47 +31,45 @@
     (let [ctx (update ctx :debug #(str % ">inline-link[" (:db/id link) ":" (or (:link/rel link) (:anchor/prompt link)) "]"))]
       (request-from-anchor link ctx))))
 
-(defn cell-dependent-requests [cell fe fe-anchors-lookup ctx]
+(defn cell-dependent-requests [cell fe links ctx]
   (let [ctx (-> ctx
-                (context/find-element fe)
+                (context/find-element fe (:fe-pos ctx))
                 (context/cell-data cell))]
     (concat
-      (->> (get fe-anchors-lookup :links)
+      (->> (link/links-lookup links [(:fe-pos ctx)])
            (filter :link/dependent?)
            (mapcat #(recurse-request % ctx)))
       (->> (:fields fe)
            (mapcat (fn [field]
                      (let [ctx (-> (context/attribute ctx (:attribute field))
                                    (context/value ((:cell-data->value field) (:cell-data ctx))))]
-                       (->> (get-in fe-anchors-lookup [(:attribute field) :links])
+                       (->> (link/links-lookup links [(:fe-pos ctx) (-> ctx :attribute :db/ident)])
                             (filter :link/dependent?)
                             (mapcat #(recurse-request % ctx))))))))))
 
-(defn relation-dependent-requests [relation ordered-fes anchors-lookup ctx]
+(defn relation-dependent-requests [relation ordered-fes links ctx]
   (->> (map vector relation ordered-fes)
-       (map-indexed (fn [pos [cell fe]]
-                      (cell-dependent-requests cell fe (get anchors-lookup pos) ctx)))
+       (map-indexed (fn [fe-pos [cell fe]]
+                      (cell-dependent-requests cell fe links (assoc ctx :fe-pos fe-pos))))
        (apply concat)))
 
-(defn fiddle-dependent-requests [result ordered-fes anchors ctx]
-  (let [anchors-lookup (->> anchors
-                            (filter :link/render-inline?)   ; at this point we only care about inline links
-                            (base/build-pathed-anchors-lookup))]
+(defn fiddle-dependent-requests [result ordered-fes links ctx]
+  ; reconcile this with the anchor.cljs logic
+  (let [links (filter :link/render-inline? links)]      ; at this point we only care about inline links
     (concat
-      (->> (mapcat #(recurse-request % ctx) (->> (get anchors-lookup :links)
+      (->> (mapcat #(recurse-request % ctx) (->> (link/links-lookup links [])
                                                  (remove :link/dependent?))))
       (->> ordered-fes                                      ; might have empty results
            (map-indexed (fn [fe-pos fe]
-                          (let [ctx (context/find-element ctx fe)
-                                fe-anchors-lookup (get anchors-lookup fe-pos)]
+                          (let [ctx (context/find-element ctx fe fe-pos)]
                             (concat
-                              (->> (get fe-anchors-lookup :links)
+                              (->> (link/links-lookup links [fe-pos])
                                    (remove :link/dependent?)
                                    (mapcat #(recurse-request % ctx)))
                               (->> (:fields fe)
                                    (mapcat (fn [{:keys [attribute]}]
                                              (let [ctx (context/attribute ctx attribute)]
-                                               (->> (get-in fe-anchors-lookup [attribute :links])
+                                               (->> (link/links-lookup links [fe-pos (-> ctx :attribute :db/ident)])
                                                     (remove :link/dependent?)
                                                     (mapcat #(recurse-request % ctx)))))))))))
            (apply concat))
@@ -82,11 +81,11 @@
                     (fn [source-symbol]
                       (case (get-in ctx [:schemas (str source-symbol) a :db/cardinality :db/ident])
                         :db.cardinality/one
-                        (cell-dependent-requests result (first ordered-fes) (get anchors-lookup 0) ctx)
+                        (cell-dependent-requests result (first ordered-fes) links (assoc ctx :fe-pos 0))
 
                         :db.cardinality/many
-                        (mapcat #(cell-dependent-requests % (first ordered-fes) (get anchors-lookup 0) ctx) result))))
-                  (cell-dependent-requests result (first ordered-fes) (get anchors-lookup 0) ctx))
+                        (mapcat #(cell-dependent-requests % (first ordered-fes) links (assoc ctx :fe-pos 0)) result))))
+                  (cell-dependent-requests result (first ordered-fes) links (assoc ctx :fe-pos 0)))
 
         :query (either/branch
                  (try-either (parser/parse-query (get-in ctx [:request :query])))
@@ -94,16 +93,16 @@
                  (fn [{:keys [qfind]}]
                    (condp = (type qfind)
                      datascript.parser.FindRel
-                     (mapcat #(relation-dependent-requests % ordered-fes anchors-lookup ctx) result)
+                     (mapcat #(relation-dependent-requests % ordered-fes links ctx) result)
 
                      datascript.parser.FindColl
-                     (mapcat #(cell-dependent-requests % (first ordered-fes) (get anchors-lookup 0) ctx) result)
+                     (mapcat #(cell-dependent-requests % (first ordered-fes) links (assoc ctx :fe-pos 0)) result)
 
                      datascript.parser.FindTuple
-                     (relation-dependent-requests result ordered-fes anchors-lookup ctx)
+                     (relation-dependent-requests result ordered-fes links ctx)
 
                      datascript.parser.FindScalar
-                     (cell-dependent-requests result (first ordered-fes) (get anchors-lookup 0) ctx))))
+                     (cell-dependent-requests result (first ordered-fes) links (assoc ctx :fe-pos 0)))))
 
         :blank nil
 
@@ -113,9 +112,9 @@
   {:from-ctx :user-request
    :from-link :fiddle/request
    :with-user-fn (fn [user-fn]
-                   (fn [result ordered-fes anchors ctx]
+                   (fn [result ordered-fes links ctx]
                      ; todo report invocation errors back to the user
-                     (try (->> (user-fn result ordered-fes anchors ctx)
+                     (try (->> (user-fn result ordered-fes links ctx)
                                ; user-fn HAS to return a seqable value, we want to throw right here if it doesn't
                                seq)
                           (catch :default e

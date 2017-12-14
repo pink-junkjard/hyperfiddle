@@ -48,7 +48,7 @@
   ; todo custom user-dispatch with all the tx-fns as reducers
   ((:dispatch! ctx) (actions/with (:peer ctx) branch uri tx)))
 
-(defn find-element [ctx fe]
+(defn find-element [ctx fe fe-pos]
   (-> (if-let [dbname (some-> (:source-symbol fe) str)]
         (let [uri (get-in ctx [:repository :repository/environment dbname])]
           (assoc ctx :uri uri
@@ -57,7 +57,7 @@
         ctx)
 
       ; todo why is fe necessary in the ctx?
-      (assoc ctx :find-element fe)))
+      (assoc :find-element fe :fe-pos fe-pos)))
 
 (defn cell-data [ctx cell-data]
   (assoc ctx :owner (if-let [owner-fn (:owner-fn ctx)]
