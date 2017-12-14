@@ -3,6 +3,8 @@
             [reagent.core :as reagent]))
 
 
+(declare safe-user-renderer)
+
 (code-for-nodejs
   (require '[reagent.dom.server :as reagent-server]))
 

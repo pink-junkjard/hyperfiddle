@@ -2,7 +2,7 @@
   (:require [reagent.core :as reagent]))
 
 
-(if (= *target* "nodejs")
-  ; todo this node implementation is wrong
-  (def native-listener (fn [props child] child))
-  (def native-listener (reagent/adapt-react-class js/NativeListener)))
+(def native-listener
+  (if (= *target* "nodejs")
+    (fn [props child] child)                                ; todo this node implementation is wrong
+    (reagent/adapt-react-class js/NativeListener)))
