@@ -1,6 +1,6 @@
 (ns hypercrud.ui.navigate-cmp
   (:require [hypercrud.browser.routing :as routing]
-            [hypercrud.platform.native-event-listener :refer [native-listener]]
+            [hypercrud.ui.native-event-listener :refer [native-listener]]
             [hypercrud.ui.tooltip :as tooltip]
             [re-com.core :as re-com]))
 
