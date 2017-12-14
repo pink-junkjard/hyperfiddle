@@ -63,17 +63,17 @@
 
 (defn tempid-lookups-reducer [tempid-lookup action & args]
   (case action
-    :set-ptm (second args)
+    :hydrate!-success (second args)
     tempid-lookup))
 
 (defn ptm-reducer [ptm action & args]
   (case action
-    :set-ptm (first args)
+    :hydrate!-success (first args)
     (or ptm nil)))
 
 (defn error-reducer [error action & args]
   (case action
-    :set-ptm nil
+    :hydrate!-success nil
     ; need errors to be serializable, so crapily pr-str
     :set-error (pr-str (first args))
     :hydrate!-failure (pr-str (first args))

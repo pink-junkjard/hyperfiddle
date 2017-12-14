@@ -23,9 +23,7 @@
     (-> (api/hydrate-route rt)
         (p/then (fn [{:keys [ptm id->tempid]}]
                   (if (= hydrate-id (:hydrate-id (get-state)))
-                    (dispatch! [:batch
-                                [:set-ptm ptm id->tempid]
-                                [:hydrate!-success]])
+                    (dispatch! [:hydrate!-success ptm id->tempid])
                     (timbre/info (str "Ignoring response for " hydrate-id)))))
         (p/catch (fn [error]
                    (if (= hydrate-id (:hydrate-id (get-state)))
