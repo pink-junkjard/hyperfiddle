@@ -2,9 +2,9 @@
 (ns hypercrud.readers-test
   (:require-macros [cljs.test :refer [deftest is]])
   (:require [cljs.test]
-            [cljs.reader :as reader]
             [hypercrud.client.transit :as transit]
             [hypercrud.compile.eval :as eval]
+            [hypercrud.compile.reader :as reader]
             [hypercrud.types.DbVal :refer [->DbVal]]
             [hypercrud.types.Entity :refer [->Entity]]
             [hypercrud.types.ThinEntity :refer [->ThinEntity]]
@@ -13,6 +13,7 @@
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hypercrud.types.URI :refer [->URI]]))
 
+
 (defn test-compile-read [control literal-read]
   (is (= control literal-read)))
 
@@ -20,6 +21,11 @@
   (is (= control
          (reader/read-string (pr-str control))
          (reader/read-string strd))))
+
+(defn test-edn-read [control strd]
+  (is (= control
+         (reader/read-edn-string (pr-str control))
+         (reader/read-edn-string strd))))
 
 (defn test-eval [control strd]
   (is (= control
@@ -34,6 +40,7 @@
 (defn test-all-forms [control literal-read strd transit-strd]
   (test-compile-read control literal-read)
   (test-runtime-read control strd)
+  (test-edn-read control strd)
   (test-eval control strd)
   (test-transit control transit-strd))
 

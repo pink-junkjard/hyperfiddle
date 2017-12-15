@@ -1,8 +1,8 @@
 (ns hypercrud.util.vedn
-  (:require [cljs.reader :as reader]
-            [clojure.string :as string]
+  (:require [clojure.string :as string]
             [hypercrud.compile.eval :as eval]
-            [hypercrud.compile.macros :refer [str-and-code']]))
+            [hypercrud.compile.macros :refer [str-and-code']]
+            [hypercrud.compile.reader :as reader]))
 
 
 (def vedn-delimiter "(?m)^==")

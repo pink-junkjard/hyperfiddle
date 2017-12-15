@@ -1,11 +1,11 @@
 (ns hypercrud.browser.routing
   (:require [cats.core :as cats :refer [mlet]]
             [cats.monad.either :as either :refer-macros [try-either]]
-            [cljs.reader :as reader]
             [clojure.set :as set]
             [clojure.string :as string]
             [clojure.walk :as walk]
             [hypercrud.compile.eval :as eval]
+            [hypercrud.compile.reader :as reader]
             [hypercrud.types.Entity :refer [->Entity Entity]]
             [hypercrud.types.ThinEntity :refer [->ThinEntity ThinEntity]]
             [hypercrud.util.base-64-url-safe :as base64]

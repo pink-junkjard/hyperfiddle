@@ -1,6 +1,5 @@
 (ns hypercrud.ui.input
   (:require [cats.monad.either :as either]
-            [cljs.reader :as reader]
             [hypercrud.util.string :as hc-string]
             [reagent.core :as reagent]))
 
@@ -46,9 +45,9 @@
 (defn edn-input* [value on-change! & [props]]
   (let [parse-string read-string-or-nil
         to-string pr-str
-        valid? #(try (let [_ (reader/read-string %)]        ; differentiate between read `nil` and error
-                       true)
-                     (catch :default e false))]
+        valid? #(either/branch (hc-string/safe-read-edn-string %) ; differentiate between read `nil` and error
+                               (constantly true)
+                               (constantly false))]
     ^{:key value}
     [validated-input' value on-change! parse-string to-string valid? props]))
 

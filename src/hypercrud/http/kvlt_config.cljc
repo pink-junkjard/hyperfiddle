@@ -1,8 +1,8 @@
 (ns hypercrud.http.kvlt-config
   (:require
-    #?(:cljs [cljs.reader :as reader])
     #?(:cljs [cljs.pprint :as pprint])
     #?(:cljs [hypercrud.client.transit :as transit])
+    [hypercrud.compile.reader :as reader]
     [kvlt.middleware]
     [kvlt.middleware.params]))
 
@@ -32,6 +32,5 @@
              (with-out-str (pprint/pprint form-params)))))
 
 (defmethod kvlt.middleware/from-content-type :application/edn [resp]
-  #?(:clj  (assert false "todo")
-     :cljs (let [decoded-val (reader/read-string (:body resp))] ; todo what happens if this throws?
-             (assoc resp :body decoded-val))))
+  (let [decoded-val (reader/read-edn-string (:body resp))]      ; todo this can throw
+    (assoc resp :body decoded-val)))
