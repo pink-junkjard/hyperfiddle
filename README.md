@@ -31,17 +31,25 @@ Proper functional composition in the UI is the foundation necessary to climb eve
 
 (Okay, it's two functions. But both functions are traversals of the same UI tree, they just do different things at the leaf node, and they share much of their code and we may eventually attempt to unify them.
 
+Hyperfiddle UI component functions look like this:
+
+    (fn [] :todo)
+
 ## App-as-a-Value
 
 Hyperfiddle Browser is a generic app-as-a-function which interprets app-values. A *hyperfiddle* (noun) is just an EDN value, inspired by HTML.
 
 #### web browser : web pages :: hyperfiddle browser :: hyperfiddles
 
+hyperfiddle EDN values look like this:
+
+    {:to :do}
+
 This is the basis for extremely powerful data-driven abstractions. The best place to read about that is <http://www.hyperfiddle.net/>.
 
 ## How far will it scale?
 
-Without immutability in the database, all efforts to abstract higher will fail; because to achieve the necessary performance, requires writing imperative optimizations to imperative platforms (object-relational impedance mismatch, N+1 problems, deeply nested JOINs, caching vs batching tradeoffs). This system cannot be built on RDBMS or Neo4J; their imperative nature breaks all attempts to abstract. [The Vietnam of Computer Science (2006)](http://blogs.tedneward.com/post/the-vietnam-of-computer-science/)
+Without immutability in the database, all efforts to abstract higher will fail; because to achieve the necessary performance, requires writing imperative optimizations to imperative platforms (object-relational impedance mismatch, N+1 problems, deeply nested JOINs, caching vs batching tradeoffs, [The Vietnam of Computer Science (2006)](http://blogs.tedneward.com/post/the-vietnam-of-computer-science/)). Hyperfiddle cannot be built on RDBMS or Neo4J; their imperative nature leaks through all attempts to abstract.
 
 But immutability, as always, to the rescue. Datomic's code/data locality story brings us a solution.
 
