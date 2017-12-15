@@ -2,6 +2,8 @@
 
 > functional client/server data sync, for composable and data-driven CRUD applications
 
+This is the open source library powering <http://www.hyperfiddle.net>.
+
 ## Dependency coordinates—Todo
 
 There is a JVM server and a browser client. Prod deployments additionally target nodejs (for server-side rendering). All platforms use the same artifact:
