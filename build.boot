@@ -1,5 +1,5 @@
-(def dependencies '[[com.cognitect/transit-clj "0.8.285"]
-                    [com.hyperfiddle/util "0.0.1-SNAPSHOT"]
+(def dependencies '[[com.cognitect/transit-clj "0.8.300"]
+                    [com.hyperfiddle/hyperfiddle "0.3.0-SNAPSHOT"]
                     [datascript "0.16.2"]
                     [funcool/cuerdas "2.0.4"]
                     [io.pedestal/pedestal.service "0.5.1"]
@@ -29,7 +29,7 @@
          '[adzerk.boot-test :as boot-test]
          'boot.lein)
 
-(def +version+ "0.2.0-SNAPSHOT")
+(def +version+ "0.3.0-SNAPSHOT")
 
 (task-options!
   push #(into % {:repo "deploy-clojars" :ensure-version +version+})
