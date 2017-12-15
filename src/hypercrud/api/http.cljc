@@ -2,7 +2,6 @@
   (:require [cuerdas.core :as str]
             [hypercrud.api.util :as api-util]
             [hypercrud.http.core :refer [request!]]
-            [hypercrud.types.URI]                           ; hyperfiddle/hyperfiddle#101
             [hypercrud.util.base-64-url-safe :as base-64-url-safe]
             [hypercrud.util.branch :as branch]
             [promesa.core :as p]
