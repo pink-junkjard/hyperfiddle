@@ -1,4 +1,4 @@
-(ns hypercrud.browser.connection-color)
+(ns hypercrud.ui.connection-color)
 
 
 ; http://martin.ankerl.com/2009/12/09/how-to-create-random-colors-programmatically/

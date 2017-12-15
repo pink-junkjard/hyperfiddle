@@ -1,8 +1,8 @@
 (ns hypercrud.ui.form
   (:require [cuerdas.core :as str]
-            [hypercrud.browser.connection-color :as connection-color]
             [hypercrud.browser.context :as context]
             [hypercrud.ui.auto-control :refer [auto-control]]
+            [hypercrud.ui.connection-color :as connection-color]
             [hypercrud.ui.form-util :as form-util]
             [hypercrud.ui.input :as input]
             [hypercrud.ui.markdown :as markdown]
