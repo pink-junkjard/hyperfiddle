@@ -1,0 +1,87 @@
+(ns hypercrud.types.ThinEntity
+  #?(:clj
+     (:import [clojure.lang Counted IFn IHashEq ILookup Seqable]
+              [clojure.core.protocols IKVReduce])))
+
+
+(defn- impl-hash [o]
+  (hash [(.-dbname o) (:db/id (.-coll o))]))
+
+(defn- impl-print [o]
+  (str "#entity" (pr-str [(.-dbname o) (.-id o)])))
+
+(deftype ThinEntity [dbname id]
+  #?@(:clj  [Object
+             (equals [o other]
+               (and (instance? ThinEntity other)
+                    (= (.-dbname o) (.-dbname other))
+                    (= (.-id o) (.-id other))))
+
+             IHashEq
+             (hasheq [o] (impl-hash o))
+
+             Seqable
+             (seq [o] (seq {:db/id id}))
+
+             Counted
+             (count [o] (count {:db/id id}))
+
+             ILookup
+             (valAt [o k] (get {:db/id id} k))
+             (valAt [o k not-found] (get {:db/id id} k not-found))
+
+             IKVReduce
+             (kv_reduce [o f init] (reduce-kv {:db/id id} f init))
+
+             IFn
+             (invoke [o k] ({:db/id id} k))
+             (invoke [o k not-found] ({:db/id id} k not-found))]
+
+      :cljs [Object
+             (toString [o] (impl-print o))
+
+             IPrintWithWriter
+             (-pr-writer [o writer _] (-write writer (.toString o)))
+
+             IEquiv
+             (-equiv [o other]
+                     (and (instance? ThinEntity other)
+                          (= (.-dbname o) (.-dbname other))
+                          (= (.-id o) (.-id other))))
+
+             IHash
+             (-hash [o] (impl-hash o))
+
+             IIterable
+             (-iterator [o] (-iterator {:db/id id}))
+
+             ISeqable
+             (-seq [o] (seq {:db/id id}))
+
+             ICounted
+             (-count [o] (count {:db/id id}))
+
+             ILookup
+             (-lookup [o k] (get {:db/id id} k))
+             (-lookup [o k not-found] (get {:db/id id} k not-found))
+
+             IFind
+             (-find [o k] (-find {:db/id id} k))
+
+             IKVReduce
+             (-kv-reduce [o f init] (reduce-kv {:db/id id} f init))
+
+             IFn
+             (-invoke [o k] ({:db/id id} k))
+             (-invoke [o k not-found] ({:db/id id} k not-found))]))
+
+#?(:clj
+   (defmethod print-method ThinEntity [o ^java.io.Writer w]
+     (.write w (impl-print o))))
+
+#?(:clj
+   (defmethod print-dup ThinEntity [o w]
+     (print-method o w)))
+
+(def read-ThinEntity #(apply ->ThinEntity %))
+
