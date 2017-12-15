@@ -1,5 +1,5 @@
 (ns hypercrud.util.string
-  (:require [cats.monad.either :as either :refer [try-either]]
+  (:require [cats.monad.either :as either #?(:clj :refer :cljs :refer-macros) [try-either]]
             [hypercrud.compile.reader :as reader]))
 
 
