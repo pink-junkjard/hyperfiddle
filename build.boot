@@ -10,10 +10,6 @@
                   [re-com "2.0.0"]
 
                   ; provided
-                  ; todo this has a provided dependency on a hypercrud platform
-                  ; need to create a platform api library that node and browser implement
-                  ; platform-api : node/browser :: jaxrs api : jersey
-                  ; [com.hyperfiddle/hypercrud.platform.api "0.2.0-SNAPSHOT" :scope "provided"]
                   [org.clojure/clojurescript "1.9.946" :scope "provided"]
                   [reagent "0.7.0" :scope "provided"]
 
@@ -30,11 +26,11 @@
          '[crisptrutski.boot-cljs-test :refer [test-cljs]]
          'boot.lein)
 
-(def +version+ "0.2.0-SNAPSHOT")
+(def +version+ "0.3.0-SNAPSHOT")
 
 (task-options!
   push #(into % {:repo "deploy-clojars" :ensure-version +version+})
-  pom {:project 'com.hyperfiddle/hypercrud.browser
+  pom {:project 'com.hyperfiddle/hyperfiddle
        :version +version+}
   test-cljs {:js-env :node})
 
