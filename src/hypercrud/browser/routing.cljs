@@ -55,7 +55,7 @@
                    (either/right (:db/id page))
                    (either/left {:message "link has no fiddle" :data {:link link}}))
          user-route-params (if (eval/validate-user-code-str (:link/formula link))
-                             (mlet [user-fn (eval/eval-str' (:link/formula link))]
+                             (mlet [user-fn (eval/eval-str (:link/formula link))]
                                (if user-fn
                                  (try-either (user-fn ctx))
                                  (cats/return nil)))

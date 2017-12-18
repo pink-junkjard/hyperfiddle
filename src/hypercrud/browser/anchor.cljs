@@ -5,7 +5,7 @@
             [hypercrud.browser.context :as context]
             [hypercrud.browser.q-util :as q-util]
             [hypercrud.browser.routing :as routing]
-            [hypercrud.compile.eval :as eval :refer [eval-str']]
+            [hypercrud.compile.eval :as eval :refer [eval-str]]
             [hypercrud.state.actions.core :as actions]
             [hypercrud.types.Entity :refer [Entity]]
             [hypercrud.types.ThinEntity :refer [->ThinEntity]]
@@ -98,7 +98,7 @@
         route (-> unvalidated-route' (cats/mplus (either/right nil)) (cats/extract))
         validated-route' (validated-route' fiddle route)
         user-props' (if-let [user-code-str (eval/validate-user-code-str (:hypercrud/props link))]
-                      (mlet [user-expr (eval-str' user-code-str)]
+                      (mlet [user-expr (eval-str user-code-str)]
                         (get-or-apply' user-expr ctx))
                       (either/right nil))
         user-props-map-raw (cats/extract (cats/mplus user-props' (either/right nil)))
@@ -125,7 +125,7 @@
 (def ^:export build-anchor-props-raw build-link-props-raw)
 
 (defn stage! [link route ctx]
-  (let [user-txfn (some-> (eval/validate-user-code-str (:link/tx-fn link)) eval-str' (cats/mplus (either/right nil)) (cats/extract))
+  (let [user-txfn (some-> (eval/validate-user-code-str (:link/tx-fn link)) eval-str (cats/mplus (either/right nil)) (cats/extract))
         user-txfn (or user-txfn (constantly nil))]
     (-> (p/promise
           (fn [resolve! reject!]
@@ -165,7 +165,7 @@
 
 (defn visible? [link ctx]
   (-> (if-let [code-str (eval/validate-user-code-str (:anchor/visible? link))] ; also inline links !
-        (mlet [user-fn (eval-str' code-str)]
+        (mlet [user-fn (eval-str code-str)]
           (try-either (user-fn ctx)))
         (either/right true))
       (cats/mplus (either/right true))

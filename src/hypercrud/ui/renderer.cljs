@@ -1,7 +1,7 @@
 (ns hypercrud.ui.renderer
   (:require [cats.monad.either :as either]
             [hypercrud.browser.anchor :as link]
-            [hypercrud.compile.eval :as eval :refer [eval-str']]
+            [hypercrud.compile.eval :as eval :refer [eval-str]]
             [hypercrud.ui.safe-render :refer [safe-user-renderer]]
             [hypercrud.util.core :refer [pprint-str]]))
 
@@ -16,7 +16,7 @@
 (defn user-cell-render [maybe-field links props ctx]
   [:div.value
    (-> (if-let [user-fn-str (user-cell-renderer ctx)]
-         (eval-str' user-fn-str)
+         (eval-str user-fn-str)
          (either/left {:message "missing user-renderer"}))  ; double error check, remove this one
        (either/branch
          (fn [e] [:pre (pprint-str e)])

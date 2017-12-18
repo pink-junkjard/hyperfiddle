@@ -1,8 +1,6 @@
-; todo this test belongs in hypecrud.util, should be cljc, and tested on both platforms
 (ns hypercrud.readers-test
-  (:require-macros [cljs.test :refer [deftest is]])
-  (:require [cljs.test]
-            [hypercrud.client.transit :as transit]
+  (:require [#?(:clj clojure.test :cljs cljs.test) #?(:clj :refer :cljs :refer-macros) [deftest is]]
+            #?(:cljs [hypercrud.client.transit :as transit])
             [hypercrud.compile.eval :as eval]
             [hypercrud.compile.reader :as reader]
             [hypercrud.types.DbVal :refer [->DbVal]]
@@ -33,9 +31,10 @@
          (eval/eval-str-and-throw strd))))
 
 (defn test-transit [control transit-strd]
-  (is (= control
-         (transit/decode (transit/encode control))
-         (transit/decode transit-strd))))
+  #?(:cljs
+     (is (= control
+            (transit/decode (transit/encode control))
+            (transit/decode transit-strd)))))
 
 (defn test-all-forms [control literal-read strd transit-strd]
   (test-compile-read control literal-read)

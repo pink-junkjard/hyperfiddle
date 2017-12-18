@@ -15,9 +15,7 @@
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hypercrud.types.ThinEntity :refer [ThinEntity]]
-            [hypercrud.util.string :as hc-string]
-            [taoensso.timbre :as timbre]
-            [hypercrud.browser.anchor :as anchor]))
+            [hypercrud.util.string :as hc-string]))
 
 
 (def meta-pull-exp-for-link
@@ -98,7 +96,7 @@
       ; todo report eval and invocation errors back to the user
       :user (or (some->> (or (some-> (from-ctx ctx) either/right)
                              (if-not (empty? (from-link link))
-                               (eval/eval-str' (from-link link))))
+                               (eval/eval-str (from-link link))))
                          (cats/fmap with-user-fn))
                 (either/right default))
       :xray (either/right default))))
