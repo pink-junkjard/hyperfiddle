@@ -1,7 +1,7 @@
 (ns hypercrud.http.kvlt-config
   (:require [#?(:clj clojure.pprint :cljs cljs.pprint) :as pprint]
-    #?(:cljs [hypercrud.client.transit :as transit])
             [hypercrud.compile.reader :as reader]
+            [hypercrud.transit :as transit]
             [kvlt.middleware]
             [kvlt.middleware.params]))
 

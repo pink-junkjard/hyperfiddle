@@ -1,8 +1,8 @@
 (ns hypercrud.readers-test
   (:require [#?(:clj clojure.test :cljs cljs.test) #?(:clj :refer :cljs :refer-macros) [deftest is]]
-            #?(:cljs [hypercrud.client.transit :as transit])
             [hypercrud.compile.eval :as eval]
             [hypercrud.compile.reader :as reader]
+            [hypercrud.transit :as transit]
             [hypercrud.types.DbVal :refer [->DbVal]]
             [hypercrud.types.Entity :refer [->Entity]]
             [hypercrud.types.ThinEntity :refer [->ThinEntity]]
@@ -31,10 +31,9 @@
          (eval/eval-str-and-throw strd))))
 
 (defn test-transit [control transit-strd]
-  #?(:cljs
-     (is (= control
-            (transit/decode (transit/encode control))
-            (transit/decode transit-strd)))))
+  (is (= control
+         (transit/decode (transit/encode control))
+         (transit/decode transit-strd))))
 
 (defn test-all-forms [control literal-read strd transit-strd]
   (test-compile-read control literal-read)

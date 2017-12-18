@@ -13,7 +13,8 @@
               (hypercrud.types.EntityRequest EntityRequest)
               (hypercrud.types.Err Err)
               (hypercrud.types.QueryRequest QueryRequest)
-              (hypercrud.types.ThinEntity ThinEntity))))
+              (hypercrud.types.ThinEntity ThinEntity)
+              (java.io ByteArrayInputStream ByteArrayOutputStream))))
 
 
 (def read-handlers
@@ -48,3 +49,25 @@
        [URI
         (t/write-handler (constantly "r") (fn [v] (.-uri-str v)))])})
 
+(def ^:dynamic *string-encoding* "UTF-8")
+
+(defn decode
+  "Transit decode an object from `s`."
+  [s & {:keys [type opts]
+        :or {type :json-verbose opts {:handlers read-handlers}}}]
+  #?(:clj  (let [in (ByteArrayInputStream. (.getBytes s *string-encoding*))
+                 rdr (t/reader in type opts)]
+             (t/read rdr))
+     :cljs (let [rdr (t/reader type opts)]
+             (t/read rdr s))))
+
+(defn encode
+  "Transit encode `x` into a String."
+  [x & {:keys [type opts]
+        :or {type :json-verbose opts {:handlers write-handlers}}}]
+  #?(:clj  (let [out (ByteArrayOutputStream.)
+                 writer (t/writer out :json-verbose opts)]
+             (t/write writer x)
+             (.toString out))
+     :cljs (let [wrtr (t/writer type opts)]
+             (t/write wrtr x))))
