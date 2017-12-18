@@ -6,10 +6,8 @@
 ; reactivity is currently never needed on the jvm
 ; so fill their implementations with naive/unreactive implementations
 
-(defn atom
-  ([x] (atom x))
-  ([x & rest]
-   (apply #?(:clj clojure.core/atom :cljs reagent/atom) x rest)))
+(defn atom [x & rest]
+  (apply #?(:clj clojure.core/atom :cljs reagent/atom) x rest))
 
 (defn cursor [src path]
   ; todo support more than just IDeref
