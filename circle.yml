@@ -10,6 +10,7 @@ jobs:
       - checkout
       - restore_cache:
           key: project-{{checksum "boot.properties" }}-{{ checksum "build.boot" }}
+      - run: boot testing test-clj
       - run: boot testing test-cljs -x
       - run: boot pom jar push-snapshot
       - save_cache:

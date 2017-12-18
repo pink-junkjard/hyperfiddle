@@ -27,6 +27,7 @@
   :resource-paths #{"src" "resources"})
 
 (require '[adzerk.boot-cljs :refer :all]
+         '[adzerk.boot-test :as boot-test]
          '[adzerk.bootlaces :refer [push-snapshot]]
          '[crisptrutski.boot-cljs-test :refer [test-cljs]]
          'boot.lein)
@@ -44,6 +45,8 @@
          (merge-env! :source-paths #{"test"}
                      :dependencies '[])
          identity)
+
+(deftask test-clj [] (boot-test/test :include #".*-test"))
 
 (when (> (.lastModified (clojure.java.io/file "build.boot"))
          (.lastModified (clojure.java.io/file "project.clj")))
