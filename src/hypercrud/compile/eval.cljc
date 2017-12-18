@@ -7,6 +7,7 @@
             [hypercrud.readers :as hc-readers]))
 
 
+; todo cannot return stack traces inside a memoized fn
 (def eval-str
   (memoize
     (fn [code-str]
