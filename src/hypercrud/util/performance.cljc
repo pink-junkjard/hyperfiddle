@@ -5,7 +5,9 @@
 
 
 (defn total-time-fn-builder [& [precision]]
-  #?(:clj  (assert false "todo")
+  #?(:clj  (let [start (System/currentTimeMillis)]
+             #(-> (- (System/currentTimeMillis) start)
+                  (str "ms")))
      :cljs (let [start (system-time)]
              #(-> (- (system-time) start)
                   (.toFixed (or precision 1))

@@ -14,7 +14,7 @@
   ; This returns a new value each time the transaction changes - can't call it again later.
   ; So tx-fns must inspect the modal-route, they can't re-create the dbid.
   (let [dbval (hc/db (:peer ctx) (:uri ctx) (:branch ctx))
-        id (-> (:branch dbval) js/Math.abs - str)]
+        id (-> (:branch dbval) #?(:clj Math/abs :cljs js/Math.abs) - str)]
     (->Entity dbval {:db/id id})))
 
 ; todo there are collisions when two links share the same 'location'
@@ -37,7 +37,7 @@
               :db.cardinality/one nil
               :db.cardinality/many (hash (into #{} (mapv :db/id v))) ; todo scalar
               nil nil #_":db/id has a faked attribute with no cardinality, need more thought to make elegant"))
-       hash js/Math.abs - str)))
+       hash #?(:clj Math/abs :cljs js/Math.abs) - str)))
 
 (defn auto-entity [ctx]
   (let [cell-data (:cell-data ctx)

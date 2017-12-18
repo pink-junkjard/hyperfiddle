@@ -39,7 +39,7 @@
   (if (:link/managed? link)
     ; we should run the auto-formula logic to determine an appropriate auto-id fn
     (let [child-id-str (-> [(auto-anchor-formula/deterministic-ident ctx) (:db/id link)]
-                           hash js/Math.abs - str)
+                           hash #?(:clj Math/abs :cljs js/Math.abs) - str)
           branch (branch/encode-branch-child (:branch ctx) child-id-str)]
       (assoc ctx :branch branch))
     ctx))

@@ -24,6 +24,7 @@
    :with-user-fn (fn [user-fn]
                    (fn [result ordered-fes anchors ctx]
                      [safe-user-renderer user-fn result ordered-fes anchors ctx]))
+   ; todo ui binding should be provided by a RT
    :default hypercrud.ui.result/view})
 
 (letfn [(browse [anchor-index ident ctx & [user-renderer & args]]

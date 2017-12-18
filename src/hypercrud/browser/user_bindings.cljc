@@ -1,6 +1,6 @@
 (ns hypercrud.browser.user-bindings
   (:require [cats.core :as cats :refer [mlet]]
-            [cats.monad.either :as either :refer-macros [try-either]]
+            [cats.monad.either :as either #?(:clj :refer :cljs :refer-macros) [try-either]]
             [hypercrud.compile.eval :as eval :refer [eval-str]]))
 
 (defn user-bindings' [link ctx]

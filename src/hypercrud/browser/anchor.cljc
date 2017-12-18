@@ -1,6 +1,6 @@
 (ns hypercrud.browser.anchor                                ; link
   (:require [cats.core :as cats :refer [mlet return]]
-            [cats.monad.either :as either :refer-macros [try-either]]
+            [cats.monad.either :as either #?(:clj :refer :cljs :refer-macros) [try-either]]
             [clojure.set :as set]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.q-util :as q-util]

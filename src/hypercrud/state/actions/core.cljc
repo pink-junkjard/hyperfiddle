@@ -18,7 +18,7 @@
 (defn batch [& action-list] (cons :batch action-list))
 
 (defn rehydrate [rt on-start dispatch! get-state]
-  (let [hydrate-id (js/Math.random)]
+  (let [hydrate-id #?(:clj (Math/random) :cljs (js/Math.random))]
     (dispatch! (apply batch [:hydrate!-start hydrate-id] on-start))
     (-> (api/hydrate-route rt)
         (p/then (fn [{:keys [ptm id->tempid]}]
@@ -110,7 +110,7 @@
                          (util/map-values (partial filter api-util/v-not-nil?)))]
       (-> (api/transact! (:peer ctx) tx-groups)
           (p/catch (fn [error]
-                     (js/alert (pr-str error))
+                     #?(:cljs (js/alert (pr-str error)))
                      (dispatch! [:transact!-failure error])
                      (p/rejected error)))
           (p/then (fn [{:keys [tempid->id]}]

@@ -9,20 +9,17 @@
 (defmethod kvlt.middleware.params/coerce-form-params
   (keyword "application/transit+json")
   [{:keys [form-params]}]
-  #?(:clj  (assert false "todo")
-     :cljs (transit/encode form-params)))
+  (transit/encode form-params))
 
 (defmethod kvlt.middleware/from-content-type
   (keyword "application/transit+json; charset=utf-8")
   [resp]
-  #?(:clj  (assert false "todo")
-     :cljs (update resp :body transit/decode)))
+  (update resp :body transit/decode))
 
 (defmethod kvlt.middleware/from-content-type
   (keyword "application/transit+json")
   [resp]
-  #?(:clj  (assert false "todo")
-     :cljs (update resp :body transit/decode)))
+  (update resp :body transit/decode))
 
 (defmethod kvlt.middleware.params/coerce-form-params :application/edn [{:keys [form-params]}]
   (binding [pprint/*print-miser-width* nil
