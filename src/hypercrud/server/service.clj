@@ -1,6 +1,9 @@
 (ns hypercrud.server.service
-  (:require [hypercrud.readers]
-            [hypercrud.server.api :as api]
+  (:refer-clojure :exclude [sync])
+  (:require [hypercrud.api.impl.hydrate-requests :refer [hydrate-requests]]
+            [hypercrud.api.impl.sync :refer [sync]]
+            [hypercrud.api.impl.transact :refer [transact!]]
+            [hypercrud.readers]
             [hypercrud.server.util.http :as http]
             [hypercrud.transit :as hc-t]
             [hypercrud.util.base-64-url-safe :as base-64-url-safe]
@@ -21,7 +24,7 @@
           local-basis (binding [*data-readers* (merge *data-readers* {'uri #'hypercrud.types.URI/read-URI})]
                         ((comp read-string base-64-url-safe/decode) (:local-basis path-params)))
           {staged-branches :staged-branches request :request} body-params
-          r (api/hydrate-requests local-basis request staged-branches)]
+          r (hydrate-requests local-basis request staged-branches)]
       (ring-resp/response (wrap-hypercrud r)))
     (catch Exception e
       (println "...http-hydrate; exception=" e)
@@ -33,7 +36,7 @@
           dtx-groups body-params]
       (ring-resp/response
         (wrap-hypercrud
-          (api/transact! dtx-groups))))
+          (transact! dtx-groups))))
     (catch Exception e
       (println e)
       {:status 500 :headers {} :body (str e)})))
@@ -43,7 +46,7 @@
     (let [dbs (:body-params req)]
       (ring-resp/response
         (wrap-hypercrud
-          (api/sync dbs))))
+          (sync dbs))))
     (catch Exception e
       (println e)
       {:status 500 :headers {} :body (str e)})))
