@@ -1,4 +1,5 @@
 (ns hypercrud.compile.reader
+  (:refer-clojure :exclude [read-string])
   (:require [#?(:clj  clojure.tools.reader
                 :cljs cljs.tools.reader) :as reader]
             [#?(:clj  clojure.tools.reader.edn
