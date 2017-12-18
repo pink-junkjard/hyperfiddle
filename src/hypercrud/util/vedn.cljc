@@ -1,4 +1,5 @@
 (ns hypercrud.util.vedn
+  (:refer-clojure :exclude [read-string])
   (:require [clojure.string :as string]
             [hypercrud.compile.eval :as eval]
             [hypercrud.compile.macros :refer [str-and-code']]

@@ -2,12 +2,12 @@
   (:require [cats.core :as cats :refer [mlet]]
             [cats.monad.either :as either :refer-macros [try-either]]
             [datascript.parser :as parser]
+            [hypercrud.browser.anchor :as link]
             [hypercrud.browser.base :as base]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.routing :as routing]
             [hypercrud.client.schema :as schema-util]
-            [taoensso.timbre :as timbre]
-            [hypercrud.browser.anchor :as link]))
+            [taoensso.timbre :as timbre]))
 
 
 (declare request-from-route)
