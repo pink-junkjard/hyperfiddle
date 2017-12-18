@@ -1,7 +1,9 @@
 (ns hypercrud.api.reference
   (:require [hypercrud.api.core :refer [HypercrudDataAPI]]
             [hypercrud.api.http :as http]
-            [hypercrud.api.impl :as impl]
+            [hypercrud.api.impl.global-basis :refer [global-basis]]
+            [hypercrud.api.impl.local-basis :refer [local-basis]]
+            [hypercrud.api.util :as api-util]
             [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]))
 
@@ -9,14 +11,14 @@
 (deftype BrowserReference [service-uri state-atom request-fn]
   HypercrudDataAPI
   (global-basis [rt]
-    (impl/global-basis rt))
+    (global-basis rt))
 
   (local-basis [rt]
-    (impl/local-basis rt (:global-basis @state-atom)))
+    (local-basis rt (:global-basis @state-atom)))
 
   (hydrate-route [rt]
     (let [{:keys [id->tempid local-basis ptm stage]} @state-atom]
-      (impl/hydrate-loop rt request-fn local-basis stage id->tempid ptm)))
+      (api-util/hydrate-loop rt request-fn local-basis stage id->tempid ptm)))
 
   (hydrate-requests [rt local-basis stage requests]
     (http/hydrate-requests! service-uri local-basis stage requests))

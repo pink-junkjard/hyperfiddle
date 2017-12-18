@@ -1,30 +1,37 @@
+(def datomic-dep '[com.datomic/datomic-free "0.9.5561" :scope "provided"])
+
+(def dependencies
+  '[[com.taoensso/timbre "4.10.0"]
+    [datascript "0.16.2"]
+    [funcool/cats "2.1.0"]
+    [funcool/cuerdas "2.0.4"]
+    [funcool/promesa "1.8.1"]
+    [io.nervous/kvlt "0.1.4"]
+    [re-com "2.0.0"]
+
+    ; provided
+    [reagent "0.7.0" :scope "provided"]
+
+    ; provided clj
+    [com.cognitect/transit-clj "0.8.300" :scope "provided"]
+    ;[com.datomic/datomic-free "0.9.5561" :scope "provided"] ; test-cljs chokes on this for some reason
+    [org.clojure/clojure "1.8.0" :scope "provided"]
+
+    ; provided cljs
+    [com.cognitect/transit-cljs "0.8.243" :scope "provided"]
+    [org.clojure/clojurescript "1.9.946" :scope "provided"]
+
+    ; build/test/dev
+    [adzerk/boot-cljs "2.1.4" :scope "test"]
+    [adzerk/boot-test "1.2.0" :scope "test"]
+    [adzerk/bootlaces "0.1.13" :scope "test"]
+    [crisptrutski/boot-cljs-test "0.3.4" :scope "test"]
+    [sparkfund/boot-lein-generate "0.3.0" :scope "test"]])
+
 (set-env!
-  :dependencies '[[com.taoensso/timbre "4.10.0"]
-                  [datascript "0.16.2"]
-                  [funcool/cats "2.1.0"]
-                  [funcool/cuerdas "2.0.4"]
-                  [funcool/promesa "1.8.1"]
-                  [io.nervous/kvlt "0.1.4"]
-                  [re-com "2.0.0"]
-
-                  ; provided
-                  [reagent "0.7.0" :scope "provided"]
-
-                  ; provided clj
-                  [org.clojure/clojure "1.8.0" :scope "provided"]
-                  [com.cognitect/transit-clj "0.8.300" :scope "provided"]
-
-                  ; provided cljs
-                  [org.clojure/clojurescript "1.9.946" :scope "provided"]
-                  [com.cognitect/transit-cljs "0.8.243" :scope "provided"]
-
-                  ; build/test/dev
-                  [adzerk/boot-cljs "2.1.4" :scope "test"]
-                  [adzerk/bootlaces "0.1.13" :scope "test"]
-                  [adzerk/boot-test "1.2.0" :scope "test"]
-                  [crisptrutski/boot-cljs-test "0.3.4" :scope "test"]
-                  [sparkfund/boot-lein-generate "0.3.0" :scope "test"]]
-  :resource-paths #{"src" "resources"})
+  :dependencies dependencies
+  :resource-paths #{"src" "resources"}
+  :boot.lein/project-clj {:dependencies (conj dependencies datomic-dep)})
 
 (require '[adzerk.boot-cljs :refer :all]
          '[adzerk.boot-test :as boot-test]
@@ -46,7 +53,9 @@
                      :dependencies '[])
          identity)
 
-(deftask test-clj [] (boot-test/test :include #".*-test"))
+(deftask test-clj []
+         (merge-env! :dependencies (conj dependencies datomic-dep))
+         (boot-test/test :include #".*-test"))
 
 (when (> (.lastModified (clojure.java.io/file "build.boot"))
          (.lastModified (clojure.java.io/file "project.clj")))
