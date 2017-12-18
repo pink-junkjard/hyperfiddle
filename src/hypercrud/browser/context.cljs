@@ -4,7 +4,7 @@
             [hypercrud.browser.routing :as routing]
             [hypercrud.state.actions.core :as actions]
             [hypercrud.util.branch :as branch]
-            [reagent.core :as reagent]))
+            [hypercrud.util.reactive :as reactive]))
 
 
 (defn clean [ctx]
@@ -53,7 +53,7 @@
         (let [uri (get-in ctx [:repository :repository/environment dbname])]
           (assoc ctx :uri uri
                      :schema (get-in ctx [:schemas dbname])
-                     :user-with! (reagent/partial user-with ctx (:branch ctx) uri)))
+                     :user-with! (reactive/partial user-with ctx (:branch ctx) uri)))
         ctx)
 
       ; todo why is fe necessary in the ctx?

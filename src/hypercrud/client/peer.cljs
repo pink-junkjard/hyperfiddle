@@ -4,20 +4,20 @@
             [hypercrud.client.core :as hypercrud]
             [hypercrud.types.DbVal :refer [->DbVal]]
             [hypercrud.util.branch :as branch]
-            [reagent.core :as reagent]))
+            [hypercrud.util.reactive :as reactive]))
 
 
 (defn trackable-hydrate [state-atom request]
-  (let [ptm @(reagent/cursor state-atom [:ptm])]
+  (let [ptm @(reactive/cursor state-atom [:ptm])]
     (if (contains? ptm request)
       (api-util/process-result (get ptm request) request)
       (either/left {:message "Loading" :data {:request request}}))))
 
 (defn hydrate [state-atom request]
-  @(reagent/track trackable-hydrate state-atom request))
+  @(reactive/track trackable-hydrate state-atom request))
 
 (defn db [state-atom uri branch]
-  (->DbVal uri (branch/branch-val uri branch @(reagent/cursor state-atom [:stage]))))
+  (->DbVal uri (branch/branch-val uri branch @(reactive/cursor state-atom [:stage]))))
 
 (deftype Peer [state-atom]
   hypercrud/Peer

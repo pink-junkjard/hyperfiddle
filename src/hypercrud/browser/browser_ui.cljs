@@ -11,7 +11,7 @@
             [hypercrud.ui.safe-render :refer [safe-user-renderer]]
             [hypercrud.ui.stale :as stale]
             [hypercrud.util.core :as util]
-            [reagent.core :as r]
+            [hypercrud.util.reactive :as reactive]
             [taoensso.timbre :as timbre]))
 
 
@@ -51,11 +51,11 @@
                                    (mapv (juxt #(-> % :link/rel) identity)) ; [ repeating entity attr ident ]
                                    (into {}))
                  ctx (assoc ctx
-                       :anchor (r/partial anchor anchor-index)
-                       :browse (r/partial browse anchor-index)
-                       :anchor* (r/partial anchor* anchor-index)
-                       :browse' (r/partial browse' anchor-index)
-                       :link-fn (r/partial link-fn anchor-index))]]
+                       :anchor (reactive/partial anchor anchor-index)
+                       :browse (reactive/partial browse anchor-index)
+                       :anchor* (reactive/partial anchor* anchor-index)
+                       :browse' (reactive/partial browse' anchor-index)
+                       :link-fn (reactive/partial link-fn anchor-index))]]
       (cats/return (ui-fn result ordered-fes anchors ctx)))))
 
 (defn e->map [e]
@@ -96,9 +96,9 @@
     (.stopPropagation event)))
 
 (defn wrap-ui [v' route ctx]
-  (let [on-click (r/partial (or (:page-on-click ctx)
-                                (r/partial page-on-click ctx))
-                            route)]
+  (let [on-click (reactive/partial (or (:page-on-click ctx)
+                                       (reactive/partial page-on-click ctx))
+                                   route)]
     ^{:key route}
     [native-listener {:on-click on-click}
      [stale/loading v'

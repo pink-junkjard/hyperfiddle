@@ -1,5 +1,6 @@
 (ns hypercrud.ui.form
   (:require [cuerdas.core :as str]
+            [hypercrud.browser.anchor :as link]
             [hypercrud.browser.context :as context]
             [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.connection-color :as connection-color]
@@ -8,9 +9,7 @@
             [hypercrud.ui.markdown :as markdown]
             [hypercrud.ui.renderer :as renderer]
             [hypercrud.ui.widget :as widget]
-            [hypercrud.util.core :as util]
-            [reagent.core :as r]
-            [hypercrud.browser.anchor :as link]))
+            [hypercrud.util.reactive :as reactive]))
 
 (defn Control [field links ctx]
   (let [props (form-util/build-props field links ctx)]
@@ -22,7 +21,7 @@
   [:div {:class (str/join " " ["field" (-> ctx :attribute :db/ident str form-util/css-slugify)])
          :style {:border-color (connection-color/connection-color (:uri ctx) ctx)}}
    (let [[my-links] (as-> (link/links-lookup' links [(:fe-pos ctx) (-> ctx :attribute :db/ident)]) $
-                          (remove :link/dependent? $)     ; because we're in the label
+                          (remove :link/dependent? $)       ; because we're in the label
                           (link/process-option-links $ ctx))]
      [:div.hc-label
       [:label [form-util/field-label field ctx]]
@@ -33,7 +32,7 @@
    [markdown/markdown (-> ctx :attribute :db/doc) #() {:class "hypercrud-doc"}]])
 
 (defn new-field [entity ctx]
-  (let [attr-ident (r/atom nil)]
+  (let [attr-ident (reactive/atom nil)]
     (fn [entity ctx]
       [:div.field {:style {:border-color (connection-color/connection-color (:uri ctx) ctx)}}
        [:div.hc-label
@@ -61,7 +60,7 @@
         Control (case display-mode :xray Control :user (get ctx :control Control))]
     ; todo control can have access to repeating contextual values (color, owner, result, entity, value, etc) but field should NOT
     ; this leads to inconsistent location formulas between non-repeating links in tables vs forms
-    [Field (r/partial Control field links) field links ctx]))
+    [Field (reactive/partial Control field links) field links ctx]))
 
 (defn cell-data-fields [fe cell-data links ctx]
   (let [ctx (context/cell-data ctx cell-data)

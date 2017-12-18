@@ -1,9 +1,10 @@
 (ns hypercrud.ui.code-editor
-  (:require [cuerdas.core :as str]
+  (:require [cats.monad.either :as either]
+            [cuerdas.core :as str]
+            [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :refer [safe-read-edn-string]]
-            [reagent.core :as reagent]
             [re-com.core :as re-com]
-            [cats.monad.either :as either]))
+            [reagent.core :as reagent]))
 
 
 (defn sync-changed-props! [ref props]
@@ -65,7 +66,7 @@
     [code-editor* value change! props]))
 
 (defn code-inline-block [& args]
-  (let [showing? (reagent/atom false)]
+  (let [showing? (reactive/atom false)]
     (fn [props value change!]
       [:div
        [re-com/popover-anchor-wrapper

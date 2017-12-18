@@ -1,7 +1,7 @@
 (ns hypercrud.ui.input
   (:require [cats.monad.either :as either]
-            [hypercrud.util.string :as hc-string]
-            [reagent.core :as reagent]))
+            [hypercrud.util.reactive :as reactive]
+            [hypercrud.util.string :as hc-string]))
 
 
 (defn read-string-or-nil [code-str]
@@ -13,7 +13,7 @@
   {:disabled (:read-only props)})
 
 (defn- validated-input' [value on-change! parse-string to-string valid? props]
-  (let [intermediate-val (reagent/atom (to-string value))]
+  (let [intermediate-val (reactive/atom (to-string value))]
     (fn [value on-change! parse-string to-string valid? props]
       ; todo this valid check should NOT be nil punning
       (let [valid?' (valid? @intermediate-val)]

@@ -8,7 +8,7 @@
             [hypercrud.ui.form-util :as form-util]
             [hypercrud.ui.renderer :as renderer]
             [hypercrud.ui.widget :as widget]
-            [reagent.core :as r]))
+            [hypercrud.util.reactive :as reactive]))
 
 
 (defn attr-sortable? [fe attribute ctx]
@@ -110,7 +110,7 @@
         display-mode @(:display-mode ctx)
         Field (case display-mode :xray Field :user (get ctx :field Field))
         Control (case display-mode :xray Control :user (get ctx :control Control))]
-    [Field (r/partial Control field anchors) field anchors ctx]))
+    [Field (reactive/partial Control field anchors) field anchors ctx]))
 
 (defn result-cell [fe cell-data anchors ctx]
   (let [ctx (context/cell-data ctx cell-data)]
@@ -156,7 +156,7 @@
                 [Row relation ordered-fes anchors ctx])))))
 
 (defn Table [& props]
-  (let [sort-col (r/atom nil)]
+  (let [sort-col (reactive/atom nil)]
     (fn [relations ordered-fes anchors ctx]
       (let [ctx (assoc ctx :layout (:layout ctx :table))]
         [:table.ui-table

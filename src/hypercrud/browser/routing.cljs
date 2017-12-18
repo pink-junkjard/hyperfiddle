@@ -10,7 +10,7 @@
             [hypercrud.types.ThinEntity :refer [->ThinEntity ThinEntity]]
             [hypercrud.util.base-64-url-safe :as base64]
             [hypercrud.util.branch :as branch]
-            [reagent.core :as reagent]))
+            [hypercrud.util.reactive :as reactive]))
 
 
 (defn invert-ids [route invert-id ctx]
@@ -32,10 +32,10 @@
 
 (defn ctx->id-lookup [uri ctx]
   ; todo tempid-lookups need to be indexed by db-ident not val
-  (let [stage-val @(reagent/cursor (.-state-atom (:peer ctx)) [:stage])
+  (let [stage-val @(reactive/cursor (.-state-atom (:peer ctx)) [:stage])
         branch-val (branch/branch-val uri (:branch ctx) stage-val)]
     ; todo what about if the tempid is on a higher branch in the uri?
-    @(reagent/cursor (.-state-atom (:peer ctx)) [:tempid-lookups uri branch-val])))
+    @(reactive/cursor (.-state-atom (:peer ctx)) [:tempid-lookups uri branch-val])))
 
 (defn id->tempid [route ctx]
   (let [invert-id (fn [id uri]
@@ -52,8 +52,8 @@
 
 (defn ^:export build-route' [link ctx]
   (mlet [fiddle-id (if-let [page (:link/fiddle link)]
-                   (either/right (:db/id page))
-                   (either/left {:message "link has no fiddle" :data {:link link}}))
+                     (either/right (:db/id page))
+                     (either/left {:message "link has no fiddle" :data {:link link}}))
          user-route-params (if (eval/validate-user-code-str (:link/formula link))
                              (mlet [user-fn (eval/eval-str (:link/formula link))]
                                (if user-fn

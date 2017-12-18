@@ -1,7 +1,7 @@
 (ns hypercrud.ui.markdown
-  (:require [reagent.core :as r]
+  (:require [hypercrud.ui.code-editor]
             [hypercrud.util.core :as util]
-            [hypercrud.ui.code-editor]))
+            [reagent.core :as reagent]))
 
 
 (defn code-editor-wrap-argv [{:keys [value change!] :as props}]
@@ -29,7 +29,7 @@
             js/remarkReact
             (clj->js
               {"sanitize" false
-               "remarkReactComponents" (util/map-values r/reactify-component whitelist)}))
+               "remarkReactComponents" (util/map-values reagent/reactify-component whitelist)}))
           (.processSync value {"commonmark" true})
           .-contents)]
     [:div.markdown {:class (:class props)} children]))

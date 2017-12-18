@@ -10,9 +10,9 @@
             [hypercrud.types.Entity :refer [Entity]]
             [hypercrud.types.ThinEntity :refer [->ThinEntity]]
             [hypercrud.util.core :refer [pprint-str]]
+            [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :as hc-string]
             [promesa.core :as p]
-            [reagent.core :as reagent]
             [taoensso.timbre :as timbre]))
 
 
@@ -89,7 +89,7 @@
     (try-either (apply expr args))
     (either/right expr)))
 
-(defn ^:export build-link-props-raw [unvalidated-route' link ctx]    ; ctx is for display-mode
+(defn ^:export build-link-props-raw [unvalidated-route' link ctx] ; ctx is for display-mode
 
   ; this is a fine place to eval, put error message in the tooltip prop
   ; each prop might have special rules about his default, for example :visible is default true, does this get handled here?
@@ -152,8 +152,8 @@
   ((:dispatch! ctx) (actions/cancel-popover (:peer ctx) (:branch ctx))))
 
 (defn managed-popover-body [link route ctx]
-  (let [stage! (reagent/partial stage! link route ctx)
-        cancel! (reagent/partial cancel! ctx)
+  (let [stage! (reactive/partial stage! link route ctx)
+        cancel! (reactive/partial cancel! ctx)
         ; NOTE: this ctx logic and structure is the same as the popover branch of browser-request/recurse-request
         ctx (-> ctx
                 (context/clean)
@@ -193,8 +193,8 @@
                         (if-let [route (and (:link/managed? link) (either/right? route') (cats/extract route'))]
                           ; If no route, there's nothing to draw, and the anchor tooltip shows the error.
                           (let [ctx (context/anchor-branch ctx link)]
-                            {:showing? (reagent/cursor (-> ctx :peer .-state-atom) [:popovers (:branch ctx)])
+                            {:showing? (reactive/cursor (-> ctx :peer .-state-atom) [:popovers (:branch ctx)])
                              :body [managed-popover-body link route ctx]
-                             :open! (reagent/partial open! ctx)})))
+                             :open! (reactive/partial open! ctx)})))
         link-props {:hidden (not visible?)}]
     (merge link-props hypercrud-props {:popover popover-props})))

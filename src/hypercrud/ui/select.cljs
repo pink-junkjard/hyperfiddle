@@ -4,7 +4,7 @@
             [datascript.parser :as parser]
             [hypercrud.browser.core :as browser]
             [hypercrud.client.tx :as tx]
-            [reagent.core :as reagent]))
+            [hypercrud.util.reactive :as reactive]))
 
 
 (defn default-label-renderer [v ctx]
@@ -102,7 +102,7 @@
 (def always-user (atom :user))
 
 (defn anchor->select [props anchor ctx]
-  (let [renderer (reagent/partial select-anchor-renderer props)]
+  (let [renderer (reactive/partial select-anchor-renderer props)]
     [browser/ui anchor (assoc ctx
                          :display-mode always-user
                          :user-renderer renderer)]))
@@ -116,6 +116,6 @@
                           :else (str (:db/id value)))
 
                  ;; reconstruct the typed value
-                 :on-change (reagent/partial on-change ctx)
+                 :on-change (reactive/partial on-change ctx)
                  :disabled (:read-only props)}]
       [anchor->select props options-anchor ctx])))

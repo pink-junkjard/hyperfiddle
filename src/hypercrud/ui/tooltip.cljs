@@ -1,6 +1,6 @@
 (ns hypercrud.ui.tooltip
-  (:require [re-com.core :as re-com]
-            [reagent.core :as r]))
+  (:require [hypercrud.util.reactive :as reactive]
+            [re-com.core :as re-com]))
 
 
 ;(defn tooltip [& {:as props}]                               ; re-com style props
@@ -28,7 +28,7 @@
 
 (defn hover-tooltip-managed [& args]
   ; if there is no tooltip, the hovers are such that it will never be shown
-  (let [state (r/atom false)]
+  (let [state (reactive/atom false)]
     (fn [t-props anchor]
       (apply
         re-com/popover-tooltip
@@ -79,7 +79,7 @@
                    :body (:body t-props)]}))))
 
 (defn click-popover-managed* [& args]
-  (let [state (r/atom false)]
+  (let [state (reactive/atom false)]
     (fn [& args]
       (apply click-popover* state args))))
 
@@ -105,7 +105,7 @@
                    :body (:label t-props)]}))))
 
 (defn- hover-popover-managed* [& args]
-  (let [state (r/atom false)]
+  (let [state (reactive/atom false)]
     (fn [& args]
       (apply hover-popover* state args))))
 
