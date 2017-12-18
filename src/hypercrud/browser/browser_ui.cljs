@@ -58,17 +58,25 @@
                        :link-fn (r/partial link-fn anchor-index))]]
       (cats/return (ui-fn result ordered-fes anchors ctx)))))
 
+(defn e->map [e]
+  (if (map? e)
+    e
+    {:message (ex-message e)
+     :data (ex-data e)
+     :cause (ex-cause e)}))
+
 (defn ui-error-inline [e ctx]
   (let [dev-open? true
-        detail (if dev-open? (str " -- " (pr-str (:data e))))]
-    [:code (:message e) " " detail]))
+        {:keys [cause data message]} (e->map e)
+        detail (if dev-open? (str " -- " (pr-str data)))]
+    [:code message " " detail]))
 
 (defn ui-error-block [e ctx]
-  #_(ex-message e) #_(pr-str (ex-data e))
   (let [dev-open? true
-        detail (if dev-open? (util/pprint-str (:data e)))]
+        {:keys [cause data message]} (e->map e)
+        detail (if dev-open? (util/pprint-str data))]
     ; todo we don't always return an error with a message
-    [:pre (:message e) "\n" detail]))
+    [:pre message "\n" detail]))
 
 (defn ui-error [e ctx]
   ; :find-element :attribute :value
