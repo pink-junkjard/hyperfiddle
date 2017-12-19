@@ -7,6 +7,7 @@
             [hypercrud.browser.routing :as routing]
             [hypercrud.state.actions.core :as actions]
             [hypercrud.state.actions.util :as actions-util]
+            [hypercrud.ui.css :as css]
             [hypercrud.ui.native-event-listener :refer [native-listener]]
             [hypercrud.ui.safe-render :refer [safe-user-renderer]]
             [hypercrud.ui.stale :as stale]
@@ -96,19 +97,19 @@
                             (actions/set-route (:peer ctx) encoded-route dispatch! get-state)))))
     (.stopPropagation event)))
 
-(defn wrap-ui [v' route ctx]
+(defn wrap-ui [v' route ctx & [class]]
   (let [on-click (reactive/partial (or (:page-on-click ctx)
                                        (reactive/partial page-on-click ctx))
                                    route)]
     ^{:key route}
     [native-listener {:on-click on-click}
      [stale/loading v'
-      (fn [e] [:div.ui (ui-error e ctx)])
-      (fn [v] [:div.ui v])
-      (fn [v] [:div.ui.loading v])]]))
+      (fn [e] [:div {:class (css/classes "ui" class "hyperfiddle-error")} (ui-error e ctx)])
+      (fn [v] [:div {:class (css/classes "ui" class)} v])
+      (fn [v] [:div {:class (css/classes "ui" class "hyperfiddle-loading")} v])]]))
 
-(defn ui-from-route [route ctx]
-  [wrap-ui (cats/bind (base/data-from-route route ctx) process-data) route ctx])
+(defn ui-from-route [route ctx & [class]]
+  [wrap-ui (cats/bind (base/data-from-route route ctx) process-data) route ctx class])
 
 (defn ui-from-anchor [anchor ctx]
   (let [anchor-props' (try-either (anchor/build-link-props anchor ctx)) ; LOOOOOLLLLLL we are dumb
