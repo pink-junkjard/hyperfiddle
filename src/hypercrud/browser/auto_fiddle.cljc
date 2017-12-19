@@ -1,5 +1,5 @@
 (ns hypercrud.browser.auto-fiddle
-  (:require [cats.monad.either :refer [try-either]]))
+  (:require [cats.monad.either #?(:clj :refer :cljs :refer-macros) [try-either]]))
 
 
 (defn system-fiddle? [fiddle-id]
