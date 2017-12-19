@@ -65,3 +65,11 @@
   (if-not (p v) v not-found))
 
 (defn tee [g f!] (fn [v] (f! v) (g v)))
+
+(defn kwargs
+  "arg format is kwargs first; trailing non-kw args are nil key
+      [:a 1 :b 2 'a 'b 'c] => {nil (a b c), :b 2, :a 1}"
+  [as]
+  (let [[kwargs args] (split-with (comp keyword? first) (partition-all 2 as))]
+    (-> (apply hash-map (flatten kwargs))
+        (assoc nil (flatten args)))))

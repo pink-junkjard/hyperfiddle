@@ -28,11 +28,13 @@
    ; todo ui binding should be provided by a RT
    :default hypercrud.ui.result/view})
 
-(letfn [(browse [anchor-index ident ctx & [user-renderer & args]]
-          (let [ctx (if user-renderer
+(letfn [(browse [anchor-index ident ctx & args]
+          (let [kwargs (util/kwargs args)
+                [user-renderer & args] (get kwargs nil)
+                ctx (if user-renderer
                       (assoc ctx :user-renderer user-renderer #_(if f #(apply f %1 %2 %3 %4 args)))
                       ctx)]
-            [ui-from-anchor (get anchor-index ident) ctx]))
+            [ui-from-anchor (get anchor-index ident) ctx (:class kwargs)]))
         (anchor [anchor-index ident ctx label]
           (let [props (-> (anchor/build-link-props (get anchor-index ident) ctx)
                           #_(dissoc :style) #_"custom renderers don't want colored links")]
@@ -111,7 +113,7 @@
 (defn ui-from-route [route ctx & [class]]
   [wrap-ui (cats/bind (base/data-from-route route ctx) process-data) route ctx class])
 
-(defn ui-from-anchor [anchor ctx]
+(defn ui-from-anchor [anchor ctx & [class]]
   (let [anchor-props' (try-either (anchor/build-link-props anchor ctx)) ; LOOOOOLLLLLL we are dumb
         v' (mlet [anchor-props anchor-props']
              ; todo should filter hidden anchors out before recursing (in widget/render-inline-anchors)
@@ -124,4 +126,4 @@
         route (-> (cats/fmap :route anchor-props')
                   (cats/mplus (either/right nil))
                   (cats/extract))]
-    [wrap-ui v' route ctx]))
+    [wrap-ui v' route ctx class]))
