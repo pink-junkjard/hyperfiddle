@@ -1,6 +1,5 @@
 (ns hypercrud.ui.form-util
   (:require [cuerdas.core :as str]
-            [hypercrud.ui.markdown :refer [markdown]]
             [hypercrud.ui.tooltip :as tooltip]
             [hypercrud.util.core :as util]))
 

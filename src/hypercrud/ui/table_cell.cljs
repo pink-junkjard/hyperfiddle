@@ -1,6 +1,6 @@
 (ns hypercrud.ui.table-cell
   (:require [clojure.string :as string]
-            [hypercrud.ui.widget :as widget]))
+            [hypercrud.ui.control.link-controls :as link-controls]))
 
 
 (defn ellipsis
@@ -12,16 +12,16 @@
 (defn ref-one-component [field anchors props ctx]
   [:div
    #_(pr-str (:db/id (:value ctx)))
-   [:div.anchors (widget/render-links (remove :link/render-inline? anchors) ctx)]
-   (widget/render-inline-links (filter :link/render-inline? anchors) ctx)])
+   [:div.anchors (link-controls/render-links (remove :link/render-inline? anchors) ctx)]
+   (link-controls/render-inline-links (filter :link/render-inline? anchors) ctx)])
 
 (defn ref-many [field anchors props ctx]
   [:div
    #_(->> (mapv :db/id (:value ctx))
           (pr-str)
           (ellipsis 15))
-   [:div.anchors (widget/render-links (remove :link/render-inline? anchors) ctx)]
-   (widget/render-inline-links (filter :link/render-inline? anchors) ctx)])
+   [:div.anchors (link-controls/render-links (remove :link/render-inline? anchors) ctx)]
+   (link-controls/render-inline-links (filter :link/render-inline? anchors) ctx)])
 
 (defn other-many [field anchors props ctx]
   [:div

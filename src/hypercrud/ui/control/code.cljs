@@ -1,6 +1,8 @@
-(ns hypercrud.ui.code-editor
+(ns hypercrud.ui.control.code
   (:require [cats.monad.either :as either]
             [cuerdas.core :as str]
+            [hypercrud.browser.anchor :as link]
+            [hypercrud.client.tx :as tx]
             [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :refer [safe-read-edn-string]]
             [re-com.core :as re-com]
@@ -12,7 +14,7 @@
     (if-not (= val (.getOption ref (name prop)))
       (.setOption ref (name prop) val))))
 
-(def codemirror*
+(def -codemirror
 
   ;; all usages of value (from react lifecycle) need to be (str value), because
   ;; codemirror throws NPE if value is nil
@@ -45,7 +47,7 @@
 
 (def validators {"clojure" #(-> (safe-read-edn-string %) (either/right?))})
 
-(defn code-editor* [value change! props]
+(defn code* [value change! props]
   (let [defaults {:lineNumbers true
                   :matchBrackets true
                   :autoCloseBrackets true
@@ -55,15 +57,16 @@
         class (str/join " " (list (if (:readOnly props) "read-only")
                                   (if (not valid?) "invalid")))]
     [:div.code-editor-wrapper {:class class}
-     [codemirror* value change! props]]))
+     [-codemirror value change! props]]))
 
+; useless layer, merge code-block with code
 (defn code-block [props value change!]
   (let [props (if-not (nil? (:read-only props))
                 (-> props
                     (dissoc :read-only)
                     (assoc :readOnly (:read-only props)))
                 props)]
-    [code-editor* value change! props]))
+    [code* value change! props]))
 
 (defn code-inline-block [& args]
   (let [showing? (reactive/atom false)]

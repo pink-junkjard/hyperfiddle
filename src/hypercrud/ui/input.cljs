@@ -27,7 +27,7 @@
                                       (on-change! parsed)))})]))))
 
 (defn validated-input [value on-change! parse-string to-string valid? & [props]]
-  ^{:key value}
+  ^{:key value}                                             ; wut
   [validated-input' value on-change! parse-string to-string valid? props])
 
 (defn input* [value on-change! & [props]]

@@ -3,9 +3,9 @@
             [datascript.parser :as parser]
             [hypercrud.browser.base :as base]
             [hypercrud.ui.form :as form]
-            [hypercrud.ui.markdown :as markdown]
+            [hypercrud.ui.control.markdown-rendered :refer [markdown-rendered*]]
             [hypercrud.ui.table :as table]
-            [hypercrud.ui.widget :as widget]
+            [hypercrud.ui.control.link-controls :as link-controls]
             [hypercrud.util.core :as util]
             [hypercrud.browser.anchor :as link]))
 
@@ -48,7 +48,7 @@
                                                          (group-by :link/render-inline?))
         index-ctx (dissoc ctx :isComponent)]
     [:div.auto-result
-     [markdown/markdown (str (-> ctx :fiddle :db/doc)) #() {:class "hypercrud-doc"}]
-     (widget/render-links index-links index-ctx)
+     [markdown-rendered* (str (-> ctx :fiddle :db/doc)) #() {:class "hypercrud-doc"}]
+     (link-controls/render-links index-links index-ctx)
      (result-renderer result ordered-fes links ctx)
-     (widget/render-inline-links index-inline-links index-ctx)]))
+     (link-controls/render-inline-links index-inline-links index-ctx)]))

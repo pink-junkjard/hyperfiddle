@@ -161,6 +161,7 @@
     [:div.managed-popover
      [hypercrud.browser.core/ui-from-route route ctx]       ; cycle
      [:button {:on-click stage!} "stage"]
+     ; TODO also cancel on escape
      [:button {:on-click cancel!} "cancel"]]))
 
 (defn visible? [link ctx]

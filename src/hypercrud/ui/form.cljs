@@ -6,9 +6,9 @@
             [hypercrud.ui.connection-color :as connection-color]
             [hypercrud.ui.form-util :as form-util]
             [hypercrud.ui.input :as input]
-            [hypercrud.ui.markdown :as markdown]
+            [hypercrud.ui.control.markdown-rendered :refer [markdown-rendered*]]
             [hypercrud.ui.renderer :as renderer]
-            [hypercrud.ui.widget :as widget]
+            [hypercrud.ui.control.link-controls :as link-controls]
             [hypercrud.util.reactive :as reactive]))
 
 (defn Control [field links ctx]
@@ -26,10 +26,10 @@
      [:div.hc-label
       [:label [form-util/field-label field ctx]]
       [:div.anchors
-       (widget/render-links (->> my-links (remove :link/render-inline?)) ctx)
-       (widget/render-inline-links (->> my-links (filter :link/render-inline?)) ctx)]])
+       (link-controls/render-links (->> my-links (remove :link/render-inline?)) ctx)
+       (link-controls/render-inline-links (->> my-links (filter :link/render-inline?)) ctx)]])
    (control ctx)
-   [markdown/markdown (-> ctx :attribute :db/doc) #() {:class "hypercrud-doc"}]])
+   [markdown-rendered* (-> ctx :attribute :db/doc) #() {:class "hypercrud-doc"}]])
 
 (defn new-field [entity ctx]
   (let [attr-ident (reactive/atom nil)]
@@ -68,7 +68,7 @@
                                                     (filter :link/dependent?)
                                                     (group-by :link/render-inline?))]
     (concat
-      (widget/render-links anchor-links ctx)
+      (link-controls/render-links anchor-links ctx)
       (conj
         (->> (:fields fe)
              (mapv (fn [field]
@@ -77,16 +77,16 @@
         (if (:splat? fe)
           ^{:key (hash (keys cell-data))}
           [new-field cell-data ctx]))
-      (widget/render-inline-links inline-links ctx))))
+      (link-controls/render-inline-links inline-links ctx))))
 
 (defn result-cell [fe cell-data links ctx]
   (let [{inline-links true anchor-links false} (->> (link/links-lookup' links [(:fe-pos ctx)])
                                                     (remove :link/dependent?)
                                                     (group-by :link/render-inline?))]
     (concat
-      (widget/render-links anchor-links ctx)
+      (link-controls/render-links anchor-links ctx)
       (cell-data-fields fe cell-data links ctx)
-      (widget/render-inline-links inline-links ctx))))
+      (link-controls/render-inline-links inline-links ctx))))
 
 (defn Relation [relation ordered-fes links ctx]
   (let [ctx (assoc ctx :layout (:layout ctx :block))]

@@ -7,7 +7,7 @@
             [hypercrud.ui.connection-color :as connection-color]
             [hypercrud.ui.form-util :as form-util]
             [hypercrud.ui.renderer :as renderer]
-            [hypercrud.ui.widget :as widget]
+            [hypercrud.ui.control.link-controls :as link-controls]
             [hypercrud.util.reactive :as reactive]))
 
 
@@ -35,8 +35,8 @@
 
 (defn col-head-anchors [attr-label-anchors ctx]
   [:div.anchors
-   (widget/render-links (remove :link/render-inline? attr-label-anchors) ctx)
-   (widget/render-inline-links (filter :link/render-inline? attr-label-anchors) ctx)])
+   (link-controls/render-links (remove :link/render-inline? attr-label-anchors) ctx)
+   (link-controls/render-inline-links (filter :link/render-inline? attr-label-anchors) ctx)])
 
 (defn col-head [fe fe-pos field links sort-col ctx]
   (let [ctx (context/attribute ctx (:attribute field))
@@ -75,7 +75,7 @@
                                                ((if repeating? filter remove) :link/dependent?)
                                                ; inline entity-anchors are not yet implemented, what does that mean.
                                                (remove :link/render-inline?))]
-                         (widget/render-links form-anchors ctx))))
+                         (link-controls/render-links form-anchors ctx))))
         (apply concat))])
 
 (defn THead [ordered-fes links sort-col ctx]
