@@ -4,16 +4,16 @@
             [hypercrud.browser.auto-anchor :as auto-anchor]
             [hypercrud.browser.context :as context]
             [hypercrud.ui.css :refer [css-slugify]]
-            [hypercrud.ui.attribute :refer [Attribute]]
+            [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.connection-color :as connection-color]
             [hypercrud.ui.user-attribute-renderer :as renderer]
             [hypercrud.ui.control.link-controls :as link-controls]
             [hypercrud.util.reactive :as reactive]
-            [hypercrud.ui.field :as field]))
+            [hypercrud.ui.label :as field]))
 
 
-(def ^:export with-field field/with-field)                  ; compat
-(def ^:export Field field/Field)                            ; compat
+(def ^:export with-field identity)                          ; compat
+(def ^:export Field nil)                                    ; compat
 
 (defn attr-sortable? [fe attribute ctx]
   (if-let [source-symbol (:source-symbol fe)]
@@ -37,11 +37,6 @@
                    (:db/ident valueType))))
     (not (nil? fe))))
 
-(defn col-head-anchors [attr-label-anchors ctx]
-  [:div.anchors
-   (link-controls/render-links (remove :link/render-inline? attr-label-anchors) ctx)
-   (link-controls/render-inline-links (filter :link/render-inline? attr-label-anchors) ctx)])
-
 (defn col-head [fe fe-pos field links sort-col ctx]
   (let [ctx (context/attribute ctx (:attribute field))
         my-links (->> (link/links-lookup' links [fe-pos (-> ctx :attribute :db/ident)])
@@ -64,8 +59,10 @@
     [:th {:class (string/join " " css-classes)
           :style {:background-color (connection-color/connection-color (:uri ctx) ctx)}
           :on-click on-click}
-     [:label [field/field-label field ctx]]
-     [col-head-anchors my-links ctx]]))
+     [:label [field/label-inner field ctx]]
+     [:div.anchors
+      (link-controls/render-links (remove :link/render-inline? my-links) ctx)
+      (link-controls/render-inline-links (filter :link/render-inline? my-links) ctx)]]))
 
 (defn LinkCell [relation repeating? ordered-fes anchors ctx]
   [(if repeating? :td.link-cell :th.link-cell)
@@ -95,23 +92,28 @@
    ; no need for a relation for non-repeating, todo fix this crap
    [LinkCell nil false ordered-fes links ctx]])
 
-(defn result-cell [fe cell-data anchors ctx]
+(defn table-cell [control field links ctx]
+  ; why are links unused
+  (let [shadow-link (auto-anchor/system-anchor? (get-in ctx [:cell-data :db/id]))
+        style {:border-color (if-not shadow-link (connection-color/connection-color (:uri ctx) ctx))}]
+    [:td.truncate {:style style}
+     [control ctx]]))
+
+(defn Entity [fe cell-data links ctx]
   (let [ctx (context/cell-data ctx cell-data)]
     (->> (:fields fe)
          (mapv (fn [field]
                  (let [ctx (-> (context/attribute ctx (:attribute field))
-                               (context/value ((:cell-data->value field) (:cell-data ctx))))] ; Not reactive
-                   (if (renderer/user-attribute-renderer ctx)
-                     (renderer/user-attribute-render field anchors {} ctx)
-                     ^{:key (:id field)}
-                     [Attribute field anchors {} ctx])))))))
+                               (context/value ((:cell-data->value field) (:cell-data ctx))))]
+                   ^{:key (:id field)}
+                   [table-cell (auto-control field links ctx) field links ctx]))))))
 
 (defn Relation [relation ordered-fes anchors ctx]
   (->> ordered-fes
        (map-indexed (fn [fe-pos fe]
                       (let [cell-data (get relation fe-pos)
                             ctx (context/find-element ctx fe fe-pos)]
-                        (result-cell fe cell-data anchors ctx))))
+                        (Entity fe cell-data anchors ctx))))
        (apply concat)))
 
 (defn Row [relation ordered-fes anchors ctx]

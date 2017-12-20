@@ -1,7 +1,7 @@
 (ns hypercrud.ui.multi-select
   (:require [hypercrud.browser.context :as context]
             [hypercrud.client.tx :as tx]
-            [hypercrud.ui.auto-control :refer [auto-control]]))
+            [hypercrud.ui.auto-control :refer [schema-control-form]]))
 
 
 (defn multi-select* [markupfn add-item! field anchors props {:keys [user-with!] :as ctx}]
@@ -11,7 +11,7 @@
                                           ctx (-> ctx
                                                   (context/value inner-value)
                                                   (update-in [:attribute :db/cardinality] :db.cardinality/one))
-                                          control [auto-control field anchors ctx]]
+                                          control [schema-control-form field anchors ctx]]
                                       [inner-value click-remove! control]))
                                   (:value ctx)))]
     (markupfn add-item! control-tuples)))

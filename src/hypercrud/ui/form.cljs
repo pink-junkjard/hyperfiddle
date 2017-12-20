@@ -2,17 +2,18 @@
   (:require [cuerdas.core :as str]
             [hypercrud.browser.anchor :as link]
             [hypercrud.browser.context :as context]
+            [hypercrud.react.react-fragment :refer [react-fragment]]
             [hypercrud.ui.connection-color :as connection-color]
-            [hypercrud.ui.field :as field]
-            [hypercrud.ui.attribute :refer [Attribute]]
+            [hypercrud.ui.css :refer [css-slugify]]
+            [hypercrud.ui.label :as label]
+            [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.input :as input]
-            [hypercrud.ui.user-attribute-renderer :as renderer]
             [hypercrud.ui.control.link-controls :as link-controls]
             [hypercrud.util.reactive :as reactive]))
 
 
-(def ^:export with-field field/with-field)                  ; compat
-(def ^:export Field field/Field)                            ; compat
+(def ^:export with-field identity)                          ; compat
+(def ^:export Field nil)                                    ; compat
 
 (defn new-field [entity ctx]
   (let [attr-ident (reactive/atom nil)]
@@ -33,39 +34,53 @@
 ; attribute renderers works in :xray mode, like select options
 ; ctx overrides are :user mode
 
-(defn cell-data-fields [fe cell-data links ctx]
-  (let [ctx (context/cell-data ctx cell-data)
-        {inline-links true anchor-links false} (->> (link/links-lookup' links [(:fe-pos ctx)])
-                                                    (filter :link/dependent?)
-                                                    (group-by :link/render-inline?))]
-    (concat
-      (link-controls/render-links anchor-links ctx)
-      (conj
-        (->> (:fields fe)
-             (mapv (fn [field]
-                     (let [ctx (as-> (context/attribute ctx (:attribute field)) $
-                                     (context/value $ ((:cell-data->value field) (:cell-data ctx)))
-                                     (if (or (nil? (:attribute field))
-                                             (= (:attribute field) :db/id))
-                                       (assoc $ :read-only always-read-only)
-                                       $))]
-                       (if (renderer/user-attribute-renderer ctx)
-                         (renderer/user-attribute-render field links {} ctx)
-                         ^{:key (:id field)}
-                         [Attribute field links {} ctx])
-                       ))))
-        (if (:splat? fe)
-          ^{:key (hash (keys cell-data))}
-          [new-field cell-data ctx]))
-      (link-controls/render-inline-links inline-links ctx))))
+(defn form-label [field links ctx]
+  (let [[my-links] (as-> (link/links-lookup' links [(:fe-pos ctx) (-> ctx :attribute :db/ident)]) $
+                         (remove :link/dependent? $)        ; because we're in the label
+                         (link/process-option-links $ ctx))]
+    [:div.hc-label
+     [:label [label/label-inner field ctx]]
+     [:div.anchors
+      (link-controls/render-links (->> my-links (remove :link/render-inline?)) ctx)
+      (link-controls/render-inline-links (->> my-links (filter :link/render-inline?)) ctx)]]))
 
-(defn result-cell [fe cell-data links ctx]
+(defn form-cell [control field links ctx]
+  [:div {:class (str/join " " ["field" (-> ctx :attribute :db/ident str css-slugify)])
+         :style {:border-color (connection-color/connection-color (:uri ctx) ctx)}}
+   [form-label field links ctx]
+   [control ctx]
+   #_[markdown-rendered* (-> ctx :attribute :db/doc) #() {:class "hypercrud-doc"}]])
+
+(defn Entity [fe cell-data links ctx]
   (let [{inline-links true anchor-links false} (->> (link/links-lookup' links [(:fe-pos ctx)])
                                                     (remove :link/dependent?)
                                                     (group-by :link/render-inline?))]
     (concat
       (link-controls/render-links anchor-links ctx)
-      (cell-data-fields fe cell-data links ctx)
+      (let [ctx (context/cell-data ctx cell-data)
+            {inline-links true anchor-links false} (->> (link/links-lookup' links [(:fe-pos ctx)])
+                                                        (filter :link/dependent?)
+                                                        (group-by :link/render-inline?))]
+        (concat
+          (link-controls/render-links anchor-links ctx)
+          (conj
+            (->> (:fields fe)
+                 (mapv (fn [field]
+                         (let [ctx (as-> (context/attribute ctx (:attribute field)) $
+                                         (context/value $ ((:cell-data->value field) (:cell-data ctx)))
+                                         (if (or (nil? (:attribute field))
+                                                 (= (:attribute field) :db/id))
+                                           (assoc $ :read-only always-read-only)
+                                           $))]
+
+                           ; the cell can be overridden as well, e.g. to reposition docstring
+                           ; (probably at all levels)
+                           ^{:key (:id field)}
+                           [form-cell (auto-control field links ctx) field links ctx]))))
+            (if (:splat? fe)
+              ^{:key (hash (keys cell-data))}
+              [new-field cell-data ctx]))
+          (link-controls/render-inline-links inline-links ctx)))
       (link-controls/render-inline-links inline-links ctx))))
 
 (defn Relation [relation ordered-fes links ctx]
@@ -74,5 +89,5 @@
      (->> ordered-fes
           (map-indexed (fn [fe-pos fe]
                          (let [ctx (context/find-element ctx fe fe-pos)]
-                           (result-cell fe (get relation fe-pos) links ctx))))
+                           (Entity fe (get relation fe-pos) links ctx))))
           (apply concat))]))

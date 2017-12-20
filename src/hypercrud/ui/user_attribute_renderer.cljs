@@ -12,9 +12,9 @@
       ; todo binding renderers should be pathed for aggregates and values
       #_(eval/validate-user-code-str (get-in ctx [:fields (:db/ident attr) :renderer]))
       (eval/validate-user-code-str (-> attr :attribute/renderer))))
-  #_nil)
+  nil)
 
-(defn user-attribute-render [maybe-field links props ctx]
+(defn user-attribute-render [maybe-field links ctx]
   [:div.value
    (-> (if-let [user-fn-str (user-attribute-renderer ctx)]
          (eval-str user-fn-str)
@@ -33,4 +33,4 @@
                            [(:navigate-cmp ctx) props label])))]
              ; Same interface as auto-control widgets.
              ; pass value only as scope todo
-             [safe-user-renderer user-fn maybe-field links props ctx]))))])
+             [safe-user-renderer user-fn maybe-field links ctx]))))])
