@@ -60,7 +60,7 @@
      [-codemirror value change! props]]))
 
 ; useless layer, merge code-block with code
-(defn code-block [props value change!]
+(defn code-block* [props value change!]
   (let [props (if-not (nil? (:read-only props))
                 (-> props
                     (dissoc :read-only)
@@ -68,7 +68,7 @@
                 props)]
     [code* value change! props]))
 
-(defn code-inline-block [& args]
+(defn code-inline-block* [& args]
   (let [showing? (reactive/atom false)]
     (fn [props value change!]
       [:div
@@ -81,5 +81,5 @@
                   :on-cancel #(reset! showing? false)
                   :no-clip? true
                   :width "600px"
-                  :body (code-block props value change!)]]
+                  :body (code-block* props value change!)]]
        " " value])))

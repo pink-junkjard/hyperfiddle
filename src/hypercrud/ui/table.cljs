@@ -3,13 +3,16 @@
             [hypercrud.browser.anchor :as link]
             [hypercrud.browser.auto-anchor :as auto-anchor]
             [hypercrud.browser.context :as context]
-            [hypercrud.ui.auto-control :refer [auto-table-cell]]
+            [hypercrud.ui.css :refer [css-slugify]]
+            [hypercrud.ui.attribute :refer [Attribute]]
             [hypercrud.ui.connection-color :as connection-color]
-            [hypercrud.ui.form-util :as form-util]
             [hypercrud.ui.user-attribute-renderer :as renderer]
             [hypercrud.ui.control.link-controls :as link-controls]
-            [hypercrud.util.reactive :as reactive]))
+            [hypercrud.util.reactive :as reactive]
+            [hypercrud.ui.field :as field]))
 
+
+(def ^:export with-field field/with-field)                  ; compat
 
 (defn attr-sortable? [fe attribute ctx]
   (if-let [source-symbol (:source-symbol fe)]
@@ -54,13 +57,13 @@
                                         :asc [fe-pos (:attribute field) :desc]
                                         :desc nil
                                         [fe-pos (:attribute field) :asc]))))
-        css-classes [(str "field-attr-" (form-util/css-slugify (str (:attribute field)))) #_"Dustin removed field-id and field-prompt; use a custom renderer"
+        css-classes [(str "field-attr-" (css-slugify (str (:attribute field)))) #_"Dustin removed field-id and field-prompt; use a custom renderer"
                      (if sortable? "sortable")
                      (some-> sort-direction name)]]
     [:th {:class (string/join " " css-classes)
           :style {:background-color (connection-color/connection-color (:uri ctx) ctx)}
           :on-click on-click}
-     [:label [form-util/field-label field ctx]]
+     [:label [field/field-label field ctx]]
      [col-head-anchors my-links ctx]]))
 
 (defn LinkCell [relation repeating? ordered-fes anchors ctx]
@@ -91,37 +94,16 @@
    ; no need for a relation for non-repeating, todo fix this crap
    [LinkCell nil false ordered-fes links ctx]])
 
-(defn Control [field links props ctx]
-  [auto-table-cell field links props ctx])
-
-(defn Field [control field anchors ctx]
-  ; why are anchors unused
-  (let [shadow-link (auto-anchor/system-anchor? (get-in ctx [:cell-data :db/id]))
-        style {:border-color (if-not shadow-link (connection-color/connection-color (:uri ctx) ctx))}]
-    [:td.truncate {:style style}
-     [control ctx]]))
-
-(defn with-field [Control]
-  (fn [field links props ctx]
-    [Field (reactive/partial Control field links props) field links ctx]))
-
-(defn Attribute [field anchors props ctx]
-  (let [display-mode @(:display-mode ctx)
-        Field (case display-mode :xray Field :user (get ctx :field Field))
-        Control (case display-mode :xray Control :user (get ctx :control Control))]
-    [(with-field Control) field anchors props ctx]))
-
 (defn result-cell [fe cell-data anchors ctx]
   (let [ctx (context/cell-data ctx cell-data)]
     (->> (:fields fe)
          (mapv (fn [field]
                  (let [ctx (-> (context/attribute ctx (:attribute field))
-                               (context/value ((:cell-data->value field) (:cell-data ctx)))) ; Not reactive
-                       props (form-util/build-props field anchors ctx)]
+                               (context/value ((:cell-data->value field) (:cell-data ctx))))] ; Not reactive
                    (if (renderer/user-attribute-renderer ctx)
-                     (renderer/user-attribute-render field anchors props ctx)
+                     (renderer/user-attribute-render field anchors {} ctx)
                      ^{:key (:id field)}
-                     [Attribute field anchors props ctx])))))))
+                     [Attribute field anchors {} ctx])))))))
 
 (defn Relation [relation ordered-fes anchors ctx]
   (->> ordered-fes

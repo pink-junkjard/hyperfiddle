@@ -18,8 +18,8 @@
 
 
 (defn edn-block* [value change! props]
-  (-edn code/code-block value change! (assoc props :mode "clojure")))
+  (-edn code/code-block* value change! (assoc props :mode "clojure")))
 
 
 (defn edn-inline-block* [value change! props]
-  (-edn code/code-inline-block value change! (assoc props :mode "clojure")))
+  (-edn code/code-inline-block* value change! (assoc props :mode "clojure")))

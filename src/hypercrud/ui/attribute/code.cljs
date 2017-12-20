@@ -11,8 +11,8 @@
     ;^{:key ident}
     [:div.value
      [:div.anchors (links/render-links (remove :link/render-inline? my-links) ctx)]
-     (let [widget (case (:layout ctx) :block code/code-block
-                                      :inline-block code/code-inline-block
-                                      :table code/code-inline-block)]
-       [widget props (:value ctx) change!])               ; backwards args - props last
+     (let [control (case (:layout ctx) :block code/code-block*
+                                       :inline-block code/code-inline-block*
+                                       :table code/code-inline-block*)]
+       [control props (:value ctx) change!])               ; backwards args - props last
      (links/render-inline-links (filter :link/render-inline? my-links) ctx)]))

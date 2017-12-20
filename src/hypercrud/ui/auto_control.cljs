@@ -22,6 +22,7 @@
                  :else edn/edn)]
     (widget field anchors props ctx)))
 
+; Can be unified; inspect (:layout ctx)
 (defn auto-table-cell [field anchors props ctx]
   (let [isComponent (-> (:attribute ctx) :db/isComponent)
         valueType (-> (:attribute ctx) :db/valueType :db/ident)
