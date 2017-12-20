@@ -6,7 +6,7 @@
             [hypercrud.ui.auto-control :refer [auto-table-cell]]
             [hypercrud.ui.connection-color :as connection-color]
             [hypercrud.ui.form-util :as form-util]
-            [hypercrud.ui.renderer :as renderer]
+            [hypercrud.ui.user-attribute-renderer :as renderer]
             [hypercrud.ui.control.link-controls :as link-controls]
             [hypercrud.util.reactive :as reactive]))
 
@@ -91,11 +91,8 @@
    ; no need for a relation for non-repeating, todo fix this crap
    [LinkCell nil false ordered-fes links ctx]])
 
-(defn Control [field anchors ctx]
-  (let [props (form-util/build-props field anchors ctx)]
-    (if (renderer/user-cell-renderer ctx)
-      (renderer/user-cell-render field anchors props ctx)
-      [auto-table-cell field anchors props ctx])))
+(defn Control [field links props ctx]
+  [auto-table-cell field links props ctx])
 
 (defn Field [control field anchors ctx]
   ; why are anchors unused
@@ -104,20 +101,27 @@
     [:td.truncate {:style style}
      [control ctx]]))
 
-(defn Value [field anchors ctx]
-  (let [ctx (-> (context/attribute ctx (:attribute field))
-                (context/value ((:cell-data->value field) (:cell-data ctx)))) ; Not reactive
-        display-mode @(:display-mode ctx)
+(defn with-field [Control]
+  (fn [field links props ctx]
+    [Field (reactive/partial Control field links props) field links ctx]))
+
+(defn Attribute [field anchors props ctx]
+  (let [display-mode @(:display-mode ctx)
         Field (case display-mode :xray Field :user (get ctx :field Field))
         Control (case display-mode :xray Control :user (get ctx :control Control))]
-    [Field (reactive/partial Control field anchors) field anchors ctx]))
+    [(with-field Control) field anchors props ctx]))
 
 (defn result-cell [fe cell-data anchors ctx]
   (let [ctx (context/cell-data ctx cell-data)]
     (->> (:fields fe)
          (mapv (fn [field]
-                 ^{:key (:id field)}
-                 [Value field anchors ctx])))))
+                 (let [ctx (-> (context/attribute ctx (:attribute field))
+                               (context/value ((:cell-data->value field) (:cell-data ctx)))) ; Not reactive
+                       props (form-util/build-props field anchors ctx)]
+                   (if (renderer/user-attribute-renderer ctx)
+                     (renderer/user-attribute-render field anchors props ctx)
+                     ^{:key (:id field)}
+                     [Attribute field anchors props ctx])))))))
 
 (defn Relation [relation ordered-fes anchors ctx]
   (->> ordered-fes

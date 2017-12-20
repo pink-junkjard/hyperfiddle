@@ -1,4 +1,4 @@
-(ns hypercrud.ui.renderer
+(ns hypercrud.ui.user-attribute-renderer
   (:require [cats.monad.either :as either]
             [hypercrud.browser.anchor :as link]
             [hypercrud.compile.eval :as eval :refer [eval-str]]
@@ -6,16 +6,17 @@
             [hypercrud.util.core :refer [pprint-str]]))
 
 
-(defn user-cell-renderer [ctx]
+(defn user-attribute-renderer [ctx]
   (let [attr (:attribute ctx)]
     (or
       ; todo binding renderers should be pathed for aggregates and values
-      (eval/validate-user-code-str (get-in ctx [:fields (:db/ident attr) :renderer]))
-      (eval/validate-user-code-str (-> attr :attribute/renderer)))))
+      #_(eval/validate-user-code-str (get-in ctx [:fields (:db/ident attr) :renderer]))
+      (eval/validate-user-code-str (-> attr :attribute/renderer))))
+  #_nil)
 
-(defn user-cell-render [maybe-field links props ctx]
+(defn user-attribute-render [maybe-field links props ctx]
   [:div.value
-   (-> (if-let [user-fn-str (user-cell-renderer ctx)]
+   (-> (if-let [user-fn-str (user-attribute-renderer ctx)]
          (eval-str user-fn-str)
          (either/left {:message "missing user-renderer"}))  ; double error check, remove this one
        (either/branch
