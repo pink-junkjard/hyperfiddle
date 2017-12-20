@@ -13,6 +13,7 @@
 
 
 (def ^:export with-field field/with-field)                  ; compat
+(def ^:export Field field/Field)                            ; compat
 
 (defn attr-sortable? [fe attribute ctx]
   (if-let [source-symbol (:source-symbol fe)]

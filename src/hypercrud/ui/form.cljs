@@ -12,6 +12,7 @@
 
 
 (def ^:export with-field field/with-field)                  ; compat
+(def ^:export Field field/Field)                            ; compat
 
 (defn new-field [entity ctx]
   (let [attr-ident (reactive/atom nil)]
