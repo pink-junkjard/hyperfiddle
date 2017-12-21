@@ -3,10 +3,12 @@
             [cats.monad.either :as either]
             [clojure.set :as set]
             [hypercrud.api.core :as api]
-            [hypercrud.types.Err :refer [Err]]
+            [hypercrud.types.Err :refer [#?(:cljs Err)]]
             [hypercrud.util.performance :as perf]
             [promesa.core :as p]
-            [taoensso.timbre :as timbre]))
+            [taoensso.timbre :as timbre])
+  #?(:clj
+     (:import (hypercrud.types.Err Err))))
 
 
 (defn- hydrate-loop-impl [rt request-fn local-basis stage id->tempid ptm total-loops]

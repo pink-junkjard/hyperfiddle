@@ -6,11 +6,14 @@
             [clojure.walk :as walk]
             [hypercrud.compile.eval :as eval]
             [hypercrud.compile.reader :as reader]
-            [hypercrud.types.Entity :refer [->Entity Entity]]
-            [hypercrud.types.ThinEntity :refer [->ThinEntity ThinEntity]]
+            [hypercrud.types.Entity :refer [->Entity #?(:cljs Entity)]]
+            [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
             [hypercrud.util.base-64-url-safe :as base64]
             [hypercrud.util.branch :as branch]
-            [hypercrud.util.reactive :as reactive]))
+            [hypercrud.util.reactive :as reactive])
+  #?(:clj
+     (:import (hypercrud.types.Entity Entity)
+              (hypercrud.types.ThinEntity ThinEntity))))
 
 
 (defn invert-ids [route invert-id ctx]

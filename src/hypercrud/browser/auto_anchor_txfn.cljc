@@ -1,6 +1,7 @@
 (ns hypercrud.browser.auto-anchor-txfn
   (:require [cats.monad.either :as either]
             [clojure.string :as string]
+            [hypercrud.client.tx]                           ; for resource loading
             [hypercrud.compile.eval :as eval]
             [hypercrud.compile.macros :refer [str-and-code']]
             [hypercrud.util.string :as hc-string]

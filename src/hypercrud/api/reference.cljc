@@ -1,11 +1,13 @@
 (ns hypercrud.api.reference
-  (:require [hypercrud.api.core :refer [HypercrudDataAPI]]
+  (:require [hypercrud.api.core :refer [#?(:cljs HypercrudDataAPI)]]
             [hypercrud.api.http :as http]
             [hypercrud.api.impl.global-basis :refer [global-basis]]
             [hypercrud.api.impl.local-basis :refer [local-basis]]
             [hypercrud.api.util :as api-util]
             [hypercrud.client.core :as hc]
-            [hypercrud.client.peer :as peer]))
+            [hypercrud.client.peer :as peer])
+  #?(:clj
+     (:import (hypercrud.api.core HypercrudDataAPI))))
 
 
 (deftype BrowserReference [service-uri state-atom request-fn]
@@ -38,5 +40,5 @@
 
   ; IEquiv?
 
-  IHash
-  (-hash [this] (goog/getUid this)))
+  #?@(:cljs [IHash
+             (-hash [this] (goog/getUid this))]))

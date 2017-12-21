@@ -11,11 +11,14 @@
             [hypercrud.client.core :as hc]
             [hypercrud.client.schema :as schema-util]
             [hypercrud.compile.eval :as eval]
-            [hypercrud.types.Entity :refer [Entity]]
+            [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
-            [hypercrud.types.ThinEntity :refer [ThinEntity]]
-            [hypercrud.util.string :as hc-string]))
+            [hypercrud.types.ThinEntity :refer [#?(:cljs ThinEntity)]]
+            [hypercrud.util.string :as hc-string])
+  #?(:clj
+     (:import (hypercrud.types.Entity Entity)
+              (hypercrud.types.ThinEntity ThinEntity))))
 
 
 (def meta-pull-exp-for-link

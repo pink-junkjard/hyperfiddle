@@ -1,13 +1,16 @@
 (ns hypercrud.browser.auto-anchor-formula
   (:require [cats.monad.either :as either]
             [hypercrud.client.core :as hc]
-            [hypercrud.types.Entity :refer [->Entity Entity]]
-            [hypercrud.types.ThinEntity :refer [ThinEntity]]
+            [hypercrud.types.Entity :refer [->Entity #?(:cljs Entity)]]
+            [hypercrud.types.ThinEntity :refer [#?(:cljs ThinEntity)]]
             [hypercrud.util.core :as util]
             [hypercrud.util.string :as hc-string]
             [hypercrud.util.template :as template]
             [hypercrud.util.vedn :as vedn]
-            [taoensso.timbre :as timbre]))
+            [taoensso.timbre :as timbre])
+  #?(:clj
+     (:import (hypercrud.types.Entity Entity)
+              (hypercrud.types.ThinEntity ThinEntity))))
 
 
 (defn auto-entity-from-stage [ctx]

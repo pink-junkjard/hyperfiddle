@@ -3,8 +3,10 @@
             [clojure.string :as string]
             [hypercrud.client.core :as hc]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
-            [hypercrud.types.URI :refer [URI]]
-            [hypercrud.util.core :as util]))
+            [hypercrud.types.URI :refer [#?(:cljs URI)]]
+            [hypercrud.util.core :as util])
+  #?(:clj
+     (:import (java.net URI))))
 
 
 (defn hc-attr-request [ctx]

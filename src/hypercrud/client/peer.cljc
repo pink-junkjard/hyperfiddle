@@ -27,5 +27,5 @@
   (db [this uri branch]
     (db state-atom uri branch))
 
-  IHash
-  (-hash [this] (goog/getUid this)))
+  #?@(:cljs [IHash
+             (-hash [this] (goog/getUid this))]))
