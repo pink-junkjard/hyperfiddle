@@ -104,9 +104,10 @@
     (->> (:fields fe)
          (mapv (fn [field]
                  (let [ctx (-> (context/attribute ctx (:attribute field))
-                               (context/value ((:cell-data->value field) (:cell-data ctx))))]
+                               (context/value ((:cell-data->value field) (:cell-data ctx))))
+                       user-cell (case @(:display-mode ctx) :xray table-cell :user (:cell ctx table-cell))]
                    ^{:key (:id field)}
-                   [table-cell (auto-control field links ctx) field links ctx]))))))
+                   [user-cell (auto-control field links ctx) field links ctx]))))))
 
 (defn Relation [relation ordered-fes anchors ctx]
   (->> ordered-fes

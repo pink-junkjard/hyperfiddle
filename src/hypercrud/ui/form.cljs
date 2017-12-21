@@ -47,8 +47,8 @@
 (defn form-cell [control field links ctx]
   [:div {:class (str/join " " ["field" (-> ctx :attribute :db/ident str css-slugify)])
          :style {:border-color (connection-color/connection-color (:uri ctx) ctx)}}
-   [form-label field links ctx]
-   [control ctx]
+   [(:label ctx form-label) field links ctx]
+   [control ctx]                                            ; cannot override control from down here
    #_[markdown-rendered* (-> ctx :attribute :db/doc) #() {:class "hypercrud-doc"}]])
 
 (defn Entity [fe cell-data links ctx]
@@ -71,12 +71,10 @@
                                          (if (or (nil? (:attribute field))
                                                  (= (:attribute field) :db/id))
                                            (assoc $ :read-only always-read-only)
-                                           $))]
-
-                           ; the cell can be overridden as well, e.g. to reposition docstring
-                           ; (probably at all levels)
+                                           $))
+                               user-cell (case @(:display-mode ctx) :xray form-cell :user (:cell ctx form-cell))]
                            ^{:key (:id field)}
-                           [form-cell (auto-control field links ctx) field links ctx]))))
+                           [user-cell (auto-control field links ctx) field links ctx]))))
             (if (:splat? fe)
               ^{:key (hash (keys cell-data))}
               [new-field cell-data ctx]))
