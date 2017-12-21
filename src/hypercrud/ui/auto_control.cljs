@@ -55,7 +55,11 @@
   ; todo clean this interface up
   {:read-only ((get ctx :read-only) (:attribute ctx) ctx)})
 
-(defn auto-control [field links ctx]
+; Not clear if auto-control needs props. For now this is compat as the next
+; layer down of controls (aka widgets) take props.
+; hypercrud/props is on links. I dont think there is even a way for users
+; to pass props here. But, how do you pass through things to the native widget?
+(defn auto-control [field links _ ctx]
   (let [; control override at schema level (Not really an override yet, but soon)
         control (case (:layout ctx) :block schema-control-form
                                     :inline-block schema-control-table
@@ -63,7 +67,7 @@
 
         ; control override at attribute level
         control (if (renderer/user-attribute-renderer ctx)
-                  (renderer/user-attribute-render field links ctx)
+                  (renderer/user-attribute-render ctx)
                   control)
 
         ; control override at fiddle/ctx level

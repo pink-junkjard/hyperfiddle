@@ -6,7 +6,6 @@
             [hypercrud.ui.css :refer [css-slugify]]
             [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.connection-color :as connection-color]
-            [hypercrud.ui.user-attribute-renderer :as renderer]
             [hypercrud.ui.control.link-controls :as link-controls]
             [hypercrud.util.reactive :as reactive]
             [hypercrud.ui.label :as field]))
@@ -105,9 +104,9 @@
          (mapv (fn [field]
                  (let [ctx (-> (context/attribute ctx (:attribute field))
                                (context/value ((:cell-data->value field) (:cell-data ctx))))
-                       user-cell (case @(:display-mode ctx) :xray table-cell :user (:cell ctx table-cell))]
+                       user-cell (case @(:display-mode ctx) :xray table-cell :user table-cell #_(:cell ctx table-cell))]
                    ^{:key (:id field)}
-                   [user-cell (auto-control field links ctx) field links ctx]))))))
+                   [user-cell (auto-control field links {} ctx) field links ctx]))))))
 
 (defn Relation [relation ordered-fes anchors ctx]
   (->> ordered-fes

@@ -9,10 +9,10 @@
             [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.input :as input]
             [hypercrud.ui.control.link-controls :as link-controls]
-            [hypercrud.util.reactive :as reactive]))
+            [hypercrud.util.reactive :as reactive]
+            [taoensso.timbre :as timbre]))
 
 
-(def ^:export with-field identity)                          ; compat
 (def ^:export Field nil)                                    ; compat
 
 (defn new-field [entity ctx]
@@ -49,6 +49,7 @@
          :style {:border-color (connection-color/connection-color (:uri ctx) ctx)}}
    [(:label ctx form-label) field links ctx]
    [control ctx]                                            ; cannot override control from down here
+   #_(try (control ctx) (catch :default e (timbre/error (str "broken control: " (:attribute field)) e)))
    #_[markdown-rendered* (-> ctx :attribute :db/doc) #() {:class "hypercrud-doc"}]])
 
 (defn Entity [fe cell-data links ctx]
@@ -74,7 +75,7 @@
                                            $))
                                user-cell (case @(:display-mode ctx) :xray form-cell :user (:cell ctx form-cell))]
                            ^{:key (:id field)}
-                           [user-cell (auto-control field links ctx) field links ctx]))))
+                           [user-cell (auto-control field links {} ctx) field links ctx]))))
             (if (:splat? fe)
               ^{:key (hash (keys cell-data))}
               [new-field cell-data ctx]))
