@@ -1,9 +1,11 @@
 (ns hypercrud.server.util.http
-  (:require [clojure.string :as string]
+  (:require [clojure.core.async :refer [chan go >!!]]
+            [clojure.string :as string]
             [cognitect.transit :as transit]
             [hypercrud.transit :as hc-t]
             [io.pedestal.http :as http]
-            [io.pedestal.interceptor.helpers :as interceptor])
+            [io.pedestal.interceptor.helpers :as interceptor]
+            [promesa.core :as p])
   (:import (java.io OutputStreamWriter OutputStream)
            org.apache.commons.lang3.StringEscapeUtils))
 
@@ -68,3 +70,16 @@
         (-> context
             (update-in [:response :body] (or content-renderer str))
             (update-in [:response :headers] assoc "Content-Type" accept))))))
+
+(def promise->chan
+  {:name ::promise->chan
+   :leave (fn [{:keys [response] :as context}]
+            (if-not (p/promise? response)
+              context
+              (let [channel (chan)]
+                (-> response
+                    (p/then (fn [response]
+                              (>!! channel (assoc context :response response))))
+                    (p/catch (fn [err]
+                               (>!! channel (assoc context :response {:status 500 :body (pr-str err)})))))
+                channel)))})
