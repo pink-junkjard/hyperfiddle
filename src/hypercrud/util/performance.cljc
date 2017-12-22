@@ -21,7 +21,7 @@
                    (p/resolved resp#)))
          (p/catch (fn [err#]
                     (~error-fn err# total-time-fn#)
-                    (p/rejected err#))))))
+                    (throw err#))))))
 
 (defmacro time
   "Evaluates expr and prints the time it took. Returns the value of expr."

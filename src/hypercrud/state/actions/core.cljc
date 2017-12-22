@@ -29,7 +29,7 @@
                    (if (= hydrate-id (:hydrate-id (get-state)))
                      (dispatch! [:hydrate!-failure error])
                      (timbre/info (str "Ignoring response for " hydrate-id)))
-                   (p/rejected error))))))
+                   (throw error))))))
 
 (defn refresh-global-basis [rt dispatch! get-state]
   (-> (api/global-basis rt)
@@ -37,7 +37,7 @@
                 (dispatch! [:set-global-basis global-basis])))
       (p/catch (fn [error]
                  (dispatch! [:set-error error])
-                 (p/rejected error)))))
+                 (throw error)))))
 
 (defn refresh-local-basis [rt dispatch! get-state]
   (-> (api/local-basis rt)
@@ -45,7 +45,7 @@
                 (dispatch! [:set-local-basis local-basis])))
       (p/catch (fn [error]
                  (dispatch! [:set-error error])
-                 (p/rejected error)))))
+                 (throw error)))))
 
 (defn set-route [rt encoded-route dispatch! get-state]
   (let [actions (cons [:set-route encoded-route]
@@ -112,7 +112,7 @@
           (p/catch (fn [error]
                      #?(:cljs (js/alert (pr-str error)))
                      (dispatch! [:transact!-failure error])
-                     (p/rejected error)))
+                     (throw error)))
           (p/then (fn [{:keys [tempid->id]}]
                     (let [{:keys [encoded-route]} (get-state)
                           invert-id (fn [temp-id uri]
