@@ -1,5 +1,6 @@
 (ns hypercrud.ui.label
-  (:require [hypercrud.browser.link :as link]
+  (:require [cuerdas.core :as str]
+            [hypercrud.browser.link :as link]
             [hypercrud.ui.tooltip :as tooltip]
             [hypercrud.util.core :as util]))
 
@@ -14,8 +15,11 @@
 
 (defn label-inner [field ctx]
   (let [label (-> ctx :attribute :db/ident str)
-        help-text (apply str (interpose " " (attribute-schema-human (:attribute ctx))))]
-    [tooltip/fast-hover-tooltip-managed
-     {:label help-text
-      :position :below-right}
-     [:span.help label]]))
+        ;help-text (apply str (interpose " " (attribute-schema-human (:attribute ctx))))
+        help-text (-> ctx :attribute :db/doc)]
+    (if-not (str/empty-or-nil? help-text)
+      [tooltip/fast-hover-tooltip-managed
+       {:label help-text
+        :position :below-right}
+       [:span.hyperfiddle-help label]]
+      [:span label])))

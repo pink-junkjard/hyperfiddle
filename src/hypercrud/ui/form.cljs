@@ -51,7 +51,7 @@
          :style {:border-color (connection-color/connection-color (:uri ctx) ctx)}}
    [(:label ctx form-label) -field links ctx]
    [control -field links (control-props -field links ctx) ctx]
-   [markdown-rendered* (-> ctx :attribute :db/doc) #() {:class "hypercrud-doc"}]])
+   #_[markdown-rendered* (-> ctx :attribute :db/doc) #() {:class "hypercrud-doc"}]])
 
 (defn Entity [fe cell-data links ctx]
   (let [{inline-links true anchor-links false} (->> (link/links-lookup' links [(:fe-pos ctx)])

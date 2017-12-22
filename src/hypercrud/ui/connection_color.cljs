@@ -12,7 +12,7 @@
     (get-in ctx [:repository :dbhole/uri]) "#777"
     (-> {:h (* 360 (mod (+ seed (* (hash uri) golden-ratio)) 1))
          :s 55 #_"Too bright hurts the eyes"
-         :l (or l 50) #_"Medium gray (50) can be read on white and black backgrounds"}
+         :l (or l 70) #_"Medium gray (50) can be read on white and black backgrounds"}
         (clj->js)
         (js/Color)
         (.string))))
