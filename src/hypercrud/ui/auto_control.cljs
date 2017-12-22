@@ -80,6 +80,11 @@
   ;
   ; Return value just needs a ctx.
   ; Dynamic logic is done; user can't further override it with the field-ctx
+
+  ; This is not quite right; each stage wants to be able to wrap the stage before.
+  ; So it's kind of backwards right now and user-controls have
+  ; knowledge of this pipeline.
+
   (or (case @(:display-mode ctx) :user (some-> (:control ctx) unify-portal-markup) :xray nil)
       (case @(:display-mode ctx) :user (fiddle-field-control ctx) :xray nil)
       (attribute-control ctx)
