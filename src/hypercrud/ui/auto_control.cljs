@@ -1,19 +1,15 @@
 (ns hypercrud.ui.auto-control
-  (:require [cats.monad.either :as either]
-            [cuerdas.core :as str]
-            [hypercrud.browser.auto-anchor :as auto-anchor]
+  (:require [cuerdas.core :as str]
             [hypercrud.compile.eval :as eval :refer [eval-str]]
             [hypercrud.ui.attribute.instant :as instant]
             [hypercrud.ui.attribute.edn :as edn]
-            [hypercrud.ui.connection-color :as connection-color]
             [hypercrud.ui.control.markdown-rendered :refer [markdown-rendered*]]
             [hypercrud.ui.css :refer [css-slugify]]
             [hypercrud.ui.safe-render :refer [unify-portal-markup]]
             [hypercrud.ui.table-cell :as table-cell]
             [hypercrud.ui.user-attribute-renderer :refer [eval-user-control-ui]]
             [hypercrud.ui.widget :as widget]
-            [hypercrud.util.core :refer [pprint-str tee]]
-            [hypercrud.util.reactive :as reactive]
+            [hypercrud.util.core :refer [pprint-str]]
             [taoensso.timbre :as timbre]))
 
 
@@ -56,17 +52,17 @@
 
 (defn fiddle-field-control [ctx]
   (let [attr (:attribute ctx)
-        user-str ((tee eval/validate-user-code-str
-                       #(if % (timbre/info "using fiddle ctx/field renderer" (-> attr :db/ident str) %)))
-                   (get-in ctx [:fields (:db/ident attr) :renderer]))]
-    (if user-str (eval-user-control-ui user-str))))
+        user-str (eval/validate-user-code-str (get-in ctx [:fields (:db/ident attr) :renderer]))]
+    (when user-str
+      (timbre/info "using fiddle ctx/field renderer" (-> attr :db/ident str) user-str)
+      (eval-user-control-ui user-str))))
 
 (defn attribute-control [ctx]
   (let [attr (:attribute ctx)
-        user-str ((tee eval/validate-user-code-str
-                       #(if % (timbre/info "using attribute/renderer " (-> attr :db/ident str) %)))
-                   (-> attr :attribute/renderer))]
-    (if user-str (eval-user-control-ui user-str))))
+        user-str (eval/validate-user-code-str (-> attr :attribute/renderer))]
+    (when user-str
+      (timbre/info "using attribute/renderer " (-> attr :db/ident str) user-str)
+      (eval-user-control-ui user-str))))
 
 (defn auto-control' [ctx]
   ; todo binding renderers should be pathed for aggregates and values
