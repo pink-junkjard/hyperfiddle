@@ -102,4 +102,7 @@
   ; todo clean this interface up
   {:read-only ((get ctx :read-only) (:attribute ctx) ctx)})
 
-(def auto-control schema-control-form)                      ; compat
+(defn auto-control [_ _ _ ctx]                              ; compat
+  (some-> (case (:layout ctx) :block (schema-control-form ctx)
+                              :inline-block (schema-control-table ctx)
+                              :table (schema-control-table ctx))))
