@@ -14,7 +14,7 @@
 
 (code-for-nodejs
   (defn safe-user-renderer [user-fn & props]
-    (let [user-result (apply user-fn props)
+    (let [user-result (apply vector user-fn props)
           explicit-container [:div.hyperfiddle-internal-react-root {:key (hash user-fn)}
                               user-result]]
       [:div.hyperfiddle-internal-react-portal
@@ -29,7 +29,11 @@
   (defn safe-render! [this]
     (let [[react-ctor user-fn & props] (reagent/argv this)
           dom-el (reagent/dom-node this)
-          user-result (apply user-fn props)
+
+          ; if we comment out "vector" it works with react-fragments
+          ; but not hiccup syntax, which is necessary to work with reagent-style
+          ; components with closure-constructor pattern.
+          user-result (apply vector user-fn props)
           explicit-container [:div.hyperfiddle-internal-react-root {:key (hash user-fn)}
                               user-result]]
       (try
