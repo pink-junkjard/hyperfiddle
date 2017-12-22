@@ -1,20 +1,19 @@
 (ns hypercrud.ui.auto-control
-  (:require [cuerdas.core :as str]
+  (:require [cats.monad.either :as either]
+            [cuerdas.core :as str]
             [hypercrud.browser.auto-anchor :as auto-anchor]
+            [hypercrud.compile.eval :as eval :refer [eval-str]]
+            [hypercrud.ui.attribute.instant :as instant]
+            [hypercrud.ui.attribute.edn :as edn]
             [hypercrud.ui.connection-color :as connection-color]
             [hypercrud.ui.control.markdown-rendered :refer [markdown-rendered*]]
             [hypercrud.ui.css :refer [css-slugify]]
-            [hypercrud.ui.attribute.instant :as instant]
-            [hypercrud.ui.attribute.edn :as edn]
+            [hypercrud.ui.safe-render :refer [unify-portal-markup]]
             [hypercrud.ui.table-cell :as table-cell]
             [hypercrud.ui.user-attribute-renderer :refer [eval-user-control-ui]]
-            [hypercrud.ui.safe-render :refer [unify-portal-markup]]
             [hypercrud.ui.widget :as widget]
-            [hypercrud.util.reactive :as reactive]
-            [hypercrud.compile.eval :as eval]
-            [hypercrud.compile.eval :as eval :refer [eval-str]]
             [hypercrud.util.core :refer [pprint-str tee]]
-            [cats.monad.either :as either]
+            [hypercrud.util.reactive :as reactive]
             [taoensso.timbre :as timbre]))
 
 
@@ -58,14 +57,14 @@
 (defn fiddle-field-control [ctx]
   (let [attr (:attribute ctx)
         user-str ((tee eval/validate-user-code-str
-                       #(if % (timbre/warn "using fiddle ctx/field renderer" (-> attr :db/ident str) %)))
+                       #(if % (timbre/info "using fiddle ctx/field renderer" (-> attr :db/ident str) %)))
                    (get-in ctx [:fields (:db/ident attr) :renderer]))]
     (if user-str (eval-user-control-ui user-str))))
 
 (defn attribute-control [ctx]
   (let [attr (:attribute ctx)
         user-str ((tee eval/validate-user-code-str
-                       #(if % (timbre/warn "using attribute/renderer " (-> attr :db/ident str) %)))
+                       #(if % (timbre/info "using attribute/renderer " (-> attr :db/ident str) %)))
                    (-> attr :attribute/renderer))]
     (if user-str (eval-user-control-ui user-str))))
 
