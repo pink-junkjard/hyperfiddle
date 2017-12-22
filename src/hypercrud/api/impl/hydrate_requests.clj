@@ -12,7 +12,8 @@
             [hypercrud.types.QueryRequest]
             [hypercrud.util.branch :as branch]
             [hypercrud.util.core :as util]
-            [hypercrud.util.identity :refer [tempid?]])
+            [hypercrud.util.identity :refer [tempid?]]
+            [taoensso.timbre :as timbre])
   (:import (hypercrud.types.DbVal DbVal)
            (hypercrud.types.EntityRequest EntityRequest)
            (hypercrud.types.QueryRequest QueryRequest)))
@@ -132,12 +133,15 @@
         (get-secure-db-from-branch branch)))))
 
 (defn hydrate-requests [local-basis requests staged-branches] ; theoretically, requests are grouped by basis for cache locality
-  (println (->> (map (comp #(str/prune % 40) pr-str) [local-basis staged-branches (count requests)]) (interpose ", ") (apply str "hydrate-requests: ")))
+  (timbre/debug (->> (map (comp #(str/prune % 40) pr-str) [local-basis staged-branches (count requests)]) (interpose ", ") (apply str "hydrate-requests: ")))
   (let [db-with-lookup (atom {})
         get-secure-db-with (build-get-secure-db-with staged-branches db-with-lookup local-basis)
         pulled-trees (->> requests
                           (map #(try (hydrate-request* % get-secure-db-with)
-                                     (catch Throwable e (.println *err* (pr-str e)) (->Err (str e))))))
+                                     (catch Throwable e
+                                       (timbre/error e)
+                                       (->Err (str e)))))
+                          (doall))
         ; this can also stream, as the request hydrates.
         id->tempid (reduce (fn [acc [branch db]]
                              (assoc-in acc [(:uri branch) (:branch-val branch)] (:id->tempid db)))

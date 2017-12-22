@@ -40,11 +40,12 @@
         (p/then #(dissoc % :total-loops)))))
 
 (defn human-error [e req]
-  (let [unfilled-holes (->> (filter (comp nil? val) (.-params req)) (map key))]
+  ; this is invalid on the jvm
+  #_(let [unfilled-holes (->> (filter (comp nil? val) (.-params req)) (map key))]
     ; what about EntityRequests? why are datomic errors not sufficient?
     (if-not (empty? unfilled-holes)
-      {:message "Invalid query" :data {:datomic-error (.-msg e) :query (.-query req) :missing unfilled-holes}}
-      {:message "Datomic error" :data {:datomic-error (.-msg e)}})))
+      {:message "Invalid query" :data {:datomic-error (.-msg e) :query (.-query req) :missing unfilled-holes}}))
+  (ex-info "Datomic error" {:datomic-error (.-msg e)}))
 
 ; this can be removed; #err can natively be Either
 (defn process-result [resultset-or-error request]
