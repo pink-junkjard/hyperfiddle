@@ -6,7 +6,7 @@
             [hypercrud.ui.connection-color :as connection-color]
             [hypercrud.ui.css :refer [css-slugify]]
             [hypercrud.ui.label :as label]
-            [hypercrud.ui.auto-control :refer [auto-control]]
+            [hypercrud.ui.auto-control :refer [auto-control' control-props]]
             [hypercrud.ui.input :as input]
             [hypercrud.ui.control.link-controls :as link-controls]
             [hypercrud.util.reactive :as reactive]
@@ -44,12 +44,11 @@
       (link-controls/render-links (->> my-links (remove :link/render-inline?)) ctx)
       (link-controls/render-inline-links (->> my-links (filter :link/render-inline?)) ctx)]]))
 
-(defn form-cell [control field links ctx]
+(defn form-cell [control -field links ctx]
   [:div {:class (str/join " " ["field" (-> ctx :attribute :db/ident str css-slugify)])
          :style {:border-color (connection-color/connection-color (:uri ctx) ctx)}}
-   [(:label ctx form-label) field links ctx]
-   [control ctx]                                            ; cannot override control from down here
-   #_(try (control ctx) (catch :default e (timbre/error (str "broken control: " (:attribute field)) e)))
+   [(:label ctx form-label) -field links ctx]
+   [control -field links (control-props -field links ctx) ctx]
    #_[markdown-rendered* (-> ctx :attribute :db/doc) #() {:class "hypercrud-doc"}]])
 
 (defn Entity [fe cell-data links ctx]
@@ -74,8 +73,9 @@
                                            (assoc $ :read-only always-read-only)
                                            $))
                                user-cell (case @(:display-mode ctx) :xray form-cell :user (:cell ctx form-cell))]
+                           (assert @(:display-mode ctx))
                            ^{:key (:id field)}
-                           [user-cell (auto-control field links {} ctx) field links ctx]))))
+                           [user-cell (auto-control' ctx) field links ctx]))))
             (if (:splat? fe)
               ^{:key (hash (keys cell-data))}
               [new-field cell-data ctx]))

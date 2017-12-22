@@ -4,7 +4,7 @@
             [hypercrud.browser.auto-anchor :as auto-anchor]
             [hypercrud.browser.context :as context]
             [hypercrud.ui.css :refer [css-slugify]]
-            [hypercrud.ui.auto-control :refer [auto-control]]
+            [hypercrud.ui.auto-control :refer [auto-control' control-props]]
             [hypercrud.ui.connection-color :as connection-color]
             [hypercrud.ui.control.link-controls :as link-controls]
             [hypercrud.util.reactive :as reactive]
@@ -91,12 +91,12 @@
    ; no need for a relation for non-repeating, todo fix this crap
    [LinkCell nil false ordered-fes links ctx]])
 
-(defn table-cell [control field links ctx]
+(defn table-cell [control -field links ctx]
   ; why are links unused
   (let [shadow-link (auto-anchor/system-anchor? (get-in ctx [:cell-data :db/id]))
         style {:border-color (if-not shadow-link (connection-color/connection-color (:uri ctx) ctx))}]
     [:td.truncate {:style style}
-     [control ctx]]))
+     [control -field links (control-props -field links ctx) ctx]]))
 
 (defn Entity [fe cell-data links ctx]
   (let [ctx (context/cell-data ctx cell-data)]
@@ -106,7 +106,7 @@
                                (context/value ((:cell-data->value field) (:cell-data ctx))))
                        user-cell (case @(:display-mode ctx) :xray table-cell :user table-cell #_(:cell ctx table-cell))]
                    ^{:key (:id field)}
-                   [user-cell (auto-control field links {} ctx) field links ctx]))))))
+                   [user-cell (auto-control' ctx) field links ctx]))))))
 
 (defn Relation [relation ordered-fes anchors ctx]
   (->> ordered-fes

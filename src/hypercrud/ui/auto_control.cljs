@@ -7,12 +7,17 @@
             [hypercrud.ui.attribute.instant :as instant]
             [hypercrud.ui.attribute.edn :as edn]
             [hypercrud.ui.table-cell :as table-cell]
-            [hypercrud.ui.user-attribute-renderer :as renderer]
+            [hypercrud.ui.user-attribute-renderer :refer [eval-user-control-ui]]
             [hypercrud.ui.widget :as widget]
-            [hypercrud.util.reactive :as reactive]))
+            [hypercrud.util.reactive :as reactive]
+            [hypercrud.compile.eval :as eval]
+            [hypercrud.compile.eval :as eval :refer [eval-str]]
+            [hypercrud.util.core :refer [pprint-str tee]]
+            [cats.monad.either :as either]
+            [taoensso.timbre :as timbre]))
 
 
-(defn schema-control-form [field links props ctx]
+(defn schema-control-form [ctx]
   (let [isComponent (-> (:attribute ctx) :db/isComponent)
         valueType (-> (:attribute ctx) :db/valueType :db/ident)
         cardinality (-> (:attribute ctx) :db/cardinality :db/ident)
@@ -27,10 +32,10 @@
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many) isComponent) widget/ref-many-table
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) edn/edn-many
                  :else edn/edn)]
-    (widget field links props ctx)))
+    widget))
 
 ; Can be unified; inspect (:layout ctx)
-(defn schema-control-table [field links props ctx]
+(defn schema-control-table [ctx]
   (let [isComponent (-> (:attribute ctx) :db/isComponent)
         valueType (-> (:attribute ctx) :db/valueType :db/ident)
         cardinality (-> (:attribute ctx) :db/cardinality :db/ident)
@@ -47,7 +52,40 @@
                  (and (= cardinality :db.cardinality/many)) widget/edn-many
                  (and (= cardinality :db.cardinality/one)) widget/edn
                  :else edn/edn)]
-    (widget field links props ctx)))
+    widget))
+
+(defn fiddle-field-control [ctx]
+  (let [attr (:attribute ctx)
+        user-str ((tee eval/validate-user-code-str
+                       #(if % (timbre/warn "using fiddle ctx/field renderer" (-> attr :db/ident str) %)))
+                   (get-in ctx [:fields (:db/ident attr) :renderer]))]
+    (if user-str (eval-user-control-ui user-str))))
+
+(defn attribute-control [ctx]
+  (let [attr (:attribute ctx)
+        user-str ((tee eval/validate-user-code-str
+                       #(if % (timbre/warn "using attribute/renderer " (-> attr :db/ident str) %)))
+                   (-> attr :attribute/renderer))]
+    (if user-str (eval-user-control-ui user-str))))
+
+(defn auto-control' [ctx]
+  ; todo binding renderers should be pathed for aggregates and values
+  ;
+  ; Old comment, what does this mean now: (I think it means nothing, field is dead)
+  ; --What is the user-field allowed to change? The ctx. Can it change links or anchors? no.
+  ;
+  ; todo control can have access to repeating contextual values (color, owner, result, entity, value, etc) but field should NOT
+  ; this leads to inconsistent location formulas between non-repeating links in tables vs forms
+  ;
+  ; Return value just needs a ctx.
+  ; Dynamic logic is done; user can't further override it with the field-ctx
+  (or (case @(:display-mode ctx) :user (:control ctx) :xray nil)
+      (case @(:display-mode ctx) :user (fiddle-field-control ctx) :xray nil)
+      (attribute-control ctx)
+      (case (:layout ctx) :block (schema-control-form ctx)
+                          :inline-block (schema-control-table ctx)
+                          :table (schema-control-table ctx))))
+#_(reactive/partial control field links (control-props field links ctx))
 
 ; What even is this scar
 (defn control-props [field links ctx]
@@ -59,26 +97,5 @@
 ; layer down of controls (aka widgets) take props.
 ; hypercrud/props is on links. I dont think there is even a way for users
 ; to pass props here. But, how do you pass through things to the native widget?
-(defn auto-control [field links _ ctx]
-  (let [; control override at schema level (Not really an override yet, but soon)
-        control (case (:layout ctx) :block schema-control-form
-                                    :inline-block schema-control-table
-                                    :table schema-control-table)
 
-        ; control override at attribute level
-        control (if (renderer/user-attribute-renderer ctx)
-                  (renderer/user-attribute-render ctx)
-                  control)
-
-        ; control override at fiddle/ctx level
-        control (case @(:display-mode ctx) :xray control :user (get ctx :control control))]
-
-    ; Old comment, what does this mean now: (I think it means nothing, field is dead)
-    ; --What is the user-field allowed to change? The ctx. Can it change links or anchors? no.
-    ;
-    ; todo control can have access to repeating contextual values (color, owner, result, entity, value, etc) but field should NOT
-    ; this leads to inconsistent location formulas between non-repeating links in tables vs forms
-
-    ; Return value just needs a ctx.
-    ; Dynamic logic is done; user can't further override it with the field-ctx
-    (reactive/partial control field links (control-props field links ctx))))
+(def auto-control schema-control-form)                      ; compat
