@@ -8,6 +8,7 @@
             [hypercrud.ui.attribute.edn :as edn]
             [hypercrud.ui.table-cell :as table-cell]
             [hypercrud.ui.user-attribute-renderer :refer [eval-user-control-ui]]
+            [hypercrud.ui.safe-render :refer [unify-portal-markup]]
             [hypercrud.ui.widget :as widget]
             [hypercrud.util.reactive :as reactive]
             [hypercrud.compile.eval :as eval]
@@ -79,23 +80,22 @@
   ;
   ; Return value just needs a ctx.
   ; Dynamic logic is done; user can't further override it with the field-ctx
-  (or (case @(:display-mode ctx) :user (:control ctx) :xray nil)
+  (or (case @(:display-mode ctx) :user (some-> (:control ctx) unify-portal-markup) :xray nil)
       (case @(:display-mode ctx) :user (fiddle-field-control ctx) :xray nil)
       (attribute-control ctx)
-      (case (:layout ctx) :block (schema-control-form ctx)
-                          :inline-block (schema-control-table ctx)
-                          :table (schema-control-table ctx))))
-#_(reactive/partial control field links (control-props field links ctx))
+      (some-> (case (:layout ctx) :block (schema-control-form ctx)
+                                  :inline-block (schema-control-table ctx)
+                                  :table (schema-control-table ctx))
+              unify-portal-markup)))
 
 ; What even is this scar
-(defn control-props [field links ctx]
-  ; why does this need the field - it needs the ident for readonly in "Edit Anchors"
-  ; todo clean this interface up
-  {:read-only ((get ctx :read-only) (:attribute ctx) ctx)})
-
 ; Not clear if auto-control needs props. For now this is compat as the next
 ; layer down of controls (aka widgets) take props.
 ; hypercrud/props is on links. I dont think there is even a way for users
 ; to pass props here. But, how do you pass through things to the native widget?
+(defn control-props [field links ctx]
+  ; why does this need the field - it needs the ident for readonly in "Edit Anchors"
+  ; todo clean this interface up
+  {:read-only ((get ctx :read-only) (:attribute ctx) ctx)})
 
 (def auto-control schema-control-form)                      ; compat

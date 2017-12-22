@@ -10,6 +10,7 @@
             [hypercrud.ui.input :as input]
             [hypercrud.ui.control.link-controls :as link-controls]
             [hypercrud.util.reactive :as reactive]
+            [hypercrud.ui.safe-render :refer [unify-portal-markup]]
             [taoensso.timbre :as timbre]))
 
 
@@ -72,7 +73,8 @@
                                                  (= (:attribute field) :db/id))
                                            (assoc $ :read-only always-read-only)
                                            $))
-                               user-cell (case @(:display-mode ctx) :xray form-cell :user (:cell ctx form-cell))]
+                               user-cell (case @(:display-mode ctx) :xray form-cell #_(unify-portal-markup form-cell)
+                                                                    :user (:cell ctx form-cell))]
                            (assert @(:display-mode ctx))
                            ^{:key (:id field)}
                            [user-cell (auto-control' ctx) field links ctx]))))
