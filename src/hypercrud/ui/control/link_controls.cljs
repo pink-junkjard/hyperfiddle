@@ -1,6 +1,6 @@
 (ns hypercrud.ui.control.link-controls
   (:require [hypercrud.browser.core :as browser]
-            [hypercrud.browser.anchor :as link]))
+            [hypercrud.browser.link :as link]))
 
 
 (defn render-link [link ctx]

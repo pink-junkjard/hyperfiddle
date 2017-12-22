@@ -2,7 +2,7 @@
   (:require [hypercrud.ui.control.link-controls :as link-controls]
             [hypercrud.ui.control.edn :as edn]
             [hypercrud.ui.control.instant :as instant]
-            [hypercrud.browser.anchor :as link]
+            [hypercrud.browser.link :as link]
             [hypercrud.client.tx :as tx]))
 
 

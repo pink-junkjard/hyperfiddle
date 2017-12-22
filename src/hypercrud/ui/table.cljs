@@ -1,6 +1,6 @@
 (ns hypercrud.ui.table
   (:require [clojure.string :as string]
-            [hypercrud.browser.anchor :as link]
+            [hypercrud.browser.link :as link]
             [hypercrud.browser.auto-anchor :as auto-anchor]
             [hypercrud.browser.context :as context]
             [hypercrud.ui.css :refer [css-slugify]]

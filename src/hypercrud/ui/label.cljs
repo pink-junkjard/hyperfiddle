@@ -1,5 +1,5 @@
 (ns hypercrud.ui.label
-  (:require [hypercrud.browser.anchor :as link]
+  (:require [hypercrud.browser.link :as link]
             [hypercrud.ui.tooltip :as tooltip]
             [hypercrud.util.core :as util]))
 

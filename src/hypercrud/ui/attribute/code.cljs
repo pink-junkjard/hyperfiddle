@@ -1,5 +1,5 @@
 (ns hypercrud.ui.attribute.code
-  (:require [hypercrud.browser.anchor :as link]
+  (:require [hypercrud.browser.link :as link]
             [hypercrud.client.tx :as tx]
             [hypercrud.ui.control.code :as code]
             [hypercrud.ui.control.link-controls :as links]))

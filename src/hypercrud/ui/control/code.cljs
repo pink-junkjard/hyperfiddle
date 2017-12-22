@@ -1,7 +1,6 @@
 (ns hypercrud.ui.control.code
   (:require [cats.monad.either :as either]
             [cuerdas.core :as str]
-            [hypercrud.browser.anchor :as link]
             [hypercrud.client.tx :as tx]
             [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :refer [safe-read-edn-string]]

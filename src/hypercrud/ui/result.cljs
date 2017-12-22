@@ -7,7 +7,7 @@
             [hypercrud.ui.table :as table]
             [hypercrud.ui.control.link-controls :as link-controls]
             [hypercrud.util.core :as util]
-            [hypercrud.browser.anchor :as link]))
+            [hypercrud.browser.link :as link]))
 
 
 (defn result-renderer [result ordered-fes links ctx]

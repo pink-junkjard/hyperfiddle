@@ -1,7 +1,7 @@
 (ns hypercrud.ui.widget
   (:refer-clojure :exclude [keyword long boolean])
   (:require [clojure.set :as set]
-            [hypercrud.browser.anchor :as link]
+            [hypercrud.browser.link :as link]
             [hypercrud.browser.base :as base]
             [hypercrud.browser.core :as browser]
             [hypercrud.client.tx :as tx]

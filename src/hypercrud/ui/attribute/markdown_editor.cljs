@@ -2,7 +2,7 @@
   (:require [hypercrud.client.tx :as tx]
             [hypercrud.ui.control.code :as code]
             [hypercrud.ui.control.link-controls :as links]
-            [hypercrud.browser.anchor :as link]))
+            [hypercrud.browser.link :as link]))
 
 
 (defn ^:export markdown-editor [field links props ctx]

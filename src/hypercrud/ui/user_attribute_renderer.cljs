@@ -1,6 +1,6 @@
 (ns hypercrud.ui.user-attribute-renderer
   (:require [cats.monad.either :as either]
-            [hypercrud.browser.anchor :as link]
+            [hypercrud.browser.link :as link]
             [hypercrud.compile.eval :as eval :refer [eval-str]]
             [hypercrud.ui.safe-render :refer [safe-user-renderer]]
             [hypercrud.util.core :refer [pprint-str tee]]))

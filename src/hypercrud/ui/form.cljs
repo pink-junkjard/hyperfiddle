@@ -1,6 +1,6 @@
 (ns hypercrud.ui.form
   (:require [cuerdas.core :as str]
-            [hypercrud.browser.anchor :as link]
+            [hypercrud.browser.link :as link]
             [hypercrud.browser.context :as context]
             [hypercrud.react.react-fragment :refer [react-fragment]]
             [hypercrud.ui.connection-color :as connection-color]
