@@ -54,14 +54,14 @@
   (let [attr (:attribute ctx)
         user-str (eval/validate-user-code-str (get-in ctx [:fields (:db/ident attr) :renderer]))]
     (when user-str
-      (timbre/info "using fiddle ctx/field renderer" (-> attr :db/ident str) user-str)
+      ;(timbre/info "using fiddle ctx/field renderer" (-> attr :db/ident str) user-str)
       (eval-user-control-ui user-str))))
 
 (defn attribute-control [ctx]
   (let [attr (:attribute ctx)
         user-str (eval/validate-user-code-str (-> attr :attribute/renderer))]
     (when user-str
-      (timbre/info "using attribute/renderer " (-> attr :db/ident str) user-str)
+      ;(timbre/info "using attribute/renderer " (-> attr :db/ident str) user-str)
       (eval-user-control-ui user-str))))
 
 (defn auto-control' [ctx]
