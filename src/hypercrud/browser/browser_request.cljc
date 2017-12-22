@@ -2,7 +2,7 @@
   (:require [cats.core :as cats :refer [mlet]]
             [cats.monad.either :as either #?(:clj :refer :cljs :refer-macros) [try-either]]
             [datascript.parser :as parser]
-            [hypercrud.browser.anchor :as link]
+            [hypercrud.browser.link :as link]
             [hypercrud.browser.base :as base]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.routing :as routing]

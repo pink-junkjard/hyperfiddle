@@ -1,4 +1,4 @@
-(ns hypercrud.browser.anchor                                ; link
+(ns hypercrud.browser.link
   (:require [cats.core :as cats :refer [mlet return]]
             [cats.monad.either :as either #?(:clj :refer :cljs :refer-macros) [try-either]]
             [clojure.set :as set]

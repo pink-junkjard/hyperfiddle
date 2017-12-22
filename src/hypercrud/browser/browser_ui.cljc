@@ -1,7 +1,7 @@
 (ns hypercrud.browser.browser-ui
   (:require [cats.core :as cats :refer [mlet]]
             [cats.monad.either :as either #?(:clj :refer :cljs :refer-macros) [try-either]]
-            [hypercrud.browser.anchor :as anchor]
+            [hypercrud.browser.link :as anchor]
             [hypercrud.browser.base :as base]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.routing :as routing]
