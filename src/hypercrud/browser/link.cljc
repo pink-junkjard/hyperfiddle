@@ -148,7 +148,9 @@
                               result))]
               ((:dispatch! ctx) (actions/stage-popover (:peer ctx) (:branch ctx) swap-fn)))))
         ; todo something better with these exceptions (could be user error)
-        (p/catch #(-> % pprint-str js/alert)))))
+        (p/catch (fn [err]
+                   #?(:clj  (throw err)
+                      :cljs (js/alert (pprint-str err))))))))
 
 (defn cancel! [ctx]
   ((:dispatch! ctx) (actions/cancel-popover (:peer ctx) (:branch ctx))))
@@ -161,7 +163,8 @@
                 (context/clean)
                 (update :debug #(str % ">popover-link[" (:db/id link) ":" (or (:link/rel link) (:anchor/prompt link)) "]")))]
     [:div.managed-popover
-     [hypercrud.browser.core/ui-from-route route ctx]       ; cycle
+     #?(:clj  (assert false "todo")
+        :cljs [hypercrud.browser.core/ui-from-route route ctx]) ; cycle
      [:button {:on-click stage!} "stage"]
      ; TODO also cancel on escape
      [:button {:on-click cancel!} "cancel"]]))

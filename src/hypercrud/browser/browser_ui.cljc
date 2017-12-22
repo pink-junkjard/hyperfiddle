@@ -26,7 +26,8 @@
                    (fn [result ordered-fes anchors ctx]
                      [safe-user-renderer user-fn result ordered-fes anchors ctx]))
    ; todo ui binding should be provided by a RT
-   :default hypercrud.ui.result/view})
+   :default #?(:clj  (assert false "todo")
+               :cljs hypercrud.ui.result/view)})
 
 (letfn [(browse [anchor-index ident ctx & args]
           (let [kwargs (util/kwargs args)
@@ -65,9 +66,11 @@
 (defn e->map [e]
   (if (map? e)
     e
-    {:message (ex-message e)
+    {:message #?(:clj  (.getMessage e)
+                 :cljs (ex-message e))
      :data (ex-data e)
-     :cause (ex-cause e)}))
+     :cause #?(:clj  (.getCause e)
+               :cljs (ex-cause e))}))
 
 (defn ui-error-inline [e ctx]
   (let [dev-open? true

@@ -74,7 +74,7 @@
           e (:entity request-params)
           uri (try (let [dbname (.-dbname e)]               ;todo report this exception better
                      (get-in ctx [:repository :repository/environment dbname]))
-                   (catch :default e nil))
+                   (catch #?(:clj Exception :cljs js/Error) e nil))
           pull-exp (or (-> (hc-string/memoized-safe-read-edn-string (:fiddle/pull fiddle))
                            (either/branch (constantly nil) identity)
                            first)

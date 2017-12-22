@@ -4,6 +4,7 @@
             [clojure.set :as set]
             [hypercrud.api.core :as api]
             [hypercrud.types.Err :refer [#?(:cljs Err)]]
+            [hypercrud.util.branch :as branch]
             [hypercrud.util.performance :as perf]
             [promesa.core :as p]
             [taoensso.timbre :as timbre])
@@ -56,6 +57,17 @@
       (let [[op e a v] stmt]
         (not (and (or (= :db/add op) (= :db/retract op))
                   (nil? v))))))
+
+(defn stage-val->staged-branches [stage-val]
+  (->> stage-val
+       (mapcat (fn [[branch-ident branch-content]]
+                 (->> branch-content
+                      (map (fn [[uri tx]]
+                             (let [branch-val (branch/branch-val uri branch-ident stage-val)]
+                               {:branch-ident branch-ident
+                                :branch-val branch-val
+                                :uri uri
+                                :tx (filter v-not-nil? tx)}))))))) )
 
 (defn hydrate-one! [rt local-basis stage request]
   (-> (api/hydrate-requests rt local-basis stage [request])

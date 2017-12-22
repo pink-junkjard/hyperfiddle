@@ -18,4 +18,3 @@
   [& body]
   (when-not (nodejs-target?)
     `(do ~@body)))
-

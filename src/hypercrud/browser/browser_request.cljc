@@ -117,7 +117,7 @@
                      (try (->> (user-fn result ordered-fes links ctx)
                                ; user-fn HAS to return a seqable value, we want to throw right here if it doesn't
                                seq)
-                          (catch :default e
+                          (catch #?(:clj Exception :cljs js/Error) e
                             (timbre/error e)
                             nil))))
    :default fiddle-dependent-requests})
