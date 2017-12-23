@@ -1,6 +1,4 @@
-# Hyperfiddle
-
-> functional client/server data sync, for composable and data-driven CRUD applications
+# Hyperfiddle—data-driven CRUD applications
 
 This is the open source library powering <http://www.hyperfiddle.net>.
 
