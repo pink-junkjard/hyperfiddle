@@ -53,6 +53,19 @@
    [control -field links (control-props -field links ctx) ctx]
    #_[markdown-rendered* (-> ctx :attribute :db/doc) #() {:class "hypercrud-doc"}]])
 
+(defn Cell [field links ctx]
+  (let [ctx (as-> (context/attribute ctx (:attribute field)) $
+                  (context/value $ ((:cell-data->value field) (:cell-data ctx)))
+                  (if (or (nil? (:attribute field))
+                          (= (:attribute field) :db/id))
+                    (assoc $ :read-only always-read-only)
+                    $))
+        user-cell (case @(:display-mode ctx) :xray form-cell #_(unify-portal-markup form-cell)
+                                             :user (:cell ctx form-cell))]
+    (assert @(:display-mode ctx))
+    ^{:key (:id field)}
+    [user-cell (auto-control' ctx) field links ctx]))
+
 (defn Entity [fe cell-data links ctx]
   (let [{inline-links true anchor-links false} (->> (link/links-lookup' links [(:fe-pos ctx)])
                                                     (remove :link/dependent?)
@@ -68,17 +81,7 @@
           (conj
             (->> (:fields fe)
                  (mapv (fn [field]
-                         (let [ctx (as-> (context/attribute ctx (:attribute field)) $
-                                         (context/value $ ((:cell-data->value field) (:cell-data ctx)))
-                                         (if (or (nil? (:attribute field))
-                                                 (= (:attribute field) :db/id))
-                                           (assoc $ :read-only always-read-only)
-                                           $))
-                               user-cell (case @(:display-mode ctx) :xray form-cell #_(unify-portal-markup form-cell)
-                                                                    :user (:cell ctx form-cell))]
-                           (assert @(:display-mode ctx))
-                           ^{:key (:id field)}
-                           [user-cell (auto-control' ctx) field links ctx]))))
+                         (Cell field links ctx))))
             (if (:splat? fe)
               ^{:key (hash (keys cell-data))}
               [new-field cell-data ctx]))
