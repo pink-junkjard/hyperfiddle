@@ -14,7 +14,9 @@
           :schemas :request :fiddle
           :uri :schema :user-with!
           :find-element :attribute :value
-          :layout :field))
+          :layout :field
+          :cell                                             ; TODO :cell should cascade
+          ))
 
 (defn route [ctx route]
   (let [route (routing/tempid->id route ctx)
