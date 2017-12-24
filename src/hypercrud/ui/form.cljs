@@ -47,7 +47,7 @@
       (link-controls/render-inline-links (->> my-links (filter :link/render-inline?)) ctx)]]))
 
 (defn form-cell [control -field links ctx]
-  [:div {:class (str/join " " ["field" (-> ctx :attribute :db/ident str css-slugify)])
+  [:div {:class (str/join " " ["block" "field" (-> ctx :attribute :db/ident str css-slugify)])
          :style {:border-color (connection-color/connection-color (:uri ctx) ctx)}}
    [(:label ctx form-label) -field links ctx]
    [control -field links (control-props -field links ctx) ctx]
@@ -90,9 +90,10 @@
 
 (defn Relation [relation ordered-fes links ctx]
   (let [ctx (assoc ctx :layout (:layout ctx :block))]
-    [:div {:class (name (:layout ctx))}
-     (->> ordered-fes
-          (map-indexed (fn [fe-pos fe]
-                         (let [ctx (context/find-element ctx fe fe-pos)]
-                           (Entity fe (get relation fe-pos) links ctx))))
-          (apply concat))]))
+    ; No wrapper div; it limits layout e.g. floating
+    ; Next couple stack frames will all flatten out with no wrappers at any layer.
+    (->> ordered-fes
+         (map-indexed (fn [fe-pos fe]
+                        (let [ctx (context/find-element ctx fe fe-pos)]
+                          (Entity fe (get relation fe-pos) links ctx))))
+         (apply concat))))
