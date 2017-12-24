@@ -50,7 +50,7 @@
                  :else edn/edn)]
     widget))
 
-(defn fiddle-field-control [ctx]
+(defn fiddle-field-control [ctx]                            ; TODO :renderer -> :control
   (let [attr (:attribute ctx)
         user-str (eval/validate-user-code-str (get-in ctx [:fields (:db/ident attr) :renderer]))]
     (when user-str
@@ -82,6 +82,7 @@
 
   (or (case @(:display-mode ctx) :user (some-> (:control ctx) unify-portal-markup) :xray nil)
       (case @(:display-mode ctx) :user (fiddle-field-control ctx) :xray nil)
+      ;(case @(:display-mode ctx) :user (fiddle-control ctx) :xray nil)
       (attribute-control ctx)
       (some-> (case (:layout ctx) :block (schema-control-form ctx)
                                   :inline-block (schema-control-table ctx)
