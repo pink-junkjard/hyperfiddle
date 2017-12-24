@@ -92,6 +92,7 @@
   (let [ctx (assoc ctx :layout (:layout ctx :block))]
     ; No wrapper div; it limits layout e.g. floating
     ; Next couple stack frames will all flatten out with no wrappers at any layer.
+    ; But if no wrapper div; then this is not compatible with hiccup syntax until it gets wrapped.
     (->> ordered-fes
          (map-indexed (fn [fe-pos fe]
                         (let [ctx (context/find-element ctx fe fe-pos)]
