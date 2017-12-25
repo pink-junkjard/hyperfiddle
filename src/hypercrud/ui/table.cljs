@@ -144,7 +144,7 @@
                 ^{:key (hash (map #(or (:db/id %) %) relation))}
                 [Row relation ordered-fes anchors ctx])))))
 
-(defn Table [& props]
+(defn Table-inner [props]
   (let [sort-col (reactive/atom nil)]
     (fn [relations ordered-fes anchors ctx]
       (let [ctx (assoc ctx :layout (:layout ctx :table))]
@@ -152,3 +152,7 @@
          [:thead [THead ordered-fes anchors sort-col ctx]]
          ; Sometimes the leafnode needs all the anchors.
          [:tbody (TBody relations ordered-fes anchors sort-col ctx)]]))))
+
+; This one is a function
+(defn Table [& props]
+  (apply vector Table-inner props))
