@@ -36,10 +36,11 @@
                       (assoc ctx :user-renderer user-renderer #_(if f #(apply f %1 %2 %3 %4 args)))
                       ctx)]
             [ui-from-anchor (get anchor-index ident) ctx (:class kwargs)]))
-        (anchor [anchor-index ident ctx label]
-          (let [props (-> (anchor/build-link-props (get anchor-index ident) ctx)
+        (anchor [anchor-index ident ctx label & args]
+          (let [kwargs (util/kwargs args)
+                props (-> (anchor/build-link-props (get anchor-index ident) ctx)
                           #_(dissoc :style) #_"custom renderers don't want colored links")]
-            [(:navigate-cmp ctx) props label]))
+            [(:navigate-cmp ctx) props label (:class kwargs)]))
         (browse' [anchor-index ident ctx]
           (->> (base/data-from-anchor (get anchor-index ident) ctx)
                (cats/fmap :result)))

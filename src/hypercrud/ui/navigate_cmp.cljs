@@ -2,7 +2,8 @@
   (:require [hypercrud.browser.routing :as routing]
             [hypercrud.ui.native-event-listener :refer [native-listener]]
             [hypercrud.ui.tooltip :as tooltip]
-            [re-com.core :as re-com]))
+            [re-com.core :as re-com]
+            [hypercrud.ui.css :as css]))
 
 (defn dissoc-non-native-props [hypercrud-props]
   (dissoc hypercrud-props :route :tooltip :popover :hidden :external-hostname))
@@ -47,12 +48,12 @@
 ; }
 ; todo all HF prop values should be monads and
 ; tooltip can be generated within navigate-cmp by mapping over them
-(defn navigate-cmp* [hypercrud-props label]
+(defn navigate-cmp* [hypercrud-props label & [class]]
   ; why doesn't this just take anchor? - ctx should not leak up this high.
   ; props (links/build-link-props anchor ctx)
   ; and because nested router. Is that even needed now?
   (if-not (:hidden hypercrud-props)
-    (let [hypercrud-props (update hypercrud-props :class #(str % " hf-auto-nav"))]
+    (let [hypercrud-props (update hypercrud-props :class #(css/classes % class "hf-auto-nav"))]
       (if (some-> hypercrud-props :popover :showing? deref)
 
         ; this means popover AND popover-showing - so omit the formula tooltip
@@ -70,5 +71,5 @@
            [anchor-cmp hypercrud-props label])]))))
 
 ; act like a function down-stack
-(defn navigate-cmp [props label]
-  [navigate-cmp* props label])
+(defn navigate-cmp [props label & [class]]
+  [navigate-cmp* props label class])
