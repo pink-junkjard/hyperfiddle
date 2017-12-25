@@ -15,7 +15,7 @@
           :uri :schema :user-with!
           :find-element :attribute :value
           :layout :field
-          :cell                                             ; TODO :cell should cascade
+          :cell :label                                      ; TODO :cell should cascade
           ))
 
 (defn route [ctx route]

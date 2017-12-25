@@ -49,7 +49,7 @@
 (defn form-cell [control -field links ctx]
   [:div {:class (str/join " " ["block" "field" (-> ctx :attribute :db/ident str css-slugify)])
          :style {:border-color (connection-color/connection-color (:uri ctx) ctx)}}
-   [(:label ctx form-label) -field links ctx]
+   ((:label ctx form-label) -field links ctx)
    [control -field links (control-props -field links ctx) ctx]
    #_[markdown-rendered* (-> ctx :attribute :db/doc) #() {:class "hypercrud-doc"}]])
 
