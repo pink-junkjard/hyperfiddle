@@ -5,7 +5,7 @@
             [hypercrud.ui.control.link-controls :as links]))
 
 
-(defn ^:export code [maybe-field links props ctx]
+(defn ^:export code [field links props ctx]
   (let [my-links (link/links-lookup' links [(:fe-pos ctx) (-> ctx :attribute :db/ident)])
         change! #((:user-with! ctx) (tx/update-entity-attr (:cell-data ctx) (:attribute ctx) %))]
     ;^{:key ident}
