@@ -4,7 +4,7 @@
             [hypercrud.browser.context :as context]
             [hypercrud.react.react-fragment :refer [react-fragment]]
             [hypercrud.ui.connection-color :as connection-color]
-            [hypercrud.ui.css :refer [css-slugify]]
+            [hypercrud.ui.css :refer [css-slugify classes]]
             [hypercrud.ui.label :as label]
             [hypercrud.ui.auto-control :refer [auto-control' control-props]]
             [hypercrud.ui.input :as input]
@@ -47,7 +47,7 @@
       (link-controls/render-inline-links (->> my-links (filter :link/render-inline?)) ctx)]]))
 
 (defn form-cell [control -field links ctx]
-  [:div {:class (str/join " " ["block" "field" (-> ctx :attribute :db/ident str css-slugify)])
+  [:div {:class (classes "block" "field" (-> ctx :attribute :db/ident str css-slugify))
          :style {:border-color (connection-color/connection-color (:uri ctx) ctx)}}
    ((:label ctx form-label) -field links ctx)
    [control -field links (control-props -field links ctx) ctx]
