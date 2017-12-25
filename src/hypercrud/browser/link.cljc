@@ -162,7 +162,7 @@
         ctx (-> ctx
                 (context/clean)
                 (update :debug #(str % ">popover-link[" (:db/id link) ":" (or (:link/rel link) (:anchor/prompt link)) "]")))]
-    [:div.managed-popover
+    [:div.hyperfiddle-popover-body
      #?(:clj  (assert false "todo")
         :cljs [hypercrud.browser.core/ui-from-route route ctx]) ; cycle
      [:button {:on-click stage!} "stage"]
