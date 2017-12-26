@@ -93,7 +93,7 @@
 
 (defn table-cell [control -field links ctx]
   ; why are links unused
-  (let [shadow-link (auto-anchor/system-anchor? (get-in ctx [:cell-data :db/id]))
+  (let [shadow-link (auto-anchor/system-link? (get-in ctx [:cell-data :db/id]))
         style {:border-color (if-not shadow-link (connection-color/connection-color (:uri ctx) ctx))}]
     [:td.truncate {:style style}
      [control -field links (control-props -field links ctx) ctx]]))

@@ -11,7 +11,7 @@
 
 
 (declare request-from-route)
-(declare request-from-anchor)
+(declare request-from-link)
 
 (defn recurse-request [link ctx]
   (if (:link/managed? link)
@@ -29,7 +29,7 @@
                          #(request-from-route % ctx)))))
     ; if the anchor IS NOT a popover, this should be the same logic as widget/render-inline-anchors
     (let [ctx (update ctx :debug #(str % ">inline-link[" (:db/id link) ":" (or (:link/rel link) (:anchor/prompt link)) "]"))]
-      (request-from-anchor link ctx))))
+      (request-from-link link ctx))))
 
 (defn cell-dependent-requests [cell fe links ctx]
   (let [ctx (-> ctx
@@ -54,7 +54,7 @@
        (apply concat)))
 
 (defn fiddle-dependent-requests [result ordered-fes links ctx]
-  ; reconcile this with the anchor.cljs logic
+  ; reconcile this with the link.cljc logic
   (let [links (filter :link/render-inline? links)]      ; at this point we only care about inline links
     (concat
       (->> (mapcat #(recurse-request % ctx) (->> (link/links-lookup links [])
@@ -146,8 +146,8 @@
                 (cats/mplus (either/right nil))
                 (cats/extract)))))
 
-(defn request-from-anchor [anchor ctx]
-  (-> (base/from-anchor anchor ctx (fn [route ctx]
+(defn request-from-link [link ctx]
+  (-> (base/from-link link ctx (fn [route ctx]
                                      (either/right (request-from-route route ctx))))
       (cats/mplus (either/right nil))
       (cats/extract)))

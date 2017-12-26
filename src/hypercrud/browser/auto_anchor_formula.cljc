@@ -1,4 +1,4 @@
-(ns hypercrud.browser.auto-anchor-formula
+(ns hypercrud.browser.auto-anchor-formula                   ; namespace is public export api
   (:require [cats.monad.either :as either]
             [hypercrud.client.core :as hc]
             [hypercrud.types.Entity :refer [->Entity #?(:cljs Entity)]]

@@ -7,9 +7,9 @@
             ))
 
 
-(def data base/data-from-anchor)
-(def ui browser-ui/ui-from-anchor)
-(def request browser-request/request-from-anchor)
+(def data base/data-from-link)
+(def ui browser-ui/ui-from-link)
+(def request browser-request/request-from-link)
 
 ; this interface is to reuse an evaluated route (performance of eval and effects)
 ; and also the entrypoint (route is document.location, original anchor is unknowable)

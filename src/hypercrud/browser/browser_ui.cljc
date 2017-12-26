@@ -1,7 +1,7 @@
 (ns hypercrud.browser.browser-ui
   (:require [cats.core :as cats :refer [mlet]]
             [cats.monad.either :as either #?(:clj :refer :cljs :refer-macros) [try-either]]
-            [hypercrud.browser.link :as anchor]
+            [hypercrud.browser.link :as link]
             [hypercrud.browser.base :as base]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.routing :as routing]
@@ -16,52 +16,52 @@
             [taoensso.timbre :as timbre]))
 
 
-(declare ui-from-anchor)
+(declare ui-from-link)
 
 ; defn because hypercrud.ui.result/view cannot be required from this ns
 (defn f-mode-config []
   {:from-ctx :user-renderer
    :from-link :fiddle/renderer
    :with-user-fn (fn [user-fn]
-                   (fn [result ordered-fes anchors ctx]
-                     [safe-user-renderer user-fn result ordered-fes anchors ctx]))
+                   (fn [result ordered-fes links ctx]
+                     [safe-user-renderer user-fn result ordered-fes links ctx]))
    ; todo ui binding should be provided by a RT
    :default #?(:clj  (assert false "todo")
                :cljs hypercrud.ui.result/view)})
 
-(letfn [(browse [anchor-index ident ctx & args]
+(letfn [(browse [link-index ident ctx & args]
           (let [kwargs (util/kwargs args)
                 [user-renderer & args] (get kwargs nil)
                 ctx (if user-renderer
                       (assoc ctx :user-renderer user-renderer #_(if f #(apply f %1 %2 %3 %4 args)))
                       ctx)]
-            [ui-from-anchor (get anchor-index ident) ctx (:class kwargs)]))
-        (anchor [anchor-index ident ctx label & args]
+            [ui-from-link (get link-index ident) ctx (:class kwargs)]))
+        (anchor [link-index ident ctx label & args]
           (let [kwargs (util/kwargs args)
-                props (-> (anchor/build-link-props (get anchor-index ident) ctx)
+                props (-> (link/build-link-props (get link-index ident) ctx)
                           #_(dissoc :style) #_"custom renderers don't want colored links")]
             [(:navigate-cmp ctx) props label (:class kwargs)]))
-        (browse' [anchor-index ident ctx]
-          (->> (base/data-from-anchor (get anchor-index ident) ctx)
+        (browse' [link-index ident ctx]
+          (->> (base/data-from-link (get link-index ident) ctx)
                (cats/fmap :result)))
-        (anchor* [anchor-index ident ctx]
-          (anchor/build-link-props (get anchor-index ident) ctx))
-        (link-fn [anchor-index ident label ctx]
+        (anchor* [link-index ident ctx]
+          (link/build-link-props (get link-index ident) ctx))
+        (link-fn [link-index ident label ctx]
           (timbre/error "Warning: :link-fn is deprecated, and will be removed in a future release. Use :anchor instead")
-          (anchor anchor-index ident ctx label))]
+          (anchor link-index ident ctx label))]
   ; process-data returns an Either[Error, DOM]
   (defn process-data [{:keys [result ordered-fes anchors ctx]}]
     (mlet [ui-fn (base/fn-from-mode (f-mode-config) (:fiddle ctx) ctx)
-           :let [anchor-index (->> anchors
+           :let [link-index (->> anchors
                                    (filter :link/rel)       ; cannot lookup nil idents
                                    (mapv (juxt #(-> % :link/rel) identity)) ; [ repeating entity attr ident ]
                                    (into {}))
                  ctx (assoc ctx
-                       :anchor (reactive/partial anchor anchor-index)
-                       :browse (reactive/partial browse anchor-index)
-                       :anchor* (reactive/partial anchor* anchor-index)
-                       :browse' (reactive/partial browse' anchor-index)
-                       :link-fn (reactive/partial link-fn anchor-index))]]
+                       :anchor (reactive/partial anchor link-index)
+                       :browse (reactive/partial browse link-index)
+                       :anchor* (reactive/partial anchor* link-index)
+                       :browse' (reactive/partial browse' link-index)
+                       :link-fn (reactive/partial link-fn link-index))]]
       (cats/return (ui-fn result ordered-fes anchors ctx)))))
 
 (defn e->map [e]
@@ -117,17 +117,17 @@
 (defn ui-from-route [route ctx & [class]]
   [wrap-ui (cats/bind (base/data-from-route route ctx) process-data) route ctx class])
 
-(defn ui-from-anchor [anchor ctx & [class]]
-  (let [anchor-props' (try-either (anchor/build-link-props anchor ctx)) ; LOOOOOLLLLLL we are dumb
-        v' (mlet [anchor-props anchor-props']
-             ; todo should filter hidden anchors out before recursing (in widget/render-inline-anchors)
-             (if (:hidden anchor-props)
+(defn ui-from-link [link ctx & [class]]
+  (let [link-props' (try-either (link/build-link-props link ctx))
+        v' (mlet [link-props link-props']
+             ; todo should filter hidden links out before recursing (in render-inline-links)
+             (if (:hidden link-props)
                (either/right [:noscript])
-               (mlet [route (routing/build-route' anchor ctx)
+               (mlet [route (routing/build-route' link ctx)
                       ; entire context must be encoded in the route
                       data (base/data-from-route route (context/clean ctx))]
                  (process-data data))))
-        route (-> (cats/fmap :route anchor-props')
+        route (-> (cats/fmap :route link-props')
                   (cats/mplus (either/right nil))
                   (cats/extract))]
     [wrap-ui v' route ctx class]))

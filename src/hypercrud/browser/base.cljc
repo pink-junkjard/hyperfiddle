@@ -120,7 +120,7 @@
            ordered-fes (find-element/auto-find-elements result ctx)]
       (cats/return {:result result
                     :ordered-fes ordered-fes
-                    :anchors (auto-anchor/auto-anchors ordered-fes ctx)
+                    :anchors (auto-anchor/auto-links ordered-fes ctx)
                     :ctx ctx}))))
 
 (defn data-from-route [route ctx]
@@ -130,10 +130,10 @@
            fiddle-request (request-for-fiddle fiddle ctx)]
       (process-results fiddle fiddle-request ctx))))
 
-(defn from-anchor [anchor ctx with-route]
-  (mlet [route (routing/build-route' anchor ctx)]
+(defn from-link [link ctx with-route]
+  (mlet [route (routing/build-route' link ctx)]
     ; entire context must be encoded in the route
     (with-route route (context/clean ctx))))
 
-(defn data-from-anchor [anchor ctx]
-  (from-anchor anchor ctx data-from-route))
+(defn data-from-link [link ctx]
+  (from-link link ctx data-from-route))

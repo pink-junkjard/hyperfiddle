@@ -1,4 +1,4 @@
-(ns hypercrud.browser.auto-anchor
+(ns hypercrud.browser.auto-anchor                           ; this namespace is public extern
   (:require [hypercrud.browser.auto-anchor-formula :refer [auto-formula]]
             [hypercrud.browser.auto-anchor-txfn :refer [auto-txfn]]
             [hypercrud.browser.auto-fiddle :as auto-fiddle]
@@ -6,15 +6,16 @@
             [hypercrud.util.vedn :as vedn]))
 
 
-(defn system-anchor? [link-id]
+(defn ^:export system-link? [link-id]
   (map? link-id))
+(def ^:export system-anchor? system-link?)                  ; compat
 
-(def auto-anchor-txfn-lookup
+(def auto-link-txfn-lookup
   (->> (template/load-resource "auto-anchor/tx-fns.vedn")
        (vedn/read-string)))
 
-(defn system-anchors
-  "All sys links are :link/rel :sys, so they can be matched and merged with user-anchors.
+(defn system-links
+  "All sys links are :link/rel :sys, so they can be matched and merged with user-links.
   Matching is determined by [repeat? entity attribute ident]
 
   This function recurses in unexpected abstract way and impacts performance highly
@@ -56,7 +57,7 @@
                                                        :link/path (str fe-pos)
                                                        :link/managed? true
                                                        :link/render-inline? true
-                                                       :link/tx-fn (:entity-remove auto-anchor-txfn-lookup)}]
+                                                       :link/tx-fn (:entity-remove auto-link-txfn-lookup)}]
                                            (case (:fiddle/type parent-fiddle)
                                              :entity [remove]
 
@@ -113,13 +114,13 @@
                                                             :link/render-inline? true
                                                             :link/disabled? true
                                                             :link/tx-fn (if (= :db.cardinality/one (get-in schema [attribute :db/cardinality :db/ident]))
-                                                                          (:value-remove-one auto-anchor-txfn-lookup)
-                                                                          (:value-remove-many auto-anchor-txfn-lookup))}]))))))
+                                                                          (:value-remove-one auto-link-txfn-lookup)
+                                                                          (:value-remove-many auto-link-txfn-lookup))}]))))))
                           (apply concat)
                           doall))]
     (concat entity-links attr-links)))
 
-(defn auto-anchor [link]
+(defn auto-link [link]
   (let [auto-fn (fn [link attr auto-f]
                   (let [v (get link attr)]
                     (if (or (not v) (and (string? v) (empty? v)))
@@ -129,13 +130,13 @@
         (auto-fn :link/tx-fn auto-txfn)
         (auto-fn :link/formula auto-formula))))
 
-(defn merge-anchors [sys-links links]
+(defn merge-links [sys-links links]
   (->> (reduce (fn [grouped-links sys-link]
                  (update grouped-links
                          (:link/rel sys-link)
-                         (fn [maybe-link-anchors]
-                           (if maybe-link-anchors
-                             (map (partial merge sys-link) maybe-link-anchors)
+                         (fn [maybe-links]
+                           (if maybe-links
+                             (map (partial merge sys-link) maybe-links)
                              [sys-link]))))
                (->> links
                     (map #(into {} %))
@@ -145,10 +146,10 @@
        flatten
        doall))
 
-(defn auto-anchors [ordered-fes ctx]
-  (let [sys-links (system-anchors (:fiddle ctx) ordered-fes ctx)
-        links (->> (merge-anchors sys-links (get-in ctx [:fiddle :fiddle/links]))
-                   (map auto-anchor))]
+(defn auto-links [ordered-fes ctx]
+  (let [sys-links (system-links (:fiddle ctx) ordered-fes ctx)
+        links (->> (merge-links sys-links (get-in ctx [:fiddle :fiddle/links]))
+                   (map auto-link))]
     (if (:keep-disabled-anchors? ctx)
       links
       (remove :link/disabled? links))))
