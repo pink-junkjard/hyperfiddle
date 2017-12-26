@@ -36,20 +36,30 @@
 ; attribute renderers works in :xray mode, like select options
 ; ctx overrides are :user mode
 
-(defn form-label [field links ctx]
+(defn ^:extern form-label [field links ctx]
   (let [[my-links] (as-> (link/links-lookup' links [(:fe-pos ctx) (-> ctx :attribute :db/ident)]) $
                          (remove :link/dependent? $)        ; because we're in the label
                          (link/process-option-links $ ctx))]
-    [:div.hc-label
-     [:label [label/label-inner field ctx]]
-     [:div.anchors
-      (link-controls/render-links (->> my-links (remove :link/render-inline?)) ctx)
-      (link-controls/render-inline-links (->> my-links (filter :link/render-inline?)) ctx)]]))
+    (list
+      [:label [label/label-inner field ctx]]
+      [:div.anchors
+       (link-controls/render-links (->> my-links (remove :link/render-inline?)) ctx)
+       (link-controls/render-inline-links (->> my-links (filter :link/render-inline?)) ctx)])))
+
+(defn ^:extern form-label-stacked [field links ctx]
+  (let [[my-links] (as-> (link/links-lookup' links [(:fe-pos ctx) (-> ctx :attribute :db/ident)]) $
+                         (remove :link/dependent? $)        ; because we're in the label
+                         (link/process-option-links $ ctx))]
+    (list
+      [:label [label/label-inner field ctx]]
+      [:div.anchors
+       (link-controls/render-links (->> my-links (remove :link/render-inline?)) ctx)
+       (link-controls/render-inline-links (->> my-links (filter :link/render-inline?)) ctx)])))
 
 (defn form-cell [control -field links ctx]
   [:div {:class (classes "block" "field" (-> ctx :attribute :db/ident str css-slugify))
          :style {:border-color (connection-color/connection-color (:uri ctx) ctx)}}
-   ((:label ctx form-label) -field links ctx)
+   ((:label ctx form-label) -field links ctx)               ; nil or seq permitted
    [control -field links (control-props -field links ctx) ctx]])
 
 (defn Cell [field links ctx]
