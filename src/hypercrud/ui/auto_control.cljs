@@ -103,3 +103,13 @@
   (some-> (case (:layout ctx) :block (schema-control-form ctx)
                               :inline-block (schema-control-table ctx)
                               :table (schema-control-table ctx))))
+
+(comment
+  ; Find a home for this:
+  (def validators {"clojure" #(-> (safe-read-edn-string %) (either/right?))})
+
+  (let [valid? ((get validators (:mode props) (constantly true)))
+        class (str/join " " (list (if (:readOnly props) "read-only")
+                                  (if (not valid?) "invalid")))])
+
+  )

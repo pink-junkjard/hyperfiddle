@@ -44,19 +44,15 @@
              ref (aget this "codeMirrorRef")]
          (sync-changed-props! ref (assoc props :value (str value)))))}))
 
-(def validators {"clojure" #(-> (safe-read-edn-string %) (either/right?))})
-
 (defn code* [value change! props]
   (let [defaults {:lineNumbers true
                   :matchBrackets true
                   :autoCloseBrackets true
                   :viewportMargin js/Infinity}
-        props (merge defaults props)
-        valid? ((get validators (:mode props) (constantly true)))
-        class (str/join " " (list (if (:readOnly props) "read-only")
-                                  (if (not valid?) "invalid")))]
-    [:div.code-editor-wrapper {:class class}
-     [-codemirror value change! props]]))
+        props (merge defaults props)]
+    ; There is nothing to be done about invalid css down here.
+    ; You'd have to write CodeMirror implementation-specific css.
+    [-codemirror value change! props]))
 
 ; useless layer, merge code-block with code
 (defn code-block* [props value change!]
