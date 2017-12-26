@@ -50,8 +50,7 @@
   [:div {:class (classes "block" "field" (-> ctx :attribute :db/ident str css-slugify))
          :style {:border-color (connection-color/connection-color (:uri ctx) ctx)}}
    ((:label ctx form-label) -field links ctx)
-   [control -field links (control-props -field links ctx) ctx]
-   #_[markdown-rendered* (-> ctx :attribute :db/doc) #() {:class "hypercrud-doc"}]])
+   [control -field links (control-props -field links ctx) ctx]])
 
 (defn Cell [field links ctx]
   (let [ctx (as-> (context/attribute ctx (:attribute field)) $
