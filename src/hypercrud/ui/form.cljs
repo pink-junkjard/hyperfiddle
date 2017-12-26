@@ -34,11 +34,11 @@
 
 (def always-read-only (constantly true))
 
-(defn form-cell [control -field links ctx]                  ; safe to return nil or seq
+(defn form-cell [control -field links ctx & [class]]        ; safe to return nil or seq
   (let [[my-links] (as-> (link/links-lookup' links [(:fe-pos ctx) (-> ctx :attribute :db/ident)]) $
                          (remove :link/dependent? $)        ; because we're in the label
                          (link/process-option-links $ ctx))]
-    [:div {:class (classes "hyperfiddle-form-cell" "block" "field"
+    [:div {:class (classes class "hyperfiddle-form-cell" "block" "field"
                            (-> ctx :attribute :db/ident str css-slugify))
            :style {:border-color (connection-color/connection-color (:uri ctx) ctx)}}
      ((:label ctx label) -field ctx)
@@ -53,8 +53,7 @@
                           (= (:attribute field) :db/id))
                     (assoc $ :read-only always-read-only)
                     $))
-        user-cell (case @(:display-mode ctx) :xray form-cell #_(unify-portal-markup form-cell)
-                                             :user (:cell ctx form-cell))]
+        user-cell (case @(:display-mode ctx) :xray form-cell (:cell ctx form-cell))]
     (assert @(:display-mode ctx))
     ^{:key (:id field)}
     [user-cell (auto-control' ctx) field links ctx]))
