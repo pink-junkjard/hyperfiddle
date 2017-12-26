@@ -8,7 +8,7 @@
             [hypercrud.ui.connection-color :as connection-color]
             [hypercrud.ui.control.link-controls :as link-controls]
             [hypercrud.util.reactive :as reactive]
-            [hypercrud.ui.label :as label]))
+            [hypercrud.ui.label :refer [label]]))
 
 
 (def ^:export with-field identity)                          ; compat
@@ -58,7 +58,7 @@
     [:th {:class (string/join " " css-classes)
           :style {:background-color (connection-color/connection-color (:uri ctx) ctx)}
           :on-click on-click}
-     [:label [label/label-inner field ctx]]
+     ((:label ctx label) field ctx)
      [:div.anchors
       (link-controls/render-links (remove :link/render-inline? my-links) ctx)
       (link-controls/render-inline-links (filter :link/render-inline? my-links) ctx)]]))
