@@ -44,6 +44,8 @@
     (fn [e] (throw e))
     identity))
 
+
+; I think this impl is broken but I don't risk changing it
 (defn validate-user-code-str [code-str]
   (cond
     (:str (meta code-str)) code-str
@@ -51,5 +53,15 @@
     (and (not (nil? code-str))
          (or (not (string? code-str))
              (not (empty? code-str)))) code-str
+
+    :else nil))
+
+(defn validate-user-code-str-fixed [code-str]
+  (cond
+    (:str (meta code-str)) code-str
+
+    (and (not (nil? code-str))
+         (string? code-str)
+         (not (empty? code-str))) code-str
 
     :else nil))
