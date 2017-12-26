@@ -169,13 +169,6 @@
      ; TODO also cancel on escape
      [:button {:on-click cancel!} "cancel"]]))
 
-(defn visible? [link ctx]
-  (-> (if-let [code-str (eval/validate-user-code-str (:anchor/visible? link))] ; also inline links !
-        (mlet [user-fn (eval-str code-str)]
-          (try-either (user-fn ctx)))
-        (either/right true))
-      (cats/mplus (either/right true))
-      (cats/extract)))
 
 (defn open! [ctx]
   ((:dispatch! ctx) (actions/open-popover (:branch ctx))))
@@ -192,8 +185,7 @@
   ; - broken user txfn
   ; - broken user visible fn
   ; If these fns are ommitted (nil), its not an error.
-  (let [visible? (visible? link ctx)
-        route' (routing/build-route' link ctx)
+  (let [route' (routing/build-route' link ctx)
         hypercrud-props (build-link-props-raw route' link ctx)
         popover-props (if (popover-link? link)
                         (if-let [route (and (:link/managed? link) (either/right? route') (cats/extract route'))]
@@ -201,6 +193,5 @@
                           (let [ctx (context/anchor-branch ctx link)]
                             {:showing? (reactive/cursor (-> ctx :peer .-state-atom) [:popovers (:branch ctx)])
                              :body [managed-popover-body link route ctx]
-                             :open! (reactive/partial open! ctx)})))
-        link-props {:hidden (not visible?)}]
-    (merge link-props hypercrud-props {:popover popover-props})))
+                             :open! (reactive/partial open! ctx)})))]
+    (merge hypercrud-props {:popover popover-props})))
