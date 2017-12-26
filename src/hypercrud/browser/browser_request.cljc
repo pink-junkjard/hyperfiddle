@@ -55,7 +55,7 @@
 
 (defn fiddle-dependent-requests [result ordered-fes links ctx]
   ; reconcile this with the link.cljc logic
-  (let [links (filter :link/render-inline? links)]      ; at this point we only care about inline links
+  (let [links (filter :link/render-inline? links)]          ; at this point we only care about inline links
     (concat
       (->> (mapcat #(recurse-request % ctx) (->> (link/links-lookup links [])
                                                  (remove :link/dependent?))))
@@ -148,6 +148,6 @@
 
 (defn request-from-link [link ctx]
   (-> (base/from-link link ctx (fn [route ctx]
-                                     (either/right (request-from-route route ctx))))
+                                 (either/right (request-from-route route ctx))))
       (cats/mplus (either/right nil))
       (cats/extract)))

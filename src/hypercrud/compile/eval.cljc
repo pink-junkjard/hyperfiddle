@@ -4,7 +4,8 @@
                [cljs.js :as cljs]
                [cljs.tagged-literals :as tags]])
             [hypercrud.compile.reader :refer [hc-data-readers]]
-            [hypercrud.readers :as hc-readers]))
+            [hypercrud.readers :as hc-readers]
+            [taoensso.timbre :as timbre]))
 
 
 ; todo cannot return stack traces inside a memoized fn
@@ -21,7 +22,11 @@
         ;; Hack - we don't understand why cljs compiler doesn't handle top level forms naturally
         ;; but wrapping in identity fixes the problem
         (let [code-str' (str "(identity\n" code-str "\n)")]
-          #?(:clj  (try-either (load-string code-str'))     ; todo clj has no notion of js/*
+          #?(:clj  (try (either/right (load-string code-str'))
+                        (catch Exception e
+                          (timbre/debug code-str)
+                          (timbre/error e)
+                          (either/left e)))
              :cljs (binding [analyzer/*cljs-warning-handlers* []
                              tags/*cljs-data-readers* (merge tags/*cljs-data-readers*
                                                              hc-data-readers
