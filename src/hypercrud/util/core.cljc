@@ -73,3 +73,7 @@
   (let [[kwargs args] (split-with (comp keyword? first) (partition-all 2 as))]
     (-> (apply hash-map (flatten kwargs))
         (assoc nil (flatten args)))))
+
+(defn truncate
+  [s n]
+  (subs s 0 (min (count s) n)))
