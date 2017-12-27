@@ -45,10 +45,7 @@
           (->> (base/data-from-link (get link-index ident) ctx)
                (cats/fmap :result)))
         (anchor* [link-index ident ctx]
-          (link/build-link-props (get link-index ident) ctx))
-        (link-fn [link-index ident label ctx]
-          (timbre/error "Warning: :link-fn is deprecated, and will be removed in a future release. Use :anchor instead")
-          (anchor link-index ident ctx label))]
+          (link/build-link-props (get link-index ident) ctx))]
   ; process-data returns an Either[Error, DOM]
   (defn process-data [{:keys [result ordered-fes anchors ctx]}]
     (mlet [ui-fn (base/fn-from-mode (f-mode-config) (:fiddle ctx) ctx)
@@ -60,8 +57,7 @@
                        :anchor (reactive/partial anchor link-index)
                        :browse (reactive/partial browse link-index)
                        :anchor* (reactive/partial anchor* link-index)
-                       :browse' (reactive/partial browse' link-index)
-                       :link-fn (reactive/partial link-fn link-index))]]
+                       :browse' (reactive/partial browse' link-index))]]
       (cats/return (ui-fn result ordered-fes anchors ctx)))))
 
 (defn e->map [e]
