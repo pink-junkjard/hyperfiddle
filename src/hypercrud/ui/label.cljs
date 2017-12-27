@@ -20,4 +20,4 @@
     [tooltip/fast-hover-tooltip-managed {:label help-text :position :below-right}
      [:label {:class (if help-text "help-available")}
       (-> ctx :attribute :db/ident str)
-      [:sup "†"]]]))
+      (if help-text [:sup "†"])]]))
