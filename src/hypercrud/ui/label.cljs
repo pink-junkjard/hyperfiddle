@@ -15,10 +15,9 @@
        (reduce-kv (fn [acc k v] (conj acc v)) [])))
 
 (defn label [field ctx]
-  (let [label (-> ctx :attribute :db/ident str)
-        ;help-text (apply str (interpose " " (attribute-schema-human (:attribute ctx))))
-        help-text (eval/validate-user-code-str (-> ctx :attribute :db/doc))]
-    [:label {:class (if help-text "help-available")}
-     (if help-text
-       [tooltip/fast-hover-tooltip-managed {:label help-text :position :below-right} label]
-       label)]))
+  ;(apply str (interpose " " (attribute-schema-human (:attribute ctx))))
+  (let [help-text (eval/validate-user-code-str (-> ctx :attribute :db/doc))]
+    [tooltip/fast-hover-tooltip-managed {:label help-text :position :below-right}
+     [:label {:class (if help-text "help-available")}
+      (-> ctx :attribute :db/ident str)
+      [:sup "†"]]]))
