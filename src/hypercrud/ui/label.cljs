@@ -1,7 +1,7 @@
 (ns hypercrud.ui.label
   (:require [cuerdas.core :as str]
             [hypercrud.browser.link :as link]
-            [hypercrud.ui.tooltip :as tooltip]
+            [hypercrud.ui.tooltip :refer [tooltip]]
             [hypercrud.util.core :as util]
             [hypercrud.compile.eval :as eval]))
 
@@ -17,7 +17,7 @@
 (defn label [field ctx]
   ;(apply str (interpose " " (attribute-schema-human (:attribute ctx))))
   (let [help-text (eval/validate-user-code-str (-> ctx :attribute :db/doc))]
-    [tooltip/hover-tooltip-managed {:label help-text :position :below-right}
+    [tooltip {:label help-text :position :below-right}
      [:label {:class (if help-text "help-available")}
       (-> ctx :attribute :db/ident str)
       (if help-text [:sup "†"])]]))

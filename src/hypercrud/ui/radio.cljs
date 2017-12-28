@@ -1,9 +1,9 @@
 (ns hypercrud.ui.radio
-  (:require [hypercrud.ui.tooltip :as tooltip]))
+  (:require [hypercrud.ui.tooltip :refer [tooltip]]))
 
 
 (defn option [props]
-  [tooltip/hover-tooltip-managed {:label (:tooltip props)}
+  [tooltip {:label (:tooltip props)}
    [:label.radio-option {:class (if (:disabled props) "disabled")}
     [:input {:type "radio"
              :style {:width "auto"}

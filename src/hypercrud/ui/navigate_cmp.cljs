@@ -1,7 +1,7 @@
 (ns hypercrud.ui.navigate-cmp
   (:require [hypercrud.browser.routing :as routing]
             [hypercrud.ui.native-event-listener :refer [native-listener]]
-            [hypercrud.ui.tooltip :as tooltip]
+            [hypercrud.ui.tooltip :refer [tooltip]]
             [re-com.core :as re-com]
             [hypercrud.ui.css :as css]))
 
@@ -60,7 +60,7 @@
         [popover-cmp hypercrud-props label]
 
         ; no popover showing - so can draw tooltip
-        [tooltip/hover-tooltip-managed
+        [tooltip
          (let [tooltip-config (:tooltip hypercrud-props)
                [status label] (if (string? tooltip-config)
                                 [:info tooltip-config]
