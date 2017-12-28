@@ -1,7 +1,8 @@
 (ns hypercrud.ui.control.markdown-rendered
   (:require [hypercrud.ui.control.code]
             [hypercrud.util.core :as util]
-            [reagent.core :as reagent]))
+            [reagent.core :as reagent]
+            [hypercrud.compile.eval :as eval]))
 
 
 (defn code-editor-wrap-argv [{:keys [value change!] :as props}]
@@ -15,21 +16,26 @@
 
 ; https://github.com/medfreeman/remark-generic-extensions
 
-(defn markdown-rendered* [value change! & [props]]
-  (let [children
-        (->
-          (js/remark)
-          (.use
-            js/remarkGenericExtensions
-            (clj->js
-              {"elements"
-               {"span" {"html" {"properties" {"value" "::content::"}}}
-                "CodeEditor" {"html" {"properties" {"value" "::content::"}}}}}))
-          (.use
-            js/remarkReact
-            (clj->js
-              {"sanitize" false
-               "remarkReactComponents" (util/map-values reagent/reactify-component whitelist)}))
-          (.processSync value {"commonmark" true})
-          .-contents)]
-    [:div.markdown {:class (:class props)} children]))
+(defn markdown [value]
+  (if-let [value (eval/validate-user-code-str value)]
+    (let [children
+          (->
+            (js/remark)
+            (.use
+              js/remarkGenericExtensions
+              (clj->js
+                {"elements"
+                 {"span" {"html" {"properties" {"value" "::content::"}}}
+                  "CodeEditor" {"html" {"properties" {"value" "::content::"}}}}}))
+            (.use
+              js/remarkReact
+              (clj->js
+                {"sanitize" false
+                 "remarkReactComponents" (util/map-values reagent/reactify-component whitelist)}))
+            (.processSync value {"commonmark" true})
+            .-contents)]
+      children)))
+
+; Todo; remove div.markdown; that should be default and style the inverse.
+(defn markdown-rendered* [value]
+  [:div.markdown (markdown value)])

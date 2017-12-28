@@ -14,13 +14,13 @@
 ;                          }))]
 ;    (apply popover-anchor-wrapper* (apply concat props))))
 
-(defn popover-anchor-wrapper* [& args]
+(defn anchor-wrapper* [& args]
   ; re-com has some weird "sugar" which inhibits dynamic props so turn it into a fn
   (apply vector re-com/popover-anchor-wrapper args))
 
 (defn click-popover* [state t-props anchor]
   (apply
-    popover-anchor-wrapper*
+    anchor-wrapper*
     (apply
       concat
       (merge
@@ -41,12 +41,11 @@
 
 (defn- hover-popover* [state t-props anchor]                ; accept :label instead of :body to standardize
   (apply
-    popover-anchor-wrapper*
+    anchor-wrapper*
     (apply
       concat
       (merge
-        {:position :below-left
-         :showing? state}
+        {:position :below-left :showing? state}
         (dissoc t-props :label :status)                     ; just ignore status, todo fix
 
         ; Delay hide and cancel delay if we enter again.

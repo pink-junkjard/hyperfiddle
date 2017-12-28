@@ -9,7 +9,6 @@
             [hypercrud.ui.auto-control :refer [auto-control' control-props]]
             [hypercrud.ui.input :as input]
             [hypercrud.ui.control.link-controls :as link-controls]
-            [hypercrud.ui.control.markdown-rendered :refer [markdown-rendered*]]
             [hypercrud.util.reactive :as reactive]
             [hypercrud.ui.safe-render :refer [unify-portal-markup]]
             [taoensso.timbre :as timbre]))

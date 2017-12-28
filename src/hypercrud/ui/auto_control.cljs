@@ -3,7 +3,6 @@
             [hypercrud.compile.eval :as eval :refer [eval-str]]
             [hypercrud.ui.attribute.instant :as instant]
             [hypercrud.ui.attribute.edn :as edn]
-            [hypercrud.ui.control.markdown-rendered :refer [markdown-rendered*]]
             [hypercrud.ui.css :refer [css-slugify]]
             [hypercrud.ui.safe-render :refer [unify-portal-markup]]
             [hypercrud.ui.table-cell :as table-cell]
