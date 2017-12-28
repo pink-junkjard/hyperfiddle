@@ -60,7 +60,7 @@
         [popover-cmp hypercrud-props label]
 
         ; no popover showing - so can draw tooltip
-        [tooltip/fast-hover-tooltip-managed
+        [tooltip/hover-tooltip-managed
          (let [tooltip-config (:tooltip hypercrud-props)
                [status label] (if (string? tooltip-config)
                                 [:info tooltip-config]
