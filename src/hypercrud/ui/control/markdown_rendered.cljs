@@ -16,25 +16,19 @@
 
 ; https://github.com/medfreeman/remark-generic-extensions
 
+(def remarkInstance (-> (js/remark)
+                        (.use js/remarkGenericExtensions
+                              (clj->js
+                                {"elements"
+                                 {"span" {"html" {"properties" {"value" "::content::"}}}
+                                  "CodeEditor" {"html" {"properties" {"value" "::content::"}}}}}))
+                        (.use js/remarkReact
+                              (clj->js
+                                {"sanitize" false
+                                 "remarkReactComponents" (util/map-values reagent/reactify-component whitelist)}))))
 (defn markdown [value]
   (if-let [value (eval/validate-user-code-str value)]
-    (let [children
-          (->
-            (js/remark)
-            (.use
-              js/remarkGenericExtensions
-              (clj->js
-                {"elements"
-                 {"span" {"html" {"properties" {"value" "::content::"}}}
-                  "CodeEditor" {"html" {"properties" {"value" "::content::"}}}}}))
-            (.use
-              js/remarkReact
-              (clj->js
-                {"sanitize" false
-                 "remarkReactComponents" (util/map-values reagent/reactify-component whitelist)}))
-            (.processSync value {"commonmark" true})
-            .-contents)]
-      children)))
+    (-> remarkInstance (.processSync value {"commonmark" true}) .-contents)))
 
 ; Todo; remove div.markdown; that should be default and style the inverse.
 (defn markdown-rendered* [value]
