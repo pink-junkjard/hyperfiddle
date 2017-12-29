@@ -3,7 +3,7 @@
             [hypercrud.browser.link :as link]
             [hypercrud.ui.tooltip :refer [tooltip-thick]]
             [hypercrud.util.core :as util]
-            [hypercrud.compile.eval :as eval]
+            [hypercrud.compile.eval :refer [validate-user-code-str]]
             [hypercrud.ui.control.markdown-rendered :refer [markdown]]))
 
 
@@ -20,9 +20,14 @@
 #_{:label help-text :position :below-right}
 
 (defn label [field ctx]
-  (let [help-text (-> ctx :attribute :db/doc)]
-    [tooltip-thick (if help-text
-                     [:div.docstring (markdown help-text)])
-     [:label {:class (if help-text "help-available")}
+  (let [dbdoc (validate-user-code-str (-> ctx :attribute :db/doc))
+        typedoc (apply str (interpose " " (attribute-schema-human (:attribute ctx))))
+        help-md (str (if dbdoc (str dbdoc "\n\n"))          ; markdown needs double line-break
+                     "`" typedoc "`")]
+    ; There is always help-md rn but maybe there wont be and
+    ; i like the if check on the styles
+    [tooltip-thick (if help-md
+                     [:div.docstring (markdown help-md)])
+     [:label {:class (if help-md "help-available")}
       (-> ctx :attribute :db/ident str)
-      (if help-text [:sup "†"])]]))
+      (if help-md [:sup "†"])]]))

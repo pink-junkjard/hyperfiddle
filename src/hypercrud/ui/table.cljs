@@ -3,7 +3,7 @@
             [hypercrud.browser.link :as link]
             [hypercrud.browser.auto-anchor :as auto-anchor]
             [hypercrud.browser.context :as context]
-            [hypercrud.ui.css :refer [css-slugify]]
+            [hypercrud.ui.css :refer [css-slugify classes]]
             [hypercrud.ui.auto-control :refer [auto-control' control-props]]
             [hypercrud.ui.connection-color :as connection-color]
             [hypercrud.ui.control.link-controls :as link-controls]
@@ -51,11 +51,11 @@
                      (reset! sort-col (case sort-direction
                                         :asc [fe-pos (:attribute field) :desc]
                                         :desc nil
-                                        [fe-pos (:attribute field) :asc]))))
-        css-classes [(str "field-attr-" (css-slugify (str (:attribute field)))) #_"Dustin removed field-id and field-prompt; use a custom renderer"
-                     (if sortable? "sortable")
-                     (some-> sort-direction name)]]
-    [:th {:class (string/join " " css-classes)
+                                        [fe-pos (:attribute field) :asc]))))]
+    [:th {:class (classes "hyperfiddle-table-cell"
+                          (-> ctx :attribute :db/ident str css-slugify)
+                          (if sortable? "sortable")
+                          (some-> sort-direction name))
           :style {:background-color (connection-color/connection-color (:uri ctx) ctx)}
           :on-click on-click}
      ((:label ctx label) field ctx)
@@ -92,10 +92,9 @@
    [LinkCell nil false ordered-fes links ctx]])
 
 (defn table-cell [control -field links ctx]
-  ; why are links unused
-  (let [shadow-link (auto-anchor/system-link? (get-in ctx [:cell-data :db/id]))
-        style {:border-color (if-not shadow-link (connection-color/connection-color (:uri ctx) ctx))}]
-    [:td.truncate {:style style}
+  (let [shadow-link (auto-anchor/system-link? (get-in ctx [:cell-data :db/id]))]
+    [:td {:class (classes "hyperfiddle-table-cell" "truncate")
+          :style {:border-color (if-not shadow-link (connection-color/connection-color (:uri ctx) ctx))}}
      [control -field links (control-props -field links ctx) ctx]]))
 
 (defn Entity [fe cell-data links ctx]
