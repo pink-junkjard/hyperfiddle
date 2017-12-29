@@ -5,8 +5,10 @@
             [hypercrud.browser.base :as base]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.routing :as routing]
+            [hypercrud.react.react-fragment :refer [react-fragment]]
             [hypercrud.state.actions.core :as actions]
             [hypercrud.state.actions.util :as actions-util]
+            [hypercrud.ui.control.markdown-rendered :refer [markdown]]
             [hypercrud.ui.css :as css]
             [hypercrud.ui.native-event-listener :refer [native-listener]]
             [hypercrud.ui.safe-render :refer [safe-user-renderer]]
@@ -50,9 +52,9 @@
   (defn process-data [{:keys [result ordered-fes anchors ctx]}]
     (mlet [ui-fn (base/fn-from-mode (f-mode-config) (:fiddle ctx) ctx)
            :let [link-index (->> anchors
-                                   (filter :link/rel)       ; cannot lookup nil idents
-                                   (mapv (juxt #(-> % :link/rel) identity)) ; [ repeating entity attr ident ]
-                                   (into {}))
+                                 (filter :link/rel)         ; cannot lookup nil idents
+                                 (mapv (juxt #(-> % :link/rel) identity)) ; [ repeating entity attr ident ]
+                                 (into {}))
                  ctx (assoc ctx
                        :anchor (reactive/partial anchor link-index)
                        :browse (reactive/partial browse link-index)
@@ -80,7 +82,9 @@
         {:keys [cause data message]} (e->map e)
         detail (if dev-open? (util/pprint-str data))]
     ; todo we don't always return an error with a message
-    [:pre message "\n" detail]))
+    ; Use code instead of pre so the text wraps, since the errors are not uniform
+    ; and we can't pretty print them properly
+    [:code message "\n" detail]))
 
 (defn ui-error [e ctx]
   ; :find-element :attribute :value
@@ -89,7 +93,10 @@
             (:attribute ctx) ui-error-inline                ; table: header or cell, form: header or cell
             (:find-element ctx) ui-error-inline             ;
             :else ui-error-block)]                          ; browser including inline true links
-    [C e ctx]))
+    (list [:fieldset [:legend "Error"] (C e ctx)]
+          (markdown "### Helpful tip:
+* If Datomic error, check the staging area
+* If the staging area not visible, paste this at js console: `dispatch(hyperfiddle.main.root_ctx, hyperfiddle.ide.state.actions.toggle_staging)`"))))
 
 (defn page-on-click [ctx route event]
   (when (and route (.-altKey event))
@@ -106,7 +113,7 @@
     ^{:key route}
     [native-listener {:on-click on-click}
      [stale/loading v'
-      (fn [e] [:div {:class (css/classes "ui" class "hyperfiddle-error")} (ui-error e ctx)])
+      (fn [e] [:div {:class (css/classes "ui" class "hyperfiddle-error")} (apply react-fragment :_ (ui-error e ctx))])
       (fn [v] [:div {:class (css/classes "ui" class)} v])
       (fn [v] [:div {:class (css/classes "ui" class "hyperfiddle-loading")} v])]]))
 
