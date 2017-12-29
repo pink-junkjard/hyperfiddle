@@ -6,13 +6,20 @@
             [hypercrud.compile.eval :refer [validate-user-code-str]]
             [hypercrud.ui.control.markdown-rendered :refer [markdown]]))
 
+(defn fqn->name [s]
+  ; both cljs and js work with cljs eval
+  (-> (if (str/includes? s "/")
+        (str/split s "/")
+        (str/split s "."))
+      last))
 
 (defn attribute-schema-human [attr]
   (->> (-> attr
            (util/update-existing :db/cardinality :db/ident)
            (util/update-existing :db/valueType :db/ident)
            (util/update-existing :db/unique :db/ident)
-           (select-keys [:db/valueType :db/cardinality :db/unique]))
+           (util/update-existing :attribute/renderer fqn->name)
+           (select-keys [:db/valueType :db/cardinality :db/unique :attribute/renderer]))
        (reduce-kv (fn [acc k v] (conj acc v)) [])))
 
 ;(apply str (interpose " " (attribute-schema-human (:attribute ctx))))
