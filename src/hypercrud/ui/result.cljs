@@ -51,7 +51,7 @@
                                                          (group-by :link/render-inline?))
         index-ctx (dissoc ctx :isComponent)]
     [:div.auto-result
-     [:div.hyperfiddle-fiddle-doc (markdown-rendered* (str (-> ctx :fiddle :db/doc)))]
+     [:div.hyperfiddle-fiddle-doc (markdown-rendered* (-> ctx :fiddle :db/doc))]
      (link-controls/render-links index-links index-ctx)
      (result-renderer result ordered-fes links ctx)
      (link-controls/render-inline-links index-inline-links index-ctx)]))
