@@ -7,7 +7,7 @@
             [hypercrud.browser.routing :as routing]
             [hypercrud.state.actions.core :as actions]
             [hypercrud.state.actions.util :as actions-util]
-            [hypercrud.ui.css :as css]
+            [hypercrud.ui.css :refer [css-slugify classes]]
             [hypercrud.ui.native-event-listener :refer [native-listener]]
             [hypercrud.ui.safe-render :refer [safe-user-renderer]]
             [hypercrud.ui.stale :as stale]
@@ -106,9 +106,9 @@
     ^{:key route}
     [native-listener {:on-click on-click}
      [stale/loading v'
-      (fn [e] [:div {:class (css/classes "ui" class "hyperfiddle-error")} (ui-error e ctx)])
-      (fn [v] [:div {:class (css/classes "ui" class)} v])
-      (fn [v] [:div {:class (css/classes "ui" class "hyperfiddle-loading")} v])]]))
+      (fn [e] [:div {:class (classes "ui" class "hyperfiddle-error")} (ui-error e ctx)])
+      (fn [v] [:div {:class (classes "ui" class)} v])
+      (fn [v] [:div {:class (classes "ui" class "hyperfiddle-loading")} v])]]))
 
 (defn ui-from-route [route ctx & [class]]
   [wrap-ui (cats/bind (base/data-from-route route ctx) process-data) route ctx class])
@@ -126,4 +126,4 @@
         route (-> (cats/fmap :route link-props')
                   (cats/mplus (either/right nil))
                   (cats/extract))]
-    [wrap-ui v' route ctx class]))
+    [wrap-ui v' route ctx (classes class (css-slugify (:link/rel link)))]))
