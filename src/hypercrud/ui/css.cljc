@@ -9,7 +9,7 @@
 
 (defn css-slugify [s]
   ; http://stackoverflow.com/a/449000/959627
-  (-> s
+  (-> (str s)                                               ; coerce keywords etc
       (str/replace ":" "-")
       (str/replace "/" "-")
       (str/replace " " "-")))
