@@ -19,7 +19,7 @@
            (util/update-existing :db/valueType :db/ident)
            (util/update-existing :db/unique :db/ident)
            (util/update-existing :attribute/renderer fqn->name)
-           (select-keys [:db/valueType :db/cardinality :db/unique :attribute/renderer]))
+           (select-keys [:attribute/renderer :db/valueType :db/cardinality :db/unique]))
        (reduce-kv (fn [acc k v] (conj acc v)) [])))
 
 ;(apply str (interpose " " (attribute-schema-human (:attribute ctx))))
