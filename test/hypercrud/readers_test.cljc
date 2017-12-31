@@ -9,7 +9,8 @@
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.Err :refer [->Err]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
-            [hypercrud.types.URI :refer [->URI]]))
+            [hypercrud.types.URI :refer [->URI]])
+  (:import #?(:clj java.util.Date)))
 
 
 (defn test-compile-read [control literal-read]
@@ -83,3 +84,8 @@
                   #uri "foo"
                   "#uri \"foo\""
                   "{\"~#'\":\"~rfoo\"}"))
+(deftest inst []
+         (test-all-forms #?(:cljs (js/Date. "2017-12-31") :clj #inst "2017-12-31")
+                         #inst "2017-12-31"
+                         "#inst \"2017-12-31\""
+                         "{\"~#t\":\"2017-12-31\"}"))
