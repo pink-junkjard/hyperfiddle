@@ -29,6 +29,7 @@
                                  {"span" {"html" {"properties" {"value" "::content::"}}}
                                   "CodeEditor" {"html" {"properties" {"value" "::content::"}}}
                                   "block" {"html" {"properties" {"value" "::content::"}}}}}))
+                        (.use js/remarkGridTables)
                         (.use js/remarkReact
                               (clj->js
                                 {"sanitize" false
