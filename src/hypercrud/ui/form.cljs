@@ -40,9 +40,9 @@
     [:div {:class (classes class "hyperfiddle-form-cell" "block" "field"
                            (-> ctx :attribute :db/ident str css-slugify))
            :style {:border-color (connection-color/connection-color (:uri ctx) ctx)}}
-     ((:label ctx label) -field ctx)
-     (link-controls/render-links (->> my-links (remove :link/render-inline?)) ctx)
-     (link-controls/render-inline-links (->> my-links (filter :link/render-inline?)) ctx)
+     [:div ((:label ctx label) -field ctx)
+      (link-controls/render-links (->> my-links (remove :link/render-inline?)) ctx)
+      (link-controls/render-inline-links (->> my-links (filter :link/render-inline?)) ctx)]
      [control -field links (control-props -field links ctx) ctx]]))
 
 (defn Cell [field links ctx]
