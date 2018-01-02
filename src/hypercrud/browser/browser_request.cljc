@@ -17,7 +17,7 @@
   (if (:link/managed? link)
     (let [route' (routing/build-route' link ctx)
           ctx (context/anchor-branch ctx link)]
-      (if true #_(get-in (-> ctx :peer .-state-atom deref) [:popovers (:branch ctx)])
+      (if (get-in (-> ctx :peer .-state-atom deref) [:branches (:branch ctx)])
         ; if the anchor IS a popover, we need to run the same logic as anchor/build-anchor-props
         ; the ctx needs to be updated (branched, etc), but NOT BEFORE determining the route
         ; that MUST happen in the parent context
