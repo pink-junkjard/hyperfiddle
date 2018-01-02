@@ -5,7 +5,8 @@
             [hypercrud.transit :as hc-t]
             [io.pedestal.http :as http]
             [io.pedestal.interceptor.helpers :as interceptor]
-            [promesa.core :as p])
+            [promesa.core :as p]
+            [taoensso.timbre :as timbre])
   (:import (java.io OutputStreamWriter OutputStream)
            org.apache.commons.lang3.StringEscapeUtils))
 
@@ -81,5 +82,6 @@
                     (p/then (fn [response]
                               (>!! channel (assoc context :response response))))
                     (p/catch (fn [err]
+                               (timbre/error err)
                                (>!! channel (assoc context :response {:status 500 :body (pr-str err)})))))
                 channel)))})
