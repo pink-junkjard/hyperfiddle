@@ -33,14 +33,14 @@
                      (timbre/info (str "Ignoring response for " hydrate-id)))
                    (throw error))))))
 
-(defn rehydrate-page [rt on-start dispatch! get-state]
+(defn hydrate-page [rt on-start dispatch! get-state]
   (let [{:keys [encoded-route local-basis stage] :as state} (get-state)]
     (hydrate-route* rt local-basis encoded-route stage "page" nil
                     on-start :hydrate!-success :hydrate!-failure
                     dispatch! get-state)))
 
-(defn rehydrate-branch [rt local-basis encoded-route foo branch
-                        on-start dispatch! get-state]
+(defn hydrate-branch [rt local-basis encoded-route foo branch
+                      on-start dispatch! get-state]
   (let [{:keys [stage]} (get-state)]
     (hydrate-route* rt local-basis encoded-route stage foo branch
                     on-start :popover-hydrate!-success :popover-hydrate!-failure
@@ -71,7 +71,7 @@
                      (cons [:set-route encoded-route]))]
     (dispatch! (cons :batch actions))
     (-> (refresh-page-local-basis rt dispatch! get-state)
-        (p/then (fn [] (rehydrate-page rt nil dispatch! get-state))))))
+        (p/then (fn [] (hydrate-page rt nil dispatch! get-state))))))
 
 (defn update-to-tempids [get-state branch uri tx]
   (let [{:keys [ptm stage tempid-lookups]} (get-state)
@@ -89,9 +89,9 @@
     (let [tx (update-to-tempids get-state branch uri tx)
           on-start [[:with branch uri tx]]]
       (if (nil? branch)
-        (rehydrate-page rt on-start dispatch! get-state)
+        (hydrate-page rt on-start dispatch! get-state)
         (let [{:keys [local-basis encoded-route]} (get-in (get-state) [:branches branch])]
-          (rehydrate-branch rt local-basis encoded-route foo branch on-start dispatch! get-state))))))
+          (hydrate-branch rt local-basis encoded-route foo branch on-start dispatch! get-state))))))
 
 (defn open-popover [rt branch route foo]
   (fn [dispatch! get-state]
@@ -103,7 +103,7 @@
                      (throw error)))
           (p/then (fn [local-basis]
                     (let [on-start [[:open-popover branch encoded-route local-basis]]]
-                      (rehydrate-branch rt local-basis encoded-route foo branch on-start dispatch! get-state))))))))
+                      (hydrate-branch rt local-basis encoded-route foo branch on-start dispatch! get-state))))))))
 
 (defn cancel-popover [branch]
   (batch [:discard branch]
@@ -124,13 +124,13 @@
                                  [:close-popover branch]])]
                   (if-let [parent-branch (branch/decode-parent-branch branch)]
                     (let [{:keys [local-basis encoded-route]} (get-in (get-state) [:branches parent-branch])]
-                      (rehydrate-branch rt local-basis encoded-route foo parent-branch actions dispatch! get-state))
-                    (rehydrate-page rt actions dispatch! get-state))))))))
+                      (hydrate-branch rt local-basis encoded-route foo parent-branch actions dispatch! get-state))
+                    (hydrate-page rt actions dispatch! get-state))))))))
 
 (defn reset-stage [rt tx]
   (fn [dispatch! get-state]
     (when (not= tx (:stage (get-state)))
-      (rehydrate-page rt [[:reset-stage tx]] dispatch! get-state))))
+      (hydrate-page rt [[:reset-stage tx]] dispatch! get-state))))
 
 (defn transact! [home-route ctx]
   (fn [dispatch! get-state]
@@ -155,4 +155,4 @@
                       ; todo fix the ordering of this, transact-success should fire immediately (whether or not the rehydrate succeeds)
                       (mlet [_ (refresh-global-basis (:peer ctx) dispatch! get-state)
                              _ (refresh-page-local-basis (:peer ctx) dispatch! get-state)]
-                        (rehydrate-page (:peer ctx) [[:transact!-success updated-route]] dispatch! get-state)))))))))
+                        (hydrate-page (:peer ctx) [[:transact!-success updated-route]] dispatch! get-state)))))))))
