@@ -8,7 +8,9 @@
   (case action
     :hydrate!-start (first args)
     :hydrate!-success nil
+    :popover-hydrate!-success nil
     :hydrate!-failure nil
+    :popover-hydrate!-failure nil
 
     (or loading? false)))
 
@@ -64,11 +66,13 @@
 (defn tempid-lookups-reducer [tempid-lookup action & args]
   (case action
     :hydrate!-success (second args)
+    :popover-hydrate!-success (merge-with (partial merge-with merge) tempid-lookup (second args))
     tempid-lookup))
 
 (defn ptm-reducer [ptm action & args]
   (case action
     :hydrate!-success (first args)
+    :popover-hydrate!-success (merge ptm (first args))
     (or ptm nil)))
 
 (defn error-reducer [error action & args]
@@ -79,13 +83,14 @@
     :hydrate!-failure (pr-str (first args))
     error))
 
-(defn popover-reducer [popovers action & args]
+(defn branches-reducer [branches action & args]
   (case action
-    :open-popover (let [[branch] args]
-                    (conj popovers branch))
+    :open-popover (let [[branch encoded-route local-basis] args]
+                    (assoc-in branches [branch :local-basis] {:local-basis local-basis
+                                                              :encoded-route encoded-route}))
     :close-popover (let [[branch] args]
-                     (disj popovers branch))
-    (or popovers #{})))
+                     (dissoc branches branch))
+    (or branches {})))
 
 (defn pressed-keys-reducer [v action & args]
   (or v #{}))
@@ -108,7 +113,7 @@
    :stage stage-reducer
    :ptm ptm-reducer
    :error error-reducer
-   :popovers popover-reducer
+   :branches branches-reducer
    :pressed-keys pressed-keys-reducer
    :tempid-lookups tempid-lookups-reducer})
 

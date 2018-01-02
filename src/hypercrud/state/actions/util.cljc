@@ -6,7 +6,7 @@
      :cljs (js/confirm message)))
 
 
-(defn navigable? [route {:keys [encoded-route popovers] :as state}]
+(defn navigable? [route {:keys [encoded-route branches] :as state}]
   (and (not= route encoded-route)
-       (or (empty? popovers)
+       (or (empty? branches)
            (confirm "Unstaged work will be lost on navigate, are you sure?"))))

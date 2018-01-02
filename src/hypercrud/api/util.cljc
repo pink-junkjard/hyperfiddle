@@ -12,7 +12,7 @@
      (:import (hypercrud.types.Err Err))))
 
 
-(defn- hydrate-loop-impl [rt request-fn local-basis stage id->tempid ptm total-loops]
+(defn- hydrate-loop-impl [rt request-fn local-basis stage {:keys [id->tempid ptm] :as data-cache} total-loops]
   (let [all-requests (perf/time (fn [get-total-time] (timbre/debug "Computing needed requests" "total time: " (get-total-time)))
                                 (->> (request-fn id->tempid ptm) (into #{})))
         missing-requests (let [have-requests (set (keys ptm))]
@@ -25,14 +25,16 @@
       (p/then (api/hydrate-requests rt local-basis stage missing-requests)
               (fn [{:keys [pulled-trees id->tempid]}]
                 (let [new-ptm (zipmap missing-requests pulled-trees)
-                      ptm (merge ptm new-ptm)]
-                  (hydrate-loop-impl rt request-fn local-basis stage id->tempid ptm (inc total-loops))))))))
+                      ptm (merge ptm new-ptm)
+                      data-cache {:id->tempid id->tempid
+                                  :ptm ptm}]
+                  (hydrate-loop-impl rt request-fn local-basis stage data-cache (inc total-loops))))))))
 
-(defn hydrate-loop [rt request-fn local-basis stage id->tempid ptm]
+(defn hydrate-loop [rt request-fn local-basis stage & data-cache]
   (let [hydrate-loop-id #?(:cljs (js/Math.random)
                            :clj  (Math/random))]
     (timbre/debug "Starting hydrate-loop" (str "[" hydrate-loop-id "]"))
-    (-> (perf/time-promise (hydrate-loop-impl rt request-fn local-basis stage id->tempid ptm 0)
+    (-> (perf/time-promise (hydrate-loop-impl rt request-fn local-basis stage data-cache 0)
                            (fn [err get-total-time]
                              (timbre/debug "Finished hydrate-loop" (str "[" hydrate-loop-id "]") "total time:" (get-total-time)))
                            (fn [success get-total-time]

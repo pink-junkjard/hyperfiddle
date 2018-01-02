@@ -7,36 +7,37 @@
             [taoensso.timbre :as timbre]))
 
 
-(defn stateful-req [service-uri path state-val path-params]
-  ; todo this list needs to be overridable
-  ; todo use bide for building the url
-  (merge {:url (->> (select-keys state-val [:encoded-route
-                                            :global-basis
-                                            :local-basis
-                                            :popovers])
-                    pr-str
-                    base-64-url-safe/encode
-                    (str #?(:clj service-uri :cljs (.-uri-str service-uri)) path "/" (if path-params (str path-params "/"))))
-          :accept :application/transit+json :as :auto}
-         (if (empty? (:stage state-val))
-           {:method :get}                                   ; Try to hit CDN
-           {:method :post
-            :form (:stage state-val)
-            :content-type :application/transit+json})))
-
 (defn global-basis! [service-uri]
   (-> (request! {:url (str #?(:clj service-uri :cljs (.-uri-str service-uri)) "global-basis")
                  :accept :application/transit+json :as :auto
                  :method :get})
       (p/then :body)))
 
-(defn local-basis! [service-uri state-val & [path-params]]
-  (-> (stateful-req service-uri "local-basis" state-val path-params)
+(defn local-basis! [service-uri global-basis encoded-route foo]
+  (-> {:url (str/format "%(service-uri)slocal-basis/$global-basis/$route/$foo"
+                        {:service-uri (str #?(:clj  service-uri
+                                              :cljs (.-uri-str service-uri)))
+                         :global-basis (base-64-url-safe/encode (pr-str global-basis))
+                         :route (subs encoded-route 1)      ; trim preceding '/' ; todo this is awful
+                         :foo foo})
+       :accept :application/transit+json :as :auto
+       :method :get}
       (request!)
       (p/then :body)))
 
-(defn hydrate-route! [service-uri state-val & [path-params]]
-  (-> (stateful-req service-uri "hydrate-route" state-val path-params)
+(defn hydrate-route! [service-uri local-basis encoded-route foo stage]
+  (-> (merge {:url (str/format "%(service-uri)shydrate-route/$local-basis/$route/$foo"
+                               {:service-uri (str #?(:clj  service-uri
+                                                     :cljs (.-uri-str service-uri)))
+                                :local-basis (base-64-url-safe/encode (pr-str local-basis))
+                                :route (subs encoded-route 1) ; trim preceding '/' ; todo this is awful
+                                :foo foo})
+              :accept :application/transit+json :as :auto}
+             (if (empty? stage)
+               {:method :get}                               ; Try to hit CDN
+               {:method :post
+                :form stage
+                :content-type :application/transit+json}))
       (request!)
       (p/then :body)))
 

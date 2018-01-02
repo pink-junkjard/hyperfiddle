@@ -146,14 +146,14 @@
 
                               ; return the result to the action, it could be a promise
                               result))]
-              ((:dispatch! ctx) (actions/stage-popover (:peer ctx) (:branch ctx) swap-fn)))))
+              ((:dispatch! ctx) (actions/stage-popover (:peer ctx) (:branch ctx) (:foo ctx) swap-fn)))))
         ; todo something better with these exceptions (could be user error)
         (p/catch (fn [err]
                    #?(:clj  (throw err)
                       :cljs (js/alert (pprint-str err))))))))
 
 (defn cancel! [ctx]
-  ((:dispatch! ctx) (actions/cancel-popover (:peer ctx) (:branch ctx))))
+  ((:dispatch! ctx) (actions/cancel-popover (:branch ctx))))
 
 (defn managed-popover-body [link route ctx]
   (let [stage! (reactive/partial stage! link route ctx)
@@ -170,8 +170,8 @@
      [:button {:on-click cancel!} "cancel"]]))
 
 
-(defn open! [ctx]
-  ((:dispatch! ctx) (actions/open-popover (:branch ctx))))
+(defn open! [route ctx]
+  ((:dispatch! ctx) (actions/open-popover (:peer ctx) (:branch ctx) route (:foo ctx))))
 
 ; if this is driven by link, and not route, it needs memoized.
 ; the route is a fn of the formulas and the formulas can have effects
@@ -191,7 +191,7 @@
                         (if-let [route (and (:link/managed? link) (either/right? route') (cats/extract route'))]
                           ; If no route, there's nothing to draw, and the anchor tooltip shows the error.
                           (let [ctx (context/anchor-branch ctx link)]
-                            {:showing? (reactive/cursor (-> ctx :peer .-state-atom) [:popovers (:branch ctx)])
+                            {:showing? (reactive/cursor (-> ctx :peer .-state-atom) [:branches (:branch ctx)])
                              :body [managed-popover-body link route ctx]
-                             :open! (reactive/partial open! ctx)})))]
+                             :open! (reactive/partial open! route ctx)})))]
     (merge hypercrud-props {:popover popover-props})))
