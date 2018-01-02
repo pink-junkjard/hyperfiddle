@@ -15,12 +15,12 @@
   (global-basis [rt]
     (global-basis rt))
 
-  (local-basis [rt global-basis encoded-route foo]
+  (local-basis [rt global-basis encoded-route foo branch]
     (local-basis rt global-basis encoded-route foo))
 
-  (hydrate-route [rt local-basis encoded-route foo stage]
+  (hydrate-route [rt local-basis encoded-route foo branch stage]
     (let [data-cache (select-keys @state-atom [:id->tempid :ptm])]
-      (api-util/hydrate-loop rt (partial request-fn encoded-route foo) local-basis stage data-cache)))
+      (api-util/hydrate-loop rt (partial request-fn encoded-route foo branch) local-basis stage data-cache)))
 
   (hydrate-requests [rt local-basis stage requests]
     (http/hydrate-requests! service-uri local-basis stage requests))

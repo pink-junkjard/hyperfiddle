@@ -4,8 +4,8 @@
 
 (defprotocol HypercrudDataAPI
   (global-basis [rt])
-  (local-basis [rt global-basis encoded-route foo])
-  (hydrate-route [rt local-basis encoded-route foo stage])
+  (local-basis [rt global-basis encoded-route foo branch])
+  (hydrate-route [rt local-basis encoded-route foo branch stage])
   (hydrate-requests [rt local-basis stage requests])
   (sync [rt dbs])
   (transact! [rt tx-groups]))

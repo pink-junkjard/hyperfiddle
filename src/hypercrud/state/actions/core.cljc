@@ -7,7 +7,6 @@
             [hypercrud.client.schema :as schema]
             [hypercrud.client.tx :as tx]
             [hypercrud.types.DbVal :refer [->DbVal]]
-            [hypercrud.util.base-64-url-safe :as base-64-url-safe]
             [hypercrud.util.branch :as branch]
             [hypercrud.util.core :as util]
             [promesa.core :as p]
@@ -18,12 +17,12 @@
 ; user beware
 (defn batch [& action-list] (cons :batch action-list))
 
-(defn hydrate-route* [rt local-basis encoded-route stage foo
+(defn hydrate-route* [rt local-basis encoded-route stage foo branch
                       on-start success-action failure-action
                       dispatch! get-state]
   (let [hydrate-id #?(:clj (Math/random) :cljs (js/Math.random))]
     (dispatch! (apply batch [:hydrate!-start hydrate-id] on-start))
-    (-> (api/hydrate-route rt local-basis encoded-route foo stage)
+    (-> (api/hydrate-route rt local-basis encoded-route foo branch stage)
         (p/then (fn [{:keys [ptm id->tempid]}]
                   (if (= hydrate-id (:hydrate-id (get-state)))
                     (dispatch! [success-action ptm id->tempid])
@@ -36,14 +35,14 @@
 
 (defn rehydrate-page [rt on-start dispatch! get-state]
   (let [{:keys [encoded-route local-basis stage] :as state} (get-state)]
-    (hydrate-route* rt local-basis encoded-route stage "page"
+    (hydrate-route* rt local-basis encoded-route stage "page" nil
                     on-start :hydrate!-success :hydrate!-failure
                     dispatch! get-state)))
 
-(defn rehydrate-branch [rt local-basis encoded-route foo
+(defn rehydrate-branch [rt local-basis encoded-route foo branch
                         on-start dispatch! get-state]
   (let [{:keys [stage]} (get-state)]
-    (hydrate-route* rt local-basis encoded-route stage foo
+    (hydrate-route* rt local-basis encoded-route stage foo branch
                     on-start :popover-hydrate!-success :popover-hydrate!-failure
                     dispatch! get-state)))
 
@@ -57,7 +56,7 @@
 
 (defn refresh-page-local-basis [rt dispatch! get-state]
   (let [{:keys [global-basis encoded-route]} (get-state)]
-    (-> (api/local-basis rt global-basis encoded-route "page")
+    (-> (api/local-basis rt global-basis encoded-route "page" nil)
         (p/then (fn [local-basis]
                   (dispatch! [:set-local-basis local-basis])))
         (p/catch (fn [error]
@@ -92,19 +91,19 @@
       (if (nil? branch)
         (rehydrate-page rt on-start dispatch! get-state)
         (let [{:keys [local-basis encoded-route]} (get-in (get-state) [:branches branch])]
-          (rehydrate-branch rt local-basis encoded-route foo on-start dispatch! get-state))))))
+          (rehydrate-branch rt local-basis encoded-route foo branch on-start dispatch! get-state))))))
 
 (defn open-popover [rt branch route foo]
   (fn [dispatch! get-state]
-    (let [encoded-route (base-64-url-safe/encode (pr-str route))
+    (let [encoded-route (routing/encode (pr-str route))
           {:keys [global-basis]} (get-state)]
-      (-> (api/local-basis rt global-basis encoded-route foo)
+      (-> (api/local-basis rt global-basis encoded-route foo branch)
           (p/catch (fn [error]
                      (dispatch! [:set-error error])
                      (throw error)))
           (p/then (fn [local-basis]
                     (let [on-start [[:open-popover branch encoded-route local-basis]]]
-                      (rehydrate-branch rt local-basis encoded-route foo on-start dispatch! get-state))))))))
+                      (rehydrate-branch rt local-basis encoded-route foo branch on-start dispatch! get-state))))))))
 
 (defn cancel-popover [branch]
   (batch [:discard branch]
@@ -125,7 +124,7 @@
                                  [:close-popover branch]])]
                   (if-let [parent-branch (branch/decode-parent-branch branch)]
                     (let [{:keys [local-basis encoded-route]} (get-in (get-state) [:branches parent-branch])]
-                      (rehydrate-branch rt local-basis encoded-route foo actions dispatch! get-state))
+                      (rehydrate-branch rt local-basis encoded-route foo parent-branch actions dispatch! get-state))
                     (rehydrate-page rt actions dispatch! get-state))))))))
 
 (defn reset-stage [rt tx]

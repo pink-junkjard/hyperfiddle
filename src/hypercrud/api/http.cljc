@@ -13,25 +13,27 @@
                  :method :get})
       (p/then :body)))
 
-(defn local-basis! [service-uri global-basis encoded-route foo]
-  (-> {:url (str/format "%(service-uri)slocal-basis/$global-basis/$route/$foo"
+(defn local-basis! [service-uri global-basis encoded-route foo branch]
+  (-> {:url (str/format "%(service-uri)slocal-basis/$global-basis/$route/$foo/$branch"
                         {:service-uri (str #?(:clj  service-uri
                                               :cljs (.-uri-str service-uri)))
                          :global-basis (base-64-url-safe/encode (pr-str global-basis))
                          :route (subs encoded-route 1)      ; trim preceding '/' ; todo this is awful
-                         :foo foo})
+                         :foo foo
+                         :branch branch})
        :accept :application/transit+json :as :auto
        :method :get}
       (request!)
       (p/then :body)))
 
-(defn hydrate-route! [service-uri local-basis encoded-route foo stage]
-  (-> (merge {:url (str/format "%(service-uri)shydrate-route/$local-basis/$route/$foo"
+(defn hydrate-route! [service-uri local-basis encoded-route foo branch stage]
+  (-> (merge {:url (str/format "%(service-uri)shydrate-route/$local-basis/$route/$foo/$branch"
                                {:service-uri (str #?(:clj  service-uri
                                                      :cljs (.-uri-str service-uri)))
                                 :local-basis (base-64-url-safe/encode (pr-str local-basis))
                                 :route (subs encoded-route 1) ; trim preceding '/' ; todo this is awful
-                                :foo foo})
+                                :foo foo
+                                :branch (base-64-url-safe/encode (pr-str branch))})
               :accept :application/transit+json :as :auto}
              (if (empty? stage)
                {:method :get}                               ; Try to hit CDN
