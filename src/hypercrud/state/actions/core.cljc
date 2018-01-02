@@ -95,7 +95,7 @@
 
 (defn open-popover [rt branch route foo]
   (fn [dispatch! get-state]
-    (let [encoded-route (routing/encode (pr-str route))
+    (let [encoded-route (routing/encode route)
           {:keys [global-basis]} (get-state)]
       (-> (api/local-basis rt global-basis encoded-route foo branch)
           (p/catch (fn [error]
