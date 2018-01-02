@@ -30,7 +30,7 @@
                                   :ptm ptm}]
                   (hydrate-loop-impl rt request-fn local-basis stage data-cache (inc total-loops))))))))
 
-(defn hydrate-loop [rt request-fn local-basis stage & data-cache]
+(defn hydrate-loop [rt request-fn local-basis stage & [data-cache]]
   (let [hydrate-loop-id #?(:cljs (js/Math.random)
                            :clj  (Math/random))]
     (timbre/debug "Starting hydrate-loop" (str "[" hydrate-loop-id "]"))
