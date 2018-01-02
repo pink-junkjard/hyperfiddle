@@ -107,8 +107,8 @@
                       (rehydrate-branch rt local-basis encoded-route foo on-start dispatch! get-state))))))))
 
 (defn cancel-popover [branch]
-  [[:discard branch]
-   [:close-popover branch]])
+  (batch [:discard branch]
+         [:close-popover branch]))
 
 (defn stage-popover [rt branch foo swap-fn-async]
   (fn [dispatch! get-state]
