@@ -14,11 +14,11 @@
       (p/then :body)))
 
 (defn local-basis! [service-uri global-basis encoded-route foo branch]
-  (-> {:url (str/format "%(service-uri)slocal-basis/$global-basis/$route/$foo/$branch"
+  (-> {:url (str/format "%(service-uri)slocal-basis/$global-basis/$double-encoded-route/$foo/$branch"
                         {:service-uri (str #?(:clj  service-uri
                                               :cljs (.-uri-str service-uri)))
                          :global-basis (base-64-url-safe/encode (pr-str global-basis))
-                         :route (subs encoded-route 1)      ; trim preceding '/' ; todo this is awful
+                         :double-encoded-route (base-64-url-safe/encode encoded-route) ; todo this is awful
                          :foo foo
                          :branch branch})
        :accept :application/transit+json :as :auto
@@ -27,11 +27,12 @@
       (p/then :body)))
 
 (defn hydrate-route! [service-uri local-basis encoded-route foo branch stage]
-  (-> (merge {:url (str/format "%(service-uri)shydrate-route/$local-basis/$route/$foo/$branch"
+  (timbre/info (pr-str encoded-route))
+  (-> (merge {:url (str/format "%(service-uri)shydrate-route/$local-basis/$double-encoded-route/$foo/$branch"
                                {:service-uri (str #?(:clj  service-uri
                                                      :cljs (.-uri-str service-uri)))
                                 :local-basis (base-64-url-safe/encode (pr-str local-basis))
-                                :route (subs encoded-route 1) ; trim preceding '/' ; todo this is awful
+                                :double-encoded-route (base-64-url-safe/encode encoded-route) ; todo this is awful
                                 :foo foo
                                 :branch (base-64-url-safe/encode (pr-str branch))})
               :accept :application/transit+json :as :auto}
