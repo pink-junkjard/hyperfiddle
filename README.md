@@ -116,7 +116,7 @@ Here is the above functions, represented as a Hyperfiddle EDN value:
 Actually these values do a lot more than the above functions do. Data is more information dense than code, kind of like 
 how a picture is worth 1000 words.
 
-> [![](https://i.imgur.com/iwOvJzA.png)](http://dustingetz.hyperfiddle.site/ezpjb2RlLWRhdGFiYXNlICJzYW5kYm94IiwgOmxpbmstaWQgMTc1OTIxODYwNDU0MTh9)
+> [![](https://i.imgur.com/iwOvJzA.png)](http://dustingetz.hyperfiddle.net/ezpjb2RlLWRhdGFiYXNlICJzYW5kYm94IiwgOmxpbmstaWQgMTc1OTIxODYwNDU0MTh9)
 >
 > *Above EDN values are about half of the data that defines the [gender/shirt-size demo](http://dustingetz.hyperfiddle.site/ezpjb2RlLWRhdGFiYXNlICJzYW5kYm94IiwgOmxpbmstaWQgMTc1OTIxODYwNDU0MTh9).*
 
