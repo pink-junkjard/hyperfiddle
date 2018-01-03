@@ -123,7 +123,7 @@ how a picture is worth 1000 words.
 > *Above EDN values are about half of the data that defines the [gender/shirt-size demo](http://dustingetz.hyperfiddle.site/ezpjb2RlLWRhdGFiYXNlICJzYW5kYm94IiwgOmxpbmstaWQgMTc1OTIxODYwNDU0MTh9).*
 
 Obviously, data is better in every possible way (structural tooling, decoupled from platform, decoupled from 
-performance, tiny surface area for bugs, better tasting kool-aid, etc).
+performance, tiny surface area for bugs, better tasting kool-aid, an intelligent child is be able to figure it out).
 
 Like all Hyperfiddle applications, hyperfiddle EDN values are interpreted by two functions. In this case, 
 these two functions are provided by Hyperfiddle, together they comprise the *Hyperfiddle Browser*. The Browser 
