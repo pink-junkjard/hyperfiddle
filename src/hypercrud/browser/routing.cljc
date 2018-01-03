@@ -9,7 +9,6 @@
             [hypercrud.types.Entity :refer [->Entity #?(:cljs Entity)]]
             [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
             [hypercrud.util.base-64-url-safe :as base64]
-            [hypercrud.util.branch :as branch]
             [hypercrud.util.reactive :as reactive])
   #?(:clj
      (:import (hypercrud.types.Entity Entity)
@@ -34,11 +33,8 @@
                          #(invert-id % uri)))))
 
 (defn ctx->id-lookup [uri ctx]
-  ; todo tempid-lookups need to be indexed by db-ident not val
-  (let [stage-val @(reactive/cursor (.-state-atom (:peer ctx)) [:stage])
-        branch-val (branch/branch-val uri (:branch ctx) stage-val)]
-    ; todo what about if the tempid is on a higher branch in the uri?
-    @(reactive/cursor (.-state-atom (:peer ctx)) [:tempid-lookups uri branch-val])))
+  ; todo what about if the tempid is on a higher branch in the uri?
+  @(reactive/cursor (.-state-atom (:peer ctx)) [:tempid-lookups uri (:branch ctx)]))
 
 (defn id->tempid [route ctx]
   (let [invert-id (fn [id uri]

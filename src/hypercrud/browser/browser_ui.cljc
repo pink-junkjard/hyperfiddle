@@ -103,7 +103,7 @@
   (let [on-click (reactive/partial (or (:page-on-click ctx)
                                        (reactive/partial page-on-click ctx))
                                    route)]
-    ^{:key route}
+    ;^{:key route}
     [native-listener {:on-click on-click}
      [stale/loading v'
       (fn [e] [:div {:class (classes "ui" class "hyperfiddle-error")} (ui-error e ctx)])

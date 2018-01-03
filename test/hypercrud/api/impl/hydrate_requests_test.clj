@@ -17,7 +17,6 @@
 (deftest branch-once []
   (let [conn (d/connect fixtures/test-uri)
         staged-branches [{:branch-ident nil
-                          :branch-val "nil"
                           :uri fixtures/test-uri
                           :tx [{:db/id "-1" :person/name "John" :person/age 30}]}]
         local-basis {fixtures/test-uri (d/basis-t (d/db conn))}
@@ -28,7 +27,6 @@
 (deftest branch-once-stale []
   (let [conn (d/connect fixtures/test-uri)
         staged-branches [{:branch-ident nil
-                          :branch-val "nil"
                           :uri fixtures/test-uri
                           :tx [{:db/id "-1" :person/name "John" :person/age 30}]}]
         local-basis {fixtures/test-uri (d/basis-t (d/db conn))} ; get a stale basis before another user transacts
@@ -40,11 +38,9 @@
 (deftest branch-popover []
   (let [conn (d/connect fixtures/test-uri)
         staged-branches [{:branch-ident nil
-                          :branch-val "nil"
                           :uri fixtures/test-uri
                           :tx nil}
                          {:branch-ident "2"
-                          :branch-val "2"
                           :uri fixtures/test-uri
                           :tx [{:db/id "-1" :person/name "John" :person/age 30}]}]
         local-basis {fixtures/test-uri (d/basis-t (d/db conn))}
@@ -57,11 +53,9 @@
 (deftest branch-popover-stale []
   (let [conn (d/connect fixtures/test-uri)
         staged-branches [{:branch-ident nil
-                          :branch-val "nil"
                           :uri fixtures/test-uri
                           :tx nil}
                          {:branch-ident "2"
-                          :branch-val "2"
                           :uri fixtures/test-uri
                           :tx [{:db/id "-1" :person/name "John" :person/age 30}]}]
         local-basis {fixtures/test-uri (d/basis-t (d/db conn))} ; get a stale basis before another user transacts
@@ -75,11 +69,9 @@
 (deftest branch-twice []
   (let [conn (d/connect fixtures/test-uri)
         staged-branches [{:branch-ident nil
-                          :branch-val "nil"
                           :uri fixtures/test-uri
                           :tx [{:db/id "-1" :person/name "John" :person/age 30}]}
                          {:branch-ident "2"
-                          :branch-val "2"
                           :uri fixtures/test-uri
                           :tx [{:db/id "-2" :person/name "Alice" :person/age 40}]}]
         local-basis {fixtures/test-uri (d/basis-t (d/db conn))}
@@ -94,11 +86,9 @@
 (deftest branch-twice-stale []
   (let [conn (d/connect fixtures/test-uri)
         staged-branches [{:branch-ident nil
-                          :branch-val "nil"
                           :uri fixtures/test-uri
                           :tx [{:db/id "-1" :person/name "John" :person/age 30}]}
                          {:branch-ident "2"
-                          :branch-val "2"
                           :uri fixtures/test-uri
                           :tx [{:db/id "-2" :person/name "Alice" :person/age 40}]}]
         local-basis {fixtures/test-uri (d/basis-t (d/db conn))} ; get a stale basis before another user transacts

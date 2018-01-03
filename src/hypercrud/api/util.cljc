@@ -4,7 +4,7 @@
             [clojure.set :as set]
             [hypercrud.api.core :as api]
             [hypercrud.types.Err :refer [#?(:cljs Err)]]
-            [hypercrud.util.branch :as branch]
+            [hypercrud.util.core :as util]
             [hypercrud.util.performance :as perf]
             [promesa.core :as p]
             [taoensso.timbre :as timbre])
@@ -15,16 +15,19 @@
 (defn- hydrate-loop-impl [rt request-fn local-basis stage id->tempid ptm total-loops]
   (let [all-requests (perf/time (fn [get-total-time] (timbre/debug "Computing needed requests" "total time: " (get-total-time)))
                                 (->> (request-fn id->tempid ptm) (into #{})))
-        missing-requests (let [have-requests (set (keys ptm))]
+        missing-requests (let [have-requests (set (map second (keys ptm)))]
                            (->> (set/difference all-requests have-requests)
                                 (into [])))]
     (if (empty? missing-requests)
       (p/resolved {:id->tempid id->tempid
-                   :ptm (select-keys ptm all-requests)      ; prevent memory leak by returning exactly what is needed
+                   :ptm (->> (select-keys (util/map-keys second ptm) all-requests)) ; prevent memory leak by returning exactly what is needed
                    :total-loops total-loops})
       (p/then (api/hydrate-requests rt local-basis stage missing-requests)
               (fn [{:keys [pulled-trees id->tempid]}]
-                (let [new-ptm (zipmap missing-requests pulled-trees)
+                (let [new-ptm (->> (zipmap missing-requests pulled-trees)
+                                   (util/map-keys (fn [request] ; (QueryRequest nil) (quer "`-adsfas") ("`-asdf`-qwe")
+                                                    ; todo branch-val
+                                                    [(hash stage) request])))
                       ptm (merge ptm new-ptm)]
                   (hydrate-loop-impl rt request-fn local-basis stage id->tempid ptm (inc total-loops))))))))
 
@@ -42,9 +45,9 @@
 (defn human-error [e req]
   ; this is invalid on the jvm
   #_(let [unfilled-holes (->> (filter (comp nil? val) (.-params req)) (map key))]
-    ; what about EntityRequests? why are datomic errors not sufficient?
-    (if-not (empty? unfilled-holes)
-      {:message "Invalid query" :data {:datomic-error (.-msg e) :query (.-query req) :missing unfilled-holes}}))
+      ; what about EntityRequests? why are datomic errors not sufficient?
+      (if-not (empty? unfilled-holes)
+        {:message "Invalid query" :data {:datomic-error (.-msg e) :query (.-query req) :missing unfilled-holes}}))
   (ex-info "Datomic error" {:datomic-error (.-msg e)}))
 
 ; this can be removed; #err can natively be Either
@@ -64,11 +67,9 @@
        (mapcat (fn [[branch-ident branch-content]]
                  (->> branch-content
                       (map (fn [[uri tx]]
-                             (let [branch-val (branch/branch-val uri branch-ident stage-val)]
-                               {:branch-ident branch-ident
-                                :branch-val branch-val
-                                :uri uri
-                                :tx (filter v-not-nil? tx)}))))))) )
+                             {:branch-ident branch-ident
+                              :uri uri
+                              :tx (filter v-not-nil? tx)})))))))
 
 (defn hydrate-one! [rt local-basis stage request]
   (-> (api/hydrate-requests rt local-basis stage [request])

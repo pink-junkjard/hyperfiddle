@@ -7,7 +7,6 @@
             [hypercrud.client.schema :as schema]
             [hypercrud.client.tx :as tx]
             [hypercrud.types.DbVal :refer [->DbVal]]
-            [hypercrud.util.branch :as branch]
             [hypercrud.util.core :as util]
             [promesa.core :as p]
             [taoensso.timbre :as timbre]))
@@ -23,7 +22,12 @@
     (-> (api/hydrate-route rt)
         (p/then (fn [{:keys [ptm id->tempid]}]
                   (if (= hydrate-id (:hydrate-id (get-state)))
-                    (dispatch! [:hydrate!-success ptm id->tempid])
+                    (let [stage-val (:stage (get-state))
+                          ptm (util/map-keys (fn [request]
+                                               ; todo branch-val
+                                               [(hash stage-val) request])
+                                             ptm)]
+                      (dispatch! [:hydrate!-success ptm id->tempid]))
                     (timbre/info (str "Ignoring response for " hydrate-id)))))
         (p/catch (fn [error]
                    (if (= hydrate-id (:hydrate-id (get-state)))
@@ -59,13 +63,12 @@
 
 (defn update-to-tempids [get-state branch uri tx]
   (let [{:keys [ptm stage tempid-lookups]} (get-state)
-        branch-val (branch/branch-val uri branch stage)
-        dbval (->DbVal uri branch-val)
+        dbval (->DbVal uri branch)
         schema (let [schema-request (schema/schema-request dbval)]
                  (-> (get ptm schema-request)
                      (api-util/process-result schema-request)
                      (either/branch (fn [e] (throw e)) identity)))
-        id->tempid (get-in tempid-lookups [uri branch-val])]
+        id->tempid (get-in tempid-lookups [uri branch])]
     (map (partial tx/stmt-id->tempid id->tempid schema) tx)))
 
 (defn with [rt branch uri tx]
