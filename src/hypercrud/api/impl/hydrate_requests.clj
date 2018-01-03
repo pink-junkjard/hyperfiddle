@@ -29,7 +29,7 @@
 (defn recursively-add-entity-types [pulled-tree dbval]
   (walk/postwalk (fn [o]
                    (if (:db/id o)
-                     (->Entity dbval o)
+                     (->Entity (.-uri dbval) o)
                      o))
                  pulled-tree))
 

@@ -5,17 +5,30 @@
 
 
 (defn- impl-hash [o]
-  (hash [(.-dbval o) (:db/id (.-coll o))]))
+  ; Omit tx-tempid, that would be a big problem if it wasn't the same.
+  (hash [(.-uri o) (:db/id (.-coll o))]))
 
 (defn- impl-print [o]
   (pr-str (.-coll o)))
 
-(deftype Entity [dbval coll]
+(declare equals-impl)
+
+; Entity is always a ref
+; EntityVal makes no sense. Even though this is backed by a PTM, it's semantically a ref into graph
+; Purpose of dbval in scope is for URL generation, which needs tempid map, which was hydrated
+; which is a DBRef, because the staging area is
+; passed alongside
+; Depart from Datomic here, because Hyperfiddle always has a staging area in context.
+
+; NO! DbVals have tempid maps.
+
+
+; Whole purpose of Entity is: a ref type, with a dbval, which has a tempid map, for rendering URLs.
+; What if Entity had its own old tempid? And that's it?
+; TODO access only through reactive cursors
+(deftype Entity [uri coll]
   #?@(:clj  [Object
-             (equals [o other]
-               (and (instance? Entity other)
-                    (= (.-dbval o) (.-dbval other))
-                    (= (:db/id (.-coll o)) (:db/id (.-coll other)))))
+             (equals [o other] (equals-impl o other))
 
              IHashEq
              (hasheq [o] (impl-hash o))
@@ -44,10 +57,7 @@
              (-pr-writer [o writer _] (-write writer (.toString o)))
 
              IEquiv
-             (-equiv [o other]
-                     (and (instance? Entity other)
-                          (= (.-dbval o) (.-dbval other))
-                          (= (:db/id (.-coll o)) (:db/id (.-coll other)))))
+             (-equiv [o other] (equals-impl o other))
 
              IHash
              (-hash [o] (impl-hash o))
@@ -82,3 +92,12 @@
 #?(:clj
    (defmethod print-dup Entity [o w]
      (print-method o w)))
+
+(defn- equals-impl [o other]
+  ; This is an identity check, because in future all value access should be reactive
+  ; which means ILookup will return cursors and the call site will deref.
+  ; Equality on entities is not defined because entities are refs. Databases are values.
+  ; Omit tx-tempid, that would be a big problem if it wasn't the same.
+  (and (instance? Entity other)
+       (= (.-uri o) (.-uri other))                          ; identity
+       (= (:db/id (.-coll o)) (:db/id (.-coll other)))))

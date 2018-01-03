@@ -21,8 +21,8 @@
 (defn hydrate [state-atom request]
   @(reactive/track trackable-hydrate state-atom request))
 
-(defn db [state-atom uri branch]                            ; todo remove state-atom arg
-  (->DbVal uri branch))
+(defn db-pointer [state-atom uri branch-name]               ; todo remove state-atom arg
+  (->DbVal uri branch-name))
 
 (deftype Peer [state-atom]
   hypercrud/Peer
@@ -30,7 +30,7 @@
     (hydrate state-atom request))
 
   (db [this uri branch]
-    (db state-atom uri branch))
+    (db-pointer state-atom uri branch))
 
   #?@(:cljs [IHash
              (-hash [this] (goog/getUid this))]))

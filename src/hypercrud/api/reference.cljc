@@ -36,7 +36,7 @@
     (peer/hydrate state-atom request))
 
   (db [this uri branch]
-    (peer/db state-atom uri branch))
+    (peer/db-pointer state-atom uri branch))
 
   ; IEquiv?
 
