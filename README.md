@@ -34,31 +34,35 @@ Hyperfiddle UI components work like this. The functions are pure.
 
 Here is a request function:
 
-    (def datomic-samples-blog #uri "datomic:free://datomic:4334/samples-blog")
-    
-    (def race-registration-query
-      '[:find (pull ?e [:db/id :reg/email :reg/gender :reg/shirt-size])
-        :in $ :where [?e :reg/email]])
-    
-    (def gender-options-query
-      '[:find (pull ?e [:db/id :reg.gender/ident])
-        :in $ :where [?e :reg.gender/ident]])
-    
-    (defn request [state peer]
-      (let [$ (hc/db peer datomic-samples-blog nil)]            ; nil is HEAD (related to time-basis)
-        [(->QueryRequest race-registration-query {"$" $})
-         (->QueryRequest gender-options-query {"$" $})]))
+```clojure
+(def datomic-samples-blog #uri "datomic:free://datomic:4334/samples-blog")
+
+(def race-registration-query
+  '[:find (pull ?e [:db/id :reg/email :reg/gender :reg/shirt-size])
+    :in $ :where [?e :reg/email]])
+
+(def gender-options-query
+  '[:find (pull ?e [:db/id :reg.gender/ident])
+    :in $ :where [?e :reg.gender/ident]])
+
+(defn request [state peer]
+  (let [$ (hc/db peer datomic-samples-blog nil)]            ; nil is HEAD (related to time-basis)
+    [(->QueryRequest race-registration-query {"$" $})
+     (->QueryRequest gender-options-query {"$" $})]))
+```
 
 Here is the corresponding view function, it is simple and just prettyprints the resultset into a :pre:
 
-    (defn view [state peer]
-      (let [$ (hc/db peer datomic-samples-blog nil)]
-        [:ul
-         (->> @(hc/hydrate peer (request state $))              ; synchronous and reactive
-              (map (fn [relation]
-                     (let [e (get relation "?e")]
-                       [:li {:key (:db/id e)}
-                        [:pre (with-out-str (pprint e))]]))))]))
+```clojure
+(defn view [state peer]
+  (let [$ (hc/db peer datomic-samples-blog nil)]
+    [:ul
+     (->> @(hc/hydrate peer (request state $))              ; synchronous and reactive
+          (map (fn [relation]
+                 (let [e (get relation "?e")]
+                   [:li {:key (:db/id e)}
+                    [:pre (with-out-str (pprint e))]]))))]))
+```
                         
 Notes about these functions
 * Request fns return seq; you can hydrate many queries in bulk.
@@ -87,33 +91,35 @@ Now that I/O is solved, we can start building *real, composable abstractions:*
 
 Here is the above functions, represented as a Hyperfiddle EDN value:
 
-    ; email registration table
-    
-    {:db/id 17592186045418,
-     :fiddle/type :query,
-     :fiddle/query "[:find (pull ?e [:db/id :reg/email :reg/gender :reg/shirt-size])
-                     :in $ :where [?e :reg/email]]",
-     :fiddle/links #{{:db/id 17592186045434,
-                      :link/rel :options,
-                      :link/fiddle #:db{:id 17592186045435},
-                      :link/render-inline? true,
-                      :link/dependent? true,
-                      :link/path "0 :reg/shirt-size",
-                      :link/formula "(fn [ctx] {:request-params {\"?gender\" (get-in ctx [:cell-data :reg/gender])}})"}
-                     {:db/id 17592186045427,
-                      :link/rel :options,
-                      :link/fiddle #:db{:id 17592186045428},
-                      :link/render-inline? true,
-                      :link/path "0 :reg/gender"}
-                     {:db/id 17592186045481, :link/rel :sys-new-?e, :link/fiddle #:db{:id 17592186045482}}}}
-     
-    ; select options query
-    
-    {:db/id 17592186045428,
-     :fiddle/type :query,
-     :fiddle/query "[:find (pull ?e [:db/id :reg.gender/ident])
-                     :in $ :where [?e :reg.gender/ident]]",
-     :fiddle/links #{{:db/id 17592186045474, :link/rel :sys-new-?e, :link/fiddle #:db{:id 17592186045475}}}}
+```clojure
+; email registration table
+
+{:db/id 17592186045418,
+ :fiddle/type :query,
+ :fiddle/query "[:find (pull ?e [:db/id :reg/email :reg/gender :reg/shirt-size])
+                 :in $ :where [?e :reg/email]]",
+ :fiddle/links #{{:db/id 17592186045434,
+                  :link/rel :options,
+                  :link/fiddle #:db{:id 17592186045435},
+                  :link/render-inline? true,
+                  :link/dependent? true,
+                  :link/path "0 :reg/shirt-size",
+                  :link/formula "(fn [ctx] {:request-params {\"?gender\" (get-in ctx [:cell-data :reg/gender])}})"}
+                 {:db/id 17592186045427,
+                  :link/rel :options,
+                  :link/fiddle #:db{:id 17592186045428},
+                  :link/render-inline? true,
+                  :link/path "0 :reg/gender"}
+                 {:db/id 17592186045481, :link/rel :sys-new-?e, :link/fiddle #:db{:id 17592186045482}}}}
+ 
+; select options query
+
+{:db/id 17592186045428,
+ :fiddle/type :query,
+ :fiddle/query "[:find (pull ?e [:db/id :reg.gender/ident])
+                 :in $ :where [?e :reg.gender/ident]]",
+ :fiddle/links #{{:db/id 17592186045474, :link/rel :sys-new-?e, :link/fiddle #:db{:id 17592186045475}}}}
+```
 
 Actually these values do a lot more than the above functions do. Data is more information dense than code, kind of like 
 how a picture is worth 1000 words.
