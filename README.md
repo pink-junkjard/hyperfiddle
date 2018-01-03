@@ -87,18 +87,19 @@ Now that I/O is solved, we can start building *real, composable abstractions:*
 
 Here is the above functions, represented as a Hyperfiddle EDN value:
 
-    ; race registrations table
+    ; email registration table
+    
     {:db/id 17592186045418,
+     :fiddle/type :query,
      :fiddle/query "[:find (pull ?e [:db/id :reg/email :reg/gender :reg/shirt-size])
                      :in $ :where [?e :reg/email]]",
-     :fiddle/type :query,
      :fiddle/links #{{:db/id 17592186045434,
                       :link/rel :options,
                       :link/fiddle #:db{:id 17592186045435},
                       :link/render-inline? true,
                       :link/dependent? true,
                       :link/path "0 :reg/shirt-size",
-                      :link/formula "(fn [ctx]\n{:request-params\n  {\"?gender\" (get-in ctx [:cell-data :reg/gender])}})"}
+                      :link/formula "(fn [ctx] {:request-params {\"?gender\" (get-in ctx [:cell-data :reg/gender])}})"}
                      {:db/id 17592186045427,
                       :link/rel :options,
                       :link/fiddle #:db{:id 17592186045428},
@@ -106,12 +107,13 @@ Here is the above functions, represented as a Hyperfiddle EDN value:
                       :link/path "0 :reg/gender"}
                      {:db/id 17592186045481, :link/rel :sys-new-?e, :link/fiddle #:db{:id 17592186045482}}}}
      
-    ; gender options for select
+    ; select options query
+    
     {:db/id 17592186045428,
-     :fiddle/links #{{:db/id 17592186045474, :link/rel :sys-new-?e, :link/fiddle #:db{:id 17592186045475}}},
-     :fiddle/name "gender/size genders",
-     :fiddle/query "[:find (pull ?e [:db/id :reg.gender/ident])\n:in $\n:where [?e :reg.gender/ident]]",
-     :fiddle/type :query}
+     :fiddle/type :query,
+     :fiddle/query "[:find (pull ?e [:db/id :reg.gender/ident])
+                     :in $ :where [?e :reg.gender/ident]]",
+     :fiddle/links #{{:db/id 17592186045474, :link/rel :sys-new-?e, :link/fiddle #:db{:id 17592186045475}}}}
 
 Actually these values do a lot more than the above functions do. Data is more information dense than code, kind of like 
 how a picture is worth 1000 words.
