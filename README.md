@@ -74,7 +74,7 @@ This is how Hyperfiddle insulates the application programmer from I/O. No browse
 REST, no service/database round trips like SQL. No object/relational impedance mismatch. App-as-a-fn is a 
 wonderful, functional way to write your web dashboards, better than anything else that exists today.
 
-Managed I/O permits many optimizations that *human-coded I/O cannot do:*
+Managed I/O permits many **optimizations that human-coded I/O cannot do:**
 * Automatic I/O partitioning and batching, optimized for cache hits
 * all requests have a time-basis, all responses are immutable
 * Integrated Hyperfiddle-aware CDN (serve APIs like static sites)
