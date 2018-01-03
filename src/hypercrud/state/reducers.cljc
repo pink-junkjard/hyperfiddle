@@ -25,31 +25,28 @@
                                              (into {}))))
                      (remove (fn [[branch multi-color-tx]] (empty? multi-color-tx)))
                      (into {})))]
-    (case action
-      :transact!-success nil
+    (-> (case action
+          :transact!-success nil
 
-      :discard (let [[branch] args]
-                 (-> stage
-                     (discard branch)
-                     clean))
+          :discard (let [[branch] args]
+                     (discard stage branch))
 
-      :with (let [[branch uri tx] args]
-              (-> stage
-                  (with branch uri tx)
-                  clean))
+          :with (let [[branch uri tx] args]
+                  (-> stage
+                      (with branch uri tx)))
 
-      :merge (let [[branch] args
-                   parent-branch (branch/decode-parent-branch branch)]
-               (-> (reduce (fn [stage [uri tx]]
-                             (with stage parent-branch uri tx))
-                           stage
-                           (get stage branch))
-                   (discard branch)
-                   clean))
+          :merge (let [[branch] args
+                       parent-branch (branch/decode-parent-branch branch)]
+                   (-> (reduce (fn [stage [uri tx]]
+                                 (with stage parent-branch uri tx))
+                               stage
+                               (get stage branch))
+                       (discard branch)))
 
-      :reset-stage (first args)
+          :reset-stage (first args)
 
-      stage)))
+          stage)
+        clean)))
 
 (defn route-reducer [route action & args]
   (case action
