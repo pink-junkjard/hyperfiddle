@@ -146,8 +146,8 @@ than imperative systems.
 
 ## Hyperfiddle.net is 100% built in Hyperfiddle (EDN style)
 
-The following screenshot is fully defined as Hyperfiddle EDN and Reagent expressions. There are no side effects in 
-application code.
+The following screenshot is fully defined as Hyperfiddle EDN and simple Reagent expressions that a web 
+designer could write.
 
 > <kbd><img src="https://i.imgur.com/DCPtHN3.png"></kbd>
 > 
