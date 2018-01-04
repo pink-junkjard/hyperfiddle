@@ -174,6 +174,10 @@ User experience
 - [ ] Human readable URLs and customizable URL router
 - [ ] Fix query param tooltips when you hover an anchor
 
+Onboarding
+
+- [ ] Hello-world usage and tutorial repo
+
 On deck:
 - [ ] Edit React.js/Reagent expressions side-by-side with the running app (like JSFiddle)
 - [ ] Links panel user experience
