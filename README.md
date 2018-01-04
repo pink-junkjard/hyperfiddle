@@ -166,11 +166,11 @@ We're nearing a 0.1 open-source release in Q1 2018.
 Performance (Hyperfiddle must respond as fast as a Clojure repl)
 
 - [x] data loop running in JVM
-- [ ] auto partition data hydrates (only what changes gets reloaded)
+- [ ] partition data hydrates, using hyperfiddle link graph, so only what changed gets reloaded
 
 User experience
 
-- [ ] improve popover user experience
+- [ ] improve popovers, finish stage/discard UX
 - [ ] Human readable URLs and customizable URL router
 - [ ] Fix query param tooltips when you hover an anchor
 
