@@ -178,7 +178,8 @@ Onboarding
 
 - [ ] Hello-world usage and tutorial repo
 
-On deck:
+#### On deck
+
 - [ ] Edit React.js/Reagent expressions side-by-side with the running app (like JSFiddle)
 - [ ] Links panel user experience
 
