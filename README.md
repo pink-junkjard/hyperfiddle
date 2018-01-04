@@ -148,7 +148,8 @@ than imperative systems.
 
 This is provided as an example of how far Hyperfiddle EDN composition scales.
 
-> ![](https://i.imgur.com/z5oYOhy.png)
+> <kbd><img src="https://i.imgur.com/z5oYOhy.png"></kbd>
+> 
 > *The radio control on :fiddle/type is a custom attribute renderer for Datomic keywords*
 
 ## Roadmap
