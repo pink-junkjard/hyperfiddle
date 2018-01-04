@@ -151,11 +151,11 @@ application code.
 
 > <kbd><img src="https://i.imgur.com/DCPtHN3.png"></kbd>
 > 
-> *The radio control on :fiddle/type is an attribute renderer. :fiddle/query has 
-> an attribute renderer for Datomic Datalog (a CodeMirror with syntax highlighting, balanced parens etc), 
-> and the layout itself (including button labels and stuff) 
-> is a fiddle renderer, about 100 lines of Reagent markup, eval'ed at runtime. Each popover also has a 
-> handful of custom renderers.*
+> *The radio control on :fiddle/type is a custom attribute renderer, `qe-picker-control`, which is defined 
+> in the view menu and eval'ed at runtime. :fiddle/query's custom renderer is a CodeMirror with syntax 
+> highlighting, balanced parens etc. The fiddle's own layout (including button labels and local state) 
+> is a fiddle renderer, about 100 lines of Reagent markup, defined in the view menu and eval'ed at runtime.
+> Each menu is a :button link to another fiddle, with its own data dependencies and renderers.*
 
 ## Roadmap
 
