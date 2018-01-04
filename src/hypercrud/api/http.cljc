@@ -27,7 +27,6 @@
       (p/then :body)))
 
 (defn hydrate-route! [service-uri local-basis encoded-route foo branch stage]
-  (timbre/info (pr-str encoded-route))
   (-> (merge {:url (str/format "%(service-uri)shydrate-route/$local-basis/$double-encoded-route/$foo/$branch"
                                {:service-uri (str #?(:clj  service-uri
                                                      :cljs (.-uri-str service-uri)))
