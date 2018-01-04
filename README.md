@@ -149,7 +149,7 @@ than imperative systems.
 The following screenshot is fully defined as Hyperfiddle EDN and Reagent expressions. There are no side effects in 
 application code.
 
-> <kbd><img src="https://i.imgur.com/z5oYOhy.png"></kbd>
+> <kbd><img src="https://i.imgur.com/DCPtHN3.png"></kbd>
 > 
 > *The radio control on :fiddle/type is an attribute renderer. :fiddle/query has 
 > an attribute renderer for Datomic Datalog (a CodeMirror with syntax highlighting, balanced parens etc), 
