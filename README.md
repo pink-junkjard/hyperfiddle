@@ -165,8 +165,8 @@ We're nearing a 0.1 open-source release in Q1 2018.
 
 Performance (Hyperfiddle must respond as fast as a Clojure repl)
 
-- [x] data loop running in JVM for performance
-- [ ] popovers lazy loaded for initial load performance
+- [x] data loop running in JVM
+- [ ] auto partition data hydrates (only what changes gets reloaded)
 
 User experience
 
