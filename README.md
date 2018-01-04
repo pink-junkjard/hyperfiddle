@@ -1,22 +1,14 @@
-# Hyperfiddle—data-driven CRUD applications
+# Hyperfiddle — full-stack Clojure framework for data-driven CRUD applications
 
 This is the open source library powering <http://www.hyperfiddle.net>.
 
-## Dependency coordinates—Todo
+## Dependency coordinates — Todo
 
     [com.hyperfiddle/hyperfiddle "0.0.0"]
 
-## Community
-
-We are eager to talk to you so please reach out!
-
-* <https://www.reddit.com/r/hyperfiddle/>
-* Slack: #Hyperfiddle @ [clojurians](http://clojurians.net/)
-* <https://groups.google.com/forum/#!forum/hyperfiddle>
-
 ## Philosophy
 
-Hyperfiddle is built in layers
+Hyperfiddle is built in layers.
 
 * Low level I/O runtime for client/server data sync, such that userland is pure functions (**app-as-a-function**)
 * High level data-driven interpreter function (**app-as-a-value**)
@@ -30,12 +22,11 @@ UI, at its essense, is about two concerns:
 * a view (pixels) — a function returning the virtual dom
 * the data backing it — a function returning the query
 
-Hyperfiddle UI components work like this. The functions are pure.
-
-Here is a request function:
+Hyperfiddle UI components work like this. Here is a simple request function, with two database queries:
 
 ```clojure
 (def datomic-samples-blog #uri "datomic:free://datomic:4334/samples-blog")
+(def db-branch nil) ; This is the datomic time-basis; nil is HEAD
 
 (def race-registration-query
   '[:find (pull ?e [:db/id :reg/email :reg/gender :reg/shirt-size])
@@ -46,7 +37,7 @@ Here is a request function:
     :in $ :where [?e :reg.gender/ident]])
 
 (defn request [state peer]
-  (let [$ (hc/db peer datomic-samples-blog nil)]            ; nil is HEAD (related to time-basis)
+  (let [$ (hc/db peer datomic-samples-blog db-branch)]            
     [(->QueryRequest race-registration-query {"$" $})
      (->QueryRequest gender-options-query {"$" $})]))
 ```
@@ -152,3 +143,11 @@ How high can we abstract? We aren't sure yet. It will scale until Datomic's app-
 at which point programmers will manually optimize their Datomic services. Datomic Peer vs Client vs Cloud makes a 
 difference here as they all have different stories for code/data locality. We think it will scale a lot farther 
 than imperative systems.
+
+## Community
+
+We're nearing a release in Q1 2018.
+
+* <https://www.reddit.com/r/hyperfiddle/> will aggregate all our blog posts and documentation links
+* Slack: #Hyperfiddle @ [clojurians](http://clojurians.net/), say hi! 
+* [developer mailing list](https://groups.google.com/forum/#!forum/hyperfiddle)
