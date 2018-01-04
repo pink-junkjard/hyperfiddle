@@ -152,7 +152,8 @@ application code.
 > <kbd><img src="https://i.imgur.com/z5oYOhy.png"></kbd>
 > 
 > *The radio control on :fiddle/type is an attribute renderer. :fiddle/query has 
-> an attribute renderer for Clojure code, and the layout itself (including button labels and stuff) 
+> an attribute renderer for Datomic Datalog (a CodeMirror with syntax highlighting, balanced parens etc), 
+> and the layout itself (including button labels and stuff) 
 > is a fiddle renderer, about 100 lines of Reagent markup, eval'ed at runtime. Each popover also has a 
 > handful of custom renderers.*
 
