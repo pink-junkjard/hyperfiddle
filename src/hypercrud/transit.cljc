@@ -31,7 +31,7 @@
    (t/write-handler (constantly "DbVal") (fn [v] [(:uri v) (:branch v)]))
 
    Entity
-   (t/write-handler (constantly "Entity") (fn [v] [(.-dbval v) (.-coll v)]))
+   (t/write-handler (constantly "Entity") (fn [v] [(.-uri v) (.-coll v)]))
 
    EntityRequest
    (t/write-handler (constantly "EReq") (fn [v] [(:e v) (:a v) (:db v) (:pull-exp v)]))

@@ -1,8 +1,8 @@
 (ns hypercrud.browser.auto-anchor-formula                   ; namespace is public export api
   (:require [cats.monad.either :as either]
-            [hypercrud.client.core :as hc]
-            [hypercrud.types.Entity :refer [->Entity #?(:cljs Entity)]]
-            [hypercrud.types.ThinEntity :refer [#?(:cljs ThinEntity)]]
+            [hypercrud.browser.dbname :as dbname]
+            [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
+            [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
             [hypercrud.util.core :as util]
             [hypercrud.util.string :as hc-string]
             [hypercrud.util.template :as template]
@@ -16,9 +16,8 @@
 (defn auto-entity-from-stage [ctx]
   ; This returns a new value each time the transaction changes - can't call it again later.
   ; So tx-fns must inspect the modal-route, they can't re-create the dbid.
-  (let [dbval (hc/db (:peer ctx) (:uri ctx) (:branch ctx))
-        id (-> (:branch dbval) #?(:clj Math/abs :cljs js/Math.abs) - str)]
-    (->Entity dbval {:db/id id})))
+  (let [id (-> (:branch ctx) #?(:clj Math/abs :cljs js/Math.abs) - str)]
+    (->ThinEntity (dbname/uri->dbname (:uri ctx) ctx) id)))
 
 ; todo there are collisions when two links share the same 'location'
 (defn deterministic-ident
@@ -44,10 +43,10 @@
 
 (defn auto-entity [ctx]
   (let [cell-data (:cell-data ctx)
-        dbval (if (instance? Entity cell-data)
-                (.-dbval cell-data)
-                (hc/db (:peer ctx) (:uri ctx) (:branch ctx)))]
-    (->Entity dbval {:db/id (deterministic-ident ctx)})))
+        uri (if (instance? Entity cell-data)
+              (.-uri cell-data)
+              (:uri ctx))]
+    (->ThinEntity (dbname/uri->dbname uri ctx) (deterministic-ident ctx))))
 
 (def auto-formula-lookup
   (let [fe-no-create (->> (template/load-resource "auto-formula/fe-no-create.vedn")

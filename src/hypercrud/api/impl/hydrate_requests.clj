@@ -29,7 +29,7 @@
 (defn recursively-add-entity-types [pulled-tree dbval]
   (walk/postwalk (fn [o]
                    (if (:db/id o)
-                     (->Entity dbval o)
+                     (->Entity (.-uri dbval) o)
                      o))
                  pulled-tree))
 
@@ -123,12 +123,12 @@
                                                         #(d/filter % read-sec-predicate))))]
                   (swap! db-with-lookup assoc branch project-db-with)
                   project-db-with)))]
-    (fn [uri branch-val]
+    (fn [uri branch-ident]
       (let [branch (or (->> staged-branches
-                            (filter #(and (= branch-val (:branch-val %))
+                            (filter #(and (= branch-ident (:branch-ident %))
                                           (= uri (:uri %))))
                             first)
-                       {:branch-val branch-val
+                       {:branch-ident branch-ident
                         :uri uri})]
         (get-secure-db-from-branch branch)))))
 
@@ -144,7 +144,7 @@
                           (doall))
         ; this can also stream, as the request hydrates.
         id->tempid (reduce (fn [acc [branch db]]
-                             (assoc-in acc [(:uri branch) (:branch-val branch)] (:id->tempid db)))
+                             (assoc-in acc [(:uri branch) (:branch-ident branch)] (:id->tempid db)))
                            {}
                            @db-with-lookup)
         ;result (concat pulled-trees id->tempid)

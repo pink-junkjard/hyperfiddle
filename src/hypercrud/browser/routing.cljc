@@ -4,12 +4,12 @@
             [clojure.set :as set]
             [clojure.string :as string]
             [clojure.walk :as walk]
+            [hypercrud.browser.dbname :as dbname]
             [hypercrud.compile.eval :as eval]
             [hypercrud.compile.reader :as reader]
             [hypercrud.types.Entity :refer [->Entity #?(:cljs Entity)]]
             [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
             [hypercrud.util.base-64-url-safe :as base64]
-            [hypercrud.util.branch :as branch]
             [hypercrud.util.reactive :as reactive])
   #?(:clj
      (:import (hypercrud.types.Entity Entity)
@@ -19,9 +19,7 @@
 (defn invert-ids [route invert-id ctx]
   (-> (walk/postwalk (fn [v]
                        (cond
-                         (instance? Entity v)
-                         (let [id (invert-id (:db/id v) (-> v .-dbval .-uri))]
-                           (->Entity (.-dbval v) (assoc (.-coll v) :db/id id)))
+                         (instance? Entity v) (assert false "hyperfiddle/hyperfiddle.net#150")
 
                          (instance? ThinEntity v)
                          (let [uri (get-in ctx [:repository :repository/environment (.-dbname v)])
@@ -34,11 +32,8 @@
                          #(invert-id % uri)))))
 
 (defn ctx->id-lookup [uri ctx]
-  ; todo tempid-lookups need to be indexed by db-ident not val
-  (let [stage-val @(reactive/cursor (.-state-atom (:peer ctx)) [:stage])
-        branch-val (branch/branch-val uri (:branch ctx) stage-val)]
-    ; todo what about if the tempid is on a higher branch in the uri?
-    @(reactive/cursor (.-state-atom (:peer ctx)) [:tempid-lookups uri branch-val])))
+  ; todo what about if the tempid is on a higher branch in the uri?
+  @(reactive/cursor (.-state-atom (:peer ctx)) [:tempid-lookups uri (:branch ctx)]))
 
 (defn id->tempid [route ctx]
   (let [invert-id (fn [id uri]
@@ -63,16 +58,10 @@
                                  (try-either (user-fn ctx))
                                  (cats/return nil)))
                              (either/right nil))
-         :let [uri->dbname (->> (get-in ctx [:repository :repository/environment])
-                                (filter (fn [[k v]]
-                                          (and (string? k) (string/starts-with? k "$"))))
-                                (map (fn [[k v]]
-                                       [v k]))
-                                (into {}))
-               route-params (->> user-route-params
+         :let [route-params (->> user-route-params
                                  (walk/postwalk (fn [v]
                                                   (if (instance? Entity v)
-                                                    (let [dbname (some-> v .-dbval .-uri uri->dbname)]
+                                                    (let [dbname (some-> v .-uri (dbname/uri->dbname ctx))]
                                                       (->ThinEntity dbname (:db/id v)))
                                                     v))))]]
     (cats/return

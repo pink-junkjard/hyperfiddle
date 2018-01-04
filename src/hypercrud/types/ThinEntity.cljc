@@ -10,6 +10,7 @@
 (defn- impl-print [o]
   (str "#entity" (pr-str [(.-dbname o) (.-id o)])))
 
+; dbname = $, for URIs
 (deftype ThinEntity [dbname id]
   #?@(:clj  [Object
              (equals [o other]
