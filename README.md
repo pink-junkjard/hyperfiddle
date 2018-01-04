@@ -66,15 +66,18 @@ Notes about these functions
 data load in response to a UI state change
 
 This is how Hyperfiddle insulates the application programmer from I/O. No browser/service round trips like 
-REST, no service/database round trips like SQL. No object/relational impedance mismatch. App-as-a-fn is a 
-wonderful, functional way to write your web dashboards, better than anything else that exists today.
+REST, no service/database round trips like SQL. App-as-a-fn is a wonderful, functional way to write web dashboards, 
+better than anything else that exists today, because:
 
-Managed I/O permits many **optimizations that human-coded I/O cannot do:**
-* Automatic I/O partitioning and batching, optimized for cache hits
-* all requests have a time-basis, all responses are immutable
-* Integrated Hyperfiddle-aware CDN (serve APIs like static sites)
-* Built-in server side rendering
-* Works with browser javascript disabled
+* Unified backend/frontend, same codebase runs in both places
+* No manual conversion between backend types and frontend types
+* No REST, no low level HTTP boilerplate 
+* No monstrous JOINs to avoid database round trips
+* No batching and caching
+* No GraphQL resolver hiding complexity in the closet
+* No eventual consistency
+* No thinking about network cost
+* Program as if all data is local
 
 Now that I/O is solved, we can start building *real, composable abstractions:*
 
@@ -130,6 +133,20 @@ is a generic app-as-a-function which interprets hyperfiddle app-values.
 
 Hyperfiddles are graphs, not documents, so they are stored in databases. Databases storing hyperfiddles are like 
 git repos storing the "source code" (data) of your hyperfiddles. Like git, there is no central database.
+
+## Managed I/O permits optimizations that human-coded I/O cannot do:
+
+App-as-a-function optimizations:
+
+* Built-in server side rendering
+* Works with browser javascript disabled (Whole app can run in Node and JVM)
+* all requests have a time-basis, all responses are immutable
+* CDN/infra integration that understands your app (serve APIs like static sites)
+
+App-as-a-value defines app structure as a graph of links, which enables further optimizations:  
+
+* Automatic I/O partitioning and batching, optimized for cache hits
+* Automatic code splitting
 
 ## How far will it scale?
 
