@@ -191,4 +191,5 @@ and documentation.
 ## Community
 
 * Slack: #Hyperfiddle @ [clojurians](http://clojurians.net/), come say hi, tell us why you care, and hang out! 
+* Twitter: <https://twitter.com/dustingetz>
 * [developer mailing list](https://groups.google.com/forum/#!forum/hyperfiddle)
