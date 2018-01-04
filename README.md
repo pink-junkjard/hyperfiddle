@@ -166,17 +166,17 @@ We're nearing a 0.1 open-source release in Q1 2018.
 Performance (Hyperfiddle must respond as fast as a Clojure repl)
 
 - [x] data loop running in JVM for performance
-- [] popovers lazy loaded for initial load performance
+- [ ] popovers lazy loaded for initial load performance
 
 User experience
 
-- [] improve popover user experience
-- [] Human readable URLs and customizable URL router
-- [] Fix query param tooltips when you hover an anchor
+- [ ] improve popover user experience
+- [ ] Human readable URLs and customizable URL router
+- [ ] Fix query param tooltips when you hover an anchor
 
 On deck:
-- [] Edit React.js/Reagent expressions side-by-side with the running app (like JSFiddle)
-- [] Links panel user experience
+- [ ] Edit React.js/Reagent expressions side-by-side with the running app (like JSFiddle)
+- [ ] Links panel user experience
 
 ## Documentation
 
