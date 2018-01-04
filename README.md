@@ -144,10 +144,40 @@ at which point programmers will manually optimize their Datomic services. Datomi
 difference here as they all have different stories for code/data locality. We think it will scale a lot farther 
 than imperative systems.
 
+## Hyperfiddle.net is 100% built in Hyperfiddle (EDN style)
+
+This is provided as an example of how far Hyperfiddle EDN composition scales.
+
+> ![](https://i.imgur.com/z5oYOhy.png)
+> *The radio control on :fiddle/type is a custom attribute renderer for Datomic keywords*
+
+## Roadmap
+
+We're nearing a 0.1 open-source release in Q1 2018.
+
+#### Blocking release of 0.1.0: 
+
+Performance (Hyperfiddle must respond as fast as a Clojure repl)
+
+* [x] data loop running in JVM for performance
+* [] popovers lazy loaded for initial load performance
+
+User experience
+
+* [] improve popover user experience
+* [] Human readable URLs and customizable URL router
+* [] Fix query param tooltips when you hover an anchor
+
+On deck:
+* [] Edit React.js/Reagent expressions side-by-side with the running app (like JSFiddle)
+* [] Links panel user experience
+
+## Documentation
+
+<https://www.reddit.com/r/hyperfiddle/> will aggregate all our scattered blog posts, tutorials
+and documentation.
+
 ## Community
 
-We're nearing a release in Q1 2018.
-
-* <https://www.reddit.com/r/hyperfiddle/> will aggregate all our blog posts and documentation links
-* Slack: #Hyperfiddle @ [clojurians](http://clojurians.net/), say hi! 
+* Slack: #Hyperfiddle @ [clojurians](http://clojurians.net/), come say hi, tell us why you care, and hang out! 
 * [developer mailing list](https://groups.google.com/forum/#!forum/hyperfiddle)
