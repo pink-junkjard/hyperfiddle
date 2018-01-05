@@ -114,8 +114,7 @@ than the above functions do, in fewer lines. Data is more information-dense than
 worth 1000 words.
 
 ```clojure
-; email registration table
-
+; Main query
 {:db/id        17592186045418,
  :fiddle/type  :query,
  :fiddle/query "[:find (pull ?e [:db/id :reg/email :reg/gender :reg/shirt-size])
