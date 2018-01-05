@@ -250,7 +250,7 @@ Todo
 The following screenshot is fully defined as Hyperfiddle EDN and simple Reagent expressions that a web 
 designer could write.
 
-> ![](https://i.imgur.com/DCPtHN3.png | width=720)
+> <img src="https://i.imgur.com/DCPtHN3.png" width="720px">
 > 
 > *The radio control on :fiddle/type is a custom attribute renderer, `qe-picker-control`, which is defined 
 > in the view menu and eval'ed at runtime. :fiddle/query's custom renderer is a CodeMirror with syntax 
