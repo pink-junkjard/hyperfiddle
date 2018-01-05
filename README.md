@@ -21,12 +21,6 @@ easy to write since they are just pure functions, you can just bring your own. H
 to Reagent but only superficially, the data sync is separate (it has to be as it runs in JVM). It should be 
 straightforward to use with any managed dom strategy. 
 
-> <img src="https://i.imgur.com/pQk6g0a.png" width="720px">
-> 
-> *Hyperfiddle UI component builtins are
->  very good and highly dynamic, there are control points to override all markup, for example this markdown 
->  editor is defined by ClojureScript code, stored in a database and eval'ed at runtime.*
-
 # Documentation and community
 
 <https://www.reddit.com/r/hyperfiddle/> will aggregate all our scattered blog posts, tutorials
@@ -234,9 +228,38 @@ git repos storing the "source code" (data) of your hyperfiddles. Like git and th
 
 We don't do all of this today, but we will.
 
-## \#3. Automatic dashboards
+## \#3. Automatic dashboards, like Swagger UI
 
-Todo
+> <img src="https://i.imgur.com/pQk6g0a.png" width="720px">
+> 
+> *This dashboard is entirely generated from Datomic schema and Hyperfiddle EDN. 
+> Hyperfiddle UI builtins are highly dynamic, there are control points to override all markup, for example this markdown 
+> editor is defined by ClojureScript code, stored in a database and eval'ed at runtime.
+> UI is very easy in Hyperfiddle since it's just functions and the data is always preloaded.*
+
+The dynamic dashboards have the following data driven hook points:
+
+* Top level renderer
+* Fiddle page renderer
+* Fiddle form-field renderer
+* Datomic attribute renderer
+
+Here is an attribute renderer:
+
+> <img src="https://i.imgur.com/Kok1tz9.png">
+> 
+> *On the left, we see `:post/content` attribute is a Datomic `:db/type/string`,
+> being rendered as markdown. On the right, we see it wired up. Renderers
+> can be any ClojureScript expression and are eval'ed at runtime.*
+
+Here is a fiddle renderer:
+
+> <img src="https://i.imgur.com/KP90ClH.png">
+> 
+> *On the left, we see the fiddle's final rendering. It is no longer a form at all,
+> we've rendered the data as HTML. On the right, we see the Reagent expression.
+> The data/view toggles the fiddle renderer, so you get a free admin dashboard with every 
+> fiddle.*
 
 ## \#4. Structural editor for CRUD apps
 
@@ -244,6 +267,10 @@ Todo
 > 
 > *The gender iframe is actually select options query, with the select renderer toggled off.
 > It renders in the header because the query runs once, not once-per-row.*
+
+To customize rendering, all the right hooks are available:
+
+[source](https://github.com/hyperfiddle/hyperfiddle/blob/5e1f44de4b2c70101528d14bce6d19d663d26a32/src/hypercrud/ui/auto_control.cljs#L15-L30)
 
 ## Hyperfiddle.net is 100% built in Hyperfiddle (EDN style)
 
