@@ -61,9 +61,9 @@ Onboarding
 Hyperfiddle is built in layers. Higher layers are optional.
 
 1. app-as-a-function: managed data sync, userland is a function
-2. app-as-a-value: data-driven CRUD model, userland is a value
+2. app-as-a-value: data-driven CRUD model, userland is EDN
 3. automatic dashboards: dynamic forms/UI library, customize markup with functions 
-4. structural editor: edit userland app-values and store them in Datomic 
+4. structural editor: edit EDN app-values and store them in Datomic 
 
 ## \#1. App-as-a-Function
 
