@@ -264,7 +264,7 @@ Query subscription issues: Relational/graph databases aren't designed for this, 
 need to re-run all the queries on a page to know if new data impacts them (and on Facebook there are hundreds
 of queries per page). However in the average case, we just want 
 subscriptions on simple queries for which a heuristic works, or for only specific queries, which I believe the Posh 
-project has working, see this [reddit thread](https://www.reddit.com/r/Clojure/comments/6rncgw/arachneframeworkfactui/dl7j2g9/?context=2)
+project has working, see this [reddit thread](https://www.reddit.com/r/Clojure/comments/6rncgw/arachneframeworkfactui/dl7r1xs/?context=2)
 
 * Eric: I would like to understand where caching actually happens
 * Eric: What happens from top to bottom when a form is rendered
