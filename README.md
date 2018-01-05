@@ -71,7 +71,7 @@ Hyperfiddle is built in layers. Higher layers are optional.
 3. automatic dashboards: dynamic forms/UI library, customize markup with functions 
 4. structural editor: edit userland app-values and store them in Datomic 
 
-# \#1 App-as-a-Function
+## \#1. App-as-a-Function
 
 UI, at its essense, is about two concerns:
 
@@ -163,7 +163,7 @@ Basically, we think Datomic fully solves CRUD apps permanently.
 
 Now that I/O is solved, we can start building *real, composable abstractions:*
 
-# \#2. App-as-a-Value
+## \#2. App-as-a-Value
 
 Here is the above functions, represented as a Hyperfiddle EDN value. Actually the below values do a lot more 
 than the above functions do, in fewer lines. Data is more information-dense than code, kind of like how a picture is 
@@ -234,18 +234,18 @@ git repos storing the "source code" (data) of your hyperfiddles. Like git and th
 
 We don't do all of this today, but we will.
 
-# \#3. Automatic dashboards
+## \#3. Automatic dashboards
 
 Todo
 
-# \#4. Structural editor for CRUD apps
+## \#4. Structural editor for CRUD apps
 
 > ![](https://i.imgur.com/sZfypDa.png)
 > 
 > *The gender iframe is actually select options query, with the select renderer toggled off.
 > It renders in the header because the query runs once, not once-per-row.*
 
-# Hyperfiddle.net is 100% built in Hyperfiddle (EDN style)
+## Hyperfiddle.net is 100% built in Hyperfiddle (EDN style)
 
 The following screenshot is fully defined as Hyperfiddle EDN and simple Reagent expressions that a web 
 designer could write.
@@ -283,7 +283,7 @@ project has working, see this [reddit thread](https://www.reddit.com/r/Clojure/c
 * Eric: What happens from top to bottom when a form is rendered
 * Eric: synchronous and reactive - what does this mean?
 
-# How far will it scale?
+## How far will it scale?
 
 Without immutability in the database, all efforts to abstract higher will fail; because to achieve the 
 necessary performance, requires writing imperative optimizations to imperative platforms (object-relational 
