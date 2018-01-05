@@ -276,10 +276,6 @@ rather than requiring you to model the queries in advance as fiddles. This has f
 > *The gender iframe is actually select options query, with the select renderer toggled off.
 > It renders in the header because the query runs once, not once-per-row.*
 
-To customize rendering, all the right hooks are available:
-
-[source](https://github.com/hyperfiddle/hyperfiddle/blob/5e1f44de4b2c70101528d14bce6d19d663d26a32/src/hypercrud/ui/auto_control.cljs#L15-L30)
-
 ## Hyperfiddle.net is 100% built in Hyperfiddle (EDN style)
 
 The following screenshot is fully defined as Hyperfiddle EDN and simple Reagent expressions that a web 
