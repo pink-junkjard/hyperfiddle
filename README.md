@@ -68,9 +68,9 @@ Notes about these functions
 * Sometimes the runtime chooses to loop in the browser, i.e. a little, incremental 
 data load in response to a UI state change
 
-App-as-a-fn with managed I/O is a wonderful way to write web dashboards, better than anything else that exists today, because:
+App-as-a-fn with managed I/O is a better way to write web dashboards:
 
-#### Programming model is higher level:
+### Programming model is higher level
 
 * application programmer fully insulated from I/O–real functional programming
 * No async in userland
@@ -82,7 +82,7 @@ App-as-a-fn with managed I/O is a wonderful way to write web dashboards, better 
 * No more fiat APIs — all fiddles speak the same API
 * Integrated high level tooling (form-builder, app-builder)
 
-#### Immutability in database (Datomic) makes imperative problems go away:
+### Immutability in database (Datomic) makes SQL/ORM problems go away
 
 * No monstrous JOINs to avoid database round trips
 * no service/database round trips at all
@@ -90,15 +90,15 @@ App-as-a-fn with managed I/O is a wonderful way to write web dashboards, better 
 * No GraphQL resolver hiding complexity in the closet
 * No eventual consistency
 * No thinking about network cost
-* Program as if all data is local
+* Program as if all data is local–real functional programming
 
-#### The machine does all the boilerplate:
+### The machine does all the boilerplate
 
 * Exact data sync in one request, including dynamic dependencies
 * Built-in server side rendering, no integration glue code
 * Works with browser javascript disabled (whole app can run #{Browser Node JVM} including transactions and business logic)
 
-#### Infrastructure benefits:
+### Infrastructure benefits
 
 * all requests have a time-basis, all responses are immutable
 * CDN integration that understands your app (serve APIs like static sites)
