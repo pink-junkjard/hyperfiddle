@@ -8,15 +8,59 @@ If React.js is managed DOM, Hyperfiddle is managed database and network.
 
     [com.hyperfiddle/hyperfiddle "0.0.0"]
 
-# Philosophy
+# Overview
+
+Hyperfiddle abstracts over client/server data sync. Userland code does not know the difference between client or server,
+the application runs simultaneously in both places.
+
+Abstracting out the network brings a lot of interesting opportunities. Unlike REST/GraphQL/whatever, Hyperfiddle's 
+data sync *composes*. Userland is simple Clojure functions and Clojure data; all network I/O is managed.
+
+Hyperfiddle is currently coupled to Reagent but only superficially, not in any deep way. It should be straightforward 
+to use with any managed dom strategy. There is a library of default components for forms and such, but they are very
+easy to write since they are just pure functions, you can just bring your own. 
+
+# Documentation and community
+
+<https://www.reddit.com/r/hyperfiddle/> will aggregate all our scattered blog posts, tutorials
+and documentation.
+
+* Slack: #Hyperfiddle @ [clojurians](http://clojurians.net/), come say hi, tell us why you care, and hang out! 
+* Twitter: <https://twitter.com/dustingetz>
+* [developer mailing list](https://groups.google.com/forum/#!forum/hyperfiddle)
+
+# Roadmap
+
+We're nearing a 0.1 open-source release in Q1 2018.
+
+### Blocking 0.1.0: 
+
+Performance (Hyperfiddle must respond as fast as a Clojure repl)
+
+- [x] data loop running in JVM
+- [ ] partition data hydrates, using hyperfiddle link graph, so only what changed gets reloaded
+
+User experience
+
+- [ ] improve popovers, finish stage/discard UX
+- [ ] Human readable URLs and customizable URL router
+- [ ] Fix query param tooltips when you hover an anchor
+
+Onboarding
+
+- [ ] Hello-world usage and tutorial repo
+
+### 0.2.0
+
+- [ ] Edit React.js/Reagent expressions side-by-side with the running app (like JSFiddle)
+- [ ] Links panel user experience
+
+# Philosophy 
 
 Hyperfiddle is built in layers.
 
 * app-as-a-function: Low level I/O runtime for managed client/server data sync, userland is a fn
 * app-as-a-value: High level data-driven interpreter function, userland is a value
-
-You can code at either level. Unlike REST/GraphQL/whatever, Hyperfiddle's data sync *composes*. Userland is simple 
-Clojure functions and Clojure data; all network I/O is managed.
 
 # App-as-a-Function
 
@@ -173,7 +217,7 @@ ourselves HTML at age 13.)
 Hyperfiddles are graphs, not documents, so they are stored in databases. Databases storing hyperfiddles are like 
 git repos storing the "source code" (data) of your hyperfiddles. Like git and the web, there is no central database.
 
-## App as graph permits optimizations that human-coded I/O cannot do:  
+# App as graph permits optimizations that human-coded I/O cannot do:  
 
 * Automatic I/O partitioning and batching, optimized for cache hits
 * Server preloading, prefetching and optimistic push
@@ -181,20 +225,7 @@ git repos storing the "source code" (data) of your hyperfiddles. Like git and th
 
 We don't do all of this today, but we will.
 
-## How far will it scale?
-
-Without immutability in the database, all efforts to abstract higher will fail; because to achieve the 
-necessary performance, requires writing imperative optimizations to imperative platforms (object-relational 
-impedance mismatch, N+1 problems, deeply nested JOINs, caching vs batching tradeoffs). Hyperfiddle cannot 
-be built on RDBMS or Neo4J; their imperative nature leaks through all attempts to abstract. This is why all 4GLs 
-historically fail. Immutability, as always, to the rescue.
-
-How high can we abstract? We aren't sure yet. It will scale until Datomic's app-as-a-value abstraction breaks down, 
-at which point programmers will manually optimize their Datomic services. Datomic Peer vs Client vs Cloud makes a 
-difference here as they all have different stories for code/data locality. We think it will scale a lot farther 
-than imperative systems.
-
-## Hyperfiddle.net is 100% built in Hyperfiddle (EDN style)
+# Hyperfiddle.net is 100% built in Hyperfiddle (EDN style)
 
 The following screenshot is fully defined as Hyperfiddle EDN and simple Reagent expressions that a web 
 designer could write.
@@ -207,39 +238,40 @@ designer could write.
 > is a fiddle renderer, about 100 lines of Reagent markup, defined in the view menu and eval'ed at runtime.
 > Each menu is a :button link to another fiddle, with its own data dependencies and renderers.*
 
-## Roadmap
+# FAQ and anti-features
 
-We're nearing a 0.1 open-source release in Q1 2018.
+Integration with REST/fiat APIs: Hyperfiddle can't help you with foreign data sync but it doesn't get in the way either.
+Do what you'd do in React. You'll lose out-of-the-box SSR.
 
-#### Blocking release of 0.1.0: 
+Local state in UI: Hyperfiddle is about data sync; Do what you'd do in React. Keep in mind that Hyperfiddle data sync
+is so fast (on par with static sites) that you may not need much local state; just use page navigation (the URL is a 
+perfectly good place to store state). Local state is perfectly allowable and idiomatic
 
-Performance (Hyperfiddle must respond as fast as a Clojure repl)
+Reframe: Reframe does not support SSR, and we want SSR by default. It should be straightforward to swap in
+reframe or any other rendering strategy.
 
-- [x] data loop running in JVM
-- [ ] partition data hydrates, using hyperfiddle link graph, so only what changed gets reloaded
+Why Reagent? Vanilla React is memoized rendering oriented around values. It's not fast enough; Hyperfiddle UIs 
+can get very sophisticated very fast, the reactive abstraction is required to feel snappy.
 
-User experience
+Query subscription issues: Relational/graph databases aren't designed for this, because in the general case you'd
+need to re-run all the queries on a page to know if new data impacts them (and on Facebook there are hundreds
+of queries per page). However in the average case, we just want 
+subscriptions on simple queries for which a heuristic works, or for only specific queries, which I believe the Posh 
+project has working, see this [reddit thread](https://www.reddit.com/r/Clojure/comments/6rncgw/arachneframeworkfactui/dl7j2g9/?context=2)
 
-- [ ] improve popovers, finish stage/discard UX
-- [ ] Human readable URLs and customizable URL router
-- [ ] Fix query param tooltips when you hover an anchor
+* Eric: I would like to understand where caching actually happens
+* Eric: What happens from top to bottom when a form is rendered
+* Eric: synchronous and reactive - what does this mean?
 
-Onboarding
+# How far will it scale?
 
-- [ ] Hello-world usage and tutorial repo
+Without immutability in the database, all efforts to abstract higher will fail; because to achieve the 
+necessary performance, requires writing imperative optimizations to imperative platforms (object-relational 
+impedance mismatch, N+1 problems, deeply nested JOINs, caching vs batching tradeoffs). Hyperfiddle cannot 
+be built on RDBMS or Neo4J; their imperative nature leaks through all attempts to abstract. This is why all 4GLs 
+historically fail. Immutability, as always, to the rescue.
 
-#### On deck
-
-- [ ] Edit React.js/Reagent expressions side-by-side with the running app (like JSFiddle)
-- [ ] Links panel user experience
-
-## Documentation
-
-<https://www.reddit.com/r/hyperfiddle/> will aggregate all our scattered blog posts, tutorials
-and documentation.
-
-## Community
-
-* Slack: #Hyperfiddle @ [clojurians](http://clojurians.net/), come say hi, tell us why you care, and hang out! 
-* Twitter: <https://twitter.com/dustingetz>
-* [developer mailing list](https://groups.google.com/forum/#!forum/hyperfiddle)
+How high can we abstract? We aren't sure yet. It will scale until Datomic's app-as-a-value abstraction breaks down, 
+at which point programmers will manually optimize their Datomic services. Datomic Peer vs Client vs Cloud makes a 
+difference here as they all have different stories for code/data locality. We think it will scale a lot farther 
+than imperative systems.
