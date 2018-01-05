@@ -158,18 +158,19 @@ ourselves HTML at age 13.)
 > [![](https://i.imgur.com/iwOvJzA.png)](http://dustingetz.hyperfiddle.net/ezpjb2RlLWRhdGFiYXNlICJzYW5kYm94IiwgOmxpbmstaWQgMTc1OTIxODYwNDU0MTh9)
 >
 > *Hyperfiddle Browser, navigating a hyperfiddle edn value. Both select options queries are defined as :fiddle/links 
-> in the above EDN. For brevity, the above snippets omit half of the EDN comprising this demo. The above 
-> EDN values are about half of the data that defines this 
-> [gender/shirt-size demo](http://dustingetz.hyperfiddle.site/ezpjb2RlLWRhdGFiYXNlICJzYW5kYm94IiwgOmxpbmstaWQgMTc1OTIxODYwNDU0MTh9).*
+> in the above EDN. The shirt-size query depends on the value of gender. For brevity, the above snippets omit about 
+> half of the EDN comprising this demo. [gender/shirt-size demo](http://dustingetz.hyperfiddle.site/ezpjb2RlLWRhdGFiYXNlICJzYW5kYm94IiwgOmxpbmstaWQgMTc1OTIxODYwNDU0MTh9).*
 
 Hyperfiddles are graphs, not documents, so they are stored in databases. Databases storing hyperfiddles are like 
-git repos storing the "source code" (data) of your hyperfiddles. Like git, there is no central database.
+git repos storing the "source code" (data) of your hyperfiddles. Like git and the web, there is no central database.
 
 ## App as graph permits optimizations that human-coded I/O cannot do:  
 
 * Automatic I/O partitioning and batching, optimized for cache hits
 * Server preloading, prefetching and optimistic push
-* Machine learning can do the optimzations
+* Machine learning can analyze the graph to do optimzations
+
+We don't do all of this today, but we will.
 
 ## How far will it scale?
 
