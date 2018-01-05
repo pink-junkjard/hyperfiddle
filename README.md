@@ -1,4 +1,4 @@
-# Hyperfiddle — full-stack Clojure framework for client/server CRUD data sync
+# Hyperfiddle — full-stack CRUD data sync for Clojure
 
 This is the open source library powering <http://www.hyperfiddle.net>.
 
