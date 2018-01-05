@@ -1,4 +1,6 @@
-# Hyperfiddle — full-stack Clojure framework for data-driven CRUD applications
+# Hyperfiddle
+
+## full-stack Clojure framework for client/server CRUD data sync
 
 This is the open source library powering <http://www.hyperfiddle.net>.
 
@@ -10,10 +12,11 @@ This is the open source library powering <http://www.hyperfiddle.net>.
 
 Hyperfiddle is built in layers.
 
-* Low level I/O runtime for client/server data sync, such that userland is pure functions (**app-as-a-function**)
-* High level data-driven interpreter function (**app-as-a-value**)
+* app-as-a-function: Low level I/O runtime for managed client/server data sync, such that userland is pure functions
+* app-as-a-value: High level data-driven interpreter function
 
-You can code at either level. Both data and functions compose properly (it is just Clojure functions and Clojure data).
+You can code at either level. Unlike REST/GraphQL/whatever, Hyperfiddle's data sync *composes*. Userland is simple 
+Clojure functions and Clojure data; all network I/O is managed. (If React.js is managed DOM, Hyperfiddle is managed network.)
 
 # App-as-a-Function
 
