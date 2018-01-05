@@ -1,8 +1,8 @@
-# Hyperfiddle — full-stack CRUD data sync for Clojure
+# Hyperfiddle — full-stack CRUD data sync for Clojure & Datomic
 
 This is the open source library powering <http://www.hyperfiddle.net>.
 
-If React.js is managed DOM, Hyperfiddle is managed network.
+If React.js is managed DOM, Hyperfiddle is managed database and network.
 
 # Dependency coordinates — Todo
 
