@@ -249,8 +249,8 @@ Here is an attribute renderer:
 > <img src="https://i.imgur.com/Kok1tz9.png">
 > 
 > *On the left, we see `:post/content` attribute is a Datomic `:db/type/string`,
-> being rendered as markdown. On the right, we see it wired up. Renderers
-> can be any ClojureScript expression and are eval'ed at runtime.*
+> being rendered as a CodeMirror with markdown syntax highlighting. On the right, we 
+> see it wired up. Renderers can be any ClojureScript expression and are eval'ed at runtime.*
 
 Here is a fiddle renderer:
 
