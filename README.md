@@ -64,12 +64,14 @@ Onboarding
 
 # Philosophy 
 
-Hyperfiddle is built in layers.
+Hyperfiddle is built in layers. Higher layers are optional. 
 
-* app-as-a-function: Low level I/O runtime for managed client/server data sync, userland is a fn
-* app-as-a-value: High level data-driven interpreter function, userland is a value
+1. app-as-a-function: Low level I/O runtime for managed client/server data sync, userland is a fn
+2. app-as-a-value: High level data-driven interpreter function, userland is a value
+3. UI forms/tables library, fully dynamic, all markup can be customized with functions 
+4. Structural editor for CRUD apps
 
-# App-as-a-Function
+# Layer 1. App-as-a-Function
 
 UI, at its essense, is about two concerns:
 
@@ -161,7 +163,7 @@ Basically, we think Datomic fully solves CRUD apps permanently.
 
 Now that I/O is solved, we can start building *real, composable abstractions:*
 
-# App-as-a-Value
+# Layer 2. App-as-a-Value
 
 Here is the above functions, represented as a Hyperfiddle EDN value. Actually the below values do a lot more 
 than the above functions do, in fewer lines. Data is more information-dense than code, kind of like how a picture is 
@@ -231,6 +233,20 @@ git repos storing the "source code" (data) of your hyperfiddles. Like git and th
 * Machine learning can analyze the graph to do optimzations
 
 We don't do all of this today, but we will.
+
+# Layer 3. UI forms/tables library, fully dynamic
+
+> ![]()
+> 
+> *The gender iframe is actually select options query, with the select renderer toggled off.
+> It renders in the header because the query runs once, not once-per-row.*
+
+# Layer 4. Structural editor for CRUD apps
+
+> ![](https://i.imgur.com/sZfypDa.png)
+> 
+> *The gender iframe is actually select options query, with the select renderer toggled off.
+> It renders in the header because the query runs once, not once-per-row.*
 
 # Hyperfiddle.net is 100% built in Hyperfiddle (EDN style)
 
