@@ -280,5 +280,7 @@ historically fail. Immutability, as always, to the rescue.
 
 How high can we abstract? We aren't sure yet. It will scale until Datomic's app-as-a-value abstraction breaks down, 
 at which point programmers will manually optimize their Datomic services. Datomic Peer vs Client vs Cloud makes a 
-difference here as they all have different stories for code/data locality. We think it will scale a lot farther 
-than imperative systems.
+difference here as they all have different stories for code/data locality. 
+
+Hyperfiddle's abstraction has scaled quite far already, see Hyperfiddle-in-Hyperfiddle. We think there is much more 
+room to go. Imagine a world of composable applications.
