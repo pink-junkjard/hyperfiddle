@@ -4,6 +4,8 @@
 
 This is the open source library powering <http://www.hyperfiddle.net>.
 
+If React.js is managed DOM, Hyperfiddle is managed network.
+
 # Dependency coordinates — Todo
 
     [com.hyperfiddle/hyperfiddle "0.0.0"]
@@ -16,7 +18,7 @@ Hyperfiddle is built in layers.
 * app-as-a-value: High level data-driven interpreter function, userland is a value
 
 You can code at either level. Unlike REST/GraphQL/whatever, Hyperfiddle's data sync *composes*. Userland is simple 
-Clojure functions and Clojure data; all network I/O is managed. (If React.js is managed DOM, Hyperfiddle is managed network.)
+Clojure functions and Clojure data; all network I/O is managed.
 
 # App-as-a-Function
 
