@@ -228,7 +228,7 @@ git repos storing the "source code" (data) of your hyperfiddles. Like git and th
 
 We don't do all of this today, but we will.
 
-## \#3. Automatic dashboards, like Swagger UI
+## \#3. Automatic dashboards, like Swagger UI (also automatic API)
 
 > <img src="https://i.imgur.com/pQk6g0a.png" width="720px">
 > 
@@ -259,10 +259,15 @@ Here is a fiddle renderer:
 > 
 > *On the left, we see the fiddle's final rendering. It is no longer a form at all,
 > we've rendered the data as HTML. On the right, we see the Reagent expression.
-> The data/view toggles the fiddle renderer, so you get a free admin dashboard with every 
-> fiddle.*
+> The data/view toggles the fiddle renderer, so you can always get to the admin dashboard.*
 
 Here is the [Datomic schema renderer](https://github.com/hyperfiddle/hyperfiddle/blob/bd61dfb07cbff75d5002b15999d1abc6c3c6af3c/src/hypercrud/ui/auto_control.cljs#L15-L30), TODO this should be a core.match config stored in a database...
+
+API works the same way as the dashboards. The API is just hydrating a route (URL), except instead of HTML the server
+the server returns EDN (transit). URLs and fiddles are essentially the same information, so
+there is an "open" API that will respond to any query. You'll probably have the open API turned off in production. It
+is an area of research to define a general purpose security layer that filters the actual data in the resultset, 
+rather than requiring you to model the queries in advance as fiddles. This has future implications for the semantic web.
 
 ## \#4. Structural editor for CRUD apps
 
