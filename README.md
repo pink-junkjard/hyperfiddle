@@ -240,7 +240,7 @@ Todo
 
 ## \#4. Structural editor for CRUD apps
 
-> ![](https://i.imgur.com/sZfypDa.png | width=720)
+> <img src="https://i.imgur.com/sZfypDa.png" width="720px">
 > 
 > *The gender iframe is actually select options query, with the select renderer toggled off.
 > It renders in the header because the query runs once, not once-per-row.*
