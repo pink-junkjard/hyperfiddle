@@ -21,7 +21,7 @@ easy to write since they are just pure functions, you can just bring your own. H
 to Reagent but only superficially, the data sync is separate (it has to be as it runs in JVM). It should be 
 straightforward to use with any managed dom strategy. 
 
-> ![](https://i.imgur.com/pQk6g0a.png | width=720)
+> <img src="https://i.imgur.com/pQk6g0a.png" width="720px">
 > 
 > *Hyperfiddle UI component builtins are
 >  very good and highly dynamic, there are control points to override all markup, for example this markdown 
@@ -217,7 +217,7 @@ Obviously, data is better in every possible way (structural tooling, decoupled f
 performance, tiny surface area for bugs, an intelligent child is able to figure it out, like how we all taught 
 ourselves HTML at age 13.)
 
-> ![](https://i.imgur.com/iwOvJzA.png | width=720)
+> <img src="https://i.imgur.com/iwOvJzA.png" width="720px">
 >
 > *Hyperfiddle Browser, navigating a hyperfiddle edn value. Both select options queries are defined as :fiddle/links 
 > in the above EDN. The shirt-size query depends on the value of gender. For brevity, the above snippets omit about 
