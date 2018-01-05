@@ -17,39 +17,39 @@
 ; user beware
 (defn batch [& action-list] (cons :batch action-list))
 
-(defn hydrate-route* [rt local-basis encoded-route stage foo branch
+(defn hydrate-route* [rt foo branch post-start->route-vals
                       on-start success-action failure-action
                       dispatch! get-state]
   (let [hydrate-id #?(:clj (Math/random) :cljs (js/Math.random))]
     (dispatch! (apply batch [:hydrate!-start hydrate-id] on-start))
-    (-> (api/hydrate-route rt local-basis encoded-route foo branch stage)
-        (p/then (fn [{:keys [ptm id->tempid]}]
-                  (if (= hydrate-id (:hydrate-id (get-state)))
-                    (let [stage-val (:stage (get-state))
-                          ptm (util/map-keys (fn [request]
-                                               ; todo branch-val
-                                               [(hash stage-val) request])
-                                             ptm)]
-                      (dispatch! [success-action ptm id->tempid]))
-                    (timbre/info (str "Ignoring response for " hydrate-id)))))
-        (p/catch (fn [error]
-                   (if (= hydrate-id (:hydrate-id (get-state)))
-                     (dispatch! [failure-action error])
-                     (timbre/info (str "Ignoring response for " hydrate-id)))
-                   (throw error))))))
+    (let [{:keys [stage] :as post-start-state} (get-state)
+          {:keys [encoded-route local-basis]} (post-start->route-vals post-start-state)]
+      (-> (api/hydrate-route rt local-basis encoded-route foo branch stage)
+          (p/then (fn [{:keys [ptm id->tempid]}]
+                    (if (= hydrate-id (:hydrate-id (get-state)))
+                      (let [stage-val (:stage (get-state))
+                            ptm (util/map-keys (fn [request]
+                                                 ; todo branch-val
+                                                 [(hash stage-val) request])
+                                               ptm)]
+                        (dispatch! [success-action ptm id->tempid]))
+                      (timbre/info (str "Ignoring response for " hydrate-id)))))
+          (p/catch (fn [error]
+                     (if (= hydrate-id (:hydrate-id (get-state)))
+                       (dispatch! [failure-action error])
+                       (timbre/info (str "Ignoring response for " hydrate-id)))
+                     (throw error)))))))
 
 (defn hydrate-page [rt on-start dispatch! get-state]
-  (let [{:keys [encoded-route local-basis stage] :as state} (get-state)]
-    (hydrate-route* rt local-basis encoded-route stage {:type "page"} nil
-                    on-start :hydrate!-success :hydrate!-failure
-                    dispatch! get-state)))
+  (hydrate-route* rt {:type "page"} nil #(select-keys % [:encoded-route :local-basis])
+                  on-start :hydrate!-success :hydrate!-failure
+                  dispatch! get-state))
 
-(defn hydrate-branch [rt local-basis encoded-route foo branch
+(defn hydrate-branch [rt post-start->route-vals foo branch
                       on-start dispatch! get-state]
-  (let [{:keys [stage]} (get-state)]
-    (hydrate-route* rt local-basis encoded-route stage foo branch
-                    on-start :popover-hydrate!-success :popover-hydrate!-failure
-                    dispatch! get-state)))
+  (hydrate-route* rt foo branch post-start->route-vals
+                  on-start :popover-hydrate!-success :popover-hydrate!-failure
+                  dispatch! get-state))
 
 (defn refresh-global-basis [rt dispatch! get-state]
   (-> (api/global-basis rt)
@@ -93,8 +93,8 @@
           on-start [[:with branch uri tx]]]
       (if (nil? branch)
         (hydrate-page rt on-start dispatch! get-state)
-        (let [{:keys [local-basis encoded-route]} (get-in (get-state) [:branches branch])]
-          (hydrate-branch rt local-basis encoded-route foo branch on-start dispatch! get-state))))))
+        (let [post-start->route-vals #(get-in % [:branches branch])]
+          (hydrate-branch rt post-start->route-vals foo branch on-start dispatch! get-state))))))
 
 (defn open-popover [popover-id]
   (timbre/debug popover-id)
@@ -111,8 +111,9 @@
                      (throw error)))
           (p/then (fn [local-basis]
                     (let [on-start [(open-popover popover-id)
-                                    [:add-branch branch encoded-route local-basis]]]
-                      (hydrate-branch rt local-basis encoded-route foo branch on-start dispatch! get-state))))))))
+                                    [:add-branch branch encoded-route local-basis]]
+                          post-start->route-vals (constantly {:encoded-route encoded-route :local-basis local-basis})]
+                      (hydrate-branch rt post-start->route-vals foo branch on-start dispatch! get-state))))))))
 
 (defn close-popover [popover-id]
   (timbre/debug popover-id)
@@ -137,8 +138,8 @@
                                  (if app-route [:set-route (routing/encode app-route)])
                                  [:close-popover branch]])]
                   (if-let [parent-branch (branch/decode-parent-branch branch)]
-                    (let [{:keys [local-basis encoded-route]} (get-in (get-state) [:branches parent-branch])]
-                      (hydrate-branch rt local-basis encoded-route foo parent-branch actions dispatch! get-state))
+                    (let [post-start->route-vals #(get-in % [:branches parent-branch])]
+                      (hydrate-branch rt post-start->route-vals foo parent-branch actions dispatch! get-state))
                     (hydrate-page rt actions dispatch! get-state))))))))
 
 (defn reset-stage [rt tx]
