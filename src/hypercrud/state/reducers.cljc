@@ -30,8 +30,8 @@
     (-> (case action
           :transact!-success nil
 
-          :discard (let [[branch] args]
-                     (discard stage branch))
+          :discard-branch (let [[branch] args]
+                            (discard stage branch))
 
           :with (let [[branch uri tx] args]
                   (-> stage
@@ -80,13 +80,21 @@
     :hydrate!-failure (pr-str (first args))
     error))
 
+(defn popover-reducer [popovers action & args]
+  (case action
+    :open-popover (let [[popover-id] args]
+                    (conj popovers popover-id))
+    :close-popover (let [[popover-id] args]
+                     (disj popovers popover-id))
+    (or popovers #{})))
+
 (defn branches-reducer [branches action & args]
   (case action
-    :open-popover (let [[branch encoded-route local-basis] args]
-                    (assoc-in branches [branch :local-basis] {:local-basis local-basis
-                                                              :encoded-route encoded-route}))
-    :close-popover (let [[branch] args]
-                     (dissoc branches branch))
+    :add-branch (let [[branch encoded-route local-basis] args]
+                  (assoc-in branches [branch :local-basis] {:local-basis local-basis
+                                                            :encoded-route encoded-route}))
+    :discard-branch (let [[branch] args]
+                      (dissoc branches branch))
     (or branches {})))
 
 (defn pressed-keys-reducer [v action & args]
@@ -111,6 +119,7 @@
    :ptm ptm-reducer
    :error error-reducer
    :branches branches-reducer
+   :popovers popover-reducer
    :pressed-keys pressed-keys-reducer
    :tempid-lookups tempid-lookups-reducer})
 

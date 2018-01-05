@@ -3,6 +3,7 @@
             [cats.monad.either :as either #?(:clj :refer :cljs :refer-macros) [try-either]]
             [clojure.set :as set]
             [hypercrud.browser.context :as context]
+            [hypercrud.browser.popovers :as popovers]
             [hypercrud.browser.q-util :as q-util]
             [hypercrud.browser.routing :as routing]
             [hypercrud.compile.eval :as eval :refer [eval-str]]
@@ -152,26 +153,26 @@
                    #?(:clj  (throw err)
                       :cljs (js/alert (pprint-str err))))))))
 
-(defn cancel! [ctx]
-  ((:dispatch! ctx) (actions/cancel-popover (:branch ctx))))
+(defn close! [popover-id ctx]
+  ((:dispatch! ctx) (actions/close-popover popover-id)))
 
-(defn managed-popover-body [link route ctx]
-  (let [stage! (reactive/partial stage! link route ctx)
-        cancel! (reactive/partial cancel! ctx)
-        ; NOTE: this ctx logic and structure is the same as the popover branch of browser-request/recurse-request
-        ctx (-> ctx
+(defn cancel! [popover-id ctx]
+  ((:dispatch! ctx) (actions/discard-branched-popover popover-id (:branch ctx))))
+
+(defn managed-popover-body [link route popover-id ctx]
+  ; NOTE: this ctx logic and structure is the same as the popover branch of browser-request/recurse-request
+  (let [ctx (-> ctx
                 (context/clean)
                 (update :debug #(str % ">popover-link[" (:db/id link) ":" (or (:link/rel link) (:anchor/prompt link)) "]")))]
     [:div.hyperfiddle-popover-body
      #?(:clj  (assert false "todo")
         :cljs [hypercrud.browser.core/ui-from-route route ctx]) ; cycle
-     [:button {:on-click stage!} "stage"]
+     [:button {:on-click (reactive/partial stage! link route ctx)} "stage"]
      ; TODO also cancel on escape
-     [:button {:on-click cancel!} "cancel"]]))
+     [:button {:on-click (reactive/partial cancel! popover-id ctx)} "cancel"]]))
 
-
-(defn open! [route ctx]
-  ((:dispatch! ctx) (actions/open-popover (:peer ctx) (:branch ctx) route (:foo ctx))))
+(defn open! [route popover-id ctx]
+  ((:dispatch! ctx) (actions/open-branched-popover (:peer ctx) popover-id (:branch ctx) route (:foo ctx))))
 
 ; if this is driven by link, and not route, it needs memoized.
 ; the route is a fn of the formulas and the formulas can have effects
@@ -190,8 +191,9 @@
         popover-props (if (popover-link? link)
                         (if-let [route (and (:link/managed? link) (either/right? route') (cats/extract route'))]
                           ; If no route, there's nothing to draw, and the anchor tooltip shows the error.
-                          (let [ctx (context/anchor-branch ctx link)]
-                            {:showing? (reactive/cursor (-> ctx :peer .-state-atom) [:branches (:branch ctx)])
-                             :body [managed-popover-body link route ctx]
-                             :open! (reactive/partial open! route ctx)})))]
+                          (let [ctx (context/anchor-branch ctx link)
+                                popover-id (popovers/popover-id link ctx)]
+                            {:showing? (reactive/cursor (-> ctx :peer .-state-atom) [:popovers popover-id])
+                             :body [managed-popover-body link route popover-id ctx]
+                             :open! (reactive/partial open! route popover-id ctx)})))]
     (merge hypercrud-props {:popover popover-props})))

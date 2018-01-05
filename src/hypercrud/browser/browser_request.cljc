@@ -2,9 +2,10 @@
   (:require [cats.core :as cats :refer [mlet]]
             [cats.monad.either :as either #?(:clj :refer :cljs :refer-macros) [try-either]]
             [datascript.parser :as parser]
-            [hypercrud.browser.link :as link]
             [hypercrud.browser.base :as base]
             [hypercrud.browser.context :as context]
+            [hypercrud.browser.link :as link]
+            [hypercrud.browser.popovers :as popovers]
             [hypercrud.browser.routing :as routing]
             [hypercrud.client.schema :as schema-util]
             [taoensso.timbre :as timbre]))
@@ -16,8 +17,9 @@
 (defn recurse-request [link ctx]
   (if (:link/managed? link)
     (let [route' (routing/build-route' link ctx)
-          ctx (context/anchor-branch ctx link)]
-      (if (get-in (-> ctx :peer .-state-atom deref) [:branches (:branch ctx)])
+          ctx (context/anchor-branch ctx link)
+          popover-id (popovers/popover-id link ctx)]
+      (if (get-in (-> ctx :peer .-state-atom deref) [:popovers popover-id])
         ; if the anchor IS a popover, we need to run the same logic as anchor/build-anchor-props
         ; the ctx needs to be updated (branched, etc), but NOT BEFORE determining the route
         ; that MUST happen in the parent context

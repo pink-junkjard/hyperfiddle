@@ -69,10 +69,9 @@
                    (throw error))))))
 
 (defn set-route [rt encoded-route dispatch! get-state]
-  (let [actions (->> (keys (:branches (get-state)))
-                     (mapcat (fn [branch-id]
-                               [[:discard branch-id]
-                                [:close-popover branch-id]]))
+  (let [{:keys [branches popovers]} (get-state)
+        actions (->> (concat (map (fn [branch-id] [:discard-branch branch-id]) (keys branches))
+                             (map (fn [popover-id] [:close-popover popover-id]) popovers))
                      (cons [:set-route encoded-route]))]
     (dispatch! (cons :batch actions))
     (-> (refresh-page-local-basis rt dispatch! get-state)
@@ -97,7 +96,12 @@
         (let [{:keys [local-basis encoded-route]} (get-in (get-state) [:branches branch])]
           (hydrate-branch rt local-basis encoded-route foo branch on-start dispatch! get-state))))))
 
-(defn open-popover [rt branch route foo]
+(defn open-popover [popover-id]
+  (timbre/debug popover-id)
+  [:open-popover popover-id])
+
+(defn open-branched-popover [rt popover-id branch route foo]
+  (timbre/debug popover-id)
   (fn [dispatch! get-state]
     (let [encoded-route (routing/encode route)
           {:keys [global-basis]} (get-state)]
@@ -106,12 +110,18 @@
                      (dispatch! [:set-error error])
                      (throw error)))
           (p/then (fn [local-basis]
-                    (let [on-start [[:open-popover branch encoded-route local-basis]]]
+                    (let [on-start [(open-popover popover-id)
+                                    [:add-branch branch encoded-route local-basis]]]
                       (hydrate-branch rt local-basis encoded-route foo branch on-start dispatch! get-state))))))))
 
-(defn cancel-popover [branch]
-  (batch [:discard branch]
-         [:close-popover branch]))
+(defn close-popover [popover-id]
+  (timbre/debug popover-id)
+  [:close-popover popover-id])
+
+(defn discard-branched-popover [popover-id branch]
+  (timbre/debug popover-id)
+  (batch [:discard-branch branch]
+         (close-popover popover-id)))
 
 (defn stage-popover [rt branch foo swap-fn-async]
   (fn [dispatch! get-state]
