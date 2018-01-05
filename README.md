@@ -22,11 +22,11 @@ in JVM). It should be straightforward to use with any managed dom strategy.
 There is a builtin library of UI components for forms and such, but they are very
 easy to write since they are just pure functions, you can just bring your own.
 
-> ![](https://i.imgur.com/4pdvDaD.png)
+> ![](https://i.imgur.com/pQk6g0a.png)
 > 
-> *Hyperfiddle UI component builtins, they are just functions so you can trivially provide your own. Our builtins are
->  very good and highly dynamic, there are control points to override all markup, for example this CodeMirror was 
->  defined by ClojureScript code, stored in a database and eval'ed at runtime.*
+> *Hyperfiddle UI component builtins are
+>  very good and highly dynamic, there are control points to override all markup, for example this markdown 
+>  editor is defined by ClojureScript code, stored in a database and eval'ed at runtime.*
 
 # Documentation and community
 
@@ -238,7 +238,7 @@ We don't do all of this today, but we will.
 The following screenshot is fully defined as Hyperfiddle EDN and simple Reagent expressions that a web 
 designer could write.
 
-> <kbd><img src="https://i.imgur.com/DCPtHN3.png"></kbd>
+> ![](https://i.imgur.com/DCPtHN3.png)
 > 
 > *The radio control on :fiddle/type is a custom attribute renderer, `qe-picker-control`, which is defined 
 > in the view menu and eval'ed at runtime. :fiddle/query's custom renderer is a CodeMirror with syntax 
