@@ -105,7 +105,7 @@
                                    route)]
     ;^{:key route}
     [native-listener {:on-click on-click}
-     [stale/loading v'
+     [stale/loading (stale/can-be-loading? ctx) v'
       (fn [e] [:div {:class (classes "ui" class "hyperfiddle-error")} (ui-error e ctx)])
       (fn [v] [:div {:class (classes "ui" class)} v])
       (fn [v] [:div {:class (classes "ui" class "hyperfiddle-loading")} v])]]))

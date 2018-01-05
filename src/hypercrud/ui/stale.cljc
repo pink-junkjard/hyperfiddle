@@ -1,17 +1,26 @@
 (ns hypercrud.ui.stale
-  (:require [cats.monad.either :as either]))
+  (:require [cats.monad.either :as either]
+            [hypercrud.util.reactive :as reactive]))
+
+
+(defn can-be-loading? [ctx]
+  (reactive/cursor (.-state-atom (:peer ctx)) [:hydrate-id]))
 
 
 (defn loading
-  ([either-v error success]
-   [loading either-v error success success])
-  ([either-v error success loading]
+  ([can-be-loading? either-v error success]
+   [loading can-be-loading? either-v error success success])
+  ([can-be-loading? either-v error success loading]
    (let [prev-v (atom nil)]
-     (fn [either-v error success loading]
+     (fn [can-be-loading? either-v error success loading]
        (either/branch either-v
                       (fn [e]
                         (if-let [v (and (= "Loading" (:message e)) @prev-v)]
-                          (loading v)
+                          (if @can-be-loading?
+                            (loading v)
+                            (do
+                              (reset! prev-v v)
+                              (error e)))
                           (error e)))
                       (fn [v]
                         (reset! prev-v v)
