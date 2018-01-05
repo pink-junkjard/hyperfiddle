@@ -1,6 +1,6 @@
 (ns hypercrud.browser.base
   (:require [cats.core :as cats :refer [mlet]]
-            [cats.monad.either :as either #?(:clj :refer :cljs :refer-macros) [try-either]]
+            [cats.monad.either :as either]
             [hypercrud.browser.auto-anchor :as auto-anchor]
             [hypercrud.browser.find-element :as find-element]
             [hypercrud.browser.auto-fiddle :as auto-fiddle]
@@ -15,6 +15,7 @@
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hypercrud.types.ThinEntity :refer [#?(:cljs ThinEntity)]]
+            [hypercrud.util.non-fatal :refer [try-either]]
             [hypercrud.util.string :as hc-string])
   #?(:clj
      (:import (hypercrud.types.Entity Entity)

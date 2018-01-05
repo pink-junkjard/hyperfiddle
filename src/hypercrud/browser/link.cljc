@@ -1,6 +1,6 @@
 (ns hypercrud.browser.link
   (:require [cats.core :as cats :refer [mlet return]]
-            [cats.monad.either :as either #?(:clj :refer :cljs :refer-macros) [try-either]]
+            [cats.monad.either :as either]
             [clojure.set :as set]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.popovers :as popovers]
@@ -11,6 +11,7 @@
             [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
             [hypercrud.types.ThinEntity :refer [->ThinEntity]]
             [hypercrud.util.core :refer [pprint-str]]
+            [hypercrud.util.non-fatal :refer [try-either]]
             [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :as hc-string]
             [promesa.core :as p]

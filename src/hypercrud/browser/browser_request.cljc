@@ -1,6 +1,6 @@
 (ns hypercrud.browser.browser-request
   (:require [cats.core :as cats :refer [mlet]]
-            [cats.monad.either :as either #?(:clj :refer :cljs :refer-macros) [try-either]]
+            [cats.monad.either :as either]
             [datascript.parser :as parser]
             [hypercrud.browser.base :as base]
             [hypercrud.browser.context :as context]
@@ -8,6 +8,7 @@
             [hypercrud.browser.popovers :as popovers]
             [hypercrud.browser.routing :as routing]
             [hypercrud.client.schema :as schema-util]
+            [hypercrud.util.non-fatal :refer [try-either]]
             [taoensso.timbre :as timbre]))
 
 
