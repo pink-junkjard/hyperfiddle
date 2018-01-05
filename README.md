@@ -2,11 +2,11 @@
 
 This is the open source library powering <http://www.hyperfiddle.net>.
 
-## Dependency coordinates — Todo
+# Dependency coordinates — Todo
 
     [com.hyperfiddle/hyperfiddle "0.0.0"]
 
-## Philosophy
+# Philosophy
 
 Hyperfiddle is built in layers.
 
@@ -15,7 +15,7 @@ Hyperfiddle is built in layers.
 
 You can code at either level. Both data and functions compose properly (it is just Clojure functions and Clojure data).
 
-## App-as-a-Function
+# App-as-a-Function
 
 UI, at its essense, is about two concerns:
 
@@ -65,25 +65,53 @@ Notes about these functions
 * Sometimes the runtime chooses to loop in the browser, i.e. a little, incremental 
 data load in response to a UI state change
 
-This is how Hyperfiddle insulates the application programmer from I/O. No browser/service round trips like 
-REST, no service/database round trips like SQL. App-as-a-fn is a wonderful, functional way to write web dashboards, 
-better than anything else that exists today, because:
+App-as-a-fn with managed I/O is a wonderful way to write web dashboards, better than anything else that exists today, because:
 
+#### Programming model is higher level:
+
+* application programmer fully insulated from I/O–real functional programming
+* No async in userland
 * Unified backend/frontend, same codebase runs in both places
 * No manual conversion between backend types and frontend types
 * No REST, no low level HTTP boilerplate 
+* no repeated browser/service round trips
+* API built-in
+* No more fiat APIs — all fiddles speak the same API
+* Integrated high level tooling (form-builder, app-builder)
+
+#### Immutability in database (Datomic) makes imperative problems go away:
+
 * No monstrous JOINs to avoid database round trips
+* no service/database round trips at all
 * No batching and caching
 * No GraphQL resolver hiding complexity in the closet
 * No eventual consistency
 * No thinking about network cost
 * Program as if all data is local
 
+#### The machine does all the boilerplate:
+
+* Exact data sync in one request, including dynamic dependencies
+* Built-in server side rendering, no integration glue code
+* Works with browser javascript disabled (whole app can run #{Browser Node JVM} including transactions and business logic)
+
+#### Infrastructure benefits:
+
+* all requests have a time-basis, all responses are immutable
+* CDN integration that understands your app (serve APIs like static sites)
+* Dashboards work offline, from disk cache
+* Reads continue to be serviced from cache during deployments
+* Massively parallelizable, serverless, elastic
+
+Basically, we think Datomic fully solves CRUD apps permanently.
+
 Now that I/O is solved, we can start building *real, composable abstractions:*
 
-## App-as-a-Value
+# App-as-a-Value
 
-Here is the above functions, represented as a Hyperfiddle EDN value:
+Here is the above functions, represented as a Hyperfiddle EDN value. Actually the below values do a lot more 
+than the above functions do, in fewer lines. Data is more information-dense than code, kind of like how a picture is 
+worth 1000 words.
 
 ```clojure
 ; email registration table
@@ -115,38 +143,33 @@ Here is the above functions, represented as a Hyperfiddle EDN value:
  :fiddle/links #{{:db/id 17592186045474, :link/rel :sys-new-?e, :link/fiddle #:db{:id 17592186045475}}}}
 ```
 
-Actually these values do a lot more than the above functions do. Data is more information dense than code, kind of like 
-how a picture is worth 1000 words.
-
-> [![](https://i.imgur.com/iwOvJzA.png)](http://dustingetz.hyperfiddle.net/ezpjb2RlLWRhdGFiYXNlICJzYW5kYm94IiwgOmxpbmstaWQgMTc1OTIxODYwNDU0MTh9)
->
-> *Above EDN values are about half of the data that defines the [gender/shirt-size demo](http://dustingetz.hyperfiddle.site/ezpjb2RlLWRhdGFiYXNlICJzYW5kYm94IiwgOmxpbmstaWQgMTc1OTIxODYwNDU0MTh9).*
-
-Obviously, data is better in every possible way (structural tooling, decoupled from platform, decoupled from 
-performance, tiny surface area for bugs, better tasting kool-aid, an intelligent child is be able to figure it out).
+Fiddles have links to other fiddles, this forms a graph.
 
 Like all Hyperfiddle applications, hyperfiddle EDN values are interpreted by two functions. In this case, 
 these two functions are provided by Hyperfiddle, together they comprise the *Hyperfiddle Browser*. The Browser 
-is a generic app-as-a-function which interprets hyperfiddle app-values.
+is a generic app-as-a-function which interprets hyperfiddle app-values, by navigating the link graph.
 
 *web browser : HTML documents :: hyperfiddle browser :: hyperfiddle EDN values*
+
+Obviously, data is better in every possible way (structural tooling, decoupled from platform, decoupled from 
+performance, tiny surface area for bugs, an intelligent child is able to figure it out, like how we all taught 
+ourselves HTML at age 13.)
+
+> [![](https://i.imgur.com/iwOvJzA.png)](http://dustingetz.hyperfiddle.net/ezpjb2RlLWRhdGFiYXNlICJzYW5kYm94IiwgOmxpbmstaWQgMTc1OTIxODYwNDU0MTh9)
+>
+> *Hyperfiddle Browser, navigating a hyperfiddle edn value. Both select options queries are defined as :fiddle/links 
+> in the above EDN. For brevity, the above snippets omit half of the EDN comprising this demo. The above 
+> EDN values are about half of the data that defines this 
+> [gender/shirt-size demo](http://dustingetz.hyperfiddle.site/ezpjb2RlLWRhdGFiYXNlICJzYW5kYm94IiwgOmxpbmstaWQgMTc1OTIxODYwNDU0MTh9).*
 
 Hyperfiddles are graphs, not documents, so they are stored in databases. Databases storing hyperfiddles are like 
 git repos storing the "source code" (data) of your hyperfiddles. Like git, there is no central database.
 
-## Managed I/O permits optimizations that human-coded I/O cannot do:
-
-App-as-a-function optimizations:
-
-* Built-in server side rendering
-* Works with browser javascript disabled (Whole app can run in Node and JVM)
-* all requests have a time-basis, all responses are immutable
-* CDN/infra integration that understands your app (serve APIs like static sites)
-
-App-as-a-value defines app structure as a graph of links, which enables further optimizations:  
+## App as graph permits optimizations that human-coded I/O cannot do:  
 
 * Automatic I/O partitioning and batching, optimized for cache hits
-* Automatic code splitting
+* Server preloading, prefetching and optimistic push
+* Machine learning can do the optimzations
 
 ## How far will it scale?
 
