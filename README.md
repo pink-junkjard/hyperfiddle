@@ -11,7 +11,7 @@ If React.js is managed DOM, Hyperfiddle is managed database and network.
 # Overview
 
 Hyperfiddle abstracts over client/server data sync. Userland code does not know the difference between client or server,
-the application runs simultaneously in both places.
+the application is coded in CLJC and runs simultaneously in both places.
 
 Abstracting out the network brings a lot of interesting opportunities. Unlike REST/GraphQL/whatever, Hyperfiddle's 
 data sync *composes*. Userland is simple Clojure functions and Clojure data; all network I/O is managed.
