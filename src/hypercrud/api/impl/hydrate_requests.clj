@@ -29,7 +29,7 @@
 (defn recursively-add-entity-types [pulled-tree dbval]
   (walk/postwalk (fn [o]
                    (if (:db/id o)
-                     (->Entity (.-uri dbval) o)
+                     (->Entity (:uri dbval) o)
                      o))
                  pulled-tree))
 
@@ -51,9 +51,12 @@
 (defn process-result [user-params fe result]
   (condp = (type fe)
     datascript.parser.Variable result
-    datascript.parser.Pull (let [dbval (->> (get-in fe [:source :symbol])
-                                            str
-                                            (get user-params))]
+    datascript.parser.Pull (let [sym (get-in fe [:source :symbol])
+                                 dbval (get user-params (str sym))]
+                             ; unfortunately user may have written valid datomic datalog, but invalid datascript datalog
+                             ; see: hyperfiddle/hyperfiddle.net#70
+                             (when-not dbval
+                               (throw (Exception. (str "Unable to find dbval for '" sym "'. Please check your pull expression"))))
                              (recursively-add-entity-types result dbval))
     datascript.parser.Aggregate result))
 
