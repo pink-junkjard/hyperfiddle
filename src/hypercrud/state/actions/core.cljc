@@ -97,11 +97,9 @@
           (hydrate-branch rt post-start->route-vals foo branch on-start dispatch! get-state))))))
 
 (defn open-popover [popover-id]
-  (timbre/debug popover-id)
   [:open-popover popover-id])
 
 (defn open-branched-popover [rt popover-id branch route foo]
-  (timbre/debug popover-id)
   (fn [dispatch! get-state]
     (let [encoded-route (routing/encode route)
           {:keys [global-basis]} (get-state)]
@@ -116,11 +114,9 @@
                       (hydrate-branch rt post-start->route-vals foo branch on-start dispatch! get-state))))))))
 
 (defn close-popover [popover-id]
-  (timbre/debug popover-id)
   [:close-popover popover-id])
 
 (defn discard-branched-popover [popover-id branch]
-  (timbre/debug popover-id)
   (batch [:discard-branch branch]
          (close-popover popover-id)))
 
