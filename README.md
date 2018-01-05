@@ -16,9 +16,12 @@ the application runs simultaneously in both places.
 Abstracting out the network brings a lot of interesting opportunities. Unlike REST/GraphQL/whatever, Hyperfiddle's 
 data sync *composes*. Userland is simple Clojure functions and Clojure data; all network I/O is managed.
 
-Hyperfiddle is currently coupled to Reagent but only superficially, not in any deep way. It should be straightforward 
-to use with any managed dom strategy. There is a library of default components for forms and such, but they are very
-easy to write since they are just pure functions, you can just bring your own. 
+There is a builtin library of UI components for forms and such, but they are very
+easy to write since they are just pure functions, you can just bring your own. The builtin forms are very good and 
+highly dynamic, as seen on hyperfiddle.net, there are control points to override all markup.
+
+Hyperfiddle is currently coupled to Reagent but only superficially, the data sync is separate (it has to be as it runs 
+in JVM). It should be straightforward to use with any managed dom strategy. 
 
 # Documentation and community
 
