@@ -40,7 +40,7 @@
 
 (defn hydrate-page [rt on-start dispatch! get-state]
   (let [{:keys [encoded-route local-basis stage] :as state} (get-state)]
-    (hydrate-route* rt local-basis encoded-route stage "page" nil
+    (hydrate-route* rt local-basis encoded-route stage {:type "page"} nil
                     on-start :hydrate!-success :hydrate!-failure
                     dispatch! get-state)))
 
@@ -61,7 +61,7 @@
 
 (defn refresh-page-local-basis [rt dispatch! get-state]
   (let [{:keys [global-basis encoded-route]} (get-state)]
-    (-> (api/local-basis rt global-basis encoded-route "page" nil)
+    (-> (api/local-basis rt global-basis encoded-route {:type "page"} nil)
         (p/then (fn [local-basis]
                   (dispatch! [:set-local-basis local-basis])))
         (p/catch (fn [error]

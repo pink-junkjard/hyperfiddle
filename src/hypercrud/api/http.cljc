@@ -19,7 +19,7 @@
                                               :cljs (.-uri-str service-uri)))
                          :global-basis (base-64-url-safe/encode (pr-str global-basis))
                          :double-encoded-route (base-64-url-safe/encode encoded-route) ; todo this is awful
-                         :foo foo
+                         :foo (base-64-url-safe/encode (pr-str foo))
                          :branch branch})
        :accept :application/transit+json :as :auto
        :method :get}
@@ -32,7 +32,7 @@
                                                      :cljs (.-uri-str service-uri)))
                                 :local-basis (base-64-url-safe/encode (pr-str local-basis))
                                 :double-encoded-route (base-64-url-safe/encode encoded-route) ; todo this is awful
-                                :foo foo
+                                :foo (base-64-url-safe/encode (pr-str foo))
                                 :branch (base-64-url-safe/encode (pr-str branch))})
               :accept :application/transit+json :as :auto}
              (if (empty? stage)
