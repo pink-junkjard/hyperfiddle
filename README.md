@@ -64,14 +64,14 @@ Onboarding
 
 # Philosophy 
 
-Hyperfiddle is built in layers. Higher layers are optional. 
+Hyperfiddle is built in layers. Higher layers are optional.
 
-1. app-as-a-function: Low level I/O runtime for managed client/server data sync, userland is a fn
-2. app-as-a-value: High level data-driven interpreter function, userland is a value
-3. UI forms/tables library, fully dynamic, all markup can be customized with functions 
-4. Structural editor for CRUD apps
+1. app-as-a-function: managed data sync, userland is a function
+2. app-as-a-value: data-driven CRUD model, userland is a value
+3. automatic dashboards: dynamic forms/UI library, customize markup with functions 
+4. structural editor: edit userland app-values and store them in Datomic 
 
-# Layer 1. App-as-a-Function
+# \#1 App-as-a-Function
 
 UI, at its essense, is about two concerns:
 
@@ -163,7 +163,7 @@ Basically, we think Datomic fully solves CRUD apps permanently.
 
 Now that I/O is solved, we can start building *real, composable abstractions:*
 
-# Layer 2. App-as-a-Value
+# \#2. App-as-a-Value
 
 Here is the above functions, represented as a Hyperfiddle EDN value. Actually the below values do a lot more 
 than the above functions do, in fewer lines. Data is more information-dense than code, kind of like how a picture is 
@@ -226,7 +226,7 @@ ourselves HTML at age 13.)
 Hyperfiddles are graphs, not documents, so they are stored in databases. Databases storing hyperfiddles are like 
 git repos storing the "source code" (data) of your hyperfiddles. Like git and the web, there is no central database.
 
-# App as graph permits optimizations that human-coded I/O cannot do:  
+## App as graph permits optimizations that human-coded I/O cannot do:  
 
 * Automatic I/O partitioning and batching, optimized for cache hits
 * Server preloading, prefetching and optimistic push
@@ -234,14 +234,11 @@ git repos storing the "source code" (data) of your hyperfiddles. Like git and th
 
 We don't do all of this today, but we will.
 
-# Layer 3. UI forms/tables library, fully dynamic
+# \#3. Automatic dashboards
 
-> ![]()
-> 
-> *The gender iframe is actually select options query, with the select renderer toggled off.
-> It renders in the header because the query runs once, not once-per-row.*
+Todo
 
-# Layer 4. Structural editor for CRUD apps
+# \#4. Structural editor for CRUD apps
 
 > ![](https://i.imgur.com/sZfypDa.png)
 > 
