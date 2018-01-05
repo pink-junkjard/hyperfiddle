@@ -116,31 +116,38 @@ worth 1000 words.
 ```clojure
 ; email registration table
 
-{:db/id 17592186045418,
- :fiddle/type :query,
+{:db/id        17592186045418,
+ :fiddle/type  :query,
  :fiddle/query "[:find (pull ?e [:db/id :reg/email :reg/gender :reg/shirt-size])
                  :in $ :where [?e :reg/email]]",
- :fiddle/links #{{:db/id 17592186045434,
-                  :link/rel :options,
-                  :link/fiddle #:db{:id 17592186045435},
-                  :link/render-inline? true,
-                  :link/dependent? true,
-                  :link/path "0 :reg/shirt-size",
-                  :link/formula "(fn [ctx] {:request-params {\"?gender\" (get-in ctx [:cell-data :reg/gender])}})"}
-                 {:db/id 17592186045427,
-                  :link/rel :options,
-                  :link/fiddle #:db{:id 17592186045428},
-                  :link/render-inline? true,
-                  :link/path "0 :reg/gender"}
-                 {:db/id 17592186045481, :link/rel :sys-new-?e, :link/fiddle #:db{:id 17592186045482}}}}
- 
-; select options query
+ :fiddle/links #{
+                 ; link to shirt-size options
+                 {:db/id               17592186045434,
+                  :link/rel            :options,
+                  :link/fiddle         #:db{:id 17592186045435},
+                  :link/render-inline? true,                ; embedded like an iframe
+                  :link/dependent?     true,
+                  :link/path           "0 :reg/shirt-size",
+                  :link/formula        "(fn [ctx] {:request-params {\"?gender\" (get-in ctx [:cell-data :reg/gender])}})"}
 
-{:db/id 17592186045428,
- :fiddle/type :query,
+                 ; link to gender options
+                 {:db/id               17592186045427,
+                  :link/rel            :options,
+                  :link/fiddle         #:db{:id 17592186045428},
+                  :link/render-inline? true,                ; embedded like an iframe
+                  :link/path           "0 :reg/gender"}
+
+                 ; link to new-registration form
+                 {:db/id 17592186045481, :link/rel :sys-new-?e, :link/fiddle #:db{:id 17592186045482}}}}
+
+; select options query
+{:db/id        17592186045428,
+ :fiddle/type  :query,
  :fiddle/query "[:find (pull ?e [:db/id :reg.gender/ident])
                  :in $ :where [?e :reg.gender/ident]]",
- :fiddle/links #{{:db/id 17592186045474, :link/rel :sys-new-?e, :link/fiddle #:db{:id 17592186045475}}}}
+ :fiddle/links #{
+                 ; link to new-gender form
+                 {:db/id 17592186045474, :link/rel :sys-new-?e, :link/fiddle #:db{:id 17592186045475}}}}
 ```
 
 Fiddles have links to other fiddles, this forms a graph.
