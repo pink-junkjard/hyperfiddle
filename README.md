@@ -239,10 +239,11 @@ We don't do all of this today, but we will.
 
 The dynamic dashboards have the following data driven hook points:
 
-* Top level renderer
-* Fiddle page renderer
-* Fiddle form-field renderer
-* Datomic attribute renderer
+* Fiddle page
+* Fiddle form-field
+* Fiddle form-field- #{form table tr th label value ...}
+* Datomic attribute from your schema
+* Datomic type #{string keyword bool inst long ref ...}
 
 Here is an attribute renderer:
 
@@ -260,6 +261,8 @@ Here is a fiddle renderer:
 > we've rendered the data as HTML. On the right, we see the Reagent expression.
 > The data/view toggles the fiddle renderer, so you get a free admin dashboard with every 
 > fiddle.*
+
+Here is the [Datomic schema renderer](https://github.com/hyperfiddle/hyperfiddle/blob/bd61dfb07cbff75d5002b15999d1abc6c3c6af3c/src/hypercrud/ui/auto_control.cljs#L15-L30), TODO this should be a core.match config stored in a database...
 
 ## \#4. Structural editor for CRUD apps
 
