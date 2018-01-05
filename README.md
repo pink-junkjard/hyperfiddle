@@ -12,8 +12,8 @@ This is the open source library powering <http://www.hyperfiddle.net>.
 
 Hyperfiddle is built in layers.
 
-* app-as-a-function: Low level I/O runtime for managed client/server data sync, such that userland is pure functions
-* app-as-a-value: High level data-driven interpreter function
+* app-as-a-function: Low level I/O runtime for managed client/server data sync, userland is a fn
+* app-as-a-value: High level data-driven interpreter function, userland is a value
 
 You can code at either level. Unlike REST/GraphQL/whatever, Hyperfiddle's data sync *composes*. Userland is simple 
 Clojure functions and Clojure data; all network I/O is managed. (If React.js is managed DOM, Hyperfiddle is managed network.)
