@@ -78,7 +78,7 @@ App-as-a-fn with managed I/O is a wonderful way to write web dashboards, better 
 * No manual conversion between backend types and frontend types
 * No REST, no low level HTTP boilerplate 
 * no repeated browser/service round trips
-* API built-in
+* API built-in (capabilities competitive with OData)
 * No more fiat APIs — all fiddles speak the same API
 * Integrated high level tooling (form-builder, app-builder)
 
