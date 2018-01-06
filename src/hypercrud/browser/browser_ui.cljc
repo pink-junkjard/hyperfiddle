@@ -1,6 +1,6 @@
 (ns hypercrud.browser.browser-ui
   (:require [cats.core :as cats :refer [mlet]]
-            [cats.monad.either :as either #?(:clj :refer :cljs :refer-macros) [try-either]]
+            [cats.monad.either :as either]
             [hypercrud.browser.link :as link]
             [hypercrud.browser.base :as base]
             [hypercrud.browser.context :as context]
@@ -12,6 +12,7 @@
             [hypercrud.ui.safe-render :refer [safe-user-renderer]]
             [hypercrud.ui.stale :as stale]
             [hypercrud.util.core :as util]
+            [hypercrud.util.non-fatal :refer [try-either]]
             [hypercrud.util.reactive :as reactive]
             [taoensso.timbre :as timbre]))
 
@@ -105,7 +106,7 @@
                                    route)]
     ;^{:key route}
     [native-listener {:on-click on-click}
-     [stale/loading v'
+     [stale/loading (stale/can-be-loading? ctx) v'
       (fn [e] [:div {:class (classes "ui" class "hyperfiddle-error")} (ui-error e ctx)])
       (fn [v] [:div {:class (classes "ui" class)} v])
       (fn [v] [:div {:class (classes "ui" class "hyperfiddle-loading")} v])]]))

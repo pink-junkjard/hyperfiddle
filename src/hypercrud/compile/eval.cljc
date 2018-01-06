@@ -1,10 +1,11 @@
 (ns hypercrud.compile.eval
-  (:require [cats.monad.either :as either #?(:clj :refer :cljs :refer-macros) [try-either]]
+  (:require [cats.monad.either :as either]
     #?@(:cljs [[cljs.analyzer :as analyzer]
                [cljs.js :as cljs]
                [cljs.tagged-literals :as tags]])
             [hypercrud.compile.reader :refer [hc-data-readers]]
             [hypercrud.readers :as hc-readers]
+            [hypercrud.util.non-fatal :refer [try-either]]
             [taoensso.timbre :as timbre]))
 
 

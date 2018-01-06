@@ -2,5 +2,5 @@
   (:require [promesa.core :as p]))
 
 
-(defn local-basis [rt global-basis]
+(defn local-basis [rt global-basis encoded-route foo]
   (p/resolved global-basis))

@@ -8,7 +8,9 @@
   (case action
     :hydrate!-start (first args)
     :hydrate!-success nil
+    :popover-hydrate!-success nil
     :hydrate!-failure nil
+    :popover-hydrate!-failure nil
 
     (or loading? false)))
 
@@ -28,8 +30,8 @@
     (-> (case action
           :transact!-success nil
 
-          :discard (let [[branch] args]
-                     (discard stage branch))
+          :discard-branch (let [[branch] args]
+                            (discard stage branch))
 
           :with (let [[branch uri tx] args]
                   (-> stage
@@ -61,11 +63,13 @@
 (defn tempid-lookups-reducer [tempid-lookup action & args]
   (case action
     :hydrate!-success (second args)
+    :popover-hydrate!-success (merge-with (partial merge-with merge) tempid-lookup (second args))
     tempid-lookup))
 
 (defn ptm-reducer [ptm action & args]
   (case action
     :hydrate!-success (first args)
+    :popover-hydrate!-success (merge ptm (first args))
     (or ptm nil)))
 
 (defn error-reducer [error action & args]
@@ -78,11 +82,20 @@
 
 (defn popover-reducer [popovers action & args]
   (case action
-    :open-popover (let [[branch] args]
-                    (conj popovers branch))
-    :close-popover (let [[branch] args]
-                     (disj popovers branch))
+    :open-popover (let [[popover-id] args]
+                    (conj popovers popover-id))
+    :close-popover (let [[popover-id] args]
+                     (disj popovers popover-id))
     (or popovers #{})))
+
+(defn branches-reducer [branches action & args]
+  (case action
+    :add-branch (let [[branch encoded-route local-basis] args]
+                  (assoc branches branch {:local-basis local-basis
+                                          :encoded-route encoded-route}))
+    :discard-branch (let [[branch] args]
+                      (dissoc branches branch))
+    (or branches {})))
 
 (defn pressed-keys-reducer [v action & args]
   (or v #{}))
@@ -105,6 +118,7 @@
    :stage stage-reducer
    :ptm ptm-reducer
    :error error-reducer
+   :branches branches-reducer
    :popovers popover-reducer
    :pressed-keys pressed-keys-reducer
    :tempid-lookups tempid-lookups-reducer})

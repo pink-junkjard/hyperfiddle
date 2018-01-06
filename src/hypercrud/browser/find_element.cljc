@@ -1,9 +1,10 @@
 (ns hypercrud.browser.find-element
   (:require [cats.core :as cats :refer [mlet]]
-            [cats.monad.either :as either #?(:clj :refer :cljs :refer-macros) [try-either]]
+            [cats.monad.either :as either]
             [clojure.set :as set]
             [datascript.parser :as parser]
-            [hypercrud.util.core :as util]))
+            [hypercrud.util.core :as util]
+            [hypercrud.util.non-fatal :refer [try-either]]))
 
 
 (defrecord FindElement [name fields source-symbol splat? type])

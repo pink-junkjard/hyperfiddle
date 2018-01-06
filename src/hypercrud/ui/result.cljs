@@ -1,5 +1,5 @@
 (ns hypercrud.ui.result
-  (:require [cats.monad.either :as either :refer-macros [try-either]]
+  (:require [cats.monad.either :as either]
             [datascript.parser :as parser]
             [hypercrud.browser.base :as base]
             [hypercrud.ui.form :as form]
@@ -7,6 +7,7 @@
             [hypercrud.ui.table :as table]
             [hypercrud.ui.control.link-controls :as link-controls]
             [hypercrud.util.core :as util]
+            [hypercrud.util.non-fatal :refer [try-either]]
             [hypercrud.browser.link :as link]))
 
 

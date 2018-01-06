@@ -1,6 +1,7 @@
 (ns hypercrud.util.string
-  (:require [cats.monad.either :as either #?(:clj :refer :cljs :refer-macros) [try-either]]
-            [hypercrud.compile.reader :as reader]))
+  (:require [cats.monad.either :as either]
+            [hypercrud.compile.reader :as reader]
+            [hypercrud.util.non-fatal :refer [try-either]]))
 
 
 (defn safe-read-edn-string [user-edn-str]
