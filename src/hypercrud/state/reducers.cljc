@@ -91,8 +91,8 @@
 (defn branches-reducer [branches action & args]
   (case action
     :add-branch (let [[branch encoded-route local-basis] args]
-                  (assoc-in branches [branch :local-basis] {:local-basis local-basis
-                                                            :encoded-route encoded-route}))
+                  (assoc branches branch {:local-basis local-basis
+                                          :encoded-route encoded-route}))
     :discard-branch (let [[branch] args]
                       (dissoc branches branch))
     (or branches {})))
