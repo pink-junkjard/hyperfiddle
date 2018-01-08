@@ -166,7 +166,6 @@
                 (context/clean)
                 (update :debug #(str % ">popover-link[" (:db/id link) ":" (or (:link/rel link) (:anchor/prompt link)) "]")))]
     [:div.hyperfiddle-popover-body
-     [:p popover-id] [:p (:branch ctx)] [:p (pr-str dont-branch?)]
      #?(:clj  (assert false "todo")
         :cljs [hypercrud.browser.core/ui-from-route route ctx]) ; cycle
      (when-not dont-branch?
