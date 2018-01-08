@@ -166,6 +166,7 @@
                 (context/clean)
                 (update :debug #(str % ">popover-link[" (:db/id link) ":" (or (:link/rel link) (:anchor/prompt link)) "]")))]
     [:div.hyperfiddle-popover-body
+     [:p popover-id] [:p (:branch ctx)] [:p (pr-str dont-branch?)]
      #?(:clj  (assert false "todo")
         :cljs [hypercrud.browser.core/ui-from-route route ctx]) ; cycle
      (when-not dont-branch?
@@ -198,8 +199,8 @@
         popover-props (if (popover-link? link)
                         (if-let [route (and (:link/managed? link) (either/right? route') (cats/extract route'))]
                           ; If no route, there's nothing to draw, and the anchor tooltip shows the error.
-                          (let [ctx (if dont-branch? ctx (context/anchor-branch ctx link))
-                                popover-id (popovers/popover-id link ctx)]
+                          (let [popover-id (popovers/popover-id link ctx)
+                                ctx (if dont-branch? ctx (context/anchor-branch ctx link))]
                             {:showing? (reactive/cursor (-> ctx :peer .-state-atom) [:popovers popover-id])
                              :body [managed-popover-body link route popover-id dont-branch? ctx]
                              :open! (reactive/partial open! route popover-id dont-branch? ctx)})))]
