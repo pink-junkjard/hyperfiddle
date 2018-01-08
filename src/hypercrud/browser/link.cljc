@@ -161,19 +161,19 @@
   ((:dispatch! ctx) (actions/discard-branched-popover popover-id (:branch ctx))))
 
 (defn managed-popover-body [link route popover-id dont-branch? ctx]
-  ; NOTE: this ctx logic and structure is the same as the popover branch of browser-request/recurse-request
-  (let [ctx (-> ctx
-                (context/clean)
-                (update :debug #(str % ">popover-link[" (:db/id link) ":" (or (:link/rel link) (:anchor/prompt link)) "]")))]
-    [:div.hyperfiddle-popover-body
-     #?(:clj  (assert false "todo")
-        :cljs [hypercrud.browser.core/ui-from-route route ctx]) ; cycle
-     (when-not dont-branch?
-       [:button {:on-click (reactive/partial stage! link route popover-id ctx)} "stage"])
-     ; TODO also cancel on escape
-     (if dont-branch?
-       [:button {:on-click (reactive/partial close! popover-id ctx)} "close"]
-       [:button {:on-click (reactive/partial cancel! popover-id ctx)} "cancel"])]))
+  [:div.hyperfiddle-popover-body
+   ; NOTE: this ctx logic and structure is the same as the popover branch of browser-request/recurse-request
+   (let [ctx (-> ctx
+                 (context/clean)
+                 (update :debug #(str % ">popover-link[" (:db/id link) ":" (or (:link/rel link) (:anchor/prompt link)) "]")))])
+   #?(:clj  (assert false "todo")
+      :cljs [hypercrud.browser.core/ui-from-route route ctx]) ; cycle
+   (when-not dont-branch?
+     [:button {:on-click (reactive/partial stage! link route popover-id ctx)} "stage"])
+   ; TODO also cancel on escape
+   (if dont-branch?
+     [:button {:on-click (reactive/partial close! popover-id ctx)} "close"]
+     [:button {:on-click (reactive/partial cancel! popover-id ctx)} "cancel"])])
 
 (defn open! [route popover-id dont-branch? ctx]
   ((:dispatch! ctx)
