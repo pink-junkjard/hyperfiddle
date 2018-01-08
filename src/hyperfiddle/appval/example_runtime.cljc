@@ -1,7 +1,7 @@
 (ns hyperfiddle.appval.example-runtime
   (:require [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
-            [hyperfiddle.api :refer [#?(:cljs AppFnApi) #?(:cljs AppValApi)]]
+            [hyperfiddle.api :as api]
             [hyperfiddle.appfn.runtime-local :refer [hydrate-requests hydrate-loop]]
             [hyperfiddle.appfn.runtime-rpc :refer [hydrate-requests! sync! transact!!]]
             [hyperfiddle.appval.runtime-local :refer [hydrate-route global-basis local-basis]]
@@ -12,23 +12,27 @@
 
 
 (deftype BrowserReferenceRuntime [service-uri state-atom request-fn]
-  AppValApi
+  api/AppValGlobalBasis
   (global-basis [rt] (p/resolved nil))
 
+  api/AppValLocalBasis
   (local-basis [rt global-basis encoded-route foo branch]
     (p/resolved global-basis))
 
+  api/AppValHydrate
   (hydrate-route [rt local-basis encoded-route foo branch stage]
     (let [data-cache (select-keys @state-atom [:id->tempid :ptm])]
       (hydrate-loop rt (partial request-fn encoded-route foo branch) local-basis stage data-cache)))
 
-  AppFnApi
+  api/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
     (hydrate-requests! service-uri local-basis stage requests))
 
+  api/AppFnSync
   (sync [rt dbs]
     (sync! service-uri dbs))
 
+  api/AppFnTransact!
   (transact! [rt tx-groups]
     (transact!! service-uri tx-groups))
 
