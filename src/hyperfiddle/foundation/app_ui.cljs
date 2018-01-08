@@ -80,5 +80,5 @@
                      (update :debug str "-v"))]
          [:div.hyperfiddle ui-props
           [browser/ui-from-route (app/main-route ctx) ctx]
-          ;(if @(reactive/cursor state-atom [:staging-open]))
-          [staging (:peer ctx) (:dispatch! ctx)]]))]))
+          (if @(reactive/cursor state-atom [:staging-open])
+            [staging (:peer ctx) (:dispatch! ctx)])]))]))
