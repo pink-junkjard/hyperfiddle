@@ -1,12 +1,12 @@
 (ns hypercrud.server.service
   (:refer-clojure :exclude [sync])
-  (:require [hypercrud.api.impl.hydrate-requests :refer [hydrate-requests]]
-            [hypercrud.api.impl.sync :refer [sync]]
-            [hypercrud.api.impl.transact :refer [transact!]]
-            [hypercrud.readers]
+  (:require [hypercrud.readers]
             [hypercrud.server.util.http :as http]
             [hypercrud.transit :as hc-t]
             [hypercrud.util.base-64-url-safe :as base-64-url-safe]
+            [hyperfiddle.appfn.hydrate-requests :refer [hydrate-requests]]
+            [hyperfiddle.appfn.sync :refer [sync]]
+            [hyperfiddle.appfn.transact :refer [transact!]]
             [io.pedestal.http.body-params :as body-params]
             [io.pedestal.http.route :refer [expand-routes]]
             [ring.util.response :as ring-resp]))
