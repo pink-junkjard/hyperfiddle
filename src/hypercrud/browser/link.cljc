@@ -128,7 +128,7 @@
 
 (def ^:export build-anchor-props-raw build-link-props-raw)
 
-(defn stage! [link route ctx]
+(defn stage! [link route popover-id ctx]
   (let [user-txfn (some-> (eval/validate-user-code-str (:link/tx-fn link)) eval-str (cats/mplus (either/right nil)) (cats/extract))
         user-txfn (or user-txfn (constantly nil))]
     (-> (p/promise
@@ -148,7 +148,7 @@
 
                               ; return the result to the action, it could be a promise
                               result))]
-              ((:dispatch! ctx) (actions/stage-popover (:peer ctx) (:branch ctx) (:foo ctx) swap-fn)))))
+              ((:dispatch! ctx) (actions/stage-popover (:peer ctx) popover-id (:branch ctx) (:foo ctx) swap-fn)))))
         ; todo something better with these exceptions (could be user error)
         (p/catch (fn [err]
                    #?(:clj  (throw err)
@@ -169,7 +169,7 @@
      #?(:clj  (assert false "todo")
         :cljs [hypercrud.browser.core/ui-from-route route ctx]) ; cycle
      (when-not dont-branch?
-       [:button {:on-click (reactive/partial stage! link route ctx)} "stage"])
+       [:button {:on-click (reactive/partial stage! link route popover-id ctx)} "stage"])
      ; TODO also cancel on escape
      (if dont-branch?
        [:button {:on-click (reactive/partial close! popover-id ctx)} "close"]
