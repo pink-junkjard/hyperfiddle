@@ -67,7 +67,7 @@
                   (either/branch (constantly nil) identity))
             missing (->> params (filter (comp nil? second)) (mapv first))]
         (if (empty? missing)
-          (cats/return (->QueryRequest q params nil))
+          (cats/return (->QueryRequest q params))
           (either/left {:message "missing param" :data {:params params :missing missing}}))))
 
     :entity
