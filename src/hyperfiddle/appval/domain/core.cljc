@@ -1,4 +1,4 @@
-(ns hyperfiddle.foundation.core
+(ns hyperfiddle.appval.domain.core
   (:require [clojure.string :as string]
             [cuerdas.core :as cuerdas]
             [hypercrud.client.core :as hc]

@@ -27,4 +27,4 @@
                             ((:dispatch! ctx) (apply action args)))))
 
 
-; cljs.core.get(ctx, kw('dispatch!'))(hyperfiddle.foundation.state.actions.toggle_staging())
+; cljs.core.get(ctx, kw('dispatch!'))(hyperfiddle.app.state.actions.toggle_staging())

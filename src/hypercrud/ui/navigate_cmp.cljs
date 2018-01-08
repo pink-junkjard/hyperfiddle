@@ -70,6 +70,6 @@
            [popover-cmp hypercrud-props label]
            [anchor-cmp hypercrud-props label])]))))
 
-; act like a function down-stack
+; act like a appfn down-stack
 (defn navigate-cmp [props label & [class]]
   [navigate-cmp* props label class])

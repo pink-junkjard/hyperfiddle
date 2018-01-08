@@ -1,11 +1,9 @@
-(ns hyperfiddle.api.impl
+(ns hyperfiddle.appval.runtime-local
   (:require [cats.core :as cats :refer [mlet]]
             [cats.monad.either :as either]
             [cats.labs.promise]
             [clojure.set :as set]
             [cuerdas.core :as str]
-            [hypercrud.api.core :as api]
-            [hypercrud.api.util :as api-util]
             [hypercrud.browser.routing :as routing]
             [hypercrud.client.peer :as peer]
             [hypercrud.util.core :as util]
@@ -14,9 +12,11 @@
             [hypercrud.util.performance :as perf]
             [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :as hc-string]
-            [hyperfiddle.foundation.app :as ide]
-            [hyperfiddle.foundation.core :as hf]
-            [hyperfiddle.foundation.state.reducers :as reducers]
+            [hyperfiddle.appfn.runtime-local :refer [hydrate-all-or-nothing! hydrate-one! hydrate-loop]] ;todo
+            [hyperfiddle.appval.domain.app :as ide]
+            [hyperfiddle.appval.domain.core :as hf]
+            [hyperfiddle.appval.state.reducers :as reducers]
+            [hyperfiddle.api :as api]
             [promesa.core :as p]
             [taoensso.timbre :as timbre]))
 
@@ -35,7 +35,7 @@
                  domain-requests [(hf/domain-request (hf/hostname->hf-domain-name hostname hyperfiddle-hostname) rt)
                                   (hf/domain-request "hyperfiddle" rt)]]
            domain-basis (api/sync rt #{hf/domain-uri})
-           [user-domain hf-domain] (api-util/hydrate-all-or-nothing! rt domain-basis nil domain-requests)
+           [user-domain hf-domain] (hydrate-all-or-nothing! rt domain-basis nil domain-requests)
            :let [user-domain (ide/process-domain user-domain)
                  hf-domain (ide/process-domain hf-domain)
                  user-domain-uris (uris-for-domain user-domain) ; Any reachable thing, not per route.
@@ -67,7 +67,7 @@
                                  (p/resolved nil))
            user-domain (let [domain-basis (apply sorted-map (apply concat (:domain global-basis)))
                              user-domain-request (hf/domain-request (hf/hostname->hf-domain-name hostname hyperfiddle-hostname) rt)]
-                         (-> (api-util/hydrate-one! rt domain-basis nil user-domain-request)
+                         (-> (hydrate-one! rt domain-basis nil user-domain-request)
                              (p/then ide/process-domain)))
            route (or maybe-decoded-route
                      (-> (hc-string/safe-read-edn-string (:domain/home-route user-domain))
@@ -143,4 +143,4 @@
                            "page" (ide/page-request state-val ctx)
                            "ide" (ide/ide-request state-val ctx)
                            "user" (ide/user-request state-val ctx)))))]
-    (api-util/hydrate-loop rt request-fn local-basis stage data-cache)))
+    (hydrate-loop rt request-fn local-basis stage data-cache)))

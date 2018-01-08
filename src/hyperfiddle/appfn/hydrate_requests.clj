@@ -1,4 +1,4 @@
-(ns hypercrud.api.impl.hydrate-requests
+(ns hyperfiddle.appfn.hydrate-requests
   (:refer-clojure :exclude [sync])
   (:require [clojure.set :as set]
             [clojure.walk :as walk]

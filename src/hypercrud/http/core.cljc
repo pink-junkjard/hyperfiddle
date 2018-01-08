@@ -6,7 +6,7 @@
     [taoensso.timbre :as timbre]))
 
 
-(defn request! [req]
+(defn http-request! [req]
   (let [req-hash (delay (hash req))]
     (perf/time-promise
       (do

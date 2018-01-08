@@ -1,4 +1,4 @@
-(ns hypercrud.api.impl.sync
+(ns hyperfiddle.appfn.sync
   (:refer-clojure :exclude [sync])
   (:require [datomic.api :as d]
             [taoensso.timbre :as timbre]))

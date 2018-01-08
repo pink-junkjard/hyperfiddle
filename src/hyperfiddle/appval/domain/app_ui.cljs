@@ -1,4 +1,4 @@
-(ns hyperfiddle.foundation.app-ui
+(ns hyperfiddle.appval.domain.app-ui
   (:require [cats.core :refer [mlet]]
             [cats.monad.either :as either]
             [cljs.pprint :as pprint]
@@ -15,9 +15,9 @@
             [hypercrud.util.non-fatal :refer [try-either]]
             [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :as hc-string]
-            [hyperfiddle.foundation.app :as app]
-            [hyperfiddle.foundation.core :as hf]
-            [hyperfiddle.foundation.error :as error]))
+            [hyperfiddle.appval.domain.app :as app]
+            [hyperfiddle.appval.domain.core :as hf]
+            [hyperfiddle.appval.domain.error :as error]))
 
 
 (defn staging [peer dispatch!]
@@ -42,7 +42,7 @@
                                                   (when (actions-util/navigable? encoded-route (get-state))
                                                     (actions/set-route (:peer ctx) encoded-route dispatch! get-state)))))
                             (let [encoded-route (routing/encode route (str "hyperfiddle." (:hyperfiddle-hostname ctx)))]
-                              ; todo push this window.location set up to the runtime atom watcher
+                              ; todo push this window.location set up to the appfn atom watcher
                               (aset js/window "location" encoded-route)))
                           (.stopPropagation event))))]
   (defn hf-ui-context [ctx hf-domain target-domain target-route user-profile]

@@ -1,4 +1,4 @@
-(ns hyperfiddle.foundation.state.actions
+(ns hyperfiddle.appval.state.actions
   (:require [hypercrud.state.actions.core :refer [refresh-page-local-basis hydrate-page]]
             [promesa.core :as p]))
 

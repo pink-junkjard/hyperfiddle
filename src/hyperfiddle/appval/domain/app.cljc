@@ -1,4 +1,4 @@
-(ns hyperfiddle.foundation.app
+(ns hyperfiddle.appval.domain.app
   (:require [cats.core :as cats]
             [cats.monad.either :as either]
             [hypercrud.browser.core :as browser]
@@ -9,7 +9,7 @@
             [hypercrud.util.non-fatal :refer [try-either]]
             [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :as hc-string]
-            [hyperfiddle.foundation.core :as hf]))
+            [hyperfiddle.appval.domain.core :as hf]))
 
 
 (defn process-domain [domain]

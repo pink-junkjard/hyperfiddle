@@ -2,5 +2,5 @@
 (ns hyperfiddle.ide.cljc
   (:require [hyperfiddle.ide.fiddles.domain-code-database]
             [hyperfiddle.ide.fiddles.topnav]
-            [hyperfiddle.foundation.state.actions]
+            [hyperfiddle.appval.state.actions]
             [hyperfiddle.ide.util]))

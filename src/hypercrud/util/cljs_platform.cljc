@@ -6,8 +6,8 @@
   (= :nodejs (get-in @cljs.env/*compiler* [:options :target])))
 
 ; a compile time check for environment
-; most of the time a runtime check will do (= "nodejs" *target*)
-; which is also public api, unlike these macros
+; most of the time a appfn check will do (= "nodejs" *target*)
+; which is also public runtime, unlike these macros
 ; https://stackoverflow.com/a/47499855
 (defmacro code-for-nodejs
   [& body]

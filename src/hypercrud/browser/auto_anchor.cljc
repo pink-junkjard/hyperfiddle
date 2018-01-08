@@ -18,7 +18,7 @@
   "All sys links are :link/rel :sys, so they can be matched and merged with user-links.
   Matching is determined by [repeat? entity attribute ident]
 
-  This function recurses in unexpected abstract way and impacts performance highly
+  This appfn recurses in unexpected abstract way and impacts performance highly
   "
   [parent-fiddle ordered-fes ctx]
   (let [entity-links (->> ordered-fes

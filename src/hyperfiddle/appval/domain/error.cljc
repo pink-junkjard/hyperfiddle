@@ -1,4 +1,4 @@
-(ns hyperfiddle.foundation.error
+(ns hyperfiddle.appval.domain.error
   (:require [hypercrud.react.react-fragment :refer [react-fragment]]))
 
 
@@ -16,4 +16,4 @@
 ;(apply react-fragment :_)
 ;(markdown "### Helpful tip:
 ;* If Datomic error, check the staging area
-;* If the staging area not visible, paste this at js console: `dispatch(hyperfiddle.main.root_ctx, hyperfiddle.foundation.state.actions.toggle_staging)`")
+;* If the staging area not visible, paste this at js console: `dispatch(hyperfiddle.main.root_ctx, hyperfiddle.app.state.actions.toggle_staging)`")

@@ -152,6 +152,6 @@
          ; Sometimes the leafnode needs all the anchors.
          [:tbody (TBody relations ordered-fes anchors sort-col ctx)]]))))
 
-; This one is a function
+; This one is a appfn
 (defn Table [& props]
   (apply vector Table-inner props))

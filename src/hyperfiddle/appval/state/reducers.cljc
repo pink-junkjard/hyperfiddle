@@ -1,4 +1,4 @@
-(ns hyperfiddle.foundation.state.reducers
+(ns hyperfiddle.appval.state.reducers
   (:require [hypercrud.state.core :as state]
             [hypercrud.state.reducers :as hc-reducers]))
 

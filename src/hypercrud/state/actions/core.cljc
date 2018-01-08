@@ -1,14 +1,14 @@
 (ns hypercrud.state.actions.core
   (:require [cats.core :refer [mlet]]
             [cats.monad.either :as either]
-            [hypercrud.api.core :as api]
-            [hypercrud.api.util :as api-util]
             [hypercrud.browser.routing :as routing]
             [hypercrud.client.schema :as schema]
             [hypercrud.client.tx :as tx]
             [hypercrud.types.DbVal :refer [->DbVal]]
             [hypercrud.util.branch :as branch]
             [hypercrud.util.core :as util]
+            [hyperfiddle.api :as api]
+            [hyperfiddle.appfn.runtime-local :refer [process-result v-not-nil?]] ; todo
             [promesa.core :as p]
             [taoensso.timbre :as timbre]))
 
@@ -82,7 +82,7 @@
         dbval (->DbVal uri branch)
         schema (let [schema-request (schema/schema-request dbval)]
                  (-> (get ptm schema-request)
-                     (api-util/process-result schema-request)
+                     (process-result schema-request)
                      (either/branch (fn [e] (throw e)) identity)))
         id->tempid (get-in tempid-lookups [uri branch])]
     (map (partial tx/stmt-id->tempid id->tempid schema) tx)))
@@ -150,7 +150,7 @@
           ; todo do something when child branches exist and are not nil: hyperfiddle/hyperfiddle#99
           tx-groups (->> (get stage nil)                    ; can only transact one branch
                          ; hack because the ui still generates some garbage tx
-                         (util/map-values (partial filter api-util/v-not-nil?)))]
+                         (util/map-values (partial filter v-not-nil?)))]
       (-> (api/transact! (:peer ctx) tx-groups)
           (p/catch (fn [error]
                      #?(:cljs (js/alert (pr-str error)))

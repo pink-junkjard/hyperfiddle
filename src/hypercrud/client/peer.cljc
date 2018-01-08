@@ -1,10 +1,11 @@
 (ns hypercrud.client.peer
   (:require [cats.monad.either :as either]
-            [hypercrud.api.util :as api-util]
             [hypercrud.client.core :as hypercrud]
             [hypercrud.types.DbVal :refer [->DbVal]]
             [hypercrud.util.branch :as branch]
-            [hypercrud.util.reactive :as reactive]))
+            [hypercrud.util.reactive :as reactive]
+            [hyperfiddle.appfn.runtime-local :refer [process-result]] ;todo
+            ))
 
 
 ; react on the answer, not the question
@@ -15,7 +16,7 @@
         request' [(hash stage-val) request]]
     ; (branch/branch-val uri branch @(reactive/cursor state-atom [:stage]))
     (if (contains? ptm request')
-      (api-util/process-result (get ptm request') request)
+      (process-result (get ptm request') request)
       (either/left {:message "Loading" :data {:request request}}))))
 
 (defn hydrate [state-atom request]
