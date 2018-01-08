@@ -29,8 +29,7 @@
                     (if (= hydrate-id (:hydrate-id (get-state)))
                       (let [stage-val (:stage (get-state))
                             ptm (util/map-keys (fn [request]
-                                                 ; todo branch-val
-                                                 [(hash stage-val) request])
+                                                 [(branch/branch-vals-for-request request stage-val) request])
                                                ptm)]
                         (dispatch! [success-action ptm id->tempid]))
                       (timbre/info (str "Ignoring response for " hydrate-id)))))
