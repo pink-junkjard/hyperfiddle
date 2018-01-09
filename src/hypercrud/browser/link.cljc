@@ -128,7 +128,7 @@
 
 (def ^:export build-anchor-props-raw build-link-props-raw)
 
-(defn stage! [link route ctx]
+(defn stage! [link route popover-id ctx]
   (let [user-txfn (some-> (eval/validate-user-code-str (:link/tx-fn link)) eval-str (cats/mplus (either/right nil)) (cats/extract))
         user-txfn (or user-txfn (constantly nil))]
     (-> (p/promise
@@ -148,7 +148,7 @@
 
                               ; return the result to the action, it could be a promise
                               result))]
-              ((:dispatch! ctx) (actions/stage-popover (:peer ctx) (:branch ctx) (:foo ctx) swap-fn)))))
+              ((:dispatch! ctx) (actions/stage-popover (:peer ctx) popover-id (:branch ctx) (:foo ctx) swap-fn)))))
         ; todo something better with these exceptions (could be user error)
         (p/catch (fn [err]
                    #?(:clj  (throw err)
@@ -161,19 +161,19 @@
   ((:dispatch! ctx) (actions/discard-branched-popover popover-id (:branch ctx))))
 
 (defn managed-popover-body [link route popover-id dont-branch? ctx]
-  ; NOTE: this ctx logic and structure is the same as the popover branch of browser-request/recurse-request
-  (let [ctx (-> ctx
-                (context/clean)
-                (update :debug #(str % ">popover-link[" (:db/id link) ":" (or (:link/rel link) (:anchor/prompt link)) "]")))]
-    [:div.hyperfiddle-popover-body
-     #?(:clj  (assert false "todo")
-        :cljs [hypercrud.browser.core/ui-from-route route ctx]) ; cycle
-     (when-not dont-branch?
-       [:button {:on-click (reactive/partial stage! link route ctx)} "stage"])
-     ; TODO also cancel on escape
-     (if dont-branch?
-       [:button {:on-click (reactive/partial close! popover-id ctx)} "close"]
-       [:button {:on-click (reactive/partial cancel! popover-id ctx)} "cancel"])]))
+  [:div.hyperfiddle-popover-body
+   ; NOTE: this ctx logic and structure is the same as the popover branch of browser-request/recurse-request
+   (let [ctx (-> ctx
+                 (context/clean)
+                 (update :debug #(str % ">popover-link[" (:db/id link) ":" (or (:link/rel link) (:anchor/prompt link)) "]")))])
+   #?(:clj  (assert false "todo")
+      :cljs [hypercrud.browser.core/ui-from-route route ctx]) ; cycle
+   (when-not dont-branch?
+     [:button {:on-click (reactive/partial stage! link route popover-id ctx)} "stage"])
+   ; TODO also cancel on escape
+   (if dont-branch?
+     [:button {:on-click (reactive/partial close! popover-id ctx)} "close"]
+     [:button {:on-click (reactive/partial cancel! popover-id ctx)} "cancel"])])
 
 (defn open! [route popover-id dont-branch? ctx]
   ((:dispatch! ctx)
@@ -198,8 +198,8 @@
         popover-props (if (popover-link? link)
                         (if-let [route (and (:link/managed? link) (either/right? route') (cats/extract route'))]
                           ; If no route, there's nothing to draw, and the anchor tooltip shows the error.
-                          (let [ctx (if dont-branch? ctx (context/anchor-branch ctx link))
-                                popover-id (popovers/popover-id link ctx)]
+                          (let [popover-id (popovers/popover-id link ctx)
+                                ctx (if dont-branch? ctx (context/anchor-branch ctx link))]
                             {:showing? (reactive/cursor (-> ctx :peer .-state-atom) [:popovers popover-id])
                              :body [managed-popover-body link route popover-id dont-branch? ctx]
                              :open! (reactive/partial open! route popover-id dont-branch? ctx)})))]

@@ -3,6 +3,7 @@
             [cats.monad.either :as either]
             [clojure.set :as set]
             [hypercrud.types.Err :refer [#?(:cljs Err)]]
+            [hypercrud.util.branch :as branch]
             [hypercrud.util.core :as util]
             [hypercrud.util.performance :as perf]
             [hyperfiddle.api :as api]
@@ -26,8 +27,7 @@
               (fn [{:keys [pulled-trees id->tempid]}]
                 (let [new-ptm (->> (zipmap missing-requests pulled-trees)
                                    (util/map-keys (fn [request]
-                                                    ; todo branch-val
-                                                    [(hash stage) request])))
+                                                    [(branch/branch-vals-for-request request stage) request])))
                       ptm (merge ptm new-ptm)
                       data-cache {:id->tempid id->tempid
                                   :ptm ptm}]

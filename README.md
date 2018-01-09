@@ -1,25 +1,17 @@
-# Hyperfiddle — full-stack CRUD data sync for Clojure & Datomic
+# Hyperfiddle — Functional data sync for Datomic APIs
 
-This is the open source library powering <http://www.hyperfiddle.net>.
+Hyperfiddle abstracts over client/server data sync for APIs. If React.js is managed DOM, Hyperfiddle is managed database and network.
 
-If React.js is managed DOM, Hyperfiddle is managed database and network.
+Hyperfiddle models API inter-dependencies as a graph (I need query-X and also query-Y which depends query-Z). This graph lets the I/O runtime understand the structure and data flows of the application, which permits interesting optimization opportunities.
+
+Hyperfiddle extends Datomic's immutable database semantics to the API. Unlike REST/GraphQL/whatever, Hyperfiddle's 
+data sync *composes*. Userland is simple Clojure functions and Clojure data. Userland code does not know the difference between client or server, the application is coded in CLJC and runs simultaneously in both places.
+
+Managed I/O is not the point; the point is: *what does managed I/O make possible that wasn't possible before?* 
 
 # Dependency coordinates — Todo
 
     [com.hyperfiddle/hyperfiddle "0.0.0"]
-
-# Overview
-
-Hyperfiddle abstracts over client/server data sync. Userland code does not know the difference between client or server,
-the application is coded in CLJC and runs simultaneously in both places.
-
-Abstracting out the network brings a lot of interesting opportunities. Unlike REST/GraphQL/whatever, Hyperfiddle's 
-data sync *composes*. Userland is simple Clojure functions and Clojure data; all network I/O is managed.
-
-Hyperfiddle comes with a builtin library of UI components for forms and such, but they are very
-easy to write since they are just pure functions, you can just bring your own. Hyperfiddle is currently coupled 
-to Reagent but only superficially, the data sync is separate (it has to be as it runs in JVM). It should be 
-straightforward to use with any managed dom strategy. 
 
 # Documentation and community
 
@@ -38,32 +30,35 @@ We're nearing a 0.1 open-source release in Q1 2018.
 
 Performance (Hyperfiddle must respond as fast as a Clojure repl)
 
-- [x] data loop running in JVM
-- [ ] partition data hydrates, using hyperfiddle link graph, so only what changed gets reloaded
-
-User experience
-
-- [ ] improve popovers, finish stage/discard UX
-- [ ] Human readable URLs and customizable URL router
-- [ ] Fix query param tooltips when you hover an anchor
-
-Onboarding
-
-- [ ] Hello-world usage and tutorial repo
+- [x] Perf: data loop running in JVM
+- [ ] Perf: automatically optimize hydrates for cache locality (using link graph)
+- [ ] Release CLI so you don't have to think about http, backends etc until you outgrow it
+- [ ] UX: improve popovers, finish stage/discard UX
+- [ ] UX: Human readable URLs and customizable URL router
+- [ ] UX: Fix query param tooltips when you hover an anchor
 
 ### 0.2.0
 
+- [ ] Hello-world usage and tutorial repo
 - [ ] Edit React.js/Reagent expressions side-by-side with the running app (like JSFiddle)
 - [ ] Links panel user experience
 
-# Philosophy 
+# Overview
 
 Hyperfiddle is built in layers. Higher layers are optional.
 
 1. app-as-a-function: managed data sync, userland is a function
 2. app-as-a-value: data-driven CRUD model, userland is EDN
-3. automatic dashboards: dynamic forms/UI library, customize markup with functions 
-4. structural editor: edit EDN app-values and store them in Datomic 
+3. dashboards auto-generated: dynamic forms/UI library, customize markup with functions 
+4. structural editor for CRUD apps: edit EDN app-values and store them in Datomic 
+
+Hyperfiddle IDE, the structural editor (<http://www.hyperfiddle.net>) is also the open-source reference application to teach you how Hyperfiddle works. Hyperfiddle IDE runs on your machine from a CLI (`hyperfiddle serve datomic:free://localhost:4334/my-fiddles`); it runs in your application as a jar file from github, and as managed elastic cloud infrastructure.
+
+The reference application is built with Reagent and does server side rendering in node, but it should be straightforward to use with any managed dom rendering strategy.
+
+Hyperfiddle makes forms and such really easy to write (something a web designer can do), because when I/O is managed, there is nothing left but markup. Hyperfiddle comes batteries included with a library of UI components, but you don't have to use them.
+
+Hyperfiddle's data sync loop runs in the JVM (to solve N+1 problem of REST). 
 
 ## \#1. App-as-a-Function
 

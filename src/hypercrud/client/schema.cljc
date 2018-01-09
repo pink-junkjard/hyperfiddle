@@ -13,8 +13,7 @@
   (->QueryRequest '[:find [(pull ?attr [:attribute/ident :attribute/renderer :db/doc]) ...]
                     :in $ :where
                     [?attr :attribute/ident]]
-                  {"$" (hc/db (:peer ctx) (get-in ctx [:repository :dbhole/uri] ctx) (:branch ctx))}
-                  nil))
+                  {"$" (hc/db (:peer ctx) (get-in ctx [:repository :dbhole/uri] ctx) (:branch ctx))}))
 
 (defn schema-request [dbval]
   (->QueryRequest '[:find [(pull ?attr [*
@@ -22,8 +21,7 @@
                                          :db/cardinality [:db/ident]
                                          :db/unique [:db/ident]}]) ...]
                     :in $ :where [:db.part/db :db.install/attribute ?attr]]
-                  {"$" dbval}
-                  nil))
+                  {"$" dbval}))
 
 (defn schema-requests-for-link [ctx]
   (->> (get-in ctx [:repository :repository/environment])

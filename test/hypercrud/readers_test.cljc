@@ -74,10 +74,10 @@
                   "{\"~#err\":\"foo\"}"))
 
 (deftest QReq []
-  (test-all-forms (->QueryRequest "foo" "bar" "fizz")
-                  #hypercrud.types.QueryRequest.QueryRequest{:query "foo" :params "bar" :pull-exps "fizz"}
-                  "#hypercrud.types.QueryRequest.QueryRequest{:query \"foo\" :params \"bar\" :pull-exps \"fizz\"}"
-                  "{\"~#QReq\":[\"foo\",\"bar\",\"fizz\"]}"))
+  (test-all-forms (->QueryRequest "foo" "bar")
+                  #hypercrud.types.QueryRequest.QueryRequest{:query "foo" :params "bar"}
+                  "#hypercrud.types.QueryRequest.QueryRequest{:query \"foo\" :params \"bar\"}"
+                  "{\"~#QReq\":[\"foo\",\"bar\"]}"))
 
 (deftest uri []
   (test-all-forms (->URI "foo")

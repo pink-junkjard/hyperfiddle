@@ -40,7 +40,7 @@
    (t/write-handler (constantly "err") #(:msg %))
 
    QueryRequest
-   (t/write-handler (constantly "QReq") (fn [v] [(:query v) (:params v) (:pull-exps v)]))
+   (t/write-handler (constantly "QReq") (fn [v] [(:query v) (:params v)]))
 
    ThinEntity
    (t/write-handler (constantly "entity") (fn [v] [(.-dbname v) (.-id v)]))

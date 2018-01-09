@@ -18,8 +18,8 @@
 (defn recurse-request [link ctx]
   (if (:link/managed? link)
     (let [route' (routing/build-route' link ctx)
-          ctx (context/anchor-branch ctx link)
-          popover-id (popovers/popover-id link ctx)]
+          popover-id (popovers/popover-id link ctx)
+          ctx (context/anchor-branch ctx link)]
       (if (get-in (-> ctx :peer .-state-atom deref) [:popovers popover-id])
         ; if the anchor IS a popover, we need to run the same logic as anchor/build-anchor-props
         ; the ctx needs to be updated (branched, etc), but NOT BEFORE determining the route

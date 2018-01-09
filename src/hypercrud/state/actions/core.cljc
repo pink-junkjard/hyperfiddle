@@ -29,8 +29,7 @@
                     (if (= hydrate-id (:hydrate-id (get-state)))
                       (let [stage-val (:stage (get-state))
                             ptm (util/map-keys (fn [request]
-                                                 ; todo branch-val
-                                                 [(hash stage-val) request])
+                                                 [(branch/branch-vals-for-request request stage-val) request])
                                                ptm)]
                         (dispatch! [success-action ptm id->tempid]))
                       (timbre/info (str "Ignoring response for " hydrate-id)))))
@@ -68,10 +67,16 @@
                    (dispatch! [:set-error error])
                    (throw error))))))
 
+(defn discard-branch [branch]
+  [:discard-branch branch])
+
+(defn close-popover [popover-id]
+  [:close-popover popover-id])
+
 (defn set-route [rt encoded-route dispatch! get-state]
   (let [{:keys [branches popovers]} (get-state)
-        actions (->> (concat (map (fn [branch-id] [:discard-branch branch-id]) (keys branches))
-                             (map (fn [popover-id] [:close-popover popover-id]) popovers))
+        actions (->> (concat (map discard-branch (keys branches))
+                             (map close-popover popovers))
                      (cons [:set-route encoded-route]))]
     (dispatch! (cons :batch actions))
     (-> (refresh-page-local-basis rt dispatch! get-state)
@@ -113,14 +118,11 @@
                           post-start->route-vals (constantly {:encoded-route encoded-route :local-basis local-basis})]
                       (hydrate-branch rt post-start->route-vals foo branch on-start dispatch! get-state))))))))
 
-(defn close-popover [popover-id]
-  [:close-popover popover-id])
-
 (defn discard-branched-popover [popover-id branch]
-  (batch [:discard-branch branch]
+  (batch (discard-branch branch)
          (close-popover popover-id)))
 
-(defn stage-popover [rt branch foo swap-fn-async]
+(defn stage-popover [rt popover-id branch foo swap-fn-async]
   (fn [dispatch! get-state]
     (let [multi-color-tx (get-in (get-state) [:stage branch] {})]
       (p/then (swap-fn-async multi-color-tx)
@@ -132,7 +134,7 @@
                                       tx)
                                 [[:merge branch]
                                  (if app-route [:set-route (routing/encode app-route)])
-                                 [:close-popover branch]])]
+                                 (close-popover popover-id)])]
                   (if-let [parent-branch (branch/decode-parent-branch branch)]
                     (let [post-start->route-vals #(get-in % [:branches parent-branch])]
                       (hydrate-branch rt post-start->route-vals foo parent-branch actions dispatch! get-state))

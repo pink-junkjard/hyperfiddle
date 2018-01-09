@@ -12,9 +12,7 @@
 (defn trackable-hydrate [state-atom request]
   (let [ptm @(reactive/cursor state-atom [:ptm])
         stage-val @(reactive/cursor state-atom [:stage])
-        ; todo branch-val
-        request' [(hash stage-val) request]]
-    ; (branch/branch-val uri branch @(reactive/cursor state-atom [:stage]))
+        request' [(branch/branch-vals-for-request request stage-val) request]]
     (if (contains? ptm request')
       (process-result (get ptm request') request)
       (either/left {:message "Loading" :data {:request request}}))))
