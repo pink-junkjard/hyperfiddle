@@ -51,9 +51,9 @@
   (defn process-data [{:keys [result ordered-fes anchors ctx]}]
     (mlet [ui-fn (base/fn-from-mode (f-mode-config) (:fiddle ctx) ctx)
            :let [link-index (->> anchors
-                                   (filter :link/rel)       ; cannot lookup nil idents
-                                   (mapv (juxt #(-> % :link/rel) identity)) ; [ repeating entity attr ident ]
-                                   (into {}))
+                                 (filter :link/rel)         ; cannot lookup nil idents
+                                 (mapv (juxt #(-> % :link/rel) identity)) ; [ repeating entity attr ident ]
+                                 (into {}))
                  ctx (assoc ctx
                        :anchor (reactive/partial anchor link-index)
                        :browse (reactive/partial browse link-index)
@@ -104,7 +104,7 @@
   (let [on-click (reactive/partial (or (:page-on-click ctx)
                                        (reactive/partial page-on-click ctx))
                                    route)]
-    ;^{:key route}
+    ;^{:key route} ; clear memory when route changes
     [native-listener {:on-click on-click}
      [stale/loading (stale/can-be-loading? ctx) v'
       (fn [e] [:div {:class (classes "ui" class "hyperfiddle-error")} (ui-error e ctx)])
