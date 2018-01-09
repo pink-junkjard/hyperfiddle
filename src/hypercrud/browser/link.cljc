@@ -165,9 +165,9 @@
    ; NOTE: this ctx logic and structure is the same as the popover branch of browser-request/recurse-request
    (let [ctx (-> ctx
                  (context/clean)
-                 (update :debug #(str % ">popover-link[" (:db/id link) ":" (or (:link/rel link) (:anchor/prompt link)) "]")))])
-   #?(:clj  (assert false "todo")
-      :cljs [hypercrud.browser.core/ui-from-route route ctx]) ; cycle
+                 (update :debug #(str % ">popover-link[" (:db/id link) ":" (or (:link/rel link) (:anchor/prompt link)) "]")))]
+     #?(:clj  (assert false "todo")
+        :cljs [hypercrud.browser.core/ui-from-route route ctx])) ; cycle
    (when-not dont-branch?
      [:button {:on-click (reactive/partial stage! link route popover-id ctx)} "stage"])
    ; TODO also cancel on escape
