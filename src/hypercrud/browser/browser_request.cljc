@@ -127,7 +127,7 @@
 
 (defn process-data [{:keys [result ordered-fes anchors ctx]}]
   (mlet [request-fn (base/fn-from-mode (f-mode-config) (:fiddle ctx) ctx)]
-    (cats/return (request-fn result ordered-fes anchors ctx))))
+    (cats/return (request-fn @result ordered-fes anchors ctx))))
 
 (defn request-from-route [route ctx]
   (let [ctx (context/route ctx route)

@@ -16,6 +16,7 @@
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hypercrud.types.ThinEntity :refer [#?(:cljs ThinEntity)]]
             [hypercrud.util.non-fatal :refer [try-either]]
+            [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :as hc-string])
   #?(:clj
      (:import (hypercrud.types.Entity Entity)
@@ -46,7 +47,7 @@
      :fiddle' (auto-fiddle/hydrate-system-fiddle (get-in ctx [:route :link-id]) ctx)}
     (let [meta-fiddle-request (meta-request-for-fiddle ctx)]
       {:meta-fiddle-req' meta-fiddle-request
-       :fiddle' (cats/bind meta-fiddle-request #(hc/hydrate (:peer ctx) %))})))
+       :fiddle' (cats/bind meta-fiddle-request #(deref (hc/hydrate (:peer ctx) %)))})))
 
 (defn request-for-fiddle [fiddle ctx]
   (case (:fiddle/type fiddle)
@@ -105,21 +106,24 @@
                 (either/right default))
       :xray (either/right default))))
 
-(let [never-read-only (constantly false)]
+(let [never-read-only (constantly false)
+      reactive-right-nil (reactive/atom (either/right nil))]
   (defn process-results [fiddle request ctx]
     (mlet [schemas (schema-util/hydrate-schema ctx)         ; schema is allowed to be nil if the link only has anchors and no data dependencies
-           result (->> (if request
-                         (hc/hydrate (:peer ctx) request)
-                         (either/right nil)))
-           :let [ctx (assoc ctx                             ; provide defaults before user-bindings run.
+           :let [reactive-either-result (->> (if request
+                                               (hc/hydrate (:peer ctx) request)
+                                               reactive-right-nil))]
+           result @reactive-either-result
+           :let [reactive-result (reactive/track identity result)
+                 ctx (assoc ctx                             ; provide defaults before user-bindings run.
                        :request request
                        :schemas schemas                     ; For tx/entity->statements in userland.
                        :fiddle fiddle                       ; for :db/doc
                        :read-only (or (:read-only ctx) never-read-only))]
            ctx (user-bindings/user-bindings' fiddle ctx)
            ; todo why are we imposing these auto-fns on everyone?
-           ordered-fes (find-element/auto-find-elements result ctx)]
-      (cats/return {:result result
+           ordered-fes (find-element/auto-find-elements @reactive-result ctx)]
+      (cats/return {:result reactive-result
                     :ordered-fes ordered-fes
                     :anchors (auto-anchor/auto-links ordered-fes ctx)
                     :ctx ctx}))))

@@ -44,7 +44,8 @@
             [(:navigate-cmp ctx) props label (:class kwargs)]))
         (browse' [link-index ident ctx]
           (->> (base/data-from-link (get link-index ident) ctx)
-               (cats/fmap :result)))
+               (cats/fmap :result)
+               (cats/fmap deref)))
         (anchor* [link-index ident ctx]
           (link/build-link-props (get link-index ident) ctx))]
   ; process-data returns an Either[Error, DOM]
@@ -59,7 +60,7 @@
                        :browse (reactive/partial browse link-index)
                        :anchor* (reactive/partial anchor* link-index)
                        :browse' (reactive/partial browse' link-index))]]
-      (cats/return (ui-fn result ordered-fes anchors ctx)))))
+      (cats/return (ui-fn @result ordered-fes anchors ctx)))))
 
 (defn e->map [e]
   (if (map? e)

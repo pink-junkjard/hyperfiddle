@@ -93,8 +93,8 @@
         hf-domain-request (hf/domain-request "hyperfiddle" (:peer ctx))]
     (concat
       [target-domain-request hf-domain-request]
-      (-> (cats/sequence [(hc/hydrate (:peer ctx) target-domain-request)
-                          (hc/hydrate (:peer ctx) hf-domain-request)])
+      (-> (cats/sequence [@(hc/hydrate (:peer ctx) target-domain-request)
+                          @(hc/hydrate (:peer ctx) hf-domain-request)])
           (either/branch
             (constantly nil)
             (fn [[target-domain hf-domain]]
@@ -108,7 +108,7 @@
                                 (hf/domain-request hf-domain-name (:peer ctx)))]
     (concat
       [target-domain-request]
-      (-> (hc/hydrate (:peer ctx) target-domain-request)
+      (-> @(hc/hydrate (:peer ctx) target-domain-request)
           (either/branch
             (constantly nil)
             (fn [target-domain]

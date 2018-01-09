@@ -62,8 +62,8 @@
                                                     (try-either (routing/decode state-route))
                                                     (either/right nil))
                               target-domain (let [hf-domain-name (hf/hostname->hf-domain-name (:hostname ctx) (:hyperfiddle-hostname ctx))]
-                                              (hc/hydrate (:peer ctx) (hf/domain-request hf-domain-name (:peer ctx))))
-                              hf-domain (hc/hydrate (:peer ctx) (hf/domain-request "hyperfiddle" (:peer ctx)))
+                                              @(hc/hydrate (:peer ctx) (hf/domain-request hf-domain-name (:peer ctx))))
+                              hf-domain @(hc/hydrate (:peer ctx) (hf/domain-request "hyperfiddle" (:peer ctx)))
                               maybe-decoded-route (or (some-> maybe-decoded-route either/right)
                                                       (hc-string/safe-read-edn-string (:domain/home-route target-domain)))]
                          (if maybe-decoded-route
