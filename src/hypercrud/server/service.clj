@@ -54,7 +54,7 @@
 #_(def routes
   (expand-routes
     `[[["/" {:get [:index http-index]}]
-       ["/runtime" {} ^:interceptors [(body-params/body-params
+       ["/api" {} ^:interceptors [(body-params/body-params
                                     (body-params/default-parser-map :edn-options {:readers *data-readers*}
                                                                     :transit-options [{:handlers hc-t/read-handlers}]))
                                   http/combine-body-params
