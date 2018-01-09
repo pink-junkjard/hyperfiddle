@@ -2,7 +2,6 @@
   (:require [cuerdas.core :as str]
             [hypercrud.browser.link :as link]
             [hypercrud.browser.context :as context]
-            [hypercrud.react.react-fragment :refer [react-fragment]]
             [hypercrud.ui.connection-color :as connection-color]
             [hypercrud.ui.css :refer [css-slugify classes]]
             [hypercrud.ui.label :refer [label]]
