@@ -52,11 +52,13 @@ Hyperfiddle is built in layers. Higher layers are optional.
 3. dashboards auto-generated: dynamic forms/UI library, customize markup with functions 
 4. structural editor for CRUD apps: edit EDN app-values and store them in Datomic 
 
-Hyperfiddle's data sync runs in the JVM (to solve N+1 problem of REST). Our reference application is built with Reagent and does server side rendering in node, but it should be straightforward to use with any managed dom rendering strategy.
+Hyperfiddle IDE, the structural editor (<http://www.hyperfiddle.net>) is also the open-source reference application to teach you how Hyperfiddle works. Hyperfiddle IDE runs on your machine from a CLI (`hyperfiddle serve datomic:free://localhost:4334/my-fiddles`); it runs in your application as a jar file from github, and as managed elastic cloud infrastructure.
+
+The reference application is built with Reagent and does server side rendering in node, but it should be straightforward to use with any managed dom rendering strategy.
 
 Hyperfiddle makes forms and such really easy to write (something a web designer can do), because when I/O is managed, there is nothing left but markup. Hyperfiddle comes batteries included with a library of UI components, but you don't have to use them.
 
-Hyperfiddle IDE, the structural editor (<http://www.hyperfiddle.net>) is also the open-source reference application to teach you how Hyperfiddle works. Hyperfiddle IDE runs on your machine from a CLI (`hyperfiddle serve datomic:free://localhost:4334/my-fiddles`); it runs in your application as a jar file from github, and as managed elastic cloud infrastructure.
+Hyperfiddle's data sync loop runs in the JVM (to solve N+1 problem of REST). 
 
 ## \#1. App-as-a-Function
 
