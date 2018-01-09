@@ -2,7 +2,7 @@
   (:require [clojure.test :refer [deftest is use-fixtures]]
             [datomic.api :as d]
             [hypercrud.api.impl.fixtures :as fixtures]
-            [hypercrud.api.impl.hydrate-requests :as hydrate-requests]))
+            [hyperfiddle.appfn.hydrate-requests :as hydrate-requests]))
 
 
 (def schema [{:db/ident :person/name
