@@ -1,4 +1,4 @@
-(ns hypercrud.api.impl.fixtures
+(ns hyperfiddle.appfn.fixtures
   (:require [datomic.api :as d]))
 
 

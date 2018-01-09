@@ -1,7 +1,7 @@
-(ns hypercrud.api.impl.hydrate-requests-test
+(ns hyperfiddle.appfn.hydrate-requests-test
   (:require [clojure.test :refer [deftest is use-fixtures]]
             [datomic.api :as d]
-            [hypercrud.api.impl.fixtures :as fixtures]
+            [hyperfiddle.appfn.fixtures :as fixtures]
             [hyperfiddle.appfn.hydrate-requests :as hydrate-requests]))
 
 
