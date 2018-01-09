@@ -16,7 +16,7 @@
 (defn auto-entity-from-stage [ctx]
   ; This returns a new value each time the transaction changes - can't call it again later.
   ; So tx-fns must inspect the modal-route, they can't re-create the dbid.
-  (let [id (-> (:branch ctx) #?(:clj Math/abs :cljs js/Math.abs) - str)]
+  (let [id (-> (:branch ctx) util/abs-normalized - str)]
     (->ThinEntity (dbname/uri->dbname (:uri ctx) ctx) id)))
 
 ; todo there are collisions when two links share the same 'location'
@@ -39,7 +39,7 @@
               :db.cardinality/one nil
               :db.cardinality/many (hash (into #{} (mapv :db/id v))) ; todo scalar
               nil nil #_":db/id has a faked attribute with no cardinality, need more thought to make elegant"))
-       hash #?(:clj Math/abs :cljs js/Math.abs) - str)))
+       hash util/abs-normalized - str)))
 
 (defn auto-entity [ctx]
   (let [cell-data (:cell-data ctx)

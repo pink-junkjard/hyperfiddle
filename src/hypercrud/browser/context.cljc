@@ -4,7 +4,8 @@
             [hypercrud.browser.routing :as routing]
             [hypercrud.state.actions.core :as actions]
             [hypercrud.util.branch :as branch]
-            [hypercrud.util.reactive :as reactive]))
+            [hypercrud.util.reactive :as reactive]
+            [hypercrud.util.core :as util]))
 
 
 (defn clean [ctx]
@@ -41,7 +42,7 @@
   (if (:link/managed? link)
     ; we should run the auto-formula logic to determine an appropriate auto-id fn
     (let [child-id-str (-> [(auto-anchor-formula/deterministic-ident ctx) (:db/id link)]
-                           hash #?(:clj Math/abs :cljs js/Math.abs) - str)
+                           hash util/abs-normalized - str)
           branch (branch/encode-branch-child (:branch ctx) child-id-str)]
       (assoc ctx :branch branch))
     ctx))

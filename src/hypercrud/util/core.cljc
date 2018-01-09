@@ -77,3 +77,7 @@
 (defn truncate
   [s n]
   (subs s 0 (min (count s) n)))
+
+(defn abs-normalized [x]
+  #?(:clj  (if x (Math/abs x) 0)
+     :cljs (js/Math.abs x)))
