@@ -107,14 +107,15 @@
       :xray (either/right default))))
 
 (let [never-read-only (constantly false)
-      reactive-right-nil (reactive/atom (either/right nil))]
+      nil-or-hydrate (fn [peer request]
+                       (if request
+                         @(hc/hydrate peer request)
+                         (either/right nil)))]
   (defn process-results [fiddle request ctx]
     (mlet [schemas (schema-util/hydrate-schema ctx)         ; schema is allowed to be nil if the link only has anchors and no data dependencies
-           :let [reactive-either-result (->> (if request
-                                               (hc/hydrate (:peer ctx) request)
-                                               reactive-right-nil))]
-           result @reactive-either-result
-           :let [reactive-result (reactive/track identity result)
+           :let [reactive-either-result (reactive/track nil-or-hydrate (:peer ctx) request)]
+           _ @reactive-either-result                        ; short the monad
+           :let [reactive-result (reactive/map deref reactive-either-result)
                  ctx (assoc ctx                             ; provide defaults before user-bindings run.
                        :request request
                        :schemas schemas                     ; For tx/entity->statements in userland.

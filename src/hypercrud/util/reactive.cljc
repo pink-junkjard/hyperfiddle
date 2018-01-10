@@ -1,5 +1,5 @@
 (ns hypercrud.util.reactive
-  (:refer-clojure :exclude [atom partial])
+  (:refer-clojure :exclude [atom map partial])
   #?(:cljs (:require [reagent.core :as reagent])))
 
 
@@ -21,3 +21,9 @@
   ; todo support more than just IDeref
   #?(:clj  (delay (apply f args))
      :cljs (apply reagent/track f args)))
+
+(let [trackable-f (fn [reactive f] (f (deref reactive)))]
+  (defn map [f reactive]
+    ; if functions could be compared with =
+    ; (track (comp f deref) reactive)
+    (track trackable-f reactive f)))
