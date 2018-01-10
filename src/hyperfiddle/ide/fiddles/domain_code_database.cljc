@@ -33,11 +33,11 @@
      :cljs (assoc-in
              ctx [:fields :repository/environment :renderer]
              (str-and-code
-               (fn [field links props ctx]
-                 (let [foo (group-by #(= (:link/rel %) :attributes-for-database) links)
+               (fn [field props ctx]
+                 (let [foo (group-by #(= (:link/rel %) :attributes-for-database) (:links ctx))
                        {[attrs-for-db] true links false} foo]
                    [:div
-                    [(attribute-control ctx) field links props ctx]
+                    [(attribute-control ctx) field props ctx]
                     (->> (prep-ctxs ctx)
                          (map (fn [ctx]
                                 (let [props (link/build-link-props attrs-for-db ctx)]
@@ -46,8 +46,7 @@
                          (doall))]))))))
 
 (defn request [repositories ordered-fes links ctx]
-  (let [foo (group-by #(= (:link/rel %) :attributes-for-database) links)
-        {[attrs-for-db] true links false} foo]
+  (let [{[attrs-for-db] true links false} (group-by #(= (:link/rel %) :attributes-for-database) links)]
     (concat
       (browser-request/fiddle-dependent-requests repositories ordered-fes links ctx)
       ; todo support custom request fns at the field level, then this code is 95% deleted
@@ -55,10 +54,11 @@
         (->> repositories
              (mapcat (fn [repo]
                        (let [ctx (-> ctx
+                                     (context/relation [repo])
                                      (context/find-element fe 0)
                                      (context/cell-data)
                                      (context/attribute :repository/environment)
-                                     (context/value (get repo :repository/environment)))]
+                                     (context/value (reactive/atom (get repo :repository/environment))))]
                          (->> (prep-ctxs ctx)
                               (mapcat #(browser-request/recurse-request attrs-for-db %))
                               (remove nil?))))))))))
