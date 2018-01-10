@@ -9,7 +9,7 @@
             [hypercrud.browser.result :as result]
             [hypercrud.browser.routing :as routing]
             [hypercrud.client.schema :as schema-util]
-            [hypercrud.util.non-fatal :refer [try-either]]
+            [hypercrud.util.non-fatal :refer [try-catch-non-fatal try-either]]
             [hypercrud.util.reactive :as reactive]
             [taoensso.timbre :as timbre]))
 
@@ -128,12 +128,11 @@
    :with-user-fn (fn [user-fn]
                    (fn [result ordered-fes links ctx]
                      ; todo report invocation errors back to the user
-                     (try (->> (user-fn result ordered-fes links ctx)
-                               ; user-fn HAS to return a seqable value, we want to throw right here if it doesn't
-                               seq)
-                          (catch #?(:clj Exception :cljs js/Error) e
-                            (timbre/error e)
-                            nil))))
+                     ; user-fn HAS to return a seqable value, we want to throw right here if it doesn't
+                     (try-catch-non-fatal (seq (user-fn result ordered-fes links ctx))
+                                          e (do
+                                              (timbre/error e)
+                                              nil))))
    :default fiddle-dependent-requests})
 
 (defn process-data [{:keys [result ordered-fes links ctx]}]
