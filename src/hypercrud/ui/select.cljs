@@ -43,7 +43,7 @@
                                      "" nil
                                      "true" true
                                      "false" false)]
-                             ((:user-with! ctx) (tx/update-entity-attr (:cell-data ctx) (:attribute ctx) v)))
+                             ((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) (:attribute ctx) v)))
                :disabled (if (:read-only props) true false)}]
     [:select props
      [:option {:key true :value "true"} "True"]
@@ -109,12 +109,12 @@
                          :user-renderer renderer)]))
 
 (let [on-change (fn [ctx id]
-                  ((:user-with! ctx) (tx/update-entity-attr (:cell-data ctx) (:attribute ctx) id)))]
-  (defn select* [value options-anchor props ctx]
+                  ((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) (:attribute ctx) id)))]
+  (defn select* [options-anchor props ctx]
     (let [props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
                  :value (cond
-                          (nil? value) ""
-                          :else (str (:db/id value)))
+                          (nil? @(:value ctx)) ""
+                          :else (str (:db/id @(:value ctx))))
 
                  ;; reconstruct the typed value
                  :on-change (reactive/partial on-change ctx)

@@ -125,7 +125,7 @@
            ordered-fes (find-element/auto-find-elements @reactive-result ctx)]
       (cats/return {:result reactive-result
                     :ordered-fes ordered-fes
-                    :anchors (auto-anchor/auto-links ordered-fes ctx)
+                    :links (auto-anchor/auto-links ordered-fes ctx)
                     :ctx ctx}))))
 
 (defn data-from-route [route ctx]

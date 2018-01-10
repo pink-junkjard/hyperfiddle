@@ -51,6 +51,12 @@
   ; todo custom user-dispatch with all the tx-fns as reducers
   ((:dispatch! ctx) (actions/with (:peer ctx) (:foo ctx) branch uri tx)))
 
+(defn relations [ctx relations]
+  (assoc ctx :relations (reactive/atom relations)))
+
+(defn relation [ctx relation]
+  (assoc ctx :relation relation))
+
 (defn find-element [ctx fe fe-pos]
   (-> (if-let [dbname (some-> (:source-symbol fe) str)]
         (let [uri (get-in ctx [:repository :repository/environment dbname])]
@@ -62,14 +68,18 @@
       ; todo why is fe necessary in the ctx?
       (assoc :find-element fe :fe-pos fe-pos)))
 
-(defn cell-data [ctx cell-data]
-  (assoc ctx :owner (if-let [owner-fn (:owner-fn ctx)]
-                      (owner-fn cell-data ctx))
-             :cell-data cell-data))
+(let [f (fn [cell-data ctx]
+          (if-let [owner-fn (:owner-fn ctx)]
+            (owner-fn @cell-data ctx)))]
+  (defn cell-data [ctx]
+    (assert (:relation ctx))
+    (assert (:fe-pos ctx))
+    (let [cell-data (reactive/cursor (:relation ctx) [(:fe-pos ctx)])]
+      (assoc ctx :owner (reactive/track f cell-data ctx)
+                 :cell-data cell-data))))
 
 (defn attribute [ctx attr-ident]
   (assoc ctx :attribute (get-in ctx [:schema attr-ident])))
 
 (defn value [ctx value]
-  ; this is not reactive
   (assoc ctx :value value))

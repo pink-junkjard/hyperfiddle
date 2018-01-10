@@ -49,9 +49,9 @@
         (anchor* [link-index ident ctx]
           (link/build-link-props (get link-index ident) ctx))]
   ; process-data returns an Either[Error, DOM]
-  (defn process-data [{:keys [result ordered-fes anchors ctx]}]
+  (defn process-data [{:keys [result ordered-fes links ctx]}]
     (mlet [ui-fn (base/fn-from-mode (f-mode-config) (:fiddle ctx) ctx)
-           :let [link-index (->> anchors
+           :let [link-index (->> links
                                  (filter :link/rel)         ; cannot lookup nil idents
                                  (mapv (juxt #(-> % :link/rel) identity)) ; [ repeating entity attr ident ]
                                  (into {}))
@@ -60,7 +60,7 @@
                        :browse (reactive/partial browse link-index)
                        :anchor* (reactive/partial anchor* link-index)
                        :browse' (reactive/partial browse' link-index))]]
-      (cats/return (ui-fn @result ordered-fes anchors ctx)))))
+      (cats/return (ui-fn @result ordered-fes links ctx)))))
 
 (defn e->map [e]
   (if (map? e)

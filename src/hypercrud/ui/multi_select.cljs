@@ -7,13 +7,13 @@
 (defn multi-select* [markupfn add-item! field anchors props {:keys [user-with!] :as ctx}]
   (assert false "todo readonly and test this")
   (let [control-tuples (seq (mapv (fn [inner-value]
-                                    (let [click-remove! #(user-with! (tx/edit-entity (get-in ctx [:cell-data :db/id]) (:attribute ctx) [inner-value] nil))
+                                    (let [click-remove! #(user-with! (tx/edit-entity (-> ctx :cell-data deref :db/id) (:attribute ctx) [inner-value] nil))
                                           ctx (-> ctx
                                                   (context/value inner-value)
                                                   (update-in [:attribute :db/cardinality] :db.cardinality/one))
                                           control [schema-control-form field anchors ctx]]
                                       [inner-value click-remove! control]))
-                                  (:value ctx)))]
+                                  @(:value ctx)))]
     (markupfn add-item! control-tuples)))
 
 (defn multi-select-markup [click-add! control-tuples & [css-class]]

@@ -33,16 +33,16 @@
     ; Why Db is omitted?
     ; Why value is only inspected in :many for unique hashing?
    (-> (str (:name fe) "."
-            (or (:db/id cell-data) (hash cell-data)) "."
+            (or (:db/id (some-> cell-data deref)) (hash (some-> cell-data deref))) "."
             (-> a :db/ident) "."
             (case (get-in a [:db/cardinality :db/ident])
               :db.cardinality/one nil
-              :db.cardinality/many (hash (into #{} (mapv :db/id v))) ; todo scalar
+              :db.cardinality/many (hash (into #{} (mapv :db/id @v))) ; todo scalar
               nil nil #_":db/id has a faked attribute with no cardinality, need more thought to make elegant"))
        hash util/abs-normalized - str)))
 
 (defn auto-entity [ctx]
-  (let [cell-data (:cell-data ctx)
+  (let [cell-data @(:cell-data ctx)
         uri (if (instance? Entity cell-data)
               (.-uri cell-data)
               (:uri ctx))]

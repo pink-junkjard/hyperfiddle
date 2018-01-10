@@ -15,3 +15,12 @@
 (def data-from-route base/data-from-route)
 (def ui-from-route browser-ui/ui-from-route)
 (def request-from-route browser-request/request-from-route)
+
+
+;(defn result [ctx path]
+;  @(reaction/track ctx path))
+;
+;(defn ordered-fes [ctx])
+;
+;(defn links [ctx]
+;  )

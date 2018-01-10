@@ -110,14 +110,14 @@
      ;:component-did-update (fn [this])
      }))
 
-(defn ^:export qe-picker-control [field links props ctx]
+(defn ^:export qe-picker-control [field props ctx]
   (let [enums [:query :entity :blank]
-        change! #((:user-with! ctx) (tx/update-entity-attr (:cell-data ctx) (:attribute ctx) %))
+        change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) (:attribute ctx) %))
         options (->> enums
                      (map #(radio/option
                              {:label (case % :query "query" :entity "pull" :blank "blank")
                               :target %
-                              :value (:value ctx)
+                              :value @(:value ctx)
                               :change! change!})))]
     [:span.qe.radio-group (apply react-fragment :_ options)]))
 
