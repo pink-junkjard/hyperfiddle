@@ -1,4 +1,4 @@
-(ns hypercrud.server.util.http
+(ns hyperfiddle.service.jvm.lib.http
   (:require [clojure.core.async :refer [chan go >!!]]
             [clojure.string :as string]
             [cognitect.transit :as transit]

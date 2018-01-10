@@ -1,20 +1,12 @@
-(ns hypercrud.server.datomic.root-init
+(ns root-init
   (:require [clojure.java.io :as io]
-            [datomic.api :as d])
-  (:import (java.net URI)))
+            [datomic.api :as d]))
 
 
 (defn generate-domain-record [transactor-uri db-name]
   {:db/id (d/tempid :db.part/user)
    ; todo https://tools.ietf.org/html/rfc3986#section-2
    :domain/ident db-name})
-
-(defn reflect-schema [conn]
-  (let [$ (d/db conn)]
-    (->> (d/q '[:find [?attr ...] :in $ :where [:db.part/db :db.install/attribute ?attr]] $)
-         (mapv #(d/touch (d/entity $ %)))
-         ;filter out datomic attributes, todo this is a huge hack
-         (filter #(> (:db/id %) 62)))))
 
 (defn init-root [root-uri hf-schema hf-data]
   (if-not (d/create-database root-uri)
