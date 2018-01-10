@@ -5,7 +5,6 @@
             [clojure.set :as set]
             [cuerdas.core :as str]
             [hypercrud.browser.routing :as routing]
-            [hypercrud.client.peer :as peer]
             [hypercrud.util.core :as util]
             [hypercrud.util.exception :refer [->Exception]]
             [hypercrud.util.non-fatal :refer [try-either]]
@@ -15,7 +14,7 @@
             [hyperfiddle.appfn.runtime-local :refer [hydrate-all-or-nothing! hydrate-one! hydrate-loop]] ;todo
             [hyperfiddle.appval.domain.app :as ide]
             [hyperfiddle.appval.domain.core :as hf]
-            [hyperfiddle.appval.state.reducers :as reducers]
+
             [hyperfiddle.api :as api]
             [promesa.core :as p]
             [taoensso.timbre :as timbre]))
@@ -125,22 +124,5 @@
       #uri"datomic:free://datomic:4334/kalzumeus" 1037}))
 
 (defn hydrate-route [rt hyperfiddle-hostname hostname local-basis encoded-route foo branch stage & [data-cache]]
-  (let [request-fn (let [ctx {:branch branch
-                              :dispatch! #(throw (->Exception "dispatch! not supported in hydrate-route"))
-                              :foo foo
-                              :hostname hostname
-                              :hyperfiddle-hostname hyperfiddle-hostname}]
-                     (fn [id->tempid ptm]
-                       (let [state-val (-> {:encoded-route encoded-route
-                                            :local-basis local-basis
-                                            :tempid-lookups id->tempid
-                                            :ptm ptm
-                                            :stage stage}
-                                           (reducers/root-reducer nil))
-                             ; just blast the peer everytime
-                             ctx (assoc ctx :peer (peer/->Peer (reactive/atom state-val)))]
-                         (case (:type foo)
-                           "page" (ide/page-request state-val ctx)
-                           "ide" (ide/ide-request state-val ctx)
-                           "user" (ide/user-request state-val ctx)))))]
+  (let [request-fn #(ide/request hyperfiddle-hostname hostname local-basis encoded-route foo branch stage)]
     (hydrate-loop rt request-fn local-basis stage data-cache)))

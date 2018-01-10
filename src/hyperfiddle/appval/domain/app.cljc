@@ -4,12 +4,15 @@
             [hypercrud.browser.core :as browser]
             [hypercrud.browser.routing :as routing]
             [hypercrud.client.core :as hc]
+            [hypercrud.client.peer :as peer]
             [hypercrud.compile.reader :as reader]
             [hypercrud.types.ThinEntity :refer [->ThinEntity]]
+            [hypercrud.util.exception :refer [->Exception]]
             [hypercrud.util.non-fatal :refer [try-either]]
             [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :as hc-string]
-            [hyperfiddle.appval.domain.core :as hf]))
+            [hyperfiddle.appval.domain.core :as hf]
+            [hyperfiddle.appval.state.reducers :as reducers]))
 
 
 (defn process-domain [domain]
@@ -148,3 +151,23 @@
                       (fn [ctx]
                         (browser/request-from-route (main-route ctx) ctx)))
         (decoded-route->user-request maybe-decoded-route state-value ctx)))))
+
+(defn request [hyperfiddle-hostname hostname local-basis encoded-route foo branch stage]
+  (let [ctx {:branch branch
+             :dispatch! #(throw (->Exception "dispatch! not supported in hydrate-route"))
+             :foo foo
+             :hostname hostname
+             :hyperfiddle-hostname hyperfiddle-hostname}]
+    (fn [id->tempid ptm]
+      (let [state-val (-> {:encoded-route encoded-route
+                           :local-basis local-basis
+                           :tempid-lookups id->tempid
+                           :ptm ptm
+                           :stage stage}
+                          (reducers/root-reducer nil))
+            ; just blast the peer everytime
+            ctx (assoc ctx :peer (peer/->Peer (reactive/atom state-val)))]
+        (case (:type foo)
+          "page" (page-request state-val ctx)
+          "ide" (ide-request state-val ctx)
+          "user" (user-request state-val ctx))))))

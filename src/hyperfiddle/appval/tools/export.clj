@@ -1,6 +1,5 @@
 (ns hyperfiddle.appval.tools.export
   (:require [datomic.api :as d]
-            [hypercrud.server.datomic.root-init :as root-init]
             [hypercrud.util.core :as util]
             [loom.alg-generic :as loom]))
 
@@ -87,8 +86,15 @@
                    [[:db/add (str (hash ident)) :attribute/ident ident]
                     [:db/add (str (hash ident)) :attribute/renderer renderer]])))))
 
+(defn reflect-schema [conn]
+  (let [$ (d/db conn)]
+    (->> (d/q '[:find [?attr ...] :in $ :where [:db.part/db :db.install/attribute ?attr]] $)
+         (mapv #(d/touch (d/entity $ %)))
+         ;filter out datomic attributes, todo this is a huge hack
+         (filter #(> (:db/id %) 62)))))
+
 (defn export-schema [conn]
-  (->> (root-init/reflect-schema conn)
+  (->> (reflect-schema conn)
        (sort-by :db/ident)
        (mapv (partial into {}))))
 
