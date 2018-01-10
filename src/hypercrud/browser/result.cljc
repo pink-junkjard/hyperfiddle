@@ -8,8 +8,7 @@
                  (f (context/find-element ctx fe fe-pos)))
                (:ordered-fes ctx)))
 
-(let [num-relations (fn [ctx] (count @(:relations ctx)))]
-  (defn map-relations [f ctx]
-    (->> (range @(reactive/track num-relations ctx))
-         (map (fn [idx]
-                (f (context/relation ctx (reactive/cursor (:relations ctx) [idx]))))))))
+(defn map-relations [f ctx]
+  (->> (range @(reactive/map count (:relations ctx)))
+       (map (fn [idx]
+              (f (context/relation ctx (reactive/cursor (:relations ctx) [idx])))))))

@@ -99,16 +99,15 @@
           :style {:border-color (if-not shadow-link (connection-color/connection-color (:uri ctx) ctx))}}
      [control -field (control-props ctx) ctx]]))
 
-(let [f (fn [field ctx] ((:cell-data->value field) @(:cell-data ctx)))]
-  (defn Entity [ctx]
-    (let [ctx (context/cell-data ctx)]
-      (->> (get-in ctx [:find-element :fields])
-           (mapv (fn [field]
-                   (let [ctx (-> (context/attribute ctx (:attribute field))
-                                 (context/value (reactive/track f field ctx)))
-                         user-cell (case @(:display-mode ctx) :xray table-cell :user table-cell #_(:cell ctx table-cell))]
-                     ^{:key (:id field)}
-                     [user-cell (auto-control' ctx) field ctx])))))))
+(defn Entity [ctx]
+  (let [ctx (context/cell-data ctx)]
+    (->> (get-in ctx [:find-element :fields])
+         (mapv (fn [field]
+                 (let [ctx (-> (context/attribute ctx (:attribute field))
+                               (context/value (reactive/map (:cell-data->value field) (:cell-data ctx))))
+                       user-cell (case @(:display-mode ctx) :xray table-cell :user table-cell #_(:cell ctx table-cell))]
+                   ^{:key (:id field)}
+                   [user-cell (auto-control' ctx) field ctx]))))))
 
 (defn Relation [ctx]
   (->> (result/map-relation Entity ctx)

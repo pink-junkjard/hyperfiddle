@@ -49,18 +49,17 @@
       (link-controls/render-inline-links (->> my-links (filter :link/render-inline?)) ctx)]
      [control -field (control-props ctx) ctx]]))
 
-(let [f (fn [field ctx] ((:cell-data->value field) @(:cell-data ctx)))]
-  (defn Cell [field ctx]
-    (let [ctx (as-> (context/attribute ctx (:attribute field)) $
-                    (context/value $ (reactive/track f field ctx))
-                    (if (or (nil? (:attribute field))
-                            (= (:attribute field) :db/id))
-                      (assoc $ :read-only always-read-only)
-                      $))
-          user-cell (case @(:display-mode ctx) :xray form-cell (:cell ctx form-cell))]
-      (assert @(:display-mode ctx))
-      ^{:key (:id field)}
-      [user-cell (auto-control' ctx) field ctx])))
+(defn Cell [field ctx]
+  (let [ctx (as-> (context/attribute ctx (:attribute field)) $
+                  (context/value $ (reactive/map (:cell-data->value field) (:cell-data ctx)))
+                  (if (or (nil? (:attribute field))
+                          (= (:attribute field) :db/id))
+                    (assoc $ :read-only always-read-only)
+                    $))
+        user-cell (case @(:display-mode ctx) :xray form-cell (:cell ctx form-cell))]
+    (assert @(:display-mode ctx))
+    ^{:key (:id field)}
+    [user-cell (auto-control' ctx) field ctx]))
 
 (defn Entity [ctx]
   (let [{inline-links true anchor-links false} (->> (link/links-lookup' (:links ctx) [(:fe-pos ctx)])

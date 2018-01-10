@@ -45,7 +45,7 @@
       (->> (get-in ctx [:find-element :fields])
            (mapcat (fn [field]
                      (let [ctx (-> (context/attribute ctx (:attribute field))
-                                   (context/value (reactive/track (:cell-data->value field) (:cell-data ctx))))]
+                                   (context/value (reactive/map (:cell-data->value field) (:cell-data ctx))))]
                        (->> (link/links-lookup (:links ctx) [(:fe-pos ctx) (-> ctx :attribute :db/ident)])
                             (filter :link/dependent?)
                             (mapcat #(recurse-request % ctx))))))))))
