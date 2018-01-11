@@ -10,8 +10,7 @@ data sync *composes*. APIs are defined with simple Clojure functions, for exampl
 ```clojure
 (defn api-blog-index [state peer]
   [(->QueryRequest
-     '[:find (pull ?e [:db/id :post/title :post/content]) 
-       :where [?e :post/title]]
+     '[:find (pull ?e [:db/id :post/title :post/content]) :where [?e :post/title]]
      {"$" (hc/db peer #uri "datomic:free://datomic:4334/samples-blog" nil)})])
 ```
 
