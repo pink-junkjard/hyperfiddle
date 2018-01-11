@@ -185,7 +185,7 @@ git repos storing the "source code" (data) of your hyperfiddles. Like git and th
 
 We do some of this already today.
 
-## \#3. Automatic dashboards, like Swagger UI
+## \#3. Data-driven UI, like Swagger UI
 
 Hyperfiddle api-values capture precisely the right semantic information to build an API browser.
 
@@ -234,18 +234,19 @@ there is an "open" API that will respond to any query. You'll probably have the 
 is an area of research to define a general purpose security layer that filters the actual data in the resultset, 
 rather than requiring you to model the queries in advance as fiddles. This has future implications for the semantic web.
 
-## \#4. Structural editor for APIs
+## \#4. Hyperfiddle IDE: a Structural Editor for APIs
+
+The IDE is out of scope for this readme, but here are some pictures:
 
 > <img src="https://i.imgur.com/iwOvJzA.png" width="720px">
 > 
 > *Hyperfiddle IDE, editing the gender fiddle*
 
-The IDE is out of scope for this readme, but for example here is a visualization of how select options work:
+Select options are just iframe links with a semantic renderer:
 
 > <img src="https://i.imgur.com/JxzWUIq.gif" width="720px">
 > 
-> *The gender iframe is actually select options query, with the select renderer toggled off.
-> It renders in the header because the query runs once, not once-per-row. `:link/rel` has semantic meaning like html. `:options` matches up with the [`:db.type/ref` renderer](https://github.com/hyperfiddle/hyperfiddle/blob/bd61dfb07cbff75d5002b15999d1abc6c3c6af3c/src/hypercrud/ui/widget.cljs#L74). If you override the `:db.type/ref` renderer, you may care to use `:link/rel` as semantic hint, or not. Imagine a [link/rel registry like HTML](https://www.iana.org/assignments/link-relations/link-relations.xhtml).*
+> *When the gender semantic renderer is toggled off, the link is in the header, because the query runs once, not per-row. `:link/rel` has semantic meaning like html. `:options` matches up with the [`:db.type/ref` renderer](https://github.com/hyperfiddle/hyperfiddle/blob/bd61dfb07cbff75d5002b15999d1abc6c3c6af3c/src/hypercrud/ui/widget.cljs#L74). If you override the `:db.type/ref` renderer, you may care to use `:link/rel` as semantic hint, or not. Imagine a [link/rel registry like HTML](https://www.iana.org/assignments/link-relations/link-relations.xhtml).*
 
 ## Hyperfiddle.net is 100% built in Hyperfiddle (EDN style)
 
