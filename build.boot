@@ -3,14 +3,15 @@
         [com.cognitect/transit-clj "0.8.300"]
         [com.taoensso/timbre "4.10.0"]
         [datascript "0.16.2"]
+        [funcool/cats "2.1.0"]
         [funcool/cuerdas "2.0.4"]
         [funcool/promesa "1.8.1"]
         [io.nervous/kvlt "0.1.4"]
         [io.pedestal/pedestal.service "0.5.1"]
         ;[org.apache.commons/commons-lang3 "3.4"]
         [org.clojure/clojure "1.9.0-alpha14"]
-        [org.clojure/core.async "0.2.395" #_"transitive - override pedestal"]
-        [org.clojure/core.incubator "0.1.4" #_"transitive - override pedestal"]]
+        [com.hyperfiddle/hyperfiddle "0.3.0-SNAPSHOT"]]
+
       build-dependencies
       '[[adzerk/bootlaces "0.1.13" :scope "test"]
         [sparkfund/boot-lein-generate "0.3.0" :scope "test"]]]
@@ -18,12 +19,7 @@
   (set-env!
     :resource-paths #{"src"}
     :dependencies (concat dependencies build-dependencies)
-
-    :boot.lein/project-clj {:resource-paths #{"src"}
-                            :source-paths #{"dev"}
-                            :dependencies (concat dependencies
-                                                  '[[funcool/cats "2.1.0"]
-                                                    [com.hyperfiddle/hyperfiddle "0.3.0-SNAPSHOT"]])}))
+    :boot.lein/project-clj {:dependencies dependencies}))
 
 (require '[adzerk.bootlaces :refer [push-snapshot]]
          'boot.lein)
