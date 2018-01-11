@@ -27,9 +27,6 @@
             [taoensso.timbre :as timbre]))
 
 
-(defn req->service-uri [env req]
-  (->URI (str (:protocol req) "://" (:server-name req) "/api/" (:BUILD env) "/")))
-
 (defn req->state-val [{:keys [body-params path-params] :as req}]
   (-> {:encoded-route (or (some-> (:double-encoded-route path-params) base-64-url-safe/decode)
                           (str "/" (:route path-params)))

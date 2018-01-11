@@ -1,6 +1,5 @@
 (ns hyperfiddle.service.lib.env
-  (:require [hypercrud.compile.reader :as reader]
-    #?(:cljs [cljs.nodejs :as node]))
+  #?(:cljs (:require [cljs.nodejs :as node]))
   #?(:clj
      (:import [clojure.lang ILookup])))
 
