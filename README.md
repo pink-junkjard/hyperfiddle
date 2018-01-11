@@ -185,7 +185,7 @@ performance, tiny surface area for bugs, an intelligent child is able to figure 
 Hyperfiddles are graphs, not documents, so they are stored in databases. Databases storing hyperfiddles are like 
 git repos storing the "source code" (data) of your hyperfiddles. Like git and the web, there is no central database.
 
-## Representing APIs as a graph permits optimizations that human-coded I/O cannot do:  
+## APIs as a graph permits optimizations that human-coded I/O cannot do:  
 
 * Automatic I/O partitioning and batching, optimized for cache hits
 * Server preloading, prefetching and optimistic push
@@ -193,7 +193,7 @@ git repos storing the "source code" (data) of your hyperfiddles. Like git and th
 
 We do some of this already today.
 
-## \#3. Automatic dashboards, like Swagger UI (also automatic API)
+## \#3. Automatic dashboards, like Swagger UI
 
 > <img src="https://i.imgur.com/pQk6g0a.png" width="720px">
 > 
@@ -209,7 +209,7 @@ The dynamic dashboards have the following hook points for progressive enhancemen
 * Datomic type #{string keyword bool inst long ref ...}
 * UI controls #{form table tr th label value ...}
 
-Here is an attribute renderer:
+Here is a markdown attribute renderer:
 
 > <img src="https://i.imgur.com/Kok1tz9.png">
 > 
@@ -217,7 +217,7 @@ Here is an attribute renderer:
 > being rendered as a CodeMirror with markdown syntax highlighting. On the right, we 
 > see it wired up. Renderers can be any ClojureScript expression and are eval'ed at runtime.*
 
-Here is a fiddle renderer:
+Here is a fiddle root renderer:
 
 > <img src="https://i.imgur.com/KP90ClH.png">
 > 
@@ -237,7 +237,7 @@ rather than requiring you to model the queries in advance as fiddles. This has f
 
 > <img src="https://i.imgur.com/iwOvJzA.png" width="720px">
 > 
-> *The gender fiddle, inside Hyperfiddle IDE*
+> *Hyperfiddle IDE, editing the gender fiddle*
 
 The IDE is out of scope for this readme, but for example here is a visualization of how select options work:
 
