@@ -46,12 +46,12 @@ We're nearing a 0.1 open-source release in Q1 2018.
 
 Performance (Hyperfiddle must respond as fast as a Clojure repl)
 
-- [x] Perf: data loop running in JVM
-- [ ] Perf: automatically optimize hydrates for cache locality (using link graph)
-- [ ] Release CLI to serve your fiddles (no http/backend boilerplate for application developers)
-- [ ] UX: improve popovers, finish stage/discard UX
-- [ ] UX: Human readable URLs and customizable URL router
-- [ ] UX: Fix query param tooltips when you hover an anchor
+- [x] API: data loop running in JVM
+- [ ] API: automatically optimize hydrates for cache locality (using link graph)
+- [ ] API: Release CLI to serve your fiddles (no http/backend boilerplate for application developers)
+- [ ] UI: improve popovers, finish stage/discard UX
+- [ ] UI: Human readable URLs and customizable URL router
+- [ ] UI: Fix query param tooltips when you hover an anchor
 
 ### 0.2.0
 
@@ -61,27 +61,27 @@ Performance (Hyperfiddle must respond as fast as a Clojure repl)
 
 # Overview
 
-Hyperfiddle is built in layers. Higher layers are optional.
+Hyperfiddle is built in layers. Higher layers are optional and implemented in terms of lower.
 
-1. app-as-a-function: managed data sync, userland is a function
-2. app-as-a-value: data-driven CRUD model, userland is EDN
-3. dashboards auto-generated: dynamic forms/UI library, customize markup with functions 
-4. structural editor for CRUD apps: edit EDN app-values and store them in Datomic 
+1. **Managed I/O primitives:** userland is a function, "api-as-a-function"
+2. **API modeled as graph:** data-driven CRUD model, userland is EDN, "api-as-a-value"
+3. **Data-driven UI:** automatic user interface, reflected from your api-as-a-value
+4. **IDE for applications:** structural editor for api-as-a-values, stored in Datomic
 
 Hyperfiddle IDE, the structural editor (<http://www.hyperfiddle.net>) is also the open-source reference application to teach you how Hyperfiddle works. Hyperfiddle IDE runs on your machine from a CLI (`hyperfiddle serve datomic:free://localhost:4334/my-fiddles`); it runs in your application as a jar file from github, and as managed elastic cloud infrastructure.
 
-The reference application is built with Reagent and does server side rendering in node, but it should be straightforward to use with any managed dom rendering strategy.
+The dashboard UI components are built with Reagent and support SSR, but it should be straightforward to use any managed dom rendering strategy.
 
 Hyperfiddle makes forms and such really easy to write (something a web designer can do), because when I/O is managed, there is nothing left but markup. Hyperfiddle comes batteries included with a library of UI components, but you don't have to use them.
 
 Hyperfiddle's data sync loop runs in the JVM (to solve N+1 problem of REST). 
 
-## \#1. App-as-a-Function
+## \#1. API-as-a-Function
 
 UI, at its essense, is about two concerns:
 
-* a view (pixels) — a function returning the virtual dom
-* the data backing it — a function returning the query
+* the view (pixels) — a function returning virtual-dom
+* the data (api) — a function returning the query
 
 Hyperfiddle UI components work like this. Here is a simple request function, with two database queries:
 
