@@ -7,9 +7,7 @@
             [hyperfiddle.appfn.hydrate-requests :refer [hydrate-requests]] ; todo
             [hyperfiddle.appfn.sync :refer [sync]]          ; todo
             [hyperfiddle.appfn.runtime-local :refer [stage-val->staged-branches]] ; todo
-            [hyperfiddle.appfn.runtime-rpc :refer [hydrate-requests! sync! transact!!]]
             [hyperfiddle.appval.runtime-local :refer [hydrate-route global-basis local-basis]]
-            [hyperfiddle.appval.runtime-rpc :refer [hydrate-route! global-basis! local-basis!]]
             [promesa.core :as p]))
 
 
