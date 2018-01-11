@@ -78,12 +78,7 @@ Hyperfiddle's data sync loop runs in the JVM (to solve N+1 problem of REST).
 
 ## \#1. API-as-a-Function
 
-UI, at its essense, is about two concerns:
-
-* the view (pixels) — a function returning virtual-dom
-* the data (api) — a function returning the query
-
-Hyperfiddle UI components work like this. Here is a simple request function, with two database queries:
+Here is a simple API function, with two database queries:
 
 ```clojure
 (def datomic-samples-blog #uri "datomic:free://datomic:4334/samples-blog")
@@ -102,119 +97,81 @@ Hyperfiddle UI components work like this. Here is a simple request function, wit
     [(->QueryRequest race-registration-query {"$" $})
      (->QueryRequest gender-options-query {"$" $})]))
 ```
-
-Here is the corresponding view function, it is simple and just prettyprints the resultset into a :pre:
-
-```clojure
-(defn view [state peer]
-  (let [$ (hc/db peer datomic-samples-blog nil)]
-    [:ul
-     (->> @(hc/hydrate peer (request state $))              ; synchronous and reactive
-          (map (fn [relation]
-                 (let [e (get relation "?e")]
-                   [:li {:key (:db/id e)}
-                    [:pre (with-out-str (pprint e))]]))))]))
-```
                         
-Notes about these functions
-* Request fns return seq; you can hydrate many queries in bulk.
-* Both are CLJC, runs in both JVM and browser
-* I/O runtime manages these fns to load data and then render views
-* Request fn is called repeatedly until its return value stabalizes
+Notes:
+* API fns return seq (use `mapcat` etc to hydrate many queries in bulk)
+* I/O runtime will call API fn repeatedly until its return value stabalizes
 * This permits queries that depend on the results of earlier queries  
+* CLJC can run in client, server, or both simultaneously (useful for optimizations)
 * Data loop typically runs in JVM Datomic Peer, so no network hops or N+1 problem
-* Sometimes the runtime chooses to loop in the browser, i.e. a little, incremental 
-data load in response to a UI state change
+* Data loop sometimes runs in browser (e.g. in response to incremental ui state change)
 
-App-as-a-fn with managed I/O is a better way to write web dashboards:
+Api-as-a-fn with managed I/O is a better way to write web dashboards:
 
 ### Programming model is higher level
 
-* application programmer fully insulated from I/O–real functional programming
+* Real functional programming
 * No async in userland
-* Unified backend/frontend, same codebase runs in both places
-* No manual conversion between backend types and frontend types
-* No REST, no low level HTTP boilerplate 
-* no repeated browser/service round trips
-* API built-in (think OData or Swagger)
-* No more fiat APIs — all fiddles speak the same API
-* Integrated high level tooling (form-builder, app-builder)
+* All fiddles speak the same API, tooling built-in (like Swagger or OData)
+* No low level HTTP boilerplate, no marshaling between backend and frontend types
 
 ### Immutability in database (Datomic) makes SQL/ORM problems go away
 
 * No monstrous JOINs to avoid database round trips
-* no service/database round trips at all
-* No batching and caching
+* No service/database round trips at all
+* No REST, no repeated browser/service round trips
 * No GraphQL resolver hiding complexity in the closet
 * No eventual consistency
-* No thinking about network cost
-* Program as if all data is local–real functional programming
-
-### The machine does all the boilerplate
-
-* Exact data sync in one request, including dynamic dependencies
-* Built-in server side rendering, no integration glue code
-* Works with browser javascript disabled (whole app can run #{Browser Node JVM} including transactions and business logic)
+* No batching and caching
+* Real functional programming
 
 ### Infrastructure benefits
 
-* all requests have a time-basis, all responses are immutable
 * CDN integration that understands your app (serve APIs like static sites)
-* Dashboards work offline, from disk cache
-* Reads continue to be serviced from cache during deployments
+* all responses are immutable, all requests have a time-basis
+* Reads serviced offline from cache (inclduing during deployments)
 * Massively parallelizable, serverless, elastic
 
-Basically, we think Datomic fully solves CRUD apps permanently.
+Basically, we think Datomic fully solves CRUD APIs permanently.
 
-Now that I/O is solved, we can start building *real, composable abstractions:*
+Now that we have a composable I/O primitive, we can use it as a basis to build *composable abstractions:*
 
-## \#2. App-as-a-Value
+## \#2. API-as-a-Value
 
-Here is the above functions, represented as a Hyperfiddle EDN value. Actually the below values do a lot more 
-than the above functions do, in fewer lines. Data is more information-dense than code, kind of like how a picture is 
-worth 1000 words.
+Here is the above API function, represented as a Hyperfiddle EDN value. Actually the below values do a lot more. Data is more information-dense than code, kind of like how a picture is worth 1000 words.
 
 ```clojure
-; Main query
-{:db/id        17592186045418,
- :fiddle/type  :query,
- :fiddle/query "[:find (pull ?e [:db/id :reg/email :reg/gender :reg/shirt-size])
-                 :in $ :where [?e :reg/email]]",
- :fiddle/links #{
-                 ; link to shirt-size options
-                 {:db/id               17592186045434,
-                  :link/rel            :options,
-                  :link/fiddle         #:db{:id 17592186045435},
+{:db/id 17592186045418,                                     ; Root query
+ :fiddle/type :query,
+ :fiddle/query "[:find (pull ?e [:db/id :reg/email :reg/gender :reg/shirt-size]) :in $ :where [?e :reg/email]]",
+ :fiddle/links #{{:db/id 17592186045427,                    ; link to gender options
+                  :link/rel :options,
                   :link/render-inline? true,                ; embedded like an iframe
-                  :link/dependent?     true,
-                  :link/path           "0 :reg/shirt-size",
-                  :link/formula        "(fn [ctx] {:request-params {\"?gender\" (get-in ctx [:cell-data :reg/gender])}})"}
-
-                 ; link to gender options
-                 {:db/id               17592186045427,
-                  :link/rel            :options,
-                  :link/fiddle         #:db{:id 17592186045428},
+                  :link/path "0 :reg/gender",
+                  :link/fiddle {:db/id 17592186045428,      ; select options query
+                                :fiddle/type :query,
+                                :fiddle/query "[:find (pull ?e [:db/id :reg.gender/ident]) :in $ :where [?e :reg.gender/ident]]",
+                                :fiddle/links #{{:db/id 17592186045474, ; link to new-gender-option form
+                                                 :link/rel :sys-new-?e,
+                                                 :link/fiddle #:db{:id 17592186045475} ; new-gender form omitted
+                                                 }}}}
+                 {:db/id 17592186045434,                    ; link to shirt-size options
+                  :link/rel :options,
                   :link/render-inline? true,                ; embedded like an iframe
-                  :link/path           "0 :reg/gender"}
-
-                 ; link to new-registration form
-                 {:db/id 17592186045481, :link/rel :sys-new-?e, :link/fiddle #:db{:id 17592186045482}}}}
-
-; select options query
-{:db/id        17592186045428,
- :fiddle/type  :query,
- :fiddle/query "[:find (pull ?e [:db/id :reg.gender/ident])
-                 :in $ :where [?e :reg.gender/ident]]",
- :fiddle/links #{
-                 ; link to new-gender form
-                 {:db/id 17592186045474, :link/rel :sys-new-?e, :link/fiddle #:db{:id 17592186045475}}}}
+                  :link/dependent? true,                    ; dependency on parent fiddle's data
+                  :link/path "0 :reg/shirt-size",
+                  :link/formula "(fn [ctx] {:request-params {\"?gender\" (get-in ctx [:cell-data :reg/gender])}})",
+                  :link/fiddle #:db{:id 17592186045435}     ; shirt size options query omitted
+                  }
+                 {:db/id 17592186045481,                    ; link to new-registration form
+                  :link/rel :sys-new-?e,
+                  :link/fiddle #:db{:id 17592186045482}     ; new-registration form omitted
+                  }}}
 ```
 
 Fiddles have links to other fiddles, this forms a graph.
 
-Like all Hyperfiddle applications, hyperfiddle EDN values are interpreted by two functions. In this case, 
-these two functions are provided by Hyperfiddle, together they comprise the *Hyperfiddle Browser*. The Browser 
-is a generic app-as-a-function which interprets hyperfiddle app-values, by navigating the link graph.
+Like all Hyperfiddle applications, hyperfiddle EDN values are interpreted by a function. This very special function is called the *Hyperfiddle Browser*. The Browser is a generic api-as-a-function which interprets hyperfiddle api-values, by navigating the link graph.
 
 *web browser : HTML documents :: hyperfiddle browser :: hyperfiddle EDN values*
 
@@ -231,13 +188,13 @@ ourselves HTML at age 13.)
 Hyperfiddles are graphs, not documents, so they are stored in databases. Databases storing hyperfiddles are like 
 git repos storing the "source code" (data) of your hyperfiddles. Like git and the web, there is no central database.
 
-## App as graph permits optimizations that human-coded I/O cannot do:  
+## Representing APIs as a graph permits optimizations that human-coded I/O cannot do:  
 
 * Automatic I/O partitioning and batching, optimized for cache hits
 * Server preloading, prefetching and optimistic push
 * Machine learning can analyze the graph to do optimzations
 
-We don't do all of this today, but we will.
+We do some of this already today.
 
 ## \#3. Automatic dashboards, like Swagger UI (also automatic API)
 
