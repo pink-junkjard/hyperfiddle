@@ -18,6 +18,7 @@
             [hyperfiddle.appval.runtime-rpc :refer [hydrate-route! global-basis! local-basis!]]
             [hyperfiddle.appval.domain.app-ui :as ide]
             [hyperfiddle.appval.state.reducers :as reducers]
+            [hyperfiddle.service.node.lib :refer [req->service-uri req->state-val]]
 
             [promesa.core :as p]
             [reagent.dom.server :as reagent-server]
