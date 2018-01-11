@@ -5,15 +5,31 @@ Hyperfiddle abstracts over client/server data sync for APIs. If React.js is mana
 Hyperfiddle models API inter-dependencies as a graph (I need query-X and also query-Y which depends query-Z). This graph lets the I/O runtime understand the structure and data flows of the application, which permits interesting optimization opportunities.
 
 Hyperfiddle extends Datomic's immutable database semantics to the API. Unlike REST/GraphQL/whatever, Hyperfiddle's 
-data sync *composes*. Userland is simple Clojure functions and Clojure data. Userland code does not know the difference between client or server, the application is coded in CLJC and runs simultaneously in both places.
+data sync *composes*. APIs are defined with simple Clojure functions, for example
 
-Managed I/O is not the point; the point is: *what does managed I/O make possible that wasn't possible before?* 
+```clojure
+(defn api-blog-index [state peer]
+  [(->QueryRequest
+     '[:find (pull ?e [:db/id :post/title :post/content]) 
+       :where [?e :post/title]]
+     {"$" (hc/db peer #uri "datomic:free://datomic:4334/samples-blog" nil)})])
+```
+
+These API functions are 
+* referentially transparent and compose
+* coded in CLJC
+* don't know the difference between API client or API server
+* run simultaneously in both API client and API server
+
+API functions' lifecycle is managed by an "I/O runtime", analogous to React's managed virtual-dom functions. Managed I/O is not the point; the point is: *what does managed I/O make possible that wasn't possible before?* 
 
 # Dependency coordinates — Todo
 
     [com.hyperfiddle/hyperfiddle "0.0.0"]
 
 # Documentation and community
+
+Hyperfiddle is alpha software. The core is quite mature and stable and in prod at <http://hyperfiddle.net>. The public API is not frozen.
 
 <https://www.reddit.com/r/hyperfiddle/> will aggregate all our scattered blog posts, tutorials
 and documentation.
@@ -32,16 +48,16 @@ Performance (Hyperfiddle must respond as fast as a Clojure repl)
 
 - [x] Perf: data loop running in JVM
 - [ ] Perf: automatically optimize hydrates for cache locality (using link graph)
-- [ ] Release CLI so you don't have to think about http, backends etc until you outgrow it
+- [ ] Release CLI to serve your fiddles (no http/backend boilerplate for application developers)
 - [ ] UX: improve popovers, finish stage/discard UX
 - [ ] UX: Human readable URLs and customizable URL router
 - [ ] UX: Fix query param tooltips when you hover an anchor
 
 ### 0.2.0
 
-- [ ] Hello-world usage and tutorial repo
+- [ ] release Hyperblog, a markdown ~~static site generator~~ *static application* backed by Datomic
 - [ ] Edit React.js/Reagent expressions side-by-side with the running app (like JSFiddle)
-- [ ] Links panel user experience
+- [ ] IDE user experience, including links panel
 
 # Overview
 
