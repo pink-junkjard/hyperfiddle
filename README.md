@@ -106,7 +106,7 @@ Notes:
 * Data loop typically runs in JVM Datomic Peer, so no network hops or N+1 problem
 * Data loop sometimes runs in browser (e.g. in response to incremental ui state change)
 
-Api-as-a-fn with managed I/O is a better way to write web dashboards:
+Api-as-a-fn with managed I/O is a better way to code APIs:
 
 ### Programming model is higher level
 
@@ -134,7 +134,7 @@ Api-as-a-fn with managed I/O is a better way to write web dashboards:
 
 Basically, we think Datomic fully solves CRUD APIs permanently.
 
-Now that we have a composable I/O primitive, we can use it as a basis to build *composable abstractions:*
+Now that we have a properly composable I/O primitive, we can use it as a basis to build *composable abstractions:*
 
 ## \#2. API-as-a-Value
 
@@ -215,7 +215,7 @@ Here is a markdown attribute renderer:
 
 > <img src="https://i.imgur.com/Kok1tz9.png">
 > 
-> *On the left, we see `:post/content` attribute is a Datomic `:db/type/string`,
+> *On the left, we see `:post/content` attribute is a Datomic `:db.type/string`,
 > being rendered as a CodeMirror with markdown syntax highlighting. On the right, we 
 > see it wired up. Renderers can be any ClojureScript expression and are eval'ed at runtime.*
 
@@ -246,7 +246,7 @@ The IDE is out of scope for this readme, but for example here is a visualization
 > <img src="https://i.imgur.com/JxzWUIq.gif" width="720px">
 > 
 > *The gender iframe is actually select options query, with the select renderer toggled off.
-> It renders in the header because the query runs once, not once-per-row. `:link/rel` has semantic meaning like html. `:options` matches up with the `:db.valueType/ref` renderer. If you override the `:db.valueType/ref` renderer, you may care to use `:link/rel` as semantic hint, or not. Imagine a [link/rel registry like HTML](https://www.iana.org/assignments/link-relations/link-relations.xhtml).*
+> It renders in the header because the query runs once, not once-per-row. `:link/rel` has semantic meaning like html. `:options` matches up with the [`:db.type/ref` renderer](https://github.com/hyperfiddle/hyperfiddle/blob/bd61dfb07cbff75d5002b15999d1abc6c3c6af3c/src/hypercrud/ui/widget.cljs#L74). If you override the `:db.type/ref` renderer, you may care to use `:link/rel` as semantic hint, or not. Imagine a [link/rel registry like HTML](https://www.iana.org/assignments/link-relations/link-relations.xhtml).*
 
 ## Hyperfiddle.net is 100% built in Hyperfiddle (EDN style)
 
@@ -255,11 +255,11 @@ designer could write.
 
 > <img src="https://i.imgur.com/DCPtHN3.png" width="720px">
 > 
-> *The radio control on :fiddle/type is a custom attribute renderer, `qe-picker-control`, which is defined 
-> in the view menu and eval'ed at runtime. :fiddle/query's custom renderer is a CodeMirror with syntax 
+> *The radio control on `:fiddle/type` is a custom attribute renderer, `qe-picker-control`, which is defined 
+> in the view menu and eval'ed at runtime. `:fiddle/query`'s custom renderer is a CodeMirror with syntax 
 > highlighting, balanced parens etc. The fiddle's own layout (including button labels and local state) 
 > is a fiddle renderer, about 100 lines of Reagent markup, defined in the view menu and eval'ed at runtime.
-> Each menu is a :button link to another fiddle, with its own data dependencies and renderers.*
+> Each menu is a `:button` link to another fiddle, with its own data dependencies and renderers.*
 
 # FAQ and anti-features
 
