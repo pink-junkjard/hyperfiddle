@@ -169,23 +169,16 @@ Here is the above API function, represented as a Hyperfiddle EDN value ("fiddle"
                   }}}
 ```
 
-Actually the below values do a lot more. Data is more information-dense than code, kind of like how a picture is worth 1000 words.
+Actually this api-value does a lot more than the earlier function. Data is more information-dense than code, kind of like how a picture is worth 1000 words:
 
 > <img src="https://i.imgur.com/ZtYAlTE.png" width="720px">
 >
 > *Above EDN api-as-a-value, interpreted. Pink highlights indicate a link. Both select options queries are defined as :fiddle/links in the above EDN. The shirt-size query depends on the value of gender. For brevity, the above snippets omit about half of the EDN comprising this demo, [click here for the actual fiddle](http://dustingetz.hyperfiddle.site/ezpjb2RlLWRhdGFiYXNlICJzYW5kYm94IiwgOmxpbmstaWQgMTc1OTIxODYwNDU0MTh9).*
 
-Like all Hyperfiddle applications, hyperfiddle EDN values are interpreted by a function. This very special function is called the *Hyperfiddle Browser*. The Browser is a generic api-as-a-function which interprets hyperfiddle api-values, by navigating the link graph.
-
-*web browser : HTML documents :: hyperfiddle browser :: hyperfiddle EDN values*
-
-Obviously, data is better in every possible way (structural tooling, decoupled from platform, decoupled from 
-performance, tiny surface area for bugs, an intelligent child is able to figure it out, like learning HTML by trial and error.)
-
 Hyperfiddles are graphs, not documents, so they are stored in databases. Databases storing hyperfiddles are like 
 git repos storing the "source code" (data) of your hyperfiddles. Like git and the web, there is no central database.
 
-## APIs as a graph permits optimizations that human-coded I/O cannot do:  
+### APIs as a graph permits optimizations that human-coded I/O cannot do:  
 
 * Automatic I/O partitioning and batching, optimized for cache hits
 * Server preloading, prefetching and optimistic push
@@ -194,6 +187,15 @@ git repos storing the "source code" (data) of your hyperfiddles. Like git and th
 We do some of this already today.
 
 ## \#3. Automatic dashboards, like Swagger UI
+
+Hyperfiddle api-values capture precisely the right semantic information to build an API browser.
+
+Like all Hyperfiddle applications, hyperfiddle EDN values are interpreted by a function. This very special function is called the *Hyperfiddle Browser*. The Browser is a generic api-as-a-function which interprets hyperfiddle api-values, by navigating the link graph.
+
+*web browser : HTML documents :: hyperfiddle browser :: hyperfiddle EDN values*
+
+Obviously, data is better in every possible way (structural tooling, decoupled from platform, decoupled from 
+performance, tiny surface area for bugs, an intelligent child is able to figure it out, like learning HTML by trial and error.)
 
 > <img src="https://i.imgur.com/pQk6g0a.png" width="720px">
 > 
@@ -244,7 +246,7 @@ The IDE is out of scope for this readme, but for example here is a visualization
 > <img src="https://i.imgur.com/JxzWUIq.gif" width="720px">
 > 
 > *The gender iframe is actually select options query, with the select renderer toggled off.
-> It renders in the header because the query runs once, not once-per-row. `:link/rel` has semantic meaning like html. `:options` matches up with the select option renderer. Imagine a [link/rel registry like HTML](https://www.iana.org/assignments/link-relations/link-relations.xhtml).*
+> It renders in the header because the query runs once, not once-per-row. `:link/rel` has semantic meaning like html. `:options` matches up with the `:db.valueType/ref` renderer. If you override the `:db.valueType/ref` renderer, you may care to use `:link/rel` as semantic hint, or not. Imagine a [link/rel registry like HTML](https://www.iana.org/assignments/link-relations/link-relations.xhtml).*
 
 ## Hyperfiddle.net is 100% built in Hyperfiddle (EDN style)
 
