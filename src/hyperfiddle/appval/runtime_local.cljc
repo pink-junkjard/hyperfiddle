@@ -124,5 +124,5 @@
       #uri"datomic:free://datomic:4334/kalzumeus" 1037}))
 
 (defn hydrate-route [rt hyperfiddle-hostname hostname local-basis encoded-route foo branch stage & [data-cache]]
-  (let [request-fn #(ide/request hyperfiddle-hostname hostname local-basis encoded-route foo branch stage)]
+  (let [request-fn (ide/request hyperfiddle-hostname hostname local-basis encoded-route foo branch stage)]
     (hydrate-loop rt request-fn local-basis stage data-cache)))
