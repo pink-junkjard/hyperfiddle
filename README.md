@@ -138,7 +138,7 @@ Now that we have a composable I/O primitive, we can use it as a basis to build *
 
 ## \#2. API-as-a-Value
 
-Here is the above API function, represented as a Hyperfiddle EDN value. Actually the below values do a lot more. Data is more information-dense than code, kind of like how a picture is worth 1000 words.
+Here is the above API function, represented as a Hyperfiddle EDN value ("fiddle"). Fiddles have links to other fiddles, this forms a graph.
 
 ```clojure
 {:db/id 17592186045418,                                     ; Root query
@@ -169,21 +169,18 @@ Here is the above API function, represented as a Hyperfiddle EDN value. Actually
                   }}}
 ```
 
-Fiddles have links to other fiddles, this forms a graph.
+Actually the below values do a lot more. Data is more information-dense than code, kind of like how a picture is worth 1000 words.
+
+> <img src="https://i.imgur.com/ZtYAlTE.png" width="720px">
+>
+> *Above EDN api-as-a-value, interpreted. Pink highlights indicate a link. Both select options queries are defined as :fiddle/links in the above EDN. The shirt-size query depends on the value of gender. For brevity, the above snippets omit about half of the EDN comprising this demo, [click here for the actual fiddle](http://dustingetz.hyperfiddle.site/ezpjb2RlLWRhdGFiYXNlICJzYW5kYm94IiwgOmxpbmstaWQgMTc1OTIxODYwNDU0MTh9).*
 
 Like all Hyperfiddle applications, hyperfiddle EDN values are interpreted by a function. This very special function is called the *Hyperfiddle Browser*. The Browser is a generic api-as-a-function which interprets hyperfiddle api-values, by navigating the link graph.
 
 *web browser : HTML documents :: hyperfiddle browser :: hyperfiddle EDN values*
 
 Obviously, data is better in every possible way (structural tooling, decoupled from platform, decoupled from 
-performance, tiny surface area for bugs, an intelligent child is able to figure it out, like how we all taught 
-ourselves HTML at age 13.)
-
-> <img src="https://i.imgur.com/iwOvJzA.png" width="720px">
->
-> *Hyperfiddle Browser, navigating a hyperfiddle edn value. Both select options queries are defined as :fiddle/links 
-> in the above EDN. The shirt-size query depends on the value of gender. For brevity, the above snippets omit about 
-> half of the EDN comprising this demo, [click here for the actual fiddle](http://dustingetz.hyperfiddle.site/ezpjb2RlLWRhdGFiYXNlICJzYW5kYm94IiwgOmxpbmstaWQgMTc1OTIxODYwNDU0MTh9).*
+performance, tiny surface area for bugs, an intelligent child is able to figure it out, like learning HTML by trial and error.)
 
 Hyperfiddles are graphs, not documents, so they are stored in databases. Databases storing hyperfiddles are like 
 git repos storing the "source code" (data) of your hyperfiddles. Like git and the web, there is no central database.
@@ -205,13 +202,12 @@ We do some of this already today.
 > editor is defined by ClojureScript code, stored in a database and eval'ed at runtime.
 > UI is very easy in Hyperfiddle since it's just functions and the data is always preloaded.*
 
-The dynamic dashboards have the following data driven hook points:
+The dynamic dashboards have the following hook points for progressive enhancement with Reagent expressions:
 
-* Fiddle page
-* Fiddle form-field
-* Fiddle form-field- #{form table tr th label value ...}
-* Datomic attribute from your schema
+* Fiddle root
+* Datomic attributes #{:post/content :post/title :post/date ...}
 * Datomic type #{string keyword bool inst long ref ...}
+* UI controls #{form table tr th label value ...}
 
 Here is an attribute renderer:
 
@@ -237,12 +233,18 @@ there is an "open" API that will respond to any query. You'll probably have the 
 is an area of research to define a general purpose security layer that filters the actual data in the resultset, 
 rather than requiring you to model the queries in advance as fiddles. This has future implications for the semantic web.
 
-## \#4. Structural editor for CRUD apps
+## \#4. Structural editor for APIs
 
-> <img src="https://i.imgur.com/sZfypDa.png" width="720px">
+> <img src="https://i.imgur.com/iwOvJzA.png" width="720px">
+> 
+> *The gender fiddle, inside Hyperfiddle IDE*
+
+The IDE is out of scope for this readme, but for example here is a visualization of how select options work:
+
+> <img src="https://i.imgur.com/JxzWUIq.gif" width="720px">
 > 
 > *The gender iframe is actually select options query, with the select renderer toggled off.
-> It renders in the header because the query runs once, not once-per-row.*
+> It renders in the header because the query runs once, not once-per-row. `:link/rel` has semantic meaning like html. `:options` matches up with the select option renderer. Imagine a [link/rel registry like HTML](https://www.iana.org/assignments/link-relations/link-relations.xhtml).*
 
 ## Hyperfiddle.net is 100% built in Hyperfiddle (EDN style)
 
