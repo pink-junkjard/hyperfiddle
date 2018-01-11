@@ -98,10 +98,11 @@
   ; todo clean this interface up
   {:read-only ((get ctx :read-only) (:attribute ctx) ctx)})
 
-(defn auto-control [_ _ _ ctx]                              ; compat
-  (some-> (case (:layout ctx) :block (schema-control-form ctx)
-                              :inline-block (schema-control-table ctx)
-                              :table (schema-control-table ctx))))
+(defn auto-control [maybe-field props _ ctx]                              ; compat
+  [(some-> (case (:layout ctx) :block (schema-control-form ctx)
+                               :inline-block (schema-control-table ctx)
+                               :table (schema-control-table ctx)))
+   maybe-field props ctx])
 
 (comment
   ; Find a home for this:
