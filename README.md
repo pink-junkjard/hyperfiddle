@@ -174,9 +174,6 @@ Actually this api-value does a lot more than the earlier function. Data is more 
 >
 > *Above EDN api-as-a-value, interpreted. Pink highlights indicate a link. Both select options queries are defined as :fiddle/links in the above EDN. The shirt-size query depends on the value of gender. For brevity, the above snippets omit about half of the EDN comprising this demo, [click here for the actual fiddle](http://dustingetz.hyperfiddle.site/ezpjb2RlLWRhdGFiYXNlICJzYW5kYm94IiwgOmxpbmstaWQgMTc1OTIxODYwNDU0MTh9).*
 
-Hyperfiddles are graphs, not documents, so they are stored in databases. Databases storing hyperfiddles are like 
-git repos storing the "source code" (data) of your hyperfiddles. Like git and the web, there is no central database.
-
 ### APIs as a graph permits optimizations that human-coded I/O cannot do:  
 
 * Automatic I/O partitioning and batching, optimized for cache hits
@@ -236,7 +233,14 @@ rather than requiring you to model the queries in advance as fiddles. This has f
 
 ## \#4. Hyperfiddle IDE: a Structural Editor for APIs
 
-The IDE is out of scope for this readme, but here are some pictures:
+Hyperfiddles are graphs, not documents, so instead of git they are stored in Datomic. This means you can query them structurally ("how many fiddles link to me"). Like git and the web, there is no central database.
+
+Once you start coding "data" (data-ing?), two things happen
+
+1. You are vastly more productive than before, the surface area for bugs is vastly decreased
+2. You realize that writing graphs as EDN is a pain in the ass, and you want a tool to do it for you
+
+Hyperfiddle IDE is out of scope for this readme, but here are some pictures:
 
 > <img src="https://i.imgur.com/iwOvJzA.png" width="720px">
 > 
