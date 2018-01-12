@@ -233,12 +233,13 @@ rather than requiring you to model the queries in advance as fiddles. This has f
 
 ## \#4. Hyperfiddle IDE: a Structural Editor for APIs
 
-Hyperfiddles are graphs, not documents, so instead of git they are stored in Datomic. This means you can query them structurally ("how many fiddles link to me"). Like git and the web, there is no central database.
+Once you start coding "data" (data-ing?), a few ideas form:
 
-Once you start coding "data" (data-ing?), two things happen
+1. Data is vastly more productive than code, the surface area for bugs is vastly decreased
+2. Dealing with huge graphs as edn text on a filesystem is stupid
+3. Datomic is really good at graphs
 
-1. You are vastly more productive than before, the surface area for bugs is vastly decreased
-2. You realize that writing graphs as EDN is a pain in the ass, and you want a tool to do it for you
+Hyperfiddles are graphs, not text, so instead of git they are stored in Datomic. This means you can query them structurally ("how many fiddles link to me"). Like git and the web, there is no central database.
 
 Hyperfiddle IDE is out of scope for this readme, but here are some pictures:
 
