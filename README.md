@@ -214,17 +214,11 @@ Once you start coding "data" (data-ing?), a few ideas form:
 
 Hyperfiddles are graphs, not text, so instead of git they are stored in Datomic. This means you can query the graph e.g. "which fiddles link to me". Like git and the web, there is no central database.
 
-Hyperfiddle IDE is out of scope for this readme, but here are some pictures:
-
-> <img src="https://i.imgur.com/iwOvJzA.png" width="720px">
-> 
-> *Hyperfiddle IDE, editing the gender fiddle*
-
-Select options are just iframe links with a semantic renderer:
+Hyperfiddle IDE is out of scope for this readme, but here is a picture.
 
 > <img src="https://i.imgur.com/JxzWUIq.gif" width="720px">
 > 
-> *When the gender semantic renderer is toggled off, the link is in the header, because the query runs once, not per-row. `:link/rel` has semantic meaning like html. `:options` matches up with the [`:db.type/ref` renderer](https://github.com/hyperfiddle/hyperfiddle/blob/bd61dfb07cbff75d5002b15999d1abc6c3c6af3c/src/hypercrud/ui/widget.cljs#L74). If you override the `:db.type/ref` renderer, you may care to use `:link/rel` as semantic hint, or not. Imagine a [link/rel registry like HTML](https://www.iana.org/assignments/link-relations/link-relations.xhtml).*
+> *Select options are iframes with style. `:link/rel` has semantic meaning like html, `:options` matches up with the [`:db.type/ref` renderer](https://github.com/hyperfiddle/hyperfiddle/blob/bd61dfb07cbff75d5002b15999d1abc6c3c6af3c/src/hypercrud/ui/widget.cljs#L74). When the gender semantic renderer is toggled off, the link is in the header, because the query runs once, not per-row. If you override the `:db.type/ref` renderer, you may care to use `:link/rel` as semantic hint, or not. Imagine a [link/rel registry like HTML](https://www.iana.org/assignments/link-relations/link-relations.xhtml).*
 
 ## Hyperfiddle.net is 100% built in Hyperfiddle (EDN style)
 
