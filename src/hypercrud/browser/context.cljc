@@ -20,8 +20,7 @@
           ))
 
 (defn route [ctx route]
-  (let [route (routing/tempid->id route ctx)
-        initial-repository (->> (get-in ctx [:domain :domain/code-databases])
+  (let [initial-repository (->> (get-in ctx [:domain :domain/code-databases])
                                 (filter #(= (:dbhole/name %) (:code-database route)))
                                 first
                                 (into {}))
@@ -30,13 +29,13 @@
                                         ; on navigate, this context is gone
                                         (filter (fn [[k _]] (and (string? k) (string/starts-with? k "$"))))
                                         (into {}))]
-                     (update initial-repository :repository/environment merge overrides))]
-    (-> ctx
-        (update-in [:domain :domain/code-databases]
-                   (fn [repos]
-                     (map #(if (= initial-repository) repository %) repos)))
-        (assoc :route route
-               :repository repository))))
+                     (update initial-repository :repository/environment merge overrides))
+        ctx (-> ctx
+                (update-in [:domain :domain/code-databases]
+                           (fn [repos]
+                             (map #(if (= initial-repository) repository %) repos)))
+                (assoc :repository repository))]
+    (assoc ctx :route (routing/tempid->id route ctx))))
 
 (defn anchor-branch [ctx link]
   (if (:link/managed? link)
