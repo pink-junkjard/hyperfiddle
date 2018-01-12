@@ -64,6 +64,8 @@
   (case action
     :hydrate!-success (second args)
     :popover-hydrate!-success (merge-with (partial merge-with merge) tempid-lookup (second args))
+    :discard-branch (let [[branch] args]
+                      (util/map-values #(dissoc % branch) tempid-lookup))
     tempid-lookup))
 
 (defn ptm-reducer [ptm action & args]
