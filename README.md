@@ -209,7 +209,7 @@ the server returns EDN (transit). There is also an "open" API for development th
 
 Once you start coding "data" (data-ing?), a few ideas form:
 
-1. Data is vastly more productive than code, the surface area for bugs is vastly decreased
+1. Data is vastly more productive than code, the surface area for bugs is tiny–mostly just typos
 2. Working with EDN-serialized text on a filesystem is stupid
 
 Hyperfiddles are graphs, not text, so instead of git they are stored in Datomic. This means you can query the graph e.g. "which fiddles link to me". Like git and the web, there is no central database. The future implications of this are profound.
