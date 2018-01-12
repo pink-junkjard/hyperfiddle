@@ -46,7 +46,7 @@ We're nearing a 0.1 open-source release in Q1 2018.
 Performance (Hyperfiddle must respond as fast as a Clojure repl)
 
 - [x] API: data loop running in JVM
-- [ ] API: automatically optimize hydrates for cache locality (using link graph)
+- [x] API: automatically optimize hydrates for cache locality (using link graph)
 - [ ] API: Release CLI to serve your fiddles (no http/backend boilerplate for application developers)
 - [ ] UI: improve popovers, finish stage/discard UX
 - [ ] UI: Human readable URLs and customizable URL router
