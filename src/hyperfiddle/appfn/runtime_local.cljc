@@ -13,31 +13,35 @@
      (:import (hypercrud.types.Err Err))))
 
 
-(defn- hydrate-loop-impl [rt request-fn local-basis stage {:keys [id->tempid ptm] :as data-cache} total-loops]
-  (let [all-requests (perf/time (fn [get-total-time] (timbre/debug "Computing needed requests" "total time: " (get-total-time)))
-                                (->> (request-fn id->tempid ptm) (into #{})))
-        missing-requests (let [have-requests (set (map second (keys ptm)))]
-                           (->> (set/difference all-requests have-requests)
-                                (into [])))]
-    (if (empty? missing-requests)
-      (p/resolved {:id->tempid id->tempid
-                   :ptm (->> (select-keys (util/map-keys second ptm) all-requests)) ; prevent memory leak by returning exactly what is needed
-                   :total-loops total-loops})
-      (p/then (api/hydrate-requests rt local-basis stage missing-requests)
-              (fn [{:keys [pulled-trees id->tempid]}]
-                (let [new-ptm (->> (zipmap missing-requests pulled-trees)
-                                   (util/map-keys (fn [request]
-                                                    [(branch/branch-vals-for-request request stage) request])))
-                      ptm (merge ptm new-ptm)
-                      data-cache {:id->tempid id->tempid
-                                  :ptm ptm}]
-                  (hydrate-loop-impl rt request-fn local-basis stage data-cache (inc total-loops))))))))
+(def hydrate-loop-limit 25)
+
+(defn- hydrate-loop-impl [rt request-fn local-basis stage {:keys [id->tempid ptm] :as data-cache} total-loops & [loop-limit]]
+  (if (> total-loops loop-limit)
+    (p/rejected (ex-info "Request limit reached" {:total-loops total-loops :ptm-at-cutoff (keys ptm)}))
+    (let [all-requests (perf/time (fn [get-total-time] (timbre/debug "Computing needed requests" "total time: " (get-total-time)))
+                                  (->> (request-fn id->tempid ptm) (into #{})))
+          missing-requests (let [have-requests (set (map second (keys ptm)))]
+                             (->> (set/difference all-requests have-requests)
+                                  (into [])))]
+      (if (empty? missing-requests)
+        (p/resolved {:id->tempid id->tempid
+                     :ptm (->> (select-keys (util/map-keys second ptm) all-requests)) ; prevent memory leak by returning exactly what is needed
+                     :total-loops total-loops})
+        (p/then (api/hydrate-requests rt local-basis stage missing-requests)
+                (fn [{:keys [pulled-trees id->tempid]}]
+                  (let [new-ptm (->> (zipmap missing-requests pulled-trees)
+                                     (util/map-keys (fn [request]
+                                                      [(branch/branch-vals-for-request request stage) request])))
+                        ptm (merge ptm new-ptm)
+                        data-cache {:id->tempid id->tempid
+                                    :ptm ptm}]
+                    (hydrate-loop-impl rt request-fn local-basis stage data-cache (inc total-loops) loop-limit))))))))
 
 (defn hydrate-loop [rt request-fn local-basis stage & [data-cache]]
   (let [hydrate-loop-id #?(:cljs (js/Math.random)
                            :clj  (Math/random))]
     (timbre/debug "Starting hydrate-loop" (str "[" hydrate-loop-id "]"))
-    (-> (perf/time-promise (hydrate-loop-impl rt request-fn local-basis stage data-cache 0)
+    (-> (perf/time-promise (hydrate-loop-impl rt request-fn local-basis stage data-cache 0 hydrate-loop-limit)
                            (fn [err get-total-time]
                              (timbre/debug "Finished hydrate-loop" (str "[" hydrate-loop-id "]") "total time:" (get-total-time)))
                            (fn [success get-total-time]
