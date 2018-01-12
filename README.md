@@ -62,10 +62,10 @@ Performance (Hyperfiddle must respond as fast as a Clojure repl)
 
 Hyperfiddle is built in layers. Higher layers are optional and implemented in terms of lower.
 
-1. **Managed I/O primitives:** userland is a function, "api-as-a-function"
-2. **API modeled as graph:** data-driven CRUD model, userland is EDN, "api-as-a-value"
-3. **Data-driven UI:** automatic user interface, reflected from your api-as-a-value
-4. **IDE for applications:** structural editor for api-as-a-values, stored in Datomic
+1. **Managed I/O primitives:** API defined as a function
+2. **API modeled as graph:** data-driven CRUD model, API defined in EDN
+3. **Data-driven UI:** automatic UI (like Swagger)
+4. **IDE for applications:** structural editor for APIs
 
 Hyperfiddle IDE, the structural editor (<http://www.hyperfiddle.net>) is also the open-source reference application to teach you how Hyperfiddle works. Hyperfiddle IDE runs on your machine from a CLI (`hyperfiddle serve datomic:free://localhost:4334/my-fiddles`); it runs in your application as a jar file from github, and as managed elastic cloud infrastructure.
 
@@ -75,9 +75,9 @@ Hyperfiddle makes forms and such really easy to write (something a web designer 
 
 Hyperfiddle's data sync loop runs in the JVM (to solve N+1 problem of REST). 
 
-## \#1. API-as-a-Function
+## \#1. API as a function
 
-Here is a simple API function, with two database queries:
+A simple API function, with two database queries:
 
 ```clojure
 (def datomic-samples-blog #uri "datomic:free://datomic:4334/samples-blog")
@@ -105,39 +105,22 @@ Notes:
 * Data loop typically runs in JVM Datomic Peer, so no network hops or N+1 problem
 * Data loop sometimes runs in browser (e.g. in response to incremental ui state change)
 
-Api-as-a-fn with managed I/O is a better way to code APIs:
-
-### Programming model is higher level
-
-* Real functional programming
-* No async in userland
-* All fiddles speak the same API, tooling built-in (like Swagger or OData)
-* No low level HTTP boilerplate, no marshaling between backend and frontend types
-
-### Immutability in database (Datomic) makes SQL/ORM problems go away
-
-* No monstrous JOINs to avoid database round trips
-* No service/database round trips at all
-* No REST, no repeated browser/service round trips
-* No GraphQL resolver hiding complexity in the closet
-* No eventual consistency
-* No batching and caching
-* Real functional programming
-
-### Infrastructure benefits
-
-* CDN integration that understands your app (serve APIs like static sites)
-* all responses are immutable, all requests have a time-basis
-* Reads serviced offline from cache (inclduing during deployments)
+#### Big List Of Benefits:
+* Userland sheltered from I/O and async
+* All fiddles speak the same API
+* API tooling built-in (like Swagger or OData)
+* No low level backend/frontend http boilerplate
+* No REST, no browser/service round trips
+* No ORM, no GraphQL resolver, no service/database round trips
 * Massively parallelizable, serverless, elastic
-
-Basically, we think Datomic fully solves CRUD APIs permanently.
+* all responses are immutable, all requests have a time-basis
+* CDN integration that understands your app (serve APIs like static sites)
 
 Now that we have a properly composable I/O primitive, we can use it as a basis to build *composable abstractions:*
 
-## \#2. API-as-a-Value
+## \#2. API defined in EDN
 
-Here is the above API function, represented as a Hyperfiddle EDN value ("fiddle"). Fiddles have links to other fiddles, this forms a graph.
+An API defined as EDN ("fiddle"). Fiddles have links to other fiddles, this forms a graph.
 
 ```clojure
 {:db/id 17592186045418,                                     ; Root query
@@ -168,13 +151,7 @@ Here is the above API function, represented as a Hyperfiddle EDN value ("fiddle"
                   }}}
 ```
 
-Actually this api-value does a lot more than the earlier function. Data is more information-dense than code, kind of like how a picture is worth 1000 words:
-
-> <img src="https://i.imgur.com/ZtYAlTE.png" width="720px">
->
-> *Above EDN api-as-a-value, interpreted. Pink highlights indicate a link. Both select options queries are defined as :fiddle/links in the above EDN. The shirt-size query depends on the value of gender. For brevity, the above snippets omit about half of the EDN comprising this demo, [click here for the actual fiddle](http://dustingetz.hyperfiddle.site/ezpjb2RlLWRhdGFiYXNlICJzYW5kYm94IiwgOmxpbmstaWQgMTc1OTIxODYwNDU0MTh9).*
-
-### APIs as a graph permits optimizations that human-coded I/O cannot do:  
+### API as a graph permits optimizations that human-coded I/O cannot do:  
 
 * Automatic I/O partitioning and batching, optimized for cache hits
 * Server preloading, prefetching and optimistic push
@@ -184,28 +161,26 @@ We do some of this already today.
 
 ## \#3. Data-driven UI, like Swagger UI
 
-Hyperfiddle api-values capture precisely the right semantic information to build an API browser.
+Batteries included tooling, your API "just works" out of the box. A picture is worth 1000 words:
 
-Like all Hyperfiddle applications, hyperfiddle EDN values are interpreted by a function. This very special function is called the *Hyperfiddle Browser*. The Browser is a generic api-as-a-function which interprets hyperfiddle api-values, by navigating the link graph.
+> <img src="https://i.imgur.com/ZtYAlTE.png" width="720px">
+>
+> *Above EDN definition, rendered. Pink highlights indicate a link to another fiddle. [click here for the live fiddle](http://dustingetz.hyperfiddle.net/ezpjb2RlLWRhdGFiYXNlICJzYW5kYm94IiwgOmxpbmstaWQgMTc1OTIxODYwNDU0MTh9).*
+
+All Hyperfiddle APIs must resolve to a function, and this is no different. Fiddles are interpreted by a very special function called the *Hyperfiddle Browser*. The Browser interprets fiddles by navigating the link graph.
 
 *web browser : HTML documents :: hyperfiddle browser :: hyperfiddle EDN values*
 
-Obviously, data is better in every possible way (structural tooling, decoupled from platform, decoupled from 
-performance, tiny surface area for bugs, an intelligent child is able to figure it out, like learning HTML by trial and error.)
-
-> <img src="https://i.imgur.com/pQk6g0a.png" width="720px">
-> 
-> *This dashboard is entirely generated from Datomic schema and Hyperfiddle EDN. 
-> Hyperfiddle UI builtins are highly dynamic, there are control points to override all markup, for example this markdown 
-> editor is defined by ClojureScript code, stored in a database and eval'ed at runtime.
-> UI is very easy in Hyperfiddle since it's just functions and the data is always preloaded.*
-
-The dynamic dashboards have the following hook points for progressive enhancement with Reagent expressions:
+The Browser has the following hook points for progressive enhancement with Reagent expressions:
 
 * Fiddle root
 * Datomic attributes #{:post/content :post/title :post/date ...}
 * Datomic type #{string keyword bool inst long ref ...}
 * UI controls #{form table tr th label value ...}
+
+> <img src="https://i.imgur.com/pQk6g0a.png" width="720px">
+> 
+> *This dashboard is fully data driven. The markdown editor is defined by ClojureScript code, stored in a database and eval'ed at runtime.*
 
 Here is a markdown attribute renderer:
 
@@ -225,21 +200,19 @@ Here is a fiddle root renderer:
 
 Here is the [Datomic schema renderer](https://github.com/hyperfiddle/hyperfiddle/blob/bd61dfb07cbff75d5002b15999d1abc6c3c6af3c/src/hypercrud/ui/auto_control.cljs#L15-L30), TODO this should be a core.match config stored in a database...
 
-API works the same way as the dashboards. The API is just hydrating a route (URL), except instead of HTML the server
-the server returns EDN (transit). URLs and fiddles are essentially the same information, so
-there is an "open" API that will respond to any query. You'll probably have the open API turned off in production. It
-is an area of research to define a general purpose security layer that filters the actual data in the resultset, 
-rather than requiring you to model the queries in advance as fiddles. This has future implications for the semantic web.
+Views are very easy to code since they're just functions.
+
+The dashboard is backed by an API, which hydrates a route (URL), except instead of HTML the server
+the server returns EDN (transit). There is also an "open" API for development that will respond to any query, not just valid routes. The "open" API has future implications for the semantic web.
 
 ## \#4. Hyperfiddle IDE: a Structural Editor for APIs
 
 Once you start coding "data" (data-ing?), a few ideas form:
 
 1. Data is vastly more productive than code, the surface area for bugs is vastly decreased
-2. Dealing with huge graphs as edn text on a filesystem is stupid
-3. Datomic is really good at graphs
+2. Working with EDN-serialized text on a filesystem is stupid
 
-Hyperfiddles are graphs, not text, so instead of git they are stored in Datomic. This means you can query them structurally ("how many fiddles link to me"). Like git and the web, there is no central database.
+Hyperfiddles are graphs, not text, so instead of git they are stored in Datomic. This means you can query the graph e.g. "which fiddles link to me". Like git and the web, there is no central database.
 
 Hyperfiddle IDE is out of scope for this readme, but here are some pictures:
 
