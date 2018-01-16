@@ -9,5 +9,5 @@
    (if-not (hyperfiddle/alias? (hyperfiddle/hostname->hf-domain-name (:hostname ctx) (:hyperfiddle-hostname ctx)))
      (let [ctx (assoc ctx :ui-error browser-ui/ui-error-inline)]
        [(:browse ctx) :topnav ctx :class "topnav hidden-print"]))
-   (let [ctx (hyperfiddle.appval.domain.app-ui/target-ui-context ctx)]
+   (let [ctx (hyperfiddle.appval.domain.foundation-view/target-ui-context ctx)]
      [browser/ui-from-route (:target-route ctx) ctx "app-browser"])])

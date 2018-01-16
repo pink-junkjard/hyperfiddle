@@ -1,4 +1,4 @@
-(ns hyperfiddle.appval.domain.app
+(ns hyperfiddle.appval.domain.foundation
   (:require [cats.core :as cats]
             [cats.monad.either :as either]
             [hypercrud.browser.core :as browser]
@@ -80,17 +80,12 @@
                         target-route)
         :user-profile user-profile))))
 
-(defn main-route [ctx]
-  {:code-database "root"
-   :link-id :hyperfiddle/main
-   :entity #entity["$" (get-in ctx [:target-route :link-id])]})
-
 (defn- ->decoded-route [maybe-decoded-route target-domain]
   (or maybe-decoded-route
       (-> (hc-string/safe-read-edn-string (:domain/home-route target-domain))
           (either/branch (constantly nil) identity))))
 
-(defn- with-ide-ctx [maybe-decoded-route state-value ctx f]
+(defn- with-foundation-ctx [maybe-decoded-route state-value ctx f]
   (let [target-domain-request (let [hf-domain-name (hf/hostname->hf-domain-name (:hostname ctx) (:hyperfiddle-hostname ctx))]
                                 (hf/domain-request hf-domain-name (:peer ctx)))
         hf-domain-request (hf/domain-request "hyperfiddle" (:peer ctx))]
@@ -128,13 +123,13 @@
     (constantly nil)
     f))
 
-(defn ide-request [state-value ctx]
+(defn foundation-request [state-value ctx]
   (with-decoded-route
     state-value
     (fn [maybe-decoded-route]
-      (with-ide-ctx maybe-decoded-route state-value ctx
-                    (fn [ctx]
-                      (browser/request-from-route (:target-route ctx) ctx))))))
+      (with-foundation-ctx maybe-decoded-route state-value ctx
+                           (fn [ctx]
+                             (browser/request-from-route (:target-route ctx) ctx))))))
 
 (defn user-request [state-value ctx]
   (with-decoded-route
@@ -142,20 +137,22 @@
     (fn [maybe-decoded-route]
       (decoded-route->user-request maybe-decoded-route state-value ctx))))
 
-(defn page-request [state-value ctx]
+(defn page-request [state-value ctx user-data-fn]
   (with-decoded-route
     state-value
     (fn [maybe-decoded-route]
       (concat
-        (with-ide-ctx maybe-decoded-route state-value ctx
-                      (fn [ctx]
-                        (browser/request-from-route (main-route ctx) ctx)))
+        (with-foundation-ctx maybe-decoded-route state-value ctx user-data-fn)
         (decoded-route->user-request maybe-decoded-route state-value ctx)))))
 
-(defn request [hyperfiddle-hostname hostname local-basis encoded-route foo branch stage]
+(defn local-basis [global-basis domain route ctx]
+  global-basis)
+
+; user-data-fn already partialed foo?
+(defn api [user-data-fn hyperfiddle-hostname hostname local-basis encoded-route branch stage]
   (let [ctx {:branch branch
              :dispatch! #(throw (->Exception "dispatch! not supported in hydrate-route"))
-             :foo foo
+             :foo foo                                       ; bad
              :hostname hostname
              :hyperfiddle-hostname hyperfiddle-hostname}]
     (fn [id->tempid ptm]
@@ -168,6 +165,6 @@
             ; just blast the peer everytime
             ctx (assoc ctx :peer (peer/->Peer (reactive/atom state-val)))]
         (case (:type foo)
-          "page" (page-request state-val ctx)
-          "ide" (ide-request state-val ctx)
+          "page" (page-request state-val ctx user-data-fn)
+          "ide" (foundation-request state-val ctx)
           "user" (user-request state-val ctx))))))

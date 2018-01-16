@@ -1,9 +1,8 @@
-(ns hyperfiddle.appval.domain.app-ui
+(ns hyperfiddle.appval.domain.foundation-view
   (:require [cats.core :refer [mlet]]
             [cats.monad.either :as either]
             [cljs.pprint :as pprint]
             [clojure.string :as string]
-            [hypercrud.browser.core :as browser]
             [hypercrud.browser.routing :as routing]
             [hypercrud.client.core :as hc]
             [hypercrud.compile.reader :as reader]
@@ -15,7 +14,7 @@
             [hypercrud.util.non-fatal :refer [try-either]]
             [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :as hc-string]
-            [hyperfiddle.appval.domain.app :as app]
+            [hyperfiddle.appval.domain.foundation :as foundation]
             [hyperfiddle.appval.domain.core :as hf]
             [hyperfiddle.appval.domain.error :as error]))
 
@@ -46,15 +45,15 @@
                               (aset js/window "location" encoded-route)))
                           (.stopPropagation event))))]
   (defn hf-ui-context [ctx hf-domain target-domain target-route user-profile]
-    (-> (app/hf-context ctx hf-domain target-domain target-route user-profile)
+    (-> (foundation/hf-context ctx hf-domain target-domain target-route user-profile)
         (assoc :navigate-cmp navigate-cmp/navigate-cmp
                :page-on-click (reactive/partial page-on-click ctx target-domain)))))
 
 (defn target-ui-context [ctx]
-  (-> (app/target-context ctx (:target-domain ctx) (:target-route ctx) (:user-profile ctx))
+  (-> (foundation/target-context ctx (:target-domain ctx) (:target-route ctx) (:user-profile ctx))
       (dissoc :page-on-click)))
 
-(defn ui [ctx]
+(defn view [user-view-fn ctx]
   (let [state-atom (.-state-atom (:peer ctx))
         either-v (or (some-> @(reactive/cursor state-atom [:error]) either/left)
                      (let [state-route @(reactive/cursor state-atom [:encoded-route])]
@@ -79,6 +78,6 @@
        (let [ctx (-> (hf-ui-context ctx hf-domain target-domain decoded-route @(reactive/cursor state-atom [:user-profile]))
                      (update :debug str "-v"))]
          [:div.hyperfiddle ui-props
-          [browser/ui-from-route (app/main-route ctx) ctx]
+          (user-view-fn ctx)
           (if @(reactive/cursor state-atom [:staging-open])
             [staging (:peer ctx) (:dispatch! ctx)])]))]))

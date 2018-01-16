@@ -7,7 +7,7 @@
             [hypercrud.types.DbVal :refer [->DbVal]]
             [hypercrud.util.branch :as branch]
             [hypercrud.util.core :as util]
-            [hyperfiddle.api :as api]
+            [hyperfiddle.runtime :as runtime]
             [hyperfiddle.appfn.runtime-local :refer [process-result v-not-nil?]] ; todo
             [promesa.core :as p]
             [taoensso.timbre :as timbre]))
@@ -24,7 +24,7 @@
     (dispatch! (apply batch [:hydrate!-start hydrate-id] on-start))
     (let [{:keys [stage] :as post-start-state} (get-state)
           {:keys [encoded-route local-basis]} (post-start->route-vals post-start-state)]
-      (-> (api/hydrate-route rt local-basis encoded-route foo branch stage)
+      (-> (runtime/hydrate-route rt local-basis encoded-route foo branch stage)
           (p/then (fn [{:keys [ptm id->tempid]}]
                     (if (= hydrate-id (:hydrate-id (get-state)))
                       (let [stage-val (:stage (get-state))
@@ -51,7 +51,7 @@
                   dispatch! get-state))
 
 (defn refresh-global-basis [rt dispatch! get-state]
-  (-> (api/global-basis rt)
+  (-> (runtime/global-basis rt)
       (p/then (fn [global-basis]
                 (dispatch! [:set-global-basis global-basis])))
       (p/catch (fn [error]
@@ -60,7 +60,7 @@
 
 (defn refresh-page-local-basis [rt dispatch! get-state]
   (let [{:keys [global-basis encoded-route]} (get-state)]
-    (-> (api/local-basis rt global-basis encoded-route {:type "page"} nil)
+    (-> (runtime/local-basis rt global-basis encoded-route {:type "page"} nil)
         (p/then (fn [local-basis]
                   (dispatch! [:set-local-basis local-basis])))
         (p/catch (fn [error]
@@ -108,7 +108,7 @@
   (fn [dispatch! get-state]
     (let [encoded-route (routing/encode route)
           {:keys [global-basis]} (get-state)]
-      (-> (api/local-basis rt global-basis encoded-route foo branch)
+      (-> (runtime/local-basis rt global-basis encoded-route foo branch)
           (p/catch (fn [error]
                      (dispatch! [:set-error error])
                      (throw error)))
@@ -153,7 +153,7 @@
           tx-groups (->> (get stage nil)                    ; can only transact one branch
                          ; hack because the ui still generates some garbage tx
                          (util/map-values (partial filter v-not-nil?)))]
-      (-> (api/transact! (:peer ctx) tx-groups)
+      (-> (runtime/transact! (:peer ctx) tx-groups)
           (p/catch (fn [error]
                      #?(:cljs (js/alert (pr-str error)))
                      (dispatch! [:transact!-failure error])

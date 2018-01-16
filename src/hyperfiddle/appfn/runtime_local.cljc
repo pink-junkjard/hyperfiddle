@@ -6,7 +6,7 @@
             [hypercrud.util.branch :as branch]
             [hypercrud.util.core :as util]
             [hypercrud.util.performance :as perf]
-            [hyperfiddle.api :as api]
+            [hyperfiddle.runtime :as runtime]
             [promesa.core :as p]
             [taoensso.timbre :as timbre])
   #?(:clj
@@ -23,7 +23,7 @@
       (p/resolved {:id->tempid id->tempid
                    :ptm (->> (select-keys (util/map-keys second ptm) all-requests)) ; prevent memory leak by returning exactly what is needed
                    :total-loops total-loops})
-      (p/then (api/hydrate-requests rt local-basis stage missing-requests)
+      (p/then (runtime/hydrate-requests rt local-basis stage missing-requests)
               (fn [{:keys [pulled-trees id->tempid]}]
                 (let [new-ptm (->> (zipmap missing-requests pulled-trees)
                                    (util/map-keys (fn [request]
@@ -74,14 +74,14 @@
                               :tx (filter v-not-nil? tx)})))))))
 
 (defn hydrate-one! [rt local-basis stage request]
-  (-> (api/hydrate-requests rt local-basis stage [request])
+  (-> (runtime/hydrate-requests rt local-basis stage [request])
       (p/then (fn [{:keys [pulled-trees]}]
                 (-> (process-result (first pulled-trees) request)
                     (either/branch p/rejected p/resolved))))))
 
 ; Promise[List[Response]]
 (defn hydrate-all-or-nothing! [rt local-basis stage requests]
-  (-> (api/hydrate-requests rt local-basis stage requests)
+  (-> (runtime/hydrate-requests rt local-basis stage requests)
       (p/then (fn [{:keys [pulled-trees]}]
                 (-> (map process-result pulled-trees requests)
                     (cats/sequence)
