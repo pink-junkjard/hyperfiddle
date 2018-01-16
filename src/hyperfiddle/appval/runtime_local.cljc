@@ -74,8 +74,8 @@
            route (or maybe-decoded-route
                      (-> (hc-string/safe-read-edn-string (:domain/home-route user-domain))
                          (either/branch p/rejected p/resolved)))]
-      (cats/return (concat (foundation/local-basis global-basis user-domain route)
-                           (user-local-basis global-basis user-domain route))))
+      (cats/return
+        (user-local-basis global-basis user-domain route)))
     (fn [err get-total-time]
       (timbre/debug "local-basis failure;" "total time:" (get-total-time)))
     (fn [success get-total-time]

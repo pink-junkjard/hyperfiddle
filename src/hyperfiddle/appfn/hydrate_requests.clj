@@ -87,6 +87,7 @@
 (def ERROR-BRANCH-PAST "Branching the past is currently unsupported, please update your basis")
 
 (defn build-get-secure-db-with [staged-branches db-with-lookup local-basis]
+  {:pre [(not-any? nil? (vals local-basis))]}
   (letfn [(get-secure-db-from-branch [{:keys [branch-ident uri tx] :as branch}]
             (or (get @db-with-lookup branch)
                 (let [t (get local-basis uri)
@@ -138,7 +139,7 @@
 (defn hydrate-requests [local-basis requests staged-branches] ; theoretically, requests are grouped by basis for cache locality
   (timbre/debug (->> (map (comp #(str/prune % 40) pr-str) [local-basis staged-branches (count requests)]) (interpose ", ") (apply str "hydrate-requests: ")))
   (let [db-with-lookup (atom {})
-        get-secure-db-with (build-get-secure-db-with staged-branches db-with-lookup local-basis)
+        get-secure-db-with (build-get-secure-db-with staged-branches db-with-lookup (into {} local-basis) #_":: ([uri 1234]), but there are some duck type shenanigans happening")
         pulled-trees (->> requests
                           (map #(try (hydrate-request* % get-secure-db-with)
                                      (catch Throwable e

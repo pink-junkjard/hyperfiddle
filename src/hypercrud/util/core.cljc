@@ -1,5 +1,6 @@
 (ns hypercrud.util.core
-    (:require [clojure.string :as string]
+    (:require [cats.monad.either :as either]
+              [clojure.string :as string]
     #?(:clj [clojure.pprint :as pprint]
        :cljs [cljs.pprint :as pprint])))
 
@@ -81,3 +82,7 @@
 (defn abs-normalized [x]
   #?(:clj  (if x (Math/abs x) 0)
      :cljs (js/Math.abs x)))
+
+(defn unwrap [v']
+  ; On the api side, we never inspect the error, the either is useless
+  (either/branch v' (constantly nil) identity))

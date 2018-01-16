@@ -148,7 +148,7 @@
 
                               ; return the result to the action, it could be a promise
                               result))]
-              ((:dispatch! ctx) (actions/stage-popover (:peer ctx) popover-id (:branch ctx) (:foo ctx) swap-fn)))))
+              ((:dispatch! ctx) (actions/stage-popover (:peer ctx) popover-id (:branch ctx) swap-fn)))))
         ; todo something better with these exceptions (could be user error)
         (p/catch (fn [err]
                    #?(:clj  (throw err)
@@ -179,7 +179,7 @@
   ((:dispatch! ctx)
     (if dont-branch?
       (actions/open-popover popover-id)
-      (actions/open-branched-popover (:peer ctx) popover-id (:branch ctx) route (:foo ctx)))))
+      (actions/open-branched-popover (:peer ctx) popover-id (:branch ctx) route))))
 
 ; if this is driven by link, and not route, it needs memoized.
 ; the route is a fn of the formulas and the formulas can have effects

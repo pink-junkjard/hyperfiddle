@@ -46,11 +46,11 @@
         ui-props {:class (string/join " " @(reactive/cursor state-atom [:pressed-keys]))}]
     [stale/loading (stale/can-be-loading? ctx) either-v
      (fn [e]
-       [:div.hyperfiddle ui-props
+       [:div.hyperfiddle.hyperfiddle-foundation ui-props
         [error/error-cmp e]
         [staging (:peer ctx) (:dispatch! ctx)]])
      (fn [[target-domain hf-domain decoded-route]]
-       [:div.hyperfiddle ui-props
+       [:div.hyperfiddle.hyperfiddle-foundation ui-props
         (user-view-fn target-domain hf-domain decoded-route ctx)
         (if @(reactive/cursor state-atom [:staging-open])
           [staging (:peer ctx) (:dispatch! ctx)])])]))

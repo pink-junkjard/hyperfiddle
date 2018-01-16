@@ -1,6 +1,7 @@
 (ns hypercrud.client.peer
   (:require [cats.monad.either :as either]
             [hypercrud.client.core :as hypercrud]
+            [hypercrud.util.core :refer [unwrap]]
             [hypercrud.types.DbVal :refer [->DbVal]]
             [hypercrud.util.branch :as branch]
             [hypercrud.util.reactive :as reactive]
@@ -31,19 +32,9 @@
   (db [this uri branch]
     (db-pointer state-atom uri branch))
 
+  hypercrud/HydrateApi
+  (hydrate-api [this request]
+    (unwrap (hypercrud/hydrate this request)))
+
   #?@(:cljs [IHash
              (-hash [this] (goog/getUid this))]))
-
-
-(defn unwrap [v']
-  ; On the api side, we never inspect the error, the either is useless
-  (either/branch v' (constantly nil) identity))
-
-(deftype ApiPeer [state-atom]
-  hypercrud/Peer
-  (hydrate [this request]
-    (unwrap                                                 ; no errors
-      (hydrate state-atom request)))
-
-  (db [this uri branch]
-    (db-pointer state-atom uri branch)))

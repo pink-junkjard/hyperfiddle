@@ -49,7 +49,7 @@
 
 (defn user-with [ctx branch uri tx]
   ; todo custom user-dispatch with all the tx-fns as reducers
-  ((:dispatch! ctx) (actions/with (:peer ctx) (:foo ctx) branch uri tx)))
+  ((:dispatch! ctx) (actions/with (:peer ctx) branch uri tx)))
 
 (defn find-element [ctx fe fe-pos]
   (-> (if-let [dbname (some-> (:source-symbol fe) str)]

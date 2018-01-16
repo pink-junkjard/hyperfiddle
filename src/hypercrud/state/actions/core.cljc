@@ -17,14 +17,14 @@
 ; user beware
 (defn batch [& action-list] (cons :batch action-list))
 
-(defn hydrate-route* [rt foo branch post-start->route-vals
+(defn hydrate-route* [rt branch post-start->route-vals
                       on-start success-action failure-action
                       dispatch! get-state]
   (let [hydrate-id #?(:clj (Math/random) :cljs (js/Math.random))]
     (dispatch! (apply batch [:hydrate!-start hydrate-id] on-start))
     (let [{:keys [stage] :as post-start-state} (get-state)
           {:keys [encoded-route local-basis]} (post-start->route-vals post-start-state)]
-      (-> (runtime/hydrate-route rt local-basis encoded-route foo branch stage)
+      (-> (runtime/hydrate-route rt local-basis encoded-route branch stage)
           (p/then (fn [{:keys [ptm id->tempid]}]
                     (if (= hydrate-id (:hydrate-id (get-state)))
                       (let [stage-val (:stage (get-state))
@@ -40,13 +40,13 @@
                      (throw error)))))))
 
 (defn hydrate-page [rt on-start dispatch! get-state]
-  (hydrate-route* rt {:type "page"} nil #(select-keys % [:encoded-route :local-basis])
+  (hydrate-route* rt nil #(select-keys % [:encoded-route :local-basis])
                   on-start :hydrate!-success :hydrate!-failure
                   dispatch! get-state))
 
-(defn hydrate-branch [rt post-start->route-vals foo branch
+(defn hydrate-branch [rt post-start->route-vals branch
                       on-start dispatch! get-state]
-  (hydrate-route* rt foo branch post-start->route-vals
+  (hydrate-route* rt branch post-start->route-vals
                   on-start :popover-hydrate!-success :popover-hydrate!-failure
                   dispatch! get-state))
 
@@ -60,7 +60,7 @@
 
 (defn refresh-page-local-basis [rt dispatch! get-state]
   (let [{:keys [global-basis encoded-route]} (get-state)]
-    (-> (runtime/local-basis rt global-basis encoded-route {:type "page"} nil)
+    (-> (runtime/local-basis rt global-basis encoded-route nil)
         (p/then (fn [local-basis]
                   (dispatch! [:set-local-basis local-basis])))
         (p/catch (fn [error]
@@ -92,23 +92,23 @@
         id->tempid (get-in tempid-lookups [uri branch])]
     (map (partial tx/stmt-id->tempid id->tempid schema) tx)))
 
-(defn with [rt foo branch uri tx]
+(defn with [rt branch uri tx]
   (fn [dispatch! get-state]
     (let [tx (update-to-tempids get-state branch uri tx)
           on-start [[:with branch uri tx]]]
       (if (nil? branch)
         (hydrate-page rt on-start dispatch! get-state)
         (let [post-start->route-vals #(get-in % [:branches branch])]
-          (hydrate-branch rt post-start->route-vals foo branch on-start dispatch! get-state))))))
+          (hydrate-branch rt post-start->route-vals branch on-start dispatch! get-state))))))
 
 (defn open-popover [popover-id]
   [:open-popover popover-id])
 
-(defn open-branched-popover [rt popover-id branch route foo]
+(defn open-branched-popover [rt popover-id branch route]
   (fn [dispatch! get-state]
     (let [encoded-route (routing/encode route)
           {:keys [global-basis]} (get-state)]
-      (-> (runtime/local-basis rt global-basis encoded-route foo branch)
+      (-> (runtime/local-basis rt global-basis encoded-route branch)
           (p/catch (fn [error]
                      (dispatch! [:set-error error])
                      (throw error)))
@@ -116,13 +116,13 @@
                     (let [on-start [(open-popover popover-id)
                                     [:add-branch branch encoded-route local-basis]]
                           post-start->route-vals (constantly {:encoded-route encoded-route :local-basis local-basis})]
-                      (hydrate-branch rt post-start->route-vals foo branch on-start dispatch! get-state))))))))
+                      (hydrate-branch rt post-start->route-vals branch on-start dispatch! get-state))))))))
 
 (defn discard-branched-popover [popover-id branch]
   (batch (discard-branch branch)
          (close-popover popover-id)))
 
-(defn stage-popover [rt popover-id branch foo swap-fn-async]
+(defn stage-popover [rt popover-id branch swap-fn-async]
   (fn [dispatch! get-state]
     (let [multi-color-tx (get-in (get-state) [:stage branch] {})]
       (p/then (swap-fn-async multi-color-tx)
@@ -137,7 +137,7 @@
                                  (close-popover popover-id)])]
                   (if-let [parent-branch (branch/decode-parent-branch branch)]
                     (let [post-start->route-vals #(get-in % [:branches parent-branch])]
-                      (hydrate-branch rt post-start->route-vals foo parent-branch actions dispatch! get-state))
+                      (hydrate-branch rt post-start->route-vals parent-branch actions dispatch! get-state))
                     (hydrate-page rt actions dispatch! get-state))))))))
 
 (defn reset-stage [rt tx]
