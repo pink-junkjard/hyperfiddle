@@ -18,19 +18,22 @@
             ))
 
 
-(deftype HydrateRouteRuntime [hyperfiddle-hostname hostname service-uri state-atom]
+(deftype HydrateRouteRuntime [hyperfiddle-hostname hostname service-uri foo state-atom]
   runtime/AppFnGlobalBasis
   (global-basis [rt]
     (global-basis! service-uri))
 
   runtime/AppValLocalBasis
-  (local-basis [rt global-basis encoded-route foo branch]
-    (local-basis rt (partial hyperfiddle.ide/local-basis foo) hyperfiddle-hostname hostname global-basis encoded-route))
+  (local-basis [rt global-basis encoded-route branch]
+    ; Resolve foo here.
+    (local-basis rt (partial hyperfiddle.ide/local-basis (partial hyperfiddle.ide/api foo))
+                 hyperfiddle-hostname hostname global-basis encoded-route))
 
   runtime/AppValHydrate
-  (hydrate-route [rt local-basis encoded-route foo branch stage] ; :: ... -> DataCache on the wire
+  (hydrate-route [rt local-basis encoded-route branch stage] ; :: ... -> DataCache on the wire
+    ; Inspect foo here.
     (let [data-cache (select-keys @state-atom [:id->tempid :ptm])]
-      (hydrate-route rt (partial foundation/api foo hyperfiddle.ide/api)
+      (hydrate-route rt (partial foundation/api (partial hyperfiddle.ide/api foo))
                      hyperfiddle-hostname hostname local-basis encoded-route branch stage data-cache)))
 
   runtime/AppFnHydrate
@@ -59,8 +62,8 @@
         state-val (req->state-val env req path-params query-params)
         foo (some-> (:foo path-params) base-64-url-safe/decode reader/read-edn-string)
         branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
-        rt (HydrateRouteRuntime. (:HF_HOSTNAME env) hostname (req->service-uri env req) (reactive/atom state-val))]
-    (-> (runtime/hydrate-route rt (:local-basis state-val) (:encoded-route state-val) foo branch (:stage state-val))
+        rt (HydrateRouteRuntime. (:HF_HOSTNAME env) hostname (req->service-uri env req) foo (reactive/atom state-val))]
+    (-> (runtime/hydrate-route rt (:local-basis state-val) (:encoded-route state-val) branch (:stage state-val))
         (p/then (fn [data]
                   (doto res
                     (.status 200)

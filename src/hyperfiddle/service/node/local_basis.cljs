@@ -12,17 +12,19 @@
             [hypercrud.util.reactive :as reactive]
             [hypercrud.transit :as transit]
 
-            [hyperfiddle.ide]))
+            [hyperfiddle.ide]
+            [hyperfiddle.appval.domain.foundation :as foundation]))
 
 
-(deftype LocalBasisRuntime [hyperfiddle-hostname hostname service-uri state-atom]
+(deftype LocalBasisRuntime [hyperfiddle-hostname hostname service-uri foo state-atom]
   runtime/AppFnGlobalBasis
   (global-basis [rt]
     (global-basis! service-uri))
 
   runtime/AppValLocalBasis
-  (local-basis [rt global-basis encoded-route foo branch]
-    (local-basis rt (partial hyperfiddle.ide/local-basis foo) hyperfiddle-hostname hostname global-basis encoded-route))
+  (local-basis [rt global-basis encoded-route branch]
+    (local-basis rt (partial foundation/local-basis (partial hyperfiddle.ide/local-basis foo))
+                 hyperfiddle-hostname hostname global-basis encoded-route))
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
@@ -49,8 +51,8 @@
         state-val (req->state-val env req path-params query-params)
         foo (some-> (:foo path-params) base-64-url-safe/decode reader/read-edn-string)
         branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
-        rt (LocalBasisRuntime. (:HF_HOSTNAME env) hostname (req->service-uri env req) (reactive/atom state-val))]
-    (-> (runtime/local-basis rt (:global-basis state-val) (:encoded-route state-val) foo branch)
+        rt (LocalBasisRuntime. (:HF_HOSTNAME env) hostname (req->service-uri env req) foo (reactive/atom state-val))]
+    (-> (runtime/local-basis rt (:global-basis state-val) (:encoded-route state-val) branch)
         (p/then (fn [local-basis]
                   (doto res
                     (.status 200)

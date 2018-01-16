@@ -95,8 +95,8 @@
               state-val (req->state-val req)
               foo (some-> (get-in req [:path-params :foo]) base-64-url-safe/decode reader/read-edn-string)
               branch (some-> (get-in req [:path-params :branch]) base-64-url-safe/decode reader/read-edn-string)
-              rt (->LocalBasis (:HF_HOSTNAME env) hostname (reactive/atom state-val))]
-          (-> (runtime/local-basis rt (:global-basis state-val) (:encoded-route state-val) foo branch)
+              rt (->LocalBasis (:HF_HOSTNAME env) hostname foo (reactive/atom state-val))]
+          (-> (runtime/local-basis rt (:global-basis state-val) (:encoded-route state-val) branch)
               (p/then (fn [local-basis]
                         {:status 200
                          :headers {"Cache-Control" "max-age=31536000"}
@@ -114,8 +114,8 @@
               state-val (req->state-val req)
               foo (some-> (get-in req [:path-params :foo]) base-64-url-safe/decode reader/read-edn-string)
               branch (some-> (get-in req [:path-params :branch]) base-64-url-safe/decode reader/read-edn-string)
-              rt (->HydrateRoute (:HF_HOSTNAME env) hostname (reactive/atom state-val))]
-          (-> (runtime/hydrate-route rt (:local-basis state-val) (:encoded-route state-val) foo branch (:stage state-val))
+              rt (->HydrateRoute (:HF_HOSTNAME env) hostname foo (reactive/atom state-val))]
+          (-> (runtime/hydrate-route rt (:local-basis state-val) (:encoded-route state-val) branch (:stage state-val))
               (p/then (fn [data]
                         {:status 200
                          :headers {"Cache-Control" "max-age=31536000"} ; todo max-age=0 if POST

@@ -99,18 +99,18 @@
                    ; careful this needs to throw a Throwable in clj
                    (p/rejected (error error)))))))
 
-(deftype PageSsrRuntime [hyperfiddle-hostname hostname service-uri state-atom]
+(deftype PageSsrRuntime [hyperfiddle-hostname hostname foo service-uri state-atom]
   runtime/AppFnGlobalBasis
   (global-basis [rt]
     (global-basis! service-uri))
 
   runtime/AppValLocalBasis
-  (local-basis [rt global-basis encoded-route foo branch]
+  (local-basis [rt global-basis encoded-route branch]
     (local-basis rt (partial foundation/local-basis (partial hyperfiddle.ide/local-basis foo))
                  hyperfiddle-hostname hostname global-basis encoded-route))
 
   runtime/AppValHydrate
-  (hydrate-route [rt local-basis encoded-route foo branch stage]
+  (hydrate-route [rt local-basis encoded-route branch stage]
     (hydrate-route! service-uri local-basis encoded-route foo branch stage))
 
   runtime/AppFnHydrate
@@ -123,7 +123,7 @@
 
   runtime/AppFnSsr
   (ssr [rt]
-    (render-local-html (partial foundation-view/view hyperfiddle.ide/view)
+    (render-local-html (partial foundation-view/view (partial hyperfiddle.ide/view foo))
                        {:hostname hostname
                         :hyperfiddle-hostname hyperfiddle-hostname
                         :peer rt}))
@@ -143,7 +143,8 @@
 (defn http-edge [env req res path-params query-params]
   (let [hostname (.-hostname req)
         state-val (req->state-val env req path-params query-params)
-        rt (PageSsrRuntime. (:HF_HOSTNAME env) hostname (req->service-uri env req) (reactive/atom state-val))]
+        rt (PageSsrRuntime. (:HF_HOSTNAME env) hostname "page" #_ "We only ssr whole pages right now."
+                            (req->service-uri env req) (reactive/atom state-val))]
     ; Do not inject user-api-fn/view - it is encoded into the route - coordinate with ServiceImpl
     (-> (ssr env rt (:HF_HOSTNAME env) hostname)
         (p/then (fn [html-resp]

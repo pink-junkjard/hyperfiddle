@@ -22,20 +22,22 @@
             ))
 
 
-(deftype HydrateRoute [hyperfiddle-hostname hostname state-atom]
+(deftype HydrateRoute [hyperfiddle-hostname hostname foo state-atom]
   runtime/AppFnGlobalBasis
   (global-basis [rt]
     (global-basis rt hyperfiddle-hostname hostname))
 
   runtime/AppValLocalBasis
-  (local-basis [rt global-basis encoded-route foo branch]
-    (local-basis rt (partial foundation/local-basis foo hyperfiddle.ide/local-basis)
+  (local-basis [rt global-basis encoded-route branch]
+    ; Resolve foo here.
+    (local-basis rt (partial foundation/local-basis (partial hyperfiddle.ide/local-basis foo))
                  hyperfiddle-hostname hostname global-basis encoded-route))
 
   runtime/AppValHydrate
-  (hydrate-route [rt local-basis encoded-route foo branch stage]
+  (hydrate-route [rt local-basis encoded-route branch stage]
+    ; Resolve foo here.
     (let [data-cache (select-keys @state-atom [:id->tempid :ptm])]
-      (hydrate-route rt (partial foundation/api foo hyperfiddle.ide/api)
+      (hydrate-route rt (partial foundation/api (partial hyperfiddle.ide/api foo))
                      hyperfiddle-hostname hostname local-basis encoded-route foo branch stage data-cache)))
 
   runtime/AppFnHydrate
