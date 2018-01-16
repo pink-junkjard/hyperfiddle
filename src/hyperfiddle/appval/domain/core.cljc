@@ -7,8 +7,8 @@
 
 
 (def domain-uri #uri "datomic:free://datomic:4334/domains")
-(def root-uri #uri "datomic:free://datomic:4334/root")
-(def auth0-redirect-path "/auth0")
+(def root-uri #uri "datomic:free://datomic:4334/root")      ; ide
+(def auth0-redirect-path "/auth0")                          ; ide
 
 (defn hostname->hf-domain-name [hostname hyperfiddle-hostname]
   ; buggy

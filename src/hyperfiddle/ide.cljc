@@ -56,8 +56,8 @@
         :display-mode always-user
         :domain (update-hf-domain hf-domain target-domain (or (:code-database (:foo ctx)) ; you aren't crazy, this is weird af
                                                               (:code-database target-route)))
-        :foo {:type "ide"
-              :code-database (:code-database target-route)}
+        :peer (:peer-ide ctx)
+        :foo {:code-database (:code-database target-route)}
         :target-domain target-domain
         :target-route target-route
         :user-profile user-profile))))
@@ -73,7 +73,7 @@
         :dispatch! (reactive/partial dispatch!-factory (:dispatch! ctx))
         :display-mode (reactive/cursor (.-state-atom (:peer ctx)) [:display-mode])
         :domain processed-domain
-        :foo {:type "user"}
+        :peer (:peer-user ctx)
         ; repository is needed for transact! in topnav
         ; repository is illegal as well, it should just be domain/databases
         :repository (->> (:domain/code-databases processed-domain)
@@ -113,16 +113,16 @@
                   (update :debug str "-r"))]
       (user-api-fn ctx))))
 
-(defn api [domain foo state-val ctx]
+(defn api [foo domain state-val ctx]
   (let [browser-api-fn (fn [ctx] (browser/request-from-route (:target-route ctx) ctx))
         ; IDE is always a browser, but userland could be something different.
-        userland-api-fn browser-api-fn #_ (:domain/api-fn domain)]
-    (case (:type foo)
+        user-api-fn browser-api-fn #_(:domain/api-fn domain)]
+    (case foo
       "page" (with-decoded-route state-val #(concat
                                               (with-ide-ctx % state-val ctx (fn [ctx] (browser/request-from-route (ide-route ctx) ctx)))
-                                              (decoded-route->user-request domain % state-val ctx userland-api-fn)))
+                                              (decoded-route->user-request domain % state-val ctx user-api-fn)))
       "ide" (with-decoded-route state-val #(with-ide-ctx % state-val ctx browser-api-fn))
-      "user" (with-decoded-route state-val #(decoded-route->user-request domain % state-val ctx userland-api-fn)))))
+      "user" (with-decoded-route state-val #(decoded-route->user-request domain % state-val ctx user-api-fn)))))
 
 (defn local-basis [foo global-basis domain route]
   ; Given all the reachable dbs, return only from this route.
@@ -140,7 +140,7 @@
 
         user-basis (get user (:code-database route))        ; hardcoded browser route knowledge
         topnav-basis (get user (:code-database foo))        ; todo the only repo uri is needed from user. dont need the environment as well
-        basis-maps (condp = (:type foo)
+        basis-maps (condp = foo
                      ; everybody using foundation has domain - even the IDE's new-anchor popover needs to do a subdomain lookup on the server side
                      "page" (concat [user-basis] (vals ide))
                      "ide" (concat [topnav-basis] (vals ide))
@@ -175,14 +175,21 @@
                                  ; todo push this window.location set up to the appfn atom watcher
                                  (aset js/window "location" encoded-route)))
                              (.stopPropagation event))))]
-     (defn hf-ui-context [ctx hf-domain target-domain target-route user-profile]
+     (defn ide-page-context [ctx hf-domain target-domain target-route user-profile]
        (-> (ide-context ctx hf-domain target-domain target-route user-profile)
            (assoc :navigate-cmp navigate-cmp/navigate-cmp
                   :page-on-click (reactive/partial page-on-click ctx target-domain))))))
 
-
 #?(:cljs
-   (defn view [domain hf-domain decoded-route ctx]
-     (let [ctx (-> (hf-ui-context ctx hf-domain domain decoded-route @(reactive/cursor (.-state-atom (:peer ctx)) [:user-profile]))
-                   (update :debug str "-v"))]
-       (browser/ui-from-route (ide-route ctx) ctx))))
+   (defn view [foo domain hf-domain decoded-route ctx]
+     (let [browser-view-fn (fn [ctx] (browser/ui-from-route (:target-route ctx) ctx))
+           user-view-fn (fn [ctx] (browser/ui-from-route (:target-route ctx) ctx))]
+       (case foo
+         "page" (let [ctx (-> (ide-page-context ctx hf-domain domain decoded-route @(reactive/cursor (.-state-atom (:peer ctx)) [:user-profile]))
+                              (update :debug str "-v"))]
+                  (browser/ui-from-route (ide-route ctx) ctx))
+
+         ; On SSR side this is only ever called as "page", but it could be differently (e.g. turbolinks)
+         ; On Browser side, also only ever called as "page", but it could be configured differently (client side render the ide, server render userland...?)
+         "ide" #(with-ide-ctx decoded-route {} ctx browser-view-fn)
+         "user" (user-view-fn (target-ui-context ctx))))))
