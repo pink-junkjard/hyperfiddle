@@ -1,7 +1,8 @@
 (ns hc.d
   (:require [cljs.pprint :as pprint]
             [hypercrud.react.react-fragment]
-            [hypercrud.util.core :refer [pprint-str]]))
+            [hypercrud.util.core :refer [pprint-str]]
+            hypercrud.browser.routing))
 
 
 (defn a [window]
