@@ -8,11 +8,10 @@
             [hypercrud.browser.core :as browser]
             [hypercrud.util.reactive :as reactive]
             [hypercrud.browser.routing :as routing]
-            [hypercrud.ui.navigate-cmp :as navigate-cmp]
             [hypercrud.state.actions.core :as actions]
             [hypercrud.state.actions.util :as actions-util]
-
             [hyperfiddle.appval.domain.core :as hf]
+    #?(:cljs [hypercrud.ui.navigate-cmp :as navigate-cmp])
     #?(:cljs [hypercrud.browser.core :as browser])
     #?(:cljs [hyperfiddle.appval.domain.foundation-view :as foundation-view])))
 
@@ -117,7 +116,7 @@
 (defn api [domain foo state-val ctx]
   (let [browser-api-fn (fn [ctx] (browser/request-from-route (:target-route ctx) ctx))
         ; IDE is always a browser, but userland could be something different.
-        userland-api-fn browser-api-fn]
+        userland-api-fn browser-api-fn #_ (:domain/api-fn domain)]
     (case (:type foo)
       "page" (with-decoded-route state-val #(concat
                                               (with-ide-ctx % state-val ctx (fn [ctx] (browser/request-from-route (ide-route ctx) ctx)))
@@ -158,27 +157,28 @@
     #_(determine-local-basis)
     local-basis))
 
-(let [page-on-click (fn [ctx target-domain route event]
-                      (when (and route (.-altKey event))
-                        (let [can-soft-nav? (->> (:domain/code-databases target-domain)
-                                                 ; only if the user domain has the root code-database
-                                                 (filter #(and (= (:dbhole/name %) "root")
-                                                               (= (:dbhole/uri %) hf/root-uri)))
-                                                 (empty?)
-                                                 not)]
-                          (if can-soft-nav?
-                            ((:dispatch! ctx) (fn [dispatch! get-state]
-                                                (let [encoded-route (routing/encode route)]
-                                                  (when (actions-util/navigable? encoded-route (get-state))
-                                                    (actions/set-route (:peer ctx) encoded-route dispatch! get-state)))))
-                            (let [encoded-route (routing/encode route (str "hyperfiddle." (:hyperfiddle-hostname ctx)))]
-                              ; todo push this window.location set up to the appfn atom watcher
-                              (aset js/window "location" encoded-route)))
-                          (.stopPropagation event))))]
-  (defn hf-ui-context [ctx hf-domain target-domain target-route user-profile]
-    (-> (ide-context ctx hf-domain target-domain target-route user-profile)
-        (assoc :navigate-cmp navigate-cmp/navigate-cmp
-               :page-on-click (reactive/partial page-on-click ctx target-domain)))))
+#?(:cljs
+   (let [page-on-click (fn [ctx target-domain route event]
+                         (when (and route (.-altKey event))
+                           (let [can-soft-nav? (->> (:domain/code-databases target-domain)
+                                                    ; only if the user domain has the root code-database
+                                                    (filter #(and (= (:dbhole/name %) "root")
+                                                                  (= (:dbhole/uri %) hf/root-uri)))
+                                                    (empty?)
+                                                    not)]
+                             (if can-soft-nav?
+                               ((:dispatch! ctx) (fn [dispatch! get-state]
+                                                   (let [encoded-route (routing/encode route)]
+                                                     (when (actions-util/navigable? encoded-route (get-state))
+                                                       (actions/set-route (:peer ctx) encoded-route dispatch! get-state)))))
+                               (let [encoded-route (routing/encode route (str "hyperfiddle." (:hyperfiddle-hostname ctx)))]
+                                 ; todo push this window.location set up to the appfn atom watcher
+                                 (aset js/window "location" encoded-route)))
+                             (.stopPropagation event))))]
+     (defn hf-ui-context [ctx hf-domain target-domain target-route user-profile]
+       (-> (ide-context ctx hf-domain target-domain target-route user-profile)
+           (assoc :navigate-cmp navigate-cmp/navigate-cmp
+                  :page-on-click (reactive/partial page-on-click ctx target-domain))))))
 
 
 #?(:cljs

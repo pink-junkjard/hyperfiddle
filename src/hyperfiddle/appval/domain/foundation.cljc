@@ -22,7 +22,7 @@
                                 ; todo this can throw
                                 (update :repository/environment reader/read-string)))))))))
 
-(defn- ->decoded-route [maybe-decoded-route target-domain]
+(defn ->decoded-route [maybe-decoded-route target-domain]
   (or maybe-decoded-route
       (-> (hc-string/safe-read-edn-string (:domain/home-route target-domain))
           (either/branch (constantly nil) identity))))
