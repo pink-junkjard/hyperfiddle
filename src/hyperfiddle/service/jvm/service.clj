@@ -5,7 +5,7 @@
             [hypercrud.types.URI :refer [->URI]]
             [hypercrud.util.base-64-url-safe :as base-64-url-safe]
             [hypercrud.util.reactive :as reactive]
-            [hyperfiddle.api :as api]
+            [hyperfiddle.runtime :as runtime]
 
             [hyperfiddle.appfn.hydrate-requests :refer [hydrate-requests]]
             [hyperfiddle.appfn.sync :refer [sync]]
@@ -77,7 +77,7 @@
         (let [hostname (:server-name req)
               state-val (req->state-val req)
               rt (->GlobalBasisRuntime (:HF_HOSTNAME env) hostname (reactive/atom state-val))]
-          (-> (api/global-basis rt)
+          (-> (runtime/global-basis rt)
               (p/then (fn [global-basis]
                         {:status 200
                          :headers {"Cache-Control" "max-age=0"}
@@ -96,7 +96,7 @@
               foo (some-> (get-in req [:path-params :foo]) base-64-url-safe/decode reader/read-edn-string)
               branch (some-> (get-in req [:path-params :branch]) base-64-url-safe/decode reader/read-edn-string)
               rt (->LocalBasis (:HF_HOSTNAME env) hostname (reactive/atom state-val))]
-          (-> (api/local-basis rt (:global-basis state-val) (:encoded-route state-val) foo branch)
+          (-> (runtime/local-basis rt (:global-basis state-val) (:encoded-route state-val) foo branch)
               (p/then (fn [local-basis]
                         {:status 200
                          :headers {"Cache-Control" "max-age=31536000"}
@@ -115,7 +115,7 @@
               foo (some-> (get-in req [:path-params :foo]) base-64-url-safe/decode reader/read-edn-string)
               branch (some-> (get-in req [:path-params :branch]) base-64-url-safe/decode reader/read-edn-string)
               rt (->HydrateRoute (:HF_HOSTNAME env) hostname (reactive/atom state-val))]
-          (-> (api/hydrate-route rt (:local-basis state-val) (:encoded-route state-val) foo branch (:stage state-val))
+          (-> (runtime/hydrate-route rt (:local-basis state-val) (:encoded-route state-val) foo branch (:stage state-val))
               (p/then (fn [data]
                         {:status 200
                          :headers {"Cache-Control" "max-age=31536000"} ; todo max-age=0 if POST

@@ -12,23 +12,26 @@
             [hypercrud.util.reactive :as reactive]
             [hypercrud.util.template :as template]
 
-            [hyperfiddle.api :as api]
-            [hyperfiddle.appfn.runtime-rpc :refer [hydrate-requests! sync! transact!!]]
-            [hyperfiddle.appval.runtime-local :refer [hydrate-route global-basis local-basis]]
-            [hyperfiddle.appval.runtime-rpc :refer [hydrate-route! global-basis! local-basis!]]
-            [hyperfiddle.appval.domain.app-ui :as ide]
+            [hyperfiddle.runtime :as runtime]
+            [hyperfiddle.appfn.runtime-rpc :refer [hydrate-requests! sync!]]
+            [hyperfiddle.appval.runtime-local :refer [local-basis]]
+            [hyperfiddle.appval.runtime-rpc :refer [hydrate-route! global-basis!]]
             [hyperfiddle.appval.state.reducers :as reducers]
             [hyperfiddle.service.node.lib :refer [req->service-uri req->state-val]]
 
             [promesa.core :as p]
             [reagent.dom.server :as reagent-server]
             [taoensso.timbre :as timbre]
+
+            [hyperfiddle.ide]
+            [hyperfiddle.appval.domain.foundation :as foundation]
+            [hyperfiddle.appval.domain.foundation-view :as foundation-view]
             ))
 
 (def cheerio (node/require "cheerio"))
 
 
-(defn local-html [F ctx]                                    ; react 16 is async, and this can fail
+(defn render-local-html [F ctx]                             ; react 16 is async, and this can fail
   ; html fragment, not a document, no <html> enclosing tag
   (p/resolved
     (let [ctx (assoc ctx :dispatch! #(throw (->Exception "dispatch! not supported in ssr")))]
@@ -89,35 +92,41 @@
         (p/then #(actions/refresh-page-local-basis rt dispatch! get-state))
         (p/then #(actions/hydrate-page rt nil dispatch! get-state))
         (p/catch (constantly (p/resolved nil)))             ; any error above IS NOT fatal, so render the UI. anything below IS fatal
-        (p/then #(local-html ide/ui {:hostname hostname
-                                     :hyperfiddle-hostname hyperfiddle-hostname
-                                     :peer rt}))
+        (p/then #(runtime/ssr rt))
         (p/then (fn [html-fragment] (html env @state-atom html-fragment)))
         (p/catch (fn [error]
                    (timbre/error error)
                    ; careful this needs to throw a Throwable in clj
                    (p/rejected (error error)))))))
 
-(deftype EdgeApiImpl [hyperfiddle-hostname hostname service-uri state-atom]
-  api/AppValGlobalBasis
+(deftype PageSsrRuntime [hyperfiddle-hostname hostname service-uri state-atom]
+  runtime/AppFnGlobalBasis
   (global-basis [rt]
     (global-basis! service-uri))
 
-  api/AppValLocalBasis
+  runtime/AppValLocalBasis
   (local-basis [rt global-basis encoded-route foo branch]
-    (local-basis rt hyperfiddle-hostname hostname global-basis encoded-route foo))
+    (local-basis rt (partial foundation/local-basis (partial hyperfiddle.ide/local-basis foo))
+                 hyperfiddle-hostname hostname global-basis encoded-route))
 
-  api/AppValHydrate
+  runtime/AppValHydrate
   (hydrate-route [rt local-basis encoded-route foo branch stage]
     (hydrate-route! service-uri local-basis encoded-route foo branch stage))
 
-  api/AppFnHydrate
+  runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
     (hydrate-requests! service-uri local-basis stage requests))
 
-  api/AppFnSync
+  runtime/AppFnSync
   (sync [rt dbs]
     (sync! service-uri dbs))
+
+  runtime/AppFnSsr
+  (ssr [rt]
+    (render-local-html (partial foundation-view/view hyperfiddle.ide/view)
+                       {:hostname hostname
+                        :hyperfiddle-hostname hyperfiddle-hostname
+                        :peer rt}))
 
   hc/Peer
   (hydrate [this request]
@@ -134,7 +143,8 @@
 (defn http-edge [env req res path-params query-params]
   (let [hostname (.-hostname req)
         state-val (req->state-val env req path-params query-params)
-        rt (EdgeApiImpl. (:HF_HOSTNAME env) hostname (req->service-uri env req) (reactive/atom state-val))]
+        rt (PageSsrRuntime. (:HF_HOSTNAME env) hostname (req->service-uri env req) (reactive/atom state-val))]
+    ; Do not inject user-api-fn/view - it is encoded into the route - coordinate with ServiceImpl
     (-> (ssr env rt (:HF_HOSTNAME env) hostname)
         (p/then (fn [html-resp]
                   (doto res

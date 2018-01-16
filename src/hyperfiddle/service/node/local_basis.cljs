@@ -1,30 +1,32 @@
 (ns hyperfiddle.service.node.local-basis
   (:require [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
-            [hypercrud.util.exception :refer [->Exception]]
-            [hyperfiddle.api :as api]
-            [hyperfiddle.appfn.runtime-rpc :refer [hydrate-requests! sync! transact!!]]
-            [hyperfiddle.appval.runtime-local :refer [hydrate-route global-basis local-basis]]
-            [hyperfiddle.appval.runtime-rpc :refer [hydrate-route! global-basis! local-basis!]]
-
-            [hyperfiddle.service.node.lib :refer [req->service-uri]]
-            [promesa.core :as p]))
+            [hyperfiddle.runtime :as runtime]
+            [hyperfiddle.appfn.runtime-rpc :refer [hydrate-requests! sync!]]
+            [hyperfiddle.appval.runtime-local :refer [local-basis]]
+            [hyperfiddle.appval.runtime-rpc :refer [global-basis!]]
+            [hyperfiddle.service.node.lib :refer [req->service-uri req->state-val]]
+            [promesa.core :as p]
+            [hypercrud.util.base-64-url-safe :as base-64-url-safe]
+            [hypercrud.compile.reader :as reader]
+            [hypercrud.util.reactive :as reactive]
+            [hypercrud.transit :as transit]))
 
 
 (deftype LocalBasisRuntime [hyperfiddle-hostname hostname service-uri state-atom]
-  api/AppValGlobalBasis
+  runtime/AppFnGlobalBasis
   (global-basis [rt]
     (global-basis! service-uri))
 
-  api/AppValLocalBasis
+  runtime/AppValLocalBasis
   (local-basis [rt global-basis encoded-route foo branch]
-    (local-basis rt hyperfiddle-hostname hostname global-basis encoded-route foo))
+    (local-basis rt (partial hyperfiddle.ide/local-basis foo) hyperfiddle-hostname hostname global-basis encoded-route))
 
-  api/AppFnHydrate
+  runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
     (hydrate-requests! service-uri local-basis stage requests))
 
-  api/AppFnSync
+  runtime/AppFnSync
   (sync [rt dbs]
     (sync! service-uri dbs))
 
@@ -45,8 +47,8 @@
         state-val (req->state-val env req path-params query-params)
         foo (some-> (:foo path-params) base-64-url-safe/decode reader/read-edn-string)
         branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
-        rt (->LocalBasisRuntime (:HF_HOSTNAME env) hostname (req->service-uri env req) (reactive/atom state-val))]
-    (-> (api/local-basis rt (:global-basis state-val) (:encoded-route state-val) foo branch)
+        rt (LocalBasisRuntime. (:HF_HOSTNAME env) hostname (req->service-uri env req) (reactive/atom state-val))]
+    (-> (runtime/local-basis rt (:global-basis state-val) (:encoded-route state-val) foo branch)
         (p/then (fn [local-basis]
                   (doto res
                     (.status 200)

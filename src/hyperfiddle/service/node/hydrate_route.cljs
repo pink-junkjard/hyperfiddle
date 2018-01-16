@@ -1,40 +1,43 @@
 (ns hyperfiddle.service.node.hydrate-route
   (:require [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
-            [hypercrud.util.exception :refer [->Exception]]
-            [hyperfiddle.api :as api]
-            [hyperfiddle.appfn.runtime-rpc :refer [hydrate-requests! sync! transact!!]]
-            [hyperfiddle.appval.runtime-local :refer [hydrate-route global-basis local-basis]]
-            [hyperfiddle.appval.runtime-rpc :refer [hydrate-route! global-basis! local-basis!]]
+            [hyperfiddle.runtime :as runtime]
+            [hyperfiddle.appfn.runtime-rpc :refer [hydrate-requests! sync!]]
+            [hyperfiddle.appval.runtime-local :refer [hydrate-route local-basis]]
+            [hyperfiddle.appval.runtime-rpc :refer [global-basis!]]
 
             [hyperfiddle.service.node.lib :refer [req->service-uri req->state-val]]
-            [hypercrud.types.URI :refer [->URI]]
             [hypercrud.util.base-64-url-safe :as base-64-url-safe]
             [hypercrud.compile.reader :as reader]
             [hypercrud.transit :as transit]
             [hypercrud.util.reactive :as reactive]
-            [promesa.core :as p]))
+            [promesa.core :as p]
+
+            [hyperfiddle.appval.domain.foundation :as foundation]
+            [hyperfiddle.ide]
+            ))
 
 
 (deftype HydrateRouteRuntime [hyperfiddle-hostname hostname service-uri state-atom]
-  api/AppValGlobalBasis
+  runtime/AppFnGlobalBasis
   (global-basis [rt]
     (global-basis! service-uri))
 
-  api/AppValLocalBasis
+  runtime/AppValLocalBasis
   (local-basis [rt global-basis encoded-route foo branch]
-    (local-basis rt hyperfiddle-hostname hostname global-basis encoded-route foo))
+    (local-basis rt (partial hyperfiddle.ide/local-basis foo) hyperfiddle-hostname hostname global-basis encoded-route))
 
-  api/AppValHydrate
+  runtime/AppValHydrate
   (hydrate-route [rt local-basis encoded-route foo branch stage]
     (let [data-cache (select-keys @state-atom [:id->tempid :ptm])]
-      (hydrate-route rt hyperfiddle-hostname hostname local-basis encoded-route foo branch stage data-cache)))
+      (hydrate-route rt (partial foundation/api (partial hyperfiddle.ide/api foo))
+                     hyperfiddle-hostname hostname local-basis encoded-route branch stage data-cache)))
 
-  api/AppFnHydrate
+  runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
     (hydrate-requests! service-uri local-basis stage requests))
 
-  api/AppFnSync
+  runtime/AppFnSync
   (sync [rt dbs]
     (sync! service-uri dbs))
 
@@ -56,8 +59,8 @@
         state-val (req->state-val env req path-params query-params)
         foo (some-> (:foo path-params) base-64-url-safe/decode reader/read-edn-string)
         branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
-        rt (->HydrateRouteRuntime (:HF_HOSTNAME env) hostname (req->service-uri env req) (reactive/atom state-val))]
-    (-> (api/hydrate-route rt (:local-basis state-val) (:encoded-route state-val) foo branch (:stage state-val))
+        rt (HydrateRouteRuntime. (:HF_HOSTNAME env) hostname (req->service-uri env req) (reactive/atom state-val))]
+    (-> (runtime/hydrate-route rt (:local-basis state-val) (:encoded-route state-val) foo branch (:stage state-val))
         (p/then (fn [data]
                   (doto res
                     (.status 200)
