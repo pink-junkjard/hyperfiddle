@@ -37,10 +37,11 @@
              :hostname hostname
              :hyperfiddle-hostname hyperfiddle-hostname
              ; just blast the peer everytime
-             :peer (peer/->ApiPeer (reactive/atom state-val))}
+             :peer (peer/->Peer (reactive/atom state-val))
+             :peer2 (peer/->ApiPeer (reactive/atom state-val))}
         target-domain-api (let [hf-domain-name (hf/hostname->hf-domain-name (:hostname ctx) (:hyperfiddle-hostname ctx))]
                                 (hf/domain-request hf-domain-name (:peer ctx)))
-        target-domain (hc/hydrate (:peer ctx) target-domain-api)]
+        target-domain (hc/hydrate (:peer2 ctx) target-domain-api)]
     ; Always need target-domain, but that's about all we know, because IDE popovers.
     (concat [target-domain-api]
             (user-api-fn target-domain foo state-val ctx))))

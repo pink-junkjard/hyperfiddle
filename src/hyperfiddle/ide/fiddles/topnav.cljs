@@ -13,10 +13,11 @@
             [hypercrud.util.core :refer [truncate]]
             [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :as hc-string]
-            [hyperfiddle.appval.domain.foundation-view :as app-ui :refer [staging]]
+            [hyperfiddle.appval.domain.foundation-view :refer [staging]]
             [hyperfiddle.appval.domain.core :as hf]
             [hyperfiddle.appval.state.actions :as ide-actions]
             [hyperfiddle.ide.fiddles.topnav-bindings :as topnav-bindings]
+            [hyperfiddle.ide]
             [reagent.core :as reagent]
             [hypercrud.util.core :as util]
             [hypercrud.browser.link :as link]))
@@ -122,7 +123,7 @@
     [:span.qe.radio-group (apply react-fragment :_ options)]))
 
 (defn save-and-navigate! [home-route ctx]
-  ((:dispatch! ctx) (hc-actions/transact! home-route (app-ui/target-ui-context ctx))))
+  ((:dispatch! ctx) (hc-actions/transact! home-route (hyperfiddle.ide/target-ui-context ctx))))
 
 (defn ^:export stage-ui [result ordered-fes links ctx]
   [:div.hyperfiddle-topnav-stage

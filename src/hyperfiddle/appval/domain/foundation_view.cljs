@@ -27,32 +27,7 @@
     ; todo this can throw
     [code* edn #(dispatch! (actions/reset-stage peer (reader/read-edn-string %)))]))
 
-(let [page-on-click (fn [ctx target-domain route event]
-                      (when (and route (.-altKey event))
-                        (let [can-soft-nav? (->> (:domain/code-databases target-domain)
-                                                 ; only if the user domain has the root code-database
-                                                 (filter #(and (= (:dbhole/name %) "root")
-                                                               (= (:dbhole/uri %) hf/root-uri)))
-                                                 (empty?)
-                                                 not)]
-                          (if can-soft-nav?
-                            ((:dispatch! ctx) (fn [dispatch! get-state]
-                                                (let [encoded-route (routing/encode route)]
-                                                  (when (actions-util/navigable? encoded-route (get-state))
-                                                    (actions/set-route (:peer ctx) encoded-route dispatch! get-state)))))
-                            (let [encoded-route (routing/encode route (str "hyperfiddle." (:hyperfiddle-hostname ctx)))]
-                              ; todo push this window.location set up to the appfn atom watcher
-                              (aset js/window "location" encoded-route)))
-                          (.stopPropagation event))))]
-  (defn hf-ui-context [ctx hf-domain target-domain target-route user-profile]
-    (-> (foundation/ide-context ctx hf-domain target-domain target-route user-profile)
-        (assoc :navigate-cmp navigate-cmp/navigate-cmp
-               :page-on-click (reactive/partial page-on-click ctx target-domain)))))
-
-(defn target-ui-context [ctx]
-  (-> (foundation/target-context ctx (:target-domain ctx) (:target-route ctx) (:user-profile ctx))
-      (dissoc :page-on-click)))
-
+; Users can't bypass the foundation.
 (defn view [user-view-fn ctx]
   (let [state-atom (.-state-atom (:peer ctx))
         either-v (or (some-> @(reactive/cursor state-atom [:error]) either/left)
@@ -75,9 +50,7 @@
         [error/error-cmp e]
         [staging (:peer ctx) (:dispatch! ctx)]])
      (fn [[target-domain hf-domain decoded-route]]
-       (let [ctx (-> (hf-ui-context ctx hf-domain target-domain decoded-route @(reactive/cursor state-atom [:user-profile]))
-                     (update :debug str "-v"))]
-         [:div.hyperfiddle ui-props
-          (user-view-fn ctx)
-          (if @(reactive/cursor state-atom [:staging-open])
-            [staging (:peer ctx) (:dispatch! ctx)])]))]))
+       [:div.hyperfiddle ui-props
+        (user-view-fn target-domain hf-domain decoded-route ctx)
+        (if @(reactive/cursor state-atom [:staging-open])
+          [staging (:peer ctx) (:dispatch! ctx)])])]))
