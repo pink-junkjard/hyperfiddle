@@ -99,7 +99,7 @@
                    ; careful this needs to throw a Throwable in clj
                    (p/rejected (error error)))))))
 
-(deftype PageSsrRuntime [hyperfiddle-hostname hostname foo service-uri state-atom]
+(deftype SsrRuntime [hyperfiddle-hostname hostname foo service-uri state-atom]
   runtime/AppFnGlobalBasis
   (global-basis [rt]
     (global-basis! service-uri))
@@ -123,10 +123,13 @@
 
   runtime/AppFnSsr
   (ssr [rt]
+    (assert (= foo "page") "Impossible; sub-rts don't ssr (but they could)")
     (render-local-html (partial foundation-view/view (partial hyperfiddle.ide/view foo))
                        {:hostname hostname
                         :hyperfiddle-hostname hyperfiddle-hostname
-                        :peer rt}))
+                        :peer rt                            ; See hyperfiddle.ide.fiddles.main
+                        :peer-ide (SsrRuntime. hyperfiddle-hostname hostname "ide" service-uri state-atom)
+                        :peer-user (SsrRuntime. hyperfiddle-hostname hostname "user" service-uri state-atom)}))
 
   hc/Peer
   (hydrate [this request]
@@ -143,9 +146,9 @@
 (defn http-edge [env req res path-params query-params]
   (let [hostname (.-hostname req)
         state-val (req->state-val env req path-params query-params)
-        rt (PageSsrRuntime. (:HF_HOSTNAME env) hostname "page" #_ "We only ssr whole pages right now."
-                            (req->service-uri env req) (reactive/atom state-val))]
-    ; Do not inject user-api-fn/view - it is encoded into the route - coordinate with ServiceImpl
+        rt (SsrRuntime. (:HF_HOSTNAME env) hostname "page" #_ "We only ssr whole pages right now."
+                        (req->service-uri env req) (reactive/atom state-val))]
+    ; Do not inject user-api-fn/view - it is baked into SsrRuntime
     (-> (ssr env rt (:HF_HOSTNAME env) hostname)
         (p/then (fn [html-resp]
                   (doto res
