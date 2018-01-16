@@ -10,7 +10,9 @@
             [hypercrud.util.base-64-url-safe :as base-64-url-safe]
             [hypercrud.compile.reader :as reader]
             [hypercrud.util.reactive :as reactive]
-            [hypercrud.transit :as transit]))
+            [hypercrud.transit :as transit]
+
+            [hyperfiddle.ide]))
 
 
 (deftype LocalBasisRuntime [hyperfiddle-hostname hostname service-uri state-atom]

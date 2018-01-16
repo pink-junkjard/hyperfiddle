@@ -29,13 +29,13 @@
 
   runtime/AppValLocalBasis
   (local-basis [rt global-basis encoded-route foo branch]
-    (local-basis rt (partial hyperfiddle.ide/local-basis foo)
+    (local-basis rt (partial foundation/local-basis foo hyperfiddle.ide/local-basis)
                  hyperfiddle-hostname hostname global-basis encoded-route))
 
   runtime/AppValHydrate
   (hydrate-route [rt local-basis encoded-route foo branch stage]
     (let [data-cache (select-keys @state-atom [:id->tempid :ptm])]
-      (hydrate-route rt (partial foundation/api (partial hyperfiddle.ide/api foo))
+      (hydrate-route rt (partial foundation/api foo hyperfiddle.ide/api)
                      hyperfiddle-hostname hostname local-basis encoded-route foo branch stage data-cache)))
 
   runtime/AppFnHydrate

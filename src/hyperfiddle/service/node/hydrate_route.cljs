@@ -28,9 +28,9 @@
     (local-basis rt (partial hyperfiddle.ide/local-basis foo) hyperfiddle-hostname hostname global-basis encoded-route))
 
   runtime/AppValHydrate
-  (hydrate-route [rt local-basis encoded-route foo branch stage]
+  (hydrate-route [rt local-basis encoded-route foo branch stage] ; :: ... -> DataCache on the wire
     (let [data-cache (select-keys @state-atom [:id->tempid :ptm])]
-      (hydrate-route rt (partial foundation/api (partial hyperfiddle.ide/api foo))
+      (hydrate-route rt (partial foundation/api foo hyperfiddle.ide/api)
                      hyperfiddle-hostname hostname local-basis encoded-route branch stage data-cache)))
 
   runtime/AppFnHydrate
