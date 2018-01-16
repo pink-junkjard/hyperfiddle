@@ -29,7 +29,7 @@
 ; Ide-basis wraps user-basis
 ; ide-basis assumes a browser in userland
 ; ide-basis can just be global-basis if userland is a function
-(defn local-basis [foo global-basis domain route ctx]
+(defn local-basis [foo global-basis domain route]
   ; Given all the reachable dbs, return only from this route.
   ; If hc browser, we can prune a lot.
   ; If userland is a fn, local-basis is global-basis (minus domain)

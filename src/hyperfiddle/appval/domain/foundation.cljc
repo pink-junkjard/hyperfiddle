@@ -11,8 +11,7 @@
             [hypercrud.util.non-fatal :refer [try-either]]
             [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :as hc-string]
-            [hyperfiddle.appval.domain.core :as hf]
-            [hyperfiddle.appval.state.reducers :as reducers]))
+            [hyperfiddle.appval.domain.core :as hf]))
 
 
 (defn process-domain [domain]
@@ -145,26 +144,18 @@
         (with-foundation-ctx maybe-decoded-route state-value ctx user-data-fn)
         (decoded-route->user-request maybe-decoded-route state-value ctx)))))
 
-(defn local-basis [global-basis domain route ctx]
+(defn local-basis [global-basis domain route]
   global-basis)
 
-; user-data-fn already partialed foo?
-(defn api [user-data-fn hyperfiddle-hostname hostname local-basis encoded-route branch stage]
+(defn api [user-data-fn hyperfiddle-hostname hostname branch state-val]
   (let [ctx {:branch branch
              :dispatch! #(throw (->Exception "dispatch! not supported in hydrate-route"))
-             :foo foo                                       ; bad
              :hostname hostname
              :hyperfiddle-hostname hyperfiddle-hostname}]
-    (fn [id->tempid ptm]
-      (let [state-val (-> {:encoded-route encoded-route
-                           :local-basis local-basis
-                           :tempid-lookups id->tempid
-                           :ptm ptm
-                           :stage stage}
-                          (reducers/root-reducer nil))
-            ; just blast the peer everytime
-            ctx (assoc ctx :peer (peer/->Peer (reactive/atom state-val)))]
-        (case (:type foo)
-          "page" (page-request state-val ctx user-data-fn)
-          "ide" (foundation-request state-val ctx)
-          "user" (user-request state-val ctx))))))
+    ; just blast the peer everytime
+    ; The ctx is at minimum for the foundation; userland may or many not ever see it
+    (let [ctx (assoc ctx :peer (peer/->Peer (reactive/atom state-val)))]
+      (case (:type foo)
+        "page" (page-request state-val ctx user-data-fn)
+        "ide" (foundation-request state-val ctx)
+        "user" (user-request state-val ctx)))))             ; where is user data fn

@@ -13,6 +13,7 @@
             [hyperfiddle.appfn.runtime-local :refer [hydrate-all-or-nothing! hydrate-one! hydrate-loop]] ;todo
             [hyperfiddle.appval.domain.foundation :as foundation]
             [hyperfiddle.appval.domain.core :as hf]
+            [hyperfiddle.appval.state.reducers :as reducers]
 
             [hyperfiddle.runtime :as api]
             [promesa.core :as p]
@@ -102,6 +103,15 @@
       #uri"datomic:free://datomic:4334/hyperblog" 1115,
       #uri"datomic:free://datomic:4334/kalzumeus" 1037}))
 
-(defn hydrate-route [rt user-data-fn hyperfiddle-hostname hostname local-basis encoded-route branch stage & [data-cache]]
-  (let [request-fn (user-data-fn hyperfiddle-hostname hostname local-basis encoded-route branch stage)]
+(defn hydrate-route [rt user-data-fn hyperfiddle-hostname hostname
+                     local-basis encoded-route branch stage & [data-cache]] ; -> DataCache
+  (let [request-fn (fn [id->tempid ptm]
+                     (let [state-val (-> {:encoded-route encoded-route
+                                          :local-basis local-basis
+                                          :tempid-lookups id->tempid
+                                          :ptm ptm
+                                          :stage stage}
+                                         (reducers/root-reducer nil))]
+                       ; No ctx yet, might not be a browser
+                       (user-data-fn hyperfiddle-hostname hostname branch state-val)))]
     (hydrate-loop rt request-fn local-basis stage data-cache)))
