@@ -20,7 +20,7 @@
             [taoensso.timbre :as timbre]))
 
 
-(defn ide-uris-for-domain [domain]
+(defn uris-for-domain-legacy [domain]
   #_(:domain/databases domain)
   (->> (:domain/code-databases domain)                      ; browser. Lift all databases to top-level on domain.
        (map (fn [repo]
@@ -37,10 +37,10 @@
                                   (hf/domain-request "hyperfiddle" rt)]]
            domain-basis (api/sync rt #{hf/domain-uri})
            [user-domain foundation-domain] (hydrate-all-or-nothing! rt domain-basis nil domain-requests)
-           :let [user-domain (foundation/process-domain user-domain)
-                 hf-domain (foundation/process-domain foundation-domain)
-                 user-domain-uris (ide-uris-for-domain user-domain) ; Any reachable thing, not per route.
-                 hf-domain-uris (ide-uris-for-domain hf-domain)
+           :let [user-domain (foundation/process-domain-legacy user-domain)
+                 hf-domain (foundation/process-domain-legacy foundation-domain)
+                 user-domain-uris (uris-for-domain-legacy user-domain) ; Any reachable thing, not per route.
+                 hf-domain-uris (uris-for-domain-legacy hf-domain)
                  uris (apply set/union (concat (vals user-domain-uris)
                                                (vals hf-domain-uris)))]
            sync (api/sync rt uris)]
@@ -70,11 +70,12 @@
            user-domain (let [domain-basis (apply sorted-map (apply concat (:domain global-basis)))
                              user-domain-request (hf/domain-request (hf/hostname->hf-domain-name hostname hyperfiddle-hostname) rt)]
                          (-> (hydrate-one! rt domain-basis nil user-domain-request)
-                             (p/then foundation/process-domain)))
+                             (p/then foundation/process-domain-legacy)))
            route (or maybe-decoded-route
                      (-> (hc-string/safe-read-edn-string (:domain/home-route user-domain))
                          (either/branch p/rejected p/resolved)))]
-      (cats/return (concat [user-domain] (user-local-basis global-basis user-domain route))))
+      (cats/return (concat (foundation/local-basis global-basis user-domain route)
+                           (user-local-basis global-basis user-domain route))))
     (fn [err get-total-time]
       (timbre/debug "local-basis failure;" "total time:" (get-total-time)))
     (fn [success get-total-time]

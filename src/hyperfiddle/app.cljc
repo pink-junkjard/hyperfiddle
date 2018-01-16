@@ -6,4 +6,4 @@
 ; userland compat
 (def ^:export alias? hyperfiddle.appval.domain.core/alias?)
 (def ^:export hostname->hf-domain-name foundation-core/hostname->hf-domain-name)
-(def ^:export process-domain foundation/process-domain)
+(def ^:export process-domain foundation/process-domain-legacy)

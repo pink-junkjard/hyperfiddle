@@ -81,7 +81,7 @@
    (str (some->> external-hostname (str "http://"))
         (encode route))))
 
-(defn decode [route-str]
+(defn decode [route-str]                                    ; Assumes foundation, but no assumptions about userland-api-fn e.g. the browser
   (assert (string/starts-with? route-str "/"))
 
   ; Urls in the wild get query params added because tweetdeck tools think its safe e.g.:

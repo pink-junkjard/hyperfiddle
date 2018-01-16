@@ -45,7 +45,7 @@
                               (aset js/window "location" encoded-route)))
                           (.stopPropagation event))))]
   (defn hf-ui-context [ctx hf-domain target-domain target-route user-profile]
-    (-> (foundation/hf-context ctx hf-domain target-domain target-route user-profile)
+    (-> (foundation/ide-context ctx hf-domain target-domain target-route user-profile)
         (assoc :navigate-cmp navigate-cmp/navigate-cmp
                :page-on-click (reactive/partial page-on-click ctx target-domain)))))
 

@@ -1,11 +1,19 @@
 (ns hyperfiddle.ide
-  (:require hyperfiddle.appval.domain.foundation
+  (:require [cats.monad.either :as either]
+            [cats.core :as cats :refer [mlet]]
+            [hypercrud.types.ThinEntity :refer [->ThinEntity]]
+            [hypercrud.util.non-fatal :refer [try-either]]
+            [hypercrud.client.core :as hc]
+            [hyperfiddle.appval.domain.foundation :as foundation]
+            [hypercrud.browser.core :as browser]
+            [hypercrud.browser.routing :as routing]
+
+            [hyperfiddle.appval.domain.core :as hf]
     #?(:cljs [hypercrud.browser.core :as browser])
     #?(:cljs [hyperfiddle.appval.domain.foundation-view :as foundation-view])))
 
 
-
-(def domain {})
+;(def domain {})
 
 (defn ide-route [ctx]
   ; Depends on the parsed browser location which happens inside app-ui/ui
@@ -21,19 +29,105 @@
    (defn view [ctx]
      (browser/ui-from-route (ide-route ctx) ctx)))
 
-(defn api [foo ctx]
-  (browser/request-from-route (ide-route ctx) ctx))
+(defn- with-decoded-route [state-value f]
+  (either/branch
+    (if-let [state-route (:encoded-route state-value)]
+      (try-either (routing/decode state-route))
+      (either/right nil))
+    (constantly nil)
+    f))
 
+(defn update-hf-domain [hf-domain target-domain code-database]
+  (let [target-source-uri (->> (:domain/code-databases target-domain)
+                               (filter #(= (:dbhole/name %) code-database))
+                               first
+                               :dbhole/uri)]
+    (update hf-domain :domain/code-databases
+            (fn [repos]
+              (->> repos
+                   (map (fn [repo]
+                          (if (= "root" (:dbhole/name repo))
+                            (assoc-in repo [:repository/environment "$"] target-source-uri)
+                            repo)))
+                   set)))))
 
+(let [always-user (atom :user)]
+  (defn ide-context [ctx hf-domain target-domain target-route user-profile]
+    (let [hf-domain (foundation/process-domain-legacy hf-domain)]
+      (assoc ctx
+        :debug "hf"
+        :display-mode always-user
+        :domain (update-hf-domain hf-domain target-domain (or (:code-database (:foo ctx)) ; you aren't crazy, this is weird af
+                                                              (:code-database target-route)))
+        :foo {:type "ide"
+              :code-database (:code-database target-route)}
+        :target-domain target-domain
+        :target-route target-route
+        :user-profile user-profile))))
 
-; Ide-basis wraps user-basis
-; ide-basis assumes a browser in userland
-; ide-basis can just be global-basis if userland is a function
+(let [dispatch!-factory (fn [dispatch! action]
+                          ; todo filter available actions
+                          (dispatch! action)
+                          nil)]
+  (defn target-context [ctx target-domain target-route user-profile]
+    (let [processed-domain (foundation/process-domain-legacy target-domain)]
+      (assoc ctx
+        :debug "target"
+        :dispatch! (reactive/partial dispatch!-factory (:dispatch! ctx))
+        :display-mode (reactive/cursor (.-state-atom (:peer ctx)) [:display-mode])
+        :domain processed-domain
+        :foo {:type "user"}
+        ; repository is needed for transact! in topnav
+        ; repository is illegal as well, it should just be domain/databases
+        :repository (->> (:domain/code-databases processed-domain)
+                         (filter #(= (:dbhole/name %) (:code-database target-route)))
+                         first
+                         (into {}))
+        :target-domain target-domain
+        :target-route (if (and (= "root" (:code-database target-route)) ; todo "root" is a valid user string, check uri
+                               (#{17592186060855 [:db/ident :hyperfiddle/main]} (:link-id target-route)))
+                        ; hack to prevent infinite loop
+                        {:code-database "root"
+                         :link-id 17592186045564
+                         :request-params {:entity (->ThinEntity "$domains" 17592186045506)}}
+                        target-route)
+        :user-profile user-profile))))
+
+(defn- with-ide-ctx [maybe-decoded-route state-value ctx f]
+  (let [hf-domain-request (hf/domain-request "hyperfiddle" (:peer ctx))]
+    (concat
+      [hf-domain-request]
+      (-> (cats/sequence [(hc/hydrate (:peer ctx) hf-domain-request)])
+          (either/branch
+            (constantly nil)
+            (fn [[target-domain hf-domain]]
+              (let [decoded-route (foundation/->decoded-route maybe-decoded-route target-domain)
+                    ctx (-> (ide-context ctx hf-domain target-domain decoded-route (:user-profile state-value))
+                            (update :debug str "-r"))]
+                (f ctx))))))))
+
+(defn- decoded-route->user-request [target-domain maybe-decoded-route state-value ctx user-api-fn]
+  (when-let [decoded-route (foundation/->decoded-route maybe-decoded-route target-domain)]
+    (let [ctx (-> (target-context ctx target-domain decoded-route (:user-profile state-value))
+                  (update :debug str "-r"))]
+      (user-api-fn ctx))))
+
+(defn api [domain foo state-val ctx]
+  (let [browser-api-fn (fn [ctx] (browser/request-from-route (:target-route ctx) ctx))
+        ; IDE is always a browser, but userland could be something different.
+        userland-api-fn browser-api-fn]
+    (case (:type foo)
+      "page" (with-decoded-route state-val #(concat
+                                              (with-ide-ctx % state-val ctx (fn [ctx] (browser/request-from-route (ide-route ctx) ctx)))
+                                              (decoded-route->user-request domain % state-val ctx userland-api-fn)))
+      "ide" (with-decoded-route state-val #(with-ide-ctx % state-val ctx browser-api-fn))
+      "user" (with-decoded-route state-val #(decoded-route->user-request domain % state-val ctx userland-api-fn)))))
+
 (defn local-basis [foo global-basis domain route]
   ; Given all the reachable dbs, return only from this route.
   ; If hc browser, we can prune a lot.
   ; If userland is a fn, local-basis is global-basis (minus domain)
-  ; The foundation will concat on the domain.
+  ; The foundation takes care of the domain.
 
   (let [{:keys [domain ide user]} global-basis
         ; basis-maps: List[Map[uri, t]]
