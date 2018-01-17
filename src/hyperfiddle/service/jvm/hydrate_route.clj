@@ -45,7 +45,6 @@
         rt
         ; foundation/api doesn't care about page (foundation/view does though)
         (partial foundation/api (partial hyperfiddle.ide/api foo) hyperfiddle-hostname hostname encoded-route branch)
-        #_(decoded-route->user-request domain decoded-route state-val ctx hyperfiddle.ide/user-api)
         local-basis branch stage data-cache)))
 
   runtime/AppFnHydrate
