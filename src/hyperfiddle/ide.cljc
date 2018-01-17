@@ -53,8 +53,8 @@
                           ; todo filter available actions
                           (dispatch! action)
                           nil)]
-  (defn target-context [ctx target-domain target-route user-profile]
-    (let [processed-domain (foundation/process-domain-legacy target-domain)]
+  (defn target-context [ctx domain route user-profile]
+    (let [processed-domain (foundation/process-domain-legacy domain)]
       (assoc ctx
         :debug "target"
         :dispatch! (reactive/partial dispatch!-factory (:dispatch! ctx))
@@ -64,17 +64,17 @@
         ; repository is needed for transact! in topnav
         ; repository is illegal as well, it should just be domain/databases
         :repository (->> (:domain/code-databases processed-domain)
-                         (filter #(= (:dbhole/name %) (:code-database target-route)))
+                         (filter #(= (:dbhole/name %) (:code-database route)))
                          first
                          (into {}))
-        :target-domain target-domain
-        :target-route (if (and (= "root" (:code-database target-route)) ; todo "root" is a valid user string, check uri
-                               (#{17592186060855 [:db/ident :hyperfiddle/main]} (:link-id target-route)))
+        :target-domain domain
+        :target-route (if (and (= "root" (:code-database route)) ; todo "root" is a valid user string, check uri
+                               (#{17592186060855 [:db/ident :hyperfiddle/main]} (:link-id route)))
                         ; hack to prevent infinite loop
                         {:code-database "root"
                          :link-id 17592186045564
-                         :request-params {:entity (->ThinEntity "$domains" 17592186045506)}}
-                        target-route)
+                         :request-params {:entity #entity["$domains" 17592186045506]}}
+                        route)
         :user-profile user-profile))))
 
 (defn local-basis [foo global-basis domain route]

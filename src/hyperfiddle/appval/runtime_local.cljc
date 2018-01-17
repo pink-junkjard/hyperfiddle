@@ -38,15 +38,15 @@
            domain-basis (api/sync rt #{hf/domain-uri})
            [user-domain foundation-domain] (hydrate-all-or-nothing! rt domain-basis nil domain-requests)
            :let [user-domain (foundation/process-domain-legacy user-domain)
-                 hf-domain (foundation/process-domain-legacy foundation-domain)
+                 ide-domain (foundation/process-domain-legacy foundation-domain)
                  user-domain-uris (uris-for-domain-legacy user-domain) ; Any reachable thing, not per route.
-                 hf-domain-uris (uris-for-domain-legacy hf-domain)
+                 ide-domain-uris (uris-for-domain-legacy ide-domain)
                  uris (apply set/union (concat (vals user-domain-uris)
-                                               (vals hf-domain-uris)))]
+                                               (vals ide-domain-uris)))]
            sync (api/sync rt uris)]
       (cats/return                                          ; Just return the sync and reconstruct which is what in local-basis
         {:domain domain-basis
-         :ide (->> hf-domain-uris                           ; Not allowed structure here
+         :ide (->> ide-domain-uris                          ; Not allowed structure here
                    (util/map-values (fn [repo-uris]
                                       (->> repo-uris
                                            (map (juxt identity #(get sync %)))
