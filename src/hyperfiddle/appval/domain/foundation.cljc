@@ -39,18 +39,17 @@
                                 ; todo this can throw
                                 (update :repository/environment reader/read-string)))))))))
 
-(defn local-basis [user-local-basis global-basis route]
+(defn local-basis [foo user-local-basis global-basis route]
   (let [domain nil #_"unused but theoretically allowed?"]
     (concat
       (:domain global-basis)
       (user-local-basis global-basis domain route))))
 
-(defn process-route [route domain]
+(defn canonical-route [route domain]
   (or (routing/decode' route)
       (unwrap (hc-string/safe-read-edn-string (:domain/home-route domain)))))
 
-; Foundation needs to give domain, and thats it i guess
-(defn api [user-api-fn hyperfiddle-hostname hostname route branch state-val]
+(defn api [foo user-api-fn hyperfiddle-hostname hostname route branch state-val]
   (let [ctx {:branch branch
              :dispatch! #(throw (->Exception "dispatch! not supported in hydrate-route"))
              :hostname hostname
@@ -58,10 +57,10 @@
              ; just blast the peer everytime
              :peer (peer/->Peer (reactive/atom state-val))}
         domain-api (hf/domain-request (hf/hostname->hf-domain-name hostname hyperfiddle-hostname) (:peer ctx))
-        domain (hc/hydrate-api (:peer ctx) domain-api)
-        route (process-route route domain)]
+        domain (hc/hydrate-api (:peer ctx) domain-api)]
     (concat [domain-api]
-            (user-api-fn domain route state-val ctx))))
+            (if domain
+              (user-api-fn domain (canonical-route route domain) state-val ctx)))))
 
 #?(:cljs
    (defn staging [peer dispatch!]
@@ -94,3 +93,11 @@
            (user-view-fn domain route ctx)
            (if @(reactive/cursor (.-state-atom (:peer ctx)) [:staging-open])
              [staging (:peer ctx) (:dispatch! ctx)])])])))
+
+(defn view [foo user-view-fn hyperfiddle-hostname hostname route ctx]
+  (case foo
+    ; The foundation comes with special root markup which means the foundation/view knows about page/user (not ide)
+    ; Can't ide/user (not page) be part of the userland route?
+    "page" (partial page-view user-view-fn hyperfiddle-hostname hostname route ctx)
+    "ide" (partial leaf-view user-view-fn hyperfiddle-hostname hostname route ctx)
+    "user" (partial leaf-view user-view-fn hyperfiddle-hostname hostname route ctx)))
