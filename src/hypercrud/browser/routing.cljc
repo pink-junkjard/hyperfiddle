@@ -94,3 +94,8 @@
 
       ; The only way to get to / is if the user types it in. We never ever link to /, and nginx & node should redirect to the canonical.
       :else nil)))
+
+(defn decode' [route]
+  (if route
+    (try-either (decode route))
+    (either/right nil)))

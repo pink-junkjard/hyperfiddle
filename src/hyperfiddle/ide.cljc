@@ -11,28 +11,15 @@
             [hypercrud.state.actions.core :as actions]
             [hypercrud.state.actions.util :as actions-util]
             [hyperfiddle.appval.domain.core :as hf]
-    #?(:cljs [hypercrud.ui.navigate-cmp :as navigate-cmp])
-    #?(:cljs [hypercrud.browser.core :as browser])
-    #?(:cljs [hyperfiddle.appval.domain.foundation-view :as foundation-view])))
+    #?(:cljs [hypercrud.ui.navigate-cmp :as navigate-cmp])))
 
 
 ;(def domain {})
 
-(defn ide-route [ctx]
-  ; Depends on the parsed browser location which happens inside app-ui/ui
-  ; We can probably invert the logic so that we can do this from the outside.
-  (let [target-user-fiddle (get-in ctx [:target-route :link-id])]
-    {:code-database "root"
-     :link-id :hyperfiddle/main
-     :entity #entity["$" target-user-fiddle]}))
-
-(defn- with-decoded-route [state-value f]
-  (either/branch
-    (if-let [state-route (:encoded-route state-value)]
-      (try-either (routing/decode state-route))
-      (either/right nil))
-    (constantly nil)
-    f))
+(defn ide-route [route]
+  {:code-database "root"
+   :link-id :hyperfiddle/main
+   :entity #entity["$" (:link-id route)]})
 
 (defn update-hf-domain [hf-domain target-domain code-database]
   (let [target-source-uri (->> (:domain/code-databases target-domain)
@@ -90,58 +77,12 @@
                         target-route)
         :user-profile user-profile))))
 
-(defn ^:export target-ui-context [ctx]
-  (-> (target-context ctx (:target-domain ctx) (:target-route ctx) (:user-profile ctx))
-      (dissoc :page-on-click)))
-
-(defn- with-ide-ctx [maybe-decoded-route state-value ctx f]
-  (let [hf-domain-request (hf/domain-request "hyperfiddle" (:peer ctx))]
-    (concat
-      [hf-domain-request]
-      (-> (cats/sequence [(hc/hydrate (:peer ctx) hf-domain-request)])
-          (either/branch
-            (constantly nil)
-            (fn [[target-domain hf-domain]]
-              (let [decoded-route (foundation/->decoded-route maybe-decoded-route target-domain)
-                    ctx (-> (ide-context ctx hf-domain target-domain decoded-route (:user-profile state-value))
-                            (update :debug str "-r"))]
-                (f ctx))))))))
-
-(defn- decoded-route->user-request [target-domain maybe-decoded-route state-value ctx user-api-fn]
-  (when-let [decoded-route (foundation/->decoded-route maybe-decoded-route target-domain)]
-    (let [ctx (-> (target-context ctx target-domain decoded-route (:user-profile state-value))
-                  (update :debug str "-r"))]
-      (user-api-fn ctx))))
-
-(defn api [foo domain state-val ctx]
-  (let [browser-api-fn (fn [ctx] (browser/request-from-route (:target-route ctx) ctx))
-        ; IDE is always a browser, but userland could be something different.
-        user-api-fn browser-api-fn #_(:domain/api-fn domain)]
-    (case foo
-      "page" (with-decoded-route state-val #(concat
-                                              (with-ide-ctx % state-val ctx (fn [ctx] (browser/request-from-route (ide-route ctx) ctx)))
-                                              (decoded-route->user-request domain % state-val ctx user-api-fn)))
-      "ide" (with-decoded-route state-val #(with-ide-ctx % state-val ctx browser-api-fn))
-      "user" (with-decoded-route state-val #(decoded-route->user-request domain % state-val ctx user-api-fn)))))
-
 (defn local-basis [foo global-basis domain route]
-  ; Given all the reachable dbs, return only from this route.
-  ; If hc browser, we can prune a lot.
-  ; If userland is a fn, local-basis is global-basis (minus domain)
-  ; The foundation takes care of the domain.
-
   (let [{:keys [domain ide user]} global-basis
         ; basis-maps: List[Map[uri, t]]
-
-        ; This is browser's local-basis.
-
-        ; userland needs to optimize the basis. 1) by running the api-fn and see what is queried. 2) configure a predicate, hyperfiddle.ide/local-basis
-        ; Appfn can have local-basis, it defaults to global-basis. They'd have to code it since there's no link structure hints.
-
-        user-basis (get user (:code-database route))        ; hardcoded browser route knowledge
-        topnav-basis (get user (:code-database foo))        ; todo the only repo uri is needed from user. dont need the environment as well
-        basis-maps (condp = foo
-                     ; everybody using foundation has domain - even the IDE's new-anchor popover needs to do a subdomain lookup on the server side
+        user-basis (get user (:code-database route))
+        topnav-basis (Get user (:code-database foo))        ; todo the only repo uri is needed from user. dont need the environment as well
+        basis-maps (case foo
                      "page" (concat [user-basis] (vals ide))
                      "ide" (concat [topnav-basis] (vals ide))
                      "user" [user-basis])
@@ -149,47 +90,52 @@
                          (apply concat)
                          (apply concat)
                          (apply sorted-map))]
-
-    ; Local-basis is for the subset of databases visible now for this fiddle.
-    ; Does not include popovers or navigates, they have their own local basis.
-    ; In the future, we can do better than reachable-basis if we hydrate and see what came out.
-    #_(hydrate-route rt hostname foo state-val)
-    #_(determine-local-basis)
+    #_(determine-local-basis (hydrate-route ...))
     local-basis))
 
-#?(:cljs
-   (let [page-on-click (fn [ctx target-domain route event]
-                         (when (and route (.-altKey event))
-                           (let [can-soft-nav? (->> (:domain/code-databases target-domain)
-                                                    ; only if the user domain has the root code-database
-                                                    (filter #(and (= (:dbhole/name %) "root")
-                                                                  (= (:dbhole/uri %) hf/root-uri)))
-                                                    (empty?)
-                                                    not)]
-                             (if can-soft-nav?
-                               ((:dispatch! ctx) (fn [dispatch! get-state]
-                                                   (let [encoded-route (routing/encode route)]
-                                                     (when (actions-util/navigable? encoded-route (get-state))
-                                                       (actions/set-route (:peer ctx) encoded-route dispatch! get-state)))))
-                               (let [encoded-route (routing/encode route (str "hyperfiddle." (:hyperfiddle-hostname ctx)))]
-                                 ; todo push this window.location set up to the appfn atom watcher
-                                 (aset js/window "location" encoded-route)))
-                             (.stopPropagation event))))]
-     (defn ide-page-context [ctx hf-domain target-domain target-route user-profile]
-       (-> (ide-context ctx hf-domain target-domain target-route user-profile)
-           (assoc :navigate-cmp navigate-cmp/navigate-cmp
-                  :page-on-click (reactive/partial page-on-click ctx target-domain))))))
+(defn api [foo domain route state-val ctx]
+  (let [ide-domain-request (hf/domain-request "hyperfiddle" (:peer ctx))
+        ide-domain (hc/hydrate-api (:peer ctx) ide-domain-request)
+        user-profile (:user-profile state-val)]
+    (case foo
+      "page" (concat [ide-domain-request]
+                     (browser/request-from-route (ide-route route) (ide-context ctx ide-domain domain route user-profile)))
+      "ide" (concat [ide-domain-request]
+                    (browser/request-from-route route (ide-context ctx ide-domain domain route user-profile)))
+      "user" (browser/request-from-route route (target-context ctx domain route user-profile)))))
 
 #?(:cljs
-   (defn view [foo domain hf-domain decoded-route ctx]
-     (let [browser-view-fn (fn [ctx] (browser/ui-from-route (:target-route ctx) ctx))
-           user-view-fn (fn [ctx] (browser/ui-from-route (:target-route ctx) ctx))]
+   (defn page-on-click [ctx target-domain route event]
+     (when (and route (.-altKey event))
+       (let [can-soft-nav? (->> (:domain/code-databases target-domain)
+                                ; only if the user domain has the root code-database
+                                (filter #(and (= (:dbhole/name %) "root")
+                                              (= (:dbhole/uri %) hf/root-uri)))
+                                (empty?)
+                                not)]
+         (if can-soft-nav?
+           ((:dispatch! ctx) (fn [dispatch! get-state]
+                               (let [encoded-route (routing/encode route)]
+                                 (when (actions-util/navigable? encoded-route (get-state))
+                                   (actions/set-route (:peer ctx) encoded-route dispatch! get-state)))))
+           (let [encoded-route (routing/encode route (str "hyperfiddle." (:hyperfiddle-hostname ctx)))]
+             ; todo push this window.location set up to the appfn atom watcher
+             (aset js/window "location" encoded-route)))
+         (.stopPropagation event)))))
+
+#?(:cljs
+   (defn view [foo domain route ctx]
+     (let [ide-domain-request (hf/domain-request "hyperfiddle" (:peer ctx))
+           ide-domain (hc/hydrate-api (:peer ctx) ide-domain-request)
+           user-profile @(reactive/cursor (.-state-atom (:peer ctx)) [:user-profile])]
        (case foo
-         "page" (let [ctx (-> (ide-page-context ctx hf-domain domain decoded-route @(reactive/cursor (.-state-atom (:peer ctx)) [:user-profile]))
-                              (update :debug str "-v"))]
-                  (browser/ui-from-route (ide-route ctx) ctx))
-
+         "page" (let [ctx (-> (ide-context ctx ide-domain domain route user-profile)
+                              (assoc :navigate-cmp navigate-cmp/navigate-cmp
+                                     :page-on-click (reactive/partial page-on-click ctx domain)))]
+                  (browser/ui-from-route (ide-route route) ctx))
          ; On SSR side this is only ever called as "page", but it could be differently (e.g. turbolinks)
          ; On Browser side, also only ever called as "page", but it could be configured differently (client side render the ide, server render userland...?)
-         "ide" #(with-ide-ctx decoded-route {} ctx browser-view-fn)
-         "user" (user-view-fn (target-ui-context ctx))))))
+         "ide" (browser/ui-from-route route (ide-context ctx ide-domain domain route user-profile))
+         "user" (browser/ui-from-route route (target-context ctx domain route user-profile))))))
+
+(declare ^:export target-ui-context nil)                    ; its gone tho

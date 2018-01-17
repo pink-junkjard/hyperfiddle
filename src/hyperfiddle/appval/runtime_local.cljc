@@ -62,24 +62,6 @@
       (timbre/debug "global-basis;" "total time:" (get-total-time)))))
 
 ; This knows about userland api fn (but has no assumptions e.g. that it is the browser-api-fn)
-(defn local-basis [rt user-local-basis hyperfiddle-hostname hostname global-basis encoded-route]
-  (perf/time-promise
-    (mlet [maybe-decoded-route (if encoded-route
-                                 (either/branch (try-either (routing/decode encoded-route)) p/rejected p/resolved)
-                                 (p/resolved nil))
-           user-domain (let [domain-basis (apply sorted-map (apply concat (:domain global-basis)))
-                             user-domain-request (hf/domain-request (hf/hostname->hf-domain-name hostname hyperfiddle-hostname) rt)]
-                         (-> (hydrate-one! rt domain-basis nil user-domain-request)
-                             (p/then foundation/process-domain-legacy)))
-           route (or maybe-decoded-route
-                     (-> (hc-string/safe-read-edn-string (:domain/home-route user-domain))
-                         (either/branch p/rejected p/resolved)))]
-      (cats/return
-        (user-local-basis global-basis user-domain route)))
-    (fn [err get-total-time]
-      (timbre/debug "local-basis failure;" "total time:" (get-total-time)))
-    (fn [success get-total-time]
-      (timbre/debug "local-basis;" "total time:" (get-total-time)))))
 
 (comment
   (def global-basis {:domain {#uri"datomic:free://datomic:4334/domains" 1316},
@@ -104,15 +86,13 @@
       #uri"datomic:free://datomic:4334/hyperblog" 1115,
       #uri"datomic:free://datomic:4334/kalzumeus" 1037}))
 
-(defn hydrate-route [rt user-data-fn hyperfiddle-hostname hostname
-                     local-basis encoded-route branch stage & [data-cache]] ; -> DataCache
+(defn hydrate-route [rt user-data-fn local-basis stage & [data-cache]] ; -> DataCache
   (let [request-fn (fn [id->tempid ptm]
-                     (let [state-val (-> {:encoded-route encoded-route
-                                          :local-basis local-basis
+                     (let [state-val (-> {:local-basis local-basis
                                           :tempid-lookups id->tempid
                                           :ptm ptm
                                           :stage stage}
                                          (reducers/root-reducer nil))]
                        ; No ctx yet, might not be a browser
-                       (user-data-fn hyperfiddle-hostname hostname branch state-val)))]
+                       (user-data-fn state-val)))]
     (hydrate-loop rt request-fn local-basis stage data-cache)))

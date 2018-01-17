@@ -13,7 +13,7 @@
             [hypercrud.util.core :refer [truncate]]
             [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :as hc-string]
-            [hyperfiddle.appval.domain.foundation-view :refer [staging]]
+            [hyperfiddle.appval.domain.foundation :refer [staging]]
             [hyperfiddle.appval.domain.core :as hf]
             [hyperfiddle.appval.state.actions :as ide-actions]
             [hyperfiddle.ide.fiddles.topnav-bindings :as topnav-bindings]
