@@ -38,11 +38,8 @@
              (invoke [o k] ({:db/id id} k))
              (invoke [o k not-found] ({:db/id id} k not-found))]
 
-      :cljs [Object
-             (toString [o] (impl-print o))
-
-             IPrintWithWriter
-             (-pr-writer [o writer _] (-write writer (.toString o)))
+      :cljs [IPrintWithWriter
+             (-pr-writer [o writer _] (-write writer (impl-print o)))
 
              IEquiv
              (-equiv [o other]

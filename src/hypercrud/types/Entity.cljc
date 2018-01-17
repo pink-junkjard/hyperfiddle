@@ -50,11 +50,8 @@
              (invoke [o k] (coll k))
              (invoke [o k not-found] (coll k not-found))]
 
-      :cljs [Object
-             (toString [o] (impl-print o))
-
-             IPrintWithWriter
-             (-pr-writer [o writer _] (-write writer (.toString o)))
+      :cljs [IPrintWithWriter
+             (-pr-writer [o writer _] (-write writer (impl-print o)))
 
              IEquiv
              (-equiv [o other] (equals-impl o other))

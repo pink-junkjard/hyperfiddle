@@ -2,8 +2,8 @@
 
 #?(:cljs
    (deftype URI [uri-str]
-     Object (toString [_] (str "#uri " (pr-str uri-str)))
-     IPrintWithWriter (-pr-writer [o writer _] (-write writer (.toString o)))
+     Object (toString [_] uri-str)
+     IPrintWithWriter (-pr-writer [o writer _] (-write writer (str "#uri " (pr-str uri-str))))
      IComparable (-compare [this other]
                    (and (instance? URI other)
                         (compare (.-uri-str this) (.-uri-str other))))
