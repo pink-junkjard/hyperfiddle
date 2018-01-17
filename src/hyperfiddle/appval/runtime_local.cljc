@@ -41,8 +41,8 @@
                                                (vals ide-domain-uris)))]
            sync (api/sync rt uris)]
       (cats/return                                          ; Just return the sync and reconstruct which is what in local-basis
-        sync
-        #_{:domain domain-basis
+        #_sync
+        {:domain domain-basis
          :ide (->> ide-domain-uris                          ; Not allowed structure here
                    (util/map-values (fn [repo-uris]
                                       (->> repo-uris
