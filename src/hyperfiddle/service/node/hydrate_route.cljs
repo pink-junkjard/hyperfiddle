@@ -25,14 +25,17 @@
 
   runtime/AppValLocalBasis
   (local-basis [rt global-basis encoded-route branch]
-    ; Foundation local basis is same for all foo.
     (foundation/local-basis foo (partial hyperfiddle.ide/local-basis foo) global-basis encoded-route))
 
   runtime/AppValHydrate
   (hydrate-route [rt local-basis encoded-route branch stage] ; :: ... -> DataCache on the wire
-    ; Inspect foo here.
     (let [data-cache (select-keys @state-atom [:id->tempid :ptm])]
       (hydrate-route rt (partial foundation/api foo (partial hyperfiddle.ide/api foo))
+                     hyperfiddle-hostname hostname local-basis branch stage data-cache)))
+
+  (hydrate-route-page [rt local-basis encoded-route branch stage]
+    (let [data-cache (select-keys @state-atom [:id->tempid :ptm])]
+      (hydrate-route rt (partial foundation/api "page" (partial hyperfiddle.ide/api "page"))
                      hyperfiddle-hostname hostname local-basis branch stage data-cache)))
 
   runtime/AppFnHydrate

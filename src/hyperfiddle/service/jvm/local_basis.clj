@@ -19,8 +19,7 @@
 
   runtime/AppValLocalBasis
   (local-basis [rt global-basis encoded-route branch]
-    ; Foundation local basis is same for all foo
-    (foundation/local-basis (partial hyperfiddle.ide/local-basis foo) global-basis encoded-route))
+    (foundation/local-basis foo (partial hyperfiddle.ide/local-basis foo) global-basis encoded-route))
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]

@@ -96,19 +96,22 @@
                    ; careful this needs to throw a Throwable in clj
                    (p/rejected (error error)))))))
 
-(deftype IdeSsrRuntime [hyperfiddle-hostname hostname foo service-uri state-atom]
+(deftype IdeSsrRuntime [hyperfiddle-hostname hostname ide-or-user service-uri state-atom]
   runtime/AppFnGlobalBasis
   (global-basis [rt]
     (global-basis! service-uri))
 
   runtime/AppValLocalBasis
   (local-basis [rt global-basis encoded-route branch]
-    ; Foundation local basis is same for all foo.
-    (foundation/local-basis (partial hyperfiddle.ide/local-basis foo) global-basis encoded-route))
+    (foundation/local-basis ide-or-user (partial hyperfiddle.ide/local-basis ide-or-user) global-basis encoded-route))
 
   runtime/AppValHydrate
   (hydrate-route [rt local-basis encoded-route branch stage]
-    (hydrate-route! service-uri local-basis encoded-route foo branch stage))
+    ; If IDE, send up target-repo as well (encoded in route as query param?)
+    (hydrate-route! service-uri local-basis encoded-route ide-or-user branch stage))
+
+  (hydrate-route-page [rt local-basis encoded-route branch stage]
+    (hydrate-route! service-uri local-basis encoded-route "page" branch stage))
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
@@ -120,7 +123,7 @@
 
   runtime/AppFnSsr
   (ssr [rt route]
-    (assert (= foo "page") "Impossible; sub-rts don't ssr (but they could)")
+    (assert (= ide-or-user "page") "Impossible; sub-rts don't ssr (but they could)") ; flag, remove this.
     ; We have the domain if we are here.
     ; This runtime doesn't actually support :domain/view-fn, we assume the foo interface.
     (let [ctx {:hostname hostname
@@ -131,7 +134,7 @@
                :dispatch! #(throw (->Exception "dispatch! not supported in ssr"))}]
       (render-local-html
         ; Can't ide/user (not page) be part of the userland route?
-        (partial foundation/view foo (partial hyperfiddle.ide/view foo) hyperfiddle-hostname hostname route ctx))))
+        (partial foundation/view ide-or-user (partial hyperfiddle.ide/view ide-or-user) hyperfiddle-hostname hostname route ctx))))
 
   hc/Peer
   (hydrate [this request]

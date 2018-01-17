@@ -16,15 +16,14 @@
             [hyperfiddle.appval.domain.foundation :as foundation]))
 
 
-(deftype LocalBasisRuntime [hyperfiddle-hostname hostname service-uri foo state-atom]
+(deftype LocalBasisRuntime [hyperfiddle-hostname hostname service-uri ide-or-user state-atom]
   runtime/AppFnGlobalBasis
   (global-basis [rt]
     (global-basis! service-uri))
 
   runtime/AppValLocalBasis
   (local-basis [rt global-basis encoded-route branch]
-    ; Foundation local basis is same for all foo.
-    (foundation/local-basis (partial hyperfiddle.ide/local-basis foo) global-basis encoded-route))
+    (foundation/local-basis ide-or-user (partial hyperfiddle.ide/local-basis ide-or-user) global-basis encoded-route))
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]

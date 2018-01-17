@@ -35,17 +35,24 @@
 
   runtime/AppValLocalBasis
   (local-basis [rt global-basis encoded-route branch]
-    ; Foundation local-basis is same for all foo.
-    (foundation/local-basis ide-or-user (partial hyperfiddle.ide/local-basis ide-or-user target-repo) global-basis encoded-route))
+    (foundation/local-basis ide-or-user (partial hyperfiddle.ide/local-basis ide-or-user target-repo)
+                            global-basis encoded-route))
 
   runtime/AppValHydrate
+  ; hydrate-route-leaf - leaf-or-page
   (hydrate-route [rt local-basis encoded-route branch stage]
     (let [data-cache (select-keys @state-atom [:id->tempid :ptm])]
-      (hydrate-route
-        rt
-        ; foundation/api doesn't care about page (foundation/view does though)
-        (partial foundation/api ide-or-user (partial hyperfiddle.ide/api ide-or-user) hyperfiddle-hostname hostname encoded-route branch)
-        local-basis branch stage data-cache)))
+      (hydrate-route rt
+                     (partial foundation/api ide-or-user (partial hyperfiddle.ide/api ide-or-user)
+                              hyperfiddle-hostname hostname encoded-route branch)
+                     local-basis branch stage data-cache)))
+
+  (hydrate-route-page [rt local-basis encoded-route branch stage]
+    (let [data-cache (select-keys @state-atom [:id->tempid :ptm])]
+      (hydrate-route rt
+                     (partial foundation/api "page" (partial hyperfiddle.ide/api "page")
+                              hyperfiddle-hostname hostname encoded-route branch)
+                     local-basis branch stage data-cache)))
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
