@@ -7,7 +7,7 @@
             [hyperfiddle.appfn.hydrate-requests :refer [hydrate-requests]] ; todo
             [hyperfiddle.appfn.sync :refer [sync]]          ; todo
             [hyperfiddle.appfn.runtime-local :refer [stage-val->staged-branches]] ; todo
-            [hyperfiddle.appval.runtime-local :refer [global-basis local-basis]]
+            [hyperfiddle.appval.runtime-local :refer [global-basis]]
             [promesa.core :as p]
             [hyperfiddle.appval.domain.foundation :as foundation]))
 
@@ -19,8 +19,8 @@
 
   runtime/AppValLocalBasis
   (local-basis [rt global-basis encoded-route branch]
-    (local-basis rt (partial foundation/local-basis (partial hyperfiddle.ide/local-basis foo))
-                 hyperfiddle-hostname hostname global-basis encoded-route))
+    ; Foundation local basis is same for all foo
+    (foundation/local-basis (partial hyperfiddle.ide/local-basis foo) global-basis encoded-route))
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]

@@ -3,7 +3,7 @@
             [hypercrud.client.peer :as peer]
             [hyperfiddle.runtime :as runtime]
             [hyperfiddle.appfn.runtime-rpc :refer [hydrate-requests! sync!]]
-            [hyperfiddle.appval.runtime-local :refer [hydrate-route local-basis]]
+            [hyperfiddle.appval.runtime-local :refer [hydrate-route]]
             [hyperfiddle.appval.runtime-rpc :refer [global-basis!]]
 
             [hyperfiddle.service.node.lib :refer [req->service-uri req->state-val]]
@@ -25,16 +25,15 @@
 
   runtime/AppValLocalBasis
   (local-basis [rt global-basis encoded-route branch]
-    ; Resolve foo here.
-    (local-basis rt (partial hyperfiddle.ide/local-basis (partial hyperfiddle.ide/api foo))
-                 hyperfiddle-hostname hostname global-basis encoded-route))
+    ; Foundation local basis is same for all foo.
+    (foundation/local-basis (partial hyperfiddle.ide/local-basis foo) global-basis encoded-route))
 
   runtime/AppValHydrate
   (hydrate-route [rt local-basis encoded-route branch stage] ; :: ... -> DataCache on the wire
     ; Inspect foo here.
     (let [data-cache (select-keys @state-atom [:id->tempid :ptm])]
       (hydrate-route rt (partial foundation/api (partial hyperfiddle.ide/api foo))
-                     hyperfiddle-hostname hostname local-basis encoded-route branch stage data-cache)))
+                     hyperfiddle-hostname hostname local-basis branch stage data-cache)))
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]

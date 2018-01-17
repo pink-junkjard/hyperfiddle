@@ -7,7 +7,7 @@
             [hyperfiddle.appfn.hydrate-requests :refer [hydrate-requests]] ; todo
             [hyperfiddle.appfn.sync :refer [sync]]          ; todo
             [hyperfiddle.appfn.runtime-local :refer [stage-val->staged-branches]] ; todo
-            [hyperfiddle.appval.runtime-local :refer [hydrate-route global-basis local-basis]]
+            [hyperfiddle.appval.runtime-local :refer [hydrate-route global-basis]]
             [promesa.core :as p]
 
             [hyperfiddle.appval.domain.foundation :as foundation]
@@ -17,10 +17,16 @@
             [hypercrud.ui.auto-control]
             [hypercrud.ui.form]
             [hypercrud.ui.table]
+
+            [cats.monad.either :as either]
+            [hypercrud.util.non-fatal :refer [try-either]]
+
+
+
             [hyperfiddle.appval.domain.core]
             [hyperfiddle.core]                              ; compat
-            ))
-
+            [taoensso.timbre :as timbre]
+            [hypercrud.util.performance :as perf]))
 
 (deftype HydrateRoute [hyperfiddle-hostname hostname foo state-atom]
   runtime/AppFnGlobalBasis
@@ -29,16 +35,18 @@
 
   runtime/AppValLocalBasis
   (local-basis [rt global-basis encoded-route branch]
-    ; Resolve foo here.
-    (local-basis rt (partial foundation/local-basis (partial hyperfiddle.ide/local-basis foo))
-                 hyperfiddle-hostname hostname global-basis encoded-route))
+    ; Foundation local-basis is same for all foo.
+    (foundation/local-basis (partial hyperfiddle.ide/local-basis foo) global-basis encoded-route))
 
   runtime/AppValHydrate
   (hydrate-route [rt local-basis encoded-route branch stage]
-    ; Resolve foo here.
     (let [data-cache (select-keys @state-atom [:id->tempid :ptm])]
-      (hydrate-route rt (partial foundation/api (partial hyperfiddle.ide/api foo))
-                     hyperfiddle-hostname hostname local-basis encoded-route foo branch stage data-cache)))
+      (hydrate-route
+        rt
+        ; foundation/api doesn't care about page (foundation/view does though)
+        (partial foundation/api (partial hyperfiddle.ide/api foo) hyperfiddle-hostname hostname encoded-route branch)
+        #_(decoded-route->user-request domain decoded-route state-val ctx hyperfiddle.ide/user-api)
+        local-basis branch stage data-cache)))
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]

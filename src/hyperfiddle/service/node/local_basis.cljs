@@ -3,7 +3,7 @@
             [hypercrud.client.peer :as peer]
             [hyperfiddle.runtime :as runtime]
             [hyperfiddle.appfn.runtime-rpc :refer [hydrate-requests! sync!]]
-            [hyperfiddle.appval.runtime-local :refer [local-basis]]
+            [hyperfiddle.appval.runtime-local :refer []]
             [hyperfiddle.appval.runtime-rpc :refer [global-basis!]]
             [hyperfiddle.service.node.lib :refer [req->service-uri req->state-val]]
             [promesa.core :as p]
@@ -23,8 +23,8 @@
 
   runtime/AppValLocalBasis
   (local-basis [rt global-basis encoded-route branch]
-    (local-basis rt (partial foundation/local-basis (partial hyperfiddle.ide/local-basis foo))
-                 hyperfiddle-hostname hostname global-basis encoded-route))
+    ; Foundation local basis is same for all foo.
+    (foundation/local-basis (partial hyperfiddle.ide/local-basis foo) global-basis encoded-route))
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
