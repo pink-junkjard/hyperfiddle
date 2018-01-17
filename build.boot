@@ -24,11 +24,11 @@
 (require '[adzerk.bootlaces :refer [push-snapshot]]
          'boot.lein)
 
-(def +version+ "0.3.0-SNAPSHOT")
+(def +version+ "0.0.1-SNAPSHOT")
 
 (task-options!
   push #(into % {:repo "deploy-clojars" :ensure-version +version+})
-  pom {:project 'com.hyperfiddle/hypercrud.server
+  pom {:project 'com.hyperfiddle/hyperfiddle-server
        :version +version+})
 
 (when (> (.lastModified (clojure.java.io/file "build.boot"))
