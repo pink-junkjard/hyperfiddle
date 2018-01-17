@@ -2,7 +2,6 @@
   (:require [hypercrud.browser.auto-anchor-formula :refer [auto-formula]]
             [hypercrud.browser.auto-anchor-txfn :refer [auto-txfn]]
             [hypercrud.browser.auto-fiddle :as auto-fiddle]
-            [hypercrud.util.template :as template]
             [hypercrud.util.vedn :as vedn]))
 
 
@@ -10,9 +9,7 @@
   (map? link-id))
 (def ^:export system-anchor? system-link?)                  ; compat
 
-(def auto-link-txfn-lookup
-  (->> (template/load-resource "auto-anchor/tx-fns.vedn")
-       (vedn/read-string)))
+(def auto-link-txfn-lookup (vedn/load-vedn-from-file "auto-anchor/tx-fns.vedn"))
 
 (defn system-links
   "All sys links are :link/rel :sys, so they can be matched and merged with user-links.

@@ -5,7 +5,6 @@
             [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
             [hypercrud.util.core :as util]
             [hypercrud.util.string :as hc-string]
-            [hypercrud.util.template :as template]
             [hypercrud.util.vedn :as vedn]
             [taoensso.timbre :as timbre])
   #?(:clj
@@ -49,11 +48,9 @@
     (->ThinEntity (dbname/uri->dbname uri ctx) (deterministic-ident ctx))))
 
 (def auto-formula-lookup
-  (let [fe-no-create (->> (template/load-resource "auto-formula/fe-no-create.vedn")
-                          (vedn/read-string)
+  (let [fe-no-create (->> (vedn/load-vedn-from-file "auto-formula/fe-no-create.vedn")
                           (util/map-keys #(assoc % :fe true :c? false)))
-        fe-create (->> (template/load-resource "auto-formula/fe-create.vedn")
-                       (vedn/read-string)
+        fe-create (->> (vedn/load-vedn-from-file "auto-formula/fe-create.vedn")
                        (util/map-keys #(assoc % :fe true :c? true)))
         ; no fe = index or relation links
         no-fe {{:fe false :c? false :d? true :a false} nil
