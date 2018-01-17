@@ -76,9 +76,9 @@
                  ; basis-maps: List[Map[uri, t]]
                  basis-maps (condp = (:type foo)
                               ; everybody has purple - even the IDE's new-anchor popover needs to do a subdomain lookup on the server side
-                              "page" (conj (vals ide)
-                                           (get user (:code-database route))
-                                           domain)
+                              "page" (concat (vals ide)
+                                             (vals user)
+                                             [domain])
 
                               "ide" (conj (vals ide)
                                           ; code-database from foo not route
