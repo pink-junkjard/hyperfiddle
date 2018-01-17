@@ -1,30 +1,22 @@
 (ns hyperfiddle.appval.domain.foundation
-  (:require [cats.monad.either :as either]
-            [hypercrud.client.peer :as peer]
-            [hypercrud.util.core :refer [unwrap]]
-            [hypercrud.util.exception :refer [->Exception]]
-            [hypercrud.util.reactive :as reactive]
-            [hypercrud.compile.reader :as reader]
-            [hypercrud.util.string :as hc-string]
-            [hypercrud.browser.routing :as routing]
-            [hypercrud.util.non-fatal :refer [try-either]]
-            [hypercrud.client.core :as hc]
-            [hyperfiddle.appval.domain.core :as hf]
-            [cats.core :refer [mlet]]
+  (:require [cats.core :refer [mlet]]
             [cljs.pprint :as pprint]
-            [clojure.string :as string]
             [hypercrud.browser.routing :as routing]
             [hypercrud.client.core :as hc]
+            [hypercrud.client.peer :as peer]
             [hypercrud.compile.reader :as reader]
             [hypercrud.state.actions.core :as actions]
-            [hypercrud.ui.control.code :refer [code*]]
-            [hypercrud.ui.stale :as stale]
+            [hypercrud.util.core :refer [unwrap]]
+            [hypercrud.util.exception :refer [->Exception]]
             [hypercrud.util.non-fatal :refer [try-either]]
             [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :as hc-string]
-            [hyperfiddle.appval.domain.core :as hf]
-            [hyperfiddle.appval.domain.error :as error]
-            [hypercrud.ui.css :as css :refer [classes]]))
+
+            [hyperfiddle.appval.domain.core :as foundation2]
+    #?(:cljs [hypercrud.ui.stale :as stale])
+    #?(:cljs [hypercrud.ui.control.code :refer [code*]])
+    #?(:cljs [hypercrud.ui.css :refer [classes]])
+    #?(:cljs [hyperfiddle.appval.domain.error :as error])))
 
 
 
@@ -56,7 +48,7 @@
              :hyperfiddle-hostname hyperfiddle-hostname
              ; just blast the peer everytime
              :peer (peer/->Peer (reactive/atom state-val))}
-        domain-api (hf/domain-request (hf/hostname->hf-domain-name hostname hyperfiddle-hostname) (:peer ctx))
+        domain-api (foundation2/domain-request (foundation2/hostname->hf-domain-name hostname hyperfiddle-hostname) (:peer ctx))
         domain (hc/hydrate-api (:peer ctx) domain-api)]
     (concat [domain-api]
             (if domain
@@ -73,15 +65,15 @@
 
 #?(:cljs
    (defn leaf-view [user-view-fn hyperfiddle-hostname hostname route ctx]
-     (let [domain (let [hf-domain-name (hf/hostname->hf-domain-name hostname hyperfiddle-hostname)]
-                    (hc/hydrate-api (:peer ctx) (hf/domain-request hf-domain-name (:peer ctx))))]
+     (let [domain (let [user-domain (foundation2/hostname->hf-domain-name hostname hyperfiddle-hostname)]
+                    (hc/hydrate-api (:peer ctx) (foundation2/domain-request user-domain (:peer ctx))))]
        ; A malformed stage can break bootstrap hydrates, but the root-page is bust, so ignore here
        ; Fix this by branching userland so bootstrap is sheltered from staging area? (There are chickens and eggs)
        (user-view-fn domain route ctx))))
 
 #?(:cljs
    (defn page-view [user-view-fn hyperfiddle-hostname hostname route ctx]
-     (let [domain' (hc/hydrate (:peer ctx) (hf/domain-request (hf/hostname->hf-domain-name hostname hyperfiddle-hostname) (:peer ctx)))]
+     (let [domain' (hc/hydrate (:peer ctx) (foundation2/domain-request (foundation2/hostname->hf-domain-name hostname hyperfiddle-hostname) (:peer ctx)))]
        [stale/loading (stale/can-be-loading? ctx) domain'
         (fn [e]
           [:div.hyperfiddle.hyperfiddle-foundation
@@ -94,10 +86,11 @@
            (if @(reactive/cursor (.-state-atom (:peer ctx)) [:staging-open])
              [staging (:peer ctx) (:dispatch! ctx)])])])))
 
-(defn view [foo user-view-fn hyperfiddle-hostname hostname route ctx]
-  (case foo
-    ; The foundation comes with special root markup which means the foundation/view knows about page/user (not ide)
-    ; Can't ide/user (not page) be part of the userland route?
-    "page" (partial page-view user-view-fn hyperfiddle-hostname hostname route ctx)
-    "ide" (partial leaf-view user-view-fn hyperfiddle-hostname hostname route ctx)
-    "user" (partial leaf-view user-view-fn hyperfiddle-hostname hostname route ctx)))
+#(:cljs
+   (defn view [foo user-view-fn hyperfiddle-hostname hostname route ctx]
+     (case foo
+       ; The foundation comes with special root markup which means the foundation/view knows about page/user (not ide)
+       ; Can't ide/user (not page) be part of the userland route?
+       "page" (partial page-view user-view-fn hyperfiddle-hostname hostname route ctx)
+       "ide" (partial leaf-view user-view-fn hyperfiddle-hostname hostname route ctx)
+       "user" (partial leaf-view user-view-fn hyperfiddle-hostname hostname route ctx))))

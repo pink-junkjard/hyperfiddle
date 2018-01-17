@@ -1,53 +1,47 @@
 (ns hyperfiddle.ide
-  (:require [cats.monad.either :as either]
-            [cats.core :as cats :refer [mlet]]
-            [hypercrud.types.ThinEntity :refer [->ThinEntity]]
-            [hypercrud.util.non-fatal :refer [try-either]]
-            [hypercrud.client.core :as hc]
-            [hyperfiddle.appval.domain.foundation :as foundation]
+  (:require [hypercrud.client.core :as hc]
             [hypercrud.browser.core :as browser]
-            [hypercrud.util.reactive :as reactive]
             [hypercrud.browser.routing :as routing]
+            [hypercrud.util.reactive :as reactive]
             [hypercrud.state.actions.core :as actions]
             [hypercrud.state.actions.util :as actions-util]
-            [hyperfiddle.appval.domain.core :as hf]
+            [hyperfiddle.appval.domain.foundation :as foundation] ; hack
+            [hyperfiddle.appval.domain.core :as foundation2] ; hack
+
     #?(:cljs [hypercrud.ui.navigate-cmp :as navigate-cmp])))
 
 
-;(def domain {})
+(def root-uri #uri "datomic:free://datomic:4334/root")      ; I don't understand this magic constant fully
 
 (defn ide-route [route]
   {:code-database "root"
    :link-id :hyperfiddle/main
    :entity #entity["$" (:link-id route)]})
 
-(defn update-hf-domain [hf-domain target-domain code-database]
-  (let [target-source-uri (->> (:domain/code-databases target-domain)
-                               (filter #(= (:dbhole/name %) code-database))
-                               first
-                               :dbhole/uri)]
-    (update hf-domain :domain/code-databases
-            (fn [repos]
-              (->> repos
-                   (map (fn [repo]
-                          (if (= "root" (:dbhole/name repo))
-                            (assoc-in repo [:repository/environment "$"] target-source-uri)
-                            repo)))
-                   set)))))
-
 (let [always-user (atom :user)]
-  (defn ide-context [ctx hf-domain target-domain target-route user-profile]
-    (let [hf-domain (foundation/process-domain-legacy hf-domain)]
+  (defn ide-context [ctx ide-domain target-domain target-route user-profile]
+    (let [target-repo nil                                   ; from ide route query parameter, blocked on custom ide router?
+          target-repo (or target-repo (:code-database target-route))
+          ide-domain (foundation/process-domain-legacy ide-domain)]
       (assoc ctx
-        :debug "hf"
+        :debug "ide"
         :display-mode always-user
-        :domain (update-hf-domain hf-domain target-domain (or (:code-database (:foo ctx)) ; you aren't crazy, this is weird af
-                                                              (:code-database target-route)))
         :peer (:peer-ide ctx)
-        :foo {:code-database (:code-database target-route)}
         :target-domain target-domain
         :target-route target-route
-        :user-profile user-profile))))
+        :user-profile user-profile
+        :domain (let [target-source-uri (->> (:domain/code-databases target-domain)
+                                             (filter #(= (:dbhole/name %) target-repo))
+                                             first
+                                             :dbhole/uri)]
+                  (update ide-domain :domain/code-databases
+                          (fn [repos]
+                            (->> repos
+                                 (map (fn [repo]
+                                        (if (= "root" (:dbhole/name repo))
+                                          (assoc-in repo [:repository/environment "$"] target-source-uri)
+                                          repo)))
+                                 set))))))))
 
 (let [dispatch!-factory (fn [dispatch! action]
                           ; todo filter available actions
@@ -62,7 +56,6 @@
         :domain processed-domain
         :peer (:peer-user ctx)
         ; repository is needed for transact! in topnav
-        ; repository is illegal as well, it should just be domain/databases
         :repository (->> (:domain/code-databases processed-domain)
                          (filter #(= (:dbhole/name %) (:code-database route)))
                          first
@@ -77,14 +70,15 @@
                         route)
         :user-profile user-profile))))
 
-(defn local-basis [foo global-basis domain route]
+(defn local-basis [ide-or-user target-repo global-basis domain route]
+  ;local-basis-ide and local-basis-user
   (let [{:keys [domain ide user]} global-basis
         ; basis-maps: List[Map[uri, t]]
         user-basis (get user (:code-database route))
-        topnav-basis (Get user (:code-database foo))        ; todo the only repo uri is needed from user. dont need the environment as well
-        basis-maps (case foo
-                     "page" (concat [user-basis] (vals ide))
-                     "ide" (concat [topnav-basis] (vals ide))
+        ide-basis (get global-basis target-repo)            ; flag, unfinished
+        basis-maps (case ide-or-user
+                     ;"page" (concat [user-basis] (vals ide)) ; dead code i think?
+                     "ide" (concat [ide-basis] (vals ide))
                      "user" [user-basis])
         local-basis (->> basis-maps                         ; Userland api-fn should filter irrelevant routes
                          (apply concat)
@@ -94,7 +88,7 @@
     local-basis))
 
 (defn api [foo domain route state-val ctx]
-  (let [ide-domain-request (hf/domain-request "hyperfiddle" (:peer ctx))
+  (let [ide-domain-request (foundation2/domain-request "hyperfiddle" (:peer ctx))
         ide-domain (hc/hydrate-api (:peer ctx) ide-domain-request)
         user-profile (:user-profile state-val)]
     (case foo
@@ -110,7 +104,7 @@
        (let [can-soft-nav? (->> (:domain/code-databases target-domain)
                                 ; only if the user domain has the root code-database
                                 (filter #(and (= (:dbhole/name %) "root")
-                                              (= (:dbhole/uri %) hf/root-uri)))
+                                              (= (:dbhole/uri %) root-uri)))
                                 (empty?)
                                 not)]
          (if can-soft-nav?
@@ -125,7 +119,7 @@
 
 #?(:cljs
    (defn view [foo domain route ctx]
-     (let [ide-domain-request (hf/domain-request "hyperfiddle" (:peer ctx))
+     (let [ide-domain-request (foundation2/domain-request "hyperfiddle" (:peer ctx))
            ide-domain (hc/hydrate-api (:peer ctx) ide-domain-request)
            user-profile @(reactive/cursor (.-state-atom (:peer ctx)) [:user-profile])]
        (case foo
@@ -138,4 +132,4 @@
          "ide" (browser/ui-from-route route (ide-context ctx ide-domain domain route user-profile))
          "user" (browser/ui-from-route route (target-context ctx domain route user-profile))))))
 
-(declare ^:export target-ui-context nil)                    ; its gone tho
+(def ^:export target-ui-context nil)                    ; its gone tho

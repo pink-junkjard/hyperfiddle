@@ -1,4 +1,4 @@
-(ns hyperfiddle.appval.domain.core
+(ns hyperfiddle.appval.domain.core                          ; collapse into foundation
   (:require [clojure.string :as string]
             [cuerdas.core :as cuerdas]
             [hypercrud.client.core :as hc]
@@ -7,7 +7,6 @@
 
 
 (def domain-uri #uri "datomic:free://datomic:4334/domains")
-(def root-uri #uri "datomic:free://datomic:4334/root")      ; ide
 (def auth0-redirect-path "/auth0")                          ; ide
 
 (defn hostname->hf-domain-name [hostname hyperfiddle-hostname]
