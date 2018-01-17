@@ -6,9 +6,10 @@
             [hypercrud.state.actions.core :as actions]
             [hypercrud.state.actions.util :as actions-util]
             [hyperfiddle.appval.domain.foundation :as foundation] ; hack
-            [hyperfiddle.appval.domain.core :as foundation2] ; hack
+            [hyperfiddle.appval.domain.core :as foundation2]
 
-    #?(:cljs [hypercrud.ui.navigate-cmp :as navigate-cmp])))
+    #?(:cljs [hypercrud.ui.navigate-cmp :as navigate-cmp])
+    #?(:cljs [hypercrud.browser.browser-ui :as browser-ui])))
 
 
 (def root-uri #uri "datomic:free://datomic:4334/root")      ; I don't understand this magic constant fully
@@ -77,7 +78,7 @@
         user-basis (get user (:code-database route))
         ide-basis (get global-basis target-repo)            ; flag, unfinished
         basis-maps (case ide-or-user
-                     ;"page" (concat [user-basis] (vals ide)) ; dead code i think?
+                     "page" (concat [user-basis] (vals ide)) ; dead code i think?
                      "ide" (concat [ide-basis] (vals ide))
                      "user" [user-basis])
         local-basis (->> basis-maps                         ; Userland api-fn should filter irrelevant routes
@@ -118,18 +119,31 @@
          (.stopPropagation event)))))
 
 #?(:cljs
+   (def ^:export target-ui-context nil))                    ; its gone tho
+
+#?(:cljs
+   (defn view-page [domain route ctx]
+     (let [ide-domain (hc/hydrate-api (:peer ctx) (foundation2/domain-request "hyperfiddle" (:peer ctx)))
+           hide-ide (foundation2/alias? (foundation2/hostname->hf-domain-name (:hostname ctx) (:hyperfiddle-hostname ctx)))
+           user-profile @(reactive/cursor (.-state-atom (:peer ctx)) [:user-profile])
+           ctx (assoc ctx :navigate-cmp navigate-cmp/navigate-cmp
+                          :page-on-click (reactive/partial page-on-click ctx domain))]
+       [:div.hyperfiddle-ide
+
+        (if-not hide-ide
+          [browser/ui-from-route (ide-route route) (ide-context ctx ide-domain domain route user-profile)])
+
+        (let [ctx (target-context ctx domain route user-profile)]
+          ; This is different than foo=user because it is special css at root attach point
+          [browser/ui-from-route route ctx "app-browser"])])))
+
+#?(:cljs
    (defn view [foo domain route ctx]
-     (let [ide-domain-request (foundation2/domain-request "hyperfiddle" (:peer ctx))
-           ide-domain (hc/hydrate-api (:peer ctx) ide-domain-request)
+     (let [ide-domain (hc/hydrate-api (:peer ctx) (foundation2/domain-request "hyperfiddle" (:peer ctx)))
            user-profile @(reactive/cursor (.-state-atom (:peer ctx)) [:user-profile])]
        (case foo
-         "page" (let [ctx (-> (ide-context ctx ide-domain domain route user-profile)
-                              (assoc :navigate-cmp navigate-cmp/navigate-cmp
-                                     :page-on-click (reactive/partial page-on-click ctx domain)))]
-                  (browser/ui-from-route (ide-route route) ctx))
+         "page" (view-page domain route ctx)
          ; On SSR side this is only ever called as "page", but it could be differently (e.g. turbolinks)
          ; On Browser side, also only ever called as "page", but it could be configured differently (client side render the ide, server render userland...?)
          "ide" (browser/ui-from-route route (ide-context ctx ide-domain domain route user-profile))
          "user" (browser/ui-from-route route (target-context ctx domain route user-profile))))))
-
-(def ^:export target-ui-context nil)                    ; its gone tho

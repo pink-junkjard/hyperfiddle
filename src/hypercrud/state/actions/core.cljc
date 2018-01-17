@@ -60,9 +60,9 @@
                  (dispatch! [:set-error error])
                  (throw error)))))
 
-(defn refresh-page-local-basis [rt dispatch! get-state]
+(defn refresh-page-local-basis [rt-page dispatch! get-state]
   (let [{:keys [global-basis encoded-route]} (get-state)]
-    (-> (runtime/local-basis-page rt global-basis encoded-route nil)
+    (-> (runtime/local-basis rt-page global-basis encoded-route nil)
         (p/then (fn [local-basis]
                   (dispatch! [:set-local-basis local-basis])))
         (p/catch (fn [error]

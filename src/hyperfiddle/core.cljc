@@ -1,4 +1,4 @@
-(ns hyperfiddle.core
+(ns hyperfiddle.core                                        ; foundation
   (:require hyperfiddle.appval.domain.core))
 
 

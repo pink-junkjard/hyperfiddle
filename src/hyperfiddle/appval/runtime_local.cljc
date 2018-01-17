@@ -1,15 +1,11 @@
 (ns hyperfiddle.appval.runtime-local
   (:require [cats.core :as cats :refer [mlet]]
-            [cats.monad.either :as either]
             [cats.labs.promise]
             [clojure.set :as set]
             [cuerdas.core :as str]
-            [hypercrud.browser.routing :as routing]
             [hypercrud.util.core :as util]
-            [hypercrud.util.exception :refer [->Exception]]
-            [hypercrud.util.non-fatal :refer [try-either]]
             [hypercrud.util.performance :as perf]
-            [hypercrud.util.string :as hc-string]
+
             [hyperfiddle.appfn.runtime-local :refer [hydrate-all-or-nothing! hydrate-one! hydrate-loop]] ;todo
             [hyperfiddle.appval.domain.foundation :as foundation]
             [hyperfiddle.appval.domain.core :as foundation2]
@@ -45,7 +41,8 @@
                                                (vals ide-domain-uris)))]
            sync (api/sync rt uris)]
       (cats/return                                          ; Just return the sync and reconstruct which is what in local-basis
-        {:domain domain-basis
+        sync
+        #_{:domain domain-basis
          :ide (->> ide-domain-uris                          ; Not allowed structure here
                    (util/map-values (fn [repo-uris]
                                       (->> repo-uris
@@ -64,11 +61,10 @@
 ; This knows about userland api fn (but has no assumptions e.g. that it is the browser-api-fn)
 
 (comment
-  (def global-basis {:domain {#uri"datomic:free://datomic:4334/domains" 1316},
-                     :ide {"root" {#uri"datomic:free://datomic:4334/root" 16754,
-                                   #uri"datomic:free://datomic:4334/domains" 1316}},
-                     :user {"hyperblog" {#uri"datomic:free://datomic:4334/kalzumeus" 1037,
-                                         #uri"datomic:free://datomic:4334/hyperblog" 1115}}})
+  (def global-basis {#uri"datomic:free://datomic:4334/domains" 1316
+                     #uri"datomic:free://datomic:4334/root" 16754,
+                     #uri"datomic:free://datomic:4334/kalzumeus" 1037,
+                     #uri"datomic:free://datomic:4334/hyperblog" 1115})
 
   (= (local-basis _ _ global-basis _ {:type "page"})
      {#uri"datomic:free://datomic:4334/domains" 1316,
