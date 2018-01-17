@@ -28,7 +28,7 @@
             [taoensso.timbre :as timbre]
             [hypercrud.util.performance :as perf]))
 
-(deftype HydrateRoute [hyperfiddle-hostname hostname foo state-atom]
+(deftype HydrateRoute [hyperfiddle-hostname hostname ide-or-user target-repo state-atom]
   runtime/AppFnGlobalBasis
   (global-basis [rt]
     (global-basis rt hyperfiddle-hostname hostname))
@@ -36,7 +36,7 @@
   runtime/AppValLocalBasis
   (local-basis [rt global-basis encoded-route branch]
     ; Foundation local-basis is same for all foo.
-    (foundation/local-basis (partial hyperfiddle.ide/local-basis foo) global-basis encoded-route))
+    (foundation/local-basis ide-or-user (partial hyperfiddle.ide/local-basis ide-or-user target-repo) global-basis encoded-route))
 
   runtime/AppValHydrate
   (hydrate-route [rt local-basis encoded-route branch stage]
@@ -44,7 +44,7 @@
       (hydrate-route
         rt
         ; foundation/api doesn't care about page (foundation/view does though)
-        (partial foundation/api (partial hyperfiddle.ide/api foo) hyperfiddle-hostname hostname encoded-route branch)
+        (partial foundation/api ide-or-user (partial hyperfiddle.ide/api ide-or-user) hyperfiddle-hostname hostname encoded-route branch)
         local-basis branch stage data-cache)))
 
   runtime/AppFnHydrate

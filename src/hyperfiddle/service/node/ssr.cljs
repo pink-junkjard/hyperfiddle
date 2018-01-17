@@ -29,7 +29,7 @@
 (def cheerio (node/require "cheerio"))
 
 
-(defn render-local-html [F]                             ; react 16 is async, and this can fail
+(defn render-local-html [F]                                 ; react 16 is async, and this can fail
   ; html fragment, not a document, no <html> enclosing tag
   (p/resolved
     (perf/time (fn [get-total-time] (timbre/debug "Render total time:" (get-total-time)))
@@ -125,18 +125,13 @@
     ; This runtime doesn't actually support :domain/view-fn, we assume the foo interface.
     (let [ctx {:hostname hostname
                :hyperfiddle-hostname hyperfiddle-hostname
-               :peer rt                                           ; See hyperfiddle.ide.fiddles.main
+               :peer rt                                     ; See hyperfiddle.ide.fiddles.main
                :peer-ide (IdeSsrRuntime. hyperfiddle-hostname hostname "ide" service-uri state-atom)
                :peer-user (IdeSsrRuntime. hyperfiddle-hostname hostname "user" service-uri state-atom)
                :dispatch! #(throw (->Exception "dispatch! not supported in ssr"))}]
       (render-local-html
-        ; "foo" is complected; foundation cares about page/not-page; user cares about all three, and user-ide is also complected
-        (case foo
-          ; The foundation comes with special root markup which means the foundation/view knows about page/user (not ide)
-          ; Can't ide/user (not page) be part of the userland route?
-          "page" (partial foundation/page-view (partial hyperfiddle.ide/view foo) hyperfiddle-hostname hostname route ctx)
-          "ide" (partial foundation/leaf-view (partial hyperfiddle.ide/view foo) hyperfiddle-hostname hostname route ctx)
-          "user" (partial foundation/leaf-view (partial hyperfiddle.ide/view foo) hyperfiddle-hostname hostname route ctx)))))
+        ; Can't ide/user (not page) be part of the userland route?
+        (partial foundation/view foo (partial hyperfiddle.ide/view foo) hyperfiddle-hostname hostname route ctx))))
 
   hc/Peer
   (hydrate [this request]
