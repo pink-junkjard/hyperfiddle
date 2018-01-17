@@ -122,19 +122,20 @@
     (sync! service-uri dbs))
 
   runtime/AppFnSsr
-  (ssr [rt route]
-    (assert (= ide-or-user "page") "Impossible; sub-rts don't ssr (but they could)") ; flag, remove this.
+  (ssr [rt-page route]
+    (assert (= ide-or-user "page") "Impossible; sub-rts don't ssr")
     ; We have the domain if we are here.
     ; This runtime doesn't actually support :domain/view-fn, we assume the foo interface.
     (let [ctx {:hostname hostname
                :hyperfiddle-hostname hyperfiddle-hostname
-               :peer rt                                     ; See hyperfiddle.ide.fiddles.main
+               :peer rt-page
                :peer-ide (IdeSsrRuntime. hyperfiddle-hostname hostname "ide" service-uri state-atom)
                :peer-user (IdeSsrRuntime. hyperfiddle-hostname hostname "user" service-uri state-atom)
                :dispatch! #(throw (->Exception "dispatch! not supported in ssr"))}]
       (render-local-html
         ; Can't ide/user (not page) be part of the userland route?
-        (partial foundation/view ide-or-user (partial hyperfiddle.ide/view ide-or-user) hyperfiddle-hostname hostname route ctx))))
+        (partial foundation/view ide-or-user (partial hyperfiddle.ide/view ide-or-user)
+                 hyperfiddle-hostname hostname route ctx))))
 
   hc/Peer
   (hydrate [this request]
