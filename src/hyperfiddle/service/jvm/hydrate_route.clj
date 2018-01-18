@@ -34,8 +34,8 @@
                :hostname hostname
                :branch branch
                :peer rt
-               :peer-ide nil
-               :peer-user nil}]
+               :peer-ide (HydrateRoute. hyperfiddle-hostname hostname "ide" target-repo state-atom)
+               :peer-user (HydrateRoute. hyperfiddle-hostname hostname "user" target-repo state-atom)}]
       ; Local basis has to have enough info to call the API (even if we omit that call today)
       (foundation/local-basis ide-or-user (partial hyperfiddle.ide/local-basis ide-or-user target-repo)
                               global-basis ctx)))
@@ -47,9 +47,9 @@
                :hyperfiddle-hostname hyperfiddle-hostname
                :hostname hostname
                :branch branch
-               :peer rt ; Blast peer every time
-               :peer-ide nil
-               :peer-user nil}]
+               :peer rt
+               :peer-ide (HydrateRoute. hyperfiddle-hostname hostname "ide" target-repo state-atom)
+               :peer-user (HydrateRoute. hyperfiddle-hostname hostname "user" target-repo state-atom)}]
       (hydrate-route rt (partial foundation/api ide-or-user (partial hyperfiddle.ide/api ide-or-user) ctx)
                      local-basis stage data-cache)))
 
@@ -60,8 +60,8 @@
                :hostname hostname
                :branch branch
                :peer rt                                     ; blast peer every time
-               :peer-ide nil
-               :peer-user nil}]
+               :peer-ide (HydrateRoute. hyperfiddle-hostname hostname "ide" target-repo state-atom)
+               :peer-user (HydrateRoute. hyperfiddle-hostname hostname "user" target-repo state-atom)}]
       (hydrate-route rt (partial foundation/api "page" (partial hyperfiddle.ide/api "page") ctx)
                      local-basis stage data-cache)))
 

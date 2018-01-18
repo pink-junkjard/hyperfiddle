@@ -115,6 +115,7 @@
               state-val (req->state-val req)
               foo (some-> (get-in req [:path-params :foo]) base-64-url-safe/decode reader/read-edn-string)
               branch (some-> (get-in req [:path-params :branch]) base-64-url-safe/decode reader/read-edn-string)
+              ; Blast peer every time
               rt (->HydrateRoute (:HF_HOSTNAME env) hostname foo target-repo (reactive/atom state-val))]
           (-> (runtime/hydrate-route rt (:local-basis state-val) (:encoded-route state-val) branch (:stage state-val))
               (p/then (fn [data]
