@@ -3,7 +3,9 @@
             [cats.labs.promise]
             [clojure.set :as set]
             [cuerdas.core :as str]
-            [hypercrud.client.peer :refer [->FakeApiPeerForInnerHydrateLoop]]
+            [hypercrud.util.core :refer [unwrap]]
+            [hypercrud.client.peer :as peer]
+            [hypercrud.client.core :as hypercrud]
             [hypercrud.util.core :as util]
             [hypercrud.util.performance :as perf]
 
@@ -84,11 +86,12 @@
       #uri"datomic:free://datomic:4334/hyperblog" 1115,
       #uri"datomic:free://datomic:4334/kalzumeus" 1037}))
 
-(defn hydrate-loop-adapter [local-basis stage ctx f]
+(defn hydrate-loop-adapter [local-basis stage ctx ->Runtime f]
+  ; Hacks because the hydrate-loop doesn't write to the state atom.
   (fn [id->tempid ptm]
     (let [state-val {:local-basis local-basis
                      :tempid-lookups id->tempid
                      :ptm ptm
                      :stage stage}
-          ctx (assoc ctx :peer (-> state-val (reducers/root-reducer nil) reactive/atom ->FakeApiPeerForInnerHydrateLoop))]
+          ctx (assoc ctx :peer (->Runtime (reducers/root-reducer state-val nil)))]
       (f ctx))))
