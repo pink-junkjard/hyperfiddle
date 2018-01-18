@@ -25,18 +25,39 @@
 
   runtime/AppValLocalBasis
   (local-basis [rt global-basis encoded-route branch]
-    (foundation/local-basis foo (partial hyperfiddle.ide/local-basis foo) global-basis encoded-route))
+    (let [ctx {:dispatch! #()
+               :hyperfiddle-hostname hyperfiddle-hostname
+               :hostname hostname
+               :branch branch
+               :peer rt ; blast peer every time
+               :peer-ide nil
+               :peer-user nil}]
+      (foundation/local-basis foo (partial hyperfiddle.ide/local-basis foo) global-basis ctx)))
 
   runtime/AppValHydrate
   (hydrate-route [rt local-basis encoded-route branch stage] ; :: ... -> DataCache on the wire
-    (let [data-cache (select-keys @state-atom [:id->tempid :ptm])]
-      (hydrate-route rt (partial foundation/api foo (partial hyperfiddle.ide/api foo))
-                     hyperfiddle-hostname hostname local-basis branch stage data-cache)))
+    (let [data-cache (select-keys @state-atom [:id->tempid :ptm])
+          ctx {:dispatch! #()
+               :hyperfiddle-hostname hyperfiddle-hostname
+               :hostname hostname
+               :branch branch
+               :peer rt ; blast peer every time
+               :peer-ide nil
+               :peer-user nil}]
+      (hydrate-route rt (partial foundation/api foo (partial hyperfiddle.ide/api foo) ctx)
+                     local-basis stage data-cache)))
 
   (hydrate-route-page [rt local-basis encoded-route branch stage]
-    (let [data-cache (select-keys @state-atom [:id->tempid :ptm])]
-      (hydrate-route rt (partial foundation/api "page" (partial hyperfiddle.ide/api "page"))
-                     hyperfiddle-hostname hostname local-basis branch stage data-cache)))
+    (let [data-cache (select-keys @state-atom [:id->tempid :ptm])
+          ctx {:dispatch! #()
+               :hyperfiddle-hostname hyperfiddle-hostname
+               :hostname hostname
+               :branch branch
+               :peer rt ; blast peer every time
+               :peer-ide nil
+               :peer-user nil}]
+      (hydrate-route rt (partial foundation/api "page" (partial hyperfiddle.ide/api "page") ctx)
+                     local-basis stage data-cache)))
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
