@@ -13,7 +13,7 @@
 (defprotocol AppFnSync
   (sync [rt dbs]))
 
-(defprotocol AppFnSsr
+(defprotocol AppFnSsr                                       ; Same protocol is Client Render
   (ssr [rt]))
 
 (defprotocol AppFnTransact!
