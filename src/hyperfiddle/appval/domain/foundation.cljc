@@ -1,17 +1,12 @@
 (ns hyperfiddle.appval.domain.foundation
   (:require [cats.core :refer [mlet]]
             [cljs.pprint :as pprint]
-            [hypercrud.browser.routing :as routing]
             [hypercrud.client.core :as hc]
-            [hypercrud.client.peer :as peer]
             [hypercrud.compile.reader :as reader]
             [hypercrud.state.actions.core :as actions]
-            [hypercrud.util.core :refer [unwrap]]
             [hypercrud.util.exception :refer [->Exception]]
             [hypercrud.util.non-fatal :refer [try-either]]
             [hypercrud.util.reactive :as reactive]
-            [hypercrud.util.string :as hc-string]
-
             [hyperfiddle.appval.domain.core :as foundation2]
     #?(:cljs [hypercrud.ui.stale :as stale])
     #?(:cljs [hypercrud.ui.control.code :refer [code*]])
@@ -31,13 +26,8 @@
                                 ; todo this can throw
                                 (update :repository/environment reader/read-string)))))))))
 
-(defn canonical-route [route domain]
-  (or (routing/decode' route)
-      (unwrap (hc-string/safe-read-edn-string (:domain/home-route domain)))))
-
 (defn local-basis [foo global-basis route ctx f]
-  (let [domain nil #_"unused but theoretically allowed"
-        route (canonical-route @(reactive/cursor (.-state-atom (:peer ctx)) [:encoded-route]) domain)]
+  (let [domain nil #_"unused but theoretically allowed"]
     (concat
       (:domain global-basis)
       (f global-basis domain route ctx))))
@@ -47,7 +37,7 @@
         domain (hc/hydrate-api (:peer ctx) domain-api)
         user-api (if domain (f domain route ctx))]
     (case foo
-      "page" [domain-api (if domain (f domain (canonical-route route domain) ctx))]
+      "page" [domain-api (if domain (f domain route))]
       "ide" [domain-api user-api]
       "user" [domain-api user-api])))
 
@@ -78,7 +68,7 @@
            [staging (:peer ctx) (:dispatch! ctx)]])
         (fn [domain]
           [:div {:class (apply classes "hyperfiddle-foundation" "hyperfiddle" @(reactive/cursor (.-state-atom (:peer ctx)) [:pressed-keys]))}
-           (f domain (canonical-route domain route) ctx)
+           (f domain route)
            (if @(reactive/cursor (.-state-atom (:peer ctx)) [:staging-open])
              [staging (:peer ctx) (:dispatch! ctx)])])])))
 
