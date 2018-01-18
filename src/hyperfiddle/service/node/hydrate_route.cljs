@@ -41,7 +41,8 @@
                :branch branch
                :peer rt}]
       (hydrate-loop rt (hydrate-loop-adapter local-basis stage ctx
-                                #(foundation/api foo encoded-route % (partial hyperfiddle.ide/api foo)))
+                                             #(HydrateRouteRuntime. hyperfiddle-hostname hostname service-uri foo ide-repo (reactive/atom %))
+                                             #(foundation/api foo encoded-route % (partial hyperfiddle.ide/api foo)))
                     local-basis stage data-cache)))
 
   (hydrate-route-page [rt local-basis encoded-route stage]
@@ -51,6 +52,7 @@
                :branch nil
                :peer rt}]
       (hydrate-loop rt (hydrate-loop-adapter local-basis stage ctx
+                                             #(HydrateRouteRuntime. hyperfiddle-hostname hostname service-uri foo ide-repo (reactive/atom %))
                                              #(foundation/api "page" encoded-route % (partial hyperfiddle.ide/api "page")))
                     local-basis stage data-cache)))
 

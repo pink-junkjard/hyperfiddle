@@ -21,7 +21,8 @@
             [hypercrud.ui.auto-control]
             [hypercrud.ui.form]
             [hypercrud.ui.table]
-            [hyperfiddle.appval.state.reducers :as reducers]))
+            [hyperfiddle.appval.state.reducers :as reducers]
+            [hypercrud.util.reactive :as reactive]))
 
 
 (deftype HydrateRoute [hyperfiddle-hostname hostname foo ide-repo state-atom]
@@ -47,6 +48,7 @@
                :branch branch
                :peer rt}]
       (hydrate-loop rt (hydrate-loop-adapter local-basis stage ctx
+                                             #(HydrateRoute. hyperfiddle-hostname hostname foo ide-repo (reactive/atom %))
                                              #(foundation/api foo encoded-route % (partial hyperfiddle.ide/api foo)))
                     local-basis stage data-cache)))
 
@@ -57,6 +59,7 @@
                :branch nil
                :peer rt}]
       (hydrate-loop rt (hydrate-loop-adapter local-basis stage ctx
+                                             #(HydrateRoute. hyperfiddle-hostname hostname foo ide-repo (reactive/atom %))
                                              #(foundation/api "page" encoded-route % (partial hyperfiddle.ide/api "page")))
                     local-basis stage data-cache)))
 
