@@ -4,6 +4,7 @@
             [hypercrud.client.peer :as peer]
             [hypercrud.util.exception :refer [->Exception]]
             [hypercrud.util.performance :as perf]
+            [hypercrud.util.core :refer [unwrap]]
             [hyperfiddle.runtime :as runtime]
             [hyperfiddle.appfn.hydrate-requests :refer [hydrate-requests]] ; todo
             [hyperfiddle.appfn.sync :refer [sync]]          ; todo
@@ -79,6 +80,10 @@
 
   (db [this uri branch]
     (peer/db-pointer state-atom uri branch))
+
+  hc/HydrateApi
+  (hydrate-api [this request]
+    (unwrap (hc/hydrate this request)))
 
   hyperfiddle.ide/SplitRuntime
   (sub-rt [rt foo ide-repo]

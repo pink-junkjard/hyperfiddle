@@ -1,6 +1,7 @@
 (ns hyperfiddle.service.node.hydrate-route
   (:require [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
+            [hypercrud.util.core :refer [unwrap]]
             [hyperfiddle.runtime :as runtime]
             [hyperfiddle.appfn.runtime-rpc :refer [hydrate-requests! sync!]]
             [hyperfiddle.appfn.runtime-local :refer [hydrate-loop]]
@@ -70,6 +71,10 @@
 
   (db [this uri branch]
     (peer/db-pointer state-atom uri branch))
+
+  hc/HydrateApi
+  (hydrate-api [this request]
+    (unwrap (hc/hydrate this request)))
 
   hyperfiddle.ide/SplitRuntime
   (sub-rt [rt foo ide-repo]
