@@ -62,6 +62,7 @@
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
+    {:pre [requests (not-any? nil? requests)]}
     (let [staged-branches (stage-val->staged-branches stage)]
       (p/resolved (hydrate-requests local-basis requests staged-branches))))
 
