@@ -20,9 +20,8 @@
    :entity #entity["$" (:link-id route)]})
 
 (let [always-user (atom :user)]
-  (defn ide-context [ctx ide-domain target-domain target-route user-profile]
-    (let [target-repo nil                                   ; from ide route query parameter, blocked on custom ide router?
-          target-repo (or target-repo (:code-database target-route))
+  (defn ide-context [ctx ide-domain target-domain target-route target-repo user-profile]
+    (let [target-repo (or target-repo (:code-database target-route))
           ide-domain (foundation/process-domain-legacy ide-domain)]
       (assoc ctx
         :debug "ide"
@@ -71,9 +70,10 @@
                         route)
         :user-profile user-profile))))
 
-(defn local-basis [ide-or-user target-repo global-basis -domain route ctx]
+(defn local-basis [ide-or-user global-basis -domain route ctx]
   ;local-basis-ide and local-basis-user
-  (let [{:keys [domain ide user]} global-basis
+  (let [target-repo nil                                     ; figure it out from custom router
+        {:keys [domain ide user]} global-basis
         ; basis-maps: List[Map[uri, t]]
         user-basis (get user (:code-database route))
         ide-basis (get global-basis target-repo)            ; flag, unfinished
@@ -93,13 +93,14 @@
 ; Foo can be ignored for now
 (defn api [foo -domain route ctx]
   ; We can actually call into the foundation a second time here to get the ide-domain
-  (let [ide-domain-request (foundation2/domain-request "hyperfiddle" (:peer ctx))
+  (let [target-repo nil                                     ; figure it out from custom router or nil
+        ide-domain-request (foundation2/domain-request "hyperfiddle" (:peer ctx))
         ide-domain (hc/hydrate-api (:peer ctx) ide-domain-request)
         user-profile @(reactive/cursor (.-state-atom (:peer ctx)) [:user-profile])
 
         user-fiddle (delay (browser/request-from-route route (target-context ctx -domain route user-profile)))
-        ide-fiddle (delay (browser/request-from-route route (ide-context ctx ide-domain -domain route user-profile)))
-        ide-root (delay (browser/request-from-route (ide-route route) (ide-context ctx ide-domain -domain route user-profile)))]
+        ide-fiddle (delay (browser/request-from-route route (ide-context ctx ide-domain -domain route target-repo user-profile)))
+        ide-root (delay (browser/request-from-route (ide-route route) (ide-context ctx ide-domain -domain route target-repo user-profile)))]
     (case foo
       "page" [ide-domain-request @user-fiddle @ide-root]
       "ide" [ide-domain-request @ide-fiddle]
@@ -125,7 +126,7 @@
          (.stopPropagation event)))))
 
 #?(:cljs
-   (defn view-page [-domain route ctx]
+   (defn view-page [-domain route target-repo ctx]
      (let [ide-domain (hc/hydrate-api (:peer ctx) (foundation2/domain-request "hyperfiddle" (:peer ctx)))
            hide-ide (foundation2/alias? (foundation2/hostname->hf-domain-name (:hostname ctx) (:hyperfiddle-hostname ctx)))
            user-profile @(reactive/cursor (.-state-atom (:peer ctx)) [:user-profile])
@@ -133,18 +134,19 @@
                           :page-on-click (reactive/partial page-on-click ctx -domain))]
        [:div.hyperfiddle-ide
         (if-not hide-ide
-          [browser/ui-from-route (ide-route route) (ide-context ctx ide-domain -domain route user-profile)])
+          [browser/ui-from-route (ide-route route) (ide-context ctx ide-domain -domain route target-repo user-profile)])
         ; This is different than foo=user because it is special css at root attach point
         [browser/ui-from-route route (target-context ctx -domain route user-profile) "app-browser"]])))
 
 #?(:cljs
    ; Route is managed by the domain; Domain will not be available here soon.
    (defn view [foo -domain route ctx]                              ; pass most as ref for reactions
-     (let [ide-domain (hc/hydrate-api (:peer ctx) (foundation2/domain-request "hyperfiddle" (:peer ctx)))
+     (let [target-repo nil                                  ; figure it out! custom router, or nil
+           ide-domain (hc/hydrate-api (:peer ctx) (foundation2/domain-request "hyperfiddle" (:peer ctx)))
            user-profile @(reactive/cursor (.-state-atom (:peer ctx)) [:user-profile])]
        (case foo
-         "page" [view-page -domain route ctx]
+         "page" [view-page -domain route target-repo ctx]
          ; On SSR side this is only ever called as "page", but it could be differently (e.g. turbolinks)
          ; On Browser side, also only ever called as "page", but it could be configured differently (client side render the ide, server render userland...?)
-         "ide" [browser/ui-from-route route (ide-context ctx ide-domain -domain route user-profile)]
+         "ide" [browser/ui-from-route route (ide-context ctx ide-domain -domain route target-repo user-profile)]
          "user" [browser/ui-from-route route (target-context ctx -domain route user-profile)]))))

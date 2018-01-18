@@ -35,23 +35,19 @@
   (or (routing/decode' route)
       (unwrap (hc-string/safe-read-edn-string (:domain/home-route domain)))))
 
-(defn local-basis [foo f global-basis ctx]
-  ; Get encoded-route from the state atom?
+(defn local-basis [foo global-basis route ctx f]
   (let [domain nil #_"unused but theoretically allowed"
         route (canonical-route @(reactive/cursor (.-state-atom (:peer ctx)) [:encoded-route]) domain)]
     (concat
       (:domain global-basis)
       (f global-basis domain route ctx))))
 
-(defn api [foo f ctx]
+(defn api [foo route ctx f]
   (let [domain-api (foundation2/domain-request (foundation2/hostname->hf-domain-name (:hostname ctx) (:hyperfiddle-hostname ctx)) (:peer ctx))
         domain (hc/hydrate-api (:peer ctx) domain-api)
-        user-api (if domain
-                   (let [route (canonical-route @(reactive/cursor (.-state-atom (:peer ctx)) [:encoded-route]) domain)]
-                     (f domain route ctx)))]
+        user-api (if domain (f domain route ctx))]
     (case foo
-      ; It is a coincidence of the foundation/view that they are all the same
-      "page" [domain-api user-api]
+      "page" [domain-api (if domain (f domain (canonical-route route domain) ctx))]
       "ide" [domain-api user-api]
       "user" [domain-api user-api])))
 
@@ -65,17 +61,15 @@
        [code* edn #(dispatch! (actions/reset-stage peer (reader/read-edn-string %)))])))
 
 #?(:cljs
-   (defn leaf-view [f ctx]
+   (defn leaf-view [route ctx f]
      (let [domain (let [user-domain (foundation2/hostname->hf-domain-name (:hostname ctx) (:hyperfiddle-hostname ctx))]
                     (hc/hydrate-api (:peer ctx) (foundation2/domain-request user-domain (:peer ctx))))]
        ; A malformed stage can break bootstrap hydrates, but the root-page is bust, so ignore here
        ; Fix this by branching userland so bootstrap is sheltered from staging area? (There are chickens and eggs)
-       (if domain
-         (let [route (canonical-route @(reactive/cursor (.-state-atom (:peer ctx)) [:encoded-route]) domain)]
-           (f domain route ctx))))))
+       (if domain (f domain route)))))
 
 #?(:cljs
-   (defn page-view [f ctx]
+   (defn page-view [route ctx f]
      (let [domain' (hc/hydrate (:peer ctx) (foundation2/domain-request (foundation2/hostname->hf-domain-name (:hostname ctx) (:hyperfiddle-hostname ctx)) (:peer ctx)))]
        [stale/loading (stale/can-be-loading? ctx) domain'
         (fn [e]
@@ -83,17 +77,16 @@
            [error/error-cmp e]
            [staging (:peer ctx) (:dispatch! ctx)]])
         (fn [domain]
-          (let [route (canonical-route @(reactive/cursor (.-state-atom (:peer ctx)) [:encoded-route]) domain)]
-            [:div {:class (apply classes "hyperfiddle-foundation" "hyperfiddle" @(reactive/cursor (.-state-atom (:peer ctx)) [:pressed-keys]))}
-             (f domain route ctx)
-             (if @(reactive/cursor (.-state-atom (:peer ctx)) [:staging-open])
-               [staging (:peer ctx) (:dispatch! ctx)])]))])))
+          [:div {:class (apply classes "hyperfiddle-foundation" "hyperfiddle" @(reactive/cursor (.-state-atom (:peer ctx)) [:pressed-keys]))}
+           (f domain (canonical-route domain route) ctx)
+           (if @(reactive/cursor (.-state-atom (:peer ctx)) [:staging-open])
+             [staging (:peer ctx) (:dispatch! ctx)])])])))
 
 #?(:cljs
-   (defn view [foo f ctx]
+   (defn view [foo route ctx f]
      (case foo
        ; The foundation comes with special root markup which means the foundation/view knows about page/user (not ide)
        ; Can't ide/user (not page) be part of the userland route?
-       "page" (page-view f ctx)
-       "ide" (leaf-view f ctx)
-       "user" (leaf-view f ctx))))
+       "page" (page-view route ctx f)
+       "ide" (leaf-view route ctx f)
+       "user" (leaf-view  route ctx f))))
