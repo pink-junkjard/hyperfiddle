@@ -23,3 +23,19 @@
 
 (defn db-pointer [state-atom uri branch-name]               ; todo remove state-atom arg
   (->DbVal uri branch-name))
+
+
+(deftype FakeApiPeerForInnerHydrateLoop [state-atom]
+  hypercrud/Peer
+  (hydrate [this request]
+    (hydrate state-atom request))
+
+  (db [this uri branch]
+    (db-pointer state-atom uri branch))
+
+  hypercrud/HydrateApi
+  (hydrate-api [this request]
+    (unwrap (hypercrud/hydrate this request)))
+
+  #?@(:cljs [IHash
+             (-hash [this] (goog/getUid this))]))

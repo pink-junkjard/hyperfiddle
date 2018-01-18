@@ -3,6 +3,7 @@
             [cats.labs.promise]
             [clojure.set :as set]
             [cuerdas.core :as str]
+            [hypercrud.client.peer :refer [->FakeApiPeerForInnerHydrateLoop]]
             [hypercrud.util.core :as util]
             [hypercrud.util.performance :as perf]
 
@@ -10,6 +11,7 @@
             [hyperfiddle.appval.domain.foundation :as foundation]
             [hyperfiddle.appval.domain.core :as foundation2]
             [hyperfiddle.appval.state.reducers :as reducers]
+            [hypercrud.util.reactive :as reactive]
 
             [hyperfiddle.runtime :as api]
             [promesa.core :as p]
@@ -82,13 +84,11 @@
       #uri"datomic:free://datomic:4334/hyperblog" 1115,
       #uri"datomic:free://datomic:4334/kalzumeus" 1037}))
 
-(defn hydrate-route [rt user-data-fn local-basis stage & [data-cache]] ; -> DataCache
-  (let [request-fn (fn [id->tempid ptm]
-                     (let [state-val (-> {:local-basis local-basis
-                                          :tempid-lookups id->tempid
-                                          :ptm ptm
-                                          :stage stage}
-                                         (reducers/root-reducer nil))]
-                       ; No ctx yet, might not be a browser
-                       (user-data-fn state-val)))]
-    (hydrate-loop rt request-fn local-basis stage data-cache)))
+(defn hydrate-loop-adapter [local-basis stage ctx f]
+  (fn [id->tempid ptm]
+    (let [state-val {:local-basis local-basis
+                     :tempid-lookups id->tempid
+                     :ptm ptm
+                     :stage stage}
+          ctx (assoc ctx :peer (-> state-val (reducers/root-reducer nil) reactive/atom ->FakeApiPeerForInnerHydrateLoop))]
+      (f ctx))))
