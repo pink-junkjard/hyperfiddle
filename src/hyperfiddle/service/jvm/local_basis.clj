@@ -12,21 +12,18 @@
             [hyperfiddle.appval.domain.foundation :as foundation]))
 
 
-(deftype LocalBasis [hyperfiddle-hostname hostname foo state-atom]
+; This is allowed to hydrate route, this runtime is probably the same as hydrate-route runtime
+(deftype LocalBasis [hyperfiddle-hostname hostname foo ide-repo state-atom]
   runtime/AppFnGlobalBasis
   (global-basis [rt]
     (global-basis rt hyperfiddle-hostname hostname))
 
   runtime/AppValLocalBasis
   (local-basis [rt global-basis encoded-route branch]
-    ; This is allowed to hydrate route, this runtime is probably the same as hydrate-route runtime
-    (let [ctx {:dispatch! #()
-               :hyperfiddle-hostname hyperfiddle-hostname
+    (let [ctx {:hyperfiddle-hostname hyperfiddle-hostname
                :hostname hostname
                :branch branch
-               :peer rt
-               :peer-ide (LocalBasis. hyperfiddle-hostname hostname "ide" state-atom)
-               :peer-user (LocalBasis. hyperfiddle-hostname hostname "user" state-atom)}]
+               :peer rt}]
       (foundation/local-basis foo global-basis encoded-route ctx
                               (partial hyperfiddle.ide/local-basis foo))))
 
@@ -45,4 +42,8 @@
     (peer/hydrate state-atom request))
 
   (db [this uri branch]
-    (peer/db-pointer state-atom uri branch)))
+    (peer/db-pointer state-atom uri branch))
+
+  hyperfiddle.ide/SplitRuntime
+  (sub-rt [rt foo ide-repo]
+    (LocalBasis. hyperfiddle-hostname hostname foo ide-repo state-atom)))

@@ -18,46 +18,37 @@
             ))
 
 
-(deftype HydrateRouteRuntime [hyperfiddle-hostname hostname service-uri foo state-atom]
+(deftype HydrateRouteRuntime [hyperfiddle-hostname hostname service-uri foo ide-repo state-atom]
   runtime/AppFnGlobalBasis
   (global-basis [rt]
     (global-basis! service-uri))
 
   runtime/AppValLocalBasis
   (local-basis [rt global-basis encoded-route branch]
-    (let [ctx {:dispatch! #()
-               :hyperfiddle-hostname hyperfiddle-hostname
+    (let [ctx {:hyperfiddle-hostname hyperfiddle-hostname
                :hostname hostname
                :branch branch
-               :peer rt ; blast peer every time
-               :peer-ide nil
-               :peer-user nil}]
+               :peer rt}]
       (foundation/local-basis foo global-basis encoded-route ctx
                               (partial hyperfiddle.ide/local-basis foo))))
 
   runtime/AppValHydrate
   (hydrate-route [rt local-basis encoded-route branch stage] ; :: ... -> DataCache on the wire
     (let [data-cache (select-keys @state-atom [:id->tempid :ptm])
-          ctx {:dispatch! #()
-               :hyperfiddle-hostname hyperfiddle-hostname
+          ctx {:hyperfiddle-hostname hyperfiddle-hostname
                :hostname hostname
                :branch branch
-               :peer rt ; blast peer every time
-               :peer-ide nil
-               :peer-user nil}]
+               :peer rt}]
       (hydrate-route rt (partial foundation/api foo encoded-route ctx
                                  (partial hyperfiddle.ide/api foo))
                      local-basis stage data-cache)))
 
-  (hydrate-route-page [rt local-basis encoded-route branch stage]
+  (hydrate-route-page [rt local-basis encoded-route stage]
     (let [data-cache (select-keys @state-atom [:id->tempid :ptm])
-          ctx {:dispatch! #()
-               :hyperfiddle-hostname hyperfiddle-hostname
+          ctx {:hyperfiddle-hostname hyperfiddle-hostname
                :hostname hostname
-               :branch branch
-               :peer rt ; blast peer every time
-               :peer-ide nil
-               :peer-user nil}]
+               :branch nil
+               :peer rt}]
       (hydrate-route rt (partial foundation/api "page" encoded-route ctx
                                  (partial hyperfiddle.ide/api "page"))
                      local-basis stage data-cache)))
@@ -77,7 +68,9 @@
   (db [this uri branch]
     (peer/db-pointer state-atom uri branch))
 
-  ; IEquiv?
+  hyperfiddle.ide/SplitRuntime
+  (sub-rt [rt foo ide-repo]
+    (HydrateRouteRuntime. hyperfiddle-hostname hostname service-uri foo ide-repo state-atom))
 
   IHash
   (-hash [this] (goog/getUid this)))
@@ -88,7 +81,7 @@
         state-val (req->state-val env req path-params query-params)
         foo (some-> (:foo path-params) base-64-url-safe/decode reader/read-edn-string)
         branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
-        rt (HydrateRouteRuntime. (:HF_HOSTNAME env) hostname (req->service-uri env req) foo (reactive/atom state-val))]
+        rt (HydrateRouteRuntime. (:HF_HOSTNAME env) hostname (req->service-uri env req) foo nil (reactive/atom state-val))]
     (-> (runtime/hydrate-route rt (:local-basis state-val) (:encoded-route state-val) branch (:stage state-val))
         (p/then (fn [data]
                   (doto res

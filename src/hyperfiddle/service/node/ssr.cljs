@@ -96,7 +96,7 @@
                    ; careful this needs to throw a Throwable in clj
                    (p/rejected (error error)))))))
 
-(deftype IdeSsrRuntime [hyperfiddle-hostname hostname ide-or-user service-uri state-atom]
+(deftype IdeSsrRuntime [hyperfiddle-hostname hostname foo ide-repo service-uri state-atom]
   runtime/AppFnGlobalBasis
   (global-basis [rt]
     (global-basis! service-uri))
@@ -105,20 +105,18 @@
   (local-basis [rt global-basis encoded-route branch]
     (let [ctx {:hostname hostname
                :hyperfiddle-hostname hyperfiddle-hostname
-               :dispatch! #()
-               :peer rt
-               :peer-ide (IdeSsrRuntime. hyperfiddle-hostname hostname "ide" service-uri state-atom)
-               :peer-user (IdeSsrRuntime. hyperfiddle-hostname hostname "user" service-uri state-atom)}]
-      (foundation/local-basis ide-or-user global-basis encoded-route ctx
-                              (partial hyperfiddle.ide/local-basis ide-or-user))))
+               :branch branch
+               :peer rt}]
+      (foundation/local-basis foo global-basis encoded-route ctx
+                              (partial hyperfiddle.ide/local-basis foo))))
 
   runtime/AppValHydrate
   (hydrate-route [rt local-basis encoded-route branch stage]
     ; If IDE, send up target-repo as well (encoded in route as query param?)
-    (hydrate-route! service-uri local-basis encoded-route ide-or-user branch stage))
+    (hydrate-route! service-uri local-basis encoded-route foo branch stage))
 
-  (hydrate-route-page [rt local-basis encoded-route branch stage]
-    (hydrate-route! service-uri local-basis encoded-route "page" branch stage))
+  (hydrate-route-page [rt local-basis encoded-route stage]
+    (hydrate-route! service-uri local-basis encoded-route "page" nil stage))
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
@@ -128,20 +126,17 @@
   (sync [rt dbs]
     (sync! service-uri dbs))
 
-  runtime/AppFnSsr
+  runtime/AppFnRenderPageRoot
   (ssr [rt-page route]
-    (assert (= ide-or-user "page") "Impossible; sub-rts don't ssr")
+    (assert (= foo "page") "Impossible; sub-rts don't render, they just hydrate")
     ; We have the domain if we are here.
     ; This runtime doesn't actually support :domain/view-fn, we assume the foo interface.
     (let [ctx {:hostname hostname
                :hyperfiddle-hostname hyperfiddle-hostname
-               :dispatch! #()
-               :peer rt-page
-               :peer-ide (IdeSsrRuntime. hyperfiddle-hostname hostname "ide" service-uri state-atom)
-               :peer-user (IdeSsrRuntime. hyperfiddle-hostname hostname "user" service-uri state-atom)}]
+               :peer rt-page}]
       (render-local-html
-        (partial foundation/view ide-or-user route ctx
-                 (partial hyperfiddle.ide/view ide-or-user)))))
+        (partial foundation/view foo route ctx
+                 (partial hyperfiddle.ide/view foo)))))
 
   hc/Peer
   (hydrate [this request]
@@ -154,7 +149,9 @@
   (hydrate-api [this request]
     (unwrap (hc/hydrate this request)))
 
-  ; IEquiv?
+  hyperfiddle.ide/SplitRuntime
+  (sub-rt [rt foo ide-repo]
+    (IdeSsrRuntime. hyperfiddle-hostname hostname service-uri foo ide-repo state-atom))
 
   IHash
   (-hash [this] (goog/getUid this)))
@@ -162,7 +159,7 @@
 (defn http-edge [env req res path-params query-params]
   (let [hostname (.-hostname req)
         state-val (req->state-val env req path-params query-params)
-        rt (IdeSsrRuntime. (:HF_HOSTNAME env) hostname "page"
+        rt (IdeSsrRuntime. (:HF_HOSTNAME env) hostname "page" nil
                            (req->service-uri env req) (reactive/atom state-val))]
     ; Do not inject user-api-fn/view - it is baked into SsrRuntime
     (-> (ssr env rt (:HF_HOSTNAME env) hostname)

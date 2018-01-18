@@ -17,22 +17,19 @@
 
 
 ; Todo this is same runtime as HydrateRoute
-(deftype LocalBasisRuntime [hyperfiddle-hostname hostname service-uri ide-or-user state-atom]
+(deftype LocalBasisRuntime [hyperfiddle-hostname hostname service-uri foo ide-repo state-atom]
   runtime/AppFnGlobalBasis
   (global-basis [rt]
     (global-basis! service-uri))
 
   runtime/AppValLocalBasis
   (local-basis [rt global-basis encoded-route branch]
-    (let [ctx {:dispatch! #()
-               :hyperfiddle-hostname hyperfiddle-hostname
+    (let [ctx {:hyperfiddle-hostname hyperfiddle-hostname
                :hostname hostname
                :branch branch
-               :peer rt
-               :peer-ide (LocalBasisRuntime. hyperfiddle-hostname hostname "ide" state-atom)
-               :peer-user (LocalBasisRuntime. hyperfiddle-hostname hostname "user" state-atom)}]
-      (foundation/local-basis ide-or-user global-basis encoded-route ctx
-                              (partial hyperfiddle.ide/local-basis ide-or-user))))
+               :peer rt}]
+      (foundation/local-basis foo global-basis encoded-route ctx
+                              (partial hyperfiddle.ide/local-basis foo))))
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
@@ -49,7 +46,9 @@
   (db [this uri branch]
     (peer/db-pointer state-atom uri branch))
 
-  ; IEquiv?
+  hyperfiddle.ide/SplitRuntime
+  (sub-rt [rt foo ide-repo]
+    (LocalBasisRuntime. hyperfiddle-hostname hostname service-uri foo ide-repo state-atom))
 
   IHash
   (-hash [this] (goog/getUid this)))
@@ -59,7 +58,7 @@
         state-val (req->state-val env req path-params query-params)
         foo (some-> (:foo path-params) base-64-url-safe/decode reader/read-edn-string)
         branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
-        rt (LocalBasisRuntime. (:HF_HOSTNAME env) hostname (req->service-uri env req) foo (reactive/atom state-val))]
+        rt (LocalBasisRuntime. (:HF_HOSTNAME env) hostname (req->service-uri env req) foo nil (reactive/atom state-val))]
     (-> (runtime/local-basis rt (:global-basis state-val) (:encoded-route state-val) branch)
         (p/then (fn [local-basis]
                   (doto res
