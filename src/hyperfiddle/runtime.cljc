@@ -13,7 +13,7 @@
 (defprotocol AppFnSync
   (sync [rt dbs]))
 
-(defprotocol AppFnSsr                                       ; Same protocol is Client Render
+(defprotocol AppFnRenderPageRoot                            ; Same protocol is Client Render
   (ssr [rt route]))
 
 (defprotocol AppFnTransact!
@@ -28,4 +28,4 @@
 (defprotocol AppValHydrate
   ; user-data-fn not on this interface; hardcoded in runtime impls or read from db
   (hydrate-route [rt local-basis encoded-route branch stage]) ; returns ptm without stage-val hashes
-  (hydrate-route-page [rt local-basis encoded-route branch stage]))
+  (hydrate-route-page [rt local-basis encoded-route stage]))

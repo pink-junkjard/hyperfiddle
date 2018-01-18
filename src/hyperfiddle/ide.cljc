@@ -22,19 +22,27 @@
    :link-id :hyperfiddle/main
    :entity #entity["$" (:link-id route)]})
 
+(defprotocol SplitRuntime
+  (sub-rt [rt foo code-database]))
+
+(def -ide-rt (memoize sub-rt))
+
 (let [always-user (atom :user)]
   (defn ide-context [ctx ide-domain target-domain ide-route target-route user-profile]
-    (let [target-repo (or (:target-repo ide-route) (:code-database target-route))
-          ide-domain (foundation/process-domain-legacy ide-domain)]
+    (let [ide-domain (foundation/process-domain-legacy ide-domain)
+          peer (if (= "ide" (.-foo (:peer ctx)))
+                 (:peer ctx)
+                 ; Converting from page -> ide, means we're an ide at the root with a code-database.
+                  (-ide-rt (:peer ctx) "ide" (:code-database target-route)))]
       (assoc ctx
         :debug "ide"
         :display-mode always-user
-        :peer (:peer-ide ctx)
+        :peer peer
         :target-domain target-domain
         :target-route target-route
         :user-profile user-profile
         :domain (let [target-source-uri (->> (:domain/code-databases target-domain)
-                                             (filter #(= (:dbhole/name %) target-repo))
+                                             (filter #(= (:dbhole/name %) (.-code-database peer)))
                                              first
                                              :dbhole/uri)]
                   (update ide-domain :domain/code-databases
@@ -51,13 +59,14 @@
                           (dispatch! action)
                           nil)]
   (defn target-context [ctx domain route user-profile]
-    (let [processed-domain (foundation/process-domain-legacy domain)]
+    (let [processed-domain (foundation/process-domain-legacy domain)
+          peer (-ide-rt (:peer ctx) "user" nil)]
       (assoc ctx
         :debug "target"
         :dispatch! (reactive/partial dispatch!-factory (:dispatch! ctx))
         :display-mode (reactive/cursor (.-state-atom (:peer ctx)) [:display-mode])
         :domain processed-domain
-        :peer (:peer-user ctx)
+        :peer peer
         ; repository is needed for transact! in topnav
         :repository (->> (:domain/code-databases processed-domain)
                          (filter #(= (:dbhole/name %) (:code-database route)))

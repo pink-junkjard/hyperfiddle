@@ -24,9 +24,9 @@
     (dispatch! (apply batch [:hydrate!-start hydrate-id] on-start))
     (let [{:keys [stage] :as post-start-state} (get-state)
           {:keys [encoded-route local-basis]} (post-start->route-vals post-start-state)]
-      (-> ((case page-or-leaf
-             :page runtime/hydrate-route-page
-             :leaf runtime/hydrate-route) rt local-basis encoded-route branch stage)
+      (-> (case page-or-leaf
+            :page (runtime/hydrate-route-page rt local-basis encoded-route stage)
+            :leaf (runtime/hydrate-route rt local-basis encoded-route branch stage))
           (p/then (fn [{:keys [ptm id->tempid]}]
                     (if (= hydrate-id (:hydrate-id (get-state)))
                       (let [stage-val (:stage (get-state))

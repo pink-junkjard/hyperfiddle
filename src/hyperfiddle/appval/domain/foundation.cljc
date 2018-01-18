@@ -38,8 +38,7 @@
         user-api (if domain (f domain route ctx))]
     (case foo
       "page" [domain-api (if domain (f domain route))]
-      "ide" [domain-api user-api]
-      "user" [domain-api user-api])))
+      [domain-api user-api])))
 
 #?(:cljs
    (defn staging [peer dispatch!]
@@ -78,5 +77,4 @@
        ; The foundation comes with special root markup which means the foundation/view knows about page/user (not ide)
        ; Can't ide/user (not page) be part of the userland route?
        "page" (page-view route ctx f)
-       "ide" (leaf-view route ctx f)
-       "user" (leaf-view  route ctx f))))
+       (leaf-view route ctx f))))
