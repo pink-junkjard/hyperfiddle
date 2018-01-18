@@ -17,7 +17,7 @@ data sync *composes*. APIs are defined with simple Clojure functions, for exampl
 
 The lifecycle of API functions is managed by the "I/O runtime", analogous to React's managed virtual-dom functions. You never call it. The function is coded in CLJC and compiled into both the client and the service, which lets them automatically coordinate. If the service knows in advance what the client will request next, it can avoid network round-trips.
 
-The programming model is similar to React.js refresh-and-forget. When state changes, the runtime will "reload everything", which makes userland code very simple (just functions–like React.js). It is the I/O runtime's job to figure out how to reload efficiently, through a variety of strategies built on top of immutable database semantics. Hyperfiddle ships with an HTTP-based I/O runtime that coordinates your api functions across browser, jvm and node, serves HTTP responses with `Cache-Control: Immutable` (zomg!), and is compatible with existing HTTP caching infrastructure.
+The programming model is similar to React.js refresh-and-forget. When state changes, the runtime will "reload everything", which makes userland code very simple (just functions–like React.js). It is the I/O runtime's job to figure out how to reload efficiently, through a variety of strategies built on top of immutable database semantics. Hyperfiddle ships with an HTTP-based I/O runtime that coordinates your api functions across browser, jvm and node, and serves HTTP responses with `Cache-Control: Immutable` (zomg!).
 
 Managed I/O is not the point. The point is: *what does managed I/O make possible that wasn't possible before?* 
 
