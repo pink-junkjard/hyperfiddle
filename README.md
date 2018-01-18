@@ -9,18 +9,17 @@ data sync *composes*. APIs are defined with simple Clojure functions, for exampl
 
 ```clojure
 (defn api-blog-index [state peer]
+  ; State includes the url/route, client-side local state, etc
   [(->QueryRequest
      '[:find (pull ?e [:db/id :post/title :post/content]) :where [?e :post/title]]
      {"$" (hc/db peer #uri "datomic:free://datomic:4334/samples-blog" nil)})])
 ```
 
-These API functions are 
-* referentially transparent and compose
-* coded in CLJC
-* don't know the difference between API client or API server
-* run simultaneously in both API client and API server
+The lifecycle of API functions is managed by the "I/O runtime", analogous to React's managed virtual-dom functions. You never call it. The function is coded in CLJC and compiled into both the client and the service, which lets them automatically coordinate. If the service knows in advance what the client will request next, it can avoid network round-trips.
 
-API functions' lifecycle is managed by an "I/O runtime", analogous to React's managed virtual-dom functions. Managed I/O is not the point; the point is: *what does managed I/O make possible that wasn't possible before?* 
+The programming model is similar to React.js refresh-and-forget. When state changes, the runtime will "reload everything", which makes userland code very simple (just functions–like React.js). It is the I/O runtime's job to figure out how to reload efficiently, through a variety of strategies built on top of immutable database semantics. Hyperfiddle ships with an HTTP-based I/O runtime that coordinates your api functions across browser, jvm and node, serves HTTP responses with `Cache-Control: Immutable` (zomg!), and is compatible with existing HTTP caching infrastructure.
+
+Managed I/O is not the point. The point is: *what does managed I/O make possible that wasn't possible before?* 
 
 # Dependency coordinates — Todo
 
@@ -77,7 +76,7 @@ Hyperfiddle's data sync loop runs in the JVM (to solve N+1 problem of REST).
 
 ## \#1. API as a function
 
-A simple API function, with two database queries:
+A simple API fn:
 
 ```clojure
 (def datomic-samples-blog #uri "datomic:free://datomic:4334/samples-blog")
@@ -91,7 +90,7 @@ A simple API function, with two database queries:
   '[:find (pull ?e [:db/id :reg.gender/ident])
     :in $ :where [?e :reg.gender/ident]])
 
-(defn request [state peer]
+(defn api [state peer]
   (let [$ (hc/db peer datomic-samples-blog db-branch)]            
     [(->QueryRequest race-registration-query {"$" $})
      (->QueryRequest gender-options-query {"$" $})]))
