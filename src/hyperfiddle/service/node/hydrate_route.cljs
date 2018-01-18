@@ -32,7 +32,8 @@
                :peer rt ; blast peer every time
                :peer-ide nil
                :peer-user nil}]
-      (foundation/local-basis foo (partial hyperfiddle.ide/local-basis foo) global-basis ctx)))
+      (foundation/local-basis foo global-basis encoded-route ctx
+                              (partial hyperfiddle.ide/local-basis foo))))
 
   runtime/AppValHydrate
   (hydrate-route [rt local-basis encoded-route branch stage] ; :: ... -> DataCache on the wire
@@ -44,7 +45,8 @@
                :peer rt ; blast peer every time
                :peer-ide nil
                :peer-user nil}]
-      (hydrate-route rt (partial foundation/api foo (partial hyperfiddle.ide/api foo) ctx)
+      (hydrate-route rt (partial foundation/api foo encoded-route ctx
+                                 (partial hyperfiddle.ide/api foo))
                      local-basis stage data-cache)))
 
   (hydrate-route-page [rt local-basis encoded-route branch stage]
@@ -56,7 +58,8 @@
                :peer rt ; blast peer every time
                :peer-ide nil
                :peer-user nil}]
-      (hydrate-route rt (partial foundation/api "page" (partial hyperfiddle.ide/api "page") ctx)
+      (hydrate-route rt (partial foundation/api "page" encoded-route ctx
+                                 (partial hyperfiddle.ide/api "page"))
                      local-basis stage data-cache)))
 
   runtime/AppFnHydrate

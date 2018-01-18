@@ -22,7 +22,7 @@
             [hypercrud.ui.form]
             [hypercrud.ui.table]))
 
-(deftype HydrateRoute [hyperfiddle-hostname hostname ide-or-user target-repo state-atom]
+(deftype HydrateRoute [hyperfiddle-hostname hostname ide-or-user state-atom]
   runtime/AppFnGlobalBasis
   (global-basis [rt]
     (global-basis rt hyperfiddle-hostname hostname))
@@ -34,23 +34,24 @@
                :hostname hostname
                :branch branch
                :peer rt
-               :peer-ide (HydrateRoute. hyperfiddle-hostname hostname "ide" target-repo state-atom)
-               :peer-user (HydrateRoute. hyperfiddle-hostname hostname "user" target-repo state-atom)}]
+               :peer-ide (HydrateRoute. hyperfiddle-hostname hostname "ide" state-atom)
+               :peer-user (HydrateRoute. hyperfiddle-hostname hostname "user" state-atom)}]
       ; Local basis has to have enough info to call the API (even if we omit that call today)
-      (foundation/local-basis ide-or-user (partial hyperfiddle.ide/local-basis ide-or-user target-repo)
-                              global-basis ctx)))
+      (foundation/local-basis ide-or-user global-basis encoded-route ctx
+                              (partial hyperfiddle.ide/local-basis ide-or-user))))
 
   runtime/AppValHydrate
-  (hydrate-route [rt local-basis branch stage]
+  (hydrate-route [rt local-basis encoded-route branch stage]
     (let [data-cache (select-keys @state-atom [:id->tempid :ptm])
           ctx {:dispatch! #()
                :hyperfiddle-hostname hyperfiddle-hostname
                :hostname hostname
                :branch branch
                :peer rt
-               :peer-ide (HydrateRoute. hyperfiddle-hostname hostname "ide" target-repo state-atom)
-               :peer-user (HydrateRoute. hyperfiddle-hostname hostname "user" target-repo state-atom)}]
-      (hydrate-route rt (partial foundation/api ide-or-user (partial hyperfiddle.ide/api ide-or-user) ctx)
+               :peer-ide (HydrateRoute. hyperfiddle-hostname hostname "ide" state-atom)
+               :peer-user (HydrateRoute. hyperfiddle-hostname hostname "user" state-atom)}]
+      (hydrate-route rt (partial foundation/api ide-or-user encoded-route ctx
+                                 (partial hyperfiddle.ide/api ide-or-user))
                      local-basis stage data-cache)))
 
   (hydrate-route-page [rt local-basis encoded-route branch stage] ; encoded-route in state ?
@@ -60,9 +61,10 @@
                :hostname hostname
                :branch branch
                :peer rt                                     ; blast peer every time
-               :peer-ide (HydrateRoute. hyperfiddle-hostname hostname "ide" target-repo state-atom)
-               :peer-user (HydrateRoute. hyperfiddle-hostname hostname "user" target-repo state-atom)}]
-      (hydrate-route rt (partial foundation/api "page" (partial hyperfiddle.ide/api "page") ctx)
+               :peer-ide (HydrateRoute. hyperfiddle-hostname hostname "ide" state-atom)
+               :peer-user (HydrateRoute. hyperfiddle-hostname hostname "user" state-atom)}]
+      (hydrate-route rt (partial foundation/api "page" encoded-route ctx
+                                 (partial hyperfiddle.ide/api "page"))
                      local-basis stage data-cache)))
 
   runtime/AppFnHydrate

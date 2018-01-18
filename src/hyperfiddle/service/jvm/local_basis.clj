@@ -19,7 +19,16 @@
 
   runtime/AppValLocalBasis
   (local-basis [rt global-basis encoded-route branch]
-    (foundation/local-basis foo (partial hyperfiddle.ide/local-basis foo) global-basis encoded-route))
+    ; This is allowed to hydrate route, this runtime is probably the same as hydrate-route runtime
+    (let [ctx {:dispatch! #()
+               :hyperfiddle-hostname hyperfiddle-hostname
+               :hostname hostname
+               :branch branch
+               :peer rt
+               :peer-ide (LocalBasis. hyperfiddle-hostname hostname "ide" state-atom)
+               :peer-user (LocalBasis. hyperfiddle-hostname hostname "user" state-atom)}]
+      (foundation/local-basis foo global-basis encoded-route ctx
+                              (partial hyperfiddle.ide/local-basis foo))))
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]

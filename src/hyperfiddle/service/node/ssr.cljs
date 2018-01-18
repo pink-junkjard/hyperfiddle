@@ -89,7 +89,7 @@
         (p/then #(actions/refresh-page-local-basis rt dispatch! get-state))
         (p/then #(actions/hydrate-page rt nil dispatch! get-state))
         (p/catch (constantly (p/resolved nil)))             ; any error above IS NOT fatal, so render the UI. anything below IS fatal
-        (p/then #(runtime/ssr rt))
+        (p/then #(runtime/ssr rt (:encoded-route @state-atom)))
         (p/then (fn [html-fragment] (html env @state-atom html-fragment)))
         (p/catch (fn [error]
                    (timbre/error error)
@@ -103,7 +103,14 @@
 
   runtime/AppValLocalBasis
   (local-basis [rt global-basis encoded-route branch]
-    (foundation/local-basis ide-or-user (partial hyperfiddle.ide/local-basis ide-or-user) global-basis encoded-route))
+    (let [ctx {:hostname hostname
+               :hyperfiddle-hostname hyperfiddle-hostname
+               :dispatch! #()
+               :peer rt
+               :peer-ide (IdeSsrRuntime. hyperfiddle-hostname hostname "ide" service-uri state-atom)
+               :peer-user (IdeSsrRuntime. hyperfiddle-hostname hostname "user" service-uri state-atom)}]
+      (foundation/local-basis ide-or-user global-basis encoded-route ctx
+                              (partial hyperfiddle.ide/local-basis ide-or-user))))
 
   runtime/AppValHydrate
   (hydrate-route [rt local-basis encoded-route branch stage]
@@ -122,18 +129,19 @@
     (sync! service-uri dbs))
 
   runtime/AppFnSsr
-  (ssr [rt-page]
+  (ssr [rt-page route]
     (assert (= ide-or-user "page") "Impossible; sub-rts don't ssr")
     ; We have the domain if we are here.
     ; This runtime doesn't actually support :domain/view-fn, we assume the foo interface.
     (let [ctx {:hostname hostname
                :hyperfiddle-hostname hyperfiddle-hostname
+               :dispatch! #()
                :peer rt-page
                :peer-ide (IdeSsrRuntime. hyperfiddle-hostname hostname "ide" service-uri state-atom)
-               :peer-user (IdeSsrRuntime. hyperfiddle-hostname hostname "user" service-uri state-atom)
-               :dispatch! #(throw (->Exception "dispatch! not supported in ssr"))}]
+               :peer-user (IdeSsrRuntime. hyperfiddle-hostname hostname "user" service-uri state-atom)}]
       (render-local-html
-        (partial foundation/view ide-or-user (partial hyperfiddle.ide/view ide-or-user) ctx))))
+        (partial foundation/view ide-or-user route ctx
+                 (partial hyperfiddle.ide/view ide-or-user)))))
 
   hc/Peer
   (hydrate [this request]
@@ -154,7 +162,7 @@
 (defn http-edge [env req res path-params query-params]
   (let [hostname (.-hostname req)
         state-val (req->state-val env req path-params query-params)
-        rt (IdeSsrRuntime. (:HF_HOSTNAME env) hostname "page" #_"We only ssr whole pages right now."
+        rt (IdeSsrRuntime. (:HF_HOSTNAME env) hostname "page"
                            (req->service-uri env req) (reactive/atom state-val))]
     ; Do not inject user-api-fn/view - it is baked into SsrRuntime
     (-> (ssr env rt (:HF_HOSTNAME env) hostname)

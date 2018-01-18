@@ -16,6 +16,7 @@
             [hyperfiddle.appval.domain.foundation :as foundation]))
 
 
+; Todo this is same runtime as HydrateRoute
 (deftype LocalBasisRuntime [hyperfiddle-hostname hostname service-uri ide-or-user state-atom]
   runtime/AppFnGlobalBasis
   (global-basis [rt]
@@ -23,7 +24,15 @@
 
   runtime/AppValLocalBasis
   (local-basis [rt global-basis encoded-route branch]
-    (foundation/local-basis ide-or-user (partial hyperfiddle.ide/local-basis ide-or-user) global-basis encoded-route))
+    (let [ctx {:dispatch! #()
+               :hyperfiddle-hostname hyperfiddle-hostname
+               :hostname hostname
+               :branch branch
+               :peer rt
+               :peer-ide (LocalBasisRuntime. hyperfiddle-hostname hostname "ide" state-atom)
+               :peer-user (LocalBasisRuntime. hyperfiddle-hostname hostname "user" state-atom)}]
+      (foundation/local-basis ide-or-user global-basis encoded-route ctx
+                              (partial hyperfiddle.ide/local-basis ide-or-user))))
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
