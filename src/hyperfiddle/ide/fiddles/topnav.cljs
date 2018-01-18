@@ -123,7 +123,8 @@
     [:span.qe.radio-group (apply react-fragment :_ options)]))
 
 (defn save-and-navigate! [home-route ctx]
-  ((:dispatch! ctx) (hc-actions/transact! home-route (hyperfiddle.ide/target-ui-context ctx))))
+  ; Interface feels wonky because we currently have an IDE context and are converting, which is weird.
+  ((:dispatch! ctx) (hc-actions/transact! home-route (hyperfiddle.ide/target-context ctx (:target-domain ctx) (:target-route ctx) (:user-profile ctx)))))
 
 (defn ^:export stage-ui [result ordered-fes links ctx]
   [:div.hyperfiddle-topnav-stage

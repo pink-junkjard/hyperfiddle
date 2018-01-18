@@ -31,28 +31,29 @@
                                 ; todo this can throw
                                 (update :repository/environment reader/read-string)))))))))
 
-(defn local-basis [foo f global-basis route]
-  (let [domain nil #_"unused but theoretically allowed?"]
-    (concat
-      (:domain global-basis)
-      (f global-basis domain route))))
-
 (defn canonical-route [route domain]
   (or (routing/decode' route)
       (unwrap (hc-string/safe-read-edn-string (:domain/home-route domain)))))
 
-(defn api [foo f hyperfiddle-hostname hostname route branch state-val]
-  (let [ctx {:branch branch
-             :dispatch! #(throw (->Exception "dispatch! not supported in hydrate-route"))
-             :hostname hostname
-             :hyperfiddle-hostname hyperfiddle-hostname
-             ; just blast the peer everytime
-             :peer (peer/->Peer (reactive/atom state-val))}
-        domain-api (foundation2/domain-request (foundation2/hostname->hf-domain-name hostname hyperfiddle-hostname) (:peer ctx))
-        domain (hc/hydrate-api (:peer ctx) domain-api)]
-    (concat [domain-api]
-            (if domain
-              (f domain (canonical-route route domain) state-val ctx)))))
+(defn local-basis [foo f global-basis ctx]
+  ; Get encoded-route from the state atom?
+  (let [domain nil #_"unused but theoretically allowed"
+        route (canonical-route @(reactive/cursor (.-state-atom (:peer ctx)) [:encoded-route]) domain)]
+    (concat
+      (:domain global-basis)
+      (f global-basis domain route ctx))))
+
+(defn api [foo f ctx]
+  (let [domain-api (foundation2/domain-request (foundation2/hostname->hf-domain-name (:hostname ctx) (:hyperfiddle-hostname ctx)) (:peer ctx))
+        domain (hc/hydrate-api (:peer ctx) domain-api)
+        user-api (if domain
+                   (let [route (canonical-route @(reactive/cursor (.-state-atom (:peer ctx)) [:encoded-route]) domain)]
+                     (f domain route ctx)))]
+    (case foo
+      ; It is a coincidence of the foundation/view that they are all the same
+      "page" [domain-api user-api]
+      "ide" [domain-api user-api]
+      "user" [domain-api user-api])))
 
 #?(:cljs
    (defn staging [peer dispatch!]
@@ -64,33 +65,35 @@
        [code* edn #(dispatch! (actions/reset-stage peer (reader/read-edn-string %)))])))
 
 #?(:cljs
-   (defn leaf-view [f hyperfiddle-hostname hostname route ctx]
-     (let [domain (let [user-domain (foundation2/hostname->hf-domain-name hostname hyperfiddle-hostname)]
+   (defn leaf-view [f ctx]
+     (let [domain (let [user-domain (foundation2/hostname->hf-domain-name (:hostname ctx) (:hyperfiddle-hostname ctx))]
                     (hc/hydrate-api (:peer ctx) (foundation2/domain-request user-domain (:peer ctx))))]
        ; A malformed stage can break bootstrap hydrates, but the root-page is bust, so ignore here
        ; Fix this by branching userland so bootstrap is sheltered from staging area? (There are chickens and eggs)
-       (f domain route ctx))))
+       (if domain
+         (let [route (canonical-route @(reactive/cursor (.-state-atom (:peer ctx)) [:encoded-route]) domain)]
+           (f domain route ctx))))))
 
 #?(:cljs
-   (defn page-view [f hyperfiddle-hostname hostname route ctx]
-     (let [domain' (hc/hydrate (:peer ctx) (foundation2/domain-request (foundation2/hostname->hf-domain-name hostname hyperfiddle-hostname) (:peer ctx)))]
+   (defn page-view [f ctx]
+     (let [domain' (hc/hydrate (:peer ctx) (foundation2/domain-request (foundation2/hostname->hf-domain-name (:hostname ctx) (:hyperfiddle-hostname ctx)) (:peer ctx)))]
        [stale/loading (stale/can-be-loading? ctx) domain'
         (fn [e]
           [:div.hyperfiddle.hyperfiddle-foundation
            [error/error-cmp e]
            [staging (:peer ctx) (:dispatch! ctx)]])
         (fn [domain]
-          [:div {:class (apply classes "hyperfiddle-foundation" "hyperfiddle"
-                               @(reactive/cursor (.-state-atom (:peer ctx)) [:pressed-keys]))}
-           (f domain route ctx)
-           (if @(reactive/cursor (.-state-atom (:peer ctx)) [:staging-open])
-             [staging (:peer ctx) (:dispatch! ctx)])])])))
+          (let [route (canonical-route @(reactive/cursor (.-state-atom (:peer ctx)) [:encoded-route]) domain)]
+            [:div {:class (apply classes "hyperfiddle-foundation" "hyperfiddle" @(reactive/cursor (.-state-atom (:peer ctx)) [:pressed-keys]))}
+             (f domain route ctx)
+             (if @(reactive/cursor (.-state-atom (:peer ctx)) [:staging-open])
+               [staging (:peer ctx) (:dispatch! ctx)])]))])))
 
 #?(:cljs
-   (defn view [foo f hyperfiddle-hostname hostname route ctx]
+   (defn view [foo f ctx]
      (case foo
        ; The foundation comes with special root markup which means the foundation/view knows about page/user (not ide)
        ; Can't ide/user (not page) be part of the userland route?
-       "page" (page-view f hyperfiddle-hostname hostname route ctx)
-       "ide" (leaf-view f hyperfiddle-hostname hostname route ctx)
-       "user" (leaf-view f hyperfiddle-hostname hostname route ctx))))
+       "page" (page-view f ctx)
+       "ide" (leaf-view f ctx)
+       "user" (leaf-view f ctx))))

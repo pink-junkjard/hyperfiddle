@@ -14,7 +14,7 @@
   (sync [rt dbs]))
 
 (defprotocol AppFnSsr
-  (ssr [rt route]))
+  (ssr [rt]))
 
 (defprotocol AppFnTransact!
   (transact! [rt tx-groups]))

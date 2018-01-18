@@ -71,7 +71,7 @@
                         route)
         :user-profile user-profile))))
 
-(defn local-basis [ide-or-user target-repo global-basis domain route]
+(defn local-basis [ide-or-user target-repo global-basis -domain route ctx]
   ;local-basis-ide and local-basis-user
   (let [{:keys [domain ide user]} global-basis
         ; basis-maps: List[Map[uri, t]]
@@ -85,19 +85,25 @@
                          (apply concat)
                          (apply concat)
                          (apply sorted-map))]
-    #_(determine-local-basis (hydrate-route ...))
+    #_(determine-local-basis (hydrate-route route ... ))
     local-basis))
 
-(defn api [foo domain route state-val ctx]
+; Domain can be removed with a double foundation
+; Reactive pattern obfuscates params
+; Foo can be ignored for now
+(defn api [foo -domain route ctx]
+  ; We can actually call into the foundation a second time here to get the ide-domain
   (let [ide-domain-request (foundation2/domain-request "hyperfiddle" (:peer ctx))
         ide-domain (hc/hydrate-api (:peer ctx) ide-domain-request)
-        user-profile (:user-profile state-val)]
+        user-profile @(reactive/cursor (.-state-atom (:peer ctx)) [:user-profile])
+
+        user-fiddle (delay (browser/request-from-route route (target-context ctx -domain route user-profile)))
+        ide-fiddle (delay (browser/request-from-route route (ide-context ctx ide-domain -domain route user-profile)))
+        ide-root (delay (browser/request-from-route (ide-route route) (ide-context ctx ide-domain -domain route user-profile)))]
     (case foo
-      "page" (concat [ide-domain-request]
-                     (browser/request-from-route (ide-route route) (ide-context ctx ide-domain domain route user-profile)))
-      "ide" (concat [ide-domain-request]
-                    (browser/request-from-route route (ide-context ctx ide-domain domain route user-profile)))
-      "user" (browser/request-from-route route (target-context ctx domain route user-profile)))))
+      "page" [ide-domain-request @user-fiddle @ide-root]
+      "ide" [ide-domain-request @ide-fiddle]
+      "user" [@user-fiddle])))
 
 #?(:cljs
    (defn page-on-click [ctx target-domain route event]
@@ -119,31 +125,26 @@
          (.stopPropagation event)))))
 
 #?(:cljs
-   (def ^:export target-ui-context nil))                    ; its gone tho
-
-#?(:cljs
-   (defn view-page [domain route ctx]
+   (defn view-page [-domain route ctx]
      (let [ide-domain (hc/hydrate-api (:peer ctx) (foundation2/domain-request "hyperfiddle" (:peer ctx)))
            hide-ide (foundation2/alias? (foundation2/hostname->hf-domain-name (:hostname ctx) (:hyperfiddle-hostname ctx)))
            user-profile @(reactive/cursor (.-state-atom (:peer ctx)) [:user-profile])
            ctx (assoc ctx :navigate-cmp navigate-cmp/navigate-cmp
-                          :page-on-click (reactive/partial page-on-click ctx domain))]
+                          :page-on-click (reactive/partial page-on-click ctx -domain))]
        [:div.hyperfiddle-ide
-
         (if-not hide-ide
-          [browser/ui-from-route (ide-route route) (ide-context ctx ide-domain domain route user-profile)])
-
-        (let [ctx (target-context ctx domain route user-profile)]
-          ; This is different than foo=user because it is special css at root attach point
-          [browser/ui-from-route route ctx "app-browser"])])))
+          [browser/ui-from-route (ide-route route) (ide-context ctx ide-domain -domain route user-profile)])
+        ; This is different than foo=user because it is special css at root attach point
+        [browser/ui-from-route route (target-context ctx -domain route user-profile) "app-browser"]])))
 
 #?(:cljs
-   (defn view [foo domain route ctx]
+   ; Route is managed by the domain; Domain will not be available here soon.
+   (defn view [foo -domain route ctx]                              ; pass most as ref for reactions
      (let [ide-domain (hc/hydrate-api (:peer ctx) (foundation2/domain-request "hyperfiddle" (:peer ctx)))
            user-profile @(reactive/cursor (.-state-atom (:peer ctx)) [:user-profile])]
        (case foo
-         "page" (view-page domain route ctx)
+         "page" [view-page -domain route ctx]
          ; On SSR side this is only ever called as "page", but it could be differently (e.g. turbolinks)
          ; On Browser side, also only ever called as "page", but it could be configured differently (client side render the ide, server render userland...?)
-         "ide" (browser/ui-from-route route (ide-context ctx ide-domain domain route user-profile))
-         "user" (browser/ui-from-route route (target-context ctx domain route user-profile))))))
+         "ide" [browser/ui-from-route route (ide-context ctx ide-domain -domain route user-profile)]
+         "user" [browser/ui-from-route route (target-context ctx -domain route user-profile)]))))

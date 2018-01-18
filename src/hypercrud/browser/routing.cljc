@@ -82,8 +82,8 @@
         (encode route))))
 
 (defn decode [route-str]                                    ; Assumes foundation, but no assumptions about userland-api-fn e.g. the browser
-  (assert (string/starts-with? route-str "/"))
-
+  {:pre [(not (empty? route-str))
+         (string/starts-with? route-str "/")]}
   ; Urls in the wild get query params added because tweetdeck tools think its safe e.g.:
   ; http://localhost/hyperfiddle-blog/ezpkb21haW4gbmlsLCA6cHJvamVjdCAiaHlwZXJmaWRkbGUtYmxvZyIsIDpsaW5rLWRiaWQgI0RiSWRbMTc1OTIxODYwNDU4OTQgMTc1OTIxODYwNDU0MjJdLCA6cXVlcnktcGFyYW1zIHs6ZW50aXR5ICNEYklkWzE3NTkyMTg2MDQ2MTMyIDE3NTkyMTg2MDQ1ODgyXX19?utm_content=buffer9a24a&utm_medium=social&utm_source=twitter.com&utm_campaign=buffer
   (let [[_ route-encoded-and-query-params] (string/split route-str #"/")]
