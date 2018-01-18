@@ -15,7 +15,9 @@
 
 (defn- hydrate-loop-impl [rt request-fn local-basis stage {:keys [id->tempid ptm] :as data-cache} total-loops]
   (let [all-requests (perf/time (fn [get-total-time] (timbre/debug "Computing needed requests" "total time: " (get-total-time)))
-                                (->> (request-fn id->tempid ptm) (into #{})))
+                                (->> (request-fn id->tempid ptm)
+                                     (remove nil?)          ; userland convenience
+                                     (into #{})))
         missing-requests (let [have-requests (set (map second (keys ptm)))]
                            (->> (set/difference all-requests have-requests)
                                 (into [])))]
