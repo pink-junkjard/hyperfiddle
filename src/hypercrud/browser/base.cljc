@@ -41,6 +41,7 @@
       (->EntityRequest fiddle-id nil dbval meta-pull-exp-for-link))))
 
 (defn hydrate-fiddle [ctx]
+  {:pre [(-> ctx :repository) (-> ctx :repository :dbhole/uri)]}
   (if (auto-fiddle/system-fiddle? (get-in ctx [:route :link-id]))
     {:meta-fiddle-req' (either/right nil)
      :fiddle' (auto-fiddle/hydrate-system-fiddle (get-in ctx [:route :link-id]) ctx)}

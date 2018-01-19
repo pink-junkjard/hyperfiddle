@@ -5,7 +5,8 @@
             [hypercrud.state.actions.core :as actions]
             [hypercrud.util.branch :as branch]
             [hypercrud.util.reactive :as reactive]
-            [hypercrud.util.core :as util]))
+            [hypercrud.util.core :as util]
+            [taoensso.timbre :as timbre]))
 
 
 (defn clean [ctx]
@@ -20,6 +21,9 @@
           ))
 
 (defn route [ctx route]
+  {:pre [(:code-database route)
+         (-> ctx :domain)
+         (-> ctx :domain :domain/code-databases)]}
   (let [route (routing/tempid->id route ctx)
         initial-repository (->> (get-in ctx [:domain :domain/code-databases])
                                 (filter #(= (:dbhole/name %) (:code-database route)))

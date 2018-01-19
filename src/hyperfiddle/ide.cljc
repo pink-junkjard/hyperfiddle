@@ -61,6 +61,7 @@
                           (dispatch! action)
                           nil)]
   (defn target-context [ctx domain route user-profile]
+    {:post [(:repository %) (-> % :repository :dbhole/uri)]}
     (let [processed-domain (foundation/process-domain-legacy domain)
           peer (-sub-rt (:peer ctx) "user" nil)]
       (assoc ctx
@@ -120,9 +121,9 @@
         ide-domain (hc/hydrate-api (:peer ctx) ide-domain-q)
         user-profile @(reactive/cursor (.-state-atom (:peer ctx)) [:user-profile])
 
-        user-fiddle-qs (fn [route] (browser/request-from-route route (target-context ctx -domain route user-profile)))
-        ide-fiddle-qs (fn [route] (browser/request-from-route route (ide-context ctx ide-domain -domain route nil user-profile)))
-        ide-root-qs (fn [route] (browser/request-from-route (ide-route route) (ide-context ctx ide-domain -domain nil route user-profile)))]
+        user-fiddle-qs (fn [route] (if -domain (browser/request-from-route route (target-context ctx -domain route user-profile))))
+        ide-fiddle-qs (fn [route] (if ide-domain (browser/request-from-route route (ide-context ctx ide-domain -domain route nil user-profile))))
+        ide-root-qs (fn [route] (if ide-domain (browser/request-from-route (ide-route route) (ide-context ctx ide-domain -domain nil route user-profile))))]
 
     ; This route over-applies canonical but it works out and really simplifies the validation
     (if-let [route (routing/decode (canonical-route -domain route))]
@@ -131,7 +132,7 @@
         "ide" (concat [ide-domain-q] (ide-fiddle-qs route))
         "user" (concat (user-fiddle-qs route)))
       (do (timbre/warn "hyperfiddle.ide: invalid route" route)
-          #{} #_ "No mechanism to propogate the error yet"))))
+          #{} #_"No mechanism to propogate the error yet"))))
 
 #?(:cljs
    (defn page-on-click [ctx target-domain route event]

@@ -19,5 +19,6 @@
 (defn hydrate [state-atom request]
   @(reactive/track trackable-hydrate state-atom request))
 
-(defn db-pointer [state-atom uri branch-name]               ; todo remove state-atom arg
-  (->DbVal uri branch-name))
+(defn db-pointer [state-atom uri ?branch-name]               ; todo remove state-atom arg
+  {:pre [uri]}
+  (->DbVal uri ?branch-name))
