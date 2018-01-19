@@ -24,15 +24,33 @@
 
 
 (def meta-pull-exp-for-link
-  ['*
+  [:db/id
    :db/doc
-   :fiddle/query
-   :fiddle/type
-   :fiddle/request
+   :fiddle/bindings
+   :fiddle/entrypoint
+   {:fiddle/links [:db/id
+                   :hypercrud/props
+                   :anchor/prompt
+                   :link/create?
+                   :link/dependent?
+                   :link/disabled?
+                   ; hydrate the parts of the fiddle we need for validating the link
+                   {:link/fiddle [:db/id
+                                  :fiddle/query
+                                  :fiddle/type]}
+                   :link/formula
+                   :link/ident
+                   :link/managed?
+                   :link/path
+                   :link/rel
+                   :link/render-inline?
+                   :link/tx-fn]}
+   :fiddle/name
    :fiddle/pull
-   {:fiddle/links ['*
-                   ; hydrate the whole fiddle for validating the anchor by query params
-                   {:link/fiddle ['*]}]}])
+   :fiddle/query
+   :fiddle/renderer
+   :fiddle/request
+   :fiddle/type])
 
 (defn meta-request-for-fiddle [ctx]
   (try-either
