@@ -137,8 +137,10 @@
         (get-secure-db-from-branch branch)))))
 
 (defn hydrate-requests [local-basis requests staged-branches] ; theoretically, requests are grouped by basis for cache locality
-  {:pre [(not-any? nil? requests)]}
-  (timbre/debug (->> (map (comp #(str/prune % 40) pr-str) [local-basis staged-branches (count requests)]) (interpose ", ") (apply str "hydrate-requests: ")))
+  {:pre [requests
+         (not-any? nil? requests)
+         (every? #(or (instance? EntityRequest %) (instance? QueryRequest %)) requests)]}
+  (timbre/debug (->> (map (comp #(str/prune % 400) pr-str) [local-basis staged-branches (count requests)]) (interpose ", ") (apply str "hydrate-requests: ")))
   (let [db-with-lookup (atom {})
         get-secure-db-with (build-get-secure-db-with staged-branches db-with-lookup (into {} local-basis) #_":: ([uri 1234]), but there are some duck type shenanigans happening")
         pulled-trees (->> requests

@@ -2,21 +2,32 @@
   (:require [cats.core :as cats]
             [cats.monad.either :as either]
             [clojure.set :as set]
-            [hypercrud.types.Err :refer [#?(:cljs Err)]]
             [hypercrud.util.branch :as branch]
             [hypercrud.util.core :as util]
             [hypercrud.util.performance :as perf]
             [hyperfiddle.runtime :as runtime]
             [promesa.core :as p]
-            [taoensso.timbre :as timbre])
-  #?(:clj
-     (:import (hypercrud.types.Err Err))))
+            [taoensso.timbre :as timbre]
 
+            [hypercrud.types.Err :refer [#?(:cljs Err)]]
+    #?(:cljs [hypercrud.types.EntityRequest :refer [EntityRequest]])
+    #?(:cljs [hypercrud.types.QueryRequest :refer [QueryRequest]]))
+  #?(:clj
+     (:import (hypercrud.types.Err Err)
+              (hypercrud.types.EntityRequest EntityRequest)
+              (hypercrud.types.QueryRequest QueryRequest))))
+
+
+(defn validate-user-qs [qs]
+  {:pre [qs]
+   :post [(not-any? nil? %)
+          (every? #(or (instance? EntityRequest %) (instance? QueryRequest %)) %)]}
+  (remove nil? qs) #_"userland convenience")
 
 (defn- hydrate-loop-impl [rt request-fn local-basis stage {:keys [id->tempid ptm] :as data-cache} total-loops]
   (let [all-requests (perf/time (fn [get-total-time] (timbre/debug "Computing needed requests" "total time: " (get-total-time)))
                                 (->> (request-fn id->tempid ptm)
-                                     (remove nil?)          ; userland convenience
+                                     (validate-user-qs)
                                      (into #{})))
         missing-requests (let [have-requests (set (map second (keys ptm)))]
                            (->> (set/difference all-requests have-requests)

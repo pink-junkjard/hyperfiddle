@@ -33,12 +33,12 @@
       (f global-basis domain route ctx))))
 
 (defn api [foo route ctx f]
-  (let [domain-api (foundation2/domain-request (foundation2/hostname->hf-domain-name (:hostname ctx) (:hyperfiddle-hostname ctx)) (:peer ctx))
-        domain (hc/hydrate-api (:peer ctx) domain-api)
-        user-api (if domain (f domain route ctx))]
+  (let [domain-q (foundation2/domain-request (foundation2/hostname->hf-domain-name (:hostname ctx) (:hyperfiddle-hostname ctx)) (:peer ctx))
+        domain (hc/hydrate-api (:peer ctx) domain-q)
+        user-qs (if domain (f domain route ctx))]
     (case foo
-      "page" [domain-api (if domain (f domain route))]
-      [domain-api user-api])))
+      "page" (concat [domain-q] user-qs)
+      (concat [domain-q] user-qs))))
 
 #?(:cljs
    (defn staging [peer dispatch!]

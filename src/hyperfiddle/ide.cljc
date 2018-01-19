@@ -1,5 +1,6 @@
 (ns hyperfiddle.ide
   (:require [hypercrud.client.core :as hc]
+            [cuerdas.core :as str]
             [hypercrud.browser.core :as browser]
             [hypercrud.browser.routing :as routing]
             [hypercrud.util.reactive :as reactive]
@@ -10,6 +11,7 @@
             [hypercrud.util.core :refer [unwrap]]
             [hypercrud.browser.routing :as routing]
             [hypercrud.util.string :as hc-string]
+            [taoensso.timbre :as timbre]
 
     #?(:cljs [hypercrud.ui.navigate-cmp :as navigate-cmp])
     #?(:cljs [hypercrud.browser.browser-ui :as browser-ui])))
@@ -23,9 +25,9 @@
    :entity #entity["$" (:link-id route)]})
 
 (defprotocol SplitRuntime
-  (sub-rt [rt foo code-database]))
+  (sub-rt [rt foo ide-repo]))
 
-(def -ide-rt (memoize sub-rt))
+(def -sub-rt (memoize sub-rt))
 
 (let [always-user (atom :user)]
   (defn ide-context [ctx ide-domain target-domain ide-route target-route user-profile]
@@ -33,7 +35,7 @@
           peer (if (= "ide" (.-foo (:peer ctx)))
                  (:peer ctx)
                  ; Converting from page -> ide, means we're an ide at the root with a code-database.
-                  (-ide-rt (:peer ctx) "ide" (:code-database target-route)))]
+                 (-sub-rt (:peer ctx) "ide" (:code-database target-route)))]
       (assoc ctx
         :debug "ide"
         :display-mode always-user
@@ -42,7 +44,7 @@
         :target-route target-route
         :user-profile user-profile
         :domain (let [target-source-uri (->> (:domain/code-databases target-domain)
-                                             (filter #(= (:dbhole/name %) (.-code-database peer)))
+                                             (filter #(= (:dbhole/name %) (.-ide-repo peer)))
                                              first
                                              :dbhole/uri)]
                   (update ide-domain :domain/code-databases
@@ -60,7 +62,7 @@
                           nil)]
   (defn target-context [ctx domain route user-profile]
     (let [processed-domain (foundation/process-domain-legacy domain)
-          peer (-ide-rt (:peer ctx) "user" nil)]
+          peer (-sub-rt (:peer ctx) "user" nil)]
       (assoc ctx
         :debug "target"
         :dispatch! (reactive/partial dispatch!-factory (:dispatch! ctx))
@@ -83,7 +85,11 @@
         :user-profile user-profile))))
 
 (defn canonical-route [domain route]
-  (or route (unwrap (hc-string/safe-read-edn-string (:domain/home-route domain)))))
+  {:pre [domain (string? route)]
+   :post [(string? %)]}
+  (case route
+    "/" (routing/encode (unwrap (hc-string/safe-read-edn-string (:domain/home-route domain))))
+    route))
 
 (defn local-basis [ide-or-user global-basis -domain route ctx]
   ;local-basis-ide and local-basis-user
@@ -100,26 +106,32 @@
                          (apply concat)
                          (apply concat)
                          (apply sorted-map))]
-    #_(determine-local-basis (hydrate-route route ... ))
+    #_(determine-local-basis (hydrate-route route ...))
     local-basis))
 
 ; Domain can be removed with a double foundation
 ; Reactive pattern obfuscates params
 ; Foo can be ignored for now
 (defn api [foo -domain route ctx]
+  {:pre [route (str/starts-with? route "/")]
+   :post [(seq %)]}
   ; We can actually call into the foundation a second time here to get the ide-domain
-  (let [ide-domain-request (foundation2/domain-request "hyperfiddle" (:peer ctx))
-        ide-domain (hc/hydrate-api (:peer ctx) ide-domain-request)
+  (let [ide-domain-q (foundation2/domain-request "hyperfiddle" (:peer ctx))
+        ide-domain (hc/hydrate-api (:peer ctx) ide-domain-q)
         user-profile @(reactive/cursor (.-state-atom (:peer ctx)) [:user-profile])
-        route (routing/decode route)
 
-        user-fiddle (delay (browser/request-from-route route (target-context ctx -domain route user-profile)))
-        ide-fiddle (delay (browser/request-from-route route (ide-context ctx ide-domain -domain route nil user-profile)))
-        ide-root (delay (browser/request-from-route (ide-route route) (ide-context ctx ide-domain -domain nil (canonical-route -domain route) user-profile)))]
-    (case foo
-      "page" [ide-domain-request @user-fiddle @ide-root]
-      "ide" [ide-domain-request @ide-fiddle]
-      "user" [@user-fiddle])))
+        user-fiddle-qs (fn [route] (browser/request-from-route route (target-context ctx -domain route user-profile)))
+        ide-fiddle-qs (fn [route] (browser/request-from-route route (ide-context ctx ide-domain -domain route nil user-profile)))
+        ide-root-qs (fn [route] (browser/request-from-route (ide-route route) (ide-context ctx ide-domain -domain nil route user-profile)))]
+
+    ; This route over-applies canonical but it works out and really simplifies the validation
+    (if-let [route (routing/decode (canonical-route -domain route))]
+      (case foo
+        "page" (concat [ide-domain-q] (user-fiddle-qs route) (ide-root-qs route))
+        "ide" (concat [ide-domain-q] (ide-fiddle-qs route))
+        "user" (concat (user-fiddle-qs route)))
+      (do (timbre/warn "hyperfiddle.ide: invalid route" route)
+          #{} #_ "No mechanism to propogate the error yet"))))
 
 #?(:cljs
    (defn page-on-click [ctx target-domain route event]
@@ -155,7 +167,7 @@
 
 #?(:cljs
    ; Route is managed by the domain; Domain will not be available here soon.
-   (defn view [foo -domain route ctx]                              ; pass most as ref for reactions
+   (defn view [foo -domain route ctx]                       ; pass most as ref for reactions
      (let [target-repo nil                                  ; figure it out! custom router, or nil flag
            ide-domain (hc/hydrate-api (:peer ctx) (foundation2/domain-request "hyperfiddle" (:peer ctx)))
            route (routing/decode route)
