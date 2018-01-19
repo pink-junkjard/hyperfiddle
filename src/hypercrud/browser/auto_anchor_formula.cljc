@@ -15,7 +15,7 @@
 (defn auto-entity-from-stage [ctx]
   ; This returns a new value each time the transaction changes - can't call it again later.
   ; So tx-fns must inspect the modal-route, they can't re-create the dbid.
-  (let [id (-> (:branch ctx) util/abs-normalized - str)]
+  (let [id (-> (:branch ctx) hash util/abs-normalized - str)]
     (->ThinEntity (dbname/uri->dbname (:uri ctx) ctx) id)))
 
 ; todo there are collisions when two links share the same 'location'
