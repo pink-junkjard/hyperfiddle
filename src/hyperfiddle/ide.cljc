@@ -83,8 +83,7 @@
         :user-profile user-profile))))
 
 (defn canonical-route [domain route]
-  (or (routing/decode route)
-      (unwrap (hc-string/safe-read-edn-string (:domain/home-route domain)))))
+  (or route (unwrap (hc-string/safe-read-edn-string (:domain/home-route domain)))))
 
 (defn local-basis [ide-or-user global-basis -domain route ctx]
   ;local-basis-ide and local-basis-user
@@ -112,6 +111,7 @@
   (let [ide-domain-request (foundation2/domain-request "hyperfiddle" (:peer ctx))
         ide-domain (hc/hydrate-api (:peer ctx) ide-domain-request)
         user-profile @(reactive/cursor (.-state-atom (:peer ctx)) [:user-profile])
+        route (routing/decode route)
 
         user-fiddle (delay (browser/request-from-route route (target-context ctx -domain route user-profile)))
         ide-fiddle (delay (browser/request-from-route route (ide-context ctx ide-domain -domain route nil user-profile)))
@@ -158,6 +158,7 @@
    (defn view [foo -domain route ctx]                              ; pass most as ref for reactions
      (let [target-repo nil                                  ; figure it out! custom router, or nil flag
            ide-domain (hc/hydrate-api (:peer ctx) (foundation2/domain-request "hyperfiddle" (:peer ctx)))
+           route (routing/decode route)
            user-profile @(reactive/cursor (.-state-atom (:peer ctx)) [:user-profile])]
        (case foo
          "page" [view-page -domain (canonical-route -domain route) target-repo ctx]
