@@ -1,6 +1,8 @@
 (ns hyperfiddle.ide.fiddles.topnav
   (:require [cats.core :as cats]
             [cats.monad.either :as either]
+            [cuerdas.core :as string]
+            [hypercrud.browser.link :as link]
             [hypercrud.browser.routing :as routing]
             [hypercrud.client.tx :as tx]
             [hypercrud.react.react-fragment :refer [react-fragment]]
@@ -10,16 +12,14 @@
             [hypercrud.ui.radio :as radio]
             [hypercrud.ui.result :as result]
             [hypercrud.ui.tooltip :refer [tooltip]]
-            [hypercrud.util.core :refer [truncate]]
+            [hypercrud.util.core :as util]
             [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :as hc-string]
             [hyperfiddle.appval.domain.app-ui :as app-ui :refer [staging]]
             [hyperfiddle.appval.domain.core :as hf]
             [hyperfiddle.appval.state.actions :as ide-actions]
             [hyperfiddle.ide.fiddles.topnav-bindings :as topnav-bindings]
-            [reagent.core :as reagent]
-            [hypercrud.util.core :as util]
-            [hypercrud.browser.link :as link]))
+            [reagent.core :as reagent]))
 
 
 (defn get-state [state-atom]
@@ -54,7 +54,7 @@
      [:div.hyperfiddle-topnav-root-controls
       (fake-managed-anchor :domain ctx (get-in ctx [:target-domain :domain/ident]))
       " / "
-      (fake-managed-anchor :fiddle-more ctx (truncate (:fiddle/name fiddle) 20))
+      (fake-managed-anchor :fiddle-more ctx (string/prune (:fiddle/name fiddle) 20 ""))
       " · "
       (fake-managed-anchor :links ctx "links")
       (fake-managed-anchor :ui ctx "view")
