@@ -5,7 +5,6 @@
             [cuerdas.core :as str]
             [hypercrud.util.core :refer [unwrap]]
             [hypercrud.client.peer :as peer]
-            [hypercrud.client.core :as hypercrud]
             [hypercrud.util.core :as util]
             [hypercrud.util.performance :as perf]
 
