@@ -1,16 +1,16 @@
 (ns hyperfiddle.service.jvm.hydrate-route
   (:refer-clojure :exclude [sync])
-  (:require [hypercrud.client.core :as hc]
+  (:require [cats.core :refer [return mlet]]
+            [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
             [hypercrud.util.exception :refer [->Exception]]
             [hypercrud.util.performance :as perf]
             [hypercrud.util.core :refer [unwrap]]
             [hyperfiddle.runtime :as runtime]
-            [hyperfiddle.appfn.hydrate-requests :refer [hydrate-requests]] ; todo
-            [hyperfiddle.appfn.sync :refer [sync]]          ; todo
-            [hyperfiddle.appfn.runtime-local :refer [stage-val->staged-branches hydrate-loop]] ; todo
-            [hyperfiddle.appval.runtime-local :refer [global-basis hydrate-loop-adapter]]
-            [hyperfiddle.appval.domain.core]
+            [hyperfiddle.appfn.hydrate-requests :refer [hydrate-requests]]
+            [hyperfiddle.appfn.sync :refer [sync]]
+            [hyperfiddle.appfn.runtime-local :refer [stage-val->staged-branches hydrate-loop]]
+            [hyperfiddle.appval.runtime-local :refer [global-basis hydrate-loop-adapter fetch-domain!]]
             [hyperfiddle.appval.domain.foundation :as foundation]
             [hyperfiddle.ide]
             [hyperfiddle.core]                              ; compat
@@ -32,14 +32,17 @@
     (global-basis rt hyperfiddle-hostname hostname))
 
   runtime/AppValLocalBasis
-  (local-basis [rt global-basis encoded-route branch]       ; Problem: use encoded-route in state for symmetry
-    (let [ctx {:hyperfiddle-hostname hyperfiddle-hostname
-               :hostname hostname
-               :branch branch
-               :peer rt}]
-      ; Local basis has to have enough info to call the API (even if we omit that call today)
-      (foundation/local-basis foo global-basis encoded-route ctx
-                              (partial hyperfiddle.ide/local-basis foo))))
+  (local-basis [rt global-basis encoded-route branch]
+    ; Don't have a local basis, we do have a global-basis though
+    (mlet [domain (fetch-domain! rt hostname hyperfiddle-hostname global-basis)]
+      (return
+        (let [ctx {:hyperfiddle-hostname hyperfiddle-hostname
+                   :hostname hostname
+                   :branch branch
+                   :peer rt}]
+          ; Local basis has to have enough info to call the API (even if we omit that call today)
+          (foundation/local-basis foo global-basis encoded-route domain ctx
+                                  (partial hyperfiddle.ide/local-basis foo))))))
 
   runtime/AppValHydrate
   (hydrate-route [rt local-basis encoded-route branch stage]

@@ -1,11 +1,12 @@
 (ns hyperfiddle.service.node.hydrate-route
-  (:require [hypercrud.client.core :as hc]
+  (:require [cats.core :refer [mlet return]]
+            [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
             [hypercrud.util.core :refer [unwrap]]
             [hyperfiddle.runtime :as runtime]
             [hyperfiddle.appfn.runtime-rpc :refer [hydrate-requests! sync!]]
             [hyperfiddle.appfn.runtime-local :refer [hydrate-loop]]
-            [hyperfiddle.appval.runtime-local :refer [hydrate-loop-adapter]]
+            [hyperfiddle.appval.runtime-local :refer [hydrate-loop-adapter fetch-domain!]]
             [hyperfiddle.appval.runtime-rpc :refer [global-basis!]]
 
             [hyperfiddle.service.node.lib :refer [req->service-uri req->state-val]]
@@ -27,12 +28,14 @@
 
   runtime/AppValLocalBasis
   (local-basis [rt global-basis encoded-route branch]
-    (let [ctx {:hyperfiddle-hostname hyperfiddle-hostname
-               :hostname hostname
-               :branch branch
-               :peer rt}]
-      (foundation/local-basis foo global-basis encoded-route ctx
-                              (partial hyperfiddle.ide/local-basis foo))))
+    (mlet [domain (fetch-domain! rt hostname hyperfiddle-hostname global-basis)]
+          (return
+            (let [ctx {:hostname hostname
+                       :hyperfiddle-hostname hyperfiddle-hostname
+                       :branch branch
+                       :peer rt}]
+              (foundation/local-basis foo global-basis encoded-route domain ctx
+                                      (partial hyperfiddle.ide/local-basis foo))))))
 
   runtime/AppValHydrate
   (hydrate-route [rt local-basis encoded-route branch stage] ; :: ... -> DataCache on the wire

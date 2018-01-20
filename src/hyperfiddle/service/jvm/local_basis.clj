@@ -1,13 +1,14 @@
 (ns hyperfiddle.service.jvm.local-basis
   (:refer-clojure :exclude [sync])
-  (:require [hypercrud.client.core :as hc]
+  (:require [cats.core :refer [mlet return]]
+            [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
             [hypercrud.util.exception :refer [->Exception]]
             [hyperfiddle.runtime :as runtime]
-            [hyperfiddle.appfn.hydrate-requests :refer [hydrate-requests]] ; todo
-            [hyperfiddle.appfn.sync :refer [sync]]          ; todo
-            [hyperfiddle.appfn.runtime-local :refer [stage-val->staged-branches]] ; todo
-            [hyperfiddle.appval.runtime-local :refer [global-basis]]
+            [hyperfiddle.appfn.hydrate-requests :refer [hydrate-requests]]
+            [hyperfiddle.appfn.sync :refer [sync]]
+            [hyperfiddle.appfn.runtime-local :refer [stage-val->staged-branches]]
+            [hyperfiddle.appval.runtime-local :refer [global-basis fetch-domain!]]
             [promesa.core :as p]
             [hyperfiddle.appval.domain.foundation :as foundation]))
 
@@ -20,12 +21,14 @@
 
   runtime/AppValLocalBasis
   (local-basis [rt global-basis encoded-route branch]
-    (let [ctx {:hyperfiddle-hostname hyperfiddle-hostname
-               :hostname hostname
-               :branch branch
-               :peer rt}]
-      (foundation/local-basis foo global-basis encoded-route ctx
-                              (partial hyperfiddle.ide/local-basis foo))))
+    (mlet [domain (fetch-domain! rt hostname hyperfiddle-hostname global-basis)]
+      (return
+        (let [ctx {:hostname hostname
+                   :hyperfiddle-hostname hyperfiddle-hostname
+                   :branch branch
+                   :peer rt}]
+          (foundation/local-basis foo global-basis encoded-route domain ctx
+                                  (partial hyperfiddle.ide/local-basis foo))))))
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]

@@ -1,9 +1,10 @@
 (ns hyperfiddle.service.node.local-basis
-  (:require [hypercrud.client.core :as hc]
+  (:require [cats.core :refer [mlet return]]
+            [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
             [hyperfiddle.runtime :as runtime]
             [hyperfiddle.appfn.runtime-rpc :refer [hydrate-requests! sync!]]
-            [hyperfiddle.appval.runtime-local :refer []]
+            [hyperfiddle.appval.runtime-local :refer [fetch-domain!]]
             [hyperfiddle.appval.runtime-rpc :refer [global-basis!]]
             [hyperfiddle.service.node.lib :refer [req->service-uri req->state-val]]
             [promesa.core :as p]
@@ -24,12 +25,14 @@
 
   runtime/AppValLocalBasis
   (local-basis [rt global-basis encoded-route branch]
-    (let [ctx {:hyperfiddle-hostname hyperfiddle-hostname
-               :hostname hostname
-               :branch branch
-               :peer rt}]
-      (foundation/local-basis foo global-basis encoded-route ctx
-                              (partial hyperfiddle.ide/local-basis foo))))
+    (mlet [domain (fetch-domain! rt hostname hyperfiddle-hostname global-basis)]
+      (return
+        (let [ctx {:hostname hostname
+                   :hyperfiddle-hostname hyperfiddle-hostname
+                   :branch branch
+                   :peer rt}]
+          (foundation/local-basis foo global-basis encoded-route domain ctx
+                                  (partial hyperfiddle.ide/local-basis foo))))))
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
@@ -46,19 +49,22 @@
   (db [this uri branch]
     (peer/db-pointer state-atom uri branch))
 
-  hyperfiddle.ide/SplitRuntime
-  (sub-rt [rt foo ide-repo]
-    (LocalBasisRuntime. hyperfiddle-hostname hostname service-uri foo ide-repo state-atom))
+  ; Happened on client, node reconstructed the right rt already
+  ;hyperfiddle.ide/SplitRuntime
+  ;(sub-rt [rt foo ide-repo]
+  ;  (LocalBasisRuntime. hyperfiddle-hostname hostname service-uri foo ide-repo state-atom))
 
   IHash
   (-hash [this] (goog/getUid this)))
 
 (defn http-local-basis [env req res path-params query-params]
+  {:pre [(:ide-repo path-params) #_"Did the client rt send this with the http request?"]}
+  ; Never called.
   (let [hostname (.-hostname req)
         state-val (req->state-val env req path-params query-params)
         foo (some-> (:foo path-params) base-64-url-safe/decode reader/read-edn-string)
         branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
-        rt (LocalBasisRuntime. (:HF_HOSTNAME env) hostname (req->service-uri env req) foo nil (reactive/atom state-val))]
+        rt (LocalBasisRuntime. (:HF_HOSTNAME env) hostname (req->service-uri env req) foo (:ide-repo path-params) (reactive/atom state-val))]
     (-> (runtime/local-basis rt (:global-basis state-val) (:encoded-route state-val) branch)
         (p/then (fn [local-basis]
                   (doto res

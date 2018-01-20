@@ -1,6 +1,6 @@
 (ns hyperfiddle.service.node.ssr
   (:require [cljs.nodejs :as node]
-
+            [cats.core :refer [mlet return]]
             [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
             [hypercrud.state.actions.core :as actions]
@@ -15,6 +15,7 @@
             [hyperfiddle.runtime :as runtime]
             [hyperfiddle.appfn.runtime-rpc :refer [hydrate-requests! sync!]]
             [hyperfiddle.appval.runtime-rpc :refer [hydrate-route! global-basis!]]
+            [hyperfiddle.appval.runtime-local :refer [fetch-domain!]]
             [hyperfiddle.appval.state.reducers :as reducers]
             [hyperfiddle.service.node.lib :refer [req->service-uri req->state-val]]
 
@@ -103,12 +104,14 @@
 
   runtime/AppValLocalBasis
   (local-basis [rt global-basis encoded-route branch]
-    (let [ctx {:hostname hostname
-               :hyperfiddle-hostname hyperfiddle-hostname
-               :branch branch
-               :peer rt}]
-      (foundation/local-basis foo global-basis encoded-route ctx
-                              (partial hyperfiddle.ide/local-basis foo))))
+    (mlet [domain (fetch-domain! rt hostname hyperfiddle-hostname global-basis)]
+      (return
+        (let [ctx {:hostname hostname
+                   :hyperfiddle-hostname hyperfiddle-hostname
+                   :branch branch
+                   :peer rt}]
+          (foundation/local-basis foo global-basis encoded-route domain ctx
+                                  (partial hyperfiddle.ide/local-basis foo))))))
 
   runtime/AppValHydrate
   (hydrate-route [rt local-basis encoded-route branch stage]
