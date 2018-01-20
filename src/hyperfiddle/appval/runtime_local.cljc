@@ -94,3 +94,8 @@
                      :stage stage}
           ctx (assoc ctx :peer (->Runtime (reducers/root-reducer state-val nil)))]
       (f ctx))))
+
+(defn fetch-domain! [rt hostname hyperfiddle-hostname global-basis]
+  (-> (hydrate-one! rt (apply sorted-map (apply concat (:domain global-basis))) nil
+                    (foundation2/domain-request
+                      (foundation2/hostname->hf-domain-name hostname hyperfiddle-hostname) rt))))

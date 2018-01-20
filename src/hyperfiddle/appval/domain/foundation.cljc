@@ -26,11 +26,10 @@
                                 ; todo this can throw
                                 (update :repository/environment reader/read-string)))))))))
 
-(defn local-basis [foo global-basis route ctx f]
-  (let [domain nil #_"unused but theoretically allowed"]
-    (concat
-      (:domain global-basis)
-      (f global-basis domain route ctx))))
+(defn local-basis [foo global-basis route domain #_ "hack" ctx f]
+  (concat
+    (:domain global-basis)
+    (f global-basis domain route ctx)))
 
 (defn api [foo route ctx f]
   (let [domain-q (foundation2/domain-request (foundation2/hostname->hf-domain-name (:hostname ctx) (:hyperfiddle-hostname ctx)) (:peer ctx))
@@ -67,7 +66,7 @@
            [staging (:peer ctx) (:dispatch! ctx)]])
         (fn [domain]
           [:div {:class (apply classes "hyperfiddle-foundation" "hyperfiddle" @(reactive/cursor (.-state-atom (:peer ctx)) [:pressed-keys]))}
-           (f domain route)
+           (f domain route ctx)
            (if @(reactive/cursor (.-state-atom (:peer ctx)) [:staging-open])
              [staging (:peer ctx) (:dispatch! ctx)])])])))
 
