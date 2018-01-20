@@ -1,6 +1,6 @@
 (ns hypercrud.types.Entity
   #?(:clj
-     (:import [clojure.lang Associative Counted IFn IHashEq ILookup Seqable]
+     (:import [clojure.lang Counted IFn IHashEq ILookup Seqable]
               [clojure.core.protocols IKVReduce])))
 
 
@@ -42,11 +42,6 @@
              ILookup
              (valAt [o k] (get coll k))
              (valAt [o k not-found] (get coll k not-found))
-
-             Associative
-             (containsKey [_ k] (.containsKey coll k))
-             (entryAt [_ k] (.entryAt coll k))
-             ;(assoc [_ k v]) explicitly don't want assoc
 
              IKVReduce
              (kv_reduce [o f init] (reduce-kv coll f init))
