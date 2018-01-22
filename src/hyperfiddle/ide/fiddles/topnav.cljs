@@ -19,7 +19,6 @@
             [hyperfiddle.appval.domain.core :as hf]
             [hyperfiddle.appval.state.actions :as ide-actions]
             [hyperfiddle.ide.fiddles.topnav-bindings :as topnav-bindings]
-            [hyperfiddle.ide]
             [reagent.core :as reagent]
             [hypercrud.browser.link :as link]))
 
