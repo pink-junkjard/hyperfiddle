@@ -24,7 +24,7 @@
         [sparkfund/boot-lein-generate "0.3.0" :scope "test"]]]
 
   (set-env!
-    :dependencies (concat dependencies build-dependencies [datomic-dep])
+    :dependencies (concat dependencies build-dependencies)
     :resource-paths #{"src" "resources"}
     :boot.lein/project-clj {:dependencies (conj dependencies datomic-dep)}))
 
