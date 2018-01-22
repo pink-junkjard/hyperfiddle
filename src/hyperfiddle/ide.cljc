@@ -112,7 +112,7 @@
         basis-maps (case ide-or-user
                      "page" (concat (vals user) #_"for schema in topnav"
                                     (vals ide))             ; dead code i think?
-                     "ide" (concat [ide-basis] (vals ide))
+                     "ide" (concat [ide-basis] (vals ide) (vals user))
                      "user" [user-basis])
         local-basis (->> basis-maps                         ; Userland api-fn should filter irrelevant routes
                          (apply concat)
