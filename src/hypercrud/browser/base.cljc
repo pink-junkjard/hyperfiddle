@@ -16,6 +16,7 @@
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hypercrud.types.ThinEntity :refer [#?(:cljs ThinEntity)]]
             [hypercrud.util.non-fatal :refer [try-either]]
+            [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :as hc-string])
   #?(:clj
      (:import (hypercrud.types.Entity Entity)
@@ -23,15 +24,33 @@
 
 
 (def meta-pull-exp-for-link
-  ['*
+  [:db/id
    :db/doc
-   :fiddle/query
-   :fiddle/type
-   :fiddle/request
+   :fiddle/bindings
+   :fiddle/entrypoint
+   {:fiddle/links [:db/id
+                   :hypercrud/props
+                   :anchor/prompt
+                   :link/create?
+                   :link/dependent?
+                   :link/disabled?
+                   ; hydrate the parts of the fiddle we need for validating the link
+                   {:link/fiddle [:db/id
+                                  :fiddle/query
+                                  :fiddle/type]}
+                   :link/formula
+                   :link/ident
+                   :link/managed?
+                   :link/path
+                   :link/rel
+                   :link/render-inline?
+                   :link/tx-fn]}
+   :fiddle/name
    :fiddle/pull
-   {:fiddle/links ['*
-                   ; hydrate the whole fiddle for validating the anchor by query params
-                   {:link/fiddle ['*]}]}])
+   :fiddle/query
+   :fiddle/renderer
+   :fiddle/request
+   :fiddle/type])
 
 (defn meta-request-for-fiddle [ctx]
   (try-either
@@ -47,7 +66,7 @@
      :fiddle' (auto-fiddle/hydrate-system-fiddle (get-in ctx [:route :link-id]) ctx)}
     (let [meta-fiddle-request (meta-request-for-fiddle ctx)]
       {:meta-fiddle-req' meta-fiddle-request
-       :fiddle' (cats/bind meta-fiddle-request #(hc/hydrate (:peer ctx) %))})))
+       :fiddle' (cats/bind meta-fiddle-request #(deref (hc/hydrate (:peer ctx) %)))})))
 
 (defn request-for-fiddle [fiddle ctx]
   (case (:fiddle/type fiddle)
@@ -106,23 +125,27 @@
                 (either/right default))
       :xray (either/right default))))
 
-(let [never-read-only (constantly false)]
+(let [never-read-only (constantly false)
+      nil-or-hydrate (fn [peer request]
+                       (if request
+                         @(hc/hydrate peer request)
+                         (either/right nil)))]
   (defn process-results [fiddle request ctx]
     (mlet [schemas (schema-util/hydrate-schema ctx)         ; schema is allowed to be nil if the link only has anchors and no data dependencies
-           result (->> (if request
-                         (hc/hydrate (:peer ctx) request)
-                         (either/right nil)))
-           :let [ctx (assoc ctx                             ; provide defaults before user-bindings run.
+           :let [reactive-either-result (reactive/track nil-or-hydrate (:peer ctx) request)]
+           _ @reactive-either-result                        ; short the monad
+           :let [reactive-result (reactive/map deref reactive-either-result)
+                 ctx (assoc ctx                             ; provide defaults before user-bindings run.
                        :request request
                        :schemas schemas                     ; For tx/entity->statements in userland.
                        :fiddle fiddle                       ; for :db/doc
                        :read-only (or (:read-only ctx) never-read-only))]
            ctx (user-bindings/user-bindings' fiddle ctx)
            ; todo why are we imposing these auto-fns on everyone?
-           ordered-fes (find-element/auto-find-elements result ctx)]
-      (cats/return {:result result
+           ordered-fes (find-element/auto-find-elements @reactive-result ctx)]
+      (cats/return {:result reactive-result
                     :ordered-fes ordered-fes
-                    :anchors (auto-anchor/auto-links ordered-fes ctx)
+                    :links (auto-anchor/auto-links ordered-fes ctx)
                     :ctx ctx}))))
 
 (defn data-from-route [route ctx]

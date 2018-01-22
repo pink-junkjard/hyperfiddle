@@ -7,35 +7,37 @@
             [hypercrud.browser.link :as link]
             [hypercrud.compile.macros :refer [str-and-code]]
             [hypercrud.types.URI #?@(:cljs [:refer [URI]])]
-            #?(:cljs [hypercrud.ui.auto-control :refer [attribute-control]])
+    #?(:cljs [hypercrud.ui.auto-control :refer [attribute-control]])
+            [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :as hc-string])
   #?(:clj
      (:import (java.net URI))))
 
 
-(defn prep-ctxs [ctx]
-  (->> (-> (:value ctx)
-           (hc-string/safe-read-edn-string)
-           ; todo something with this error
-           (cats/mplus (either/right nil))
-           (cats/extract))
-       (filter (fn [[k v]] (and (string? k) (string/starts-with? k "$") (instance? URI v))))
-       (map (fn [[name uri]]
-              (assoc ctx
-                :cell-data {:db/id name}                    ; add a fake entity so modals/branches are unique
-                :name name
-                :uri uri)))))
+(let [f (memoize (fn [name] (reactive/atom {:db/id name})))]
+  (defn prep-ctxs [ctx]
+    (->> (-> @(:value ctx)
+             (hc-string/safe-read-edn-string)
+             ; todo something with this error
+             (cats/mplus (either/right nil))
+             (cats/extract))
+         (filter (fn [[k v]] (and (string? k) (string/starts-with? k "$") (instance? URI v))))
+         (map (fn [[name uri]]
+                (assoc ctx
+                  :cell-data (f name)                       ; add a fake entity so modals/branches are unique
+                  :name name
+                  :uri uri))))))
 
 (defn bindings [ctx]
   #?(:clj  ctx
      :cljs (assoc-in
              ctx [:fields :repository/environment :renderer]
              (str-and-code
-               (fn [field links props ctx]
-                 (let [foo (group-by #(= (:link/rel %) :attributes-for-database) links)
+               (fn [field props ctx]
+                 (let [foo (group-by #(= (:link/rel %) :attributes-for-database) (:links ctx))
                        {[attrs-for-db] true links false} foo]
                    [:div
-                    [(attribute-control ctx) field links props ctx]
+                    [(attribute-control ctx) field props ctx]
                     (->> (prep-ctxs ctx)
                          (map (fn [ctx]
                                 (let [props (link/build-link-props attrs-for-db ctx)]
@@ -44,8 +46,7 @@
                          (doall))]))))))
 
 (defn request [repositories ordered-fes links ctx]
-  (let [foo (group-by #(= (:link/rel %) :attributes-for-database) links)
-        {[attrs-for-db] true links false} foo]
+  (let [{[attrs-for-db] true links false} (group-by #(= (:link/rel %) :attributes-for-database) links)]
     (concat
       (browser-request/fiddle-dependent-requests repositories ordered-fes links ctx)
       ; todo support custom request fns at the field level, then this code is 95% deleted
@@ -53,10 +54,11 @@
         (->> repositories
              (mapcat (fn [repo]
                        (let [ctx (-> ctx
+                                     (context/relation [repo])
                                      (context/find-element fe 0)
-                                     (context/cell-data repo)
+                                     (context/cell-data)
                                      (context/attribute :repository/environment)
-                                     (context/value (get repo :repository/environment)))]
+                                     (context/value (reactive/atom (get repo :repository/environment))))]
                          (->> (prep-ctxs ctx)
                               (mapcat #(browser-request/recurse-request attrs-for-db %))
                               (remove nil?))))))))))

@@ -34,7 +34,7 @@
 
 (defn read-edn-string
   ([s]
-   (read-edn-string {} s))
+   (read-edn-string {:eof nil} s))
   ([opts s]
    (-> (update opts :readers merge hc-data-readers)
        (edn-reader/read-string s))))

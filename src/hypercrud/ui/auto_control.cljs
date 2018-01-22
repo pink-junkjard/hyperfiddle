@@ -93,15 +93,16 @@
 ; layer down of controls (aka widgets) take props.
 ; hypercrud/props is on links. I dont think there is even a way for users
 ; to pass props here. But, how do you pass through things to the native widget?
-(defn control-props [field links ctx]
+(defn control-props [ctx]
   ; why does this need the field - it needs the ident for readonly in "Edit Anchors"
   ; todo clean this interface up
   {:read-only ((get ctx :read-only) (:attribute ctx) ctx)})
 
-(defn auto-control [_ _ _ ctx]                              ; compat
-  (some-> (case (:layout ctx) :block (schema-control-form ctx)
-                              :inline-block (schema-control-table ctx)
-                              :table (schema-control-table ctx))))
+(defn auto-control [maybe-field props _ ctx]                              ; compat
+  [(some-> (case (:layout ctx) :block (schema-control-form ctx)
+                               :inline-block (schema-control-table ctx)
+                               :table (schema-control-table ctx)))
+   maybe-field props ctx])
 
 (comment
   ; Find a home for this:

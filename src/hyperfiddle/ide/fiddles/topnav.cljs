@@ -1,6 +1,8 @@
 (ns hyperfiddle.ide.fiddles.topnav
   (:require [cats.core :as cats]
             [cats.monad.either :as either]
+            [cuerdas.core :as string]
+            [hypercrud.browser.link :as link]
             [hypercrud.browser.routing :as routing]
             [hypercrud.client.tx :as tx]
             [hypercrud.react.react-fragment :refer [react-fragment]]
@@ -10,7 +12,7 @@
             [hypercrud.ui.radio :as radio]
             [hypercrud.ui.result :as result]
             [hypercrud.ui.tooltip :refer [tooltip]]
-            [hypercrud.util.core :refer [truncate]]
+            [hypercrud.util.core :as util]
             [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :as hc-string]
             [hyperfiddle.appval.domain.foundation :refer [staging]]
@@ -19,7 +21,6 @@
             [hyperfiddle.ide.fiddles.topnav-bindings :as topnav-bindings]
             [hyperfiddle.ide]
             [reagent.core :as reagent]
-            [hypercrud.util.core :as util]
             [hypercrud.browser.link :as link]))
 
 
@@ -55,7 +56,7 @@
      [:div.hyperfiddle-topnav-root-controls
       (fake-managed-anchor :domain ctx (get-in ctx [:target-domain :domain/ident]))
       " / "
-      (fake-managed-anchor :fiddle-more ctx (truncate (:fiddle/name fiddle) 20))
+      (fake-managed-anchor :fiddle-more ctx (string/prune (:fiddle/name fiddle) 20 ""))
       " · "
       (fake-managed-anchor :links ctx "links")
       (fake-managed-anchor :ui ctx "view")
@@ -111,14 +112,14 @@
      ;:component-did-update (fn [this])
      }))
 
-(defn ^:export qe-picker-control [field links props ctx]
+(defn ^:export qe-picker-control [field props ctx]
   (let [enums [:query :entity :blank]
-        change! #((:user-with! ctx) (tx/update-entity-attr (:cell-data ctx) (:attribute ctx) %))
+        change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) (:attribute ctx) %))
         options (->> enums
                      (map #(radio/option
                              {:label (case % :query "query" :entity "pull" :blank "blank")
                               :target %
-                              :value (:value ctx)
+                              :value @(:value ctx)
                               :change! change!})))]
     [:span.qe.radio-group (apply react-fragment :_ options)]))
 
@@ -134,11 +135,13 @@
                         (cats/mplus (either/right nil))
                         (cats/extract))
          anonymous? (nil? (:user-profile ctx))
-         stage @(reactive/cursor (.-state-atom (:peer ctx)) [:stage])]
+         stage @(reactive/cursor (.-state-atom (:peer ctx)) [:stage])
+         disabled? (or anonymous? (empty? stage))]
      ; tooltip busted
      [tooltip (cond anonymous? {:status :warning :label "please login"}
                     (empty? stage) {:status :warning :label "no changes"})
-      [:button {:disabled (or anonymous? (empty? stage))
+      [:button {:disabled disabled?
+                :style (if disabled? {:pointer-events "none"})
                 :on-click (reactive/partial save-and-navigate! home-route ctx)} "transact!"]])
    [staging (:peer ctx) (:dispatch! ctx)]
    [:div.markdown (markdown "Hyperfiddle always generates valid transactions, if it doesn't, please file a bug.

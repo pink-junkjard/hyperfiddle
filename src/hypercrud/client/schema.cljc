@@ -32,7 +32,7 @@
        (concat [(hc-attr-request ctx)])))
 
 (defn hydrate-schema [ctx]
-  (-> (hc/hydrate (:peer ctx) (hc-attr-request ctx))
+  (-> @(hc/hydrate (:peer ctx) (hc-attr-request ctx))
       (cats/bind
         (fn [root-data]
           (let [indexed-root (->> root-data
@@ -43,14 +43,13 @@
             (->> (get-in ctx [:repository :repository/environment])
                  (filter (fn [[k v]] (and (string? k) (string/starts-with? k "$") (instance? URI v))))
                  (mapv (fn [[dbname uri]]
-                         (->> (hc/db (:peer ctx) uri (:branch ctx))
-                              (schema-request)
-                              (hc/hydrate (:peer ctx))
-                              (cats/fmap (fn [schema]
-                                           [dbname
-                                            (->> schema
-                                                 (map #(into {} %))
-                                                 (util/group-by-assume-unique :db/ident)
-                                                 (merge-with #(merge %2 %1) indexed-root))])))))
+                         (let [request (schema-request (hc/db (:peer ctx) uri (:branch ctx)))]
+                           (->> @(hc/hydrate (:peer ctx) request)
+                                (cats/fmap (fn [schema]
+                                             [dbname
+                                              (->> schema
+                                                   (map #(into {} %))
+                                                   (util/group-by-assume-unique :db/ident)
+                                                   (merge-with #(merge %2 %1) indexed-root))]))))))
                  (cats/sequence)
                  (cats/fmap #(into {} %))))))))

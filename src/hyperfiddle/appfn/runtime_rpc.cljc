@@ -1,4 +1,4 @@
-(ns hyperfiddle.appfn.runtime-rpc                                  ;-impl
+(ns hyperfiddle.appfn.runtime-rpc                           ;-impl
   (:require [cuerdas.core :as str]
             [hypercrud.http.core :refer [http-request!]]
             [hypercrud.util.base-64-url-safe :as base-64-url-safe]
@@ -10,7 +10,7 @@
 (defn hydrate-requests! [service-uri local-basis stage-val requests]
   (let [staged-branches (stage-val->staged-branches stage-val)
         ; Note the UI-facing interface contains stage-val; the API accepts staged-branches
-        req {:url (str #?(:clj service-uri :cljs (.-uri-str service-uri)) "hydrate-requests/" ((comp base-64-url-safe/encode pr-str) local-basis)) ; serialize kvseq
+        req {:url (str service-uri "hydrate-requests/" ((comp base-64-url-safe/encode pr-str) local-basis)) ; serialize kvseq
              :accept :application/transit+json :as :auto
              :method :post                                  ; hydrate-requests always has a POST body, though it has a basis and is cachable
              :form {:staged-branches staged-branches :request requests}
@@ -23,7 +23,7 @@
 
 (defn transact!! [service-uri tx-groups]
   (-> (http-request!
-        {:url (str #?(:clj service-uri :cljs (.-uri-str service-uri)) "transact")
+        {:url (str service-uri "transact")
          :accept :application/transit+json :as :auto
          :method :post :form tx-groups
          :content-type :application/transit+json})
@@ -35,10 +35,10 @@
                   (p/rejected resp))))))
 
 (defn sync! [service-uri dbs]
-  (-> (http-request! {:url (str #?(:clj service-uri :cljs (.-uri-str service-uri)) "sync")
-                 :accept :application/transit+json :as :auto
-                 :method :post :form dbs
-                 :content-type :application/transit+json})
+  (-> (http-request! {:url (str service-uri "sync")
+                      :accept :application/transit+json :as :auto
+                      :method :post :form dbs
+                      :content-type :application/transit+json})
       (p/then (fn [{:keys [body]}]
                 (->> body
                      (apply concat)

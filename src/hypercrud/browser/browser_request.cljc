@@ -6,9 +6,11 @@
             [hypercrud.browser.context :as context]
             [hypercrud.browser.link :as link]
             [hypercrud.browser.popovers :as popovers]
+            [hypercrud.browser.result :as result]
             [hypercrud.browser.routing :as routing]
             [hypercrud.client.schema :as schema-util]
-            [hypercrud.util.non-fatal :refer [try-either]]
+            [hypercrud.util.non-fatal :refer [try-catch-non-fatal try-either]]
+            [hypercrud.util.reactive :as reactive]
             [taoensso.timbre :as timbre]))
 
 
@@ -34,45 +36,44 @@
     (let [ctx (update ctx :debug #(str % ">inline-link[" (:db/id link) ":" (or (:link/rel link) (:anchor/prompt link)) "]"))]
       (request-from-link link ctx))))
 
-(defn cell-dependent-requests [cell fe links ctx]
-  (let [ctx (-> ctx
-                (context/find-element fe (:fe-pos ctx))
-                (context/cell-data cell))]
+(defn cell-dependent-requests [ctx]
+  (let [ctx (context/cell-data ctx)]
     (concat
-      (->> (link/links-lookup links [(:fe-pos ctx)])
+      (->> (link/links-lookup (:links ctx) [(:fe-pos ctx)])
            (filter :link/dependent?)
            (mapcat #(recurse-request % ctx)))
-      (->> (:fields fe)
+      (->> (get-in ctx [:find-element :fields])
            (mapcat (fn [field]
                      (let [ctx (-> (context/attribute ctx (:attribute field))
-                                   (context/value ((:cell-data->value field) (:cell-data ctx))))]
-                       (->> (link/links-lookup links [(:fe-pos ctx) (-> ctx :attribute :db/ident)])
+                                   (context/value (reactive/map (:cell-data->value field) (:cell-data ctx))))]
+                       (->> (link/links-lookup (:links ctx) [(:fe-pos ctx) (-> ctx :attribute :db/ident)])
                             (filter :link/dependent?)
                             (mapcat #(recurse-request % ctx))))))))))
 
-(defn relation-dependent-requests [relation ordered-fes links ctx]
-  (->> (map vector relation ordered-fes)
-       (map-indexed (fn [fe-pos [cell fe]]
-                      (cell-dependent-requests cell fe links (assoc ctx :fe-pos fe-pos))))
+(defn relation-dependent-requests [ctx]
+  (->> (result/map-relation cell-dependent-requests ctx)
        (apply concat)))
 
 (defn fiddle-dependent-requests [result ordered-fes links ctx]
   ; reconcile this with the link.cljc logic
-  (let [links (filter :link/render-inline? links)]          ; at this point we only care about inline links
+  (let [links (filter :link/render-inline? links)           ; at this point we only care about inline links
+        ctx (assoc ctx
+              :ordered-fes ordered-fes
+              :links links)]
     (concat
-      (->> (mapcat #(recurse-request % ctx) (->> (link/links-lookup links [])
+      (->> (mapcat #(recurse-request % ctx) (->> (link/links-lookup (:links ctx) [])
                                                  (remove :link/dependent?))))
-      (->> ordered-fes                                      ; might have empty results
+      (->> (:ordered-fes ctx)                               ; might have empty results
            (map-indexed (fn [fe-pos fe]
                           (let [ctx (context/find-element ctx fe fe-pos)]
                             (concat
-                              (->> (link/links-lookup links [fe-pos])
+                              (->> (link/links-lookup (:links ctx) [fe-pos])
                                    (remove :link/dependent?)
                                    (mapcat #(recurse-request % ctx)))
                               (->> (:fields fe)
                                    (mapcat (fn [{:keys [attribute]}]
                                              (let [ctx (context/attribute ctx attribute)]
-                                               (->> (link/links-lookup links [fe-pos (-> ctx :attribute :db/ident)])
+                                               (->> (link/links-lookup (:links ctx) [fe-pos (-> ctx :attribute :db/ident)])
                                                     (remove :link/dependent?)
                                                     (mapcat #(recurse-request % ctx)))))))))))
            (apply concat))
@@ -84,11 +85,15 @@
                     (fn [source-symbol]
                       (case (get-in ctx [:schemas (str source-symbol) a :db/cardinality :db/ident])
                         :db.cardinality/one
-                        (cell-dependent-requests result (first ordered-fes) links (assoc ctx :fe-pos 0))
+                        (let [ctx (context/relation ctx (reactive/atom [result]))]
+                          (relation-dependent-requests ctx))
 
                         :db.cardinality/many
-                        (mapcat #(cell-dependent-requests % (first ordered-fes) links (assoc ctx :fe-pos 0)) result))))
-                  (cell-dependent-requests result (first ordered-fes) links (assoc ctx :fe-pos 0)))
+                        (let [ctx (context/relations ctx (mapv vector result))]
+                          (->> (result/map-relations relation-dependent-requests ctx)
+                               (apply concat))))))
+                  (let [ctx (context/relation ctx (reactive/atom [result]))]
+                    (relation-dependent-requests ctx)))
 
         :query (either/branch
                  (try-either (parser/parse-query (get-in ctx [:request :query])))
@@ -96,16 +101,22 @@
                  (fn [{:keys [qfind]}]
                    (condp = (type qfind)
                      datascript.parser.FindRel
-                     (mapcat #(relation-dependent-requests % ordered-fes links ctx) result)
+                     (let [ctx (context/relations ctx (mapv vec result))]
+                       (->> (result/map-relations relation-dependent-requests ctx)
+                            (apply concat)))
 
                      datascript.parser.FindColl
-                     (mapcat #(cell-dependent-requests % (first ordered-fes) links (assoc ctx :fe-pos 0)) result)
+                     (let [ctx (context/relations ctx (map vector result))]
+                       (->> (result/map-relations relation-dependent-requests ctx)
+                            (apply concat)))
 
                      datascript.parser.FindTuple
-                     (relation-dependent-requests result ordered-fes links ctx)
+                     (let [ctx (context/relation ctx (reactive/atom (vec result)))]
+                       (relation-dependent-requests ctx))
 
                      datascript.parser.FindScalar
-                     (cell-dependent-requests result (first ordered-fes) links (assoc ctx :fe-pos 0)))))
+                     (let [ctx (context/relation ctx (reactive/atom [result]))]
+                       (relation-dependent-requests ctx)))))
 
         :blank nil
 
@@ -117,17 +128,16 @@
    :with-user-fn (fn [user-fn]
                    (fn [result ordered-fes links ctx]
                      ; todo report invocation errors back to the user
-                     (try (->> (user-fn result ordered-fes links ctx)
-                               ; user-fn HAS to return a seqable value, we want to throw right here if it doesn't
-                               seq)
-                          (catch #?(:clj Exception :cljs js/Error) e
-                            (timbre/error e)
-                            nil))))
+                     ; user-fn HAS to return a seqable value, we want to throw right here if it doesn't
+                     (try-catch-non-fatal (seq (user-fn result ordered-fes links ctx))
+                                          e (do
+                                              (timbre/error e)
+                                              nil))))
    :default fiddle-dependent-requests})
 
-(defn process-data [{:keys [result ordered-fes anchors ctx]}]
+(defn process-data [{:keys [result ordered-fes links ctx]}]
   (mlet [request-fn (base/fn-from-mode (f-mode-config) (:fiddle ctx) ctx)]
-    (cats/return (request-fn result ordered-fes anchors ctx))))
+    (cats/return (request-fn @result ordered-fes links ctx))))
 
 (defn request-from-route [route ctx]
   (let [ctx (context/route ctx route)

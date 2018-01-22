@@ -17,6 +17,8 @@
                                 ; :relation, :db
                                 (select-keys [:route :find-element :fe-pos :cell-data :attribute :value])
                                 (update :attribute :db/ident)
+                                (update :cell-data deref)
+                                (update :value deref)
                                 (pprint-str 150))))
   (aset window "hc_route" (fn [ctx] (-> ctx :route pprint-str)))
   (aset window "hc_root_route" #(-> js/document.location.pathname

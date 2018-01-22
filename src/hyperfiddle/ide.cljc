@@ -19,6 +19,8 @@
     ; userland imports for topnav link formulas, these vars should be moved to this public ns.
             [hyperfiddle.appval.state.actions]
             [hyperfiddle.ide.fiddles.domain-code-database]
+            [hyperfiddle.ide.fiddles.fiddle-links.bindings]
+    #?(:cljs [hyperfiddle.ide.fiddles.fiddle-links.renderer])
     #?(:cljs [hyperfiddle.ide.fiddles.main])
             [hyperfiddle.ide.fiddles.topnav]
     #?(:cljs [hyperfiddle.ide.fiddles.user-dashboard])
@@ -108,7 +110,8 @@
         user-basis (get user (:code-database route))
         ide-basis (get ide (.-ide-repo (:peer ctx)))
         basis-maps (case ide-or-user
-                     "page" (concat [user-basis] (vals ide)) ; dead code i think?
+                     "page" (concat (vals user) #_"for schema in topnav"
+                                    (vals ide))             ; dead code i think?
                      "ide" (concat [ide-basis] (vals ide))
                      "user" [user-basis])
         local-basis (->> basis-maps                         ; Userland api-fn should filter irrelevant routes

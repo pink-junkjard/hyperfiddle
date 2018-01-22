@@ -6,13 +6,13 @@
             [hypercrud.client.tx :as tx]))
 
 
-(defn instant [maybe-field links props ctx]
-  (let [my-links (link/links-lookup' links [(:fe-pos ctx) (-> ctx :attribute :db/ident)])]
+(defn instant [maybe-field props ctx]
+  (let [my-links (link/links-lookup' (:links ctx) [(:fe-pos ctx) (-> ctx :attribute :db/ident)])]
     [:div.value
      [:div.anchors (link-controls/render-links (remove :link/render-inline? my-links) ctx)]
-     (let [change! #((:user-with! ctx) (tx/update-entity-attr (:cell-data ctx) (:attribute ctx) %))
+     (let [change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) (:attribute ctx) %))
            widget (case (:layout ctx) :block instant/date*
                                       :inline-block edn/edn-inline-block*
                                       :table edn/edn-inline-block*)]
-       [widget (:value ctx) change! props])
+       [widget @(:value ctx) change! props])
      (link-controls/render-inline-links (filter :link/render-inline? my-links) ctx)]))

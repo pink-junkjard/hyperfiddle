@@ -136,7 +136,8 @@
                                       tx)
                                 [[:merge branch]
                                  (if app-route [:set-route (routing/encode app-route)])
-                                 (close-popover popover-id)])]
+                                 (close-popover popover-id)
+                                 (discard-branch branch)])]
                   (if-let [parent-branch (branch/decode-parent-branch branch)]
                     (let [post-start->route-vals #(get-in % [:branches parent-branch])]
                       (hydrate-branch rt post-start->route-vals parent-branch actions dispatch! get-state))

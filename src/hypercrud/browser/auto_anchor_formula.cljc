@@ -5,7 +5,6 @@
             [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
             [hypercrud.util.core :as util]
             [hypercrud.util.string :as hc-string]
-            [hypercrud.util.template :as template]
             [hypercrud.util.vedn :as vedn]
             [taoensso.timbre :as timbre])
   #?(:clj
@@ -16,7 +15,7 @@
 (defn auto-entity-from-stage [ctx]
   ; This returns a new value each time the transaction changes - can't call it again later.
   ; So tx-fns must inspect the modal-route, they can't re-create the dbid.
-  (let [id (-> (:branch ctx) util/abs-normalized - str)]
+  (let [id (-> (:branch ctx) hash util/abs-normalized - str)]
     (->ThinEntity (dbname/uri->dbname (:uri ctx) ctx) id)))
 
 ; todo there are collisions when two links share the same 'location'
@@ -33,27 +32,25 @@
     ; Why Db is omitted?
     ; Why value is only inspected in :many for unique hashing?
    (-> (str (:name fe) "."
-            (or (:db/id cell-data) (hash cell-data)) "."
+            (or (:db/id (some-> cell-data deref)) (hash (some-> cell-data deref))) "."
             (-> a :db/ident) "."
             (case (get-in a [:db/cardinality :db/ident])
               :db.cardinality/one nil
-              :db.cardinality/many (hash (into #{} (mapv :db/id v))) ; todo scalar
+              :db.cardinality/many (hash (into #{} (mapv :db/id @v))) ; todo scalar
               nil nil #_":db/id has a faked attribute with no cardinality, need more thought to make elegant"))
        hash util/abs-normalized - str)))
 
 (defn auto-entity [ctx]
-  (let [cell-data (:cell-data ctx)
+  (let [cell-data @(:cell-data ctx)
         uri (if (instance? Entity cell-data)
               (.-uri cell-data)
               (:uri ctx))]
     (->ThinEntity (dbname/uri->dbname uri ctx) (deterministic-ident ctx))))
 
 (def auto-formula-lookup
-  (let [fe-no-create (->> (template/load-resource "auto-formula/fe-no-create.vedn")
-                          (vedn/read-string)
+  (let [fe-no-create (->> (vedn/load-vedn-from-file "auto-formula/fe-no-create.vedn")
                           (util/map-keys #(assoc % :fe true :c? false)))
-        fe-create (->> (template/load-resource "auto-formula/fe-create.vedn")
-                       (vedn/read-string)
+        fe-create (->> (vedn/load-vedn-from-file "auto-formula/fe-create.vedn")
                        (util/map-keys #(assoc % :fe true :c? true)))
         ; no fe = index or relation links
         no-fe {{:fe false :c? false :d? true :a false} nil

@@ -25,4 +25,4 @@
      otherwise return the result as a right."
      [& body]
      (let [e (gensym)]
-       (macroexpand `(try-catch-non-fatal (either/right (do ~@body)) ~e (either/left ~e))))))
+       `(try-catch-non-fatal (either/right (do ~@body)) ~e (either/left ~e)))))

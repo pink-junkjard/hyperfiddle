@@ -17,7 +17,7 @@
       (either/left {:message "Loading" :data {:request request}}))))
 
 (defn hydrate [state-atom request]
-  @(reactive/track trackable-hydrate state-atom request))
+  (reactive/track trackable-hydrate state-atom request))
 
 (defn db-pointer [state-atom uri ?branch-name]               ; todo remove state-atom arg
   {:pre [uri]}
