@@ -14,7 +14,15 @@
             [taoensso.timbre :as timbre]
 
     #?(:cljs [hypercrud.ui.navigate-cmp :as navigate-cmp])
-    #?(:cljs [hypercrud.browser.browser-ui :as browser-ui])))
+    #?(:cljs [hypercrud.browser.browser-ui :as browser-ui])
+
+    ; userland imports for topnav link formulas, these vars should be moved to this public ns.
+            [hyperfiddle.appval.state.actions]
+            [hyperfiddle.ide.fiddles.domain-code-database]
+    #?(:cljs [hyperfiddle.ide.fiddles.main])
+            [hyperfiddle.ide.fiddles.topnav]
+    #?(:cljs [hyperfiddle.ide.fiddles.user-dashboard])
+            [hyperfiddle.ide.util]))
 
 
 (def root-uri #uri "datomic:free://datomic:4334/root")      ; I don't understand this magic constant fully
@@ -92,7 +100,7 @@
     "/" (routing/encode (unwrap (hc-string/safe-read-edn-string (:domain/home-route domain))))
     route))
 
-(defn local-basis [ide-or-user global-basis -domain #_ "offensive" route ctx]
+(defn local-basis [ide-or-user global-basis -domain #_"offensive" route ctx]
   ;local-basis-ide and local-basis-user
   (let [route (routing/decode (canonical-route -domain route))
         {:keys [domain ide user]} global-basis
