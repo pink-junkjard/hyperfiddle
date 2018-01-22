@@ -132,11 +132,13 @@
                         (cats/mplus (either/right nil))
                         (cats/extract))
          anonymous? (nil? (:user-profile ctx))
-         stage @(reactive/cursor (.-state-atom (:peer ctx)) [:stage])]
+         stage @(reactive/cursor (.-state-atom (:peer ctx)) [:stage])
+         disabled? (or anonymous? (empty? stage))]
      ; tooltip busted
      [tooltip (cond anonymous? {:status :warning :label "please login"}
                     (empty? stage) {:status :warning :label "no changes"})
-      [:button {:disabled (or anonymous? (empty? stage))
+      [:button {:disabled disabled?
+                :style (if disabled? {:pointer-events "none"})
                 :on-click (reactive/partial save-and-navigate! home-route ctx)} "transact!"]])
    [staging (:peer ctx) (:dispatch! ctx)]
    [:div.markdown (markdown "Hyperfiddle always generates valid transactions, if it doesn't, please file a bug.
