@@ -24,12 +24,13 @@
       (http-request!)
       (p/then :body)))
 
-(defn hydrate-route! [service-uri local-basis encoded-route foo branch stage]
-  (-> (merge {:url (str/format "%(service-uri)shydrate-route/$local-basis/$double-encoded-route/$foo/$branch"
+(defn hydrate-route! [service-uri local-basis encoded-route foo ide-repo branch stage]
+  (-> (merge {:url (str/format "%(service-uri)shydrate-route/$local-basis/$double-encoded-route/$foo/$ide-repo/$branch"
                                {:service-uri service-uri
                                 :local-basis (base-64-url-safe/encode (pr-str local-basis))
                                 :double-encoded-route (base-64-url-safe/encode encoded-route) ; todo this is awful
                                 :foo (base-64-url-safe/encode (pr-str foo))
+                                :ide-repo (base-64-url-safe/encode (pr-str ide-repo))
                                 :branch (base-64-url-safe/encode (pr-str branch))})
               :accept :application/transit+json :as :auto}
              (if (empty? stage)
