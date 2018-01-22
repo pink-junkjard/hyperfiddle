@@ -95,8 +95,9 @@
                        :user-profile (lib/req->user-profile env req)}
                       (reducers/root-reducer nil))
         foo (some-> (:foo path-params) base-64-url-safe/decode reader/read-edn-string)
+        ide-repo (some-> (:ide-repo path-params) base-64-url-safe/decode reader/read-edn-string)
         branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
-        rt (HydrateRouteRuntime. (:HF_HOSTNAME env) hostname (req->service-uri env req) foo nil (reactive/atom state-val))]
+        rt (HydrateRouteRuntime. (:HF_HOSTNAME env) hostname (req->service-uri env req) foo ide-repo (reactive/atom state-val))]
     (-> (runtime/hydrate-route rt (:local-basis state-val) (:encoded-route state-val) branch (:stage state-val))
         (p/then (fn [data]
                   (doto res
