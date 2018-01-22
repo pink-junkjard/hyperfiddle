@@ -27,15 +27,6 @@
             [taoensso.timbre :as timbre]))
 
 
-(defn req->state-val [{:keys [body-params path-params] :as req}]
-  (-> {:encoded-route (or (some-> (:double-encoded-route path-params) base-64-url-safe/decode)
-                          (str "/" (:route path-params)))
-       :global-basis (some-> (:global-basis path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
-       :local-basis (some-> (:local-basis path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
-       :stage body-params
-       :user-profile (:user req)}
-      (reducers/root-reducer nil)))
-
 (defn http-index [req]
   (ring-resp/response "Hypercrud Server Running!"))
 
@@ -75,7 +66,8 @@
     (fn [req]
       (try
         (let [hostname (:server-name req)
-              state-val (req->state-val req)
+              state-val (-> {:user-profile (:user req)}
+                            (reducers/root-reducer nil))
               rt (->GlobalBasisRuntime (:HF_HOSTNAME env) hostname (reactive/atom state-val))]
           (-> (runtime/global-basis rt)
               (p/then (fn [global-basis]
@@ -89,12 +81,15 @@
 
 (defn http-local-basis [env]
   (interceptor/handler
-    (fn [req]
+    (fn [{:keys [path-params] :as req}]
       (try
         (let [hostname (:server-name req)
-              state-val (req->state-val req)
-              foo (some-> (get-in req [:path-params :foo]) base-64-url-safe/decode reader/read-edn-string)
-              branch (some-> (get-in req [:path-params :branch]) base-64-url-safe/decode reader/read-edn-string)
+              state-val (-> {:encoded-route (base-64-url-safe/decode (:double-encoded-route path-params))
+                             :global-basis (-> (:global-basis path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
+                             :user-profile (:user req)}
+                            (reducers/root-reducer nil))
+              foo (some-> (:foo path-params) base-64-url-safe/decode reader/read-edn-string)
+              branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string)
               rt (->LocalBasis (:HF_HOSTNAME env) hostname foo nil (reactive/atom state-val))]
           (-> (runtime/local-basis rt (:global-basis state-val) (:encoded-route state-val) branch)
               (p/then (fn [local-basis]
@@ -108,12 +103,16 @@
 
 (defn http-hydrate-route [env]
   (interceptor/handler
-    (fn [req]
+    (fn [{:keys [body-params path-params] :as req}]
       (try
         (let [hostname (:server-name req)
-              state-val (req->state-val req)
-              foo (some-> (get-in req [:path-params :foo]) base-64-url-safe/decode reader/read-edn-string)
-              branch (some-> (get-in req [:path-params :branch]) base-64-url-safe/decode reader/read-edn-string)
+              state-val (-> {:encoded-route (base-64-url-safe/decode (:double-encoded-route path-params))
+                             :local-basis (-> (:local-basis path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
+                             :stage body-params
+                             :user-profile (:user req)}
+                            (reducers/root-reducer nil))
+              foo (some-> (:foo path-params) base-64-url-safe/decode reader/read-edn-string)
+              branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string)
               rt (->HydrateRoute (:HF_HOSTNAME env) hostname foo nil (reactive/atom state-val))]
           (-> (runtime/hydrate-route rt (:local-basis state-val) (:encoded-route state-val) branch (:stage state-val))
               (p/then (fn [data]

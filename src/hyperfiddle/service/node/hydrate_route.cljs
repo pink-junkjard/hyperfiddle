@@ -9,7 +9,7 @@
             [hyperfiddle.appval.runtime-local :refer [hydrate-loop-adapter fetch-domain!]]
             [hyperfiddle.appval.runtime-rpc :refer [global-basis!]]
 
-            [hyperfiddle.service.node.lib :refer [req->service-uri req->state-val]]
+            [hyperfiddle.service.node.lib :as lib :refer [req->service-uri]]
             [hypercrud.util.base-64-url-safe :as base-64-url-safe]
             [hypercrud.compile.reader :as reader]
             [hypercrud.transit :as transit]
@@ -18,7 +18,7 @@
 
             [hyperfiddle.appval.domain.foundation :as foundation]
             [hyperfiddle.ide]
-            ))
+            [hyperfiddle.appval.state.reducers :as reducers]))
 
 
 (deftype HydrateRouteRuntime [hyperfiddle-hostname hostname service-uri foo ide-repo state-atom]
@@ -77,7 +77,7 @@
 
   hc/HydrateApi
   (hydrate-api [this request]
-    (unwrap (hc/hydrate this request)))
+    (unwrap @(hc/hydrate this request)))
 
   hyperfiddle.ide/SplitRuntime
   (sub-rt [rt foo ide-repo]
@@ -89,7 +89,11 @@
 
 (defn http-hydrate-route [env req res path-params query-params]
   (let [hostname (.-hostname req)
-        state-val (req->state-val env req path-params query-params)
+        state-val (-> {:encoded-route (base-64-url-safe/decode (:double-encoded-route path-params))
+                       :local-basis (-> (:local-basis path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
+                       :stage (some-> req .-body lib/hack-buggy-express-body-text-parser transit/decode)
+                       :user-profile (lib/req->user-profile env req)}
+                      (reducers/root-reducer nil))
         foo (some-> (:foo path-params) base-64-url-safe/decode reader/read-edn-string)
         branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
         rt (HydrateRouteRuntime. (:HF_HOSTNAME env) hostname (req->service-uri env req) foo nil (reactive/atom state-val))]

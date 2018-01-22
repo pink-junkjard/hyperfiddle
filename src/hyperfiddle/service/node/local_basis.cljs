@@ -6,7 +6,7 @@
             [hyperfiddle.appfn.runtime-rpc :refer [hydrate-requests! sync!]]
             [hyperfiddle.appval.runtime-local :refer [fetch-domain!]]
             [hyperfiddle.appval.runtime-rpc :refer [global-basis!]]
-            [hyperfiddle.service.node.lib :refer [req->service-uri req->state-val]]
+            [hyperfiddle.service.node.lib :as lib :refer [req->service-uri]]
             [promesa.core :as p]
             [hypercrud.util.base-64-url-safe :as base-64-url-safe]
             [hypercrud.compile.reader :as reader]
@@ -14,7 +14,9 @@
             [hypercrud.transit :as transit]
 
             [hyperfiddle.ide]
-            [hyperfiddle.appval.domain.foundation :as foundation]))
+            [hyperfiddle.appval.domain.foundation :as foundation]
+            [hyperfiddle.appval.state.reducers :as reducers]
+            ))
 
 
 ; Todo this is same runtime as HydrateRoute
@@ -61,7 +63,10 @@
   {:pre [(:ide-repo path-params) #_"Did the client rt send this with the http request?"]}
   ; Never called.
   (let [hostname (.-hostname req)
-        state-val (req->state-val env req path-params query-params)
+        state-val (-> {:encoded-route (base-64-url-safe/decode (:double-encoded-route path-params))
+                       :global-basis (-> (:global-basis path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
+                       :user-profile (lib/req->user-profile env req)}
+                      (reducers/root-reducer nil))
         foo (some-> (:foo path-params) base-64-url-safe/decode reader/read-edn-string)
         branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
         rt (LocalBasisRuntime. (:HF_HOSTNAME env) hostname (req->service-uri env req) foo (:ide-repo path-params) (reactive/atom state-val))]

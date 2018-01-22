@@ -3,7 +3,7 @@
         [com.cognitect/transit-clj "0.8.300"]
         [com.taoensso/timbre "4.10.0"]
         [datascript "0.16.2"]
-        [funcool/cats "2.1.0"]
+        [funcool/cats "2.2.0"]
         [funcool/cuerdas "2.0.4"]
         [funcool/promesa "1.8.1"]
         [io.nervous/kvlt "0.1.4"]

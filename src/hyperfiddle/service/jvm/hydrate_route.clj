@@ -86,7 +86,7 @@
 
   hc/HydrateApi
   (hydrate-api [this request]
-    (unwrap (hc/hydrate this request)))
+    (unwrap @(hc/hydrate this request)))
 
   hyperfiddle.ide/SplitRuntime
   (sub-rt [rt foo ide-repo]

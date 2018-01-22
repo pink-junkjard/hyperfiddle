@@ -4,9 +4,10 @@
             [hyperfiddle.runtime :as runtime]
             [hyperfiddle.appfn.runtime-rpc :refer [hydrate-requests! sync!]]
             [hyperfiddle.appval.runtime-local :refer [global-basis]]
+            [hyperfiddle.appval.state.reducers :as reducers]
             [hypercrud.transit :as transit]
             [hypercrud.util.reactive :as reactive]
-            [hyperfiddle.service.node.lib :refer [req->service-uri req->state-val]]
+            [hyperfiddle.service.node.lib :as lib :refer [req->service-uri]]
             [promesa.core :as p]))
 
 
@@ -37,7 +38,8 @@
 
 (defn http-global-basis [env req res path-params query-params]
   (let [hostname (.-hostname req)
-        state-val (req->state-val env req path-params query-params)
+        state-val (-> {:user-profile (lib/req->user-profile env req)}
+                      (reducers/root-reducer nil))
         rt (GlobalBasisRuntime. (:HF_HOSTNAME env) hostname (req->service-uri env req) (reactive/atom state-val))]
     (-> (runtime/global-basis rt)
         (p/then (fn [global-basis]

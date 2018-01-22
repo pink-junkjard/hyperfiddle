@@ -17,7 +17,7 @@
             [hyperfiddle.appval.runtime-rpc :refer [hydrate-route! global-basis!]]
             [hyperfiddle.appval.runtime-local :refer [fetch-domain!]]
             [hyperfiddle.appval.state.reducers :as reducers]
-            [hyperfiddle.service.node.lib :refer [req->service-uri req->state-val]]
+            [hyperfiddle.service.node.lib :as lib :refer [req->service-uri]]
 
             [promesa.core :as p]
             [reagent.dom.server :as reagent-server]
@@ -37,11 +37,6 @@
                (reagent-server/render-to-string (F)))))
 
 (def analytics (template/load-resource "analytics.html"))
-
-(defn error [error]
-  (str "<html><body><h2>Error:</h2><pre>"
-       (util/pprint-str error 100)
-       "</pre></body></html>"))
 
 (def template
   "
@@ -94,8 +89,9 @@
         (p/then (fn [html-fragment] (html env @state-atom html-fragment)))
         (p/catch (fn [error]
                    (timbre/error error)
-                   ; careful this needs to throw a Throwable in clj
-                   (p/rejected (error error)))))))
+                   (let [html-fragment (str "<h2>Error:</h2><pre>" (util/pprint-str error 100) "</pre>")]
+                     ; careful this needs to throw a Throwable in clj
+                     (p/rejected (html env @state-atom html-fragment))))))))
 
 (deftype IdeSsrRuntime [hyperfiddle-hostname hostname foo ide-repo service-uri state-atom]
   runtime/AppFnGlobalBasis
@@ -150,7 +146,7 @@
 
   hc/HydrateApi
   (hydrate-api [this request]
-    (unwrap (hc/hydrate this request)))
+    (unwrap @(hc/hydrate this request)))
 
   hyperfiddle.ide/SplitRuntime
   (sub-rt [rt foo ide-repo]
@@ -161,7 +157,9 @@
 
 (defn http-edge [env req res path-params query-params]
   (let [hostname (.-hostname req)
-        state-val (req->state-val env req path-params query-params)
+        state-val (-> {:encoded-route (.-path req)
+                       :user-profile (lib/req->user-profile env req)}
+                      (reducers/root-reducer nil))
         rt (IdeSsrRuntime. (:HF_HOSTNAME env) hostname "page" nil
                            (req->service-uri env req) (reactive/atom state-val))]
     ; Do not inject user-api-fn/view - it is baked into SsrRuntime
