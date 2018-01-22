@@ -105,8 +105,11 @@
                      "user" [user-basis])
         local-basis (->> basis-maps                         ; Userland api-fn should filter irrelevant routes
                          (apply concat)
-                         (apply concat)
-                         (apply sorted-map))]
+                         ;(apply concat)
+                         sort
+                         ;(apply sorted-map)
+                         )]
+    (timbre/info (pr-str local-basis))
     #_(determine-local-basis (hydrate-route route ...))
     local-basis))
 
