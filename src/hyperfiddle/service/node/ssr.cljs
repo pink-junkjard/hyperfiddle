@@ -150,7 +150,7 @@
 
   hyperfiddle.ide/SplitRuntime
   (sub-rt [rt foo ide-repo]
-    (IdeSsrRuntime. hyperfiddle-hostname hostname service-uri foo ide-repo state-atom))
+    (IdeSsrRuntime. hyperfiddle-hostname hostname foo ide-repo service-uri state-atom))
 
   IHash
   (-hash [this] (goog/getUid this)))
