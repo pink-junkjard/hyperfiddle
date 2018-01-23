@@ -11,11 +11,12 @@
             [hypercrud.util.performance :as perf]
             [hypercrud.util.reactive :as reactive]
             [hypercrud.util.template :as template]
-
+            [hyperfiddle.io.global-basis :refer [global-basis-rpc!]]
+            [hyperfiddle.io.hydrate-requests :refer [hydrate-requests-rpc!]]
+            [hyperfiddle.io.hydrate-route :refer [hydrate-route-rpc!]]
+            [hyperfiddle.io.sync :refer [sync-rpc!]]
+            [hyperfiddle.io.local-basis :refer [fetch-domain!]]
             [hyperfiddle.runtime :as runtime]
-            [hyperfiddle.appfn.runtime-rpc :refer [hydrate-requests! sync!]]
-            [hyperfiddle.appval.runtime-rpc :refer [hydrate-route! global-basis!]]
-            [hyperfiddle.appval.runtime-local :refer [fetch-domain!]]
             [hyperfiddle.appval.state.reducers :as reducers]
             [hyperfiddle.service.node.lib :as lib :refer [req->service-uri]]
 
@@ -96,7 +97,7 @@
 (deftype IdeSsrRuntime [hyperfiddle-hostname hostname foo ide-repo service-uri state-atom]
   runtime/AppFnGlobalBasis
   (global-basis [rt]
-    (global-basis! service-uri))
+    (global-basis-rpc! service-uri))
 
   runtime/AppValLocalBasis
   (local-basis [rt global-basis encoded-route branch]
@@ -112,18 +113,18 @@
   runtime/AppValHydrate
   (hydrate-route [rt local-basis encoded-route branch stage]
     ; If IDE, send up target-repo as well (encoded in route as query param?)
-    (hydrate-route! service-uri local-basis encoded-route foo ide-repo branch stage))
+    (hydrate-route-rpc! service-uri local-basis encoded-route foo ide-repo branch stage))
 
   (hydrate-route-page [rt local-basis encoded-route stage]
-    (hydrate-route! service-uri local-basis encoded-route "page" nil nil stage))
+    (hydrate-route-rpc! service-uri local-basis encoded-route "page" nil nil stage))
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
-    (hydrate-requests! service-uri local-basis stage requests))
+    (hydrate-requests-rpc! service-uri local-basis stage requests))
 
   runtime/AppFnSync
   (sync [rt dbs]
-    (sync! service-uri dbs))
+    (sync-rpc! service-uri dbs))
 
   runtime/AppFnRenderPageRoot
   (ssr [rt-page route]

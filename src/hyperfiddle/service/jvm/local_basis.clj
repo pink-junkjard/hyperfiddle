@@ -5,10 +5,10 @@
             [hypercrud.client.peer :as peer]
             [hypercrud.util.exception :refer [->Exception]]
             [hyperfiddle.runtime :as runtime]
-            [hyperfiddle.appfn.hydrate-requests :refer [hydrate-requests]]
-            [hyperfiddle.appfn.sync :refer [sync]]
-            [hyperfiddle.appfn.runtime-local :refer [stage-val->staged-branches]]
-            [hyperfiddle.appval.runtime-local :refer [global-basis fetch-domain!]]
+            [hyperfiddle.io.hydrate-requests :refer [hydrate-requests stage-val->staged-branches]]
+            [hyperfiddle.io.sync :refer [sync]]
+            [hyperfiddle.io.global-basis :refer [global-basis]]
+            [hyperfiddle.io.local-basis :refer [fetch-domain!]]
             [promesa.core :as p]
             [hyperfiddle.foundation :as foundation]))
 

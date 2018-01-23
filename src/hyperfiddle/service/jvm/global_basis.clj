@@ -3,10 +3,9 @@
   (:require [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
             [hyperfiddle.runtime :as runtime]
-            [hyperfiddle.appfn.hydrate-requests :refer [hydrate-requests]] ; todo
-            [hyperfiddle.appfn.sync :refer [sync]]          ; todo
-            [hyperfiddle.appfn.runtime-local :refer [stage-val->staged-branches]] ; todo
-            [hyperfiddle.appval.runtime-local :refer [global-basis]]
+            [hyperfiddle.io.hydrate-requests :refer [hydrate-requests stage-val->staged-branches]]
+            [hyperfiddle.io.sync :refer [sync]]
+            [hyperfiddle.io.global-basis :refer [global-basis]]
             [promesa.core :as p]))
 
 

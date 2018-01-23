@@ -2,8 +2,9 @@
   (:require [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
             [hyperfiddle.runtime :as runtime]
-            [hyperfiddle.appfn.runtime-rpc :refer [hydrate-requests! sync!]]
-            [hyperfiddle.appval.runtime-local :refer [global-basis]]
+            [hyperfiddle.io.global-basis :refer [global-basis]]
+            [hyperfiddle.io.hydrate-requests :refer [hydrate-requests-rpc!]]
+            [hyperfiddle.io.sync :refer [sync-rpc!]]
             [hyperfiddle.appval.state.reducers :as reducers]
             [hypercrud.transit :as transit]
             [hypercrud.util.reactive :as reactive]
@@ -18,11 +19,11 @@
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
-    (hydrate-requests! service-uri local-basis stage requests))
+    (hydrate-requests-rpc! service-uri local-basis stage requests))
 
   runtime/AppFnSync
   (sync [rt dbs]
-    (sync! service-uri dbs))
+    (sync-rpc! service-uri dbs))
 
   hc/Peer
   (hydrate [this request]

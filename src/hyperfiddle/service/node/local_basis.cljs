@@ -3,9 +3,11 @@
             [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
             [hyperfiddle.runtime :as runtime]
-            [hyperfiddle.appfn.runtime-rpc :refer [hydrate-requests! sync!]]
-            [hyperfiddle.appval.runtime-local :refer [fetch-domain!]]
-            [hyperfiddle.appval.runtime-rpc :refer [global-basis!]]
+            [hyperfiddle.io.global-basis :refer [global-basis-rpc!]]
+            [hyperfiddle.io.hydrate-requests :refer [hydrate-requests-rpc!]]
+            [hyperfiddle.io.sync :refer [sync-rpc!]]
+            [hyperfiddle.io.local-basis :refer [fetch-domain!]]
+
             [hyperfiddle.service.node.lib :as lib :refer [req->service-uri]]
             [promesa.core :as p]
             [hypercrud.util.base-64-url-safe :as base-64-url-safe]
@@ -23,7 +25,7 @@
 (deftype LocalBasisRuntime [hyperfiddle-hostname hostname service-uri foo ide-repo state-atom]
   runtime/AppFnGlobalBasis
   (global-basis [rt]
-    (global-basis! service-uri))
+    (global-basis-rpc! service-uri))
 
   runtime/AppValLocalBasis
   (local-basis [rt global-basis encoded-route branch]
@@ -38,11 +40,11 @@
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
-    (hydrate-requests! service-uri local-basis stage requests))
+    (hydrate-requests-rpc! service-uri local-basis stage requests))
 
   runtime/AppFnSync
   (sync [rt dbs]
-    (sync! service-uri dbs))
+    (sync-rpc! service-uri dbs))
 
   hc/Peer
   (hydrate [this request]

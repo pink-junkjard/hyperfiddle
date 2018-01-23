@@ -7,9 +7,9 @@
             [hypercrud.util.reactive :as reactive]
             [hyperfiddle.runtime :as runtime]
 
-            [hyperfiddle.appfn.hydrate-requests :refer [hydrate-requests]]
-            [hyperfiddle.appfn.sync :refer [sync]]
-            [hyperfiddle.appfn.transact :refer [transact!]]
+            [hyperfiddle.io.hydrate-requests :refer [hydrate-requests]]
+            [hyperfiddle.io.sync :refer [sync]]
+            [hyperfiddle.io.transact :refer [transact!]]
             [hyperfiddle.appval.state.reducers :as reducers]
 
             [hyperfiddle.service.lib.jwt :as jwt]
