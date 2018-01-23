@@ -3,7 +3,6 @@
   (:require [hypercrud.browser.link :as link]
             [hypercrud.client.tx :as tx]
             [hypercrud.ui.attribute.code :as code]
-            [hypercrud.ui.attribute.edn :as edn]
             [hypercrud.ui.attribute.markdown-editor :as markdown-editor]
             [hypercrud.ui.control.link-controls :as links]
             [hypercrud.ui.input :as input]
@@ -15,8 +14,6 @@
 ; compat
 (def ^:export code code/code)
 (def ^:export markdown markdown-editor/markdown-editor)
-(def ^:export edn edn/edn)
-(def ^:export edn-many edn/edn-many)
 
 (defn keyword [maybe-field props ctx]
   (let [my-links (->> (link/links-lookup' (:links ctx) [(:fe-pos ctx) (-> ctx :attribute :db/ident)])
