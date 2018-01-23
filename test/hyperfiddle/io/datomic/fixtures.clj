@@ -1,4 +1,4 @@
-(ns hyperfiddle.appfn.fixtures
+(ns hyperfiddle.io.datomic.fixtures
   (:require [datomic.api :as d]))
 
 

@@ -1,4 +1,4 @@
-(ns hyperfiddle.appfn.hydrate-requests
+(ns hyperfiddle.io.datomic.hydrate-requests
   (:refer-clojure :exclude [sync])
   (:require [clojure.set :as set]
             [clojure.walk :as walk]

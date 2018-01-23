@@ -1,21 +1,21 @@
-(ns hyperfiddle.appfn.runtime-local
-  (:require [cats.core :as cats]
-            [cats.monad.either :as either]
-            [clojure.set :as set]
+(ns hyperfiddle.io.hydrate-route
+  (:require [clojure.set :as set]
+            [cuerdas.core :as str]
+            [hypercrud.http.core :refer [http-request!]]
+            [hypercrud.types.EntityRequest :refer [#?(:cljs EntityRequest)]]
+            [hypercrud.types.QueryRequest :refer [#?(:cljs QueryRequest)]]
+            [hypercrud.util.base-64-url-safe :as base-64-url-safe]
             [hypercrud.util.branch :as branch]
             [hypercrud.util.core :as util]
             [hypercrud.util.performance :as perf]
+            [hyperfiddle.appval.state.reducers :as reducers]
             [hyperfiddle.runtime :as runtime]
             [promesa.core :as p]
-            [taoensso.timbre :as timbre]
-
-            [hypercrud.types.Err :refer [#?(:cljs Err)]]
-    #?(:cljs [hypercrud.types.EntityRequest :refer [EntityRequest]])
-    #?(:cljs [hypercrud.types.QueryRequest :refer [QueryRequest]]))
+            [taoensso.timbre :as timbre])
   #?(:clj
-     (:import (hypercrud.types.Err Err)
-              (hypercrud.types.EntityRequest EntityRequest)
-              (hypercrud.types.QueryRequest QueryRequest))))
+     (:import
+       (hypercrud.types.EntityRequest EntityRequest)
+       (hypercrud.types.QueryRequest QueryRequest))))
 
 
 (defn validate-user-qs [qs]
@@ -61,45 +61,29 @@
                              (timbre/debug "Finished hydrate-loop" (str "[" hydrate-loop-id "]") "total time:" (get-total-time) "total loops:" (:total-loops success))))
         (p/then #(dissoc % :total-loops)))))
 
-(defn human-error [e req]
-  ; this is invalid on the jvm
-  #_(let [unfilled-holes (->> (filter (comp nil? val) (.-params req)) (map key))]
-      ; what about EntityRequests? why are datomic errors not sufficient?
-      (if-not (empty? unfilled-holes)
-        {:message "Invalid query" :data {:datomic-error (.-msg e) :query (.-query req) :missing unfilled-holes}}))
-  (ex-info "Datomic error" {:datomic-error (.-msg e)}))
+(defn hydrate-loop-adapter [local-basis stage ctx ->Runtime f]
+  ; Hacks because the hydrate-loop doesn't write to the state atom.
+  (fn [id->tempid ptm]
+    (let [state-val {:local-basis local-basis
+                     :tempid-lookups id->tempid
+                     :ptm ptm
+                     :stage stage}
+          ctx (assoc ctx :peer (->Runtime (reducers/root-reducer state-val nil)))]
+      (f ctx))))
 
-; this can be removed; #err can natively be Either
-(defn process-result [resultset-or-error request]
-  (if (instance? Err resultset-or-error)
-    (either/left (human-error resultset-or-error request))
-    (either/right resultset-or-error)))
-
-(defn v-not-nil? [stmt]
-  (or (map? stmt)
-      (let [[op e a v] stmt]
-        (not (and (or (= :db/add op) (= :db/retract op))
-                  (nil? v))))))
-
-(defn stage-val->staged-branches [stage-val]
-  (->> stage-val
-       (mapcat (fn [[branch-ident branch-content]]
-                 (->> branch-content
-                      (map (fn [[uri tx]]
-                             {:branch-ident branch-ident
-                              :uri uri
-                              :tx (filter v-not-nil? tx)})))))))
-
-(defn hydrate-one! [rt local-basis stage request]
-  (-> (runtime/hydrate-requests rt local-basis stage [request])
-      (p/then (fn [{:keys [pulled-trees]}]
-                (-> (process-result (first pulled-trees) request)
-                    (either/branch p/rejected p/resolved))))))
-
-; Promise[List[Response]]
-(defn hydrate-all-or-nothing! [rt local-basis stage requests]
-  (-> (runtime/hydrate-requests rt local-basis stage requests)
-      (p/then (fn [{:keys [pulled-trees]}]
-                (-> (map process-result pulled-trees requests)
-                    (cats/sequence)
-                    (either/branch p/rejected p/resolved))))))
+(defn hydrate-route-rpc! [service-uri local-basis encoded-route foo ide-repo branch stage]
+  (-> (merge {:url (str/format "%(service-uri)shydrate-route/$local-basis/$double-encoded-route/$foo/$ide-repo/$branch"
+                               {:service-uri service-uri
+                                :local-basis (base-64-url-safe/encode (pr-str local-basis))
+                                :double-encoded-route (base-64-url-safe/encode encoded-route) ; todo this is awful
+                                :foo (base-64-url-safe/encode (pr-str foo))
+                                :ide-repo (base-64-url-safe/encode (pr-str ide-repo))
+                                :branch (base-64-url-safe/encode (pr-str branch))})
+              :accept :application/transit+json :as :auto}
+             (if (empty? stage)
+               {:method :get}                               ; Try to hit CDN
+               {:method :post
+                :form stage
+                :content-type :application/transit+json}))
+      (http-request!)
+      (p/then :body)))
