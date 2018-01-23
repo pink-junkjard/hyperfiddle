@@ -178,11 +178,12 @@
            user-profile @(reactive/cursor (.-state-atom (:peer ctx)) [:user-profile])
            ctx (assoc ctx :navigate-cmp navigate-cmp/navigate-cmp
                           :page-on-click (reactive/partial page-on-click ctx -domain))]
-       [:div.hyperfiddle-ide
-        (if-not hide-ide
-          [browser/ui-from-route (ide-route route) (ide-context ctx ide-domain -domain nil route user-profile)])
-        ; This is different than foo=user because it is special css at root attach point
-        [browser/ui-from-route route (target-context ctx -domain route user-profile) "app-browser"]])))
+       (react-fragment
+         :view-page
+         (if-not hide-ide
+           [browser/ui-from-route (ide-route route) (ide-context ctx ide-domain -domain nil route user-profile) "hyperfiddle-ide-topnav"])
+         ; This is different than foo=user because it is special css at root attach point
+         [browser/ui-from-route route (target-context ctx -domain route user-profile) "hyperfiddle-ide-user"]))))
 
 #?(:cljs
    ; Route is managed by the domain; Domain will not be available here soon.
@@ -191,7 +192,7 @@
            ide-domain (hc/hydrate-api (:peer ctx) (foundation/domain-request "hyperfiddle" (:peer ctx)))
            user-profile @(reactive/cursor (.-state-atom (:peer ctx)) [:user-profile])]
        (case foo
-         "page" [view-page -domain route ctx]
+         "page" (view-page -domain route ctx)               ; component, seq-component or nil
          ; On SSR side this is only ever called as "page", but it could be differently (e.g. turbolinks)
          ; On Browser side, also only ever called as "page", but it could be configured differently (client side render the ide, server render userland...?)
          "ide" [browser/ui-from-route route (ide-context ctx ide-domain -domain route nil user-profile)]
