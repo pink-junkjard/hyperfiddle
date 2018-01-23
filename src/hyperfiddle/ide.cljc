@@ -44,6 +44,8 @@
 
 (let [always-user (atom :user)]
   (defn ide-context [ctx ide-domain target-domain ide-route target-route user-profile]
+    {:pre [target-route target-domain (seq (-> target-domain :domain/code-databases))]
+     :post [(seq (-> % :domain :domain/code-databases))]}
     (let [ide-domain (foundation/process-domain-legacy ide-domain)
           peer (if (= "ide" (.-foo (:peer ctx)))
                  (:peer ctx)
@@ -74,7 +76,8 @@
                           (dispatch! action)
                           nil)]
   (defn target-context [ctx domain route user-profile]
-    {:post [(:repository %) (-> % :repository :dbhole/uri)]}
+    {:pre [route domain (seq (-> domain :domain/code-databases))]
+     :post [(:repository %) (-> % :repository :dbhole/uri)]}
     (let [processed-domain (foundation/process-domain-legacy domain)
           peer (-sub-rt (:peer ctx) "user" nil)]
       (assoc ctx

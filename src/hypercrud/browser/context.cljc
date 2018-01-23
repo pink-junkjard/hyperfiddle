@@ -22,7 +22,9 @@
 (defn route [ctx route]
   {:pre [(:code-database route)
          (-> ctx :domain)
-         (-> ctx :domain :domain/code-databases)]}
+         (seq (-> ctx :domain :domain/code-databases))]
+   :post [(-> % :repository)
+          (-> % :repository :dbhole/uri)]}
   (let [initial-repository (->> (get-in ctx [:domain :domain/code-databases])
                                 (filter #(= (:dbhole/name %) (:code-database route)))
                                 first
