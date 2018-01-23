@@ -11,7 +11,7 @@
             [hyperfiddle.appfn.sync :refer [sync]]
             [hyperfiddle.appfn.runtime-local :refer [stage-val->staged-branches hydrate-loop]]
             [hyperfiddle.appval.runtime-local :refer [global-basis hydrate-loop-adapter fetch-domain!]]
-            [hyperfiddle.appval.domain.foundation :as foundation]
+            [hyperfiddle.foundation :as foundation]
             [hyperfiddle.ide]
             [hyperfiddle.core]                              ; compat
 

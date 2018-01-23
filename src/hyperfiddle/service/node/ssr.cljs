@@ -24,7 +24,7 @@
             [taoensso.timbre :as timbre]
 
             [hyperfiddle.ide]
-            [hyperfiddle.appval.domain.foundation :as foundation]
+            [hyperfiddle.foundation :as foundation]
             ))
 
 (def cheerio (node/require "cheerio"))

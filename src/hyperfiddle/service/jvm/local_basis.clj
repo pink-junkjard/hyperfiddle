@@ -10,7 +10,7 @@
             [hyperfiddle.appfn.runtime-local :refer [stage-val->staged-branches]]
             [hyperfiddle.appval.runtime-local :refer [global-basis fetch-domain!]]
             [promesa.core :as p]
-            [hyperfiddle.appval.domain.foundation :as foundation]))
+            [hyperfiddle.foundation :as foundation]))
 
 
 ; This is allowed to hydrate route, this runtime is probably the same as hydrate-route runtime

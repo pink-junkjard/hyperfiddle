@@ -14,7 +14,7 @@
             [hypercrud.transit :as transit]
 
             [hyperfiddle.ide]
-            [hyperfiddle.appval.domain.foundation :as foundation]
+            [hyperfiddle.foundation :as foundation]
             [hyperfiddle.appval.state.reducers :as reducers]
             ))
 

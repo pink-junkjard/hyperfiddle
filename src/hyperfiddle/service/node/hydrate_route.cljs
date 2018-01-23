@@ -16,7 +16,7 @@
             [hypercrud.util.reactive :as reactive]
             [promesa.core :as p]
 
-            [hyperfiddle.appval.domain.foundation :as foundation]
+            [hyperfiddle.foundation :as foundation]
             [hyperfiddle.ide]
             [hyperfiddle.appval.state.reducers :as reducers]))
 
