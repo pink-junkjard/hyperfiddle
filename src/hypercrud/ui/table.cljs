@@ -11,9 +11,6 @@
             [hypercrud.util.reactive :as reactive]))
 
 
-(def ^:export with-field identity)                          ; compat
-(def ^:export Field nil)                                    ; compat
-
 (defn attr-sortable? [fe attribute ctx]
   (if-let [source-symbol (:source-symbol fe)]
     (let [{:keys [:db/cardinality :db/valueType]} (get-in ctx [:schemas (str source-symbol) attribute])]

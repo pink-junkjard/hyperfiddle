@@ -16,6 +16,9 @@
                                           (-> ctx :attribute :db/ident))
                     readonly (or sys? (and shadow? cantchange))
                     ctx (assoc ctx :read-only (if readonly always-readonly never-readonly))]
-                (table/Field control maybe-field ctx)))]
+                ;(table/Field control maybe-field ctx)
+                ))]
   (defn bindings [ctx]
-    (assoc ctx :field field)))
+    ctx
+    ;(assoc ctx :field field)
+    ))

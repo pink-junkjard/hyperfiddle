@@ -17,9 +17,7 @@
     ; todo these hc.ui.* should be reduced to one require e.g. [hypercrud.ui]
     #?(:cljs [hypercrud.react.react-fragment])
             [hypercrud.ui.auto-control]
-            [hypercrud.ui.form]
     #?(:cljs [hypercrud.ui.result])
-            [hypercrud.ui.table]
 
     ; pull in the entire ide app for reference from user-land
             [hyperfiddle.ide.actions]

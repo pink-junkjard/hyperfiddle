@@ -11,8 +11,6 @@
             [hypercrud.util.reactive :as reactive]))
 
 
-(def ^:export Field nil)                                    ; compat
-
 (defn new-field-state-container [ctx]
   (let [attr-ident (reactive/atom nil)]
     (fn [ctx]
