@@ -29,3 +29,7 @@
   ; user-data-fn not on this interface; hardcoded in runtime impls or read from db
   (hydrate-route [rt local-basis encoded-route branch stage]) ; returns ptm without stage-val hashes
   (hydrate-route-page [rt local-basis encoded-route stage]))
+
+#_(defprotocol State
+  (dispatch! [rt])
+    (deref ))

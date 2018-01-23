@@ -1,8 +1,9 @@
-(ns hypercrud.state.reducers
+(ns hyperfiddle.foundation.reducers
   (:require [hypercrud.client.tx :as tx]
-            [hypercrud.state.core :as state]
+            [hyperfiddle.state :as state]
             [hypercrud.util.branch :as branch]
             [hypercrud.util.core :as util]))
+
 
 (defn hydrate-id-reducer [loading? action & args]
   (case action
@@ -112,17 +113,30 @@
     :set-local-basis (first args)
     local-basis))
 
-(def root-reducer-map
-  {:hydrate-id hydrate-id-reducer
-   :encoded-route route-reducer
-   :global-basis global-basis-reducer
-   :local-basis local-basis-reducer
-   :stage stage-reducer
-   :ptm ptm-reducer
-   :error error-reducer
-   :branches branches-reducer
-   :popovers popover-reducer
-   :pressed-keys pressed-keys-reducer
-   :tempid-lookups tempid-lookups-reducer})
+(defn staging-open-reducer [staging-open? action & args]
+  (case action
+    :toggle-staging (not staging-open?)
+    :hydrate!-failure true
+    (or staging-open? false)))
 
-(def root-reducer (state/combine-reducers root-reducer-map))
+(defn display-mode-reducer [display-mode action & args]
+  (case action
+    :toggle-display-mode (case display-mode
+                           :xray :user
+                           :user :xray)
+    :set-display-mode (first args)
+    (or display-mode :user)))
+
+(def reducer-map {:display-mode display-mode-reducer
+                  :staging-open staging-open-reducer
+                  :hydrate-id hydrate-id-reducer
+                  :encoded-route route-reducer
+                  :global-basis global-basis-reducer
+                  :local-basis local-basis-reducer
+                  :stage stage-reducer
+                  :ptm ptm-reducer
+                  :error error-reducer
+                  :branches branches-reducer
+                  :popovers popover-reducer
+                  :pressed-keys pressed-keys-reducer
+                  :tempid-lookups tempid-lookups-reducer})

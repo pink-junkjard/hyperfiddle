@@ -5,8 +5,8 @@
             [hypercrud.browser.base :as base]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.routing :as routing]
-            [hypercrud.state.actions.core :as actions]
-            [hypercrud.state.actions.util :as actions-util]
+            [hyperfiddle.foundation :as foundation]
+            [hyperfiddle.foundation.actions :as foundation-actions]
             [hypercrud.ui.css :refer [css-slugify classes]]
             [hypercrud.ui.native-event-listener :refer [native-listener]]
             [hypercrud.ui.safe-render :refer [safe-user-renderer]]
@@ -97,8 +97,8 @@
   (when (and route (.-altKey event))
     ((:dispatch! ctx) (fn [dispatch! get-state]
                         (let [encoded-route (routing/encode route)]
-                          (when (actions-util/navigable? encoded-route (get-state))
-                            (actions/set-route (:peer ctx) encoded-route dispatch! get-state)))))
+                          (when (foundation/navigable? encoded-route (get-state))
+                            (foundation-actions/set-route (:peer ctx) encoded-route dispatch! get-state)))))
     (.stopPropagation event)))
 
 (defn wrap-ui [v' route ctx & [class]]

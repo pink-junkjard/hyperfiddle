@@ -7,7 +7,7 @@
             [hypercrud.browser.q-util :as q-util]
             [hypercrud.browser.routing :as routing]
             [hypercrud.compile.eval :as eval :refer [eval-str]]
-            [hypercrud.state.actions.core :as actions]
+            [hyperfiddle.foundation.actions :as foundation-actions]
             [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
             [hypercrud.types.ThinEntity :refer [->ThinEntity]]
             [hypercrud.util.core :refer [pprint-str]]
@@ -148,17 +148,17 @@
 
                               ; return the result to the action, it could be a promise
                               result))]
-              ((:dispatch! ctx) (actions/stage-popover (:peer ctx) popover-id (:branch ctx) swap-fn)))))
+              ((:dispatch! ctx) (foundation-actions/stage-popover (:peer ctx) popover-id (:branch ctx) swap-fn)))))
         ; todo something better with these exceptions (could be user error)
         (p/catch (fn [err]
                    #?(:clj  (throw err)
                       :cljs (js/alert (pprint-str err))))))))
 
 (defn close! [popover-id ctx]
-  ((:dispatch! ctx) (actions/close-popover popover-id)))
+  ((:dispatch! ctx) (foundation-actions/close-popover popover-id)))
 
 (defn cancel! [popover-id ctx]
-  ((:dispatch! ctx) (actions/discard-branched-popover popover-id (:branch ctx))))
+  ((:dispatch! ctx) (foundation-actions/discard-branched-popover popover-id (:branch ctx))))
 
 (defn managed-popover-body [link route popover-id dont-branch? ctx]
   [:div.hyperfiddle-popover-body
@@ -178,8 +178,8 @@
 (defn open! [route popover-id dont-branch? ctx]
   ((:dispatch! ctx)
     (if dont-branch?
-      (actions/open-popover popover-id)
-      (actions/open-branched-popover (:peer ctx) popover-id (:branch ctx) route))))
+      (foundation-actions/open-popover popover-id)
+      (foundation-actions/open-branched-popover (:peer ctx) popover-id (:branch ctx) route))))
 
 ; if this is driven by link, and not route, it needs memoized.
 ; the route is a fn of the formulas and the formulas can have effects

@@ -6,7 +6,6 @@
             [hypercrud.browser.routing :as routing]
             [hypercrud.client.tx :as tx]
             [hypercrud.react.react-fragment :refer [react-fragment]]
-            [hypercrud.state.actions.core :as hc-actions]
             [hypercrud.ui.attribute.code :refer [code]]
             [hypercrud.ui.control.markdown-rendered :refer [markdown]]
             [hypercrud.ui.radio :as radio]
@@ -16,7 +15,7 @@
             [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :as hc-string]
             [hyperfiddle.foundation :as foundation :refer [staging]]
-            [hyperfiddle.appval.state.actions :as ide-actions]
+            [hyperfiddle.foundation.actions :as foundation-actions]
             [hyperfiddle.ide.fiddles.topnav-bindings :as topnav-bindings]
             [reagent.core :as reagent]
             [hypercrud.browser.link :as link]))
@@ -60,7 +59,7 @@
       (fake-managed-anchor :ui ctx "view")
       (fake-managed-anchor :stage ctx "stage" :class (if dirty? "stage-dirty"))
 
-      (let [change! #((:dispatch! ctx) (ide-actions/set-display-mode %))]
+      (let [change! #((:dispatch! ctx) (foundation-actions/set-display-mode %))]
         [:span.radio-group
          (radio/option {:label "data" :tooltip "Edit data directly" :target :xray :value display-mode :change! change!})
          (radio/option {:label "view" :tooltip "View end-user UI" :target :user :value display-mode :change! change!})])
@@ -123,7 +122,7 @@
 
 (defn save-and-navigate! [home-route ctx]
   ; Interface feels wonky because we currently have an IDE context and are converting, which is weird.
-  ((:dispatch! ctx) (hc-actions/transact! home-route (hyperfiddle.ide/target-context ctx (:target-domain ctx) (:target-route ctx) (:user-profile ctx)))))
+  ((:dispatch! ctx) (foundation-actions/transact! home-route (hyperfiddle.ide/target-context ctx (:target-domain ctx) (:target-route ctx) (:user-profile ctx)))))
 
 (defn ^:export stage-ui [result ordered-fes links ctx]
   [:div.hyperfiddle-topnav-stage

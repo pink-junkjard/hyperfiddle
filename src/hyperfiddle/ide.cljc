@@ -4,9 +4,8 @@
             [hypercrud.browser.core :as browser]
             [hypercrud.browser.routing :as routing]
             [hypercrud.util.reactive :as reactive]
-            [hypercrud.state.actions.core :as actions]
-            [hypercrud.state.actions.util :as actions-util]
-            [hyperfiddle.foundation :as foundation] ; hack
+            [hyperfiddle.foundation.actions :as foundation-actions]
+            [hyperfiddle.foundation :as foundation]
             [hypercrud.util.core :refer [unwrap]]
             [hypercrud.browser.routing :as routing]
             [hypercrud.util.string :as hc-string]
@@ -16,7 +15,9 @@
     #?(:cljs [hypercrud.browser.browser-ui :as browser-ui])
 
     ; userland imports for topnav link formulas, these vars should be moved to this public ns.
-            [hyperfiddle.appval.state.actions]
+            [hyperfiddle.cloud.actions]
+            [hyperfiddle.foundation.actions]
+            [hyperfiddle.ide.actions]
             [hyperfiddle.ide.fiddles.domain-code-database]
             [hyperfiddle.ide.fiddles.fiddle-links.bindings]
     #?(:cljs [hyperfiddle.ide.fiddles.fiddle-links.renderer])
@@ -160,8 +161,8 @@
          (if can-soft-nav?
            ((:dispatch! ctx) (fn [dispatch! get-state]
                                (let [encoded-route (routing/encode route)]
-                                 (when (actions-util/navigable? encoded-route (get-state))
-                                   (actions/set-route (:peer ctx) encoded-route dispatch! get-state)))))
+                                 (when (foundation/navigable? encoded-route (get-state))
+                                   (foundation-actions/set-route (:peer ctx) encoded-route dispatch! get-state)))))
            (let [encoded-route (routing/encode route (str "hyperfiddle." (:hyperfiddle-hostname ctx)))]
              ; todo push this window.location set up to the appfn atom watcher
              (aset js/window "location" encoded-route)))

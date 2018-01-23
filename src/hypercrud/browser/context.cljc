@@ -2,7 +2,7 @@
   (:require [clojure.string :as string]
             [hypercrud.browser.auto-anchor-formula :as auto-anchor-formula]
             [hypercrud.browser.routing :as routing]
-            [hypercrud.state.actions.core :as actions]
+            [hyperfiddle.foundation.actions :as foundation-actions]
             [hypercrud.util.branch :as branch]
             [hypercrud.util.reactive :as reactive]
             [hypercrud.util.core :as util]
@@ -52,7 +52,7 @@
 
 (defn user-with [ctx branch uri tx]
   ; todo custom user-dispatch with all the tx-fns as reducers
-  ((:dispatch! ctx) (actions/with (:peer ctx) branch uri tx)))
+  ((:dispatch! ctx) (foundation-actions/with (:peer ctx) branch uri tx)))
 
 (defn relations [ctx relations]
   (assoc ctx :relations (reactive/atom relations)))

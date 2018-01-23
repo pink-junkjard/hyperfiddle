@@ -3,7 +3,7 @@
             [cljs.pprint :as pprint]
             [hypercrud.client.core :as hc]
             [hypercrud.compile.reader :as reader]
-            [hypercrud.state.actions.core :as actions]
+            [hyperfiddle.foundation.actions :as foundation-actions]
             [hypercrud.util.exception :refer [->Exception]]
             [hypercrud.util.non-fatal :refer [try-either]]
             [hypercrud.util.reactive :as reactive]
@@ -80,7 +80,7 @@
                          pprint/*print-right-margin* 200]
                  (with-out-str (pprint/pprint stage-val)))]
        ; todo this can throw
-       [code* edn #(dispatch! (actions/reset-stage peer (reader/read-edn-string %)))])))
+       [code* edn #(dispatch! (foundation-actions/reset-stage peer (reader/read-edn-string %)))])))
 
 #?(:cljs
    (defn leaf-view [route ctx f]
@@ -111,3 +111,12 @@
        ; Can't ide/user (not page) be part of the userland route?
        "page" (page-view route ctx f)
        (leaf-view route ctx f))))
+
+(defn confirm [message]
+  #?(:clj  (throw (ex-info "confirm unsupported by platform" nil))
+     :cljs (js/confirm message)))
+
+(defn navigable? [route {:keys [encoded-route branches] :as state}]
+  (and (not= route encoded-route)
+       (or (empty? branches)
+           (confirm "Unstaged work will be lost on navigate, are you sure?"))))

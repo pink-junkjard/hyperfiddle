@@ -1,4 +1,4 @@
-(ns hypercrud.state.actions.core
+(ns hyperfiddle.foundation.actions
   (:require [cats.core :refer [mlet]]
             [cats.monad.either :as either]
             [hypercrud.browser.routing :as routing]
@@ -12,6 +12,11 @@
             [promesa.core :as p]
             [taoensso.timbre :as timbre]))
 
+
+(defn toggle-staging [] [:toggle-staging])
+
+(defn set-display-mode [display-mode]
+  [:set-display-mode display-mode])
 
 ; batch doesn't make sense with thunks (can be sync or async dispatches in a thunk),
 ; user beware

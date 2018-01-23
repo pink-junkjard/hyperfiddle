@@ -1,4 +1,4 @@
-(ns hypercrud.state.core)
+(ns hyperfiddle.state)
 
 
 (defn combine-reducers [reducer-map]

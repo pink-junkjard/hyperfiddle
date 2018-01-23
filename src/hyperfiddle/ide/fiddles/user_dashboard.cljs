@@ -5,11 +5,11 @@
             [hypercrud.ui.native-event-listener :refer [native-listener]]
             [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :as hc-string]
-            [hyperfiddle.appval.state.actions :as foundation-actions]))
+            [hyperfiddle.ide.actions :as ide-actions]))
 
 
 (defn logout! [rt dispatch! e]
-  (dispatch! (foundation-actions/set-user-profile rt nil))
+  (dispatch! (ide-actions/set-user-profile rt nil))
   (.preventDefault e)
   (.stopPropagation e))
 
