@@ -1,6 +1,5 @@
 (ns hyperfiddle.ide.fiddles.fiddle-links.bindings
-  (:require [hypercrud.browser.auto-anchor :as auto-anchor]
-            [hypercrud.ui.table :as table]))
+  (:require [hypercrud.browser.auto-anchor :as auto-anchor]))
 
 
 (let [always-readonly (constantly true)
