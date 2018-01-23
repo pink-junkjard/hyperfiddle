@@ -7,7 +7,7 @@
             [hypercrud.browser.dbname :as dbname]
             [hypercrud.compile.eval :as eval]
             [hypercrud.compile.reader :as reader]
-            [hypercrud.types.Entity :refer [->Entity #?(:cljs Entity)]]
+            [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
             [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
             [hypercrud.util.base-64-url-safe :as base64]
             [hypercrud.util.non-fatal :refer [try-either]]

@@ -2,8 +2,8 @@
   (:require [hypercrud.browser.base :as base]
             [hypercrud.browser.browser-request :as browser-request]
             [hypercrud.browser.browser-ui :as browser-ui]
-            [hypercrud.form.q-util]                         ; legacy
-            ))
+    ; legacy
+            [hypercrud.form.q-util]))
 
 
 (def data base/data-from-link)

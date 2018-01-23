@@ -1,17 +1,14 @@
 (ns hypercrud.ui.form
-  (:require [cuerdas.core :as str]
+  (:require [hypercrud.browser.context :as context]
             [hypercrud.browser.link :as link]
-            [hypercrud.browser.context :as context]
             [hypercrud.browser.result :as result]
-            [hypercrud.ui.connection-color :as connection-color]
-            [hypercrud.ui.css :refer [css-slugify classes]]
-            [hypercrud.ui.label :refer [label]]
             [hypercrud.ui.auto-control :refer [auto-control' control-props]]
-            [hypercrud.ui.input :as input]
+            [hypercrud.ui.connection-color :as connection-color]
             [hypercrud.ui.control.link-controls :as link-controls]
-            [hypercrud.util.reactive :as reactive]
-            [hypercrud.ui.safe-render :refer [unify-portal-markup]]
-            [taoensso.timbre :as timbre]))
+            [hypercrud.ui.css :refer [css-slugify classes]]
+            [hypercrud.ui.input :as input]
+            [hypercrud.ui.label :refer [label]]
+            [hypercrud.util.reactive :as reactive]))
 
 
 (def ^:export Field nil)                                    ; compat

@@ -1,12 +1,10 @@
 (ns hypercrud.browser.browser-ui
   (:require [cats.core :as cats :refer [mlet]]
             [cats.monad.either :as either]
-            [hypercrud.browser.link :as link]
             [hypercrud.browser.base :as base]
             [hypercrud.browser.context :as context]
+            [hypercrud.browser.link :as link]
             [hypercrud.browser.routing :as routing]
-            [hyperfiddle.foundation :as foundation]
-            [hyperfiddle.foundation.actions :as foundation-actions]
             [hypercrud.ui.css :refer [css-slugify classes]]
             [hypercrud.ui.native-event-listener :refer [native-listener]]
             [hypercrud.ui.safe-render :refer [safe-user-renderer]]
@@ -14,7 +12,8 @@
             [hypercrud.util.core :as util]
             [hypercrud.util.non-fatal :refer [try-either]]
             [hypercrud.util.reactive :as reactive]
-            [taoensso.timbre :as timbre]))
+            [hyperfiddle.foundation :as foundation]
+            [hyperfiddle.foundation.actions :as foundation-actions]))
 
 
 (declare ui-from-link)
@@ -105,7 +104,7 @@
   (let [on-click (reactive/partial (or (:page-on-click ctx)
                                        (reactive/partial page-on-click ctx))
                                    route)]
-    ^{:key route} ; clear memory when route changes
+    ^{:key route}                                           ; clear memory when route changes
     [native-listener {:on-click on-click}
      [stale/loading (stale/can-be-loading? ctx) v'
       (fn [e] [:div {:class (classes "ui" class "hyperfiddle-error")} (ui-error e ctx)])

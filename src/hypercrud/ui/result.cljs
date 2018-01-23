@@ -2,14 +2,14 @@
   (:require [cats.monad.either :as either]
             [datascript.parser :as parser]
             [hypercrud.browser.context :as context]
-            [hypercrud.ui.form :as form]
-            [hypercrud.ui.control.markdown-rendered :refer [markdown-rendered*]]
-            [hypercrud.ui.table :as table]
+            [hypercrud.browser.link :as link]
             [hypercrud.ui.control.link-controls :as link-controls]
+            [hypercrud.ui.control.markdown-rendered :refer [markdown-rendered*]]
+            [hypercrud.ui.form :as form]
+            [hypercrud.ui.table :as table]
             [hypercrud.util.core :as util]
             [hypercrud.util.non-fatal :refer [try-either]]
-            [hypercrud.util.reactive :as reactive]
-            [hypercrud.browser.link :as link]))
+            [hypercrud.util.reactive :as reactive]))
 
 
 (defn result-renderer [result ordered-fes links ctx]

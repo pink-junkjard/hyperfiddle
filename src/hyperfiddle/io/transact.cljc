@@ -1,7 +1,7 @@
 (ns hyperfiddle.io.transact
   (:require #?(:clj [datomic.api :as d])
-            [hypercrud.http.core :refer [http-request!]]
-            [promesa.core :as p]))
+                    [hypercrud.http.core :refer [http-request!]]
+                    [promesa.core :as p]))
 
 #?(:clj
    (defn transact! [tx-groups]

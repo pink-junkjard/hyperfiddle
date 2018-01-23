@@ -31,5 +31,5 @@
   (hydrate-route-page [rt local-basis encoded-route stage]))
 
 #_(defprotocol State
-  (dispatch! [rt])
-    (deref ))
+    (dispatch! [rt])
+    (deref))

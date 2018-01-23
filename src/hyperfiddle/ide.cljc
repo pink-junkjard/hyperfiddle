@@ -1,22 +1,19 @@
 (ns hyperfiddle.ide
-  (:require [hypercrud.client.core :as hc]
-            [cuerdas.core :as str]
+  (:require [cuerdas.core :as str]
             [hypercrud.browser.core :as browser]
             [hypercrud.browser.routing :as routing]
-            [hypercrud.util.reactive :as reactive]
-            [hyperfiddle.foundation.actions :as foundation-actions]
-            [hyperfiddle.foundation :as foundation]
-            [hypercrud.util.core :refer [unwrap]]
             [hypercrud.browser.routing :as routing]
-            [hypercrud.util.string :as hc-string]
+            [hypercrud.client.core :as hc]
     #?(:cljs [hypercrud.react.react-fragment :refer [react-fragment]])
+    #?(:cljs [hypercrud.ui.navigate-cmp :as navigate-cmp])
+            [hypercrud.util.core :refer [unwrap]]
+            [hypercrud.util.reactive :as reactive]
+            [hypercrud.util.string :as hc-string]
+            [hyperfiddle.foundation :as foundation]
+            [hyperfiddle.foundation.actions :as foundation-actions]
             [taoensso.timbre :as timbre]
 
-    #?(:cljs [hypercrud.ui.navigate-cmp :as navigate-cmp])
-    #?(:cljs [hypercrud.browser.browser-ui :as browser-ui])
-
     ; userland imports for topnav link formulas, these vars should be moved to this public ns.
-            [hyperfiddle.foundation.actions]
             [hyperfiddle.ide.actions]
             [hyperfiddle.ide.fiddles.domain-code-database]
             [hyperfiddle.ide.fiddles.fiddle-links.bindings]
@@ -146,7 +143,7 @@
         "page" (concat [ide-domain-q] (user-fiddle-qs route) (ide-root-qs route))
         "ide" (concat [ide-domain-q] (ide-fiddle-qs route))
         "user" (concat (user-fiddle-qs route)))
-      (do (timbre/warn "hyperfiddle.ide: invalid route" route)
+      (do (timbre/warn "invalid route" route)
           #{} #_"No mechanism to propogate the error yet"))))
 
 #?(:cljs
@@ -175,20 +172,20 @@
            user-profile @(reactive/cursor (.-state-atom (:peer ctx)) [:user-profile])
            ctx (assoc ctx :navigate-cmp navigate-cmp/navigate-cmp
                           :page-on-click (reactive/partial page-on-click ctx -domain))]
-       (react-fragment
-         :view-page
-         (if-not hide-ide
-           [browser/ui-from-route (ide-route route) (ide-context ctx ide-domain -domain nil route user-profile) "hyperfiddle-ide-topnav"])
-         ; This is different than foo=user because it is special css at root attach point
-         [browser/ui-from-route route (target-context ctx -domain route user-profile) "hyperfiddle-ide-user"]))))
+       [:div.hyperfiddle-ide
+        (if-not hide-ide
+          [browser/ui-from-route (ide-route route) (ide-context ctx ide-domain -domain nil route user-profile)])
+        ; This is different than foo=user because it is special css at root attach point
+        [browser/ui-from-route route (target-context ctx -domain route user-profile) "app-browser"]])))
 
 #?(:cljs
+   ; Route is managed by the domain; Domain will not be available here soon.
    (defn view [foo -domain route ctx]                       ; pass most as ref for reactions
      (let [route (routing/decode (canonical-route -domain route))
            ide-domain (hc/hydrate-api (:peer ctx) (foundation/domain-request "hyperfiddle" (:peer ctx)))
            user-profile @(reactive/cursor (.-state-atom (:peer ctx)) [:user-profile])]
        (case foo
-         "page" (view-page -domain route ctx)               ; component, seq-component or nil
+         "page" [view-page -domain route ctx]
          ; On SSR side this is only ever called as "page", but it could be differently (e.g. turbolinks)
          ; On Browser side, also only ever called as "page", but it could be configured differently (client side render the ide, server render userland...?)
          "ide" [browser/ui-from-route route (ide-context ctx ide-domain -domain route nil user-profile)]

@@ -1,8 +1,7 @@
 (ns hypercrud.ui.tooltip
-  (:require [hypercrud.util.reactive :as reactive]
-            [hypercrud.ui.popover :as popover]
-            [re-com.core :as re-com]
-            [re-com.popover :as re-com-popover]))
+  (:require [hypercrud.ui.popover :as popover]
+            [hypercrud.util.reactive :as reactive]
+            [re-com.core :as re-com]))
 
 
 ; Tooltips are popovers, and implemented in terms of popovers
@@ -44,7 +43,7 @@
 (defn tooltip-thick* [rstate body anchor]
   (apply
     popover/anchor-wrapper*
-    (apply concat {:position :below-right ; link tooltips prefer left; field labels prefer right
+    (apply concat {:position :below-right                   ; link tooltips prefer left; field labels prefer right
                    :showing? rstate
                    :popover [re-com/popover-content-wrapper
                              :body body
@@ -52,9 +51,9 @@
                              :tooltip-style? true
                              :popover-color "#333"
                              :padding "3px 8px"
-                             :arrow-length   6
-                             :arrow-width    12
-                             :arrow-gap      4]
+                             :arrow-length 6
+                             :arrow-width 12
+                             :arrow-gap 4]
                    :anchor [:span {:key 0
                                    :on-mouse-over #(do (reset! rstate true) nil)
                                    :on-mouse-out #(do (reset! rstate false) nil)}

@@ -1,8 +1,8 @@
 (ns hypercrud.ui.control.markdown-rendered
-  (:require [hypercrud.ui.control.code]
+  (:require [hypercrud.compile.eval :as eval]
+            [hypercrud.ui.control.code]
             [hypercrud.util.core :as util]
-            [reagent.core :as reagent]
-            [hypercrud.compile.eval :as eval]))
+            [reagent.core :as reagent]))
 
 
 (declare markdown)

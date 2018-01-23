@@ -1,7 +1,8 @@
 (ns hypercrud.util.core
-    (:require [cats.monad.either :as either]
-              [clojure.string :as string]
-    #?(:clj [clojure.pprint :as pprint]
+  (:require [cats.monad.either :as either]
+            [clojure.string :as string]
+    #?(:clj
+            [clojure.pprint :as pprint]
        :cljs [cljs.pprint :as pprint])))
 
 

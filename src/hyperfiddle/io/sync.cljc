@@ -1,10 +1,10 @@
 (ns hyperfiddle.io.sync
-  #?(:clj (:refer-clojure :exclude [sync]))
+  #?(:clj
+     (:refer-clojure :exclude [sync]))
   (:require #?(:clj [datomic.api :as d])
-            [cuerdas.core :as str]
-            [hypercrud.http.core :refer [http-request!]]
-            [promesa.core :as p]
-            [taoensso.timbre :as timbre]))
+                    [hypercrud.http.core :refer [http-request!]]
+                    [promesa.core :as p]
+                    [taoensso.timbre :as timbre]))
 
 
 #?(:clj

@@ -1,15 +1,14 @@
 (ns hypercrud.ui.table
-  (:require [clojure.string :as string]
-            [hypercrud.browser.link :as link]
-            [hypercrud.browser.auto-anchor :as auto-anchor]
+  (:require [hypercrud.browser.auto-anchor :as auto-anchor]
             [hypercrud.browser.context :as context]
+            [hypercrud.browser.link :as link]
             [hypercrud.browser.result :as result]
-            [hypercrud.ui.css :refer [css-slugify classes]]
             [hypercrud.ui.auto-control :refer [auto-control' control-props]]
             [hypercrud.ui.connection-color :as connection-color]
             [hypercrud.ui.control.link-controls :as link-controls]
-            [hypercrud.util.reactive :as reactive]
-            [hypercrud.ui.label :refer [label]]))
+            [hypercrud.ui.css :refer [css-slugify classes]]
+            [hypercrud.ui.label :refer [label]]
+            [hypercrud.util.reactive :as reactive]))
 
 
 (def ^:export with-field identity)                          ; compat

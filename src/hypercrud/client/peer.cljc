@@ -3,8 +3,7 @@
             [hypercrud.types.DbVal :refer [->DbVal]]
             [hypercrud.util.branch :as branch]
             [hypercrud.util.reactive :as reactive]
-            [hyperfiddle.io.util :refer [process-result]] ;todo
-            ))
+            [hyperfiddle.io.util :refer [process-result]]))
 
 
 ; react on the answer, not the question
@@ -19,6 +18,6 @@
 (defn hydrate [state-atom request]
   (reactive/track trackable-hydrate state-atom request))
 
-(defn db-pointer [state-atom uri ?branch-name]               ; todo remove state-atom arg
+(defn db-pointer [state-atom uri ?branch-name]              ; todo remove state-atom arg
   {:pre [uri]}
   (->DbVal uri ?branch-name))

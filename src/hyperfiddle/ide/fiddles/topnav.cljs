@@ -17,8 +17,7 @@
             [hyperfiddle.foundation :as foundation :refer [staging]]
             [hyperfiddle.foundation.actions :as foundation-actions]
             [hyperfiddle.ide.fiddles.topnav-bindings :as topnav-bindings]
-            [reagent.core :as reagent]
-            [hypercrud.browser.link :as link]))
+            [reagent.core :as reagent]))
 
 
 (defn get-state [state-atom]

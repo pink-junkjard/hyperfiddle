@@ -2,6 +2,7 @@
   (:require [hypercrud.util.reactive :as reactive]
             [re-com.core :as re-com]))
 
+
 ;(defn popover [& {:as props}]
 ;  (let [props (-> props
 ;                  (dissoc :body)                            ; leave :status and other props which don't need adaption

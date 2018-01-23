@@ -1,9 +1,10 @@
 (ns hypercrud.ui.navigate-cmp
   (:require [hypercrud.browser.routing :as routing]
+            [hypercrud.ui.css :as css]
             [hypercrud.ui.native-event-listener :refer [native-listener]]
             [hypercrud.ui.tooltip :refer [tooltip]]
-            [re-com.core :as re-com]
-            [hypercrud.ui.css :as css]))
+            [re-com.core :as re-com]))
+
 
 (defn dissoc-non-native-props [hypercrud-props]
   (dissoc hypercrud-props :route :tooltip :popover :hidden :external-hostname))

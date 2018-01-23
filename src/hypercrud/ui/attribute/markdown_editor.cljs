@@ -1,8 +1,8 @@
 (ns hypercrud.ui.attribute.markdown-editor
-  (:require [hypercrud.client.tx :as tx]
+  (:require [hypercrud.browser.link :as link]
+            [hypercrud.client.tx :as tx]
             [hypercrud.ui.control.code :as code]
-            [hypercrud.ui.control.link-controls :as links]
-            [hypercrud.browser.link :as link]))
+            [hypercrud.ui.control.link-controls :as links]))
 
 
 (defn ^:export markdown-editor [field props ctx]

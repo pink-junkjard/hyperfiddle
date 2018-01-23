@@ -1,7 +1,7 @@
 (ns hyperfiddle.appval.state.reducers
-  (:require [hyperfiddle.state :as state]
-            [hyperfiddle.foundation.reducers :as foundation-reducers]
-            [hyperfiddle.ide.reducers :as ide-reducers]))
+  (:require [hyperfiddle.foundation.reducers :as foundation-reducers]
+            [hyperfiddle.ide.reducers :as ide-reducers]
+            [hyperfiddle.state :as state]))
 
 
 (def root-reducer-map

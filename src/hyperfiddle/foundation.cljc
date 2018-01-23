@@ -1,20 +1,15 @@
 (ns hyperfiddle.foundation
-  (:require [cats.core :refer [mlet]]
-            [cljs.pprint :as pprint]
-            [hypercrud.client.core :as hc]
-            [hypercrud.compile.reader :as reader]
-            [hyperfiddle.foundation.actions :as foundation-actions]
-            [hypercrud.util.exception :refer [->Exception]]
-            [hypercrud.util.non-fatal :refer [try-either]]
-            [hypercrud.util.reactive :as reactive]
+  (:require [cljs.pprint :as pprint]
             [clojure.string :as string]
             [cuerdas.core :as cuerdas]
             [hypercrud.client.core :as hc]
+            [hypercrud.compile.reader :as reader]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
-            [hypercrud.types.URI]
-    #?(:cljs [hypercrud.ui.stale :as stale])
     #?(:cljs [hypercrud.ui.control.code :refer [code*]])
-    #?(:cljs [hypercrud.ui.css :refer [classes]])))
+    #?(:cljs [hypercrud.ui.css :refer [classes]])
+    #?(:cljs [hypercrud.ui.stale :as stale])
+            [hypercrud.util.reactive :as reactive]
+            [hyperfiddle.foundation.actions :as foundation-actions]))
 
 
 (def domain-uri #uri "datomic:free://datomic:4334/domains")

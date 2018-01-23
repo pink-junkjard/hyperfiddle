@@ -7,17 +7,13 @@
             [hypercrud.browser.q-util :as q-util]
             [hypercrud.browser.routing :as routing]
             [hypercrud.compile.eval :as eval :refer [eval-str]]
-            [hyperfiddle.foundation.actions :as foundation-actions]
-            [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
-            [hypercrud.types.ThinEntity :refer [->ThinEntity]]
             [hypercrud.util.core :refer [pprint-str]]
             [hypercrud.util.non-fatal :refer [try-either]]
             [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :as hc-string]
+            [hyperfiddle.foundation.actions :as foundation-actions]
             [promesa.core :as p]
-            [taoensso.timbre :as timbre])
-  #?(:clj
-     (:import (hypercrud.types.Entity Entity))))
+            [taoensso.timbre :as timbre]))
 
 
 (defn option-link? [link]

@@ -2,14 +2,13 @@
   (:require [cats.monad.either :as either]
             [hypercrud.browser.dbname :as dbname]
             [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
-            [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
+            [hypercrud.types.ThinEntity :refer [->ThinEntity]]
             [hypercrud.util.core :as util]
             [hypercrud.util.string :as hc-string]
             [hypercrud.util.vedn :as vedn]
             [taoensso.timbre :as timbre])
   #?(:clj
-     (:import (hypercrud.types.Entity Entity)
-              (hypercrud.types.ThinEntity ThinEntity))))
+     (:import (hypercrud.types.Entity Entity))))
 
 
 (defn auto-entity-from-stage [ctx]

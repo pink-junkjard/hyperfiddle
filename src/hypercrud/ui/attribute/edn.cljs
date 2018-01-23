@@ -1,9 +1,9 @@
 (ns hypercrud.ui.attribute.edn
   (:require [clojure.set :as set]
-            [hypercrud.client.tx :as tx]
             [hypercrud.browser.link :as link]
-            [hypercrud.ui.control.link-controls :as link-controls]
-            [hypercrud.ui.control.edn :refer [edn-block* edn-inline-block*]]))
+            [hypercrud.client.tx :as tx]
+            [hypercrud.ui.control.edn :refer [edn-block* edn-inline-block*]]
+            [hypercrud.ui.control.link-controls :as link-controls]))
 
 
 (defn edn-many [maybe-field props ctx]

@@ -20,8 +20,8 @@
           (drop 1)
           (partition 2)
           (mapv (fn [[k v]]
-                 (let [code-str (string/trim v)
-                       code (reader/read-string code-str)]
-                   ; cannot str-and-code' until runtime https://dev.clojure.org/jira/browse/CLJ-1206
-                   [(reader/read-string k) `(str-and-code' ~code ~code-str)])))
+                  (let [code-str (string/trim v)
+                        code (reader/read-string code-str)]
+                    ; cannot str-and-code' until runtime https://dev.clojure.org/jira/browse/CLJ-1206
+                    [(reader/read-string k) `(str-and-code' ~code ~code-str)])))
           (into {}))))

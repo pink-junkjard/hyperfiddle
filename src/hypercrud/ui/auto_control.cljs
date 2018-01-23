@@ -1,15 +1,12 @@
 (ns hypercrud.ui.auto-control
   (:require [cuerdas.core :as str]
-            [hypercrud.compile.eval :as eval :refer [eval-str]]
-            [hypercrud.ui.attribute.instant :as instant]
+            [hypercrud.compile.eval :as eval]
             [hypercrud.ui.attribute.edn :as edn]
-            [hypercrud.ui.css :refer [css-slugify]]
+            [hypercrud.ui.attribute.instant :as instant]
             [hypercrud.ui.safe-render :refer [unify-portal-markup]]
             [hypercrud.ui.table-cell :as table-cell]
             [hypercrud.ui.user-attribute-renderer :refer [eval-user-control-ui]]
-            [hypercrud.ui.widget :as widget]
-            [hypercrud.util.core :refer [pprint-str]]
-            [taoensso.timbre :as timbre]))
+            [hypercrud.ui.widget :as widget]))
 
 
 (defn schema-control-form [ctx]
@@ -98,7 +95,7 @@
   ; todo clean this interface up
   {:read-only ((get ctx :read-only) (:attribute ctx) ctx)})
 
-(defn auto-control [maybe-field props _ ctx]                              ; compat
+(defn auto-control [maybe-field props _ ctx]                ; compat
   [(some-> (case (:layout ctx) :block (schema-control-form ctx)
                                :inline-block (schema-control-table ctx)
                                :table (schema-control-table ctx)))

@@ -4,10 +4,10 @@
             [clojure.string :as string]
             [hypercrud.client.tx]                           ; for resource loading
             [hypercrud.compile.macros :refer [str-and-code']]
+            [hypercrud.compile.reader :as reader]
             [hypercrud.util.string :as hc-string]
             [hypercrud.util.template :as template]
-            [taoensso.timbre :as timbre]
-            [hypercrud.compile.reader :as reader]))
+            [taoensso.timbre :as timbre]))
 
 
 #?(:clj

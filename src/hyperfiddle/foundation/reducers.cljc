@@ -1,6 +1,5 @@
 (ns hyperfiddle.foundation.reducers
   (:require [hypercrud.client.tx :as tx]
-            [hyperfiddle.state :as state]
             [hypercrud.util.branch :as branch]
             [hypercrud.util.core :as util]))
 

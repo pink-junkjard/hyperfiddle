@@ -1,9 +1,5 @@
 (ns hypercrud.ui.control.code
-  (:require [cats.monad.either :as either]
-            [cuerdas.core :as str]
-            [hypercrud.client.tx :as tx]
-            [hypercrud.util.reactive :as reactive]
-            [hypercrud.util.string :refer [safe-read-edn-string]]
+  (:require [hypercrud.util.reactive :as reactive]
             [re-com.core :as re-com]
             [reagent.core :as reagent]))
 

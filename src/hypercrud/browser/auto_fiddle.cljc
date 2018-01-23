@@ -5,7 +5,7 @@
 (defn system-fiddle? [fiddle-id]
   (map? fiddle-id))
 
-(defn fiddle-system-edit [fe-name]                            ; these need to be thick/hydrated params bc we are manufacturing a pulled tree here.
+(defn fiddle-system-edit [fe-name]                          ; these need to be thick/hydrated params bc we are manufacturing a pulled tree here.
   {:pre [fe-name]}
   {:db/id {:ident :system-edit
            :fe-name fe-name}

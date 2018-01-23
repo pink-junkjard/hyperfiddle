@@ -1,26 +1,22 @@
 (ns hypercrud.ui.widget
-  (:refer-clojure :exclude [keyword long boolean])
-  (:require [clojure.set :as set]
-            [hypercrud.browser.link :as link]
-            [hypercrud.browser.base :as base]
-            [hypercrud.browser.core :as browser]
+  (:refer-clojure :exclude [boolean keyword long])
+  (:require [hypercrud.browser.link :as link]
             [hypercrud.client.tx :as tx]
+            [hypercrud.ui.attribute.code :as code]
+            [hypercrud.ui.attribute.edn :as edn]
+            [hypercrud.ui.attribute.markdown-editor :as markdown-editor]
             [hypercrud.ui.control.link-controls :as links]
             [hypercrud.ui.input :as input]
             [hypercrud.ui.radio]                            ; used in user renderers
             [hypercrud.ui.select :refer [select* select-boolean*]]
-            [hypercrud.ui.textarea :refer [textarea*]]
-
-    ;compat
-            [hypercrud.ui.attribute.code]
-            [hypercrud.ui.attribute.markdown-editor]
-            [hypercrud.ui.attribute.edn]))
+            [hypercrud.ui.textarea :refer [textarea*]]))
 
 
-(def ^:export code hypercrud.ui.attribute.code/code)
-(def ^:export markdown hypercrud.ui.attribute.markdown-editor/markdown-editor)
-(def ^:export edn hypercrud.ui.attribute.edn/edn)
-(def ^:export edn-many hypercrud.ui.attribute.edn/edn-many)
+; compat
+(def ^:export code code/code)
+(def ^:export markdown markdown-editor/markdown-editor)
+(def ^:export edn edn/edn)
+(def ^:export edn-many edn/edn-many)
 
 (defn keyword [maybe-field props ctx]
   (let [my-links (->> (link/links-lookup' (:links ctx) [(:fe-pos ctx) (-> ctx :attribute :db/ident)])

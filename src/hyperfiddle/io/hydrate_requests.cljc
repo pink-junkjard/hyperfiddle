@@ -50,5 +50,4 @@
                   body)))))
 
 #?(:clj
-   (defn hydrate-requests [& args]
-     (apply datomic-hydrate-requests/hydrate-requests args)))
+   (def hydrate-requests datomic-hydrate-requests/hydrate-requests))

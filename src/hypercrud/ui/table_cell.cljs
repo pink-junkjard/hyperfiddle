@@ -27,5 +27,5 @@
   [:div
    [:button {:on-click #(js/alert "todo")} "Edit"]
    " "
-   (->> (map pr-str @(:value ctx))                     ;todo account for many different types of values
+   (->> (map pr-str @(:value ctx))                          ;todo account for many different types of values
         (string/join ", "))])

@@ -1,10 +1,10 @@
 (ns hypercrud.ui.label
   (:require [cuerdas.core :as str]
-            [hypercrud.browser.link :as link]
-            [hypercrud.ui.tooltip :refer [tooltip-thick]]
-            [hypercrud.util.core :as util]
             [hypercrud.compile.eval :refer [validate-user-code-str]]
-            [hypercrud.ui.control.markdown-rendered :refer [markdown]]))
+            [hypercrud.ui.control.markdown-rendered :refer [markdown]]
+            [hypercrud.ui.tooltip :refer [tooltip-thick]]
+            [hypercrud.util.core :as util]))
+
 
 (defn fqn->name [s]
   ; both cljs and js work with cljs eval

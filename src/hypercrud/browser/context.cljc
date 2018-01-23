@@ -2,11 +2,10 @@
   (:require [clojure.string :as string]
             [hypercrud.browser.auto-anchor-formula :as auto-anchor-formula]
             [hypercrud.browser.routing :as routing]
-            [hyperfiddle.foundation.actions :as foundation-actions]
             [hypercrud.util.branch :as branch]
-            [hypercrud.util.reactive :as reactive]
             [hypercrud.util.core :as util]
-            [taoensso.timbre :as timbre]))
+            [hypercrud.util.reactive :as reactive]
+            [hyperfiddle.foundation.actions :as foundation-actions]))
 
 
 (defn clean [ctx]
