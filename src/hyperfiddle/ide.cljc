@@ -9,7 +9,7 @@
             [hypercrud.util.core :refer [unwrap]]
             [hypercrud.browser.routing :as routing]
             [hypercrud.util.string :as hc-string]
-            [hypercrud.react.react-fragment :refer [react-fragment]]
+    #?(:cljs [hypercrud.react.react-fragment :refer [react-fragment]])
             [taoensso.timbre :as timbre]
 
     #?(:cljs [hypercrud.ui.navigate-cmp :as navigate-cmp])
