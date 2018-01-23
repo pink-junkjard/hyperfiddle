@@ -96,15 +96,16 @@
     (global-basis-rpc! service-uri))
 
   runtime/AppValLocalBasis
-  (local-basis [rt global-basis encoded-route branch]
+  (local-basis-page [rt global-basis encoded-route]
+    {:pre [(= "page" foo)]}
     (mlet [domain (fetch-domain! rt hostname hyperfiddle-hostname global-basis)]
       (return
         (let [ctx {:hostname hostname
                    :hyperfiddle-hostname hyperfiddle-hostname
-                   :branch branch
+                   :branch nil
                    :peer rt}]
-          (foundation/local-basis foo global-basis encoded-route domain ctx
-                                  (partial ide/local-basis foo))))))
+          (foundation/local-basis "page" global-basis encoded-route domain ctx
+                                  (partial ide/local-basis "page"))))))
 
   runtime/AppValHydrate
   (hydrate-route [rt local-basis encoded-route branch stage]
