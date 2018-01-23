@@ -4,7 +4,6 @@
             [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
             [hypercrud.util.core :refer [unwrap]]
-            [hyperfiddle.core]                              ; compat
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.ide :as ide]
             [hyperfiddle.io.global-basis :refer [global-basis]]
