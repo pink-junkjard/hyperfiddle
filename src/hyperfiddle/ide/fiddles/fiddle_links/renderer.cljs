@@ -4,13 +4,13 @@
             [hypercrud.browser.base :as base]
             [hypercrud.browser.browser-ui :as browser-ui]
             [hypercrud.ui.result :as result]
-            [hyperfiddle.app :as hf-app]))
+            [hyperfiddle.foundation :as foundation]))
 
 
 (defn renderer [result ordered-fes links ctx]
   (-> (base/data-from-route (:target-route ctx)
                             (assoc ctx
-                              :domain (hf-app/process-domain (:target-domain ctx))
+                              :domain (foundation/process-domain-legacy (:target-domain ctx))
                               :keep-disabled-anchors? true))
       (either/branch
         (fn [e]

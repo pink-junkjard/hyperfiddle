@@ -1,6 +1,5 @@
 (ns hyperfiddle.compat
-  (:require [hyperfiddle.app]
-            [hyperfiddle.core]))
+  (:require [hyperfiddle.core]))
 
 
 ; intentionally blank
