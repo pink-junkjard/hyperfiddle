@@ -95,12 +95,12 @@
      (let [domain' @(hc/hydrate (:peer ctx) (domain-request (hostname->hf-domain-name (:hostname ctx) (:hyperfiddle-hostname ctx)) (:peer ctx)))]
        [stale/loading (stale/can-be-loading? ctx) domain'
         (fn [e]
-          [:div.hyperfiddle.hyperfiddle-foundation
+          [:div.hyperfiddle-foundation
            [error-cmp e]
            [staging (:peer ctx) (:dispatch! ctx)]])
         (fn [domain]
-          [:div {:class (apply classes "hyperfiddle-foundation" "hyperfiddle" @(reactive/cursor (.-state-atom (:peer ctx)) [:pressed-keys]))}
-           (f domain route ctx)
+          [:div {:class (apply classes "hyperfiddle-foundation" @(reactive/cursor (.-state-atom (:peer ctx)) [:pressed-keys]))}
+           (f domain route ctx)                             ; nil, seq or reagent component
            (if @(reactive/cursor (.-state-atom (:peer ctx)) [:staging-open])
              [staging (:peer ctx) (:dispatch! ctx)])])])))
 
