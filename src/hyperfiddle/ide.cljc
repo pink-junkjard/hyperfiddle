@@ -13,7 +13,15 @@
             [hyperfiddle.foundation.actions :as foundation-actions]
             [taoensso.timbre :as timbre]
 
-    ; userland imports for topnav link formulas, these vars should be moved to this public ns.
+    ; pull in public ui deps
+    ; todo these hc.ui.* should be reduced to one require e.g. [hypercrud.ui]
+    #?(:cljs [hypercrud.react.react-fragment])
+            [hypercrud.ui.auto-control]
+            [hypercrud.ui.form]
+    #?(:cljs [hypercrud.ui.result])
+            [hypercrud.ui.table]
+
+    ; pull in the entire ide app for reference from user-land
             [hyperfiddle.ide.actions]
             [hyperfiddle.ide.fiddles.domain-code-database]
             [hyperfiddle.ide.fiddles.fiddle-links.bindings]
