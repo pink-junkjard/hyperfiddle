@@ -4,6 +4,7 @@
             [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
             [hypercrud.util.core :refer [unwrap]]
+            [hypercrud.util.reactive :as reactive]
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.ide :as ide]
             [hyperfiddle.io.global-basis :refer [global-basis]]
@@ -12,12 +13,7 @@
             [hyperfiddle.io.local-basis :refer [fetch-domain!]]
             [hyperfiddle.io.sync :refer [sync]]
             [hyperfiddle.runtime :as runtime]
-            [promesa.core :as p]
-    ; imports for user-land
-            [hypercrud.ui.auto-control]
-            [hypercrud.ui.form]
-            [hypercrud.ui.table]
-            [hypercrud.util.reactive :as reactive]))
+            [promesa.core :as p]))
 
 
 (deftype HydrateRoute [hyperfiddle-hostname hostname foo ide-repo state-atom]
