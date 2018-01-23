@@ -17,19 +17,19 @@
               (hypercrud.types.ThinEntity ThinEntity))))
 
 
-(defn invert-ids [route invert-id ctx]
+(defn invert-ids [route invert-id repository]
   (-> (walk/postwalk (fn [v]
                        (cond
                          (instance? Entity v) (assert false "hyperfiddle/hyperfiddle.net#150")
 
                          (instance? ThinEntity v)
-                         (let [uri (get-in ctx [:repository :repository/environment (.-dbname v)])
+                         (let [uri (get-in repository [:repository/environment (.-dbname v)])
                                id (invert-id (.-id v) uri)]
                            (->ThinEntity (.-dbname v) id))
 
                          :else v))
                      route)
-      (update :link-id (let [uri (get-in ctx [:repository :dbhole/uri])]
+      (update :link-id (let [uri (:dbhole/uri repository)]
                          #(invert-id % uri)))))
 
 (defn ctx->id-lookup [uri ctx]
@@ -40,14 +40,14 @@
   (let [invert-id (fn [id uri]
                     (let [id->tempid (ctx->id-lookup uri ctx)]
                       (get id->tempid id id)))]
-    (invert-ids route invert-id ctx)))
+    (invert-ids route invert-id (:repository ctx))))
 
 (defn tempid->id [route ctx]
   (let [invert-id (fn [temp-id uri]
                     (let [tempid->id (-> (ctx->id-lookup uri ctx)
                                          (set/map-invert))]
                       (get tempid->id temp-id temp-id)))]
-    (invert-ids route invert-id ctx)))
+    (invert-ids route invert-id (:repository ctx))))
 
 (defn ^:export build-route' [link ctx]
   (mlet [fiddle-id (if-let [page (:link/fiddle link)]

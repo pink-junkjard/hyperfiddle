@@ -119,10 +119,6 @@
                               :change! change!})))]
     [:span.qe.radio-group (apply react-fragment :_ options)]))
 
-(defn save-and-navigate! [home-route ctx]
-  ; Interface feels wonky because we currently have an IDE context and are converting, which is weird.
-  ((:dispatch! ctx) (foundation-actions/transact! home-route (hyperfiddle.ide/target-context ctx (:target-domain ctx) (:target-route ctx) (:user-profile ctx)))))
-
 (defn ^:export stage-ui [result ordered-fes links ctx]
   [:div.hyperfiddle-topnav-stage
    (result/view result ordered-fes links ctx)               ; for docstring
@@ -138,7 +134,8 @@
                     (empty? stage) {:status :warning :label "no changes"})
       [:button {:disabled disabled?
                 :style (if disabled? {:pointer-events "none"})
-                :on-click (reactive/partial save-and-navigate! home-route ctx)} "transact!"]])
+                :on-click #((:dispatch! ctx) (foundation-actions/transact! home-route (:peer ctx) (.-ide-repo (:peer ctx))))}
+       "transact!"]])
    [staging (:peer ctx) (:dispatch! ctx)]
    [:div.markdown (markdown "Hyperfiddle always generates valid transactions, if it doesn't, please file a bug.
 

@@ -65,9 +65,9 @@
                  (dispatch! [:set-error error])
                  (throw error)))))
 
-(defn refresh-page-local-basis [rt-page dispatch! get-state]
+(defn refresh-page-local-basis [rt dispatch! get-state]
   (let [{:keys [global-basis encoded-route]} (get-state)]
-    (-> (runtime/local-basis rt-page global-basis encoded-route nil)
+    (-> (runtime/local-basis-page rt global-basis encoded-route)
         (p/then (fn [local-basis]
                   (dispatch! [:set-local-basis local-basis])))
         (p/catch (fn [error]
@@ -153,7 +153,7 @@
     (when (not= tx (:stage (get-state)))
       (hydrate-page rt [[:reset-stage tx]] dispatch! get-state))))
 
-(defn transact! [home-route ctx]
+(defn transact! [home-route peer target-repository]
   (fn [dispatch! get-state]
     (dispatch! [:transact!-start])
     (let [{:keys [stage]} (get-state)
@@ -161,7 +161,7 @@
           tx-groups (->> (get stage nil)                    ; can only transact one branch
                          ; hack because the ui still generates some garbage tx
                          (util/map-values (partial filter v-not-nil?)))]
-      (-> (runtime/transact! (:peer ctx) tx-groups)
+      (-> (runtime/transact! peer tx-groups)
           (p/catch (fn [error]
                      #?(:cljs (js/alert (pr-str error)))
                      (dispatch! [:transact!-failure error])
@@ -171,9 +171,9 @@
                           invert-id (fn [temp-id uri]
                                       (get-in tempid->id [uri temp-id] temp-id))
                           updated-route (-> (or (routing/decode encoded-route) home-route)
-                                            (routing/invert-ids invert-id ctx)
+                                            (routing/invert-ids invert-id target-repository)
                                             (routing/encode))]
                       ; todo fix the ordering of this, transact-success should fire immediately (whether or not the rehydrate succeeds)
-                      (mlet [_ (refresh-global-basis (:peer ctx) dispatch! get-state)
-                             _ (refresh-page-local-basis (:peer ctx) dispatch! get-state)]
-                        (hydrate-page (:peer ctx) [[:transact!-success updated-route]] dispatch! get-state)))))))))
+                      (mlet [_ (refresh-global-basis peer dispatch! get-state)
+                             _ (refresh-page-local-basis peer dispatch! get-state)]
+                        (hydrate-page peer [[:transact!-success updated-route]] dispatch! get-state)))))))))
