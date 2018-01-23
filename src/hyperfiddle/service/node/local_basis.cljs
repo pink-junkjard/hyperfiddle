@@ -2,23 +2,20 @@
   (:require [cats.core :refer [mlet return]]
             [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
-            [hyperfiddle.runtime :as runtime]
+            [hypercrud.compile.reader :as reader]
+            [hypercrud.transit :as transit]
+            [hypercrud.util.base-64-url-safe :as base-64-url-safe]
+            [hypercrud.util.reactive :as reactive]
+            [hyperfiddle.appval.state.reducers :as reducers]
+            [hyperfiddle.foundation :as foundation]
+            [hyperfiddle.ide :as ide]
             [hyperfiddle.io.global-basis :refer [global-basis-rpc!]]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-requests-rpc!]]
-            [hyperfiddle.io.sync :refer [sync-rpc!]]
             [hyperfiddle.io.local-basis :refer [fetch-domain!]]
-
-            [hyperfiddle.service.node.lib :as lib :refer [req->service-uri]]
-            [promesa.core :as p]
-            [hypercrud.util.base-64-url-safe :as base-64-url-safe]
-            [hypercrud.compile.reader :as reader]
-            [hypercrud.util.reactive :as reactive]
-            [hypercrud.transit :as transit]
-
-            [hyperfiddle.ide]
-            [hyperfiddle.foundation :as foundation]
-            [hyperfiddle.appval.state.reducers :as reducers]
-            ))
+            [hyperfiddle.io.sync :refer [sync-rpc!]]
+            [hyperfiddle.runtime :as runtime]
+            [hyperfiddle.service.node.lib :as lib]
+            [promesa.core :as p]))
 
 
 ; Todo this is same runtime as HydrateRoute
@@ -36,7 +33,7 @@
                    :branch branch
                    :peer rt}]
           (foundation/local-basis foo global-basis encoded-route domain ctx
-                                  (partial hyperfiddle.ide/local-basis foo))))))
+                                  (partial ide/local-basis foo))))))
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
@@ -54,7 +51,7 @@
     (peer/db-pointer state-atom uri branch))
 
   ; Happened on client, node reconstructed the right rt already
-  ;hyperfiddle.ide/SplitRuntime
+  ;ide/SplitRuntime
   ;(sub-rt [rt foo ide-repo]
   ;  (LocalBasisRuntime. hyperfiddle-hostname hostname service-uri foo ide-repo state-atom))
 
@@ -71,7 +68,7 @@
                       (reducers/root-reducer nil))
         foo (some-> (:foo path-params) base-64-url-safe/decode reader/read-edn-string)
         branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
-        rt (LocalBasisRuntime. (:HF_HOSTNAME env) hostname (req->service-uri env req) foo (:ide-repo path-params) (reactive/atom state-val))]
+        rt (LocalBasisRuntime. (:HF_HOSTNAME env) hostname (lib/req->service-uri env req) foo (:ide-repo path-params) (reactive/atom state-val))]
     (-> (runtime/local-basis rt (:global-basis state-val) (:encoded-route state-val) branch)
         (p/then (fn [local-basis]
                   (doto res

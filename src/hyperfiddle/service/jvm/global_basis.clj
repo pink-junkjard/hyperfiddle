@@ -2,10 +2,10 @@
   (:refer-clojure :exclude [sync])
   (:require [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
-            [hyperfiddle.runtime :as runtime]
+            [hyperfiddle.io.global-basis :refer [global-basis]]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-requests stage-val->staged-branches]]
             [hyperfiddle.io.sync :refer [sync]]
-            [hyperfiddle.io.global-basis :refer [global-basis]]
+            [hyperfiddle.runtime :as runtime]
             [promesa.core :as p]))
 
 

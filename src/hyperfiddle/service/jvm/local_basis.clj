@@ -3,14 +3,14 @@
   (:require [cats.core :refer [mlet return]]
             [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
-            [hypercrud.util.exception :refer [->Exception]]
-            [hyperfiddle.runtime :as runtime]
-            [hyperfiddle.io.hydrate-requests :refer [hydrate-requests stage-val->staged-branches]]
-            [hyperfiddle.io.sync :refer [sync]]
+            [hyperfiddle.foundation :as foundation]
+            [hyperfiddle.ide :as ide]
             [hyperfiddle.io.global-basis :refer [global-basis]]
+            [hyperfiddle.io.hydrate-requests :refer [hydrate-requests stage-val->staged-branches]]
             [hyperfiddle.io.local-basis :refer [fetch-domain!]]
-            [promesa.core :as p]
-            [hyperfiddle.foundation :as foundation]))
+            [hyperfiddle.io.sync :refer [sync]]
+            [hyperfiddle.runtime :as runtime]
+            [promesa.core :as p]))
 
 
 ; This is allowed to hydrate route, this runtime is probably the same as hydrate-route runtime
@@ -28,7 +28,7 @@
                    :branch branch
                    :peer rt}]
           (foundation/local-basis foo global-basis encoded-route domain ctx
-                                  (partial hyperfiddle.ide/local-basis foo))))))
+                                  (partial ide/local-basis foo))))))
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
@@ -47,6 +47,6 @@
   (db [this uri branch]
     (peer/db-pointer state-atom uri branch))
 
-  hyperfiddle.ide/SplitRuntime
+  ide/SplitRuntime
   (sub-rt [rt foo ide-repo]
     (LocalBasis. hyperfiddle-hostname hostname foo ide-repo state-atom)))

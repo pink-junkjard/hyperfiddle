@@ -3,21 +3,17 @@
   (:require [cats.core :refer [return mlet]]
             [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
-            [hypercrud.util.exception :refer [->Exception]]
             [hypercrud.util.core :refer [unwrap]]
-            [hyperfiddle.runtime :as runtime]
-            [hyperfiddle.io.hydrate-requests :refer [hydrate-requests stage-val->staged-branches]]
-            [hyperfiddle.io.sync :refer [sync]]
+            [hyperfiddle.core]                              ; compat
+            [hyperfiddle.foundation :as foundation]
+            [hyperfiddle.ide :as ide]
             [hyperfiddle.io.global-basis :refer [global-basis]]
+            [hyperfiddle.io.hydrate-requests :refer [hydrate-requests stage-val->staged-branches]]
             [hyperfiddle.io.hydrate-route :refer [hydrate-loop hydrate-loop-adapter]]
             [hyperfiddle.io.local-basis :refer [fetch-domain!]]
-            [hyperfiddle.foundation :as foundation]
-            [hyperfiddle.ide]
-            [hyperfiddle.core]                              ; compat
-
+            [hyperfiddle.io.sync :refer [sync]]
+            [hyperfiddle.runtime :as runtime]
             [promesa.core :as p]
-            [taoensso.timbre :as timbre]
-
     ; imports for user-land
             [hypercrud.ui.auto-control]
             [hypercrud.ui.form]
@@ -41,7 +37,7 @@
                    :peer rt}]
           ; Local basis has to have enough info to call the API (even if we omit that call today)
           (foundation/local-basis foo global-basis encoded-route domain ctx
-                                  (partial hyperfiddle.ide/local-basis foo))))))
+                                  (partial ide/local-basis foo))))))
 
   runtime/AppValHydrate
   (hydrate-route [rt local-basis encoded-route branch stage]
@@ -52,7 +48,7 @@
                :peer rt}]
       (hydrate-loop rt (hydrate-loop-adapter local-basis stage ctx
                                              #(HydrateRoute. hyperfiddle-hostname hostname foo ide-repo (reactive/atom %))
-                                             #(foundation/api foo encoded-route % (partial hyperfiddle.ide/api foo)))
+                                             #(foundation/api foo encoded-route % (partial ide/api foo)))
                     local-basis stage data-cache)))
 
   (hydrate-route-page [rt local-basis encoded-route stage]  ; encoded-route in state ?
@@ -63,7 +59,7 @@
                :peer rt}]
       (hydrate-loop rt (hydrate-loop-adapter local-basis stage ctx
                                              #(HydrateRoute. hyperfiddle-hostname hostname foo ide-repo (reactive/atom %))
-                                             #(foundation/api "page" encoded-route % (partial hyperfiddle.ide/api "page")))
+                                             #(foundation/api "page" encoded-route % (partial ide/api "page")))
                     local-basis stage data-cache)))
 
   runtime/AppFnHydrate
@@ -87,6 +83,6 @@
   (hydrate-api [this request]
     (unwrap @(hc/hydrate this request)))
 
-  hyperfiddle.ide/SplitRuntime
+  ide/SplitRuntime
   (sub-rt [rt foo ide-repo]
     (HydrateRoute. hyperfiddle-hostname hostname foo ide-repo state-atom)))

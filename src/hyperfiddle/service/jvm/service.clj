@@ -2,22 +2,18 @@
   (:refer-clojure :exclude [sync])
   (:require [hypercrud.compile.reader :as reader]
             [hypercrud.transit :as hc-t]
-            [hypercrud.types.URI :refer [->URI]]
             [hypercrud.util.base-64-url-safe :as base-64-url-safe]
             [hypercrud.util.reactive :as reactive]
-            [hyperfiddle.runtime :as runtime]
-
+            [hyperfiddle.appval.state.reducers :as reducers]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-requests]]
             [hyperfiddle.io.sync :refer [sync]]
             [hyperfiddle.io.transact :refer [transact!]]
-            [hyperfiddle.appval.state.reducers :as reducers]
-
+            [hyperfiddle.runtime :as runtime]
             [hyperfiddle.service.lib.jwt :as jwt]
             [hyperfiddle.service.jvm.lib.http :as http]
             [hyperfiddle.service.jvm.global-basis :refer [->GlobalBasisRuntime]]
             [hyperfiddle.service.jvm.hydrate-route :refer [->HydrateRoute]]
             [hyperfiddle.service.jvm.local-basis :refer [->LocalBasis]]
-
             [io.pedestal.http.body-params :as body-params]
             [io.pedestal.http.ring-middlewares :as ring-middlewares]
             [io.pedestal.http.route :refer [expand-routes]]
@@ -33,8 +29,7 @@
 (defn http-hydrate-requests [req]
   (try
     (let [{:keys [body-params path-params]} req
-          local-basis (binding [*data-readers* (merge *data-readers* {'uri #'hypercrud.types.URI/read-URI})]
-                        ((comp read-string base-64-url-safe/decode) (:local-basis path-params)))
+          local-basis (some-> (:local-basis path-params) base-64-url-safe/decode reader/read-edn-string)
           {staged-branches :staged-branches request :request} body-params
           r (hydrate-requests local-basis request staged-branches)]
       (ring-resp/response r))

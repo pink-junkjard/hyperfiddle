@@ -1,14 +1,14 @@
 (ns hyperfiddle.service.node.global-basis
   (:require [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
-            [hyperfiddle.runtime :as runtime]
+            [hypercrud.transit :as transit]
+            [hypercrud.util.reactive :as reactive]
+            [hyperfiddle.appval.state.reducers :as reducers]
             [hyperfiddle.io.global-basis :refer [global-basis]]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-requests-rpc!]]
             [hyperfiddle.io.sync :refer [sync-rpc!]]
-            [hyperfiddle.appval.state.reducers :as reducers]
-            [hypercrud.transit :as transit]
-            [hypercrud.util.reactive :as reactive]
-            [hyperfiddle.service.node.lib :as lib :refer [req->service-uri]]
+            [hyperfiddle.runtime :as runtime]
+            [hyperfiddle.service.node.lib :as lib]
             [promesa.core :as p]))
 
 
@@ -41,7 +41,7 @@
   (let [hostname (.-hostname req)
         state-val (-> {:user-profile (lib/req->user-profile env req)}
                       (reducers/root-reducer nil))
-        rt (GlobalBasisRuntime. (:HF_HOSTNAME env) hostname (req->service-uri env req) (reactive/atom state-val))]
+        rt (GlobalBasisRuntime. (:HF_HOSTNAME env) hostname (lib/req->service-uri env req) (reactive/atom state-val))]
     (-> (runtime/global-basis rt)
         (p/then (fn [global-basis]
                   (doto res

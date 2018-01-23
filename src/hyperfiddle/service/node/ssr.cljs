@@ -1,32 +1,28 @@
 (ns hyperfiddle.service.node.ssr
-  (:require [cljs.nodejs :as node]
-            [cats.core :refer [mlet return]]
+  (:require [cats.core :refer [mlet return]]
+            [cljs.nodejs :as node]
             [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
-            [hyperfiddle.foundation.actions :as foundation-actions]
-            [hyperfiddle.state :as state]
             [hypercrud.transit :as transit]
             [hypercrud.util.core :as util :refer [unwrap]]
-            [hypercrud.util.exception :refer [->Exception]]
             [hypercrud.util.performance :as perf]
             [hypercrud.util.reactive :as reactive]
             [hypercrud.util.template :as template]
+            [hyperfiddle.appval.state.reducers :as reducers]
+            [hyperfiddle.foundation :as foundation]
+            [hyperfiddle.foundation.actions :as foundation-actions]
+            [hyperfiddle.ide :as ide]
             [hyperfiddle.io.global-basis :refer [global-basis-rpc!]]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-requests-rpc!]]
             [hyperfiddle.io.hydrate-route :refer [hydrate-route-rpc!]]
-            [hyperfiddle.io.sync :refer [sync-rpc!]]
             [hyperfiddle.io.local-basis :refer [fetch-domain!]]
+            [hyperfiddle.io.sync :refer [sync-rpc!]]
             [hyperfiddle.runtime :as runtime]
-            [hyperfiddle.appval.state.reducers :as reducers]
             [hyperfiddle.service.node.lib :as lib :refer [req->service-uri]]
-
+            [hyperfiddle.state :as state]
             [promesa.core :as p]
             [reagent.dom.server :as reagent-server]
-            [taoensso.timbre :as timbre]
-
-            [hyperfiddle.ide]
-            [hyperfiddle.foundation :as foundation]
-            ))
+            [taoensso.timbre :as timbre]))
 
 (def cheerio (node/require "cheerio"))
 
@@ -108,7 +104,7 @@
                    :branch branch
                    :peer rt}]
           (foundation/local-basis foo global-basis encoded-route domain ctx
-                                  (partial hyperfiddle.ide/local-basis foo))))))
+                                  (partial ide/local-basis foo))))))
 
   runtime/AppValHydrate
   (hydrate-route [rt local-basis encoded-route branch stage]
@@ -136,7 +132,7 @@
                :peer rt-page}]
       (render-local-html
         (partial foundation/view foo route ctx
-                 (partial hyperfiddle.ide/view foo)))))
+                 (partial ide/view foo)))))
 
   hc/Peer
   (hydrate [this request]
@@ -149,7 +145,7 @@
   (hydrate-api [this request]
     (unwrap @(hc/hydrate this request)))
 
-  hyperfiddle.ide/SplitRuntime
+  ide/SplitRuntime
   (sub-rt [rt foo ide-repo]
     (IdeSsrRuntime. hyperfiddle-hostname hostname foo ide-repo service-uri state-atom))
 

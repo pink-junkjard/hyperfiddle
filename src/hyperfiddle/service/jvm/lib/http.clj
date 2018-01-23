@@ -1,5 +1,5 @@
 (ns hyperfiddle.service.jvm.lib.http
-  (:require [clojure.core.async :refer [chan go >!!]]
+  (:require [clojure.core.async :refer [chan >!!]]
             [clojure.string :as string]
             [cognitect.transit :as transit]
             [hypercrud.transit :as hc-t]
