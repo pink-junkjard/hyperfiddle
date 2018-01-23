@@ -22,7 +22,6 @@
             [hypercrud.ui.auto-control]
             [hypercrud.ui.form]
             [hypercrud.ui.table]
-            [hyperfiddle.appval.state.reducers :as reducers]
             [hypercrud.util.reactive :as reactive]))
 
 

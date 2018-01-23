@@ -3,8 +3,8 @@
             [cats.core :refer [mlet return]]
             [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
-            [hypercrud.state.actions.core :as actions]
-            [hypercrud.state.core :as state]
+            [hyperfiddle.foundation.actions :as foundation-actions]
+            [hyperfiddle.state :as state]
             [hypercrud.transit :as transit]
             [hypercrud.util.core :as util :refer [unwrap]]
             [hypercrud.util.exception :refer [->Exception]]
@@ -81,9 +81,9 @@
   (let [state-atom (.-state-atom rt)
         get-state (fn [] @state-atom)
         dispatch! (state/build-dispatch state-atom reducers/root-reducer)]
-    (-> (actions/refresh-global-basis rt dispatch! get-state)
-        (p/then #(actions/refresh-page-local-basis rt dispatch! get-state))
-        (p/then #(actions/hydrate-page rt nil dispatch! get-state))
+    (-> (foundation-actions/refresh-global-basis rt dispatch! get-state)
+        (p/then #(foundation-actions/refresh-page-local-basis rt dispatch! get-state))
+        (p/then #(foundation-actions/hydrate-page rt nil dispatch! get-state))
         (p/catch (constantly (p/resolved nil)))             ; any error above IS NOT fatal, so render the UI. anything below IS fatal
         (p/then #(runtime/ssr rt (:encoded-route @state-atom)))
         (p/then (fn [html-fragment] (html env @state-atom html-fragment)))
