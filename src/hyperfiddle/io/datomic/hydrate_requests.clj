@@ -89,6 +89,7 @@
 (defn build-get-secure-db-with [staged-branches db-with-lookup local-basis]
   {:pre [(not-any? nil? (vals local-basis))]}
   (letfn [(get-secure-db-from-branch [{:keys [branch-ident uri tx] :as branch}]
+            {:pre [(get local-basis uri)]}
             (or (get @db-with-lookup branch)
                 (let [t (get local-basis uri)
                       init-db-with (if branch-ident
