@@ -6,8 +6,7 @@
             [hypercrud.util.reactive :as reactive]
             [hypercrud.state.actions.core :as actions]
             [hypercrud.state.actions.util :as actions-util]
-            [hyperfiddle.appval.domain.foundation :as foundation] ; hack
-            [hyperfiddle.appval.domain.core :as foundation2]
+            [hyperfiddle.foundation :as foundation] ; hack
             [hypercrud.util.core :refer [unwrap]]
             [hypercrud.browser.routing :as routing]
             [hypercrud.util.string :as hc-string]
@@ -132,7 +131,7 @@
          (str/starts-with? route "/")]
    :post [(seq %)]}
   ; We can actually call into the foundation a second time here to get the ide-domain
-  (let [ide-domain-q (foundation2/domain-request "hyperfiddle" (:peer ctx))
+  (let [ide-domain-q (foundation/domain-request "hyperfiddle" (:peer ctx))
         ide-domain (hc/hydrate-api (:peer ctx) ide-domain-q)
         user-profile @(reactive/cursor (.-state-atom (:peer ctx)) [:user-profile])
 
@@ -170,8 +169,8 @@
 
 #?(:cljs
    (defn view-page [-domain route ctx]
-     (let [ide-domain (hc/hydrate-api (:peer ctx) (foundation2/domain-request "hyperfiddle" (:peer ctx)))
-           hide-ide (foundation2/alias? (foundation2/hostname->hf-domain-name (:hostname ctx) (:hyperfiddle-hostname ctx)))
+     (let [ide-domain (hc/hydrate-api (:peer ctx) (foundation/domain-request "hyperfiddle" (:peer ctx)))
+           hide-ide (foundation/alias? (foundation/hostname->hf-domain-name (:hostname ctx) (:hyperfiddle-hostname ctx)))
            user-profile @(reactive/cursor (.-state-atom (:peer ctx)) [:user-profile])
            ctx (assoc ctx :navigate-cmp navigate-cmp/navigate-cmp
                           :page-on-click (reactive/partial page-on-click ctx -domain))]
@@ -185,7 +184,7 @@
    ; Route is managed by the domain; Domain will not be available here soon.
    (defn view [foo -domain route ctx]                       ; pass most as ref for reactions
      (let [route (routing/decode (canonical-route -domain route))
-           ide-domain (hc/hydrate-api (:peer ctx) (foundation2/domain-request "hyperfiddle" (:peer ctx)))
+           ide-domain (hc/hydrate-api (:peer ctx) (foundation/domain-request "hyperfiddle" (:peer ctx)))
            user-profile @(reactive/cursor (.-state-atom (:peer ctx)) [:user-profile])]
        (case foo
          "page" [view-page -domain route ctx]

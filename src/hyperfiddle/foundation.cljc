@@ -1,4 +1,4 @@
-(ns hyperfiddle.appval.domain.foundation
+(ns hyperfiddle.foundation
   (:require [cats.core :refer [mlet]]
             [cljs.pprint :as pprint]
             [hypercrud.client.core :as hc]
@@ -7,13 +7,47 @@
             [hypercrud.util.exception :refer [->Exception]]
             [hypercrud.util.non-fatal :refer [try-either]]
             [hypercrud.util.reactive :as reactive]
-            [hyperfiddle.appval.domain.core :as foundation2]
+            [clojure.string :as string]
+            [cuerdas.core :as cuerdas]
+            [hypercrud.client.core :as hc]
+            [hypercrud.types.EntityRequest :refer [->EntityRequest]]
+            [hypercrud.types.URI]
     #?(:cljs [hypercrud.ui.stale :as stale])
     #?(:cljs [hypercrud.ui.control.code :refer [code*]])
-    #?(:cljs [hypercrud.ui.css :refer [classes]])
-    #?(:cljs [hyperfiddle.appval.domain.error :as error])))
+    #?(:cljs [hypercrud.ui.css :refer [classes]])))
 
 
+(def domain-uri #uri "datomic:free://datomic:4334/domains")
+(def auth0-redirect-path "/auth0")                          ; ide
+
+(defn hostname->hf-domain-name [hostname hyperfiddle-hostname]
+  ; buggy
+  (string/replace hostname (str "." hyperfiddle-hostname) ""))
+
+(defn alias? [hf-domain-name]
+  (string/includes? hf-domain-name "."))
+
+(defn domain-request [hf-domain-name peer]
+  (let [e (if (alias? hf-domain-name)
+            [:domain/aliases hf-domain-name]
+            [:domain/ident hf-domain-name])]
+    (->EntityRequest e nil
+                     (hc/db peer domain-uri nil)
+                     [:db/id :domain/ident :domain/home-route :domain/aliases
+                      {:domain/code-databases [:db/id :dbhole/name :dbhole/uri :repository/environment]}])))
+
+(defn user-profile->ident [user-profile]
+  (-> user-profile :email (cuerdas/replace #"\@.+$" "") (cuerdas/slug)))
+
+(defn error-cmp [e]
+  [:div
+   [:h1 "Fatal error"]
+   [:fieldset [:legend "(pr-str e)"]
+    [:pre (pr-str e)]]
+   [:fieldset [:legend "(ex-data e)"]                       ; network error
+    [:pre (pr-str (ex-data e))]]                            ; includes :body key
+   [:fieldset [:legend "(.-stack e)"]                       ; network error
+    [:pre (.-stack e)]]])
 
 ; Can be removed once domain/databases are flattened up.
 (defn process-domain-legacy [domain]
@@ -26,13 +60,13 @@
                                 ; todo this can throw
                                 (update :repository/environment reader/read-string)))))))))
 
-(defn local-basis [foo global-basis route domain #_ "hack" ctx f]
+(defn local-basis [foo global-basis route domain #_"hack" ctx f]
   (concat
     (:domain global-basis)
     (f global-basis domain route ctx)))
 
 (defn api [foo route ctx f]
-  (let [domain-q (foundation2/domain-request (foundation2/hostname->hf-domain-name (:hostname ctx) (:hyperfiddle-hostname ctx)) (:peer ctx))
+  (let [domain-q (domain-request (hostname->hf-domain-name (:hostname ctx) (:hyperfiddle-hostname ctx)) (:peer ctx))
         domain (hc/hydrate-api (:peer ctx) domain-q)
         user-qs (if domain (f domain route ctx))]
     (case foo
@@ -50,19 +84,19 @@
 
 #?(:cljs
    (defn leaf-view [route ctx f]
-     (let [domain (let [user-domain (foundation2/hostname->hf-domain-name (:hostname ctx) (:hyperfiddle-hostname ctx))]
-                    (hc/hydrate-api (:peer ctx) (foundation2/domain-request user-domain (:peer ctx))))]
+     (let [domain (let [user-domain (hostname->hf-domain-name (:hostname ctx) (:hyperfiddle-hostname ctx))]
+                    (hc/hydrate-api (:peer ctx) (domain-request user-domain (:peer ctx))))]
        ; A malformed stage can break bootstrap hydrates, but the root-page is bust, so ignore here
        ; Fix this by branching userland so bootstrap is sheltered from staging area? (There are chickens and eggs)
        (if domain (f domain route)))))
 
 #?(:cljs
    (defn page-view [route ctx f]
-     (let [domain' @(hc/hydrate (:peer ctx) (foundation2/domain-request (foundation2/hostname->hf-domain-name (:hostname ctx) (:hyperfiddle-hostname ctx)) (:peer ctx)))]
+     (let [domain' @(hc/hydrate (:peer ctx) (domain-request (hostname->hf-domain-name (:hostname ctx) (:hyperfiddle-hostname ctx)) (:peer ctx)))]
        [stale/loading (stale/can-be-loading? ctx) domain'
         (fn [e]
           [:div.hyperfiddle.hyperfiddle-foundation
-           [error/error-cmp e]
+           [error-cmp e]
            [staging (:peer ctx) (:dispatch! ctx)]])
         (fn [domain]
           [:div {:class (apply classes "hyperfiddle-foundation" "hyperfiddle" @(reactive/cursor (.-state-atom (:peer ctx)) [:pressed-keys]))}

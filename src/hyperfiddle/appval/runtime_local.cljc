@@ -9,8 +9,7 @@
             [hypercrud.util.performance :as perf]
 
             [hyperfiddle.appfn.runtime-local :refer [hydrate-all-or-nothing! hydrate-one! hydrate-loop]] ;todo
-            [hyperfiddle.appval.domain.foundation :as foundation]
-            [hyperfiddle.appval.domain.core :as foundation2]
+            [hyperfiddle.foundation :as foundation]
             [hyperfiddle.appval.state.reducers :as reducers]
             [hypercrud.util.reactive :as reactive]
 
@@ -32,9 +31,9 @@
 
 (defn global-basis [rt hyperfiddle-hostname hostname]       ; this is foundation code, app-fn level (Just sees configured datomic URIs, no userland api fn)
   (perf/time-promise
-    (mlet [:let [domain-requests [(foundation2/domain-request (foundation2/hostname->hf-domain-name hostname hyperfiddle-hostname) rt)
-                                  (foundation2/domain-request "hyperfiddle" rt)]]
-           domain-basis (api/sync rt #{foundation2/domain-uri})
+    (mlet [:let [domain-requests [(foundation/domain-request (foundation/hostname->hf-domain-name hostname hyperfiddle-hostname) rt)
+                                  (foundation/domain-request "hyperfiddle" rt)]]
+           domain-basis (api/sync rt #{foundation/domain-uri})
            [user-domain foundation-domain] (hydrate-all-or-nothing! rt domain-basis nil domain-requests)
            :let [user-domain (foundation/process-domain-legacy user-domain)
                  ide-domain (foundation/process-domain-legacy foundation-domain)
@@ -97,5 +96,5 @@
 
 (defn fetch-domain! [rt hostname hyperfiddle-hostname global-basis]
   (-> (hydrate-one! rt (apply sorted-map (apply concat (:domain global-basis))) nil
-                    (foundation2/domain-request
-                      (foundation2/hostname->hf-domain-name hostname hyperfiddle-hostname) rt))))
+                    (foundation/domain-request
+                      (foundation/hostname->hf-domain-name hostname hyperfiddle-hostname) rt))))

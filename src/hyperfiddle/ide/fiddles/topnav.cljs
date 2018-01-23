@@ -15,8 +15,7 @@
             [hypercrud.util.core :as util]
             [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :as hc-string]
-            [hyperfiddle.appval.domain.foundation :refer [staging]]
-            [hyperfiddle.appval.domain.core :as hf]
+            [hyperfiddle.foundation :as foundation :refer [staging]]
             [hyperfiddle.appval.state.actions :as ide-actions]
             [hyperfiddle.ide.fiddles.topnav-bindings :as topnav-bindings]
             [reagent.core :as reagent]
@@ -28,7 +27,7 @@
 
 (defn stateless-login-url [ctx]
   (let [{:keys [domain client-id]} (get-in ctx [:repository :repository/environment :auth0 (:hyperfiddle-hostname ctx)])
-        callback-url (str "http://" (:hostname ctx) hf/auth0-redirect-path)]
+        callback-url (str "http://" (:hostname ctx) foundation/auth0-redirect-path)]
     (str domain "/login?client=" client-id "&callbackURL=" callback-url)))
 
 (defn -renderer [fiddle ordered-fes links ctx]

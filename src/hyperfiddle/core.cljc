@@ -1,6 +1,6 @@
-(ns hyperfiddle.core                                        ; foundation
-  (:require hyperfiddle.appval.domain.core))
+(ns hyperfiddle.core
+  (:require [hyperfiddle.foundation :as foundation]))
 
 
-(def ^:export alias? hyperfiddle.appval.domain.core/alias?) ; userland compat
-(def ^:export hostname->hf-domain-name hyperfiddle.appval.domain.core/hostname->hf-domain-name) ; userland compat
+(def ^:export alias? foundation/alias?) ; userland compat
+(def ^:export hostname->hf-domain-name foundation/hostname->hf-domain-name) ; userland compat
