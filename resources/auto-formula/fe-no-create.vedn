@@ -28,15 +28,11 @@
 ==
 {:d? false :a false}
 ==
-(fn [ctx]
-  ; auto-formula unsupported
-  nil)
+(fn [ctx] nil)
 
 
 ==
 {:d? false :a true}
 ==
-(fn [ctx]
-  ; auto-formula unsupported
-  nil)
+(fn [ctx] nil)
 ==
