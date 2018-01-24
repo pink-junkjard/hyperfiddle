@@ -61,6 +61,7 @@
 
 (defn pprint-str [v & [columns]]
   (string/trimr
+    ; Previously, pprint/*print-miser-width* was set to nil in main
     (binding [pprint/*print-right-margin* (or columns pprint/*print-right-margin*)]
       (with-out-str
         #_(pprint/pprint v)
