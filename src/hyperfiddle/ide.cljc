@@ -184,7 +184,9 @@
        (react-fragment
          :view-page
          (if-not hide-ide
-           [browser/ui-from-route (ide-route route) (ide-context ctx ide-domain -domain nil route user-profile) "hyperfiddle-ide-topnav"])
+           (if ide-domain
+             [browser/ui-from-route (ide-route route) (ide-context ctx ide-domain -domain nil route user-profile) "hyperfiddle-ide-topnav"]
+             "loading... (ide bootstrap, you edited ide-domain)"))
          ; This is different than foo=user because it is special css at root attach point
          [browser/ui-from-route route (target-context ctx -domain route user-profile) "hyperfiddle-ide-user"]))))
 
