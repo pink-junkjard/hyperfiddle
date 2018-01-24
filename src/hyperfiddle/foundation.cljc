@@ -9,7 +9,8 @@
     #?(:cljs [hypercrud.ui.css :refer [classes]])
     #?(:cljs [hypercrud.ui.stale :as stale])
             [hypercrud.util.reactive :as reactive]
-            [hyperfiddle.foundation.actions :as foundation-actions]))
+            [hyperfiddle.foundation.actions :as foundation-actions]
+            [hypercrud.util.core :as util]))
 
 
 (def domain-uri #uri "datomic:free://datomic:4334/domains")
@@ -71,9 +72,7 @@
 #?(:cljs
    (defn staging [peer dispatch!]
      (let [stage-val @(reactive/cursor (.-state-atom peer) [:stage])
-           edn (binding [pprint/*print-miser-width* nil
-                         pprint/*print-right-margin* 200]
-                 (with-out-str (pprint/pprint stage-val)))]
+           edn (util/pprint-str stage-val 70)]
        ; todo this can throw
        [code* edn #(dispatch! (foundation-actions/reset-stage peer (reader/read-edn-string %)))])))
 

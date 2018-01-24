@@ -7,6 +7,7 @@
         [funcool/cuerdas "2.0.4"]
         [funcool/promesa "1.8.1"]
         [io.nervous/kvlt "0.1.4"]
+        [net.cgrand/packed-printer "0.2.1"]
         [re-com "2.0.0"]
 
         [com.cognitect/transit-clj "0.8.300" :scope "provided"]

@@ -1,6 +1,7 @@
 (ns hypercrud.util.core
   (:require [cats.monad.either :as either]
             [clojure.string :as string]
+            [net.cgrand.packed-printer :as packed-printer]
     #?(:clj
             [clojure.pprint :as pprint]
        :cljs [cljs.pprint :as pprint])))
@@ -61,7 +62,9 @@
 (defn pprint-str [v & [columns]]
   (string/trimr
     (binding [pprint/*print-right-margin* (or columns pprint/*print-right-margin*)]
-      (with-out-str (pprint/pprint v)))))
+      (with-out-str
+        #_(pprint/pprint v)
+        (packed-printer/pprint v :width (or columns pprint/*print-right-margin*))))))
 
 (defn fallback [p v not-found]
   (if-not (p v) v not-found))
