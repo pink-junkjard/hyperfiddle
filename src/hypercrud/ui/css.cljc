@@ -12,4 +12,5 @@
   (-> (str s)                                               ; coerce keywords etc
       (str/replace ":" "-")
       (str/replace "/" "-")
+      (str/replace "?" "-")                                 ; legal but syntax highlighting issues
       (str/replace " " "-")))
