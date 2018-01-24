@@ -43,21 +43,21 @@
 (def -sub-rt (memoize sub-rt))
 
 (let [always-user (atom :user)]
-  (defn ide-context [ctx ide-domain target-domain ide-route target-route user-profile]
-    {:pre [target-route target-domain (seq (-> target-domain :domain/code-databases))]
+  (defn ide-context [ctx ide-domain target-domain ?ide-route ?target-route ?user-profile]
+    {:pre [ide-domain target-domain (seq (-> target-domain :domain/code-databases))]
      :post [(seq (-> % :domain :domain/code-databases))]}
     (let [ide-domain (foundation/process-domain-legacy ide-domain)
           peer (if (= "ide" (.-foo (:peer ctx)))
                  (:peer ctx)
                  ; Converting from page -> ide, means we're an ide at the root with a code-database.
-                 (-sub-rt (:peer ctx) "ide" (:code-database target-route)))]
+                 (-sub-rt (:peer ctx) "ide" (:code-database ?target-route)))]
       (assoc ctx
         :debug "ide"
         :display-mode always-user
         :peer peer
         :target-domain target-domain
-        :target-route target-route
-        :user-profile user-profile
+        :target-route ?target-route
+        :user-profile ?user-profile
         :domain (let [target-source-uri (->> (:domain/code-databases target-domain)
                                              (filter #(= (:dbhole/name %) (.-ide-repo peer)))
                                              first
