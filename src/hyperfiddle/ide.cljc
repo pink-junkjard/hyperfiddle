@@ -53,6 +53,7 @@
                  (-sub-rt (:peer ctx) "ide" (:code-database ?target-route)))]
       (assoc ctx
         :debug "ide"
+        :page-on-click #()                                  ; disable alt-nav up top
         :display-mode always-user
         :peer peer
         :target-domain target-domain
@@ -156,31 +157,11 @@
           #{} #_"No mechanism to propogate the error yet"))))
 
 #?(:cljs
-   (defn page-on-click [ctx target-domain route event]
-     (when (and route (.-altKey event))
-       (let [can-soft-nav? (->> (:domain/code-databases target-domain)
-                                ; only if the user domain has the root code-database
-                                (filter #(and (= (:dbhole/name %) "root")
-                                              (= (:dbhole/uri %) root-uri)))
-                                (empty?)
-                                not)]
-         (if can-soft-nav?
-           ((:dispatch! ctx) (fn [dispatch! get-state]
-                               (let [encoded-route (routing/encode route)]
-                                 (when (foundation/navigable? encoded-route (get-state))
-                                   (foundation-actions/set-route (:peer ctx) encoded-route dispatch! get-state)))))
-           (let [encoded-route (routing/encode route (str "hyperfiddle." (:hyperfiddle-hostname ctx)))]
-             ; todo push this window.location set up to the appfn atom watcher
-             (aset js/window "location" encoded-route)))
-         (.stopPropagation event)))))
-
-#?(:cljs
    (defn view-page [-domain route ctx]
      (let [ide-domain (hc/hydrate-api (:peer ctx) (foundation/domain-request "hyperfiddle" (:peer ctx)))
            hide-ide (foundation/alias? (foundation/hostname->hf-domain-name (:hostname ctx) (:hyperfiddle-hostname ctx)))
            user-profile @(reactive/cursor (.-state-atom (:peer ctx)) [:user-profile])
-           ctx (assoc ctx :navigate-cmp navigate-cmp/navigate-cmp
-                          :page-on-click (reactive/partial page-on-click ctx -domain))]
+           ctx (assoc ctx :navigate-cmp navigate-cmp/navigate-cmp)]
        (react-fragment
          :view-page
          (if-not hide-ide
