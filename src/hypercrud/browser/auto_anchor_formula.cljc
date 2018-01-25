@@ -3,7 +3,9 @@
             [hypercrud.browser.dbname :as dbname]
             [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
             [hypercrud.types.ThinEntity :refer [->ThinEntity]]
+            [hypercrud.util.branch :as branch]
             [hypercrud.util.core :as util]
+            [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :as hc-string]
             [hypercrud.util.vedn :as vedn]
             [taoensso.timbre :as timbre])
@@ -14,7 +16,8 @@
 (defn auto-entity-from-stage [ctx]
   ; This returns a new value each time the transaction changes - can't call it again later.
   ; So tx-fns must inspect the modal-route, they can't re-create the dbid.
-  (let [id (-> (:branch ctx) hash util/abs-normalized - str)]
+  (let [branch-val (branch/branch-val (:uri ctx) (:branch ctx) @(reactive/cursor (.-state-atom (:peer ctx)) [:stage]))
+        id (-> branch-val hash util/abs-normalized - str)]
     (->ThinEntity (dbname/uri->dbname (:uri ctx) ctx) id)))
 
 ; todo there are collisions when two links share the same 'location'
