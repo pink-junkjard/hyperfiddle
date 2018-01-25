@@ -35,7 +35,8 @@
    :entity #entity["$" (:link-id route)]})
 
 (defprotocol SplitRuntime
-  (sub-rt [rt foo ide-repo]))
+  (sub-rt [rt foo target-repo])
+  (target-repo [rt]))
 
 (def -sub-rt (memoize sub-rt))
 
@@ -58,7 +59,7 @@
         :target-route ?target-route
         :user-profile ?user-profile
         :domain (let [target-source-uri (->> (:domain/code-databases target-domain)
-                                             (filter #(= (:dbhole/name %) (.-ide-repo peer)))
+                                             (filter #(= (:dbhole/name %) (target-repo peer)))
                                              first
                                              :dbhole/uri)]
                   (update ide-domain :domain/code-databases
@@ -118,7 +119,7 @@
         {:keys [domain ide user]} global-basis
         ; basis-maps: List[Map[uri, t]]
         user-basis (get user (:code-database route))
-        ide-basis (get ide (.-ide-repo (:peer ctx)))
+        ide-basis (get ide (target-repo (:peer ctx)))
         basis-maps (case ide-or-user
                      "page" (concat (vals user) #_"for schema in topnav"
                                     (vals ide))             ; dead code i think?
