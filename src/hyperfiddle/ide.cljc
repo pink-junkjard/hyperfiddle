@@ -132,7 +132,7 @@
                          sort
                          ;(apply sorted-map)
                          )]
-    (timbre/info (pr-str local-basis))
+    (timbre/debug (pr-str local-basis))
     #_(determine-local-basis (hydrate-route route ...))
     local-basis))
 
