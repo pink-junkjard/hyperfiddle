@@ -14,6 +14,23 @@
 
 (use-fixtures :each (fixtures/build-fixtures schema))
 
+(deftest schema-alteration []
+  (let [conn (d/connect fixtures/test-uri)
+        staged-branches [{:branch-ident nil
+                          :uri fixtures/test-uri
+                          :tx [[:db/add "-1" :db/ident :x/y]
+                               [:db/add "-1" :db/valueType :db.type/string]
+                               [:db/add "-1" :db/cardinality :db.cardinality/one]]}]
+        local-basis {fixtures/test-uri (d/basis-t (d/db conn))}
+        get-secure-db-with (datomic-hydrate-requests/build-get-secure-db-with staged-branches (atom {}) local-basis)
+        $ (:db (get-secure-db-with fixtures/test-uri "nil"))]
+    (is (= (as-> (d/touch (d/entity $ :x/y)) entity
+                 (into {} entity)
+                 (dissoc entity :db/id))
+           {:db/ident :x/y
+            :db/valueType :db.type/string
+            :db/cardinality :db.cardinality/one}))))
+
 (deftest branch-once []
   (let [conn (d/connect fixtures/test-uri)
         staged-branches [{:branch-ident nil

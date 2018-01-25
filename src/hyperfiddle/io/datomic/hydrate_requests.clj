@@ -19,6 +19,8 @@
            (hypercrud.types.QueryRequest QueryRequest)))
 
 
+(defrecord SecureDbWith [db id->tempid])
+
 (defmulti parameter (fn [this & args] (class this)))
 
 (defmethod parameter :default [this & args] this)
@@ -88,7 +90,10 @@
 
 (defn build-get-secure-db-with [staged-branches db-with-lookup local-basis]
   {:pre [(not-any? nil? (vals local-basis))]}
-  (letfn [(get-secure-db-from-branch [{:keys [branch-ident uri tx] :as branch}]
+  (letfn [(filter-db [db]
+            (let [read-sec-predicate (constantly true)]     ;todo look up sec pred
+              (d/filter db read-sec-predicate)))
+          (get-secure-db-from-branch [{:keys [branch-ident uri tx] :as branch}]
             {:pre [(get local-basis uri)]}
             (or (get @db-with-lookup branch)
                 (let [t (get local-basis uri)
@@ -101,41 +106,42 @@
                                                              {:branch-ident parent-ident
                                                               :uri uri})]
                                        (get-secure-db-from-branch parent-branch))
-                                     {:db (-> (d/connect (str uri))
-                                              (d/db)
-                                              (d/as-of t))})
+                                     (let [$ (-> (d/connect (str uri)) d/db filter-db)]
+                                       {:db-with $
+                                        :secure-db (d/as-of $ t)}))
                       ; is it a history query? (let [db (if (:history? dbval) (d/history db) db)])
-                      project-db-with (-> (if (empty? tx)
-                                            init-db-with
-                                            (let [{:keys [db id->tempid with?]} init-db-with
-                                                  _ (when (and (not with?) (not= t (d/basis-t db)))
-                                                      ; can only run this assert once, on the first time a user d/with's
-                                                      ; every subsequent d/with, the new db's basis will never again match the user submitted basis
-                                                      ; however this is fine, since the original t is already known good
-                                                      (throw (RuntimeException. ERROR-BRANCH-PAST)))
-                                                  _ (let [validate-tx (constantly true)] ; todo look up tx validator
-                                                      (assert (validate-tx db tx) (str "staged tx for " uri " failed validation")))
-                                                  ; todo d/with an unfiltered db
-                                                  {:keys [db-after tempids]} (d/with db tx)]
-                                              ; as-of/basis-t gymnastics:
-                                              ; https://gist.github.com/dustingetz/39f28f148942728c13edef1c7d8baebf/ee35a6af327feba443339176d371d9c7eaff4e51#file-datomic-d-with-interactions-with-d-as-of-clj-L35
-                                              ; https://forum.datomic.com/t/interactions-of-d-basis-t-d-as-of-d-with/219
-                                              {:db (d/as-of db-after (d/basis-t db-after))
-                                               :with? true
-                                               ; todo this merge is excessively duplicating data to send to the client
-                                               :id->tempid (merge id->tempid (set/map-invert tempids))}))
-                                          (update :db (let [read-sec-predicate (constantly true)] ;todo look up sec pred
-                                                        #(d/filter % read-sec-predicate))))]
-                  (swap! db-with-lookup assoc branch project-db-with)
-                  project-db-with)))]
+                      db-with (if (empty? tx)
+                                init-db-with
+                                (let [{:keys [db-with id->tempid with?]} init-db-with
+                                      _ (when (and (not with?) (not= t (d/basis-t db-with)))
+                                          ; can only run this assert once, on the first time a user d/with's
+                                          ; every subsequent d/with, the new db's basis will never again match the user submitted basis
+                                          ; however this is fine, since the original t is already known good
+                                          (throw (RuntimeException. ERROR-BRANCH-PAST)))
+                                      _ (let [validate-tx (constantly true)] ; todo look up tx validator
+                                          (assert (validate-tx tx) (str "staged tx for " uri " failed validation")))
+                                      ; todo d/with an unfiltered db
+                                      {:keys [db-after tempids]} (d/with db-with tx)
+                                      db-with (filter-db db-after)]
+                                  ; as-of/basis-t gymnastics:
+                                  ; https://gist.github.com/dustingetz/39f28f148942728c13edef1c7d8baebf/ee35a6af327feba443339176d371d9c7eaff4e51#file-datomic-d-with-interactions-with-d-as-of-clj-L35
+                                  ; https://forum.datomic.com/t/interactions-of-d-basis-t-d-as-of-d-with/219
+                                  {:db-with db-with
+                                   :secure-db (d/as-of db-with (d/basis-t db-with))
+                                   :with? true
+                                   ; todo this merge is excessively duplicating data to send to the client
+                                   :id->tempid (merge id->tempid (set/map-invert tempids))}))]
+                  (swap! db-with-lookup assoc branch db-with)
+                  db-with)))]
     (fn [uri branch-ident]
       (let [branch (or (->> staged-branches
                             (filter #(and (= branch-ident (:branch-ident %))
                                           (= uri (:uri %))))
                             first)
                        {:branch-ident branch-ident
-                        :uri uri})]
-        (get-secure-db-from-branch branch)))))
+                        :uri uri})
+            internal-secure-db (get-secure-db-from-branch branch)]
+        (->SecureDbWith (:secure-db internal-secure-db) (:id->tempid internal-secure-db))))))
 
 (defn hydrate-requests [local-basis requests staged-branches] ; theoretically, requests are grouped by basis for cache locality
   {:pre [requests
@@ -151,8 +157,8 @@
                                        (->Err (str e)))))
                           (doall))
         ; this can also stream, as the request hydrates.
-        id->tempid (reduce (fn [acc [branch db]]
-                             (assoc-in acc [(:uri branch) (:branch-ident branch)] (:id->tempid db)))
+        id->tempid (reduce (fn [acc [branch internal-secure-db]]
+                             (assoc-in acc [(:uri branch) (:branch-ident branch)] (:id->tempid internal-secure-db)))
                            {}
                            @db-with-lookup)
         ;result (concat pulled-trees id->tempid)
