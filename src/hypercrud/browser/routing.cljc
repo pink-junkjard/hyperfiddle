@@ -97,7 +97,7 @@
       (let [[route-encoded url-param-garbage] (string/split route-encoded-and-query-params #"\?")]
         (reader/read-string (base64/decode route-encoded)))
 
-      ; bot garbage
+      ; no route, or garbage from http crawlers
       :else nil)))
 
 (defn decode' [route]

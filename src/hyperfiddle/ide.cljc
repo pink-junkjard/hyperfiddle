@@ -109,7 +109,9 @@
   {:pre [domain (string? route)]
    :post [(string? %)]}
   (case route
-    "/" (routing/encode (unwrap (hc-string/safe-read-edn-string (:domain/home-route domain))))
+    "/" (if-let [home-route (:domain/home-route domain)]
+          (routing/encode (unwrap (hc-string/safe-read-edn-string home-route)))
+          "/" #_"no home-route, maybe a brand new domain with no fiddles")
     route))
 
 (defn local-basis [ide-or-user global-basis -domain #_"offensive" route ctx]
@@ -140,7 +142,7 @@
 (defn api [foo -domain route ctx]
   {:pre [-domain route
          (str/starts-with? route "/")]
-   :post [(seq %)]}
+   :post [#_(seq %)]}
   ; We can actually call into the foundation a second time here to get the ide-domain
   (let [ide-domain-q (foundation/domain-request "hyperfiddle" (:peer ctx))
         ide-domain (hc/hydrate-api (:peer ctx) ide-domain-q)
@@ -151,16 +153,14 @@
         ide-root-qs (fn [route] (if ide-domain (browser/request-from-route (ide-route route) (ide-context ctx ide-domain -domain nil route user-profile))))]
 
     ; This route over-applies canonical but it works out and really simplifies the validation
-    (if-let [route (routing/decode (canonical-route -domain route))]
+    (let [?route (routing/decode (canonical-route -domain route))]
       (case foo
-        "page" (concat [ide-domain-q] (user-fiddle-qs route) (ide-root-qs route))
-        "ide" (concat [ide-domain-q] (ide-fiddle-qs route))
-        "user" (concat (user-fiddle-qs route)))
-      (do (timbre/warn "invalid route" route)
-          #{} #_"No mechanism to propogate the error yet"))))
+        "page" (concat [ide-domain-q] (if ?route (user-fiddle-qs ?route)) (ide-root-qs ?route))
+        "ide" (concat [ide-domain-q] (ide-fiddle-qs ?route #_"route is valid"))
+        "user" (concat (if ?route (user-fiddle-qs ?route)))))))
 
 #?(:cljs
-   (defn view-page [-domain route ctx]
+   (defn view-page [-domain ?route ctx]
      (let [ide-domain (hc/hydrate-api (:peer ctx) (foundation/domain-request "hyperfiddle" (:peer ctx)))
            ide-active (activate-ide? (foundation/hostname->hf-domain-name (:hostname ctx) (:hyperfiddle-hostname ctx)))
            user-profile @(reactive/cursor (.-state-atom (:peer ctx)) [:user-profile])
@@ -169,10 +169,11 @@
          :view-page
          (if ide-active
            (if ide-domain
-             [browser/ui-from-route (ide-route route) (ide-context ctx ide-domain -domain nil route user-profile) "hyperfiddle-ide-topnav"]
-             "loading... (ide bootstrap, you edited ide-domain)"))
-         ; This is different than foo=user because it is special css at root attach point
-         [browser/ui-from-route route (target-context ctx -domain route user-profile) "hyperfiddle-ide-user"]))))
+             [browser/ui-from-route (ide-route ?route) (ide-context ctx ide-domain -domain nil ?route user-profile) "hyperfiddle-ide-topnav"]
+             [:div "loading... (ide bootstrap, you edited ide-domain)"]))
+         (if ?route
+           ; This is different than foo=user because it is special css at root attach point
+           [browser/ui-from-route ?route (target-context ctx -domain ?route user-profile) "hyperfiddle-ide-user"])))))
 
 #?(:cljs
    ; Route is managed by the domain; Domain will not be available here soon.
