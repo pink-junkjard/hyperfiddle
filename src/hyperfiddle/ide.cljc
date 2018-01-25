@@ -10,7 +10,6 @@
             [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :as hc-string]
             [hyperfiddle.foundation :as foundation]
-            [hyperfiddle.foundation.actions :as foundation-actions]
             [taoensso.timbre :as timbre]
 
     ; pull in public ui deps
@@ -29,8 +28,6 @@
     #?(:cljs [hyperfiddle.ide.fiddles.user-dashboard])
             [hyperfiddle.ide.util]))
 
-
-(def root-uri #uri "datomic:free://datomic:4334/root")      ; I don't understand this magic constant fully
 
 (defn ide-route [route]
   {:code-database "root"
