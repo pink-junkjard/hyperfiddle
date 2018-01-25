@@ -196,8 +196,7 @@
                                      :checked @hide-datomic?
                                      :on-change #(swap! hide-datomic? not)}]
                             " Hide Datomic attributes?"]
-                           [hypercrud.ui.result/view attributes ordered-fes anchors ctx]
-                           [:style {:dangerouslySetInnerHTML {:__html ".hyperfiddle-attributes { max-height: 40vh; }"}}]])))))]
+                           [hypercrud.ui.result/view attributes ordered-fes anchors ctx]])))))]
   (defn schema-all-attributes [$db]
     {:db/id {:ident :schema/all-attributes
              :dbhole/name $db}
