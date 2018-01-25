@@ -19,7 +19,7 @@
 
 
 ; Todo this is same runtime as HydrateRoute
-(deftype LocalBasisRuntime [hyperfiddle-hostname hostname service-uri foo ide-repo state-atom]
+(deftype LocalBasisRuntime [hyperfiddle-hostname hostname service-uri foo target-repo state-atom]
   runtime/AppFnGlobalBasis
   (global-basis [rt]
     (global-basis-rpc! service-uri))
@@ -52,14 +52,15 @@
 
   ; Happened on client, node reconstructed the right rt already
   ;ide/SplitRuntime
-  ;(sub-rt [rt foo ide-repo]
-  ;  (LocalBasisRuntime. hyperfiddle-hostname hostname service-uri foo ide-repo state-atom))
+  ;(sub-rt [rt foo target-repo]
+  ;  (LocalBasisRuntime. hyperfiddle-hostname hostname service-uri foo target-repo state-atom))
+  ;(target-repo [rt] targe-repo)
 
   IHash
   (-hash [this] (goog/getUid this)))
 
 (defn http-local-basis [env req res path-params query-params]
-  {:pre [(:ide-repo path-params) #_"Did the client rt send this with the http request?"]}
+  {:pre [(:target-repo path-params) #_"Did the client rt send this with the http request?"]}
   ; Never called.
   (let [hostname (.-hostname req)
         state-val (-> {:encoded-route (base-64-url-safe/decode (:double-encoded-route path-params))
@@ -68,7 +69,7 @@
                       (reducers/root-reducer nil))
         foo (some-> (:foo path-params) base-64-url-safe/decode reader/read-edn-string)
         branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
-        rt (LocalBasisRuntime. (:HF_HOSTNAME env) hostname (lib/req->service-uri env req) foo (:ide-repo path-params) (reactive/atom state-val))]
+        rt (LocalBasisRuntime. (:HF_HOSTNAME env) hostname (lib/req->service-uri env req) foo (:target-repo path-params) (reactive/atom state-val))]
     (-> (runtime/local-basis rt (:global-basis state-val) (:encoded-route state-val) branch)
         (p/then (fn [local-basis]
                   (doto res

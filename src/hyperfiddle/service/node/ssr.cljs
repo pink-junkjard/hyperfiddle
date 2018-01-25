@@ -90,7 +90,7 @@
                      ; careful this needs to throw a Throwable in clj
                      (p/rejected (html env @state-atom html-fragment))))))))
 
-(deftype IdeSsrRuntime [hyperfiddle-hostname hostname foo ide-repo service-uri state-atom]
+(deftype IdeSsrRuntime [hyperfiddle-hostname hostname foo target-repo service-uri state-atom]
   runtime/AppFnGlobalBasis
   (global-basis [rt]
     (global-basis-rpc! service-uri))
@@ -110,7 +110,7 @@
   runtime/AppValHydrate
   (hydrate-route [rt local-basis encoded-route branch stage]
     ; If IDE, send up target-repo as well (encoded in route as query param?)
-    (hydrate-route-rpc! service-uri local-basis encoded-route foo ide-repo branch stage))
+    (hydrate-route-rpc! service-uri local-basis encoded-route foo target-repo branch stage))
 
   (hydrate-route-page [rt local-basis encoded-route stage]
     (hydrate-route-rpc! service-uri local-basis encoded-route "page" nil nil stage))
@@ -147,8 +147,9 @@
     (unwrap @(hc/hydrate this request)))
 
   ide/SplitRuntime
-  (sub-rt [rt foo ide-repo]
-    (IdeSsrRuntime. hyperfiddle-hostname hostname foo ide-repo service-uri state-atom))
+  (sub-rt [rt foo target-repo]
+    (IdeSsrRuntime. hyperfiddle-hostname hostname foo target-repo service-uri state-atom))
+  (target-repo [rt] target-repo)
 
   IHash
   (-hash [this] (goog/getUid this)))

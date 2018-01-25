@@ -16,7 +16,7 @@
             [promesa.core :as p]))
 
 
-(deftype HydrateRoute [hyperfiddle-hostname hostname foo ide-repo state-atom]
+(deftype HydrateRoute [hyperfiddle-hostname hostname foo target-repo state-atom]
   runtime/AppFnGlobalBasis
   (global-basis [rt]
     (global-basis rt hyperfiddle-hostname hostname))
@@ -42,7 +42,7 @@
                :branch branch
                :peer rt}]
       (hydrate-loop rt (hydrate-loop-adapter local-basis stage ctx
-                                             #(HydrateRoute. hyperfiddle-hostname hostname foo ide-repo (reactive/atom %))
+                                             #(HydrateRoute. hyperfiddle-hostname hostname foo target-repo (reactive/atom %))
                                              #(foundation/api foo encoded-route % (partial ide/api foo)))
                     local-basis stage data-cache)))
 
@@ -53,7 +53,7 @@
                :branch nil
                :peer rt}]
       (hydrate-loop rt (hydrate-loop-adapter local-basis stage ctx
-                                             #(HydrateRoute. hyperfiddle-hostname hostname foo ide-repo (reactive/atom %))
+                                             #(HydrateRoute. hyperfiddle-hostname hostname foo target-repo (reactive/atom %))
                                              #(foundation/api "page" encoded-route % (partial ide/api "page")))
                     local-basis stage data-cache)))
 
@@ -79,5 +79,6 @@
     (unwrap @(hc/hydrate this request)))
 
   ide/SplitRuntime
-  (sub-rt [rt foo ide-repo]
-    (HydrateRoute. hyperfiddle-hostname hostname foo ide-repo state-atom)))
+  (sub-rt [rt foo target-repo]
+    (HydrateRoute. hyperfiddle-hostname hostname foo target-repo state-atom))
+  (target-repo [rt] target-repo))

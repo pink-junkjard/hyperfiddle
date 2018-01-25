@@ -20,7 +20,7 @@
             [promesa.core :as p]))
 
 
-(deftype HydrateRouteRuntime [hyperfiddle-hostname hostname service-uri foo ide-repo state-atom]
+(deftype HydrateRouteRuntime [hyperfiddle-hostname hostname service-uri foo target-repo state-atom]
   runtime/AppFnGlobalBasis
   (global-basis [rt]
     (global-basis-rpc! service-uri))
@@ -44,7 +44,7 @@
                :branch branch
                :peer rt}]
       (hydrate-loop rt (hydrate-loop-adapter local-basis stage ctx
-                                             #(HydrateRouteRuntime. hyperfiddle-hostname hostname service-uri foo ide-repo (reactive/atom %))
+                                             #(HydrateRouteRuntime. hyperfiddle-hostname hostname service-uri foo target-repo (reactive/atom %))
                                              #(foundation/api foo encoded-route % (partial ide/api foo)))
                     local-basis stage data-cache)))
 
@@ -55,7 +55,7 @@
                :branch nil
                :peer rt}]
       (hydrate-loop rt (hydrate-loop-adapter local-basis stage ctx
-                                             #(HydrateRouteRuntime. hyperfiddle-hostname hostname service-uri foo ide-repo (reactive/atom %))
+                                             #(HydrateRouteRuntime. hyperfiddle-hostname hostname service-uri foo target-repo (reactive/atom %))
                                              #(foundation/api "page" encoded-route % (partial ide/api "page")))
                     local-basis stage data-cache)))
 
@@ -79,8 +79,9 @@
     (unwrap @(hc/hydrate this request)))
 
   ide/SplitRuntime
-  (sub-rt [rt foo ide-repo]
-    (HydrateRouteRuntime. hyperfiddle-hostname hostname service-uri foo ide-repo state-atom))
+  (sub-rt [rt foo target-repo]
+    (HydrateRouteRuntime. hyperfiddle-hostname hostname service-uri foo target-repo state-atom))
+  (target-repo [rt] target-repo)
 
   IHash
   (-hash [this] (goog/getUid this)))
@@ -94,9 +95,9 @@
                        :user-profile (lib/req->user-profile env req)}
                       (reducers/root-reducer nil))
         foo (some-> (:foo path-params) base-64-url-safe/decode reader/read-edn-string)
-        ide-repo (some-> (:ide-repo path-params) base-64-url-safe/decode reader/read-edn-string)
+        target-repo (some-> (:target-repo path-params) base-64-url-safe/decode reader/read-edn-string)
         branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
-        rt (HydrateRouteRuntime. (:HF_HOSTNAME env) hostname (lib/req->service-uri env req) foo ide-repo (reactive/atom state-val))]
+        rt (HydrateRouteRuntime. (:HF_HOSTNAME env) hostname (lib/req->service-uri env req) foo target-repo (reactive/atom state-val))]
     (-> (runtime/hydrate-route rt (:local-basis state-val) (:encoded-route state-val) branch (:stage state-val))
         (p/then (fn [data]
                   (doto res

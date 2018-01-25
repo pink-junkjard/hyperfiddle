@@ -14,7 +14,7 @@
 
 
 ; This is allowed to hydrate route, this runtime is probably the same as hydrate-route runtime
-(deftype LocalBasis [hyperfiddle-hostname hostname foo ide-repo state-atom]
+(deftype LocalBasis [hyperfiddle-hostname hostname foo target-repo state-atom]
   runtime/AppFnGlobalBasis
   (global-basis [rt]
     (global-basis rt hyperfiddle-hostname hostname))
@@ -48,5 +48,6 @@
     (peer/db-pointer state-atom uri branch))
 
   ide/SplitRuntime
-  (sub-rt [rt foo ide-repo]
-    (LocalBasis. hyperfiddle-hostname hostname foo ide-repo state-atom)))
+  (sub-rt [rt foo target-repo]
+    (LocalBasis. hyperfiddle-hostname hostname foo target-repo state-atom))
+  (target-repo [rt] target-repo))

@@ -107,9 +107,9 @@
                              :user-profile (:user req)}
                             (reducers/root-reducer nil))
               foo (some-> (:foo path-params) base-64-url-safe/decode reader/read-edn-string)
-              ide-repo (some-> (:ide-repo path-params) base-64-url-safe/decode reader/read-edn-string)
+              target-repo (some-> (:target-repo path-params) base-64-url-safe/decode reader/read-edn-string)
               branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string)
-              rt (->HydrateRoute (:HF_HOSTNAME env) hostname foo ide-repo (reactive/atom state-val))]
+              rt (->HydrateRoute (:HF_HOSTNAME env) hostname foo target-repo (reactive/atom state-val))]
           (-> (runtime/hydrate-route rt (:local-basis state-val) (:encoded-route state-val) branch (:stage state-val))
               (p/then (fn [data]
                         {:status 200
@@ -144,8 +144,8 @@
           ["/local-basis/:global-basis/:double-encoded-route/:foo" {:get [:local-basis-get ~(http-local-basis env)]}]
           ["/local-basis/:global-basis/:double-encoded-route/:foo" {:post [:local-basis-post ~(http-local-basis env)]}]
           ["/hydrate-requests/:local-basis" {:post [:hydrate-requests http-hydrate-requests]}]
-          ["/hydrate-route/:local-basis/:double-encoded-route/:foo/:ide-repo/:branch" {:get [:hydrate-route-get ~(http-hydrate-route env)]}]
-          ["/hydrate-route/:local-basis/:double-encoded-route/:foo/:ide-repo/:branch" {:post [:hydrate-route-post ~(http-hydrate-route env)]}]
+          ["/hydrate-route/:local-basis/:double-encoded-route/:foo/:target-repo/:branch" {:get [:hydrate-route-get ~(http-hydrate-route env)]}]
+          ["/hydrate-route/:local-basis/:double-encoded-route/:foo/:target-repo/:branch" {:post [:hydrate-route-post ~(http-hydrate-route env)]}]
           ["/transact" {:post [:transact! http-transact!]}]
           ["/sync" {:post [:latest http-sync]}]
           ]]])))
