@@ -46,8 +46,8 @@
   (let [parse-string read-string-or-nil
         to-string pr-str
         valid? #(either/branch (hc-string/safe-read-edn-string %) ; differentiate between read `nil` and error
-                               (constantly true)
-                               (constantly false))]
+                               (constantly false)
+                               (constantly true))]
     ^{:key value}
     [validated-input' value on-change! parse-string to-string valid? props]))
 
