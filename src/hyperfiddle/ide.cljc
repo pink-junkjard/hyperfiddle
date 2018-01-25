@@ -42,7 +42,8 @@
 
 (def -sub-rt (memoize sub-rt))
 
-(let [always-user (atom :user)]
+(let [always-user (atom :user)
+      constantly-nil (constantly nil)]
   (defn ide-context [ctx ide-domain target-domain ?ide-route ?target-route ?user-profile]
     {:pre [ide-domain target-domain (seq (-> target-domain :domain/code-databases))]
      :post [(seq (-> % :domain :domain/code-databases))]}
@@ -53,7 +54,7 @@
                  (-sub-rt (:peer ctx) "ide" (:code-database ?target-route)))]
       (assoc ctx
         :debug "ide"
-        :page-on-click #()                                  ; disable alt-nav up top
+        :page-on-click constantly-nil                       ; disable alt-nav up top
         :display-mode always-user
         :peer peer
         :target-domain target-domain
