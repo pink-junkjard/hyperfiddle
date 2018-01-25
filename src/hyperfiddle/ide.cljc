@@ -156,15 +156,18 @@
       (do (timbre/warn "invalid route" route)
           #{} #_"No mechanism to propogate the error yet"))))
 
+(def activate-ide? (complement foundation/alias?))
+
 #?(:cljs
    (defn view-page [-domain route ctx]
      (let [ide-domain (hc/hydrate-api (:peer ctx) (foundation/domain-request "hyperfiddle" (:peer ctx)))
-           hide-ide (foundation/alias? (foundation/hostname->hf-domain-name (:hostname ctx) (:hyperfiddle-hostname ctx)))
+           ide-active (activate-ide? (foundation/hostname->hf-domain-name (:hostname ctx) (:hyperfiddle-hostname ctx)))
            user-profile @(reactive/cursor (.-state-atom (:peer ctx)) [:user-profile])
-           ctx (assoc ctx :navigate-cmp navigate-cmp/navigate-cmp)]
+           ctx (assoc ctx :navigate-cmp navigate-cmp/navigate-cmp
+                          :ide-active ide-active #_"used instead of :xray for non-eval related things")]
        (react-fragment
          :view-page
-         (if-not hide-ide
+         (if ide-active
            (if ide-domain
              [browser/ui-from-route (ide-route route) (ide-context ctx ide-domain -domain nil route user-profile) "hyperfiddle-ide-topnav"]
              "loading... (ide bootstrap, you edited ide-domain)"))

@@ -113,9 +113,9 @@
       {:route (-> unvalidated-route' (cats/mplus (either/right nil)) (cats/extract))
        :tooltip (if-not (empty? errors)
                   [:warning (pprint-str errors)]
-                  (case @(:display-mode ctx)
-                    :xray [nil (pr-str (dissoc route :code-database :link-id))]
-                    :user (:tooltip user-props)))
+                  (if (:ide-active ctx)
+                    [nil (pr-str (dissoc route :code-database :link-id))]
+                    (:tooltip user-props)))
        :class (->> [(:class user-props)
                     (if-not (empty? errors) "invalid")]
                    (remove nil?)
