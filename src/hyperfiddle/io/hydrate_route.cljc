@@ -41,12 +41,12 @@
                      :ptm (->> (select-keys (util/map-keys second ptm) all-requests)) ; prevent memory leak by returning exactly what is needed
                      :total-loops total-loops})
         (p/then (runtime/hydrate-requests rt local-basis stage missing-requests)
-                (fn [{:keys [pulled-trees id->tempid]}]
+                (fn [{:keys [pulled-trees] :as resp}]
                   (let [new-ptm (->> (zipmap missing-requests pulled-trees)
                                      (util/map-keys (fn [request]
                                                       [(branch/branch-vals-for-request request stage) request])))
                         ptm (merge ptm new-ptm)
-                        data-cache {:id->tempid id->tempid
+                        data-cache {:id->tempid (merge-with #(merge-with merge %1 %2) id->tempid (:id->tempid resp))
                                     :ptm ptm}]
                     (hydrate-loop-impl rt request-fn local-basis stage data-cache (inc total-loops) loop-limit))))))))
 
