@@ -72,6 +72,8 @@
                                           repo)))
                                  set))))))))
 
+(def activate-ide? (complement foundation/alias?))
+
 (let [dispatch!-factory (fn [dispatch! action]
                           ; todo filter available actions
                           (dispatch! action)
@@ -85,6 +87,7 @@
         :debug "target"
         :dispatch! (reactive/partial dispatch!-factory (:dispatch! ctx))
         :display-mode (reactive/cursor (.-state-atom (:peer ctx)) [:display-mode])
+        :ide-active (activate-ide? (foundation/hostname->hf-domain-name (:hostname ctx) (:hyperfiddle-hostname ctx)))
         :domain processed-domain
         :peer peer
         ; repository is needed for transact! in topnav
@@ -156,15 +159,12 @@
       (do (timbre/warn "invalid route" route)
           #{} #_"No mechanism to propogate the error yet"))))
 
-(def activate-ide? (complement foundation/alias?))
-
 #?(:cljs
    (defn view-page [-domain route ctx]
      (let [ide-domain (hc/hydrate-api (:peer ctx) (foundation/domain-request "hyperfiddle" (:peer ctx)))
            ide-active (activate-ide? (foundation/hostname->hf-domain-name (:hostname ctx) (:hyperfiddle-hostname ctx)))
            user-profile @(reactive/cursor (.-state-atom (:peer ctx)) [:user-profile])
-           ctx (assoc ctx :navigate-cmp navigate-cmp/navigate-cmp
-                          :ide-active ide-active #_"used instead of :xray for non-eval related things")]
+           ctx (assoc ctx :navigate-cmp navigate-cmp/navigate-cmp)]
        (react-fragment
          :view-page
          (if ide-active
