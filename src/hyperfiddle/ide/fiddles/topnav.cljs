@@ -134,7 +134,14 @@
                     (empty? stage) {:status :warning :label "no changes"})
       [:button {:disabled disabled?
                 :style (if disabled? {:pointer-events "none"})
-                :on-click #((:dispatch! ctx) (foundation-actions/transact! home-route (:peer ctx) (.-ide-repo (:peer ctx))))}
+                :on-click (fn []
+                            ; specifically dont use the SplitRuntime protocol here. the only thing that makes sense is whats in the context from the route
+                            (let [target-repo (->> (foundation/process-domain-legacy (:target-domain ctx))
+                                                   :domain/code-databases
+                                                   (filter #(= (:dbhole/name %) (get-in ctx [:target-route :code-database])))
+                                                   first
+                                                   (into {}))]
+                              ((:dispatch! ctx) (foundation-actions/transact! home-route (:peer ctx) target-repo))))}
        "transact!"]])
    [staging (:peer ctx) (:dispatch! ctx)]
    [:div.markdown (markdown "Hyperfiddle always generates valid transactions, if it doesn't, please file a bug.
