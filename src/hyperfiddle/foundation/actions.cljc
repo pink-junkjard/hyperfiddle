@@ -2,12 +2,13 @@
   (:require [cats.core :refer [mlet]]
             [cats.monad.either :as either]
             [hypercrud.browser.routing :as routing]
+            [hypercrud.client.peer :as peer]
             [hypercrud.client.schema :as schema]
             [hypercrud.client.tx :as tx]
             [hypercrud.types.DbVal :refer [->DbVal]]
             [hypercrud.util.branch :as branch]
             [hypercrud.util.core :as util]
-            [hyperfiddle.io.util :refer [process-result v-not-nil?]]
+            [hyperfiddle.io.util :refer [v-not-nil?]]
             [hyperfiddle.runtime :as runtime]
             [promesa.core :as p]
             [taoensso.timbre :as timbre]))
@@ -93,8 +94,7 @@
   (let [{:keys [ptm stage tempid-lookups]} (get-state)
         dbval (->DbVal uri branch)
         schema (let [schema-request (schema/schema-request dbval)]
-                 (-> (get ptm schema-request)
-                     (process-result schema-request)
+                 (-> (peer/hydrate-val ptm stage schema-request)
                      (either/branch (fn [e] (throw e)) identity)))
         id->tempid (get-in tempid-lookups [uri branch])]
     (map (partial tx/stmt-id->tempid id->tempid schema) tx)))
