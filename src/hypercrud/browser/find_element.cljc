@@ -135,7 +135,11 @@
     :query (mlet [{:keys [qfind]} (try-either (parser/parse-query (get-in ctx [:request :query])))]
              (cats/return
                (condp = (type qfind)
-                 datascript.parser.FindRel (mapv auto-fe-many-cells (:elements qfind) (util/transpose result))
+                 datascript.parser.FindRel (let [results-by-column (util/transpose result)]
+                                             (->> (:elements qfind)
+                                                  (map-indexed (fn [idx element]
+                                                                 (auto-fe-many-cells element (get results-by-column idx))))
+                                                  vec))
                  datascript.parser.FindColl [(auto-fe-many-cells (:element qfind) result)]
                  datascript.parser.FindTuple (mapv auto-fe-one-cell (:elements qfind) result)
                  datascript.parser.FindScalar [(auto-fe-one-cell (:element qfind) result)])))
