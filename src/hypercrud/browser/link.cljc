@@ -23,18 +23,20 @@
 (defn popover-link? [link]
   (:link/managed? link))
 
-(defn build-pathed-links-lookup [anchors]
-  (reduce (fn [acc anchor]
-            (-> (hc-string/memoized-safe-read-edn-string (str "[" (:link/path anchor) "]"))
-                (either/branch
-                  (fn [e]
-                    (timbre/error e)
-                    ; swallow the error
-                    acc)
-                  (fn [path]
-                    (update-in acc (conj path :links) conj anchor)))))
-          {}
-          anchors))
+(def build-pathed-links-lookup
+  (memoize                                                  ; memory leak; should back by local ratom
+    (fn [anchors]
+      (reduce (fn [acc anchor]
+                (-> (hc-string/memoized-safe-read-edn-string (str "[" (:link/path anchor) "]"))
+                    (either/branch
+                      (fn [e]
+                        (timbre/error e)
+                        ; swallow the error
+                        acc)
+                      (fn [path]
+                        (update-in acc (conj path :links) conj anchor)))))
+              {}
+              anchors))))
 
 (defn process-popover-link [link]
   (if (popover-link? link)
@@ -46,18 +48,14 @@
         links (remove option-link? links)]
     [links options-link]))
 
-(def links-lookup'                                          ; cosmetic UI side because popover hacks. If popovers hydrate seperate, this goes away
-  (memoize                                                  ; memory leak; should back by local ratom
-    (fn [links path]
-      (-> (map process-popover-link links)                  ; the cosmetic change
-          (build-pathed-links-lookup)
-          (get-in (conj path :links))))))
+(defn links-lookup [links path]                             ; the real one used by request side
+  (-> (build-pathed-links-lookup links)
+      (get-in (conj path :links))))
 
-(def links-lookup                                           ; the real one used by request side
-  (memoize
-    (fn [links path]
-      (-> (build-pathed-links-lookup links)
-          (get-in (conj path :links))))))
+(defn links-lookup' [links path]                            ; cosmetic UI side because popover hacks. If popovers hydrate seperate, this goes away
+  (-> (links-lookup links path)
+      ; the cosmetic change
+      (map process-popover-link links)))
 
 ; todo belongs in routing ns
 ; this is same business logic as base/request-for-link
