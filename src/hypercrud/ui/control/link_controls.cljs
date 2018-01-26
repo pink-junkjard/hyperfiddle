@@ -30,6 +30,6 @@
                ; don't test link validity, we need to render the failure. If this is a dependent link, use visibility predicate to hide the error.
                [:div {:key (hash (:db/id link))}            ; extra div bc had trouble getting keys to work
                 ; NOTE: this ctx logic and structure is the same as the inline branch of browser-request/recurse-request
-                [browser/ui link (update ctx :debug #(str % ">inline-link[" (:db/id link) ":" (or (:link/rel link) (:anchor/prompt link)) "]"))]]))
+                [browser/ui link (update ctx :hypercrud.browser/debug #(str % ">inline-link[" (:db/id link) ":" (or (:link/rel link) (:anchor/prompt link)) "]"))]]))
         (remove nil?)
         (doall))))

@@ -101,7 +101,7 @@
     (.stopPropagation event)))
 
 (defn wrap-ui [v' route ctx & [class]]
-  (let [on-click (reactive/partial (or (:page-on-click ctx)
+  (let [on-click (reactive/partial (or (:hypercrud.browser/page-on-click ctx)
                                        (reactive/partial page-on-click ctx))
                                    route)]
     ^{:key route}                                           ; clear memory when route changes

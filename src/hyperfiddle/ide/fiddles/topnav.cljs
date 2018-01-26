@@ -24,7 +24,7 @@
   (select-keys @state-atom [:display-mode :stage]))
 
 (defn stateless-login-url [ctx]
-  (let [{:keys [domain client-id]} (get-in ctx [:repository :repository/environment :auth0 (:hyperfiddle-hostname ctx)])
+  (let [{:keys [domain client-id]} (get-in ctx [:hypercrud.browser/repository :repository/environment :auth0 (:hyperfiddle-hostname ctx)])
         callback-url (str "http://" (:hostname ctx) foundation/auth0-redirect-path)]
     (str domain "/login?client=" client-id "&callbackURL=" callback-url)))
 

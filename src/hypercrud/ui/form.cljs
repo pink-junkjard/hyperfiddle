@@ -51,8 +51,8 @@
                           (= (:attribute field) :db/id))
                     (assoc $ :read-only always-read-only)
                     $))
-        user-cell (case @(:display-mode ctx) :xray form-cell (:cell ctx form-cell))]
-    (assert @(:display-mode ctx))
+        user-cell (case @(:hypercrud.ui/display-mode ctx) :xray form-cell (:cell ctx form-cell))]
+    (assert @(:hypercrud.ui/display-mode ctx))
     ^{:key (:id field)}
     [user-cell (auto-control' ctx) field ctx]))
 

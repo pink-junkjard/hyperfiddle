@@ -56,12 +56,12 @@
   (try-either
     (let [fiddle-id (get-in ctx [:route :link-id])
           _ (assert fiddle-id "missing link-id")
-          dbval (hc/db (:peer ctx) (get-in ctx [:repository :dbhole/uri]) (:branch ctx))]
+          dbval (hc/db (:peer ctx) (get-in ctx [:hypercrud.browser/repository :dbhole/uri]) (:branch ctx))]
       (->EntityRequest fiddle-id nil dbval meta-pull-exp-for-link))))
 
 (defn hydrate-fiddle [ctx]
-  {:pre [(-> ctx :repository)
-         (-> ctx :repository :dbhole/uri)]}
+  {:pre [(-> ctx :hypercrud.browser/repository)
+         (-> ctx :hypercrud.browser/repository :dbhole/uri)]}
   (if (auto-fiddle/system-fiddle? (get-in ctx [:route :link-id]))
     {:meta-fiddle-req' (either/right nil)
      :fiddle' (auto-fiddle/hydrate-system-fiddle (get-in ctx [:route :link-id]))}
@@ -95,7 +95,7 @@
     (let [request-params (get-in ctx [:route :request-params])
           e (:entity request-params)
           uri (try (let [dbname (.-dbname e)]               ;todo report this exception better
-                     (get-in ctx [:repository :repository/environment dbname]))
+                     (get-in ctx [:hypercrud.browser/repository :repository/environment dbname]))
                    (catch #?(:clj Exception :cljs js/Error) e nil))
           pull-exp (or (-> (hc-string/memoized-safe-read-edn-string (:fiddle/pull fiddle))
                            (either/branch (constantly nil) identity)
@@ -117,7 +117,7 @@
 
 (defn fn-from-mode [f-mode-config link ctx]
   (let [{:keys [from-ctx from-link with-user-fn default]} f-mode-config]
-    (case @(:display-mode ctx)
+    (case @(:hypercrud.ui/display-mode ctx)
       ; todo report eval and invocation errors back to the user
       :user (or (some->> (or (some-> (from-ctx ctx) either/right)
                              (if-not (empty? (from-link link))

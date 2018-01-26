@@ -101,7 +101,7 @@
          (mapv (fn [field]
                  (let [ctx (-> (context/attribute ctx (:attribute field))
                                (context/value (reactive/map (:cell-data->value field) (:cell-data ctx))))
-                       user-cell (case @(:display-mode ctx) :xray table-cell :user table-cell #_(:cell ctx table-cell))]
+                       user-cell (case @(:hypercrud.ui/display-mode ctx) :xray table-cell :user table-cell #_(:cell ctx table-cell))]
                    ^{:key (:id field)}
                    [user-cell (auto-control' ctx) field ctx]))))))
 

@@ -21,11 +21,11 @@
 
 (defn route [ctx route]
   {:pre [(:code-database route)
-         (-> ctx :domain)
-         (seq (-> ctx :domain :domain/code-databases))]
-   :post [(-> % :repository)
-          (-> % :repository :dbhole/uri)]}
-  (let [initial-repository (->> (get-in ctx [:domain :domain/code-databases])
+         (:hypercrud.browser/domain ctx)
+         (seq (-> ctx :hypercrud.browser/domain :domain/code-databases))]
+   :post [(-> % :hypercrud.browser/repository)
+          (-> % :hypercrud.browser/repository :dbhole/uri)]}
+  (let [initial-repository (->> (get-in ctx [:hypercrud.browser/domain :domain/code-databases])
                                 (filter #(= (:dbhole/name %) (:code-database route)))
                                 first
                                 (into {}))
@@ -36,10 +36,10 @@
                                         (into {}))]
                      (update initial-repository :repository/environment merge overrides))
         ctx (-> ctx
-                (update-in [:domain :domain/code-databases]
+                (update-in [:hypercrud.browser/domain :domain/code-databases]
                            (fn [repos]
                              (map #(if (= initial-repository) repository %) repos)))
-                (assoc :repository repository))]
+                (assoc :hypercrud.browser/repository repository))]
     (assoc ctx :route (routing/tempid->id route ctx))))
 
 (defn anchor-branch [ctx link]
@@ -63,7 +63,7 @@
 
 (defn find-element [ctx fe fe-pos]
   (-> (if-let [dbname (some-> (:source-symbol fe) str)]
-        (let [uri (get-in ctx [:repository :repository/environment dbname])]
+        (let [uri (get-in ctx [:hypercrud.browser/repository :repository/environment dbname])]
           (assoc ctx :uri uri
                      :schema (get-in ctx [:schemas dbname])
                      :user-with! (reactive/partial user-with ctx (:branch ctx) uri)))

@@ -40,14 +40,14 @@
   (let [invert-id (fn [id uri]
                     (let [id->tempid (ctx->id-lookup uri ctx)]
                       (get id->tempid id id)))]
-    (invert-ids route invert-id (:repository ctx))))
+    (invert-ids route invert-id (:hypercrud.browser/repository ctx))))
 
 (defn tempid->id [route ctx]
   (let [invert-id (fn [temp-id uri]
                     (let [tempid->id (-> (ctx->id-lookup uri ctx)
                                          (set/map-invert))]
                       (get tempid->id temp-id temp-id)))]
-    (invert-ids route invert-id (:repository ctx))))
+    (invert-ids route invert-id (:hypercrud.browser/repository ctx))))
 
 (defn ^:export build-route' [link ctx]
   (mlet [fiddle-id (if-let [page (:link/fiddle link)]
@@ -70,7 +70,7 @@
         (merge (into {} route-params)
                {
                 ;:code-database (:link/code-database link) todo when cross db references are working on links, don't need to inherit code-db-uri
-                :code-database (get-in ctx [:repository :dbhole/name])
+                :code-database (get-in ctx [:hypercrud.browser/repository :dbhole/name])
                 :link-id fiddle-id})
         ctx))))
 

@@ -25,7 +25,7 @@
       (either/left {:message (str "Invalid query '" (pr-str q) "', only vectors supported")}))))
 
 (defn build-dbhole-lookup [ctx]
-  (->> (get-in ctx [:repository :repository/environment])
+  (->> (get-in ctx [:hypercrud.browser/repository :repository/environment])
        (filter (fn [[k _]] (and (string? k) (string/starts-with? k "$"))))
        (map (juxt #(first %) #(hc/db (:peer ctx) (second %) (:branch ctx))))
        (into {})))

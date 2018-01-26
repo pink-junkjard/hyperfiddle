@@ -28,12 +28,12 @@
         ; that MUST happen in the parent context
         (let [ctx (-> ctx
                       (context/clean)
-                      (update :debug #(str % ">popover-link[" (:db/id link) ":" (or (:link/rel link) (:anchor/prompt link)) "]")))]
+                      (update :hypercrud.browser/debug #(str % ">popover-link[" (:db/id link) ":" (or (:link/rel link) (:anchor/prompt link)) "]")))]
           (either/branch route'
                          (constantly nil)
                          #(request-from-route % ctx)))))
     ; if the anchor IS NOT a popover, this should be the same logic as widget/render-inline-anchors
-    (let [ctx (update ctx :debug #(str % ">inline-link[" (:db/id link) ":" (or (:link/rel link) (:anchor/prompt link)) "]"))]
+    (let [ctx (update ctx :hypercrud.browser/debug #(str % ">inline-link[" (:db/id link) ":" (or (:link/rel link) (:anchor/prompt link)) "]"))]
       (request-from-link link ctx))))
 
 (defn cell-dependent-requests [ctx]

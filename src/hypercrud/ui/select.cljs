@@ -105,7 +105,7 @@
 (defn anchor->select [props anchor ctx]
   (let [renderer (reactive/partial select-anchor-renderer props)]
     [browser/ui anchor (assoc ctx
-                         :display-mode always-user
+                         :hypercrud.ui/display-mode always-user
                          :user-renderer renderer)]))
 
 (let [on-change (fn [ctx id]
