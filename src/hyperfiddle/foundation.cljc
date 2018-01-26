@@ -16,9 +16,12 @@
 (def domain-uri #uri "datomic:free://datomic:4334/domains")
 (def auth0-redirect-path "/auth0")                          ; ide
 
-(defn hostname->hf-domain-name [hostname hyperfiddle-hostname]
-  ; buggy
-  (string/replace hostname (str "." hyperfiddle-hostname) ""))
+(defn hostname->hf-domain-name
+  ([ctx]
+   (hostname->hf-domain-name (:hostname ctx) (:hyperfiddle-hostname ctx)))
+  ([hostname hyperfiddle-hostname]
+    ; buggy
+   (string/replace hostname (str "." hyperfiddle-hostname) "")))
 
 (defn alias? [hf-domain-name]
   (string/includes? hf-domain-name "."))
@@ -62,7 +65,7 @@
     (f global-basis domain route ctx)))
 
 (defn api [foo route ctx f]
-  (let [domain-q (domain-request (hostname->hf-domain-name (:hostname ctx) (:hyperfiddle-hostname ctx)) (:peer ctx))
+  (let [domain-q (domain-request (hostname->hf-domain-name ctx) (:peer ctx))
         domain (hc/hydrate-api (:peer ctx) domain-q)
         user-qs (if domain (f domain route ctx))]
     (case foo
@@ -78,7 +81,7 @@
 
 #?(:cljs
    (defn leaf-view [route ctx f]
-     (let [domain (let [user-domain (hostname->hf-domain-name (:hostname ctx) (:hyperfiddle-hostname ctx))]
+     (let [domain (let [user-domain (hostname->hf-domain-name ctx)]
                     (hc/hydrate-api (:peer ctx) (domain-request user-domain (:peer ctx))))]
        ; A malformed stage can break bootstrap hydrates, but the root-page is bust, so ignore here
        ; Fix this by branching userland so bootstrap is sheltered from staging area? (There are chickens and eggs)
@@ -86,7 +89,7 @@
 
 #?(:cljs
    (defn page-view [route ctx f]
-     (let [domain' @(hc/hydrate (:peer ctx) (domain-request (hostname->hf-domain-name (:hostname ctx) (:hyperfiddle-hostname ctx)) (:peer ctx)))]
+     (let [domain' @(hc/hydrate (:peer ctx) (domain-request (hostname->hf-domain-name ctx) (:peer ctx)))]
        [stale/loading (stale/can-be-loading? ctx) domain'
         (fn [e]
           [:div.hyperfiddle-foundation

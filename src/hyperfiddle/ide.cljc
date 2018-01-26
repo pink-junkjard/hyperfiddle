@@ -93,7 +93,7 @@
       :hypercrud.browser/domain (foundation/process-domain-legacy domain)
       :hypercrud.ui/display-mode (reactive/cursor (.-state-atom (:peer ctx)) [:display-mode])
       :dispatch! (reactive/partial dispatch!-factory (:dispatch! ctx))
-      :ide-active (activate-ide? (foundation/hostname->hf-domain-name (:hostname ctx) (:hyperfiddle-hostname ctx)))
+      :ide-active (activate-ide? (foundation/hostname->hf-domain-name ctx))
       :user-profile user-profile
 
       ; these target values only exists to allow the topnav to render in the bottom/user
@@ -169,7 +169,7 @@
 #?(:cljs
    (defn view-page [-domain ?route ctx]
      (let [ide-domain (hc/hydrate-api (:peer ctx) (foundation/domain-request "hyperfiddle" (:peer ctx)))
-           ide-active (activate-ide? (foundation/hostname->hf-domain-name (:hostname ctx) (:hyperfiddle-hostname ctx)))
+           ide-active (activate-ide? (foundation/hostname->hf-domain-name ctx))
            user-profile @(reactive/cursor (.-state-atom (:peer ctx)) [:user-profile])
            ctx (assoc ctx :navigate-cmp navigate-cmp/navigate-cmp)]
        (react-fragment
