@@ -30,12 +30,7 @@
 
 (defn -renderer [fiddle ordered-fes links ctx]
   (let [{:keys [display-mode stage]} @(reactive/track get-state (.-state-atom (:peer ctx)))
-        home-route (-> (get-in ctx [:target-domain :domain/home-route])
-                       (hc-string/memoized-safe-read-edn-string)
-                       (cats/mplus (either/right nil))
-                       (cats/extract))
         dirty? (not (empty? stage))
-
         ; hack until hyperfiddle.net#156 is complete
         link-index (->> links
                         (filter :link/rel)                  ; cannot lookup nil idents
