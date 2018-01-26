@@ -158,7 +158,7 @@
         "page" (concat [ide-domain-q]
                        (if (and ?route -domain)
                          (browser/request-from-route ?route (page-target-context ctx -domain ?route user-profile)))
-                       (if ide-domain
+                       (if (and (activate-ide? (foundation/hostname->hf-domain-name ctx)) ide-domain)
                          (browser/request-from-route (ide-route ?route) (page-ide-context ctx ide-domain -domain ?route user-profile))))
         "ide" (concat [ide-domain-q]
                       (if ide-domain
