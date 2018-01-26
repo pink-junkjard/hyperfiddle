@@ -1,5 +1,6 @@
 (ns hyperfiddle.ide
   (:require [cuerdas.core :as str]
+    #?(:cljs [hypercrud.browser.browser-ui :as browser-ui])
             [hypercrud.browser.core :as browser]
             [hypercrud.browser.routing :as routing]
             [hypercrud.browser.routing :as routing]
@@ -23,7 +24,6 @@
             [hyperfiddle.ide.fiddles.domain-code-database]
             [hyperfiddle.ide.fiddles.fiddle-links.bindings]
     #?(:cljs [hyperfiddle.ide.fiddles.fiddle-links.renderer])
-    #?(:cljs [hyperfiddle.ide.fiddles.main])
             [hyperfiddle.ide.fiddles.topnav]
     #?(:cljs [hyperfiddle.ide.fiddles.user-dashboard])
             [hyperfiddle.ide.util]))
@@ -31,8 +31,8 @@
 
 (defn ide-route [route]
   {:code-database "root"
-   :link-id :hyperfiddle/main
-   :entity #entity["$" (:link-id route)]})
+   :link-id :hyperfiddle/topnav
+   :request-params {:entity #entity["$" (:link-id route)]}})
 
 (defprotocol SplitRuntime
   (sub-rt [rt foo target-repo])
@@ -176,7 +176,9 @@
          :view-page
          (if ide-active
            (if ide-domain
-             [browser/ui-from-route (ide-route ?route) (page-ide-context ctx ide-domain -domain ?route user-profile) "hyperfiddle-ide-topnav"]
+             (let [ctx (-> (page-ide-context ctx ide-domain -domain ?route user-profile)
+                           (assoc :ui-error browser-ui/ui-error-inline))]
+               [browser/ui-from-route (ide-route ?route) ctx "topnav hidden-print"])
              [:div "loading... (ide bootstrap, you edited ide-domain)"]))
          (if ?route
            ; This is different than foo=user because it is special css at root attach point
