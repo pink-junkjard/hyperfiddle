@@ -177,7 +177,7 @@
          (if ide-active
            (if ide-domain
              (let [ctx (-> (page-ide-context ctx ide-domain -domain ?route user-profile)
-                           (assoc :ui-error browser-ui/ui-error-inline))]
+                           (assoc :hypercrud.ui/ui-error browser-ui/ui-error-inline))]
                [browser/ui-from-route (ide-route ?route) ctx "topnav hidden-print"])
              [:div "loading... (ide bootstrap, you edited ide-domain)"]))
          (if ?route

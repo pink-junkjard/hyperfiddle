@@ -86,7 +86,7 @@
 (defn ui-error [e ctx]
   ; :find-element :attribute :value
   (let [C (cond
-            (:ui-error ctx) (:ui-error ctx)                 ; botnav
+            (:hypercrud.ui/ui-error ctx) (:hypercrud.ui/ui-error ctx)
             (:attribute ctx) ui-error-inline                ; table: header or cell, form: header or cell
             (:find-element ctx) ui-error-inline             ;
             :else ui-error-block)]                          ; browser including inline true links
