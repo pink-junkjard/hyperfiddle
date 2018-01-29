@@ -181,8 +181,9 @@
                [browser/ui-from-route (ide-route ?route) ctx "topnav hidden-print"])
              [:div "loading... (ide bootstrap, you edited ide-domain)"]))
          (if ?route
-           ; This is different than foo=user because it is special css at root attach point
-           [browser/ui-from-route ?route (page-target-context ctx -domain ?route user-profile) "hyperfiddle-ide-user"])))))
+           (let [class (str "hyperfiddle-user" (if ide-active " hyperfiddle-ide-user" ""))]
+             ; This is different than foo=user because it is special css at root attach point
+             [browser/ui-from-route ?route (page-target-context ctx -domain ?route user-profile) class]))))))
 
 #?(:cljs
    ; Route is managed by the domain; Domain will not be available here soon.
