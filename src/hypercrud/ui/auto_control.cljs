@@ -23,6 +23,7 @@
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one)) widget/ref
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many) isComponent) widget/ref-many-table
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) edn/edn-many
+                 (nil? valueType) widget/text
                  :else edn/edn)]
     widget))
 
@@ -43,6 +44,7 @@
                  (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) edn/edn-many
                  (and (= cardinality :db.cardinality/many)) edn/edn-many
                  (and (= cardinality :db.cardinality/one)) edn/edn
+                 (nil? valueType) widget/text
                  :else edn/edn)]
     widget))
 

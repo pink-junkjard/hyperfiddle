@@ -83,7 +83,7 @@
                  :cell-data cell-data))))
 
 (defn attribute [ctx attr-ident]
-  (assoc ctx :attribute (get-in ctx [:schema attr-ident])))
+  (assoc ctx :attribute (get-in ctx [:schema attr-ident] {:db/ident attr-ident})))
 
 (defn value [ctx value]
   (assoc ctx :value value))
