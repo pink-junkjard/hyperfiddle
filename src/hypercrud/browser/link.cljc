@@ -53,9 +53,9 @@
       (get-in (conj path :links))))
 
 (defn links-lookup' [links path]                            ; cosmetic UI side because popover hacks. If popovers hydrate seperate, this goes away
-  (-> (links-lookup links path)
-      ; the cosmetic change
-      (map process-popover-link)))
+  (->> (links-lookup links path)
+       ; the cosmetic change
+       (map process-popover-link)))
 
 ; todo belongs in routing ns
 ; this is same business logic as base/request-for-link
