@@ -52,7 +52,7 @@
   ;(:anchors ctx)
   (let [{index-inline-links true index-links false} (->> (link/links-lookup' links [])
                                                          (remove :link/dependent?) ; link/dependent? true = relation link
-                                                         (group-by :link/render-inline?))
+                                                         (group-by #(or (:link/render-inline? %) false)))
         index-ctx (dissoc ctx :isComponent)]
     [:div.auto-result
      [:div.hyperfiddle-fiddle-doc (markdown-rendered* (-> ctx :fiddle :db/doc))]

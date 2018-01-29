@@ -59,13 +59,13 @@
 (defn Entity [ctx]
   (let [{inline-links true anchor-links false} (->> (link/links-lookup' (:links ctx) [(:fe-pos ctx)])
                                                     (remove :link/dependent?)
-                                                    (group-by :link/render-inline?))]
+                                                    (group-by #(or (:link/render-inline? %) false)))]
     (concat
       (link-controls/render-links anchor-links ctx)
       (let [ctx (context/cell-data ctx)
             {inline-links true anchor-links false} (->> (link/links-lookup' (:links ctx) [(:fe-pos ctx)])
                                                         (filter :link/dependent?)
-                                                        (group-by :link/render-inline?))]
+                                                        (group-by #(or (:link/render-inline? %) false)))]
         (concat
           (link-controls/render-links anchor-links ctx)
           (conj
