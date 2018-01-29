@@ -4,9 +4,10 @@
 
 
 (defn render-link [link ctx]
-  (let [prompt (or (:anchor/prompt link)                    ; ???
-                   (:link/rel link)
-                   "_")]
+  (let [prompt (-> (or (:anchor/prompt link)                ; ???
+                       (:link/rel link)
+                       "_")
+                   str)]
     [(:navigate-cmp ctx) (link/build-link-props link ctx) prompt]))
 
 (defn render-links
