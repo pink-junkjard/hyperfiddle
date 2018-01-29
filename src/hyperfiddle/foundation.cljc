@@ -1,6 +1,5 @@
 (ns hyperfiddle.foundation
-  (:require [cljs.pprint :as pprint]
-            [clojure.string :as string]
+  (:require [clojure.string :as string]
             [cuerdas.core :as cuerdas]
             [hypercrud.client.core :as hc]
             [hypercrud.compile.reader :as reader]
@@ -8,9 +7,10 @@
     #?(:cljs [hypercrud.ui.control.code :refer [code*]])
     #?(:cljs [hypercrud.ui.css :refer [classes]])
     #?(:cljs [hypercrud.ui.stale :as stale])
+            [hypercrud.util.core :as util]
             [hypercrud.util.reactive :as reactive]
             [hyperfiddle.foundation.actions :as foundation-actions]
-            [hypercrud.util.core :as util]))
+            [promesa.core :as p]))
 
 
 (def domain-uri #uri "datomic:free://datomic:4334/domains")
@@ -117,3 +117,19 @@
   (and (not= route encoded-route)
        (or (empty? branches)
            (confirm "Unstaged work will be lost on navigate, are you sure?"))))
+
+(def LEVEL-NONE 0)
+(def LEVEL-GLOBAL-BASIS 1)
+(def LEVEL-LOCAL-BASIS 2)
+(def LEVEL-HYDRATE-PAGE 3)
+
+; careful setting load-level to LOCAL-BASIS; it is not supported as an init-level in the browser yet
+; how can the browser know if hydrate page has or has not happened yet?
+(defn bootstrap-data [rt dispatch! get-state init-level load-level]
+  (if (>= init-level load-level)
+    (p/resolved nil)
+    (-> (condp = (inc init-level)
+          LEVEL-GLOBAL-BASIS (foundation-actions/refresh-global-basis rt dispatch! get-state)
+          LEVEL-LOCAL-BASIS (foundation-actions/refresh-page-local-basis rt dispatch! get-state)
+          LEVEL-HYDRATE-PAGE (foundation-actions/hydrate-page rt nil dispatch! get-state))
+        (p/then #(bootstrap-data rt dispatch! get-state (inc init-level) load-level)))))
