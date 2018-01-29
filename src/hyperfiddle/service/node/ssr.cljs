@@ -74,13 +74,12 @@
     (perf/time (fn [get-total-time] (timbre/debug "Template total time:" (get-total-time)))
                (evaluated-template env state-val params app-html))))
 
-(defn ssr [env rt hyperfiddle-hostname hostname]
+(defn ssr [env rt]
   (let [state-atom (.-state-atom rt)
         get-state (fn [] @state-atom)
-        dispatch! (state/build-dispatch state-atom reducers/root-reducer)]
-    (-> (foundation-actions/refresh-global-basis rt dispatch! get-state)
-        (p/then #(foundation-actions/refresh-page-local-basis rt dispatch! get-state))
-        (p/then #(foundation-actions/hydrate-page rt nil dispatch! get-state))
+        dispatch! (state/build-dispatch state-atom reducers/root-reducer)
+        load-level foundation/LEVEL-HYDRATE-PAGE]
+    (-> (foundation/bootstrap-data rt dispatch! get-state foundation/LEVEL-NONE load-level)
         (p/catch (constantly (p/resolved nil)))             ; any error above IS NOT fatal, so render the UI. anything below IS fatal
         (p/then #(runtime/ssr rt (:encoded-route @state-atom)))
         (p/then (fn [html-fragment] (html env @state-atom html-fragment)))
@@ -162,7 +161,7 @@
         rt (IdeSsrRuntime. (:HF_HOSTNAME env) hostname "page" nil
                            (req->service-uri env req) (reactive/atom state-val))]
     ; Do not inject user-api-fn/view - it is baked into SsrRuntime
-    (-> (ssr env rt (:HF_HOSTNAME env) hostname)
+    (-> (ssr env rt)
         (p/then (fn [html-resp]
                   (doto res
                     (.append "Cache-Control" "max-age=0")
