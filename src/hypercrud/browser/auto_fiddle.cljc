@@ -1,5 +1,6 @@
 (ns hypercrud.browser.auto-fiddle
-  (:require [hypercrud.compile.macros :refer [str-and-code]]
+  (:require [hypercrud.browser.schema-attribute :as schema-attribute]
+            [hypercrud.compile.macros :refer [str-and-code]]
             [hypercrud.util.non-fatal :refer [try-either]]))
 
 
@@ -66,121 +67,42 @@
                        [$db '?db-part :db/ident :db.part/db]])
    :fiddle/type :query})
 
-(let [renderer (str
-                 '(let [special-case-attrs #{:db/ident :db/cardinality :db/valueType}
-                        has-required-attrs? (fn [entity] (clojure.set/subset? special-case-attrs (set (keys entity))))
-                        read-only (fn [attr ctx]
-                                    (not (or (has-required-attrs? @(:cell-data ctx))
-                                             (#{:db/ident :db/doc :db/valueType :db/cardinality} (:db/ident attr)))))
-                        merge-in-tx (fn [entity tx ctx]
-                                      (reduce (fn [entity [op e a v]]
-                                                ; todo this fn has bare minimum support for this page
-                                                ; e.g. doesnt support card/many or nested modals
-                                                (let [attr (get-in ctx [:schemas "$" a])
-                                                      v (if (= :db.type/ref (-> attr :db/valueType :db/ident))
-                                                          {:db/id v}
-                                                          v)]
-                                                  (case op
-                                                    :db/add (assoc entity a v)
-                                                    :db/retract (dissoc entity a))))
-                                              (into {} entity)
-                                              tx))]
-                    (fn [result colspec anchors ctx]
-                      (let [special-attrs-state (reagent.core/atom nil)
-
-                            valueType-and-cardinality-renderer
-                            (let [user-with! (fn [ctx user-with! tx]
-                                               (let [entity @(:cell-data ctx)
-                                                     new-entity (merge-in-tx entity tx ctx)]
-                                                 (case [(has-required-attrs? entity) (has-required-attrs? new-entity)]
-                                                   [false false]
-                                                   (swap! special-attrs-state hypercrud.client.tx/into-tx tx)
-
-                                                   [false true]
-                                                   (do
-                                                     (user-with! (hypercrud.client.tx/into-tx @special-attrs-state tx))
-                                                     (reset! special-attrs-state nil))
-
-                                                   [true false]
-                                                   ; todo this case WILL throw (going from a valid tx to invalid)
-                                                   (user-with! tx)
-
-                                                   [true true]
-                                                   (user-with! tx))))]
-                              (hypercrud.compile.macros/str-and-code'
-                                (fn [field props ctx]
-                                  (let [ctx (update ctx :user-with! #(reagent.core/partial user-with! ctx %))]
-                                    (hypercrud.ui.auto-control/auto-control field nil props ctx)))
-                                "todo"))
-
-                            ident-renderer
-                            (let [user-with! (fn [ctx user-with! tx]
-                                               (let [entity @(:cell-data ctx)
-                                                     new-entity (merge-in-tx entity tx ctx)]
-                                                 (case [(has-required-attrs? entity) (has-required-attrs? new-entity)]
-                                                   [false false]
-                                                   (user-with! tx)
-
-                                                   [false true]
-                                                   (do
-                                                     (user-with! (hypercrud.client.tx/into-tx @special-attrs-state tx))
-                                                     (reset! special-attrs-state nil))
-
-                                                   [true false]
-                                                   ; todo this case WILL throw (going from a valid tx to invalid)
-                                                   (user-with! tx)
-
-                                                   [true true]
-                                                   (user-with! tx))))]
-                              (hypercrud.compile.macros/str-and-code'
-                                (fn [field props ctx]
-                                  (let [ctx (update ctx :user-with! #(reagent.core/partial user-with! ctx %))]
-                                    (hypercrud.ui.auto-control/auto-control field nil props ctx)))
-                                "todo"))]
-                        (fn [entity colspec anchors ctx]
-                          (let [entity (merge-in-tx entity @special-attrs-state ctx)
-                                ctx (-> ctx
-                                        (assoc :read-only read-only)
-                                        (assoc-in [:fields :db/cardinality :renderer] valueType-and-cardinality-renderer)
-                                        (assoc-in [:fields :db/valueType :renderer] valueType-and-cardinality-renderer)
-                                        (assoc-in [:fields :db/ident :renderer] ident-renderer))]
-                            (hypercrud.ui.result/view entity colspec anchors ctx)))))))]
-  (defn schema-attribute [$db]
-    {:db/id {:ident :schema/attribute
-             :dbhole/name $db}
-     :fiddle/name (str "[schema] " $db " attribute")
-     :fiddle/type :entity
-     :fiddle/pull (str [[:db/id
-                         :db/ident
-                         :db/valueType
-                         :db/cardinality
-                         :db/doc
-                         :db/unique
-                         :db/isComponent
-                         :db/fulltext]])
-     :fiddle/renderer renderer
-     :fiddle/links #{{:db/id {:ident :schema/cardinality-options-link}
-                      :link/fiddle (schema-cardinality-options $db)
-                      :link/dependent? true
-                      :link/render-inline? true
-                      :link/rel :options
-                      :link/path "0 :db/cardinality"}
-                     {:db/id {:ident :schema/unique-options-link}
-                      :link/fiddle (schema-unique-options $db)
-                      :link/dependent? true
-                      :link/render-inline? true
-                      :link/rel :options
-                      :link/path "0 :db/unique"}
-                     {:db/id {:ident :schema/valueType-options-link}
-                      :link/fiddle (schema-valueType-options $db)
-                      :link/dependent? true
-                      :link/render-inline? true
-                      :link/rel :options
-                      :link/path "0 :db/valueType"}
-                     {:db/id {:ident :system-anchor-remove
-                              :fe "entity"}
-                      :link/rel :sys-remove-entity
-                      :link/disabled? true}}}))
+(defn schema-attribute [$db]
+  {:db/id {:ident :schema/attribute
+           :dbhole/name $db}
+   :fiddle/name (str "[schema] " $db " attribute")
+   :fiddle/type :entity
+   :fiddle/pull (str [[:db/id
+                       :db/ident
+                       :db/valueType
+                       :db/cardinality
+                       :db/doc
+                       :db/unique
+                       :db/isComponent
+                       :db/fulltext]])
+   :fiddle/renderer (str `schema-attribute/renderer)
+   :fiddle/links #{{:db/id {:ident :schema/cardinality-options-link}
+                    :link/fiddle (schema-cardinality-options $db)
+                    :link/dependent? true
+                    :link/render-inline? true
+                    :link/rel :options
+                    :link/path "0 :db/cardinality"}
+                   {:db/id {:ident :schema/unique-options-link}
+                    :link/fiddle (schema-unique-options $db)
+                    :link/dependent? true
+                    :link/render-inline? true
+                    :link/rel :options
+                    :link/path "0 :db/unique"}
+                   {:db/id {:ident :schema/valueType-options-link}
+                    :link/fiddle (schema-valueType-options $db)
+                    :link/dependent? true
+                    :link/render-inline? true
+                    :link/rel :options
+                    :link/path "0 :db/valueType"}
+                   {:db/id {:ident :system-anchor-remove
+                            :fe "entity"}
+                    :link/rel :sys-remove-entity
+                    :link/disabled? true}}})
 
 (let [renderer (str
                  '(fn [attributes ordered-fes anchors ctx]
