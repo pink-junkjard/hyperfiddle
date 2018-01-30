@@ -4,7 +4,7 @@
 
 
 (let [read-only (fn [attribute ctx]
-                  (let [sys? (auto-anchor/system-anchor? @(reactive/cursor (:cell-data ctx) [:db/id]))
+                  (let [sys? (auto-anchor/system-link? @(reactive/cursor (:cell-data ctx) [:db/id]))
                         shadow? @(reactive/cursor (:cell-data ctx) [:hypercrud/sys?])
                         cantchange (contains? #{:link/rel
                                                 :link/path

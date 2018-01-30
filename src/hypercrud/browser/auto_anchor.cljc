@@ -7,7 +7,6 @@
 
 (defn ^:export system-link? [link-id]
   (map? link-id))
-(def ^:export system-anchor? system-link?)                  ; compat
 
 (def auto-link-txfn-lookup (vedn/load-vedn-from-file "auto-anchor/tx-fns.vedn"))
 
