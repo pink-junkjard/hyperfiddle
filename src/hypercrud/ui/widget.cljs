@@ -4,10 +4,11 @@
             [hypercrud.client.tx :as tx]
             [hypercrud.ui.attribute.code :as code]
             [hypercrud.ui.attribute.markdown-editor :as markdown-editor]
+            [hypercrud.ui.attribute.tristate-boolean :as tristate-boolean]
             [hypercrud.ui.control.link-controls :as links]
             [hypercrud.ui.input :as input]
             [hypercrud.ui.radio]                            ; used in user renderers
-            [hypercrud.ui.select :refer [select* select-boolean*]]
+            [hypercrud.ui.select :refer [select*]]
             [hypercrud.ui.textarea :refer [textarea*]]))
 
 
@@ -43,13 +44,7 @@
       props]
      (links/render-inline-links (filter :link/render-inline? my-links) ctx)]))
 
-(defn boolean [maybe-field props ctx]
-  (let [my-links (link/links-lookup' (:links ctx) [(:fe-pos ctx) (-> ctx :attribute :db/ident)])]
-    [:div.value
-     [:div.editable-select {:key (:db/ident (:attribute ctx))}
-      [:div.anchors (links/render-links (remove :link/render-inline? my-links) ctx)]
-      (select-boolean* @(:value ctx) props ctx)]
-     (links/render-inline-links (filter :link/render-inline? my-links) ctx)]))
+(def boolean tristate-boolean/tristate-boolean)
 
 (defn id* [props ctx]
   (let [on-change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) (:attribute ctx) %))]
