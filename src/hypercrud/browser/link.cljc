@@ -120,8 +120,6 @@
                    (interpose " ")
                    (apply str))})))
 
-(def ^:export build-anchor-props-raw build-link-props-raw)
-
 (defn stage! [link route popover-id ctx]
   (let [user-txfn (some-> (eval/validate-user-code-str (:link/tx-fn link)) eval-str (cats/mplus (either/right nil)) (cats/extract))
         user-txfn (or user-txfn (constantly nil))]
