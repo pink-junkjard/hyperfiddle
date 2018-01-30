@@ -137,6 +137,7 @@
            _ @reactive-either-result                        ; short the monad
            :let [reactive-result (reactive/map deref reactive-either-result)
                  ctx (assoc ctx                             ; provide defaults before user-bindings run.
+                       :result reactive-result
                        :request request
                        :schemas schemas                     ; For tx/entity->statements in userland.
                        :fiddle fiddle                       ; for :db/doc
