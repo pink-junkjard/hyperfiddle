@@ -15,11 +15,11 @@
 
 (defn attribute-schema-human [attr]
   (-> attr ((juxt :db/ident
-                  (comp fqn->name :attribute/renderer)
-                  (comp :db/ident :db/valueType)
-                  (comp :db/ident :db/cardinality)
-                  (comp :db/ident :db/isComponent)
-                  (comp :db/ident :db/unique)))))
+                  #(some-> % :attribute/renderer fqn->name)
+                  #(some-> % :db/valueType :db/ident name)
+                  #(some-> % :db/cardinality :db/ident name)
+                  #(some-> % :db/isComponent (if :component) name)
+                  #(some-> % :db/unique :db/ident name)))))
 
 ;(apply str (interpose " " (attribute-schema-human (:attribute ctx))))
 ; (eval/validate-user-code-str (-> ctx :attribute :db/doc))
