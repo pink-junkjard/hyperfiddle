@@ -10,7 +10,6 @@
             [hypercrud.util.template :as template]
             [hyperfiddle.appval.state.reducers :as reducers]
             [hyperfiddle.foundation :as foundation]
-            [hyperfiddle.foundation.actions :as foundation-actions]
             [hyperfiddle.ide :as ide]
             [hyperfiddle.io.global-basis :refer [global-basis-rpc!]]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-requests-rpc!]]
@@ -74,20 +73,24 @@
     (perf/time (fn [get-total-time] (timbre/debug "Template total time:" (get-total-time)))
                (evaluated-template env state-val params app-html))))
 
-(defn ssr [env rt]
+(defn ssr [env rt hostname]
   (let [state-atom (.-state-atom rt)
         get-state (fn [] @state-atom)
         dispatch! (state/build-dispatch state-atom reducers/root-reducer)
+        aliased? (foundation/alias? (foundation/hostname->hf-domain-name hostname (:HF_HOSTNAME env)))
+        get-bootstrap-state (if aliased?
+                              (fn [] @state-atom)
+                              (constantly @state-atom))
         load-level foundation/LEVEL-HYDRATE-PAGE]
     (-> (foundation/bootstrap-data rt dispatch! get-state foundation/LEVEL-NONE load-level)
         (p/catch (constantly (p/resolved nil)))             ; any error above IS NOT fatal, so render the UI. anything below IS fatal
         (p/then #(runtime/ssr rt (:encoded-route @state-atom)))
-        (p/then (fn [html-fragment] (html env @state-atom html-fragment)))
+        (p/then (fn [html-fragment] (html env (get-bootstrap-state) html-fragment)))
         (p/catch (fn [error]
                    (timbre/error error)
                    (let [html-fragment (str "<h2>Error:</h2><pre>" (util/pprint-str error 100) "</pre>")]
                      ; careful this needs to throw a Throwable in clj
-                     (p/rejected (html env @state-atom html-fragment))))))))
+                     (p/rejected (html env (get-bootstrap-state) html-fragment))))))))
 
 (deftype IdeSsrRuntime [hyperfiddle-hostname hostname foo target-repo service-uri state-atom]
   runtime/AppFnGlobalBasis
@@ -161,7 +164,7 @@
         rt (IdeSsrRuntime. (:HF_HOSTNAME env) hostname "page" nil
                            (req->service-uri env req) (reactive/atom state-val))]
     ; Do not inject user-api-fn/view - it is baked into SsrRuntime
-    (-> (ssr env rt)
+    (-> (ssr env rt hostname)
         (p/then (fn [html-resp]
                   (doto res
                     (.append "Cache-Control" "max-age=0")
