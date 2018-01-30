@@ -5,6 +5,7 @@
             [hypercrud.ui.attribute.code :as code]
             [hypercrud.ui.attribute.markdown-editor :as markdown-editor]
             [hypercrud.ui.attribute.tristate-boolean :as tristate-boolean]
+            [hypercrud.ui.attribute.checkbox]               ; userland renderer
             [hypercrud.ui.control.link-controls :as links]
             [hypercrud.ui.input :as input]
             [hypercrud.ui.radio]                            ; used in user renderers
