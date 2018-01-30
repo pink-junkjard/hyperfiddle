@@ -74,19 +74,18 @@
     :query
     (mlet [q (hc-string/memoized-safe-read-edn-string (:fiddle/query fiddle))
            query-holes (try-either (q-util/parse-holes q))]
-      (let [params-map (merge (get-in ctx [:route :request-params]) (q-util/build-dbhole-lookup ctx))
+      (let [params-lookup (merge (get-in ctx [:route :request-params]) (q-util/build-dbhole-lookup ctx))
             params (->> query-holes
                         (mapv (juxt identity (fn [hole-name]
-                                               (let [param (get params-map hole-name)]
+                                               (let [param (get params-lookup hole-name)]
                                                  (cond
                                                    (instance? Entity param) (:db/id param)
                                                    (instance? ThinEntity param) (:db/id param)
-                                                   :else param)))))
-                        (into {}))
+                                                   :else param))))))
             missing (->> params (filter (comp nil? second)) (mapv first))]
         (if (empty? missing)
-          (cats/return (->QueryRequest q params))
-          (either/left {:message "missing param" :data {:params params :missing missing}}))))
+          (cats/return (->QueryRequest q (mapv second params)))
+          (either/left {:message "missing param" :data {:params (into {} params) :missing missing}}))))
 
     :entity
     (let [request-params (get-in ctx [:route :request-params])

@@ -36,6 +36,6 @@
   (condp = (type request)
     EntityRequest (branch-val (get-in request [:db :uri]) (get-in request [:db :branch]) stage-val)
     QueryRequest (->> (:params request)
-                      (filter (fn [[_ v]] (= (type v) DbVal)))
-                      (map (fn [[_ db]] (branch-val (:uri db) (:branch db) stage-val)))
+                      (filter #(= (type %) DbVal))
+                      (map (fn [db] (branch-val (:uri db) (:branch db) stage-val)))
                       (hash))))

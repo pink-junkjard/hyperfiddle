@@ -12,7 +12,7 @@ data sync *composes*. APIs are defined with simple Clojure functions, for exampl
   ; State includes the url/route, client-side local state, etc
   [(->QueryRequest
      '[:find (pull ?e [:db/id :post/title :post/content]) :where [?e :post/title]]
-     {"$" (hc/db peer #uri "datomic:free://datomic:4334/samples-blog" nil)})])
+     [(hc/db peer #uri "datomic:free://datomic:4334/samples-blog" nil)])])
 ```
 
 The lifecycle of API functions is managed by the "I/O runtime", analogous to React's managed virtual-dom functions. You never call it. The function is coded in CLJC and compiled into both the client and the service, which lets them automatically coordinate. If the service knows in advance what the client will request next, it can avoid network round-trips.
@@ -92,8 +92,8 @@ A simple API fn:
 
 (defn api [state peer]
   (let [$ (hc/db peer datomic-samples-blog db-branch)]            
-    [(->QueryRequest race-registration-query {"$" $})
-     (->QueryRequest gender-options-query {"$" $})]))
+    [(->QueryRequest race-registration-query [$])
+     (->QueryRequest gender-options-query [$])]))
 ```
                         
 Notes:

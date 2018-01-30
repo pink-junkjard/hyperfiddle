@@ -11,17 +11,16 @@
 
 (defn hc-attr-request [ctx]
   (->QueryRequest '[:find [(pull ?attr [:attribute/ident :attribute/renderer :db/doc]) ...]
-                    :in $ :where
-                    [?attr :attribute/ident]]
-                  {"$" (hc/db (:peer ctx) (get-in ctx [:hypercrud.browser/repository :dbhole/uri] ctx) (:branch ctx))}))
+                    :where [?attr :attribute/ident]]
+                  [(hc/db (:peer ctx) (get-in ctx [:hypercrud.browser/repository :dbhole/uri] ctx) (:branch ctx))]))
 
 (defn schema-request [dbval]
   (->QueryRequest '[:find [(pull ?attr [*
                                         {:db/valueType [:db/ident]
                                          :db/cardinality [:db/ident]
                                          :db/unique [:db/ident]}]) ...]
-                    :in $ :where [:db.part/db :db.install/attribute ?attr]]
-                  {"$" dbval}))
+                    :where [:db.part/db :db.install/attribute ?attr]]
+                  [dbval]))
 
 (defn schema-requests-for-link [ctx]
   (->> (get-in ctx [:hypercrud.browser/repository :repository/environment])

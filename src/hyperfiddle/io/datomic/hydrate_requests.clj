@@ -73,17 +73,17 @@
 (defmethod hydrate-request* QueryRequest [{:keys [query params]} get-secure-db-with]
   (assert query "hydrate: missing query")
   (let [{:keys [qfind]} (parser/parse-query query)
-        ordered-params (->> (q-util/parse-holes query)
-                            (mapv #(get params %))
-                            (mapv #(parameter % get-secure-db-with)))
-        ;todo gaping security hole
-        result (apply d/q query ordered-params)]
+        result (->> (map #(parameter % get-secure-db-with) params)
+                    ;todo gaping security hole
+                    (apply d/q query))
+        ; todo don't duplicate parsing the query
+        params-lookup (zipmap (q-util/parse-holes query) params)]
     (condp = (type qfind)
       ; todo preserve set results
-      datascript.parser.FindRel (mapv #(process-tuple params qfind %) result)
-      datascript.parser.FindColl (mapv #(process-scalar params qfind %) result)
-      datascript.parser.FindTuple (process-tuple params qfind result)
-      datascript.parser.FindScalar (process-scalar params qfind result))))
+      datascript.parser.FindRel (mapv #(process-tuple params-lookup qfind %) result)
+      datascript.parser.FindColl (mapv #(process-scalar params-lookup qfind %) result)
+      datascript.parser.FindTuple (process-tuple params-lookup qfind result)
+      datascript.parser.FindScalar (process-scalar params-lookup qfind result))))
 
 ; todo i18n
 (def ERROR-BRANCH-PAST "Branching the past is currently unsupported, please update your basis")
