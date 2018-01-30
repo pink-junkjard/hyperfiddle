@@ -5,13 +5,13 @@
             [cuerdas.core :as str]
             [datascript.parser :as parser]
             [datomic.api :as d]
+            [hypercrud.browser.q-util :as q-util]
             [hypercrud.types.DbVal]
             [hypercrud.types.Entity :refer [->Entity]]
             [hypercrud.types.EntityRequest]
             [hypercrud.types.Err :refer [->Err]]
             [hypercrud.types.QueryRequest]
             [hypercrud.util.branch :as branch]
-            [hypercrud.util.core :as util]
             [hypercrud.util.identity :refer [tempid?]]
             [taoensso.timbre :as timbre])
   (:import (hypercrud.types.DbVal DbVal)
@@ -73,8 +73,8 @@
 (defmethod hydrate-request* QueryRequest [{:keys [query params]} get-secure-db-with]
   (assert query "hydrate: missing query")
   (let [{:keys [qfind]} (parser/parse-query query)
-        ordered-params (->> (util/parse-query-element query :in)
-                            (mapv #(get params (str %)))
+        ordered-params (->> (q-util/parse-holes query)
+                            (mapv #(get params %))
                             (mapv #(parameter % get-secure-db-with)))
         ;todo gaping security hole
         result (apply d/q query ordered-params)]

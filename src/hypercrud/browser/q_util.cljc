@@ -10,9 +10,10 @@
 (defn parse-holes [q]
   {:pre [(vector? q)]
    :post [(vector? %)]}
-  (->> (util/parse-query-element q :in)
-       ;; the string conversion should happen at the other side imo
-       (mapv str)))
+  (as-> (util/parse-query-element q :in) elements
+        (if (empty? elements) ['$] elements)
+        ;; the string conversion should happen at the other side imo
+        (mapv str elements)))
 
 (defn parse-param-holes [q]
   (->> (parse-holes q)
