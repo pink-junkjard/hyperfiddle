@@ -6,7 +6,6 @@
             [hypercrud.browser.routing :as routing]
             [hypercrud.client.tx :as tx]
             [hypercrud.react.react-fragment :refer [react-fragment]]
-            [hypercrud.ui.attribute.code :refer [code]]
             [hypercrud.ui.control.markdown-rendered :refer [markdown]]
             [hypercrud.ui.radio :as radio]
             [hypercrud.ui.result :as result]
