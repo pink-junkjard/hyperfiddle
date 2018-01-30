@@ -54,30 +54,32 @@
   </body>
   </html>")
 
-(defn evaluated-template [env state-val params app-html]
+(defn evaluated-template [env state-val params serve-js? app-html]
   (let [$ (.load cheerio template)
         resource-base (str (:STATIC_RESOURCES env) "/" (:BUILD env))]
     (-> ($ "title") (.text "Hyperfiddle"))
     (-> ($ "#app-css") (.attr "href" (str resource-base "/styles.css")))
     (-> ($ "#root") (.html app-html))
-    (-> ($ "#params") (.text (transit/encode params)))      ; env vars for client side rendering
-    (-> ($ "#state") (.text (transit/encode state-val)))
-    (-> ($ "#preamble") (.attr "src" (str resource-base "/preamble.js")))
-    (-> ($ "#main") (.attr "src" (str resource-base "/main.js")))
+    (when serve-js?
+      (-> ($ "#params") (.text (transit/encode params)))    ; env vars for client side rendering
+      (-> ($ "#state") (.text (transit/encode state-val)))
+      (-> ($ "#preamble") (.attr "src" (str resource-base "/preamble.js")))
+      (-> ($ "#main") (.attr "src" (str resource-base "/main.js"))))
     (-> ($ "#build") (.text (:BUILD env)))
     (when (:ANALYTICS env) (-> ($ "#root") (.after analytics))) ; if logged in, issue identify?
     (.html $)))
 
-(defn html [env state-val app-html]
+(defn html [env state-val serve-js? app-html]
   (let [params {:hyperfiddle-hostname (:HF_HOSTNAME env)}]
     (perf/time (fn [get-total-time] (timbre/debug "Template total time:" (get-total-time)))
-               (evaluated-template env state-val params app-html))))
+               (evaluated-template env state-val params serve-js? app-html))))
 
 (defn ssr [env rt hostname]
   (let [state-atom (.-state-atom rt)
         get-state (fn [] @state-atom)
         dispatch! (state/build-dispatch state-atom reducers/root-reducer)
         aliased? (foundation/alias? (foundation/hostname->hf-domain-name hostname (:HF_HOSTNAME env)))
+        serve-js? true #_(not aliased?)
         get-bootstrap-state (if aliased?
                               (fn [] @state-atom)
                               (constantly @state-atom))
@@ -85,12 +87,12 @@
     (-> (foundation/bootstrap-data rt dispatch! get-state foundation/LEVEL-NONE load-level)
         (p/catch (constantly (p/resolved nil)))             ; any error above IS NOT fatal, so render the UI. anything below IS fatal
         (p/then #(runtime/ssr rt (:encoded-route @state-atom)))
-        (p/then (fn [html-fragment] (html env (get-bootstrap-state) html-fragment)))
+        (p/then (fn [html-fragment] (html env (get-bootstrap-state) serve-js? html-fragment)))
         (p/catch (fn [error]
                    (timbre/error error)
                    (let [html-fragment (str "<h2>Error:</h2><pre>" (util/pprint-str error 100) "</pre>")]
                      ; careful this needs to throw a Throwable in clj
-                     (p/rejected (html env (get-bootstrap-state) html-fragment))))))))
+                     (p/rejected (html env (get-bootstrap-state) serve-js? html-fragment))))))))
 
 (deftype IdeSsrRuntime [hyperfiddle-hostname hostname foo target-repo service-uri state-atom]
   runtime/AppFnGlobalBasis
