@@ -18,6 +18,7 @@
                   (comp fqn->name :attribute/renderer)
                   (comp :db/ident :db/valueType)
                   (comp :db/ident :db/cardinality)
+                  (comp :db/ident :db/isComponent)
                   (comp :db/ident :db/unique)))))
 
 ;(apply str (interpose " " (attribute-schema-human (:attribute ctx))))
