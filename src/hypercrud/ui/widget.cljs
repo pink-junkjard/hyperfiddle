@@ -2,20 +2,18 @@
   (:refer-clojure :exclude [boolean keyword long])
   (:require [hypercrud.browser.link :as link]
             [hypercrud.client.tx :as tx]
-            [hypercrud.ui.attribute.code :as code]
-            [hypercrud.ui.attribute.markdown-editor :as markdown-editor]
             [hypercrud.ui.attribute.tristate-boolean :as tristate-boolean]
-            [hypercrud.ui.attribute.checkbox]               ; userland renderer
             [hypercrud.ui.control.link-controls :as links]
             [hypercrud.ui.input :as input]
-            [hypercrud.ui.radio]                            ; used in user renderers
             [hypercrud.ui.select :refer [select*]]
-            [hypercrud.ui.textarea :refer [textarea*]]))
+            [hypercrud.ui.textarea :refer [textarea*]]
 
+    ;user land
+            [hypercrud.ui.attribute.checkbox]
+            [hypercrud.ui.attribute.code]
+            [hypercrud.ui.attribute.markdown-editor]
+            [hypercrud.ui.radio]))
 
-; compat
-(def ^:export code code/code)
-(def ^:export markdown markdown-editor/markdown-editor)
 
 (defn keyword [maybe-field props ctx]
   (let [my-links (->> (link/links-lookup' (:links ctx) [(:fe-pos ctx) (-> ctx :attribute :db/ident)])
