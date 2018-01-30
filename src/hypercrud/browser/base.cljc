@@ -83,9 +83,6 @@
                                                    (instance? ThinEntity param) (:db/id param)
                                                    :else param)))))
                         (into {}))
-            ;pull-exp
-            #_(-> (hc-string/memoized-safe-read-edn-string (:fiddle/pull fiddle))
-                  (either/branch (constantly nil) identity))
             missing (->> params (filter (comp nil? second)) (mapv first))]
         (if (empty? missing)
           (cats/return (->QueryRequest q params))
