@@ -88,6 +88,10 @@
       (result/result-renderer fiddle ordered-fes links ctx)
       ]]))
 
+(defn- update-spacer [topnav]
+  (let [measuredHeight (-> topnav (aget "fixed") .-offsetHeight)]
+    (-> topnav (aget "spacer") (aget "style") (aset "height" (str measuredHeight "px")))))
+
 (def renderer
   (reagent/create-class
     {:render (fn [this]
@@ -96,12 +100,8 @@
                 [:div.fixed {:ref (fn [!el] (aset this "fixed" !el))}
                  (let [[_ & args] (reagent/argv this)]
                    (apply vector -renderer args))]])
-     :component-did-mount
-     (fn [this]
-       (let [measuredHeight (-> this (aget "fixed") .-offsetHeight)]
-         (-> this (aget "spacer") (aget "style") (aset "height" (str measuredHeight "px")))))
-     ;:component-did-update (fn [this])
-     }))
+     :component-did-mount update-spacer
+     :component-did-update update-spacer}))
 
 (defn ^:export qe-picker-control [field props ctx]
   (let [enums [:query :entity :blank]
