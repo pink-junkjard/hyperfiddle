@@ -6,13 +6,13 @@
             [hypercrud.ui.control.link-controls :as links]
             [hypercrud.ui.input :as input]
             [hypercrud.ui.select :refer [select*]]
-            [hypercrud.ui.textarea :refer [textarea*]]
 
-    ;user land
+    ;user land (todo these should be in a core hc.ui namespace; widget is arbitrary)
             [hypercrud.ui.attribute.checkbox]
             [hypercrud.ui.attribute.code]
             [hypercrud.ui.attribute.markdown-editor]
-            [hypercrud.ui.radio]))
+            [hypercrud.ui.radio]
+            [hypercrud.ui.textarea]))
 
 
 (defn keyword [maybe-field props ctx]
