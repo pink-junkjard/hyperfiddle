@@ -2,7 +2,7 @@ version: 2
 jobs:
   test-clj:
     docker:
-      - image: hyperfiddle/boot-node
+      - image: clojure:boot-2.7.1
     environment:
       BOOT_JVM_OPTIONS: "-Xms1024m -Xmx2048m"
       BOOT_WATCHERS_DISABLE: "yes"
@@ -38,7 +38,7 @@ jobs:
 
   build:
     docker:
-      - image: hyperfiddle/boot-node
+      - image: clojure:boot-2.7.1
     environment:
       BOOT_JVM_OPTIONS: "-Xms1024m -Xmx2048m"
       BOOT_WATCHERS_DISABLE: "yes"
@@ -59,7 +59,7 @@ jobs:
 
   publish:
     docker:
-      - image: hyperfiddle/boot-node
+      - image: clojure:boot-2.7.1
     environment:
       BOOT_JVM_OPTIONS: "-Xms1024m -Xmx2048m"
       BOOT_WATCHERS_DISABLE: "yes"
