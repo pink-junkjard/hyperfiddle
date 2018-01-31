@@ -57,10 +57,10 @@
     [:div.value
      [:div.editable-select
       [:div.anchors (links/render-links (remove :link/render-inline? my-links) ctx)] ;todo can this be lifted out of editable-select?
-      [:div.select                                          ; helps the weird link float left css thing
-       (if options-link
-         (select* options-link props ctx)
-         (id* props ctx))]]
+      (if options-link
+        [:div.select                                          ; helps the weird link float left css thing
+         (select* options-link props ctx)]
+        (id* props ctx))]
      (links/render-inline-links (filter :link/render-inline? my-links) ctx)]))
 
 (defn ref-component [maybe-field props ctx]
