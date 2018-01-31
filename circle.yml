@@ -2,10 +2,10 @@ version: 2
 jobs:
   test-clj:
     docker:
-      - image: clojure:boot-2.7.1
-    environment:
-      BOOT_JVM_OPTIONS: "-Xms1024m -Xmx2048m"
-      BOOT_WATCHERS_DISABLE: "yes"
+      - image: clojure:boot-2.7.1-alpine
+        environment:
+          BOOT_JVM_OPTIONS: "-Xms1024m -Xmx2048m"
+          BOOT_WATCHERS_DISABLE: "yes"
     steps:
       - checkout
       - restore_cache:
@@ -21,9 +21,9 @@ jobs:
   test-cljs:
     docker:
       - image: hyperfiddle/boot-node
-    environment:
-      BOOT_JVM_OPTIONS: "-Xms1024m -Xmx2048m"
-      BOOT_WATCHERS_DISABLE: "yes"
+        environment:
+          BOOT_JVM_OPTIONS: "-Xms1024m -Xmx2048m"
+          BOOT_WATCHERS_DISABLE: "yes"
     steps:
       - checkout
       - restore_cache:
@@ -38,10 +38,10 @@ jobs:
 
   build:
     docker:
-      - image: clojure:boot-2.7.1
-    environment:
-      BOOT_JVM_OPTIONS: "-Xms1024m -Xmx2048m"
-      BOOT_WATCHERS_DISABLE: "yes"
+      - image: clojure:boot-2.7.1-alpine
+        environment:
+          BOOT_JVM_OPTIONS: "-Xms1024m -Xmx2048m"
+          BOOT_WATCHERS_DISABLE: "yes"
     steps:
       - checkout
       - restore_cache:
@@ -59,7 +59,7 @@ jobs:
 
   publish:
     docker:
-      - image: clojure:boot-2.7.1
+      - image: clojure:boot-2.7.1-alpine
     environment:
       BOOT_JVM_OPTIONS: "-Xms1024m -Xmx2048m"
       BOOT_WATCHERS_DISABLE: "yes"
