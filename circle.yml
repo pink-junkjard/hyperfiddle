@@ -1,6 +1,6 @@
 version: 2
 jobs:
-  test:
+  test-clj:
     docker:
       - image: hyperfiddle/boot-node
     environment:
@@ -9,15 +9,32 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          key: test-{{checksum "boot.properties" }}-{{ checksum "build.boot" }}
+          key: test-clj-{{checksum "boot.properties" }}-{{ checksum "build.boot" }}
       - run: boot testing test-clj
+      - save_cache:
+          paths:
+            - ~/.m2
+            - ~/.boot/cache/lib
+            - ~/.boot/cache/bin
+          key: test-clj-{{checksum "boot.properties" }}-{{ checksum "build.boot" }}
+
+  test-cljs:
+    docker:
+      - image: hyperfiddle/boot-node
+    environment:
+      BOOT_JVM_OPTIONS: "-Xms1024m -Xmx2048m"
+      BOOT_WATCHERS_DISABLE: "yes"
+    steps:
+      - checkout
+      - restore_cache:
+          key: test-cljs-{{checksum "boot.properties" }}-{{ checksum "build.boot" }}
       - run: boot testing test-cljs -x
       - save_cache:
           paths:
             - ~/.m2
             - ~/.boot/cache/lib
             - ~/.boot/cache/bin
-          key: test-{{checksum "boot.properties" }}-{{ checksum "build.boot" }}
+          key: test-cljs-{{checksum "boot.properties" }}-{{ checksum "build.boot" }}
 
   build:
     docker:
@@ -64,11 +81,13 @@ workflows:
   version: 2
   test_and_deploy:
     jobs:
-      - test
+      - test-clj
+      - test-cljs
       - build
       - publish:
           requires:
-            - test
+            - test-clj
+            - test-cljs
             - build
           filters:
             branches:
