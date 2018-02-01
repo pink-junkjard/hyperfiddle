@@ -14,8 +14,8 @@
             [hyperfiddle.io.global-basis :refer [global-basis-rpc!]]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-requests-rpc!]]
             [hyperfiddle.io.hydrate-route :refer [hydrate-route-rpc!]]
-            [hyperfiddle.io.local-basis :refer [fetch-domain!]]
             [hyperfiddle.io.sync :refer [sync-rpc!]]
+            [hyperfiddle.io.domain :refer [fetch-domain-rpc!]]
             [hyperfiddle.runtime :as runtime]
             [hyperfiddle.service.node.lib :as lib :refer [req->service-uri]]
             [hyperfiddle.state :as state]
@@ -74,50 +74,38 @@
     (perf/time (fn [get-total-time] (timbre/debug "Template total time:" (get-total-time)))
                (evaluated-template env state-val params serve-js? app-html))))
 
-(defn ssr [env rt hostname]
-  (let [state-atom (.-state-atom rt)
-        get-state (fn [] @state-atom)
-        dispatch! (state/build-dispatch state-atom reducers/root-reducer)
-        aliased? (foundation/alias? (foundation/hostname->hf-domain-name hostname (:HF_HOSTNAME env)))
-        serve-js? true #_(not aliased?)
-        get-bootstrap-state (if aliased?
-                              (fn [] @state-atom)
-                              (constantly @state-atom))
-        load-level foundation/LEVEL-HYDRATE-PAGE]
-    (-> (foundation/bootstrap-data rt dispatch! get-state foundation/LEVEL-NONE load-level)
-        (p/catch (constantly (p/resolved nil)))             ; any error above IS NOT fatal, so render the UI. anything below IS fatal
-        (p/then #(runtime/ssr rt (:encoded-route @state-atom)))
-        (p/then (fn [html-fragment] (html env (get-bootstrap-state) serve-js? html-fragment)))
-        (p/catch (fn [error]
-                   (timbre/error error)
-                   (let [html-fragment (str "<h2>Error:</h2><pre>" (util/pprint-str error 100) "</pre>")]
-                     ; careful this needs to throw a Throwable in clj
-                     (p/rejected (html env (get-bootstrap-state) serve-js? html-fragment))))))))
-
-(deftype IdeSsrRuntime [hyperfiddle-hostname hostname foo target-repo service-uri state-atom]
+(deftype IdeSsrRuntime [hyperfiddle-hostname hostname ^:mutable domain foo target-repo service-uri state-atom]
   runtime/AppFnGlobalBasis
   (global-basis [rt]
-    (global-basis-rpc! service-uri))
+    (-> (mlet [global-basis (global-basis-rpc! service-uri)
+               domain' (fetch-domain-rpc! hostname hyperfiddle-hostname service-uri (:domain global-basis) nil)]
+          (set! domain domain')
+          (return global-basis))))
+
+  runtime/Route
+  (decode-route [rt foo s]
+    (ide/route-decode foo domain s))
+
+  (encode-route [rt foo v]
+    (ide/route-encode foo domain v))
 
   runtime/AppValLocalBasis
-  (local-basis-page [rt global-basis encoded-route]
+  (local-basis-page [rt global-basis route]
     {:pre [(= "page" foo)]}
-    (mlet [domain (fetch-domain! rt hostname hyperfiddle-hostname global-basis)]
-      (return
-        (let [ctx {:hostname hostname
-                   :hyperfiddle-hostname hyperfiddle-hostname
-                   :branch nil
-                   :peer rt}]
-          (foundation/local-basis "page" global-basis encoded-route domain ctx
-                                  (partial ide/local-basis "page"))))))
+    (let [ctx {:hostname hostname
+               :hyperfiddle-hostname hyperfiddle-hostname
+               :branch nil
+               :peer rt}]
+      (foundation/local-basis "page" global-basis route domain ctx
+                              (partial ide/local-basis "page"))))
 
   runtime/AppValHydrate
-  (hydrate-route [rt local-basis encoded-route branch stage]
+  (hydrate-route [rt local-basis route branch stage]
     ; If IDE, send up target-repo as well (encoded in route as query param?)
-    (hydrate-route-rpc! service-uri local-basis encoded-route foo target-repo branch stage))
+    (hydrate-route-rpc! service-uri local-basis (ide/route-encode foo domain route) foo target-repo branch stage))
 
-  (hydrate-route-page [rt local-basis encoded-route stage]
-    (hydrate-route-rpc! service-uri local-basis encoded-route "page" nil nil stage))
+  (hydrate-route-page [rt local-basis route stage]
+    (hydrate-route-rpc! service-uri local-basis (ide/route-encode "page" domain route) "page" nil nil stage))
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
@@ -144,7 +132,7 @@
     (peer/hydrate state-atom request))
 
   (db [this uri branch]
-    (peer/db-pointer state-atom uri branch))
+    (peer/db-pointer uri branch))
 
   hc/HydrateApi
   (hydrate-api [this request]
@@ -152,7 +140,7 @@
 
   ide/SplitRuntime
   (sub-rt [rt foo target-repo]
-    (IdeSsrRuntime. hyperfiddle-hostname hostname foo target-repo service-uri state-atom))
+    (IdeSsrRuntime. hyperfiddle-hostname hostname domain foo target-repo service-uri state-atom))
   (target-repo [rt] target-repo)
 
   IHash
@@ -160,13 +148,28 @@
 
 (defn http-edge [env req res path-params query-params]
   (let [hostname (.-hostname req)
-        state-val (-> {:encoded-route (.-path req)
-                       :user-profile (lib/req->user-profile env req)}
+        state-val (-> {:user-profile (lib/req->user-profile env req)}
                       (reducers/root-reducer nil))
-        rt (IdeSsrRuntime. (:HF_HOSTNAME env) hostname "page" nil
-                           (req->service-uri env req) (reactive/atom state-val))]
-    ; Do not inject user-api-fn/view - it is baked into SsrRuntime
-    (-> (ssr env rt hostname)
+        rt (IdeSsrRuntime. (:HF_HOSTNAME env) hostname nil "page" nil ; WHY NO STAGE??? (turns out we don't POST to SSR)
+                           (req->service-uri env req) (reactive/atom state-val))
+        state-atom (.-state-atom rt)
+        dispatch! (state/build-dispatch state-atom reducers/root-reducer)
+        serve-js? true #_(not aliased?)
+        force-browser-reload-prevent-stale (foundation/alias? (foundation/hostname->hf-domain-name hostname (:HF_HOSTNAME env)))
+        load-level foundation/LEVEL-HYDRATE-PAGE]
+    (-> (mlet [_ (-> (foundation/bootstrap-data rt dispatch! (partial deref state-atom) foundation/LEVEL-NONE load-level (.-path req))
+                     (p/catch (fn [error]
+                                #_"any error above IS NOT fatal, so render the UI. anything below IS fatal"
+                                (timbre/error error)
+                                (p/resolved nil))))
+               :let [browser-initial-state (if force-browser-reload-prevent-stale @state-atom state-val)]]
+          (-> (runtime/ssr rt (:route @state-atom))
+              (p/then (fn [html-fragment] (html env browser-initial-state serve-js? html-fragment)))
+              (p/catch (fn [error]
+                         (timbre/error error)
+                         (let [html-fragment (str "<h2>Error:</h2><pre>" (util/pprint-str error 100) "</pre>")]
+                           ; careful this needs to throw a Throwable in clj
+                           (p/rejected (html env browser-initial-state serve-js? html-fragment)))))))
         (p/then (fn [html-resp]
                   (doto res
                     (.append "Cache-Control" "max-age=0")

@@ -29,4 +29,4 @@
     (peer/hydrate state-atom request))
 
   (db [this uri branch]
-    (peer/db-pointer state-atom uri branch)))
+    (peer/db-pointer uri branch)))

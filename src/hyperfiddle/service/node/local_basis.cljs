@@ -11,29 +11,34 @@
             [hyperfiddle.ide :as ide]
             [hyperfiddle.io.global-basis :refer [global-basis-rpc!]]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-requests-rpc!]]
-            [hyperfiddle.io.local-basis :refer [fetch-domain!]]
             [hyperfiddle.io.sync :refer [sync-rpc!]]
+            [hyperfiddle.io.domain :refer [fetch-domain-rpc!]]
             [hyperfiddle.runtime :as runtime]
             [hyperfiddle.service.node.lib :as lib]
             [promesa.core :as p]))
 
 
 ; Todo this is same runtime as HydrateRoute
-(deftype LocalBasisRuntime [hyperfiddle-hostname hostname service-uri foo target-repo state-atom]
+(deftype LocalBasisRuntime [hyperfiddle-hostname hostname service-uri domain foo target-repo state-atom]
   runtime/AppFnGlobalBasis
   (global-basis [rt]
     (global-basis-rpc! service-uri))
 
+  runtime/Route
+  (encode-route [rt foo v]
+    (ide/route-encode foo domain v))
+
+  (decode-route [rt foo s]
+    (ide/route-decode foo domain s))
+
   runtime/AppValLocalBasis
-  (local-basis [rt global-basis encoded-route branch]
-    (mlet [domain (fetch-domain! rt hostname hyperfiddle-hostname global-basis)]
-      (return
-        (let [ctx {:hostname hostname
-                   :hyperfiddle-hostname hyperfiddle-hostname
-                   :branch branch
-                   :peer rt}]
-          (foundation/local-basis foo global-basis encoded-route domain ctx
-                                  (partial ide/local-basis foo))))))
+  (local-basis [rt global-basis route branch]
+    (let [ctx {:hostname hostname
+               :hyperfiddle-hostname hyperfiddle-hostname
+               :branch branch
+               :peer rt}]
+      (foundation/local-basis foo global-basis route domain ctx
+                              (partial ide/local-basis foo))))
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
@@ -48,7 +53,7 @@
     (peer/hydrate state-atom request))
 
   (db [this uri branch]
-    (peer/db-pointer state-atom uri branch))
+    (peer/db-pointer uri branch))
 
   ; Happened on client, node reconstructed the right rt already
   ;ide/SplitRuntime
@@ -59,23 +64,27 @@
   IHash
   (-hash [this] (goog/getUid this)))
 
-(defn http-local-basis [env req res path-params query-params]
+(defn http-local-basis [env req res
+                        {:keys [double-encoded-route] :as path-params}
+                        query-params]
   {:pre [(:target-repo path-params) #_"Did the client rt send this with the http request?"]}
   ; Never called.
   (let [hostname (.-hostname req)
-        state-val (-> {:encoded-route (base-64-url-safe/decode (:double-encoded-route path-params))
-                       :global-basis (-> (:global-basis path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
-                       :user-profile (lib/req->user-profile env req)}
-                      (reducers/root-reducer nil))
+        global-basis (-> path-params :global-basis base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
         foo (some-> (:foo path-params) base-64-url-safe/decode reader/read-edn-string)
         branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
-        rt (LocalBasisRuntime. (:HF_HOSTNAME env) hostname (lib/req->service-uri env req) foo (:target-repo path-params) (reactive/atom state-val))]
-    (-> (runtime/local-basis rt (:global-basis state-val) (:encoded-route state-val) branch)
-        (p/then (fn [local-basis]
-                  (doto res
-                    (.status 200)
-                    (.append "Cache-Control" "max-age=31536000")
-                    (.format #js {"application/transit+json" #(.send res (transit/encode local-basis))}))))
+        state-val (-> {:global-basis global-basis
+                       :user-profile (lib/req->user-profile env req)}
+                      (reducers/root-reducer nil))]
+    (-> (mlet [domain (fetch-domain-rpc! hostname (:HF_HOSTNAME env) (lib/req->service-uri env req) (:domain global-basis) state-val)
+               :let [rt (LocalBasisRuntime. (:HF_HOSTNAME env) hostname (lib/req->service-uri env req) domain foo (:target-repo path-params) (reactive/atom state-val))
+                     route (runtime/decode-route rt foo double-encoded-route)]
+               local-basis (runtime/local-basis rt global-basis route branch)]
+          (return
+            (doto res
+              (.status 200)
+              (.append "Cache-Control" "max-age=31536000")
+              (.format #js {"application/transit+json" #(.send res (transit/encode local-basis))}))))
         (p/catch (fn [error]
                    (doto res
                      (.status 500)

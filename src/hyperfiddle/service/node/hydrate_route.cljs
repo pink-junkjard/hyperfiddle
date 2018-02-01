@@ -13,28 +13,33 @@
             [hyperfiddle.io.global-basis :refer [global-basis-rpc!]]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-requests-rpc!]]
             [hyperfiddle.io.hydrate-route :refer [hydrate-loop hydrate-loop-adapter]]
-            [hyperfiddle.io.local-basis :refer [fetch-domain!]]
             [hyperfiddle.io.sync :refer [sync-rpc!]]
+            [hyperfiddle.io.domain :refer [fetch-domain-rpc!]]
             [hyperfiddle.runtime :as runtime]
             [hyperfiddle.service.node.lib :as lib]
             [promesa.core :as p]))
 
 
-(deftype HydrateRouteRuntime [hyperfiddle-hostname hostname service-uri foo target-repo state-atom]
-  runtime/AppFnGlobalBasis
-  (global-basis [rt]
-    (global-basis-rpc! service-uri))
+(deftype HydrateRouteRuntime [hyperfiddle-hostname hostname service-uri domain foo target-repo state-atom]
+  ;runtime/AppFnGlobalBasis
+  ;(global-basis [rt]
+  ;  (global-basis-rpc! service-uri))
+
+  runtime/Route
+  (decode-route [rt foo s]
+    (ide/route-decode foo domain s))
+
+  (encode-route [rt foo v]
+    (ide/route-encode foo domain v))
 
   runtime/AppValLocalBasis
-  (local-basis [rt global-basis encoded-route branch]
-    (mlet [domain (fetch-domain! rt hostname hyperfiddle-hostname global-basis)]
-      (return
-        (let [ctx {:hostname hostname
-                   :hyperfiddle-hostname hyperfiddle-hostname
-                   :branch branch
-                   :peer rt}]
-          (foundation/local-basis foo global-basis encoded-route domain ctx
-                                  (partial ide/local-basis foo))))))
+  (local-basis [rt global-basis route branch]
+    (let [ctx {:hostname hostname
+               :hyperfiddle-hostname hyperfiddle-hostname
+               :branch branch
+               :peer rt}]
+      (foundation/local-basis foo global-basis route domain ctx
+                              (partial ide/local-basis foo))))
 
   runtime/AppValHydrate
   (hydrate-route [rt local-basis encoded-route branch stage] ; :: ... -> DataCache on the wire
@@ -44,7 +49,7 @@
                :branch branch
                :peer rt}]
       (hydrate-loop rt (hydrate-loop-adapter local-basis stage ctx
-                                             #(HydrateRouteRuntime. hyperfiddle-hostname hostname service-uri foo target-repo (reactive/atom %))
+                                             #(HydrateRouteRuntime. hyperfiddle-hostname hostname service-uri domain foo target-repo (reactive/atom %))
                                              #(foundation/api foo encoded-route % (partial ide/api foo)))
                     local-basis stage data-cache)))
 
@@ -55,7 +60,7 @@
                :branch nil
                :peer rt}]
       (hydrate-loop rt (hydrate-loop-adapter local-basis stage ctx
-                                             #(HydrateRouteRuntime. hyperfiddle-hostname hostname service-uri foo target-repo (reactive/atom %))
+                                             #(HydrateRouteRuntime. hyperfiddle-hostname hostname service-uri domain foo target-repo (reactive/atom %))
                                              #(foundation/api "page" encoded-route % (partial ide/api "page")))
                     local-basis stage data-cache)))
 
@@ -72,7 +77,7 @@
     (peer/hydrate state-atom request))
 
   (db [this uri branch]
-    (peer/db-pointer state-atom uri branch))
+    (peer/db-pointer uri branch))
 
   hc/HydrateApi
   (hydrate-api [this request]
@@ -80,37 +85,41 @@
 
   ide/SplitRuntime
   (sub-rt [rt foo target-repo]
-    (HydrateRouteRuntime. hyperfiddle-hostname hostname service-uri foo target-repo state-atom))
+    (HydrateRouteRuntime. hyperfiddle-hostname hostname service-uri domain foo target-repo state-atom))
   (target-repo [rt] target-repo)
 
   IHash
   (-hash [this] (goog/getUid this)))
 
 
-(defn http-hydrate-route [env req res path-params query-params]
+(defn http-hydrate-route [env req res {:keys [encoded-route] :as path-params} query-params]
   (let [hostname (.-hostname req)
-        state-val (-> {:encoded-route (base-64-url-safe/decode (:double-encoded-route path-params))
-                       :local-basis (-> (:local-basis path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
-                       :stage (some-> req .-body lib/hack-buggy-express-body-text-parser transit/decode)
-                       :user-profile (lib/req->user-profile env req)}
-                      (reducers/root-reducer nil))
         foo (some-> (:foo path-params) base-64-url-safe/decode reader/read-edn-string)
         target-repo (some-> (:target-repo path-params) base-64-url-safe/decode reader/read-edn-string)
         branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
-        rt (HydrateRouteRuntime. (:HF_HOSTNAME env) hostname (lib/req->service-uri env req) foo target-repo (reactive/atom state-val))]
-    (-> (runtime/hydrate-route rt (:local-basis state-val) (:encoded-route state-val) branch (:stage state-val))
-        (p/then (fn [data]
-                  (doto res
-                    (.status 200)
-                    (.append "Cache-Control" "max-age=31536000") ; todo max-age=0 if POST
-                    (.format #js {"application/transit+json" #(.send res (transit/encode data))
-                                  #_"text/html" #_(fn []
-                                                    (mlet [html-fragment nil #_(api-impl/local-html ui-fn ctx)]
-                                                      (.send res html-fragment)))}))))
-        (p/catch (fn [error]
-                   (doto res
-                     (.status 500)
-                     ; todo caching on errors, there are a subset of requests that are actually permanently cacheable
-                     (.format #js {"application/transit+json" #(.send res (transit/encode {:error (pr-str error)}))
-                                   #_"text/html" #_(fn []
-                                                     (document/error error))})))))))
+        local-basis (-> (:local-basis path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
+        domain-basis (filter (fn [[k v]] (= #uri "datomic:free://datomic:4334/domains" k)) local-basis)
+        state-val (-> {:local-basis local-basis             ; no need for :route here, it is ignored, this whole thing gets clobbered
+                       :stage (some-> req .-body lib/hack-buggy-express-body-text-parser transit/decode)
+                       :user-profile (lib/req->user-profile env req)}
+                      (reducers/root-reducer nil))]
+    (-> (mlet [domain (fetch-domain-rpc! hostname (:HF_HOSTNAME env) (lib/req->service-uri env req) domain-basis state-val)
+               :let [rt (HydrateRouteRuntime. (:HF_HOSTNAME env) hostname (lib/req->service-uri env req) domain foo target-repo (reactive/atom state-val))
+                     route (runtime/decode-route rt foo encoded-route)]]
+          (-> (runtime/hydrate-route rt local-basis route branch (:stage state-val))
+              (p/then (fn [data]
+                        (doto res
+                          (.status 200)
+                          (.append "Cache-Control" "max-age=31536000") ; todo max-age=0 if POST
+                          (.format #js {"application/transit+json" #(.send res (transit/encode data))
+                                        #_"text/html" #_(fn []
+                                                          (mlet [html-fragment nil #_(api-impl/local-html ui-fn ctx)]
+                                                            (.send res html-fragment)))}))))))
+        (p/catch
+          (fn [error]
+            (doto res
+              (.status 500)
+              ; todo caching on errors, there are a subset of requests that are actually permanently cacheable
+              (.format #js {"application/transit+json" #(.send res (transit/encode {:error (pr-str error)}))
+                            #_"text/html" #_(fn []
+                                              (document/error error))})))))))

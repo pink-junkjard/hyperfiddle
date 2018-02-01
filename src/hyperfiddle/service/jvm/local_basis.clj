@@ -7,28 +7,32 @@
             [hyperfiddle.ide :as ide]
             [hyperfiddle.io.global-basis :refer [global-basis]]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-requests stage-val->staged-branches]]
-            [hyperfiddle.io.local-basis :refer [fetch-domain!]]
             [hyperfiddle.io.sync :refer [sync]]
             [hyperfiddle.runtime :as runtime]
             [promesa.core :as p]))
 
 
 ; This is allowed to hydrate route, this runtime is probably the same as hydrate-route runtime
-(deftype LocalBasis [hyperfiddle-hostname hostname foo target-repo state-atom]
+(deftype LocalBasis [hyperfiddle-hostname hostname domain foo target-repo state-atom]
   runtime/AppFnGlobalBasis
   (global-basis [rt]
     (global-basis rt hyperfiddle-hostname hostname))
 
+  runtime/Route
+  (decode-route [rt foo s]
+    (ide/route-decode foo domain s))
+
+  (encode-route [rt foo v]
+    (ide/route-encode foo domain v))
+
   runtime/AppValLocalBasis
-  (local-basis [rt global-basis encoded-route branch]
-    (mlet [domain (fetch-domain! rt hostname hyperfiddle-hostname global-basis)]
-      (return
-        (let [ctx {:hostname hostname
-                   :hyperfiddle-hostname hyperfiddle-hostname
-                   :branch branch
-                   :peer rt}]
-          (foundation/local-basis foo global-basis encoded-route domain ctx
-                                  (partial ide/local-basis foo))))))
+  (local-basis [rt global-basis route branch]
+    (let [ctx {:hostname hostname
+               :hyperfiddle-hostname hyperfiddle-hostname
+               :branch branch
+               :peer rt}]
+      (foundation/local-basis foo global-basis route domain ctx
+                              (partial ide/local-basis foo))))
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
@@ -45,9 +49,9 @@
     (peer/hydrate state-atom request))
 
   (db [this uri branch]
-    (peer/db-pointer state-atom uri branch))
+    (peer/db-pointer uri branch))
 
   ide/SplitRuntime
   (sub-rt [rt foo target-repo]
-    (LocalBasis. hyperfiddle-hostname hostname foo target-repo state-atom))
+    (LocalBasis. hyperfiddle-hostname hostname domain foo target-repo state-atom))
   (target-repo [rt] target-repo))
