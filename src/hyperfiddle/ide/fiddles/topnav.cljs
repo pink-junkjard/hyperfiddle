@@ -2,6 +2,9 @@
   (:require [cats.core :as cats]
             [cats.monad.either :as either]
             [cuerdas.core :as string]
+            [hypercrud.browser.auto-fiddle :as auto-fiddle]
+            [hypercrud.browser.base :as base]
+            [hypercrud.browser.browser-ui :as browser-ui]
             [hypercrud.browser.link :as link]
             [hypercrud.browser.routing :as routing]
             [hypercrud.client.tx :as tx]
@@ -27,9 +30,27 @@
         callback-url (str "http://" (:hostname ctx) foundation/auth0-redirect-path)]
     (str domain "/login?client=" client-id "&callbackURL=" callback-url)))
 
+; inline sys-link data when the entity is a system-fiddle
+(defn shadow-fiddle [fiddle ctx]
+  (let [fiddle-id (get-in ctx [:route :request-params :entity :db/id])
+        system-fiddle? (auto-fiddle/system-fiddle? fiddle-id)]
+    (if system-fiddle?
+      @(cats/mplus (auto-fiddle/hydrate-system-fiddle fiddle-id) (either/right nil))
+      fiddle)))
+
+; ugly hacks to recursively fix the ui for sys links
+(defn hijack-renderer [fiddle fes links ctx]
+  (let [ctx (dissoc ctx :user-renderer)
+        f-mode-config (browser-ui/f-mode-config)
+        ui-fn (-> (base/fn-from-mode f-mode-config (:fiddle ctx) ctx)
+                  (cats/mplus (either/right (:default f-mode-config)))
+                  deref)]
+    (ui-fn (shadow-fiddle fiddle ctx) fes links ctx)))
+
 (defn -renderer [fiddle ordered-fes links ctx]
   (let [{:keys [display-mode stage]} @(reactive/track get-state (.-state-atom (:peer ctx)))
         dirty? (not (empty? stage))
+        fiddle (shadow-fiddle fiddle ctx)
         ; hack until hyperfiddle.net#156 is complete
         link-index (->> links
                         (filter :link/rel)                  ; cannot lookup nil idents
@@ -46,10 +67,10 @@
      [:div.hyperfiddle-topnav-root-controls
       (fake-managed-anchor :domain ctx (get-in ctx [:target-domain :domain/ident]))
       " / "
-      (fake-managed-anchor :fiddle-more ctx (string/prune (:fiddle/name fiddle) 20 ""))
+      (fake-managed-anchor :fiddle-more (assoc ctx :user-renderer hijack-renderer) (string/prune (:fiddle/name fiddle) 20 ""))
       " · "
-      (fake-managed-anchor :links ctx "links")
-      (fake-managed-anchor :ui ctx "view")
+      (fake-managed-anchor :links (assoc ctx :user-renderer hijack-renderer) "links")
+      (fake-managed-anchor :ui (assoc ctx :user-renderer hijack-renderer) "view")
       (fake-managed-anchor :stage ctx "stage" :class (if dirty? "stage-dirty"))
 
       (let [change! #((:dispatch! ctx) (foundation-actions/set-display-mode %))]
