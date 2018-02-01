@@ -114,12 +114,9 @@
 (defn fn-from-mode [f-mode-config link ctx]
   (let [{:keys [from-ctx from-link with-user-fn default]} f-mode-config]
     (case @(:hypercrud.ui/display-mode ctx)
-      ; todo report eval and invocation errors back to the user
-      :user (or (some->> (or (some-> (from-ctx ctx) either/right)
-                             (if-not (empty? (from-link link))
-                               (eval/eval-str (from-link link))))
-                         (cats/fmap with-user-fn))
-                (either/right default))
+      :user (->> (or (some-> (from-ctx ctx) either/right)
+                     (eval/eval-str (from-link link)))
+                 (cats/fmap #(if % (with-user-fn %) default)))
       :xray (either/right default))))
 
 (let [never-read-only (constantly false)

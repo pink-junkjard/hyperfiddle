@@ -1,12 +1,12 @@
 (ns hypercrud.browser.link
-  (:require [cats.core :as cats :refer [mlet return]]
+  (:require [cats.core :as cats]
             [cats.monad.either :as either]
             [clojure.set :as set]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.popovers :as popovers]
             [hypercrud.browser.q-util :as q-util]
             [hypercrud.browser.routing :as routing]
-            [hypercrud.compile.eval :as eval :refer [eval-str]]
+            [hypercrud.compile.eval :as eval]
             [hypercrud.util.core :refer [pprint-str]]
             [hypercrud.util.non-fatal :refer [try-either]]
             [hypercrud.util.reactive :as reactive]
@@ -95,10 +95,11 @@
   (let [fiddle (:link/fiddle link)                          ; can be nil - in which case route is invalid
         route (-> unvalidated-route' (cats/mplus (either/right nil)) (cats/extract))
         validated-route' (validated-route' fiddle route)
-        user-props' (if-let [user-code-str (eval/validate-user-code-str (:hypercrud/props link))]
-                      (mlet [user-expr (eval-str user-code-str)]
-                        (get-or-apply' user-expr ctx))
-                      (either/right nil))
+        user-props' (cats/bind (eval/eval-str (:hypercrud/props link))
+                               (fn [user-expr]
+                                 (if user-expr
+                                   (get-or-apply' user-expr ctx)
+                                   (either/right nil))))
         user-props-map-raw (cats/extract (cats/mplus user-props' (either/right nil)))
         user-prop-val's (map #(get-or-apply' % ctx) (vals user-props-map-raw))
         user-prop-vals (map #(cats/extract (cats/mplus % (either/right nil))) user-prop-val's)
@@ -121,8 +122,10 @@
                    (apply str))})))
 
 (defn stage! [link route popover-id ctx]
-  (let [user-txfn (some-> (eval/validate-user-code-str (:link/tx-fn link)) eval-str (cats/mplus (either/right nil)) (cats/extract))
-        user-txfn (or user-txfn (constantly nil))]
+  (let [user-txfn (-> (eval/eval-str (:link/tx-fn link))
+                      (cats/mplus (either/right nil))
+                      (cats/extract)
+                      (or (constantly nil)))]
     (-> (p/promise
           (fn [resolve! reject!]
             (let [swap-fn (fn [multi-color-tx]

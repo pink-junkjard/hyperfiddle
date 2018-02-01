@@ -1,6 +1,5 @@
 (ns hypercrud.ui.auto-control
   (:require [cuerdas.core :as str]
-            [hypercrud.compile.eval :as eval]
             [hypercrud.ui.attribute.edn :as edn]
             [hypercrud.ui.attribute.instant :as instant]
             [hypercrud.ui.safe-render :refer [unify-portal-markup]]
@@ -49,18 +48,13 @@
     widget))
 
 (defn fiddle-field-control [ctx]                            ; TODO :renderer -> :control
-  (let [attr (:attribute ctx)
-        user-str (eval/validate-user-code-str (get-in ctx [:fields (:db/ident attr) :renderer]))]
-    (when user-str
-      ;(timbre/info "using fiddle ctx/field renderer" (-> attr :db/ident str) user-str)
-      (eval-user-control-ui user-str))))
+  (let [attr (:attribute ctx)]
+    ;(timbre/info "using fiddle ctx/field renderer" (-> attr :db/ident str) user-str)
+    (eval-user-control-ui (get-in ctx [:fields (:db/ident attr) :renderer]))))
 
 (defn attribute-control [ctx]
-  (let [attr (:attribute ctx)
-        user-str (eval/validate-user-code-str (-> attr :attribute/renderer))]
-    (when user-str
-      ;(timbre/info "using attribute/renderer " (-> attr :db/ident str) user-str)
-      (eval-user-control-ui user-str))))
+  ;(timbre/info "using attribute/renderer " (-> attr :db/ident str) user-str)
+  (eval-user-control-ui (-> ctx :attribute :attribute/renderer)))
 
 (defn auto-control' [ctx]
   ; todo binding renderers should be pathed for aggregates and values

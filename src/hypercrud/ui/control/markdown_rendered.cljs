@@ -1,6 +1,5 @@
 (ns hypercrud.ui.control.markdown-rendered
-  (:require [hypercrud.compile.eval :as eval]
-            [hypercrud.ui.control.code]
+  (:require [hypercrud.ui.control.code]
             [hypercrud.util.core :as util]
             [reagent.core :as reagent]))
 
@@ -35,7 +34,7 @@
                                 {"sanitize" false
                                  "remarkReactComponents" (util/map-values reagent/reactify-component whitelist)}))))
 (defn markdown [value]
-  (if-let [value (eval/validate-user-code-str value)]
+  (when (and (string? value) (not (empty? value)))
     (-> remarkInstance (.processSync value {"commonmark" true}) .-contents)))
 
 ; Todo; remove div.markdown; that should be default and style the inverse.

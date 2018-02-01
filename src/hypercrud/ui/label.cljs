@@ -1,6 +1,5 @@
 (ns hypercrud.ui.label
   (:require [cuerdas.core :as str]
-            [hypercrud.compile.eval :refer [validate-user-code-str]]
             [hypercrud.ui.control.markdown-rendered :refer [markdown]]
             [hypercrud.ui.tooltip :refer [tooltip-thick]]
             [hypercrud.util.core :as util]))
@@ -26,7 +25,9 @@
 #_{:label help-text :position :below-right}
 
 (defn label [field ctx]
-  (let [dbdoc (validate-user-code-str (-> ctx :attribute :db/doc))
+  (let [dbdoc (let [dbdoc (-> ctx :attribute :db/doc)]
+                (when (and (string? dbdoc) (not (empty? dbdoc)))
+                  dbdoc))
         typedoc (apply str (interpose " " (attribute-schema-human (:attribute ctx))))
         help-md (str (if dbdoc (str dbdoc "\n\n"))          ; markdown needs double line-break
                      "`" typedoc "`")]
