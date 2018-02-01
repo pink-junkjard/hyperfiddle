@@ -35,7 +35,14 @@
   (let [fiddle-id (get-in ctx [:route :request-params :entity :db/id])
         system-fiddle? (auto-fiddle/system-fiddle? fiddle-id)]
     (if system-fiddle?
-      @(cats/mplus (auto-fiddle/hydrate-system-fiddle fiddle-id) (either/right nil))
+      (-> (->> (auto-fiddle/hydrate-system-fiddle fiddle-id)
+               (cats/fmap (fn [fiddle]
+                            (-> fiddle
+                                (update :fiddle/bindings #(or (-> % meta :str) %))
+                                (update :fiddle/renderer #(or (-> % meta :str) %))
+                                (update :fiddle/request #(or (-> % meta :str) %))))))
+          (cats/mplus (either/right nil))
+          (cats/extract))
       fiddle)))
 
 ; ugly hacks to recursively fix the ui for sys links

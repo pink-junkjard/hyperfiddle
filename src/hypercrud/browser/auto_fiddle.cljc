@@ -28,8 +28,9 @@
            :a a}
    :fiddle/name "sys-remove"
    :fiddle/type :blank
-   :fiddle/renderer (str '(fn [result fes anchors ctx]
-                            [:p "Retract entity?"]))})
+   :fiddle/renderer (str-and-code
+                      (fn [result fes anchors ctx]
+                        [:p "Retract entity?"]))})
 
 (defn schema-cardinality-options [$db]
   {:db/id {:ident :schema/cardinality-options
