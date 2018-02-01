@@ -1,6 +1,5 @@
 (ns hypercrud.ui.navigate-cmp
-  (:require [hypercrud.browser.routing :as routing]
-            [hypercrud.ui.css :as css]
+  (:require [hypercrud.ui.css :as css]
             [hypercrud.ui.native-event-listener :refer [native-listener]]
             [hypercrud.ui.tooltip :refer [tooltip]]
             [re-com.core :as re-com]))
@@ -9,11 +8,11 @@
 (defn dissoc-non-native-props [hypercrud-props]
   (dissoc hypercrud-props :route :tooltip :popover :hidden :external-hostname))
 
-(defn anchor-cmp [hypercrud-props label]
+(defn anchor-cmp [route-encode hypercrud-props label]
   (let [anchor-props (-> hypercrud-props
                          (dissoc-non-native-props)
                          (assoc :href (if (:route hypercrud-props)
-                                        (routing/encode (:route hypercrud-props) (:external-hostname hypercrud-props))
+                                        (route-encode (:route hypercrud-props) (:external-hostname hypercrud-props))
                                         nil #_"javascript:void 0;")))]
     ; Why would an anchor have an on-click? Is this historical.
     ; If legit it needs to respect disabled.
@@ -49,7 +48,7 @@
 ; }
 ; todo all HF prop values should be monads and
 ; tooltip can be generated within navigate-cmp by mapping over them
-(defn navigate-cmp* [hypercrud-props label & [class]]
+(defn navigate-cmp* [route-encode hypercrud-props label & [class]]
   ; why doesn't this just take anchor? - ctx should not leak up this high.
   ; props (links/build-link-props anchor ctx)
   ; and because nested router. Is that even needed now?
@@ -69,8 +68,8 @@
            {:status status :label label})
          (if (:popover hypercrud-props)
            [popover-cmp hypercrud-props label]
-           [anchor-cmp hypercrud-props label])]))))
+           [anchor-cmp route-encode hypercrud-props label])]))))
 
 ; act like a appfn down-stack
-(defn navigate-cmp [props label & [class]]
-  [navigate-cmp* props label class])
+(defn navigate-cmp [route-encode props label & [class]]
+  [navigate-cmp* route-encode props label class])

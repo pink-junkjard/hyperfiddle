@@ -95,9 +95,8 @@
 (defn page-on-click [ctx route event]
   (when (and route (.-altKey event))
     ((:dispatch! ctx) (fn [dispatch! get-state]
-                        (let [encoded-route (routing/encode route)]
-                          (when (foundation/navigable? encoded-route (get-state))
-                            (foundation-actions/set-route (:peer ctx) encoded-route dispatch! get-state)))))
+                        (when (foundation/navigable? route (get-state))
+                          (foundation-actions/set-route (:peer ctx) route dispatch! get-state))))
     (.stopPropagation event)))
 
 (defn wrap-ui [v' route ctx & [class]]

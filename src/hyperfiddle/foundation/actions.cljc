@@ -29,10 +29,12 @@
   (let [hydrate-id #?(:clj (Math/random) :cljs (js/Math.random))]
     (dispatch! (apply batch [:hydrate!-start hydrate-id] on-start))
     (let [{:keys [stage] :as post-start-state} (get-state)
-          {:keys [encoded-route local-basis]} (post-start->route-vals post-start-state)]
+          {:keys [route local-basis]} (post-start->route-vals post-start-state)]
+      (assert route)
+      (assert (not (string? route)))
       (-> (case page-or-leaf
-            :page (runtime/hydrate-route-page rt local-basis encoded-route stage)
-            :leaf (runtime/hydrate-route rt local-basis encoded-route branch stage))
+            :page (runtime/hydrate-route-page rt local-basis route stage)
+            :leaf (runtime/hydrate-route rt local-basis route branch stage))
           (p/then (fn [{:keys [ptm id->tempid]}]
                     (if (= hydrate-id (:hydrate-id (get-state)))
                       (let [stage-val (:stage (get-state))
@@ -48,7 +50,7 @@
                      (throw error)))))))
 
 (defn hydrate-page [rt on-start dispatch! get-state]
-  (hydrate-route* rt :page nil #(select-keys % [:encoded-route :local-basis])
+  (hydrate-route* rt :page nil #(select-keys % [:route :local-basis])
                   on-start :hydrate!-success :hydrate!-failure
                   dispatch! get-state))
 
@@ -67,8 +69,8 @@
                  (throw error)))))
 
 (defn refresh-page-local-basis [rt dispatch! get-state]
-  (let [{:keys [global-basis encoded-route]} (get-state)]
-    (-> (runtime/local-basis-page rt global-basis encoded-route)
+  (let [{:keys [global-basis route]} (get-state)]
+    (-> (runtime/local-basis-page rt global-basis route)
         (p/then (fn [local-basis]
                   (dispatch! [:set-local-basis local-basis])))
         (p/catch (fn [error]
@@ -81,11 +83,11 @@
 (defn close-popover [popover-id]
   [:close-popover popover-id])
 
-(defn set-route [rt-page encoded-route dispatch! get-state]
+(defn set-route [rt-page route dispatch! get-state]
   (let [{:keys [branches popovers]} (get-state)
         actions (->> (concat (map discard-branch (keys branches))
                              (map close-popover popovers))
-                     (cons [:set-route encoded-route]))]
+                     (cons [:set-route route]))]
     (dispatch! (cons :batch actions))
     (-> (refresh-page-local-basis rt-page dispatch! get-state)
         (p/then (fn [] (hydrate-page rt-page nil dispatch! get-state))))))
@@ -113,16 +115,15 @@
 
 (defn open-branched-popover [rt popover-id branch route]
   (fn [dispatch! get-state]
-    (let [encoded-route (routing/encode route)
-          {:keys [global-basis]} (get-state)]
-      (-> (runtime/local-basis rt global-basis encoded-route branch)
+    (let [{:keys [global-basis]} (get-state)]
+      (-> (runtime/local-basis rt global-basis route branch)
           (p/catch (fn [error]
                      (dispatch! [:set-error error])
                      (throw error)))
           (p/then (fn [local-basis]
                     (let [on-start [(open-popover popover-id)
-                                    [:add-branch branch encoded-route local-basis]]
-                          post-start->route-vals (constantly {:encoded-route encoded-route :local-basis local-basis})]
+                                    [:add-branch branch route local-basis]]
+                          post-start->route-vals (constantly {:route route :local-basis local-basis})]
                       (hydrate-branch rt post-start->route-vals branch on-start dispatch! get-state))))))))
 
 (defn discard-branched-popover [popover-id branch]
@@ -140,7 +141,7 @@
                                           [:with branch uri tx]))
                                       tx)
                                 [[:merge branch]
-                                 (if app-route [:set-route (routing/encode app-route)])
+                                 (if app-route [:set-route app-route])
                                  (close-popover popover-id)
                                  (discard-branch branch)])]
                   (if-let [parent-branch (branch/decode-parent-branch branch)]
@@ -167,13 +168,11 @@
                      (dispatch! [:transact!-failure error])
                      (throw error)))
           (p/then (fn [{:keys [tempid->id]}]
-                    (let [{:keys [encoded-route]} (get-state)
+                    (let [{:keys [route]} (get-state)
                           invert-id (fn [temp-id uri]
                                       (get-in tempid->id [uri temp-id] temp-id))
-                          updated-route (-> (or (routing/decode encoded-route) home-route)
-                                            (routing/invert-ids invert-id target-repository)
-                                            (routing/encode))]
+                          route' (routing/invert-ids route invert-id target-repository)]
                       ; todo fix the ordering of this, transact-success should fire immediately (whether or not the rehydrate succeeds)
                       (mlet [_ (refresh-global-basis peer dispatch! get-state)
                              _ (refresh-page-local-basis peer dispatch! get-state)]
-                        (hydrate-page peer [[:transact!-success updated-route]] dispatch! get-state)))))))))
+                        (hydrate-page peer [[:transact!-success route']] dispatch! get-state)))))))))

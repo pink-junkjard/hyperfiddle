@@ -72,10 +72,11 @@
       (f ctx))))
 
 (defn hydrate-route-rpc! [service-uri local-basis encoded-route foo target-repo branch stage]
-  (-> (merge {:url (str/format "%(service-uri)shydrate-route/$local-basis/$double-encoded-route/$foo/$target-repo/$branch"
+  ; matrix params instead of path params
+  (-> (merge {:url (str/format "%(service-uri)shydrate-route/$local-basis/$encoded-route/$foo/$target-repo/$branch"
                                {:service-uri service-uri
                                 :local-basis (base-64-url-safe/encode (pr-str local-basis))
-                                :double-encoded-route (base-64-url-safe/encode encoded-route) ; todo this is awful
+                                :encoded-route (subs encoded-route 1) #_ "drop leading /"
                                 :foo (base-64-url-safe/encode (pr-str foo))
                                 :target-repo (base-64-url-safe/encode (pr-str target-repo))
                                 :branch (base-64-url-safe/encode (pr-str branch))})

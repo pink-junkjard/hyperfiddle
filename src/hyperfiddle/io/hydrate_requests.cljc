@@ -51,3 +51,18 @@
 
 #?(:clj
    (def hydrate-requests datomic-hydrate-requests/hydrate-requests))
+
+#?(:clj
+   (defn hydrate-one!' [local-basis stage request]          ; type tetris for when there isn't a runtime (domain hydrates)
+     (-> (hydrate-requests local-basis [request] stage)
+         :pulled-trees first
+         (process-result request)
+         (either/branch p/rejected p/resolved))))
+
+(defn hydrate-one-rpc!' [service-uri local-basis stage request] ; type tetris no runtime
+  (-> (hydrate-requests-rpc! service-uri local-basis stage [request])
+      (p/then (comp
+                #(either/branch % p/rejected p/resolved)
+                #(process-result % request)
+                first
+                :pulled-trees))))

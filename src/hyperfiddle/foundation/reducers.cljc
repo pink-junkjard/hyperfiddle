@@ -92,9 +92,9 @@
 
 (defn branches-reducer [branches action & args]
   (case action
-    :add-branch (let [[branch encoded-route local-basis] args]
+    :add-branch (let [[branch route local-basis] args]
                   (assoc branches branch {:local-basis local-basis
-                                          :encoded-route encoded-route}))
+                                          :route route}))
     :discard-branch (let [[branch] args]
                       (dissoc branches branch))
     (or branches {})))
@@ -129,7 +129,7 @@
 (def reducer-map {:display-mode display-mode-reducer
                   :staging-open staging-open-reducer
                   :hydrate-id hydrate-id-reducer
-                  :encoded-route route-reducer
+                  :route route-reducer
                   :global-basis global-basis-reducer
                   :local-basis local-basis-reducer
                   :stage stage-reducer

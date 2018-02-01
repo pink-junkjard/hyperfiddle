@@ -12,6 +12,7 @@
             [hypercrud.util.string :as hc-string]
             [hyperfiddle.foundation :as foundation]
             [taoensso.timbre :as timbre]
+    #?(:cljs [reagent.core :as reagent])
 
     ; pull in public ui deps
     ; todo these hc.ui.* should be reduced to one require e.g. [hypercrud.ui]
@@ -110,33 +111,34 @@
   (-> (update ctx :peer #(-sub-rt % "user" nil))
       (*-target-context domain route user-profile)))
 
-(defn canonical-route [domain route]
-  {:pre [domain (string? route)]
-   :post [(string? %)]}
-  (case route
-    "/" (if-let [home-route (:domain/home-route domain)]
-          (routing/encode (unwrap (hc-string/safe-read-edn-string home-route)))
-          "/" #_"no home-route, maybe a brand new domain with no fiddles")
-    route))
+(defn route-decode [foo domain s]
+  {:pre [domain (string? s)]}
+  (case foo
+    "page" (case s
+             "/" (unwrap (hc-string/safe-read-edn-string (:domain/home-route domain)))
+             (routing/decode s))
+    "user" (routing/decode s)
+    "ide" (routing/decode s)))
 
-(defn local-basis [ide-or-user global-basis -domain #_"offensive" route ctx]
+(defn route-encode [foo domain route]
+  ; use domain to canonicalize
+  (case foo
+    "page" (routing/encode route)
+    "user" (routing/encode route)
+    "ide" (routing/encode route)))
+
+(defn local-basis [foo global-basis -domain #_"offensive" route ctx]
   ;local-basis-ide and local-basis-user
-  (let [route (routing/decode (canonical-route -domain route))
-        {:keys [domain ide user]} global-basis
+  (let [{:keys [domain ide user]} global-basis
         ; basis-maps: List[Map[uri, t]]
         user-basis (get user (:code-database route))
-        ide-basis (get ide (target-repo (:peer ctx)))
-        basis-maps (case ide-or-user
+        ide-basis (get ide (target-repo (:peer ctx)))       ; Why don't we call ide-route-decode? I guess we don't care?
+        basis-maps (case foo
                      "page" (concat (vals user) #_"for schema in topnav"
                                     (vals ide))             ; dead code i think?
                      "ide" (concat [ide-basis] (vals ide) (vals user))
                      "user" [user-basis])
-        local-basis (->> basis-maps                         ; Userland api-fn should filter irrelevant routes
-                         (apply concat)
-                         ;(apply concat)
-                         sort
-                         ;(apply sorted-map)
-                         )]
+        local-basis (->> basis-maps (apply concat) sort)]   ; Userland api-fn should filter irrelevant routes
     (timbre/debug (pr-str local-basis))
     #_(determine-local-basis (hydrate-route route ...))
     local-basis))
@@ -144,34 +146,31 @@
 ; Domain can be removed with a double foundation
 ; Reactive pattern obfuscates params
 ; Foo can be ignored for now
-(defn api [foo -domain route ctx]
-  {:pre [-domain route
-         (str/starts-with? route "/")]
+(defn api [foo -domain ?route ctx]
+  {:pre [-domain ?route (not (string? ?route))]
    :post [#_(seq %)]}
   ; We can actually call into the foundation a second time here to get the ide-domain
   (let [ide-domain-q (foundation/domain-request "hyperfiddle" (:peer ctx))
         ide-domain (hc/hydrate-api (:peer ctx) ide-domain-q)
         user-profile @(reactive/cursor (.-state-atom (:peer ctx)) [:user-profile])]
-    ; This route over-applies canonical but it works out and really simplifies the validation
-    (let [?route (routing/decode (canonical-route -domain route))]
-      (case foo
-        "page" (concat [ide-domain-q]
-                       (if (and ?route -domain)
-                         (browser/request-from-route ?route (page-target-context ctx -domain ?route user-profile)))
-                       (if (and (activate-ide? (foundation/hostname->hf-domain-name ctx)) ide-domain)
-                         (browser/request-from-route (ide-route ?route) (page-ide-context ctx ide-domain -domain ?route user-profile))))
-        "ide" (concat [ide-domain-q]
-                      (if ide-domain
-                        (browser/request-from-route ?route (leaf-ide-context ctx ide-domain -domain user-profile))))
-        "user" (if (and ?route -domain)
-                 (browser/request-from-route ?route (leaf-target-context ctx -domain ?route user-profile)))))))
+    (case foo
+      "page" (concat [ide-domain-q]
+                     (if (and ?route -domain)
+                       (browser/request-from-route ?route (page-target-context ctx -domain ?route user-profile)))
+                     (if (and (activate-ide? (foundation/hostname->hf-domain-name ctx)) ide-domain)
+                       (browser/request-from-route (ide-route ?route) (page-ide-context ctx ide-domain -domain ?route user-profile))))
+      "ide" (concat [ide-domain-q]
+                    (if ide-domain
+                      (browser/request-from-route ?route (leaf-ide-context ctx ide-domain -domain user-profile))))
+      "user" (if (and ?route -domain)
+               (browser/request-from-route ?route (leaf-target-context ctx -domain ?route user-profile))))))
 
 #?(:cljs
    (defn view-page [-domain ?route ctx]
      (let [ide-domain (hc/hydrate-api (:peer ctx) (foundation/domain-request "hyperfiddle" (:peer ctx)))
            ide-active (activate-ide? (foundation/hostname->hf-domain-name ctx))
            user-profile @(reactive/cursor (.-state-atom (:peer ctx)) [:user-profile])
-           ctx (assoc ctx :navigate-cmp navigate-cmp/navigate-cmp)]
+           ctx (assoc ctx :navigate-cmp (reagent/partial navigate-cmp/navigate-cmp routing/encode))]
        (react-fragment
          :view-page
          (if ide-active
@@ -188,11 +187,10 @@
 #?(:cljs
    ; Route is managed by the domain; Domain will not be available here soon.
    (defn view [foo -domain route ctx]                       ; pass most as ref for reactions
-     (let [route (routing/decode (canonical-route -domain route))
-           ide-domain (hc/hydrate-api (:peer ctx) (foundation/domain-request "hyperfiddle" (:peer ctx)))
+     (let [ide-domain (hc/hydrate-api (:peer ctx) (foundation/domain-request "hyperfiddle" (:peer ctx)))
            user-profile @(reactive/cursor (.-state-atom (:peer ctx)) [:user-profile])]
        (case foo
-         "page" (view-page -domain route ctx)               ; component, seq-component or nil
+         "page" (view-page -domain route ctx) ; component, seq-component or nil
          ; On SSR side this is only ever called as "page", but it could be differently (e.g. turbolinks)
          ; On Browser side, also only ever called as "page", but it could be configured differently (client side render the ide, server render userland...?)
          "ide" [browser/ui-from-route route (leaf-ide-context ctx ide-domain -domain user-profile)]

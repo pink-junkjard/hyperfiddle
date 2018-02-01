@@ -10,6 +10,7 @@
             [hypercrud.util.core :as util]
             [hypercrud.util.reactive :as reactive]
             [hyperfiddle.foundation.actions :as foundation-actions]
+            [hyperfiddle.runtime :as runtime]
             [promesa.core :as p]))
 
 
@@ -120,16 +121,18 @@
 
 (def LEVEL-NONE 0)
 (def LEVEL-GLOBAL-BASIS 1)
-(def LEVEL-LOCAL-BASIS 2)
-(def LEVEL-HYDRATE-PAGE 3)
+(def LEVEL-SET-ROUTE 2)
+(def LEVEL-LOCAL-BASIS 3)
+(def LEVEL-HYDRATE-PAGE 4)
 
 ; careful setting load-level to LOCAL-BASIS; it is not supported as an init-level in the browser yet
 ; how can the browser know if hydrate page has or has not happened yet?
-(defn bootstrap-data [rt dispatch! get-state init-level load-level]
+(defn bootstrap-data [rt dispatch! get-state init-level load-level encoded-route]
   (if (>= init-level load-level)
     (p/resolved nil)
     (-> (condp = (inc init-level)
           LEVEL-GLOBAL-BASIS (foundation-actions/refresh-global-basis rt dispatch! get-state)
+          LEVEL-SET-ROUTE (foundation-actions/set-route rt (runtime/decode-route rt "page" encoded-route) dispatch! get-state)
           LEVEL-LOCAL-BASIS (foundation-actions/refresh-page-local-basis rt dispatch! get-state)
           LEVEL-HYDRATE-PAGE (foundation-actions/hydrate-page rt nil dispatch! get-state))
-        (p/then #(bootstrap-data rt dispatch! get-state (inc init-level) load-level)))))
+        (p/then #(bootstrap-data rt dispatch! get-state (inc init-level) load-level encoded-route)))))
