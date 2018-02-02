@@ -1,6 +1,5 @@
 (ns hypercrud.browser.context
-  (:require [clojure.string :as string]
-            [hypercrud.browser.auto-anchor-formula :as auto-anchor-formula]
+  (:require [hypercrud.browser.auto-anchor-formula :as auto-anchor-formula]
             [hypercrud.browser.routing :as routing]
             [hypercrud.util.branch :as branch]
             [hypercrud.util.core :as util]
@@ -25,22 +24,11 @@
          (seq (-> ctx :hypercrud.browser/domain :domain/code-databases))]
    :post [(-> % :hypercrud.browser/repository)
           (-> % :hypercrud.browser/repository :dbhole/uri)]}
-  (let [initial-repository (->> (get-in ctx [:hypercrud.browser/domain :domain/code-databases])
-                                (filter #(= (:dbhole/name %) (:code-database route)))
-                                first
-                                (into {}))
-        repository (let [overrides (->> route
-                                        ; todo this is not sufficient for links on the page to inherit this override
-                                        ; on navigate, this context is gone
-                                        (filter (fn [[k _]] (and (string? k) (string/starts-with? k "$"))))
-                                        (into {}))]
-                     (update initial-repository :repository/environment merge overrides))
-        ctx (-> ctx
-                (update-in [:hypercrud.browser/domain :domain/code-databases]
-                           (fn [repos]
-                             (map #(if (= initial-repository) repository %) repos)))
-                (assoc :hypercrud.browser/repository repository))]
-    (assoc ctx :route (routing/tempid->id route ctx))))
+  (assoc ctx :route (routing/tempid->id route ctx)
+             :hypercrud.browser/repository (->> (get-in ctx [:hypercrud.browser/domain :domain/code-databases])
+                                                (filter #(= (:dbhole/name %) (:code-database route)))
+                                                first
+                                                (into {}))))
 
 (defn anchor-branch [ctx link]
   (if (:link/managed? link)
