@@ -54,6 +54,21 @@
                   deref)]
     (ui-fn (shadow-fiddle fiddle ctx) fes links ctx)))
 
+(defn loading-spinner [ctx]
+  (if @(reactive/cursor (.-state-atom (:peer ctx)) [:hydrate-id])
+    [:span {:style {:height "20px"
+                    :width "23px"
+                    :float "left"
+                    :margin-right "1px"
+                    :background-color "white"
+                    :position "relative"
+                    :z-index 0}}
+     [:div {:style {:height "1em"
+                    :margin-top "-2px"
+                    :position "absolute"
+                    :z-index -1}}
+      [re-com.core/throbber :size :smaller]]]))
+
 (defn -renderer [fiddle ordered-fes links ctx]
   (let [{:keys [display-mode stage]} @(reactive/track get-state (.-state-atom (:peer ctx)))
         dirty? (not (empty? stage))
@@ -86,19 +101,7 @@
          (radio/option {:label "view" :tooltip "View end-user UI" :target :user :value display-mode :change! change!})])
 
       [:div.right-nav {:key "right-nav"}                    ; CAREFUL; this key prevents popover flickering
-       (if @(reactive/cursor (.-state-atom (:peer ctx)) [:hydrate-id])
-         [:span {:style {:height "20px"
-                         :width "23px"
-                         :float "left"
-                         :margin-right "1px"
-                         :background-color "white"
-                         :position "relative"
-                         :z-index 0}}
-          [:div {:style {:height "1em"
-                         :margin-top "-2px"
-                         :position "absolute"
-                         :z-index -1}}
-           [re-com.core/throbber :size :smaller]]])
+       [loading-spinner ctx]
        ; ignore results; don't display the fiddle's data, just the anchors
        ((:browse ctx) :repo-picker ctx :class "hyperfiddle-topnav-repo-picker"
          (fn [result]
