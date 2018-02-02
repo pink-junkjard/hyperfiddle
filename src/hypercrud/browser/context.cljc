@@ -24,11 +24,13 @@
          (seq (-> ctx :hypercrud.browser/domain :domain/code-databases))]
    :post [(-> % :hypercrud.browser/repository)
           (-> % :hypercrud.browser/repository :dbhole/uri)]}
-  (assoc ctx :route (routing/tempid->id route ctx)
-             :hypercrud.browser/repository (->> (get-in ctx [:hypercrud.browser/domain :domain/code-databases])
-                                                (filter #(= (:dbhole/name %) (:code-database route)))
-                                                first
-                                                (into {}))))
+  (let [ctx (assoc ctx
+              :hypercrud.browser/repository (->> (get-in ctx [:hypercrud.browser/domain :domain/code-databases])
+                                                 (filter #(= (:dbhole/name %) (:code-database route)))
+                                                 first
+                                                 (into {})))]
+    ; explicitly set :hypercrud.browser/repository BEFORE running tempid->id
+    (assoc ctx :route (routing/tempid->id route ctx))))
 
 (defn anchor-branch [ctx link]
   (if (:link/managed? link)
