@@ -2,7 +2,7 @@
   (:require [cats.core :as cats]
             [cats.monad.either :as either]
             [hypercrud.ui.markdown :refer [markdown]]
-            [hypercrud.ui.native-event-listener :refer [native-listener]]
+            [hypercrud.ui.native-event-listener :refer [native-on-click-listener]]
             [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :as hc-string]
             [hyperfiddle.ide.actions :as ide-actions]))
@@ -16,7 +16,7 @@
 (defn renderer [domains ordered-fes anchors ctx]
   [:div.hyperfiddle-user-dashboard
    (if (-> ctx :user-profile)
-     [native-listener
+     [native-on-click-listener
       {:key :logout :on-click (reactive/partial logout! (:peer ctx) (:dispatch! ctx))}
       ; todo https://auth0.com/docs/logout
       [:span.nav-link.auth {:key :logout}

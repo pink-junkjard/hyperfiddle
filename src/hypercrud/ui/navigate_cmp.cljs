@@ -1,6 +1,6 @@
 (ns hypercrud.ui.navigate-cmp
   (:require [hypercrud.ui.css :as css]
-            [hypercrud.ui.native-event-listener :refer [native-listener]]
+            [hypercrud.ui.native-event-listener :refer [native-on-click-listener]]
             [hypercrud.ui.tooltip :refer [tooltip]]
             [re-com.core :as re-com]))
 
@@ -16,7 +16,7 @@
                                         nil #_"javascript:void 0;")))]
     ; Why would an anchor have an on-click? Is this historical.
     ; If legit it needs to respect disabled.
-    [native-listener (select-keys anchor-props [:on-click])
+    [native-on-click-listener (select-keys anchor-props [:on-click])
      [:a (dissoc anchor-props :on-click) label]]))
 
 (defn popover-cmp [hypercrud-props label]

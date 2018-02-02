@@ -6,7 +6,7 @@
             [hypercrud.browser.link :as link]
             [hypercrud.browser.routing :as routing]
             [hypercrud.ui.css :refer [css-slugify classes]]
-            [hypercrud.ui.native-event-listener :refer [native-listener]]
+            [hypercrud.ui.native-event-listener :refer [native-on-click-listener]]
             [hypercrud.ui.safe-render :refer [safe-user-renderer]]
             [hypercrud.ui.stale :as stale]
             [hypercrud.util.core :as util]
@@ -103,8 +103,7 @@
   (let [on-click (reactive/partial (or (:hypercrud.browser/page-on-click ctx)
                                        (reactive/partial page-on-click ctx))
                                    route)]
-    ^{:key route}                                           ; clear memory when route changes
-    [native-listener {:on-click on-click}
+    [native-on-click-listener {:on-click on-click}
      [stale/loading (stale/can-be-loading? ctx) v'
       (fn [e] [:div {:class (classes "ui" class "hyperfiddle-error")} (ui-error e ctx)])
       (fn [v] [:div {:class (classes "ui" class)} v])
