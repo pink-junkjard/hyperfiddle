@@ -13,7 +13,7 @@
 
 #?(:cljs
    ; addEventListener chokes HARD on reagent/partialed functions,
-   ; it wants javascript functions or a function :
+   ; it wants a javascript function or an object:
    ; see: "listener" param at https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener
    ; when adapting props for adapated react classes, reagent wraps ALL IFn in an anonymous fn
    ; like: (fn [&args] (apply user-fn args))
