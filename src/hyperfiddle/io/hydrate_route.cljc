@@ -64,11 +64,17 @@
 (defn hydrate-loop-adapter [local-basis stage ctx ->Runtime f]
   ; Hacks because the hydrate-loop doesn't write to the state atom.
   (fn [id->tempid ptm]
-    (let [state-val {:local-basis local-basis
-                     :tempid-lookups id->tempid
-                     :ptm ptm
-                     :stage stage}
-          ctx (assoc ctx :peer (->Runtime (reducers/root-reducer state-val nil)))]
+    (let [ctx (update ctx :peer (fn [peer]
+                                  (-> @(.-state-atom peer)
+                                      ; want to keep all user/ui state, just use overwrite the io state.
+                                      ; suspect that other values are unset (route, global-basis, popovers, branches)
+                                      (select-keys [:user-profile])
+                                      (assoc :local-basis local-basis
+                                             :tempid-lookups id->tempid
+                                             :ptm ptm
+                                             :stage stage)
+                                      (reducers/root-reducer nil)
+                                      (->Runtime))))]
       (f ctx))))
 
 (defn hydrate-route-rpc! [service-uri local-basis encoded-route foo target-repo branch stage]
@@ -76,7 +82,7 @@
   (-> (merge {:url (str/format "%(service-uri)shydrate-route/$local-basis/$encoded-route/$foo/$target-repo/$branch"
                                {:service-uri service-uri
                                 :local-basis (base-64-url-safe/encode (pr-str local-basis))
-                                :encoded-route (subs encoded-route 1) #_ "drop leading /"
+                                :encoded-route (subs encoded-route 1) #_"drop leading /"
                                 :foo (base-64-url-safe/encode (pr-str foo))
                                 :target-repo (base-64-url-safe/encode (pr-str target-repo))
                                 :branch (base-64-url-safe/encode (pr-str branch))})
