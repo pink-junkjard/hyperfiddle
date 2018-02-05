@@ -1,5 +1,5 @@
 (ns hypercrud.browser.base
-  (:require [cats.core :as cats :refer [mlet]]
+  (:require [cats.core :as cats :refer [mlet return]]
             [cats.monad.either :as either]
             [hypercrud.browser.auto-anchor :as auto-anchor]
             [hypercrud.browser.auto-fiddle :as auto-fiddle]
@@ -17,7 +17,9 @@
             [hypercrud.types.ThinEntity :refer [#?(:cljs ThinEntity)]]
             [hypercrud.util.non-fatal :refer [try-either]]
             [hypercrud.util.reactive :as reactive]
-            [hypercrud.util.string :as hc-string])
+            [hypercrud.util.string :as hc-string]
+            [hyperfiddle.legacy-issue-43 :as issue43]
+            [taoensso.timbre :as timbre])
   #?(:clj
      (:import (hypercrud.types.Entity Entity)
               (hypercrud.types.ThinEntity ThinEntity))))
@@ -69,27 +71,45 @@
       {:meta-fiddle-req' meta-fiddle-request
        :fiddle' (cats/bind meta-fiddle-request #(deref (hc/hydrate (:peer ctx) %)))})))
 
+(defn- fix-param [param]
+  (cond
+    (instance? Entity param) (:db/id param)
+    (instance? ThinEntity param) (:db/id param)
+    :else param))
+
+(defn validate-params [q params ctx]
+  {:pre [(vector? q)]
+   :post [#_(do (timbre/debug %) true)]}
+  (mlet [query-holes (try-either (q-util/parse-holes q)) #_"normalizes for :in $"
+         :let [;_ (timbre/debug params query-holes q)
+               db-lookup (q-util/build-dbhole-lookup ctx)
+               ; Add in named database params that aren't formula params
+               [params' unused] (loop [acc []
+                                       params params
+                                       [x & xs] query-holes]
+                                  (let [is-db (.startsWith x "$")
+                                        next-param (if is-db (get db-lookup x)
+                                                             (fix-param (first params)))
+                                        rest-params (if is-db params
+                                                              (rest params))
+                                        acc (conj acc next-param)]
+                                    (if xs
+                                      (recur acc rest-params xs)
+                                      [acc rest-params])))]]
+    ; validation. better to show the query and overlay the params or something?
+    (cond (seq unused) (either/left {:message "unused param" :data {:query q :params params' :unused unused}})
+          (not= (count params') (count query-holes)) (either/left {:message "missing params" :data {:query q :params params' :unused unused}})
+          :else-valid (either/right params'))))
+
 (defn request-for-fiddle [fiddle ctx]
   (case (:fiddle/type fiddle)
-    :query
-    (mlet [q (hc-string/memoized-safe-read-edn-string (:fiddle/query fiddle))
-           query-holes (try-either (q-util/parse-holes q))]
-      (let [params-lookup (merge (get-in ctx [:route :request-params]) (q-util/build-dbhole-lookup ctx))
-            params (->> query-holes
-                        (mapv (juxt identity (fn [hole-name]
-                                               (let [param (get params-lookup hole-name)]
-                                                 (cond
-                                                   (instance? Entity param) (:db/id param)
-                                                   (instance? ThinEntity param) (:db/id param)
-                                                   :else param))))))
-            missing (->> params (filter (comp nil? second)) (mapv first))]
-        (if (empty? missing)
-          (cats/return (->QueryRequest q (mapv second params)))
-          (either/left {:message "missing param" :data {:params (into {} params) :missing missing}}))))
+    :query (mlet [q (hc-string/memoized-safe-read-edn-string (:fiddle/query fiddle))
+                  params (validate-params q (issue43/normalize-params (get-in ctx [:route :request-params])) ctx)]
+             (return (->QueryRequest q params)))
 
     :entity
-    (let [request-params (get-in ctx [:route :request-params])
-          e (:entity request-params)
+    (let [params (issue43/normalize-params (get-in ctx [:route :request-params]))
+          [e #_"fat" a] params
           uri (try (let [dbname (.-dbname e)]               ;todo report this exception better
                      (get-in ctx [:hypercrud.browser/repository :repository/environment dbname]))
                    (catch #?(:clj Exception :cljs js/Error) e nil))
@@ -98,14 +118,10 @@
                            first)
                        ['*])]
       (if (or (nil? uri) (nil? (:db/id e)))
-        (either/left {:message "missing param" :data {:params request-params
-                                                      :missing #{:entity}}})
+        (either/left {:message "malformed entity param" :data {:params params}})
         (either/right
           (->EntityRequest
-            (:db/id e)
-            (:a request-params)
-            (hc/db (:peer ctx) uri (:branch ctx))
-            pull-exp))))
+            (:db/id e) a (hc/db (:peer ctx) uri (:branch ctx)) pull-exp))))
 
     :blank (either/right nil)
 

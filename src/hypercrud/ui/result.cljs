@@ -9,7 +9,8 @@
             [hypercrud.ui.table :as table]
             [hypercrud.util.core :as util]
             [hypercrud.util.non-fatal :refer [try-either]]
-            [hypercrud.util.reactive :as reactive]))
+            [hypercrud.util.reactive :as reactive]
+            [hyperfiddle.legacy-issue-43 :as issue43]))
 
 
 (defn result-renderer [result ordered-fes links ctx]
@@ -20,17 +21,18 @@
     ; Which means at that point it might as well return monad and let the wrapper sort out the errors?
     (case (get-in ctx [:fiddle :fiddle/type])
       :entity (if-let [a (get-in ctx [:request :a])]
-                (either/branch
-                  (try-either (.-dbname (get-in ctx [:route :request-params :entity])))
-                  (fn [e]
-                    [:pre (util/pprint-str e)])
-                  (fn [source-symbol]
-                    (case (get-in ctx [:schemas (str source-symbol) a :db/cardinality :db/ident])
-                      :db.cardinality/one
-                      (form/Relation (assoc ctx :relation [result]))
+                (let [[e a] (issue43/normalize-params (get-in ctx [:route :request-params]))]
+                  (either/branch
+                    (try-either (.-dbname e))
+                    (fn [e]
+                      [:pre (util/pprint-str e)])
+                    (fn [source-symbol]
+                      (case (get-in ctx [:schemas (str source-symbol) a :db/cardinality :db/ident])
+                        :db.cardinality/one
+                        (form/Relation (assoc ctx :relation [result]))
 
-                      :db.cardinality/many
-                      (table/Table (context/relations ctx (mapv vector result))))))
+                        :db.cardinality/many
+                        (table/Table (context/relations ctx (mapv vector result)))))))
                 (form/Relation (context/relation ctx (reactive/atom [result]))))
 
       :query (either/branch

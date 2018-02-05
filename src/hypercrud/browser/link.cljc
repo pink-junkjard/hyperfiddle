@@ -1,19 +1,20 @@
 (ns hypercrud.browser.link
   (:require [cats.core :as cats]
             [cats.monad.either :as either]
-            [clojure.set :as set]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.popovers :as popovers]
             [hypercrud.browser.q-util :as q-util]
             [hypercrud.browser.routing :as routing]
             [hypercrud.compile.eval :as eval]
-            [hypercrud.util.core :refer [pprint-str]]
+            [hypercrud.util.core :refer [pprint-str unwrap]]
             [hypercrud.util.non-fatal :refer [try-either]]
             [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :as hc-string]
             [hyperfiddle.foundation.actions :as foundation-actions]
             [promesa.core :as p]
-            [taoensso.timbre :as timbre]))
+            [taoensso.timbre :as timbre]
+            [hypercrud.browser.base :as base]
+            [hyperfiddle.legacy-issue-43 :as issue43]))
 
 
 (defn option-link? [link]
@@ -60,25 +61,18 @@
 ; todo belongs in routing ns
 ; this is same business logic as base/request-for-link
 ; this is currently making assumptions on dbholes
-(defn validated-route' [fiddle route]
+(defn validated-route' [fiddle route ctx]
   ; We specifically hydrate this deep just so we can validate anchors like this.
-  (let [have (set (keys (into {} (remove (comp nil? val) (:request-params route)))))]
+  (let [params (issue43/normalize-params (:request-params route))]
     (case (:fiddle/type fiddle)
-      :query (let [q (-> (q-util/safe-parse-query-validated fiddle)
-                         (cats/mplus (either/right []))
-                         (cats/extract))
-                   ; todo check fe conn
-                   ; todo merge in dbhole lookup, see: hypercrud.browser.base/request-for-link
-                   ; todo parse-param-holes can throw
-                   need (set (q-util/parse-param-holes q))
-                   missing (set/difference need have)]
-               (if (empty? missing)
-                 (either/right route)
-                 (either/left {:message "missing query params" :data {:have have :missing missing}})))
-      :entity (if (not= nil (get-in route [:request-params :entity])) ; add logic for a
+      ; todo check fe conn
+      ; todo merge in dbhole lookup, see: hypercrud.browser.base/request-for-link
+      :query (let [q (unwrap (q-util/safe-parse-query-validated fiddle))]
+               (base/validate-params q params ctx))
+      :entity (if (not= nil params) ; handles `e` but no logic for `[e a]`
                 ; todo check fe conn
                 (either/right route)
-                (either/left {:message "missing query params" :data {:have have :missing #{:entity}}}))
+                (either/left {:message "malformed entity param" :data {:params params}}))
       :blank (either/right route)
       (either/left {:message "route has no fiddle" :data {:route route}}))))
 
@@ -94,7 +88,7 @@
 
   (let [fiddle (:link/fiddle link)                          ; can be nil - in which case route is invalid
         route (-> unvalidated-route' (cats/mplus (either/right nil)) (cats/extract))
-        validated-route' (validated-route' fiddle route)
+        validated-route' (validated-route' fiddle route ctx)
         user-props' (cats/bind (eval/eval-str (:hypercrud/props link))
                                (fn [user-expr]
                                  (if user-expr

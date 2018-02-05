@@ -3,8 +3,9 @@
             [cats.monad.either :as either]
             [clojure.string :as string]
             [hypercrud.client.core :as hc]
-            [hypercrud.util.core :as util]
-            [hypercrud.util.string :as hc-string]))
+            [hypercrud.util.core :as util :refer [tee]]
+            [hypercrud.util.string :as hc-string]
+            [taoensso.timbre :as timbre]))
 
 
 (defn parse-holes [q]
@@ -28,5 +29,7 @@
 (defn build-dbhole-lookup [ctx]
   (->> (get-in ctx [:hypercrud.browser/repository :repository/environment])
        (filter (fn [[k _]] (and (string? k) (string/starts-with? k "$"))))
-       (map (juxt #(first %) #(hc/db (:peer ctx) (second %) (:branch ctx))))
+       (map (juxt #(first %) (tee #(hc/db (:peer ctx) (second %) (:branch ctx))
+                                  #(if (nil? (second %))
+                                     (timbre/warn (second %) (keys ctx))))))
        (into {})))

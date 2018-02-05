@@ -11,7 +11,8 @@
             [hypercrud.client.schema :as schema-util]
             [hypercrud.util.non-fatal :refer [try-catch-non-fatal try-either]]
             [hypercrud.util.reactive :as reactive]
-            [taoensso.timbre :as timbre]))
+            [taoensso.timbre :as timbre]
+            [hyperfiddle.legacy-issue-43 :as issue43]))
 
 
 (declare request-from-route)
@@ -79,19 +80,20 @@
            (apply concat))
       (case (get-in ctx [:fiddle :fiddle/type])
         :entity (if-let [a (get-in ctx [:request :a])]
-                  (either/branch
-                    (try-either (.-dbname (get-in ctx [:route :request-params :entity])))
-                    (constantly nil)
-                    (fn [source-symbol]
-                      (case (get-in ctx [:schemas (str source-symbol) a :db/cardinality :db/ident])
-                        :db.cardinality/one
-                        (let [ctx (context/relation ctx (reactive/atom [result]))]
-                          (relation-dependent-requests ctx))
+                  (let [[e a] (issue43/normalize-params (get-in ctx [:route :request-params]))]
+                    (either/branch
+                      (try-either (.-dbname e))
+                      (constantly nil)
+                      (fn [source-symbol]
+                        (case (get-in ctx [:schemas (str source-symbol) a :db/cardinality :db/ident])
+                          :db.cardinality/one
+                          (let [ctx (context/relation ctx (reactive/atom [result]))]
+                            (relation-dependent-requests ctx))
 
-                        :db.cardinality/many
-                        (let [ctx (context/relations ctx (mapv vector result))]
-                          (->> (result/map-relations relation-dependent-requests ctx)
-                               (apply concat))))))
+                          :db.cardinality/many
+                          (let [ctx (context/relations ctx (mapv vector result))]
+                            (->> (result/map-relations relation-dependent-requests ctx)
+                                 (apply concat)))))))
                   (let [ctx (context/relation ctx (reactive/atom [result]))]
                     (relation-dependent-requests ctx)))
 

@@ -13,13 +13,14 @@
             [hypercrud.ui.radio :as radio]
             [hypercrud.ui.result :as result]
             [hypercrud.ui.tooltip :refer [tooltip]]
-            [hypercrud.util.core :as util]
+            [hypercrud.util.core :as util :refer [unwrap]]
             [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :as hc-string]
             [hyperfiddle.foundation :as foundation :refer [staging]]
             [hyperfiddle.foundation.actions :as foundation-actions]
             [hyperfiddle.ide.fiddles.topnav-bindings :as topnav-bindings]
-            [reagent.core :as reagent]))
+            [reagent.core :as reagent]
+            [hyperfiddle.legacy-issue-43 :as issue43]))
 
 
 (defn get-state [state-atom]
@@ -32,17 +33,16 @@
 
 ; inline sys-link data when the entity is a system-fiddle
 (defn shadow-fiddle [fiddle ctx]
-  (let [fiddle-id (get-in ctx [:route :request-params :entity :db/id])
-        system-fiddle? (auto-fiddle/system-fiddle? fiddle-id)]
+  (let [[e a] (issue43/normalize-params (get-in ctx [:route :request-params]))
+        system-fiddle? (auto-fiddle/system-fiddle? (:db/id e))]
     (if system-fiddle?
-      (-> (->> (auto-fiddle/hydrate-system-fiddle fiddle-id)
-               (cats/fmap (fn [fiddle]
-                            (-> fiddle
-                                (update :fiddle/bindings #(or (-> % meta :str) %))
-                                (update :fiddle/renderer #(or (-> % meta :str) %))
-                                (update :fiddle/request #(or (-> % meta :str) %))))))
-          (cats/mplus (either/right nil))
-          (cats/extract))
+      (->> (auto-fiddle/hydrate-system-fiddle (:db/id e))
+           (cats/fmap (fn [fiddle]
+                        (-> fiddle
+                            (update :fiddle/bindings #(or (-> % meta :str) %))
+                            (update :fiddle/renderer #(or (-> % meta :str) %))
+                            (update :fiddle/request #(or (-> % meta :str) %)))))
+           unwrap)
       fiddle)))
 
 ; ugly hacks to recursively fix the ui for sys links
