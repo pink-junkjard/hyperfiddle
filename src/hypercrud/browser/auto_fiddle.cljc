@@ -51,10 +51,9 @@
    :fiddle/query (str [:find (list 'pull $db '?e [:db/id :db/ident])
                        :in $db
                        :where
-                       [$db '?e :db/ident '?ident]]
-                      '[(namespace ?ident) ?ns]
-                      '[(= ?ns "db.unique")])
-
+                       [$db '?e :db/ident '?ident]
+                       '[(namespace ?ident) ?ns]
+                       '[(= ?ns "db.unique")]])
    :fiddle/type :query})
 
 (defn schema-valueType-options [$db]
