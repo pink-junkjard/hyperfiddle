@@ -3,7 +3,6 @@
     #?(:cljs [hypercrud.browser.browser-ui :as browser-ui])
             [hypercrud.browser.core :as browser]
             [hypercrud.browser.routing :as routing]
-            [hypercrud.browser.routing :as routing]
             [hypercrud.client.core :as hc]
     #?(:cljs [hypercrud.react.react-fragment :refer [react-fragment]])
     #?(:cljs [hypercrud.ui.navigate-cmp :as navigate-cmp])
@@ -12,8 +11,9 @@
             [hypercrud.util.string :as hc-string]
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.ide-rt :as ide-rt]
-            [taoensso.timbre :as timbre]
+            [hyperfiddle.runtime :as runtime]
     #?(:cljs [reagent.core :as reagent])
+            [taoensso.timbre :as timbre]
 
     ; pull in public ui deps
     ; todo these hc.ui.* should be reduced to one require e.g. [hypercrud.ui]
@@ -108,21 +108,15 @@
   (-> (update ctx :peer #(-sub-rt % "user" nil))
       (*-target-context domain route user-profile)))
 
-(defn route-decode [foo domain s]
+(defn route-decode [domain s]
   {:pre [domain (string? s)]}
-  (case foo
-    "page" (case s
-             "/" (unwrap (hc-string/safe-read-edn-string (:domain/home-route domain)))
-             (routing/decode s))
-    "user" (routing/decode s)
-    "ide" (routing/decode s)))
+  (case s
+    "/" (unwrap (hc-string/safe-read-edn-string (:domain/home-route domain)))
+    (routing/decode s)))
 
-(defn route-encode [foo domain route]
+(defn route-encode [domain route]
   ; use domain to canonicalize
-  (case foo
-    "page" (routing/encode route)
-    "user" (routing/encode route)
-    "ide" (routing/encode route)))
+  (routing/encode route))
 
 (defn local-basis [foo global-basis -domain #_"offensive" route ctx]
   ;local-basis-ide and local-basis-user

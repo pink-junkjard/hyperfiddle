@@ -132,7 +132,7 @@
     (p/resolved nil)
     (-> (condp = (inc init-level)
           LEVEL-GLOBAL-BASIS (foundation-actions/refresh-global-basis rt dispatch! get-state)
-          LEVEL-SET-ROUTE (foundation-actions/set-route rt (runtime/decode-route rt "page" encoded-route) dispatch! get-state)
+          LEVEL-SET-ROUTE (foundation-actions/set-route rt (runtime/decode-route rt encoded-route) dispatch! get-state)
           LEVEL-LOCAL-BASIS (foundation-actions/refresh-page-local-basis rt dispatch! get-state)
           LEVEL-HYDRATE-PAGE (foundation-actions/hydrate-page rt nil dispatch! get-state))
         (p/then #(bootstrap-data rt dispatch! get-state (inc init-level) load-level encoded-route)))))

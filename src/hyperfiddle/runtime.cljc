@@ -37,5 +37,5 @@
 (defprotocol Route
   ; let the call site sort out how to get domain-basis.
   ; maybe from global-basis, maybe from local-basis, depends what we were sent up.
-  (encode-route [rt foo v])
-  (decode-route [rt foo s]))
+  (encode-route [rt v])
+  (decode-route [rt s]))
