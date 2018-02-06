@@ -27,11 +27,11 @@
   ;  (global-basis-rpc! service-uri))
 
   runtime/Route
-  (decode-route [rt foo s]
-    (ide/route-decode foo domain s))
+  (decode-route [rt s]
+    (ide/route-decode domain s))
 
-  (encode-route [rt foo v]
-    (ide/route-encode foo domain v))
+  (encode-route [rt v]
+    (ide/route-encode domain v))
 
   runtime/AppValLocalBasis
   (local-basis [rt global-basis route branch]
@@ -106,7 +106,7 @@
                       (reducers/root-reducer nil))]
     (-> (mlet [domain (fetch-domain-rpc! hostname (:HF_HOSTNAME env) (lib/req->service-uri env req) domain-basis state-val)
                :let [rt (HydrateRouteRuntime. (:HF_HOSTNAME env) hostname (lib/req->service-uri env req) domain foo target-repo (reactive/atom state-val))
-                     route (runtime/decode-route rt foo encoded-route)]]
+                     route (runtime/decode-route rt encoded-route)]]
           (-> (runtime/hydrate-route rt local-basis route branch (:stage state-val))
               (p/then (fn [data]
                         (doto res

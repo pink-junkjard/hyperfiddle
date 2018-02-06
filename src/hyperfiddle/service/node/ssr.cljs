@@ -84,11 +84,11 @@
           (return global-basis))))
 
   runtime/Route
-  (decode-route [rt foo s]
-    (ide/route-decode foo domain s))
+  (decode-route [rt s]
+    (ide/route-decode domain s))
 
-  (encode-route [rt foo v]
-    (ide/route-encode foo domain v))
+  (encode-route [rt v]
+    (ide/route-encode domain v))
 
   runtime/AppValLocalBasis
   (local-basis-page [rt global-basis route]
@@ -103,10 +103,10 @@
   runtime/AppValHydrate
   (hydrate-route [rt local-basis route branch stage]
     ; If IDE, send up target-repo as well (encoded in route as query param?)
-    (hydrate-route-rpc! service-uri local-basis (ide/route-encode foo domain route) foo target-repo branch stage))
+    (hydrate-route-rpc! service-uri local-basis (ide/route-encode domain route) foo target-repo branch stage))
 
   (hydrate-route-page [rt local-basis route stage]
-    (hydrate-route-rpc! service-uri local-basis (ide/route-encode "page" domain route) "page" nil nil stage))
+    (hydrate-route-rpc! service-uri local-basis (ide/route-encode domain route) "page" nil nil stage))
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]

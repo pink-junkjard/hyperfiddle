@@ -22,11 +22,11 @@
     (global-basis rt hyperfiddle-hostname hostname))
 
   runtime/Route
-  (decode-route [rt foo s]
-    (ide/route-decode foo domain s))
+  (decode-route [rt s]
+    (ide/route-decode domain s))
 
-  (encode-route [rt foo v]
-    (ide/route-encode foo domain v))
+  (encode-route [rt v]
+    (ide/route-encode domain v))
 
   runtime/AppValLocalBasis
   (local-basis [rt global-basis route branch]

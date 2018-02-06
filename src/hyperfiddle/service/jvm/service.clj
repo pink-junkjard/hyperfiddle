@@ -6,6 +6,7 @@
             [hypercrud.util.base-64-url-safe :as base-64-url-safe]
             [hypercrud.util.reactive :as reactive]
             [hyperfiddle.appval.state.reducers :as reducers]
+            [hyperfiddle.io.domain :refer [fetch-domain!]]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-requests]]
             [hyperfiddle.io.sync :refer [sync]]
             [hyperfiddle.io.transact :refer [transact!]]
@@ -21,9 +22,7 @@
             [io.pedestal.interceptor.helpers :as interceptor]
             [promesa.core :as p]
             [ring.util.response :as ring-resp]
-            [taoensso.timbre :as timbre]
-
-            [hyperfiddle.io.domain :refer [fetch-domain!]]))
+            [taoensso.timbre :as timbre]))
 
 
 (defn http-index [req]
@@ -90,7 +89,7 @@
               branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string)]
           (-> (mlet [domain (fetch-domain! hostname (:HF_HOSTNAME env) (:domain global-basis) nil #_"WHY NO PASS STAGE?????")
                      :let [rt (->LocalBasis (:HF_HOSTNAME env) hostname domain foo nil (reactive/atom state-val))
-                           route (runtime/decode-route rt foo (:encoded-route path-params))]
+                           route (runtime/decode-route rt (:encoded-route path-params))]
                      local-basis (runtime/local-basis rt global-basis route branch)]
                 (return
                   {:status 200
@@ -118,7 +117,7 @@
                             (reducers/root-reducer nil))]
           (mlet [domain (fetch-domain! hostname (:HF_HOSTNAME env) domain-basis body-params)
                  :let [rt (->HydrateRoute (:HF_HOSTNAME env) hostname domain foo target-repo (reactive/atom state-val))
-                       route (runtime/decode-route rt foo (str "/" (:encoded-route path-params)))]
+                       route (runtime/decode-route rt (str "/" (:encoded-route path-params)))]
                  data (runtime/hydrate-route rt local-basis route branch (:stage state-val))]
             (return
               {:status 200
