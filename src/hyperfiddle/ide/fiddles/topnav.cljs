@@ -6,7 +6,6 @@
             [hypercrud.browser.base :as base]
             [hypercrud.browser.browser-ui :as browser-ui]
             [hypercrud.browser.link :as link]
-            [hypercrud.browser.routing :as routing]
             [hypercrud.client.tx :as tx]
             [hypercrud.react.react-fragment :refer [react-fragment]]
             [hypercrud.ui.control.markdown-rendered :refer [markdown]]
@@ -19,6 +18,7 @@
             [hyperfiddle.foundation :as foundation :refer [staging]]
             [hyperfiddle.foundation.actions :as foundation-actions]
             [hyperfiddle.ide.fiddles.topnav-bindings :as topnav-bindings]
+            [hyperfiddle.runtime :as runtime]
             [reagent.core :as reagent]
             [hyperfiddle.legacy-issue-43 :as issue43]))
 
@@ -113,7 +113,7 @@
        ((:anchor ctx) :new-fiddle ctx "new-fiddle")
        (if (:user-profile ctx)
          ((:anchor ctx) :account ctx (get-in ctx [:user-profile :email]))
-         [:span.nav-link.auth [:a {:href (str (stateless-login-url ctx) "&state=" (routing/encode (:target-route ctx)))} "Login"]])]]
+         [:span.nav-link.auth [:a {:href (str (stateless-login-url ctx) "&state=" (runtime/encode-route (:peer ctx) (:target-route ctx)))} "Login"]])]]
      [:div.hyperfiddle-topnav-fiddle-controls
       (result/result-renderer fiddle ordered-fes links ctx)
       ]]))

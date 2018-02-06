@@ -21,9 +21,11 @@
                                 (update :value deref)
                                 (pprint-str 150))))
   (aset global "hc_route" (fn [ctx] (-> ctx :route pprint-str)))
-  (aset global "hc_root_route" #(-> js/document.location.pathname
-                                    routing/decode
-                                    pprint-str))
+  (aset global "hc_root_route" (fn []
+                                 (js/console.warn "WARNING: hc_root_route needs to use the runtime for decoding, this will be broken with custom user routing")
+                                 (-> js/document.location.pathname
+                                     routing/decode
+                                     pprint-str)))
   (aset global "react_fragment" react-fragment/react-fragment)
   (aset global "dispatch" (fn [ctx action & args]
                             ; ((:dispatch! ctx) ())
