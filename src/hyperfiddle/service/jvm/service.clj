@@ -1,6 +1,7 @@
 (ns hyperfiddle.service.jvm.service
   (:refer-clojure :exclude [sync])
   (:require [cats.core :refer [mlet return]]
+            [hypercrud.browser.routing :as routing]
             [hypercrud.compile.reader :as reader]
             [hypercrud.transit :as hc-t]
             [hypercrud.util.base-64-url-safe :as base-64-url-safe]
@@ -85,11 +86,11 @@
               state-val (-> {:global-basis global-basis
                              :user-profile (:user req)}
                             (reducers/root-reducer nil))
+              route (routing/decode (str "/" (:encoded-route path-params)))
               foo (some-> (:foo path-params) base-64-url-safe/decode reader/read-edn-string)
               branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string)]
           (-> (mlet [domain (fetch-domain! hostname (:HF_HOSTNAME env) (:domain global-basis) nil #_"WHY NO PASS STAGE?????")
-                     :let [rt (->LocalBasis (:HF_HOSTNAME env) hostname domain foo nil (reactive/atom state-val))
-                           route (runtime/decode-route rt (:encoded-route path-params))]
+                     :let [rt (->LocalBasis (:HF_HOSTNAME env) hostname domain foo nil (reactive/atom state-val))]
                      local-basis (runtime/local-basis rt global-basis route branch)]
                 (return
                   {:status 200
@@ -107,6 +108,7 @@
       (try
         (let [hostname (:server-name req)
               local-basis (-> (:local-basis path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
+              route (routing/decode (str "/" (:encoded-route path-params)))
               foo (some-> (:foo path-params) base-64-url-safe/decode reader/read-edn-string)
               target-repo (some-> (:target-repo path-params) base-64-url-safe/decode reader/read-edn-string)
               branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string)
@@ -116,8 +118,7 @@
                              :user-profile (:user req)}
                             (reducers/root-reducer nil))]
           (mlet [domain (fetch-domain! hostname (:HF_HOSTNAME env) domain-basis body-params)
-                 :let [rt (->HydrateRoute (:HF_HOSTNAME env) hostname domain foo target-repo (reactive/atom state-val))
-                       route (runtime/decode-route rt (str "/" (:encoded-route path-params)))]
+                 :let [rt (->HydrateRoute (:HF_HOSTNAME env) hostname domain foo target-repo (reactive/atom state-val))]
                  data (runtime/hydrate-route rt local-basis route branch (:stage state-val))]
             (return
               {:status 200

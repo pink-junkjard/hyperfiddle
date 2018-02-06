@@ -1,5 +1,6 @@
 (ns hyperfiddle.service.node.hydrate-route
   (:require [cats.core :refer [mlet return]]
+            [hypercrud.browser.routing :as routing]
             [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
             [hypercrud.compile.reader :as reader]
@@ -99,14 +100,14 @@
         target-repo (some-> (:target-repo path-params) base-64-url-safe/decode reader/read-edn-string)
         branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
         local-basis (-> (:local-basis path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
+        route (routing/decode encoded-route)
         domain-basis (filter (fn [[k v]] (= #uri "datomic:free://datomic:4334/domains" k)) local-basis)
         state-val (-> {:local-basis local-basis             ; no need for :route here, it is ignored, this whole thing gets clobbered
                        :stage (some-> req .-body lib/hack-buggy-express-body-text-parser transit/decode)
                        :user-profile (lib/req->user-profile env req)}
                       (reducers/root-reducer nil))]
     (-> (mlet [domain (fetch-domain-rpc! hostname (:HF_HOSTNAME env) (lib/req->service-uri env req) domain-basis state-val)
-               :let [rt (HydrateRouteRuntime. (:HF_HOSTNAME env) hostname (lib/req->service-uri env req) domain foo target-repo (reactive/atom state-val))
-                     route (runtime/decode-route rt encoded-route)]]
+               :let [rt (HydrateRouteRuntime. (:HF_HOSTNAME env) hostname (lib/req->service-uri env req) domain foo target-repo (reactive/atom state-val))]]
           (-> (runtime/hydrate-route rt local-basis route branch (:stage state-val))
               (p/then (fn [data]
                         (doto res

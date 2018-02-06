@@ -1,5 +1,6 @@
 (ns hyperfiddle.service.node.local-basis
   (:require [cats.core :refer [mlet return]]
+            [hypercrud.browser.routing :as routing]
             [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
             [hypercrud.compile.reader :as reader]
@@ -64,21 +65,19 @@
   IHash
   (-hash [this] (goog/getUid this)))
 
-(defn http-local-basis [env req res
-                        {:keys [double-encoded-route] :as path-params}
-                        query-params]
+(defn http-local-basis [env req res {:keys [encoded-route] :as path-params} query-params]
   {:pre [(:target-repo path-params) #_"Did the client rt send this with the http request?"]}
   ; Never called.
   (let [hostname (.-hostname req)
         global-basis (-> path-params :global-basis base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
+        route (routing/decode encoded-route)
         foo (some-> (:foo path-params) base-64-url-safe/decode reader/read-edn-string)
         branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
         state-val (-> {:global-basis global-basis
                        :user-profile (lib/req->user-profile env req)}
                       (reducers/root-reducer nil))]
     (-> (mlet [domain (fetch-domain-rpc! hostname (:HF_HOSTNAME env) (lib/req->service-uri env req) (:domain global-basis) state-val)
-               :let [rt (LocalBasisRuntime. (:HF_HOSTNAME env) hostname (lib/req->service-uri env req) domain foo (:target-repo path-params) (reactive/atom state-val))
-                     route (runtime/decode-route rt double-encoded-route)]
+               :let [rt (LocalBasisRuntime. (:HF_HOSTNAME env) hostname (lib/req->service-uri env req) domain foo (:target-repo path-params) (reactive/atom state-val))]
                local-basis (runtime/local-basis rt global-basis route branch)]
           (return
             (doto res

@@ -103,10 +103,10 @@
   runtime/AppValHydrate
   (hydrate-route [rt local-basis route branch stage]
     ; If IDE, send up target-repo as well (encoded in route as query param?)
-    (hydrate-route-rpc! service-uri local-basis (ide/route-encode domain route) foo target-repo branch stage))
+    (hydrate-route-rpc! service-uri local-basis route foo target-repo branch stage))
 
   (hydrate-route-page [rt local-basis route stage]
-    (hydrate-route-rpc! service-uri local-basis (ide/route-encode domain route) "page" nil nil stage))
+    (hydrate-route-rpc! service-uri local-basis route "page" nil nil stage))
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
