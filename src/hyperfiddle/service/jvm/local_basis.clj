@@ -5,6 +5,7 @@
             [hypercrud.client.peer :as peer]
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.ide :as ide]
+            [hyperfiddle.ide-rt :as ide-rt]
             [hyperfiddle.io.global-basis :refer [global-basis]]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-requests stage-val->staged-branches]]
             [hyperfiddle.io.sync :refer [sync]]
@@ -51,7 +52,7 @@
   (db [this uri branch]
     (peer/db-pointer uri branch))
 
-  ide/SplitRuntime
+  ide-rt/SplitRuntime
   (sub-rt [rt foo target-repo]
     (LocalBasis. hyperfiddle-hostname hostname domain foo target-repo state-atom))
   (target-repo [rt] target-repo))

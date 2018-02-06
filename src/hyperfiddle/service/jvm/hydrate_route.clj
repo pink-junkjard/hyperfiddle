@@ -7,6 +7,7 @@
             [hypercrud.util.reactive :as reactive]
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.ide :as ide]
+            [hyperfiddle.ide-rt :as ide-rt]
             [hyperfiddle.io.global-basis :refer [global-basis]]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-requests stage-val->staged-branches]]
             [hyperfiddle.io.hydrate-route :refer [hydrate-loop hydrate-loop-adapter]]
@@ -83,7 +84,7 @@
   (hydrate-api [this request]
     (unwrap @(hc/hydrate this request)))
 
-  ide/SplitRuntime
+  ide-rt/SplitRuntime
   (sub-rt [rt foo target-repo]
     (HydrateRoute. hyperfiddle-hostname hostname domain foo target-repo state-atom))
   (target-repo [rt] target-repo))

@@ -56,7 +56,7 @@
     (peer/db-pointer uri branch))
 
   ; Happened on client, node reconstructed the right rt already
-  ;ide/SplitRuntime
+  ;ide-rt/SplitRuntime
   ;(sub-rt [rt foo target-repo]
   ;  (LocalBasisRuntime. hyperfiddle-hostname hostname service-uri foo target-repo state-atom))
   ;(target-repo [rt] targe-repo)

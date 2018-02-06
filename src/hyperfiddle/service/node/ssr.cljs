@@ -11,6 +11,7 @@
             [hyperfiddle.appval.state.reducers :as reducers]
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.ide :as ide]
+            [hyperfiddle.ide-rt :as ide-rt]
             [hyperfiddle.io.global-basis :refer [global-basis-rpc!]]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-requests-rpc!]]
             [hyperfiddle.io.hydrate-route :refer [hydrate-route-rpc!]]
@@ -138,7 +139,7 @@
   (hydrate-api [this request]
     (unwrap @(hc/hydrate this request)))
 
-  ide/SplitRuntime
+  ide-rt/SplitRuntime
   (sub-rt [rt foo target-repo]
     (IdeSsrRuntime. hyperfiddle-hostname hostname domain foo target-repo service-uri state-atom))
   (target-repo [rt] target-repo)
