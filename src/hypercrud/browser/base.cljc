@@ -56,17 +56,17 @@
 
 (defn meta-request-for-fiddle [ctx]
   (try-either
-    (let [fiddle-id (get-in ctx [:route :link-id])
-          _ (assert fiddle-id "missing link-id")
+    (let [fiddle-id (get-in ctx [:route :fiddle-id])
+          _ (assert fiddle-id "missing fiddle-id")
           dbval (hc/db (:peer ctx) (get-in ctx [:hypercrud.browser/repository :dbhole/uri]) (:branch ctx))]
       (->EntityRequest fiddle-id nil dbval meta-pull-exp-for-link))))
 
 (defn hydrate-fiddle [ctx]
   {:pre [(-> ctx :hypercrud.browser/repository)
          (-> ctx :hypercrud.browser/repository :dbhole/uri)]}
-  (if (auto-fiddle/system-fiddle? (get-in ctx [:route :link-id]))
+  (if (auto-fiddle/system-fiddle? (get-in ctx [:route :fiddle-id]))
     {:meta-fiddle-req' (either/right nil)
-     :fiddle' (auto-fiddle/hydrate-system-fiddle (get-in ctx [:route :link-id]))}
+     :fiddle' (auto-fiddle/hydrate-system-fiddle (get-in ctx [:route :fiddle-id]))}
     (let [meta-fiddle-request (meta-request-for-fiddle ctx)]
       {:meta-fiddle-req' meta-fiddle-request
        :fiddle' (cats/bind meta-fiddle-request #(deref (hc/hydrate (:peer ctx) %)))})))

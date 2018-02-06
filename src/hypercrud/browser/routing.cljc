@@ -29,8 +29,8 @@
 
                          :else v))
                      route)
-      (update :link-id (let [uri (:dbhole/uri repository)]
-                         #(invert-id % uri)))))
+      (update :fiddle-id (let [uri (:dbhole/uri repository)]
+                           #(invert-id % uri)))))
 
 (defn ctx->id-lookup [uri ctx]
   ; todo what about if the tempid is on a higher branch in the uri?
@@ -69,7 +69,7 @@
                {
                 ;:code-database (:link/code-database link) todo when cross db references are working on links, don't need to inherit code-db-uri
                 :code-database (get-in ctx [:hypercrud.browser/repository :dbhole/name])
-                :link-id fiddle-id})
+                :fiddle-id fiddle-id})
         ctx))))
 
 (defn encode [route]
@@ -82,7 +82,7 @@
          (string/starts-with? route-str "/")
          #_(not= "/" route-str)]
    :post [#_(do (println % route-str) true)
-          #_(if % (:link-id %))]}
+          #_(if % (:fiddle-id %))]}
   ; Urls in the wild get query params added because tweetdeck tools think its safe e.g.:
   ; http://localhost/hyperfiddle-blog/ezpkb21haW4gbmlsLCA6cHJvamVjdCAiaHlwZXJmaWRkbGUtYmxvZyIsIDpsaW5rLWRiaWQgI0RiSWRbMTc1OTIxODYwNDU4OTQgMTc1OTIxODYwNDU0MjJdLCA6cXVlcnktcGFyYW1zIHs6ZW50aXR5ICNEYklkWzE3NTkyMTg2MDQ2MTMyIDE3NTkyMTg2MDQ1ODgyXX19?utm_content=buffer9a24a&utm_medium=social&utm_source=twitter.com&utm_campaign=buffer
   (let [[_ route-encoded-and-query-params] (string/split route-str #"/")]

@@ -107,7 +107,7 @@
        :tooltip (if-not (empty? errors)
                   [:warning (pprint-str errors)]
                   (if (:ide-active ctx)
-                    [nil (pr-str (dissoc route :code-database :link-id))]
+                    [nil (pr-str (dissoc route :code-database :fiddle-id))]
                     (:tooltip user-props)))
        :class (->> [(:class user-props)
                     (if-not (empty? errors) "invalid")]

@@ -33,8 +33,8 @@
 
 (defn ide-route [route]
   {:code-database "root"
-   :link-id :hyperfiddle/topnav
-   :request-params #entity["$" (:link-id route)]})
+   :fiddle-id :hyperfiddle/topnav
+   :request-params #entity["$" (:fiddle-id route)]})
 
 (def -sub-rt (memoize ide-rt/sub-rt))
 

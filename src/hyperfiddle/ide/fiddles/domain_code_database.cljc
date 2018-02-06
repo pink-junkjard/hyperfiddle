@@ -47,8 +47,8 @@
                                    (filter (fn [[k v]] (and (string? k) (string/starts-with? k "$") (instance? URI v))))
                                    (map (fn [[$name _]]
                                           (let [props {:route {:code-database @(reactive/cursor (:cell-data ctx) [:dbhole/name])
-                                                               :link-id {:ident :schema/all-attributes
-                                                                         :dbhole/name (symbol $name)}}}]
+                                                               :fiddle-id {:ident :schema/all-attributes
+                                                                           :dbhole/name (symbol $name)}}}]
                                             ^{:key $name}
                                             [(:navigate-cmp ctx) props (str $name " schema")])))
                                    (doall))]))))))
