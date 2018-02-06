@@ -1,6 +1,7 @@
 (ns hyperfiddle.io.hydrate-route
   (:require [clojure.set :as set]
             [cuerdas.core :as str]
+            [hypercrud.browser.routing :as routing]
             [hypercrud.http.core :refer [http-request!]]
             [hypercrud.types.EntityRequest :refer [#?(:cljs EntityRequest)]]
             [hypercrud.types.QueryRequest :refer [#?(:cljs QueryRequest)]]
@@ -77,12 +78,12 @@
                                       (->Runtime))))]
       (f ctx))))
 
-(defn hydrate-route-rpc! [service-uri local-basis encoded-route foo target-repo branch stage]
+(defn hydrate-route-rpc! [service-uri local-basis route foo target-repo branch stage]
   ; matrix params instead of path params
   (-> (merge {:url (str/format "%(service-uri)shydrate-route/$local-basis/$encoded-route/$foo/$target-repo/$branch"
                                {:service-uri service-uri
                                 :local-basis (base-64-url-safe/encode (pr-str local-basis))
-                                :encoded-route (subs encoded-route 1) #_"drop leading /"
+                                :encoded-route (subs (routing/encode route) 1) #_"drop leading /"
                                 :foo (base-64-url-safe/encode (pr-str foo))
                                 :target-repo (base-64-url-safe/encode (pr-str target-repo))
                                 :branch (base-64-url-safe/encode (pr-str branch))})
