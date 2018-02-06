@@ -11,6 +11,7 @@
             [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :as hc-string]
             [hyperfiddle.foundation :as foundation]
+            [hyperfiddle.ide-rt :as ide-rt]
             [taoensso.timbre :as timbre]
     #?(:cljs [reagent.core :as reagent])
 
@@ -35,11 +36,7 @@
    :link-id :hyperfiddle/topnav
    :request-params {:entity #entity["$" (:link-id route)]}})
 
-(defprotocol SplitRuntime
-  (sub-rt [rt foo target-repo])
-  (target-repo [rt]))
-
-(def -sub-rt (memoize sub-rt))
+(def -sub-rt (memoize ide-rt/sub-rt))
 
 (let [always-user (atom :user)
       constantly-nil (constantly nil)]
@@ -51,7 +48,7 @@
     (assoc ctx
       :hypercrud.browser/debug "ide"
       :hypercrud.browser/domain (let [target-source-uri (->> (:domain/code-databases target-domain)
-                                                             (filter #(= (:dbhole/name %) (target-repo (:peer ctx))))
+                                                             (filter #(= (:dbhole/name %) (ide-rt/target-repo (:peer ctx))))
                                                              first
                                                              :dbhole/uri)]
                                   (-> (foundation/process-domain-legacy ide-domain)
@@ -132,7 +129,7 @@
   (let [{:keys [domain ide user]} global-basis
         ; basis-maps: List[Map[uri, t]]
         user-basis (get user (:code-database route))
-        ide-basis (get ide (target-repo (:peer ctx)))       ; Why don't we call ide-route-decode? I guess we don't care?
+        ide-basis (get ide (ide-rt/target-repo (:peer ctx))) ; Why don't we call ide-route-decode? I guess we don't care?
         basis-maps (case foo
                      "page" (concat (vals user) #_"for schema in topnav"
                                     (vals ide))             ; dead code i think?
@@ -190,7 +187,7 @@
      (let [ide-domain (hc/hydrate-api (:peer ctx) (foundation/domain-request "hyperfiddle" (:peer ctx)))
            user-profile @(reactive/cursor (.-state-atom (:peer ctx)) [:user-profile])]
        (case foo
-         "page" (view-page -domain route ctx) ; component, seq-component or nil
+         "page" (view-page -domain route ctx)               ; component, seq-component or nil
          ; On SSR side this is only ever called as "page", but it could be differently (e.g. turbolinks)
          ; On Browser side, also only ever called as "page", but it could be configured differently (client side render the ide, server render userland...?)
          "ide" [browser/ui-from-route route (leaf-ide-context ctx ide-domain -domain user-profile)]
