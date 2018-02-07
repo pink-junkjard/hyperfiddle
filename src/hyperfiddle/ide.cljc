@@ -6,7 +6,7 @@
             [hypercrud.client.core :as hc]
     #?(:cljs [hypercrud.react.react-fragment :refer [react-fragment]])
     #?(:cljs [hypercrud.ui.navigate-cmp :as navigate-cmp])
-            [hypercrud.util.core :refer [unwrap]]
+            [hypercrud.util.core :refer [unwrap xorxs update-existing]]
             [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :as hc-string]
             [hyperfiddle.foundation :as foundation]
@@ -34,7 +34,7 @@
 (defn ide-route [route]
   {:code-database "root"
    :fiddle-id :hyperfiddle/topnav
-   :request-params #entity["$" (:fiddle-id route)]})
+   :request-params [#entity["$" (:fiddle-id route)]]})
 
 (def -sub-rt (memoize ide-rt/sub-rt))
 
@@ -111,7 +111,8 @@
 (defn route-decode [domain s]
   {:pre [domain (string? s)]}
   (case s
-    "/" (unwrap (hc-string/safe-read-edn-string (:domain/home-route domain)))
+    "/" (-> (unwrap (hc-string/safe-read-edn-string (:domain/home-route domain)))
+            (update-existing :request-params xorxs))
     (routing/decode s)))
 
 (defn route-encode [domain route]

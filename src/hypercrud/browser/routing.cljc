@@ -11,7 +11,9 @@
             [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
             [hypercrud.util.base-64-url-safe :as base64]
             [hypercrud.util.non-fatal :refer [try-either]]
-            [hypercrud.util.reactive :as reactive])
+            [hypercrud.util.reactive :as reactive]
+            [hypercrud.util.core :refer [update-existing xorxs]]
+            [taoensso.timbre :as timbre])
   #?(:clj
      (:import (hypercrud.types.Entity Entity)
               (hypercrud.types.ThinEntity ThinEntity))))
@@ -49,6 +51,18 @@
                       (get tempid->id temp-id temp-id)))]
     (invert-ids route invert-id (:hypercrud.browser/repository ctx))))
 
+(defn normalize-params [porps]
+  {:pre [(not (:entity porps)) #_"legacy"
+         ; There is some weird shit hitting this assert, like {:db/id nil}
+         #_(not (map? porps)) #_"legacy"]}
+
+  ; careful here -
+  ; (seq [1]) - truthy
+  ; (seq? [1]) - false
+  ; (seq 1) - IllegalArgumentException
+  (cond (instance? ThinEntity porps) [porps]                ; entity is also a map so do this first
+        :else (xorxs porps)))
+
 (defn ^:export build-route' [link ctx]
   (mlet [fiddle-id (if-let [page (:link/fiddle link)]
                      (either/right (:db/id page))
@@ -62,10 +76,13 @@
                                                   (if (instance? Entity v)
                                                     (let [dbname (some-> v .-uri (dbname/uri->dbname ctx))]
                                                       (->ThinEntity dbname (:db/id v)))
-                                                    v))))]]
+                                                    v)))
+                                 (into {}))
+               ;_ (timbre/debug route-params (-> (:link/formula link) meta :str))
+               route-params (update-existing route-params :request-params normalize-params)]]
     (cats/return
       (id->tempid
-        (merge (into {} route-params)
+        (merge route-params
                {
                 ;:code-database (:link/code-database link) todo when cross db references are working on links, don't need to inherit code-db-uri
                 :code-database (get-in ctx [:hypercrud.browser/repository :dbhole/name])

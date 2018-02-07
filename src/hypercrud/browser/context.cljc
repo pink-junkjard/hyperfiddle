@@ -20,6 +20,7 @@
 
 (defn route [ctx route]
   {:pre [(:code-database route)
+         (if-let [params (:request-params route)] (vector? params) true) ; validate normalized already
          (:hypercrud.browser/domain ctx)
          (seq (-> ctx :hypercrud.browser/domain :domain/code-databases))]
    :post [(-> % :hypercrud.browser/repository)

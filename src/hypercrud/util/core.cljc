@@ -87,3 +87,9 @@
 (defn unwrap [v']
   ; On the api side, we never inspect the error, the either is useless
   (either/branch v' (constantly nil) identity))
+
+(defn xorxs [xorxs]
+  (cond (vector? xorxs) xorxs
+        (seq? xorxs) xorxs
+        (nil? xorxs) nil
+        :else-single-value [xorxs] #_"can be a map"))

@@ -4,8 +4,7 @@
             [clojure.set :as set]
             [datascript.parser :as parser]
             [hypercrud.util.core :as util]
-            [hypercrud.util.non-fatal :refer [try-either]]
-            [hyperfiddle.legacy-issue-43 :as issue43]))
+            [hypercrud.util.non-fatal :refer [try-either]]))
 
 
 (defrecord FindElement [name fields source-symbol splat? type])
@@ -120,7 +119,7 @@
 
 (defn auto-find-elements [result ctx]
   (case (get-in ctx [:fiddle :fiddle/type])
-    :entity (mlet [:let [[e] (issue43/normalize-params (get-in ctx [:route :request-params]))]
+    :entity (mlet [:let [[e] (get-in ctx [:route :request-params])]
                    source-symbol (try-either (.-dbname e))
                    :let [fe-name "entity"
                          pull-pattern (get-in ctx [:request :pull-exp])]]

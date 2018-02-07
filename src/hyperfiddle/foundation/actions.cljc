@@ -154,7 +154,7 @@
     (when (not= tx (:stage (get-state)))
       (hydrate-page rt [[:reset-stage tx]] dispatch! get-state))))
 
-(defn transact! [home-route peer target-repository]
+(defn transact! [peer target-repository]
   (fn [dispatch! get-state]
     (dispatch! [:transact!-start])
     (let [{:keys [stage]} (get-state)

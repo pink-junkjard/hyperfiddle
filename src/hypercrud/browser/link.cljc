@@ -13,8 +13,7 @@
             [hyperfiddle.foundation.actions :as foundation-actions]
             [promesa.core :as p]
             [taoensso.timbre :as timbre]
-            [hypercrud.browser.base :as base]
-            [hyperfiddle.legacy-issue-43 :as issue43]))
+            [hypercrud.browser.base :as base]))
 
 
 (defn option-link? [link]
@@ -63,12 +62,12 @@
 ; this is currently making assumptions on dbholes
 (defn validated-route' [fiddle route ctx]
   ; We specifically hydrate this deep just so we can validate anchors like this.
-  (let [params (issue43/normalize-params (:request-params route))]
+  (let [params (:request-params route)]
     (case (:fiddle/type fiddle)
       ; todo check fe conn
       ; todo merge in dbhole lookup, see: hypercrud.browser.base/request-for-link
       :query (let [q (unwrap (q-util/safe-parse-query-validated fiddle))]
-               (base/validate-params q params ctx))
+               (base/validate-query-params q params ctx))
       :entity (if (not= nil params)                         ; handles `e` but no logic for `[e a]`
                 ; todo check fe conn
                 (either/right route)
@@ -87,7 +86,7 @@
   ; each prop might have special rules about his default, for example :visible is default true, does this get handled here?
 
   (let [fiddle (:link/fiddle link)                          ; can be nil - in which case route is invalid
-        route (-> unvalidated-route' (cats/mplus (either/right nil)) (cats/extract))
+        route (unwrap unvalidated-route')
         validated-route' (validated-route' fiddle route ctx)
         user-props' (cats/bind (eval/eval-str (:hypercrud/props link))
                                (fn [user-expr]

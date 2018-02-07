@@ -19,8 +19,7 @@
             [hyperfiddle.foundation.actions :as foundation-actions]
             [hyperfiddle.ide.fiddles.topnav-bindings :as topnav-bindings]
             [hyperfiddle.runtime :as runtime]
-            [reagent.core :as reagent]
-            [hyperfiddle.legacy-issue-43 :as issue43]))
+            [reagent.core :as reagent]))
 
 
 (defn get-state [state-atom]
@@ -33,7 +32,7 @@
 
 ; inline sys-link data when the entity is a system-fiddle
 (defn shadow-fiddle [fiddle ctx]
-  (let [[e a] (issue43/normalize-params (get-in ctx [:route :request-params]))
+  (let [[e a] (get-in ctx [:route :request-params])
         system-fiddle? (auto-fiddle/system-fiddle? (:db/id e))]
     (if system-fiddle?
       (->> (auto-fiddle/hydrate-system-fiddle (:db/id e))
@@ -147,11 +146,7 @@
 (defn ^:export stage-ui [result ordered-fes links ctx]
   [:div.hyperfiddle-topnav-stage
    (result/view result ordered-fes links ctx)               ; for docstring
-   (let [home-route (-> (get-in ctx [:target-domain :domain/home-route])
-                        (hc-string/memoized-safe-read-edn-string)
-                        (cats/mplus (either/right nil))
-                        (cats/extract))
-         anonymous? (nil? (:user-profile ctx))
+   (let [anonymous? (nil? (:user-profile ctx))
          stage @(reactive/cursor (.-state-atom (:peer ctx)) [:stage])
          disabled? (or anonymous? (empty? stage))]
      ; tooltip busted
@@ -166,7 +161,7 @@
                                                    (filter #(= (:dbhole/name %) (get-in ctx [:target-route :code-database])))
                                                    first
                                                    (into {}))]
-                              ((:dispatch! ctx) (foundation-actions/transact! home-route (:peer ctx) target-repo))))}
+                              ((:dispatch! ctx) (foundation-actions/transact! (:peer ctx) target-repo))))}
        "transact!"]])
    [staging (:peer ctx) (:dispatch! ctx)]
    [:div.markdown (markdown "Hyperfiddle always generates valid transactions, if it doesn't, please file a bug.

@@ -9,10 +9,10 @@
             [hypercrud.browser.result :as result]
             [hypercrud.browser.routing :as routing]
             [hypercrud.client.schema :as schema-util]
+            [hypercrud.util.core :refer [unwrap]]
             [hypercrud.util.non-fatal :refer [try-catch-non-fatal try-either]]
             [hypercrud.util.reactive :as reactive]
-            [taoensso.timbre :as timbre]
-            [hyperfiddle.legacy-issue-43 :as issue43]))
+            [taoensso.timbre :as timbre]))
 
 
 (declare request-from-route)
@@ -80,7 +80,7 @@
            (apply concat))
       (case (get-in ctx [:fiddle :fiddle/type])
         :entity (if-let [a (get-in ctx [:request :a])]
-                  (let [[e a] (issue43/normalize-params (get-in ctx [:route :request-params]))]
+                  (let [[e a] (get-in ctx [:route :request-params])]
                     (either/branch
                       (try-either (.-dbname e))
                       (constantly nil)
@@ -144,9 +144,7 @@
 (defn request-from-route [route ctx]
   (let [ctx (context/route ctx route)
         {:keys [meta-fiddle-req' fiddle']} (base/hydrate-fiddle ctx)]
-    (concat (if-let [meta-fiddle-req (-> meta-fiddle-req'
-                                         (cats/mplus (either/right nil))
-                                         (cats/extract))]
+    (concat (if-let [meta-fiddle-req (unwrap meta-fiddle-req')]
               [meta-fiddle-req])
             (-> (mlet [fiddle fiddle'
                        fiddle-request (base/request-for-fiddle fiddle ctx)]

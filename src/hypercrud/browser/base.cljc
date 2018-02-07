@@ -18,7 +18,6 @@
             [hypercrud.util.non-fatal :refer [try-either]]
             [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :as hc-string]
-            [hyperfiddle.legacy-issue-43 :as issue43]
             [taoensso.timbre :as timbre])
   #?(:clj
      (:import (hypercrud.types.Entity Entity)
@@ -77,7 +76,7 @@
     (instance? ThinEntity param) (:db/id param)
     :else param))
 
-(defn validate-params [q params ctx]
+(defn validate-query-params [q params ctx]
   {:pre [(vector? q)]
    :post [#_(do (timbre/debug %) true)]}
   (mlet [query-holes (try-either (q-util/parse-holes q)) #_"normalizes for :in $"
@@ -104,12 +103,11 @@
 (defn request-for-fiddle [fiddle ctx]
   (case (:fiddle/type fiddle)
     :query (mlet [q (hc-string/memoized-safe-read-edn-string (:fiddle/query fiddle))
-                  params (validate-params q (issue43/normalize-params (get-in ctx [:route :request-params])) ctx)]
+                  params (validate-query-params q (get-in ctx [:route :request-params]) ctx)]
              (return (->QueryRequest q params)))
 
     :entity
-    (let [params (issue43/normalize-params (get-in ctx [:route :request-params]))
-          [e #_"fat" a] params
+    (let [[e #_"fat" a :as params] (get-in ctx [:route :request-params])
           uri (try (let [dbname (.-dbname e)]               ;todo report this exception better
                      (get-in ctx [:hypercrud.browser/repository :repository/environment dbname]))
                    (catch #?(:clj Exception :cljs js/Error) e nil))

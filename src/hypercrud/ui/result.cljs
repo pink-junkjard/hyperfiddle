@@ -9,8 +9,7 @@
             [hypercrud.ui.table :as table]
             [hypercrud.util.core :as util]
             [hypercrud.util.non-fatal :refer [try-either]]
-            [hypercrud.util.reactive :as reactive]
-            [hyperfiddle.legacy-issue-43 :as issue43]))
+            [hypercrud.util.reactive :as reactive]))
 
 
 (defn result-renderer [result ordered-fes links ctx]
@@ -21,7 +20,7 @@
     ; Which means at that point it might as well return monad and let the wrapper sort out the errors?
     (case (get-in ctx [:fiddle :fiddle/type])
       :entity (if-let [a (get-in ctx [:request :a])]
-                (let [[e a] (issue43/normalize-params (get-in ctx [:route :request-params]))]
+                (let [[e a] (get-in ctx [:route :request-params])]
                   (either/branch
                     (try-either (.-dbname e))
                     (fn [e]
