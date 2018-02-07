@@ -27,12 +27,7 @@
          (sort-by :domain/ident)
          (map (fn [domain]
                 [:li {:key (hash (:db/id domain))}
-                 [(:navigate-cmp ctx) {:external-hostname (str (:domain/ident domain) "." (:hyperfiddle-hostname ctx))
-                                       :route (-> (:domain/home-route domain)
-                                                  (hc-string/memoized-safe-read-edn-string)
-                                                  (cats/mplus (either/right nil))
-                                                  (cats/extract))}
-                  (:domain/ident domain)]]))
+                 [:a {:href (str "http://" (:domain/ident domain) "." (:hyperfiddle-hostname ctx) "/")} (:domain/ident domain)]]))
          (doall))]
    [:style {:dangerouslySetInnerHTML {:__html "
 .hyperfiddle-user-dashboard { width: 250px; }

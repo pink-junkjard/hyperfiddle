@@ -9,15 +9,13 @@
   (dissoc hypercrud-props :route :tooltip :popover :hidden :external-hostname))
 
 (defn anchor-cmp [route-encode hypercrud-props label]
+  {:pre [(not (:on-click hypercrud-props))]}
   (let [anchor-props (-> hypercrud-props
                          (dissoc-non-native-props)
                          (assoc :href (if (:route hypercrud-props)
                                         (route-encode (:route hypercrud-props) (:external-hostname hypercrud-props))
                                         nil #_"javascript:void 0;")))]
-    ; Why would an anchor have an on-click? Is this historical.
-    ; If legit it needs to respect disabled.
-    [native-on-click-listener (select-keys anchor-props [:on-click])
-     [:a (dissoc anchor-props :on-click) label]]))
+    [:a anchor-props label]))
 
 (defn popover-cmp [hypercrud-props label]
   (let [{:keys [showing? body open! cancel!]} (:popover hypercrud-props)]

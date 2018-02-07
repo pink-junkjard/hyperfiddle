@@ -72,12 +72,8 @@
                 :link-id fiddle-id})
         ctx))))
 
-(defn encode
-  ([route]
-   (str "/" (some-> route pr-str base64/encode)))
-  ([route external-hostname]
-   (str (some->> external-hostname (str "http://"))
-        (encode route))))
+(defn encode [route]
+  (str "/" (some-> route pr-str base64/encode)))
 
 (defn decode [route-str]
   ; route-str must be well-formed (canonical redirect already happened)
