@@ -69,7 +69,7 @@
       ; todo merge in dbhole lookup, see: hypercrud.browser.base/request-for-link
       :query (let [q (unwrap (q-util/safe-parse-query-validated fiddle))]
                (base/validate-params q params ctx))
-      :entity (if (not= nil params) ; handles `e` but no logic for `[e a]`
+      :entity (if (not= nil params)                         ; handles `e` but no logic for `[e a]`
                 ; todo check fe conn
                 (either/right route)
                 (either/left {:message "malformed entity param" :data {:params params}}))
@@ -116,10 +116,7 @@
                    (apply str))})))
 
 (defn stage! [link route popover-id ctx]
-  (let [user-txfn (-> (eval/eval-str (:link/tx-fn link))
-                      (cats/mplus (either/right nil))
-                      (cats/extract)
-                      (or (constantly nil)))]
+  (let [user-txfn (or (unwrap (eval/eval-str (:link/tx-fn link))) (constantly nil))]
     (-> (p/promise
           (fn [resolve! reject!]
             (let [swap-fn (fn [multi-color-tx]

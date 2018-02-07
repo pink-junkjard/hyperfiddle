@@ -9,7 +9,7 @@
             [hypercrud.ui.native-event-listener :refer [native-on-click-listener]]
             [hypercrud.ui.safe-render :refer [safe-user-renderer]]
             [hypercrud.ui.stale :as stale]
-            [hypercrud.util.core :as util]
+            [hypercrud.util.core :as util :refer [unwrap]]
             [hypercrud.util.non-fatal :refer [try-either]]
             [hypercrud.util.reactive :as reactive]
             [hyperfiddle.foundation :as foundation]
@@ -122,7 +122,5 @@
                       ; entire context must be encoded in the route
                       data (base/data-from-route route (context/clean ctx))]
                  (process-data data))))
-        route (-> (cats/fmap :route link-props')
-                  (cats/mplus (either/right nil))
-                  (cats/extract))]
+        route (unwrap (cats/fmap :route link-props'))]
     [wrap-ui v' route ctx (classes class (css-slugify (:link/rel link)))]))
