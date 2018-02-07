@@ -111,8 +111,8 @@
 (defn route-decode [domain s]
   {:pre [domain (string? s)]}
   (case s
-    "/" (-> (unwrap (hc-string/safe-read-edn-string (:domain/home-route domain)))
-            (update-existing :request-params xorxs))
+    "/" (unwrap (hc-string/safe-read-edn-string (:domain/home-route domain)))
+
     (routing/decode s)))
 
 (defn route-encode [domain route]
