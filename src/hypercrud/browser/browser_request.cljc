@@ -146,21 +146,17 @@
         {:keys [meta-fiddle-req' fiddle']} (base/hydrate-fiddle ctx)]
     (concat (if-let [meta-fiddle-req (unwrap meta-fiddle-req')]
               [meta-fiddle-req])
-            (-> (mlet [fiddle fiddle'
-                       fiddle-request (base/request-for-fiddle fiddle ctx)]
-                  (cats/return
-                    (concat
-                      (if fiddle-request [fiddle-request])
-                      (schema-util/schema-requests-for-link ctx)
-                      (-> (base/process-results fiddle fiddle-request ctx)
-                          (cats/bind process-data)
-                          (cats/mplus (either/right nil))
-                          (cats/extract)))))
-                (cats/mplus (either/right nil))
-                (cats/extract)))))
+            (unwrap
+              (mlet [fiddle fiddle'
+                     fiddle-request (base/request-for-fiddle fiddle ctx)]
+                (cats/return
+                  (concat
+                    (if fiddle-request [fiddle-request])
+                    (schema-util/schema-requests-for-link ctx)
+                    (-> (base/process-results fiddle fiddle-request ctx)
+                        (cats/bind process-data)
+                        unwrap))))))))
 
 (defn request-from-link [link ctx]
-  (-> (base/from-link link ctx (fn [route ctx]
-                                 (either/right (request-from-route route ctx))))
-      (cats/mplus (either/right nil))
-      (cats/extract)))
+  (unwrap (base/from-link link ctx (fn [route ctx]
+                                     (either/right (request-from-route route ctx))))))
