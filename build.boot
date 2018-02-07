@@ -1,4 +1,4 @@
-(def datomic-dep '[com.datomic/datomic-free "0.9.5561" :scope "provided"])
+(def datomic-dep '[com.datomic/datomic-free "0.9.5561" :scope "provided" :exclusions [org.slf4j/slf4j-nop]])
 (def +version+ "0.3.0-SNAPSHOT")
 (let [dependencies
       '[[com.taoensso/timbre "4.10.0"]
