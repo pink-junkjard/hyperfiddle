@@ -47,15 +47,17 @@ Performance (Hyperfiddle must respond as fast as a Clojure repl)
 - [x] API: data loop running in JVM
 - [x] API: automatically optimize hydrates for cache locality (using link graph)
 - [ ] API: Release CLI to serve your fiddles (no http/backend boilerplate for application developers)
-- [ ] UI: improve popovers, finish stage/discard UX
-- [ ] UI: Human readable URLs and customizable URL router
-- [ ] UI: Fix query param tooltips when you hover an anchor
+- [ ] UI: Userland custom router
+- [ ] UI: Human readable URLs
+- [ ] UI: Stabalize Hyperblog URLs
 
 ### 0.2.0
 
 - [ ] release Hyperblog, a markdown ~~static site generator~~ *static application* backed by Datomic
 - [ ] Edit React.js/Reagent expressions side-by-side with the running app (like JSFiddle)
 - [ ] IDE user experience, including links panel
+- [ ] UI: improve popovers, finish stage/discard UX
+- [ ] UI: Fix query param tooltips when you hover an anchor
 
 # Overview
 
