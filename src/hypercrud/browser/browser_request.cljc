@@ -108,7 +108,7 @@
                             (apply concat)))
 
                      datascript.parser.FindColl
-                     (let [ctx (context/relations ctx (map vector result))]
+                     (let [ctx (context/relations ctx (mapv vector result))]
                        (->> (result/map-relations relation-dependent-requests ctx)
                             (apply concat)))
 
