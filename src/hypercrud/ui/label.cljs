@@ -36,5 +36,5 @@
     [tooltip-thick (if help-md
                      [:div.docstring (markdown help-md)])
      [:label {:class (if help-md "help-available")}
-      (-> ctx :attribute :db/ident name str)
+      (some-> ctx :attribute :db/ident name str)            ; common crash point, though this should be defined
       (if help-md [:sup "†"])]]))
