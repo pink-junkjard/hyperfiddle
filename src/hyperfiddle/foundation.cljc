@@ -60,15 +60,18 @@
                                 ; todo this can throw
                                 (update :repository/environment reader/read-string)))))))))
 
+(defn context [ctx domain]
+  (assoc ctx :hypercrud.browser/domain (process-domain-legacy domain)))
+
 (defn local-basis [foo global-basis route domain #_"hack" ctx f]
   (concat
     (:domain global-basis)
-    (f global-basis domain route ctx)))
+    (f global-basis route ctx)))
 
 (defn api [foo route ctx f]
   (let [domain-q (domain-request (hostname->hf-domain-name ctx) (:peer ctx))
-        domain (hc/hydrate-api (:peer ctx) domain-q)
-        user-qs (if domain (f domain route ctx))]
+        user-qs (when-let [domain (hc/hydrate-api (:peer ctx) domain-q)]
+                  (f route (context ctx domain)))]
     (case foo
       "page" (concat [domain-q] user-qs)
       (concat [domain-q] user-qs))))
@@ -82,11 +85,11 @@
 
 #?(:cljs
    (defn leaf-view [route ctx f]
-     (let [domain (let [user-domain (hostname->hf-domain-name ctx)]
-                    (hc/hydrate-api (:peer ctx) (domain-request user-domain (:peer ctx))))]
+     (when-let [domain (let [user-domain (hostname->hf-domain-name ctx)]
+                         (hc/hydrate-api (:peer ctx) (domain-request user-domain (:peer ctx))))]
        ; A malformed stage can break bootstrap hydrates, but the root-page is bust, so ignore here
        ; Fix this by branching userland so bootstrap is sheltered from staging area? (There are chickens and eggs)
-       (if domain (f domain route)))))
+       (f route (context ctx domain)))))
 
 #?(:cljs
    (defn page-view [route ctx f]
@@ -97,10 +100,11 @@
            [error-cmp e]
            [staging (:peer ctx) (:dispatch! ctx)]])
         (fn [domain]
-          [:div {:class (apply classes "hyperfiddle-foundation" @(reactive/cursor (.-state-atom (:peer ctx)) [:pressed-keys]))}
-           (f domain route ctx)                             ; nil, seq or reagent component
-           (if @(reactive/cursor (.-state-atom (:peer ctx)) [:staging-open])
-             [staging (:peer ctx) (:dispatch! ctx)])])])))
+          (let [ctx (context ctx domain)]
+            [:div {:class (apply classes "hyperfiddle-foundation" @(reactive/cursor (.-state-atom (:peer ctx)) [:pressed-keys]))}
+             (f route ctx)                                  ; nil, seq or reagent component
+             (if @(reactive/cursor (.-state-atom (:peer ctx)) [:staging-open])
+               [staging (:peer ctx) (:dispatch! ctx)])]))])))
 
 #?(:cljs
    (defn view [foo route ctx f]

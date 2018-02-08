@@ -10,7 +10,7 @@
 (defn renderer [result ordered-fes links ctx]
   (-> (base/data-from-route (:target-route ctx)
                             (assoc ctx
-                              :hypercrud.browser/domain (foundation/process-domain-legacy (:target-domain ctx))
+                              :hypercrud.browser/domain (:target-domain ctx)
                               :keep-disabled-anchors? true))
       (either/branch
         (fn [e]

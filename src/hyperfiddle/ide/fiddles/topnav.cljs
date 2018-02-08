@@ -156,7 +156,7 @@
                 :style (if disabled? {:pointer-events "none"})
                 :on-click (fn []
                             ; specifically dont use the SplitRuntime protocol here. the only thing that makes sense is whats in the context from the route
-                            (let [target-repo (->> (foundation/process-domain-legacy (:target-domain ctx))
+                            (let [target-repo (->> (:target-domain ctx)
                                                    :domain/code-databases
                                                    (filter #(= (:dbhole/name %) (get-in ctx [:target-route :code-database])))
                                                    first
