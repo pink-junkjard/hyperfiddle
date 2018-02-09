@@ -1,13 +1,12 @@
 (ns hyperfiddle.service.jvm.service
   (:refer-clojure :exclude [sync])
-  (:require [cats.core :refer [mlet return]]
-            [hypercrud.browser.routing :as routing]
+  (:require [hypercrud.browser.routing :as routing]
             [hypercrud.compile.reader :as reader]
             [hypercrud.transit :as hc-t]
             [hypercrud.util.base-64-url-safe :as base-64-url-safe]
             [hypercrud.util.reactive :as reactive]
             [hyperfiddle.appval.state.reducers :as reducers]
-            [hyperfiddle.io.domain :refer [fetch-domain!]]
+            [hyperfiddle.foundation.actions :as foundation-actions]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-requests]]
             [hyperfiddle.io.sync :refer [sync]]
             [hyperfiddle.io.transact :refer [transact!]]
@@ -17,6 +16,7 @@
             [hyperfiddle.service.jvm.global-basis :refer [->GlobalBasisRuntime]]
             [hyperfiddle.service.jvm.hydrate-route :refer [->HydrateRoute]]
             [hyperfiddle.service.jvm.local-basis :refer [->LocalBasis]]
+            [hyperfiddle.state :as state]
             [io.pedestal.http.body-params :as body-params]
             [io.pedestal.http.ring-middlewares :as ring-middlewares]
             [io.pedestal.http.route :refer [expand-routes]]
@@ -83,20 +83,22 @@
       (try
         (let [hostname (:server-name req)
               global-basis (-> (:global-basis path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
-              state-val (-> {:global-basis global-basis
-                             :user-profile (:user req)}
-                            (reducers/root-reducer nil))
               route (routing/decode (str "/" (:encoded-route path-params)))
               foo (some-> (:foo path-params) base-64-url-safe/decode reader/read-edn-string)
-              branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string)]
-          (-> (mlet [domain (fetch-domain! hostname (:HF_HOSTNAME env) (:domain global-basis) nil #_"WHY NO PASS STAGE?????")
-                     :let [rt (->LocalBasis (:HF_HOSTNAME env) hostname domain foo nil (reactive/atom state-val))]
-                     local-basis (runtime/local-basis rt global-basis route branch)]
-                (return
-                  {:status 200
-                   :headers {"Cache-Control" "max-age=31536000"}
-                   :body local-basis}))
-              (p/catch (fn [e] {:status 500 :headers {} :body (str e)}))))
+              branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string)
+              initial-state {:global-basis global-basis
+                             :user-profile (:user req)}]
+          ; this inner let should reduce to foundation/bootstrap-data
+          (let [state-atom (reactive/atom (reducers/root-reducer initial-state nil))
+                rt (->LocalBasis (:HF_HOSTNAME env) hostname foo nil state-atom)
+                dispatch! (state/build-dispatch state-atom reducers/root-reducer)
+                get-state (fn [] @state-atom)]
+            (-> (foundation-actions/refresh-domain rt dispatch! get-state)
+                (p/then (fn [_] (runtime/local-basis rt global-basis route branch)))
+                (p/then (fn [local-basis]
+                          {:status 200
+                           :headers {"Cache-Control" "max-age=31536000"}
+                           :body local-basis})))))
         (catch Exception e
           ; todo this try catch should be an interceptor
           (timbre/error e)
@@ -112,18 +114,20 @@
               foo (some-> (:foo path-params) base-64-url-safe/decode reader/read-edn-string)
               target-repo (some-> (:target-repo path-params) base-64-url-safe/decode reader/read-edn-string)
               branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string)
-              domain-basis (first (filter (fn [[k v]] (= #uri "datomic:free://datomic:4334/domains" k)) local-basis))
-              state-val (-> {:local-basis local-basis
-                             :stage body-params
-                             :user-profile (:user req)}
-                            (reducers/root-reducer nil))]
-          (mlet [domain (fetch-domain! hostname (:HF_HOSTNAME env) domain-basis body-params)
-                 :let [rt (->HydrateRoute (:HF_HOSTNAME env) hostname domain foo target-repo (reactive/atom state-val))]
-                 data (runtime/hydrate-route rt local-basis route branch (:stage state-val))]
-            (return
-              {:status 200
-               :headers {"Cache-Control" "max-age=31536000"} ; todo max-age=0 if POST
-               :body data})))
+              initial-state (-> {:local-basis local-basis
+                                 :stage body-params
+                                 :user-profile (:user req)})]
+          ; this inner let should reduce to foundation/bootstrap-data
+          (let [state-atom (reactive/atom (reducers/root-reducer initial-state nil))
+                rt (->HydrateRoute (:HF_HOSTNAME env) hostname foo target-repo state-atom)
+                dispatch! (state/build-dispatch state-atom reducers/root-reducer)
+                get-state (fn [] @state-atom)]
+            (-> (foundation-actions/refresh-domain rt dispatch! get-state)
+                (p/then (fn [_] (runtime/hydrate-route rt local-basis route branch (:stage initial-state))))
+                (p/then (fn [data]
+                          {:status 200
+                           :headers {"Cache-Control" "max-age=31536000"} ; todo max-age=0 if POST
+                           :body data})))))
         (catch Exception e
           ; todo this try catch should be an interceptor
           (timbre/error e)

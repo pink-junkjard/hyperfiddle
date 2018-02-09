@@ -1,6 +1,5 @@
 (ns hyperfiddle.service.node.local-basis
-  (:require [cats.core :refer [mlet return]]
-            [hypercrud.browser.routing :as routing]
+  (:require [hypercrud.browser.routing :as routing]
             [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
             [hypercrud.compile.reader :as reader]
@@ -9,28 +8,33 @@
             [hypercrud.util.reactive :as reactive]
             [hyperfiddle.appval.state.reducers :as reducers]
             [hyperfiddle.foundation :as foundation]
+            [hyperfiddle.foundation.actions :as foundation-actions]
             [hyperfiddle.ide :as ide]
             [hyperfiddle.io.global-basis :refer [global-basis-rpc!]]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-requests-rpc!]]
             [hyperfiddle.io.sync :refer [sync-rpc!]]
-            [hyperfiddle.io.domain :refer [fetch-domain-rpc!]]
             [hyperfiddle.runtime :as runtime]
             [hyperfiddle.service.node.lib :as lib]
+            [hyperfiddle.state :as state]
             [promesa.core :as p]))
 
 
 ; Todo this is same runtime as HydrateRoute
-(deftype LocalBasisRuntime [hyperfiddle-hostname hostname service-uri domain foo target-repo state-atom]
+(deftype LocalBasisRuntime [hyperfiddle-hostname hostname service-uri foo target-repo state-atom]
   runtime/AppFnGlobalBasis
   (global-basis [rt]
     (global-basis-rpc! service-uri))
 
   runtime/Route
   (encode-route [rt v]
-    (ide/route-encode domain v))
+    (ide/route-encode rt v))
 
   (decode-route [rt s]
-    (ide/route-decode domain s))
+    (ide/route-decode rt s))
+
+  runtime/DomainRegistry
+  (domain [rt]
+    (ide/domain rt hyperfiddle-hostname hostname))
 
   runtime/AppValLocalBasis
   (local-basis [rt global-basis route branch]
@@ -38,8 +42,7 @@
                :hyperfiddle-hostname hyperfiddle-hostname
                :branch branch
                :peer rt}]
-      (foundation/local-basis foo global-basis route domain ctx
-                              (partial ide/local-basis foo))))
+      (foundation/local-basis foo global-basis route ctx (partial ide/local-basis foo))))
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
@@ -73,18 +76,21 @@
         route (routing/decode encoded-route)
         foo (some-> (:foo path-params) base-64-url-safe/decode reader/read-edn-string)
         branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
-        state-val (-> {:global-basis global-basis
-                       :user-profile (lib/req->user-profile env req)}
-                      (reducers/root-reducer nil))]
-    (-> (mlet [domain (fetch-domain-rpc! hostname (:HF_HOSTNAME env) (lib/req->service-uri env req) (:domain global-basis) state-val)
-               :let [rt (LocalBasisRuntime. (:HF_HOSTNAME env) hostname (lib/req->service-uri env req) domain foo (:target-repo path-params) (reactive/atom state-val))]
-               local-basis (runtime/local-basis rt global-basis route branch)]
-          (return
-            (doto res
-              (.status 200)
-              (.append "Cache-Control" "max-age=31536000")
-              (.format #js {"application/transit+json" #(.send res (transit/encode local-basis))}))))
-        (p/catch (fn [error]
-                   (doto res
-                     (.status 500)
-                     (.send (pr-str error))))))))
+        initial-state {:global-basis global-basis
+                   :user-profile (lib/req->user-profile env req)}]
+    ; this inner let should reduce to foundation/bootstrap-data
+    (let [state-atom (reactive/atom (reducers/root-reducer initial-state nil))
+          rt (->LocalBasisRuntime (:HF_HOSTNAME env) hostname (lib/req->service-uri env req) foo (:target-repo path-params) state-atom)
+          dispatch! (state/build-dispatch state-atom reducers/root-reducer)
+          get-state (fn [] @state-atom)]
+      (-> (foundation-actions/refresh-domain rt dispatch! get-state)
+          (p/then #(runtime/local-basis rt global-basis route branch))
+          (p/then (fn [local-basis]
+                    (doto res
+                      (.status 200)
+                      (.append "Cache-Control" "max-age=31536000")
+                      (.format #js {"application/transit+json" #(.send res (transit/encode local-basis))}))))
+          (p/catch (fn [error]
+                     (doto res
+                       (.status 500)
+                       (.send (pr-str error)))))))))

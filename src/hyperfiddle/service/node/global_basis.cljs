@@ -41,7 +41,7 @@
   (let [hostname (.-hostname req)
         state-val (-> {:user-profile (lib/req->user-profile env req)}
                       (reducers/root-reducer nil))
-        rt (GlobalBasisRuntime. (:HF_HOSTNAME env) hostname (lib/req->service-uri env req) (reactive/atom state-val))]
+        rt (->GlobalBasisRuntime (:HF_HOSTNAME env) hostname (lib/req->service-uri env req) (reactive/atom state-val))]
     (-> (runtime/global-basis rt)
         (p/then (fn [global-basis]
                   (doto res

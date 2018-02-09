@@ -14,17 +14,21 @@
 
 
 ; This is allowed to hydrate route, this runtime is probably the same as hydrate-route runtime
-(deftype LocalBasis [hyperfiddle-hostname hostname domain foo target-repo state-atom]
+(deftype LocalBasis [hyperfiddle-hostname hostname foo target-repo state-atom]
   runtime/AppFnGlobalBasis
   (global-basis [rt]
     (global-basis rt hyperfiddle-hostname hostname))
 
   runtime/Route
   (decode-route [rt s]
-    (ide/route-decode domain s))
+    (ide/route-decode rt s))
 
   (encode-route [rt v]
-    (ide/route-encode domain v))
+    (ide/route-encode rt v))
+
+  runtime/DomainRegistry
+  (domain [rt]
+    (ide/domain rt hyperfiddle-hostname hostname))
 
   runtime/AppValLocalBasis
   (local-basis [rt global-basis route branch]
@@ -32,8 +36,7 @@
                :hyperfiddle-hostname hyperfiddle-hostname
                :branch branch
                :peer rt}]
-      (foundation/local-basis foo global-basis route domain ctx
-                              (partial ide/local-basis foo))))
+      (foundation/local-basis foo global-basis route ctx (partial ide/local-basis foo))))
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
@@ -54,5 +57,5 @@
 
   ide-rt/SplitRuntime
   (sub-rt [rt foo target-repo]
-    (LocalBasis. hyperfiddle-hostname hostname domain foo target-repo state-atom))
+    (LocalBasis. hyperfiddle-hostname hostname foo target-repo state-atom))
   (target-repo [rt] target-repo))

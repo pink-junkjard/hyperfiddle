@@ -16,17 +16,21 @@
             [promesa.core :as p]))
 
 
-(deftype HydrateRoute [hyperfiddle-hostname hostname domain foo target-repo state-atom]
+(deftype HydrateRoute [hyperfiddle-hostname hostname foo target-repo state-atom]
   runtime/AppFnGlobalBasis
   (global-basis [rt]
     (global-basis rt hyperfiddle-hostname hostname))
 
   runtime/Route
   (decode-route [rt s]
-    (ide/route-decode domain s))
+    (ide/route-decode rt s))
 
   (encode-route [rt v]
-    (ide/route-encode domain v))
+    (ide/route-encode rt v))
+
+  runtime/DomainRegistry
+  (domain [rt]
+    (ide/domain rt hyperfiddle-hostname hostname))
 
   runtime/AppValLocalBasis
   (local-basis [rt global-basis route branch]
@@ -36,8 +40,7 @@
                :branch branch
                :peer rt}]
       ; Local basis has to have enough info to call the API (even if we omit that call today)
-      (foundation/local-basis foo global-basis route domain ctx
-                              (partial ide/local-basis foo))))
+      (foundation/local-basis foo global-basis route ctx (partial ide/local-basis foo))))
 
   runtime/AppValHydrate
   (hydrate-route [rt local-basis ?route branch stage]
@@ -48,7 +51,7 @@
                :branch branch
                :peer rt}]
       (hydrate-loop rt (hydrate-loop-adapter local-basis stage ctx
-                                             #(HydrateRoute. hyperfiddle-hostname hostname domain foo target-repo (reactive/atom %))
+                                             #(HydrateRoute. hyperfiddle-hostname hostname foo target-repo (reactive/atom %))
                                              #(foundation/api foo ?route % (partial ide/api foo)))
                     local-basis stage data-cache)))
 
@@ -59,7 +62,7 @@
                :branch nil
                :peer rt}]
       (hydrate-loop rt (hydrate-loop-adapter local-basis stage ctx
-                                             #(HydrateRoute. hyperfiddle-hostname hostname domain foo target-repo (reactive/atom %))
+                                             #(HydrateRoute. hyperfiddle-hostname hostname foo target-repo (reactive/atom %))
                                              #(foundation/api "page" route % (partial ide/api "page")))
                     local-basis stage data-cache)))
 
@@ -86,5 +89,5 @@
 
   ide-rt/SplitRuntime
   (sub-rt [rt foo target-repo]
-    (HydrateRoute. hyperfiddle-hostname hostname domain foo target-repo state-atom))
+    (HydrateRoute. hyperfiddle-hostname hostname foo target-repo state-atom))
   (target-repo [rt] target-repo))
