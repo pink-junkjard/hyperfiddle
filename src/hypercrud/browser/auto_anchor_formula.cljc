@@ -13,9 +13,10 @@
      (:import (hypercrud.types.Entity Entity))))
 
 
-(defn auto-entity-from-stage [ctx]
+(defn ^:export auto-entity-from-stage [ctx]
   ; This returns a new value each time the transaction changes - can't call it again later.
   ; So tx-fns must inspect the modal-route, they can't re-create the dbid.
+  (assert (:uri ctx) "no uri in dynamic scope (If it can't be inferred, add as bindings)")
   (let [branch-val (branch/branch-val (:uri ctx) (:branch ctx) @(reactive/cursor (.-state-atom (:peer ctx)) [:stage]))
         id (-> branch-val hash util/abs-normalized - str)]
     (->ThinEntity (dbname/uri->dbname (:uri ctx) ctx) id)))
@@ -50,21 +51,21 @@
     (->ThinEntity (dbname/uri->dbname uri ctx) (deterministic-ident ctx))))
 
 (def auto-formula-lookup
-  (let [fe-no-create (->> (vedn/load-vedn-from-file "auto-formula/fe-no-create.vedn")
-                          (util/map-keys #(assoc % :fe true :c? false)))
-        fe-create (->> (vedn/load-vedn-from-file "auto-formula/fe-create.vedn")
-                       (util/map-keys #(assoc % :fe true :c? true)))
+  (let [fe-no-create (vedn/load-vedn-from-file "auto-formula/fe-no-create.vedn")
+        fe-create (vedn/load-vedn-from-file "auto-formula/fe-create.vedn")
         ; no fe = index or relation links
         no-fe {{:fe false :c? false :d? true :a false} nil
                {:fe false :c? false :d? true :a true} nil
-               {:fe false :c? false :d? false :a false} nil
+               {:fe false :c? false :d? false :a false} (get fe-no-create {:d? false :a false})
                {:fe false :c? false :d? false :a true} nil
 
                {:fe false :c? true :d? true :a false} nil
                {:fe false :c? true :d? true :a true} nil
-               {:fe false :c? true :d? false :a false} nil
+               {:fe false :c? true :d? false :a false} (get fe-create {:d? false :a false})
                {:fe false :c? true :d? false :a true} nil}]
-    (merge fe-create fe-no-create no-fe)))
+    (merge (util/map-keys #(assoc % :fe true :c? true) fe-create)
+           (util/map-keys #(assoc % :fe true :c? false) fe-no-create)
+           no-fe)))
 
 (defn auto-formula [link]
   (-> (hc-string/memoized-safe-read-edn-string (str "[" (:link/path link) "]"))
