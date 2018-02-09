@@ -3,7 +3,6 @@
             [hypercrud.browser.routing :as routing]
             [hypercrud.http.core :refer [http-request!]]
             [hypercrud.util.base-64-url-safe :as base-64-url-safe]
-            [hyperfiddle.io.hydrate-requests :refer [hydrate-one-rpc!']]
             [promesa.core :as p]))
 
 

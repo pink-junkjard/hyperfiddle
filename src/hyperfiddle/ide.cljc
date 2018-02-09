@@ -11,6 +11,7 @@
             [hypercrud.util.string :as hc-string]
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.ide-rt :as ide-rt]
+            [hyperfiddle.io.hydrate-requests :refer [hydrate-one!]]
             [hyperfiddle.runtime :as runtime]
     #?(:cljs [reagent.core :as reagent])
             [taoensso.timbre :as timbre]
@@ -30,6 +31,15 @@
     #?(:cljs [hyperfiddle.ide.fiddles.user-dashboard])
             [hyperfiddle.ide.util]))
 
+(defn domain [rt hyperfiddle-hostname hostname]
+  (let [{:keys [global-basis local-basis]} @(.-state-atom rt)
+        domain-basis (if global-basis
+                       (:domain global-basis)
+                       (filter (fn [[k v]] (= foundation/domain-uri k)) local-basis))
+        stage nil
+        request (-> (foundation/hostname->hf-domain-name hostname hyperfiddle-hostname)
+                    (foundation/domain-request rt))]
+    (hydrate-one! rt (into {} domain-basis) stage request)))
 
 (defn ide-route [route]
   {:code-database "root"
@@ -107,14 +117,15 @@
   (-> (update ctx :peer #(-sub-rt % "user" nil))
       (*-target-context route user-profile)))
 
-(defn route-decode [domain s]
-  {:pre [domain (string? s)]}
-  (case s
-    "/" (unwrap (hc-string/safe-read-edn-string (:domain/home-route domain)))
+(defn route-decode [rt s]
+  {:pre [(string? s)]}
+  (let [domain @(reactive/cursor (.-state-atom rt) [:hyperfiddle.runtime/domain])]
+    (case s
+      "/" (unwrap (hc-string/safe-read-edn-string (:domain/home-route domain)))
 
-    (routing/decode s)))
+      (routing/decode s))))
 
-(defn route-encode [domain route]
+(defn route-encode [rt route]
   ; use domain to canonicalize
   (routing/encode route))
 

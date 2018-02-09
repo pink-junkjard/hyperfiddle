@@ -112,6 +112,11 @@
     :set-local-basis (first args)
     local-basis))
 
+(defn domain-reducer [domain action & args]
+  (case action
+    :hyperfiddle.runtime/set-domain (first args)
+    domain))
+
 (defn staging-open-reducer [staging-open? action & args]
   (case action
     :toggle-staging (not staging-open?)
@@ -132,6 +137,7 @@
                   :route route-reducer
                   :global-basis global-basis-reducer
                   :local-basis local-basis-reducer
+                  :hyperfiddle.runtime/domain domain-reducer
                   :stage stage-reducer
                   :ptm ptm-reducer
                   :error error-reducer

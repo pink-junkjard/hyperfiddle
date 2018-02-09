@@ -77,6 +77,14 @@
                    (dispatch! [:set-error error])
                    (throw error))))))
 
+(defn refresh-domain [rt dispatch! get-state]
+  (-> (runtime/domain rt)
+      (p/then (fn [domain]
+                (dispatch! [:hyperfiddle.runtime/set-domain domain])))
+      (p/catch (fn [error]
+                 (dispatch! [:set-error error])
+                 (throw error)))))
+
 (defn discard-branch [branch]
   [:discard-branch branch])
 
@@ -173,6 +181,8 @@
                                       (get-in tempid->id [uri temp-id] temp-id))
                           route' (routing/invert-ids route invert-id target-repository)]
                       ; todo fix the ordering of this, transact-success should fire immediately (whether or not the rehydrate succeeds)
+                      ; todo should just call foundation/bootstrap-data
                       (mlet [_ (refresh-global-basis peer dispatch! get-state)
+                             _ (refresh-domain peer dispatch! get-state)
                              _ (refresh-page-local-basis peer dispatch! get-state)]
                         (hydrate-page peer [[:transact!-success route']] dispatch! get-state)))))))))

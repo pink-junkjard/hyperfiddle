@@ -27,15 +27,18 @@
 
 (defprotocol AppValHydrate
   ; user-data-fn not on this interface; hardcoded in runtime impls or read from db
-  (hydrate-route [rt local-basis #_ "actions need to set this without a new instance" route branch stage]) ; returns ptm without stage-val hashes
+  (hydrate-route [rt local-basis #_"actions need to set this without a new instance" route branch stage]) ; returns ptm without stage-val hashes
   (hydrate-route-page [rt local-basis route stage]))
 
 #_(defprotocol State
-    (dispatch! [rt])
-    (deref))
+  (dispatch! [rt])
+  (get-state [rt]))
 
 (defprotocol Route
   ; let the call site sort out how to get domain-basis.
   ; maybe from global-basis, maybe from local-basis, depends what we were sent up.
   (encode-route [rt v])
   (decode-route [rt s]))
+
+(defprotocol DomainRegistry
+  (domain [rt]))

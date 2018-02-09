@@ -1,5 +1,6 @@
 (ns hyperfiddle.foundation
-  (:require [clojure.string :as string]
+  (:require [cats.monad.either :as either]
+            [clojure.string :as string]
             [cuerdas.core :as cuerdas]
             [hypercrud.client.core :as hc]
             [hypercrud.compile.reader :as reader]
@@ -63,7 +64,7 @@
 (defn context [ctx domain]
   (assoc ctx :hypercrud.browser/domain (process-domain-legacy domain)))
 
-(defn local-basis [foo global-basis route domain #_"hack" ctx f]
+(defn local-basis [foo global-basis route ctx f]
   (concat
     (:domain global-basis)
     (f global-basis route ctx)))
@@ -93,8 +94,9 @@
 
 #?(:cljs
    (defn page-view [route ctx f]
-     (let [domain' @(hc/hydrate (:peer ctx) (domain-request (hostname->hf-domain-name ctx) (:peer ctx)))]
-       [stale/loading (stale/can-be-loading? ctx) domain'
+     (let [either-v (or (some-> @(reactive/cursor (.-state-atom (:peer ctx)) [:error]) either/left)
+                        @(hc/hydrate (:peer ctx) (domain-request (hostname->hf-domain-name ctx) (:peer ctx))))]
+       [stale/loading (stale/can-be-loading? ctx) either-v
         (fn [e]
           [:div.hyperfiddle-foundation
            [error-cmp e]
@@ -125,18 +127,31 @@
 
 (def LEVEL-NONE 0)
 (def LEVEL-GLOBAL-BASIS 1)
-(def LEVEL-SET-ROUTE 2)
-(def LEVEL-LOCAL-BASIS 3)
-(def LEVEL-HYDRATE-PAGE 4)
+(def LEVEL-DOMAIN 2)
+(def LEVEL-ROUTE 3)
+(def LEVEL-LOCAL-BASIS 4)
+(def LEVEL-HYDRATE-PAGE 5)
 
-; careful setting load-level to LOCAL-BASIS; it is not supported as an init-level in the browser yet
-; how can the browser know if hydrate page has or has not happened yet?
+; this needs to be a bit smarter; this should be invoked by everyone (all service endpoints, ssr, browser)
+; e.g. for service/hydrate-route, we have route, and local-basis, just need to fetch domain & hydrate
+; it makes no sense for clients to forward domains along requests (same as global-basis),
+; so we need to inject into the domain level and then continue on at the appropriate level.
+; could also handle dirty staging areas for browser
 (defn bootstrap-data [rt dispatch! get-state init-level load-level encoded-route]
   (if (>= init-level load-level)
     (p/resolved nil)
     (-> (condp = (inc init-level)
           LEVEL-GLOBAL-BASIS (foundation-actions/refresh-global-basis rt dispatch! get-state)
-          LEVEL-SET-ROUTE (foundation-actions/set-route rt (runtime/decode-route rt encoded-route) dispatch! get-state)
+          LEVEL-DOMAIN (foundation-actions/refresh-domain rt dispatch! get-state)
+          LEVEL-ROUTE (p/resolved (dispatch! [:set-route (runtime/decode-route rt encoded-route)]))
           LEVEL-LOCAL-BASIS (foundation-actions/refresh-page-local-basis rt dispatch! get-state)
           LEVEL-HYDRATE-PAGE (foundation-actions/hydrate-page rt nil dispatch! get-state))
         (p/then #(bootstrap-data rt dispatch! get-state (inc init-level) load-level encoded-route)))))
+
+; ->rt = (state-atom dispatch!) => rt
+; need to implement State protocol on rt before we can use this
+#_(defn init-runtime [->rt initial-state root-reducer init-level load-level encoded-route]
+    (let [state-atom (reactive/atom initial-state)
+          dispatch! (state/build-dispatch state-atom root-reducer)
+          rt (->rt state-atom dispatch!)]
+      (bootstrap-data rt init-level load-level encoded-route)))
