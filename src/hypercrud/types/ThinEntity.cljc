@@ -5,7 +5,7 @@
 
 
 (defn- impl-hash [o]
-  (hash [(.-dbname o) (:db/id (.-coll o))]))
+  (hash [(.-dbname o) (.-id o)]))
 
 (defn- impl-print [o]
   (str "#entity" (pr-str [(.-dbname o) (.-id o)])))
