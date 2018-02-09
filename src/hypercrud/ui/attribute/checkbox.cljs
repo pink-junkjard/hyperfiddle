@@ -11,11 +11,6 @@
     [:div.value
      [:div.editable-select {:key (:db/ident (:attribute ctx))}
       [:div.anchors (links/render-links (remove :link/render-inline? my-links) ctx)]
-      (let [change! #(let [entity @(:cell-data ctx)
-                           tx (tx/update-entity-attr
-                                entity
-                                (get-in ctx [:schemas "$" (-> ctx :attribute :db/ident)])
-                                (not @(:value ctx)))]
-                       ((:dispatch! ctx) (with (:peer ctx) (:branch ctx) (.-uri entity) tx)))]
+      (let [change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) (:attribute ctx) (not @(:value ctx))))]
         (checkbox* (:value ctx) change!))]
      (links/render-inline-links (filter :link/render-inline? my-links) ctx)]))
