@@ -1,12 +1,18 @@
 (ns hypercrud.browser.dbname
-  (:require [clojure.string :as string]))
+  (:require [clojure.string :as string]
+            [clojure.set :refer [map-invert]]))
 
+
+(defn env [ctx]
+  (->> (get-in ctx [:hypercrud.browser/repository :repository/environment])
+       (filter (fn [[k v]]
+                 (and (string? k) (string/starts-with? k "$"))))
+       (map (fn [[k v]]
+              [v k]))
+       (into {})))
 
 (defn uri->dbname [uri ctx]
-  (get (->> (get-in ctx [:hypercrud.browser/repository :repository/environment])
-            (filter (fn [[k v]]
-                      (and (string? k) (string/starts-with? k "$"))))
-            (map (fn [[k v]]
-                   [v k]))
-            (into {}))
-       uri))
+  (get (env ctx) uri))
+
+(defn dbname->uri [ctx dbname]
+  (get (map-invert (env ctx)) dbname))
