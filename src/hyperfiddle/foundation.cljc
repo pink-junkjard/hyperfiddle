@@ -146,11 +146,3 @@
           LEVEL-LOCAL-BASIS (foundation-actions/refresh-page-local-basis rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
           LEVEL-HYDRATE-PAGE (foundation-actions/hydrate-page rt nil (partial runtime/dispatch! rt) #(deref (runtime/state rt))))
         (p/then #(bootstrap-data rt (inc init-level) load-level encoded-route)))))
-
-; ->rt = (state-atom dispatch!) => rt
-; need to implement State protocol on rt before we can use this
-#_(defn init-runtime [->rt initial-state root-reducer init-level load-level encoded-route]
-    (let [state-atom (reactive/atom initial-state)
-          dispatch! (state/build-dispatch state-atom root-reducer)
-          rt (->rt state-atom dispatch!)]
-      (bootstrap-data rt init-level load-level encoded-route)))
