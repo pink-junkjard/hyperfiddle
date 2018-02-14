@@ -11,9 +11,8 @@
             [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
             [hypercrud.util.base-64-url-safe :as base64]
             [hypercrud.util.non-fatal :refer [try-either]]
-            [hypercrud.util.reactive :as reactive]
             [hypercrud.util.core :refer [update-existing xorxs]]
-            [taoensso.timbre :as timbre])
+            [hyperfiddle.runtime :as runtime])
   #?(:clj
      (:import (hypercrud.types.Entity Entity)
               (hypercrud.types.ThinEntity ThinEntity))))
@@ -36,7 +35,7 @@
 
 (defn ctx->id-lookup [uri ctx]
   ; todo what about if the tempid is on a higher branch in the uri?
-  @(reactive/cursor (.-state-atom (:peer ctx)) [:tempid-lookups uri (:branch ctx)]))
+  @(runtime/state (:peer ctx) [:tempid-lookups uri (:branch ctx)]))
 
 (defn id->tempid [route ctx]
   (let [invert-id (fn [id uri]

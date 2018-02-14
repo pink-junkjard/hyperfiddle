@@ -12,6 +12,7 @@
             [hypercrud.util.core :refer [unwrap]]
             [hypercrud.util.non-fatal :refer [try-catch-non-fatal try-either]]
             [hypercrud.util.reactive :as reactive]
+            [hyperfiddle.runtime :as runtime]
             [taoensso.timbre :as timbre]))
 
 
@@ -23,7 +24,7 @@
     (let [route' (routing/build-route' link ctx)
           popover-id (popovers/popover-id link ctx)
           ctx (context/anchor-branch ctx link)]
-      (if (get-in (-> ctx :peer .-state-atom deref) [:popovers popover-id])
+      (if @(runtime/state  (:peer ctx) [:popovers popover-id])
         ; if the anchor IS a popover, we need to run the same logic as anchor/build-anchor-props
         ; the ctx needs to be updated (branched, etc), but NOT BEFORE determining the route
         ; that MUST happen in the parent context

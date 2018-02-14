@@ -9,7 +9,6 @@
     #?(:cljs [hypercrud.ui.css :refer [classes]])
     #?(:cljs [hypercrud.ui.stale :as stale])
             [hypercrud.util.core :as util]
-            [hypercrud.util.reactive :as reactive]
             [hyperfiddle.foundation.actions :as foundation-actions]
             [hyperfiddle.runtime :as runtime]
             [promesa.core :as p]))
@@ -78,11 +77,11 @@
       (concat [domain-q] user-qs))))
 
 #?(:cljs
-   (defn staging [peer dispatch!]
-     (let [stage-val @(reactive/cursor (.-state-atom peer) [:stage])
+   (defn staging [peer]
+     (let [stage-val @(runtime/state peer [:stage])
            edn (util/pprint-str stage-val 70)]
        ; todo this can throw
-       [code* edn #(dispatch! (foundation-actions/reset-stage peer (reader/read-edn-string %)))])))
+       [code* edn #(runtime/dispatch! peer (foundation-actions/reset-stage peer (reader/read-edn-string %)))])))
 
 #?(:cljs
    (defn leaf-view [route ctx f]
@@ -94,19 +93,19 @@
 
 #?(:cljs
    (defn page-view [route ctx f]
-     (let [either-v (or (some-> @(reactive/cursor (.-state-atom (:peer ctx)) [:error]) either/left)
+     (let [either-v (or (some-> @(runtime/state (:peer ctx) [:error]) either/left)
                         @(hc/hydrate (:peer ctx) (domain-request (hostname->hf-domain-name ctx) (:peer ctx))))]
        [stale/loading (stale/can-be-loading? ctx) either-v
         (fn [e]
           [:div.hyperfiddle-foundation
            [error-cmp e]
-           [staging (:peer ctx) (:dispatch! ctx)]])
+           [staging (:peer ctx)]])
         (fn [domain]
           (let [ctx (context ctx domain)]
-            [:div {:class (apply classes "hyperfiddle-foundation" @(reactive/cursor (.-state-atom (:peer ctx)) [:pressed-keys]))}
+            [:div {:class (apply classes "hyperfiddle-foundation" @(runtime/state (:peer ctx) [:pressed-keys]))}
              (f route ctx)                                  ; nil, seq or reagent component
-             (if @(reactive/cursor (.-state-atom (:peer ctx)) [:staging-open])
-               [staging (:peer ctx) (:dispatch! ctx)])]))])))
+             (if @(runtime/state (:peer ctx) [:staging-open])
+               [staging (:peer ctx)])]))])))
 
 #?(:cljs
    (defn view [foo route ctx f]
@@ -137,16 +136,16 @@
 ; it makes no sense for clients to forward domains along requests (same as global-basis),
 ; so we need to inject into the domain level and then continue on at the appropriate level.
 ; could also handle dirty staging areas for browser
-(defn bootstrap-data [rt dispatch! get-state init-level load-level encoded-route]
+(defn bootstrap-data [rt init-level load-level encoded-route]
   (if (>= init-level load-level)
     (p/resolved nil)
     (-> (condp = (inc init-level)
-          LEVEL-GLOBAL-BASIS (foundation-actions/refresh-global-basis rt dispatch! get-state)
-          LEVEL-DOMAIN (foundation-actions/refresh-domain rt dispatch! get-state)
-          LEVEL-ROUTE (p/resolved (dispatch! [:set-route (runtime/decode-route rt encoded-route)]))
-          LEVEL-LOCAL-BASIS (foundation-actions/refresh-page-local-basis rt dispatch! get-state)
-          LEVEL-HYDRATE-PAGE (foundation-actions/hydrate-page rt nil dispatch! get-state))
-        (p/then #(bootstrap-data rt dispatch! get-state (inc init-level) load-level encoded-route)))))
+          LEVEL-GLOBAL-BASIS (foundation-actions/refresh-global-basis rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
+          LEVEL-DOMAIN (foundation-actions/refresh-domain rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
+          LEVEL-ROUTE (p/resolved (runtime/dispatch! rt [:set-route (runtime/decode-route rt encoded-route)]))
+          LEVEL-LOCAL-BASIS (foundation-actions/refresh-page-local-basis rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
+          LEVEL-HYDRATE-PAGE (foundation-actions/hydrate-page rt nil (partial runtime/dispatch! rt) #(deref (runtime/state rt))))
+        (p/then #(bootstrap-data rt (inc init-level) load-level encoded-route)))))
 
 ; ->rt = (state-atom dispatch!) => rt
 ; need to implement State protocol on rt before we can use this

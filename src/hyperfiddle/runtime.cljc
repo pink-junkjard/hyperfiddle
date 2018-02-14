@@ -30,9 +30,9 @@
   (hydrate-route [rt local-basis #_"actions need to set this without a new instance" route branch stage]) ; returns ptm without stage-val hashes
   (hydrate-route-page [rt local-basis route stage]))
 
-#_(defprotocol State
-  (dispatch! [rt])
-  (get-state [rt]))
+(defprotocol State
+  (dispatch! [rt action-or-func])
+  (state [rt] [rt path]))
 
 (defprotocol Route
   ; let the call site sort out how to get domain-basis.

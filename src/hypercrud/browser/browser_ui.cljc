@@ -13,7 +13,8 @@
             [hypercrud.util.non-fatal :refer [try-either]]
             [hypercrud.util.reactive :as reactive]
             [hyperfiddle.foundation :as foundation]
-            [hyperfiddle.foundation.actions :as foundation-actions]))
+            [hyperfiddle.foundation.actions :as foundation-actions]
+            [hyperfiddle.runtime :as runtime]))
 
 
 (declare ui-from-link)
@@ -94,9 +95,9 @@
 
 (defn page-on-click [ctx route event]
   (when (and route (.-altKey event))
-    ((:dispatch! ctx) (fn [dispatch! get-state]
-                        (when (foundation/navigable? route (get-state))
-                          (foundation-actions/set-route (:peer ctx) route dispatch! get-state))))
+    (runtime/dispatch! (:peer ctx) (fn [dispatch! get-state]
+                                     (when (foundation/navigable? route (get-state))
+                                       (foundation-actions/set-route (:peer ctx) route dispatch! get-state))))
     (.stopPropagation event)))
 
 (defn wrap-ui [v' route ctx & [class]]

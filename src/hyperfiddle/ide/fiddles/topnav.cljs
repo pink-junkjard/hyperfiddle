@@ -13,17 +13,12 @@
             [hypercrud.ui.result :as result]
             [hypercrud.ui.tooltip :refer [tooltip]]
             [hypercrud.util.core :as util :refer [unwrap]]
-            [hypercrud.util.reactive :as reactive]
-            [hypercrud.util.string :as hc-string]
             [hyperfiddle.foundation :as foundation :refer [staging]]
             [hyperfiddle.foundation.actions :as foundation-actions]
             [hyperfiddle.ide.fiddles.topnav-bindings :as topnav-bindings]
             [hyperfiddle.runtime :as runtime]
             [reagent.core :as reagent]))
 
-
-(defn get-state [state-atom]
-  (select-keys @state-atom [:display-mode :stage]))
 
 (defn stateless-login-url [ctx]
   (let [{:keys [domain client-id]} (get-in ctx [:hypercrud.browser/repository :repository/environment :auth0 (:hyperfiddle-hostname ctx)])
@@ -54,7 +49,7 @@
     (ui-fn (shadow-fiddle fiddle ctx) fes links ctx)))
 
 (defn loading-spinner [ctx]
-  (if @(reactive/cursor (.-state-atom (:peer ctx)) [:hydrate-id])
+  (if @(runtime/state (:peer ctx) [:hydrate-id])
     [:span {:style {:height "20px"
                     :width "23px"
                     :float "left"
@@ -69,8 +64,8 @@
       [re-com.core/throbber :size :smaller]]]))
 
 (defn -renderer [fiddle ordered-fes links ctx]
-  (let [{:keys [display-mode stage]} @(reactive/track get-state (.-state-atom (:peer ctx)))
-        dirty? (not (empty? stage))
+  (let [display-mode @(runtime/state (:peer ctx) [:display-mode])
+        dirty? (not (empty? @(runtime/state (:peer ctx) [:stage])))
         fiddle (shadow-fiddle fiddle ctx)
         ; hack until hyperfiddle.net#156 is complete
         link-index (->> links
@@ -94,7 +89,7 @@
       (fake-managed-anchor :ui (assoc ctx :user-renderer hijack-renderer) "view")
       (fake-managed-anchor :stage ctx "stage" :class (if dirty? "stage-dirty"))
 
-      (let [change! #((:dispatch! ctx) (foundation-actions/set-display-mode %))]
+      (let [change! #(runtime/dispatch! (:peer ctx) (foundation-actions/set-display-mode %))]
         [:span.radio-group
          (radio/option {:label "data" :tooltip "Edit data directly" :target :xray :value display-mode :change! change!})
          (radio/option {:label "view" :tooltip "View end-user UI" :target :user :value display-mode :change! change!})])
@@ -147,7 +142,7 @@
   [:div.hyperfiddle-topnav-stage
    (result/view result ordered-fes links ctx)               ; for docstring
    (let [anonymous? (nil? (:user-profile ctx))
-         stage @(reactive/cursor (.-state-atom (:peer ctx)) [:stage])
+         stage @(runtime/state (:peer ctx) [:stage])
          disabled? (or anonymous? (empty? stage))]
      ; tooltip busted
      [tooltip (cond anonymous? {:status :warning :label "please login"}
@@ -161,9 +156,9 @@
                                                    (filter #(= (:dbhole/name %) (get-in ctx [:target-route :code-database])))
                                                    first
                                                    (into {}))]
-                              ((:dispatch! ctx) (foundation-actions/transact! (:peer ctx) target-repo))))}
+                              (runtime/dispatch! (:peer ctx) (foundation-actions/transact! (:peer ctx) target-repo))))}
        "transact!"]])
-   [staging (:peer ctx) (:dispatch! ctx)]
+   [staging (:peer ctx)]
    [:div.markdown (markdown "Hyperfiddle always generates valid transactions, if it doesn't, please file a bug.
 
 *WARNING:* Datomic schema alterations cannot be used in the same transaction, for now you'll

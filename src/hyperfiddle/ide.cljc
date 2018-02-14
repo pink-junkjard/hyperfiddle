@@ -7,7 +7,6 @@
     #?(:cljs [hypercrud.react.react-fragment :refer [react-fragment]])
     #?(:cljs [hypercrud.ui.navigate-cmp :as navigate-cmp])
             [hypercrud.util.core :refer [unwrap xorxs update-existing]]
-            [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :as hc-string]
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.ide-rt :as ide-rt]
@@ -32,10 +31,9 @@
             [hyperfiddle.ide.util]))
 
 (defn domain [rt hyperfiddle-hostname hostname]
-  (let [{:keys [global-basis local-basis]} @(.-state-atom rt)
-        domain-basis (if global-basis
+  (let [domain-basis (if-let [global-basis @(runtime/state rt [:global-basis])]
                        (:domain global-basis)
-                       (filter (fn [[k v]] (= foundation/domain-uri k)) local-basis))
+                       (filter (fn [[k v]] (= foundation/domain-uri k)) @(runtime/state rt [:local-basis])))
         stage nil
         request (-> (foundation/hostname->hf-domain-name hostname hyperfiddle-hostname)
                     (foundation/domain-request rt))]
@@ -91,24 +89,19 @@
 
 (def activate-ide? (complement foundation/alias?))
 
-(let [dispatch!-factory (fn [dispatch! action]
-                          ; todo filter available actions
-                          (dispatch! action)
-                          nil)]
-  (defn- *-target-context [ctx route user-profile]
-    (assoc ctx
-      :hypercrud.browser/debug "target"
-      :hypercrud.ui/display-mode (reactive/cursor (.-state-atom (:peer ctx)) [:display-mode])
-      :dispatch! (reactive/partial dispatch!-factory (:dispatch! ctx))
-      :ide-active (activate-ide? (foundation/hostname->hf-domain-name ctx))
-      :user-profile user-profile
+(defn- *-target-context [ctx route user-profile]
+  (assoc ctx
+    :hypercrud.browser/debug "target"
+    :hypercrud.ui/display-mode (runtime/state (:peer ctx) [:display-mode])
+    :ide-active (activate-ide? (foundation/hostname->hf-domain-name ctx))
+    :user-profile user-profile
 
-      ; these target values only exists to allow the topnav to render in the bottom/user
-      ; IF we MUST to support that, this should probably be done higher up for both ide and user at the same time
-      ; and SHOULD ONLY be applied for ide within ide (other user fns don't get access to these values)
-      :target-domain (:hypercrud.browser/domain ctx)        ; todo rename :target-domain to :hyperfiddle.ide/target-domain
-      :target-route route                                   ; todo rename :target-route to :hyperfiddle.ide/target-route
-      )))
+    ; these target values only exists to allow the topnav to render in the bottom/user
+    ; IF we MUST to support that, this should probably be done higher up for both ide and user at the same time
+    ; and SHOULD ONLY be applied for ide within ide (other user fns don't get access to these values)
+    :target-domain (:hypercrud.browser/domain ctx)          ; todo rename :target-domain to :hyperfiddle.ide/target-domain
+    :target-route route                                     ; todo rename :target-route to :hyperfiddle.ide/target-route
+    ))
 
 (defn leaf-target-context [ctx route user-profile]
   (*-target-context ctx route user-profile))
@@ -119,7 +112,7 @@
 
 (defn route-decode [rt s]
   {:pre [(string? s)]}
-  (let [domain @(reactive/cursor (.-state-atom rt) [:hyperfiddle.runtime/domain])]
+  (let [domain @(runtime/state rt [:hyperfiddle.runtime/domain])]
     (case s
       "/" (unwrap (hc-string/safe-read-edn-string (:domain/home-route domain)))
 
@@ -153,7 +146,7 @@
   ; We can actually call into the foundation a second time here to get the ide-domain
   (let [ide-domain-q (foundation/domain-request "hyperfiddle" (:peer ctx))
         ide-domain (hc/hydrate-api (:peer ctx) ide-domain-q)
-        user-profile @(reactive/cursor (.-state-atom (:peer ctx)) [:user-profile])]
+        user-profile @(runtime/state (:peer ctx) [:user-profile])]
     (case foo
       "page" (concat [ide-domain-q]
                      (if ?route
@@ -170,7 +163,7 @@
    (defn view-page [?route ctx]
      (let [ide-domain (hc/hydrate-api (:peer ctx) (foundation/domain-request "hyperfiddle" (:peer ctx)))
            ide-active (activate-ide? (foundation/hostname->hf-domain-name ctx))
-           user-profile @(reactive/cursor (.-state-atom (:peer ctx)) [:user-profile])
+           user-profile @(runtime/state (:peer ctx) [:user-profile])
            ctx (assoc ctx :navigate-cmp (reagent/partial navigate-cmp/navigate-cmp (reagent/partial runtime/encode-route (:peer ctx))))]
        (react-fragment
          :view-page
@@ -188,7 +181,7 @@
 #?(:cljs
    (defn view [foo route ctx]                               ; pass most as ref for reactions
      (let [ide-domain (hc/hydrate-api (:peer ctx) (foundation/domain-request "hyperfiddle" (:peer ctx)))
-           user-profile @(reactive/cursor (.-state-atom (:peer ctx)) [:user-profile])]
+           user-profile @(runtime/state (:peer ctx) [:user-profile])]
        (case foo
          "page" (view-page route ctx)                       ; component, seq-component or nil
          ; On SSR side this is only ever called as "page", but it could be differently (e.g. turbolinks)

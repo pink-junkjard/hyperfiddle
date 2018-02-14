@@ -2,7 +2,8 @@
   (:require [cljs.pprint :as pprint]
             [hypercrud.browser.routing :as routing]
             [hypercrud.react.react-fragment :as react-fragment]
-            [hypercrud.util.core :refer [pprint-str]]))
+            [hypercrud.util.core :refer [pprint-str]]
+            [hyperfiddle.runtime :as runtime]))
 
 
 (defn set-globals [global]
@@ -28,8 +29,7 @@
                                      pprint-str)))
   (aset global "react_fragment" react-fragment/react-fragment)
   (aset global "dispatch" (fn [ctx action & args]
-                            ; ((:dispatch! ctx) ())
-                            ((:dispatch! ctx) (apply action args)))))
+                            (runtime/dispatch! (:peer ctx) (apply action args)))))
 
 
 ; cljs.core.get(ctx, kw('dispatch!'))(hyperfiddle.app.state.actions.toggle_staging())

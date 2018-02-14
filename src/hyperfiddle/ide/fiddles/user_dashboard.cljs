@@ -1,15 +1,13 @@
 (ns hyperfiddle.ide.fiddles.user-dashboard
-  (:require [cats.core :as cats]
-            [cats.monad.either :as either]
-            [hypercrud.ui.markdown :refer [markdown]]
+  (:require [hypercrud.ui.markdown :refer [markdown]]
             [hypercrud.ui.native-event-listener :refer [native-on-click-listener]]
             [hypercrud.util.reactive :as reactive]
-            [hypercrud.util.string :as hc-string]
-            [hyperfiddle.ide.actions :as ide-actions]))
+            [hyperfiddle.ide.actions :as ide-actions]
+            [hyperfiddle.runtime :as runtime]))
 
 
-(defn logout! [rt dispatch! e]
-  (dispatch! (ide-actions/set-user-profile rt nil))
+(defn logout! [rt e]
+  (runtime/dispatch! rt (ide-actions/set-user-profile rt nil))
   (.preventDefault e)
   (.stopPropagation e))
 
@@ -17,7 +15,7 @@
   [:div.hyperfiddle-user-dashboard
    (if (-> ctx :user-profile)
      [native-on-click-listener
-      {:key :logout :on-click (reactive/partial logout! (:peer ctx) (:dispatch! ctx))}
+      {:key :logout :on-click (reactive/partial logout! (:peer ctx))}
       ; todo https://auth0.com/docs/logout
       [:span.nav-link.auth {:key :logout}
        [:a {:href "/logout"} "logout"]]])

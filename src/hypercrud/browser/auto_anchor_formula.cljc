@@ -5,9 +5,9 @@
             [hypercrud.types.ThinEntity :refer [->ThinEntity]]
             [hypercrud.util.branch :as branch]
             [hypercrud.util.core :as util]
-            [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :as hc-string]
             [hypercrud.util.vedn :as vedn]
+            [hyperfiddle.runtime :as runtime]
             [taoensso.timbre :as timbre])
   #?(:clj
      (:import (hypercrud.types.Entity Entity))))
@@ -17,7 +17,7 @@
   ; This returns a new value each time the transaction changes - can't call it again later.
   ; So tx-fns must inspect the modal-route, they can't re-create the dbid.
   (assert (:uri ctx) "no uri in dynamic scope (If it can't be inferred, add as bindings)")
-  (let [branch-val (branch/branch-val (:uri ctx) (:branch ctx) @(reactive/cursor (.-state-atom (:peer ctx)) [:stage]))
+  (let [branch-val (branch/branch-val (:uri ctx) (:branch ctx) @(runtime/state (:peer ctx) [:stage]))
         id (-> branch-val hash util/abs-normalized - str)]
     (->ThinEntity (dbname/uri->dbname (:uri ctx) ctx) id)))
 

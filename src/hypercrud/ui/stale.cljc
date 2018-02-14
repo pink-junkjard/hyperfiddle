@@ -1,10 +1,10 @@
 (ns hypercrud.ui.stale
   (:require [cats.monad.either :as either]
-            [hypercrud.util.reactive :as reactive]))
+            [hyperfiddle.runtime :as runtime]))
 
 
 (defn can-be-loading? [ctx]
-  (reactive/cursor (.-state-atom (:peer ctx)) [:hydrate-id]))
+  (runtime/state (:peer ctx) [:hydrate-id]))
 
 
 (defn loading

@@ -4,7 +4,8 @@
             [hypercrud.util.branch :as branch]
             [hypercrud.util.core :as util]
             [hypercrud.util.reactive :as reactive]
-            [hyperfiddle.foundation.actions :as foundation-actions]))
+            [hyperfiddle.foundation.actions :as foundation-actions]
+            [hyperfiddle.runtime :as runtime]))
 
 
 (defn clean [ctx]
@@ -44,7 +45,7 @@
 
 (defn user-with [ctx branch uri tx]
   ; todo custom user-dispatch with all the tx-fns as reducers
-  ((:dispatch! ctx) (foundation-actions/with (:peer ctx) branch uri tx)))
+  (runtime/dispatch! (:peer ctx) (foundation-actions/with (:peer ctx) branch uri tx)))
 
 (defn relations [ctx relations]
   (assoc ctx :relations (reactive/atom relations)))

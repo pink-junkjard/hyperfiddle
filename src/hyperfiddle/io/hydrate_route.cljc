@@ -66,7 +66,7 @@
   ; Hacks because the hydrate-loop doesn't write to the state atom.
   (fn [id->tempid ptm]
     (let [ctx (update ctx :peer (fn [peer]
-                                  (-> @(.-state-atom peer)
+                                  (-> @(runtime/state peer)
                                       ; want to keep all user/ui state, just use overwrite the io state.
                                       ; suspect that other values are unset (route, global-basis, popovers, branches)
                                       (select-keys [:user-profile])
