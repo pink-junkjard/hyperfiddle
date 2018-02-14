@@ -87,18 +87,16 @@
               foo (some-> (:foo path-params) base-64-url-safe/decode reader/read-edn-string)
               branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string)
               initial-state {:global-basis global-basis
-                             :user-profile (:user req)}]
-          ; this inner let should reduce to foundation/bootstrap-data
-          (let [state-atom (reactive/atom (reducers/root-reducer initial-state nil))
-                rt (->LocalBasis (:HF_HOSTNAME env) hostname foo nil state-atom)
-                dispatch! (state/build-dispatch state-atom reducers/root-reducer)
-                get-state (fn [] @state-atom)]
-            (-> (foundation-actions/refresh-domain rt dispatch! get-state)
-                (p/then (fn [_] (runtime/local-basis rt global-basis route branch)))
-                (p/then (fn [local-basis]
-                          {:status 200
-                           :headers {"Cache-Control" "max-age=31536000"}
-                           :body local-basis})))))
+                             :user-profile (:user req)}
+              rt (->LocalBasis (:HF_HOSTNAME env) hostname foo nil
+                               (reactive/atom (reducers/root-reducer initial-state nil))
+                               reducers/root-reducer)]
+          (-> (foundation-actions/refresh-domain rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
+              (p/then (fn [_] (runtime/local-basis rt global-basis route branch)))
+              (p/then (fn [local-basis]
+                        {:status 200
+                         :headers {"Cache-Control" "max-age=31536000"}
+                         :body local-basis}))))
         (catch Exception e
           ; todo this try catch should be an interceptor
           (timbre/error e)
@@ -116,18 +114,16 @@
               branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string)
               initial-state (-> {:local-basis local-basis
                                  :stage body-params
-                                 :user-profile (:user req)})]
-          ; this inner let should reduce to foundation/bootstrap-data
-          (let [state-atom (reactive/atom (reducers/root-reducer initial-state nil))
-                rt (->HydrateRoute (:HF_HOSTNAME env) hostname foo target-repo state-atom)
-                dispatch! (state/build-dispatch state-atom reducers/root-reducer)
-                get-state (fn [] @state-atom)]
-            (-> (foundation-actions/refresh-domain rt dispatch! get-state)
-                (p/then (fn [_] (runtime/hydrate-route rt local-basis route branch (:stage initial-state))))
-                (p/then (fn [data]
-                          {:status 200
-                           :headers {"Cache-Control" "max-age=31536000"} ; todo max-age=0 if POST
-                           :body data})))))
+                                 :user-profile (:user req)})
+              rt (->HydrateRoute (:HF_HOSTNAME env) hostname foo target-repo
+                                 (reactive/atom (reducers/root-reducer initial-state nil))
+                                 reducers/root-reducer)]
+          (-> (foundation-actions/refresh-domain rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
+              (p/then (fn [_] (runtime/hydrate-route rt local-basis route branch (:stage initial-state))))
+              (p/then (fn [data]
+                        {:status 200
+                         :headers {"Cache-Control" "max-age=31536000"} ; todo max-age=0 if POST
+                         :body data}))))
         (catch Exception e
           ; todo this try catch should be an interceptor
           (timbre/error e)

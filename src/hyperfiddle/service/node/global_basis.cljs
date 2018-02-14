@@ -9,10 +9,16 @@
             [hyperfiddle.io.sync :refer [sync-rpc!]]
             [hyperfiddle.runtime :as runtime]
             [hyperfiddle.service.node.lib :as lib]
+            [hyperfiddle.state :as state]
             [promesa.core :as p]))
 
 
-(deftype GlobalBasisRuntime [hyperfiddle-hostname hostname service-uri state-atom]
+(deftype GlobalBasisRuntime [hyperfiddle-hostname hostname service-uri state-atom root-reducer]
+  runtime/State
+  (dispatch! [rt action-or-func] (state/dispatch! state-atom root-reducer action-or-func))
+  (state [rt] state-atom)
+  (state [rt path] (reactive/cursor state-atom path))
+
   runtime/AppFnGlobalBasis
   (global-basis [rt]
     (global-basis rt hyperfiddle-hostname hostname))
@@ -39,9 +45,10 @@
 
 (defn http-global-basis [env req res path-params query-params]
   (let [hostname (.-hostname req)
-        state-val (-> {:user-profile (lib/req->user-profile env req)}
-                      (reducers/root-reducer nil))
-        rt (->GlobalBasisRuntime (:HF_HOSTNAME env) hostname (lib/req->service-uri env req) (reactive/atom state-val))]
+        initial-state {:user-profile (lib/req->user-profile env req)}
+        rt (->GlobalBasisRuntime (:HF_HOSTNAME env) hostname (lib/req->service-uri env req)
+                                 (reactive/atom (reducers/root-reducer initial-state nil))
+                                 reducers/root-reducer)]
     (-> (runtime/global-basis rt)
         (p/then (fn [global-basis]
                   (doto res

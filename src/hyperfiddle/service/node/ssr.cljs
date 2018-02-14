@@ -74,7 +74,12 @@
     (perf/time (fn [get-total-time] (timbre/debug "Template total time:" (get-total-time)))
                (evaluated-template env state-val params serve-js? app-html))))
 
-(deftype IdeSsrRuntime [hyperfiddle-hostname hostname foo target-repo service-uri state-atom]
+(deftype IdeSsrRuntime [hyperfiddle-hostname hostname foo target-repo service-uri state-atom root-reducer]
+  runtime/State
+  (dispatch! [rt action-or-func] (state/dispatch! state-atom root-reducer action-or-func))
+  (state [rt] state-atom)
+  (state [rt path] (reactive/cursor state-atom path))
+
   runtime/AppFnGlobalBasis
   (global-basis [rt]
     (global-basis-rpc! service-uri))
@@ -140,7 +145,7 @@
 
   ide-rt/SplitRuntime
   (sub-rt [rt foo target-repo]
-    (IdeSsrRuntime. hyperfiddle-hostname hostname foo target-repo service-uri state-atom))
+    (IdeSsrRuntime. hyperfiddle-hostname hostname foo target-repo service-uri state-atom root-reducer))
   (target-repo [rt] target-repo)
 
   IHash
@@ -148,23 +153,22 @@
 
 (defn http-edge [env req res path-params query-params]
   (let [hostname (.-hostname req)
-        state-val (-> {:user-profile (lib/req->user-profile env req)}
-                      (reducers/root-reducer nil))
-        rt (->IdeSsrRuntime (:HF_HOSTNAME env) hostname "page" nil (req->service-uri env req) (reactive/atom state-val))
-        state-atom (.-state-atom rt)
-        dispatch! (state/build-dispatch state-atom reducers/root-reducer)
+        initial-state {:user-profile (lib/req->user-profile env req)}
+        rt (->IdeSsrRuntime (:HF_HOSTNAME env) hostname "page" nil (req->service-uri env req)
+                            (reactive/atom (reducers/root-reducer initial-state nil))
+                            reducers/root-reducer)
         serve-js? true #_(not aliased?)
         force-browser-reload-prevent-stale (foundation/alias? (foundation/hostname->hf-domain-name hostname (:HF_HOSTNAME env)))
-        browser-initial-state (if force-browser-reload-prevent-stale state-atom (delay state-val))
+        browser-initial-state (if force-browser-reload-prevent-stale (runtime/state rt) (delay initial-state))
         ; careful setting load-level to LOCAL-BASIS; it is not supported as an init-level in the browser yet
         ; how can the browser know if hydrate page has or has not happened yet?
         load-level foundation/LEVEL-HYDRATE-PAGE]
-    (-> (foundation/bootstrap-data rt dispatch! (partial deref state-atom) foundation/LEVEL-NONE load-level (.-path req))
+    (-> (foundation/bootstrap-data rt foundation/LEVEL-NONE load-level (.-path req))
         (p/catch (fn [error]
                    #_"any error above IS NOT fatal, so render the UI. anything below IS fatal"
                    (timbre/error error)
                    (p/resolved nil)))
-        (p/then #(runtime/ssr rt (:route @state-atom)))
+        (p/then #(runtime/ssr rt @(runtime/state rt [:route])))
         (p/then (fn [html-fragment] (html env @browser-initial-state serve-js? html-fragment)))
         (p/catch (fn [error]
                    (timbre/error error)

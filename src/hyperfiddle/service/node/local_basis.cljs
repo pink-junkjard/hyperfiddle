@@ -20,7 +20,12 @@
 
 
 ; Todo this is same runtime as HydrateRoute
-(deftype LocalBasisRuntime [hyperfiddle-hostname hostname service-uri foo target-repo state-atom]
+(deftype LocalBasisRuntime [hyperfiddle-hostname hostname service-uri foo target-repo state-atom root-reducer]
+  runtime/State
+  (dispatch! [rt action-or-func] (state/dispatch! state-atom root-reducer action-or-func))
+  (state [rt] state-atom)
+  (state [rt path] (reactive/cursor state-atom path))
+
   runtime/AppFnGlobalBasis
   (global-basis [rt]
     (global-basis-rpc! service-uri))
@@ -77,20 +82,18 @@
         foo (some-> (:foo path-params) base-64-url-safe/decode reader/read-edn-string)
         branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
         initial-state {:global-basis global-basis
-                   :user-profile (lib/req->user-profile env req)}]
-    ; this inner let should reduce to foundation/bootstrap-data
-    (let [state-atom (reactive/atom (reducers/root-reducer initial-state nil))
-          rt (->LocalBasisRuntime (:HF_HOSTNAME env) hostname (lib/req->service-uri env req) foo (:target-repo path-params) state-atom)
-          dispatch! (state/build-dispatch state-atom reducers/root-reducer)
-          get-state (fn [] @state-atom)]
-      (-> (foundation-actions/refresh-domain rt dispatch! get-state)
-          (p/then #(runtime/local-basis rt global-basis route branch))
-          (p/then (fn [local-basis]
-                    (doto res
-                      (.status 200)
-                      (.append "Cache-Control" "max-age=31536000")
-                      (.format #js {"application/transit+json" #(.send res (transit/encode local-basis))}))))
-          (p/catch (fn [error]
-                     (doto res
-                       (.status 500)
-                       (.send (pr-str error)))))))))
+                       :user-profile (lib/req->user-profile env req)}
+        rt (->LocalBasisRuntime (:HF_HOSTNAME env) hostname (lib/req->service-uri env req) foo (:target-repo path-params)
+                                (reactive/atom (reducers/root-reducer initial-state nil))
+                                reducers/root-reducer)]
+    (-> (foundation-actions/refresh-domain rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
+        (p/then #(runtime/local-basis rt global-basis route branch))
+        (p/then (fn [local-basis]
+                  (doto res
+                    (.status 200)
+                    (.append "Cache-Control" "max-age=31536000")
+                    (.format #js {"application/transit+json" #(.send res (transit/encode local-basis))}))))
+        (p/catch (fn [error]
+                   (doto res
+                     (.status 500)
+                     (.send (pr-str error))))))))

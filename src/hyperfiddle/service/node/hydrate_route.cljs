@@ -22,7 +22,12 @@
             [promesa.core :as p]))
 
 
-(deftype HydrateRouteRuntime [hyperfiddle-hostname hostname service-uri foo target-repo state-atom]
+(deftype HydrateRouteRuntime [hyperfiddle-hostname hostname service-uri foo target-repo state-atom root-reducer]
+  runtime/State
+  (dispatch! [rt action-or-func] (state/dispatch! state-atom root-reducer action-or-func))
+  (state [rt] state-atom)
+  (state [rt path] (reactive/cursor state-atom path))
+
   ;runtime/AppFnGlobalBasis
   ;(global-basis [rt]
   ;  (global-basis-rpc! service-uri))
@@ -54,7 +59,7 @@
                :branch branch
                :peer rt}]
       (hydrate-loop rt (hydrate-loop-adapter local-basis stage ctx
-                                             #(HydrateRouteRuntime. hyperfiddle-hostname hostname service-uri foo target-repo (reactive/atom %))
+                                             #(HydrateRouteRuntime. hyperfiddle-hostname hostname service-uri foo target-repo (reactive/atom %) root-reducer)
                                              #(foundation/api foo encoded-route % (partial ide/api foo)))
                     local-basis stage data-cache)))
 
@@ -65,7 +70,7 @@
                :branch nil
                :peer rt}]
       (hydrate-loop rt (hydrate-loop-adapter local-basis stage ctx
-                                             #(HydrateRouteRuntime. hyperfiddle-hostname hostname service-uri foo target-repo (reactive/atom %))
+                                             #(HydrateRouteRuntime. hyperfiddle-hostname hostname service-uri foo target-repo (reactive/atom %) root-reducer)
                                              #(foundation/api "page" encoded-route % (partial ide/api "page")))
                     local-basis stage data-cache)))
 
@@ -90,7 +95,7 @@
 
   ide-rt/SplitRuntime
   (sub-rt [rt foo target-repo]
-    (HydrateRouteRuntime. hyperfiddle-hostname hostname service-uri foo target-repo state-atom))
+    (HydrateRouteRuntime. hyperfiddle-hostname hostname service-uri foo target-repo state-atom root-reducer))
   (target-repo [rt] target-repo)
 
   IHash
@@ -106,27 +111,25 @@
         route (routing/decode encoded-route)
         initial-state {:local-basis local-basis             ; no need for :route here, it is ignored, this whole thing gets clobbered
                        :stage (some-> req .-body lib/hack-buggy-express-body-text-parser transit/decode)
-                       :user-profile (lib/req->user-profile env req)}]
-    ; this inner let should reduce to foundation/bootstrap-data
-    (let [state-atom (reactive/atom (reducers/root-reducer initial-state nil))
-          rt (->HydrateRouteRuntime (:HF_HOSTNAME env) hostname (lib/req->service-uri env req) foo target-repo state-atom)
-          dispatch! (state/build-dispatch state-atom reducers/root-reducer)
-          get-state (fn [] @state-atom)]
-      (-> (foundation-actions/refresh-domain rt dispatch! get-state)
-          (p/then #(runtime/hydrate-route rt local-basis route branch (:stage initial-state)))
-          (p/then (fn [data]
-                    (doto res
-                      (.status 200)
-                      (.append "Cache-Control" "max-age=31536000") ; todo max-age=0 if POST
-                      (.format #js {"application/transit+json" #(.send res (transit/encode data))
-                                    #_"text/html" #_(fn []
-                                                      (mlet [html-fragment nil #_(api-impl/local-html ui-fn ctx)]
-                                                            (.send res html-fragment)))}))))
-          (p/catch
-            (fn [error]
-              (doto res
-                (.status 500)
-                ; todo caching on errors, there are a subset of requests that are actually permanently cacheable
-                (.format #js {"application/transit+json" #(.send res (transit/encode {:error (pr-str error)}))
-                              #_"text/html" #_(fn []
-                                                (document/error error))}))))))))
+                       :user-profile (lib/req->user-profile env req)}
+        rt (->HydrateRouteRuntime (:HF_HOSTNAME env) hostname (lib/req->service-uri env req) foo target-repo
+                                  (reactive/atom (reducers/root-reducer initial-state nil))
+                                  reducers/root-reducer)]
+    (-> (foundation-actions/refresh-domain rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
+        (p/then #(runtime/hydrate-route rt local-basis route branch (:stage initial-state)))
+        (p/then (fn [data]
+                  (doto res
+                    (.status 200)
+                    (.append "Cache-Control" "max-age=31536000") ; todo max-age=0 if POST
+                    (.format #js {"application/transit+json" #(.send res (transit/encode data))
+                                  #_"text/html" #_(fn []
+                                                    (mlet [html-fragment nil #_(api-impl/local-html ui-fn ctx)]
+                                                          (.send res html-fragment)))}))))
+        (p/catch
+          (fn [error]
+            (doto res
+              (.status 500)
+              ; todo caching on errors, there are a subset of requests that are actually permanently cacheable
+              (.format #js {"application/transit+json" #(.send res (transit/encode {:error (pr-str error)}))
+                            #_"text/html" #_(fn []
+                                              (document/error error))})))))))

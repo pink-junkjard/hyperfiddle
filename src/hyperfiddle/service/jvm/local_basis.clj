@@ -3,6 +3,7 @@
   (:require [cats.core :refer [mlet return]]
             [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
+            [hypercrud.util.reactive :as reactive]
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.ide :as ide]
             [hyperfiddle.ide-rt :as ide-rt]
@@ -10,11 +11,17 @@
             [hyperfiddle.io.hydrate-requests :refer [hydrate-requests stage-val->staged-branches]]
             [hyperfiddle.io.sync :refer [sync]]
             [hyperfiddle.runtime :as runtime]
+            [hyperfiddle.state :as state]
             [promesa.core :as p]))
 
 
 ; This is allowed to hydrate route, this runtime is probably the same as hydrate-route runtime
-(deftype LocalBasis [hyperfiddle-hostname hostname foo target-repo state-atom]
+(deftype LocalBasis [hyperfiddle-hostname hostname foo target-repo state-atom root-reducer]
+  runtime/State
+  (dispatch! [rt action-or-func] (state/dispatch! state-atom root-reducer action-or-func))
+  (state [rt] state-atom)
+  (state [rt path] (reactive/cursor state-atom path))
+
   runtime/AppFnGlobalBasis
   (global-basis [rt]
     (global-basis rt hyperfiddle-hostname hostname))
@@ -57,5 +64,5 @@
 
   ide-rt/SplitRuntime
   (sub-rt [rt foo target-repo]
-    (LocalBasis. hyperfiddle-hostname hostname foo target-repo state-atom))
+    (LocalBasis. hyperfiddle-hostname hostname foo target-repo state-atom root-reducer))
   (target-repo [rt] target-repo))

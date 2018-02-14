@@ -13,10 +13,16 @@
             [hyperfiddle.io.hydrate-route :refer [hydrate-loop hydrate-loop-adapter]]
             [hyperfiddle.io.sync :refer [sync]]
             [hyperfiddle.runtime :as runtime]
+            [hyperfiddle.state :as state]
             [promesa.core :as p]))
 
 
-(deftype HydrateRoute [hyperfiddle-hostname hostname foo target-repo state-atom]
+(deftype HydrateRoute [hyperfiddle-hostname hostname foo target-repo state-atom root-reducer]
+  runtime/State
+  (dispatch! [rt action-or-func] (state/dispatch! state-atom root-reducer action-or-func))
+  (state [rt] state-atom)
+  (state [rt path] (reactive/cursor state-atom path))
+
   runtime/AppFnGlobalBasis
   (global-basis [rt]
     (global-basis rt hyperfiddle-hostname hostname))
@@ -51,7 +57,7 @@
                :branch branch
                :peer rt}]
       (hydrate-loop rt (hydrate-loop-adapter local-basis stage ctx
-                                             #(HydrateRoute. hyperfiddle-hostname hostname foo target-repo (reactive/atom %))
+                                             #(HydrateRoute. hyperfiddle-hostname hostname foo target-repo (reactive/atom %) root-reducer)
                                              #(foundation/api foo ?route % (partial ide/api foo)))
                     local-basis stage data-cache)))
 
@@ -62,7 +68,7 @@
                :branch nil
                :peer rt}]
       (hydrate-loop rt (hydrate-loop-adapter local-basis stage ctx
-                                             #(HydrateRoute. hyperfiddle-hostname hostname foo target-repo (reactive/atom %))
+                                             #(HydrateRoute. hyperfiddle-hostname hostname foo target-repo (reactive/atom %) root-reducer)
                                              #(foundation/api "page" route % (partial ide/api "page")))
                     local-basis stage data-cache)))
 
@@ -89,5 +95,5 @@
 
   ide-rt/SplitRuntime
   (sub-rt [rt foo target-repo]
-    (HydrateRoute. hyperfiddle-hostname hostname foo target-repo state-atom))
+    (HydrateRoute. hyperfiddle-hostname hostname foo target-repo state-atom root-reducer))
   (target-repo [rt] target-repo))
