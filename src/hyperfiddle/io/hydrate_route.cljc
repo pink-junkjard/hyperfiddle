@@ -78,15 +78,14 @@
                                       (->Runtime))))]
       (f ctx))))
 
-(defn hydrate-route-rpc! [service-uri local-basis route foo target-repo branch stage]
+(defn hydrate-route-rpc! [service-uri local-basis route branch branch-aux stage]
   ; matrix params instead of path params
-  (-> (merge {:url (str/format "%(service-uri)shydrate-route/$local-basis/$encoded-route/$foo/$target-repo/$branch"
+  (-> (merge {:url (str/format "%(service-uri)shydrate-route/$local-basis/$encoded-route/$branch/$branch-aux"
                                {:service-uri service-uri
                                 :local-basis (base-64-url-safe/encode (pr-str local-basis))
                                 :encoded-route (subs (routing/encode route) 1) #_"drop leading /"
-                                :foo (base-64-url-safe/encode (pr-str foo))
-                                :target-repo (base-64-url-safe/encode (pr-str target-repo))
-                                :branch (base-64-url-safe/encode (pr-str branch))})
+                                :branch (base-64-url-safe/encode (pr-str branch))
+                                :branch-aux (base-64-url-safe/encode (pr-str branch-aux))})
               :accept :application/transit+json :as :auto}
              (if (empty? stage)
                {:method :get}                               ; Try to hit CDN

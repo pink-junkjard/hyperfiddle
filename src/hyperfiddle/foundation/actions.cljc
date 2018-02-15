@@ -23,18 +23,16 @@
 ; user beware
 (defn batch [& action-list] (cons :batch action-list))
 
-(defn hydrate-route* [rt page-or-leaf branch post-start->route-vals
+(defn hydrate-route* [rt branch post-start->route-vals
                       on-start success-action failure-action
                       dispatch! get-state]
   (let [hydrate-id #?(:clj (Math/random) :cljs (js/Math.random))]
     (dispatch! (apply batch [:hydrate!-start hydrate-id] on-start))
     (let [{:keys [stage] :as post-start-state} (get-state)
-          {:keys [route local-basis]} (post-start->route-vals post-start-state)]
+          {:keys [route local-basis ::runtime/branch-aux]} (post-start->route-vals post-start-state)]
       (assert route)
       (assert (not (string? route)))
-      (-> (case page-or-leaf
-            :page (runtime/hydrate-route-page rt local-basis route stage)
-            :leaf (runtime/hydrate-route rt local-basis route branch stage))
+      (-> (runtime/hydrate-route rt local-basis route branch branch-aux stage)
           (p/then (fn [{:keys [ptm id->tempid]}]
                     (if (= hydrate-id (:hydrate-id (get-state)))
                       (let [stage-val (:stage (get-state))
@@ -50,12 +48,16 @@
                      (throw error)))))))
 
 (defn hydrate-page [rt on-start dispatch! get-state]
-  (hydrate-route* rt :page nil #(select-keys % [:route :local-basis])
+  (hydrate-route* rt nil (fn [state]
+                           {:route (:route state)
+                            :local-basis (:local-basis state)
+                            ; immoral to construct this
+                            ::runtime/branch-aux {:hyperfiddle.ide/foo "page"}})
                   on-start :hydrate!-success :hydrate!-failure
                   dispatch! get-state))
 
 (defn hydrate-branch [rt branch on-start dispatch! get-state]
-  (hydrate-route* rt :leaf branch #(get-in % [:branches branch])
+  (hydrate-route* rt branch #(get-in % [:branches branch])
                   on-start :popover-hydrate!-success :popover-hydrate!-failure
                   dispatch! get-state))
 
@@ -68,8 +70,10 @@
                  (throw error)))))
 
 (defn refresh-page-local-basis [rt dispatch! get-state]
-  (let [{:keys [global-basis route]} (get-state)]
-    (-> (runtime/local-basis-page rt global-basis route)
+  (let [{:keys [global-basis route]} (get-state)
+        ; immoral to construct branch-aux
+        branch-aux {:hyperfiddle.ide/foo "page"}]
+    (-> (runtime/local-basis rt global-basis route nil branch-aux)
         (p/then (fn [local-basis]
                   (dispatch! [:set-local-basis local-basis])))
         (p/catch (fn [error]
@@ -119,16 +123,16 @@
 (defn open-popover [popover-id]
   [:open-popover popover-id])
 
-(defn open-branched-popover [rt popover-id branch route]
+(defn open-branched-popover [rt popover-id route branch branch-aux]
   (fn [dispatch! get-state]
     (let [{:keys [global-basis]} (get-state)]
-      (-> (runtime/local-basis rt global-basis route branch)
+      (-> (runtime/local-basis rt global-basis route branch branch-aux) ; todo use action refresh-local-basis
           (p/catch (fn [error]
                      (dispatch! [:set-error error])
                      (throw error)))
           (p/then (fn [local-basis]
                     (let [on-start [(open-popover popover-id)
-                                    [:add-branch branch route local-basis]]]
+                                    [:add-branch branch branch-aux route local-basis]]]
                       (hydrate-branch rt branch on-start dispatch! get-state))))))))
 
 (defn discard-branched-popover [popover-id branch]

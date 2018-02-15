@@ -9,7 +9,6 @@
             [hypercrud.util.core :refer [unwrap xorxs update-existing]]
             [hypercrud.util.string :as hc-string]
             [hyperfiddle.foundation :as foundation]
-            [hyperfiddle.ide-rt :as ide-rt]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-one!]]
             [hyperfiddle.runtime :as runtime]
     #?(:cljs [reagent.core :as reagent])
@@ -44,8 +43,6 @@
    :fiddle-id :hyperfiddle/topnav
    :request-params [#entity["$" (:fiddle-id route)]]})
 
-(def -sub-rt (memoize ide-rt/sub-rt))
-
 (let [always-user (atom :user)
       constantly-nil (constantly nil)]
   ; ide is overloaded, these ide-context functions are exclusive to (top)
@@ -61,8 +58,9 @@
                :user-profile ?user-profile)
         (update :hypercrud.browser/domain
                 (fn [domain]
-                  (let [target-source-uri (->> (:domain/code-databases domain)
-                                               (filter #(= (:dbhole/name %) (ide-rt/target-repo (:peer ctx))))
+                  (let [target-repo (get-in ctx [::runtime/branch-aux ::target-repo])
+                        target-source-uri (->> (:domain/code-databases domain)
+                                               (filter #(= (:dbhole/name %) target-repo))
                                                first
                                                :dbhole/uri)]
                     (-> (foundation/process-domain-legacy ide-domain)
@@ -82,9 +80,11 @@
 
 (defn page-ide-context [ctx ide-domain target-route ?user-profile]
   {:pre [target-route]}
-  (-> (update ctx :peer #(-sub-rt % "ide" (:code-database target-route)))
-      ; hyperfiddle.ide/target-route is ONLY available to inlined IDE (no deferred popovers)
-      (assoc :target-route target-route)                    ; todo rename :target-route to :hyperfiddle.ide/target-route
+  (-> (assoc ctx
+        ::runtime/branch-aux {::target-repo (:code-database target-route)
+                              ::foo "ide"}
+        ; hyperfiddle.ide/target-route is ONLY available to inlined IDE (no deferred popovers)
+        :target-route target-route)                         ; todo rename :target-route to :hyperfiddle.ide/target-route
       (*-ide-context ide-domain ?user-profile)))
 
 (def activate-ide? (complement foundation/alias?))
@@ -107,7 +107,7 @@
   (*-target-context ctx route user-profile))
 
 (defn page-target-context [ctx route user-profile]
-  (-> (update ctx :peer #(-sub-rt % "user" nil))
+  (-> (assoc ctx ::runtime/branch-aux {::foo "user"})
       (*-target-context route user-profile)))
 
 (defn route-decode [rt s]
@@ -122,13 +122,13 @@
   ; use domain to canonicalize
   (routing/encode route))
 
-(defn local-basis [foo global-basis route ctx]
+(defn local-basis [global-basis route ctx]
   ;local-basis-ide and local-basis-user
   (let [{:keys [domain ide user]} global-basis
         ; basis-maps: List[Map[uri, t]]
         user-basis (get user (:code-database route))
-        ide-basis (get ide (ide-rt/target-repo (:peer ctx))) ; Why don't we call ide-route-decode? I guess we don't care?
-        basis-maps (case foo
+        ide-basis (get ide (get-in ctx [::runtime/branch-aux ::target-repo])) ; Why don't we call ide-route-decode? I guess we don't care?
+        basis-maps (case (get-in ctx [::runtime/branch-aux ::foo])
                      "page" (concat (vals user) #_"for schema in topnav"
                                     (vals ide))             ; dead code i think?
                      "ide" (concat [ide-basis] (vals ide) (vals user))
@@ -140,14 +140,14 @@
 
 ; Reactive pattern obfuscates params
 ; Foo can be ignored for now
-(defn api [foo ?route ctx]
+(defn api [?route ctx]
   {:pre [?route (not (string? ?route))]
    :post [#_(seq %)]}
   ; We can actually call into the foundation a second time here to get the ide-domain
   (let [ide-domain-q (foundation/domain-request "hyperfiddle" (:peer ctx))
         ide-domain (hc/hydrate-api (:peer ctx) ide-domain-q)
         user-profile @(runtime/state (:peer ctx) [:user-profile])]
-    (case foo
+    (case (get-in ctx [::runtime/branch-aux ::foo])
       "page" (concat [ide-domain-q]
                      (if ?route
                        (browser/request-from-route ?route (page-target-context ctx ?route user-profile)))

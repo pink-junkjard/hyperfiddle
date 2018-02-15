@@ -63,18 +63,18 @@
 (defn context [ctx domain]
   (assoc ctx :hypercrud.browser/domain (process-domain-legacy domain)))
 
-(defn local-basis [foo global-basis route ctx f]
+(defn local-basis [page-or-leaf global-basis route ctx f]
   (concat
     (:domain global-basis)
     (f global-basis route ctx)))
 
-(defn api [foo route ctx f]
+(defn api [page-or-leaf route ctx f]
   (let [domain-q (domain-request (hostname->hf-domain-name ctx) (:peer ctx))
         user-qs (when-let [domain (hc/hydrate-api (:peer ctx) domain-q)]
                   (f route (context ctx domain)))]
-    (case foo
-      "page" (concat [domain-q] user-qs)
-      (concat [domain-q] user-qs))))
+    (case page-or-leaf
+      :page (concat [domain-q] user-qs)
+      :leaf (concat [domain-q] user-qs))))
 
 #?(:cljs
    (defn staging [peer]
@@ -108,12 +108,12 @@
                [staging (:peer ctx)])]))])))
 
 #?(:cljs
-   (defn view [foo route ctx f]
-     (case foo
+   (defn view [page-or-leaf route ctx f]
+     (case page-or-leaf
        ; The foundation comes with special root markup which means the foundation/view knows about page/user (not ide)
        ; Can't ide/user (not page) be part of the userland route?
-       "page" (page-view route ctx f)
-       (leaf-view route ctx f))))
+       :page (page-view route ctx f)
+       :leaf (leaf-view route ctx f))))
 
 (defn confirm [message]
   #?(:clj  (throw (ex-info "confirm unsupported by platform" nil))

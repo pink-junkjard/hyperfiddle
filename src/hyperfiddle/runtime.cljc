@@ -22,13 +22,16 @@
 ; App val uses link-graph to determine a local-basis and optimize hydrates for cache locality
 
 (defprotocol AppValLocalBasis                               ; only the data for this route, but decoupled from browser, foo not allowed.
-  (local-basis [rt global-basis route branch])
-  (local-basis-page [rt global-basis route]))
+  (local-basis [rt global-basis route branch branch-aux])
+  ; interface could just be
+  #_(local-basis [rt branch-ident]))
 
 (defprotocol AppValHydrate
   ; user-data-fn not on this interface; hardcoded in runtime impls or read from db
-  (hydrate-route [rt local-basis #_"actions need to set this without a new instance" route branch stage]) ; returns ptm without stage-val hashes
-  (hydrate-route-page [rt local-basis route stage]))
+  ; returns ptm without stage-val hashes
+  (hydrate-route [rt local-basis route branch branch-aux stage])
+  ; interface could just be
+  #_(hydrate-route [rt branch-ident]))
 
 (defprotocol State
   (dispatch! [rt action-or-func])

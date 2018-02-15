@@ -92,9 +92,10 @@
 
 (defn branches-reducer [branches action & args]
   (case action
-    :add-branch (let [[branch route local-basis] args]
+    :add-branch (let [[branch branch-aux route local-basis] args]
                   (assoc branches branch {:local-basis local-basis
-                                          :route route}))
+                                          :route route
+                                          :hyperfiddle.runtime/branch-aux branch-aux}))
     :discard-branch (let [[branch] args]
                       (dissoc branches branch))
     (or branches {})))

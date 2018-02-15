@@ -165,7 +165,7 @@
   (runtime/dispatch! (:peer ctx)
                      (if dont-branch?
                        (foundation-actions/open-popover popover-id)
-                       (foundation-actions/open-branched-popover (:peer ctx) popover-id (:branch ctx) route))))
+                       (foundation-actions/open-branched-popover (:peer ctx) popover-id route (:branch ctx) (:hyperfiddle.runtime/branch-aux ctx)))))
 
 ; if this is driven by link, and not route, it needs memoized.
 ; the route is a fn of the formulas and the formulas can have effects
