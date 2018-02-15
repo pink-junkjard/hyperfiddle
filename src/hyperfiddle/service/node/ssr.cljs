@@ -11,7 +11,6 @@
             [hyperfiddle.appval.state.reducers :as reducers]
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.ide :as ide]
-            [hyperfiddle.ide-rt :as ide-rt]
             [hyperfiddle.io.global-basis :refer [global-basis-rpc!]]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-requests-rpc!]]
             [hyperfiddle.io.hydrate-route :refer [hydrate-route-rpc!]]
@@ -74,7 +73,7 @@
     (perf/time (fn [get-total-time] (timbre/debug "Template total time:" (get-total-time)))
                (evaluated-template env state-val params serve-js? app-html))))
 
-(deftype IdeSsrRuntime [hyperfiddle-hostname hostname foo target-repo service-uri state-atom root-reducer]
+(deftype IdeSsrRuntime [hyperfiddle-hostname hostname service-uri state-atom root-reducer]
   runtime/State
   (dispatch! [rt action-or-func] (state/dispatch! state-atom root-reducer action-or-func))
   (state [rt] state-atom)
@@ -96,21 +95,22 @@
     (ide/domain rt hyperfiddle-hostname hostname))
 
   runtime/AppValLocalBasis
-  (local-basis-page [rt global-basis route]
-    {:pre [(= "page" foo)]}
+  (local-basis [rt global-basis route branch branch-aux]
     (let [ctx {:hostname hostname
                :hyperfiddle-hostname hyperfiddle-hostname
-               :branch nil
-               :peer rt}]
-      (foundation/local-basis "page" global-basis route ctx (partial ide/local-basis "page"))))
+               :branch branch
+               :hyperfiddle.runtime/branch-aux branch-aux
+               :peer rt}
+          ; this is ide
+          page-or-leaf (case (:hyperfiddle.ide/foo branch-aux)
+                         "page" :page
+                         "user" :leaf
+                         "ide" :leaf)]
+      (foundation/local-basis page-or-leaf global-basis route ctx ide/local-basis)))
 
   runtime/AppValHydrate
-  (hydrate-route [rt local-basis route branch stage]
-    ; If IDE, send up target-repo as well (encoded in route as query param?)
-    (hydrate-route-rpc! service-uri local-basis route foo target-repo branch stage))
-
-  (hydrate-route-page [rt local-basis route stage]
-    (hydrate-route-rpc! service-uri local-basis route "page" nil nil stage))
+  (hydrate-route [rt local-basis route branch branch-aux stage]
+    (hydrate-route-rpc! service-uri local-basis route branch branch-aux stage))
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
@@ -122,15 +122,11 @@
 
   runtime/AppFnRenderPageRoot
   (ssr [rt-page route]
-    (assert (= foo "page") "Impossible; sub-rts don't render, they just hydrate")
-    ; We have the domain if we are here.
-    ; This runtime doesn't actually support :domain/view-fn, we assume the foo interface.
     (let [ctx {:hostname hostname
                :hyperfiddle-hostname hyperfiddle-hostname
                :peer rt-page}]
       (render-local-html
-        (partial foundation/view foo route ctx
-                 (partial ide/view foo)))))
+        (partial foundation/view :page route ctx (partial ide/view "page")))))
 
   hc/Peer
   (hydrate [this request]
@@ -143,18 +139,13 @@
   (hydrate-api [this request]
     (unwrap @(hc/hydrate this request)))
 
-  ide-rt/SplitRuntime
-  (sub-rt [rt foo target-repo]
-    (IdeSsrRuntime. hyperfiddle-hostname hostname foo target-repo service-uri state-atom root-reducer))
-  (target-repo [rt] target-repo)
-
   IHash
   (-hash [this] (goog/getUid this)))
 
 (defn http-edge [env req res path-params query-params]
   (let [hostname (.-hostname req)
         initial-state {:user-profile (lib/req->user-profile env req)}
-        rt (->IdeSsrRuntime (:HF_HOSTNAME env) hostname "page" nil (req->service-uri env req)
+        rt (->IdeSsrRuntime (:HF_HOSTNAME env) hostname (req->service-uri env req)
                             (reactive/atom (reducers/root-reducer initial-state nil))
                             reducers/root-reducer)
         serve-js? true #_(not aliased?)

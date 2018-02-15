@@ -84,15 +84,17 @@
         (let [hostname (:server-name req)
               global-basis (-> (:global-basis path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
               route (routing/decode (str "/" (:encoded-route path-params)))
-              foo (some-> (:foo path-params) base-64-url-safe/decode reader/read-edn-string)
               branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string)
+              branch-aux (some-> (:branch-aux path-params) base-64-url-safe/decode reader/read-edn-string)
               initial-state {:global-basis global-basis
-                             :user-profile (:user req)}
-              rt (->LocalBasis (:HF_HOSTNAME env) hostname foo nil
+                             :user-profile (:user req)
+                             :branches {branch {:route route
+                                                :hyperfiddle.runtime/branch-aux branch-aux}}}
+              rt (->LocalBasis (:HF_HOSTNAME env) hostname
                                (reactive/atom (reducers/root-reducer initial-state nil))
                                reducers/root-reducer)]
           (-> (foundation-actions/refresh-domain rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
-              (p/then (fn [_] (runtime/local-basis rt global-basis route branch)))
+              (p/then (fn [_] (runtime/local-basis rt global-basis route branch branch-aux)))
               (p/then (fn [local-basis]
                         {:status 200
                          :headers {"Cache-Control" "max-age=31536000"}
@@ -109,17 +111,21 @@
         (let [hostname (:server-name req)
               local-basis (-> (:local-basis path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
               route (routing/decode (str "/" (:encoded-route path-params)))
-              foo (some-> (:foo path-params) base-64-url-safe/decode reader/read-edn-string)
-              target-repo (some-> (:target-repo path-params) base-64-url-safe/decode reader/read-edn-string)
               branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string)
+              branch-aux (some-> (:branch-aux path-params) base-64-url-safe/decode reader/read-edn-string)
               initial-state (-> {:local-basis local-basis
                                  :stage body-params
-                                 :user-profile (:user req)})
-              rt (->HydrateRoute (:HF_HOSTNAME env) hostname foo target-repo
+                                 :user-profile (:user req)
+                                 ; should this be constructed with reducers?
+                                 ; why dont we need to preheat the tempid lookups here for parent branches?
+                                 :branches {branch {:local-basis local-basis
+                                                    :route route
+                                                    :hyperfiddle.runtime/branch-aux branch-aux}}})
+              rt (->HydrateRoute (:HF_HOSTNAME env) hostname
                                  (reactive/atom (reducers/root-reducer initial-state nil))
                                  reducers/root-reducer)]
           (-> (foundation-actions/refresh-domain rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
-              (p/then (fn [_] (runtime/hydrate-route rt local-basis route branch (:stage initial-state))))
+              (p/then (fn [_] (runtime/hydrate-route rt local-basis route branch branch-aux (:stage initial-state))))
               (p/then (fn [data]
                         {:status 200
                          :headers {"Cache-Control" "max-age=31536000"} ; todo max-age=0 if POST
@@ -150,11 +156,11 @@
                                            ~(with-user env)
                                            http/promise->chan]
           ["/global-basis" {:get [:global-basis ~(http-global-basis env)]}]
-          ["/local-basis/:global-basis/:encoded-route/:foo" {:get [:local-basis-get ~(http-local-basis env)]}]
-          ["/local-basis/:global-basis/:encoded-route/:foo" {:post [:local-basis-post ~(http-local-basis env)]}]
+          ["/local-basis/:global-basis/:encoded-route/:branch/:branch-aux" {:get [:local-basis-get ~(http-local-basis env)]}]
+          ["/local-basis/:global-basis/:encoded-route/:branch/:branch-aux" {:post [:local-basis-post ~(http-local-basis env)]}]
           ["/hydrate-requests/:local-basis" {:post [:hydrate-requests http-hydrate-requests]}]
-          ["/hydrate-route/:local-basis/:encoded-route/:foo/:target-repo/:branch" {:get [:hydrate-route-get ~(http-hydrate-route env)]}]
-          ["/hydrate-route/:local-basis/:encoded-route/:foo/:target-repo/:branch" {:post [:hydrate-route-post ~(http-hydrate-route env)]}]
+          ["/hydrate-route/:local-basis/:encoded-route/:branch/:branch-aux" {:get [:hydrate-route-get ~(http-hydrate-route env)]}]
+          ["/hydrate-route/:local-basis/:encoded-route/:branch/:branch-aux" {:post [:hydrate-route-post ~(http-hydrate-route env)]}]
           ["/transact" {:post [:transact! http-transact!]}]
           ["/sync" {:post [:latest http-sync]}]
           ]]])))

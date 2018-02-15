@@ -6,7 +6,6 @@
             [hypercrud.util.reactive :as reactive]
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.ide :as ide]
-            [hyperfiddle.ide-rt :as ide-rt]
             [hyperfiddle.io.global-basis :refer [global-basis]]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-requests stage-val->staged-branches]]
             [hyperfiddle.io.sync :refer [sync]]
@@ -16,7 +15,7 @@
 
 
 ; This is allowed to hydrate route, this runtime is probably the same as hydrate-route runtime
-(deftype LocalBasis [hyperfiddle-hostname hostname foo target-repo state-atom root-reducer]
+(deftype LocalBasis [hyperfiddle-hostname hostname state-atom root-reducer]
   runtime/State
   (dispatch! [rt action-or-func] (state/dispatch! state-atom root-reducer action-or-func))
   (state [rt] state-atom)
@@ -38,12 +37,18 @@
     (ide/domain rt hyperfiddle-hostname hostname))
 
   runtime/AppValLocalBasis
-  (local-basis [rt global-basis route branch]
+  (local-basis [rt global-basis route branch branch-aux]
     (let [ctx {:hostname hostname
                :hyperfiddle-hostname hyperfiddle-hostname
                :branch branch
-               :peer rt}]
-      (foundation/local-basis foo global-basis route ctx (partial ide/local-basis foo))))
+               ::runtime/branch-aux branch-aux
+               :peer rt}
+          ; this is ide
+          page-or-leaf (case (:hyperfiddle.ide/foo branch-aux)
+                         "page" :page
+                         "user" :leaf
+                         "ide" :leaf)]
+      (foundation/local-basis page-or-leaf global-basis route ctx ide/local-basis)))
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
@@ -60,9 +65,4 @@
     (peer/hydrate state-atom request))
 
   (db [this uri branch]
-    (peer/db-pointer uri branch))
-
-  ide-rt/SplitRuntime
-  (sub-rt [rt foo target-repo]
-    (LocalBasis. hyperfiddle-hostname hostname foo target-repo state-atom root-reducer))
-  (target-repo [rt] target-repo))
+    (peer/db-pointer uri branch)))

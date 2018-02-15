@@ -7,7 +7,6 @@
             [hypercrud.util.reactive :as reactive]
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.ide :as ide]
-            [hyperfiddle.ide-rt :as ide-rt]
             [hyperfiddle.io.global-basis :refer [global-basis]]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-requests stage-val->staged-branches]]
             [hyperfiddle.io.hydrate-route :refer [hydrate-loop hydrate-loop-adapter]]
@@ -17,7 +16,7 @@
             [promesa.core :as p]))
 
 
-(deftype HydrateRoute [hyperfiddle-hostname hostname foo target-repo state-atom root-reducer]
+(deftype HydrateRoute [hyperfiddle-hostname hostname state-atom root-reducer]
   runtime/State
   (dispatch! [rt action-or-func] (state/dispatch! state-atom root-reducer action-or-func))
   (state [rt] state-atom)
@@ -39,37 +38,37 @@
     (ide/domain rt hyperfiddle-hostname hostname))
 
   runtime/AppValLocalBasis
-  (local-basis [rt global-basis route branch]
-    ; Don't have a local basis, we do have a global-basis though
+  (local-basis [rt global-basis route branch branch-aux]
     (let [ctx {:hyperfiddle-hostname hyperfiddle-hostname
                :hostname hostname
                :branch branch
-               :peer rt}]
+               :hyperfiddle.runtime/branch-aux branch-aux
+               :peer rt}
+          ; this is ide
+          page-or-leaf (case (:hyperfiddle.ide/foo branch-aux)
+                         "page" :page
+                         "user" :leaf
+                         "ide" :leaf)]
       ; Local basis has to have enough info to call the API (even if we omit that call today)
-      (foundation/local-basis foo global-basis route ctx (partial ide/local-basis foo))))
+      (foundation/local-basis page-or-leaf global-basis route ctx ide/local-basis)))
 
   runtime/AppValHydrate
-  (hydrate-route [rt local-basis ?route branch stage]
+  (hydrate-route [rt local-basis ?route branch branch-aux stage]
     {:pre [?route (not (string? ?route))]}
     (let [data-cache (select-keys @state-atom [:id->tempid :ptm])
           ctx {:hyperfiddle-hostname hyperfiddle-hostname
                :hostname hostname
                :branch branch
-               :peer rt}]
+               :hyperfiddle.runtime/branch-aux branch-aux
+               :peer rt}
+          ; this is ide
+          page-or-leaf (case (:hyperfiddle.ide/foo branch-aux)
+                         "page" :page
+                         "user" :leaf
+                         "ide" :leaf)]
       (hydrate-loop rt (hydrate-loop-adapter local-basis stage ctx
-                                             #(HydrateRoute. hyperfiddle-hostname hostname foo target-repo (reactive/atom %) root-reducer)
-                                             #(foundation/api foo ?route % (partial ide/api foo)))
-                    local-basis stage data-cache)))
-
-  (hydrate-route-page [rt local-basis route stage]
-    (let [data-cache (select-keys @state-atom [:id->tempid :ptm])
-          ctx {:hyperfiddle-hostname hyperfiddle-hostname
-               :hostname hostname
-               :branch nil
-               :peer rt}]
-      (hydrate-loop rt (hydrate-loop-adapter local-basis stage ctx
-                                             #(HydrateRoute. hyperfiddle-hostname hostname foo target-repo (reactive/atom %) root-reducer)
-                                             #(foundation/api "page" route % (partial ide/api "page")))
+                                             #(HydrateRoute. hyperfiddle-hostname hostname (reactive/atom %) root-reducer)
+                                             #(foundation/api page-or-leaf ?route % ide/api))
                     local-basis stage data-cache)))
 
   runtime/AppFnHydrate
@@ -91,9 +90,4 @@
 
   hc/HydrateApi
   (hydrate-api [this request]
-    (unwrap @(hc/hydrate this request)))
-
-  ide-rt/SplitRuntime
-  (sub-rt [rt foo target-repo]
-    (HydrateRoute. hyperfiddle-hostname hostname foo target-repo state-atom root-reducer))
-  (target-repo [rt] target-repo))
+    (unwrap @(hc/hydrate this request))))

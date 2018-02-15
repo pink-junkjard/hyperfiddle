@@ -20,7 +20,7 @@
 
 
 ; Todo this is same runtime as HydrateRoute
-(deftype LocalBasisRuntime [hyperfiddle-hostname hostname service-uri foo target-repo state-atom root-reducer]
+(deftype LocalBasisRuntime [hyperfiddle-hostname hostname service-uri state-atom root-reducer]
   runtime/State
   (dispatch! [rt action-or-func] (state/dispatch! state-atom root-reducer action-or-func))
   (state [rt] state-atom)
@@ -42,12 +42,18 @@
     (ide/domain rt hyperfiddle-hostname hostname))
 
   runtime/AppValLocalBasis
-  (local-basis [rt global-basis route branch]
+  (local-basis [rt global-basis route branch branch-aux]
     (let [ctx {:hostname hostname
                :hyperfiddle-hostname hyperfiddle-hostname
                :branch branch
-               :peer rt}]
-      (foundation/local-basis foo global-basis route ctx (partial ide/local-basis foo))))
+               ::runtime/branch-aux branch-aux
+               :peer rt}
+          ; this is ide
+          page-or-leaf (case (:hyperfiddle.ide/foo branch-aux)
+                         "page" :page
+                         "user" :leaf
+                         "ide" :leaf)]
+      (foundation/local-basis page-or-leaf global-basis route ctx ide/local-basis)))
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
@@ -64,12 +70,6 @@
   (db [this uri branch]
     (peer/db-pointer uri branch))
 
-  ; Happened on client, node reconstructed the right rt already
-  ;ide-rt/SplitRuntime
-  ;(sub-rt [rt foo target-repo]
-  ;  (LocalBasisRuntime. hyperfiddle-hostname hostname service-uri foo target-repo state-atom))
-  ;(target-repo [rt] targe-repo)
-
   IHash
   (-hash [this] (goog/getUid this)))
 
@@ -79,15 +79,17 @@
   (let [hostname (.-hostname req)
         global-basis (-> path-params :global-basis base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
         route (routing/decode encoded-route)
-        foo (some-> (:foo path-params) base-64-url-safe/decode reader/read-edn-string)
         branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
+        branch-aux (some-> (:branch-aux path-params) base-64-url-safe/decode reader/read-edn-string)
         initial-state {:global-basis global-basis
-                       :user-profile (lib/req->user-profile env req)}
-        rt (->LocalBasisRuntime (:HF_HOSTNAME env) hostname (lib/req->service-uri env req) foo (:target-repo path-params)
+                       :user-profile (lib/req->user-profile env req)
+                       :branches {branch {:route route
+                                          :hyperfiddle.runtime/branch-aux branch-aux}}}
+        rt (->LocalBasisRuntime (:HF_HOSTNAME env) hostname (lib/req->service-uri env req)
                                 (reactive/atom (reducers/root-reducer initial-state nil))
                                 reducers/root-reducer)]
     (-> (foundation-actions/refresh-domain rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
-        (p/then #(runtime/local-basis rt global-basis route branch))
+        (p/then #(runtime/local-basis rt global-basis route branch branch-aux))
         (p/then (fn [local-basis]
                   (doto res
                     (.status 200)

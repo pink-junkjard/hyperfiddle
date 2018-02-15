@@ -11,7 +11,6 @@
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.foundation.actions :as foundation-actions]
             [hyperfiddle.ide :as ide]
-            [hyperfiddle.ide-rt :as ide-rt]
             [hyperfiddle.io.global-basis :refer [global-basis-rpc!]]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-requests-rpc!]]
             [hyperfiddle.io.hydrate-route :refer [hydrate-loop hydrate-loop-adapter]]
@@ -22,7 +21,7 @@
             [promesa.core :as p]))
 
 
-(deftype HydrateRouteRuntime [hyperfiddle-hostname hostname service-uri foo target-repo state-atom root-reducer]
+(deftype HydrateRouteRuntime [hyperfiddle-hostname hostname service-uri state-atom root-reducer]
   runtime/State
   (dispatch! [rt action-or-func] (state/dispatch! state-atom root-reducer action-or-func))
   (state [rt] state-atom)
@@ -44,34 +43,35 @@
     (ide/domain rt hyperfiddle-hostname hostname))
 
   runtime/AppValLocalBasis
-  (local-basis [rt global-basis route branch]
+  (local-basis [rt global-basis route branch branch-aux]
     (let [ctx {:hostname hostname
                :hyperfiddle-hostname hyperfiddle-hostname
                :branch branch
-               :peer rt}]
-      (foundation/local-basis foo global-basis route ctx (partial ide/local-basis foo))))
+               :hyperfiddle.runtime/branch-aux branch-aux
+               :peer rt}
+          ; this is ide
+          page-or-leaf (case (:hyperfiddle.ide/foo branch-aux)
+                         "page" :page
+                         "user" :leaf
+                         "ide" :leaf)]
+      (foundation/local-basis page-or-leaf global-basis route ctx ide/local-basis)))
 
   runtime/AppValHydrate
-  (hydrate-route [rt local-basis encoded-route branch stage] ; :: ... -> DataCache on the wire
+  (hydrate-route [rt local-basis encoded-route branch branch-aux stage] ; :: ... -> DataCache on the wire
     (let [data-cache (select-keys @state-atom [:id->tempid :ptm])
           ctx {:hyperfiddle-hostname hyperfiddle-hostname
                :hostname hostname
                :branch branch
-               :peer rt}]
+               :hyperfiddle.runtime/branch-aux branch-aux
+               :peer rt}
+          ; this is ide
+          page-or-leaf (case (:hyperfiddle.ide/foo branch-aux)
+                         "page" :page
+                         "user" :leaf
+                         "ide" :leaf)]
       (hydrate-loop rt (hydrate-loop-adapter local-basis stage ctx
-                                             #(HydrateRouteRuntime. hyperfiddle-hostname hostname service-uri foo target-repo (reactive/atom %) root-reducer)
-                                             #(foundation/api foo encoded-route % (partial ide/api foo)))
-                    local-basis stage data-cache)))
-
-  (hydrate-route-page [rt local-basis encoded-route stage]
-    (let [data-cache (select-keys @state-atom [:id->tempid :ptm])
-          ctx {:hyperfiddle-hostname hyperfiddle-hostname
-               :hostname hostname
-               :branch nil
-               :peer rt}]
-      (hydrate-loop rt (hydrate-loop-adapter local-basis stage ctx
-                                             #(HydrateRouteRuntime. hyperfiddle-hostname hostname service-uri foo target-repo (reactive/atom %) root-reducer)
-                                             #(foundation/api "page" encoded-route % (partial ide/api "page")))
+                                             #(HydrateRouteRuntime. hyperfiddle-hostname hostname service-uri (reactive/atom %) root-reducer)
+                                             #(foundation/api page-or-leaf encoded-route % ide/api))
                     local-basis stage data-cache)))
 
   runtime/AppFnHydrate
@@ -93,30 +93,27 @@
   (hydrate-api [this request]
     (unwrap @(hc/hydrate this request)))
 
-  ide-rt/SplitRuntime
-  (sub-rt [rt foo target-repo]
-    (HydrateRouteRuntime. hyperfiddle-hostname hostname service-uri foo target-repo state-atom root-reducer))
-  (target-repo [rt] target-repo)
-
   IHash
   (-hash [this] (goog/getUid this)))
 
 
 (defn http-hydrate-route [env req res {:keys [encoded-route] :as path-params} query-params]
   (let [hostname (.-hostname req)
-        foo (some-> (:foo path-params) base-64-url-safe/decode reader/read-edn-string)
-        target-repo (some-> (:target-repo path-params) base-64-url-safe/decode reader/read-edn-string)
         branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
+        branch-aux (some-> (:branch-aux path-params) base-64-url-safe/decode reader/read-edn-string)
         local-basis (-> (:local-basis path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
         route (routing/decode encoded-route)
-        initial-state {:local-basis local-basis             ; no need for :route here, it is ignored, this whole thing gets clobbered
+        initial-state {:local-basis local-basis
                        :stage (some-> req .-body lib/hack-buggy-express-body-text-parser transit/decode)
-                       :user-profile (lib/req->user-profile env req)}
-        rt (->HydrateRouteRuntime (:HF_HOSTNAME env) hostname (lib/req->service-uri env req) foo target-repo
+                       :user-profile (lib/req->user-profile env req)
+                       :branches {branch {:local-basis local-basis
+                                          :route route
+                                          :hyperfiddle.runtime/branch-aux branch-aux}}}
+        rt (->HydrateRouteRuntime (:HF_HOSTNAME env) hostname (lib/req->service-uri env req)
                                   (reactive/atom (reducers/root-reducer initial-state nil))
                                   reducers/root-reducer)]
     (-> (foundation-actions/refresh-domain rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
-        (p/then #(runtime/hydrate-route rt local-basis route branch (:stage initial-state)))
+        (p/then #(runtime/hydrate-route rt local-basis route branch branch-aux (:stage initial-state)))
         (p/then (fn [data]
                   (doto res
                     (.status 200)
