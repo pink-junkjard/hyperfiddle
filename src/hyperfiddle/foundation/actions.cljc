@@ -54,9 +54,8 @@
                   on-start :hydrate!-success :hydrate!-failure
                   dispatch! get-state))
 
-(defn hydrate-branch [rt post-start->route-vals branch
-                      on-start dispatch! get-state]
-  (hydrate-route* rt :leaf branch post-start->route-vals
+(defn hydrate-branch [rt branch on-start dispatch! get-state]
+  (hydrate-route* rt :leaf branch #(get-in % [:branches branch])
                   on-start :popover-hydrate!-success :popover-hydrate!-failure
                   dispatch! get-state))
 
@@ -115,8 +114,7 @@
           on-start [[:with branch uri tx]]]
       (if (nil? branch)
         (hydrate-page rt on-start dispatch! get-state)
-        (let [post-start->route-vals #(get-in % [:branches branch])]
-          (hydrate-branch rt post-start->route-vals branch on-start dispatch! get-state))))))
+        (hydrate-branch rt branch on-start dispatch! get-state)))))
 
 (defn open-popover [popover-id]
   [:open-popover popover-id])
@@ -130,9 +128,8 @@
                      (throw error)))
           (p/then (fn [local-basis]
                     (let [on-start [(open-popover popover-id)
-                                    [:add-branch branch route local-basis]]
-                          post-start->route-vals (constantly {:route route :local-basis local-basis})]
-                      (hydrate-branch rt post-start->route-vals branch on-start dispatch! get-state))))))))
+                                    [:add-branch branch route local-basis]]]
+                      (hydrate-branch rt branch on-start dispatch! get-state))))))))
 
 (defn discard-branched-popover [popover-id branch]
   (batch (discard-branch branch)
@@ -153,8 +150,7 @@
                                  (close-popover popover-id)
                                  (discard-branch branch)])]
                   (if-let [parent-branch (branch/decode-parent-branch branch)]
-                    (let [post-start->route-vals #(get-in % [:branches parent-branch])]
-                      (hydrate-branch rt post-start->route-vals parent-branch actions dispatch! get-state))
+                    (hydrate-branch rt parent-branch actions dispatch! get-state)
                     (hydrate-page rt actions dispatch! get-state))))))))
 
 (defn reset-stage [rt tx]
