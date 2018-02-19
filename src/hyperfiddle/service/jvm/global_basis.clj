@@ -25,8 +25,8 @@
     (p/resolved (sync dbs)))
 
   hc/Peer
-  (hydrate [this request]
-    (peer/hydrate state-atom request))
+  (hydrate [this branch request]
+    (peer/hydrate state-atom branch request))
 
   (db [this uri branch]
     (peer/db-pointer uri branch)))

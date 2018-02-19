@@ -13,7 +13,7 @@
             [hyperfiddle.ide :as ide]
             [hyperfiddle.io.global-basis :refer [global-basis-rpc!]]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-requests-rpc!]]
-            [hyperfiddle.io.hydrate-route :refer [hydrate-loop hydrate-loop-adapter]]
+            [hyperfiddle.io.hydrate-route :refer [hydrate-loop request-fn-adapter]]
             [hyperfiddle.io.sync :refer [sync-rpc!]]
             [hyperfiddle.runtime :as runtime]
             [hyperfiddle.service.node.lib :as lib]
@@ -57,8 +57,8 @@
       (foundation/local-basis page-or-leaf global-basis route ctx ide/local-basis)))
 
   runtime/AppValHydrate
-  (hydrate-route [rt local-basis encoded-route branch branch-aux stage] ; :: ... -> DataCache on the wire
-    (let [data-cache (select-keys @state-atom [:id->tempid :ptm])
+  (hydrate-route [rt local-basis route branch branch-aux stage] ; :: ... -> DataCache on the wire
+    (let [data-cache (-> @(runtime/state rt [::runtime/partitions branch]) (select-keys [:tempid-lookups :ptm]))
           ctx {:hyperfiddle-hostname hyperfiddle-hostname
                :hostname hostname
                :branch branch
@@ -69,10 +69,10 @@
                          "page" :page
                          "user" :leaf
                          "ide" :leaf)]
-      (hydrate-loop rt (hydrate-loop-adapter local-basis stage ctx
-                                             #(HydrateRouteRuntime. hyperfiddle-hostname hostname service-uri (reactive/atom %) root-reducer)
-                                             #(foundation/api page-or-leaf encoded-route % ide/api))
-                    local-basis stage data-cache)))
+      (hydrate-loop rt (request-fn-adapter local-basis route stage ctx
+                                           #(HydrateRouteRuntime. hyperfiddle-hostname hostname service-uri (reactive/atom %) root-reducer)
+                                           #(foundation/api page-or-leaf route % ide/api))
+                    local-basis branch stage data-cache)))
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
@@ -83,15 +83,15 @@
     (sync-rpc! service-uri dbs))
 
   hc/Peer
-  (hydrate [this request]
-    (peer/hydrate state-atom request))
+  (hydrate [this branch request]
+    (peer/hydrate state-atom branch request))
 
   (db [this uri branch]
     (peer/db-pointer uri branch))
 
   hc/HydrateApi
-  (hydrate-api [this request]
-    (unwrap @(hc/hydrate this request)))
+  (hydrate-api [this branch request]
+    (unwrap @(hc/hydrate this branch request)))
 
   IHash
   (-hash [this] (goog/getUid this)))
@@ -103,12 +103,11 @@
         branch-aux (some-> (:branch-aux path-params) base-64-url-safe/decode reader/read-edn-string)
         local-basis (-> (:local-basis path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
         route (routing/decode encoded-route)
-        initial-state {:local-basis local-basis
-                       :stage (some-> req .-body lib/hack-buggy-express-body-text-parser transit/decode)
+        initial-state {::stage (some-> req .-body lib/hack-buggy-express-body-text-parser transit/decode)
                        :user-profile (lib/req->user-profile env req)
-                       :branches {branch {:local-basis local-basis
-                                          :route route
-                                          :hyperfiddle.runtime/branch-aux branch-aux}}}
+                       ::runtime/partitions {branch {:local-basis local-basis
+                                                     :route route
+                                                     :hyperfiddle.runtime/branch-aux branch-aux}}}
         rt (->HydrateRouteRuntime (:HF_HOSTNAME env) hostname (lib/req->service-uri env req)
                                   (reactive/atom (reducers/root-reducer initial-state nil))
                                   reducers/root-reducer)]

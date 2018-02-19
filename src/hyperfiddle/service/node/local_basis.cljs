@@ -64,8 +64,8 @@
     (sync-rpc! service-uri dbs))
 
   hc/Peer
-  (hydrate [this request]
-    (peer/hydrate state-atom request))
+  (hydrate [this branch request]
+    (peer/hydrate state-atom branch request))
 
   (db [this uri branch]
     (peer/db-pointer uri branch))
@@ -81,10 +81,10 @@
         route (routing/decode encoded-route)
         branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
         branch-aux (some-> (:branch-aux path-params) base-64-url-safe/decode reader/read-edn-string)
-        initial-state {:global-basis global-basis
-                       :user-profile (lib/req->user-profile env req)
-                       :branches {branch {:route route
-                                          :hyperfiddle.runtime/branch-aux branch-aux}}}
+        initial-state {:user-profile (lib/req->user-profile env req)
+                       ::runtime/global-basis global-basis
+                       ::runtime/partitions {branch {:route route
+                                                     :hyperfiddle.runtime/branch-aux branch-aux}}}
         rt (->LocalBasisRuntime (:HF_HOSTNAME env) hostname (lib/req->service-uri env req)
                                 (reactive/atom (reducers/root-reducer initial-state nil))
                                 reducers/root-reducer)]

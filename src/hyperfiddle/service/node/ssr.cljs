@@ -129,15 +129,15 @@
         (partial foundation/view :page route ctx (partial ide/view "page")))))
 
   hc/Peer
-  (hydrate [this request]
-    (peer/hydrate state-atom request))
+  (hydrate [this branch request]
+    (peer/hydrate state-atom branch request))
 
   (db [this uri branch]
     (peer/db-pointer uri branch))
 
   hc/HydrateApi
-  (hydrate-api [this request]
-    (unwrap @(hc/hydrate this request)))
+  (hydrate-api [this branch request]
+    (unwrap @(hc/hydrate this branch request)))
 
   IHash
   (-hash [this] (goog/getUid this)))
@@ -159,7 +159,7 @@
                    #_"any error above IS NOT fatal, so render the UI. anything below IS fatal"
                    (timbre/error error)
                    (p/resolved nil)))
-        (p/then #(runtime/ssr rt @(runtime/state rt [:route])))
+        (p/then #(runtime/ssr rt @(runtime/state rt [::runtime/partitions nil :route])))
         (p/then (fn [html-fragment] (html env @browser-initial-state serve-js? html-fragment)))
         (p/catch (fn [error]
                    (timbre/error error)

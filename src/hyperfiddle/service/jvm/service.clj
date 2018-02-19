@@ -86,10 +86,10 @@
               route (routing/decode (str "/" (:encoded-route path-params)))
               branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string)
               branch-aux (some-> (:branch-aux path-params) base-64-url-safe/decode reader/read-edn-string)
-              initial-state {:global-basis global-basis
-                             :user-profile (:user req)
-                             :branches {branch {:route route
-                                                :hyperfiddle.runtime/branch-aux branch-aux}}}
+              initial-state {:user-profile (:user req)
+                             ::runtime/global-basis global-basis
+                             ::runtime/partitions {branch {:route route
+                                                           :hyperfiddle.runtime/branch-aux branch-aux}}}
               rt (->LocalBasis (:HF_HOSTNAME env) hostname
                                (reactive/atom (reducers/root-reducer initial-state nil))
                                reducers/root-reducer)]
@@ -113,14 +113,13 @@
               route (routing/decode (str "/" (:encoded-route path-params)))
               branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string)
               branch-aux (some-> (:branch-aux path-params) base-64-url-safe/decode reader/read-edn-string)
-              initial-state (-> {:local-basis local-basis
+              initial-state (-> {:user-profile (:user req)
                                  :stage body-params
-                                 :user-profile (:user req)
                                  ; should this be constructed with reducers?
                                  ; why dont we need to preheat the tempid lookups here for parent branches?
-                                 :branches {branch {:local-basis local-basis
-                                                    :route route
-                                                    :hyperfiddle.runtime/branch-aux branch-aux}}})
+                                 ::runtime/partitions {branch {:local-basis local-basis
+                                                               :route route
+                                                               :hyperfiddle.runtime/branch-aux branch-aux}}})
               rt (->HydrateRoute (:HF_HOSTNAME env) hostname
                                  (reactive/atom (reducers/root-reducer initial-state nil))
                                  reducers/root-reducer)]

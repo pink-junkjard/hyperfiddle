@@ -9,7 +9,7 @@
             [hyperfiddle.ide :as ide]
             [hyperfiddle.io.global-basis :refer [global-basis]]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-requests stage-val->staged-branches]]
-            [hyperfiddle.io.hydrate-route :refer [hydrate-loop hydrate-loop-adapter]]
+            [hyperfiddle.io.hydrate-route :refer [hydrate-loop request-fn-adapter]]
             [hyperfiddle.io.sync :refer [sync]]
             [hyperfiddle.runtime :as runtime]
             [hyperfiddle.state :as state]
@@ -53,9 +53,9 @@
       (foundation/local-basis page-or-leaf global-basis route ctx ide/local-basis)))
 
   runtime/AppValHydrate
-  (hydrate-route [rt local-basis ?route branch branch-aux stage]
-    {:pre [?route (not (string? ?route))]}
-    (let [data-cache (select-keys @state-atom [:id->tempid :ptm])
+  (hydrate-route [rt local-basis route branch branch-aux stage]
+    {:pre [route (not (string? route))]}
+    (let [data-cache (-> @(runtime/state rt [::runtime/partitions branch]) (select-keys [:tempid-lookups :ptm]))
           ctx {:hyperfiddle-hostname hyperfiddle-hostname
                :hostname hostname
                :branch branch
@@ -66,10 +66,10 @@
                          "page" :page
                          "user" :leaf
                          "ide" :leaf)]
-      (hydrate-loop rt (hydrate-loop-adapter local-basis stage ctx
-                                             #(HydrateRoute. hyperfiddle-hostname hostname (reactive/atom %) root-reducer)
-                                             #(foundation/api page-or-leaf ?route % ide/api))
-                    local-basis stage data-cache)))
+      (hydrate-loop rt (request-fn-adapter local-basis route stage ctx
+                                           #(HydrateRoute. hyperfiddle-hostname hostname (reactive/atom %) root-reducer)
+                                           #(foundation/api page-or-leaf route % ide/api))
+                    local-basis branch stage data-cache)))
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
@@ -82,12 +82,12 @@
     (p/resolved (sync dbs)))
 
   hc/Peer
-  (hydrate [this request]
-    (peer/hydrate state-atom request))
+  (hydrate [this branch request]
+    (peer/hydrate state-atom branch request))
 
   (db [this uri branch]
     (peer/db-pointer uri branch))
 
   hc/HydrateApi
-  (hydrate-api [this request]
-    (unwrap @(hc/hydrate this request))))
+  (hydrate-api [this branch request]
+    (unwrap @(hc/hydrate this branch request))))
