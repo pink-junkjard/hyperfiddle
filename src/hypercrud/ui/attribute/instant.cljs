@@ -12,7 +12,7 @@
      [:div.anchors (link-controls/render-links (remove :link/render-inline? my-links) ctx)]
      (let [change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) (:attribute ctx) %))
            widget (case (:layout ctx) :block instant/recom-date*
-                                      :inline-block edn/edn-inline-block*
-                                      :table edn/edn-inline-block*)]
+                                      :inline-block instant/recom-date*
+                                      :table instant/recom-date*)]
        [widget @(:value ctx) change! props])
      (link-controls/render-inline-links (filter :link/render-inline? my-links) ctx)]))
