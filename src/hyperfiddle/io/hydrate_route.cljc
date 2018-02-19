@@ -67,9 +67,8 @@
   (fn [tempid-lookups ptm]
     (let [ctx (update ctx :peer (fn [peer]
                                   (-> @(runtime/state peer)
-                                      ; want to keep all user/ui state, just use overwrite the io state.
-                                      ; suspect that other values are unset (route, global-basis, popovers, branches)
-                                      (select-keys [:user-profile])
+                                      ; want to keep all user/ui and bootstrapping state, just use overwrite the partition state.
+                                      (select-keys [:user-profile ::runtime/domain])
                                       (assoc-in [::runtime/partitions (:branch ctx)]
                                                 {:route route
                                                  ::runtime/branch-aux (:branch-aux ctx)

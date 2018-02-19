@@ -1,6 +1,5 @@
 (ns hyperfiddle.foundation
-  (:require [cats.monad.either :as either]
-            [clojure.string :as string]
+  (:require [clojure.string :as string]
             [cuerdas.core :as cuerdas]
             [hypercrud.client.core :as hc]
             [hypercrud.compile.reader :as reader]
@@ -60,21 +59,18 @@
                                 ; todo this can throw
                                 (update :repository/environment reader/read-string)))))))))
 
-(defn context [ctx domain]
-  (assoc ctx :hypercrud.browser/domain (process-domain-legacy domain)))
+(defn context [ctx]
+  (let [domain @(runtime/state (:peer ctx) [::runtime/domain])]
+    (assert domain "Bootstrapping failed to fetch the domain")
+    (assoc ctx :hypercrud.browser/domain (process-domain-legacy domain))))
 
 (defn local-basis [page-or-leaf global-basis route ctx f]
   (concat
     (:domain global-basis)
-    (f global-basis route ctx)))
+    (f global-basis route (context ctx))))
 
 (defn api [page-or-leaf route ctx f]
-  (let [domain-q (domain-request (hostname->hf-domain-name ctx) (:peer ctx))
-        user-qs (when-let [domain (hc/hydrate-api (:peer ctx) (:branch ctx) domain-q)]
-                  (f route (context ctx domain)))]
-    (case page-or-leaf
-      :page (concat [domain-q] user-qs)
-      :leaf (concat [domain-q] user-qs))))
+  (f route (context ctx)))
 
 #?(:cljs
    (defn staging [peer]
@@ -85,27 +81,22 @@
 
 #?(:cljs
    (defn leaf-view [route ctx f]
-     (when-let [domain (let [user-domain (hostname->hf-domain-name ctx)]
-                         (hc/hydrate-api (:peer ctx) (:branch ctx) (domain-request user-domain (:peer ctx))))]
-       ; A malformed stage can break bootstrap hydrates, but the root-page is bust, so ignore here
-       ; Fix this by branching userland so bootstrap is sheltered from staging area? (There are chickens and eggs)
-       (f route (context ctx domain)))))
+     ; A malformed stage can break bootstrap hydrates, but the root-page is bust, so ignore here
+     ; Fix this by branching userland so bootstrap is sheltered from staging area? (There are chickens and eggs)
+     (f route (context ctx))))
 
 #?(:cljs
    (defn page-view [route ctx f]
-     (let [either-v (or (some-> @(runtime/state (:peer ctx) [::runtime/fatal-error]) either/left)
-                        @(hc/hydrate (:peer ctx) (:branch ctx) (domain-request (hostname->hf-domain-name ctx) (:peer ctx))))]
-       [stale/loading (stale/can-be-loading? ctx) either-v
-        (fn [e]
-          [:div.hyperfiddle-foundation
-           [error-cmp e]
-           [staging (:peer ctx)]])
-        (fn [domain]
-          (let [ctx (context ctx domain)]
-            [:div {:class (apply classes "hyperfiddle-foundation" @(runtime/state (:peer ctx) [:pressed-keys]))}
-             (f route ctx)                                  ; nil, seq or reagent component
-             (if @(runtime/state (:peer ctx) [:staging-open])
-               [staging (:peer ctx)])]))])))
+     (if-let [e @(runtime/state (:peer ctx) [::runtime/fatal-error])]
+       [:div.hyperfiddle-foundation
+        [error-cmp e]
+        [staging (:peer ctx)]]
+
+       (let [ctx (context ctx)]
+         [:div {:class (apply classes "hyperfiddle-foundation" @(runtime/state (:peer ctx) [:pressed-keys]))}
+          (f route ctx)                                     ; nil, seq or reagent component
+          (if @(runtime/state (:peer ctx) [:staging-open])
+            [staging (:peer ctx)])]))))
 
 #?(:cljs
    (defn view [page-or-leaf route ctx f]
