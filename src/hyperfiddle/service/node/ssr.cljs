@@ -124,9 +124,10 @@
   (ssr [rt-page route]
     (let [ctx {:hostname hostname
                :hyperfiddle-hostname hyperfiddle-hostname
-               :peer rt-page}]
+               :peer rt-page
+               ::runtime/branch-aux {::ide/foo "page"}}]
       (render-local-html
-        (partial foundation/view :page route ctx (partial ide/view "page")))))
+        (partial foundation/view :page route ctx ide/view))))
 
   hc/Peer
   (hydrate [this branch request]
