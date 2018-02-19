@@ -186,10 +186,10 @@
              [browser/ui-from-route ?route (page-target-context ctx ?route user-profile) class]))))))
 
 #?(:cljs
-   (defn view [foo route ctx]                               ; pass most as ref for reactions
+   (defn view [route ctx]                                   ; pass most as ref for reactions
      (let [ide-domain (hc/hydrate-api (:peer ctx) (:branch ctx) (foundation/domain-request "hyperfiddle" (:peer ctx)))
            user-profile @(runtime/state (:peer ctx) [:user-profile])]
-       (case foo
+       (case (get-in ctx [::runtime/branch-aux ::foo])
          "page" (view-page route ctx)                       ; component, seq-component or nil
          ; On SSR side this is only ever called as "page", but it could be differently (e.g. turbolinks)
          ; On Browser side, also only ever called as "page", but it could be configured differently (client side render the ide, server render userland...?)
