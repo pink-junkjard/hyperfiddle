@@ -68,7 +68,7 @@
      :fiddle' (auto-fiddle/hydrate-system-fiddle (get-in ctx [:route :fiddle-id]))}
     (let [meta-fiddle-request (meta-request-for-fiddle ctx)]
       {:meta-fiddle-req' meta-fiddle-request
-       :fiddle' (cats/bind meta-fiddle-request #(deref (hc/hydrate (:peer ctx) %)))})))
+       :fiddle' (cats/bind meta-fiddle-request #(deref (hc/hydrate (:peer ctx) (:branch ctx) %)))})))
 
 (defn- fix-param [param]
   (cond
@@ -137,13 +137,13 @@
       :xray (either/right default))))
 
 (let [never-read-only (constantly false)
-      nil-or-hydrate (fn [peer request]
+      nil-or-hydrate (fn [peer branch request]
                        (if request
-                         @(hc/hydrate peer request)
+                         @(hc/hydrate peer branch request)
                          (either/right nil)))]
   (defn process-results [fiddle request ctx]
     (mlet [schemas (schema-util/hydrate-schema ctx)         ; schema is allowed to be nil if the link only has anchors and no data dependencies
-           :let [reactive-either-result (reactive/track nil-or-hydrate (:peer ctx) request)]
+           :let [reactive-either-result (reactive/track nil-or-hydrate (:peer ctx) (:branch ctx) request)]
            _ @reactive-either-result                        ; short the monad
            :let [reactive-result (reactive/map deref reactive-either-result)
                  ctx (assoc ctx                             ; provide defaults before user-bindings run.

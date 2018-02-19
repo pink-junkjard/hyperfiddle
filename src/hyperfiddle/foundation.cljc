@@ -70,7 +70,7 @@
 
 (defn api [page-or-leaf route ctx f]
   (let [domain-q (domain-request (hostname->hf-domain-name ctx) (:peer ctx))
-        user-qs (when-let [domain (hc/hydrate-api (:peer ctx) domain-q)]
+        user-qs (when-let [domain (hc/hydrate-api (:peer ctx) (:branch ctx) domain-q)]
                   (f route (context ctx domain)))]
     (case page-or-leaf
       :page (concat [domain-q] user-qs)
@@ -86,15 +86,15 @@
 #?(:cljs
    (defn leaf-view [route ctx f]
      (when-let [domain (let [user-domain (hostname->hf-domain-name ctx)]
-                         (hc/hydrate-api (:peer ctx) (domain-request user-domain (:peer ctx))))]
+                         (hc/hydrate-api (:peer ctx) (:branch ctx) (domain-request user-domain (:peer ctx))))]
        ; A malformed stage can break bootstrap hydrates, but the root-page is bust, so ignore here
        ; Fix this by branching userland so bootstrap is sheltered from staging area? (There are chickens and eggs)
        (f route (context ctx domain)))))
 
 #?(:cljs
    (defn page-view [route ctx f]
-     (let [either-v (or (some-> @(runtime/state (:peer ctx) [:error]) either/left)
-                        @(hc/hydrate (:peer ctx) (domain-request (hostname->hf-domain-name ctx) (:peer ctx))))]
+     (let [either-v (or (some-> @(runtime/state (:peer ctx) [::runtime/fatal-error]) either/left)
+                        @(hc/hydrate (:peer ctx) (:branch ctx) (domain-request (hostname->hf-domain-name ctx) (:peer ctx))))]
        [stale/loading (stale/can-be-loading? ctx) either-v
         (fn [e]
           [:div.hyperfiddle-foundation
@@ -119,9 +119,9 @@
   #?(:clj  (throw (ex-info "confirm unsupported by platform" nil))
      :cljs (js/confirm message)))
 
-(defn navigable? [route {:keys [encoded-route branches] :as state}]
+(defn navigable? [route {:keys [encoded-route ::runtime/partitions] :as state}]
   (and (not= route encoded-route)
-       (or (empty? branches)
+       (or (empty? (dissoc partitions nil))
            (confirm "Unstaged work will be lost on navigate, are you sure?"))))
 
 (def LEVEL-NONE 0)
@@ -136,13 +136,14 @@
 ; it makes no sense for clients to forward domains along requests (same as global-basis),
 ; so we need to inject into the domain level and then continue on at the appropriate level.
 ; could also handle dirty staging areas for browser
-(defn bootstrap-data [rt init-level load-level encoded-route]
+(defn bootstrap-data [rt init-level load-level encoded-route] ;branch and aux as parameter?
   (if (>= init-level load-level)
     (p/resolved nil)
     (-> (condp = (inc init-level)
           LEVEL-GLOBAL-BASIS (foundation-actions/refresh-global-basis rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
           LEVEL-DOMAIN (foundation-actions/refresh-domain rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
-          LEVEL-ROUTE (p/resolved (runtime/dispatch! rt [:set-route (runtime/decode-route rt encoded-route)]))
-          LEVEL-LOCAL-BASIS (foundation-actions/refresh-page-local-basis rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
-          LEVEL-HYDRATE-PAGE (foundation-actions/hydrate-page rt nil (partial runtime/dispatch! rt) #(deref (runtime/state rt))))
+          LEVEL-ROUTE (let [branch-aux {:hyperfiddle.ide/foo "page"}] ;ide
+                        (p/resolved (runtime/dispatch! rt [:add-partition nil (runtime/decode-route rt encoded-route) branch-aux])))
+          LEVEL-LOCAL-BASIS (foundation-actions/refresh-partition-basis rt nil (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
+          LEVEL-HYDRATE-PAGE (foundation-actions/hydrate-partition rt nil nil (partial runtime/dispatch! rt) #(deref (runtime/state rt))))
         (p/then #(bootstrap-data rt (inc init-level) load-level encoded-route)))))

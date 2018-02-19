@@ -115,7 +115,7 @@
                    (interpose " ")
                    (apply str))})))
 
-(defn stage! [link route popover-id ctx]
+(defn stage! [link route popover-id child-branch ctx]
   (let [user-txfn (or (unwrap (eval/eval-str (:link/tx-fn link))) (constantly nil))]
     (-> (p/promise
           (fn [resolve! reject!]
@@ -134,38 +134,43 @@
 
                               ; return the result to the action, it could be a promise
                               result))]
-              (runtime/dispatch! (:peer ctx) (foundation-actions/stage-popover (:peer ctx) popover-id (:branch ctx) swap-fn)))))
+              (runtime/dispatch! (:peer ctx)
+                                 (foundation-actions/stage-popover (:peer ctx) child-branch swap-fn
+                                                                   (foundation-actions/close-popover (:branch ctx) popover-id))))))
         ; todo something better with these exceptions (could be user error)
         (p/catch (fn [err]
                    #?(:clj  (throw err)
                       :cljs (js/alert (pprint-str err))))))))
 
 (defn close! [popover-id ctx]
-  (runtime/dispatch! (:peer ctx) (foundation-actions/close-popover popover-id)))
+  (runtime/dispatch! (:peer ctx) (foundation-actions/close-popover (:branch ctx) popover-id)))
 
-(defn cancel! [popover-id ctx]
-  (runtime/dispatch! (:peer ctx) (foundation-actions/discard-branched-popover popover-id (:branch ctx))))
+(defn cancel! [popover-id child-branch ctx]
+  (runtime/dispatch! (:peer ctx) (foundation-actions/batch
+                                   (foundation-actions/close-popover (:branch ctx) popover-id)
+                                   (foundation-actions/discard-partition child-branch))))
 
-(defn managed-popover-body [link route popover-id dont-branch? ctx]
+(defn managed-popover-body [link route popover-id child-branch dont-branch? ctx]
   [:div.hyperfiddle-popover-body
    ; NOTE: this ctx logic and structure is the same as the popover branch of browser-request/recurse-request
-   (let [ctx (-> ctx
+   (let [ctx (-> (if dont-branch? ctx (assoc ctx :branch child-branch))
                  (context/clean)
                  (update :hypercrud.browser/debug #(str % ">popover-link[" (:db/id link) ":" (or (:link/rel link) (:anchor/prompt link)) "]")))]
      #?(:clj  (assert false "todo")
         :cljs [hypercrud.browser.core/ui-from-route route ctx])) ; cycle
    (when-not dont-branch?
-     [:button {:on-click (reactive/partial stage! link route popover-id ctx)} "stage"])
+     [:button {:on-click (reactive/partial stage! link route popover-id child-branch ctx)} "stage"])
    ; TODO also cancel on escape
    (if dont-branch?
      [:button {:on-click (reactive/partial close! popover-id ctx)} "close"]
-     [:button {:on-click (reactive/partial cancel! popover-id ctx)} "cancel"])])
+     [:button {:on-click (reactive/partial cancel! popover-id child-branch ctx)} "cancel"])])
 
-(defn open! [route popover-id dont-branch? ctx]
+(defn open! [route popover-id child-branch dont-branch? ctx]
   (runtime/dispatch! (:peer ctx)
                      (if dont-branch?
-                       (foundation-actions/open-popover popover-id)
-                       (foundation-actions/open-branched-popover (:peer ctx) popover-id route (:branch ctx) (:hyperfiddle.runtime/branch-aux ctx)))))
+                       (foundation-actions/open-popover (:branch ctx) popover-id)
+                       (foundation-actions/add-partition (:peer ctx) route child-branch (::runtime/branch-aux ctx)
+                                                         (foundation-actions/open-popover (:branch ctx) popover-id)))))
 
 ; if this is driven by link, and not route, it needs memoized.
 ; the route is a fn of the formulas and the formulas can have effects
@@ -185,8 +190,8 @@
                         (if-let [route (and (:link/managed? link) (either/right? route') (cats/extract route'))]
                           ; If no route, there's nothing to draw, and the anchor tooltip shows the error.
                           (let [popover-id (popovers/popover-id link ctx)
-                                ctx (if dont-branch? ctx (context/anchor-branch ctx link))]
-                            {:showing? (runtime/state (:peer ctx) [:popovers popover-id])
-                             :body [managed-popover-body link route popover-id dont-branch? ctx]
-                             :open! (reactive/partial open! route popover-id dont-branch? ctx)})))]
+                                child-branch (popovers/branch ctx link)]
+                            {:showing? (runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :popovers popover-id])
+                             :body [managed-popover-body link route popover-id child-branch dont-branch? ctx]
+                             :open! (reactive/partial open! route popover-id child-branch dont-branch? ctx)})))]
     (merge hypercrud-props {:popover popover-props})))

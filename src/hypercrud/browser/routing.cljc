@@ -35,7 +35,7 @@
 
 (defn ctx->id-lookup [uri ctx]
   ; todo what about if the tempid is on a higher branch in the uri?
-  @(runtime/state (:peer ctx) [:tempid-lookups uri (:branch ctx)]))
+  @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :tempid-lookups uri]))
 
 (defn id->tempid [route ctx]
   (let [invert-id (fn [id uri]

@@ -4,16 +4,6 @@
             [hypercrud.util.core :as util]))
 
 
-(defn hydrate-id-reducer [loading? action & args]
-  (case action
-    :hydrate!-start (first args)
-    :hydrate!-success nil
-    :popover-hydrate!-success nil
-    :hydrate!-failure nil
-    :popover-hydrate!-failure nil
-
-    (or loading? false)))
-
 (defn stage-reducer [stage action & args]
   (let [discard (fn [stage branch]
                   (dissoc stage branch))
@@ -30,8 +20,8 @@
     (-> (case action
           :transact!-success nil
 
-          :discard-branch (let [[branch] args]
-                            (discard stage branch))
+          :discard-partition (let [[branch] args]
+                               (discard stage branch))
 
           :with (let [[branch uri tx] args]
                   (-> stage
@@ -50,55 +40,12 @@
           stage)
         clean)))
 
-(defn route-reducer [route action & args]
+(defn fatal-error-reducer [error action & args]
   (case action
-    :set-route (first args)
-
-    ; todo we want to overwrite our current browser location with this new url
-    ; currently this new route breaks the back button
-    :transact!-success (first args)
-
-    route))
-
-(defn tempid-lookups-reducer [tempid-lookup action & args]
-  (case action
-    :hydrate!-success (second args)
-    :popover-hydrate!-success (merge-with (partial merge-with merge) tempid-lookup (second args))
-    :discard-branch (let [[branch] args]
-                      (util/map-values #(dissoc % branch) tempid-lookup))
-    tempid-lookup))
-
-(defn ptm-reducer [ptm action & args]
-  (case action
-    :hydrate!-success (first args)
-    :popover-hydrate!-success (merge ptm (first args))
-    (or ptm nil)))
-
-(defn error-reducer [error action & args]
-  (case action
-    :hydrate!-success nil
+    :set-global-basis nil
     ; need errors to be serializable, so crapily pr-str
     :set-error (pr-str (first args))
-    :hydrate!-failure (pr-str (first args))
     error))
-
-(defn popover-reducer [popovers action & args]
-  (case action
-    :open-popover (let [[popover-id] args]
-                    (conj popovers popover-id))
-    :close-popover (let [[popover-id] args]
-                     (disj popovers popover-id))
-    (or popovers #{})))
-
-(defn branches-reducer [branches action & args]
-  (case action
-    :add-branch (let [[branch branch-aux route local-basis] args]
-                  (assoc branches branch {:local-basis local-basis
-                                          :route route
-                                          :hyperfiddle.runtime/branch-aux branch-aux}))
-    :discard-branch (let [[branch] args]
-                      (dissoc branches branch))
-    (or branches {})))
 
 (defn pressed-keys-reducer [v action & args]
   (or v #{}))
@@ -108,11 +55,6 @@
     :set-global-basis (first args)
     global-basis))
 
-(defn local-basis-reducer [local-basis action & args]
-  (case action
-    :set-local-basis (first args)
-    local-basis))
-
 (defn domain-reducer [domain action & args]
   (case action
     :hyperfiddle.runtime/set-domain (first args)
@@ -121,7 +63,8 @@
 (defn staging-open-reducer [staging-open? action & args]
   (case action
     :toggle-staging (not staging-open?)
-    :hydrate!-failure true
+    :partition-error (let [[branch error] args]
+                       (nil? branch))
     (or staging-open? false)))
 
 (defn display-mode-reducer [display-mode action & args]
@@ -132,17 +75,82 @@
     :set-display-mode (first args)
     (or display-mode :user)))
 
-(def reducer-map {:display-mode display-mode-reducer
-                  :staging-open staging-open-reducer
-                  :hydrate-id hydrate-id-reducer
-                  :route route-reducer
-                  :global-basis global-basis-reducer
-                  :local-basis local-basis-reducer
+(defn partitions-reducer [partitions action & args]
+  (->> (case action
+         :add-partition (let [[branch route branch-aux] args]
+                          (assoc partitions branch {:route route
+                                                    :hyperfiddle.runtime/branch-aux branch-aux}))
+
+         :discard-partition (let [[branch] args]
+                              (dissoc partitions branch))
+
+         :partition-basis (let [[branch local-basis] args]
+                            (assoc-in partitions [branch :local-basis] local-basis))
+
+         :partition-route (let [[branch route] args]
+                            (if (= route (get-in partitions [branch :route]))
+                              partitions
+                              (-> partitions
+                                  (assoc-in [branch :route] route)
+                                  (dissoc :error :ptm :tempid-lookups))))
+
+         :hydrate!-start (let [[branch] args]
+                           (update partitions branch
+                                   (fn [partition]
+                                     (assoc partition
+                                       :hydrate-id
+                                       (hash (select-keys partition [:hyperfiddle.runtime/branch-aux :route :stage :local-basis]))))))
+
+         :hydrate!-success (let [[branch ptm tempid-lookups] args]
+                             (update partitions branch
+                                     (fn [partition]
+                                       (-> partition
+                                           (dissoc :error :hydrate-id)
+                                           (assoc :ptm ptm
+                                                  :tempid-lookups tempid-lookups)))))
+
+         :partition-error (let [[branch error] args]
+                            (update partitions branch
+                                    (fn [partition]
+                                      (-> partition
+                                          (dissoc :hydrate-id)
+                                          ; need errors to be serializable, so crapily pr-str
+                                          (assoc :error (pr-str error))))))
+
+         :open-popover (let [[branch popover-id] args]
+                         (update-in partitions [branch :popovers] conj popover-id))
+
+         :close-popover (let [[branch popover-id] args]
+                          (update-in partitions [branch :popovers] disj popover-id))
+
+         (or partitions {}))
+       (util/map-values (fn [partition]
+                          ; apply defaults
+                          (->> {:hydrate-id identity
+                                :popovers #(or % #{})
+
+                                ; data needed to hydrate a partition
+                                :route identity
+                                :hyperfiddle.runtime/branch-aux identity
+                                :stage identity
+                                :local-basis identity
+
+                                ; response data of hydrating a partition
+                                :error identity
+                                :ptm identity
+                                :tempid-lookups identity}
+                               (reduce (fn [v [k f]] (update v k f)) partition))))))
+
+(def reducer-map {:hyperfiddle.runtime/fatal-error fatal-error-reducer
                   :hyperfiddle.runtime/domain domain-reducer
-                  :stage stage-reducer
-                  :ptm ptm-reducer
-                  :error error-reducer
-                  :branches branches-reducer
-                  :popovers popover-reducer
+                  :hyperfiddle.runtime/global-basis global-basis-reducer
+                  :hyperfiddle.runtime/partitions partitions-reducer
+
+                  ; user
+                  :display-mode display-mode-reducer
+                  :staging-open staging-open-reducer
                   :pressed-keys pressed-keys-reducer
-                  :tempid-lookups tempid-lookups-reducer})
+
+                  ; needs migration
+                  :stage stage-reducer
+                  })

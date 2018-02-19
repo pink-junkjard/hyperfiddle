@@ -34,15 +34,6 @@
     ; explicitly set :hypercrud.browser/repository BEFORE running tempid->id
     (assoc ctx :route (routing/tempid->id route ctx))))
 
-(defn anchor-branch [ctx link]
-  (if (:link/managed? link)
-    ; we should run the auto-formula logic to determine an appropriate auto-id fn
-    (let [child-id-str (-> [(auto-anchor-formula/deterministic-ident ctx) (:db/id link)]
-                           hash util/abs-normalized - str)
-          branch (branch/encode-branch-child (:branch ctx) child-id-str)]
-      (assoc ctx :branch branch))
-    ctx))
-
 (defn user-with [ctx branch uri tx]
   ; todo custom user-dispatch with all the tx-fns as reducers
   (runtime/dispatch! (:peer ctx) (foundation-actions/with (:peer ctx) branch uri tx)))

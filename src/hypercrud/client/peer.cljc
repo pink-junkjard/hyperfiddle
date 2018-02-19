@@ -13,13 +13,14 @@
       (either/left {:message "Loading" :data {:request request}}))))
 
 ; react on the answer, not the question
-(defn trackable-hydrate [state-atom request]
-  (let [ptm @(reactive/cursor state-atom [:ptm])
+; todo this signature should be [partition-cursor request]
+(defn trackable-hydrate [state-atom branch request]
+  (let [ptm @(reactive/cursor state-atom [:hyperfiddle.runtime/partitions branch :ptm])
         stage-val @(reactive/cursor state-atom [:stage])]
     (hydrate-val ptm stage-val request)))
 
-(defn hydrate [state-atom request]
-  (reactive/track trackable-hydrate state-atom request))
+(defn hydrate [state-atom branch request]
+  (reactive/track trackable-hydrate state-atom branch request))
 
 (defn db-pointer [uri ?branch-name]
   {:pre [uri]}

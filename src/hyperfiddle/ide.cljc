@@ -7,6 +7,7 @@
     #?(:cljs [hypercrud.react.react-fragment :refer [react-fragment]])
     #?(:cljs [hypercrud.ui.navigate-cmp :as navigate-cmp])
             [hypercrud.util.core :refer [unwrap xorxs update-existing]]
+            [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :as hc-string]
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-one!]]
@@ -30,9 +31,13 @@
             [hyperfiddle.ide.util]))
 
 (defn domain [rt hyperfiddle-hostname hostname]
-  (let [domain-basis (if-let [global-basis @(runtime/state rt [:global-basis])]
+  (let [domain-basis (if-let [global-basis @(runtime/state rt [::runtime/global-basis])]
                        (:domain global-basis)
-                       (filter (fn [[k v]] (= foundation/domain-uri k)) @(runtime/state rt [:local-basis])))
+                       (->> @(runtime/state rt [::runtime/partitions])
+                            (some (fn [[_ partition]]
+                                    (->> (:local-basis partition)
+                                         (filter (fn [[k _]] (= foundation/domain-uri k)))
+                                         seq)))))
         stage nil
         request (-> (foundation/hostname->hf-domain-name hostname hyperfiddle-hostname)
                     (foundation/domain-request rt))]
@@ -92,6 +97,8 @@
 (defn- *-target-context [ctx route user-profile]
   (assoc ctx
     :hypercrud.browser/debug "target"
+    :hypercrud.browser/page-on-click (let [branch-aux {:hyperfiddle.ide/foo "page"}]
+                                       #?(:cljs (reactive/partial browser-ui/page-on-click (:peer ctx) nil branch-aux)))
     :hypercrud.ui/display-mode (runtime/state (:peer ctx) [:display-mode])
     :ide-active (activate-ide? (foundation/hostname->hf-domain-name ctx))
     :user-profile user-profile
@@ -145,7 +152,7 @@
    :post [#_(seq %)]}
   ; We can actually call into the foundation a second time here to get the ide-domain
   (let [ide-domain-q (foundation/domain-request "hyperfiddle" (:peer ctx))
-        ide-domain (hc/hydrate-api (:peer ctx) ide-domain-q)
+        ide-domain (hc/hydrate-api (:peer ctx) (:branch ctx) ide-domain-q)
         user-profile @(runtime/state (:peer ctx) [:user-profile])]
     (case (get-in ctx [::runtime/branch-aux ::foo])
       "page" (concat [ide-domain-q]
@@ -161,7 +168,7 @@
 
 #?(:cljs
    (defn view-page [?route ctx]
-     (let [ide-domain (hc/hydrate-api (:peer ctx) (foundation/domain-request "hyperfiddle" (:peer ctx)))
+     (let [ide-domain (hc/hydrate-api (:peer ctx) (:branch ctx) (foundation/domain-request "hyperfiddle" (:peer ctx)))
            ide-active (activate-ide? (foundation/hostname->hf-domain-name ctx))
            user-profile @(runtime/state (:peer ctx) [:user-profile])
            ctx (assoc ctx :navigate-cmp (reagent/partial navigate-cmp/navigate-cmp (reagent/partial runtime/encode-route (:peer ctx))))]
@@ -180,7 +187,7 @@
 
 #?(:cljs
    (defn view [foo route ctx]                               ; pass most as ref for reactions
-     (let [ide-domain (hc/hydrate-api (:peer ctx) (foundation/domain-request "hyperfiddle" (:peer ctx)))
+     (let [ide-domain (hc/hydrate-api (:peer ctx) (:branch ctx) (foundation/domain-request "hyperfiddle" (:peer ctx)))
            user-profile @(runtime/state (:peer ctx) [:user-profile])]
        (case foo
          "page" (view-page route ctx)                       ; component, seq-component or nil

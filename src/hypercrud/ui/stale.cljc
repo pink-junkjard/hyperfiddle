@@ -4,7 +4,7 @@
 
 
 (defn can-be-loading? [ctx]
-  (runtime/state (:peer ctx) [:hydrate-id]))
+  (runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :hydrate-id]))
 
 
 (defn loading

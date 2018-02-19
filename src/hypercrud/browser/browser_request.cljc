@@ -22,13 +22,13 @@
 (defn recurse-request [link ctx]
   (if (:link/managed? link)
     (let [route' (routing/build-route' link ctx)
-          popover-id (popovers/popover-id link ctx)
-          ctx (context/anchor-branch ctx link)]
-      (if @(runtime/state  (:peer ctx) [:popovers popover-id])
-        ; if the anchor IS a popover, we need to run the same logic as anchor/build-anchor-props
+          popover-id (popovers/popover-id link ctx)]
+      (if @(runtime/state  (:peer ctx) [::runtime/partitions (:branch ctx) :popovers popover-id])
+        ; if the anchor IS a popover, we need to run the same logic as link/managed-popover-body
         ; the ctx needs to be updated (branched, etc), but NOT BEFORE determining the route
         ; that MUST happen in the parent context
         (let [ctx (-> ctx
+                      (assoc :branch (popovers/branch ctx link))
                       (context/clean)
                       (update :hypercrud.browser/debug #(str % ">popover-link[" (:db/id link) ":" (or (:link/rel link) (:anchor/prompt link)) "]")))]
           (either/branch route'

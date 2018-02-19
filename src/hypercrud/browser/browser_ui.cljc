@@ -82,7 +82,7 @@
         {:keys [cause data message]} (e->map e)
         detail (if dev-open? (util/pprint-str data))]
     ; todo we don't always return an error with a message
-    [:pre message "\n" detail]))
+    [:pre (or message "Error") "\n" detail]))
 
 (defn ui-error [e ctx]
   ; :find-element :attribute :value
@@ -93,19 +93,20 @@
             :else ui-error-block)]                          ; browser including inline true links
     [C e ctx]))
 
-(defn page-on-click [ctx route event]
+(defn page-on-click [rt branch branch-aux route event]
   (when (and route (.-altKey event))
-    (runtime/dispatch! (:peer ctx) (fn [dispatch! get-state]
-                                     (when (foundation/navigable? route (get-state))
-                                       (foundation-actions/set-route (:peer ctx) route dispatch! get-state))))
+    (runtime/dispatch! rt (fn [dispatch! get-state]
+                            (when (foundation/navigable? route (get-state))
+                              (foundation-actions/set-route rt route branch branch-aux dispatch! get-state))))
     (.stopPropagation event)))
 
-(defn wrap-ui [v' route ctx & [class]]
-  (let [on-click (reactive/partial (or (:hypercrud.browser/page-on-click ctx)
-                                       (reactive/partial page-on-click ctx))
-                                   route)]
+(defn wrap-ui [either-v route ctx & [class]]
+  (let [on-click (reactive/partial (or (:hypercrud.browser/page-on-click ctx) (constantly nil))
+                                   route)
+        either-v (or (some-> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :error]) either/left)
+                     either-v)]
     [native-on-click-listener {:on-click on-click}
-     [stale/loading (stale/can-be-loading? ctx) v'
+     [stale/loading (stale/can-be-loading? ctx) either-v
       (fn [e] [:div {:class (classes "ui" class "hyperfiddle-error")} (ui-error e ctx)])
       (fn [v] [:div {:class (classes "ui" class)} v])
       (fn [v] [:div {:class (classes "ui" class "hyperfiddle-loading")} v])]]))

@@ -13,6 +13,7 @@
             [hypercrud.ui.result :as result]
             [hypercrud.ui.tooltip :refer [tooltip]]
             [hypercrud.util.core :as util :refer [unwrap]]
+            [hypercrud.util.reactive :as reactive]
             [hyperfiddle.foundation :as foundation :refer [staging]]
             [hyperfiddle.foundation.actions :as foundation-actions]
             [hyperfiddle.ide.fiddles.topnav-bindings :as topnav-bindings]
@@ -48,8 +49,11 @@
                   deref)]
     (ui-fn (shadow-fiddle fiddle ctx) fes links ctx)))
 
+(defn any-loading? [peer]
+  (some (comp not nil? :hydrate-id) @(runtime/state peer [::runtime/partitions])))
+
 (defn loading-spinner [ctx]
-  (if @(runtime/state (:peer ctx) [:hydrate-id])
+  (if @(reactive/track any-loading? (:peer ctx))
     [:span {:style {:height "20px"
                     :width "23px"
                     :float "left"
@@ -155,8 +159,9 @@
                                                    :domain/code-databases
                                                    (filter #(= (:dbhole/name %) (get-in ctx [:target-route :code-database])))
                                                    first
-                                                   (into {}))]
-                              (runtime/dispatch! (:peer ctx) (foundation-actions/transact! (:peer ctx) target-repo))))}
+                                                   (into {}))
+                                  nil-branch-aux {:hyperfiddle.ide/foo "page"}]
+                              (runtime/dispatch! (:peer ctx) (foundation-actions/transact! (:peer ctx) target-repo nil-branch-aux))))}
        "transact!"]])
    [staging (:peer ctx)]
    [:div.markdown (markdown "Hyperfiddle always generates valid transactions, if it doesn't, please file a bug.

@@ -9,7 +9,7 @@
             [hypercrud.util.branch :as branch]
             [hypercrud.util.core :as util]
             [hypercrud.util.performance :as perf]
-            [hyperfiddle.appval.state.reducers :as reducers]
+            [hyperfiddle.appval.state.reducers :as reducers] ; this import is immoral
             [hyperfiddle.runtime :as runtime]
             [promesa.core :as p]
             [taoensso.timbre :as timbre])
@@ -27,18 +27,18 @@
 
 (def hydrate-loop-limit 25)
 
-(defn- hydrate-loop-impl [rt request-fn local-basis stage {:keys [id->tempid ptm] :as data-cache} total-loops & [loop-limit]]
+(defn- hydrate-loop-impl [rt request-fn local-basis branch stage {:keys [tempid-lookups ptm] :as data-cache} total-loops & [loop-limit]]
   (if (> total-loops loop-limit)
     (p/rejected (ex-info "Request limit reached" {:total-loops total-loops :ptm-at-cutoff (keys ptm)}))
     (let [all-requests (perf/time (fn [get-total-time] (timbre/debug "Computing needed requests" "total time: " (get-total-time)))
-                                  (->> (request-fn id->tempid ptm)
+                                  (->> (request-fn tempid-lookups ptm)
                                        (validate-user-qs)
                                        (into #{})))
           missing-requests (let [have-requests (set (map second (keys ptm)))]
                              (->> (set/difference all-requests have-requests)
                                   (into [])))]
       (if (empty? missing-requests)
-        (p/resolved {:id->tempid id->tempid
+        (p/resolved {:tempid-lookups tempid-lookups
                      :ptm (->> (select-keys (util/map-keys second ptm) all-requests)) ; prevent memory leak by returning exactly what is needed
                      :total-loops total-loops})
         (p/then (runtime/hydrate-requests rt local-basis stage missing-requests)
@@ -47,33 +47,36 @@
                                      (util/map-keys (fn [request]
                                                       [(branch/branch-vals-for-request request stage) request])))
                         ptm (merge ptm new-ptm)
-                        data-cache {:id->tempid (merge-with #(merge-with merge %1 %2) id->tempid (:id->tempid resp))
+                        data-cache {:tempid-lookups (merge-with merge tempid-lookups (get-in resp [:tempid-lookups branch]))
                                     :ptm ptm}]
-                    (hydrate-loop-impl rt request-fn local-basis stage data-cache (inc total-loops) loop-limit))))))))
+                    (hydrate-loop-impl rt request-fn local-basis branch stage data-cache (inc total-loops) loop-limit))))))))
 
-(defn hydrate-loop [rt request-fn local-basis stage & [data-cache]]
+(defn hydrate-loop [rt request-fn local-basis branch stage & [data-cache]]
   (let [hydrate-loop-id #?(:cljs (js/Math.random)
                            :clj  (Math/random))]
     (timbre/debug "Starting hydrate-loop" (str "[" hydrate-loop-id "]"))
-    (-> (perf/time-promise (hydrate-loop-impl rt request-fn local-basis stage data-cache 0 hydrate-loop-limit)
+    (-> (perf/time-promise (hydrate-loop-impl rt request-fn local-basis branch stage data-cache 0 hydrate-loop-limit)
                            (fn [err get-total-time]
                              (timbre/debug "Finished hydrate-loop" (str "[" hydrate-loop-id "]") "total time:" (get-total-time)))
                            (fn [success get-total-time]
                              (timbre/debug "Finished hydrate-loop" (str "[" hydrate-loop-id "]") "total time:" (get-total-time) "total loops:" (:total-loops success))))
         (p/then #(dissoc % :total-loops)))))
 
-(defn hydrate-loop-adapter [local-basis stage ctx ->Runtime f]
+(defn request-fn-adapter [local-basis route stage ctx ->Runtime f]
   ; Hacks because the hydrate-loop doesn't write to the state atom.
-  (fn [id->tempid ptm]
+  (fn [tempid-lookups ptm]
     (let [ctx (update ctx :peer (fn [peer]
                                   (-> @(runtime/state peer)
                                       ; want to keep all user/ui state, just use overwrite the io state.
                                       ; suspect that other values are unset (route, global-basis, popovers, branches)
                                       (select-keys [:user-profile])
-                                      (assoc :local-basis local-basis
-                                             :tempid-lookups id->tempid
-                                             :ptm ptm
-                                             :stage stage)
+                                      (assoc-in [::runtime/partitions (:branch ctx)]
+                                                {:route route
+                                                 ::runtime/branch-aux (:branch-aux ctx)
+                                                 :local-basis local-basis
+                                                 :ptm ptm
+                                                 :tempid-lookups tempid-lookups})
+                                      (assoc :stage stage)
                                       (reducers/root-reducer nil)
                                       (->Runtime))))]
       (f ctx))))

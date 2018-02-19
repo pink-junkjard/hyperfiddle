@@ -157,11 +157,10 @@
                                        (->Err (str e)))))
                           (doall))
         ; this can also stream, as the request hydrates.
-        id->tempid (reduce (fn [acc [branch internal-secure-db]]
-                             (assoc-in acc [(:uri branch) (:branch-ident branch)] (:id->tempid internal-secure-db)))
-                           {}
-                           @db-with-lookup)
-        ;result (concat pulled-trees id->tempid)
+        tempid-lookups (reduce (fn [acc [branch internal-secure-db]]
+                                 (assoc-in acc [(:branch-ident branch) (:uri branch)] (:id->tempid internal-secure-db)))
+                               {}
+                               @db-with-lookup)
         result {:pulled-trees pulled-trees
-                :id->tempid id->tempid}]
+                :tempid-lookups tempid-lookups}]
     result))
