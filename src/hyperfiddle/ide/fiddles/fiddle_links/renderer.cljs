@@ -19,6 +19,8 @@
            (result/view result ordered-fes links ctx)])
         (fn [data]
           (let [result (->> (:links data)
+                            ;(sort-by (juxt :link/disabled :link/rel)
+                            ;         (fn [[a b] [a' b']] (if (= a a') (< b b') (< a a'))))
                             (mapv (fn [link]
                                     (-> (if (auto-fiddle/system-fiddle? (get-in link [:link/fiddle :db/id]))
                                           (dissoc link :link/fiddle)
