@@ -20,7 +20,7 @@
     [input/validated-input value change! parse-iso8601-string to-string valid-date-str? props]))
 
 
-(defn date* [value change! props]
+(defn recom-date* [value change! props]
   ; (new goog.date.UtcDateTime(new Date())).toIsoString()
   [re-com/datepicker-dropdown
    :model (atom (goog.date.UtcDateTime. value))             ; not reactive
