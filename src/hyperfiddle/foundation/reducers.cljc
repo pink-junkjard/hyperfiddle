@@ -77,6 +77,8 @@
 
 (defn partitions-reducer [partitions action & args]
   (->> (case action
+         :transact!-success (assoc-in partitions [nil :hydrate-id] "hack; dont flicker while page rebuilds")
+
          :add-partition (let [[branch route branch-aux] args]
                           (assoc partitions branch {:route route
                                                     :hyperfiddle.runtime/branch-aux branch-aux}))
