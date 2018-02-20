@@ -2,7 +2,6 @@
   (:require [hypercrud.ui.control.link-controls :as links]
             [hypercrud.browser.link :as link]
             [hypercrud.ui.control.checkbox :refer [checkbox*]]
-            [hyperfiddle.foundation.actions :refer [with]]
             [hypercrud.client.tx :as tx]))
 
 

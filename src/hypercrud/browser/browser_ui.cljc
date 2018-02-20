@@ -97,7 +97,7 @@
   (when (and route (.-altKey event))
     (runtime/dispatch! rt (fn [dispatch! get-state]
                             (when (foundation/navigable? route (get-state))
-                              (foundation-actions/set-route rt route branch branch-aux dispatch! get-state))))
+                              (foundation-actions/set-route rt route branch dispatch! get-state))))
     (.stopPropagation event)))
 
 (defn wrap-ui [either-v route ctx & [class]]

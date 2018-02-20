@@ -143,10 +143,19 @@
                                 :tempid-lookups identity}
                                (reduce (fn [v [k f]] (update v k f)) partition))))))
 
+(defn auto-transact-reducer [auto-tx action & args]
+  (case action
+    :enable-auto-transact true
+    :disable-auto-transact false
+    (if (boolean? auto-tx)
+      auto-tx
+      true)))
+
 (def reducer-map {:hyperfiddle.runtime/fatal-error fatal-error-reducer
                   :hyperfiddle.runtime/domain domain-reducer
                   :hyperfiddle.runtime/global-basis global-basis-reducer
                   :hyperfiddle.runtime/partitions partitions-reducer
+                  :hyperfiddle.runtime/auto-transact auto-transact-reducer
 
                   ; user
                   :display-mode display-mode-reducer

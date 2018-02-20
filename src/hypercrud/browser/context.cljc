@@ -1,8 +1,5 @@
 (ns hypercrud.browser.context
-  (:require [hypercrud.browser.auto-anchor-formula :as auto-anchor-formula]
-            [hypercrud.browser.routing :as routing]
-            [hypercrud.util.branch :as branch]
-            [hypercrud.util.core :as util]
+  (:require [hypercrud.browser.routing :as routing]
             [hypercrud.util.reactive :as reactive]
             [hyperfiddle.foundation.actions :as foundation-actions]
             [hyperfiddle.runtime :as runtime]))
@@ -36,7 +33,7 @@
 
 (defn user-with [ctx branch uri tx]
   ; todo custom user-dispatch with all the tx-fns as reducers
-  (runtime/dispatch! (:peer ctx) (foundation-actions/with (:peer ctx) branch uri tx)))
+  (runtime/dispatch! (:peer ctx) (foundation-actions/with (:peer ctx) (::runtime/target-repository ctx) branch uri tx)))
 
 (defn relations [ctx relations]
   (assoc ctx :relations (reactive/atom relations)))

@@ -135,7 +135,7 @@
                               ; return the result to the action, it could be a promise
                               result))]
               (runtime/dispatch! (:peer ctx)
-                                 (foundation-actions/stage-popover (:peer ctx) child-branch swap-fn
+                                 (foundation-actions/stage-popover (:peer ctx) (::runtime/target-repository ctx) child-branch swap-fn
                                                                    (foundation-actions/close-popover (:branch ctx) popover-id))))))
         ; todo something better with these exceptions (could be user error)
         (p/catch (fn [err]

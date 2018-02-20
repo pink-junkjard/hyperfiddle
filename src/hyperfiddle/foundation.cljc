@@ -59,18 +59,23 @@
                                 ; todo this can throw
                                 (update :repository/environment reader/read-string)))))))))
 
-(defn context [ctx]
-  (let [domain @(runtime/state (:peer ctx) [::runtime/domain])]
-    (assert domain "Bootstrapping failed to fetch the domain")
-    (assoc ctx :hypercrud.browser/domain (process-domain-legacy domain))))
+(defn context [ctx route]
+  (let [domain @(runtime/state (:peer ctx) [::runtime/domain])
+        _ (assert domain "Bootstrapping failed to fetch the domain")
+        domain (process-domain-legacy domain)]
+    (assoc ctx :hypercrud.browser/domain domain
+               ::runtime/target-repository (->> (:domain/code-databases domain)
+                                                (filter #(= (:dbhole/name %) (:code-database route)))
+                                                first
+                                                (into {})))))
 
 (defn local-basis [page-or-leaf global-basis route ctx f]
   (concat
     (:domain global-basis)
-    (f global-basis route (context ctx))))
+    (f global-basis route (context ctx route))))
 
 (defn api [page-or-leaf route ctx f]
-  (f route (context ctx)))
+  (f route (context ctx route)))
 
 #?(:cljs
    (defn staging [peer]
@@ -83,7 +88,7 @@
    (defn leaf-view [route ctx f]
      ; A malformed stage can break bootstrap hydrates, but the root-page is bust, so ignore here
      ; Fix this by branching userland so bootstrap is sheltered from staging area? (There are chickens and eggs)
-     (f route (context ctx))))
+     (f route (context ctx route))))
 
 #?(:cljs
    (defn page-view [route ctx f]
@@ -92,7 +97,7 @@
         [error-cmp e]
         [staging (:peer ctx)]]
 
-       (let [ctx (context ctx)]
+       (let [ctx (context ctx route)]
          [:div {:class (apply classes "hyperfiddle-foundation" @(runtime/state (:peer ctx) [:pressed-keys]))}
           (f route ctx)                                     ; nil, seq or reagent component
           (if @(runtime/state (:peer ctx) [:staging-open])

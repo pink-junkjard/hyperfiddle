@@ -91,7 +91,12 @@
       " · "
       (fake-managed-anchor :links (assoc ctx :user-renderer hijack-renderer) "links")
       (fake-managed-anchor :ui (assoc ctx :user-renderer hijack-renderer) "view")
-      (fake-managed-anchor :stage ctx "stage" :class (if dirty? "stage-dirty"))
+      (if @(runtime/state (:peer ctx) [::runtime/auto-transact])
+        [:div
+         [:input {:id ::auto-transact :type "checkbox" :checked true
+                  :on-click (fn [] (runtime/dispatch! (:peer ctx) [:disable-auto-transact]))}]
+         [:label {:for ::auto-transact} "auto-transact"]]
+        (fake-managed-anchor :stage ctx "stage" :class (if dirty? "stage-dirty")))
 
       (let [change! #(runtime/dispatch! (:peer ctx) (foundation-actions/set-display-mode %))]
         [:span.radio-group
@@ -143,30 +148,30 @@
     [:span.qe.radio-group (apply react-fragment :_ options)]))
 
 (defn ^:export stage-ui [result ordered-fes links ctx]
-  [:div.hyperfiddle-topnav-stage
-   (result/view result ordered-fes links ctx)               ; for docstring
-   (let [anonymous? (nil? (:user-profile ctx))
-         stage @(runtime/state (:peer ctx) [:stage])
-         disabled? (or anonymous? (empty? stage))]
-     ; tooltip busted
+  (let [anonymous? (nil? (:user-profile ctx))
+        stage @(runtime/state (:peer ctx) [:stage])]
+    [:div.hyperfiddle-topnav-stage
+     (result/view result ordered-fes links ctx)             ; for docstring
      [tooltip (cond anonymous? {:status :warning :label "please login"}
-                    (empty? stage) {:status :warning :label "no changes"})
-      [:button {:disabled disabled?
-                :style (if disabled? {:pointer-events "none"})
-                :on-click (fn []
-                            ; specifically dont use the SplitRuntime protocol here. the only thing that makes sense is whats in the context from the route
-                            (let [target-repo (->> (:target-domain ctx)
-                                                   :domain/code-databases
-                                                   (filter #(= (:dbhole/name %) (get-in ctx [:target-route :code-database])))
-                                                   first
-                                                   (into {}))
-                                  nil-branch-aux {:hyperfiddle.ide/foo "page"}]
-                              (runtime/dispatch! (:peer ctx) (foundation-actions/transact! (:peer ctx) target-repo nil-branch-aux))))}
-       "transact!"]])
-   [staging (:peer ctx)]
-   [:div.markdown (markdown "Hyperfiddle always generates valid transactions, if it doesn't, please file a bug.
+                    (not (empty? stage)) {:status :warning :label "please transact! all changes first"})
+      [:button {:disabled (or anonymous? (not (empty? stage)))
+                :on-click (fn [] (runtime/dispatch! (:peer ctx) [:enable-auto-transact]))}
+       "Enable auto-transact"]]
+     (let [disabled? (or anonymous? (empty? stage))]
+       [tooltip (cond anonymous? {:status :warning :label "please login"}
+                      (empty? stage) {:status :warning :label "no changes"})
+        [:button {:disabled disabled?
+                  :style (if disabled? {:pointer-events "none"})
+                  :on-click (fn []
+                              ; specifically dont use the SplitRuntime protocol here. the only thing that makes sense is whats in the context from the route
+                              (let [target-repo (::runtime/target-repository ctx)
+                                    nil-branch-aux {:hyperfiddle.ide/foo "page"}]
+                                (runtime/dispatch! (:peer ctx) (foundation-actions/manual-transact! (:peer ctx) target-repo nil-branch-aux))))}
+         "transact!"]])
+     [staging (:peer ctx)]
+     [:div.markdown (markdown "Hyperfiddle always generates valid transactions, if it doesn't, please file a bug.
 
 *WARNING:* Datomic schema alterations cannot be used in the same transaction, for now you'll
-need to transact the schema before using, see [#6](https://github.com/hyperfiddle/hyperfiddle/issues/6).")]])
+need to transact the schema before using, see [#6](https://github.com/hyperfiddle/hyperfiddle/issues/6).")]]))
 
 (defn bindings [ctx] (topnav-bindings/bindings ctx))
