@@ -50,7 +50,7 @@
     (ui-fn (shadow-fiddle fiddle ctx) fes links ctx)))
 
 (defn any-loading? [peer]
-  (some (comp not nil? :hydrate-id) @(runtime/state peer [::runtime/partitions])))
+  (some (comp not nil? :hydrate-id val) @(runtime/state peer [::runtime/partitions])))
 
 (defn loading-spinner [ctx]
   (if @(reactive/track any-loading? (:peer ctx))
