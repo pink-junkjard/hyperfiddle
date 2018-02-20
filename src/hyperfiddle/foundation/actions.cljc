@@ -107,7 +107,7 @@
         id->tempid (get tempid-lookups uri)]
     (map (partial tx/stmt-id->tempid id->tempid schema) tx)))
 
-(defn transact! [rt target-repository tx-groups dispatch! get-state]
+(defn transact! [rt target-repository tx-groups dispatch! get-state & [route]]
   (dispatch! [:transact!-start])
   (let [tx-groups (util/map-values (partial filter v-not-nil?) ; hack because the ui still generates some garbage tx
                                    tx-groups)]
@@ -117,7 +117,7 @@
                    (dispatch! [:transact!-failure error])
                    (throw error)))
         (p/then (fn [{:keys [tempid->id]}]
-                  (let [route (get-in (get-state) [::runtime/partitions nil :route])
+                  (let [route (or route (get-in (get-state) [::runtime/partitions nil :route]))
                         invert-id (fn [temp-id uri]
                                     (get-in tempid->id [uri temp-id] temp-id))
                         route' (routing/invert-ids route invert-id target-repository)]
@@ -155,8 +155,7 @@
                   (do
                     ; should the tx fn not be withd? if the transact! fails, do we want to run it again?
                     (dispatch! (apply batch (concat with-actions on-start)))
-                    ; todo app-route
-                    (-> (transact! rt target-repository (get-in (get-state) [:stage branch]) dispatch! get-state)
+                    (-> (transact! rt target-repository (get-in (get-state) [:stage branch]) dispatch! get-state app-route)
                         ; todo what if transact throws?
                         (p/then (fn [_] (dispatch! (discard-partition branch))))))
                   (let [actions (concat
