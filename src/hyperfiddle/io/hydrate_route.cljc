@@ -2,11 +2,11 @@
   (:require [clojure.set :as set]
             [cuerdas.core :as str]
             [hypercrud.browser.routing :as routing]
+            [hypercrud.client.peer :as peer]
             [hypercrud.http.core :refer [http-request!]]
             [hypercrud.types.EntityRequest :refer [#?(:cljs EntityRequest)]]
             [hypercrud.types.QueryRequest :refer [#?(:cljs QueryRequest)]]
             [hypercrud.util.base-64-url-safe :as base-64-url-safe]
-            [hypercrud.util.branch :as branch]
             [hypercrud.util.core :as util]
             [hypercrud.util.performance :as perf]
             [hyperfiddle.appval.state.reducers :as reducers] ; this import is immoral
@@ -34,18 +34,16 @@
                                   (->> (request-fn tempid-lookups ptm)
                                        (validate-user-qs)
                                        (into #{})))
-          missing-requests (let [have-requests (set (map second (keys ptm)))]
+          missing-requests (let [have-requests (set (keys ptm))]
                              (->> (set/difference all-requests have-requests)
                                   (into [])))]
       (if (empty? missing-requests)
         (p/resolved {:tempid-lookups tempid-lookups
-                     :ptm (->> (select-keys (util/map-keys second ptm) all-requests)) ; prevent memory leak by returning exactly what is needed
+                     :ptm (select-keys ptm all-requests)    ; prevent memory leak by returning exactly what is needed
                      :total-loops total-loops})
         (p/then (runtime/hydrate-requests rt local-basis stage missing-requests)
                 (fn [{:keys [pulled-trees] :as resp}]
-                  (let [new-ptm (->> (zipmap missing-requests pulled-trees)
-                                     (util/map-keys (fn [request]
-                                                      [(branch/branch-vals-for-request request stage) request])))
+                  (let [new-ptm (zipmap missing-requests pulled-trees)
                         ptm (merge ptm new-ptm)
                         data-cache {:tempid-lookups (merge-with merge tempid-lookups (get-in resp [:tempid-lookups branch]))
                                     :ptm ptm}]
@@ -65,13 +63,14 @@
 (defn request-fn-adapter [local-basis route stage ctx ->Runtime f]
   ; Hacks because the hydrate-loop doesn't write to the state atom.
   (fn [tempid-lookups ptm]
-    (let [ctx (update ctx :peer (fn [peer]
+    (let [ptm (util/map-keys #(peer/partitioned-request route (::runtime/branch-aux ctx) local-basis stage %) ptm)
+          ctx (update ctx :peer (fn [peer]
                                   (-> @(runtime/state peer)
                                       ; want to keep all user/ui and bootstrapping state, just use overwrite the partition state.
                                       (select-keys [:user-profile ::runtime/domain])
                                       (assoc-in [::runtime/partitions (:branch ctx)]
                                                 {:route route
-                                                 ::runtime/branch-aux (:branch-aux ctx)
+                                                 ::runtime/branch-aux (::runtime/branch-aux ctx)
                                                  :local-basis local-basis
                                                  :ptm ptm
                                                  :tempid-lookups tempid-lookups})

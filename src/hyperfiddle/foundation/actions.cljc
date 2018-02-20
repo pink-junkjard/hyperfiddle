@@ -26,20 +26,19 @@
 (defn hydrate-partition [rt branch on-start dispatch! get-state]
   (dispatch! (apply batch [:hydrate!-start branch] on-start))
   (let [{:keys [stage] :as state} (get-state)
-        branch-state (fn [] (get-in state [::runtime/partitions branch]))
-        {:keys [route local-basis hydrate-id ::runtime/branch-aux]} (branch-state)]
+        partition-state (fn [] (get-in state [::runtime/partitions branch]))
+        {:keys [route local-basis hydrate-id ::runtime/branch-aux]} (partition-state)]
     (assert route)
     (assert (not (string? route)))
     (-> (runtime/hydrate-route rt local-basis route branch branch-aux stage)
         (p/then (fn [{:keys [ptm tempid-lookups]}]
-                  (if (= hydrate-id (:hydrate-id (branch-state)))
-                    (let [ptm (util/map-keys (fn [request]
-                                               [(branch/branch-vals-for-request request stage) request])
-                                             ptm)]
-                      (dispatch! [:hydrate!-success branch ptm tempid-lookups]))
-                    (timbre/info (str "Ignoring response for " hydrate-id)))))
+                  (let [partition-val (partition-state)]
+                    (if (= hydrate-id (:hydrate-id partition-val))
+                      (let [ptm (util/map-keys (partial peer/partitioned-request partition-val stage) ptm)]
+                        (dispatch! [:hydrate!-success branch ptm tempid-lookups]))
+                      (timbre/info (str "Ignoring response for " hydrate-id))))))
         (p/catch (fn [error]
-                   (if (= hydrate-id (:hydrate-id (branch-state)))
+                   (if (= hydrate-id (:hydrate-id (partition-state)))
                      (dispatch! [:partition-error branch error])
                      (timbre/info (str "Ignoring response for " hydrate-id)))
                    (throw error))))))
@@ -100,10 +99,10 @@
 
 (defn update-to-tempids [get-state branch uri tx]
   (let [{:keys [stage ::runtime/partitions]} (get-state)
-        {:keys [ptm tempid-lookups]} (get partitions branch)
+        {:keys [tempid-lookups] :as partition-val} (get partitions branch)
         dbval (->DbVal uri branch)
         schema (let [schema-request (schema/schema-request dbval)]
-                 (-> (peer/hydrate-val ptm stage schema-request)
+                 (-> (peer/hydrate-val partition-val stage schema-request)
                      (either/branch (fn [e] (throw e)) identity)))
         id->tempid (get tempid-lookups uri)]
     (map (partial tx/stmt-id->tempid id->tempid schema) tx)))

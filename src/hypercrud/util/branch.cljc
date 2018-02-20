@@ -32,10 +32,12 @@
                nil)
        hash))
 
-(defn branch-vals-for-request [request stage-val]
+(defn request->dbvals [request]
   (condp = (type request)
-    EntityRequest (branch-val (get-in request [:db :uri]) (get-in request [:db :branch]) stage-val)
-    QueryRequest (->> (:params request)
-                      (filter #(= (type %) DbVal))
-                      (map (fn [db] (branch-val (:uri db) (:branch db) stage-val)))
-                      (hash))))
+    EntityRequest [(:db request)]
+    QueryRequest (filter #(= (type %) DbVal) (:params request))))
+
+(defn branch-vals-for-dbvals [dbvals stage-val]
+  (->> dbvals
+       (map (fn [db] (branch-val (:uri db) (:branch db) stage-val)))
+       (hash)))

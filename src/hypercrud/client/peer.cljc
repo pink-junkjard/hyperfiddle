@@ -6,8 +6,26 @@
             [hyperfiddle.io.util :refer [process-result]]))
 
 
-(defn hydrate-val [ptm stage-val request]
-  (let [request' [(branch/branch-vals-for-request request stage-val) request]]
+(defn partitioned-request
+  ([partition-val stage-val request]
+   (partitioned-request (:route partition-val)
+                        (:hyperfiddle.runtime/branch-aux partition-val)
+                        (:local-basis partition-val)
+                        stage-val
+                        request))
+  ([route branch-aux local-basis stage-val request]
+   (let [relevant-dbvals (branch/request->dbvals request)]
+     {:route route
+      :hyperfiddle.runtime/branch-aux branch-aux
+      :local-basis (let [lookup (into {} local-basis)]
+                     (->> relevant-dbvals
+                          (map (juxt :uri #(get lookup (:uri %))))
+                          (into {})))
+      :stage (branch/branch-vals-for-dbvals relevant-dbvals stage-val)
+      :request request})))
+
+(defn hydrate-val [{:keys [ptm] :as partition-val} stage-val request]
+  (let [request' (partitioned-request partition-val stage-val request)]
     (if (contains? ptm request')
       (process-result (get ptm request') request)
       (either/left {:message "Loading" :data {:request request}}))))
@@ -15,9 +33,9 @@
 ; react on the answer, not the question
 ; todo this signature should be [partition-cursor request]
 (defn trackable-hydrate [state-atom branch request]
-  (let [ptm @(reactive/cursor state-atom [:hyperfiddle.runtime/partitions branch :ptm])
+  (let [partition @(reactive/cursor state-atom [:hyperfiddle.runtime/partitions branch])
         stage-val @(reactive/cursor state-atom [:stage])]
-    (hydrate-val ptm stage-val request)))
+    (hydrate-val partition stage-val request)))
 
 (defn hydrate [state-atom branch request]
   (reactive/track trackable-hydrate state-atom branch request))
