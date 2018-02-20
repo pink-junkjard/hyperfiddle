@@ -38,8 +38,8 @@
      [:div.anchors (links/render-links (remove :link/render-inline? my-links) ctx)]
      [input/validated-input
       @(:value ctx) #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) (:attribute ctx) %))
-      #(js/parseInt % 10) pr-str
-      #(or (integer? (js/parseInt % 10)) (= "nil" %))
+      #(js/parseInt % 10) (fnil str "")
+      #(or #_(= "" %) (integer? (js/parseInt % 10)))
       props]
      (links/render-inline-links (filter :link/render-inline? my-links) ctx)]))
 
