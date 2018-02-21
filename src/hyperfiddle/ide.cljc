@@ -120,14 +120,6 @@
   (-> (assoc ctx ::runtime/branch-aux {::foo "user"})
       (*-target-context route)))
 
-;(def router (memoize bide/router))
-
-; what if router is broken? can it toggle off? is there a default route /_/ ? Can userland override?
-(def router ["/" {["-/" :encoded-route] :browser
-                  [:fid "/"] :b0
-                  [:fid "/" :p0] :b1
-                  [:fid "/" :p0 "," :p1] :b2}])
-
 (defn bidi-route->browser [{handler :handler {:keys [fid] :as route-params} :route-params}]
   (let [request-params (dissoc route-params :fid)]
     {:code-database "starter-blog-src2"
