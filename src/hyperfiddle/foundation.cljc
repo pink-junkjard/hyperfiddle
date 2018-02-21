@@ -32,7 +32,7 @@
             [:domain/ident hf-domain-name])]
     (->EntityRequest e nil
                      (hc/db peer domain-uri nil)
-                     [:db/id :domain/ident :domain/home-route :domain/aliases
+                     [:db/id :domain/ident :domain/home-route :domain/router :domain/aliases
                       {:domain/code-databases [:db/id :dbhole/name :dbhole/uri :repository/environment]}])))
 
 (defn user-profile->ident [user-profile]

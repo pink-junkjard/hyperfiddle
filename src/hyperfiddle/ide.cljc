@@ -1,14 +1,16 @@
 (ns hyperfiddle.ide
-  (:require [cuerdas.core :as str]
+  (:require [bidi.bidi :as bidi]
+            [cuerdas.core :as str]
     #?(:cljs [hypercrud.browser.browser-ui :as browser-ui])
             [hypercrud.browser.core :as browser]
             [hypercrud.browser.routing :as routing]
             [hypercrud.client.core :as hc]
+            [hypercrud.types.ThinEntity]
     #?(:cljs [hypercrud.react.react-fragment :refer [react-fragment]])
     #?(:cljs [hypercrud.ui.navigate-cmp :as navigate-cmp])
             [hypercrud.util.core :refer [unwrap xorxs update-existing]]
             [hypercrud.util.reactive :as reactive]
-            [hypercrud.util.string :as hc-string]
+            [hypercrud.util.string :as hc-string :refer [safe-read-edn-string]]
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-one!]]
             [hyperfiddle.runtime :as runtime]
@@ -117,17 +119,64 @@
   (-> (assoc ctx ::runtime/branch-aux {::foo "user"})
       (*-target-context route)))
 
+;(def router (memoize bide/router))
+
+; what if router is broken? can it toggle off? is there a default route /_/ ? Can userland override?
+(def router ["/" {[:fid "/"] :b0
+                  [:fid "/" :p0] :b1
+                  [:fid "/" :p0 "," :p1] :b2}])
+
+(defn bidi-route->browser [{handler :handler {:keys [fid] :as route-params} :route-params}]
+  (let [request-params (dissoc route-params :fid)]
+    {:code-database "starter-blog-src2"
+     :fiddle-id (unwrap (safe-read-edn-string fid))
+     :request-params (mapv (fn [ix]
+                             (let [eid (-> (keyword (str "p" ix)) route-params safe-read-edn-string unwrap)]
+                               #entity["$" eid]))
+                           (range (count request-params)))}))
+
+(defn browser-route->bidi [{:keys [fiddle-id request-params]}]
+  ; is route routable? What if we can't handle it?
+  ; Return this wonky intermediate syntax that bidi/path-for wants for its arguments.
+  (let [airity (count request-params)
+        args (flatten (map-indexed (fn [ix p]
+                                     [(keyword (str "p" ix)) (if (hypercrud.types.ThinEntity/thinentity? p) (:db/id p) p)])
+                                   request-params))]
+    (concat
+      [(keyword (str "b" airity)) :fid fiddle-id]
+      args)))
+
 (defn route-decode [rt s]
   {:pre [(string? s)]}
-  (let [domain @(runtime/state rt [:hyperfiddle.runtime/domain])]
+  (let [domain @(runtime/state rt [:hyperfiddle.runtime/domain])
+        home-route (some-> domain :domain/home-route safe-read-edn-string unwrap)
+        router (some-> domain :domain/router safe-read-edn-string unwrap)]
     (case s
-      "/" (unwrap (hc-string/safe-read-edn-string (:domain/home-route domain)))
-
-      (routing/decode s))))
+      "/" home-route
+      (or (some-> router (bidi/match-route s) bidi-route->browser)
+          (routing/decode s)))))
 
 (defn route-encode [rt route]
   ; use domain to canonicalize
-  (routing/encode route))
+  (let [domain @(runtime/state rt [:hyperfiddle.runtime/domain])
+        home-route (some-> domain :domain/home-route safe-read-edn-string unwrap)
+        router (some-> domain :domain/router safe-read-edn-string unwrap)]
+    (or
+      (if router (apply bidi/path-for router (browser-route->bidi route)))
+      (routing/encode route))))
+
+(comment
+  (some-> router (bidi/match-route "/17592186045454/") bidi-route->browser)
+  (some-> router (bidi/match-route "/17592186045462/17592186045872") bidi-route->browser)
+
+  (def x {:code-database "starter-blog-src2", :fiddle-id 17592186045454})
+  (apply bidi/path-for router (browser-route->bidi x))
+
+  (def x2 {:request-params [#entity["$" 17592186046269]],
+           :code-database "starter-blog-src2", :fiddle-id 17592186045454})
+  (apply bidi/path-for router (browser-route->bidi x2))
+
+  )
 
 (defn local-basis [global-basis route ctx]
   ;local-basis-ide and local-basis-user

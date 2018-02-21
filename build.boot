@@ -3,6 +3,7 @@
 (let [dependencies
       '[[com.taoensso/timbre "4.10.0"]
         [datascript "0.16.2"]
+        [bidi "2.1.3"]
         [funcool/cats "2.2.0"]
         [funcool/cuerdas "2.0.4"]
         [funcool/promesa "1.8.1"]
