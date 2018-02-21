@@ -27,14 +27,18 @@
 
 (defn read-string
   ([s]
+   {:pre [s]}
    (read-string {} s))
   ([opts s]
+   {:pre [s]}
    (binding [reader/*data-readers* (merge hc-data-readers reader/*data-readers*)]
      (reader/read-string opts s))))
 
 (defn read-edn-string
   ([s]
+   {:pre [s]}
    (read-edn-string {:eof nil} s))
   ([opts s]
+   {:pre [s]}
    (-> (update opts :readers merge hc-data-readers)
        (edn-reader/read-string s))))
