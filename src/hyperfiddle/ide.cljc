@@ -1,11 +1,12 @@
 (ns hyperfiddle.ide
   (:require [bidi.bidi :as bidi]
             [cuerdas.core :as str]
+            [hypercrud.browser.auto-anchor :refer [system-link?]]
     #?(:cljs [hypercrud.browser.browser-ui :as browser-ui])
             [hypercrud.browser.core :as browser]
             [hypercrud.browser.routing :as routing]
             [hypercrud.client.core :as hc]
-            [hypercrud.types.ThinEntity]
+            [hypercrud.types.ThinEntity :refer [thinentity?]]
     #?(:cljs [hypercrud.react.react-fragment :refer [react-fragment]])
     #?(:cljs [hypercrud.ui.navigate-cmp :as navigate-cmp])
             [hypercrud.util.core :refer [unwrap xorxs update-existing]]
@@ -122,7 +123,8 @@
 ;(def router (memoize bide/router))
 
 ; what if router is broken? can it toggle off? is there a default route /_/ ? Can userland override?
-(def router ["/" {[:fid "/"] :b0
+(def router ["/" {["-/" :encoded-route] :browser
+                  [:fid "/"] :b0
                   [:fid "/" :p0] :b1
                   [:fid "/" :p0 "," :p1] :b2}])
 
@@ -135,16 +137,20 @@
                                #entity["$" eid]))
                            (range (count request-params)))}))
 
-(defn browser-route->bidi [{:keys [fiddle-id request-params]}]
-  ; is route routable? What if we can't handle it?
-  ; Return this wonky intermediate syntax that bidi/path-for wants for its arguments.
+(defn hyperblog-bidi-route [{:keys [code-database fiddle-id request-params]}]
   (let [airity (count request-params)
         args (flatten (map-indexed (fn [ix p]
-                                     [(keyword (str "p" ix)) (if (hypercrud.types.ThinEntity/thinentity? p) (:db/id p) p)])
+                                     [(keyword (str "p" ix)) (if (thinentity? p) (:db/id p) p)])
                                    request-params))]
     (concat
       [(keyword (str "b" airity)) :fid fiddle-id]
       args)))
+
+(defn browser-route->bidi [{:keys [code-database fiddle-id request-params] :as route}]
+  ; check for magic constants in route for /-/
+  (assert (not (system-link? fiddle-id)) "bidi router doesn't handle sys links")
+  #_(if (= :schema/all-attributes (:ident fiddle-id)))
+  (hyperblog-bidi-route route))
 
 (defn route-decode [rt s]
   {:pre [(string? s)]}
@@ -153,7 +159,8 @@
         router (some-> domain :domain/router safe-read-edn-string unwrap)]
     (case s
       "/" home-route
-      (or (some-> router (bidi/match-route s) bidi-route->browser)
+      (or (if (= "/_/" (subs s 0 3)) (routing/decode (subs s 2) #_ "include leading /"))
+          (some-> router (bidi/match-route s) bidi-route->browser)
           (routing/decode s)))))
 
 (defn route-encode [rt route]
@@ -162,8 +169,9 @@
         home-route (some-> domain :domain/home-route safe-read-edn-string unwrap)
         router (some-> domain :domain/router safe-read-edn-string unwrap)]
     (or
+      (if (system-link? (:fiddle-id route)) (str "/_" (routing/encode route)))
       (if router (apply bidi/path-for router (browser-route->bidi route)))
-      (routing/encode route))))
+      (str "/_" (routing/encode route)))))
 
 (comment
   (some-> router (bidi/match-route "/17592186045454/") bidi-route->browser)
