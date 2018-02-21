@@ -163,7 +163,7 @@
     (or
       (if (system-link? (:fiddle-id route)) (str "/_" (routing/encode route)))
       (if router (apply bidi/path-for router (browser-route->bidi route)))
-      (str "/_" (routing/encode route)))))
+      (str (routing/encode route)))))
 
 (comment
   (some-> router (bidi/match-route "/17592186045454/") bidi-route->browser)
