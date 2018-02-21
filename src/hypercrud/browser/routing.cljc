@@ -89,6 +89,8 @@
         ctx))))
 
 (defn encode [route]
+  ;/-/code-database    :fiddle-ident         ;fiddle-params       /query-params
+  ;"/-/starter-blog-src2:schema!all-attributes;dbhole!name=$domains/"
   (str "/" (some-> route pr-str base64/encode)))
 
 (defn decode [route-str]
