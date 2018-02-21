@@ -98,3 +98,5 @@
   (and (instance? Entity other)
        (= (.-uri o) (.-uri other))                          ; identity
        (= (:db/id (.-coll o)) (:db/id (.-coll other)))))
+
+(defn entity? [o] (instance? Entity o))                  ; this is hard to implement portably outside this file
