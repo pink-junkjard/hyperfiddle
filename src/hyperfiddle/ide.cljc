@@ -9,6 +9,7 @@
             [hypercrud.types.ThinEntity :refer [thinentity?]]
     #?(:cljs [hypercrud.react.react-fragment :refer [react-fragment]])
     #?(:cljs [hypercrud.ui.navigate-cmp :as navigate-cmp])
+    #?(:cljs [hypercrud.ui.stale :as stale])
             [hypercrud.util.core :refer [unwrap xorxs update-existing]]
             [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :as hc-string :refer [safe-read-edn-string]]
@@ -215,17 +216,23 @@
 
 #?(:cljs
    (defn view-page [?route ctx]
-     (let [ide-domain (hc/hydrate-api (:peer ctx) (:branch ctx) (foundation/domain-request "hyperfiddle" (:peer ctx)))
-           ide-active (activate-ide? (foundation/hostname->hf-domain-name ctx))
+     (let [ide-active (activate-ide? (foundation/hostname->hf-domain-name ctx))
            ctx (assoc ctx :navigate-cmp (reagent/partial navigate-cmp/navigate-cmp (reagent/partial runtime/encode-route (:peer ctx))))]
        (react-fragment
          :view-page
-         (if ide-active
-           (if ide-domain
-             (let [ctx (-> (page-ide-context ctx ide-domain ?route)
-                           (assoc :hypercrud.ui/ui-error browser-ui/ui-error-inline))]
-               [browser/ui-from-route (ide-route ?route) ctx "topnav hidden-print"])
-             [:div "loading... (ide bootstrap, you edited ide-domain)"]))
+         (when ide-active
+           [stale/loading
+            (stale/can-be-loading? ctx)
+            @(hc/hydrate (:peer ctx) (:branch ctx) (foundation/domain-request "hyperfiddle" (:peer ctx)))
+            (fn [e]
+              ; todo inline staging area?
+              [:div
+               [:h3 "Fatal error"]
+               [:pre (pr-str e)]])
+            (fn [ide-domain]
+              (let [ctx (-> (page-ide-context ctx ide-domain ?route)
+                            (assoc :hypercrud.ui/ui-error browser-ui/ui-error-inline))]
+                [browser/ui-from-route (ide-route ?route) ctx "topnav hidden-print"]))])
          (if ?route
            (let [class (str "hyperfiddle-user" (if ide-active " hyperfiddle-ide-user" ""))]
              ; This is different than foo=user because it is special css at root attach point
