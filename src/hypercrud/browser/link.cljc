@@ -24,21 +24,6 @@
 (defn popover-link? [link]
   (:link/managed? link))
 
-(def build-pathed-links-lookup
-  (memoize                                                  ; memory leak; should back by local ratom
-    (fn [anchors]
-      (reduce (fn [acc anchor]
-                (-> (hc-string/memoized-safe-read-edn-string (str "[" (:link/path anchor) "]"))
-                    (either/branch
-                      (fn [e]
-                        (timbre/error e)
-                        ; swallow the error
-                        acc)
-                      (fn [path]
-                        (update-in acc (conj path :links) conj anchor)))))
-              {}
-              anchors))))
-
 (defn process-popover-link [link]
   (if (popover-link? link)
     (assoc link :link/render-inline? false)
@@ -50,8 +35,14 @@
     [links options-link]))
 
 (defn links-lookup [links path]                             ; the real one used by request side
-  (-> (build-pathed-links-lookup links)
-      (get-in (conj path :links))))
+  (->> links
+       (filter (fn [link]
+                 (either/branch
+                   (hc-string/memoized-safe-read-edn-string (str "[" (:link/path link) "]"))
+                   (fn [e]
+                     (timbre/error e)                       ; swallow the error
+                     false)
+                   #(= path %))))))
 
 (defn links-lookup' [links path]                            ; cosmetic UI side because popover hacks. If popovers hydrate seperate, this goes away
   (->> (links-lookup links path)
