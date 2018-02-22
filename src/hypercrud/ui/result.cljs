@@ -28,7 +28,7 @@
                     (fn [source-symbol]
                       (case (get-in ctx [:schemas (str source-symbol) a :db/cardinality :db/ident])
                         :db.cardinality/one
-                        (form/Relation (assoc ctx :relation [result]))
+                        (form/Relation (context/relation ctx (reactive/atom [result])))
 
                         :db.cardinality/many
                         (table/Table (context/relations ctx (mapv vector result)))))))
