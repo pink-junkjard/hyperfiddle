@@ -22,7 +22,7 @@
 
 
 (defn stateless-login-url [ctx]
-  (let [{:keys [domain client-id]} (get-in ctx [:hypercrud.browser/repository :repository/environment :auth0 (:hyperfiddle-hostname ctx)])
+  (let [{:keys [domain client-id]} (get-in ctx [:hypercrud.browser/domain :domain/environment :auth0 (:hyperfiddle-hostname ctx)])
         callback-url (str "http://" (:hostname ctx) foundation/auth0-redirect-path)]
     (str domain "/login?client=" client-id "&callbackURL=" callback-url)))
 
@@ -106,13 +106,6 @@
       [:div.right-nav {:key "right-nav"}                    ; CAREFUL; this key prevents popover flickering
        [loading-spinner ctx]
        ; ignore results; don't display the fiddle's data, just the anchors
-       ((:browse ctx) :repo-picker ctx :class "hyperfiddle-topnav-repo-picker"
-         (fn [result]
-           [:span
-            "repo: " (->> result
-                          (map #(get % "?e"))
-                          (filter #(= (:uri ctx) (:dbhole/uri %)))
-                          ((comp :dbhole/name first)))]))
        ((:anchor ctx) :new-fiddle ctx "new-fiddle")
        (if (:user-profile ctx)
          ((:anchor ctx) :account ctx (get-in ctx [:user-profile :email]))
@@ -164,9 +157,8 @@
                   :style (if disabled? {:pointer-events "none"})
                   :on-click (fn []
                               ; specifically dont use the SplitRuntime protocol here. the only thing that makes sense is whats in the context from the route
-                              (let [target-repo (::runtime/target-repository ctx)
-                                    nil-branch-aux {:hyperfiddle.ide/foo "page"}]
-                                (runtime/dispatch! (:peer ctx) (foundation-actions/manual-transact! (:peer ctx) target-repo nil-branch-aux))))}
+                              (let [nil-branch-aux {:hyperfiddle.ide/foo "page"}]
+                                (runtime/dispatch! (:peer ctx) (foundation-actions/manual-transact! (:peer ctx) (:hypercrud.browser/domain ctx) nil-branch-aux))))}
          "transact!"]])
      [staging (:peer ctx)]
      [:div.markdown (markdown "Hyperfiddle always generates valid transactions, if it doesn't, please file a bug.

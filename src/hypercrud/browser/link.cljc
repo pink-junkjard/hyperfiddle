@@ -98,7 +98,7 @@
        :tooltip (if-not (empty? errors)
                   [:warning (pprint-str errors)]
                   (if (:ide-active ctx)
-                    [nil (pr-str (dissoc route :code-database :fiddle-id))]
+                    [nil (pr-str (dissoc route :fiddle-id))]
                     (:tooltip user-props)))
        :class (->> [(:class user-props)
                     (if-not (empty? errors) "invalid")]
@@ -126,7 +126,7 @@
                               ; return the result to the action, it could be a promise
                               result))]
               (runtime/dispatch! (:peer ctx)
-                                 (foundation-actions/stage-popover (:peer ctx) (::runtime/target-repository ctx) child-branch swap-fn
+                                 (foundation-actions/stage-popover (:peer ctx) (:hypercrud.browser/domain ctx) child-branch swap-fn
                                                                    (foundation-actions/close-popover (:branch ctx) popover-id))))))
         ; todo something better with these exceptions (could be user error)
         (p/catch (fn [err]

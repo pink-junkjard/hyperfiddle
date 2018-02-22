@@ -18,19 +18,19 @@
               (hypercrud.types.ThinEntity ThinEntity))))
 
 
-(defn invert-ids [route invert-id repository]
+(defn invert-ids [route invert-id domain]
   (-> (walk/postwalk (fn [v]
                        (cond
                          (instance? Entity v) (assert false "hyperfiddle/hyperfiddle.net#150")
 
                          (instance? ThinEntity v)
-                         (let [uri (get-in repository [:repository/environment (.-dbname v)])
+                         (let [uri (get-in domain [:domain/environment (.-dbname v)])
                                id (invert-id (.-id v) uri)]
                            (->ThinEntity (.-dbname v) id))
 
                          :else v))
                      route)
-      (update :fiddle-id (let [uri (:dbhole/uri repository)]
+      (update :fiddle-id (let [uri (:domain/fiddle-repo domain)]
                            #(invert-id % uri)))))
 
 (defn ctx->id-lookup [uri ctx]
@@ -41,14 +41,14 @@
   (let [invert-id (fn [id uri]
                     (let [id->tempid (ctx->id-lookup uri ctx)]
                       (get id->tempid id id)))]
-    (invert-ids route invert-id (:hypercrud.browser/repository ctx))))
+    (invert-ids route invert-id (:hypercrud.browser/domain ctx))))
 
 (defn tempid->id [route ctx]
   (let [invert-id (fn [temp-id uri]
                     (let [tempid->id (-> (ctx->id-lookup uri ctx)
                                          (set/map-invert))]
                       (get tempid->id temp-id temp-id)))]
-    (invert-ids route invert-id (:hypercrud.browser/repository ctx))))
+    (invert-ids route invert-id (:hypercrud.browser/domain ctx))))
 
 (defn normalize-params [porps]
   {:pre [(not (:entity porps)) #_"legacy"
@@ -81,11 +81,7 @@
                route-params (update-existing route-params :request-params normalize-params)]]
     (cats/return
       (id->tempid
-        (merge route-params
-               {
-                ;:code-database (:link/code-database link) todo when cross db references are working on links, don't need to inherit code-db-uri
-                :code-database (get-in ctx [:hypercrud.browser/repository :dbhole/name])
-                :fiddle-id fiddle-id})
+        (merge route-params {:fiddle-id fiddle-id})
         ctx))))
 
 (defn encode [route]

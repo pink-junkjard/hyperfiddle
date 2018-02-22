@@ -107,7 +107,7 @@
         id->tempid (get tempid-lookups uri)]
     (map (partial tx/stmt-id->tempid id->tempid schema) tx)))
 
-(defn transact! [rt target-repository tx-groups dispatch! get-state & [route]]
+(defn transact! [rt domain tx-groups dispatch! get-state & [route]]
   (dispatch! [:transact!-start])
   (let [tx-groups (util/map-values (partial filter v-not-nil?) ; hack because the ui still generates some garbage tx
                                    tx-groups)]
@@ -120,7 +120,7 @@
                   (let [route (or route (get-in (get-state) [::runtime/partitions nil :route]))
                         invert-id (fn [temp-id uri]
                                     (get-in tempid->id [uri temp-id] temp-id))
-                        route' (routing/invert-ids route invert-id target-repository)]
+                        route' (routing/invert-ids route invert-id domain)]
                     (dispatch! [:transact!-success])
                     ; todo should just call foundation/bootstrap-data
                     (mlet [_ (refresh-global-basis rt dispatch! get-state)
@@ -132,17 +132,17 @@
 (defn should-transact!? [branch get-state]
   (and (nil? branch) (::runtime/auto-transact (get-state))))
 
-(defn with [rt target-repository branch uri tx]
+(defn with [rt domain branch uri tx]
   (fn [dispatch! get-state]
     (let [tx (update-to-tempids get-state branch uri tx)]
       (if (should-transact!? branch get-state)
-        (transact! rt target-repository {uri tx} dispatch! get-state)
+        (transact! rt domain {uri tx} dispatch! get-state)
         (hydrate-partition rt branch [[:with branch uri tx]] dispatch! get-state)))))
 
 (defn open-popover [branch popover-id]
   [:open-popover branch popover-id])
 
-(defn stage-popover [rt target-repository branch swap-fn-async & on-start]
+(defn stage-popover [rt domain branch swap-fn-async & on-start]
   (fn [dispatch! get-state]
     (p/then (swap-fn-async (get-in (get-state) [:stage branch] {}))
             (fn [{:keys [tx app-route]}]
@@ -155,7 +155,7 @@
                   (do
                     ; should the tx fn not be withd? if the transact! fails, do we want to run it again?
                     (dispatch! (apply batch (concat with-actions on-start)))
-                    (-> (transact! rt target-repository (get-in (get-state) [:stage branch]) dispatch! get-state app-route)
+                    (-> (transact! rt domain (get-in (get-state) [:stage branch]) dispatch! get-state app-route)
                         ; todo what if transact throws?
                         (p/then (fn [_] (dispatch! (discard-partition branch))))))
                   (let [actions (concat
@@ -172,9 +172,9 @@
     (when (not= tx (:stage (get-state)))
       (hydrate-partition rt nil [[:reset-stage tx]] dispatch! get-state))))
 
-(defn manual-transact! [peer target-repository nil-branch-aux]
+(defn manual-transact! [peer domain nil-branch-aux]
   (fn [dispatch! get-state]
     ; todo do something when child branches exist and are not nil: hyperfiddle/hyperfiddle#99
     ; can only transact one branch
     (let [tx-groups (get-in (get-state) [:stage nil])]
-      (transact! peer target-repository tx-groups dispatch! get-state))))
+      (transact! peer domain tx-groups dispatch! get-state))))

@@ -4,7 +4,7 @@
 
 
 (defn env [ctx]
-  (->> (get-in ctx [:hypercrud.browser/repository :repository/environment])
+  (->> (get-in ctx [:hypercrud.browser/domain :domain/environment])
        (filter (fn [[k v]]
                  (and (string? k) (string/starts-with? k "$"))))
        (map (fn [[k v]]

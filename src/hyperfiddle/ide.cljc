@@ -48,8 +48,7 @@
     (hydrate-one! rt (into {} domain-basis) stage request)))
 
 (defn ide-route [route]
-  {:code-database "root"
-   :fiddle-id :hyperfiddle/topnav
+  {:fiddle-id :hyperfiddle/topnav
    :request-params [#entity["$" (:fiddle-id route)]]})
 
 (let [always-user (atom :user)
@@ -57,8 +56,7 @@
   ; ide is overloaded, these ide-context functions are exclusive to (top)
   ; despite being in the namespace (hyperfiddle.ide) which encompasses the union of target/user (bottom) and ide (top)
   (defn- *-ide-context [ctx ide-domain]
-    {:pre [ide-domain]
-     :post [(seq (-> % :hypercrud.browser/domain :domain/code-databases))]}
+    {:pre [ide-domain]}
     (-> ctx
         (assoc :hypercrud.browser/debug "ide"
                :hypercrud.browser/page-on-click constantly-nil ; disable alt-nav up top
@@ -67,20 +65,8 @@
                :user-profile @(runtime/state (:peer ctx) [:user-profile]))
         (update :hypercrud.browser/domain
                 (fn [domain]
-                  (let [target-repo (get-in ctx [::runtime/branch-aux ::target-repo])
-                        target-source-uri (->> (:domain/code-databases domain)
-                                               (filter #(= (:dbhole/name %) target-repo))
-                                               first
-                                               :dbhole/uri)]
-                    (-> (foundation/process-domain-legacy ide-domain)
-                        (update :domain/code-databases
-                                (fn [repos]
-                                  (->> repos
-                                       (map (fn [repo]
-                                              (if (= "root" (:dbhole/name repo))
-                                                (assoc-in repo [:repository/environment "$"] target-source-uri)
-                                                repo)))
-                                       set))))))))))
+                  (-> (foundation/process-domain ide-domain)
+                      (assoc-in [:domain/environment "$"] (:domain/fiddle-repo domain))))))))
 
 (defn leaf-ide-context [ctx ide-domain]
   ; ide leaf-context does not have enough information to set hyperfiddle.ide/target-route
@@ -90,8 +76,7 @@
 (defn page-ide-context [ctx ide-domain target-route]
   {:pre [target-route]}
   (-> (assoc ctx
-        ::runtime/branch-aux {::target-repo (:code-database target-route)
-                              ::foo "ide"}
+        ::runtime/branch-aux {::foo "ide"}
         ; hyperfiddle.ide/target-route is ONLY available to inlined IDE (no deferred popovers)
         :target-route target-route)                         ; todo rename :target-route to :hyperfiddle.ide/target-route
       (*-ide-context ide-domain)))
@@ -123,8 +108,7 @@
 
 (defn bidi-route->browser [{handler :handler {:keys [fid] :as route-params} :route-params}]
   (let [request-params (dissoc route-params :fid)]
-    {:code-database "starter-blog-src2"
-     :fiddle-id (unwrap (safe-read-edn-string fid))
+    {:fiddle-id (unwrap (safe-read-edn-string fid))
      :request-params (mapv (fn [ix]
                              (let [eid (-> (keyword (str "p" ix)) route-params safe-read-edn-string unwrap)]
                                #entity["$" eid]))
@@ -152,7 +136,7 @@
         router (some-> domain :domain/router safe-read-edn-string unwrap)]
     (case s
       "/" home-route
-      (or (if (= "/_/" (subs s 0 3)) (routing/decode (subs s 2) #_ "include leading /"))
+      (or (if (= "/_/" (subs s 0 3)) (routing/decode (subs s 2) #_"include leading /"))
           (some-> router (bidi/match-route s) bidi-route->browser)
           (routing/decode s)))))
 
@@ -170,30 +154,26 @@
   (some-> router (bidi/match-route "/17592186045454/") bidi-route->browser)
   (some-> router (bidi/match-route "/17592186045462/17592186045872") bidi-route->browser)
 
-  (def x {:code-database "starter-blog-src2", :fiddle-id 17592186045454})
+  (def x {:fiddle-id 17592186045454})
   (apply bidi/path-for router (browser-route->bidi x))
 
   (def x2 {:request-params [#entity["$" 17592186046269]],
-           :code-database "starter-blog-src2", :fiddle-id 17592186045454})
+           :fiddle-id 17592186045454})
   (apply bidi/path-for router (browser-route->bidi x2))
 
   )
 
 (defn local-basis [global-basis route ctx]
   ;local-basis-ide and local-basis-user
-  (let [{:keys [domain ide user]} global-basis
-        ; basis-maps: List[Map[uri, t]]
-        user-basis (get user (:code-database route))
-        ide-basis (get ide (get-in ctx [::runtime/branch-aux ::target-repo])) ; Why don't we call ide-route-decode? I guess we don't care?
-        basis-maps (case (get-in ctx [::runtime/branch-aux ::foo])
-                     "page" (concat (vals user) #_"for schema in topnav"
-                                    (vals ide))             ; dead code i think?
-                     "ide" (concat [ide-basis] (vals ide) (vals user))
-                     "user" [user-basis])
-        local-basis (->> basis-maps (apply concat) sort)]   ; Userland api-fn should filter irrelevant routes
-    (timbre/debug (pr-str local-basis))
+  (let [{:keys [ide user]} global-basis
+        basis (case (get-in ctx [::runtime/branch-aux ::foo])
+                "page" (concat ide user)
+                "ide" (concat ide user)
+                "user" user)
+        basis (sort basis)]                           ; Userland api-fn should filter irrelevant routes
+    (timbre/debug (pr-str basis))
     #_(determine-local-basis (hydrate-route route ...))
-    local-basis))
+    basis))
 
 ; Reactive pattern obfuscates params
 (defn api [route ctx]

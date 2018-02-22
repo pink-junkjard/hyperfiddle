@@ -17,23 +17,13 @@
           ))
 
 (defn route [ctx route]
-  {:pre [(:code-database route)
-         (if-let [params (:request-params route)] (vector? params) true) ; validate normalized already
-         (:hypercrud.browser/domain ctx)
-         (seq (-> ctx :hypercrud.browser/domain :domain/code-databases))]
-   :post [(-> % :hypercrud.browser/repository)
-          (-> % :hypercrud.browser/repository :dbhole/uri)]}
-  (let [ctx (assoc ctx
-              :hypercrud.browser/repository (->> (get-in ctx [:hypercrud.browser/domain :domain/code-databases])
-                                                 (filter #(= (:dbhole/name %) (:code-database route)))
-                                                 first
-                                                 (into {})))]
-    ; explicitly set :hypercrud.browser/repository BEFORE running tempid->id
-    (assoc ctx :route (routing/tempid->id route ctx))))
+  {:pre [(if-let [params (:request-params route)] (vector? params) true) ; validate normalized already
+         (some-> ctx :hypercrud.browser/domain :domain/fiddle-repo)]}
+  (assoc ctx :route (routing/tempid->id route ctx)))
 
 (defn user-with [ctx branch uri tx]
   ; todo custom user-dispatch with all the tx-fns as reducers
-  (runtime/dispatch! (:peer ctx) (foundation-actions/with (:peer ctx) (::runtime/target-repository ctx) branch uri tx)))
+  (runtime/dispatch! (:peer ctx) (foundation-actions/with (:peer ctx) (:hypercrud.browser/domain ctx) branch uri tx)))
 
 (defn relations [ctx relations]
   (assoc ctx :relations (reactive/atom relations)))
@@ -43,7 +33,7 @@
 
 (defn find-element [ctx fe fe-pos]
   (-> (if-let [dbname (some-> (:source-symbol fe) str)]
-        (let [uri (get-in ctx [:hypercrud.browser/repository :repository/environment dbname])]
+        (let [uri (get-in ctx [:hypercrud.browser/domain :domain/environment dbname])]
           (assoc ctx :uri uri
                      :schema (get-in ctx [:schemas dbname])
                      :user-with! (reactive/partial user-with ctx (:branch ctx) uri)))

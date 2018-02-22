@@ -14,16 +14,7 @@
 
 
 (defn dbhole-ctx [ctx]
-  (let [initial-repository (->> (get-in ctx [:hypercrud.browser/domain :domain/code-databases])
-                                (filter #(= (:dbhole/name %) "root"))
-                                first
-                                (into {}))
-        repository (update initial-repository :repository/environment merge {"$" @(:value ctx)})]
-    (-> ctx
-        (update-in [:hypercrud.browser/domain :domain/code-databases]
-                   (fn [repos]
-                     (map #(if (= (:dbhole/name %) "root") repository %) repos)))
-        (assoc :hypercrud.browser/repository repository))))
+  (-> ctx (update :hypercrud.browser/domain :domain/environment merge {"$" @(:value ctx)})))
 
 (defn bindings [ctx]
   #?(:clj  ctx
@@ -46,8 +37,7 @@
                                        (cats/extract))
                                    (filter (fn [[k v]] (and (string? k) (string/starts-with? k "$") (instance? URI v))))
                                    (map (fn [[$name _]]
-                                          (let [props {:route {:code-database @(reactive/cursor (:cell-data ctx) [:dbhole/name])
-                                                               :fiddle-id {:ident :schema/all-attributes
+                                          (let [props {:route {:fiddle-id {:ident :schema/all-attributes
                                                                            :dbhole/name (symbol $name)}}}]
                                             ^{:key $name}
                                             [(:navigate-cmp ctx) props (str $name " schema")])))
