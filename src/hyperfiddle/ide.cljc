@@ -27,7 +27,7 @@
 
     ; pull in the entire ide app for reference from user-land
             [hyperfiddle.ide.actions]
-            [hyperfiddle.ide.fiddles.domain-code-database]
+            [hyperfiddle.ide.fiddles.domain]
             [hyperfiddle.ide.fiddles.fiddle-links.bindings]
     #?(:cljs [hyperfiddle.ide.fiddles.fiddle-links.renderer])
             [hyperfiddle.ide.fiddles.topnav]

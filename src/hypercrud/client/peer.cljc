@@ -1,6 +1,7 @@
 (ns hypercrud.client.peer
   (:require [cats.monad.either :as either]
             [hypercrud.types.DbVal :refer [->DbVal]]
+            [hypercrud.types.URI :refer [is-uri?]]
             [hypercrud.util.branch :as branch]
             [hypercrud.util.reactive :as reactive]
             [hyperfiddle.io.util :refer [process-result]]))
@@ -41,5 +42,5 @@
   (reactive/track trackable-hydrate state-atom branch request))
 
 (defn db-pointer [uri ?branch-name]
-  {:pre [uri]}
+  {:pre [uri (is-uri? uri)]}
   (->DbVal uri ?branch-name))

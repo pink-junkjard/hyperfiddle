@@ -94,7 +94,7 @@
             (let [read-sec-predicate (constantly true)]     ;todo look up sec pred
               (d/filter db read-sec-predicate)))
           (get-secure-db-from-branch [{:keys [branch-ident uri tx] :as branch}]
-            {:pre [(get local-basis uri)]}
+            (assert (get local-basis uri) (str "busted local basis: " (pr-str uri) " not in " (pr-str local-basis)))
             (or (get @db-with-lookup branch)
                 (let [t (get local-basis uri)
                       init-db-with (if branch-ident

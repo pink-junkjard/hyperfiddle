@@ -1,5 +1,6 @@
 (ns hypercrud.types.URI)
 
+
 #?(:cljs
    (deftype URI [uri-str]
      Object (toString [_] uri-str)
@@ -24,3 +25,6 @@
      (print-method o w)))
 
 (def read-URI #(->URI %))
+
+(defn is-uri? [o] #?(:cljs (instance? URI o)
+                     :clj (instance? java.net.URI o)))
