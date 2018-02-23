@@ -1,14 +1,12 @@
 (ns hypercrud.ui.attribute.tristate-boolean
-  (:require [hypercrud.ui.control.link-controls :as links]
-            [hypercrud.browser.link :as link]
+  (:require [hypercrud.ui.control.link-controls :as link-controls]
             [hypercrud.ui.select :refer [select-boolean*]]))
 
 
-
 (defn tristate-boolean [maybe-field props ctx]
-  (let [my-links (link/links-lookup' (:links ctx) [(:fe-pos ctx) (-> ctx :attribute :db/ident)])]
+  (let [path [(:fe-pos ctx) (-> ctx :attribute :db/ident)]]
     [:div.value
      [:div.editable-select {:key (:db/ident (:attribute ctx))}
-      [:div.anchors (links/render-links (remove :link/render-inline? my-links) ctx)]
+      [:div.anchors (link-controls/render-nav-cmps path true ctx)]
       (select-boolean* @(:value ctx) props ctx)]
-     (links/render-inline-links (filter :link/render-inline? my-links) ctx)]))
+     (link-controls/render-inline-links path true ctx)]))

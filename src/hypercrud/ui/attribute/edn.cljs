@@ -22,13 +22,11 @@
         widget (case (:layout ctx) :block edn-block*
                                    :inline-block edn-inline-block*
                                    :table edn-inline-block*)
-        my-links (link/links-lookup' (:links ctx) [(:fe-pos ctx) (-> ctx :attribute :db/ident)])
-        [my-links options-link] (link/process-option-links my-links ctx)
-        my-links (->> my-links (filter :link/dependent?))]
+        path [(:fe-pos ctx) (-> ctx :attribute :db/ident)]]
     [:div.value
-     [:div.anchors (link-controls/render-links (remove :link/render-inline? my-links) ctx)]
+     [:div.anchors (link-controls/render-nav-cmps path true ctx link/options-processor)]
      [widget value change! props]
-     (link-controls/render-inline-links (filter :link/render-inline? my-links) ctx)]))
+     (link-controls/render-inline-links path true ctx link/options-processor)]))
 
 (defn edn [maybe-field props ctx]
   (let [valueType (-> ctx :attribute :db/valueType :db/ident)
@@ -37,10 +35,8 @@
         widget (case (:layout ctx) :block edn-block*
                                    :inline-block edn-inline-block*
                                    :table edn-inline-block*)
-        my-links (link/links-lookup' (:links ctx) [(:fe-pos ctx) (-> ctx :attribute :db/ident)])
-        [my-links options-link] (link/process-option-links my-links ctx)
-        my-links (->> my-links (filter :link/dependent?))]
+        path [(:fe-pos ctx) (-> ctx :attribute :db/ident)]]
     [:div.value
-     [:div.anchors (link-controls/render-links (remove :link/render-inline? my-links) ctx)]
+     [:div.anchors (link-controls/render-nav-cmps path true ctx link/options-processor)]
      [widget @(:value ctx) change! props]
-     (link-controls/render-inline-links (filter :link/render-inline? my-links) ctx)]))
+     (link-controls/render-inline-links path true ctx link/options-processor)]))

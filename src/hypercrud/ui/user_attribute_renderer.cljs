@@ -13,8 +13,14 @@
         (fn r [user-fn]
           (when user-fn
             (fn user-control [field links props ctx]
-              (let [my-links (->> (link/links-lookup' links [(:fe-pos ctx) (-> ctx :attribute :db/ident)])
+              (let [my-links (->> links
                                   (filter :link/rel)        ; cannot lookup nil idents
+                                  (map (fn [link]
+                                         ; backwards compat, why is this a thing for custom user controls?
+                                         (if (link/popover-link? link)
+                                           (assoc link :link/render-inline? false)
+                                           link)))
+                                  (filter (link/same-path-as? [(:fe-pos ctx) (-> ctx :attribute :db/ident)]))
                                   (mapv (juxt #(-> % :link/rel) identity))
                                   (into {}))
                     ctx (assoc ctx                          ; Todo unify link-fn with widget interface or something

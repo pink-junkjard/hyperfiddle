@@ -23,7 +23,7 @@
   (if (:link/managed? link)
     (let [route' (routing/build-route' link ctx)
           popover-id (popovers/popover-id link ctx)]
-      (if @(runtime/state  (:peer ctx) [::runtime/partitions (:branch ctx) :popovers popover-id])
+      (if @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :popovers popover-id])
         ; if the anchor IS a popover, we need to run the same logic as link/managed-popover-body
         ; the ctx needs to be updated (branched, etc), but NOT BEFORE determining the route
         ; that MUST happen in the parent context
@@ -41,15 +41,17 @@
 (defn cell-dependent-requests [ctx]
   (let [ctx (context/cell-data ctx)]
     (concat
-      (->> (link/links-lookup (:links ctx) [(:fe-pos ctx)])
+      (->> (:links ctx)
            (filter :link/dependent?)
+           (filter (link/same-path-as? [(:fe-pos ctx)]))
            (mapcat #(recurse-request % ctx)))
       (->> (get-in ctx [:find-element :fields])
            (mapcat (fn [field]
                      (let [ctx (-> (context/attribute ctx (:attribute field))
                                    (context/value (reactive/map (:cell-data->value field) (:cell-data ctx))))]
-                       (->> (link/links-lookup (:links ctx) [(:fe-pos ctx) (-> ctx :attribute :db/ident)])
+                       (->> (:links ctx)
                             (filter :link/dependent?)
+                            (filter (link/same-path-as? [(:fe-pos ctx) (-> ctx :attribute :db/ident)]))
                             (mapcat #(recurse-request % ctx))))))))))
 
 (defn relation-dependent-requests [ctx]
@@ -57,26 +59,29 @@
        (apply concat)))
 
 (defn fiddle-dependent-requests [result ordered-fes links ctx]
-  ; reconcile this with the link.cljc logic
-  (let [links (filter :link/render-inline? links)           ; at this point we only care about inline links
-        ctx (assoc ctx
-              :ordered-fes ordered-fes
-              :links links)]
+  (let [links (filter :link/render-inline? links) ctx       ; at this point we only care about inline links
+        (assoc ctx
+          :ordered-fes ordered-fes
+          :links links)]
     (concat
-      (->> (mapcat #(recurse-request % ctx) (->> (link/links-lookup (:links ctx) [])
-                                                 (remove :link/dependent?))))
+      (->> (:links ctx)
+           (remove :link/dependent?)
+           (filter (link/same-path-as? []))
+           (mapcat #(recurse-request % ctx)))
       (->> (:ordered-fes ctx)                               ; might have empty results
            (map-indexed (fn [fe-pos fe]
                           (let [ctx (context/find-element ctx fe fe-pos)]
                             (concat
-                              (->> (link/links-lookup (:links ctx) [fe-pos])
+                              (->> (:links ctx)
                                    (remove :link/dependent?)
+                                   (filter (link/same-path-as? [fe-pos]))
                                    (mapcat #(recurse-request % ctx)))
                               (->> (:fields fe)
                                    (mapcat (fn [{:keys [attribute]}]
                                              (let [ctx (context/attribute ctx attribute)]
-                                               (->> (link/links-lookup (:links ctx) [fe-pos (-> ctx :attribute :db/ident)])
+                                               (->> (:links ctx)
                                                     (remove :link/dependent?)
+                                                    (filter (link/same-path-as? [fe-pos (-> ctx :attribute :db/ident)]))
                                                     (mapcat #(recurse-request % ctx)))))))))))
            (apply concat))
       (case (get-in ctx [:fiddle :fiddle/type])

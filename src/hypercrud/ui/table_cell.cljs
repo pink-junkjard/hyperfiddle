@@ -10,18 +10,20 @@
            (str (subs s 0 (- c 3)) "..."))))
 
 (defn ref-one-component [field props ctx]
-  [:div
-   #_(pr-str (:db/id @(:value ctx)))
-   [:div.anchors (link-controls/render-links (remove :link/render-inline? (:links ctx)) ctx)]
-   (link-controls/render-inline-links (filter :link/render-inline? (:links ctx)) ctx)])
+  (let [path [(:fe-pos ctx) (-> ctx :attribute :db/ident)]]
+    [:div
+     #_(pr-str (:db/id @(:value ctx)))
+     [:div.anchors (link-controls/render-nav-cmps path true ctx)]
+     (link-controls/render-inline-links path true ctx)]))
 
 (defn ref-many [field props ctx]
-  [:div
-   #_(->> (mapv :db/id @(:value ctx))
-          (pr-str)
-          (ellipsis 15))
-   [:div.anchors (link-controls/render-links (remove :link/render-inline? (:links ctx)) ctx)]
-   (link-controls/render-inline-links (filter :link/render-inline? (:links ctx)) ctx)])
+  (let [path [(:fe-pos ctx) (-> ctx :attribute :db/ident)]]
+    [:div
+     #_(->> (mapv :db/id @(:value ctx))
+            (pr-str)
+            (ellipsis 15))
+     [:div.anchors (link-controls/render-nav-cmps path true ctx)]
+     (link-controls/render-inline-links path true ctx)]))
 
 (defn other-many [field props ctx]
   [:div

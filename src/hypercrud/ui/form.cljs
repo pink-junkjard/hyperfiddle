@@ -33,15 +33,13 @@
 (def always-read-only (constantly true))
 
 (defn form-cell [control -field ctx & [class]]              ; safe to return nil or seq
-  (let [[my-links] (as-> (link/links-lookup' (:links ctx) [(:fe-pos ctx) (-> ctx :attribute :db/ident)]) $
-                         (remove :link/dependent? $)        ; because we're in the label
-                         (link/process-option-links $ ctx))]
+  (let [path [(:fe-pos ctx) (-> ctx :attribute :db/ident)]]
     [:div {:class (classes class "hyperfiddle-form-cell" "block" "field"
                            (-> ctx :attribute :db/ident str css-slugify))
            :style {:border-color (connection-color/connection-color (:uri ctx) ctx)}}
      [:div ((:label ctx label) -field ctx)
-      (link-controls/render-links (->> my-links (remove :link/render-inline?)) ctx)
-      (link-controls/render-inline-links (->> my-links (filter :link/render-inline?)) ctx)]
+      (link-controls/render-nav-cmps path false ctx link/options-processor)
+      (link-controls/render-inline-links path false ctx link/options-processor)]
      [control -field (control-props ctx) ctx]]))
 
 (defn Cell [field ctx]
@@ -57,17 +55,12 @@
     [user-cell (auto-control' ctx) field ctx]))
 
 (defn Entity [ctx]
-  (let [{inline-links true anchor-links false} (->> (link/links-lookup' (:links ctx) [(:fe-pos ctx)])
-                                                    (remove :link/dependent?)
-                                                    (group-by #(or (:link/render-inline? %) false)))]
+  (let [path [(:fe-pos ctx)]]
     (concat
-      (link-controls/render-links anchor-links ctx)
-      (let [ctx (context/cell-data ctx)
-            {inline-links true anchor-links false} (->> (link/links-lookup' (:links ctx) [(:fe-pos ctx)])
-                                                        (filter :link/dependent?)
-                                                        (group-by #(or (:link/render-inline? %) false)))]
+      (link-controls/render-nav-cmps path false ctx)
+      (let [ctx (context/cell-data ctx)]
         (concat
-          (link-controls/render-links anchor-links ctx)
+          (link-controls/render-nav-cmps path true ctx)
           (conj
             (->> (get-in ctx [:find-element :fields])
                  (mapv (fn [field]
@@ -75,8 +68,8 @@
             (if (:splat? (:find-element ctx))
               ^{:key :new-field}
               [new-field ctx]))
-          (link-controls/render-inline-links inline-links ctx)))
-      (link-controls/render-inline-links inline-links ctx))))
+          (link-controls/render-inline-links path true ctx)))
+      (link-controls/render-inline-links path false ctx))))
 
 (defn Relation [ctx]
   (let [ctx (assoc ctx :layout (:layout ctx :block))]

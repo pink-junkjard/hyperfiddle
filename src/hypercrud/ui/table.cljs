@@ -35,11 +35,14 @@
 
 (defn col-head [field sort-col ctx]
   (let [ctx (context/attribute ctx (:attribute field))
-        my-links (->> (link/links-lookup' (:links ctx) [(:fe-pos ctx) (-> ctx :attribute :db/ident)])
-                      (remove :link/dependent?))
-        [my-links] (link/process-option-links my-links ctx)
-        sortable? (and (not-any? link/popover-link? my-links) ; sorting currently breaks click handling in popovers
-                       (attr-sortable? (:find-element ctx) (:attribute field) ctx))
+        path [(:fe-pos ctx) (-> ctx :attribute :db/ident)]
+        sortable? (and (attr-sortable? (:find-element ctx) (:attribute field) ctx)
+                       (->> (:links ctx)
+                            (filter (link/same-path-as? path))
+                            (remove :link/dependent?)
+                            (link/options-processor)
+                            ; sorting currently breaks click handling in popovers
+                            (not-any? link/popover-link?)))
         sort-direction (let [[sort-fe-pos sort-attr direction] @sort-col]
                          (if (and (= (:fe-pos ctx) sort-fe-pos) (= sort-attr (:attribute field)))
                            direction))
@@ -57,22 +60,21 @@
           :on-click on-click}
      ((:label ctx label) field ctx)
      [:div.anchors
-      (link-controls/render-links (remove :link/render-inline? my-links) ctx)
-      (link-controls/render-inline-links (filter :link/render-inline? my-links) ctx)]]))
+      (link-controls/render-nav-cmps path false ctx link/options-processor)
+      (link-controls/render-inline-links path false ctx link/options-processor)]]))
 
-(defn LinkCell [repeating? ctx]
-  [(if repeating? :td.link-cell :th.link-cell)
+(defn LinkCell [dependent? ctx]
+  [(if dependent? :td.link-cell :th.link-cell)
    (->> (:ordered-fes ctx)
         (map-indexed (fn [fe-pos fe]
                        (let [ctx (as-> (context/find-element ctx fe fe-pos) ctx
-                                       (if repeating?
+                                       (if dependent?
                                          (context/cell-data ctx)
                                          ctx))
-                             form-anchors (->> (link/links-lookup' (:links ctx) [fe-pos])
-                                               ((if repeating? filter remove) :link/dependent?)
-                                               ; inline entity-anchors are not yet implemented, what does that mean.
-                                               (remove :link/render-inline?))]
-                         (link-controls/render-links form-anchors ctx))))
+                            path [fe-pos]]
+                         (link-controls/render-nav-cmps path dependent? ctx)
+                         ; inline entity-anchors are not yet implemented
+                         #_(link-controls/render-inline-links path dependent? ctx))))
         (apply concat))])
 
 (defn THead [sort-col ctx]

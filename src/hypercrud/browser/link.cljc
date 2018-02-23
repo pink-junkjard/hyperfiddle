@@ -17,37 +17,29 @@
             [taoensso.timbre :as timbre]))
 
 
-(defn option-link? [link]
-  ; don't care if its inline or not, just do the right thing.
-  (= :options (:link/rel link)))
-
 (defn popover-link? [link]
   (:link/managed? link))
 
-(defn process-popover-link [link]
-  (if (popover-link? link)
-    (assoc link :link/render-inline? false)
-    link))
+(defn same-path-as? [path]
+  (fn [link]
+    (either/branch
+      (hc-string/memoized-safe-read-edn-string (str "[" (:link/path link) "]"))
+      (fn [e]
+        (timbre/error e)                                    ; swallow the error
+        false)
+      #(= path %))))
 
-(defn process-option-links [links ctx]
-  (let [[options-link] (filter option-link? links)
-        links (remove option-link? links)]
-    [links options-link]))
+(defn options-link? [link]
+  ; don't care if its inline or not, just do the right thing.
+  (= :options (:link/rel link)))
 
-(defn links-lookup [links path]                             ; the real one used by request side
-  (->> links
-       (filter (fn [link]
-                 (either/branch
-                   (hc-string/memoized-safe-read-edn-string (str "[" (:link/path link) "]"))
-                   (fn [e]
-                     (timbre/error e)                       ; swallow the error
-                     false)
-                   #(= path %))))))
+(def options-processor (partial remove options-link?))
 
-(defn links-lookup' [links path]                            ; cosmetic UI side because popover hacks. If popovers hydrate seperate, this goes away
-  (->> (links-lookup links path)
-       ; the cosmetic change
-       (map process-popover-link)))
+(defn options-link [path ctx]
+  (->> (:links ctx)
+       (filter (same-path-as? path))
+       (filter options-link?)
+       first))
 
 ; todo belongs in routing ns
 ; this is same business logic as base/request-for-link

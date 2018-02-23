@@ -2,7 +2,6 @@
   (:require [cats.monad.either :as either]
             [datascript.parser :as parser]
             [hypercrud.browser.context :as context]
-            [hypercrud.browser.link :as link]
             [hypercrud.ui.control.link-controls :as link-controls]
             [hypercrud.ui.control.markdown-rendered :refer [markdown-rendered*]]
             [hypercrud.ui.form :as form]
@@ -50,13 +49,9 @@
       nil)))
 
 (defn view [result ordered-fes links ctx]
-  ;(:anchors ctx)
-  (let [{index-inline-links true index-links false} (->> (link/links-lookup' links [])
-                                                         (remove :link/dependent?) ; link/dependent? true = relation link
-                                                         (group-by #(or (:link/render-inline? %) false)))
-        index-ctx (dissoc ctx :isComponent)]
+  (let [index-ctx (dissoc ctx :isComponent)]
     [:div.auto-result
      [:div.hyperfiddle-fiddle-doc (markdown-rendered* (-> ctx :fiddle :db/doc))]
-     (link-controls/render-links index-links index-ctx)
+     (link-controls/render-nav-cmps [] false index-ctx)
      (result-renderer result ordered-fes links ctx)
-     (link-controls/render-inline-links index-inline-links index-ctx)]))
+     (link-controls/render-inline-links [] false index-ctx)]))
