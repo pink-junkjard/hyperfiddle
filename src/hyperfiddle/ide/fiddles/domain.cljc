@@ -15,7 +15,9 @@
 
 (defn set-userland-$ [ctx]
   ; The user's links & schema are in the userland database, not root
-  (-> ctx (update-in [:hypercrud.browser/domain :domain/environment] merge {"$" @(:value ctx)})))
+  (let [domain @(:cell-data ctx)
+        $ (:domain/fiddle-repo domain)]
+    (-> ctx (update-in [:hypercrud.browser/domain :domain/environment] merge {"$" $}))))
 
 (defn bindings [ctx]
   #?(:clj  ctx
