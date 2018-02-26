@@ -48,7 +48,7 @@
     [:pre (.-stack e)]]])
 
 (defn process-domain [domain]
-  (-> (into {} domain) (update :domain/environment reader/read-string) #_"todo this can throw"))
+  (some-> (into {} domain) (update :domain/environment reader/read-string) #_"todo this can throw"))
 
 (defn context [ctx route]
   (let [domain @(runtime/state (:peer ctx) [::runtime/domain])
