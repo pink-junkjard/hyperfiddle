@@ -145,7 +145,9 @@
 
 (defn http-edge [env req res path-params query-params]
   (let [hostname (.-hostname req)
-        initial-state {:user-profile (lib/req->user-profile env req)}
+        user-profile (lib/req->user-profile env req)
+        initial-state {:user-profile user-profile
+                       ::runtime/auto-transact (not (nil? user-profile))}
         rt (->IdeSsrRuntime (:HF_HOSTNAME env) hostname (req->service-uri env req)
                             (reactive/atom (reducers/root-reducer initial-state nil))
                             reducers/root-reducer)
