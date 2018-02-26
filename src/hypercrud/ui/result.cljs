@@ -4,7 +4,7 @@
             [hypercrud.browser.context :as context]
             [hypercrud.browser.link :as link]
             [hypercrud.ui.control.link-controls :as link-controls]
-            [hypercrud.ui.control.markdown-rendered :refer [markdown-rendered*]]
+            [hypercrud.ui.control.markdown-rendered :refer [markdown-hyperfiddle]]
             [hypercrud.ui.form :as form]
             [hypercrud.ui.table :as table]
             [hypercrud.util.core :as util]
@@ -56,7 +56,7 @@
                                                          (group-by #(or (:link/render-inline? %) false)))
         index-ctx (dissoc ctx :isComponent)]
     [:div.auto-result
-     [:div.hyperfiddle-fiddle-doc (markdown-rendered* (-> ctx :fiddle :db/doc))]
+     [:div.hyperfiddle-fiddle-doc (markdown-hyperfiddle (-> ctx :fiddle :db/doc) ctx)]
      (link-controls/render-links index-links index-ctx)
      (result-renderer result ordered-fes links ctx)
      (link-controls/render-inline-links index-inline-links index-ctx)]))

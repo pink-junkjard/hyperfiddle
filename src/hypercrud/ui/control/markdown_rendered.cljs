@@ -1,5 +1,6 @@
 (ns hypercrud.ui.control.markdown-rendered
-  (:require [hypercrud.ui.control.code]
+  (:require [hypercrud.ui.user-attribute-renderer :refer [eval-user-control-ui]]
+            [hypercrud.ui.control.code]
             [hypercrud.util.core :as util]
             [reagent.core :as reagent]))
 
@@ -9,11 +10,14 @@
 (defn code-editor-wrap-argv [{:keys [value change!] :as props}]
   [hypercrud.ui.control.code/code* value change! props])
 
+(def ^:dynamic *ctx* nil)
+
 (def whitelist
+  ; Div is not needed, use it with block syntax and it hits React.createElement and works
+  ; see https://github.com/medfreeman/remark-generic-extensions/issues/30
   {"span" (fn [props] [:span (dissoc props :children :value) (:value props)])
-   ; Div is not needed, use it with block syntax and it hits React.createElement and works
-   ; see https://github.com/medfreeman/remark-generic-extensions/issues/30
    "CodeEditor" code-editor-wrap-argv
+   "eval" (fn [{:keys [value] :as props}] ((eval-user-control-ui value) nil (:links *ctx*) props *ctx*))
    "block" (fn [props] [:div (dissoc props :children :value) (markdown (:value props))])})
 
 ; https://github.com/medfreeman/remark-generic-extensions
@@ -27,7 +31,8 @@
                                 {"elements"
                                  {"span" {"html" {"properties" {"value" "::content::"}}}
                                   "CodeEditor" {"html" {"properties" {"value" "::content::"}}}
-                                  "block" {"html" {"properties" {"value" "::content::"}}}}}))
+                                  "block" {"html" {"properties" {"value" "::content::"}}}
+                                  "eval" {"html" {"properties" {"value" "::content::"}}}}}))
                         (.use js/remarkGridTables)
                         (.use js/remarkReact
                               (clj->js
@@ -40,3 +45,7 @@
 ; Todo; remove div.markdown; that should be default and style the inverse.
 (defn markdown-rendered* [value]
   [:div.markdown (markdown value)])
+
+(defn markdown-hyperfiddle [md ctx]
+  (binding [*ctx* ctx]
+    (markdown-rendered* md)))
