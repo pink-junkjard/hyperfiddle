@@ -8,7 +8,7 @@
             [hypercrud.ui.select :refer [select*]]
 
     ;user land (todo these should be in a core hc.ui namespace; widget is arbitrary)
-            [hypercrud.ui.attribute.checkbox]
+            [hypercrud.ui.attribute.checkbox :refer [checkbox]]
             [hypercrud.ui.attribute.code]
             [hypercrud.ui.attribute.markdown-editor]
             [hypercrud.ui.radio]
@@ -43,7 +43,7 @@
       props]
      (links/render-inline-links (filter :link/render-inline? my-links) ctx)]))
 
-(def boolean tristate-boolean/tristate-boolean)
+(def boolean checkbox)
 
 (defn id* [props ctx]
   (let [on-change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) (:attribute ctx) %))]
