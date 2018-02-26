@@ -3,6 +3,7 @@
             [cuerdas.core :as cuerdas]
             [hypercrud.client.core :as hc]
             [hypercrud.compile.reader :as reader]
+            [hypercrud.util.core :refer [update-existing]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
     #?(:cljs [hypercrud.ui.control.code :refer [code*]])
     #?(:cljs [hypercrud.ui.css :refer [classes]])
@@ -48,7 +49,7 @@
     [:pre (.-stack e)]]])
 
 (defn process-domain [domain]
-  (some-> (into {} domain) (update :domain/environment reader/read-string) #_"todo this can throw"))
+  (-> (into {} domain) (update-existing :domain/environment reader/read-string) #_"todo this can throw"))
 
 (defn context [ctx route]
   (let [domain @(runtime/state (:peer ctx) [::runtime/domain])
