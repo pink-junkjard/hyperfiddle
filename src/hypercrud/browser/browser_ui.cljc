@@ -5,6 +5,7 @@
             [hypercrud.browser.context :as context]
             [hypercrud.browser.link :as link]
             [hypercrud.browser.routing :as routing]
+    #?(:cljs [hypercrud.react.react-fragment :refer [react-fragment]])
             [hypercrud.ui.css :refer [css-slugify classes]]
             [hypercrud.ui.native-event-listener :refer [native-on-click-listener]]
             [hypercrud.ui.safe-render :refer [safe-user-renderer]]
@@ -19,16 +20,27 @@
 
 (declare ui-from-link)
 
+(defn fiddle-css-renderer [s]
+  [:style {:dangerouslySetInnerHTML {:__html s}}])
+
 ; defn because hypercrud.ui.result/view cannot be required from this ns
 (defn f-mode-config []
   {:from-ctx :user-renderer
    :from-link :fiddle/renderer
-   :with-user-fn (fn [user-fn]
-                   (fn [result ordered-fes links ctx]
-                     [safe-user-renderer user-fn result ordered-fes links ctx]))
+   :with-user-fn #?(:clj  (assert false "todo")
+                    :cljs (fn [user-fn]
+                            (fn [result ordered-fes links ctx]
+                              #_(react-fragment :_) #_(list)
+                              [:div
+                               [safe-user-renderer user-fn result ordered-fes links ctx]
+                               [fiddle-css-renderer (-> ctx :fiddle :fiddle/css)]])))
    ; todo ui binding should be provided by a RT
    :default #?(:clj  (assert false "todo")
-               :cljs hypercrud.ui.result/view)})
+               :cljs (fn [result ordered-fes links ctx]
+                       #_(react-fragment :_) #_(list)
+                       [:div
+                        [hypercrud.ui.result/view result ordered-fes links ctx]
+                        [fiddle-css-renderer (-> ctx :fiddle :fiddle/css)]]))})
 
 (letfn [(browse [link-index ident ctx & args]
           (let [kwargs (util/kwargs args)

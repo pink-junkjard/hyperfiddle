@@ -50,6 +50,7 @@
    :fiddle/pull
    :fiddle/query
    :fiddle/renderer
+   :fiddle/css
    :fiddle/request
    :fiddle/type])
 
