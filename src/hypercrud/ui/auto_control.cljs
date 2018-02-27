@@ -4,7 +4,7 @@
             [hypercrud.ui.attribute.instant :as instant]
             [hypercrud.ui.safe-render :refer [unify-portal-markup]]
             [hypercrud.ui.table-cell :as table-cell]
-            [hypercrud.ui.user-attribute-renderer :refer [eval-user-control-ui]]
+            [hypercrud.ui.user-attribute-renderer :refer [safe-eval-user-control-fn]]
             [hypercrud.ui.widget :as widget]))
 
 
@@ -50,11 +50,11 @@
 (defn fiddle-field-control [ctx]                            ; TODO :renderer -> :control
   (let [attr (:attribute ctx)]
     ;(timbre/info "using fiddle ctx/field renderer" (-> attr :db/ident str) user-str)
-    (eval-user-control-ui (get-in ctx [:fields (:db/ident attr) :renderer]))))
+    (safe-eval-user-control-fn (get-in ctx [:fields (:db/ident attr) :renderer]))))
 
 (defn attribute-control [ctx]
   ;(timbre/info "using attribute/renderer " (-> attr :db/ident str) user-str)
-  (eval-user-control-ui (-> ctx :attribute :attribute/renderer)))
+  (safe-eval-user-control-fn (-> ctx :attribute :attribute/renderer)))
 
 (defn auto-control' [ctx]
   ; todo binding renderers should be pathed for aggregates and values

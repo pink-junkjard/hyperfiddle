@@ -3,7 +3,7 @@
             [reagent.core :as reagent]))
 
 
-(declare safe-user-renderer)
+(declare safe-reagent-call)
 
 (code-for-nodejs
   (require '[reagent.dom.server :as reagent-server]))
@@ -13,7 +13,7 @@
 ; Which abstracts the codebase from caring if we are in a portal or not.
 
 (code-for-nodejs
-  (defn safe-user-renderer [user-fn & props]
+  (defn safe-reagent-call [user-fn & props]
     (let [user-result (apply vector user-fn props)
           explicit-container [:div.hyperfiddle-userroot {:key (hash user-fn)}
                               user-result]]
@@ -41,7 +41,7 @@
         (catch js/Error e
           (reagent/render [:pre (pr-str e)] dom-el)))))
 
-  (def safe-user-renderer
+  (def safe-reagent-call
     (reagent/create-class
       {:reagent-render (fn [user-fn & props] [:div.hyperfiddle-userportal])
        :component-did-mount safe-render!

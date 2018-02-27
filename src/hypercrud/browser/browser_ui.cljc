@@ -8,7 +8,7 @@
     #?(:cljs [hypercrud.react.react-fragment :refer [react-fragment]])
             [hypercrud.ui.css :refer [css-slugify classes]]
             [hypercrud.ui.native-event-listener :refer [native-on-click-listener]]
-            [hypercrud.ui.safe-render :refer [safe-user-renderer]]
+    #?(:cljs [hypercrud.ui.safe-render :refer [safe-reagent-call]])
             [hypercrud.ui.stale :as stale]
             [hypercrud.util.core :as util :refer [unwrap]]
             [hypercrud.util.non-fatal :refer [try-either]]
@@ -32,7 +32,7 @@
                             (fn [result ordered-fes links ctx]
                               #_(react-fragment :_) #_(list)
                               [:div
-                               [safe-user-renderer user-fn result ordered-fes links ctx]
+                               [safe-reagent-call user-fn result ordered-fes links ctx]
                                [fiddle-css-renderer (-> ctx :fiddle :fiddle/css)]])))
    ; todo ui binding should be provided by a RT
    :default #?(:clj  (assert false "todo")

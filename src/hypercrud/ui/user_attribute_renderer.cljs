@@ -2,16 +2,16 @@
   (:require [cats.monad.either :as either]
             [hypercrud.browser.link :as link]
             [hypercrud.compile.eval :as eval]
-            [hypercrud.ui.safe-render :refer [safe-user-renderer]]
+            [hypercrud.ui.safe-render :refer [safe-reagent-call]]
             [hypercrud.util.core :refer [pprint-str]]))
 
 
-(defn eval-user-control-ui [s]
+(defn safe-eval-user-control-fn [s]
   (-> (eval/eval-str s)
       (either/branch
         (fn l [e] [:pre (pprint-str e)])
-        (fn r [user-fn]
-          (when user-fn
+        (fn r [f]
+          (when f
             (fn user-control [field links props ctx]
               (let [my-links (->> (link/links-lookup' links [(:fe-pos ctx) (-> ctx :attribute :db/ident)])
                                   (filter :link/rel)        ; cannot lookup nil idents
@@ -24,4 +24,10 @@
                               [(:navigate-cmp ctx) props label])))]
                 ; Same interface as auto-control widgets.
                 ; pass value only as scope todo
-                [safe-user-renderer user-fn field links props ctx])))))))
+                [safe-reagent-call f field links props ctx])))))))
+
+(defn safe-eval-user-expr [s]
+  (-> (eval/eval-str s)
+      (either/branch
+        (fn l [e] [:pre (pprint-str e)])
+        (fn r [v] v))))

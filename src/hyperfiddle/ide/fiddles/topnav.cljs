@@ -161,9 +161,9 @@
                                 (runtime/dispatch! (:peer ctx) (foundation-actions/manual-transact! (:peer ctx) (:hypercrud.browser/domain ctx) nil-branch-aux))))}
          "transact!"]])
      [staging (:peer ctx)]
-     [:div.markdown (markdown "Hyperfiddle always generates valid transactions, if it doesn't, please file a bug.
+     [:div.markdown [markdown "Hyperfiddle always generates valid transactions, if it doesn't, please file a bug.
 
 *WARNING:* Datomic schema alterations cannot be used in the same transaction, for now you'll
-need to transact the schema before using, see [#6](https://github.com/hyperfiddle/hyperfiddle/issues/6).")]]))
+need to transact the schema before using, see [#6](https://github.com/hyperfiddle/hyperfiddle/issues/6)."]]]))
 
 (defn bindings [ctx] (topnav-bindings/bindings ctx))
