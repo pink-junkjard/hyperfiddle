@@ -27,14 +27,13 @@ Managed I/O is not the point. The point is: *what does managed I/O make possible
 
 # Documentation and community
 
-Hyperfiddle is alpha software. The core is quite mature and stable and in prod at <http://hyperfiddle.net>. The public API is not frozen.
+Hyperfiddle is alpha software. The programming API is not frozen.
 
 <https://www.reddit.com/r/hyperfiddle/> will aggregate all our scattered blog posts, tutorials
 and documentation.
 
 * Slack: #Hyperfiddle @ [clojurians](http://clojurians.net/), come say hi, tell us why you care, and hang out! 
-* Twitter: <https://twitter.com/dustingetz>
-* [developer mailing list](https://groups.google.com/forum/#!forum/hyperfiddle)
+* Reach us on twitter: <https://twitter.com/dustingetz>
 
 # Roadmap
 
