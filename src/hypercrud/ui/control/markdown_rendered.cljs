@@ -71,8 +71,8 @@
 
 
 ; Todo; remove div.markdown; that should be default and style the inverse.
-(defn markdown-rendered* [value & [?ctx]]
-  [:div.markdown [markdown value ?ctx]])
+(defn markdown-rendered* [md & [?ctx]]
+  [:div.markdown [markdown md ?ctx]])
 
 (defn markdown-hyperfiddle [md ctx]
   ; remark creates react components which don't evaluate in this stack frame
