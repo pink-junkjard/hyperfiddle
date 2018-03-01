@@ -26,6 +26,7 @@
 
 (def meta-pull-exp-for-link
   [:db/id
+   :db/ident                                                ; for router
    :db/doc
    :fiddle/bindings
    :fiddle/entrypoint
@@ -37,6 +38,7 @@
                    :link/disabled?
                    ; hydrate the parts of the fiddle we need for validating the link
                    {:link/fiddle [:db/id
+                                  :db/ident                 ; for router
                                   :fiddle/query
                                   :fiddle/type]}
                    :link/formula

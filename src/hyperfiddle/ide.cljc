@@ -6,7 +6,6 @@
             [hypercrud.browser.core :as browser]
             [hypercrud.browser.routing :as routing]
             [hypercrud.client.core :as hc]
-            [hypercrud.types.ThinEntity :refer [thinentity?]]
     #?(:cljs [hypercrud.react.react-fragment :refer [react-fragment]])
     #?(:cljs [hypercrud.ui.navigate-cmp :as navigate-cmp])
     #?(:cljs [hypercrud.ui.stale :as stale])
@@ -106,28 +105,94 @@
   (-> (assoc ctx ::runtime/branch-aux {::foo "user"})
       (*-target-context route)))
 
-(defn bidi-route->browser [{handler :handler {:keys [fid] :as route-params} :route-params}]
-  (let [request-params (dissoc route-params :fid)]
-    {:fiddle-id (unwrap (safe-read-edn-string fid))
-     :request-params (mapv (fn [ix]
-                             (let [eid (-> (keyword (str "p" ix)) route-params safe-read-edn-string unwrap)]
-                               #entity["$" eid]))
-                           (range (count request-params)))}))
+(comment
+  ; An example user router (this is provided on the domain)
+  (def router                                               ; only needs to support fq routes
+    ["/"
+     {"drafts/" :hyperblog/drafts
+      [#entity["$" :a] "/"] :hyperblog/index
+      [#entity["$" :a]] :hyperblog/post}]
+    #_["/"
+     {"drafts/" :hyperblog/drafts
+      [#entity["$" :a] "/"] :hyperblog/index
+      #{[#entity["$" :a] "/" :b]
+        [#entity["$" :a]]} :hyperblog/post}])
 
-(defn hyperblog-bidi-route [{:keys [code-database fiddle-id request-params]}]
-  (let [airity (count request-params)
-        args (flatten (map-indexed (fn [ix p]
-                                     [(keyword (str "p" ix)) (if (thinentity? p) (:db/id p) p)])
-                                   request-params))]
-    (concat
-      [(keyword (str "b" airity)) :fid fiddle-id]
-      args)))
+  ;[#entity["$" :a] "/"] 17592186045454 ;IllegalArgumentException: No implementation of method: :unresolve-handler of protocol: #'bidi.bidi/Matched found for class: java.lang.Long
 
-(defn browser-route->bidi [{:keys [code-database fiddle-id request-params] :as route}]
-  ; check for magic constants in route for /-/
+  (some-> router (bidi/match-route "/:idddd/slug"))
+
+  (->> [
+        (some-> router (bidi/match-route "/1/"))
+        #_(some-> router (bidi/match-route "/a/"))
+        #_(some-> router (bidi/match-route "/:a/"))
+        (some-> router (bidi/match-route "/:highlights/"))
+        (some-> router (bidi/match-route "/1/slug"))
+        #_(some-> router (bidi/match-route "/:sup"))        ; routes but can't rebuild
+        (some-> router (bidi/match-route "/:sup/slug"))
+        (some-> router (bidi/match-route "/drafts/"))
+        (some-> router (bidi/match-route "/1/slug-for-a-post"))
+        (some-> router (bidi/match-route "/_/asdf"))
+        ]
+       (map ->bidi-consistency-wrapper)
+       (map ->hf)
+       (map ->bidi)
+       (map #(if % (apply bidi/path-for router %))))
+
+  (apply bidi/path-for router (-> router (bidi/match-route "/1/") ->bidi-consistency-wrapper ->hf ->bidi))
+  (some-> router (bidi/match-route "/1/slug") ->bidi-consistency-wrapper ->hf ->bidi ((partial apply bidi/path-for router)))
+  (some-> router (bidi/match-route "/:sup/a") ->bidi-consistency-wrapper ->hf ->bidi ((partial apply bidi/path-for router)))
+
+  (->> [(bidi/path-for router :hyperblog/index :a #entity["$" 1])
+        (bidi/path-for router :hyperblog/index :a #entity["$" :highlights])
+        (bidi/path-for router :hyperblog/post :a #entity["$" 1] :b "asdf")
+        (bidi/path-for router :hyperblog/post :a #entity["$" :sup])
+        (bidi/path-for router :hyperblog/drafts)
+        (bidi/path-for router :not-routed)
+
+        (apply bidi/path-for router [:hyperblog/index 0 #entity["$" 17592186046269]])
+        ;(apply bidi/path-for router [17592186045454 0 #entity["$" 17592186046269]])
+        ])
+
+  (->> [(some-> router (bidi/match-route "/:sup"))
+        (some-> router (bidi/match-route "/:personal/"))]
+       (map ->browser))
+
+  (apply bidi/path-for router [:hyperblog/post 0 #entity["$" :sup]])
+  (apply bidi/path-for router [:hyperblog/index 0 #entity["$" :personal]])
+  (apply bidi/path-for router [:hyperblog/drafts])
+  )
+
+(defn ->bidi-consistency-wrapper [{:keys [handler route-params] :as ?r}]
+  ; Bidi's interface is inconsistent and makes you understand two ways to identify a route
+  ; "bidi/match" return val syntax, is the bad one
+  ; Canonicalize on the "bidi/path-for" syntax
+  (if ?r (apply conj [handler] (mapcat identity route-params))))
+
+(defn ->hf [[handler & ?route-params :as ?r]]
+  (if ?r
+    (merge {:fiddle-id handler}
+           (let [ps (->> ?route-params                      ; bidi gives us alternating k/v
+                         (partition-all 2)
+                         (map vec)
+                         sort                               ; order by keys for hyperfiddle, router should use kw or int
+                         (mapv second)                      ; drop keys; hyperfiddle params are associative by index
+                         )]
+             (if (seq ps)
+               {:request-params ps})))))
+
+(defn bidi-match->path-for "adapt bidi's inconsistent interface" [[h & ps :as ?r]]
+  (if ?r {:handler h :route-params ps}))
+
+(defn abc []
+  (map (comp keyword str) "abcdefghijklmnopqrstuvwxyz")     ; this version works in clojurescript
+  #_(->> (range) (map (comp keyword str char #(+ % (int \a))))))
+
+(defn ->bidi [{:keys [fiddle-id request-params] :as ?r}]
   (assert (not (system-link? fiddle-id)) "bidi router doesn't handle sys links")
-  #_(if (= :schema/all-attributes (:ident fiddle-id)))
-  (hyperblog-bidi-route route))
+  ; this is going to generate param names of 0, 1, ... which maybe doesn't work for all routes
+  ; we would need to disallow bidi keywords for this to be valid. Can bidi use ints? I think not :(
+  (if ?r (apply conj [fiddle-id] (mapcat vector (abc) request-params))))
 
 (defn route-decode [rt s]
   {:pre [(string? s)]}
@@ -135,33 +200,20 @@
         home-route (some-> domain :domain/home-route safe-read-edn-string unwrap)
         router (some-> domain :domain/router safe-read-edn-string unwrap)]
     (case s
-      "/" home-route
+      "/" (if router (->hf home-route) home-route)          ; compat
       (or (if (= "/_/" (subs s 0 3)) (routing/decode (subs s 2) #_"include leading /"))
-          (some-> router (bidi/match-route s) bidi-route->browser)
+          (some-> router (bidi/match-route s) ->bidi-consistency-wrapper ->hf)
           (routing/decode s)))))
 
 (defn route-encode [rt route]
   ; use domain to canonicalize
   (let [domain @(runtime/state rt [:hyperfiddle.runtime/domain])
-        home-route (some-> domain :domain/home-route safe-read-edn-string unwrap)
+        home-route (some-> domain :domain/home-route safe-read-edn-string unwrap) ;->hf
         router (some-> domain :domain/router safe-read-edn-string unwrap)]
     (or
       (if (system-link? (:fiddle-id route)) (str "/_" (routing/encode route)))
-      (if router (apply bidi/path-for router (browser-route->bidi route)))
-      (str (routing/encode route)))))
-
-(comment
-  (some-> router (bidi/match-route "/17592186045454/") bidi-route->browser)
-  (some-> router (bidi/match-route "/17592186045462/17592186045872") bidi-route->browser)
-
-  (def x {:fiddle-id 17592186045454})
-  (apply bidi/path-for router (browser-route->bidi x))
-
-  (def x2 {:request-params [#entity["$" 17592186046269]],
-           :fiddle-id 17592186045454})
-  (apply bidi/path-for router (browser-route->bidi x2))
-
-  )
+      (if router (apply bidi/path-for router (->bidi route)))
+      (routing/encode route))))
 
 (defn local-basis [global-basis route ctx]
   ;local-basis-ide and local-basis-user
@@ -170,7 +222,7 @@
                 "page" (concat ide user)
                 "ide" (concat ide user)
                 "user" user)
-        basis (sort basis)]                           ; Userland api-fn should filter irrelevant routes
+        basis (sort basis)]                                 ; Userland api-fn should filter irrelevant routes
     (timbre/debug (pr-str basis))
     #_(determine-local-basis (hydrate-route route ...))
     basis))

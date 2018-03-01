@@ -1,5 +1,6 @@
 (ns hypercrud.browser.routing
-  (:require [cats.core :as cats :refer [mlet]]
+  (:require [bidi.bidi :as bidi]
+            [cats.core :as cats :refer [mlet]]
             [cats.monad.either :as either]
             [clojure.set :as set]
             [clojure.string :as string]
@@ -64,7 +65,7 @@
 
 (defn ^:export build-route' [link ctx]
   (mlet [fiddle-id (if-let [page (:link/fiddle link)]
-                     (either/right (:db/id page))
+                     (either/right (or (:db/ident page) (:db/id page)))
                      (either/left {:message "link has no fiddle" :data {:link link}}))
          user-fn (eval/eval-str (:link/formula link))
          user-route-params (if user-fn
@@ -74,7 +75,7 @@
                                  (walk/postwalk (fn [v]
                                                   (if (instance? Entity v)
                                                     (let [dbname (some-> v .-uri (dbname/uri->dbname ctx))]
-                                                      (->ThinEntity dbname (:db/id v)))
+                                                      (->ThinEntity dbname (or (:db/ident v) (:db/id v))))
                                                     v)))
                                  (into {}))
                ;_ (timbre/debug route-params (-> (:link/formula link) meta :str))
@@ -112,3 +113,59 @@
   (if route
     (try-either (decode route))
     (either/right nil)))
+
+
+; Bidi routing protocols
+(def regex-keyword "^:[A-Za-z]+[A-Za-z0-9\\*\\+\\!\\-\\_\\?\\.]*(?:%2F[A-Za-z]+[A-Za-z0-9\\*\\+\\!\\-\\_\\?\\.]*)?")
+(def regex-string "^[A-Za-z0-9\\-\\_\\.]+")
+(def regex-long "^[0-9]+")
+
+(extend-type ThinEntity
+
+  ; must be safe to user input. if they throw, the app won't fallback to a system-route
+
+  bidi/PatternSegment
+  (segment-regex-group [_]
+    ; the value mathign the placeholder can be a keyword or a long
+    (str "(?:" regex-long ")|(?:" regex-keyword ")"))
+  (param-key [this]
+    ; Abusing .-id to store the param-key in the entity placeholder in the route
+    (.-id this))
+  (transform-param [this]
+    (fn [v]
+      (let [$ (.-dbname this)                               ; the "$" is provided by entity placeholder in the route
+            e (reader/read-edn-string v)]                   ; the reader will need to subs ! to /
+        (->ThinEntity $ e))))
+  (matches? [this s]
+    (let [r (re-pattern
+              "[A-Za-z]+[A-Za-z0-9\\*\\+\\!\\-\\_\\?\\.]*(?:%2F[A-Za-z]+[A-Za-z0-9\\*\\+\\!\\-\\_\\?\\.]*)?")]
+      (re-matches r s)))
+  (unmatch-segment [this params]
+    (let [entity (get params (.-id this))]
+      ; lookup refs not implemented, but eid and ident work
+      ; safe
+      (some-> entity .-id)))
+
+  bidi/Pattern
+  (match-pattern [this env]
+    ; is this even in play? I don't think I ever hit this bp
+    (let [read (reader/read-edn-string (:remainder env))]
+      (-> env
+          (update-in [:route-params] assoc (.-id this) (->ThinEntity (.-dbname this) read))
+          ; totally not legit to count read bc whitespace
+          (assoc :remainder (subs (:remainder env) 0 (count (pr-str read)))))))
+  (unmatch-pattern [this m]
+    (let [param-key (.-id this)]
+      (-> m :params (get param-key) .-id pr-str)))
+
+  ;bidi/Matched
+  ;(resolve-handler [this m] (bidi/succeed this m))
+  ;(unresolve-handler [this m] (when (= this (:handler m)) ""))
+  )
+
+
+; Bidi is not a great fit for the sys router because there is only one route with varargs params
+; params are dynamically typed; need to model an `any`, eager-consume the path segment,
+; and figure out the edn from the path segment. How to determine #entity vs scalar?
+;(def sys-router
+;  [["/" :fiddle-id "/" #edn 0] :browse])
