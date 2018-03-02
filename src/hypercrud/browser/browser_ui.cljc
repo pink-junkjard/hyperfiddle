@@ -24,43 +24,37 @@
   {:from-ctx :user-renderer
    :from-link :fiddle/renderer
    :with-user-fn (fn [user-fn]
-                   (fn [result ordered-fes links ctx]
-                     [safe-user-renderer user-fn result ordered-fes links ctx]))
+                   (fn [ctx]
+                     [safe-user-renderer user-fn ctx]))
    ; todo ui binding should be provided by a RT
    :default #?(:clj  (assert false "todo")
                :cljs hypercrud.ui.result/view)})
 
-(letfn [(browse [link-index ident ctx & args]
+(letfn [(browse [ident ctx & args]
           (let [kwargs (util/kwargs args)
                 [user-renderer & args] (get kwargs nil)
                 ctx (if user-renderer
                       (assoc ctx :user-renderer user-renderer #_(if f #(apply f %1 %2 %3 %4 args)))
                       ctx)]
-            [ui-from-link (get link-index ident) ctx (:class kwargs)]))
-        (anchor [link-index ident ctx label & args]
+            [ui-from-link @(reactive/track link/rel->link ident ctx) ctx (:class kwargs)]))
+        (anchor [ident ctx label & args]
           (let [kwargs (util/kwargs args)
-                props (-> (link/build-link-props (get link-index ident) ctx)
+                props (-> (link/build-link-props @(reactive/track link/rel->link ident ctx) ctx)
                           #_(dissoc :style) #_"custom renderers don't want colored links")]
             [(:navigate-cmp ctx) props label (:class kwargs)]))
-        (browse' [link-index ident ctx]
-          (->> (base/data-from-link (get link-index ident) ctx)
-               (cats/fmap :result)
+        (browse' [ident ctx]
+          (->> (base/data-from-link @(reactive/track link/rel->link ident ctx) ctx)
+               (cats/fmap :hypercrud.browser/result)
                (cats/fmap deref)))
-        (anchor* [link-index ident ctx]
-          (link/build-link-props (get link-index ident) ctx))]
-  ; process-data returns an Either[Error, DOM]
-  (defn process-data [{:keys [result ordered-fes links ctx]}]
-    (mlet [ui-fn (base/fn-from-mode (f-mode-config) (:fiddle ctx) ctx)
-           :let [link-index (->> links
-                                 (filter :link/rel)         ; cannot lookup nil idents
-                                 (mapv (juxt #(-> % :link/rel) identity)) ; [ repeating entity attr ident ]
-                                 (into {}))
-                 ctx (assoc ctx
-                       :anchor (reactive/partial anchor link-index)
-                       :browse (reactive/partial browse link-index)
-                       :anchor* (reactive/partial anchor* link-index)
-                       :browse' (reactive/partial browse' link-index))]]
-      (cats/return (ui-fn @result ordered-fes links ctx)))))
+        (anchor* [ident ctx]
+          (link/build-link-props @(reactive/track link/rel->link ident ctx) ctx))]
+  ; convenience functions, should be declared fns in this or another ns and accessed out of band of ctx
+  (defn ui-bindings [ctx]
+    (assoc ctx
+      :anchor anchor
+      :browse browse
+      :anchor* anchor*
+      :browse' browse')))
 
 (defn e->map [e]
   (if (map? e)
@@ -88,8 +82,8 @@
   ; :find-element :attribute :value
   (let [C (cond
             (:hypercrud.ui/ui-error ctx) (:hypercrud.ui/ui-error ctx)
-            (:attribute ctx) ui-error-inline                ; table: header or cell, form: header or cell
-            (:find-element ctx) ui-error-inline             ;
+            (:hypercrud.browser/attribute ctx) ui-error-inline ; table: header or cell, form: header or cell
+            (:hypercrud.browser/find-element ctx) ui-error-inline
             :else ui-error-block)]                          ; browser including inline true links
     [C e ctx]))
 
@@ -111,8 +105,13 @@
       (fn [v] [:div {:class (classes "ui" class)} v])
       (fn [v] [:div {:class (classes "ui" class "hyperfiddle-loading")} v])]]))
 
+(defn hf-ui [route ctx]                                     ; returns an Either[Error, DOM]
+  (mlet [ctx (base/data-from-route route ctx)
+         ui-fn (base/fn-from-mode (f-mode-config) (:fiddle ctx) ctx)]
+    (cats/return (ui-fn (ui-bindings ctx)))))
+
 (defn ui-from-route [route ctx & [class]]
-  [wrap-ui (cats/bind (base/data-from-route route ctx) process-data) route ctx class])
+  [wrap-ui (hf-ui route ctx) route ctx class])
 
 (defn ui-from-link [link ctx & [class]]
   (let [link-props' (try-either (link/build-link-props link ctx))
@@ -120,9 +119,7 @@
              ; todo should filter hidden links out before recursing (in render-inline-links)
              (if (:hidden link-props)
                (either/right [:noscript])
-               (mlet [route (routing/build-route' link ctx)
-                      ; entire context must be encoded in the route
-                      data (base/data-from-route route (context/clean ctx))]
-                 (process-data data))))
+               (cats/bind (routing/build-route' link ctx)
+                          #(hf-ui % (context/clean ctx)))))
         route (unwrap (cats/fmap :route link-props'))]
     [wrap-ui v' route ctx (classes class (css-slugify (:link/rel link)))]))

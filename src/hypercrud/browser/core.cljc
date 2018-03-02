@@ -19,8 +19,3 @@
 
 ;(defn result [ctx path]
 ;  @(reaction/track ctx path))
-;
-;(defn ordered-fes [ctx])
-;
-;(defn links [ctx]
-;  )

@@ -4,10 +4,20 @@
             [hypercrud.browser.base :as base]
             [hypercrud.browser.browser-ui :as browser-ui]
             [hypercrud.ui.result :as result]
-            [hyperfiddle.foundation :as foundation]))
+            [hypercrud.util.reactive :as reactive]))
 
+(defn links->result [ctx]
+  (->> @(:hypercrud.browser/links ctx)
+       ;(sort-by (juxt :link/disabled :link/rel)
+       ;         (fn [[a b] [a' b']] (if (= a a') (< b b') (< a a'))))
+       (mapv (fn [link]
+               (-> (if (auto-fiddle/system-fiddle? (get-in link [:link/fiddle :db/id]))
+                     (dissoc link :link/fiddle)
+                     link)
+                   (update :link/formula #(or (-> % meta :str) %))
+                   (update :link/tx-fn #(or (-> % meta :str) %)))))))
 
-(defn renderer [result ordered-fes links ctx]
+(defn renderer [ctx]
   (-> (base/data-from-route (:target-route ctx)
                             (assoc ctx
                               :hypercrud.browser/domain (:target-domain ctx)
@@ -16,15 +26,6 @@
         (fn [e]
           [:div
            (browser-ui/ui-error e ctx)
-           (result/view result ordered-fes links ctx)])
-        (fn [data]
-          (let [result (->> (:links data)
-                            ;(sort-by (juxt :link/disabled :link/rel)
-                            ;         (fn [[a b] [a' b']] (if (= a a') (< b b') (< a a'))))
-                            (mapv (fn [link]
-                                    (-> (if (auto-fiddle/system-fiddle? (get-in link [:link/fiddle :db/id]))
-                                          (dissoc link :link/fiddle)
-                                          link)
-                                        (update :link/formula #(or (-> % meta :str) %))
-                                        (update :link/tx-fn #(or (-> % meta :str) %))))))]
-            (result/view result ordered-fes links ctx))))))
+           (result/view ctx)])
+        (fn [ctx]
+          (result/view (assoc ctx :hypercrud.browser/result (reactive/track links->result ctx)))))))

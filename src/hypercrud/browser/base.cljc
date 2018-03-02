@@ -17,8 +17,7 @@
             [hypercrud.types.ThinEntity :refer [#?(:cljs ThinEntity)]]
             [hypercrud.util.non-fatal :refer [try-either]]
             [hypercrud.util.reactive :as reactive]
-            [hypercrud.util.string :as hc-string]
-            [taoensso.timbre :as timbre])
+            [hypercrud.util.string :as hc-string])
   #?(:clj
      (:import (hypercrud.types.Entity Entity)
               (hypercrud.types.ThinEntity ThinEntity))))
@@ -140,27 +139,30 @@
       nil-or-hydrate (fn [peer branch request]
                        (if request
                          @(hc/hydrate peer branch request)
-                         (either/right nil)))]
+                         (either/right nil)))
+      fmap-nil #(cats/fmap (constantly nil) %)]
   (defn process-results [fiddle request ctx]
     (mlet [schemas (schema-util/hydrate-schema ctx)         ; schema is allowed to be nil if the link only has anchors and no data dependencies
            :let [reactive-either-result (reactive/track nil-or-hydrate (:peer ctx) (:branch ctx) request)]
-           _ @reactive-either-result                        ; short the monad
-           :let [reactive-result (reactive/map deref reactive-either-result)
+           _ @(reactive/fmap fmap-nil reactive-either-result) ; short the monad, only react on left v right, not the right's value
+           :let [reactive-result (reactive/fmap deref reactive-either-result)
                  ctx (assoc ctx                             ; provide defaults before user-bindings run.
-                       :result reactive-result
+                       :hypercrud.browser/result reactive-result
+                       :result reactive-result              ; deprecated
                        :request request
                        :schemas schemas                     ; For tx/entity->statements in userland.
                        :fiddle fiddle                       ; for :db/doc
                        :read-only (or (:read-only ctx) never-read-only))]
            ctx (user-bindings/user-bindings' fiddle ctx)
-           ; todo why are we imposing these auto-fns on everyone?
-           ordered-fes (find-element/auto-find-elements @reactive-result ctx)]
-      (cats/return {:result reactive-result
-                    :ordered-fes ordered-fes
-                    :links (auto-anchor/auto-links ordered-fes ctx)
-                    :ctx ctx}))))
+           :let [reactive-either-fes (reactive/track find-element/auto-find-elements reactive-result fiddle request (:route ctx) schemas)]
+           _ @(reactive/fmap fmap-nil reactive-either-fes)  ; short the monad, only react on left v right, not the right's value
+           :let [reactive-fes (reactive/fmap deref reactive-either-fes)]]
+      (cats/return
+        (assoc ctx
+          :hypercrud.browser/ordered-fes reactive-fes
+          :hypercrud.browser/links (reactive/track auto-anchor/auto-links fiddle reactive-fes schemas (:keep-disabled-anchors? ctx)))))))
 
-(defn data-from-route [route ctx]
+(defn data-from-route [route ctx]                           ; todo rename
   (let [ctx (context/route ctx route)
         {:keys [fiddle']} (hydrate-fiddle ctx)]
     (mlet [fiddle fiddle'
@@ -172,5 +174,5 @@
     ; entire context must be encoded in the route
     (with-route route (context/clean ctx))))
 
-(defn data-from-link [link ctx]
+(defn data-from-link [link ctx]                             ; todo rename
   (from-link link ctx data-from-route))

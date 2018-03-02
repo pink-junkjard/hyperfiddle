@@ -20,7 +20,7 @@
                                          (if (link/popover-link? link)
                                            (assoc link :link/render-inline? false)
                                            link)))
-                                  (filter (link/same-path-as? [(:fe-pos ctx) (-> ctx :attribute :db/ident)]))
+                                  (filter (link/same-path-as? [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]))
                                   (mapv (juxt #(-> % :link/rel) identity))
                                   (into {}))
                     ctx (assoc ctx                          ; Todo unify link-fn with widget interface or something

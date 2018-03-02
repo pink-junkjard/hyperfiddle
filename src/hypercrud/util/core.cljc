@@ -20,6 +20,15 @@
        (map (juxt f identity))
        (into {})))
 
+(defn group-by-unique [f xs]
+  (->> xs
+       (map (juxt f identity))
+       (reduce (fn [acc [k _ :as kv]]
+                 (if (contains? acc k)
+                   (throw (ex-info "Duplicate key" k))
+                   (conj acc kv)))
+               {})))
+
 (defn update-existing [m k f & args]
   (if (get m k)
     (apply update m k f args)

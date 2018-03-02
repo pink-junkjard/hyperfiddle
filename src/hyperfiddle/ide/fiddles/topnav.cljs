@@ -27,27 +27,29 @@
     (str domain "/login?client=" client-id "&callbackURL=" callback-url)))
 
 ; inline sys-link data when the entity is a system-fiddle
-(defn shadow-fiddle [fiddle ctx]
-  (let [[e a] (get-in ctx [:route :request-params])
-        system-fiddle? (auto-fiddle/system-fiddle? (:db/id e))]
-    (if system-fiddle?
-      (->> (auto-fiddle/hydrate-system-fiddle (:db/id e))
-           (cats/fmap (fn [fiddle]
-                        (-> fiddle
-                            (update :fiddle/bindings #(or (-> % meta :str) %))
-                            (update :fiddle/renderer #(or (-> % meta :str) %))
-                            (update :fiddle/request #(or (-> % meta :str) %)))))
-           unwrap)
-      fiddle)))
+(letfn [(-shadow-fiddle [ctx fiddle]
+          (let [[e a] (get-in ctx [:route :request-params])
+                system-fiddle? (auto-fiddle/system-fiddle? (:db/id e))]
+            (if system-fiddle?
+              (->> (auto-fiddle/hydrate-system-fiddle (:db/id e))
+                   (cats/fmap (fn [fiddle]
+                                (-> fiddle
+                                    (update :fiddle/bindings #(or (-> % meta :str) %))
+                                    (update :fiddle/renderer #(or (-> % meta :str) %))
+                                    (update :fiddle/request #(or (-> % meta :str) %)))))
+                   unwrap)
+              fiddle)))]
+  (defn shadow-fiddle [ctx]
+    (update ctx :hypercrud.browser/result (partial reactive/fmap (reactive/partial -shadow-fiddle ctx)))))
 
 ; ugly hacks to recursively fix the ui for sys links
-(defn hijack-renderer [fiddle fes links ctx]
+(defn hijack-renderer [ctx]
   (let [ctx (dissoc ctx :user-renderer)
         f-mode-config (browser-ui/f-mode-config)
         ui-fn (-> (base/fn-from-mode f-mode-config (:fiddle ctx) ctx)
                   (cats/mplus (either/right (:default f-mode-config)))
                   deref)]
-    (ui-fn (shadow-fiddle fiddle ctx) fes links ctx)))
+    (ui-fn (shadow-fiddle ctx))))
 
 (defn any-loading? [peer]
   (some (comp not nil? :hydrate-id val) @(runtime/state peer [::runtime/partitions])))
@@ -67,19 +69,15 @@
                     :z-index -1}}
       [re-com.core/throbber :size :smaller]]]))
 
-(defn -renderer [fiddle ordered-fes links ctx]
+(defn -renderer [ctx]
   (let [display-mode @(runtime/state (:peer ctx) [:display-mode])
         dirty? (not (empty? @(runtime/state (:peer ctx) [:stage])))
-        fiddle (shadow-fiddle fiddle ctx)
+        ctx (shadow-fiddle ctx)
         ; hack until hyperfiddle.net#156 is complete
-        link-index (->> links
-                        (filter :link/rel)                  ; cannot lookup nil idents
-                        (mapv (juxt #(-> % :link/rel) identity)) ; [ repeating entity attr ident ]
-                        (into {}))
         fake-managed-anchor (fn [ident ctx label & args]
                               ; mostly copied from browser-ui
                               (let [kwargs (util/kwargs args)
-                                    link (-> (get link-index ident) (assoc :link/managed? true))
+                                    link (-> @(reactive/track link/rel->link ident ctx) (assoc :link/managed? true))
                                     props (-> (link/build-link-props link ctx true)
                                               #_(dissoc :style) #_"custom renderers don't want colored links")]
                                 [(:navigate-cmp ctx) props label (:class kwargs)]))]
@@ -87,7 +85,7 @@
      [:div.hyperfiddle-topnav-root-controls
       (fake-managed-anchor :domain ctx (get-in ctx [:target-domain :domain/ident]))
       " / "
-      (fake-managed-anchor :fiddle-more (assoc ctx :user-renderer hijack-renderer) (string/prune (:fiddle/name fiddle) 20 ""))
+      (fake-managed-anchor :fiddle-more (assoc ctx :user-renderer hijack-renderer) (string/prune @(reactive/cursor (:hypercrud.browser/result ctx) [:fiddle/name]) 20 ""))
       " · "
       (fake-managed-anchor :links (assoc ctx :user-renderer hijack-renderer) "links")
       (fake-managed-anchor :ui (assoc ctx :user-renderer hijack-renderer) "view")
@@ -118,8 +116,7 @@
          ((:anchor ctx) :account ctx (get-in ctx [:user-profile :email]))
          [:span.nav-link.auth [:a {:href (str (stateless-login-url ctx) "&state=" (runtime/encode-route (:peer ctx) (:target-route ctx)))} "Login"]])]]
      [:div.hyperfiddle-topnav-fiddle-controls
-      (result/result-renderer fiddle ordered-fes links ctx)
-      ]]))
+      (result/result-renderer ctx)]]))
 
 (defn- update-spacer [topnav]
   (let [measuredHeight (-> topnav (aget "fixed") .-offsetHeight)]
@@ -138,7 +135,7 @@
 
 (defn ^:export qe-picker-control [field props ctx]
   (let [enums [:query :entity :blank]
-        change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) (:attribute ctx) %))
+        change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))
         options (->> enums
                      (map #(radio/option
                              {:label (case % :query "query" :entity "pull" :blank "blank")
@@ -147,11 +144,11 @@
                               :change! change!})))]
     [:span.qe.radio-group (apply react-fragment :_ options)]))
 
-(defn ^:export stage-ui [result ordered-fes links ctx]
+(defn ^:export stage-ui [ctx]
   (let [anonymous? (nil? (:user-profile ctx))
         stage @(runtime/state (:peer ctx) [:stage])]
     [:div.hyperfiddle-topnav-stage
-     (result/view result ordered-fes links ctx)             ; for docstring
+     (result/view ctx)                                      ; for docstring
      [tooltip (cond anonymous? {:status :warning :label "please login"}
                     (not (empty? stage)) {:status :warning :label "please transact! all changes first"})
       [:button {:disabled (or anonymous? (not (empty? stage)))

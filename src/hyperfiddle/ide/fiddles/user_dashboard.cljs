@@ -11,7 +11,7 @@
   (.preventDefault e)
   (.stopPropagation e))
 
-(defn renderer [domains ordered-fes anchors ctx]
+(defn renderer [ctx]
   [:div.hyperfiddle-user-dashboard
    (if (-> ctx :user-profile)
      [native-on-click-listener
@@ -21,7 +21,7 @@
        [:a {:href "/logout"} "logout"]]])
    [markdown (-> ctx :fiddle :db/doc)]
    [:ul.link-list
-    (->> domains
+    (->> @(:hypercrud.browser/result ctx)
          (sort-by :domain/ident)
          (map (fn [domain]
                 [:li {:key (hash (:db/id domain))}

@@ -2,7 +2,7 @@
   (:require [cuerdas.core :as str]
             [hypercrud.ui.control.markdown-rendered :refer [markdown]]
             [hypercrud.ui.tooltip :refer [tooltip-thick]]
-            [hypercrud.util.core :as util]))
+            [hypercrud.util.reactive :as reactive]))
 
 
 (defn fqn->name [s]
@@ -25,7 +25,7 @@
 #_{:label help-text :position :below-right}
 
 (defn label [field ctx]
-  (let [dbdoc (let [dbdoc (-> ctx :attribute :db/doc)]
+  (let [dbdoc (let [dbdoc @(reactive/cursor (:hypercrud.browser/fat-attribute ctx) [:db/doc])]
                 (when (and (string? dbdoc) (not (empty? dbdoc)))
                   dbdoc))
         typedoc (apply str (interpose " " (attribute-schema-human (:attribute ctx))))
@@ -36,5 +36,6 @@
     [tooltip-thick (if help-md
                      [:div.docstring (markdown help-md)])
      [:label {:class (if help-md "help-available")}
-      (some-> ctx :attribute :db/ident name str)            ; common crash point, though this should be defined
+      ; common crash point; todo use field, attribute is explicitly NOT always defined
+      (some-> (:hypercrud.browser/attribute ctx) name str)
       (if help-md [:sup "†"])]]))

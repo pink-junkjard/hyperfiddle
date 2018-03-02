@@ -1,9 +1,9 @@
 (ns hypercrud.browser.browser-request
   (:require [cats.core :as cats :refer [mlet]]
             [cats.monad.either :as either]
-            [datascript.parser :as parser]
             [hypercrud.browser.base :as base]
             [hypercrud.browser.context :as context]
+            [hypercrud.browser.find-element :as find-element]
             [hypercrud.browser.link :as link]
             [hypercrud.browser.popovers :as popovers]
             [hypercrud.browser.result :as result]
@@ -30,101 +30,76 @@
         (let [ctx (-> ctx
                       (assoc :branch (popovers/branch ctx link))
                       (context/clean)
-                      (update :hypercrud.browser/debug #(str % ">popover-link[" (:db/id link) ":" (or (:link/rel link) (:anchor/prompt link)) "]")))]
+                      #_(update :hypercrud.browser/debug #(str % ">popover-link[" (:db/id link) ":" (or (:link/rel link) (:anchor/prompt link)) "]")))]
           (either/branch route'
                          (constantly nil)
                          #(request-from-route % ctx)))))
     ; if the anchor IS NOT a popover, this should be the same logic as widget/render-inline-anchors
-    (let [ctx (update ctx :hypercrud.browser/debug #(str % ">inline-link[" (:db/id link) ":" (or (:link/rel link) (:anchor/prompt link)) "]"))]
-      (request-from-link link ctx))))
+    #_(let [ctx (update ctx :hypercrud.browser/debug #(str % ">inline-link[" (:db/id link) ":" (or (:link/rel link) (:anchor/prompt link)) "]"))])
+    (request-from-link link ctx)))
 
-(defn cell-dependent-requests [ctx]
-  (let [ctx (context/cell-data ctx)]
+(defn cell-dependent-requests [relation ctx]
+  (let [ctx (context/cell-data ctx relation)]
     (concat
-      (->> (:links ctx)
+      (->> @(:hypercrud.browser/links ctx)
            (filter :link/dependent?)
            (filter (link/same-path-as? [(:fe-pos ctx)]))
            (mapcat #(recurse-request % ctx)))
-      (->> (get-in ctx [:find-element :fields])
+      (->> @(reactive/cursor (:hypercrud.browser/find-element ctx) [:fields])
            (mapcat (fn [field]
                      (let [ctx (-> (context/attribute ctx (:attribute field))
-                                   (context/value (reactive/map (:cell-data->value field) (:cell-data ctx))))]
-                       (->> (:links ctx)
+                                   (context/value (reactive/fmap (:cell-data->value field) (:cell-data ctx))))]
+                       (->> @(:hypercrud.browser/links ctx)
                             (filter :link/dependent?)
-                            (filter (link/same-path-as? [(:fe-pos ctx) (-> ctx :attribute :db/ident)]))
+                            (filter (link/same-path-as? [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]))
                             (mapcat #(recurse-request % ctx))))))))))
 
-(defn relation-dependent-requests [ctx]
-  (->> (result/map-relation cell-dependent-requests ctx)
-       (apply concat)))
+(defn relation-dependent-requests [ctx relation]            ; ui equivalent of form
+  (->> (find-element/fe-ctxs ctx)
+       (mapcat (partial cell-dependent-requests relation))))
 
-(defn fiddle-dependent-requests [result ordered-fes links ctx]
-  (let [links (filter :link/render-inline? links) ctx       ; at this point we only care about inline links
-        (assoc ctx
-          :ordered-fes ordered-fes
-          :links links)]
+(defn relations-dependent-requests [ctx relations]          ; ui equivalent of table
+  ; the request side does NOT need the cursors to be equiv between loops
+  (->> (reactive/unsequence relations)
+       (mapcat (fn [[relation index]]
+                 (relation-dependent-requests ctx relation)))))
+
+(defn- filter-inline [links] (filter :link/render-inline? links))
+
+(defn fiddle-dependent-requests [ctx]
+  ; at this point we only care about inline links
+  (let [ctx (update ctx :hypercrud.browser/links (partial reactive/fmap filter-inline))]
     (concat
-      (->> (:links ctx)
+      (->> @(:hypercrud.browser/links ctx)
            (remove :link/dependent?)
            (filter (link/same-path-as? []))
            (mapcat #(recurse-request % ctx)))
-      (->> (:ordered-fes ctx)                               ; might have empty results
-           (map-indexed (fn [fe-pos fe]
-                          (let [ctx (context/find-element ctx fe fe-pos)]
-                            (concat
-                              (->> (:links ctx)
-                                   (remove :link/dependent?)
-                                   (filter (link/same-path-as? [fe-pos]))
-                                   (mapcat #(recurse-request % ctx)))
-                              (->> (:fields fe)
-                                   (mapcat (fn [{:keys [attribute]}]
-                                             (let [ctx (context/attribute ctx attribute)]
-                                               (->> (:links ctx)
-                                                    (remove :link/dependent?)
-                                                    (filter (link/same-path-as? [fe-pos (-> ctx :attribute :db/ident)]))
-                                                    (mapcat #(recurse-request % ctx)))))))))))
-           (apply concat))
+      (->> (find-element/fe-ctxs ctx)                       ; might have empty results
+           (mapcat (fn [ctx]
+                     (let [fe-pos (:fe-pos ctx)]
+                       (concat
+                         (->> @(:hypercrud.browser/links ctx)
+                              (remove :link/dependent?)
+                              (filter (link/same-path-as? [fe-pos]))
+                              (mapcat #(recurse-request % ctx)))
+                         (->> @(reactive/cursor (:hypercrud.browser/find-element ctx) [:fields])
+                              (mapcat (fn [{:keys [attribute]}]
+                                        (let [ctx (context/attribute ctx attribute)]
+                                          (->> @(:hypercrud.browser/links ctx)
+                                               (remove :link/dependent?)
+                                               (filter (link/same-path-as? [fe-pos (:hypercrud.browser/attribute ctx)]))
+                                               (mapcat #(recurse-request % ctx))))))))))))
       (case (get-in ctx [:fiddle :fiddle/type])
-        :entity (if-let [a (get-in ctx [:request :a])]
-                  (let [[e a] (get-in ctx [:route :request-params])]
-                    (either/branch
-                      (try-either (.-dbname e))
-                      (constantly nil)
-                      (fn [source-symbol]
-                        (case (get-in ctx [:schemas (str source-symbol) a :db/cardinality :db/ident])
-                          :db.cardinality/one
-                          (let [ctx (context/relation ctx (reactive/atom [result]))]
-                            (relation-dependent-requests ctx))
+        :entity (-> (result/with-entity-relations ctx
+                                                  :entity (partial relation-dependent-requests ctx)
+                                                  :attr-one (partial relation-dependent-requests ctx)
+                                                  :attr-many (partial relations-dependent-requests ctx))
+                    (either/branch (constantly nil) identity))
 
-                          :db.cardinality/many
-                          (let [ctx (context/relations ctx (mapv vector result))]
-                            (->> (result/map-relations relation-dependent-requests ctx)
-                                 (apply concat)))))))
-                  (let [ctx (context/relation ctx (reactive/atom [result]))]
-                    (relation-dependent-requests ctx)))
-
-        :query (either/branch
-                 (try-either (parser/parse-query (get-in ctx [:request :query])))
-                 (constantly nil)
-                 (fn [{:keys [qfind]}]
-                   (condp = (type qfind)
-                     datascript.parser.FindRel
-                     (let [ctx (context/relations ctx (mapv vec result))]
-                       (->> (result/map-relations relation-dependent-requests ctx)
-                            (apply concat)))
-
-                     datascript.parser.FindColl
-                     (let [ctx (context/relations ctx (mapv vector result))]
-                       (->> (result/map-relations relation-dependent-requests ctx)
-                            (apply concat)))
-
-                     datascript.parser.FindTuple
-                     (let [ctx (context/relation ctx (reactive/atom (vec result)))]
-                       (relation-dependent-requests ctx))
-
-                     datascript.parser.FindScalar
-                     (let [ctx (context/relation ctx (reactive/atom [result]))]
-                       (relation-dependent-requests ctx)))))
+        :query (-> (result/with-query-relations ctx
+                                                :relation (partial relation-dependent-requests ctx)
+                                                :relations (partial relations-dependent-requests ctx))
+                   (either/branch (constantly nil) identity))
 
         :blank nil
 
@@ -134,18 +109,18 @@
   {:from-ctx :user-request
    :from-link :fiddle/request
    :with-user-fn (fn [user-fn]
-                   (fn [result ordered-fes links ctx]
+                   (fn [ctx]
                      ; todo report invocation errors back to the user
                      ; user-fn HAS to return a seqable value, we want to throw right here if it doesn't
-                     (try-catch-non-fatal (seq (user-fn result ordered-fes links ctx))
+                     (try-catch-non-fatal (seq (user-fn ctx))
                                           e (do
                                               (timbre/error e)
                                               nil))))
    :default fiddle-dependent-requests})
 
-(defn process-data [{:keys [result ordered-fes links ctx]}]
+(defn process-data [ctx]
   (mlet [request-fn (base/fn-from-mode (f-mode-config) (:fiddle ctx) ctx)]
-    (cats/return (request-fn @result ordered-fes links ctx))))
+    (cats/return (request-fn ctx))))
 
 (defn request-from-route [route ctx]
   (let [ctx (context/route ctx route)

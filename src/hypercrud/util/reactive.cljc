@@ -1,15 +1,24 @@
 (ns hypercrud.util.reactive
-  (:refer-clojure :exclude [atom map partial])
-  #?(:cljs (:require [reagent.core :as reagent])))
+  (:refer-clojure :exclude [atom partial])
+  (:require [hypercrud.util.core :as util]
+    #?(:cljs [reagent.core :as reagent])
+    #?(:cljs [reagent.ratom :refer [IReactiveAtom]]))
+  #?(:clj
+     (:import (clojure.lang IAtom IDeref))))
 
 
 ; reactivity is currently never needed on the jvm
 ; so fill their implementations with naive/unreactive implementations
 
+(defn reactive? [v]
+  #?(:clj  (instance? IDeref v)
+     :cljs (satisfies? IReactiveAtom v)))
+
 (defn atom [x & rest]
   (apply #?(:clj clojure.core/atom :cljs reagent/atom) x rest))
 
 (defn cursor [src path]
+  {:pre [(reactive? src)]}
   ; todo support more than just IDeref
   #?(:clj  (delay (get-in @src path))
      :cljs (reagent/cursor src path)))
@@ -22,8 +31,30 @@
   #?(:clj  (delay (apply f args))
      :cljs (apply reagent/track f args)))
 
-(let [trackable-f (fn [reactive f] (f (deref reactive)))]
-  (defn map [f reactive]
+(let [trackable-f (fn [rv f] (f (deref rv)))]
+  (defn fmap [f rv]
+    {:pre [(reactive? rv)]}
     ; if functions could be compared with =
-    ; (track (comp f deref) reactive)
-    (track trackable-f reactive f)))
+    ; (track (comp f deref) rv)
+    (track trackable-f rv f)))
+
+(letfn [(-fapply [rf rv] (@rf @rv))]
+  (defn fapply [rf & rvs]
+    {:pre [(reactive? rf) (every? reactive? rvs)]}
+    (reduce (partial track -fapply rf) rvs)))
+
+(defn unsequence
+  "Expand a reference of a list into a list of references while maintaining order.
+
+  If `key-fn` is provided, the children cursors will be pathed by the provided key-fn, NOT index.
+  This is useful when the child cursors' references must be consistent across reorderings (which index does not provide).
+  Like track's and fmap's `f`, `key-fn` MUST be stable across invocations to provide stable child references."
+  ([rv]
+   {:pre [(reactive? rv)]}
+   (->> (range @(fmap count rv))
+        (map (fn [index] [(cursor rv [index]) index]))))
+  ([key-fn rv]
+   {:pre [(reactive? rv)]}
+   (let [lookup (fmap (partial util/group-by-unique key-fn) rv)]
+     (->> @(fmap (partial map key-fn) rv)
+          (map (fn [key] [(cursor lookup [key]) key]))))))

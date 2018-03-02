@@ -5,13 +5,14 @@
             [hypercrud.ui.safe-render :refer [unify-portal-markup]]
             [hypercrud.ui.table-cell :as table-cell]
             [hypercrud.ui.user-attribute-renderer :refer [eval-user-control-ui]]
-            [hypercrud.ui.widget :as widget]))
+            [hypercrud.ui.widget :as widget]
+            [hypercrud.util.reactive :as reactive]))
 
 
 (defn schema-control-form [ctx]
-  (let [isComponent (-> (:attribute ctx) :db/isComponent)
-        valueType (-> (:attribute ctx) :db/valueType :db/ident)
-        cardinality (-> (:attribute ctx) :db/cardinality :db/ident)
+  (let [isComponent @(reactive/cursor (:hypercrud.browser/fat-attribute ctx) [:db/isComponent])
+        valueType @(reactive/cursor (:hypercrud.browser/fat-attribute ctx) [:db/valueType :db/ident])
+        cardinality @(reactive/cursor (:hypercrud.browser/fat-attribute ctx) [:db/cardinality :db/ident])
         widget (cond
                  (and (= valueType :db.type/boolean) (= cardinality :db.cardinality/one)) widget/boolean
                  (and (= valueType :db.type/keyword) (= cardinality :db.cardinality/one)) widget/keyword
@@ -28,9 +29,9 @@
 
 ; Can be unified; inspect (:layout ctx)
 (defn schema-control-table [ctx]
-  (let [isComponent (-> (:attribute ctx) :db/isComponent)
-        valueType (-> (:attribute ctx) :db/valueType :db/ident)
-        cardinality (-> (:attribute ctx) :db/cardinality :db/ident)
+  (let [isComponent @(reactive/cursor (:hypercrud.browser/fat-attribute ctx) [:db/isComponent])
+        valueType @(reactive/cursor (:hypercrud.browser/fat-attribute ctx) [:db/valueType :db/ident])
+        cardinality @(reactive/cursor (:hypercrud.browser/fat-attribute ctx) [:db/cardinality :db/ident])
         widget (cond
                  (and (= valueType :db.type/boolean) (= cardinality :db.cardinality/one)) widget/boolean
                  (and (= valueType :db.type/keyword) (= cardinality :db.cardinality/one)) widget/keyword
@@ -48,13 +49,12 @@
     widget))
 
 (defn fiddle-field-control [ctx]                            ; TODO :renderer -> :control
-  (let [attr (:attribute ctx)]
-    ;(timbre/info "using fiddle ctx/field renderer" (-> attr :db/ident str) user-str)
-    (eval-user-control-ui (get-in ctx [:fields (:db/ident attr) :renderer]))))
+  ;(timbre/info "using fiddle ctx/field renderer" (-> attr :db/ident str) user-str)
+  (eval-user-control-ui (get-in ctx [:fields (:hypercrud.browser/attribute ctx) :renderer])))
 
 (defn attribute-control [ctx]
   ;(timbre/info "using attribute/renderer " (-> attr :db/ident str) user-str)
-  (eval-user-control-ui (-> ctx :attribute :attribute/renderer)))
+  (eval-user-control-ui @(reactive/cursor (:hypercrud.browser/fat-attribute ctx) [:attribute/renderer])))
 
 (defn auto-control' [ctx]
   ; todo binding renderers should be pathed for aggregates and values
@@ -89,7 +89,7 @@
 (defn control-props [ctx]
   ; why does this need the field - it needs the ident for readonly in "Edit Anchors"
   ; todo clean this interface up
-  {:read-only ((get ctx :read-only) (:attribute ctx) ctx)})
+  {:read-only ((get ctx :read-only) @(:hypercrud.browser/fat-attribute ctx) ctx)})
 
 (defn auto-control [maybe-field props _ ctx]                ; compat
   [(some-> (case (:layout ctx) :block (schema-control-form ctx)

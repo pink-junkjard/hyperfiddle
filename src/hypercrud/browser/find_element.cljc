@@ -3,8 +3,10 @@
             [cats.monad.either :as either]
             [clojure.set :as set]
             [datascript.parser :as parser]
+            [hypercrud.browser.context :as context]
             [hypercrud.util.core :as util]
-            [hypercrud.util.non-fatal :refer [try-either]]))
+            [hypercrud.util.non-fatal :refer [try-either]]
+            [hypercrud.util.reactive :as reactive]))
 
 
 (defrecord FindElement [name fields source-symbol splat? type])
@@ -117,34 +119,38 @@
     datascript.parser.Aggregate
     (aggregate->fe element)))
 
-(defn auto-find-elements [result ctx]
-  (case (get-in ctx [:fiddle :fiddle/type])
-    :entity (mlet [:let [[e] (get-in ctx [:route :request-params])]
+(defn auto-find-elements [result fiddle request route schemas]
+  (case (:fiddle/type fiddle)
+    :entity (mlet [:let [[e] (:request-params route)]
                    source-symbol (try-either (.-dbname e))
                    :let [fe-name "entity"
-                         pull-pattern (get-in ctx [:request :pull-exp])]]
+                         pull-pattern (:pull-exp request)]]
               (cats/return
-                (if-let [a (get-in ctx [:request :a])]
-                  (case (get-in ctx [:schemas (str source-symbol) a :db/cardinality :db/ident])
+                (if-let [a (:a request)]
+                  (case (get-in schemas [(str source-symbol) a :db/cardinality :db/ident])
                     :db.cardinality/one
-                    [(pull-cell->fe result source-symbol fe-name pull-pattern)]
+                    [(pull-cell->fe @result source-symbol fe-name pull-pattern)]
 
                     :db.cardinality/many
-                    [(pull-many-cells->fe result source-symbol fe-name pull-pattern)])
-                  [(pull-cell->fe result source-symbol fe-name pull-pattern)])))
+                    [(pull-many-cells->fe @result source-symbol fe-name pull-pattern)])
+                  [(pull-cell->fe @result source-symbol fe-name pull-pattern)])))
 
-    :query (mlet [{:keys [qfind]} (try-either (parser/parse-query (get-in ctx [:request :query])))]
+    :query (mlet [{:keys [qfind]} (try-either (parser/parse-query (:query request)))]
              (cats/return
                (condp = (type qfind)
-                 datascript.parser.FindRel (let [results-by-column (util/transpose result)]
+                 datascript.parser.FindRel (let [results-by-column (util/transpose @result)]
                                              (->> (:elements qfind)
                                                   (map-indexed (fn [idx element]
                                                                  (auto-fe-many-cells element (get results-by-column idx))))
                                                   vec))
-                 datascript.parser.FindColl [(auto-fe-many-cells (:element qfind) result)]
-                 datascript.parser.FindTuple (mapv auto-fe-one-cell (:elements qfind) result)
-                 datascript.parser.FindScalar [(auto-fe-one-cell (:element qfind) result)])))
+                 datascript.parser.FindColl [(auto-fe-many-cells (:element qfind) @result)]
+                 datascript.parser.FindTuple (mapv auto-fe-one-cell (:elements qfind) @result)
+                 datascript.parser.FindScalar [(auto-fe-one-cell (:element qfind) @result)])))
 
     :blank (either/right [])
 
     (either/right [])))
+
+(defn fe-ctxs [ctx]
+  (->> (reactive/unsequence (:hypercrud.browser/ordered-fes ctx))
+       (map (fn [[fe fe-pos]] (context/find-element ctx fe fe-pos)))))

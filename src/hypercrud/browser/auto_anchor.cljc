@@ -16,7 +16,7 @@
 
   This appfn recurses in unexpected abstract way and impacts performance highly
   "
-  [parent-fiddle ordered-fes ctx]
+  [parent-fiddle ordered-fes schemas]
   (let [entity-links (->> ordered-fes
                           (filter :source-symbol)
                           (map-indexed (fn [fe-pos fe]
@@ -67,7 +67,7 @@
                      (->> ordered-fes
                           (filter :source-symbol)
                           (map-indexed (fn [fe-pos fe]
-                                         (let [schema (get-in ctx [:schemas (str (:source-symbol fe))])]
+                                         (let [schema (get-in schemas [(str (:source-symbol fe))])]
                                            (->> (:fields fe)
                                                 (filter (fn [{:keys [attribute]}]
                                                           (and (not= attribute :db/id)
@@ -142,10 +142,10 @@
        flatten
        doall))
 
-(defn auto-links [ordered-fes ctx]
-  (let [sys-links (system-links (:fiddle ctx) ordered-fes ctx)
-        links (->> (merge-links sys-links (get-in ctx [:fiddle :fiddle/links]))
+(defn auto-links [fiddle ordered-fes schemas & [keep-disabled-anchors?]]
+  (let [sys-links (system-links fiddle @ordered-fes schemas)
+        links (->> (merge-links sys-links (:fiddle/links fiddle))
                    (map auto-link))]
-    (if (:keep-disabled-anchors? ctx)
+    (if keep-disabled-anchors?
       links
       (remove :link/disabled? links))))

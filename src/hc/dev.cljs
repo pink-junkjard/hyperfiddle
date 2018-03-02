@@ -15,11 +15,24 @@
   (aset global "pprint_str" pprint-str)
   (aset global "hc_where" (fn [ctx]
                             (-> ctx
-                                ; :relation, :db
-                                (select-keys [:route :find-element :fe-pos :cell-data :attribute :value])
-                                (update :attribute :db/ident)
+                                (select-keys [:cell-data
+                                              :fe-pos
+                                              :hypercrud.browser/attribute
+                                              :hypercrud.browser/find-element
+                                              :route
+                                              :value])
+                                (update :hypercrud.browser/find-element deref)
                                 (update :cell-data deref)
                                 (update :value deref)
+                                #_{:hypercrud.browser/attribute identity
+                                   :fe-pos identity
+                                   :hypercrud.browser/find-element deref
+                                   :cell-data deref
+                                   :route identity
+                                   :value deref}
+                                #_(reduce (fn [acc [k f]]
+                                            (assoc acc k (f (get ctx k))))
+                                          {})
                                 (pprint-str 150))))
   (aset global "hc_route" (fn [ctx] (-> ctx :route pprint-str)))
   (aset global "hc_root_route" (fn []

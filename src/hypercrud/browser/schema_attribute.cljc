@@ -83,15 +83,16 @@
 (declare renderer)
 
 #?(:cljs
-   (defn renderer [entity colspec anchors ctx]
+   (defn renderer [ctx]
      (let [special-attrs-state (reagent/atom nil)
            valueType-and-cardinality-renderer (build-valueType-and-cardinality-renderer special-attrs-state)
-           ident-renderer (build-ident-renderer special-attrs-state)]
-       (fn [entity colspec anchors ctx]
-         (let [entity (merge-in-tx entity @special-attrs-state ctx)
-               ctx (-> ctx
+           ident-renderer (build-ident-renderer special-attrs-state)
+           reactive-merge #(merge-in-tx % @special-attrs-state ctx)]
+       (fn [ctx]
+         (let [ctx (-> ctx
+                       (update :hypercrud.browser/result (partial reactive/fmap reactive-merge))
                        (assoc :read-only read-only)
                        (assoc-in [:fields :db/cardinality :renderer] valueType-and-cardinality-renderer)
                        (assoc-in [:fields :db/valueType :renderer] valueType-and-cardinality-renderer)
                        (assoc-in [:fields :db/ident :renderer] ident-renderer))]
-           (hypercrud.ui.result/view entity colspec anchors ctx))))))
+           (hypercrud.ui.result/view ctx))))))

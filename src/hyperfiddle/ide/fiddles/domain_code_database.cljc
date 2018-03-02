@@ -53,18 +53,17 @@
                                             [(:navigate-cmp ctx) props (str $name " schema")])))
                                    (doall))]))))))
 
-(defn request [repositories ordered-fes links ctx]
-  (let [{[available-pages] true links false} (group-by #(= (:link/rel %) :available-pages) links)]
+(defn request [ctx]
+  (let [{[available-pages] true links false} (->> @(:hypercrud.browser/links ctx)
+                                                  (group-by #(= (:link/rel %) :available-pages)))]
     (concat
-      (browser-request/fiddle-dependent-requests repositories ordered-fes links ctx)
+      (browser-request/fiddle-dependent-requests (assoc ctx :hypercrud.browser/links (reactive/atom links)))
       ; todo support custom request fns at the field level, then this code is 95% deleted
-      (let [fe (first ordered-fes)]
-        (->> repositories
-             (mapcat (fn [repo]
-                       (let [ctx (-> ctx
-                                     (context/relation (reactive/atom [repo]))
-                                     (context/find-element fe 0)
-                                     (context/cell-data)
-                                     (context/attribute :dbhole/uri)
-                                     (context/value (reactive/atom (get repo :dbhole/uri))))]
-                         (browser-request/recurse-request available-pages (dbhole-ctx ctx))))))))))
+      (->> @(:hypercrud.browser/result ctx)
+           (mapcat (fn [repo]
+                     (let [ctx (-> ctx
+                                   (context/find-element (reactive/cursor (:hypercrud.browser/ordered-fes ctx) [0]) 0)
+                                   (context/cell-data (reactive/atom [repo]))
+                                   (context/attribute :dbhole/uri)
+                                   (context/value (reactive/atom (get repo :dbhole/uri))))]
+                       (browser-request/recurse-request available-pages (dbhole-ctx ctx)))))))))

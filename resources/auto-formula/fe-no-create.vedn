@@ -13,12 +13,12 @@
 {:d? true :a true}
 ==
 (fn [ctx]
-  (case (get-in ctx [:attribute :db/cardinality :db/ident])
+  (case @(hypercrud.util.reactive/cursor (:hypercrud.browser/fat-attribute ctx) [:db/cardinality :db/ident])
     :db.cardinality/one {:request-params @(:value ctx)}
 
     ; "find children of parent entity at attr"
     ; :entity would be better named :parent. See base ->EntityRequest
-    :db.cardinality/many {:request-params [@(:cell-data ctx) (get-in ctx [:attribute :db/ident])]}))
+    :db.cardinality/many {:request-params [@(:cell-data ctx) (:hypercrud.browser/attribute ctx)]}))
 
 
 ==

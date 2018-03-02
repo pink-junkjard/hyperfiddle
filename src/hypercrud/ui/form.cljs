@@ -1,7 +1,7 @@
 (ns hypercrud.ui.form
   (:require [hypercrud.browser.context :as context]
+            [hypercrud.browser.find-element :as find-element]
             [hypercrud.browser.link :as link]
-            [hypercrud.browser.result :as result]
             [hypercrud.ui.auto-control :refer [auto-control' control-props]]
             [hypercrud.ui.connection-color :as connection-color]
             [hypercrud.ui.control.link-controls :as link-controls]
@@ -33,48 +33,50 @@
 (def always-read-only (constantly true))
 
 (defn form-cell [control -field ctx & [class]]              ; safe to return nil or seq
-  (let [path [(:fe-pos ctx) (-> ctx :attribute :db/ident)]]
+  (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div {:class (classes class "hyperfiddle-form-cell" "block" "field"
-                           (-> ctx :attribute :db/ident str css-slugify))
+                           (-> ctx :hypercrud.browser/attribute str css-slugify))
            :style {:border-color (connection-color/connection-color (:uri ctx) ctx)}}
-     [:div ((:label ctx label) -field ctx)
+     ; todo unsafe execution of user code...
+     [:div ((:label ctx (partial vector label)) -field ctx)
       (link-controls/render-nav-cmps path false ctx link/options-processor)
       (link-controls/render-inline-links path false ctx link/options-processor)]
      [control -field (control-props ctx) ctx]]))
 
 (defn Cell [field ctx]
   (let [ctx (as-> (context/attribute ctx (:attribute field)) $
-                  (context/value $ (reactive/map (:cell-data->value field) (:cell-data ctx)))
+                  (context/value $ (reactive/fmap (:cell-data->value field) (:cell-data ctx)))
                   (if (or (nil? (:attribute field))
                           (= (:attribute field) :db/id))
                     (assoc $ :read-only always-read-only)
                     $))
         user-cell (case @(:hypercrud.ui/display-mode ctx) :xray form-cell (:cell ctx form-cell))]
     (assert @(:hypercrud.ui/display-mode ctx))
-    ^{:key (:id field)}
     [user-cell (auto-control' ctx) field ctx]))
 
-(defn Entity [ctx]
+(defn Entity [relation ctx]
   (let [path [(:fe-pos ctx)]]
     (concat
       (link-controls/render-nav-cmps path false ctx)
-      (let [ctx (context/cell-data ctx)]
+      (let [ctx (context/cell-data ctx relation)]
         (concat
           (link-controls/render-nav-cmps path true ctx)
           (conj
-            (->> (get-in ctx [:find-element :fields])
+            (->> @(reactive/cursor (:hypercrud.browser/find-element ctx) [:fields])
+                 ; just dereference the fields immediately
                  (mapv (fn [field]
-                         (Cell field ctx))))
-            (if (:splat? (:find-element ctx))
+                         ^{:key (:id field)}
+                         [Cell field ctx])))
+            (if @(reactive/cursor (:hypercrud.browser/find-element ctx) [:splat?])
               ^{:key :new-field}
               [new-field ctx]))
           (link-controls/render-inline-links path true ctx)))
       (link-controls/render-inline-links path false ctx))))
 
-(defn Relation [ctx]
+(defn Relation [relation ctx]
   (let [ctx (assoc ctx :layout (:layout ctx :block))]
     ; No wrapper div; it limits layout e.g. floating
     ; Next couple stack frames will all flatten out with no wrappers at any layer.
     ; But if no wrapper div; then this is not compatible with hiccup syntax until it gets wrapped.
-    (->> (result/map-relation Entity ctx)
-         (apply concat))))
+    (->> (find-element/fe-ctxs ctx)
+         (mapcat (partial Entity relation)))))

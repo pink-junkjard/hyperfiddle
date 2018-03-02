@@ -5,6 +5,7 @@
             [hypercrud.types.ThinEntity :refer [->ThinEntity]]
             [hypercrud.util.branch :as branch]
             [hypercrud.util.core :as util]
+            [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :as hc-string]
             [hypercrud.util.vedn :as vedn]
             [hyperfiddle.runtime :as runtime]
@@ -25,19 +26,20 @@
 (defn deterministic-ident
   ([ctx]
    (deterministic-ident
-     (:find-element ctx)
+     (:hypercrud.browser/find-element ctx)
      (:cell-data ctx)
-     (:attribute ctx)
+     (:hypercrud.browser/fat-attribute ctx)
      (:value ctx)))
   ([fe cell-data a v]
     ; Need comment explaining why.
     ; [fe e a v] quad is sufficient to answer "where are we".
     ; Why Db is omitted?
     ; Why value is only inspected in :many for unique hashing?
-   (-> (str (:name fe) "."
-            (or (:db/id (some-> cell-data deref)) (hash (some-> cell-data deref))) "."
-            (-> a :db/ident) "."
-            (case (get-in a [:db/cardinality :db/ident])
+   (-> (str (some-> fe (reactive/cursor [:name]) deref) "."
+            (or (some-> cell-data (reactive/cursor [:db/id]) deref)
+                (hash (some-> cell-data deref))) "."
+            (some-> a (reactive/cursor [:db/ident]) deref) "."
+            (case (some-> a (reactive/cursor [:db/cardinality :db/ident]) deref)
               :db.cardinality/one nil
               :db.cardinality/many (hash (into #{} (mapv :db/id @v))) ; todo scalar
               nil nil #_":db/id has a faked attribute with no cardinality, need more thought to make elegant"))

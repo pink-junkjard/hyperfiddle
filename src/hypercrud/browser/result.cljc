@@ -1,14 +1,35 @@
 (ns hypercrud.browser.result
-  (:require [hypercrud.browser.context :as context]
+  (:require [cats.core :as cats]
+            [cats.monad.either :as either]
+            [datascript.parser :as parser]
+            [hypercrud.util.non-fatal :refer [try-either]]
             [hypercrud.util.reactive :as reactive]))
 
 
-(defn map-relation [f ctx]
-  (map-indexed (fn [fe-pos fe]
-                 (f (context/find-element ctx fe fe-pos)))
-               (:ordered-fes ctx)))
+(defn with-entity-relations
+  "Process EntityRequest results into a relation or list of relations"
+  [ctx & {:keys [:entity :attr-one :attr-many]}]
+  (if-let [a (get-in ctx [:request :a])]
+    (let [[e a] (get-in ctx [:route :request-params])]
+      (->> (try-either (.-dbname e))
+           (cats/fmap
+             (fn [source-symbol]
+               (case (get-in ctx [:schemas (str source-symbol) a :db/cardinality :db/ident])
+                 :db.cardinality/one
+                 (attr-one (reactive/fmap vector (:hypercrud.browser/result ctx)))
 
-(defn map-relations [f ctx]
-  (->> (range @(reactive/map count (:relations ctx)))
-       (map (fn [idx]
-              (f (context/relation ctx (reactive/cursor (:relations ctx) [idx])))))))
+                 :db.cardinality/many
+                 (attr-many (reactive/fmap (reactive/partial mapv vector) (:hypercrud.browser/result ctx))))))))
+    (either/right (entity (reactive/fmap vector (:hypercrud.browser/result ctx))))))
+
+(defn with-query-relations
+  "Process QueryRequest results into a relation or list of relations"
+  [ctx & {:keys [:relation :relations]}]
+  (->> (try-either (parser/parse-query (get-in ctx [:request :query])))
+       (cats/fmap
+         (fn [{:keys [qfind]}]
+           (condp = (type qfind)
+             datascript.parser.FindRel (relations (reactive/fmap (reactive/partial mapv vec) (:hypercrud.browser/result ctx)))
+             datascript.parser.FindColl (relations (reactive/fmap (reactive/partial mapv vector) (:hypercrud.browser/result ctx)))
+             datascript.parser.FindTuple (relation (reactive/fmap vec (:hypercrud.browser/result ctx)))
+             datascript.parser.FindScalar (relation (reactive/fmap vector (:hypercrud.browser/result ctx))))))))

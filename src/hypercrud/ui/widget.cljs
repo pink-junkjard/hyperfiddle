@@ -6,6 +6,7 @@
             [hypercrud.ui.control.link-controls :as link-controls]
             [hypercrud.ui.input :as input]
             [hypercrud.ui.select :refer [select*]]
+            [hypercrud.util.reactive :as reactive]
 
     ;user land (todo these should be in a core hc.ui namespace; widget is arbitrary)
             [hypercrud.ui.attribute.checkbox]
@@ -16,27 +17,27 @@
 
 
 (defn keyword [maybe-field props ctx]
-  (let [path [(:fe-pos ctx) (-> ctx :attribute :db/ident)]]
+  (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div.value
      [:div.anchors (link-controls/render-nav-cmps path true ctx)]
-     (let [on-change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) (:attribute ctx) %))]
+     (let [on-change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))]
        [input/keyword-input* @(:value ctx) on-change! props])
      (link-controls/render-inline-links path true ctx)]))
 
 (defn string [maybe-field props ctx]
-  (let [path [(:fe-pos ctx) (-> ctx :attribute :db/ident)]]
+  (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div.value
      [:div.anchors (link-controls/render-nav-cmps path true ctx)]
-     (let [on-change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) (:attribute ctx) %))]
+     (let [on-change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))]
        [input/input* @(:value ctx) on-change! props])
      (link-controls/render-inline-links path true ctx)]))
 
 (defn long [maybe-field props ctx]
-  (let [path [(:fe-pos ctx) (-> ctx :attribute :db/ident)]]
+  (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div.value
      [:div.anchors (link-controls/render-nav-cmps path true ctx)]
      [input/validated-input
-      @(:value ctx) #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) (:attribute ctx) %))
+      @(:value ctx) #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))
       #(js/parseInt % 10) (fnil str "")
       #(or #_(= "" %) (integer? (js/parseInt % 10)))
       props]
@@ -45,24 +46,24 @@
 (def boolean tristate-boolean/tristate-boolean)
 
 (defn id* [props ctx]
-  (let [on-change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) (:attribute ctx) %))]
+  (let [on-change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))]
     (input/id-input @(:value ctx) on-change! props)))
 
 ; this can be used sometimes, on the entity page, but not the query page
 (defn ref [maybe-field props ctx]
-  (let [path [(:fe-pos ctx) (-> ctx :attribute :db/ident)]]
+  (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div.value
      [:div.editable-select
       [:div.anchors (link-controls/render-nav-cmps path true ctx link/options-processor)] ;todo can this be lifted out of editable-select?
-      (if-let [options-link (link/options-link path ctx)]
+      (if-let [options-link @(reactive/track link/options-link path ctx)]
         [:div.select                                        ; helps the weird link float left css thing
          (select* options-link props ctx)]
         (id* props ctx))]
      (link-controls/render-inline-links path true ctx link/options-processor)]))
 
 (defn ref-component [maybe-field props ctx]
-  (let [path [(:fe-pos ctx) (-> ctx :attribute :db/ident)]]
-    (assert (not (link/options-link path ctx)) "ref-components don't have options; todo handle gracefully")
+  (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
+    (assert (not @(reactive/track link/options-link path ctx)) "ref-components don't have options; todo handle gracefully")
     #_(assert (> (count (filter :link/render-inline? my-links)) 0))
     #_(ref maybe-field my-links props ctx)
     [:div.value
@@ -71,34 +72,25 @@
      (link-controls/render-inline-links path true ctx)]))
 
 (defn ref-many-table [maybe-field props ctx]
-  (let [path [(:fe-pos ctx) (-> ctx :attribute :db/ident)]]
-    (assert (not (link/options-link path ctx)) "ref-component-many don't have options; todo handle gracefully")
+  (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
+    (assert (not @(reactive/track link/options-link path ctx)) "ref-component-many don't have options; todo handle gracefully")
     [:div.value
      #_[:pre (pr-str maybe-field)]
      [:div.anchors (link-controls/render-nav-cmps path true ctx)]
      (link-controls/render-inline-links path true ctx)]))
 
 (defn ref-many-component-table [maybe-field props ctx]
-  (let [path [(:fe-pos ctx) (-> ctx :attribute :db/ident)]]
+  (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div.value
      [:div.anchors (link-controls/render-nav-cmps path true ctx)]
      (link-controls/render-inline-links path true ctx)]))
 
-(defn multi-select-ref [maybe-field props ctx]
-  (assert false "todo")
-  #_(let [add-item! #((:user-with! ctx) (tx/edit-entity (:db/id @(:cell-data ctx)) (:attribute ctx) [] [nil]))]
-      (multi-select* multi-select-markup add-item! maybe-field props ctx))) ;add-item! is: add nil to set
-
-;(defn multi-select-ref-component [maybe-field props ctx]
-;  (let [add-item! #((:user-swap! ctx) {:tx (tx/edit-entity (:db/id @(:cell-data ctx)) (:attribute ctx) [] [(temp-id!)])})]
-;    [multi-select* multi-select-markup add-item! maybe-field props ctx])) ;add new entity to set
-
 (defn text [maybe-field props ctx]
-  (let [path [(:fe-pos ctx) (-> ctx :attribute :db/ident)]]
+  (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div.value
      [:div.anchors (link-controls/render-nav-cmps path true ctx)]
      [:span.text
-      (case (-> (:attribute ctx) :db/cardinality :db/ident)
+      (case @(reactive/cursor (:hypercrud.browser/fat-attribute ctx) [:db/cardinality :db/ident])
         :db.cardinality/many (map pr-str @(:value ctx))
         (pr-str @(:value ctx)))]
      (link-controls/render-inline-links path true ctx)]))

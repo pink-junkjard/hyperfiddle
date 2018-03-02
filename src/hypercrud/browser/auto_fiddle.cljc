@@ -1,7 +1,8 @@
 (ns hypercrud.browser.auto-fiddle
   (:require [hypercrud.browser.schema-attribute :as schema-attribute]
             [hypercrud.compile.macros :refer [str-and-code]]
-            [hypercrud.util.non-fatal :refer [try-either]]))
+            [hypercrud.util.non-fatal :refer [try-either]]
+            [hypercrud.util.reactive :as reactive]))
 
 
 (defn system-fiddle? [fiddle-id]
@@ -105,12 +106,14 @@
                     :link/disabled? true}}})
 
 (let [renderer (str
-                 '(fn [attributes ordered-fes anchors ctx]
-                    (let [hide-datomic? (reagent.core/atom true)]
-                      (fn [attributes ordered-fes anchors ctx]
-                        (let [attributes (if @hide-datomic?
-                                           (filter #(> (:db/id %) 62) attributes)
-                                           attributes)]
+                 '(fn [ctx]
+                    (let [hide-datomic? (reagent.core/atom true)
+                          datomic-filter (fn [attributes]
+                                           (if @hide-datomic?
+                                             (filter #(> (:db/id %) 62) attributes)
+                                             attributes))]
+                      (fn [ctx]
+                        (let [attributes]
                           [:div.hyperfiddle-attributes
                            [:label {:for "hide-datomic"}
                             [:input {:type "checkbox"
@@ -118,7 +121,8 @@
                                      :checked @hide-datomic?
                                      :on-change #(swap! hide-datomic? not)}]
                             " Hide Datomic attributes?"]
-                           [hypercrud.ui.result/view attributes ordered-fes anchors ctx]])))))]
+                           (let [ctx (update ctx :hypercrud.browser/result (partial reactive/fmap datomic-filter))]
+                             [hypercrud.ui.result/view ctx])])))))]
   (defn schema-all-attributes [$db]
     {:db/id {:ident :schema/all-attributes
              :dbhole/name $db}

@@ -5,10 +5,10 @@
 
 
 (defn instant [maybe-field props ctx]
-  (let [path [(:fe-pos ctx) (-> ctx :attribute :db/ident)]]
+  (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div.value.hyperfiddle-ui-instant
      [:div.anchors (link-controls/render-nav-cmps path true ctx)]
-     (let [change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) (:attribute ctx) %))
+     (let [change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))
            widget (case (:layout ctx) :block instant/recom-date*
                                       :inline-block instant/recom-date*
                                       :table instant/recom-date*)]

@@ -5,8 +5,8 @@
 
 
 (defn ^:export markdown-editor [field props ctx]
-  (let [path [(:fe-pos ctx) (-> ctx :attribute :db/ident)]
-        change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) (:attribute ctx) %))]
+  (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]
+        change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))]
     ;^{:key ident}
     [:div.value
      [:div.anchors (link-controls/render-nav-cmps path true ctx)]

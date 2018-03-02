@@ -1,11 +1,11 @@
 (ns hypercrud.ui.select
   (:require [cats.core :as cats]
             [cats.monad.either :as either]
-            [datascript.parser :as parser]
             [hypercrud.browser.core :as browser]
             [hypercrud.client.tx :as tx]
             [hypercrud.util.non-fatal :refer [try-either]]
-            [hypercrud.util.reactive :as reactive]))
+            [hypercrud.util.reactive :as reactive]
+            [hypercrud.browser.result :as result]))
 
 
 (defn default-label-renderer [v ctx]
@@ -16,7 +16,7 @@
       cljs.core/Keyword (name v)
       (str v)))
 
-(defn build-label [ordered-fes relation ctx]
+(defn build-label [relation ctx]
   (->> (map (fn [cell-data fe]
               (->> (:fields fe)
                    (mapv (fn [field {:keys [attribute]}]
@@ -26,7 +26,7 @@
                                  renderer (get-in ctx [:fields attribute :label-renderer] default-label-renderer)]
                              (try-either (renderer value ctx)))))))
             relation
-            ordered-fes)
+            @(:hypercrud.browser/ordered-fes ctx))
        (apply concat)
        (cats/sequence)
        (cats/fmap (fn [labels]
@@ -43,17 +43,17 @@
                                      "" nil
                                      "true" true
                                      "false" false)]
-                             ((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) (:attribute ctx) v)))
+                             ((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) v)))
                :disabled (if (:read-only props) true false)}]
     [:select props
      [:option {:key true :value "true"} "True"]
      [:option {:key false :value "false"} "False"]
      [:option {:key :nil :value ""} "--"]]))
 
-(defn select-anchor-renderer' [props relations ordered-fes ctx]
+(defn select-anchor-renderer' [props relations ctx]
   ; hack in the selected value if we don't have options hydrated?
   ; Can't, since we only have the #DbId hydrated, and it gets complicated with relaton vs entity etc
-  (let [no-options? (empty? relations)
+  (let [no-options? (empty? @relations)
         props (-> props
                   (update :on-change (fn [on-change]
                                        (fn [e]
@@ -65,9 +65,9 @@
                   (update :disabled #(or % no-options?)))]
     [:select.select props
      (conj
-       (->> relations
+       (->> @relations
             (mapv (fn [relation]
-                    (let [label (-> (build-label ordered-fes relation ctx)
+                    (let [label (-> (build-label relation ctx)
                                     ; It's perfectly possible to properly report this error properly upstream.
                                     (either/branch (fn [e] (pr-str e)) identity))]
                       [(:db/id (first relation)) label])))
@@ -79,24 +79,19 @@
 (defn select-error-cmp [msg]
   [:span msg])
 
-(defn select-anchor-renderer [props result ordered-fes anchors ctx]
+(defn select-anchor-renderer [props ctx]
   (case (get-in ctx [:fiddle :fiddle/type])
     :entity [select-error-cmp "Only fiddle type `query` is supported for select options"]
     :blank [select-error-cmp "Only fiddle type `query` is supported for select options"]
-    :query (case (get-in ctx [:fiddle :fiddle/type])
-             ; parser can throw, but this is always embedded in a safe-user-renderer, so it surfaces safely
-             (let [{:keys [qfind]} (parser/parse-query (get-in ctx [:request :query]))]
-               (condp = (type qfind)
-                 datascript.parser.FindRel [select-anchor-renderer' props result ordered-fes ctx]
-                 datascript.parser.FindColl [select-anchor-renderer' props (map vector result) ordered-fes ctx]
-
-                 datascript.parser.FindTuple
-                 [select-error-cmp
-                  "Tuples are unsupported for select options. Please fix your options query to return a relation or collection"]
-
-                 datascript.parser.FindScalar
-                 [select-error-cmp
-                  "Scalars are unsupported for select options. Please fix your options query to return a relation or collection"])))
+    :query (-> (result/with-query-relations
+                 ctx
+                 :relation (constantly
+                             [select-error-cmp
+                              "Tuples and scalars are unsupported for select options. Please fix your options query to return a relation or collection"])
+                 :relations (fn [relations] [select-anchor-renderer' props relations ctx]))
+               (either/branch
+                 (fn [e] (throw e))                         ; this exception is always embedded in a safe-user-renderer, so it surfaces safely
+                 identity))
     ; default
     [select-error-cmp "Only fiddle type `query` is supported for select options"]))
 
@@ -109,7 +104,7 @@
                          :user-renderer renderer)]))
 
 (let [on-change (fn [ctx id]
-                  ((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) (:attribute ctx) id)))]
+                  ((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) id)))]
   (defn select* [options-anchor props ctx]
     (let [props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
                  :value (cond
