@@ -46,9 +46,9 @@ Performance (Hyperfiddle must respond as fast as a Clojure repl)
 - [x] API: data loop running in JVM
 - [x] API: automatically optimize hydrates for cache locality (using link graph)
 - [ ] API: Release CLI to serve your fiddles (no http/backend boilerplate for application developers)
-- [ ] UI: Userland custom router
+- [x] UI: Userland custom router
 - [ ] UI: Human readable URLs
-- [ ] UI: Stabalize Hyperblog URLs
+- [x] UI: Stabalize Hyperblog URLs
 
 ### 0.2.0
 
