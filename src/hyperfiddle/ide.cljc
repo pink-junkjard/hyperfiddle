@@ -206,12 +206,12 @@
           (routing/decode s)))))
 
 (defn route-encode [rt route]
-  ; use domain to canonicalize
   (let [domain @(runtime/state rt [:hyperfiddle.runtime/domain])
-        home-route (some-> domain :domain/home-route safe-read-edn-string unwrap) ;->hf
+        home-route (some-> domain :domain/home-route safe-read-edn-string unwrap)
         router (some-> domain :domain/router safe-read-edn-string unwrap)]
     (or
       (if (system-link? (:fiddle-id route)) (str "/_" (routing/encode route)))
+      (if (= (->hf home-route) route) "/")
       (if router (apply bidi/path-for router (->bidi route)))
       (routing/encode route))))
 
