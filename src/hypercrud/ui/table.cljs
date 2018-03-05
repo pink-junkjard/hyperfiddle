@@ -135,7 +135,7 @@
                            :asc #(compare %1 %2)
                            :desc #(compare %2 %1))
                          relations-val))
-              identity)))
+              relations-val)))
         (key-fn [relation] (hash (map #(or (:db/id %) %) relation)))]
   (defn TBody [sort-col relations ctx]
     (->> (reactive/fmap (reactive/partial sort-fn sort-col ctx) relations)
