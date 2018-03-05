@@ -14,7 +14,9 @@
                         stage-val
                         request))
   ([route branch-aux local-basis stage-val request]
-   (let [relevant-dbvals (branch/request->dbvals request)]
+    ; todo this invalidation layer needs an overhaul with reactions
+   request
+   #_(let [relevant-dbvals (branch/request->dbvals request)]
      {:route route
       :hyperfiddle.runtime/branch-aux branch-aux
       :local-basis (let [lookup (into {} local-basis)]

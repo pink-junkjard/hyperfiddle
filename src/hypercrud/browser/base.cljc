@@ -15,6 +15,7 @@
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hypercrud.types.ThinEntity :refer [#?(:cljs ThinEntity)]]
+            [hypercrud.util.core :as util]
             [hypercrud.util.non-fatal :refer [try-either]]
             [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :as hc-string])
@@ -145,7 +146,7 @@
     (mlet [schemas (schema-util/hydrate-schema ctx)         ; schema is allowed to be nil if the link only has anchors and no data dependencies
            :let [reactive-either-result (reactive/track nil-or-hydrate (:peer ctx) (:branch ctx) request)]
            _ @(reactive/fmap fmap-nil reactive-either-result) ; short the monad, only react on left v right, not the right's value
-           :let [reactive-result (reactive/fmap deref reactive-either-result)
+           :let [reactive-result (reactive/fmap util/unwrap reactive-either-result)
                  ctx (assoc ctx                             ; provide defaults before user-bindings run.
                        :hypercrud.browser/result reactive-result
                        :result reactive-result              ; deprecated

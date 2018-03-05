@@ -94,7 +94,7 @@
                               partitions
                               (-> partitions
                                   (assoc-in [branch :route] route)
-                                  (dissoc :error :ptm :tempid-lookups))))
+                                  #_(dissoc :error :ptm :tempid-lookups))))
 
          :hydrate!-start (let [[branch] args]
                            (update partitions branch
