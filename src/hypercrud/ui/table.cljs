@@ -61,7 +61,7 @@
                           (some-> sort-direction name))
           :style {:background-color (connection-color/connection-color (:uri ctx) ctx)}
           :on-click on-click}
-     ; todo unsafe execution of user code...
+     ; todo unsafe execution of user code: label
      ((:label ctx (partial vector label)) field ctx)
      [:div.anchors
       (link-controls/render-nav-cmps path false ctx link/options-processor)
@@ -95,6 +95,7 @@
     [:td {:class (classes "hyperfiddle-table-cell" "truncate")
           ; todo use cell renderer for shadow-link styles
           :style {:border-color (if-not shadow-link (connection-color/connection-color (:uri ctx) ctx))}}
+     ; todo unsafe execution of user code: control
      [control -field (control-props ctx) ctx]]))
 
 (defn Cell [field ctx]

@@ -37,10 +37,11 @@
     [:div {:class (classes class "hyperfiddle-form-cell" "block" "field"
                            (-> ctx :hypercrud.browser/attribute str css-slugify))
            :style {:border-color (connection-color/connection-color (:uri ctx) ctx)}}
-     ; todo unsafe execution of user code...
+     ; todo unsafe execution of user code: label
      [:div ((:label ctx (partial vector label)) -field ctx)
       (link-controls/render-nav-cmps path false ctx link/options-processor)
       (link-controls/render-inline-links path false ctx link/options-processor)]
+     ; todo unsafe execution of user code: control
      [control -field (control-props ctx) ctx]]))
 
 (defn Cell [field ctx]
@@ -50,6 +51,7 @@
                           (= (:attribute field) :db/id))
                     (assoc $ :read-only always-read-only)
                     $))
+        ; todo unsafe execution of user code: cell
         user-cell (case @(:hypercrud.ui/display-mode ctx) :xray form-cell (:cell ctx form-cell))]
     (assert @(:hypercrud.ui/display-mode ctx))
     [user-cell (auto-control' ctx) field ctx]))

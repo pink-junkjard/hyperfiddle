@@ -6,8 +6,8 @@
             [hypercrud.ui.result :as result]
             [hypercrud.util.reactive :as reactive]))
 
-(defn links->result [ctx]
-  (->> @(:hypercrud.browser/links ctx)
+(defn links->result [links]
+  (->> @links
        ;(sort-by (juxt :link/disabled :link/rel)
        ;         (fn [[a b] [a' b']] (if (= a a') (< b b') (< a a'))))
        (mapv (fn [link]
@@ -27,5 +27,5 @@
           [:div
            (browser-ui/ui-error e ctx)
            (result/view ctx)])
-        (fn [ctx]
-          (result/view (assoc ctx :hypercrud.browser/result (reactive/track links->result ctx)))))))
+        (fn [{:keys [:hypercrud.browser/links]}]
+          (result/view (assoc ctx :hypercrud.browser/result (reactive/track links->result links)))))))
