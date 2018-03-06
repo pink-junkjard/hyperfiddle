@@ -6,15 +6,16 @@
 
 (defn- impl-hash [o]
   ; Omit tx-tempid, that would be a big problem if it wasn't the same.
-  (hash [(.-uri o) (:db/id (.-coll o))]))
+  (hash [(.-uri o) (.-coll o)]))
 
 (defn- impl-print [o]
   (pr-str (.-coll o)))
 
 (declare equals-impl)
 
-; Entity is always a ref
-; EntityVal makes no sense. Even though this is backed by a PTM, it's semantically a ref into graph
+; Entity is always a ref. FALSE the collection is a VALUE, we don't have the reference api at our fingertips
+; EntityVal makes no sense. FALSE   "   "   "
+; Even though this is backed by a PTM, it's semantically a ref into graph. ONLY THE :db/id IS A REF
 ; Purpose of dbval in scope is for URL generation, which needs tempid map, which was hydrated
 ; which is a DBRef, because the staging area is
 ; passed alongside
@@ -23,9 +24,8 @@
 ; NO! DbVals have tempid maps.
 
 
-; Whole purpose of Entity is: a ref type, with a dbval, which has a tempid map, for rendering URLs.
+; Whole purpose of Entity is: a dbid ref type, with a dbval, which has a tempid map, for rendering URLs.
 ; What if Entity had its own old tempid? And that's it?
-; TODO access only through reactive cursors
 (deftype Entity [uri coll]
   #?@(:clj  [Object
              (equals [o other] (equals-impl o other))
@@ -91,12 +91,8 @@
      (print-method o w)))
 
 (defn- equals-impl [o other]
-  ; This is an identity check, because in future all value access should be reactive
-  ; which means ILookup will return cursors and the call site will deref.
-  ; Equality on entities is not defined because entities are refs. Databases are values.
-  ; Omit tx-tempid, that would be a big problem if it wasn't the same.
   (and (instance? Entity other)
-       (= (.-uri o) (.-uri other))                          ; identity
-       (= (:db/id (.-coll o)) (:db/id (.-coll other)))))
+       (= (.-uri o) (.-uri other))
+       (= (.-coll o) (.-coll other))))
 
-(defn entity? [o] (instance? Entity o))                  ; this is hard to implement portably outside this file
+(defn entity? [o] (instance? Entity o))                     ; this is hard to implement portably outside this file
