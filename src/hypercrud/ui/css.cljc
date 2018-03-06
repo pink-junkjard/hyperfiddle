@@ -2,11 +2,6 @@
   (:require [cuerdas.core :as str]))
 
 
-(defn classes
-  "&args will be flattened"
-  [& args]
-  (->> args flatten (remove nil?) (str/join " ")))
-
 (defn css-slugify [s]
   ; http://stackoverflow.com/a/449000/959627
   (-> (str s)                                               ; coerce keywords etc
@@ -14,3 +9,8 @@
       (str/replace "/" "-")
       (str/replace "?" "-")                                 ; legal but syntax highlighting issues
       (str/replace " " "-")))
+
+(defn classes
+  "&args will be flattened"
+  [& args]
+  (->> args flatten (remove nil?) (map css-slugify) (str/join " ")))

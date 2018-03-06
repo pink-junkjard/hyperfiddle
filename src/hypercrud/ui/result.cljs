@@ -9,7 +9,8 @@
             [hypercrud.ui.table :as table]
             [hypercrud.util.core :as util]
             [hypercrud.util.non-fatal :refer [try-either]]
-            [hypercrud.util.reactive :as reactive]))
+            [hypercrud.util.reactive :as reactive]
+            [hypercrud.ui.css :refer [classes]]))
 
 
 (defn result-renderer [result ordered-fes links ctx]
@@ -48,14 +49,14 @@
 
       nil)))
 
-(defn view [result ordered-fes links ctx]
+(defn view [result ordered-fes links ctx & [class]]
   ;(:anchors ctx)
   (let [{index-inline-links true index-links false} (->> (link/links-lookup' links [])
                                                          (remove :link/dependent?) ; link/dependent? true = relation link
                                                          (group-by #(or (:link/render-inline? %) false)))
         index-ctx (dissoc ctx :isComponent)
         ctx (assoc ctx :ordered-fes ordered-fes :links links) #_ "Line is duplicated here for markdown ctx"]
-    [:div.auto-result
+    [:div {:class (classes "auto-result" class)}
      [:div.hyperfiddle-fiddle-doc (markdown-hyperfiddle (-> ctx :fiddle :db/doc) ctx)]
      (link-controls/render-links index-links index-ctx)
      (result-renderer result ordered-fes links ctx)
