@@ -39,7 +39,7 @@
                :cljs (fn [result ordered-fes links ctx]
                        #_(react-fragment :_) #_(list)
                        [:div
-                        [hypercrud.ui.result/view result ordered-fes links ctx (-> ctx :fiddle :db/ident)]
+                        [hypercrud.ui.result/view result ordered-fes links ctx (-> ctx :fiddle :db/ident css-slugify)]
                         [fiddle-css-renderer (-> ctx :fiddle :fiddle/css)]]))})
 
 (letfn [(browse [link-index ident ctx & args]
