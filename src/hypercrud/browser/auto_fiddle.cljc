@@ -113,16 +113,15 @@
                                              (filter #(> (:db/id %) 62) attributes)
                                              attributes))]
                       (fn [ctx]
-                        (let [attributes]
-                          [:div.hyperfiddle-attributes
-                           [:label {:for "hide-datomic"}
-                            [:input {:type "checkbox"
-                                     :id "hide-datomic"
-                                     :checked @hide-datomic?
-                                     :on-change #(swap! hide-datomic? not)}]
-                            " Hide Datomic attributes?"]
-                           (let [ctx (update ctx :hypercrud.browser/result (partial reactive/fmap datomic-filter))]
-                             [hypercrud.ui.result/view ctx])])))))]
+                        [:div.hyperfiddle-attributes
+                         [:label {:for "hide-datomic"}
+                          [:input {:type "checkbox"
+                                   :id "hide-datomic"
+                                   :checked @hide-datomic?
+                                   :on-change #(swap! hide-datomic? not)}]
+                          " Hide Datomic attributes?"]
+                         (let [ctx (update ctx :hypercrud.browser/result (partial hypercrud.util.reactive/fmap datomic-filter))]
+                           [hypercrud.ui.result/view ctx])]))))]
   (defn schema-all-attributes [$db]
     {:db/id {:ident :schema/all-attributes
              :dbhole/name $db}
