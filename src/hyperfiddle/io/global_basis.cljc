@@ -4,7 +4,7 @@
             [clojure.set :as set]
             [cuerdas.core :as str]
             [hypercrud.http.core :refer [http-request!]]
-            [hypercrud.util.core :as util]
+            [hypercrud.util.core :as util :refer [filter-keys]]
             [hypercrud.util.performance :as perf]
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-all-or-nothing!]]
@@ -13,16 +13,11 @@
             [taoensso.timbre :as timbre]))
 
 
-(defn uris-for-domain-legacy [domain]
-  #_(:domain/databases domain)
-  (->> (:domain/code-databases domain)                      ; browser. Lift all databases to top-level on domain.
-       (map (fn [repo]
-              [(:dbhole/name repo)
-               (into #{(:dbhole/uri repo)}
-                     (->> (:repository/environment repo)
-                          (filter (fn [[k v]] (str/starts-with? k "$")))
-                          vals))]))
-       (into {})))
+(defn uris-for-domain [domain]
+  (->> (:domain/environment domain)
+       (filter-keys #(str/starts-with? % "$"))
+       vals
+       (cons (:domain/fiddle-repo domain))))
 
 (defn global-basis [rt hyperfiddle-hostname hostname]       ; this is foundation code, app-fn level (Just sees configured datomic URIs, no userland api fn)
   (perf/time-promise
@@ -30,26 +25,21 @@
                                   (foundation/domain-request "hyperfiddle" rt)]]
            domain-basis (api/sync rt #{foundation/domain-uri})
            [user-domain foundation-domain] (hydrate-all-or-nothing! rt domain-basis nil domain-requests)
-           :let [user-domain (foundation/process-domain-legacy user-domain)
-                 ide-domain (foundation/process-domain-legacy foundation-domain)
-                 user-domain-uris (uris-for-domain-legacy user-domain) ; Any reachable thing, not per route.
-                 ide-domain-uris (uris-for-domain-legacy ide-domain)
-                 uris (apply set/union (concat (vals user-domain-uris)
-                                               (vals ide-domain-uris)))]
+           :let [user-domain (foundation/process-domain user-domain)
+                 ide-domain (foundation/process-domain foundation-domain)
+                 user-domain-uris (uris-for-domain user-domain) ; Any reachable thing, not per route.
+                 ide-domain-uris (uris-for-domain ide-domain) ; still a map (the whole environment) (local basis reqs us to declare these up front)
+                 uris (set/union user-domain-uris ide-domain-uris)]
            sync (api/sync rt uris)]
-          (cats/return                                          ; Just return the sync and reconstruct which is what in local-basis
+          (cats/return                                      ; Just return the sync and reconstruct which is what in local-basis
             #_sync
             {:domain domain-basis
-             :ide (->> ide-domain-uris                          ; Not allowed structure here
-                       (util/map-values (fn [repo-uris]
-                                          (->> repo-uris
-                                               (map (juxt identity #(get sync %)))
-                                               (into {})))))
-             :user (->> user-domain-uris                        ; Not allowed structure here
-                        (util/map-values (fn [repo-uris]
-                                           (->> repo-uris
-                                                (map (juxt identity #(get sync %)))
-                                                (into {})))))}))
+             :ide (->> ide-domain-uris                      ; Not allowed structure here
+                       (map (juxt identity #(get sync %)))
+                       (into {}))
+             :user (->> user-domain-uris
+                        (map (juxt identity #(get sync %)))
+                        (into {}))}))
     (fn [err get-total-time]
       (timbre/debug "global-basis failure;" "total time:" (get-total-time)))
     (fn [success get-total-time]

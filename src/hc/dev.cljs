@@ -3,8 +3,13 @@
             [hypercrud.browser.routing :as routing]
             [hypercrud.react.react-fragment :as react-fragment]
             [hypercrud.util.core :refer [pprint-str]]
-            [hyperfiddle.runtime :as runtime]))
+            [hyperfiddle.runtime :as runtime]
+            [hyperfiddle.foundation.actions :as foundation-actions]))
 
+
+(def ^:dynamic root-ctx)                                    ; debug backdoor to dispatch!
+
+; cljs.core.get(ctx, kw('dispatch!'))(hyperfiddle.app.state.actions.toggle_staging())
 
 (defn set-globals [global]
   (aset global "pr" cljs.core.pr)
@@ -41,8 +46,28 @@
                                      routing/decode
                                      pprint-str)))
   (aset global "react_fragment" react-fragment/react-fragment)
-  (aset global "dispatch" (fn [ctx action & args]
-                            (runtime/dispatch! (:peer ctx) (apply action args)))))
 
+  (aset global "toggle_stage"
+        (fn []
+          (runtime/dispatch! (:peer root-ctx) (foundation-actions/toggle-staging))))
 
-; cljs.core.get(ctx, kw('dispatch!'))(hyperfiddle.app.state.actions.toggle_staging())
+  (aset global "transact"
+        (fn []
+          ; no idea what this means copy pasted from topnav
+          (runtime/dispatch! (:peer root-ctx)
+                             (foundation-actions/manual-transact! (:peer root-ctx)
+                                                                  (:hypercrud.browser/domain root-ctx)
+                                                                  {:hyperfiddle.ide/foo "page"}))))
+
+  (aset global "root_ctx" root-ctx)
+
+  (aset global "dispatch"
+        (fn [ctx action & args]
+          (runtime/dispatch! (:peer ctx) (apply action args))))
+  )
+
+; domain = cljs.core.get(main.main.root_ctx, kw('hypercrud.browser/domain'))
+; thing = cljs.core.hash_map(kw('hyperfiddle.ide/foo'), "page")
+; peer = cljs.core.get(main.main.root_ctx, kw('peer'))
+; dispatch = cljs.core.get(main.main.root_ctx, kw('dispatch!'))
+; dispatch(hyperfiddle.foundation.actions.manual_transact_BANG_(peer, domain, thing))

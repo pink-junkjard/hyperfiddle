@@ -6,7 +6,6 @@
             [hypercrud.browser.core :as browser]
             [hypercrud.browser.routing :as routing]
             [hypercrud.client.core :as hc]
-            [hypercrud.types.ThinEntity :refer [thinentity?]]
     #?(:cljs [hypercrud.react.react-fragment :refer [react-fragment]])
     #?(:cljs [hypercrud.ui.navigate-cmp :as navigate-cmp])
     #?(:cljs [hypercrud.ui.stale :as stale])
@@ -27,7 +26,7 @@
 
     ; pull in the entire ide app for reference from user-land
             [hyperfiddle.ide.actions]
-            [hyperfiddle.ide.fiddles.domain-code-database]
+            [hyperfiddle.ide.fiddles.domain]
             [hyperfiddle.ide.fiddles.fiddle-links.bindings]
     #?(:cljs [hyperfiddle.ide.fiddles.fiddle-links.renderer])
             [hyperfiddle.ide.fiddles.topnav]
@@ -48,8 +47,7 @@
     (hydrate-one! rt (into {} domain-basis) stage request)))
 
 (defn ide-route [route]
-  {:code-database "root"
-   :fiddle-id :hyperfiddle/topnav
+  {:fiddle-id :hyperfiddle/topnav
    :request-params [#entity["$" (:fiddle-id route)]]})
 
 (let [always-user (atom :user)
@@ -57,8 +55,7 @@
   ; ide is overloaded, these ide-context functions are exclusive to (top)
   ; despite being in the namespace (hyperfiddle.ide) which encompasses the union of target/user (bottom) and ide (top)
   (defn- *-ide-context [ctx ide-domain]
-    {:pre [ide-domain]
-     :post [(seq (-> % :hypercrud.browser/domain :domain/code-databases))]}
+    {:pre [ide-domain]}
     (-> ctx
         (assoc :hypercrud.browser/debug "ide"
                :hypercrud.browser/page-on-click constantly-nil ; disable alt-nav up top
@@ -67,20 +64,8 @@
                :user-profile @(runtime/state (:peer ctx) [:user-profile]))
         (update :hypercrud.browser/domain
                 (fn [domain]
-                  (let [target-repo (get-in ctx [::runtime/branch-aux ::target-repo])
-                        target-source-uri (->> (:domain/code-databases domain)
-                                               (filter #(= (:dbhole/name %) target-repo))
-                                               first
-                                               :dbhole/uri)]
-                    (-> (foundation/process-domain-legacy ide-domain)
-                        (update :domain/code-databases
-                                (fn [repos]
-                                  (->> repos
-                                       (map (fn [repo]
-                                              (if (= "root" (:dbhole/name repo))
-                                                (assoc-in repo [:repository/environment "$"] target-source-uri)
-                                                repo)))
-                                       set))))))))))
+                  (-> (foundation/process-domain ide-domain)
+                      (assoc-in [:domain/environment "$"] (:domain/fiddle-repo domain))))))))
 
 (defn leaf-ide-context [ctx ide-domain]
   ; ide leaf-context does not have enough information to set hyperfiddle.ide/target-route
@@ -90,8 +75,7 @@
 (defn page-ide-context [ctx ide-domain target-route]
   {:pre [target-route]}
   (-> (assoc ctx
-        ::runtime/branch-aux {::target-repo (:code-database target-route)
-                              ::foo "ide"}
+        ::runtime/branch-aux {::foo "ide"}
         ; hyperfiddle.ide/target-route is ONLY available to inlined IDE (no deferred popovers)
         :target-route target-route)                         ; todo rename :target-route to :hyperfiddle.ide/target-route
       (*-ide-context ide-domain)))
@@ -121,29 +105,94 @@
   (-> (assoc ctx ::runtime/branch-aux {::foo "user"})
       (*-target-context route)))
 
-(defn bidi-route->browser [{handler :handler {:keys [fid] :as route-params} :route-params}]
-  (let [request-params (dissoc route-params :fid)]
-    {:code-database "starter-blog-src2"
-     :fiddle-id (unwrap (safe-read-edn-string fid))
-     :request-params (mapv (fn [ix]
-                             (let [eid (-> (keyword (str "p" ix)) route-params safe-read-edn-string unwrap)]
-                               #entity["$" eid]))
-                           (range (count request-params)))}))
+(comment
+  ; An example user router (this is provided on the domain)
+  (def router                                               ; only needs to support fq routes
+    ["/"
+     {"drafts/" :hyperblog/drafts
+      [#entity["$" :a] "/"] :hyperblog/index
+      [#entity["$" :a]] :hyperblog/post}]
+    #_["/"
+     {"drafts/" :hyperblog/drafts
+      [#entity["$" :a] "/"] :hyperblog/index
+      #{[#entity["$" :a] "/" :b]
+        [#entity["$" :a]]} :hyperblog/post}])
 
-(defn hyperblog-bidi-route [{:keys [code-database fiddle-id request-params]}]
-  (let [airity (count request-params)
-        args (flatten (map-indexed (fn [ix p]
-                                     [(keyword (str "p" ix)) (if (thinentity? p) (:db/id p) p)])
-                                   request-params))]
-    (concat
-      [(keyword (str "b" airity)) :fid fiddle-id]
-      args)))
+  ;[#entity["$" :a] "/"] 17592186045454 ;IllegalArgumentException: No implementation of method: :unresolve-handler of protocol: #'bidi.bidi/Matched found for class: java.lang.Long
 
-(defn browser-route->bidi [{:keys [code-database fiddle-id request-params] :as route}]
-  ; check for magic constants in route for /-/
+  (some-> router (bidi/match-route "/:idddd/slug"))
+
+  (->> [
+        (some-> router (bidi/match-route "/1/"))
+        #_(some-> router (bidi/match-route "/a/"))
+        #_(some-> router (bidi/match-route "/:a/"))
+        (some-> router (bidi/match-route "/:highlights/"))
+        (some-> router (bidi/match-route "/1/slug"))
+        #_(some-> router (bidi/match-route "/:sup"))        ; routes but can't rebuild
+        (some-> router (bidi/match-route "/:sup/slug"))
+        (some-> router (bidi/match-route "/drafts/"))
+        (some-> router (bidi/match-route "/1/slug-for-a-post"))
+        (some-> router (bidi/match-route "/_/asdf"))
+        ]
+       (map ->bidi-consistency-wrapper)
+       (map ->hf)
+       (map ->bidi)
+       (map #(if % (apply bidi/path-for router %))))
+
+  (apply bidi/path-for router (-> router (bidi/match-route "/1/") ->bidi-consistency-wrapper ->hf ->bidi))
+  (some-> router (bidi/match-route "/1/slug") ->bidi-consistency-wrapper ->hf ->bidi ((partial apply bidi/path-for router)))
+  (some-> router (bidi/match-route "/:sup/a") ->bidi-consistency-wrapper ->hf ->bidi ((partial apply bidi/path-for router)))
+
+  (->> [(bidi/path-for router :hyperblog/index :a #entity["$" 1])
+        (bidi/path-for router :hyperblog/index :a #entity["$" :highlights])
+        (bidi/path-for router :hyperblog/post :a #entity["$" 1] :b "asdf")
+        (bidi/path-for router :hyperblog/post :a #entity["$" :sup])
+        (bidi/path-for router :hyperblog/drafts)
+        (bidi/path-for router :not-routed)
+
+        (apply bidi/path-for router [:hyperblog/index 0 #entity["$" 17592186046269]])
+        ;(apply bidi/path-for router [17592186045454 0 #entity["$" 17592186046269]])
+        ])
+
+  (->> [(some-> router (bidi/match-route "/:sup"))
+        (some-> router (bidi/match-route "/:personal/"))]
+       (map ->browser))
+
+  (apply bidi/path-for router [:hyperblog/post 0 #entity["$" :sup]])
+  (apply bidi/path-for router [:hyperblog/index 0 #entity["$" :personal]])
+  (apply bidi/path-for router [:hyperblog/drafts])
+  )
+
+(defn ->bidi-consistency-wrapper [{:keys [handler route-params] :as ?r}]
+  ; Bidi's interface is inconsistent and makes you understand two ways to identify a route
+  ; "bidi/match" return val syntax, is the bad one
+  ; Canonicalize on the "bidi/path-for" syntax
+  (if ?r (apply conj [handler] (mapcat identity route-params))))
+
+(defn ->hf [[handler & ?route-params :as ?r]]
+  (if ?r
+    (merge {:fiddle-id handler}
+           (let [ps (->> ?route-params                      ; bidi gives us alternating k/v
+                         (partition-all 2)
+                         (map vec)
+                         sort                               ; order by keys for hyperfiddle, router should use kw or int
+                         (mapv second)                      ; drop keys; hyperfiddle params are associative by index
+                         )]
+             (if (seq ps)
+               {:request-params ps})))))
+
+(defn bidi-match->path-for "adapt bidi's inconsistent interface" [[h & ps :as ?r]]
+  (if ?r {:handler h :route-params ps}))
+
+(defn abc []
+  (map (comp keyword str) "abcdefghijklmnopqrstuvwxyz")     ; this version works in clojurescript
+  #_(->> (range) (map (comp keyword str char #(+ % (int \a))))))
+
+(defn ->bidi [{:keys [fiddle-id request-params] :as ?r}]
   (assert (not (system-link? fiddle-id)) "bidi router doesn't handle sys links")
-  #_(if (= :schema/all-attributes (:ident fiddle-id)))
-  (hyperblog-bidi-route route))
+  ; this is going to generate param names of 0, 1, ... which maybe doesn't work for all routes
+  ; we would need to disallow bidi keywords for this to be valid. Can bidi use ints? I think not :(
+  (if ?r (apply conj [fiddle-id] (mapcat vector (abc) request-params))))
 
 (defn route-decode [rt s]
   {:pre [(string? s)]}
@@ -151,49 +200,32 @@
         home-route (some-> domain :domain/home-route safe-read-edn-string unwrap)
         router (some-> domain :domain/router safe-read-edn-string unwrap)]
     (case s
-      "/" home-route
-      (or (if (= "/_/" (subs s 0 3)) (routing/decode (subs s 2) #_ "include leading /"))
-          (some-> router (bidi/match-route s) bidi-route->browser)
+      "/" (if router (->hf home-route) home-route)          ; compat
+      (or (if (= "/_/" (subs s 0 3)) (routing/decode (subs s 2) #_"include leading /"))
+          (some-> router (bidi/match-route s) ->bidi-consistency-wrapper ->hf)
           (routing/decode s)))))
 
 (defn route-encode [rt route]
-  ; use domain to canonicalize
   (let [domain @(runtime/state rt [:hyperfiddle.runtime/domain])
         home-route (some-> domain :domain/home-route safe-read-edn-string unwrap)
         router (some-> domain :domain/router safe-read-edn-string unwrap)]
     (or
       (if (system-link? (:fiddle-id route)) (str "/_" (routing/encode route)))
-      (if router (apply bidi/path-for router (browser-route->bidi route)))
-      (str (routing/encode route)))))
-
-(comment
-  (some-> router (bidi/match-route "/17592186045454/") bidi-route->browser)
-  (some-> router (bidi/match-route "/17592186045462/17592186045872") bidi-route->browser)
-
-  (def x {:code-database "starter-blog-src2", :fiddle-id 17592186045454})
-  (apply bidi/path-for router (browser-route->bidi x))
-
-  (def x2 {:request-params [#entity["$" 17592186046269]],
-           :code-database "starter-blog-src2", :fiddle-id 17592186045454})
-  (apply bidi/path-for router (browser-route->bidi x2))
-
-  )
+      (if (= (->hf home-route) route) "/")
+      (if router (apply bidi/path-for router (->bidi route)))
+      (routing/encode route))))
 
 (defn local-basis [global-basis route ctx]
   ;local-basis-ide and local-basis-user
-  (let [{:keys [domain ide user]} global-basis
-        ; basis-maps: List[Map[uri, t]]
-        user-basis (get user (:code-database route))
-        ide-basis (get ide (get-in ctx [::runtime/branch-aux ::target-repo])) ; Why don't we call ide-route-decode? I guess we don't care?
-        basis-maps (case (get-in ctx [::runtime/branch-aux ::foo])
-                     "page" (concat (vals user) #_"for schema in topnav"
-                                    (vals ide))             ; dead code i think?
-                     "ide" (concat [ide-basis] (vals ide) (vals user))
-                     "user" [user-basis])
-        local-basis (->> basis-maps (apply concat) sort)]   ; Userland api-fn should filter irrelevant routes
-    (timbre/debug (pr-str local-basis))
+  (let [{:keys [ide user]} global-basis
+        basis (case (get-in ctx [::runtime/branch-aux ::foo])
+                "page" (concat ide user)
+                "ide" (concat ide user)
+                "user" user)
+        basis (sort basis)]                                 ; Userland api-fn should filter irrelevant routes
+    (timbre/debug (pr-str basis))
     #_(determine-local-basis (hydrate-route route ...))
-    local-basis))
+    basis))
 
 ; Reactive pattern obfuscates params
 (defn api [route ctx]

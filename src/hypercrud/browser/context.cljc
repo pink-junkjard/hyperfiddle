@@ -28,26 +28,16 @@
     ))
 
 (defn route [ctx route]
-  {:pre [(:code-database route)
-         (if-let [params (:request-params route)] (vector? params) true) ; validate normalized already
-         (:hypercrud.browser/domain ctx)
-         (seq (-> ctx :hypercrud.browser/domain :domain/code-databases))]
-   :post [(-> % :hypercrud.browser/repository)
-          (-> % :hypercrud.browser/repository :dbhole/uri)]}
-  (let [ctx (assoc ctx
-              :hypercrud.browser/repository (->> (get-in ctx [:hypercrud.browser/domain :domain/code-databases])
-                                                 (filter #(= (:dbhole/name %) (:code-database route)))
-                                                 first
-                                                 (into {})))]
-    ; explicitly set :hypercrud.browser/repository BEFORE running tempid->id
-    (assoc ctx :route (routing/tempid->id route ctx))))
+  {:pre [(if-let [params (:request-params route)] (vector? params) true) ; validate normalized already
+         (some-> ctx :hypercrud.browser/domain :domain/fiddle-repo)]}
+  (assoc ctx :route (routing/tempid->id route ctx)))
 
 (letfn [(user-with [rt ctx branch uri tx]
-          (runtime/dispatch! rt (foundation-actions/with rt (::runtime/target-repository ctx) branch uri tx)))]
+          (runtime/dispatch! rt (foundation-actions/with rt (:hypercrud.browser/domain ctx) branch uri tx)))]
   (defn find-element [ctx fe fe-pos]
     (let [dbname (str @(reactive/cursor fe [:source-symbol]))
           uri (when dbname
-                (get-in ctx [:hypercrud.browser/repository :repository/environment dbname]))
+                (get-in ctx [:hypercrud.browser/domain :domain/environment dbname]))
           schema (reactive/track get-in ctx [:schemas dbname])
           user-with! (reactive/partial user-with (:peer ctx) ctx (:branch ctx) uri)]
       (assoc ctx

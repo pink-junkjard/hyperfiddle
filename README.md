@@ -27,14 +27,13 @@ Managed I/O is not the point. The point is: *what does managed I/O make possible
 
 # Documentation and community
 
-Hyperfiddle is alpha software. The core is quite mature and stable and in prod at <http://hyperfiddle.net>. The public API is not frozen.
+Hyperfiddle is alpha software. The programming API is not frozen.
 
 <https://www.reddit.com/r/hyperfiddle/> will aggregate all our scattered blog posts, tutorials
 and documentation.
 
 * Slack: #Hyperfiddle @ [clojurians](http://clojurians.net/), come say hi, tell us why you care, and hang out! 
-* Twitter: <https://twitter.com/dustingetz>
-* [developer mailing list](https://groups.google.com/forum/#!forum/hyperfiddle)
+* Reach us on twitter: <https://twitter.com/dustingetz>
 
 # Roadmap
 
@@ -47,9 +46,9 @@ Performance (Hyperfiddle must respond as fast as a Clojure repl)
 - [x] API: data loop running in JVM
 - [x] API: automatically optimize hydrates for cache locality (using link graph)
 - [ ] API: Release CLI to serve your fiddles (no http/backend boilerplate for application developers)
-- [ ] UI: Userland custom router
+- [x] UI: Userland custom router
 - [ ] UI: Human readable URLs
-- [ ] UI: Stabalize Hyperblog URLs
+- [x] UI: Stabalize Hyperblog URLs
 
 ### 0.2.0
 
@@ -166,7 +165,7 @@ Batteries included tooling, your API "just works" out of the box. A picture is w
 
 > <img src="https://i.imgur.com/ZtYAlTE.png" width="720px">
 >
-> *Above EDN definition, rendered. Pink highlights indicate a link to another fiddle. [click here for the live fiddle](http://dustingetz.hyperfiddle.net/ezpjb2RlLWRhdGFiYXNlICJzYW5kYm94IiwgOmxpbmstaWQgMTc1OTIxODYwNDU0MTh9).*
+> *Above EDN definition, rendered. Pink highlights indicate a link to another fiddle. [click here for the live fiddle](http://dustingetz.hyperfiddle.net/ezpmaWRkbGUtaWQgMTc1OTIxODYwNDU0MTgsIDpjb2RlLWRhdGFiYXNlIG5pbH0,).*
 
 All Hyperfiddle APIs must resolve to a function, and this is no different. Fiddles are interpreted by a very special function called the *Hyperfiddle Browser*. The Browser interprets fiddles by navigating the link graph.
 

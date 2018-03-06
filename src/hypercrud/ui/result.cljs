@@ -2,7 +2,8 @@
   (:require [cats.monad.either :as either]
             [hypercrud.browser.result :as result]
             [hypercrud.ui.control.link-controls :as link-controls]
-            [hypercrud.ui.control.markdown-rendered :refer [markdown-rendered*]]
+            [hypercrud.ui.control.markdown-rendered :refer [markdown-hyperfiddle]]
+            [hypercrud.ui.css :refer [classes]]
             [hypercrud.ui.form :as form]
             [hypercrud.ui.table :as table]
             [hypercrud.util.core :as util]
@@ -27,10 +28,10 @@
         (fn [e] [:pre (util/pprint-str e)])
         identity)))
 
-(defn view [ctx]
+(defn view [ctx & [class]]
   (let [index-ctx (dissoc ctx :isComponent)]
-    [:div.auto-result
-     [:div.hyperfiddle-fiddle-doc (markdown-rendered* (-> ctx :fiddle :db/doc))]
+    [:div {:class (classes "auto-result" class)}
+     [:div.hyperfiddle-fiddle-doc (markdown-hyperfiddle (-> ctx :fiddle :db/doc) ctx)]
      (link-controls/render-nav-cmps [] false index-ctx)
      (result-renderer ctx)
      (link-controls/render-inline-links [] false index-ctx)]))

@@ -34,7 +34,7 @@
     ; There is always help-md rn but maybe there wont be and
     ; i like the if check on the styles
     [tooltip-thick (if help-md
-                     [:div.docstring (markdown help-md)])
+                     [:div.docstring [markdown help-md]])
      [:label {:class (if help-md "help-available")}
       ; common crash point; todo use field, attribute is explicitly NOT always defined
       (some-> (:hypercrud.browser/attribute ctx) name str)

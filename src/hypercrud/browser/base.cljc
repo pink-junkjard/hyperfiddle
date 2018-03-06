@@ -26,6 +26,7 @@
 
 (def meta-pull-exp-for-link
   [:db/id
+   :db/ident                                                ; for router
    :db/doc
    :fiddle/bindings
    :fiddle/entrypoint
@@ -37,6 +38,7 @@
                    :link/disabled?
                    ; hydrate the parts of the fiddle we need for validating the link
                    {:link/fiddle [:db/id
+                                  :db/ident                 ; for router
                                   :fiddle/query
                                   :fiddle/type]}
                    :link/formula
@@ -50,6 +52,7 @@
    :fiddle/pull
    :fiddle/query
    :fiddle/renderer
+   :fiddle/css
    :fiddle/request
    :fiddle/type])
 
@@ -57,12 +60,11 @@
   (try-either
     (let [fiddle-id (get-in ctx [:route :fiddle-id])
           _ (assert fiddle-id "missing fiddle-id")
-          dbval (hc/db (:peer ctx) (get-in ctx [:hypercrud.browser/repository :dbhole/uri]) (:branch ctx))]
+          dbval (hc/db (:peer ctx) (get-in ctx [:hypercrud.browser/domain :domain/fiddle-repo]) (:branch ctx))]
       (->EntityRequest fiddle-id nil dbval meta-pull-exp-for-link))))
 
 (defn hydrate-fiddle [ctx]
-  {:pre [(-> ctx :hypercrud.browser/repository)
-         (-> ctx :hypercrud.browser/repository :dbhole/uri)]}
+  {:pre [(-> ctx :hypercrud.browser/domain)]}
   (if (auto-fiddle/system-fiddle? (get-in ctx [:route :fiddle-id]))
     {:meta-fiddle-req' (either/right nil)
      :fiddle' (auto-fiddle/hydrate-system-fiddle (get-in ctx [:route :fiddle-id]))}
@@ -112,7 +114,7 @@
     :entity
     (let [[e #_"fat" a :as params] (get-in ctx [:route :request-params])
           uri (try (let [dbname (.-dbname e)]               ;todo report this exception better
-                     (get-in ctx [:hypercrud.browser/repository :repository/environment dbname]))
+                     (get-in ctx [:hypercrud.browser/domain :domain/environment dbname]))
                    (catch #?(:clj Exception :cljs js/Error) e nil))
           pull-exp (or (-> (hc-string/memoized-safe-read-edn-string (:fiddle/pull fiddle))
                            (either/branch (constantly nil) identity)

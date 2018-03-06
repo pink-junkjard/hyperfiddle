@@ -102,3 +102,10 @@
         (seq? xorxs) xorxs
         (nil? xorxs) nil
         :else-single-value [xorxs] #_"can be a map"))
+
+(defn group-by-pred [f? xs]
+  (let [{a true b false} (group-by f? xs)]
+    [a b]))
+
+(defn filter-keys [f? m]
+  (->> m (filter (fn [[k v]] (f? k))) (into {})))

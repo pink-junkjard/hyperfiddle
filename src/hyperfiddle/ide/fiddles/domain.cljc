@@ -1,4 +1,4 @@
-(ns hyperfiddle.ide.fiddles.domain-code-database
+(ns hyperfiddle.ide.fiddles.domain
   (:require [cats.core :as cats]
             [cats.monad.either :as either]
             [clojure.string :as string]
@@ -13,28 +13,32 @@
      (:import (java.net URI))))
 
 
-(defn dbhole-ctx [ctx]
-  (let [initial-repository (->> (get-in ctx [:hypercrud.browser/domain :domain/code-databases])
-                                (filter #(= (:dbhole/name %) "root"))
-                                first
-                                (into {}))
-        repository (update initial-repository :repository/environment merge {"$" @(:value ctx)})]
-    (-> ctx
-        (update-in [:hypercrud.browser/domain :domain/code-databases]
-                   (fn [repos]
-                     (map #(if (= (:dbhole/name %) "root") repository %) repos)))
-        (assoc :hypercrud.browser/repository repository))))
+(defn set-userland-$ [ctx]
+  ; The user's links & schema are in the userland database, not root
+  (let [domain @(:cell-data ctx)
+        $ (:domain/fiddle-repo domain)]
+    (-> ctx (update-in [:hypercrud.browser/domain :domain/environment] merge {"$" $}))))
 
 (defn bindings [ctx]
   #?(:clj  ctx
      :cljs (-> ctx
-               (assoc-in [:fields :dbhole/uri :renderer]
+               (assoc-in [:fields :domain/ident :renderer]
+                         (hypercrud.compile.macros/str-and-code'
+                           (fn [maybe-field props ctx]
+                             [:div.value
+                              [hypercrud.ui.auto-control/auto-control nil nil nil ctx]
+                              (let [href (str "http://" @(hypercrud.util.reactive/cursor (:cell-data ctx) [:domain/ident]) "." (:hyperfiddle-hostname ctx))]
+                                [:a {:href href} href])])
+                           "todo we dont need a str repr hyperfiddle/hyperfiddle#60"))
+
+               (assoc-in [:fields :domain/home-route :renderer]
                          (str-and-code
                            (fn [field props ctx]
-                             (let [ctx (dbhole-ctx ctx)
-                                   control (auto-control/auto-control' (update-in ctx [:fields :dbhole/uri] dissoc :renderer))]
+                             (let [ctx (set-userland-$ ctx)
+                                   control (auto-control/auto-control' (update-in ctx [:fields :domain/home-route] dissoc :renderer) #_ "guard inifinite recursion")]
                                [control field props ctx]))))
-               (assoc-in [:fields :repository/environment :renderer]
+
+               (assoc-in [:fields :domain/environment :renderer]
                          (str-and-code
                            (fn [field props ctx]
                              [:div
@@ -46,8 +50,7 @@
                                        (cats/extract))
                                    (filter (fn [[k v]] (and (string? k) (string/starts-with? k "$") (instance? URI v))))
                                    (map (fn [[$name _]]
-                                          (let [props {:route {:code-database @(reactive/cursor (:cell-data ctx) [:dbhole/name])
-                                                               :fiddle-id {:ident :schema/all-attributes
+                                          (let [props {:route {:fiddle-id {:ident :schema/all-attributes
                                                                            :dbhole/name (symbol $name)}}}]
                                             ^{:key $name}
                                             [(:navigate-cmp ctx) props (str $name " schema")])))
@@ -59,11 +62,10 @@
     (concat
       (browser-request/fiddle-dependent-requests (assoc ctx :hypercrud.browser/links (reactive/atom links)))
       ; todo support custom request fns at the field level, then this code is 95% deleted
-      (->> @(:hypercrud.browser/result ctx)
-           (mapcat (fn [repo]
-                     (let [ctx (-> ctx
-                                   (context/find-element (reactive/cursor (:hypercrud.browser/ordered-fes ctx) [0]) 0)
-                                   (context/cell-data (reactive/atom [repo]))
-                                   (context/attribute :dbhole/uri)
-                                   (context/value (reactive/atom (get repo :dbhole/uri))))]
-                       (browser-request/recurse-request available-pages (dbhole-ctx ctx)))))))))
+      (let [domain @(:hypercrud.browser/result ctx)
+            ctx (-> ctx
+                    (context/find-element (reactive/cursor (:hypercrud.browser/ordered-fes ctx) [0]) 0)
+                    (context/cell-data (reactive/atom [domain]))
+                    (context/attribute :dbhole/uri)
+                    (context/value (reactive/atom (get domain :domain/home-route))))]
+        (browser-request/recurse-request available-pages (set-userland-$ ctx))))))

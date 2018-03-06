@@ -18,7 +18,8 @@
 (defn update-entity-attr [{:keys [:db/id] :as entity}
                           {:keys [:db/ident :db/cardinality :db/valueType] :as attribute}
                           new-val]
-  {:pre [#_(not (js/isNaN new-val)) new-val #_"What if new-val is nil or ##NaN etc? #88"]}
+  {:pre [#_(not (js/isNaN new-val)) #_"What if new-val is nil or ##NaN etc? #88"
+         (not (nil? new-val))]}
   (let [{:keys [old new]} (let [old-val (get entity ident)]
                             (if (= (:db/ident valueType) :db.type/ref)
                               (case (:db/ident cardinality)

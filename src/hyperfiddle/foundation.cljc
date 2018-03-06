@@ -3,6 +3,7 @@
             [cuerdas.core :as cuerdas]
             [hypercrud.client.core :as hc]
             [hypercrud.compile.reader :as reader]
+            [hypercrud.util.core :refer [update-existing]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
     #?(:cljs [hypercrud.ui.control.code :refer [code*]])
     #?(:cljs [hypercrud.ui.css :refer [classes]])
@@ -32,8 +33,7 @@
             [:domain/ident hf-domain-name])]
     (->EntityRequest e nil
                      (hc/db peer domain-uri nil)
-                     [:db/id :domain/ident :domain/home-route :domain/router :domain/aliases
-                      {:domain/code-databases [:db/id :dbhole/name :dbhole/uri :repository/environment]}])))
+                     [:db/id :domain/ident :domain/home-route :domain/router :domain/fiddle-repo :domain/environment :domain/aliases])))
 
 (defn user-profile->ident [user-profile]
   (-> user-profile :email (cuerdas/replace #"\@.+$" "") (cuerdas/slug)))
@@ -48,26 +48,14 @@
    [:fieldset [:legend "(.-stack e)"]                       ; network error
     [:pre (.-stack e)]]])
 
-; Can be removed once domain/databases are flattened up.
-(defn process-domain-legacy [domain]
-  (-> (into {} domain)
-      (update :domain/code-databases
-              (fn [repos]
-                (->> repos
-                     (map (fn [repo]
-                            (-> (into {} repo)
-                                ; todo this can throw
-                                (update :repository/environment reader/read-string)))))))))
+(defn process-domain [domain]
+  (-> (into {} domain) (update-existing :domain/environment reader/read-string) #_"todo this can throw"))
 
 (defn context [ctx route]
   (let [domain @(runtime/state (:peer ctx) [::runtime/domain])
         _ (assert domain "Bootstrapping failed to fetch the domain")
-        domain (process-domain-legacy domain)]
-    (assoc ctx :hypercrud.browser/domain domain
-               ::runtime/target-repository (->> (:domain/code-databases domain)
-                                                (filter #(= (:dbhole/name %) (:code-database route)))
-                                                first
-                                                (into {})))))
+        domain (process-domain domain)]
+    (assoc ctx :hypercrud.browser/domain domain)))
 
 (defn local-basis [page-or-leaf global-basis route ctx f]
   (concat
