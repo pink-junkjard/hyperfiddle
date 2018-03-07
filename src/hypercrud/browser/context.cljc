@@ -21,11 +21,7 @@
     :hypercrud.browser/links
     :hypercrud.browser/ordered-fes
     :hypercrud.browser/result
-    :hypercrud.browser/schema
-
-    ; deprecated
-    :schema
-    ))
+    :hypercrud.browser/schema))
 
 (defn route [ctx route]
   {:pre [(if-let [params (:request-params route)] (vector? params) true) ; validate normalized already
@@ -45,10 +41,7 @@
         :hypercrud.browser/schema schema
         :fe-pos fe-pos
         :uri uri
-        :user-with! user-with!
-
-        ; deprecated
-        :schema @schema))))
+        :user-with! user-with!))))
 
 (let [f (fn [cell-data ctx]
           (if-let [owner-fn (:owner-fn ctx)]
