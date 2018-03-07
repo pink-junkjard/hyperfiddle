@@ -165,7 +165,7 @@ Batteries included tooling, your API "just works" out of the box. A picture is w
 
 > <img src="https://i.imgur.com/ZtYAlTE.png" width="720px">
 >
-> *Above EDN definition, rendered. Pink highlights indicate a link to another fiddle. [click here for the live fiddle](http://dustingetz.hyperfiddle.net/ezpmaWRkbGUtaWQgMTc1OTIxODYwNDU0MTgsIDpjb2RlLWRhdGFiYXNlIG5pbH0,).*
+> *Above EDN definition, rendered. Pink highlights indicate a link to another fiddle. live fiddle: <http://sandbox.hyperfiddle.net/gender>*
 
 All Hyperfiddle APIs must resolve to a function, and this is no different. Fiddles are interpreted by a very special function called the *Hyperfiddle Browser*. The Browser interprets fiddles by navigating the link graph.
 
