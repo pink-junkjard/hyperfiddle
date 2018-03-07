@@ -84,19 +84,16 @@
    :fiddle/renderer (str `schema-attribute/renderer)
    :fiddle/links #{{:db/id {:ident :schema/cardinality-options-link}
                     :link/fiddle (schema-cardinality-options $db)
-                    :link/dependent? true
                     :link/render-inline? true
                     :link/rel :options
                     :link/path "0 :db/cardinality"}
                    {:db/id {:ident :schema/unique-options-link}
                     :link/fiddle (schema-unique-options $db)
-                    :link/dependent? true
                     :link/render-inline? true
                     :link/rel :options
                     :link/path "0 :db/unique"}
                    {:db/id {:ident :schema/valueType-options-link}
                     :link/fiddle (schema-valueType-options $db)
-                    :link/dependent? true
                     :link/render-inline? true
                     :link/rel :options
                     :link/path "0 :db/valueType"}
