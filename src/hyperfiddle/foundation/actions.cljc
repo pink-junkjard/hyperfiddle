@@ -81,14 +81,16 @@
 (defn close-popover [branch popover-id]
   [:close-popover branch popover-id])
 
-(defn set-route [rt route branch dispatch! get-state]
+(defn set-route [rt route branch keep-popovers? dispatch! get-state]
   (assert (nil? branch) "Non-nil branches currently unsupported")
   ; currently branches only have relationships to parents, need to be able to find all children from a parent
   ; this would allow us to discard/close ourself and our children
   ; for now we are always nil branch, so blast everything
   (let [actions (->> (::runtime/partitions (get-state))
                      (mapcat (fn [[ident partition]]
-                               (conj (mapv (partial close-popover ident) (:popovers partition))
+                               (conj (if (and (= branch ident) keep-popovers?)
+                                       (vector)
+                                       (mapv (partial close-popover ident) (:popovers partition)))
                                      (if (= branch ident)
                                        [:partition-route ident route] ; dont blast nil stage
                                        (discard-partition ident))))))]
@@ -117,17 +119,19 @@
                    (dispatch! [:transact!-failure error])
                    (throw error)))
         (p/then (fn [{:keys [tempid->id]}]
-                  (let [route (or route (get-in (get-state) [::runtime/partitions nil :route]))
-                        invert-id (fn [temp-id uri]
-                                    (get-in tempid->id [uri temp-id] temp-id))
-                        route' (routing/invert-ids route invert-id domain)]
-                    (dispatch! [:transact!-success])
-                    ; todo should just call foundation/bootstrap-data
-                    (mlet [_ (refresh-global-basis rt dispatch! get-state)
-                           _ (refresh-domain rt dispatch! get-state)]
-                      ; todo we want to overwrite our current browser location with this new url
-                      ; currently this new route breaks the back button
-                      (set-route rt route' nil dispatch! get-state))))))))
+                  (dispatch! [:transact!-success])
+                  ; todo should just call foundation/bootstrap-data
+                  (mlet [_ (refresh-global-basis rt dispatch! get-state)
+                         _ (refresh-domain rt dispatch! get-state)
+                         :let [invert-id (fn [temp-id uri]
+                                           (get-in tempid->id [uri temp-id] temp-id))
+                               current-route (get-in (get-state) [::runtime/partitions nil :route])
+                               route' (-> (or route current-route)
+                                          (routing/invert-ids invert-id domain))
+                               keep-popovers? (or (nil? route) (= route current-route))]]
+                    ; todo we want to overwrite our current browser location with this new url
+                    ; currently this new route breaks the back button
+                    (set-route rt route' nil keep-popovers? dispatch! get-state)))))))
 
 (defn should-transact!? [branch get-state]
   (and (nil? branch) (::runtime/auto-transact (get-state))))
