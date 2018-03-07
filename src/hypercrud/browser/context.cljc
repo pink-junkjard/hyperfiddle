@@ -24,7 +24,7 @@
     :hypercrud.browser/schema
 
     ; deprecated
-    :attribute :schema
+    :schema
     ))
 
 (defn route [ctx route]
@@ -65,10 +65,7 @@
                         (reactive/fmap (reactive/partial default {:db/ident attr-ident})))]
       (assoc ctx
         :hypercrud.browser/attribute attr-ident
-        :hypercrud.browser/fat-attribute fat-attr
-
-        ; deprecated
-        :attribute @fat-attr))))
+        :hypercrud.browser/fat-attribute fat-attr))))
 
 (defn value [ctx value]
   {:pre [(reactive/reactive? value)]}

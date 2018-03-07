@@ -13,12 +13,12 @@
       last))
 
 (defn attribute-schema-human [attr]
-  (-> attr ((juxt :db/ident
-                  #(some-> % :attribute/renderer fqn->name)
-                  #(some-> % :db/valueType :db/ident name)
-                  #(some-> % :db/cardinality :db/ident name)
-                  #(some-> % :db/isComponent (if :component) name)
-                  #(some-> % :db/unique :db/ident name)))))
+  (-> @attr ((juxt :db/ident
+                   #(some-> % :attribute/renderer fqn->name)
+                   #(some-> % :db/valueType :db/ident name)
+                   #(some-> % :db/cardinality :db/ident name)
+                   #(some-> % :db/isComponent (if :component) name)
+                   #(some-> % :db/unique :db/ident name)))))
 
 ;(apply str (interpose " " (attribute-schema-human (:attribute ctx))))
 ; (eval/validate-user-code-str (-> ctx :attribute :db/doc))
@@ -28,7 +28,7 @@
   (let [dbdoc (let [dbdoc @(reactive/cursor (:hypercrud.browser/fat-attribute ctx) [:db/doc])]
                 (when (and (string? dbdoc) (not (empty? dbdoc)))
                   dbdoc))
-        typedoc (apply str (interpose " " (attribute-schema-human (:attribute ctx))))
+        typedoc (apply str (interpose " " @(reactive/track attribute-schema-human (:hypercrud.browser/fat-attribute ctx))))
         help-md (str (if dbdoc (str dbdoc "\n\n"))          ; markdown needs double line-break
                      "`" typedoc "`")]
     ; There is always help-md rn but maybe there wont be and
