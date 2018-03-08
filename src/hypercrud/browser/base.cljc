@@ -152,13 +152,17 @@
            :let [reactive-schemas (reactive/fmap util/unwrap reactive-either-schemas)
                  reactive-result (reactive/fmap util/unwrap reactive-either-result)
                  ctx (assoc ctx                             ; provide defaults before user-bindings run.
+                       :hypercrud.browser/fiddle (reactive/track identity fiddle) ; for :db/doc
+                       :hypercrud.browser/request (reactive/track identity request)
                        :hypercrud.browser/result reactive-result
                        :hypercrud.browser/schemas reactive-schemas ; For tx/entity->statements in userland.
-                       :result reactive-result              ; deprecated
+                       :read-only (or (:read-only ctx) never-read-only)
+
+                       ;deprecated
+                       :result reactive-result
                        :request request
-                       :schemas @reactive-schemas           ; deprecated
-                       :fiddle fiddle                       ; for :db/doc
-                       :read-only (or (:read-only ctx) never-read-only))]
+                       :schemas @reactive-schemas
+                       :fiddle fiddle)]
            ctx (user-bindings/user-bindings' fiddle ctx)
            :let [reactive-either-fes (reactive/track find-element/auto-find-elements reactive-result fiddle request (:route ctx) reactive-schemas)]
            _ @(reactive/fmap fmap-nil reactive-either-fes)  ; short the monad, only react on left v right, not the right's value
