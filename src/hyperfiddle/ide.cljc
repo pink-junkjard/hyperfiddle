@@ -80,7 +80,14 @@
         :target-route target-route)                         ; todo rename :target-route to :hyperfiddle.ide/target-route
       (*-ide-context ide-domain)))
 
-(def activate-ide? (complement foundation/alias?))
+(defn activate-ide? [x]
+  ; To userland this "www" constant would require more complicated rules
+  ; for mapping a hostname to a domain-ident
+  (let [should-be-active (and (not (foundation/alias? x))
+                              (not (= "www" x)))
+        ; WWW needs a way to activate this. For now we can mirror the domain on www2
+        explicitly-active false]
+    (or explicitly-active should-be-active)))
 
 (defn- *-target-context [ctx route]
   (assoc ctx
