@@ -59,10 +59,10 @@
 (defn Entity [relation ctx]
   (let [path [(:fe-pos ctx)]]
     (concat
-      (link-controls/render-nav-cmps path false ctx)
+      (link-controls/render-nav-cmps path false ctx :class "hyperfiddle-link-entity-independent")
       (let [ctx (context/cell-data ctx relation)]
         (concat
-          (link-controls/render-nav-cmps path true ctx)
+          (link-controls/render-nav-cmps path true ctx :class "hyperfiddle-link-entity-dependent")
           (conj
             (->> @(reactive/cursor (:hypercrud.browser/find-element ctx) [:fields])
                  ; just dereference the fields immediately

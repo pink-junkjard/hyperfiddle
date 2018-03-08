@@ -32,6 +32,6 @@
   (let [index-ctx (dissoc ctx :isComponent)]
     [:div {:class (classes "auto-result" class)}
      [:div.hyperfiddle-fiddle-doc (markdown-hyperfiddle (-> ctx :fiddle :db/doc) ctx)]
-     (link-controls/render-nav-cmps [] false index-ctx)
+     (link-controls/render-nav-cmps [] false index-ctx :class "hyperfiddle-link-index")
      (result-renderer ctx)
      (link-controls/render-inline-links [] false index-ctx)]))
