@@ -14,7 +14,7 @@
       (->> (try-either (.-dbname e))
            (cats/fmap
              (fn [source-symbol]
-               (case (get-in ctx [:schemas (str source-symbol) a :db/cardinality :db/ident])
+               (case @(reactive/cursor (:hypercrud.browser/schemas ctx) [(str source-symbol) a :db/cardinality :db/ident])
                  :db.cardinality/one
                  (attr-one (reactive/fmap vector (:hypercrud.browser/result ctx)))
 

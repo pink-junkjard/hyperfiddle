@@ -127,7 +127,7 @@
                          pull-pattern (:pull-exp request)]]
               (cats/return
                 (if-let [a (:a request)]
-                  (case (get-in schemas [(str source-symbol) a :db/cardinality :db/ident])
+                  (case @(reactive/cursor schemas [(str source-symbol) a :db/cardinality :db/ident])
                     :db.cardinality/one
                     [(pull-cell->fe @result source-symbol fe-name pull-pattern)]
 

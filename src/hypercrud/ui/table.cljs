@@ -13,7 +13,7 @@
 
 (defn attr-sortable? [fe attribute ctx]
   (if-let [source-symbol (:source-symbol fe)]
-    (let [{:keys [:db/cardinality :db/valueType]} (get-in ctx [:schemas (str source-symbol) attribute])]
+    (let [{:keys [:db/cardinality :db/valueType]} @(reactive/cursor (:hypercrud.browser/schemas ctx) [(str source-symbol) attribute])]
       (and
         (= (:db/ident cardinality) :db.cardinality/one)
         ; ref requires more work (inspect label-prop)
