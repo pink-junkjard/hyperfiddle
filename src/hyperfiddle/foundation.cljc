@@ -25,6 +25,8 @@
    (string/replace hostname (str "." hyperfiddle-hostname) "")))
 
 (defn alias? [hf-domain-name]
+  ; 'dustingetzcom.hyperfiddle.net' 'www.hyperfiddle.net'
+  ; 'dustingetzcom', 'www', 'hyperfiddle'
   (string/includes? hf-domain-name "."))
 
 (defn domain-request [hf-domain-name peer]
