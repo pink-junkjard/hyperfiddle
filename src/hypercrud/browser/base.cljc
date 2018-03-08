@@ -139,7 +139,7 @@
 
 (let [never-read-only (constantly false)
       nil-or-hydrate (fn [peer branch request]
-                       (if request
+                       (if-let [request @request]
                          @(hc/hydrate peer branch request)
                          (either/right nil)))]
   (defn process-results [fiddle request ctx]
@@ -147,14 +147,13 @@
            reactive-result @(reactive/apply-inner-r (reactive/track nil-or-hydrate (:peer ctx) (:branch ctx) request))
            :let [ctx (assoc ctx                             ; provide defaults before user-bindings run.
                        :hypercrud.browser/fiddle (reactive/track identity fiddle) ; for :db/doc
-                       :hypercrud.browser/request (reactive/track identity request)
+                       :hypercrud.browser/request request
                        :hypercrud.browser/result reactive-result
                        :hypercrud.browser/schemas reactive-schemas ; For tx/entity->statements in userland.
                        :read-only (or (:read-only ctx) never-read-only)
 
                        ;deprecated
                        :result reactive-result
-                       :request request
                        :schemas @reactive-schemas
                        :fiddle fiddle)]
            ctx (user-bindings/user-bindings' fiddle ctx)
@@ -168,7 +167,7 @@
   (let [ctx (context/route ctx route)
         {:keys [fiddle']} (hydrate-fiddle ctx)]
     (mlet [fiddle fiddle'
-           fiddle-request (request-for-fiddle fiddle ctx)]
+           fiddle-request @(reactive/apply-inner-r (reactive/track request-for-fiddle fiddle ctx))]
       (process-results fiddle fiddle-request ctx))))
 
 (defn from-link [link ctx with-route]

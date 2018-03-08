@@ -9,7 +9,7 @@
 (defn with-entity-relations
   "Process EntityRequest results into a relation or list of relations"
   [ctx & {:keys [:entity :attr-one :attr-many]}]
-  (if-let [a (get-in ctx [:request :a])]
+  (if-not @(reactive/fmap nil? (reactive/cursor (:hypercrud.browser/request ctx) [:a]))
     (let [[e a] (get-in ctx [:route :request-params])]
       (->> (try-either (.-dbname e))
            (cats/fmap
@@ -25,7 +25,7 @@
 (defn with-query-relations
   "Process QueryRequest results into a relation or list of relations"
   [ctx & {:keys [:relation :relations]}]
-  (->> (try-either (parser/parse-query (get-in ctx [:request :query])))
+  (->> (try-either (parser/parse-query @(reactive/cursor (:hypercrud.browser/request ctx) [:query])))
        (cats/fmap
          (fn [{:keys [qfind]}]
            (condp = (type qfind)

@@ -129,10 +129,10 @@
               [meta-fiddle-req])
             (unwrap
               (mlet [fiddle fiddle'
-                     fiddle-request (base/request-for-fiddle fiddle ctx)]
+                     fiddle-request @(reactive/apply-inner-r (reactive/track base/request-for-fiddle fiddle ctx))]
                 (cats/return
                   (concat
-                    (if fiddle-request [fiddle-request])
+                    (some-> @fiddle-request vector)
                     (schema-util/schema-requests-for-link ctx)
                     (-> (base/process-results fiddle fiddle-request ctx)
                         (cats/bind process-data)

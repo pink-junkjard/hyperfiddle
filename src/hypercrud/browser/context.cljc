@@ -9,7 +9,7 @@
   ; why not code-database-uri and all the custom ui/render fns?
   (dissoc ctx
     :keep-disabled-anchors? :route
-    :schemas :request :fiddle
+    :schemas :fiddle                                        ; deprecated
     :fe-pos :uri :user-with!
     :value
     :layout :field
@@ -17,9 +17,11 @@
 
     :hypercrud.browser/attribute
     :hypercrud.browser/fat-attribute
+    :hypercrud.browser/fiddle
     :hypercrud.browser/find-element
     :hypercrud.browser/links
     :hypercrud.browser/ordered-fes
+    :hypercrud.browser/request
     :hypercrud.browser/result
     :hypercrud.browser/schema
     :hypercrud.browser/schemas))
