@@ -15,7 +15,6 @@
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hypercrud.types.ThinEntity :refer [#?(:cljs ThinEntity)]]
-            [hypercrud.util.core :as util]
             [hypercrud.util.non-fatal :refer [try-either]]
             [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :as hc-string])
@@ -142,16 +141,11 @@
       nil-or-hydrate (fn [peer branch request]
                        (if request
                          @(hc/hydrate peer branch request)
-                         (either/right nil)))
-      fmap-nil #(cats/fmap (constantly nil) %)]
+                         (either/right nil)))]
   (defn process-results [fiddle request ctx]
-    (mlet [:let [reactive-either-schemas (schema-util/hydrate-schema ctx)] ; schema is allowed to be nil if the link only has anchors and no data dependencies
-           _ @(reactive/fmap fmap-nil reactive-either-schemas)
-           :let [reactive-either-result (reactive/track nil-or-hydrate (:peer ctx) (:branch ctx) request)]
-           _ @(reactive/fmap fmap-nil reactive-either-result) ; short the monad, only react on left v right, not the right's value
-           :let [reactive-schemas (reactive/fmap util/unwrap reactive-either-schemas)
-                 reactive-result (reactive/fmap util/unwrap reactive-either-result)
-                 ctx (assoc ctx                             ; provide defaults before user-bindings run.
+    (mlet [reactive-schemas @(reactive/apply-inner-r (schema-util/hydrate-schema ctx))
+           reactive-result @(reactive/apply-inner-r (reactive/track nil-or-hydrate (:peer ctx) (:branch ctx) request))
+           :let [ctx (assoc ctx                             ; provide defaults before user-bindings run.
                        :hypercrud.browser/fiddle (reactive/track identity fiddle) ; for :db/doc
                        :hypercrud.browser/request (reactive/track identity request)
                        :hypercrud.browser/result reactive-result
@@ -164,9 +158,7 @@
                        :schemas @reactive-schemas
                        :fiddle fiddle)]
            ctx (user-bindings/user-bindings' fiddle ctx)
-           :let [reactive-either-fes (reactive/track find-element/auto-find-elements reactive-result fiddle request (:route ctx) reactive-schemas)]
-           _ @(reactive/fmap fmap-nil reactive-either-fes)  ; short the monad, only react on left v right, not the right's value
-           :let [reactive-fes (reactive/fmap deref reactive-either-fes)]]
+           reactive-fes @(reactive/apply-inner-r (reactive/track find-element/auto-find-elements reactive-result fiddle request (:route ctx) reactive-schemas))]
       (cats/return
         (assoc ctx
           :hypercrud.browser/ordered-fes reactive-fes
