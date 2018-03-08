@@ -145,11 +145,13 @@
   (defn process-results [fiddle request ctx]
     (mlet [reactive-schemas @(reactive/apply-inner-r (schema-util/hydrate-schema ctx))
            reactive-result @(reactive/apply-inner-r (reactive/track nil-or-hydrate (:peer ctx) (:branch ctx) request))
-           :let [ctx (assoc ctx                             ; provide defaults before user-bindings run.
+           :let [ctx (assoc ctx
                        :hypercrud.browser/fiddle (reactive/track identity fiddle) ; for :db/doc
                        :hypercrud.browser/request request
                        :hypercrud.browser/result reactive-result
                        :hypercrud.browser/schemas reactive-schemas ; For tx/entity->statements in userland.
+
+                       ; provide defaults before user-bindings run.
                        :read-only (or (:read-only ctx) never-read-only)
 
                        ;deprecated
