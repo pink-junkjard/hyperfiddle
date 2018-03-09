@@ -8,7 +8,7 @@
 
 (defn connection-color [uri ctx & [l]]
   (condp = uri
-    nil "#000"
+    nil "#ccc"
     (get-in ctx [:hypercrud.browser/domain :domain/fiddle-repo]) "#777"
     (-> {:h (* 360 (mod (+ seed (* (hash uri) golden-ratio)) 1))
          :s 55 #_"Too bright hurts the eyes"

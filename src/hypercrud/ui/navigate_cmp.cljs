@@ -24,7 +24,9 @@
      :position :below-center
      :anchor (let [btn-props (-> hypercrud-props
                                  (dissoc-non-native-props)
-                                 (assoc :on-click open!))]
+                                 (assoc :on-click open!)
+                                 ; use twbs btn coloring but not "btn" itself
+                                 (update :class #(css/classes % "btn-default")))]
                [:button btn-props [:span (str label "▾")]])
      :popover [re-com/popover-content-wrapper
                :no-clip? true

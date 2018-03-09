@@ -8,7 +8,8 @@
             [hypercrud.ui.css :refer [css-slugify classes]]
             [hypercrud.ui.input :as input]
             [hypercrud.ui.label :refer [label]]
-            [hypercrud.util.reactive :as reactive]))
+            [hypercrud.util.reactive :as reactive]
+            [hypercrud.react.react-fragment :refer [react-fragment]]))
 
 
 (defn new-field-state-container [ctx]
@@ -32,17 +33,22 @@
 
 (def always-read-only (constantly true))
 
+(defn ui-block-border-wrap [ctx class & children]
+  [:div {:class (classes class "hyperfiddle-form-cell" #_ "block"
+                         (-> ctx :hypercrud.browser/attribute str css-slugify))
+         :style {:border-color (connection-color/connection-color (:uri ctx) ctx)}}
+   (apply react-fragment :_ children)])
+
 (defn form-cell [control -field ctx & [class]]              ; safe to return nil or seq
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
-    [:div {:class (classes class "hyperfiddle-form-cell" "block" "field"
-                           (-> ctx :hypercrud.browser/attribute str css-slugify))
-           :style {:border-color (connection-color/connection-color (:uri ctx) ctx)}}
-     ; todo unsafe execution of user code: label
-     [:div ((:label ctx (partial vector label)) -field ctx)
-      (link-controls/render-nav-cmps path false ctx link/options-processor)
-      (link-controls/render-inline-links path false ctx link/options-processor)]
-     ; todo unsafe execution of user code: control
-     [control -field (control-props ctx) ctx]]))
+    (ui-block-border-wrap
+      ctx (str class " field")
+      ; todo unsafe execution of user code: label
+      [:div ((:label ctx (partial vector label)) -field ctx)
+       (link-controls/render-nav-cmps path false ctx link/options-processor)
+       (link-controls/render-inline-links path false ctx link/options-processor)]
+      ; todo unsafe execution of user code: control
+      [control -field (control-props ctx) ctx])))
 
 (defn Cell [field ctx]
   (let [ctx (as-> (context/attribute ctx (:attribute field)) $
@@ -62,7 +68,6 @@
       (link-controls/render-nav-cmps path false ctx :class "hyperfiddle-link-entity-independent")
       (let [ctx (context/cell-data ctx relation)]
         (concat
-          (link-controls/render-nav-cmps path true ctx :class "hyperfiddle-link-entity-dependent")
           (conj
             (->> @(reactive/cursor (:hypercrud.browser/find-element ctx) [:fields])
                  ; just dereference the fields immediately
@@ -72,6 +77,7 @@
             (if @(reactive/cursor (:hypercrud.browser/find-element ctx) [:splat?])
               ^{:key :new-field}
               [new-field ctx]))
+          (link-controls/render-nav-cmps path true ctx :class "hyperfiddle-link-entity-dependent")
           (link-controls/render-inline-links path true ctx)))
       (link-controls/render-inline-links path false ctx))))
 
