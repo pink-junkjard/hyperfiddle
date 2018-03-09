@@ -129,11 +129,11 @@
 
     (either/right nil)))
 
-(defn fn-from-mode [f-mode-config link ctx]
-  (let [{:keys [from-ctx from-link with-user-fn default]} f-mode-config]
+(defn fn-from-mode [f-mode-config fiddle ctx]
+  (let [{:keys [from-ctx from-fiddle with-user-fn default]} f-mode-config]
     (case @(:hypercrud.ui/display-mode ctx)
       :user (->> (or (some-> (from-ctx ctx) either/right)
-                     (eval/eval-str (from-link link)))
+                     (eval/eval-str (from-fiddle fiddle)))
                  (cats/fmap #(if % (with-user-fn %) default)))
       :xray (either/right default))))
 

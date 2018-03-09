@@ -87,7 +87,7 @@
                                                (remove :link/dependent?)
                                                (filter (link/same-path-as? [fe-pos (:hypercrud.browser/attribute ctx)]))
                                                (mapcat #(recurse-request % ctx))))))))))))
-      (case (get-in ctx [:fiddle :fiddle/type])
+      (case @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/type])
         :entity (-> (result/with-entity-relations ctx
                                                   :entity (partial relation-dependent-requests ctx)
                                                   :attr-one (partial relation-dependent-requests ctx)
@@ -105,7 +105,7 @@
 
 (defn f-mode-config []
   {:from-ctx :user-request
-   :from-link :fiddle/request
+   :from-fiddle (fn [fiddle] @(reactive/cursor fiddle [:fiddle/request]))
    :with-user-fn (fn [user-fn]
                    (fn [ctx]
                      ; todo report invocation errors back to the user
@@ -117,7 +117,7 @@
    :default fiddle-dependent-requests})
 
 (defn process-data [ctx]
-  (mlet [request-fn (base/fn-from-mode (f-mode-config) (:fiddle ctx) ctx)]
+  (mlet [request-fn (base/fn-from-mode (f-mode-config) (:hypercrud.browser/fiddle ctx) ctx)]
     (cats/return (request-fn ctx))))
 
 (defn request-from-route [route ctx]

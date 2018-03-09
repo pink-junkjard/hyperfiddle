@@ -26,21 +26,21 @@
 ; defn because hypercrud.ui.result/view cannot be required from this ns
 (defn f-mode-config []
   {:from-ctx :user-renderer
-   :from-link :fiddle/renderer
+   :from-fiddle (fn [fiddle] @(reactive/cursor fiddle [:fiddle/renderer]))
    :with-user-fn #?(:clj  (assert false "todo")
                     :cljs (fn [user-fn]
                             (fn [ctx]
                               #_(react-fragment :_) #_(list)
                               [:div
                                [safe-reagent-call user-fn ctx]
-                               [fiddle-css-renderer (-> ctx :fiddle :fiddle/css)]])))
+                               [fiddle-css-renderer @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]])))
    ; todo ui binding should be provided by a RT
    :default #?(:clj  (assert false "todo")
                :cljs (fn [ctx]
                        #_(react-fragment :_) #_(list)
                        [:div
-                        [hypercrud.ui.result/view ctx (-> ctx :fiddle :db/ident css-slugify)]
-                        [fiddle-css-renderer (-> ctx :fiddle :fiddle/css)]]))})
+                        [hypercrud.ui.result/view ctx (-> @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:db/ident]) css-slugify)]
+                        [fiddle-css-renderer @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]]))})
 
 (letfn [(browse [ident ctx & args]
           (let [kwargs (util/kwargs args)
@@ -119,7 +119,7 @@
 
 (defn hf-ui [route ctx]                                     ; returns an Either[Error, DOM]
   (mlet [ctx (base/data-from-route route ctx)
-         ui-fn (base/fn-from-mode (f-mode-config) (:fiddle ctx) ctx)]
+         ui-fn (base/fn-from-mode (f-mode-config) (:hypercrud.browser/fiddle ctx) ctx)]
     (cats/return (ui-fn (ui-bindings ctx)))))
 
 (defn ui-from-route [route ctx & [class]]

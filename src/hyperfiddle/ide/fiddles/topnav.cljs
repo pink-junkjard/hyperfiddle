@@ -46,7 +46,7 @@
 (defn hijack-renderer [ctx]
   (let [ctx (dissoc ctx :user-renderer)
         f-mode-config (browser-ui/f-mode-config)
-        ui-fn (-> (base/fn-from-mode f-mode-config (:fiddle ctx) ctx)
+        ui-fn (-> (base/fn-from-mode f-mode-config (:hypercrud.browser/fiddle ctx) ctx)
                   (cats/mplus (either/right (:default f-mode-config)))
                   deref)]
     (ui-fn (shadow-fiddle ctx))))

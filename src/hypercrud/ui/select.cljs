@@ -80,7 +80,7 @@
   [:span msg])
 
 (defn select-anchor-renderer [props ctx]
-  (case (get-in ctx [:fiddle :fiddle/type])
+  (case @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/type])
     :entity [select-error-cmp "Only fiddle type `query` is supported for select options"]
     :blank [select-error-cmp "Only fiddle type `query` is supported for select options"]
     :query (-> (result/with-query-relations
