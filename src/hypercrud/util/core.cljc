@@ -109,3 +109,9 @@
 
 (defn filter-keys [f? m]
   (->> m (filter (fn [[k v]] (f? k))) (into {})))
+
+(defn orp "or with custom predicate" [f? & args]                                       ; todo macro
+  (first (remove f? args)))
+
+(defn or-str [& args]                                       ; todo macro
+  (apply orp string/blank? args))

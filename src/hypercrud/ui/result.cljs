@@ -6,7 +6,7 @@
             [hypercrud.ui.css :refer [classes]]
             [hypercrud.ui.form :as form]
             [hypercrud.ui.table :as table]
-            [hypercrud.util.core :as util]
+            [hypercrud.util.core :as util :refer [or-str]]
             [hypercrud.util.non-fatal :refer [try-either]]
             [hypercrud.util.reactive :as reactive]))
 
@@ -29,10 +29,15 @@
         (fn [e] [:pre (util/pprint-str e)])
         identity)))
 
+(defn doc [ctx]
+  (markdown-hyperfiddle (or-str @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:db/doc])
+                                (str "## " (or-str @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/name])
+                                                   @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:db/ident])))) ctx))
+
 (defn view [ctx & [class]]
   (let [index-ctx (dissoc ctx :isComponent)]
     [:div {:class (classes "auto-result" class)}
-     (markdown-hyperfiddle @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:db/doc]) ctx)
+     (doc ctx)
      (link-controls/render-nav-cmps [] false index-ctx :class "hyperfiddle-link-index")
      (result-renderer ctx)
      (link-controls/render-inline-links [] false index-ctx)]))
