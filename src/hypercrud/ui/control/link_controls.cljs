@@ -14,7 +14,7 @@
 
 ; garbage wrapper for reactivity capturing
 (defn- reactive-nav-cmp [link-ref ctx class]
-  [(:navigate-cmp ctx) (link/build-link-props @link-ref ctx) @(reactive/track prompt link-ref)])
+  [(:navigate-cmp ctx) (link/build-link-props @link-ref ctx) @(reactive/track prompt link-ref) class])
 
 (defn- reactive-ui [link-ref ctx class]
   [browser/ui @link-ref ctx class])
