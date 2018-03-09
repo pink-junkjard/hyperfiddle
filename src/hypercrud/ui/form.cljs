@@ -16,7 +16,7 @@
   (let [attr-ident (reactive/atom nil)]
     (fn [ctx]
       ;busted
-      [:div.field {:style {:border-color (connection-color/connection-color (:uri ctx) ctx)}}
+      [:div.field {:style {:border-color (connection-color/connection-color ctx)}}
        [:div.hc-label
         [:label
          (let [on-change! #(reset! attr-ident %)]
@@ -36,7 +36,7 @@
 (defn ui-block-border-wrap [ctx class & children]
   [:div {:class (classes class "hyperfiddle-form-cell" #_ "block"
                          (-> ctx :hypercrud.browser/attribute str css-slugify))
-         :style {:border-color (connection-color/connection-color (:uri ctx) ctx)}}
+         :style {:border-color (connection-color/connection-color ctx)}}
    (apply react-fragment :_ children)])
 
 (defn form-cell [control -field ctx & [class]]              ; safe to return nil or seq

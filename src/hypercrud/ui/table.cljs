@@ -59,7 +59,7 @@
                           (css-slugify (:hypercrud.browser/attribute ctx))
                           (if sortable? "sortable")
                           (some-> sort-direction name))
-          :style {:background-color (connection-color/connection-color (:uri ctx) ctx)}
+          :style {:background-color (connection-color/connection-color ctx)}
           :on-click on-click}
      ; todo unsafe execution of user code: label
      ((:label ctx (partial vector label)) field ctx)
@@ -94,7 +94,7 @@
   (let [shadow-link (auto-anchor/system-link? (-> ctx :cell-data deref :db/id))]
     [:td {:class (classes "hyperfiddle-table-cell" "truncate")
           ; todo use cell renderer for shadow-link styles
-          :style {:border-color (if-not shadow-link (connection-color/connection-color (:uri ctx) ctx))}}
+          :style {:border-color (if-not shadow-link (connection-color/connection-color ctx))}}
      ; todo unsafe execution of user code: control
      [control -field (control-props ctx) ctx]]))
 
