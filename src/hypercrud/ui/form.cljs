@@ -34,8 +34,7 @@
 (def always-read-only (constantly true))
 
 (defn ui-block-border-wrap [ctx class & children]
-  [:div {:class (classes class "hyperfiddle-form-cell" #_ "block"
-                         (-> ctx :hypercrud.browser/attribute str css-slugify))
+  [:div {:class (classes class "hyperfiddle-form-cell" (-> ctx :hypercrud.browser/attribute str css-slugify))
          :style {:border-color (connection-color/connection-color ctx)}}
    (apply react-fragment :_ children)])
 

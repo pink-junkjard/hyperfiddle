@@ -31,7 +31,7 @@
 (defn view [ctx & [class]]
   (let [index-ctx (dissoc ctx :isComponent)]
     [:div {:class (classes "auto-result" class)}
-     (form/ui-block-border-wrap ctx nil (markdown-hyperfiddle (-> ctx :fiddle :db/doc) ctx))
+     (markdown-hyperfiddle (-> ctx :fiddle :db/doc) ctx)    ; no border wrap, not part of matrix, but inside pink box
      (link-controls/render-nav-cmps [] false index-ctx :class "hyperfiddle-link-index")
      (result-renderer ctx)
      (link-controls/render-inline-links [] false index-ctx)]))
