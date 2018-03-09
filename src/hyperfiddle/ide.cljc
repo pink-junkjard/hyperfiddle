@@ -57,8 +57,7 @@
   (defn- *-ide-context [ctx ide-domain]
     {:pre [ide-domain]}
     (-> ctx
-        (assoc :hypercrud.browser/debug "ide"
-               :hypercrud.browser/page-on-click constantly-nil ; disable alt-nav up top
+        (assoc :hypercrud.browser/page-on-click constantly-nil ; disable alt-nav up top
                :hypercrud.ui/display-mode always-user
                :target-domain (:hypercrud.browser/domain ctx) ; todo rename :target-domain to :hyperfiddle.ide/target-domain
                :user-profile @(runtime/state (:peer ctx) [:user-profile]))
@@ -91,7 +90,6 @@
 
 (defn- *-target-context [ctx route]
   (assoc ctx
-    :hypercrud.browser/debug "target"
     :hypercrud.browser/page-on-click (let [branch-aux {:hyperfiddle.ide/foo "page"}]
                                        #?(:cljs (reactive/partial browser-ui/page-on-click (:peer ctx) nil branch-aux)))
     :hypercrud.ui/display-mode (runtime/state (:peer ctx) [:display-mode])

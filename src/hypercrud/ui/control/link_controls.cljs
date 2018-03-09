@@ -26,9 +26,8 @@
   (->> (reactive/track link-controls-util/ui-contextual-links path dependent? true (:hypercrud.browser/links ctx) processors)
        (reactive/unsequence :db/id)
        (map (fn [[link-ref link-id]]
-              (let [prompt @(reactive/track prompt link-ref)]
-                ; don't test link validity, we need to render the failure. If this is a dependent link, use visibility predicate to hide the error.
-                [:div {:key (hash link-id)}                 ; extra div bc had trouble getting keys to work
-                 ; NOTE: this ctx logic and structure is the same as the inline branch of browser-request/recurse-request
-                 [browser/ui @link-ref ctx #_(update ctx :hypercrud.browser/debug #(str % ">inline-link[" link-id ":" prompt "]"))]])))
+              ; don't test link validity, we need to render the failure. If this is a dependent link, use visibility predicate to hide the error.
+              [:div {:key (hash link-id)}                   ; extra div bc had trouble getting keys to work
+               ; NOTE: this ctx logic and structure is the same as the inline branch of browser-request/recurse-request
+               [browser/ui @link-ref ctx]]))
        (doall)))
