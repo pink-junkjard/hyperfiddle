@@ -156,7 +156,6 @@
 
                        ;deprecated
                        :result reactive-result
-                       :schemas @reactive-schemas
                        :fiddle fiddle)]
            ctx (user-bindings/user-bindings' fiddle ctx)
            reactive-fes @(reactive/apply-inner-r (reactive/track find-element/auto-find-elements reactive-result fiddle request (:route ctx) reactive-schemas))]

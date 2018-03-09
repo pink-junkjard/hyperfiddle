@@ -9,7 +9,7 @@
   ; why not code-database-uri and all the custom ui/render fns?
   (dissoc ctx
     :keep-disabled-anchors? :route
-    :schemas :fiddle                                        ; deprecated
+    :fiddle                                                 ; deprecated
     :fe-pos :uri :user-with!
     :value
     :layout :field
