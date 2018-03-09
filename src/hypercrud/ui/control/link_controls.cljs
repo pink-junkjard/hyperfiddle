@@ -39,6 +39,6 @@
          (reactive/unsequence :db/id)
          (map (fn [[link-ref link-id]]
                 (if (not= :table (:layout ctx))
-                  ^{:key (hash link-id)} [hypercrud.ui.form/ui-block-border-wrap ctx nil [:div [reactive-ui link-ref ctx (:class args)]]]
-                  [:div {:key (hash link-id)} [reactive-ui link-ref ctx (:class args)]])))
+                  ^{:key (hash link-id)} [hypercrud.ui.form/ui-block-border-wrap ctx nil [reactive-ui link-ref ctx (:class args)]]
+                  ^{:key (hash link-id)} [reactive-ui link-ref ctx (:class args)])))
          (doall))))
