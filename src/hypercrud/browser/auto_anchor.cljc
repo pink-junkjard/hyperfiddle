@@ -2,6 +2,7 @@
   (:require [hypercrud.browser.auto-anchor-formula :refer [auto-formula]]
             [hypercrud.browser.auto-anchor-txfn :refer [auto-txfn]]
             [hypercrud.browser.auto-fiddle :as auto-fiddle]
+            [hypercrud.util.reactive :as reactive]
             [hypercrud.util.vedn :as vedn]))
 
 
@@ -142,9 +143,10 @@
        flatten
        doall))
 
+; todo tighter reactivity
 (defn auto-links [fiddle ordered-fes schemas & [keep-disabled-anchors?]]
-  (let [sys-links (system-links fiddle @ordered-fes @schemas)
-        links (->> (merge-links sys-links (:fiddle/links fiddle))
+  (let [sys-links (system-links @fiddle @ordered-fes @schemas)
+        links (->> (merge-links sys-links @(reactive/cursor fiddle [:fiddle/links]))
                    (map auto-link))]
     (if keep-disabled-anchors?
       links

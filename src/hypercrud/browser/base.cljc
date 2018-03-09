@@ -56,20 +56,19 @@
    :fiddle/type])
 
 (defn meta-request-for-fiddle [ctx]
-  (try-either
-    (let [fiddle-id (get-in ctx [:route :fiddle-id])
-          _ (assert fiddle-id "missing fiddle-id")
-          dbval (hc/db (:peer ctx) (get-in ctx [:hypercrud.browser/domain :domain/fiddle-repo]) (:branch ctx))]
-      (->EntityRequest fiddle-id nil dbval meta-pull-exp-for-link))))
-
-(defn hydrate-fiddle [ctx]
-  {:pre [(-> ctx :hypercrud.browser/domain)]}
   (if (auto-fiddle/system-fiddle? (get-in ctx [:route :fiddle-id]))
-    {:meta-fiddle-req' (either/right nil)
-     :fiddle' (auto-fiddle/hydrate-system-fiddle (get-in ctx [:route :fiddle-id]))}
-    (let [meta-fiddle-request (meta-request-for-fiddle ctx)]
-      {:meta-fiddle-req' meta-fiddle-request
-       :fiddle' (cats/bind meta-fiddle-request #(deref (hc/hydrate (:peer ctx) (:branch ctx) %)))})))
+    (either/right nil)
+    (try-either
+      (let [fiddle-id (get-in ctx [:route :fiddle-id])
+            _ (assert fiddle-id "missing fiddle-id")
+            _ (assert (:hypercrud.browser/domain ctx) "missing domain")
+            dbval (hc/db (:peer ctx) (get-in ctx [:hypercrud.browser/domain :domain/fiddle-repo]) (:branch ctx))]
+        (->EntityRequest fiddle-id nil dbval meta-pull-exp-for-link)))))
+
+(defn hydrate-fiddle [meta-fiddle-request ctx]
+  (if (auto-fiddle/system-fiddle? (get-in ctx [:route :fiddle-id]))
+    (auto-fiddle/hydrate-system-fiddle (get-in ctx [:route :fiddle-id]))
+    @(hc/hydrate (:peer ctx) (:branch ctx) @meta-fiddle-request)))
 
 (defn- fix-param [param]
   (cond
@@ -105,8 +104,8 @@
           :else-valid (either/right params'))))
 
 (defn request-for-fiddle [fiddle ctx]
-  (case (:fiddle/type fiddle)
-    :query (mlet [q (hc-string/memoized-safe-read-edn-string (:fiddle/query fiddle))
+  (case @(reactive/cursor fiddle [:fiddle/type])
+    :query (mlet [q (hc-string/memoized-safe-read-edn-string @(reactive/cursor fiddle [:fiddle/query]))
                   params (validate-query-params q (get-in ctx [:route :request-params]) ctx)]
              (return (->QueryRequest q params)))
 
@@ -115,7 +114,7 @@
           uri (try (let [dbname (.-dbname e)]               ;todo report this exception better
                      (get-in ctx [:hypercrud.browser/domain :domain/environment dbname]))
                    (catch #?(:clj Exception :cljs js/Error) e nil))
-          pull-exp (or (-> (hc-string/memoized-safe-read-edn-string (:fiddle/pull fiddle))
+          pull-exp (or (-> (hc-string/memoized-safe-read-edn-string @(reactive/cursor fiddle [:fiddle/pull]))
                            (either/branch (constantly nil) identity)
                            first)
                        ['*])]
@@ -146,7 +145,7 @@
     (mlet [reactive-schemas @(reactive/apply-inner-r (schema-util/hydrate-schema ctx))
            reactive-result @(reactive/apply-inner-r (reactive/track nil-or-hydrate (:peer ctx) (:branch ctx) request))
            :let [ctx (assoc ctx
-                       :hypercrud.browser/fiddle (reactive/track identity fiddle) ; for :db/doc
+                       :hypercrud.browser/fiddle fiddle     ; for :db/doc
                        :hypercrud.browser/request request
                        :hypercrud.browser/result reactive-result
                        :hypercrud.browser/schemas reactive-schemas ; For tx/entity->statements in userland.
@@ -156,7 +155,7 @@
 
                        ;deprecated
                        :result reactive-result
-                       :fiddle fiddle)]
+                       :fiddle @fiddle)]
            ctx (user-bindings/user-bindings' fiddle ctx)
            reactive-fes @(reactive/apply-inner-r (reactive/track find-element/auto-find-elements reactive-result fiddle request (:route ctx) reactive-schemas))]
       (cats/return
@@ -165,9 +164,9 @@
           :hypercrud.browser/links (reactive/track auto-anchor/auto-links fiddle reactive-fes reactive-schemas (:keep-disabled-anchors? ctx)))))))
 
 (defn data-from-route [route ctx]                           ; todo rename
-  (let [ctx (context/route ctx route)
-        {:keys [fiddle']} (hydrate-fiddle ctx)]
-    (mlet [fiddle fiddle'
+  (let [ctx (context/route ctx route)]
+    (mlet [meta-fiddle-request @(reactive/apply-inner-r (reactive/track meta-request-for-fiddle ctx))
+           fiddle @(reactive/apply-inner-r (reactive/track hydrate-fiddle meta-fiddle-request ctx))
            fiddle-request @(reactive/apply-inner-r (reactive/track request-for-fiddle fiddle ctx))]
       (process-results fiddle fiddle-request ctx))))
 
