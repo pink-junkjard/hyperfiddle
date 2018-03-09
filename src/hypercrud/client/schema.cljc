@@ -4,7 +4,8 @@
             [hypercrud.client.core :as hc]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hypercrud.types.URI :refer [#?(:cljs URI)]]
-            [hypercrud.util.core :as util])
+            [hypercrud.util.core :as util]
+            [hypercrud.util.reactive :as reactive])
   #?(:clj
      (:import (java.net URI))))
 
@@ -30,25 +31,27 @@
                    (schema-request))))
        (concat [(hc-attr-request ctx)])))
 
-(defn hydrate-schema [ctx]
-  (-> @(hc/hydrate (:peer ctx) (:branch ctx) (hc-attr-request ctx))
-      (cats/bind
-        (fn [root-data]
-          (let [indexed-root (->> root-data
-                                  (map #(into {} %))
-                                  (util/group-by-assume-unique :attribute/ident)
-                                  (util/map-values #(dissoc % :attribute/ident :db/id)))]
+(letfn [(with-root-data [ctx either-root-data]
+          (cats/bind either-root-data
+                     (fn [root-data]
+                       (let [indexed-root (->> root-data
+                                               (map #(into {} %))
+                                               (util/group-by-assume-unique :attribute/ident)
+                                               (util/map-values #(dissoc % :attribute/ident :db/id)))]
 
-            (->> (get-in ctx [:hypercrud.browser/domain :domain/environment])
-                 (filter (fn [[k v]] (and (string? k) (string/starts-with? k "$") (instance? URI v))))
-                 (mapv (fn [[dbname uri]]
-                         (let [request (schema-request (hc/db (:peer ctx) uri (:branch ctx)))]
-                           (->> @(hc/hydrate (:peer ctx) (:branch ctx) request)
-                                (cats/fmap (fn [schema]
-                                             [dbname
-                                              (->> schema
-                                                   (map #(into {} %))
-                                                   (util/group-by-assume-unique :db/ident)
-                                                   (merge-with #(merge %2 %1) indexed-root))]))))))
-                 (cats/sequence)
-                 (cats/fmap #(into {} %))))))))
+                         (->> (get-in ctx [:hypercrud.browser/domain :domain/environment])
+                              (filter (fn [[k v]] (and (string? k) (string/starts-with? k "$") (instance? URI v))))
+                              (mapv (fn [[dbname uri]]
+                                      (let [request (schema-request (hc/db (:peer ctx) uri (:branch ctx)))]
+                                        (->> @(hc/hydrate (:peer ctx) (:branch ctx) request)
+                                             (cats/fmap (fn [schema]
+                                                          [dbname
+                                                           (->> schema
+                                                                (map #(into {} %))
+                                                                (util/group-by-assume-unique :db/ident)
+                                                                (merge-with #(merge %2 %1) indexed-root))]))))))
+                              (cats/sequence)
+                              (cats/fmap #(into {} %)))))))]
+  (defn hydrate-schema [ctx]
+    (->> (hc/hydrate (:peer ctx) (:branch ctx) (hc-attr-request ctx))
+         (reactive/fmap (reactive/partial with-root-data ctx)))))

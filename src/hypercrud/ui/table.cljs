@@ -13,7 +13,7 @@
 
 (defn attr-sortable? [fe attribute ctx]
   (if-let [source-symbol (:source-symbol fe)]
-    (let [{:keys [:db/cardinality :db/valueType]} (get-in ctx [:schemas (str source-symbol) attribute])]
+    (let [{:keys [:db/cardinality :db/valueType]} @(reactive/cursor (:hypercrud.browser/schemas ctx) [(str source-symbol) attribute])]
       (and
         (= (:db/ident cardinality) :db.cardinality/one)
         ; ref requires more work (inspect label-prop)
@@ -91,7 +91,7 @@
    [LinkCell false nil ctx]])
 
 (defn table-cell [control -field ctx]
-  (let [shadow-link (auto-anchor/system-link? (-> ctx :cell-data deref :db/id))]
+  (let [shadow-link @(reactive/fmap auto-anchor/system-link? (reactive/cursor (:cell-data ctx) [:db/id]))]
     [:td {:class (classes "hyperfiddle-table-cell" "truncate")
           ; todo use cell renderer for shadow-link styles
           :style {:border-color (if-not shadow-link (connection-color/connection-color ctx))}}
@@ -118,7 +118,7 @@
 (defn Row [relation ctx]
   [:tr
    (Relation relation ctx)
-   (LinkCell true relation ctx)])
+   [LinkCell true relation ctx]])
 
 (letfn [(sort-fn [sort-col ctx relations-val]
           (let [[sort-fe-pos sort-attr direction] @sort-col

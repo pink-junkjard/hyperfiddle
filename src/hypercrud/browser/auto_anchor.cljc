@@ -143,7 +143,7 @@
        doall))
 
 (defn auto-links [fiddle ordered-fes schemas & [keep-disabled-anchors?]]
-  (let [sys-links (system-links fiddle @ordered-fes schemas)
+  (let [sys-links (system-links fiddle @ordered-fes @schemas)
         links (->> (merge-links sys-links (:fiddle/links fiddle))
                    (map auto-link))]
     (if keep-disabled-anchors?

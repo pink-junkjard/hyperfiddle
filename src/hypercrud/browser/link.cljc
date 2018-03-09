@@ -142,8 +142,7 @@
   [:div.hyperfiddle-popover-body
    ; NOTE: this ctx logic and structure is the same as the popover branch of browser-request/recurse-request
    (let [ctx (-> (if dont-branch? ctx (assoc ctx :branch child-branch))
-                 (context/clean)
-                 #_(update :hypercrud.browser/debug #(str % ">popover-link[" (:db/id link) ":" (or (:link/rel link) (:anchor/prompt link)) "]")))]
+                 (context/clean))]
      #?(:clj  (assert false "todo")
         :cljs [hypercrud.browser.core/ui-from-route route ctx])) ; cycle
    (when-not dont-branch?

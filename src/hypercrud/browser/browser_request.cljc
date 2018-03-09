@@ -29,13 +29,11 @@
         ; that MUST happen in the parent context
         (let [ctx (-> ctx
                       (assoc :branch (popovers/branch ctx link))
-                      (context/clean)
-                      #_(update :hypercrud.browser/debug #(str % ">popover-link[" (:db/id link) ":" (or (:link/rel link) (:anchor/prompt link)) "]")))]
+                      (context/clean))]
           (either/branch route'
                          (constantly nil)
                          #(request-from-route % ctx)))))
     ; if the anchor IS NOT a popover, this should be the same logic as widget/render-inline-anchors
-    #_(let [ctx (update ctx :hypercrud.browser/debug #(str % ">inline-link[" (:db/id link) ":" (or (:link/rel link) (:anchor/prompt link)) "]"))])
     (request-from-link link ctx)))
 
 (defn cell-dependent-requests [relation ctx]
@@ -129,10 +127,10 @@
               [meta-fiddle-req])
             (unwrap
               (mlet [fiddle fiddle'
-                     fiddle-request (base/request-for-fiddle fiddle ctx)]
+                     fiddle-request @(reactive/apply-inner-r (reactive/track base/request-for-fiddle fiddle ctx))]
                 (cats/return
                   (concat
-                    (if fiddle-request [fiddle-request])
+                    (some-> @fiddle-request vector)
                     (schema-util/schema-requests-for-link ctx)
                     (-> (base/process-results fiddle fiddle-request ctx)
                         (cats/bind process-data)

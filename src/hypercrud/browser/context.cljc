@@ -9,7 +9,7 @@
   ; why not code-database-uri and all the custom ui/render fns?
   (dissoc ctx
     :keep-disabled-anchors? :route
-    :schemas :request :fiddle
+    :fiddle                                                 ; deprecated
     :fe-pos :uri :user-with!
     :value
     :layout :field
@@ -17,11 +17,14 @@
 
     :hypercrud.browser/attribute
     :hypercrud.browser/fat-attribute
+    :hypercrud.browser/fiddle
     :hypercrud.browser/find-element
     :hypercrud.browser/links
     :hypercrud.browser/ordered-fes
+    :hypercrud.browser/request
     :hypercrud.browser/result
-    :hypercrud.browser/schema))
+    :hypercrud.browser/schema
+    :hypercrud.browser/schemas))
 
 (defn route [ctx route]
   {:pre [(if-let [params (:request-params route)] (vector? params) true) ; validate normalized already
@@ -34,11 +37,10 @@
     (let [dbname (str @(reactive/cursor fe [:source-symbol]))
           uri (when dbname
                 (get-in ctx [:hypercrud.browser/domain :domain/environment dbname]))
-          schema (reactive/track get-in ctx [:schemas dbname])
           user-with! (reactive/partial user-with (:peer ctx) ctx (:branch ctx) uri)]
       (assoc ctx
         :hypercrud.browser/find-element fe
-        :hypercrud.browser/schema schema
+        :hypercrud.browser/schema (reactive/cursor (:hypercrud.browser/schemas ctx) [dbname])
         :fe-pos fe-pos
         :uri uri
         :user-with! user-with!))))

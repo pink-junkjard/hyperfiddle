@@ -15,7 +15,6 @@
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hypercrud.types.ThinEntity :refer [#?(:cljs ThinEntity)]]
-            [hypercrud.util.core :as util]
             [hypercrud.util.non-fatal :refer [try-either]]
             [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :as hc-string])
@@ -140,36 +139,36 @@
 
 (let [never-read-only (constantly false)
       nil-or-hydrate (fn [peer branch request]
-                       (if request
+                       (if-let [request @request]
                          @(hc/hydrate peer branch request)
-                         (either/right nil)))
-      fmap-nil #(cats/fmap (constantly nil) %)]
+                         (either/right nil)))]
   (defn process-results [fiddle request ctx]
-    (mlet [schemas (schema-util/hydrate-schema ctx)         ; schema is allowed to be nil if the link only has anchors and no data dependencies
-           :let [reactive-either-result (reactive/track nil-or-hydrate (:peer ctx) (:branch ctx) request)]
-           _ @(reactive/fmap fmap-nil reactive-either-result) ; short the monad, only react on left v right, not the right's value
-           :let [reactive-result (reactive/fmap util/unwrap reactive-either-result)
-                 ctx (assoc ctx                             ; provide defaults before user-bindings run.
+    (mlet [reactive-schemas @(reactive/apply-inner-r (schema-util/hydrate-schema ctx))
+           reactive-result @(reactive/apply-inner-r (reactive/track nil-or-hydrate (:peer ctx) (:branch ctx) request))
+           :let [ctx (assoc ctx
+                       :hypercrud.browser/fiddle (reactive/track identity fiddle) ; for :db/doc
+                       :hypercrud.browser/request request
                        :hypercrud.browser/result reactive-result
-                       :result reactive-result              ; deprecated
-                       :request request
-                       :schemas schemas                     ; For tx/entity->statements in userland.
-                       :fiddle fiddle                       ; for :db/doc
-                       :read-only (or (:read-only ctx) never-read-only))]
+                       :hypercrud.browser/schemas reactive-schemas ; For tx/entity->statements in userland.
+
+                       ; provide defaults before user-bindings run.
+                       :read-only (or (:read-only ctx) never-read-only)
+
+                       ;deprecated
+                       :result reactive-result
+                       :fiddle fiddle)]
            ctx (user-bindings/user-bindings' fiddle ctx)
-           :let [reactive-either-fes (reactive/track find-element/auto-find-elements reactive-result fiddle request (:route ctx) schemas)]
-           _ @(reactive/fmap fmap-nil reactive-either-fes)  ; short the monad, only react on left v right, not the right's value
-           :let [reactive-fes (reactive/fmap deref reactive-either-fes)]]
+           reactive-fes @(reactive/apply-inner-r (reactive/track find-element/auto-find-elements reactive-result fiddle request (:route ctx) reactive-schemas))]
       (cats/return
         (assoc ctx
           :hypercrud.browser/ordered-fes reactive-fes
-          :hypercrud.browser/links (reactive/track auto-anchor/auto-links fiddle reactive-fes schemas (:keep-disabled-anchors? ctx)))))))
+          :hypercrud.browser/links (reactive/track auto-anchor/auto-links fiddle reactive-fes reactive-schemas (:keep-disabled-anchors? ctx)))))))
 
 (defn data-from-route [route ctx]                           ; todo rename
   (let [ctx (context/route ctx route)
         {:keys [fiddle']} (hydrate-fiddle ctx)]
     (mlet [fiddle fiddle'
-           fiddle-request (request-for-fiddle fiddle ctx)]
+           fiddle-request @(reactive/apply-inner-r (reactive/track request-for-fiddle fiddle ctx))]
       (process-results fiddle fiddle-request ctx))))
 
 (defn from-link [link ctx with-route]

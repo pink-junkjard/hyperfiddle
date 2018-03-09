@@ -124,10 +124,10 @@
     :entity (mlet [:let [[e] (:request-params route)]
                    source-symbol (try-either (.-dbname e))
                    :let [fe-name "entity"
-                         pull-pattern (:pull-exp request)]]
+                         pull-pattern @(reactive/cursor request [:pull-exp])]]
               (cats/return
-                (if-let [a (:a request)]
-                  (case (get-in schemas [(str source-symbol) a :db/cardinality :db/ident])
+                (if-let [a @(reactive/cursor request [:a])]
+                  (case @(reactive/cursor schemas [(str source-symbol) a :db/cardinality :db/ident])
                     :db.cardinality/one
                     [(pull-cell->fe @result source-symbol fe-name pull-pattern)]
 
@@ -135,7 +135,7 @@
                     [(pull-many-cells->fe @result source-symbol fe-name pull-pattern)])
                   [(pull-cell->fe @result source-symbol fe-name pull-pattern)])))
 
-    :query (mlet [{:keys [qfind]} (try-either (parser/parse-query (:query request)))]
+    :query (mlet [{:keys [qfind]} (try-either (parser/parse-query @(reactive/cursor request [:query])))]
              (cats/return
                (condp = (type qfind)
                  datascript.parser.FindRel (let [results-by-column (util/transpose @result)]

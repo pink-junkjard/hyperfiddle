@@ -18,8 +18,8 @@
   (reduce (fn [entity [op e a v]]
             ; todo this fn has bare minimum support for this page
             ; e.g. doesnt support card/many or nested modals
-            (let [attr (get-in ctx [:schemas "$" a])
-                  v (if (= :db.type/ref (-> attr :db/valueType :db/ident))
+            (let [valueType @(reactive/cursor (:hypercrud.browser/schemas ctx) ["$" a :db/valueType :db/ident])
+                  v (if (= :db.type/ref valueType)
                       {:db/id v}
                       v)]
               (case op

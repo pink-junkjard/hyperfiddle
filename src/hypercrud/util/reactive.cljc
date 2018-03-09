@@ -1,6 +1,7 @@
 (ns hypercrud.util.reactive
   (:refer-clojure :exclude [atom partial])
-  (:require [hypercrud.util.core :as util]
+  (:require [cats.core :as cats]
+            [hypercrud.util.core :as util]
     #?(:cljs [reagent.core :as reagent])
     #?(:cljs [reagent.ratom :refer [IReactiveAtom]]))
   #?(:clj
@@ -42,6 +43,13 @@
   (defn fapply [rf & rvs]
     {:pre [(reactive? rf) (every? reactive? rvs)]}
     (reduce (partial track -fapply rf) rvs)))
+
+; Reactive[Monad[_]] => Reactive[Monad[Reactive[_]]]
+; useful for reacting on the Either (left v right), but not the Right's value
+; this should probably fall out eventually
+(let [f (fn [rmv] (cats/fmap (constantly (fmap cats/extract rmv)) @rmv))]
+  (defn apply-inner-r [rmv]
+    (track f rmv)))
 
 (defn unsequence
   "Expand a reference of a list into a list of references while maintaining order.
