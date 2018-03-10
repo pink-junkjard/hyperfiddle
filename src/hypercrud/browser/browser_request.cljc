@@ -121,20 +121,21 @@
     (cats/return (request-fn ctx))))
 
 (defn request-from-route [route ctx]
-  (let [ctx (context/route ctx route)
-        {:keys [meta-fiddle-req' fiddle']} (base/hydrate-fiddle ctx)]
-    (concat (if-let [meta-fiddle-req (unwrap meta-fiddle-req')]
-              [meta-fiddle-req])
-            (unwrap
-              (mlet [fiddle fiddle'
-                     fiddle-request @(reactive/apply-inner-r (reactive/track base/request-for-fiddle fiddle ctx))]
-                (cats/return
-                  (concat
-                    (some-> @fiddle-request vector)
-                    (schema-util/schema-requests-for-link ctx)
-                    (-> (base/process-results fiddle fiddle-request ctx)
-                        (cats/bind process-data)
-                        unwrap))))))))
+  (let [ctx (context/route ctx route)]
+    (when-let [meta-fiddle-request (unwrap @(reactive/apply-inner-r (reactive/track base/meta-request-for-fiddle ctx)))]
+      (assert (reactive/reactive? meta-fiddle-request))
+      (concat [@meta-fiddle-request]
+              (unwrap
+                (mlet [fiddle @(reactive/apply-inner-r (reactive/track base/hydrate-fiddle meta-fiddle-request ctx))
+                       fiddle-request @(reactive/apply-inner-r (reactive/track base/request-for-fiddle fiddle ctx))]
+                  (assert (reactive/reactive? fiddle-request))
+                  (cats/return
+                    (concat
+                      (some-> @fiddle-request vector)
+                      (schema-util/schema-requests-for-link ctx)
+                      (-> (base/process-results fiddle fiddle-request ctx)
+                          (cats/bind process-data)
+                          unwrap)))))))))
 
 (defn request-from-link [link ctx]
   (unwrap (base/from-link link ctx (fn [route ctx]
