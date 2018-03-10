@@ -24,6 +24,25 @@
                          (binding [hyperfiddle.core/*ctx* (goog.object/get (.-context this) "ctx")]
                            (safe-eval-user-expr value))))}))
 
+(def markdown-browse
+  (reagent/create-class
+    {:context-types #js {:ctx js/propTypes.object}
+     :reagent-render (fn [{:keys [renderer ident] :as props}]
+                       (let [kwargs (flatten (seq (dissoc props :value :ident)))
+                             this (reagent/current-component)
+                             ctx (goog.object/get (.-context this) "ctx")]
+                         (apply (:browse ctx) (keyword ident) ctx kwargs)))}))
+
+(def markdown-anchor
+  (reagent/create-class
+    {:context-types #js {:ctx js/propTypes.object}
+     :reagent-render (fn [{:keys [label ident] :as props}]
+                       (let [kwargs (flatten (seq (dissoc props :prompt :ident)))
+                             this (reagent/current-component)
+                             ctx (goog.object/get (.-context this) "ctx")]
+                         (apply (:anchor ctx) (keyword ident) ctx label kwargs)))}))
+
+
 (def markdown
   (reagent/create-class
     {:reagent-render
@@ -48,7 +67,9 @@
   {"span" (fn [props] [:span (dissoc props :children :value) (:value props)])
    "CodeEditor" code-editor-wrap-argv
    "block" (fn [props] [:div (dissoc props :children :value) [markdown (:value props)]])
-   "cljs" markdown-cljs-eval})
+   "cljs" markdown-cljs-eval
+   "browse" markdown-browse
+   "anchor" markdown-anchor})
 
 ; https://github.com/medfreeman/remark-generic-extensions
 ; https://github.com/zestedesavoir/zmarkdown/tree/master/packages/remark-grid-tables
@@ -62,7 +83,10 @@
                                  {"span" {"html" {"properties" {"value" "::content::"}}}
                                   "CodeEditor" {"html" {"properties" {"value" "::content::"}}}
                                   "block" {"html" {"properties" {"value" "::content::"}}}
-                                  "cljs" {"html" {"properties" {"value" "::content::"}}}}}))
+                                  "cljs" {"html" {"properties" {"value" "::content::"}}}
+                                  "browse" {"html" {"properties" {"renderer" "::content::" "ident" "::argument::"}}}
+                                  "anchor" {"html" {"properties" {"label" "::content::" "ident" "::argument::"}}}
+                                  }}))
                         (.use js/remarkGridTables)
                         (.use js/remarkReact
                               (clj->js
