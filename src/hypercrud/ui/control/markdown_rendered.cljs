@@ -3,7 +3,7 @@
             [hypercrud.ui.user-attribute-renderer :refer [safe-eval-user-expr]]
             [hypercrud.ui.control.code]
             [hypercrud.ui.css :refer [css-slugify classes]]
-            [hypercrud.util.core :as util]
+            [hypercrud.util.core :as util :refer [or-str]]
             [goog.object]
             [reagent.core :as reagent]
             [hypercrud.util.reactive :as r]))
@@ -41,7 +41,9 @@
      :reagent-render (fn [{:keys [label ident] :as props}]
                        (let [kwargs (flatten (seq (dissoc props :prompt :ident)))
                              this (reagent/current-component)
-                             ctx (goog.object/get (.-context this) "ctx")]
+                             ctx (goog.object/get (.-context this) "ctx")
+                             label (if-not (= label "undefined") label) ; https://github.com/medfreeman/remark-generic-extensions/issues/45
+                             label (or-str label ident)]
 
                          (apply (:anchor ctx) (keyword ident) ctx label kwargs)))}))
 
