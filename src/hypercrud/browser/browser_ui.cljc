@@ -10,7 +10,7 @@
             [hypercrud.ui.native-event-listener :refer [native-on-click-listener]]
     #?(:cljs [hypercrud.ui.safe-render :refer [safe-reagent-call]])
             [hypercrud.ui.stale :as stale]
-            [hypercrud.util.core :as util :refer [unwrap]]
+            [hypercrud.util.core :as util :refer [unwrap or-str]]
             [hypercrud.util.non-fatal :refer [try-either]]
             [hypercrud.util.reactive :as reactive]
             [hyperfiddle.foundation :as foundation]
@@ -32,7 +32,7 @@
                             (fn [ctx]
                               #_(react-fragment :_) #_(list)
                               [:div
-                               [safe-reagent-call user-fn ctx]
+                               [safe-reagent-call user-fn ctx (-> @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:db/ident]) css-slugify)]
                                [fiddle-css-renderer @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]])))
    ; todo ui binding should be provided by a RT
    :default #?(:clj  (assert false "todo")

@@ -2,9 +2,11 @@
   (:require [hyperfiddle.core]
             [hypercrud.ui.user-attribute-renderer :refer [safe-eval-user-expr]]
             [hypercrud.ui.control.code]
+            [hypercrud.ui.css :refer [css-slugify classes]]
             [hypercrud.util.core :as util]
             [goog.object]
-            [reagent.core :as reagent]))
+            [reagent.core :as reagent]
+            [hypercrud.util.reactive :as r]))
 
 
 (declare markdown)
@@ -40,8 +42,8 @@
                        (let [kwargs (flatten (seq (dissoc props :prompt :ident)))
                              this (reagent/current-component)
                              ctx (goog.object/get (.-context this) "ctx")]
-                         (apply (:anchor ctx) (keyword ident) ctx label kwargs)))}))
 
+                         (apply (:anchor ctx) (keyword ident) ctx label kwargs)))}))
 
 (def markdown
   (reagent/create-class
@@ -95,10 +97,10 @@
 
 
 ; Todo; remove div.markdown; that should be default and style the inverse.
-(defn markdown-rendered* [md & [?ctx]]
-  [:div.markdown [markdown md ?ctx]])
+(defn markdown-rendered* [md & [?ctx class]]
+  [:div {:class (classes "markdown" class)} [markdown md ?ctx]])
 
-(defn markdown-hyperfiddle [md ctx]
+(defn markdown-hyperfiddle [md ctx & class]
   ; remark creates react components which don't evaluate in this stack frame
   ; so dynamic scope is not helpful to communicate values to remark plugins
-  (markdown-rendered* md ctx))
+  (markdown-rendered* md ctx class))

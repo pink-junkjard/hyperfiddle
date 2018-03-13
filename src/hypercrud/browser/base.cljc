@@ -52,6 +52,7 @@
    :fiddle/query
    :fiddle/renderer
    :fiddle/css
+   :fiddle/markdown
    :fiddle/request
    :fiddle/type])
 

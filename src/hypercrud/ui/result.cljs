@@ -30,9 +30,16 @@
         identity)))
 
 (defn doc [ctx]
+  ; This should not be instrumented with a ctx, it should be just docs for auto-result.
   (markdown-hyperfiddle (or-str @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:db/doc])
                                 (str "## " (or-str @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/name])
                                                    @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:db/ident])))) ctx))
+
+(defn ^:export fiddle-markdown "Call this from your fiddle renderer" [ctx & [class]]
+  (markdown-hyperfiddle (or-str @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/markdown])
+                                ; Default to a name or something
+                                @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:db/doc]))
+                        ctx class))
 
 (defn view [ctx & [class]]
   (let [index-ctx (dissoc ctx :isComponent)]
