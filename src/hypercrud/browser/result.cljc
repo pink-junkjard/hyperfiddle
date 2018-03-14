@@ -22,14 +22,18 @@
                  (attr-many (reactive/fmap (reactive/partial mapv vector) (:hypercrud.browser/result ctx))))))))
     (either/right (entity (reactive/fmap vector (:hypercrud.browser/result ctx))))))
 
+(defn- query-type [query]
+  (-> (parser/parse-query query)
+      :qfind
+      type))
+
 (defn with-query-relations
   "Process QueryRequest results into a relation or list of relations"
   [ctx & {:keys [:relation :relations]}]
-  (->> (try-either (parser/parse-query @(reactive/cursor (:hypercrud.browser/request ctx) [:query])))
+  (->> (try-either @(reactive/fmap query-type (reactive/cursor (:hypercrud.browser/request ctx) [:query])))
        (cats/fmap
-         (fn [{:keys [qfind]}]
-           (condp = (type qfind)
-             datascript.parser.FindRel (relations (reactive/fmap (reactive/partial mapv vec) (:hypercrud.browser/result ctx)))
-             datascript.parser.FindColl (relations (reactive/fmap (reactive/partial mapv vector) (:hypercrud.browser/result ctx)))
-             datascript.parser.FindTuple (relation (reactive/fmap vec (:hypercrud.browser/result ctx)))
-             datascript.parser.FindScalar (relation (reactive/fmap vector (:hypercrud.browser/result ctx))))))))
+         #(condp = %
+            datascript.parser.FindRel (relations (reactive/fmap (reactive/partial mapv vec) (:hypercrud.browser/result ctx)))
+            datascript.parser.FindColl (relations (reactive/fmap (reactive/partial mapv vector) (:hypercrud.browser/result ctx)))
+            datascript.parser.FindTuple (relation (reactive/fmap vec (:hypercrud.browser/result ctx)))
+            datascript.parser.FindScalar (relation (reactive/fmap vector (:hypercrud.browser/result ctx)))))))
