@@ -32,11 +32,10 @@
   #?(:clj  (delay (apply f args))
      :cljs (apply reagent/track f args)))
 
-(let [trackable-f (fn [rv f] (f (deref rv)))]
+(let [trackable-f (fn [rv f] (f (deref rv)))]               ; stable ref
   (defn fmap [f rv]
     {:pre [(reactive? rv)]}
-    ; if functions could be compared with =
-    ; (track (comp f deref) rv)
+    ; (track (comp f deref) rv) -- unstable fn ref breaks optimizations
     (track trackable-f rv f)))
 
 (letfn [(-fapply [rf rv] (@rf @rv))]
