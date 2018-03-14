@@ -56,7 +56,7 @@
           ; no idea what this means copy pasted from topnav
           (runtime/dispatch! (:peer root-ctx)
                              (foundation-actions/manual-transact! (:peer root-ctx)
-                                                                  (:hypercrud.browser/domain root-ctx)
+                                                                  (:hypercrud.browser/invert-route root-ctx)
                                                                   {:hyperfiddle.ide/foo "page"}))))
 
   (aset global "root_ctx" root-ctx)

@@ -155,7 +155,7 @@
                   :on-click (fn []
                               ; specifically dont use the SplitRuntime protocol here. the only thing that makes sense is whats in the context from the route
                               (let [nil-branch-aux {:hyperfiddle.ide/foo "page"}]
-                                (runtime/dispatch! (:peer ctx) (foundation-actions/manual-transact! (:peer ctx) (:target-domain ctx) nil-branch-aux))))}
+                                (runtime/dispatch! (:peer ctx) (foundation-actions/manual-transact! (:peer ctx) (:hypercrud.browser/invert-route ctx) nil-branch-aux))))}
          "transact!"]])
      [staging (:peer ctx)]
      [:div.markdown [markdown "Hyperfiddle always generates valid transactions, if it doesn't, please file a bug.

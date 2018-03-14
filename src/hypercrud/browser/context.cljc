@@ -32,7 +32,7 @@
   (assoc ctx :route (routing/tempid->id route ctx)))
 
 (letfn [(user-with [rt ctx branch uri tx]
-          (runtime/dispatch! rt (foundation-actions/with rt (:hypercrud.browser/domain ctx) branch uri tx)))]
+          (runtime/dispatch! rt (foundation-actions/with rt (:hypercrud.browser/invert-route ctx) branch uri tx)))]
   (defn find-element [ctx fe fe-pos]
     (let [dbname (str @(reactive/cursor fe [:source-symbol]))
           uri (when dbname

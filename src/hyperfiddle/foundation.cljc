@@ -1,14 +1,15 @@
 (ns hyperfiddle.foundation
   (:require [clojure.string :as string]
             [cuerdas.core :as cuerdas]
+            [hypercrud.browser.routing :as routing]
             [hypercrud.client.core :as hc]
             [hypercrud.compile.reader :as reader]
-            [hypercrud.util.core :refer [update-existing]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
     #?(:cljs [hypercrud.ui.control.code :refer [code*]])
     #?(:cljs [hypercrud.ui.css :refer [classes]])
     #?(:cljs [hypercrud.ui.stale :as stale])
-            [hypercrud.util.core :as util]
+            [hypercrud.util.core :as util :refer [update-existing]]
+            [hypercrud.util.reactive :as reactive]
             [hyperfiddle.foundation.actions :as foundation-actions]
             [hyperfiddle.runtime :as runtime]
             [promesa.core :as p]))
@@ -57,7 +58,9 @@
   (let [domain @(runtime/state (:peer ctx) [::runtime/domain])
         _ (assert domain "Bootstrapping failed to fetch the domain")
         domain (process-domain domain)]
-    (assoc ctx :hypercrud.browser/domain domain)))
+    (assoc ctx
+      :hypercrud.browser/domain domain
+      :hypercrud.browser/invert-route (reactive/partial routing/invert-route domain))))
 
 (defn local-basis [page-or-leaf global-basis route ctx f]
   (concat
