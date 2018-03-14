@@ -50,10 +50,10 @@
      [:option {:key false :value "false"} "False"]
      [:option {:key :nil :value ""} "--"]]))
 
-(defn select-anchor-renderer' [props relations ctx]
+(defn select-anchor-renderer' [props ctx]
   ; hack in the selected value if we don't have options hydrated?
   ; Can't, since we only have the #DbId hydrated, and it gets complicated with relaton vs entity etc
-  (let [no-options? (empty? @relations)
+  (let [no-options? (empty? @(:relations ctx))
         props (-> props
                   (update :on-change (fn [on-change]
                                        (fn [e]
@@ -65,7 +65,7 @@
                   (update :disabled #(or % no-options?)))]
     [:select.select props
      (conj
-       (->> @relations
+       (->> @(:relations ctx)
             (mapv (fn [relation]
                     (let [label (-> (build-label relation ctx)
                                     ; It's perfectly possible to properly report this error properly upstream.
@@ -83,15 +83,16 @@
   (case @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/type])
     :entity [select-error-cmp "Only fiddle type `query` is supported for select options"]
     :blank [select-error-cmp "Only fiddle type `query` is supported for select options"]
-    :query (-> (result/with-query-relations
-                 ctx
-                 :relation (constantly
-                             [select-error-cmp
-                              "Tuples and scalars are unsupported for select options. Please fix your options query to return a relation or collection"])
-                 :relations (fn [relations] [select-anchor-renderer' props relations ctx]))
+    :query (-> (result/with-query-relations ctx)
                (either/branch
                  (fn [e] (throw e))                         ; this exception is always embedded in a safe-user-renderer, so it surfaces safely
-                 identity))
+                 (fn [ctx-options]
+                   (if (:relations ctx-options)
+                     (fn [ctx-cell]
+                       [select-anchor-renderer' props ctx-options])
+                     (constantly
+                       [select-error-cmp
+                        "Tuples and scalars are unsupported for select options. Please fix your options query to return a relation or collection"])))))
     ; default
     [select-error-cmp "Only fiddle type `query` is supported for select options"]))
 

@@ -51,7 +51,9 @@
             [ui-from-link @(reactive/track link/rel->link ident ctx) ctx (:class kwargs)]))
         (anchor [ident ctx label & args]
           (let [kwargs (util/kwargs args)
-                props (-> (link/build-link-props @(reactive/track link/rel->link ident ctx) ctx)
+                link @(reactive/track link/rel->link ident ctx)
+                ctx (context/relation-path ctx link)
+                props (-> (link/build-link-props link ctx)
                           #_(dissoc :style) #_"custom renderers don't want colored links")]
             [(:navigate-cmp ctx) props label (:class kwargs)]))
         (browse' [ident ctx]

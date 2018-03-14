@@ -150,7 +150,3 @@
     :blank (either/right [])
 
     (either/right [])))
-
-(defn fe-ctxs [ctx]
-  (->> (reactive/unsequence (:hypercrud.browser/ordered-fes ctx))
-       (map (fn [[fe fe-pos]] (context/find-element ctx fe fe-pos)))))

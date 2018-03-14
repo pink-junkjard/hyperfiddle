@@ -102,7 +102,7 @@
 (defn markdown-rendered* [md & [?ctx class]]
   [:div {:class (classes "markdown" class)} [markdown md ?ctx]])
 
-(defn markdown-hyperfiddle [md ctx & class]
+(defn markdown-relation [md ctx & class]
   ; remark creates react components which don't evaluate in this stack frame
   ; so dynamic scope is not helpful to communicate values to remark plugins
   (markdown-rendered* md ctx class))

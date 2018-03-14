@@ -1,8 +1,9 @@
 (ns hypercrud.ui.result
-  (:require [cats.monad.either :as either]
+  (:require [cats.core :refer [fmap]]
+            [cats.monad.either :as either]
             [hypercrud.browser.result :as result]
             [hypercrud.ui.control.link-controls :as link-controls]
-            [hypercrud.ui.control.markdown-rendered :refer [markdown-hyperfiddle]]
+            [hypercrud.ui.control.markdown-rendered :refer [markdown-relation]]
             [hypercrud.ui.css :refer [classes]]
             [hypercrud.ui.form :as form]
             [hypercrud.ui.table :as table]
@@ -11,35 +12,30 @@
             [hypercrud.util.reactive :as reactive]))
 
 
-(defn result-renderer [ctx]
+(defn result-renderer [ctx]                                 ; should have explicit mapcat, like markdown.
   ; This is not a reagent component; it returns a component-or-list-of-components (or nil).
   ; Thus it cannot be used from hiccup syntax. It needs to be wrapped into a :div or a react-fragment.
   ; Which means at that point it might as well return monad and let the wrapper sort out the errors?
-  (-> (case @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/type])
-        :entity (result/with-entity-relations ctx
-                                              :entity #(form/Relation % ctx)
-                                              :attr-one #(form/Relation % ctx)
-                                              :attr-many #(table/Table % ctx))
-        :query (result/with-query-relations ctx
-                                            :relation #(form/Relation % ctx)
-                                            :relations #(table/Table % ctx))
-        :blank (either/right nil)
-        (either/right nil))
+  (-> (result/with-relations ctx)
       (either/branch
         (fn [e] [:pre (util/pprint-str e)])
-        identity)))
+        (fn [ctx] (if (:relations ctx) (table/Table ctx) (form/Relation ctx))))))
 
 (defn doc [ctx]
-  ; This should not be instrumented with a ctx, it should be just docs for auto-result.
-  (markdown-hyperfiddle (or-str @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:db/doc])
-                                (str "## " (or-str @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/name])
-                                                   @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:db/ident])))) ctx))
+  (markdown-relation (or-str @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:db/doc])
+                             (str "## " (or-str @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/name])
+                                                @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:db/ident]))))
+                     nil))
 
-(defn ^:export fiddle-markdown "Call this from your fiddle renderer" [ctx & [class]]
-  (markdown-hyperfiddle (or-str @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/markdown])
-                                ; Default to a name or something
-                                @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:db/doc]))
-                        ctx class))
+(defn ^:export fiddle-markdown "Call this from your fiddle renderer"
+  [ctx & [class]]
+  (-> (result/with-relations ctx)
+      (either/branch
+        (fn [e] [:pre (util/pprint-str e)])
+        (fn [ctx]
+          (if (:relations ctx)
+            (table/Table ctx)                               ; todo - markdown tables
+            (markdown-relation @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/markdown]) ctx class))))))
 
 (defn view [ctx & [class]]
   (let [index-ctx (dissoc ctx :isComponent)]

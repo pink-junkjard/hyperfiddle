@@ -1,6 +1,8 @@
 (ns hypercrud.browser.context
-  (:require [hypercrud.browser.routing :as routing]
+  (:require [cats.monad.either :refer [branch]]
+            [hypercrud.browser.routing :as routing]
             [hypercrud.util.reactive :as reactive]
+            [hypercrud.util.string :refer [memoized-safe-read-edn-string]]
             [hyperfiddle.foundation.actions :as foundation-actions]
             [hyperfiddle.runtime :as runtime]))
 
@@ -31,10 +33,21 @@
          (some-> ctx :hypercrud.browser/domain :domain/fiddle-repo)]}
   (assoc ctx :route (routing/tempid->id route ctx)))
 
+(defn relations [ctx rv]
+  {:pre [(reactive/reactive? rv)]}
+  (assoc ctx :relations rv))
+
+(defn relation [ctx rv]
+  {:pre [(reactive/reactive? rv)]}
+  ; (assoc ctx :relation @(reactive/cursor (:relations ctx) [i]))
+  ; Break the pattern - :relations is not in scope in form case which is a bit of information.
+  (assoc ctx :relation rv))
+
 (letfn [(user-with [rt ctx branch uri tx]
           (runtime/dispatch! rt (foundation-actions/with rt (:hypercrud.browser/domain ctx) branch uri tx)))]
-  (defn find-element [ctx fe fe-pos]
-    (let [dbname (str @(reactive/cursor fe [:source-symbol]))
+  (defn find-element [ctx fe-pos]
+    (let [fe (reactive/cursor (:hypercrud.browser/ordered-fes ctx) [fe-pos])
+          dbname (str @(reactive/cursor fe [:source-symbol]))
           uri (when dbname
                 (get-in ctx [:hypercrud.browser/domain :domain/environment dbname]))
           user-with! (reactive/partial user-with (:peer ctx) ctx (:branch ctx) uri)]
@@ -48,9 +61,9 @@
 (let [f (fn [cell-data ctx]
           (if-let [owner-fn (:owner-fn ctx)]
             (owner-fn @cell-data ctx)))]
-  (defn cell-data [ctx relation]
+  (defn cell-data [ctx]                                     ; "dependent"
     {:pre [(:fe-pos ctx)]}
-    (let [cell-data (reactive/cursor relation [(:fe-pos ctx)])]
+    (let [cell-data (reactive/cursor (:relation ctx) [(:fe-pos ctx)])]
       (assoc ctx :owner (reactive/track f cell-data ctx)
                  :cell-data cell-data))))
 
@@ -65,3 +78,26 @@
 (defn value [ctx value]
   {:pre [(reactive/reactive? value)]}
   (assoc ctx :value value))
+
+(letfn [(get-value-f [attr fields]
+          (->> fields
+               (filter #(= (:attribute %) attr))
+               first
+               :cell-data->value))]
+  (defn relation-path [ctx link]
+    ; opposite of link/same-path-as
+    (branch
+      (memoized-safe-read-edn-string (str "[" (:link/path link) "]"))
+      #(throw %)
+      (fn [[fe-pos attr]]
+        (as-> ctx $
+              ;(with-relations)                                    ; already here
+              ;(relation (reactive/atom [domain]))                 ; already here
+              (find-element $ fe-pos)
+              (if (:link/dependent? link) (cell-data $) $)
+              (if attr (attribute $ attr) $)
+              (if (and (:link/dependent? link) attr)
+                (let [f (->> (reactive/cursor (:hypercrud.browser/find-element $) [:fields])
+                             (reactive/fmap (reactive/partial get-value-f attr)))]
+                  (value $ (reactive/fmap f (:cell-data $))))
+                $))))))

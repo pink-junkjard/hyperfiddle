@@ -64,8 +64,9 @@
       ; todo support custom request fns at the field level, then this code is 95% deleted
       (let [domain @(:hypercrud.browser/result ctx)
             ctx (-> ctx
-                    (context/find-element (reactive/cursor (:hypercrud.browser/ordered-fes ctx) [0]) 0)
-                    (context/cell-data (reactive/atom [domain]))
+                    (context/relation (reactive/atom [domain]))
+                    (context/find-element 0)
+                    (context/cell-data)
                     (context/attribute :dbhole/uri)
                     (context/value (reactive/atom (get domain :domain/home-route))))]
         (browser-request/recurse-request available-pages (set-userland-$ ctx))))))

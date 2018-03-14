@@ -36,8 +36,8 @@
     ; if the anchor IS NOT a popover, this should be the same logic as widget/render-inline-anchors
     (request-from-link link ctx)))
 
-(defn cell-dependent-requests [relation ctx]
-  (let [ctx (context/cell-data ctx relation)]
+(defn cell-dependent-requests [ctx]
+  (let [ctx (context/cell-data ctx)]
     (concat
       (->> @(:hypercrud.browser/links ctx)
            (filter :link/dependent?)
@@ -52,15 +52,16 @@
                             (filter (link/same-path-as? [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]))
                             (mapcat #(recurse-request % ctx))))))))))
 
-(defn relation-dependent-requests [ctx relation]            ; ui equivalent of form
-  (->> (find-element/fe-ctxs ctx)
-       (mapcat (partial cell-dependent-requests relation))))
+(defn form-requests [ctx]                          ; ui equivalent of form
+  (->> (reactive/unsequence (:hypercrud.browser/ordered-fes ctx))
+       (mapcat (fn [[fe i]]
+                 (cell-dependent-requests (context/find-element ctx i))))))
 
-(defn relations-dependent-requests [ctx relations]          ; ui equivalent of table
+(defn table-requests [ctx]                        ; ui equivalent of table
   ; the request side does NOT need the cursors to be equiv between loops
-  (->> (reactive/unsequence relations)
-       (mapcat (fn [[relation index]]
-                 (relation-dependent-requests ctx relation)))))
+  (->> (reactive/unsequence (:relations ctx))
+       (mapcat (fn [[relation i]]
+                 (form-requests (context/relation ctx relation))))))
 
 (defn- filter-inline [links] (filter :link/render-inline? links))
 
@@ -72,9 +73,10 @@
            (remove :link/dependent?)
            (filter (link/same-path-as? []))
            (mapcat #(recurse-request % ctx)))
-      (->> (find-element/fe-ctxs ctx)                       ; might have empty results
-           (mapcat (fn [ctx]
-                     (let [fe-pos (:fe-pos ctx)]
+      (->> (reactive/unsequence (:hypercrud.browser/ordered-fes ctx)) ; might have empty results-- DJG Dont know what this prior comment means?
+           (mapcat (fn [[fe i]]
+                     (let [ctx (context/find-element ctx i)
+                           fe-pos (:fe-pos ctx)]
                        (concat
                          (->> @(:hypercrud.browser/links ctx)
                               (remove :link/dependent?)
@@ -87,21 +89,10 @@
                                                (remove :link/dependent?)
                                                (filter (link/same-path-as? [fe-pos (:hypercrud.browser/attribute ctx)]))
                                                (mapcat #(recurse-request % ctx))))))))))))
-      (case @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/type])
-        :entity (-> (result/with-entity-relations ctx
-                                                  :entity (partial relation-dependent-requests ctx)
-                                                  :attr-one (partial relation-dependent-requests ctx)
-                                                  :attr-many (partial relations-dependent-requests ctx))
-                    (either/branch (constantly nil) identity))
-
-        :query (-> (result/with-query-relations ctx
-                                                :relation (partial relation-dependent-requests ctx)
-                                                :relations (partial relations-dependent-requests ctx))
-                   (either/branch (constantly nil) identity))
-
-        :blank nil
-
-        nil))))
+      (if-let [ctx (unwrap (result/with-relations ctx))]
+        (if (:relations ctx)
+          (table-requests ctx)
+          (form-requests ctx))))))
 
 (defn f-mode-config []
   {:from-ctx :user-request

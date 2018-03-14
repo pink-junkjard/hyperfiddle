@@ -67,13 +67,12 @@
       (link-controls/render-nav-cmps path false ctx link/options-processor)
       (link-controls/render-inline-links path false ctx link/options-processor)]]))
 
-(defn LinkCell [dependent? relation ctx]
+(defn LinkCell [dependent? ctx]
   [(if dependent? :td.link-cell :th.link-cell)
-   (->> (find-element/fe-ctxs ctx)
-        (mapcat (fn [ctx]
-                  (let [ctx (if dependent?
-                              (context/cell-data ctx relation)
-                              ctx)
+   (->> (reactive/unsequence (:hypercrud.browser/ordered-fes ctx))
+        (mapcat (fn [[fe i]]
+                  (let [ctx (context/find-element ctx i)
+                        ctx (if dependent? (context/cell-data ctx) ctx) ; bit in ctx?
                         path [(:fe-pos ctx)]]
                     (link-controls/render-nav-cmps path dependent? ctx)
                     ; inline entity-anchors are not yet implemented
@@ -81,14 +80,15 @@
 
 (defn THead [sort-col ctx]
   [:tr
-   (->> (find-element/fe-ctxs ctx)
-        (mapcat (fn [ctx]
-                  (->> @(reactive/cursor (:hypercrud.browser/find-element ctx) [:fields])
-                       (map (fn [field]
-                              ^{:key (:id field)}
-                              [col-head field sort-col ctx]))))))
-   ; no need for a relation for non-repeating, todo fix this crap
-   [LinkCell false nil ctx]])
+   (->> (reactive/unsequence (:hypercrud.browser/ordered-fes ctx))
+        (mapcat (fn [[fe i]]
+                  (let [ctx (context/find-element ctx i)]   ; "Entity"
+                    ; This is contorted to be more parallel to form
+                    (->> @(reactive/cursor (:hypercrud.browser/find-element ctx) [:fields])
+                         (map (fn [field]
+                                ^{:key (:id field)}
+                                [col-head field sort-col ctx])))))))
+   [LinkCell false ctx]])
 
 (defn table-cell [control -field ctx]
   (let [shadow-link @(reactive/fmap auto-anchor/system-link? (reactive/cursor (:cell-data ctx) [:db/id]))]
@@ -104,21 +104,20 @@
         user-cell (case @(:hypercrud.ui/display-mode ctx) :xray table-cell :user table-cell #_(:cell ctx table-cell))]
     [user-cell (auto-control' ctx) field ctx]))
 
-(defn Entity [relation ctx]
-  (let [ctx (context/cell-data ctx relation)]
+(defn Entity [ctx]
+  (let [ctx (context/cell-data ctx)]
     (->> @(reactive/cursor (:hypercrud.browser/find-element ctx) [:fields])
          (mapv (fn [field]
                  ^{:key (:id field)}
                  [Cell field ctx])))))
 
-(defn Relation [relation ctx]
-  (->> (find-element/fe-ctxs ctx)
-       (mapcat (partial Entity relation))))
+(defn FindElement [ctx i]
+  (Entity (context/find-element ctx i)))
 
-(defn Row [relation ctx]
-  [:tr
-   (Relation relation ctx)
-   [LinkCell true relation ctx]])
+(defn Relation [ctx]
+  (->> (reactive/unsequence (:hypercrud.browser/ordered-fes ctx))
+       (mapcat (fn [[fe i]]
+                 (FindElement ctx i)))))
 
 (letfn [(sort-fn [sort-col ctx relations-val]
           (let [[sort-fe-pos sort-attr direction] @sort-col
@@ -137,23 +136,27 @@
                          relations-val))
               relations-val)))
         (key-fn [relation] (hash (map #(or (:db/id %) %) relation)))]
-  (defn TBody [sort-col relations ctx]
-    (->> (reactive/fmap (reactive/partial sort-fn sort-col ctx) relations)
+  (defn TBody [sort-col ctx]
+    (->> (reactive/fmap (reactive/partial sort-fn sort-col ctx) (:relations ctx))
          (reactive/unsequence key-fn)
          (map (fn [[relation key]]
-                ^{:key key}
-                [Row relation ctx]))
+                (let [ctx (context/relation ctx relation)]
+                  ^{:key key}
+                  [:tr
+                   (Relation ctx)                           ; mapcat here
+                   [LinkCell true ctx]])))
          (doall))))
 
-(defn Table-inner [relations ctx]
+(defn Table-inner [ctx]
   (let [sort-col (reactive/atom nil)]
-    (fn [relations ctx]
+    (fn [ctx]
       (let [ctx (assoc ctx :layout (:layout ctx :table))]
         [:table.ui-table
          [:thead [THead sort-col ctx]]
          ; Sometimes the leafnode needs all the anchors.
-         [:tbody (TBody sort-col relations ctx)]]))))
+         [:tbody (TBody sort-col ctx)]]))))
 
-; This one is a appfn
-(defn Table [relations ctx]
-  [Table-inner relations ctx])
+(defn Table [ctx]
+  ; Relations could be in the ctx, but I chose not for now, because the user renderers don't get to see it i think.
+  ; The framework does the mapping and calls userland with a single relation the right number of times.
+  [Table-inner ctx])
