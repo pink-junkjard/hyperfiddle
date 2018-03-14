@@ -2,7 +2,7 @@
   (:require [cljs.pprint :as pprint]
             [hypercrud.browser.routing :as routing]
             [hypercrud.react.react-fragment :as react-fragment]
-            [hypercrud.util.core :refer [pprint-str]]
+            [hypercrud.util.core :refer [pprint-str update-existing]]
             [hyperfiddle.runtime :as runtime]
             [hyperfiddle.foundation.actions :as foundation-actions]))
 
@@ -26,9 +26,9 @@
                                               :hypercrud.browser/find-element
                                               :route
                                               :value])
-                                (update :hypercrud.browser/find-element deref)
-                                (update :cell-data deref)
-                                (update :value deref)
+                                (update-existing :hypercrud.browser/find-element deref)
+                                (update-existing :cell-data deref)
+                                (update-existing :value deref)
                                 #_{:hypercrud.browser/attribute identity
                                    :fe-pos identity
                                    :hypercrud.browser/find-element deref
