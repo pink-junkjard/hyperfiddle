@@ -52,7 +52,7 @@
         (anchor [ident ctx label & args]
           (let [kwargs (util/kwargs args)
                 link @(reactive/track link/rel->link ident ctx)
-                ctx (context/relation-path ctx link)
+                ctx (context/relation-path ctx ((juxt :link/dependent? :link/path) link))
                 props (-> (link/build-link-props link ctx)
                           #_(dissoc :style) #_"custom renderers don't want colored links")]
             [(:navigate-cmp ctx) props label (:class kwargs)]))

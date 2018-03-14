@@ -4,7 +4,14 @@
             [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :refer [memoized-safe-read-edn-string]]
             [hyperfiddle.foundation.actions :as foundation-actions]
-            [hyperfiddle.runtime :as runtime]))
+            [hyperfiddle.runtime :as runtime]
+
+
+            [cats.core :as cats]
+            [cats.monad.either :as either]
+            [datascript.parser :as parser]
+            [hypercrud.util.non-fatal :refer [try-either]]
+            [hypercrud.util.reactive :as reactive]))
 
 
 (defn clean [ctx]
@@ -42,6 +49,32 @@
   ; (assoc ctx :relation @(reactive/cursor (:relations ctx) [i]))
   ; Break the pattern - :relations is not in scope in form case which is a bit of information.
   (assoc ctx :relation rv))
+
+(defn with-relations "Process results into a relation or list of relations" ; "relation-or-relations", and can the either be hoisted out?
+  [ctx]
+  (case @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/type]) ; fiddle/type not relevant outside this fn
+    :entity (if-not @(reactive/fmap nil? (reactive/cursor (:hypercrud.browser/request ctx) [:a]))
+              (let [[e a] (get-in ctx [:route :request-params])]
+                (->> (try-either (.-dbname e))
+                     (cats/fmap
+                       (fn [source-symbol]
+                         (case @(reactive/cursor (:hypercrud.browser/schemas ctx) [(str source-symbol) a :db/cardinality :db/ident])
+                           :db.cardinality/one
+                           (relation ctx (reactive/fmap vector (:hypercrud.browser/result ctx)))
+
+                           :db.cardinality/many
+                           (relations ctx (reactive/fmap (reactive/partial mapv vector) (:hypercrud.browser/result ctx))))))))
+              (either/right (relation ctx (reactive/fmap vector (:hypercrud.browser/result ctx)))))
+    :query (->> (try-either (parser/parse-query @(reactive/cursor (:hypercrud.browser/request ctx) [:query])))
+                (cats/fmap
+                  (fn [{:keys [qfind]}]
+                    (condp = (type qfind)
+                      datascript.parser.FindRel (relations ctx (reactive/fmap (reactive/partial mapv vec) (:hypercrud.browser/result ctx)))
+                      datascript.parser.FindColl (relations ctx (reactive/fmap (reactive/partial mapv vector) (:hypercrud.browser/result ctx)))
+                      datascript.parser.FindTuple (relation ctx (reactive/fmap vec (:hypercrud.browser/result ctx)))
+                      datascript.parser.FindScalar (relation ctx (reactive/fmap vector (:hypercrud.browser/result ctx)))))))
+    :blank (either/right ctx)
+    (either/right ctx)))
 
 (letfn [(user-with [rt ctx branch uri tx]
           (runtime/dispatch! rt (foundation-actions/with rt (:hypercrud.browser/domain ctx) branch uri tx)))]
@@ -84,20 +117,19 @@
                (filter #(= (:attribute %) attr))
                first
                :cell-data->value))]
-  (defn relation-path [ctx link]
-    ; opposite of link/same-path-as
+  (defn relation-path [ctx [dependent path]]
     (branch
-      (memoized-safe-read-edn-string (str "[" (:link/path link) "]"))
+      (memoized-safe-read-edn-string (str "[" path "]")) ; see link/same-path-as
       #(throw %)
       (fn [[fe-pos attr]]
-        (as-> ctx $
+        (as-> ctx ctx
               ;(with-relations)                                    ; already here
               ;(relation (reactive/atom [domain]))                 ; already here
-              (find-element $ fe-pos)
-              (if (:link/dependent? link) (cell-data $) $)
-              (if attr (attribute $ attr) $)
-              (if (and (:link/dependent? link) attr)
-                (let [f (->> (reactive/cursor (:hypercrud.browser/find-element $) [:fields])
+              (if (and fe-pos) (find-element ctx fe-pos) ctx)
+              (if (and fe-pos dependent) (cell-data ctx) ctx)
+              (if (and fe-pos dependent attr) (attribute ctx attr) ctx)
+              (if (and fe-pos dependent attr)
+                (let [f (->> (reactive/cursor (:hypercrud.browser/find-element ctx) [:fields])
                              (reactive/fmap (reactive/partial get-value-f attr)))]
-                  (value $ (reactive/fmap f (:cell-data $))))
-                $))))))
+                  (value ctx (reactive/fmap f (:cell-data ctx))))
+                ctx))))))

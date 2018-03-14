@@ -1,7 +1,7 @@
 (ns hypercrud.ui.result
   (:require [cats.core :refer [fmap]]
             [cats.monad.either :as either]
-            [hypercrud.browser.result :as result]
+            [hypercrud.browser.context :as context]
             [hypercrud.ui.control.link-controls :as link-controls]
             [hypercrud.ui.control.markdown-rendered :refer [markdown-relation]]
             [hypercrud.ui.css :refer [classes]]
@@ -16,7 +16,7 @@
   ; This is not a reagent component; it returns a component-or-list-of-components (or nil).
   ; Thus it cannot be used from hiccup syntax. It needs to be wrapped into a :div or a react-fragment.
   ; Which means at that point it might as well return monad and let the wrapper sort out the errors?
-  (-> (result/with-relations ctx)
+  (-> (context/with-relations ctx)
       (either/branch
         (fn [e] [:pre (util/pprint-str e)])
         (fn [ctx] (if (:relations ctx) (table/Table ctx) (form/Relation ctx))))))
@@ -29,7 +29,7 @@
 
 (defn ^:export fiddle-markdown "Call this from your fiddle renderer"
   [ctx & [class]]
-  (-> (result/with-relations ctx)
+  (-> (context/with-relations ctx)
       (either/branch
         (fn [e] [:pre (util/pprint-str e)])
         (fn [ctx]

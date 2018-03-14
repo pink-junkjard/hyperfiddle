@@ -3,7 +3,6 @@
 
 (defn bindings [ctx]
   (assoc ctx
-    :uri (get-in ctx [:hypercrud.browser/domain :domain/environment "$"]) ; branched index link needs explicit conn-id
     :cell (fn [control field ctx]
             (let [rtype (-> ctx :cell-data deref :fiddle/type)
                   visible (case (:attribute field)

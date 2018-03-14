@@ -3,10 +3,8 @@
             [cats.monad.either :as either]
             [hypercrud.browser.base :as base]
             [hypercrud.browser.context :as context]
-            [hypercrud.browser.find-element :as find-element]
             [hypercrud.browser.link :as link]
             [hypercrud.browser.popovers :as popovers]
-            [hypercrud.browser.result :as result]
             [hypercrud.browser.routing :as routing]
             [hypercrud.client.schema :as schema-util]
             [hypercrud.util.core :refer [unwrap]]
@@ -89,7 +87,7 @@
                                                (remove :link/dependent?)
                                                (filter (link/same-path-as? [fe-pos (:hypercrud.browser/attribute ctx)]))
                                                (mapcat #(recurse-request % ctx))))))))))))
-      (if-let [ctx (unwrap (result/with-relations ctx))]
+      (if-let [ctx (unwrap (context/with-relations ctx))]
         (if (:relations ctx)
           (table-requests ctx)
           (form-requests ctx))))))

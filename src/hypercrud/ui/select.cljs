@@ -1,11 +1,11 @@
 (ns hypercrud.ui.select
   (:require [cats.core :as cats]
             [cats.monad.either :as either]
+            [hypercrud.browser.context :as context]
             [hypercrud.browser.core :as browser]
             [hypercrud.client.tx :as tx]
             [hypercrud.util.non-fatal :refer [try-either]]
-            [hypercrud.util.reactive :as reactive]
-            [hypercrud.browser.result :as result]))
+            [hypercrud.util.reactive :as reactive]))
 
 
 (defn default-label-renderer [v ctx]
@@ -83,7 +83,7 @@
   (case @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/type])
     :entity [select-error-cmp "Only fiddle type `query` is supported for select options"]
     :blank [select-error-cmp "Only fiddle type `query` is supported for select options"]
-    :query (-> (result/with-query-relations ctx)
+    :query (-> (context/with-relations ctx)
                (either/branch
                  (fn [e] (throw e))                         ; this exception is always embedded in a safe-user-renderer, so it surfaces safely
                  (fn [ctx-options]

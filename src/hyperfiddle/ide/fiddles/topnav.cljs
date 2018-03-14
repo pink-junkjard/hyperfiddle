@@ -5,6 +5,7 @@
             [hypercrud.browser.auto-fiddle :as auto-fiddle]
             [hypercrud.browser.base :as base]
             [hypercrud.browser.browser-ui :as browser-ui]
+            [hypercrud.browser.context :as context]
             [hypercrud.browser.link :as link]
             [hypercrud.client.tx :as tx]
             [hypercrud.react.react-fragment :refer [react-fragment]]
@@ -70,7 +71,8 @@
       [re-com.core/throbber :size :smaller]]]))
 
 (defn -renderer [ctx]
-  (let [display-mode @(runtime/state (:peer ctx) [:display-mode])
+  (let [ctx (unwrap (context/with-relations ctx))
+        display-mode @(runtime/state (:peer ctx) [:display-mode])
         dirty? (not (empty? @(runtime/state (:peer ctx) [:stage])))
         ctx (shadow-fiddle ctx)
         ; hack until hyperfiddle.net#156 is complete
