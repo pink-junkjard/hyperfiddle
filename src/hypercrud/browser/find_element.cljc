@@ -11,7 +11,7 @@
 
 (defrecord FindElement [name fields source-symbol splat? type])
 
-(defrecord Field [id attribute doc cell-data->value])
+(defrecord Field [id attribute cell-data->value])
 
 (defn variable->fe [element]
   (let [name (str (:symbol element))]
