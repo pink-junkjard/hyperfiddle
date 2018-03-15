@@ -138,17 +138,24 @@
     [:span.qe.radio-group (apply react-fragment :_ options)]))
 
 (defn ^:export stage-ui [ctx]
-  (let [anonymous? (nil? (:user-profile ctx))
+  (let [writes-allowed? (or (foundation/alias? (foundation/hostname->hf-domain-name ctx))
+                            @(reactive/fmap (reactive/partial foundation/domain-owner? (:user-profile ctx))
+                                            (runtime/state (:peer ctx) [::runtime/domain])))
+        anonymous? (nil? (:user-profile ctx))
         stage @(runtime/state (:peer ctx) [:stage])]
     [:div.hyperfiddle-topnav-stage
      (result/view ctx)                                      ; for docstring
-     [tooltip (cond anonymous? {:status :warning :label "please login"}
-                    (not (empty? stage)) {:status :warning :label "please transact! all changes first"})
-      [:button {:disabled (or anonymous? (not (empty? stage)))
-                :on-click (fn [] (runtime/dispatch! (:peer ctx) [:enable-auto-transact]))}
-       "Enable auto-transact"]]
-     (let [disabled? (or anonymous? (empty? stage))]
-       [tooltip (cond anonymous? {:status :warning :label "please login"}
+     (let [disabled? (or (not writes-allowed?) (not (empty? stage)))]
+       [tooltip (cond (and (not writes-allowed?) anonymous?) {:status :warning :label "please login"}
+                      (not writes-allowed?) {:status :warning :label "Writes restricted"}
+                      (not (empty? stage)) {:status :warning :label "please transact! all changes first"})
+        [:button {:disabled disabled?
+                  :style (if disabled? {:pointer-events "none"})
+                  :on-click (fn [] (runtime/dispatch! (:peer ctx) [:enable-auto-transact]))}
+         "Enable auto-transact"]])
+     (let [disabled? (or (not writes-allowed?) (empty? stage))]
+       [tooltip (cond (and (not writes-allowed?) anonymous?) {:status :warning :label "please login"}
+                      (not writes-allowed?) {:status :warning :label "Writes restricted"}
                       (empty? stage) {:status :warning :label "no changes"})
         [:button {:disabled disabled?
                   :style (if disabled? {:pointer-events "none"})

@@ -36,7 +36,20 @@
             [:domain/ident hf-domain-name])]
     (->EntityRequest e nil
                      (hc/db peer domain-uri nil)
-                     [:db/id :domain/ident :domain/home-route :domain/router :domain/fiddle-repo :domain/environment :domain/aliases])))
+                     [:db/id
+                      :domain/aliases
+                      :domain/environment
+                      :domain/fiddle-repo
+                      :domain/home-route
+                      :domain/members
+                      :domain/ident
+                      :domain/router
+                      :user/sub])))
+
+(defn domain-owner? [user-profile domain]
+  (let [sub (:sub user-profile)]
+    (or (= sub (:user/sub domain))
+        (contains? (set (:domain/members domain)) sub))))
 
 (defn user-profile->ident [user-profile]
   (-> user-profile :email (cuerdas/replace #"\@.+$" "") (cuerdas/slug)))
