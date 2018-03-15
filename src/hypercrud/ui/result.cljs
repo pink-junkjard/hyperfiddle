@@ -34,7 +34,7 @@
         (fn [e] [:pre (util/pprint-str e)])
         (fn [ctx]
           (if (:relations ctx)
-            (table/Table ctx)                               ; todo - markdown tables
+            [:pre "Markdown only supported for forms, not tables (per-row markdown can work though)"]
             (markdown-relation @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/markdown]) ctx class))))))
 
 (defn view [ctx & [class]]

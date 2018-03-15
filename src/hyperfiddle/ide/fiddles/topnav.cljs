@@ -111,7 +111,9 @@
          ((:anchor ctx) :account ctx (get-in ctx [:user-profile :email]))
          [:span.nav-link.auth [:a {:href (str (stateless-login-url ctx) "&state=" (runtime/encode-route (:peer ctx) (:target-route ctx)))} "Login"]])]]
      [:div.hyperfiddle-topnav-fiddle-controls
-      (result/result-renderer ctx)]]))
+      ((:cell ctx) [true 0 :fiddle/type] ctx)
+      ((:cell ctx) [true 0 :fiddle/pull] ctx)
+      ((:cell ctx) [true 0 :fiddle/query] ctx)]]))
 
 (defn- update-spacer [topnav]
   (let [measuredHeight (-> topnav (aget "fixed") .-offsetHeight)]

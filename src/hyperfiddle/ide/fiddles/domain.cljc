@@ -63,10 +63,10 @@
       (browser-request/fiddle-dependent-requests (assoc ctx :hypercrud.browser/links (reactive/atom links)))
       ; todo support custom request fns at the field level, then this code is 95% deleted
       (let [domain @(:hypercrud.browser/result ctx)
-            ctx (-> ctx
-                    (context/relation (reactive/atom [domain]))
-                    (context/find-element 0)
-                    (context/cell-data)
-                    (context/attribute :dbhole/uri)
-                    (context/value (reactive/atom (get domain :domain/home-route))))]
+            ctx (as-> ctx ctx
+                      (context/relation ctx (reactive/atom [domain]))
+                      (context/find-element ctx 0)
+                      (context/cell-data ctx)
+                      (context/field ctx (context/-field-getter-dumb ctx :dbhole/uri))
+                      (context/value ctx (reactive/atom (get domain :domain/home-route))))]
         (browser-request/recurse-request available-pages (set-userland-$ ctx))))))

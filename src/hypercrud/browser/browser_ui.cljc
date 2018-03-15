@@ -10,9 +10,11 @@
             [hypercrud.ui.native-event-listener :refer [native-on-click-listener]]
     #?(:cljs [hypercrud.ui.safe-render :refer [safe-reagent-call]])
             [hypercrud.ui.stale :as stale]
+    ;#?(:cljs [hypercrud.ui.form :as form])
             [hypercrud.util.core :as util :refer [unwrap or-str]]
             [hypercrud.util.non-fatal :refer [try-either]]
             [hypercrud.util.reactive :as reactive]
+            [hypercrud.util.string :refer [memoized-safe-read-edn-string]]
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.foundation.actions :as foundation-actions]
             [hyperfiddle.runtime :as runtime]))
@@ -49,13 +51,16 @@
                       (assoc ctx :user-renderer user-renderer #_(if f #(apply f %1 %2 %3 %4 args)))
                       ctx)]
             [ui-from-link @(reactive/track link/rel->link ident ctx) ctx (:class kwargs)]))
-        (anchor [ident ctx label & args]
+        (anchor [rel ctx label & args]
           (let [kwargs (util/kwargs args)
-                link @(reactive/track link/rel->link ident ctx)
-                ctx (context/relation-path ctx ((juxt :link/dependent? :link/path) link))
+                {:keys [:link/dependent? :link/path] :as link} @(reactive/track link/rel->link rel ctx)
+                ctx (context/relation-path ctx (into [dependent?] (unwrap (memoized-safe-read-edn-string (str "[" path "]")))))
                 props (-> (link/build-link-props link ctx)
                           #_(dissoc :style) #_"custom renderers don't want colored links")]
             [(:navigate-cmp ctx) props label (:class kwargs)]))
+        (cell [[d i a] ctx & args]                          ; form only
+          #?(:clj nil
+             :cljs [hypercrud.ui.form/Cell (context/relation-path ctx [d i a])]))
         (browse' [ident ctx]
           (->> (base/data-from-link @(reactive/track link/rel->link ident ctx) ctx)
                (cats/fmap :hypercrud.browser/result)
@@ -67,6 +72,7 @@
     (assoc ctx
       :anchor anchor
       :browse browse
+      :cell cell
       :anchor* anchor*
       :browse' browse')))
 

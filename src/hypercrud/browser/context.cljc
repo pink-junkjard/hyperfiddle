@@ -2,7 +2,6 @@
   (:require [cats.monad.either :refer [branch]]
             [hypercrud.browser.routing :as routing]
             [hypercrud.util.reactive :as reactive]
-            [hypercrud.util.string :refer [memoized-safe-read-edn-string]]
             [hyperfiddle.foundation.actions :as foundation-actions]
             [hyperfiddle.runtime :as runtime]
 
@@ -22,8 +21,9 @@
     :fe-pos :uri :user-with!
     :value
     :layout :field
-    :cell :label                                            ; TODO :cell should cascade
+    :label
 
+    :hypercrud.browser/cell                           ; TODO :cell should cascade
     :hypercrud.browser/attribute
     :hypercrud.browser/fat-attribute
     :hypercrud.browser/fiddle
@@ -101,35 +101,40 @@
                  :cell-data cell-data))))
 
 (letfn [(default [default-v v] (or v default-v))]
-  (defn attribute [ctx attr-ident]
-    (let [fat-attr (->> (reactive/cursor (:hypercrud.browser/schema ctx) [attr-ident])
+  (defn field [ctx field]
+    {:pre [(not (reactive/reactive? field))]}
+    (let [attr-ident (:attribute field)
+          fat-attr (->> (reactive/cursor (:hypercrud.browser/schema ctx) [attr-ident])
                         (reactive/fmap (reactive/partial default {:db/ident attr-ident})))]
       (assoc ctx
+        :hypercrud.browser/field field
         :hypercrud.browser/attribute attr-ident
         :hypercrud.browser/fat-attribute fat-attr))))
 
-(defn value [ctx value]
-  {:pre [(reactive/reactive? value)]}
-  (assoc ctx :value value))
+(defn value [ctx rv]
+  {:pre [(reactive/reactive? rv)]}
+  (assoc ctx :value rv))
+
+(defn -field-getter-dumb [ctx a]
+  #_(reactive/cursor (:hypercrud.browser/find-element ctx) [:fields i])
+  (->> @(reactive/cursor (:hypercrud.browser/find-element ctx) [:fields])
+       (filter #(= (:attribute %) a))
+       first))
 
 (letfn [(get-value-f [attr fields]
           (->> fields
                (filter #(= (:attribute %) attr))
                first
                :cell-data->value))]
-  (defn relation-path [ctx [dependent path]]
-    (branch
-      (memoized-safe-read-edn-string (str "[" path "]")) ; see link/same-path-as
-      #(throw %)
-      (fn [[fe-pos attr]]
-        (as-> ctx ctx
-              ;(with-relations)                                    ; already here
-              ;(relation (reactive/atom [domain]))                 ; already here
-              (if (and fe-pos) (find-element ctx fe-pos) ctx)
-              (if (and fe-pos dependent) (cell-data ctx) ctx)
-              (if (and fe-pos dependent attr) (attribute ctx attr) ctx)
-              (if (and fe-pos dependent attr)
-                (let [f (->> (reactive/cursor (:hypercrud.browser/find-element ctx) [:fields])
-                             (reactive/fmap (reactive/partial get-value-f attr)))]
-                  (value ctx (reactive/fmap f (:cell-data ctx))))
-                ctx))))))
+  (defn relation-path [ctx [dependent i a]]
+    (as-> ctx ctx
+          ;(with-relations)                                    ; already here
+          ;(relation (reactive/atom [domain]))                 ; already here
+          (if (and i) (find-element ctx i) ctx)
+          (if (and i dependent) (cell-data ctx) ctx)
+          (if (and i a) (field ctx (-field-getter-dumb ctx a)) ctx)
+          (if (and i dependent a)
+            (let [cell-extractor @(->> (reactive/cursor (:hypercrud.browser/find-element ctx) [:fields])
+                                       (reactive/fmap (reactive/partial get-value-f a)))]
+              (value ctx (reactive/fmap cell-extractor (:cell-data ctx))))
+            ctx))))

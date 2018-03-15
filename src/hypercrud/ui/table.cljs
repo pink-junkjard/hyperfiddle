@@ -42,7 +42,7 @@
        (not-any? link/popover-link?)))
 
 (defn col-head [field sort-col ctx]
-  (let [ctx (context/attribute ctx (:attribute field))
+  (let [ctx (context/field ctx field)
         path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]
         sortable? (and (attr-sortable? @(:hypercrud.browser/find-element ctx) (:attribute field) ctx)
                        @(reactive/track links-dont-break-sorting? path ctx))
@@ -98,18 +98,20 @@
      ; todo unsafe execution of user code: control
      [control -field (control-props ctx) ctx]]))
 
-(defn Cell [field ctx]
-  (let [ctx (-> (context/attribute ctx (:attribute field))
-                (context/value (reactive/fmap (:cell-data->value field) (:cell-data ctx))))
-        user-cell (case @(:hypercrud.ui/display-mode ctx) :xray table-cell :user table-cell #_(:cell ctx table-cell))]
-    [user-cell (auto-control' ctx) field ctx]))
+(defn Cell [ctx]
+  (let [user-cell (case @(:hypercrud.ui/display-mode ctx) :xray table-cell :user table-cell #_(:cell ctx table-cell))]
+    [user-cell (auto-control' ctx) (:hypercrud.browser/field ctx) ctx]))
 
 (defn Entity [ctx]
   (let [ctx (context/cell-data ctx)]
-    (->> @(reactive/cursor (:hypercrud.browser/find-element ctx) [:fields])
-         (mapv (fn [field]
-                 ^{:key (:id field)}
-                 [Cell field ctx])))))
+    (->> (reactive/cursor (:hypercrud.browser/find-element ctx) [:fields])
+         (reactive/unsequence :id)
+         (mapv (fn [[field id]]
+                 (let [field @field
+                       ctx (-> (context/field ctx field)
+                               (context/value (reactive/fmap (:cell-data->value field) (:cell-data ctx))))]
+                   ^{:key id}
+                   [Cell ctx]))))))
 
 (defn FindElement [ctx i]
   (Entity (context/find-element ctx i)))

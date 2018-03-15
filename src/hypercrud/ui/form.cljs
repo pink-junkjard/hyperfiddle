@@ -1,6 +1,5 @@
 (ns hypercrud.ui.form
   (:require [hypercrud.browser.context :as context]
-            [hypercrud.browser.find-element :as find-element]
             [hypercrud.browser.link :as link]
             [hypercrud.ui.auto-control :refer [auto-control' control-props]]
             [hypercrud.ui.connection-color :as connection-color]
@@ -49,17 +48,11 @@
       ; todo unsafe execution of user code: control
       [control -field (control-props ctx) ctx])))
 
-(defn Cell [field ctx]
-  (let [ctx (as-> (context/attribute ctx (:attribute field)) $
-                  (context/value $ (reactive/fmap (:cell-data->value field) (:cell-data ctx)))
-                  (if (or (nil? (:attribute field))
-                          (= (:attribute field) :db/id))
-                    (assoc $ :read-only always-read-only)
-                    $))
-        ; todo unsafe execution of user code: cell
-        user-cell (case @(:hypercrud.ui/display-mode ctx) :xray form-cell (:cell ctx form-cell))]
-    (assert @(:hypercrud.ui/display-mode ctx))
-    [user-cell (auto-control' ctx) field ctx]))
+(defn Cell [ctx]
+  (assert @(:hypercrud.ui/display-mode ctx))
+  ; todo unsafe execution of user code: cell[ctx i]
+  (let [user-cell (case @(:hypercrud.ui/display-mode ctx) :xray form-cell (:hypercrud.browser/cell ctx form-cell))]
+    [user-cell (auto-control' ctx) (:hypercrud.browser/field ctx) ctx]))
 
 (defn Entity [ctx]
   (let [path [(:fe-pos ctx)]]
@@ -68,11 +61,18 @@
       (let [ctx (context/cell-data ctx)]
         (concat
           (conj
-            (->> @(reactive/cursor (:hypercrud.browser/find-element ctx) [:fields])
-                 ; just dereference the fields immediately
-                 (mapv (fn [field]
-                         ^{:key (:id field)}
-                         [Cell field ctx])))
+            (->> (reactive/cursor (:hypercrud.browser/find-element ctx) [:fields])
+                 (reactive/unsequence :id)
+                 (mapv (fn [[field id]]
+                         ; unify with context/relation-path then remove
+                         (let [field @field
+                               ctx (as-> (context/field ctx field) $
+                                         (context/value $ (reactive/fmap (:cell-data->value field) (:cell-data ctx)))
+                                         (if (or (nil? (:attribute field)) (= (:attribute field) :db/id))
+                                           (assoc $ :read-only always-read-only)
+                                           $))]
+                           ^{:key id}
+                           [Cell ctx]))))
             (if @(reactive/cursor (:hypercrud.browser/find-element ctx) [:splat?])
               ^{:key :new-field}
               [new-field ctx]))
