@@ -1,7 +1,6 @@
 (ns hyperfiddle.foundation.actions
   (:require [cats.core :refer [mlet]]
             [cats.monad.either :as either]
-            [hypercrud.browser.routing :as routing]
             [hypercrud.client.peer :as peer]
             [hypercrud.client.schema :as schema]
             [hypercrud.client.tx :as tx]
