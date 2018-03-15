@@ -146,29 +146,39 @@
 (defn http-edge [env req res path-params query-params]
   (let [hostname (.-hostname req)
         user-profile (lib/req->user-profile env req)
-        initial-state {:user-profile user-profile
-                       ::runtime/auto-transact (not (nil? user-profile))}
+        initial-state {:user-profile user-profile}
         rt (->IdeSsrRuntime (:HF_HOSTNAME env) hostname (req->service-uri env req)
                             (reactive/atom (reducers/root-reducer initial-state nil))
                             reducers/root-reducer)
         serve-js? true #_(not aliased?)
-        force-browser-reload-prevent-stale (foundation/alias? (foundation/hostname->hf-domain-name hostname (:HF_HOSTNAME env)))
-        browser-initial-state (if force-browser-reload-prevent-stale (runtime/state rt) (delay initial-state))
+        browser-initial-state (fn []
+                                (let [bootstrapped-state @(runtime/state rt)
+                                      alias? (foundation/alias? (foundation/hostname->hf-domain-name hostname (:HF_HOSTNAME env)))]
+                                  ; initial-state to force the browser to re-run the data bootstrapping when not aliased
+                                  (if alias?
+                                    bootstrapped-state
+                                    (merge initial-state (select-keys bootstrapped-state [::runtime/auto-transact])))))
         ; careful setting load-level to LOCAL-BASIS; it is not supported as an init-level in the browser yet
         ; how can the browser know if hydrate page has or has not happened yet?
         load-level foundation/LEVEL-HYDRATE-PAGE]
     (-> (foundation/bootstrap-data rt foundation/LEVEL-NONE load-level (.-path req))
+        (p/then (fn []
+                  (let [action (if (or (foundation/alias? (foundation/hostname->hf-domain-name hostname (:HF_HOSTNAME env)))
+                                       (foundation/domain-owner? user-profile @(runtime/state rt [::runtime/domain])))
+                                 [:enable-auto-transact]
+                                 [:disable-auto-transact])]
+                    (runtime/dispatch! rt action))))
         (p/catch (fn [error]
                    #_"any error above IS NOT fatal, so render the UI. anything below IS fatal"
                    (timbre/error error)
                    (p/resolved nil)))
         (p/then #(runtime/ssr rt @(runtime/state rt [::runtime/partitions nil :route])))
-        (p/then (fn [html-fragment] (html env @browser-initial-state serve-js? html-fragment)))
+        (p/then (fn [html-fragment] (html env (browser-initial-state) serve-js? html-fragment)))
         (p/catch (fn [error]
                    (timbre/error error)
                    (let [html-fragment (str "<h2>Error:</h2><pre>" (util/pprint-str error 100) "</pre>")]
                      ; careful this needs to throw a Throwable in clj
-                     (p/rejected (html env @browser-initial-state serve-js? html-fragment)))))
+                     (p/rejected (html env (browser-initial-state) serve-js? html-fragment)))))
         (p/then (fn [html-resp]
                   (doto res
                     (.append "Cache-Control" "max-age=0")
