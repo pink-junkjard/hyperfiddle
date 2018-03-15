@@ -1,14 +1,15 @@
 (ns hyperfiddle.foundation
   (:require [clojure.string :as string]
             [cuerdas.core :as cuerdas]
+            [hypercrud.browser.routing :as routing]
             [hypercrud.client.core :as hc]
             [hypercrud.compile.reader :as reader]
-            [hypercrud.util.core :refer [update-existing]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
     #?(:cljs [hypercrud.ui.control.code :refer [code*]])
     #?(:cljs [hypercrud.ui.css :refer [classes]])
     #?(:cljs [hypercrud.ui.stale :as stale])
-            [hypercrud.util.core :as util]
+            [hypercrud.util.core :as util :refer [update-existing]]
+            [hypercrud.util.reactive :as reactive]
             [hyperfiddle.foundation.actions :as foundation-actions]
             [hyperfiddle.runtime :as runtime]
             [promesa.core :as p]))
@@ -35,7 +36,20 @@
             [:domain/ident hf-domain-name])]
     (->EntityRequest e nil
                      (hc/db peer domain-uri nil)
-                     [:db/id :domain/ident :domain/home-route :domain/router :domain/fiddle-repo :domain/environment :domain/aliases])))
+                     [:db/id
+                      :domain/aliases
+                      :domain/environment
+                      :domain/fiddle-repo
+                      :domain/home-route
+                      :domain/members
+                      :domain/ident
+                      :domain/router
+                      :user/sub])))
+
+(defn domain-owner? [user-profile domain]
+  (let [sub (:sub user-profile)]
+    (or (= sub (:user/sub domain))
+        (contains? (set (:domain/members domain)) sub))))
 
 (defn user-profile->ident [user-profile]
   (-> user-profile :email (cuerdas/replace #"\@.+$" "") (cuerdas/slug)))
@@ -57,7 +71,9 @@
   (let [domain @(runtime/state (:peer ctx) [::runtime/domain])
         _ (assert domain "Bootstrapping failed to fetch the domain")
         domain (process-domain domain)]
-    (assoc ctx :hypercrud.browser/domain domain)))
+    (assoc ctx
+      :hypercrud.browser/domain domain
+      :hypercrud.browser/invert-route (reactive/partial routing/invert-route domain))))
 
 (defn local-basis [page-or-leaf global-basis route ctx f]
   (concat

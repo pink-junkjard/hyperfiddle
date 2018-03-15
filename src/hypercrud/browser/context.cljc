@@ -51,6 +51,11 @@
   ; Break the pattern - :relations is not in scope in form case which is a bit of information.
   (assoc ctx :relation rv))
 
+(defn- query-type [query]
+  (-> (parser/parse-query query)
+      :qfind
+      type))
+
 (defn with-relations "Process results into a relation or list of relations" ; "relation-or-relations", and can the either be hoisted out?
   [ctx]
   (case @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/type]) ; fiddle/type not relevant outside this fn
@@ -66,14 +71,13 @@
                            :db.cardinality/many
                            (relations ctx (reactive/fmap (reactive/partial mapv vector) (:hypercrud.browser/result ctx))))))))
               (either/right (relation ctx (reactive/fmap vector (:hypercrud.browser/result ctx)))))
-    :query (->> (try-either (parser/parse-query @(reactive/cursor (:hypercrud.browser/request ctx) [:query])))
+    :query (->> (try-either @(reactive/fmap query-type (reactive/cursor (:hypercrud.browser/request ctx) [:query])))
                 (cats/fmap
-                  (fn [{:keys [qfind]}]
-                    (condp = (type qfind)
-                      datascript.parser.FindRel (relations ctx (reactive/fmap (reactive/partial mapv vec) (:hypercrud.browser/result ctx)))
-                      datascript.parser.FindColl (relations ctx (reactive/fmap (reactive/partial mapv vector) (:hypercrud.browser/result ctx)))
-                      datascript.parser.FindTuple (relation ctx (reactive/fmap vec (:hypercrud.browser/result ctx)))
-                      datascript.parser.FindScalar (relation ctx (reactive/fmap vector (:hypercrud.browser/result ctx)))))))
+                  #(condp = %
+                     datascript.parser.FindRel (relations ctx (reactive/fmap (reactive/partial mapv vec) (:hypercrud.browser/result ctx)))
+                     datascript.parser.FindColl (relations ctx (reactive/fmap (reactive/partial mapv vector) (:hypercrud.browser/result ctx)))
+                     datascript.parser.FindTuple (relation ctx (reactive/fmap vec (:hypercrud.browser/result ctx)))
+                     datascript.parser.FindScalar (relation ctx (reactive/fmap vector (:hypercrud.browser/result ctx))))))
     :blank (either/right ctx)
     (either/right ctx)))
 

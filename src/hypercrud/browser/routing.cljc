@@ -19,7 +19,7 @@
               (hypercrud.types.ThinEntity ThinEntity))))
 
 
-(defn invert-ids [route invert-id domain]
+(defn invert-route [domain route invert-id]
   (-> (walk/postwalk (fn [v]
                        (cond
                          (instance? Entity v) (assert false "hyperfiddle/hyperfiddle.net#150")
@@ -42,14 +42,14 @@
   (let [invert-id (fn [id uri]
                     (let [id->tempid (ctx->id-lookup uri ctx)]
                       (get id->tempid id id)))]
-    (invert-ids route invert-id (:hypercrud.browser/domain ctx))))
+    (invert-route (:hypercrud.browser/domain ctx) route invert-id)))
 
 (defn tempid->id [route ctx]
   (let [invert-id (fn [temp-id uri]
                     (let [tempid->id (-> (ctx->id-lookup uri ctx)
                                          (set/map-invert))]
                       (get tempid->id temp-id temp-id)))]
-    (invert-ids route invert-id (:hypercrud.browser/domain ctx))))
+    (invert-route (:hypercrud.browser/domain ctx) route invert-id )))
 
 (defn normalize-params [porps]
   {:pre [(not (:entity porps)) #_"legacy"
