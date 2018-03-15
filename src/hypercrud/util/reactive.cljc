@@ -59,6 +59,7 @@
   ([rv]
    {:pre [(reactive? rv)]}
    (->> (range @(fmap count rv))
+        ; Works only if rv is a vector - if its a list, cursur indexing fails
         (map (fn [index] [(cursor rv [index]) index]))))
   ([key-fn rv]
    {:pre [(reactive? rv)]}
