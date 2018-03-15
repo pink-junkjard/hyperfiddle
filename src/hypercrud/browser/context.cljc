@@ -19,7 +19,7 @@
     :keep-disabled-anchors? :route
     :fiddle                                                 ; deprecated
     :fe-pos :uri :user-with!
-    :value
+    :cell-data :value
     :layout :field
     :label
 
@@ -32,6 +32,7 @@
     :hypercrud.browser/ordered-fes
     :hypercrud.browser/request
     :hypercrud.browser/result
+    :relations :relation
     :hypercrud.browser/schema
     :hypercrud.browser/schemas))
 
