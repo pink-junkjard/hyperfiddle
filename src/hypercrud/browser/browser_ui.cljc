@@ -44,13 +44,12 @@
                         [hypercrud.ui.result/view ctx (-> @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:db/ident]) css-slugify)]
                         [fiddle-css-renderer @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]]))})
 
-(letfn [(browse [ident ctx & args]
-          (let [kwargs (util/kwargs args)
-                [user-renderer & args] (get kwargs nil)
-                ctx (if user-renderer
-                      (assoc ctx :user-renderer user-renderer #_(if f #(apply f %1 %2 %3 %4 args)))
-                      ctx)]
-            [ui-from-link @(reactive/track link/rel->link ident ctx) ctx (:class kwargs)]))
+(letfn [(browse [rel ctx & args]
+          (let [{[user-renderer & args] nil :as kwargs} (util/kwargs args)
+                {:keys [:link/dependent? :link/path] :as link} @(reactive/track link/rel->link rel ctx)
+                ctx (-> (context/relation-path ctx (into [dependent?] (unwrap (memoized-safe-read-edn-string (str "[" path "]")))))
+                        (as-> ctx (if user-renderer (assoc ctx :user-renderer user-renderer #_(if f #(apply f %1 %2 %3 %4 args))) ctx)))]
+            [ui-from-link link ctx (:class kwargs)]))
         (anchor [rel ctx label & args]
           (let [kwargs (util/kwargs args)
                 {:keys [:link/dependent? :link/path] :as link} @(reactive/track link/rel->link rel ctx)
