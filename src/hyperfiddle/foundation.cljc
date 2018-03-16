@@ -48,7 +48,7 @@
 
 (defn domain-owner? [user-profile domain]
   (let [sub (:sub user-profile)]
-    (or (= sub (:user/sub domain))
+    (or (some-> (:user/sub domain) (= sub))
         (contains? (set (:domain/members domain)) sub))))
 
 (defn user-profile->ident [user-profile]
