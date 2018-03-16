@@ -82,7 +82,7 @@
     (either/right ctx)))
 
 (letfn [(user-with [rt ctx branch uri tx]
-          (runtime/dispatch! rt (foundation-actions/with rt (:hypercrud.browser/domain ctx) branch uri tx)))]
+          (runtime/dispatch! rt (foundation-actions/with rt (:hypercrud.browser/invert-route ctx) branch uri tx)))]
   (defn find-element [ctx fe-pos]
     (let [fe (reactive/cursor (:hypercrud.browser/ordered-fes ctx) [fe-pos])
           dbname (str @(reactive/cursor fe [:source-symbol]))
