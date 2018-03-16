@@ -76,9 +76,10 @@
       (case @(:hypercrud.ui/display-mode ctx) :user (fiddle-field-control ctx) :xray nil)
       ;(case @(:display-mode ctx) :user (fiddle-control ctx) :xray nil)
       (attribute-control ctx)
-      (some-> (case (:layout ctx) :block (schema-control-form ctx)
-                                  :inline-block (schema-control-table ctx)
-                                  :table (schema-control-table ctx))
+      (some-> (case (:layout ctx :block)
+                :block (schema-control-form ctx)
+                :inline-block (schema-control-table ctx)
+                :table (schema-control-table ctx))
               unify-portal-markup)))
 
 ; What even is this scar
@@ -92,9 +93,10 @@
   {:read-only ((get ctx :read-only) @(:hypercrud.browser/fat-attribute ctx) ctx)})
 
 (defn auto-control [maybe-field props _ ctx]                ; compat
-  [(some-> (case (:layout ctx) :block (schema-control-form ctx)
-                               :inline-block (schema-control-table ctx)
-                               :table (schema-control-table ctx)))
+  [(some-> (case (:layout ctx :block)
+             :block (schema-control-form ctx)
+             :inline-block (schema-control-table ctx)
+             :table (schema-control-table ctx)))
    maybe-field props ctx])
 
 (comment
