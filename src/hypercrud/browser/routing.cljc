@@ -65,7 +65,8 @@
 
 (defn ^:export build-route' [link ctx]
   (mlet [fiddle-id (if-let [page (:link/fiddle link)]
-                     (either/right (or (:db/ident page) (:db/id page)))
+                     (either/right (or (some->> (:fiddle/ident page) (vector :fiddle/ident))
+                                       (:db/id page)))
                      (either/left {:message "link has no fiddle" :data {:link link}}))
          user-fn (eval/eval-str (:link/formula link))
          user-route-params (if user-fn

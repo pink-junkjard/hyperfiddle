@@ -1,6 +1,7 @@
 (ns hypercrud.browser.browser-ui
   (:require [cats.core :as cats :refer [mlet]]
             [cats.monad.either :as either]
+            [hypercrud.browser.auto-fiddle :as auto-fiddle]
             [hypercrud.browser.base :as base]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.link :as link]
@@ -34,14 +35,14 @@
                             (fn [ctx]
                               #_(react-fragment :_) #_(list)
                               [:div
-                               [safe-reagent-call user-fn ctx (-> @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:db/ident]) css-slugify)]
+                               [safe-reagent-call user-fn ctx (css-slugify (auto-fiddle/display-fiddle-ident @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/ident])))]
                                [fiddle-css-renderer @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]])))
    ; todo ui binding should be provided by a RT
    :default #?(:clj  (assert false "todo")
                :cljs (fn [ctx]
                        #_(react-fragment :_) #_(list)
                        [:div
-                        [hypercrud.ui.result/view ctx (-> @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:db/ident]) css-slugify)]
+                        [hypercrud.ui.result/view ctx (css-slugify (auto-fiddle/display-fiddle-ident @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/ident])))]
                         [fiddle-css-renderer @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]]))})
 
 (letfn [(browse [rel ctx & args]

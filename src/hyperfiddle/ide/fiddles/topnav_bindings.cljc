@@ -7,7 +7,7 @@
     (fn [control field ctx]
       (let [rtype (-> ctx :cell-data deref :fiddle/type)
             visible (case (:attribute field)
-                      :fiddle/name false
+                      :fiddle/ident false
                       :fiddle/query (= rtype :query)
                       :fiddle/pull (= rtype :entity)
                       true)]

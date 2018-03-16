@@ -1,6 +1,7 @@
 (ns hypercrud.ui.result
   (:require [cats.core :refer [fmap]]
             [cats.monad.either :as either]
+            [hypercrud.browser.auto-fiddle :as auto-fiddle]
             [hypercrud.browser.context :as context]
             [hypercrud.ui.control.link-controls :as link-controls]
             [hypercrud.ui.control.markdown-rendered :refer [markdown-relation]]
@@ -23,8 +24,9 @@
 
 (defn doc [ctx]
   (markdown-relation (or-str @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:db/doc])
-                             (str "## " (or-str @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/name])
-                                                @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:db/ident]))))
+                             (->> @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/ident])
+                                  (auto-fiddle/display-fiddle-ident)
+                                  (str "## ")))
                      nil))
 
 (defn ^:export fiddle-markdown "Call this from your fiddle renderer"

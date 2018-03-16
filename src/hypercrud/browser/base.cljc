@@ -25,21 +25,22 @@
 
 (def meta-pull-exp-for-link
   [:db/id
-   :db/ident                                                ; for router
    :db/doc
    :fiddle/bindings
+   :fiddle/css
    :fiddle/entrypoint
+   :fiddle/ident
    {:fiddle/links [:db/id
                    :hypercrud/props
                    :anchor/prompt
                    :link/create?
                    :link/dependent?
                    :link/disabled?
-                   ; hydrate the parts of the fiddle we need for validating the link
                    {:link/fiddle [:db/id
-                                  :db/ident                 ; for router
-                                  :fiddle/query
-                                  :fiddle/type]}
+                                  :fiddle/ident             ; routing
+                                  :fiddle/query             ; validation
+                                  :fiddle/type              ; validation
+                                  ]}
                    :link/formula
                    :link/ident
                    :link/managed?
@@ -47,12 +48,11 @@
                    :link/rel
                    :link/render-inline?
                    :link/tx-fn]}
-   :fiddle/name
+   :fiddle/markdown
+   :fiddle/name                                             ; legacy
    :fiddle/pull
    :fiddle/query
    :fiddle/renderer
-   :fiddle/css
-   :fiddle/markdown
    :fiddle/request
    :fiddle/type])
 
