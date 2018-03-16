@@ -49,7 +49,8 @@
   {:pre [(reactive/reactive? rv)]}
   ; (assoc ctx :relation @(reactive/cursor (:relations ctx) [i]))
   ; Break the pattern - :relations is not in scope in form case which is a bit of information.
-  (assoc ctx :relation rv))
+  (assoc ctx :relation rv
+             :layout :block #_ "default for renderers that bypass form/table; our table renderer overrides"))
 
 (defn- query-type [query]
   (-> (parser/parse-query query)

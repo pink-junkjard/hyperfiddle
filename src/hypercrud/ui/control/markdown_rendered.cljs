@@ -3,7 +3,8 @@
             [hypercrud.ui.user-attribute-renderer :refer [safe-eval-user-expr]]
             [hypercrud.ui.control.code]
             [hypercrud.ui.css :refer [css-slugify classes]]
-            [hypercrud.util.core :as util :refer [or-str]]
+            [hypercrud.util.core :as util :refer [unwrap or-str]]
+            [hypercrud.util.string :refer [memoized-safe-read-edn-string]]
             [goog.object]
             [reagent.core :as reagent]
             [hypercrud.util.reactive :as r]))
@@ -42,10 +43,19 @@
                        (let [kwargs (flatten (seq (dissoc props :prompt :ident)))
                              this (reagent/current-component)
                              ctx (goog.object/get (.-context this) "ctx")
-                             label (if-not (= label "undefined") label) ; https://github.com/medfreeman/remark-generic-extensions/issues/45
-                             label (or-str label ident)]
-
+                             ; https://github.com/medfreeman/remark-generic-extensions/issues/45
+                             label (or-str (if-not (= label "undefined") label) ident)]
                          (apply (:anchor ctx) (keyword ident) ctx label kwargs)))}))
+
+(def markdown-cell
+  (reagent/create-class
+    {:context-types #js {:ctx js/propTypes.object}
+     :reagent-render (fn [{:keys [path] :as props}]
+                       (let [kwargs (flatten (seq (dissoc props :prompt :ident)))
+                             this (reagent/current-component)
+                             ctx (goog.object/get (.-context this) "ctx")
+                             path (into [true] (unwrap (memoized-safe-read-edn-string (str "[" path "]"))))]
+                         (apply (:cell ctx) path ctx kwargs)))}))
 
 (def markdown
   (reagent/create-class
@@ -73,7 +83,12 @@
    "block" (fn [props] [:div (dissoc props :children :value) [markdown (:value props)]])
    "cljs" markdown-cljs-eval
    "browse" markdown-browse
-   "anchor" markdown-anchor})
+   "anchor" markdown-anchor
+   "cell" markdown-cell
+   ; relations ; table renderer with docs above and below
+   ; relation ? (for setting a title and docs, and then rendering the form by default links and all. Maybe can filter the relation down to a cell path?
+
+   })
 
 ; https://github.com/medfreeman/remark-generic-extensions
 ; https://github.com/zestedesavoir/zmarkdown/tree/master/packages/remark-grid-tables
@@ -90,6 +105,7 @@
                                   "cljs" {"html" {"properties" {"value" "::content::"}}}
                                   "browse" {"html" {"properties" {"renderer" "::content::" "ident" "::argument::"}}}
                                   "anchor" {"html" {"properties" {"label" "::content::" "ident" "::argument::"}}}
+                                  "cell" {"html" {"properties" {"renderer" "::content::" "path" "::argument::"}}}
                                   }}))
                         (.use js/remarkGridTables)
                         (.use js/remarkReact
