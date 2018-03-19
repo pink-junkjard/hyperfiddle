@@ -78,10 +78,6 @@
     :else param))
 
 (defn validate-query-params [q params ctx]
-  {:pre [(vector? q)
-         #_(= 0 (count (filter nil? params)))
-         #_(do (timbre/debug params q) true)]
-   :post [#_(do (timbre/debug %) true)]}
   (mlet [query-holes (try-either (q-util/parse-holes q)) #_"normalizes for :in $"
          :let [;_ (timbre/debug params query-holes q)
                db-lookup (q-util/build-dbhole-lookup ctx)
