@@ -2,7 +2,7 @@
   (:require [cats.core :as cats]
             [cats.monad.either :as either]
             [cuerdas.core :as str]
-            [hypercrud.http.core :refer [http-request!]]
+            [hyperfiddle.io.http.core :refer [http-request!]]
             [hypercrud.util.base-64-url-safe :as base-64-url-safe]
     #?(:clj
             [hyperfiddle.io.datomic.hydrate-requests :as datomic-hydrate-requests])

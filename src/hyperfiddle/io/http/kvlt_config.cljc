@@ -1,4 +1,4 @@
-(ns hypercrud.http.kvlt-config
+(ns hyperfiddle.io.http.kvlt-config
   (:require [#?(:clj clojure.pprint :cljs cljs.pprint) :as pprint]
             [hypercrud.compile.reader :as reader]
             [hypercrud.transit :as transit]

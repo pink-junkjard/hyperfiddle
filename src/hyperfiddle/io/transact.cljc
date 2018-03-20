@@ -1,6 +1,6 @@
 (ns hyperfiddle.io.transact
   (:require #?(:clj [datomic.api :as d])
-                    [hypercrud.http.core :refer [http-request!]]
+                    [hyperfiddle.io.http.core :refer [http-request!]]
                     [promesa.core :as p]))
 
 #?(:clj

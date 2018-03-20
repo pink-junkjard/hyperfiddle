@@ -2,7 +2,7 @@
   #?(:clj
      (:refer-clojure :exclude [sync]))
   (:require #?(:clj [datomic.api :as d])
-                    [hypercrud.http.core :refer [http-request!]]
+                    [hyperfiddle.io.http.core :refer [http-request!]]
                     [promesa.core :as p]
                     [taoensso.timbre :as timbre]))
 

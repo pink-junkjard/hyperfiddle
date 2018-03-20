@@ -1,6 +1,6 @@
-(ns hypercrud.http.core
+(ns hyperfiddle.io.http.core
   (:require
-    #?(:cljs [hypercrud.http.kvlt-config])
+    #?(:cljs [hyperfiddle.io.http.kvlt-config])
     [hypercrud.util.performance :as perf]
     #?(:cljs [kvlt.core :as kvlt])
     [taoensso.timbre :as timbre]))

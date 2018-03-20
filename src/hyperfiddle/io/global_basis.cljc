@@ -3,7 +3,7 @@
             [cats.labs.promise]
             [clojure.set :as set]
             [cuerdas.core :as str]
-            [hypercrud.http.core :refer [http-request!]]
+            [hyperfiddle.io.http.core :refer [http-request!]]
             [hypercrud.util.core :as util :refer [filter-keys]]
             [hypercrud.util.performance :as perf]
             [hyperfiddle.foundation :as foundation]
