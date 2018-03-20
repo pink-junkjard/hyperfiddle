@@ -19,52 +19,46 @@
 ; Reagent + react-context:
 ; https://github.com/reagent-project/reagent/commit/a8ec0d219bbd507f51a4d9276c4a1dcc020245af
 
-(def markdown-cljs-eval
+(defn child-with-ctx [f]
   (reagent/create-class
     {:context-types #js {:ctx js/propTypes.object}
-     :reagent-render (fn [{:keys [value] :as props}]
-                       (let [this (reagent/current-component)]
-                         (binding [hyperfiddle.core/*ctx* (goog.object/get (.-context this) "ctx")]
-                           (safe-eval-user-expr value))))}))
+     :reagent-render (fn [props]
+                       (let [ctx (goog.object/get (.-context (reagent/current-component)) "ctx")]
+                         (f props ctx)))}))
+
+(def markdown-cljs-eval
+  (child-with-ctx
+    (fn [{:keys [value] :as props} ctx]
+      (binding [hyperfiddle.core/*ctx* ctx]
+        (safe-eval-user-expr value)))))
 
 (def markdown-browse
-  (reagent/create-class
-    {:context-types #js {:ctx js/propTypes.object}
-     :reagent-render (fn [{:keys [renderer ident] :as props}]
-                       (let [kwargs (flatten (seq (dissoc props :value :ident)))
-                             this (reagent/current-component)
-                             ctx (goog.object/get (.-context this) "ctx")]
-                         (apply (:browse ctx) (keyword ident) ctx kwargs)))}))
+  (child-with-ctx
+    (fn [{:keys [renderer ident] :as props} ctx]
+      (let [kwargs (flatten (seq (dissoc props :value :ident)))]
+        (apply (:browse ctx) (keyword ident) ctx kwargs)))))
 
 (def markdown-anchor
-  (reagent/create-class
-    {:context-types #js {:ctx js/propTypes.object}
-     :reagent-render (fn [{:keys [label ident] :as props}]
-                       (let [kwargs (flatten (seq (dissoc props :prompt :ident)))
-                             this (reagent/current-component)
-                             ctx (goog.object/get (.-context this) "ctx")
-                             ; https://github.com/medfreeman/remark-generic-extensions/issues/45
-                             label (or-str (if-not (= label "undefined") label) ident)]
-                         (apply (:anchor ctx) (keyword ident) ctx label kwargs)))}))
+  (child-with-ctx
+    (fn [{:keys [label ident] :as props} ctx]
+      (let [kwargs (flatten (seq (dissoc props :prompt :ident)))
+            ; https://github.com/medfreeman/remark-generic-extensions/issues/45
+            label (or-str (if-not (= label "undefined") label) ident)]
+        (apply (:anchor ctx) (keyword ident) ctx label kwargs)))))
 
 (def markdown-cell
-  (reagent/create-class
-    {:context-types #js {:ctx js/propTypes.object}
-     :reagent-render (fn [{:keys [path] :as props}]
-                       (let [kwargs (flatten (seq (dissoc props :prompt :ident)))
-                             this (reagent/current-component)
-                             ctx (goog.object/get (.-context this) "ctx")
-                             path (into [true] (unwrap (memoized-safe-read-edn-string (str "[" path "]"))))]
-                         (apply (:cell ctx) path ctx kwargs)))}))
+  (child-with-ctx
+    (fn [{:keys [path] :as props} ctx]
+      (let [kwargs (flatten (seq (dissoc props :prompt :ident)))
+            path (into [true] (unwrap (memoized-safe-read-edn-string (str "[" path "]"))))]
+        (apply (:cell ctx) path ctx kwargs)))))
 
 (def markdown
   (reagent/create-class
     {:reagent-render
-     (fn [value & [ctx]]
+     (fn [value & [?ctx]]
        (when (and (string? value) (not (empty? value)))
-         (-> remarkInstance
-             (.processSync value {"commonmark" true})
-             .-contents)))
+         (-> remarkInstance (.processSync value {"commonmark" true}) .-contents)))
 
      :get-child-context
      (fn []
@@ -72,8 +66,7 @@
          (let [[_ value ?ctx] (reagent/argv this)]
            #js {:ctx ?ctx})))
 
-     :child-context-types
-     #js {:ctx js/propTypes.object}}))
+     :child-context-types #js {:ctx js/propTypes.object}}))
 
 (def whitelist-reagent
   ; Div is not needed, use it with block syntax and it hits React.createElement and works
