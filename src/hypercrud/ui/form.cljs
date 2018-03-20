@@ -80,14 +80,10 @@
           (link-controls/render-inline-links path true ctx)))
       (link-controls/render-inline-links path false ctx))))
 
-(defn FindElement "Context manufactured from path on demand to late bind to relation"
-  [ctx i]
+(defn Relation [ctx]
   ; No wrapper div; it limits layout e.g. floating. The pyramid mapcats out to a flat list of dom elements that comprise the form
   ; This is not compatible with hiccup syntax; this is a fn
-  (Entity (context/find-element ctx i)))
-
-(defn Relation [ctx]
   (let [ctx (assoc ctx :layout (:layout ctx :block))]       ; first point in time we know we're a form? can this be removed?
     (->> (reactive/unsequence (:hypercrud.browser/ordered-fes ctx))
          (mapcat (fn [[fe i]]
-                   (FindElement ctx i))))))
+                   (Entity (context/find-element ctx i)))))))

@@ -1,9 +1,11 @@
 (ns hypercrud.ui.control.markdown-rendered
   (:require [hyperfiddle.core]
+            [hypercrud.browser.context :as context]
             [hypercrud.ui.user-attribute-renderer :refer [safe-eval-user-expr]]
             [hypercrud.ui.control.code]
             [hypercrud.ui.css :refer [css-slugify classes]]
             [hypercrud.util.core :as util :refer [unwrap or-str]]
+            [hypercrud.util.reactive :as r]
             [hypercrud.util.string :refer [memoized-safe-read-edn-string]]
             [goog.object]
             [reagent.core :as reagent]
@@ -26,19 +28,19 @@
                        (let [ctx (goog.object/get (.-context (reagent/current-component)) "ctx")]
                          (f props ctx)))}))
 
-(def markdown-cljs-eval
+(def eval
   (child-with-ctx
     (fn [{:keys [value] :as props} ctx]
       (binding [hyperfiddle.core/*ctx* ctx]
         (safe-eval-user-expr value)))))
 
-(def markdown-browse
+(def browse
   (child-with-ctx
     (fn [{:keys [renderer ident] :as props} ctx]
       (let [kwargs (flatten (seq (dissoc props :value :ident)))]
         (apply (:browse ctx) (keyword ident) ctx kwargs)))))
 
-(def markdown-anchor
+(def anchor
   (child-with-ctx
     (fn [{:keys [label ident] :as props} ctx]
       (let [kwargs (flatten (seq (dissoc props :prompt :ident)))
@@ -46,12 +48,31 @@
             label (or-str (if-not (= label "undefined") label) ident)]
         (apply (:anchor ctx) (keyword ident) ctx label kwargs)))))
 
-(def markdown-cell
+(def cell
   (child-with-ctx
     (fn [{:keys [path] :as props} ctx]
       (let [kwargs (flatten (seq (dissoc props :prompt :ident)))
             path (into [true] (unwrap (memoized-safe-read-edn-string (str "[" path "]"))))]
         (apply (:cell ctx) path ctx kwargs)))))
+
+(def table
+  (child-with-ctx
+    (fn [{:keys [class] :as props} ctx]
+      (let [kwargs (flatten (seq (dissoc props :class)))]
+        (hypercrud.ui.table/Table ctx)))))
+
+(def md-list
+  (child-with-ctx
+    (fn [{:keys [content argument class] :as props} ctx]
+      (let [argument (safe-eval-user-expr argument)]        ; (fn f [content ctx & [?class]])
+        [:div {:class (classes class)}
+         (->> (:relations ctx)
+              (r/unsequence)
+              (map (fn [[relation i]]
+                     (argument content
+                               (context/relation ctx relation)
+                               (classes (str i)))))
+              (doall))]))))
 
 (def markdown
   (reagent/create-class
@@ -74,10 +95,12 @@
   {"span" (fn [props] [:span (dissoc props :children :value) (:value props)])
    "CodeEditor" code-editor-wrap-argv
    "block" (fn [props] [:div (dissoc props :children :value) [markdown (:value props)]])
-   "cljs" markdown-cljs-eval
-   "browse" markdown-browse
-   "anchor" markdown-anchor
-   "cell" markdown-cell
+   "cljs" eval
+   "browse" browse
+   "anchor" anchor
+   "cell" cell
+   "table" table
+   "list" md-list
    ; relations ; table renderer with docs above and below
    ; relation ? (for setting a title and docs, and then rendering the form by default links and all. Maybe can filter the relation down to a cell path?
 
@@ -98,7 +121,9 @@
                                   "cljs" {"html" {"properties" {"value" "::content::"}}}
                                   "browse" {"html" {"properties" {"renderer" "::content::" "ident" "::argument::"}}}
                                   "anchor" {"html" {"properties" {"label" "::content::" "ident" "::argument::"}}}
-                                  "cell" {"html" {"properties" {"renderer" "::content::" "path" "::argument::"}}}
+                                  "cell" {"html" {"properties" {"f" "::content::" "path" "::argument::"}}}
+                                  "table" {"html" {"properties" {"f" "::content::"}}}
+                                  "list" {"html" {"properties" {"content" "::content::" "argument" "::argument::"}}}
                                   }}))
                         (.use js/remarkGridTables)
                         (.use js/remarkReact

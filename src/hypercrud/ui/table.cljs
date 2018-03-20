@@ -113,13 +113,10 @@
                    ^{:key id}
                    [Cell ctx]))))))
 
-(defn FindElement [ctx i]
-  (Entity (context/find-element ctx i)))
-
 (defn Relation [ctx]
   (->> (reactive/unsequence (:hypercrud.browser/ordered-fes ctx))
        (mapcat (fn [[fe i]]
-                 (FindElement ctx i)))))
+                 (Entity (context/find-element ctx i))))))
 
 (letfn [(sort-fn [sort-col ctx relations-val]
           (let [[sort-fe-pos sort-attr direction] @sort-col
