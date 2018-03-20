@@ -63,18 +63,19 @@
 
 (def md-list
   (child-with-ctx
-    (fn [{:keys [content argument class] :as props} ctx]
-      (let [argument (safe-eval-user-expr argument)]        ; (fn f [content ctx & [?class]])
-        [:div {:class (classes class)}
-         (->> (:relations ctx)
-              (r/unsequence)
-              (map (fn [[relation i]]
-                     (argument content
-                               (context/relation ctx relation)
-                               (classes (str i)))))
-              (doall))]))))
+    (letfn [(keyfn [relation] (hash (map #(or (:db/id %) %) relation)))]
+      (fn [{:keys [content argument class] :as props} ctx]
+        (let [argument (safe-eval-user-expr argument)]      ; (fn f [content ctx & [?class]])
+          [:div {:class (classes class)}
+           (->> (:relations ctx)
+                (r/unsequence keyfn)
+                (map (fn [[relation k]]
+                       (argument k content (context/relation ctx relation) (str k))))
+                (doall))])))))
 
 (def markdown
+  ; remark creates react components which don't evaluate in this stack frame
+  ; so dynamic scope is not helpful to communicate values to remark plugins
   (reagent/create-class
     {:reagent-render
      (fn [value & [?ctx]]
@@ -92,7 +93,8 @@
 (def whitelist-reagent
   ; Div is not needed, use it with block syntax and it hits React.createElement and works
   ; see https://github.com/medfreeman/remark-generic-extensions/issues/30
-  {"span" (fn [props] [:span (dissoc props :children :value) (:value props)])
+  {"span" (fn [props] [:span (dissoc props :children :content) (:content props)])
+   "p" (fn [props] [:div (-> props (dissoc :children :content) (update :class #(classes "p" %))) (:children props)])
    "CodeEditor" code-editor-wrap-argv
    "block" (fn [props] [:div (dissoc props :children :value) [markdown (:value props)]])
    "cljs" eval
@@ -115,7 +117,8 @@
                         (.use js/remarkGenericExtensions
                               (clj->js
                                 {"elements"
-                                 {"span" {"html" {"properties" {"value" "::content::"}}}
+                                 {"span" {"html" {"properties" {"content" "::content::"}}}
+                                  "p" {"html" {"properties" {"content" "::content::"}}}
                                   "CodeEditor" {"html" {"properties" {"value" "::content::"}}}
                                   "block" {"html" {"properties" {"value" "::content::"}}}
                                   "cljs" {"html" {"properties" {"value" "::content::"}}}
@@ -134,9 +137,8 @@
 
 ; Todo; remove div.markdown; that should be default and style the inverse.
 (defn markdown-rendered* [md & [?ctx class]]
-  [:div {:class (classes "markdown" class)} [markdown md ?ctx]])
+  [:div {:class (classes "markdown" class)}
+   [markdown md ?ctx]])
 
-(defn markdown-relation [md ctx & class]
-  ; remark creates react components which don't evaluate in this stack frame
-  ; so dynamic scope is not helpful to communicate values to remark plugins
-  (markdown-rendered* md ctx class))
+(defn markdown-relation [k content ctx & class]
+  ^{:key k} [markdown-rendered* content ctx class])

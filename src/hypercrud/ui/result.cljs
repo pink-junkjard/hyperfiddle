@@ -23,7 +23,7 @@
         (fn [ctx] (if (:relations ctx) (table/Table ctx) (form/Relation ctx))))))
 
 (defn doc [ctx]
-  (markdown-relation (or-str @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:db/doc])
+  (markdown-relation nil (or-str @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:db/doc])
                              (->> @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/ident])
                                   (auto-fiddle/display-fiddle-ident)
                                   (str "## ")))
@@ -35,7 +35,7 @@
       (either/branch
         (fn [e] [:pre (util/pprint-str e)])
         (fn [ctx]
-          (markdown-relation @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/markdown]) ctx class)))))
+          (markdown-relation nil @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/markdown]) ctx class)))))
 
 (defn view [ctx & [class]]
   (let [index-ctx (dissoc ctx :isComponent)]
