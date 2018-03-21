@@ -18,6 +18,22 @@ jobs:
             - ~/.boot/cache/bin
           key: test-clj-{{checksum "boot.properties" }}-{{ checksum "build.boot" }}
 
+  test-cljs-yarn:
+    docker:
+      - image: circleci/node:8
+    steps:
+      - checkout
+      - restore_cache:
+          key: test-cljs-yarn-{{checksum "yarn.lock"}}
+      - run: yarn install --frozen-lockfile --non-interactive --prod=true
+      - persist_to_workspace:
+          root: .
+          paths: node_modules
+      - save_cache:
+          paths:
+            - node_modules
+          key: test-cljs-yarn-{{checksum "yarn.lock"}}
+
   test-cljs:
     docker:
       - image: hyperfiddle/boot-node
@@ -26,16 +42,17 @@ jobs:
           BOOT_WATCHERS_DISABLE: "yes"
     steps:
       - checkout
+      - attach_workspace:
+          at: .
       - restore_cache:
-          key: test-cljs-{{checksum "yarn.lock"}}-{{checksum "boot.properties" }}-{{ checksum "build.boot" }}
-      - run: yarn install --frozen-lockfile --non-interactive --prod=true
+          key: test-cljs-{{checksum "boot.properties" }}-{{ checksum "build.boot" }}
       - run: boot test-cljs -x
       - save_cache:
           paths:
             - ~/.m2
             - ~/.boot/cache/lib
             - ~/.boot/cache/bin
-          key: test-cljs-{{checksum "yarn.lock"}}-{{checksum "boot.properties" }}-{{ checksum "build.boot" }}
+          key: test-cljs-{{checksum "boot.properties" }}-{{ checksum "build.boot" }}
 
   build:
     docker:
@@ -83,7 +100,10 @@ workflows:
   test_and_deploy:
     jobs:
       - test-clj
-      - test-cljs
+      - test-cljs-yarn
+      - test-cljs:
+          requires:
+            - test-cljs-yarn
       - build
       - publish:
           requires:
