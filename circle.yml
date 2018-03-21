@@ -27,14 +27,15 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          key: test-cljs-{{checksum "boot.properties" }}-{{ checksum "build.boot" }}
+          key: test-cljs-{{checksum "yarn.lock"}}-{{checksum "boot.properties" }}-{{ checksum "build.boot" }}
+      - run: yarn install --frozen-lockfile --non-interactive --prod=true
       - run: boot test-cljs -x
       - save_cache:
           paths:
             - ~/.m2
             - ~/.boot/cache/lib
             - ~/.boot/cache/bin
-          key: test-cljs-{{checksum "boot.properties" }}-{{ checksum "build.boot" }}
+          key: test-cljs-{{checksum "yarn.lock"}}-{{checksum "boot.properties" }}-{{ checksum "build.boot" }}
 
   build:
     docker:
