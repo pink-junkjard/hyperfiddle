@@ -21,10 +21,16 @@
 
 (defn global-basis [rt hyperfiddle-hostname hostname]       ; this is foundation code, app-fn level (Just sees configured datomic URIs, no userland api fn)
   (perf/time-promise
-    (mlet [:let [domain-requests [(foundation/domain-request (foundation/hostname->hf-domain-name hostname hyperfiddle-hostname) rt)
+    (mlet [:let [user-hf-domain-name (foundation/hostname->hf-domain-name hostname hyperfiddle-hostname)
+                 domain-requests [(foundation/domain-request user-hf-domain-name rt)
                                   (foundation/domain-request "hyperfiddle" rt)]]
            domain-basis (api/sync rt #{foundation/domain-uri})
            [user-domain foundation-domain] (hydrate-all-or-nothing! rt domain-basis nil domain-requests)
+           _ (if (nil? (:db/id user-domain))
+               ; terminate when domain not found
+               ; todo force domain hydration before global-basis
+               (p/rejected (ex-info "Domain does not exist" {:domain-name user-hf-domain-name}))
+               (p/resolved nil))
            :let [user-domain (foundation/process-domain user-domain)
                  ide-domain (foundation/process-domain foundation-domain)
                  user-domain-uris (uris-for-domain user-domain) ; Any reachable thing, not per route.

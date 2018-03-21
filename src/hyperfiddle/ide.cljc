@@ -1,6 +1,5 @@
 (ns hyperfiddle.ide
   (:require [bidi.bidi :as bidi]
-            [cuerdas.core :as str]
             [hypercrud.browser.auto-anchor :refer [system-link?]]
     #?(:cljs [hypercrud.browser.browser-ui :as browser-ui])
             [hypercrud.browser.core :as browser]
@@ -9,12 +8,13 @@
     #?(:cljs [hypercrud.react.react-fragment :refer [react-fragment]])
     #?(:cljs [hypercrud.ui.navigate-cmp :as navigate-cmp])
     #?(:cljs [hypercrud.ui.stale :as stale])
-            [hypercrud.util.core :refer [unwrap xorxs update-existing]]
+            [hypercrud.util.core :refer [unwrap]]
             [hypercrud.util.reactive :as reactive]
-            [hypercrud.util.string :as hc-string :refer [safe-read-edn-string]]
+            [hypercrud.util.string :refer [safe-read-edn-string]]
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-one!]]
             [hyperfiddle.runtime :as runtime]
+            [promesa.core :as p]
     #?(:cljs [reagent.core :as reagent])
             [taoensso.timbre :as timbre]
 
@@ -42,9 +42,14 @@
                                          (filter (fn [[k _]] (= foundation/domain-uri k)))
                                          seq)))))
         stage nil
-        request (-> (foundation/hostname->hf-domain-name hostname hyperfiddle-hostname)
-                    (foundation/domain-request rt))]
-    (hydrate-one! rt (into {} domain-basis) stage request)))
+        hf-domain-name (foundation/hostname->hf-domain-name hostname hyperfiddle-hostname)
+        request (foundation/domain-request hf-domain-name rt)]
+    (-> (hydrate-one! rt (into {} domain-basis) stage request)
+        (p/then (fn [domain]
+                  (if (nil? (:db/id domain))
+                    ; terminate when domain not found
+                    (throw (ex-info "Domain does not exist" {:domain-name hf-domain-name}))
+                    domain))))))
 
 (defn ide-route [route]
   {:fiddle-id :hyperfiddle/topnav
