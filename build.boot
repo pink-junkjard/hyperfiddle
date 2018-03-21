@@ -16,7 +16,7 @@
         ;[com.datomic/datomic-free "0.9.5561" :scope "provided"] ; test-cljs chokes on this for some reason
         [org.clojure/clojure "1.8.0" :scope "provided"]
         [org.clojure/clojurescript "1.9.946" :scope "provided"]
-        [reagent "0.7.0" :scope "provided"]]
+        [reagent "0.7.0" :exclusions [cljsjs/react cljsjs/react-dom cljsjs/react-dom-server cljsjs/create-react-class] :scope "provided"]]
 
       build-dependencies
       '[[adzerk/boot-cljs "2.1.4" :scope "test"]
@@ -33,22 +33,23 @@
 (require '[adzerk.boot-cljs :refer :all]
          '[adzerk.boot-test :as boot-test]
          '[adzerk.bootlaces :refer [push-snapshot]]
-         '[crisptrutski.boot-cljs-test :refer [test-cljs]]
+         '[crisptrutski.boot-cljs-test :as boot-cljs-test]
          'boot.lein)
 
 (task-options!
   push #(into % {:repo "deploy-clojars" :ensure-version +version+})
-  pom {:project 'com.hyperfiddle/hyperfiddle :version +version+}
-  test-cljs {:js-env :node})
+  pom {:project 'com.hyperfiddle/hyperfiddle :version +version+})
 
-(deftask testing []
-         ; cljs tests have to have _test in the filename
+(deftask test-cljs [x exit? bool "Throw exception on error or inability to run tests."]
          (merge-env! :source-paths #{"test"}
-                     :dependencies '[])
-         identity)
+                     :dependencies '[[doo "0.1.8"]])
+         (boot-cljs-test/test-cljs :ids ["hyperfiddle/tests"]
+                                   :js-env :node
+                                   :exit? exit?))
 
 (deftask test-clj []
-         (merge-env! :dependencies [datomic-dep])
+         (merge-env! :source-paths #{"test"}
+                     :dependencies [datomic-dep])
          (boot-test/test :include #".*-test"))
 
 (when (> (.lastModified (clojure.java.io/file "build.boot"))

@@ -10,7 +10,7 @@ jobs:
       - checkout
       - restore_cache:
           key: test-clj-{{checksum "boot.properties" }}-{{ checksum "build.boot" }}
-      - run: boot testing test-clj
+      - run: boot test-clj
       - save_cache:
           paths:
             - ~/.m2
@@ -28,7 +28,7 @@ jobs:
       - checkout
       - restore_cache:
           key: test-cljs-{{checksum "boot.properties" }}-{{ checksum "build.boot" }}
-      - run: boot testing test-cljs -x
+      - run: boot test-cljs -x
       - save_cache:
           paths:
             - ~/.m2

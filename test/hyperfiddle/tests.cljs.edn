@@ -1,0 +1,6 @@
+{:require [hyperfiddle.test-preamble
+           hyperfiddle.test-runner]
+ :init-fns [hyperfiddle.test-preamble/init
+            hyperfiddle.test-runner/run]
+ :compiler-options {:optimizations :none
+                    :target :nodejs}}
