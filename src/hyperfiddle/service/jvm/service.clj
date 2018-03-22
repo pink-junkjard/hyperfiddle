@@ -3,6 +3,7 @@
   (:require [hypercrud.browser.router-base64 :as router-base64]
             [hypercrud.compile.reader :as reader]
             [hypercrud.transit :as hc-t]
+            [hypercrud.types.Err :refer [->Err]]
             [hypercrud.util.base-64-url-safe :as base-64-url-safe]
             [hypercrud.util.reactive :as reactive]
             [hyperfiddle.appval.state.reducers :as reducers]
@@ -16,7 +17,6 @@
             [hyperfiddle.service.jvm.global-basis :refer [->GlobalBasisRuntime]]
             [hyperfiddle.service.jvm.hydrate-route :refer [->HydrateRoute]]
             [hyperfiddle.service.jvm.local-basis :refer [->LocalBasis]]
-            [hyperfiddle.state :as state]
             [io.pedestal.http.body-params :as body-params]
             [io.pedestal.http.ring-middlewares :as ring-middlewares]
             [io.pedestal.http.route :refer [expand-routes]]
@@ -52,12 +52,12 @@
 
 (defn http-sync [req]
   (try
-    (let [dbs (:body-params req)]
-      (ring-resp/response
-        (sync dbs)))
+    (-> (sync (:body-params req))
+        (ring-resp/response))
     (catch Exception e
-      (println e)
-      {:status 500 :headers {} :body (str e)})))
+      {:status (or (:http-status-code (ex-data e)) 500)
+       :headers {}                                          ; todo retry-after on 503
+       :body (->Err (.getMessage e))})))
 
 (defn http-global-basis [env]
   (interceptor/handler

@@ -79,7 +79,7 @@
 
   runtime/AppFnSync
   (sync [rt dbs]
-    (p/resolved (sync dbs)))
+    (p/do* (sync dbs)))
 
   hc/Peer
   (hydrate [this branch request]
