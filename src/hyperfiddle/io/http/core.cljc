@@ -17,10 +17,16 @@
         #?(:clj  (assert false "kvlt broken on jvm")
            :cljs (-> (kvlt/request! req)
                      (p/catch (fn [e]
-                                (let [response-body (:body (ex-data e))]
-                                  (if (Err/Err? response-body)
-                                    (throw (ex-info (:msg response-body) (ex-data e)))
-                                    (throw e))))))))
+                                (let [data (ex-data e)
+                                      response-body (:body data)]
+                                  (cond
+                                    (Err/Err? response-body)
+                                    (throw (ex-info (:msg response-body) (ex-data e) #?(:clj (.getCause e) :cljs (ex-cause e))))
+
+                                    (and (= 502 (:status data)) (not #?(:clj (.getMessage e) :cljs (ex-message e))))
+                                    (throw (ex-info "Service Unavailable" (ex-data e) #?(:clj (.getCause e) :cljs (ex-cause e))))
+
+                                    :else (throw e))))))))
       (fn [_ get-total-time]
         (timbre/debug "Request failed" (str "[" @req-hash "]") "total time:" (get-total-time)))
       (fn [_ get-total-time]

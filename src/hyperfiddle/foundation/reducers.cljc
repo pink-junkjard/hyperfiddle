@@ -1,5 +1,6 @@
 (ns hyperfiddle.foundation.reducers
   (:require [hypercrud.client.tx :as tx]
+            [hypercrud.types.Err :refer [->Err]]
             [hypercrud.util.branch :as branch]
             [hypercrud.util.core :as util]))
 
@@ -44,7 +45,10 @@
   (case action
     :set-global-basis nil
     ; need errors to be serializable, so crapily pr-str
-    :set-error (pr-str (first args))
+    :set-error (let [e (first args)]
+                 (if-let [message #?(:clj (.getMessage e) :cljs (ex-message e))]
+                   (assoc (->Err (str message)) :data (util/pprint-str (ex-data e)))
+                   (pr-str e)))
     error))
 
 (defn pressed-keys-reducer [v action & args]
