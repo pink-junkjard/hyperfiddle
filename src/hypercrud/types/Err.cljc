@@ -8,3 +8,5 @@
             (assoc acc k v))
           (->Err nil)
           v))
+
+(defn Err? [o] (instance? Err o))
