@@ -49,7 +49,7 @@
                     (let [tempid->id (-> (ctx->id-lookup uri ctx)
                                          (set/map-invert))]
                       (get tempid->id temp-id temp-id)))]
-    (invert-route (:hypercrud.browser/domain ctx) route invert-id )))
+    (invert-route (:hypercrud.browser/domain ctx) route invert-id)))
 
 (defn normalize-params [porps]
   {:pre [(not (:entity porps)) #_"legacy"
