@@ -3,7 +3,7 @@
             [cats.core :as cats :refer [mlet]]
             [cats.monad.either :as either]
             [clojure.set :as set]
-            [clojure.string :as string]
+            [cuerdas.core :as str]
             [clojure.walk :as walk]
             [hypercrud.browser.dbname :as dbname]
             [hypercrud.compile.eval :as eval]
@@ -95,16 +95,16 @@
   ; route-str must be well-formed (canonical redirect already happened)
   ; but is potentially invalid garbage from bots
   {:pre [(seq route-str)
-         (string/starts-with? route-str "/")
+         (str/starts-with? route-str "/")
          #_(not= "/" route-str)]
    :post [#_(do (println % route-str) true)
           #_(if % (:fiddle-id %))]}
   ; Urls in the wild get query params added because tweetdeck tools think its safe e.g.:
   ; http://localhost/hyperfiddle-blog/ezpkb21haW4gbmlsLCA6cHJvamVjdCAiaHlwZXJmaWRkbGUtYmxvZyIsIDpsaW5rLWRiaWQgI0RiSWRbMTc1OTIxODYwNDU4OTQgMTc1OTIxODYwNDU0MjJdLCA6cXVlcnktcGFyYW1zIHs6ZW50aXR5ICNEYklkWzE3NTkyMTg2MDQ2MTMyIDE3NTkyMTg2MDQ1ODgyXX19?utm_content=buffer9a24a&utm_medium=social&utm_source=twitter.com&utm_campaign=buffer
-  (let [[_ route-encoded-and-query-params] (string/split route-str #"/")]
+  (let [[_ route-encoded-and-query-params] (str/split route-str #"/")]
     (cond
       (not (nil? route-encoded-and-query-params))
-      (let [[route-encoded url-param-garbage] (string/split route-encoded-and-query-params #"\?")]
+      (let [[route-encoded url-param-garbage] (str/split route-encoded-and-query-params #"\?")]
         (reader/read-string (base64/decode route-encoded)))
 
       ; no route, or garbage from http crawlers
