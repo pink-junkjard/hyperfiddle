@@ -1,6 +1,7 @@
 (ns contrib.rfc3986-test
   (:require [#?(:clj clojure.test :cljs cljs.test)
              #?(:clj :refer :cljs :refer-macros) [deftest is]]
+            [hypercrud.compile.reader]
             [contrib.rfc3986 :refer [encode-rfc3986-pchar decode-rfc3986-pchar
                                      encode-ednish decode-ednish]]
             ))
