@@ -1,5 +1,5 @@
 (ns hyperfiddle.service.node.hydrate-route
-  (:require [hypercrud.browser.routing :as routing]
+  (:require [hypercrud.browser.router-base64 :as router-base64]
             [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
             [hypercrud.compile.reader :as reader]
@@ -102,7 +102,7 @@
         branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
         branch-aux (some-> (:branch-aux path-params) base-64-url-safe/decode reader/read-edn-string)
         local-basis (-> (:local-basis path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
-        route (routing/decode encoded-route)
+        route (router-base64/decode encoded-route)
         initial-state {::stage (some-> req .-body lib/hack-buggy-express-body-text-parser transit/decode)
                        :user-profile (lib/req->user-profile env req)
                        ::runtime/partitions {branch {:local-basis local-basis
