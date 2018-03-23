@@ -1,6 +1,7 @@
 (ns hypercrud.util.core
   (:require [cats.monad.either :as either]
-            [clojure.string :as string]
+            [cuerdas.core :as str]
+            [clojure.string :as clojure-str]
             [net.cgrand.packed-printer :as packed-printer]
     #?(:clj
             [clojure.pprint :as pprint]
@@ -69,7 +70,7 @@
   )
 
 (defn pprint-str [v & [columns]]
-  (string/trimr
+  (clojure-str/trimr
     ; Previously, pprint/*print-miser-width* was set to nil in main
     (binding [pprint/*print-right-margin* (or columns pprint/*print-right-margin*)]
       (with-out-str
@@ -114,4 +115,16 @@
   (first (remove f? args)))
 
 (defn or-str [& args]                                       ; todo macro
-  (apply orp string/blank? args))
+  (apply orp str/blank? args))
+
+;(defn split-last [s sep]
+;  (let [[x & xs] (str/split (reverse s) sep)]
+;    [x (reverse (str/join xs))]))
+;
+;(comment
+;  (split-last "asdf#frag" "#")
+;  (split-last "asdf#frag" "#"))
+
+(defn split-first [s sep]
+  (let [[x & xs] (str/split s sep)]
+    [x (str/join sep xs)]))
