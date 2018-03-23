@@ -2,6 +2,7 @@
   (:require [clojure.set :as set]
             [cuerdas.core :as str]
             [hypercrud.browser.routing :as routing]
+            [hypercrud.browser.router-base64 :as router-base64]
             [hypercrud.client.peer :as peer]
             [hyperfiddle.io.http.core :refer [http-request!]]
             [hypercrud.types.EntityRequest :refer [#?(:cljs EntityRequest)]]
@@ -81,17 +82,18 @@
 
 (defn hydrate-route-rpc! [service-uri local-basis route branch branch-aux stage]
   ; matrix params instead of path params
-  (-> (merge {:url (str/format "%(service-uri)shydrate-route/$local-basis/$encoded-route/$branch/$branch-aux"
-                               {:service-uri service-uri
-                                :local-basis (base-64-url-safe/encode (pr-str local-basis))
-                                :encoded-route (subs (routing/encode route) 1) #_"drop leading /"
-                                :branch (base-64-url-safe/encode (pr-str branch))
-                                :branch-aux (base-64-url-safe/encode (pr-str branch-aux))})
-              :accept :application/transit+json :as :auto}
-             (if (empty? stage)
-               {:method :get}                               ; Try to hit CDN
-               {:method :post
-                :form stage
-                :content-type :application/transit+json}))
-      (http-request!)
-      (p/then :body)))
+  (let [route-str (router-base64/encode route)]
+    (-> (merge {:url (str/format "%(service-uri)shydrate-route/$local-basis/$encoded-route/$branch/$branch-aux"
+                                 {:service-uri service-uri
+                                  :local-basis (base-64-url-safe/encode (pr-str local-basis))
+                                  :encoded-route (subs route-str 1) #_"drop leading /"
+                                  :branch (base-64-url-safe/encode (pr-str branch))
+                                  :branch-aux (base-64-url-safe/encode (pr-str branch-aux))})
+                :accept :application/transit+json :as :auto}
+               (if (empty? stage)
+                 {:method :get}                             ; Try to hit CDN
+                 {:method :post
+                  :form stage
+                  :content-type :application/transit+json}))
+        (http-request!)
+        (p/then :body))))

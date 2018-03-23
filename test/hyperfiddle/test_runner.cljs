@@ -10,6 +10,7 @@
     hypercrud.ui.control.link-controls-test
     hyperfiddle.foundation-test
     hyperfiddle.ide-test
+    hypercrud.browser.router-test
     hypercrud.util.core-test
     contrib.char-test
     contrib.rfc3986-test
@@ -23,6 +24,7 @@
     'hypercrud.ui.control.link-controls-test
     'hyperfiddle.foundation-test
     'hyperfiddle.ide-test
+    'hypercrud.browser.router-test
     'hypercrud.util.core-test
     'contrib.char-test
     'contrib.rfc3986-test))
