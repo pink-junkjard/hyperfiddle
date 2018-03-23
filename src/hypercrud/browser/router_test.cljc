@@ -12,7 +12,7 @@
             :request-params [#entity["$" [:user/sub "google-oauth2|116635422485042503270"]]
                              #{"events" "news"}]})
 
-(def route-str "/:hyperfiddle.blog!post;'kobe'/~entity('$',(:user!sub,'google-oauth2%7c116635422485042503270'))/~%7b'news','events'%7d")
+(def route-str "/:hyperfiddle.blog!post;'kobe'/~entity('$',(:user!sub,'google-oauth2%7C116635422485042503270'))/~%7B'news','events'%7D")
 
 (deftest router-1
   []
