@@ -21,10 +21,18 @@
                                       response-body (:body data)]
                                   (cond
                                     (Err/Err? response-body)
-                                    (throw (ex-info (:msg response-body) (ex-data e) #?(:clj (.getCause e) :cljs (ex-cause e))))
+                                    (throw (ex-info (:msg response-body)
+                                                    (assoc data :hyperfiddle.io/http-status-code (:status data))
+                                                    #?(:clj (.getCause e) :cljs (ex-cause e))))
 
                                     (and (= 502 (:status data)) (not #?(:clj (.getMessage e) :cljs (ex-message e))))
-                                    (throw (ex-info "Service Unavailable" (ex-data e) #?(:clj (.getCause e) :cljs (ex-cause e))))
+                                    (throw (ex-info "Service Unavailable"
+                                                    (assoc data :hyperfiddle.io/http-status-code 502)
+                                                    #?(:clj (.getCause e) :cljs (ex-cause e))))
+
+                                    (:status data) (throw (ex-info (ex-message e)
+                                                                   (assoc data :hyperfiddle.io/http-status-code (:status data))
+                                                                   (ex-cause e)))
 
                                     :else (throw e))))))))
       (fn [_ get-total-time]

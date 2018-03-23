@@ -29,7 +29,8 @@
            _ (if (nil? (:db/id user-domain))
                ; terminate when domain not found
                ; todo force domain hydration before global-basis
-               (p/rejected (ex-info "Domain does not exist" {:domain-name user-hf-domain-name}))
+               (p/rejected (ex-info "Domain does not exist" {:hyperfiddle.io/http-status-code 404
+                                                             :domain-name user-hf-domain-name}))
                (p/resolved nil))
            :let [user-domain (foundation/process-domain user-domain)
                  ide-domain (foundation/process-domain foundation-domain)

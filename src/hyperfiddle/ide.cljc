@@ -48,7 +48,8 @@
         (p/then (fn [domain]
                   (if (nil? (:db/id domain))
                     ; terminate when domain not found
-                    (throw (ex-info "Domain does not exist" {:domain-name hf-domain-name}))
+                    (throw (ex-info "Domain does not exist" {:hyperfiddle.io/http-status-code 404
+                                                             :domain-name hf-domain-name}))
                     domain))))))
 
 (defn ide-route [route]
