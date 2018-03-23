@@ -115,8 +115,7 @@
   (first (remove f? args)))
 
 (defn or-str [& args]                                       ; todo macro
-  ; todo empty-or-nil? instead of blank?
-  (apply orp str/blank? args))
+  (apply orp str/empty-or-nil? args))
 
 ;(defn split-last [s sep]
 ;  (let [[x & xs] (str/split (reverse s) sep)]
