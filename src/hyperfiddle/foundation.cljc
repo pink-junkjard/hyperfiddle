@@ -13,7 +13,7 @@
             [hypercrud.util.reactive :as reactive]
             [hyperfiddle.foundation.actions :as foundation-actions]
             [hyperfiddle.runtime :as runtime]
-            [promesa.core :as p]))
+            [promesa.core :as p #?(:cljs :refer-macros :clj :refer) [do*]]))
 
 
 (def domain-uri #uri "datomic:free://datomic:4334/domains")
@@ -152,7 +152,7 @@
           LEVEL-GLOBAL-BASIS (foundation-actions/refresh-global-basis rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
           LEVEL-DOMAIN (foundation-actions/refresh-domain rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
           LEVEL-ROUTE (let [branch-aux {:hyperfiddle.ide/foo "page"}] ;ide
-                        (p/do* (runtime/dispatch! rt [:add-partition nil (runtime/decode-route rt encoded-route) branch-aux])))
+                        (do* (runtime/dispatch! rt [:add-partition nil (runtime/decode-route rt encoded-route) branch-aux])))
           LEVEL-LOCAL-BASIS (foundation-actions/refresh-partition-basis rt nil (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
           LEVEL-HYDRATE-PAGE (foundation-actions/hydrate-partition rt nil nil (partial runtime/dispatch! rt) #(deref (runtime/state rt))))
         (p/then #(bootstrap-data rt (inc init-level) load-level encoded-route)))))
