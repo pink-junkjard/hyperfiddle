@@ -7,22 +7,58 @@
 
 
 
-(def route {:fiddle-id :hyperfiddle.blog/post
-            :domain-ident "kobe"
-            :request-params [#entity["$" [:user/sub "google-oauth2|116635422485042503270"]]
-                             #{"events" "news"}]})
+(def kobe {:fiddle-id :hyperfiddle.blog/post
+           :domain-ident "kobe"
+           :request-params [#entity["$" [:user/sub "google-oauth2|116635422485042503270"]]
+                            #{"events" "news"}]})
 
 (def route-str "/:hyperfiddle.blog!post;'kobe'/~entity('$',(:user!sub,'google-oauth2%7C116635422485042503270'))/~%7B'news','events'%7D")
 
-(deftest router-1
+(deftest router-basic
   []
-  (is (= (encode route) route-str))
-  (is (= ((comp decode encode) (dissoc route :domain-ident)) (dissoc route :domain-ident)))
+  (is (= (encode kobe) route-str))
 
   #?(:clj
-     (is (not (nil? (java.net.URI. route-str)))))
+     (is (not (nil? (java.net.URI. route-str))))))
 
-  ; malformed?
+(deftest router-bijection
+  []
+  (is (= ((comp decode encode) (dissoc kobe :domain-ident)) (dissoc kobe :domain-ident))))
+
+(deftest router-fiddle-args
+  []
+  ; this doesn't work yet
+  (is (= ((comp decode encode) kobe) kobe)))
+
+(def route-args1 {:fiddle-id :hyperfiddle.blog/post :request-params #entity["$" [:user/sub "google-oauth2|116635422485042503270"]]})
+(def route-args1-seq {:fiddle-id :hyperfiddle.blog/post :request-params [#entity["$" [:user/sub "google-oauth2|116635422485042503270"]]]})
+
+(deftest router-one-param-normalization
+  []
+  #_(is (= ((comp decode encode) route-args1) route-args1))
+  (is (= ((comp decode encode) route-args1-seq) route-args1-seq))
+  #_(is (= ((comp decode encode) route-args1) ((comp decode encode) route-args1-seq))))
+
+(deftest router-no-params
+  []
+  (is (= (encode {:fiddle-id :hyperfiddle.blog/post})
+         (encode {:fiddle-id :hyperfiddle.blog/post :request-params nil})
+         (encode {:fiddle-id :hyperfiddle.blog/post :request-params []})
+         (encode {:fiddle-id :hyperfiddle.blog/post :request-params '()})
+         "/:hyperfiddle.blog!post/"))
+
+  (is (= (encode {:fiddle-id 17592186045502})
+         (encode {:fiddle-id 17592186045502 :request-params nil})
+         (encode {:fiddle-id 17592186045502 :request-params []})
+         (encode {:fiddle-id 17592186045502 :request-params '()})
+         "/17592186045502/"))
+
+  #_(is (= (encode {:fiddle-id :hyperfiddle.blog/post :request-params []}) "/:hyperfiddle.blog!post/"))
+  )
+
+(deftest router-malformed-1
+  []
+  ;#entity["$" [:user/sub "google-oauth2|116635422485042503270"]]
   ;(decode "/") {:fiddle-id nil, :request-params [nil]}
   ;(decode "/garbagasdf..23425649=//e") {:fiddle-id garbagasdf..23425649=, :request-params [nil e]}
   ;(decode "/asdf/asdf/asdf?asdf?asdf?sadf") {:fiddle-id asdf, :request-params [asdf asdf]}
