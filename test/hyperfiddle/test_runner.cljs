@@ -10,6 +10,9 @@
     hypercrud.ui.control.link-controls-test
     hyperfiddle.foundation-test
     hyperfiddle.ide-test
+    hypercrud.util.core-test
+    contrib.char-test
+    contrib.rfc3986-test
     ))
 
 (defn run []
@@ -20,4 +23,6 @@
     'hypercrud.ui.control.link-controls-test
     'hyperfiddle.foundation-test
     'hyperfiddle.ide-test
-    ))
+    'hypercrud.util.core-test
+    'contrib.char-test
+    'contrib.rfc3986-test))

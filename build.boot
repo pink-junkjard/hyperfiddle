@@ -40,6 +40,7 @@
   push #(into % {:repo "deploy-clojars" :ensure-version +version+})
   pom {:project 'com.hyperfiddle/hyperfiddle :version +version+})
 
+; shadowing test-cljs breaks the test-cljs CLI e.g. boot test-cljs -n "contrib"
 (deftask test-cljs [x exit? bool "Throw exception on error or inability to run tests."]
          (merge-env! :source-paths #{"test"}
                      :dependencies '[[doo "0.1.8"]])

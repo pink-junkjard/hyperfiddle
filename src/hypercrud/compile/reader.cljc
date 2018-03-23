@@ -3,6 +3,7 @@
   (:require [#?(:clj clojure.tools.reader :cljs cljs.tools.reader) :as reader]
             [#?(:clj clojure.tools.reader.edn :cljs cljs.tools.reader.edn) :as edn-reader]
             [#?(:cljs cljs.reader :clj clojure.tools.reader.default-data-readers)] ; date, uuid
+            [hypercrud.readers]                             ; important
             [hypercrud.types.DbVal :refer [read-DbVal]]
             [hypercrud.types.EntityRequest :refer [read-EntityRequest]]
             [hypercrud.types.Err :refer [read-Err]]
