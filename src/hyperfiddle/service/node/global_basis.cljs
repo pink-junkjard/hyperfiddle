@@ -2,6 +2,7 @@
   (:require [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
             [hypercrud.transit :as transit]
+            [hypercrud.types.Err :refer [->Err]]
             [hypercrud.util.reactive :as reactive]
             [hyperfiddle.appval.state.reducers :as reducers]
             [hyperfiddle.io.global-basis :refer [global-basis]]
@@ -10,7 +11,8 @@
             [hyperfiddle.runtime :as runtime]
             [hyperfiddle.service.node.lib :as lib]
             [hyperfiddle.state :as state]
-            [promesa.core :as p]))
+            [promesa.core :as p]
+            [taoensso.timbre :as timbre]))
 
 
 (deftype GlobalBasisRuntime [hyperfiddle-hostname hostname service-uri state-atom root-reducer]
@@ -52,10 +54,11 @@
     (-> (runtime/global-basis rt)
         (p/then (fn [global-basis]
                   (doto res
-                    (.append "Cache-Control" "max-age=0")
                     (.status 200)
+                    (.append "Cache-Control" "max-age=0")
                     (.format #js {"application/transit+json" #(.send res (transit/encode global-basis))}))))
-        (p/catch (fn [error]
+        (p/catch (fn [e]
+                   (timbre/error e)
                    (doto res
-                     (.status 500)
-                     (.send (pr-str error))))))))
+                     (.status (or (:hyperfiddle.io/http-status-code (ex-data e)) 500))
+                     (.send (->Err (.getMessage e)))))))))

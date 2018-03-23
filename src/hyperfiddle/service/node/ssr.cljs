@@ -18,7 +18,7 @@
             [hyperfiddle.runtime :as runtime]
             [hyperfiddle.service.node.lib :as lib :refer [req->service-uri]]
             [hyperfiddle.state :as state]
-            [promesa.core :as p]
+            [promesa.core :as p :refer-macros [do*]]
             [reagent.dom.server :as reagent-server]
             [taoensso.timbre :as timbre]))
 
@@ -27,7 +27,7 @@
 
 (defn render-local-html [F]                                 ; react 16 is async, and this can fail
   ; html fragment, not a document, no <html> enclosing tag
-  (p/resolved
+  (do*
     (perf/time (fn [get-total-time] (timbre/debug "Render total time:" (get-total-time)))
                (reagent-server/render-to-string (F)))))
 
@@ -168,23 +168,24 @@
                                  [:enable-auto-transact]
                                  [:disable-auto-transact])]
                     (runtime/dispatch! rt action))))
-        (p/catch (fn [error]
-                   #_"any error above IS NOT fatal, so render the UI. anything below IS fatal"
-                   (timbre/error error)
-                   (p/resolved nil)))
-        (p/then #(runtime/ssr rt @(runtime/state rt [::runtime/partitions nil :route])))
-        (p/then (fn [html-fragment] (html env (browser-initial-state) serve-js? html-fragment)))
-        (p/catch (fn [error]
-                   (timbre/error error)
-                   (let [html-fragment (str "<h2>Error:</h2><pre>" (util/pprint-str error 100) "</pre>")]
-                     ; careful this needs to throw a Throwable in clj
-                     (p/rejected (html env (browser-initial-state) serve-js? html-fragment)))))
-        (p/then (fn [html-resp]
-                  (doto res
-                    (.append "Cache-Control" "max-age=0")
-                    (.status 200)
-                    (.format #js {"text/html" #(.send res html-resp)}))))
-        (p/catch (fn [error-resp]
+        (p/then (constantly 200))
+        (p/catch #(or (:hyperfiddle.io/http-status-code (ex-data %)) 500))
+        (p/then (fn [http-status-code]
+                  (-> (runtime/ssr rt @(runtime/state rt [::runtime/partitions nil :route]))
+                      (p/then (fn [html-fragment]
+                                {:http-status-code http-status-code
+                                 :html-fragment html-fragment})))))
+        (p/catch (fn [e]
+                   (timbre/error e)
+                   {:http-status-code (or (:hyperfiddle.io/http-status-code (ex-data e)) 500)
+                    :html-fragment (str "<h2>Fatal Error:</h2><h4>" (ex-message e) "</h4>")}))
+        (p/then (fn [{:keys [http-status-code html-fragment]}]
+                  (let [html-response (html env (browser-initial-state) serve-js? html-fragment)]
+                    (doto res
+                      (.status http-status-code)
+                      (.format #js {"text/html" #(.send res html-response)})))))
+        (p/catch (fn [e]
+                   (timbre/error e)
                    (doto res
                      (.status 500)
-                     (.format #js {"text/html" #(.send res error-resp)})))))))
+                     (.format #js {"text/html" #(.send res (str "<h2>Failure to generate HTML</h2><h4>" (ex-message e) "</h4>"))})))))))

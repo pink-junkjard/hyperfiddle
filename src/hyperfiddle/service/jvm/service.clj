@@ -37,45 +37,47 @@
           r (hydrate-requests local-basis request staged-branches)]
       (ring-resp/response r))
     (catch Exception e
-      (println "...http-hydrate; exception=" e)
-      {:status 500 :headers {} :body (str e)})))
+      (timbre/error e)
+      {:status (or (:hyperfiddle.io/http-status-code (ex-data e)) 500)
+       :headers {}
+       :body (->Err (.getMessage e))})))
 
 (defn http-transact! [req]
   (try
-    (let [{:keys [body-params]} req
-          dtx-groups body-params]
-      (ring-resp/response
-        (transact! dtx-groups)))
+    (-> (transact! (:body-params req))
+        (ring-resp/response))
     (catch Exception e
-      (println e)
-      {:status 500 :headers {} :body (str e)})))
+      (timbre/error e)
+      {:status (or (:hyperfiddle.io/http-status-code (ex-data e)) 500)
+       :headers {}
+       :body (->Err (.getMessage e))})))
 
 (defn http-sync [req]
   (try
     (-> (sync (:body-params req))
         (ring-resp/response))
     (catch Exception e
-      {:status (or (:http-status-code (ex-data e)) 500)
+      {:status (or (:hyperfiddle.io/http-status-code (ex-data e)) 500)
        :headers {}                                          ; todo retry-after on 503
        :body (->Err (.getMessage e))})))
 
 (defn http-global-basis [env]
   (interceptor/handler
     (fn [req]
-      (try
-        (let [hostname (:server-name req)
-              state-val (-> {:user-profile (:user req)}
-                            (reducers/root-reducer nil))
-              rt (->GlobalBasisRuntime (:HF_HOSTNAME env) hostname (reactive/atom state-val))]
-          (-> (runtime/global-basis rt)
-              (p/then (fn [global-basis]
-                        {:status 200
-                         :headers {"Cache-Control" "max-age=0"}
-                         :body global-basis}))))
-        (catch Exception e
-          ; todo this try catch should be an interceptor
-          (timbre/error e)
-          {:status 500 :headers {} :body (str e)})))))
+      (let [hostname (:server-name req)
+            state-val (-> {:user-profile (:user req)}
+                          (reducers/root-reducer nil))
+            rt (->GlobalBasisRuntime (:HF_HOSTNAME env) hostname (reactive/atom state-val))]
+        (-> (runtime/global-basis rt)
+            (p/then (fn [global-basis]
+                      {:status 200
+                       :headers {"Cache-Control" "max-age=0"}
+                       :body global-basis}))
+            (p/catch (fn [e]
+                       (timbre/error e)
+                       {:status (or (:hyperfiddle.io/http-status-code (ex-data e)) 500)
+                        :headers {}
+                        :body (->Err (.getMessage e))})))))))
 
 (defn http-local-basis [env]
   (interceptor/handler
