@@ -5,9 +5,9 @@
             [bidi.bidi :as bidi]
             [hyperfiddle.runtime :as hfr]
             [hypercrud.util.reactive :as r]
-            [hyperfiddle.ide :refer [route-encode route-decode
-                                     ->bidi-consistency-wrapper ->hf ->bidi]]
-    #_[hyperfiddle.foundation :as foundation]))
+            [hyperfiddle.ide :refer [route-encode route-decode ->bidi-consistency-wrapper ->hf ->bidi
+                                     activate-ide?]]
+            [hyperfiddle.foundation :as foundation]))
 
 
 (def state
@@ -47,10 +47,13 @@
     (is (= (route-encode rt k) v)))
   )
 
-(def ctx {:hyperfiddle-hostname "hyperfiddle.net"})
+(def a-ctx-1 {:hyperfiddle-hostname "hyperfiddle.net"})
 
-;(deftest activate-ide-scrap
-;  (is (not (activate-ide? (foundation/hostname->hf-domain-name (assoc ctx :hostname "www.hyperfiddle.net"))))))
+(deftest activate-ide-1
+  []
+  (is (not (activate-ide?
+             (foundation/hostname->hf-domain-name
+               (assoc a-ctx-1 :hostname "www.hyperfiddle.net"))))))
 
 
 (comment
