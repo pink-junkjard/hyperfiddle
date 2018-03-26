@@ -5,7 +5,7 @@
             [bidi.bidi :as bidi]
             [hyperfiddle.runtime :as hfr]
             [hypercrud.util.reactive :as r]
-            [hyperfiddle.ide :refer [route-encode route-decode ->bidi-consistency-wrapper ->hf ->bidi
+            [hyperfiddle.ide :refer [route-encode route-decode ->bidi-consistency-wrapper bidi->hf ->bidi
                                      activate-ide?]]
             [hyperfiddle.foundation :as foundation]))
 
