@@ -152,7 +152,12 @@
           LEVEL-GLOBAL-BASIS (foundation-actions/refresh-global-basis rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
           LEVEL-DOMAIN (foundation-actions/refresh-domain rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
           LEVEL-ROUTE (let [branch-aux {:hyperfiddle.ide/foo "page"}] ;ide
-                        (do* (runtime/dispatch! rt [:add-partition nil (runtime/decode-route rt encoded-route) branch-aux])))
+                        (try (let [route (runtime/decode-route rt encoded-route)]
+                               (runtime/dispatch! rt [:add-partition nil route branch-aux]))
+                             (p/resolved nil)
+                             (catch #?(:cljs :default :clj Exception) e
+                               (runtime/dispatch! rt [:set-error e])
+                               (p/rejected e))))
           LEVEL-LOCAL-BASIS (foundation-actions/refresh-partition-basis rt nil (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
           LEVEL-HYDRATE-PAGE (foundation-actions/hydrate-partition rt nil nil (partial runtime/dispatch! rt) #(deref (runtime/state rt))))
         (p/then #(bootstrap-data rt (inc init-level) load-level encoded-route)))))
