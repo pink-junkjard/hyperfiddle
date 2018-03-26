@@ -20,7 +20,7 @@
         fiddle))
     fiddle))
 
-(defn -decode-fiddle [fiddle]
+(defn -decode-fiddle-id [fiddle]
   ; Keywords are not a db/ident, turn it into the fiddle-id lookup ref.
   ; Otherwise, pass it through, its already a lookup-ref or eid or whatever.
   (if (keyword? fiddle)
@@ -50,7 +50,7 @@
         datomic-args (->> (str/split datomic-args-segment "/")) ; careful: (str/split "" "/") => [""]
         [query fragment] (split-first s "#")]
     (merge
-      {:fiddle-id (-decode-fiddle (-decode-url-ednish fiddle))}
+      {:fiddle-id (-decode-fiddle-id (-decode-url-ednish fiddle))}
       (if-let [as (seq (remove str/empty-or-nil? datomic-args))]
         {:request-params (mapv -decode-url-ednish as)})
       #_(map -decode-url-ednish fiddle-args)                ; fiddle-args is not a map, its positional

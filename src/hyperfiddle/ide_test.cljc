@@ -1,8 +1,47 @@
 (ns hyperfiddle.ide-test
-  (:require [#?(:clj clojure.test :cljs cljs.test) #?(:clj :refer :cljs :refer-macros) [deftest is]]
-            #_[hyperfiddle.ide :refer [->bidi-consistency-wrapper ->hf ->bidi]]
-            #_[hyperfiddle.foundation :as foundation]))
+  (:require [#?(:clj clojure.test :cljs cljs.test)
+             #?(:clj :refer :cljs :refer-macros) [deftest is]]
+            [hypercrud.compile.reader]
+            [bidi.bidi :as bidi]
+            [hyperfiddle.runtime :as hfr]
+            [hypercrud.util.reactive :as r]
+            [hyperfiddle.ide :refer [route-encode route-decode
+                                     ->bidi-consistency-wrapper ->hf ->bidi]]
+    #_[hyperfiddle.foundation :as foundation]))
 
+
+(def state
+  (atom
+    {:hyperfiddle.runtime/domain
+     {:domain/home-route (pr-str
+                           [:hyperblog/index :a #entity["$" :highlights]])
+      :domain/router (pr-str
+                       ["/"
+                        {"drafts/" :hyperblog/drafts
+                         "pairing/" :user/pairing
+                         [#entity["$" :a] "/"] :hyperblog/index
+                         [#entity["$" :a]] :hyperblog/post}])}}))
+
+(def rt (reify hfr/State
+          (state [_ path]
+            (r/cursor state path))))
+
+(def tests
+  {
+   {:fiddle-id [:fiddle/ident :hyperblog/post], :request-params [#entity["$" :capitalism]]}
+   "/:hyperblog!post/~entity('$',:capitalism)"
+
+   {:fiddle-id [:fiddle/ident :hyperblog/post], :request-params [#entity["$" 1234]]}
+   "/:hyperblog!post/~entity('$',1234)"
+
+   {:fiddle-id :hyperblog/index, :request-params [#entity["$" :personal]]}
+   "/:personal/"
+   })
+
+(deftest user-router-1
+  []
+  (for [[k v] tests]
+    (is (= (route-encode rt k) v))))
 
 (def ctx {:hyperfiddle-hostname "hyperfiddle.net"})
 
@@ -40,13 +79,13 @@
         (some-> router (bidi/match-route "/_/asdf"))
         ]
        (map ->bidi-consistency-wrapper)
-       (map ->hf)
+       (map bidi->hf)
        (map ->bidi)
        (map #(if % (apply bidi/path-for router %))))
 
-  (apply bidi/path-for router (-> router (bidi/match-route "/1/") ->bidi-consistency-wrapper ->hf ->bidi))
-  (some-> router (bidi/match-route "/1/slug") ->bidi-consistency-wrapper ->hf ->bidi ((partial apply bidi/path-for router)))
-  (some-> router (bidi/match-route "/:sup/a") ->bidi-consistency-wrapper ->hf ->bidi ((partial apply bidi/path-for router)))
+  (apply bidi/path-for router (-> router (bidi/match-route "/1/") ->bidi-consistency-wrapper bidi->hf ->bidi))
+  (some-> router (bidi/match-route "/1/slug") ->bidi-consistency-wrapper bidi->hf ->bidi ((partial apply bidi/path-for router)))
+  (some-> router (bidi/match-route "/:sup/a") ->bidi-consistency-wrapper bidi->hf ->bidi ((partial apply bidi/path-for router)))
 
   (->> [(bidi/path-for router :hyperblog/index :a #entity["$" 1])
         (bidi/path-for router :hyperblog/index :a #entity["$" :highlights])

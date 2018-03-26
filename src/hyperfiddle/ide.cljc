@@ -4,6 +4,7 @@
     #?(:cljs [hypercrud.browser.browser-ui :as browser-ui])
             [hypercrud.browser.core :as browser]
             [hypercrud.browser.routing :as routing]
+            [hypercrud.browser.router :as router]
             [hypercrud.client.core :as hc]
     #?(:cljs [hypercrud.react.react-fragment :refer [react-fragment]])
     #?(:cljs [hypercrud.ui.navigate-cmp :as navigate-cmp])
@@ -122,9 +123,9 @@
   ; Canonicalize on the "bidi/path-for" syntax
   (if ?r (apply conj [handler] (mapcat identity route-params))))
 
-(defn ->hf [[handler & ?route-params :as ?r]]
+(defn bidi->hf [[handler & ?route-params :as ?r]]
   (if ?r
-    (merge {:fiddle-id handler}
+    (merge {:fiddle-id (router/-decode-fiddle-id handler)}  ; Bidi router names by fiddle/ident (not db/ident) so we wrap into lookup ref
            (let [ps (->> ?route-params                      ; bidi gives us alternating k/v
                          (partition-all 2)
                          (map vec)
@@ -153,9 +154,9 @@
         home-route (some-> domain :domain/home-route safe-read-edn-string unwrap)
         router (some-> domain :domain/router safe-read-edn-string unwrap)]
     (case s
-      "/" (if router (->hf home-route) home-route)          ; compat
+      "/" (if router (bidi->hf home-route) home-route)          ; compat
       (or (if (= "/_/" (subs s 0 3)) (routing/decode (subs s 2) #_"include leading /"))
-          (some-> router (bidi/match-route s) ->bidi-consistency-wrapper ->hf)
+          (some-> router (bidi/match-route s) ->bidi-consistency-wrapper bidi->hf)
           (routing/decode s)))))
 
 (defn route-encode [rt route]
@@ -164,7 +165,7 @@
         router (some-> domain :domain/router safe-read-edn-string unwrap)]
     (or
       (if (system-link? (:fiddle-id route)) (str "/_" (routing/encode route)))
-      (if (= (->hf home-route) route) "/")
+      (if (= (bidi->hf home-route) route) "/")
       (if router (apply bidi/path-for router (->bidi route)))
       (routing/encode route))))
 
