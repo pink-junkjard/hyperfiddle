@@ -7,13 +7,13 @@
 
 
 
-(def kobe {:fiddle-id [:fiddle/ident :hyperfiddle.blog/post]
+(def kobe {:fiddle-id :hyperfiddle.blog/post
            :domain-ident "kobe"
            :request-params [#entity["$" [:user/sub "google-oauth2|116635422485042503270"]]
                             #{"events" "news"}]})
 
-(def route-args1 {:fiddle-id [:fiddle/ident :hyperfiddle.blog/post] :request-params #entity["$" [:user/sub "google-oauth2|116635422485042503270"]]})
-(def route-args1-seq {:fiddle-id [:fiddle/ident :hyperfiddle.blog/post] :request-params [#entity["$" [:user/sub "google-oauth2|116635422485042503270"]]]})
+(def route-args1 {:fiddle-id :hyperfiddle.blog/post :request-params #entity["$" [:user/sub "google-oauth2|116635422485042503270"]]})
+(def route-args1-seq {:fiddle-id :hyperfiddle.blog/post :request-params [#entity["$" [:user/sub "google-oauth2|116635422485042503270"]]]})
 
 (deftest router-basic
   []
@@ -38,7 +38,7 @@
          "/17592186045502/"))
   #_(is (= (encode {:fiddle-id :hyperfiddle.blog/post :request-params []}) "/:hyperfiddle.blog!post/"))
 
-  (is (= (encode {:fiddle-id [:fiddle/ident :hyperblog/post], :request-params [#entity["$" 17592186045826]]})
+  (is (= (encode {:fiddle-id :hyperblog/post, :request-params [#entity["$" 17592186045826]]})
          "/:hyperblog!post/~entity('$',17592186045826)"))
 
   )
@@ -53,3 +53,8 @@
 
 
 ; /(:fiddle!ident,:litepay!superuser)/nil
+
+
+I believe that if something is worth doing, its worth doing well.
+And we only have time to do 1 or 2 things well.
+The first is obviously product.
