@@ -1,10 +1,8 @@
 (ns hyperfiddle.service.node.ssr
-  (:require [cats.core :refer [mlet return]]
-            [cljs.nodejs :as node]
-            [hypercrud.client.core :as hc]
+  (:require [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
             [hypercrud.transit :as transit]
-            [hypercrud.util.core :as util :refer [unwrap]]
+            [hypercrud.util.core :refer [unwrap]]
             [hypercrud.util.performance :as perf]
             [hypercrud.util.reactive :as reactive]
             [hypercrud.util.template :as template]
@@ -18,60 +16,42 @@
             [hyperfiddle.runtime :as runtime]
             [hyperfiddle.service.node.lib :as lib :refer [req->service-uri]]
             [hyperfiddle.state :as state]
-            [promesa.core :as p :refer-macros [do*]]
+            [promesa.core :as p]
             [reagent.dom.server :as reagent-server]
             [taoensso.timbre :as timbre]))
 
 
-(def cheerio (node/require "cheerio"))
-
-(defn render-local-html [F]                                 ; react 16 is async, and this can fail
+(defn render-local-html [F]
   ; html fragment, not a document, no <html> enclosing tag
-  (do*
-    (perf/time (fn [get-total-time] (timbre/debug "Render total time:" (get-total-time)))
-               (reagent-server/render-to-string (F)))))
+  (perf/time (fn [get-total-time] (timbre/debug "Render total time:" (get-total-time)))
+             (reagent-server/render-to-string (F))))
 
 (def analytics (template/load-resource "analytics.html"))
 
-(def template
-  "
-  <!DOCTYPE html>
-  <html lang='en'>
-  <head>
-    <title></title>
-    <link id='app-css' rel='stylesheet' type='text/css'>
-    <meta name='viewport' content='width=device-width,initial-scale=1'>
-    <meta charset='UTF-8'>
-    <script id='build' type='text/edn'></script>
-  </head>
-  <body>
-    <div id='root'></div>
-    <script id='params' type='text/edn'></script>
-    <script id='state' type='text/edn'></script>
-    <script id='preamble' type='text/javascript'></script>
-    <script id='main' type='text/javascript'></script>
-  </body>
-  </html>")
-
-(defn evaluated-template [env state-val params serve-js? app-html]
-  (let [$ (.load cheerio template)
-        resource-base (str (:STATIC_RESOURCES env) "/" (:BUILD env))]
-    (-> ($ "title") (.text "Hyperfiddle"))
-    (-> ($ "#app-css") (.attr "href" (str resource-base "/styles.css")))
-    (-> ($ "#root") (.html app-html))
-    (when serve-js?
-      (-> ($ "#params") (.text (transit/encode params)))    ; env vars for client side rendering
-      (-> ($ "#state") (.text (transit/encode state-val)))
-      (-> ($ "#preamble") (.attr "src" (str resource-base "/preamble.js")))
-      (-> ($ "#main") (.attr "src" (str resource-base "/main.js"))))
-    (-> ($ "#build") (.text (:BUILD env)))
-    (when (:ANALYTICS env) (-> ($ "#root") (.after analytics))) ; if logged in, issue identify?
-    (.html $)))
-
-(defn html [env state-val serve-js? app-html]
-  (let [params {:hyperfiddle-hostname (:HF_HOSTNAME env)}]
-    (perf/time (fn [get-total-time] (timbre/debug "Template total time:" (get-total-time)))
-               (evaluated-template env state-val params serve-js? app-html))))
+(defn full-html [env state-val serve-js? app-component]
+  (let [resource-base (str (:STATIC_RESOURCES env) "/" (:BUILD env))]
+    [:html {:lang "en"}
+     [:head
+      [:title "Hyperfiddle"]
+      [:link {:rel "stylesheet" :href (str resource-base "/styles.css")}]
+      [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
+      [:meta {:charset "UTF-8"}]
+      [:script {:id "build" :type "text/edn" :dangerouslySetInnerHTML {:__html (:BUILD env)}}]]
+     [:body
+      [:div {:id "root"} app-component]
+      (when (:ANALYTICS env)
+        [:div {:dangerouslySetInnerHTML {:__html analytics}}])
+      (when serve-js?
+        ; env vars for client side rendering
+        [:script {:id "params" :type "text/edn"
+                  :dangerouslySetInnerHTML {:__html (transit/encode {:hyperfiddle-hostname (:HF_HOSTNAME env)})}}])
+      (when serve-js?
+        [:script {:id "state" :type "text/edn"
+                  :dangerouslySetInnerHTML {:__html (transit/encode state-val)}}])
+      (when serve-js?
+        [:script {:id "preamble" :src (str resource-base "/preamble.js")}])
+      (when serve-js?
+        [:script {:id "main" :src (str resource-base "/main.js")}])]]))
 
 (deftype IdeSsrRuntime [hyperfiddle-hostname hostname service-uri state-atom root-reducer]
   runtime/State
@@ -126,8 +106,7 @@
                :hyperfiddle-hostname hyperfiddle-hostname
                :peer rt-page
                ::runtime/branch-aux {::ide/foo "page"}}]
-      (render-local-html
-        (partial foundation/view :page route ctx ide/view))))
+      [foundation/view :page route ctx ide/view]))
 
   hc/Peer
   (hydrate [this branch request]
@@ -171,21 +150,13 @@
         (p/then (constantly 200))
         (p/catch #(or (:hyperfiddle.io/http-status-code (ex-data %)) 500))
         (p/then (fn [http-status-code]
-                  (-> (runtime/ssr rt @(runtime/state rt [::runtime/partitions nil :route]))
-                      (p/then (fn [html-fragment]
-                                {:http-status-code http-status-code
-                                 :html-fragment html-fragment})))))
-        (p/catch (fn [e]
-                   (timbre/error e)
-                   {:http-status-code (or (:hyperfiddle.io/http-status-code (ex-data e)) 500)
-                    :html-fragment (str "<h2>Fatal Error:</h2><h4>" (ex-message e) "</h4>")}))
-        (p/then (fn [{:keys [http-status-code html-fragment]}]
-                  (let [html-response (html env (browser-initial-state) serve-js? html-fragment)]
+                  (let [html (fn [] [full-html env (browser-initial-state) serve-js?
+                                     (runtime/ssr rt @(runtime/state rt [::runtime/partitions nil :route]))])]
                     (doto res
                       (.status http-status-code)
-                      (.format #js {"text/html" #(.send res html-response)})))))
+                      (.format #js {"text/html" #(.send res (str "<!DOCTYPE html>\n" (render-local-html html)))})))))
         (p/catch (fn [e]
                    (timbre/error e)
                    (doto res
-                     (.status 500)
-                     (.format #js {"text/html" #(.send res (str "<h2>Failure to generate HTML</h2><h4>" (ex-message e) "</h4>"))})))))))
+                     (.status (or (:hyperfiddle.io/http-status-code (ex-data e)) 500))
+                     (.format #js {"text/html" #(.send res (str "<h2>Fatal error:</h2><h4>" (ex-message e) "</h4>"))})))))))
