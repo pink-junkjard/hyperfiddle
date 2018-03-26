@@ -17,7 +17,8 @@
             [hypercrud.types.ThinEntity :refer [#?(:cljs ThinEntity)]]
             [hypercrud.util.non-fatal :refer [try-either]]
             [hypercrud.util.reactive :as reactive]
-            [hypercrud.util.string :as hc-string])
+            [hypercrud.util.string :as hc-string]
+            [hypercrud.browser.router :as router])
   #?(:clj
      (:import (hypercrud.types.Entity Entity)
               (hypercrud.types.ThinEntity ThinEntity))))
@@ -56,15 +57,22 @@
    :fiddle/request
    :fiddle/type])
 
+(defn legacy-fiddle-ident->lookup-ref [fiddle]              ; SHould be an ident but sometimes is a long today
+  ; Keywords are not a db/ident, turn it into the fiddle-id lookup ref.
+  ; Otherwise, pass it through, its already a lookup-ref or eid or whatever.
+  (if (keyword? fiddle)
+    [:fiddle/ident fiddle]
+    fiddle))
+
 (defn meta-request-for-fiddle [ctx]
   (if (auto-fiddle/system-fiddle? (get-in ctx [:route :fiddle-id]))
     (either/right nil)
     (try-either
-      (let [fiddle-id (get-in ctx [:route :fiddle-id])
+      (let [fiddle-id (get-in ctx [:route :fiddle-id])      ; TODO positional
             _ (assert fiddle-id "missing fiddle-id")
             _ (assert (:hypercrud.browser/domain ctx) "missing domain")
             dbval (hc/db (:peer ctx) (get-in ctx [:hypercrud.browser/domain :domain/fiddle-repo]) (:branch ctx))]
-        (->EntityRequest fiddle-id nil dbval meta-pull-exp-for-link)))))
+        (->EntityRequest (legacy-fiddle-ident->lookup-ref fiddle-id) nil dbval meta-pull-exp-for-link)))))
 
 (defn hydrate-fiddle [meta-fiddle-request ctx]
   (if (auto-fiddle/system-fiddle? (get-in ctx [:route :fiddle-id]))

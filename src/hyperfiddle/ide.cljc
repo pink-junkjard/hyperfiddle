@@ -125,7 +125,7 @@
 
 (defn bidi->hf [[handler & ?route-params :as ?r]]
   (if ?r
-    (merge {:fiddle-id (router/-decode-fiddle-id handler)}  ; Bidi router names by fiddle/ident (not db/ident) so we wrap into lookup ref
+    (merge {:fiddle-id handler}
            (let [ps (->> ?route-params                      ; bidi gives us alternating k/v
                          (partition-all 2)
                          (map vec)
@@ -146,7 +146,7 @@
   (assert (not (system-link? fiddle-id)) "bidi router doesn't handle sys links")
   ; this is going to generate param names of 0, 1, ... which maybe doesn't work for all routes
   ; we would need to disallow bidi keywords for this to be valid. Can bidi use ints? I think not :(
-  (if ?r (apply conj [(second fiddle-id)] (mapcat vector (abc) request-params))))
+  (if ?r (apply conj [fiddle-id] (mapcat vector (abc) request-params))))
 
 (defn route-decode [rt s]
   {:pre [(string? s)]}

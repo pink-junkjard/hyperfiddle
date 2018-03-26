@@ -28,15 +28,15 @@
 
 (def tests
   {
-   {:fiddle-id [:fiddle/ident :hyperblog/post], :request-params [#entity["$" :capitalism]]}
+   {:fiddle-id :hyperblog/post, :request-params [#entity["$" :capitalism]]}
    ;"/:hyperblog!post/~entity('$',:capitalism)"
    "/:capitalism"
 
-   {:fiddle-id [:fiddle/ident :hyperblog/post], :request-params [#entity["$" 1234]]}
+   {:fiddle-id :hyperblog/post, :request-params [#entity["$" 1234]]}
    ;"/:hyperblog!post/~entity('$',1234)"
    "/1234"
 
-   {:fiddle-id [:fiddle/ident :hyperblog/index], :request-params [#entity["$" :personal]]}
+   {:fiddle-id :hyperblog/index, :request-params [#entity["$" :personal]]}
    ;{:fiddle-id :hyperblog/index, :request-params [#entity["$" :personal]]}
    "/:personal/"
    })

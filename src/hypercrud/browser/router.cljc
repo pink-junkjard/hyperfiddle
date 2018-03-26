@@ -12,19 +12,12 @@
   {:fiddle-id :hyperfiddle.blog/post
    :request-params [#entity["$" [:user/sub "google-oauth2|116635422485042503270"]]]})
 
-(defn -encode-fiddle [fiddle]
+(defn -encode-fiddle-id [fiddle]
   (if (vector? fiddle)
     (let [[a v] fiddle]
       (if (= a :fiddle/ident)
         v
         fiddle))
-    fiddle))
-
-(defn -decode-fiddle-id [fiddle]
-  ; Keywords are not a db/ident, turn it into the fiddle-id lookup ref.
-  ; Otherwise, pass it through, its already a lookup-ref or eid or whatever.
-  (if (keyword? fiddle)
-    [:fiddle/ident fiddle]
     fiddle))
 
 (defn encode [route]
@@ -34,7 +27,7 @@
         service-args {}
         state {}]
     (str "/"
-         (str/join ";" (->> (cons (-encode-pchar (-encode-fiddle fiddle)) (map -encode-pchar fiddle-args))))
+         (str/join ";" (->> (cons (-encode-pchar fiddle) (map -encode-pchar fiddle-args))))
          "/"
          (str/join "/" (map -encode-pchar datomic-args))    ; datomic args as path params is sensible default for userland
 
@@ -50,7 +43,7 @@
         datomic-args (->> (str/split datomic-args-segment "/")) ; careful: (str/split "" "/") => [""]
         [query fragment] (split-first s "#")]
     (merge
-      {:fiddle-id (-decode-fiddle-id (-decode-url-ednish fiddle))}
+      {:fiddle-id (-decode-url-ednish fiddle)}
       (if-let [as (seq (remove str/empty-or-nil? datomic-args))]
         {:request-params (mapv -decode-url-ednish as)})
       #_(map -decode-url-ednish fiddle-args)                ; fiddle-args is not a map, its positional
