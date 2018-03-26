@@ -29,19 +29,23 @@
 (def tests
   {
    {:fiddle-id [:fiddle/ident :hyperblog/post], :request-params [#entity["$" :capitalism]]}
-   "/:hyperblog!post/~entity('$',:capitalism)"
+   ;"/:hyperblog!post/~entity('$',:capitalism)"
+   "/:capitalism"
 
    {:fiddle-id [:fiddle/ident :hyperblog/post], :request-params [#entity["$" 1234]]}
-   "/:hyperblog!post/~entity('$',1234)"
+   ;"/:hyperblog!post/~entity('$',1234)"
+   "/1234"
 
-   {:fiddle-id :hyperblog/index, :request-params [#entity["$" :personal]]}
+   {:fiddle-id [:fiddle/ident :hyperblog/index], :request-params [#entity["$" :personal]]}
+   ;{:fiddle-id :hyperblog/index, :request-params [#entity["$" :personal]]}
    "/:personal/"
    })
 
 (deftest user-router-1
   []
   (for [[k v] tests]
-    (is (= (route-encode rt k) v))))
+    (is (= (route-encode rt k) v)))
+  )
 
 (def ctx {:hyperfiddle-hostname "hyperfiddle.net"})
 
