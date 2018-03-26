@@ -7,7 +7,6 @@
             [clojure.walk :as walk]
             [hypercrud.browser.dbname :as dbname]
             [hypercrud.browser.router :as router]
-            [ hypercrud.browser.router-base64 :as router-base64]
             [hypercrud.compile.eval :as eval]
             [hypercrud.compile.reader :as reader]
             [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
