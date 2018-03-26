@@ -28,7 +28,7 @@
 (defn e->response [e]
   ; todo there are a subset of requests that are cacheable
   {:status (or (:hyperfiddle.io/http-status-code (ex-data e)) 500)
-   :headers {}                                          ; todo retry-after on 503
+   :headers {}                                              ; todo retry-after on 503
    :body (->Err (.getMessage e))})
 
 (defn http-index [req]
@@ -130,9 +130,9 @@
                         {:status 200
                          :headers {"Cache-Control" "max-age=31536000"} ; todo max-age=0 if POST
                          :body data}))
-              (p/then (fn [e]
-                        (timbre/error e)
-                        (e->response e)))))
+              (p/catch (fn [e]
+                         (timbre/error e)
+                         (e->response e)))))
         (catch Exception e
           (timbre/error e)
           (e->response e))))))
