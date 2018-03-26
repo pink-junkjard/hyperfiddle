@@ -1,7 +1,6 @@
 (ns hyperfiddle.service.jvm.service
   (:refer-clojure :exclude [sync])
-  (:require [hypercrud.browser.router-base64 :as router-base64]
-            [hypercrud.compile.reader :as reader]
+  (:require [hypercrud.compile.reader :as reader]
             [hypercrud.transit :as hc-t]
             [hypercrud.types.Err :refer [->Err]]
             [hypercrud.util.base-64-url-safe :as base-64-url-safe]
@@ -26,6 +25,12 @@
             [taoensso.timbre :as timbre]))
 
 
+(defn e->response [e]
+  ; todo there are a subset of requests that are cacheable
+  {:status (or (:hyperfiddle.io/http-status-code (ex-data e)) 500)
+   :headers {}                                          ; todo retry-after on 503
+   :body (->Err (.getMessage e))})
+
 (defn http-index [req]
   (ring-resp/response "Hypercrud Server Running!"))
 
@@ -38,9 +43,7 @@
       (ring-resp/response r))
     (catch Exception e
       (timbre/error e)
-      {:status (or (:hyperfiddle.io/http-status-code (ex-data e)) 500)
-       :headers {}
-       :body (->Err (.getMessage e))})))
+      (e->response e))))
 
 (defn http-transact! [req]
   (try
@@ -48,18 +51,14 @@
         (ring-resp/response))
     (catch Exception e
       (timbre/error e)
-      {:status (or (:hyperfiddle.io/http-status-code (ex-data e)) 500)
-       :headers {}
-       :body (->Err (.getMessage e))})))
+      (e->response e))))
 
 (defn http-sync [req]
   (try
     (-> (sync (:body-params req))
         (ring-resp/response))
     (catch Exception e
-      {:status (or (:hyperfiddle.io/http-status-code (ex-data e)) 500)
-       :headers {}                                          ; todo retry-after on 503
-       :body (->Err (.getMessage e))})))
+      (e->response e))))
 
 (defn http-global-basis [env]
   (interceptor/handler
@@ -75,9 +74,7 @@
                        :body global-basis}))
             (p/catch (fn [e]
                        (timbre/error e)
-                       {:status (or (:hyperfiddle.io/http-status-code (ex-data e)) 500)
-                        :headers {}
-                        :body (->Err (.getMessage e))})))))))
+                       (e->response e))))))))
 
 (defn http-local-basis [env]
   (interceptor/handler
@@ -85,7 +82,7 @@
       (try
         (let [hostname (:server-name req)
               global-basis (-> (:global-basis path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
-              route (router-base64/decode (str "/" (:encoded-route path-params)))
+              route (-> (:encoded-route path-params) base-64-url-safe/decode reader/read-edn-string)
               branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string)
               branch-aux (some-> (:branch-aux path-params) base-64-url-safe/decode reader/read-edn-string)
               initial-state {:user-profile (:user req)
@@ -100,11 +97,13 @@
               (p/then (fn [local-basis]
                         {:status 200
                          :headers {"Cache-Control" "max-age=31536000"}
-                         :body local-basis}))))
+                         :body local-basis}))
+              (p/catch (fn [e]
+                         (timbre/error e)
+                         (e->response e)))))
         (catch Exception e
-          ; todo this try catch should be an interceptor
           (timbre/error e)
-          {:status 500 :headers {} :body (str e)})))))
+          (e->response e))))))
 
 (defn http-hydrate-route [env]
   (interceptor/handler
@@ -112,7 +111,7 @@
       (try
         (let [hostname (:server-name req)
               local-basis (-> (:local-basis path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
-              route (router-base64/decode (str "/" (:encoded-route path-params)))
+              route (-> (:encoded-route path-params) base-64-url-safe/decode reader/read-edn-string)
               branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string)
               branch-aux (some-> (:branch-aux path-params) base-64-url-safe/decode reader/read-edn-string)
               initial-state (-> {:user-profile (:user req)
@@ -130,12 +129,13 @@
               (p/then (fn [data]
                         {:status 200
                          :headers {"Cache-Control" "max-age=31536000"} ; todo max-age=0 if POST
-                         :body data}))))
+                         :body data}))
+              (p/then (fn [e]
+                        (timbre/error e)
+                        (e->response e)))))
         (catch Exception e
-          ; todo this try catch should be an interceptor
           (timbre/error e)
-          ; todo caching on errors, there are a subset of requests that are actually permanently cacheable
-          {:status 500 :headers {} :body (str e)})))))
+          (e->response e))))))
 
 (defn with-user [env]
   (interceptor/on-request

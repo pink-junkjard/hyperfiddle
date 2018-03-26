@@ -59,6 +59,4 @@
                     (.format #js {"application/transit+json" #(.send res (transit/encode global-basis))}))))
         (p/catch (fn [e]
                    (timbre/error e)
-                   (doto res
-                     (.status (or (:hyperfiddle.io/http-status-code (ex-data e)) 500))
-                     (.send (->Err (.getMessage e)))))))))
+                   (lib/e->response res e))))))

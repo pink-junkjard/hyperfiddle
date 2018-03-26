@@ -22,8 +22,8 @@
             [reagent.dom.server :as reagent-server]
             [taoensso.timbre :as timbre]))
 
-(def cheerio (node/require "cheerio"))
 
+(def cheerio (node/require "cheerio"))
 
 (defn render-local-html [F]                                 ; react 16 is async, and this can fail
   ; html fragment, not a document, no <html> enclosing tag

@@ -1,6 +1,5 @@
 (ns hyperfiddle.service.node.hydrate-route
-  (:require [hypercrud.browser.router-base64 :as router-base64]
-            [hypercrud.client.core :as hc]
+  (:require [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
             [hypercrud.compile.reader :as reader]
             [hypercrud.transit :as transit]
@@ -18,7 +17,8 @@
             [hyperfiddle.runtime :as runtime]
             [hyperfiddle.service.node.lib :as lib]
             [hyperfiddle.state :as state]
-            [promesa.core :as p]))
+            [promesa.core :as p]
+            [taoensso.timbre :as timbre]))
 
 
 (deftype HydrateRouteRuntime [hyperfiddle-hostname hostname service-uri state-atom root-reducer]
@@ -97,35 +97,34 @@
   (-hash [this] (goog/getUid this)))
 
 
-(defn http-hydrate-route [env req res {:keys [encoded-route] :as path-params} query-params]
-  (let [hostname (.-hostname req)
-        branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
-        branch-aux (some-> (:branch-aux path-params) base-64-url-safe/decode reader/read-edn-string)
-        local-basis (-> (:local-basis path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
-        route (router-base64/decode encoded-route)
-        initial-state {::stage (some-> req .-body lib/hack-buggy-express-body-text-parser transit/decode)
-                       :user-profile (lib/req->user-profile env req)
-                       ::runtime/partitions {branch {:local-basis local-basis
-                                                     :route route
-                                                     :hyperfiddle.runtime/branch-aux branch-aux}}}
-        rt (->HydrateRouteRuntime (:HF_HOSTNAME env) hostname (lib/req->service-uri env req)
-                                  (reactive/atom (reducers/root-reducer initial-state nil))
-                                  reducers/root-reducer)]
-    (-> (foundation-actions/refresh-domain rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
-        (p/then #(runtime/hydrate-route rt local-basis route branch branch-aux (:stage initial-state)))
-        (p/then (fn [data]
-                  (doto res
-                    (.status 200)
-                    (.append "Cache-Control" "max-age=31536000") ; todo max-age=0 if POST
-                    (.format #js {"application/transit+json" #(.send res (transit/encode data))
-                                  #_"text/html" #_(fn []
-                                                    (mlet [html-fragment nil #_(api-impl/local-html ui-fn ctx)]
-                                                          (.send res html-fragment)))}))))
-        (p/catch
-          (fn [error]
-            (doto res
-              (.status 500)
-              ; todo caching on errors, there are a subset of requests that are actually permanently cacheable
-              (.format #js {"application/transit+json" #(.send res (transit/encode {:error (pr-str error)}))
-                            #_"text/html" #_(fn []
-                                              (document/error error))})))))))
+(defn http-hydrate-route [env req res path-params query-params]
+  (try
+    (let [hostname (.-hostname req)
+          branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
+          branch-aux (some-> (:branch-aux path-params) base-64-url-safe/decode reader/read-edn-string)
+          local-basis (-> (:local-basis path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
+          route (-> (:encoded-route path-params) base-64-url-safe/decode reader/read-edn-string)
+          initial-state {::stage (some-> req .-body lib/hack-buggy-express-body-text-parser transit/decode)
+                         :user-profile (lib/req->user-profile env req)
+                         ::runtime/partitions {branch {:local-basis local-basis
+                                                       :route route
+                                                       :hyperfiddle.runtime/branch-aux branch-aux}}}
+          rt (->HydrateRouteRuntime (:HF_HOSTNAME env) hostname (lib/req->service-uri env req)
+                                    (reactive/atom (reducers/root-reducer initial-state nil))
+                                    reducers/root-reducer)]
+      (-> (foundation-actions/refresh-domain rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
+          (p/then #(runtime/hydrate-route rt local-basis route branch branch-aux (:stage initial-state)))
+          (p/then (fn [data]
+                    (doto res
+                      (.status 200)
+                      (.append "Cache-Control" "max-age=31536000") ; todo max-age=0 if POST
+                      (.format #js {"application/transit+json" #(.send res (transit/encode data))
+                                    #_"text/html" #_(fn []
+                                                      (mlet [html-fragment nil #_(api-impl/local-html ui-fn ctx)]
+                                                            (.send res html-fragment)))}))))
+          (p/catch (fn [e]
+                     (timbre/error e)
+                     (lib/e->response res e)))))
+    (catch :default e
+      (timbre/error e)
+      (lib/e->response res e))))
