@@ -154,18 +154,19 @@
         home-route (some-> domain :domain/home-route safe-read-edn-string unwrap)
         router (some-> domain :domain/router safe-read-edn-string unwrap)]
     (case s
-      "/" (if router (bidi->hf home-route) home-route)          ; compat
+      "/" (if router (bidi->hf home-route) home-route)      ; compat
       (or (if (= "/_/" (subs s 0 3)) (routing/decode (subs s 2) #_"include leading /"))
           (some-> router (bidi/match-route s) ->bidi-consistency-wrapper bidi->hf)
           (routing/decode s)))))
 
 (defn route-encode [rt route]
   (let [domain @(runtime/state rt [:hyperfiddle.runtime/domain])
+        router (some-> domain :domain/router safe-read-edn-string unwrap)
         home-route (some-> domain :domain/home-route safe-read-edn-string unwrap)
-        router (some-> domain :domain/router safe-read-edn-string unwrap)]
+        home-route (if router (bidi->hf home-route) home-route)]
     (or
       (if (system-link? (:fiddle-id route)) (str "/_" (routing/encode route)))
-      (if (= (bidi->hf home-route) route) "/")
+      (if (= route home-route) "/")
       (if router (apply bidi/path-for router (->bidi route)))
       (routing/encode route))))
 
