@@ -1,10 +1,10 @@
 (ns hyperfiddle.ide
   (:require [bidi.bidi :as bidi]
             [hypercrud.browser.auto-fiddle :refer [system-fiddle?]]
+            [hypercrud.browser.base :as base]
     #?(:cljs [hypercrud.browser.browser-ui :as browser-ui])
             [hypercrud.browser.core :as browser]
             [hypercrud.browser.routing :as routing]
-            [hypercrud.browser.router :as router]
             [hypercrud.client.core :as hc]
     #?(:cljs [hypercrud.react.react-fragment :refer [react-fragment]])
     #?(:cljs [hypercrud.ui.navigate-cmp :as navigate-cmp])
@@ -56,7 +56,7 @@
 (defn ide-route [route]
   {:fiddle-id :hyperfiddle/topnav
    ;:fiddle-params (:fiddle-params route)
-   :request-params [#entity["$" (:fiddle-id route)]]})
+   :request-params [#entity["$" (base/legacy-fiddle-ident->lookup-ref (:fiddle-id route))]]})
 
 (let [always-user (atom :user)
       constantly-nil (constantly nil)]
