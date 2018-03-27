@@ -1,47 +1,30 @@
-(ns hypercrud.browser.auto-fiddle
+(ns hypercrud.browser.auto-fiddle                           ; system-fiddle
   (:require [hypercrud.browser.schema-attribute :as schema-attribute]
             [hypercrud.compile.macros :refer [str-and-code]]
-            [hypercrud.util.non-fatal :refer [try-either]]))
+            [hypercrud.util.non-fatal :refer [try-either]]
+            [clojure.string :as str]))
 
 
 (defn system-fiddle? [fiddle-id]
-  (or (map? fiddle-id)
-      (and (or (seq? fiddle-id) (vector? fiddle-id))        ; lookup ref?
-           (= :fiddle/ident (first fiddle-id))
-           (map? (second fiddle-id)))))
+  (and (keyword? fiddle-id)                                 ; why long here wut?
+       (namespace fiddle-id)
+       (str/starts-with? (namespace fiddle-id) "hyperfiddle.system")))
 
-(defn display-fiddle-ident [fiddle-id]
-  (cond
-    (map? fiddle-id) (:ident fiddle-id)
-    (and (or (seq? fiddle-id) (vector? fiddle-id))          ; lookup ref?
-         (= :fiddle/ident (first fiddle-id))) (second fiddle-id)
-    :else fiddle-id))
+; these need to be thick/hydrated params bc we are manufacturing a pulled tree here.
 
-(defn fiddle-system-edit [fe-name]                          ; these need to be thick/hydrated params bc we are manufacturing a pulled tree here.
-  {:pre [fe-name]}
-  {:fiddle/ident {:ident :system-edit
-                  :fe-name fe-name}
+(def fiddle-system-edit
+  {:fiddle/ident :hyperfiddle.system/edit
    :fiddle/type :entity})
 
-(defn fiddle-system-edit-attr [fe-name a]
-  {:pre [fe-name a]}
-  {:fiddle/ident {:ident :system-edit-attr
-                  :fe-name fe-name
-                  :a a}
-   :fiddle/type :entity})
-
-(defn fiddle-blank-system-remove [fe-name a]
-  {:fiddle/ident {:ident :sys-remove
-                  :fe-name fe-name
-                  :a a}
+(defn fiddle-blank-system-remove []
+  {:fiddle/ident :hyperfiddle.system/remove
    :fiddle/type :blank
    :fiddle/renderer (str-and-code
                       (fn [result fes anchors ctx]
                         [:p "Retract entity?"]))})
 
 (defn schema-cardinality-options [$db]
-  {:fiddle/ident {:ident :schema/cardinality-options
-                  :dbhole/name $db}
+  {:fiddle/ident (keyword "hyperfiddle.system.schema.cardinality-options" $db)
    :fiddle/query (str [:find (list 'pull $db '?e [:db/id :db/ident])
                        :in $db
                        :where
@@ -51,8 +34,7 @@
    :fiddle/type :query})
 
 (defn schema-unique-options [$db]
-  {:fiddle/ident {:ident :schema/unique-options
-                  :dbhole/name $db}
+  {:fiddle/ident (keyword "hyperfiddle.system.schema.unique-options" $db)
    :fiddle/query (str [:find (list 'pull $db '?e [:db/id :db/ident])
                        :in $db
                        :where
@@ -62,8 +44,7 @@
    :fiddle/type :query})
 
 (defn schema-valueType-options [$db]
-  {:fiddle/ident {:ident :schema/valueType-options
-                  :dbhole/name $db}
+  {:fiddle/ident (keyword "hyperfiddle.system.schema.valueType-options" $db)
    :fiddle/query (str [:find (list 'pull $db '?valueType [:db/id :db/ident])
                        :in $db
                        :where
@@ -72,8 +53,7 @@
    :fiddle/type :query})
 
 (defn schema-attribute [$db]
-  {:fiddle/ident {:ident :schema/attribute
-                  :dbhole/name $db}
+  {:fiddle/ident (keyword "hyperfiddle.system.schema.attribute" (str $db))
    :fiddle/type :entity
    :fiddle/pull (str [[:db/id
                        :db/ident
@@ -84,23 +64,22 @@
                        :db/isComponent
                        :db/fulltext]])
    :fiddle/renderer (str `schema-attribute/renderer)
-   :fiddle/links #{{:db/id {:ident :schema/cardinality-options-link}
+   :fiddle/links #{{:db/id (keyword "hyperfiddle.system.schema.cardinality-options" $db)
                     :link/fiddle (schema-cardinality-options $db)
                     :link/render-inline? true
                     :link/rel :options
                     :link/path "0 :db/cardinality"}
-                   {:db/id {:ident :schema/unique-options-link}
+                   {:db/id (keyword "hyperfiddle.system.schema.unique-options" $db)
                     :link/fiddle (schema-unique-options $db)
                     :link/render-inline? true
                     :link/rel :options
                     :link/path "0 :db/unique"}
-                   {:db/id {:ident :schema/valueType-options-link}
+                   {:db/id (keyword "hyperfiddle.system.schema.valueType-options" $db)
                     :link/fiddle (schema-valueType-options $db)
                     :link/render-inline? true
                     :link/rel :options
                     :link/path "0 :db/valueType"}
-                   {:db/id {:ident :system-anchor-remove
-                            :fe "entity"}
+                   {:db/id :system-anchor-remove            ; XXX
                     :link/rel :sys-remove-entity
                     :link/disabled? true}}})
 
@@ -122,53 +101,47 @@
                          (let [ctx (update ctx :hypercrud.browser/result (partial hypercrud.util.reactive/fmap datomic-filter))]
                            [hypercrud.ui.result/view ctx])]))))]
   (defn schema-all-attributes [$db]
-    {:fiddle/ident {:ident :schema/all-attributes
-                    :dbhole/name $db}
+    {:fiddle/ident (keyword "hyperfiddle.system.schema.all-attributes" $db)
      :fiddle/query (str [:find [(list 'pull $db '?attr [:db/id :db/ident :db/valueType :db/cardinality :db/doc :db/unique :db/isComponent :db/fulltext]) '...]
                          :in $db
                          :where [$db :db.part/db :db.install/attribute '?attr]])
      :fiddle/type :query
      :fiddle/bindings (str-and-code (fn [param-ctx] (assoc param-ctx :read-only (constantly true))))
      :fiddle/renderer renderer
-     :fiddle/links #{{:db/id {:ident :schema/cardinality-options-link}
+     :fiddle/links #{{:db/id (keyword "hyperfiddle.system.schema.cardinality-options-link" $db)
                       :link/fiddle (schema-cardinality-options $db)
                       :link/render-inline? true
                       :link/rel :options
                       :link/path "0 :db/cardinality"}
-                     {:db/id {:ident :schema/unique-options-link}
+                     {:db/id (keyword "hyperfiddle.system.schema.unique-options-link" $db)
                       :link/fiddle (schema-unique-options $db)
                       :link/render-inline? true
                       :link/rel :options
                       :link/path "0 :db/unique"}
-                     {:db/id {:ident :schema/valueType-options-link}
+                     {:db/id (keyword "hyperfiddle.system.schema.valueType-options" $db)
                       :link/fiddle (schema-valueType-options $db)
                       :link/render-inline? true
                       :link/rel :options
                       :link/path "0 :db/valueType"}
-                     {:db/id {:ident :system-anchor-edit
-                              :fe "?attr"}
+                     {:db/id :system-anchor-edit            ; XXX
                       :link/rel :sys-edit-?attr
                       :link/fiddle (schema-attribute $db)}
-                     {:db/id {:ident :system-anchor-new
-                              :fe "?attr"}
+                     {:db/id :system-anchor-new             ; XXX
                       :link/rel :sys-new-?attr
                       :link/fiddle (schema-attribute $db)}
-                     {:db/id {:ident :system-anchor-remove
-                              :fe "?attr"}
+                     {:db/id :system-anchor-remove          ; XXX
                       :link/rel :sys-remove-?attr
                       :link/disabled? true}}}))
 
 (defn hydrate-system-fiddle [fiddle-id]
-  (let [id (second fiddle-id)]
-    (try-either
-      ; catch all the pre assertions
-      (case (:ident id)
-        :schema/all-attributes (schema-all-attributes (:dbhole/name id))
-        :schema/cardinality-options (schema-cardinality-options (:dbhole/name id))
-        :schema/unique-options (schema-unique-options (:dbhole/name id))
-        :schema/valueType-options (schema-valueType-options (:dbhole/name id))
-        :schema/attribute (schema-attribute (:dbhole/name id))
-        :system-edit (fiddle-system-edit (:fe-name id))
-        :system-edit-attr (fiddle-system-edit-attr (:fe-name id) (:a id))
-        :sys-remove (fiddle-blank-system-remove (:fe-name id) (:a id))))))
-
+  (try-either                                               ; catch all the pre assertions
+    (cond
+      (= fiddle-id :hyperfiddle.system/edit) fiddle-system-edit
+      (= fiddle-id :hyperfiddle.system/remove) fiddle-blank-system-remove
+      :else (let [$db (symbol (name fiddle-id))]
+              (condp = (namespace fiddle-id)
+                "hyperfiddle.system.schema.all-attributes" (schema-all-attributes $db)
+                "hyperfiddle.system.schema.cardinality-options" (schema-cardinality-options $db)
+                "hyperfiddle.system.schema.unique-options" (schema-unique-options $db)
+                "hyperfiddle.system.schema.valueType-options" (schema-valueType-options $db)
+                "hyperfiddle.system.schema.attribute" (schema-attribute $db))))))

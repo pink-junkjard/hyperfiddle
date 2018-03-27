@@ -25,7 +25,6 @@
 (defn doc [ctx]
   (markdown-relation nil (or-str @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:db/doc])
                              (->> @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/ident])
-                                  (auto-fiddle/display-fiddle-ident)
                                   (str "## ")))
                      nil))
 

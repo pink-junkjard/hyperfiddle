@@ -29,18 +29,15 @@
 
 ; inline sys-link data when the entity is a system-fiddle
 (letfn [(-shadow-fiddle [ctx fiddle]
-          (let [[e a] (get-in ctx [:route :request-params])
-                system-fiddle? (auto-fiddle/system-fiddle? (:db/id e))]
-            (if system-fiddle?
-              (->> (auto-fiddle/hydrate-system-fiddle (:db/id e))
-                   (cats/fmap (fn [fiddle]
-                                (-> fiddle
-                                    (update :fiddle/bindings #(or (-> % meta :str) %))
-                                    (update :fiddle/renderer #(or (-> % meta :str) %))
-                                    (update :fiddle/request #(or (-> % meta :str) %)))))
-                   unwrap)
+          (let [[e a] (get-in ctx [:route :request-params])]
+            (if (auto-fiddle/system-fiddle? (:db/id e))     ; this fiddle does not actually exist, conjure it up
+              (-> (unwrap (auto-fiddle/hydrate-system-fiddle (:db/id e)))
+                  (update :fiddle/bindings #(or (-> % meta :str) %))
+                  (update :fiddle/renderer #(or (-> % meta :str) %))
+                  (update :fiddle/request #(or (-> % meta :str) %)))
               fiddle)))]
   (defn shadow-fiddle [ctx]
+    {:pre [(-> ctx :hypercrud.browser/result)]}
     (update ctx :hypercrud.browser/result (partial reactive/fmap (reactive/partial -shadow-fiddle ctx)))))
 
 ; ugly hacks to recursively fix the ui for sys links
@@ -87,7 +84,7 @@
      [:div.hyperfiddle-topnav-root-controls
       (fake-managed-anchor :domain ctx (get-in ctx [:target-domain :domain/ident]))
       " / "
-      (let [ident (auto-fiddle/display-fiddle-ident @(reactive/cursor (:hypercrud.browser/result ctx) [:fiddle/ident]))]
+      (let [ident @(reactive/cursor (:hypercrud.browser/result ctx) [:fiddle/ident])]
         (fake-managed-anchor :fiddle-more (assoc ctx :user-renderer hijack-renderer) (str ident)))
       " · "
       (fake-managed-anchor :links (assoc ctx :user-renderer hijack-renderer) "links")

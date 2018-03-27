@@ -1,6 +1,6 @@
 (ns hyperfiddle.ide
   (:require [bidi.bidi :as bidi]
-            [hypercrud.browser.auto-anchor :refer [system-link?]]
+            [hypercrud.browser.auto-fiddle :refer [system-fiddle?]]
     #?(:cljs [hypercrud.browser.browser-ui :as browser-ui])
             [hypercrud.browser.core :as browser]
             [hypercrud.browser.routing :as routing]
@@ -55,6 +55,7 @@
 
 (defn ide-route [route]
   {:fiddle-id :hyperfiddle/topnav
+   ;:fiddle-params (:fiddle-params route)
    :request-params [#entity["$" (:fiddle-id route)]]})
 
 (let [always-user (atom :user)
@@ -143,7 +144,7 @@
   #_(->> (range) (map (comp keyword str char #(+ % (int \a))))))
 
 (defn ->bidi [{:keys [fiddle-id request-params] :as ?r}]
-  (assert (not (system-link? fiddle-id)) "bidi router doesn't handle sys links")
+  (assert (not (system-fiddle? fiddle-id)) "bidi router doesn't handle sys links")
   ; this is going to generate param names of 0, 1, ... which maybe doesn't work for all routes
   ; we would need to disallow bidi keywords for this to be valid. Can bidi use ints? I think not :(
   (if ?r (apply conj [fiddle-id] (mapcat vector (abc) request-params))))
@@ -165,7 +166,7 @@
         home-route (some-> domain :domain/home-route safe-read-edn-string unwrap)
         home-route (if router (bidi->hf home-route) home-route)]
     (or
-      (if (system-link? (:fiddle-id route)) (str "/_" (routing/encode route)))
+      (if (system-fiddle? (:fiddle-id route)) (str "/_" (routing/encode route)))
       (if (= route home-route) "/")
       (if router (apply bidi/path-for router (->bidi route)))
       (routing/encode route))))
