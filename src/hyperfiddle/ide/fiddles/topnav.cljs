@@ -29,9 +29,10 @@
 
 ; inline sys-link data when the entity is a system-fiddle
 (letfn [(-shadow-fiddle [ctx fiddle]
-          (let [[e a] (get-in ctx [:route :request-params])]
-            (if (auto-fiddle/system-fiddle? (:db/id e))     ; this fiddle does not actually exist, conjure it up
-              (-> (unwrap (auto-fiddle/hydrate-system-fiddle (:db/id e)))
+          (let [[e a] (get-in ctx [:route :request-params])
+                [_ fiddle-id] (:db/id e)]
+            (if (auto-fiddle/system-fiddle? fiddle-id)     ; this fiddle does not actually exist, conjure it up
+              (-> (unwrap (auto-fiddle/hydrate-system-fiddle fiddle-id))
                   (update :fiddle/bindings #(or (-> % meta :str) %))
                   (update :fiddle/renderer #(or (-> % meta :str) %))
                   (update :fiddle/request #(or (-> % meta :str) %)))
