@@ -3,7 +3,6 @@
             [hypercrud.client.peer :as peer]
             [hypercrud.transit :as transit]
             [hypercrud.util.core :refer [unwrap]]
-            [hypercrud.util.performance :as perf]
             [hypercrud.util.reactive :as reactive]
             [hypercrud.util.template :as template]
             [hyperfiddle.appval.state.reducers :as reducers]
@@ -18,13 +17,17 @@
             [hyperfiddle.state :as state]
             [promesa.core :as p]
             [reagent.dom.server :as reagent-server]
+            [reagent.impl.template :as tmpl]
+            [reagent.impl.util :as rutil]
+            [reagent.ratom :as ratom]
             [taoensso.timbre :as timbre]))
 
 
-(defn render-local-html [F]
-  ; html fragment, not a document, no <html> enclosing tag
-  (perf/time (fn [get-total-time] (timbre/debug "Render total time:" (get-total-time)))
-             (reagent-server/render-to-string (F))))
+(defn render-to-node-stream
+  [component]
+  (ratom/flush!)
+  (binding [rutil/*non-reactive* true]
+    (.renderToNodeStream (reagent-server/module) (tmpl/as-element component))))
 
 (def analytics (template/load-resource "analytics.html"))
 
@@ -150,11 +153,17 @@
         (p/then (constantly 200))
         (p/catch #(or (:hyperfiddle.io/http-status-code (ex-data %)) 500))
         (p/then (fn [http-status-code]
-                  (let [html (fn [] [full-html env (browser-initial-state) serve-js?
-                                     (runtime/ssr rt @(runtime/state rt [::runtime/partitions nil :route]))])]
+                  (let [html [full-html env (browser-initial-state) serve-js?
+                              (runtime/ssr rt @(runtime/state rt [::runtime/partitions nil :route]))]]
                     (doto res
                       (.status http-status-code)
-                      (.format #js {"text/html" #(.send res (str "<!DOCTYPE html>\n" (render-local-html html)))})))))
+                      (.type "html")
+                      (.write "<!DOCTYPE html>\n"))
+                    (let [stream (render-to-node-stream html)]
+                      (.on stream "error" (fn [e]
+                                            (timbre/error e)
+                                            (.end res (str "<h2>Fatal rendering error:</h2><h4>" (ex-message e) "</h4>"))))
+                      (.pipe stream res)))))
         (p/catch (fn [e]
                    (timbre/error e)
                    (doto res
