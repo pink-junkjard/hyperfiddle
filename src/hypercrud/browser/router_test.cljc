@@ -50,11 +50,3 @@
   ;(decode "/garbagasdf..23425649=//e") {:fiddle-id garbagasdf..23425649=, :request-params [nil e]}
   ;(decode "/asdf/asdf/asdf?asdf?asdf?sadf") {:fiddle-id asdf, :request-params [asdf asdf]}
   )
-
-
-; /(:fiddle!ident,:litepay!superuser)/nil
-
-
-I believe that if something is worth doing, its worth doing well.
-And we only have time to do 1 or 2 things well.
-The first is obviously product.
