@@ -1,4 +1,4 @@
-(ns hypercrud.browser.auto-anchor                           ; this namespace is public extern
+(ns hypercrud.browser.system-link                           ; this namespace is public extern
   (:require [hypercrud.browser.auto-anchor-formula :refer [auto-formula]]
             [hypercrud.browser.auto-anchor-txfn :refer [auto-txfn]]
             [hypercrud.browser.auto-fiddle :as auto-fiddle]

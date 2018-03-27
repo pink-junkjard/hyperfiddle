@@ -1,7 +1,7 @@
 (ns hypercrud.browser.base
   (:require [cats.core :as cats :refer [mlet return]]
             [cats.monad.either :as either]
-            [hypercrud.browser.auto-anchor :as auto-anchor]
+            [hypercrud.browser.system-link :refer [auto-links]]
             [hypercrud.browser.auto-fiddle :as auto-fiddle]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.find-element :as find-element]
@@ -166,7 +166,7 @@
       (cats/return
         (assoc ctx
           :hypercrud.browser/ordered-fes reactive-fes
-          :hypercrud.browser/links (reactive/track auto-anchor/auto-links fiddle reactive-fes reactive-schemas (:keep-disabled-anchors? ctx)))))))
+          :hypercrud.browser/links (reactive/track auto-links fiddle reactive-fes reactive-schemas (:keep-disabled-anchors? ctx)))))))
 
 (defn data-from-route [route ctx]                           ; todo rename
   (let [ctx (context/route ctx route)]

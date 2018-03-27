@@ -1,10 +1,10 @@
 (ns hyperfiddle.ide.fiddles.fiddle-links.bindings
-  (:require [hypercrud.browser.auto-anchor :as auto-anchor]
+  (:require [hypercrud.browser.system-link :refer [system-link?]]
             [hypercrud.util.reactive :as reactive]))
 
 
 (let [read-only (fn [attribute ctx]
-                  (let [sys? (auto-anchor/system-link? @(reactive/cursor (:cell-data ctx) [:db/id]))
+                  (let [sys? (system-link? @(reactive/cursor (:cell-data ctx) [:db/id]))
                         shadow? @(reactive/cursor (:cell-data ctx) [:hypercrud/sys?])
                         cantchange (contains? #{:link/rel
                                                 :link/path

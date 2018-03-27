@@ -1,5 +1,5 @@
 (ns hypercrud.ui.table
-  (:require [hypercrud.browser.auto-anchor :as auto-anchor]
+  (:require [hypercrud.browser.system-link :refer [system-link?]]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.find-element :as find-element]
             [hypercrud.browser.link :as link]
@@ -91,7 +91,7 @@
    [LinkCell false ctx]])
 
 (defn table-cell [control -field ctx]
-  (let [shadow-link @(reactive/fmap auto-anchor/system-link? (reactive/cursor (:cell-data ctx) [:db/id]))]
+  (let [shadow-link @(reactive/fmap system-link? (reactive/cursor (:cell-data ctx) [:db/id]))]
     [:td {:class (classes "hyperfiddle-table-cell" "truncate")
           ; todo use cell renderer for shadow-link styles
           :style {:border-color (if-not shadow-link (connection-color/connection-color ctx))}}
