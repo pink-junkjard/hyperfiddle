@@ -1,4 +1,4 @@
-(ns hypercrud.browser.auto-anchor-formula                   ; namespace is public export runtime
+(ns hypercrud.browser.auto-link-formula                     ; namespace is public export runtime
   (:require [cats.monad.either :as either]
             [hypercrud.browser.dbname :as dbname]
             [hypercrud.types.Entity :refer [#?(:cljs Entity)]]

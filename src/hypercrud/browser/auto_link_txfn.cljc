@@ -1,5 +1,5 @@
-(ns hypercrud.browser.auto-anchor-txfn
-  #?(:cljs (:require-macros [hypercrud.browser.auto-anchor-txfn :refer [load-fn]]))
+(ns hypercrud.browser.auto-link-txfn
+  #?(:cljs (:require-macros [hypercrud.browser.auto-link-txfn :refer [load-fn]]))
   (:require [cats.monad.either :as either]
             [clojure.string :as string]
             [hypercrud.client.tx]                           ; for resource loading

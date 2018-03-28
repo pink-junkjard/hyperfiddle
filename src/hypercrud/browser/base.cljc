@@ -1,8 +1,8 @@
 (ns hypercrud.browser.base
   (:require [cats.core :as cats :refer [mlet return]]
             [cats.monad.either :as either]
-            [hypercrud.browser.system-link :refer [auto-links]]
             [hypercrud.browser.auto-fiddle :as auto-fiddle]
+            [hypercrud.browser.auto-link :refer [auto-links]]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.find-element :as find-element]
             [hypercrud.browser.q-util :as q-util]
@@ -17,8 +17,7 @@
             [hypercrud.types.ThinEntity :refer [#?(:cljs ThinEntity)]]
             [hypercrud.util.non-fatal :refer [try-either]]
             [hypercrud.util.reactive :as reactive]
-            [hypercrud.util.string :as hc-string]
-            [hypercrud.browser.router :as router])
+            [hypercrud.util.string :as hc-string])
   #?(:clj
      (:import (hypercrud.types.Entity Entity)
               (hypercrud.types.ThinEntity ThinEntity))))
