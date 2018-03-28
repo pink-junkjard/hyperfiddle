@@ -1,7 +1,6 @@
 (ns hypercrud.browser.browser-ui
   (:require [cats.core :as cats :refer [mlet]]
             [cats.monad.either :as either]
-            [hypercrud.browser.auto-fiddle :as auto-fiddle]
             [hypercrud.browser.base :as base]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.link :as link]

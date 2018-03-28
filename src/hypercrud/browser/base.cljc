@@ -1,12 +1,12 @@
 (ns hypercrud.browser.base
   (:require [cats.core :as cats :refer [mlet return]]
             [cats.monad.either :as either]
-            [hypercrud.browser.auto-fiddle :as auto-fiddle]
             [hypercrud.browser.auto-link :refer [auto-links]]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.find-element :as find-element]
             [hypercrud.browser.q-util :as q-util]
             [hypercrud.browser.routing :as routing]
+            [hypercrud.browser.system-fiddle :as system-fiddle]
             [hypercrud.browser.user-bindings :as user-bindings]
             [hypercrud.client.core :as hc]
             [hypercrud.client.schema :as schema-util]
@@ -64,7 +64,7 @@
     fiddle))
 
 (defn meta-request-for-fiddle [ctx]
-  (if (auto-fiddle/system-fiddle? (get-in ctx [:route :fiddle-id]))
+  (if (system-fiddle/system-fiddle? (get-in ctx [:route :fiddle-id]))
     (either/right nil)
     (try-either
       (let [fiddle-id (get-in ctx [:route :fiddle-id])      ; TODO positional
@@ -74,8 +74,8 @@
         (->EntityRequest (legacy-fiddle-ident->lookup-ref fiddle-id) nil dbval meta-pull-exp-for-link)))))
 
 (defn hydrate-fiddle [meta-fiddle-request ctx]
-  (if (auto-fiddle/system-fiddle? (get-in ctx [:route :fiddle-id]))
-    (auto-fiddle/hydrate-system-fiddle (get-in ctx [:route :fiddle-id]))
+  (if (system-fiddle/system-fiddle? (get-in ctx [:route :fiddle-id]))
+    (system-fiddle/hydrate-system-fiddle (get-in ctx [:route :fiddle-id]))
     @(hc/hydrate (:peer ctx) (:branch ctx) @meta-fiddle-request)))
 
 (defn- fix-param [param]

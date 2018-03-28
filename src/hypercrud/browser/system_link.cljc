@@ -1,5 +1,5 @@
 (ns hypercrud.browser.system-link                           ; this namespace is public extern
-  (:require [hypercrud.browser.auto-fiddle :as auto-fiddle]
+  (:require [hypercrud.browser.system-fiddle :as system-fiddle]
             [hypercrud.util.vedn :as vedn]))
 
 
@@ -22,7 +22,7 @@
                                                        :hypercrud/sys? true
                                                        :anchor/prompt (str "edit-" (:name fe))
                                                        :link/rel (keyword (str "sys-edit-" (:name fe)))
-                                                       :link/fiddle auto-fiddle/fiddle-system-edit
+                                                       :link/fiddle system-fiddle/fiddle-system-edit
                                                        :link/dependent? true
                                                        :link/managed? false
                                                        :link/path (str fe-pos)}
@@ -33,7 +33,7 @@
                                                       :hypercrud/sys? true
                                                       :anchor/prompt (str "new-" (:name fe))
                                                       :link/rel (keyword (str "sys-new-" (:name fe)))
-                                                      :link/fiddle auto-fiddle/fiddle-system-edit
+                                                      :link/fiddle system-fiddle/fiddle-system-edit
                                                       :link/dependent? false ; not managed, no parent-child ref
                                                       :link/path (str fe-pos)
                                                       :link/managed? true
@@ -44,7 +44,7 @@
                                                          :hypercrud/sys? true
                                                          :anchor/prompt (str "remove-" (:name fe))
                                                          :link/rel (keyword (str "sys-remove-" (:name fe)))
-                                                         :link/fiddle (auto-fiddle/fiddle-blank-system-remove)
+                                                         :link/fiddle (system-fiddle/fiddle-blank-system-remove)
                                                          :link/dependent? true
                                                          :link/path (str fe-pos)
                                                          :link/managed? true
@@ -77,7 +77,7 @@
                                                               :link/path (str fe-pos " " attribute)
                                                               :link/managed? false
                                                               :link/disabled? true
-                                                              :link/fiddle auto-fiddle/fiddle-system-edit}
+                                                              :link/fiddle system-fiddle/fiddle-system-edit}
                                                              {:db/id {:ident :system-anchor-new-attr :fe fe :a attribute}
                                                               :hypercrud/sys? true
                                                               :anchor/prompt (str "new") ; conserve space in label
@@ -88,12 +88,12 @@
                                                               :link/create? true
                                                               :link/render-inline? true
                                                               :link/disabled? true
-                                                              :link/fiddle auto-fiddle/fiddle-system-edit}
+                                                              :link/fiddle system-fiddle/fiddle-system-edit}
                                                              {:db/id {:ident :system-anchor-remove-attr :fe fe :a attribute}
                                                               :hypercrud/sys? true
                                                               :anchor/prompt (str "remove")
                                                               :link/rel (keyword (str "sys-remove-" (:name fe) "-" attribute))
-                                                              :link/fiddle auto-fiddle/fiddle-blank-system-remove
+                                                              :link/fiddle system-fiddle/fiddle-blank-system-remove
                                                               :link/path (str fe-pos " " attribute)
                                                               :link/dependent? true
                                                               :link/managed? true

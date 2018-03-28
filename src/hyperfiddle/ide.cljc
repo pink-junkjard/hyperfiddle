@@ -1,10 +1,10 @@
 (ns hyperfiddle.ide
   (:require [bidi.bidi :as bidi]
-            [hypercrud.browser.auto-fiddle :refer [system-fiddle?]]
             [hypercrud.browser.base :as base]
     #?(:cljs [hypercrud.browser.browser-ui :as browser-ui])
             [hypercrud.browser.core :as browser]
             [hypercrud.browser.routing :as routing]
+            [hypercrud.browser.system-fiddle :refer [system-fiddle?]]
             [hypercrud.client.core :as hc]
     #?(:cljs [hypercrud.react.react-fragment :refer [react-fragment]])
     #?(:cljs [hypercrud.ui.navigate-cmp :as navigate-cmp])

@@ -1,4 +1,4 @@
-(ns hypercrud.browser.auto-fiddle                           ; system-fiddle
+(ns hypercrud.browser.system-fiddle
   (:require [hypercrud.browser.schema-attribute :as schema-attribute]
             [hypercrud.compile.macros :refer [str-and-code]]
             [hypercrud.util.non-fatal :refer [try-either]]
