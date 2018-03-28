@@ -19,15 +19,16 @@
 
 
 (defn invalid-route? [route]
-  (when-not (map? route)
+  (cond
+    (not (map? route))
     (ex-info "Invalid route" {:hyperfiddle.io/http-status-code 400
-                              :route route}))
-  (when-not (:fiddle-id route)
+                              :route route})
+    (nil? (:fiddle-id route))
     (ex-info "Invalid route: Missing fiddle-id" {:hyperfiddle.io/http-status-code 400
-                                                 :route route}))
-  #_(when-not (keyword? (:fiddle-id route))
-      (ex-info "Invalid route: fiddle-id must be a keyword" {:hyperfiddle.io/http-status-code 400
-                                                             :route route})))
+                                                 :route route})
+    (not (keyword? (:fiddle-id route)))
+    (ex-info "Invalid route: fiddle-id must be a keyword" {:hyperfiddle.io/http-status-code 400
+                                                           :route route})))
 
 (defn invert-route [domain route invert-id]
   (-> (walk/postwalk (fn [v]
