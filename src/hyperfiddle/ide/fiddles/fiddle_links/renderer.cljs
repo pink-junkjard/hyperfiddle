@@ -1,8 +1,8 @@
 (ns hyperfiddle.ide.fiddles.fiddle-links.renderer
   (:require [cats.monad.either :as either]
-            [hypercrud.browser.auto-fiddle :as auto-fiddle]
             [hypercrud.browser.base :as base]
             [hypercrud.browser.browser-ui :as browser-ui]
+            [hypercrud.browser.system-fiddle :as system-fiddle]
             [hypercrud.ui.result :as result]
             [hypercrud.util.reactive :as reactive]))
 
@@ -11,7 +11,7 @@
        ;(sort-by (juxt :link/disabled :link/rel)
        ;         (fn [[a b] [a' b']] (if (= a a') (< b b') (< a a'))))
        (mapv (fn [link]
-               (-> (if (auto-fiddle/system-fiddle? (get-in link [:link/fiddle :db/ident]))
+               (-> (if (system-fiddle/system-fiddle? (get-in link [:link/fiddle :db/ident]))
                      (dissoc link :link/fiddle)
                      link)
                    (update :link/formula #(or (-> % meta :str) %))

@@ -2,11 +2,11 @@
   (:require [cats.core :as cats]
             [cats.monad.either :as either]
             [cuerdas.core :as string]
-            [hypercrud.browser.auto-fiddle :as auto-fiddle]
             [hypercrud.browser.base :as base]
             [hypercrud.browser.browser-ui :as browser-ui]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.link :as link]
+            [hypercrud.browser.system-fiddle :as system-fiddle]
             [hypercrud.client.tx :as tx]
             [hypercrud.react.react-fragment :refer [react-fragment]]
             [hypercrud.ui.control.markdown-rendered :refer [markdown]]
@@ -31,8 +31,8 @@
 (letfn [(-shadow-fiddle [ctx fiddle]
           (let [[e a] (get-in ctx [:route :request-params])
                 [_ fiddle-id] (:db/id e)]
-            (if (auto-fiddle/system-fiddle? fiddle-id)     ; this fiddle does not actually exist, conjure it up
-              (-> (unwrap (auto-fiddle/hydrate-system-fiddle fiddle-id))
+            (if (system-fiddle/system-fiddle? fiddle-id)    ; this fiddle does not actually exist, conjure it up
+              (-> (unwrap (system-fiddle/hydrate-system-fiddle fiddle-id))
                   (update :fiddle/bindings #(or (-> % meta :str) %))
                   (update :fiddle/renderer #(or (-> % meta :str) %))
                   (update :fiddle/request #(or (-> % meta :str) %)))
