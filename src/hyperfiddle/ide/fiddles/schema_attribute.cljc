@@ -1,4 +1,4 @@
-(ns hypercrud.browser.schema-attribute
+(ns hyperfiddle.ide.fiddles.schema-attribute
   (:require [clojure.set :as set]
             [hypercrud.client.tx :as tx]
             [hypercrud.compile.macros :refer [str-and-code']]
