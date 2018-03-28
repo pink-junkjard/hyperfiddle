@@ -5,35 +5,32 @@
 
 (defn db-cardinality-options [$db]
   {:fiddle/ident (keyword "hyperfiddle.schema.db-cardinality-options" $db)
-   :fiddle/query (str [:find (list 'pull $db '?e [:db/id :db/ident])
-                       :in $db
-                       :where
-                       [$db '?e :db/ident '?ident]
-                       '[(namespace ?ident) ?ns]
-                       '[(= ?ns "db.cardinality")]])
-   :fiddle/type :query})
+   :fiddle/type :query
+   :fiddle/query (let [$db (symbol $db)]
+                   (str [:in $db :find (list 'pull $db '?e [:db/id :db/ident]) :where
+                         [$db '?e :db/ident '?ident]
+                         '[(namespace ?ident) ?ns]
+                         '[(= ?ns "db.cardinality")]]))})
 
 (defn db-unique-options [$db]
   {:fiddle/ident (keyword "hyperfiddle.schema.db-unique-options" $db)
-   :fiddle/query (str [:find (list 'pull $db '?e [:db/id :db/ident])
-                       :in $db
-                       :where
-                       [$db '?e :db/ident '?ident]
-                       '[(namespace ?ident) ?ns]
-                       '[(= ?ns "db.unique")]])
-   :fiddle/type :query})
+   :fiddle/type :query
+   :fiddle/query (let [$db (symbol $db)]
+                   (str [:in $db :find (list 'pull $db '?e [:db/id :db/ident]) :where
+                         [$db '?e :db/ident '?ident]
+                         '[(namespace ?ident) ?ns]
+                         '[(= ?ns "db.unique")]]))})
 
 (defn db-valueType-options [$db]
   {:fiddle/ident (keyword "hyperfiddle.schema.db-valueType-options" $db)
-   :fiddle/query (str [:find (list 'pull $db '?valueType [:db/id :db/ident])
-                       :in $db
-                       :where
-                       [$db '?db-part :db.install/valueType '?valueType]
-                       [$db '?db-part :db/ident :db.part/db]])
-   :fiddle/type :query})
+   :fiddle/type :query
+   :fiddle/query (let [$db (symbol $db)]
+                   (str [:in $db :find (list 'pull $db '?valueType [:db/id :db/ident]) :where
+                         [$db '?db-part :db.install/valueType '?valueType]
+                         [$db '?db-part :db/ident :db.part/db]]))})
 
 (defn db-attribute-edit [$db]
-  {:fiddle/ident (keyword "hyperfiddle.schema.db-attribute-edit" (str $db))
+  {:fiddle/ident (keyword "hyperfiddle.schema.db-attribute-edit" $db)
    :fiddle/type :entity
    :fiddle/pull (str [[:db/id
                        :db/ident
@@ -82,9 +79,10 @@
                            [hypercrud.ui.result/view ctx])]))))]
   (defn schema [$db]
     {:fiddle/ident (keyword "hyperfiddle.schema" $db)
-     :fiddle/query (str [:find [(list 'pull $db '?attr [:db/id :db/ident :db/valueType :db/cardinality :db/doc :db/unique :db/isComponent :db/fulltext]) '...]
-                         :in $db
-                         :where [$db :db.part/db :db.install/attribute '?attr]])
+     :fiddle/query (let [$db (symbol $db)]
+                     (str [:find [(list 'pull $db '?attr [:db/id :db/ident :db/valueType :db/cardinality :db/doc :db/unique :db/isComponent :db/fulltext]) '...]
+                           :in $db
+                           :where [$db :db.part/db :db.install/attribute '?attr]]))
      :fiddle/type :query
      :fiddle/bindings (str-and-code (fn [param-ctx] (assoc param-ctx :read-only (constantly true))))
      :fiddle/renderer renderer

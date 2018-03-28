@@ -31,7 +31,7 @@
     (cond
       (= fiddle-id :hyperfiddle.system/edit) fiddle-system-edit
       (= fiddle-id :hyperfiddle.system/remove) fiddle-blank-system-remove
-      :else (let [$db (symbol (name fiddle-id))]
+      :else (let [$db (name fiddle-id)]
               (condp = (namespace fiddle-id)
                 "hyperfiddle.schema" (schema/schema $db)
                 "hyperfiddle.schema.db-cardinality-options" (schema/db-cardinality-options $db)

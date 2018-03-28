@@ -13,7 +13,7 @@
 (defn hc-attr-request [ctx]
   (->QueryRequest '[:find [(pull ?attr [:attribute/ident :attribute/renderer :db/doc]) ...]
                     :where [?attr :attribute/ident]]
-                  [(hc/db (:peer ctx) (get-in ctx [:hypercrud.browser/domain :domain/fiddle-repo] ctx) (:branch ctx))]))
+                  [(hc/db (:peer ctx) (get-in ctx [:hypercrud.browser/domain :domain/fiddle-repo]) (:branch ctx))]))
 
 (defn schema-request [dbval]
   (->QueryRequest '[:find [(pull ?attr [*
