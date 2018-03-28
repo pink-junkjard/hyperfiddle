@@ -1,6 +1,7 @@
 (ns hyperfiddle.foundation.actions
   (:require [cats.core :refer [mlet]]
             [cats.monad.either :as either]
+            [hypercrud.browser.routing :as routing]
             [hypercrud.client.peer :as peer]
             [hypercrud.client.schema :as schema]
             [hypercrud.client.tx :as tx]
@@ -70,9 +71,14 @@
 
 (defn add-partition [rt route branch branch-aux & on-start]
   (fn [dispatch! get-state]
-    (dispatch! (apply batch (conj (vec on-start) [:add-partition branch route branch-aux])))
-    (-> (refresh-partition-basis rt branch dispatch! get-state)
-        (p/then #(hydrate-partition rt branch nil dispatch! get-state)))))
+    (if-let [e (routing/invalid-route? route)]
+      (do
+        (dispatch! [:partition-error e])
+        (p/rejected e))
+      (do
+        (dispatch! (apply batch (conj (vec on-start) [:add-partition branch route branch-aux])))
+        (-> (refresh-partition-basis rt branch dispatch! get-state)
+            (p/then #(hydrate-partition rt branch nil dispatch! get-state)))))))
 
 (defn discard-partition [branch]
   [:discard-partition branch])
@@ -82,21 +88,24 @@
 
 (defn set-route [rt route branch keep-popovers? dispatch! get-state]
   (assert (nil? branch) "Non-nil branches currently unsupported")
-  ; currently branches only have relationships to parents, need to be able to find all children from a parent
-  ; this would allow us to discard/close ourself and our children
-  ; for now we are always nil branch, so blast everything
-  (let [actions (->> (::runtime/partitions (get-state))
-                     (mapcat (fn [[ident partition]]
-                               (conj (if (and (= branch ident) keep-popovers?)
-                                       (vector)
-                                       (mapv (partial close-popover ident) (:popovers partition)))
-                                     (if (= branch ident)
-                                       [:partition-route ident route] ; dont blast nil stage
-                                       (discard-partition ident))))))]
-    (dispatch! (apply batch actions))
-    ; should just call foundation/bootstrap-data
-    (-> (refresh-partition-basis rt branch dispatch! get-state)
-        (p/then #(hydrate-partition rt branch nil dispatch! get-state)))))
+  (if-let [e (routing/invalid-route? route)]
+    (do (dispatch! [:set-error e])
+        (p/rejected e))
+    ; currently branches only have relationships to parents, need to be able to find all children from a parent
+    ; this would allow us to discard/close ourself and our children
+    ; for now we are always nil branch, so blast everything
+    (let [actions (->> (::runtime/partitions (get-state))
+                       (mapcat (fn [[ident partition]]
+                                 (conj (if (and (= branch ident) keep-popovers?)
+                                         (vector)
+                                         (mapv (partial close-popover ident) (:popovers partition)))
+                                       (if (= branch ident)
+                                         [:partition-route ident route] ; dont blast nil stage
+                                         (discard-partition ident))))))]
+      (dispatch! (apply batch actions))
+      ; should just call foundation/bootstrap-data
+      (-> (refresh-partition-basis rt branch dispatch! get-state)
+          (p/then #(hydrate-partition rt branch nil dispatch! get-state))))))
 
 (defn update-to-tempids [get-state branch uri tx]
   (let [{:keys [stage ::runtime/partitions]} (get-state)
@@ -108,7 +117,7 @@
         id->tempid (get tempid-lookups uri)]
     (map (partial tx/stmt-id->tempid id->tempid schema) tx)))
 
-(defn transact! [rt invert-route tx-groups dispatch! get-state & [route]]
+(defn transact! [rt invert-route tx-groups dispatch! get-state & {:keys [route post-tx]}]
   (dispatch! [:transact!-start])
   (let [tx-groups (util/map-values (partial filter v-not-nil?) ; hack because the ui still generates some garbage tx
                                    tx-groups)]
@@ -118,7 +127,7 @@
                    (dispatch! [:transact!-failure error])
                    (throw error)))
         (p/then (fn [{:keys [tempid->id]}]
-                  (dispatch! [:transact!-success])
+                  (dispatch! (apply batch [:transact!-success] post-tx))
                   ; todo should just call foundation/bootstrap-data
                   (mlet [_ (refresh-global-basis rt dispatch! get-state)
                          _ (refresh-domain rt dispatch! get-state)
@@ -158,16 +167,23 @@
                   (do
                     ; should the tx fn not be withd? if the transact! fails, do we want to run it again?
                     (dispatch! (apply batch (concat with-actions on-start)))
-                    (-> (transact! rt invert-route (get-in (get-state) [:stage branch]) dispatch! get-state app-route)
-                        ; todo what if transact throws?
-                        (p/then (fn [_] (dispatch! (discard-partition branch))))))
-                  (let [actions (concat
+                    ; todo what if transact throws?
+                    (transact! rt invert-route (get-in (get-state) [:stage branch]) dispatch! get-state
+                               {:post-tx [(discard-partition branch)]
+                                :route app-route}))
+                  (let [e (some-> app-route routing/invalid-route?)
+                        actions (concat
                                   with-actions
                                   [[:merge branch]
-                                   (if app-route [:partition-route nil app-route]) ; what about local-basis? why not specify branch?
+                                   (cond
+                                     e [:set-error e]
+                                     app-route [:partition-route nil app-route] ; what about local-basis? why not specify branch?
+                                     :else nil)
                                    (discard-partition branch)]
                                   on-start)]
-                    (hydrate-partition rt parent-branch actions dispatch! get-state))))))))
+                    (if e
+                      (dispatch! (apply batch actions))
+                      (hydrate-partition rt parent-branch actions dispatch! get-state)))))))))
 
 (defn reset-stage [rt tx]
   (fn [dispatch! get-state]

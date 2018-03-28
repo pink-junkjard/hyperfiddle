@@ -3,7 +3,6 @@
             [cats.core :as cats :refer [mlet]]
             [cats.monad.either :as either]
             [clojure.set :as set]
-            [cuerdas.core :as str]
             [clojure.walk :as walk]
             [hypercrud.browser.dbname :as dbname]
             [hypercrud.browser.router :as router]
@@ -18,6 +17,17 @@
      (:import (hypercrud.types.Entity Entity)
               (hypercrud.types.ThinEntity ThinEntity))))
 
+
+(defn invalid-route? [route]
+  (when-not (map? route)
+    (ex-info "Invalid route" {:hyperfiddle.io/http-status-code 400
+                              :route route}))
+  (when-not (:fiddle-id route)
+    (ex-info "Invalid route: Missing fiddle-id" {:hyperfiddle.io/http-status-code 400
+                                                 :route route}))
+  #_(when-not (keyword? (:fiddle-id route))
+      (ex-info "Invalid route: fiddle-id must be a keyword" {:hyperfiddle.io/http-status-code 400
+                                                             :route route})))
 
 (defn invert-route [domain route invert-id]
   (-> (walk/postwalk (fn [v]

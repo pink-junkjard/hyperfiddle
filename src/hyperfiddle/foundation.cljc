@@ -153,6 +153,7 @@
           LEVEL-DOMAIN (foundation-actions/refresh-domain rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
           LEVEL-ROUTE (let [branch-aux {:hyperfiddle.ide/foo "page"}] ;ide
                         (try (let [route (runtime/decode-route rt encoded-route)]
+                               (when-let [e (routing/invalid-route? route)] (throw e))
                                (runtime/dispatch! rt [:add-partition nil route branch-aux]))
                              (p/resolved nil)
                              (catch #?(:cljs :default :clj Exception) e
