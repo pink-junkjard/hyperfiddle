@@ -1,5 +1,6 @@
 (ns hyperfiddle.service.node.local-basis
-  (:require [hypercrud.client.core :as hc]
+  (:require [hypercrud.browser.routing :as routing]
+            [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
             [hypercrud.compile.reader :as reader]
             [hypercrud.transit :as transit]
@@ -78,6 +79,7 @@
     (let [hostname (.-hostname req)
           global-basis (-> path-params :global-basis base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
           route (-> (:encoded-route path-params) base-64-url-safe/decode reader/read-edn-string)
+          _  (when-let [e (routing/invalid-route? route)] (throw e))
           branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
           branch-aux (some-> (:branch-aux path-params) base-64-url-safe/decode reader/read-edn-string)
           initial-state {:user-profile (lib/req->user-profile env req)

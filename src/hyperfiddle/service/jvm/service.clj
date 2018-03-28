@@ -1,6 +1,7 @@
 (ns hyperfiddle.service.jvm.service
   (:refer-clojure :exclude [sync])
-  (:require [hypercrud.compile.reader :as reader]
+  (:require [hypercrud.browser.routing :as routing]
+            [hypercrud.compile.reader :as reader]
             [hypercrud.transit :as hc-t]
             [hypercrud.types.Err :refer [->Err]]
             [hypercrud.util.base-64-url-safe :as base-64-url-safe]
@@ -83,6 +84,7 @@
         (let [hostname (:server-name req)
               global-basis (-> (:global-basis path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
               route (-> (:encoded-route path-params) base-64-url-safe/decode reader/read-edn-string)
+              _  (when-let [e (routing/invalid-route? route)] (throw e))
               branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string)
               branch-aux (some-> (:branch-aux path-params) base-64-url-safe/decode reader/read-edn-string)
               initial-state {:user-profile (:user req)
@@ -112,6 +114,7 @@
         (let [hostname (:server-name req)
               local-basis (-> (:local-basis path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
               route (-> (:encoded-route path-params) base-64-url-safe/decode reader/read-edn-string)
+              _  (when-let [e (routing/invalid-route? route)] (throw e))
               branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string)
               branch-aux (some-> (:branch-aux path-params) base-64-url-safe/decode reader/read-edn-string)
               initial-state (-> {:user-profile (:user req)
