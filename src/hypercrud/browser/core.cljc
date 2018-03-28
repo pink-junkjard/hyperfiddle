@@ -3,6 +3,7 @@
             [hypercrud.browser.browser-request :as browser-request]
             [hypercrud.browser.browser-ui :as browser-ui]
     ; legacy
+            [hypercrud.browser.auto-anchor-formula]
             [hypercrud.form.q-util]))
 
 
