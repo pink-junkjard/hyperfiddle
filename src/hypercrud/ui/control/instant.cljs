@@ -23,7 +23,7 @@
 (defn recom-date* [value change! props]
   ; (new goog.date.UtcDateTime(new Date())).toIsoString()
   [re-com/datepicker-dropdown
-   :model (atom (goog.date.UtcDateTime. value))             ; not reactive
+   :model (goog.date.UtcDateTime. value)                    ; not reactive
    :disabled? (:disabled props)
    :on-change #(change! (.-date %))])
 
