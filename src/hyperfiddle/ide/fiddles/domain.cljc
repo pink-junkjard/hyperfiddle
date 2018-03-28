@@ -49,11 +49,10 @@
                                        (cats/mplus (either/right nil))
                                        (cats/extract))
                                    (filter (fn [[k v]] (and (string? k) (string/starts-with? k "$") (instance? URI v))))
-                                   (map (fn [[$name _]]
-                                          (let [props {:route {:fiddle-id [:fiddle/ident {:ident :schema/all-attributes
-                                                                                          :dbhole/name (symbol $name)}]}}]
-                                            ^{:key $name}
-                                            [(:navigate-cmp ctx) props (str $name " schema")])))
+                                   (map (fn [[$db _]]
+                                          (let [props {:route {:fiddle-id (keyword "hyperfiddle.system.schema.all-attributes" $db)}}]
+                                            ^{:key $db}
+                                            [(:navigate-cmp ctx) props (str $db " schema")])))
                                    (doall))]))))))
 
 (defn request [ctx]
