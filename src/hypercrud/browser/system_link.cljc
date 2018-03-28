@@ -6,7 +6,7 @@
 (defn ^:export system-link? [link-id]
   (map? link-id))
 
-(def auto-link-txfn-lookup (vedn/load-vedn-from-file "auto-anchor/tx-fns.vedn"))
+(def txfn-lookup (vedn/load-vedn-from-file "system-link/tx-fns.vedn"))
 
 (defn system-links
   "All sys links are :link/rel :sys, so they can be matched and merged with user-links.
@@ -49,7 +49,7 @@
                                                          :link/path (str fe-pos)
                                                          :link/managed? true
                                                          :link/render-inline? true
-                                                         :link/tx-fn (:entity-remove auto-link-txfn-lookup)}]
+                                                         :link/tx-fn (:entity-remove txfn-lookup)}]
                                              (case (:fiddle/type parent-fiddle)
                                                :entity [remove]
 
@@ -100,8 +100,8 @@
                                                               :link/render-inline? true
                                                               :link/disabled? true
                                                               :link/tx-fn (if (= :db.cardinality/one (get-in schema [attribute :db/cardinality :db/ident]))
-                                                                            (:value-remove-one auto-link-txfn-lookup)
-                                                                            (:value-remove-many auto-link-txfn-lookup))}])))))))
+                                                                            (:value-remove-one txfn-lookup)
+                                                                            (:value-remove-many txfn-lookup))}])))))))
                           (apply concat)
                           doall))]
     (concat entity-links attr-links)))
