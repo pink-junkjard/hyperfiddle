@@ -1,5 +1,7 @@
 # Hyperfiddle — Functional data sync for Datomic APIs
 
+## Hello World live demo <http://sandbox.hyperfiddle.net/gender>
+
 Hyperfiddle abstracts over client/server data sync for APIs. If React.js is managed DOM, Hyperfiddle is managed database and network.
 
 Hyperfiddle models API inter-dependencies as a graph (I need query-X and also query-Y which depends query-Z). This graph lets the I/O runtime understand the structure and data flows of the application, which permits interesting optimization opportunities.
