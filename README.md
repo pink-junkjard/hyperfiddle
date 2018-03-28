@@ -1,41 +1,19 @@
 # Hyperfiddle — Functional data sync for Datomic APIs
 
-## Hello World live demo <http://sandbox.hyperfiddle.net/gender>
-
 Hyperfiddle abstracts over client/server data sync for APIs. If React.js is managed DOM, Hyperfiddle is managed database and network.
+
+Managed I/O is not the point. The point is: *what does managed I/O make possible that wasn't possible before?* 
+
+## Hello World: <http://sandbox.hyperfiddle.net/gender>
 
 Hyperfiddle models API inter-dependencies as a graph (I need query-X and also query-Y which depends query-Z). This graph lets the I/O runtime understand the structure and data flows of the application, which permits interesting optimization opportunities.
 
 Hyperfiddle extends Datomic's immutable database semantics to the API. Unlike REST/GraphQL/whatever, Hyperfiddle's 
-data sync *composes*. APIs are defined with simple Clojure functions, for example
-
-```clojure
-(defn api-blog-index [state peer]
-  ; State includes the url/route, client-side local state, etc
-  [(->QueryRequest
-     '[:find (pull ?e [:db/id :post/title :post/content]) :where [?e :post/title]]
-     [(hc/db peer #uri "datomic:free://datomic:4334/samples-blog" nil)])])
-```
-
-The lifecycle of API functions is managed by the "I/O runtime", analogous to React's managed virtual-dom functions. You never call it. The function is coded in CLJC and compiled into both the client and the service, which lets them automatically coordinate. If the service knows in advance what the client will request next, it can avoid network round-trips.
-
-The programming model is similar to React.js refresh-and-forget. When state changes, the runtime will "reload everything", which makes userland code very simple (just functions–like React.js). It is the I/O runtime's job to figure out how to reload efficiently, through a variety of strategies built on top of immutable database semantics. Hyperfiddle ships with an HTTP-based I/O runtime that coordinates your api functions across browser, jvm and node, and serves HTTP responses with `Cache-Control: Immutable` (zomg!).
-
-Managed I/O is not the point. The point is: *what does managed I/O make possible that wasn't possible before?* 
+data sync *composes*.
 
 # Dependency coordinates — Todo
 
     [com.hyperfiddle/hyperfiddle "0.0.0"]
-
-# Documentation and community
-
-Hyperfiddle is alpha software. The programming API is not frozen.
-
-<https://www.reddit.com/r/hyperfiddle/> will aggregate all our scattered blog posts, tutorials
-and documentation.
-
-* Slack: #Hyperfiddle @ [clojurians](http://clojurians.net/), come say hi, tell us why you care, and hang out! 
-* Reach us on twitter: <https://twitter.com/dustingetz>
 
 # Roadmap
 
@@ -101,23 +79,11 @@ A simple API fn:
 ```
                         
 Notes:
-* API fns return seq (use `mapcat` etc to hydrate many queries in bulk)
 * I/O runtime will call API fn repeatedly until its return value stabalizes
 * This permits queries that depend on the results of earlier queries  
-* CLJC can run in client, server, or both simultaneously (useful for optimizations)
-* Data loop typically runs in JVM Datomic Peer, so no network hops or N+1 problem
+* Data loop typically runs in JVM Datomic Peer, so no network hops or N+1 problem like REST & ORM
 * Data loop sometimes runs in browser (e.g. in response to incremental ui state change)
-
-#### Big List Of Benefits:
-* Userland sheltered from I/O and async
-* All fiddles speak the same API
-* API tooling built-in (like Swagger or OData)
-* No low level backend/frontend http boilerplate
-* No REST, no browser/service round trips
-* No ORM, no GraphQL resolver, no service/database round trips
-* Massively parallelizable, serverless, elastic
-* all responses are immutable, all requests have a time-basis
-* CDN integration that understands your app (serve APIs like static sites)
+* all I/O responses are immutable, all requests have a time-basis
 
 Now that we have a properly composable I/O primitive, we can use it as a basis to build *composable abstractions:*
 
@@ -128,14 +94,14 @@ An API defined as EDN ("fiddle"). Fiddles have links to other fiddles, this form
 ```clojure
 {:db/id 17592186045418,                                     ; Root query
  :fiddle/type :query,
- :fiddle/query "[:find (pull ?e [:db/id :reg/email :reg/gender :reg/shirt-size]) :in $ :where [?e :reg/email]]",
+ :fiddle/query "[:find (pull ?e [:db/id :reg/email :reg/gender :reg/shirt-size]) :where [?e :reg/email]]",
  :fiddle/links #{{:db/id 17592186045427,                    ; link to gender options
                   :link/rel :options,
                   :link/render-inline? true,                ; embedded like an iframe
                   :link/path "0 :reg/gender",
                   :link/fiddle {:db/id 17592186045428,      ; select options query
                                 :fiddle/type :query,
-                                :fiddle/query "[:find (pull ?e [:db/id :reg.gender/ident]) :in $ :where [?e :reg.gender/ident]]",
+                                :fiddle/query "[:find (pull ?e [:db/id :reg.gender/ident]) :where [?e :reg.gender/ident]]",
                                 :fiddle/links #{{:db/id 17592186045474, ; link to new-gender-option form
                                                  :link/rel :sys-new-?e,
                                                  :link/fiddle #:db{:id 17592186045475} ; new-gender form omitted
@@ -145,7 +111,7 @@ An API defined as EDN ("fiddle"). Fiddles have links to other fiddles, this form
                   :link/render-inline? true,                ; embedded like an iframe
                   :link/dependent? true,                    ; dependency on parent fiddle's data
                   :link/path "0 :reg/shirt-size",
-                  :link/formula "(fn [ctx] {:request-params {\"?gender\" (get-in ctx [:cell-data :reg/gender])}})",
+                  :link/formula "(fn [ctx] {:request-params (get-in ctx [:cell-data :reg/gender])})",
                   :link/fiddle #:db{:id 17592186045435}     ; shirt size options query omitted
                   }
                  {:db/id 17592186045481,                    ; link to new-registration form
@@ -275,3 +241,10 @@ difference here as they all have different stories for code/data locality.
 
 Hyperfiddle's abstraction has scaled quite far already, see Hyperfiddle-in-Hyperfiddle. We think there is much more 
 room to go. Imagine a world of composable applications.
+
+# Documentation and community
+
+Hyperfiddle is alpha software. The programming API is not frozen.
+
+<https://www.reddit.com/r/hyperfiddle/> will aggregate all our scattered blog posts, tutorials
+and documentation.
