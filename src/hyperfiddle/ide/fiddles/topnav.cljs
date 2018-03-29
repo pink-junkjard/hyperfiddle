@@ -9,7 +9,7 @@
             [hypercrud.browser.system-fiddle :as system-fiddle]
             [hypercrud.client.tx :as tx]
             [hypercrud.react.react-fragment :refer [react-fragment]]
-            [hypercrud.ui.control.markdown-rendered :refer [markdown]]
+            [hypercrud.ui.control.markdown-rendered :refer [markdown-rendered*]]
             [hypercrud.ui.radio :as radio]
             [hypercrud.ui.result :as result]
             [hypercrud.ui.tooltip :refer [tooltip]]
@@ -153,9 +153,9 @@
                                 (runtime/dispatch! (:peer ctx) (foundation-actions/manual-transact! (:peer ctx) (:hypercrud.browser/invert-route ctx) nil-branch-aux))))}
          "transact!"]])
      [staging (:peer ctx)]
-     [:div.markdown [markdown "Hyperfiddle always generates valid transactions, if it doesn't, please file a bug.
+     [markdown-rendered* "Hyperfiddle always generates valid transactions, if it doesn't, please file a bug.
 
 *WARNING:* Datomic schema alterations cannot be used in the same transaction, for now you'll
-need to transact the schema before using, see [#6](https://github.com/hyperfiddle/hyperfiddle/issues/6)."]]]))
+need to transact the schema before using, see [#6](https://github.com/hyperfiddle/hyperfiddle/issues/6)."]]))
 
 (defn bindings [ctx] (topnav-bindings/bindings ctx))
