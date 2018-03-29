@@ -9,7 +9,7 @@
     #?(:cljs [hypercrud.react.react-fragment :refer [react-fragment]])
     #?(:cljs [hypercrud.ui.navigate-cmp :as navigate-cmp])
     #?(:cljs [hypercrud.ui.stale :as stale])
-            [hypercrud.util.core :refer [unwrap]]
+            [hypercrud.util.core :refer [unwrap abc]]
             [hypercrud.util.reactive :as reactive]
             [hypercrud.util.string :refer [safe-read-edn-string]]
             [hyperfiddle.foundation :as foundation]
@@ -135,28 +135,19 @@
 (defn bidi-match->path-for "adapt bidi's inconsistent interface" [[h & ps :as ?r]]
   (if ?r {:handler h :route-params ps}))
 
-(defn abc []
-  (map (comp keyword str) "abcdefghijklmnopqrstuvwxyz")     ; this version works in clojurescript
-  #_(->> (range) (map (comp keyword str char #(+ % (int \a))))))
-
 (defn ->bidi [[fiddle args :as ?r]]
   (assert (not (system-fiddle? fiddle)) "bidi router doesn't handle sys links")
   ; this is going to generate param names of 0, 1, ... which maybe doesn't work for all routes
   ; we would need to disallow bidi keywords for this to be valid. Can bidi use ints? I think not :(
   (if ?r (apply conj [fiddle] (mapcat vector (abc) args))))
 
-(defn home-route-legacy-adapter [route]
-  (if (map? route)
-    [(:fiddle-id route) (:request-params route)]
-    route))
-
 (defn route-decode [rt s]
   {:pre [(string? s)]}
   (let [domain @(runtime/state rt [:hyperfiddle.runtime/domain])
-        home-route (some-> domain :domain/home-route safe-read-edn-string unwrap home-route-legacy-adapter)
+        home-route (some-> domain :domain/home-route safe-read-edn-string unwrap) ; in hf format
         router (some-> domain :domain/router safe-read-edn-string unwrap)]
     (case s
-      "/" (if router (bidi->hf home-route) home-route)      ; compat
+      "/" home-route
       (or (if (= "/_/" (subs s 0 3)) (routing/decode (subs s 2) #_"include leading /"))
           (some-> router (bidi/match-route s) ->bidi-consistency-wrapper bidi->hf)
           (routing/decode s)))))

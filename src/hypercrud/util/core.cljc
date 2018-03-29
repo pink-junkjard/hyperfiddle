@@ -134,3 +134,7 @@
        (split-with (complement f?))
        first
        (into (empty xs))))
+
+(defn abc []
+  (map (comp keyword str) "abcdefghijklmnopqrstuvwxyz")     ; this version works in clojurescript
+  #_(->> (range) (map (comp keyword str char #(+ % (int \a))))))

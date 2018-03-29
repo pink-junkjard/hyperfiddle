@@ -38,8 +38,6 @@
                                        (->ThinEntity (.-dbname v) id))
 
                                      :else v))))]
-    #_(update :fiddle-id (let [uri (:domain/fiddle-repo domain)]
-                           #(invert-id % uri)))
     [fiddle (:request-params args)]))
 
 (defn ctx->id-lookup [uri ctx]
