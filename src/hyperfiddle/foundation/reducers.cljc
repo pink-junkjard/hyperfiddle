@@ -5,6 +5,12 @@
             [hypercrud.util.core :as util]))
 
 
+(defn- serializable-error [e]
+  ; need errors to be serializable, so crapily pr-str
+  (if-let [message #?(:clj (.getMessage e) :cljs (ex-message e))]
+    (assoc (->Err (str message)) :data (util/pprint-str (ex-data e)))
+    (pr-str e)))
+
 (defn stage-reducer [stage action & args]
   (let [discard (fn [stage branch]
                   (dissoc stage branch))
@@ -44,11 +50,7 @@
 (defn fatal-error-reducer [error action & args]
   (case action
     :set-global-basis nil
-    ; need errors to be serializable, so crapily pr-str
-    :set-error (let [e (first args)]
-                 (if-let [message #?(:clj (.getMessage e) :cljs (ex-message e))]
-                   (assoc (->Err (str message)) :data (util/pprint-str (ex-data e)))
-                   (pr-str e)))
+    :set-error (serializable-error (first args))
     error))
 
 (defn pressed-keys-reducer [v action & args]
@@ -120,8 +122,7 @@
                                     (fn [partition]
                                       (-> partition
                                           (dissoc :hydrate-id)
-                                          ; need errors to be serializable, so crapily pr-str
-                                          (assoc :error (pr-str error))))))
+                                          (assoc :error (serializable-error error))))))
 
          :open-popover (let [[branch popover-id] args]
                          (update-in partitions [branch :popovers] conj popover-id))
