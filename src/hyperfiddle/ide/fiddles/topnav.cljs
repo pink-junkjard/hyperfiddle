@@ -68,7 +68,7 @@
                     :z-index -1}}
       [re-com.core/throbber :size :smaller]]]))
 
-(defn -renderer [ctx]
+(defn renderer [ctx]
   (let [ctx (unwrap (context/with-relations ctx))
         display-mode @(runtime/state (:peer ctx) [:display-mode])
         dirty? (not (empty? @(runtime/state (:peer ctx) [:stage])))
@@ -113,21 +113,6 @@
       ((:cell ctx) [true 0 :fiddle/type] ctx)
       ((:cell ctx) [true 0 :fiddle/pull] ctx)
       ((:cell ctx) [true 0 :fiddle/query] ctx)]]))
-
-(defn- update-spacer [topnav]
-  (let [measuredHeight (-> topnav (aget "fixed") .-offsetHeight)]
-    (-> topnav (aget "spacer") (aget "style") (aset "height" (str measuredHeight "px")))))
-
-(def renderer
-  (reagent/create-class
-    {:render (fn [this]
-               [:div.hyperfiddle-topnav-container
-                [:div.spacer {:ref (fn [!el] (aset this "spacer" !el))}]
-                [:div.fixed {:ref (fn [!el] (aset this "fixed" !el))}
-                 (let [[_ & args] (reagent/argv this)]
-                   (apply vector -renderer args))]])
-     :component-did-mount update-spacer
-     :component-did-update update-spacer}))
 
 (defn ^:export qe-picker-control [field props ctx]
   (let [enums [:query :entity :blank]
