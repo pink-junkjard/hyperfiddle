@@ -30,6 +30,11 @@
                                                     (assoc data :hyperfiddle.io/http-status-code 502)
                                                     #?(:clj (.getCause e) :cljs (ex-cause e))))
 
+                                    (and (= 504 (:status data)) (not #?(:clj (.getMessage e) :cljs (ex-message e))))
+                                    (throw (ex-info "Service timed out"
+                                                    (assoc data :hyperfiddle.io/http-status-code 504)
+                                                    #?(:clj (.getCause e) :cljs (ex-cause e))))
+
                                     (:status data) (throw (ex-info (ex-message e)
                                                                    (assoc data :hyperfiddle.io/http-status-code (:status data))
                                                                    (ex-cause e)))
