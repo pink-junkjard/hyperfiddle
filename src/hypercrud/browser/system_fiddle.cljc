@@ -5,12 +5,12 @@
             [hyperfiddle.ide.fiddles.schema :as schema]))
 
 
-(defn system-fiddle? [fiddle-id]
-  (and (keyword? fiddle-id)                                 ; why long here wut?
-       (namespace fiddle-id)
+(defn system-fiddle? [fiddle-ident]
+  (and (keyword? fiddle-ident)                              ; why long here wut?
+       (namespace fiddle-ident)
        ; hyperfiddle.ide is real
-       (or (-> (namespace fiddle-id) (str/starts-with? "hyperfiddle.system"))
-           (-> (namespace fiddle-id) (str/starts-with? "hyperfiddle.schema")))))
+       (or (-> (namespace fiddle-ident) (str/starts-with? "hyperfiddle.system"))
+           (-> (namespace fiddle-ident) (str/starts-with? "hyperfiddle.schema")))))
 
 ; these need to be thick/hydrated params bc we are manufacturing a pulled tree here.
 
