@@ -51,7 +51,7 @@
 ; this is currently making assumptions on dbholes
 (defn validated-route' [fiddle route ctx]
   ; We specifically hydrate this deep just so we can validate anchors like this.
-  (let [params (:request-params route)]
+  (let [[_ params] route]
     (case (:fiddle/type fiddle)
       ; todo check fe conn
       ; todo merge in dbhole lookup, see: hypercrud.browser.base/request-for-link
@@ -75,7 +75,7 @@
   ; each prop might have special rules about his default, for example :visible is default true, does this get handled here?
 
   (let [fiddle (:link/fiddle link)                          ; can be nil - in which case route is invalid
-        route (unwrap unvalidated-route')
+        [_ args :as route] (unwrap unvalidated-route')
         validated-route' (validated-route' fiddle route ctx)
         user-props' (cats/bind (eval/eval-str (:hypercrud/props link))
                                (fn [user-expr]
@@ -95,7 +95,7 @@
        :tooltip (if-not (empty? errors)
                   [:warning (pprint-str errors)]
                   (if (:ide-active ctx)
-                    [nil (pr-str (dissoc route :fiddle-id))]
+                    [nil (pr-str args)]
                     (:tooltip user-props)))
        :class (->> [(:class user-props)
                     (if-not (empty? errors) "invalid")]

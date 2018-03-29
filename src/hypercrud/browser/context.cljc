@@ -37,7 +37,7 @@
     :hypercrud.browser/schemas))
 
 (defn route [ctx route]
-  {:pre [(if-let [params (:request-params route)] (vector? params) true) ; validate normalized already
+  {:pre [(if-let [params (second route)] (vector? params) true) ; validate normalized already
          (some-> ctx :hypercrud.browser/domain :domain/fiddle-repo)]}
   (assoc ctx :route (routing/tempid->id route ctx)))
 
@@ -60,7 +60,7 @@
   [ctx]
   (case @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/type]) ; fiddle/type not relevant outside this fn
     :entity (if-not @(reactive/fmap nil? (reactive/cursor (:hypercrud.browser/request ctx) [:a]))
-              (let [[e a] (get-in ctx [:route :request-params])]
+              (let [[_ [e a]] (get-in ctx [:route])]
                 (->> (try-either (.-dbname e))
                      (cats/fmap
                        (fn [source-symbol]

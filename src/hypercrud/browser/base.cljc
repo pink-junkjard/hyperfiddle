@@ -64,18 +64,18 @@
     fiddle))
 
 (defn meta-request-for-fiddle [ctx]
-  (if (system-fiddle/system-fiddle? (get-in ctx [:route :fiddle-id]))
+  (if (system-fiddle/system-fiddle? (get-in ctx [:route 0]))
     (either/right nil)
     (try-either
-      (let [fiddle-id (get-in ctx [:route :fiddle-id])      ; TODO positional
-            _ (assert fiddle-id "missing fiddle-id")
+      (let [[fiddle] (get-in ctx [:route])
+            _ (assert fiddle "missing fiddle-id")
             _ (assert (:hypercrud.browser/domain ctx) "missing domain")
             dbval (hc/db (:peer ctx) (get-in ctx [:hypercrud.browser/domain :domain/fiddle-repo]) (:branch ctx))]
-        (->EntityRequest (legacy-fiddle-ident->lookup-ref fiddle-id) nil dbval meta-pull-exp-for-link)))))
+        (->EntityRequest (legacy-fiddle-ident->lookup-ref fiddle) nil dbval meta-pull-exp-for-link)))))
 
 (defn hydrate-fiddle [meta-fiddle-request ctx]
-  (if (system-fiddle/system-fiddle? (get-in ctx [:route :fiddle-id]))
-    (system-fiddle/hydrate-system-fiddle (get-in ctx [:route :fiddle-id]))
+  (if (system-fiddle/system-fiddle? (get-in ctx [:route 0]))
+    (system-fiddle/hydrate-system-fiddle (get-in ctx [:route 0]))
     @(hc/hydrate (:peer ctx) (:branch ctx) @meta-fiddle-request)))
 
 (defn- fix-param [param]
@@ -84,23 +84,22 @@
     (instance? ThinEntity param) (:db/id param)
     :else param))
 
-(defn validate-query-params [q params ctx]
+(defn validate-query-params [q args ctx]
   (mlet [query-holes (try-either (q-util/parse-holes q)) #_"normalizes for :in $"
          :let [;_ (timbre/debug params query-holes q)
                db-lookup (q-util/build-dbhole-lookup ctx)
                ; Add in named database params that aren't formula params
                [params' unused] (loop [acc []
-                                       params params
+                                       args args
                                        [x & xs] query-holes]
                                   (let [is-db (.startsWith x "$")
-                                        next-param (if is-db (get db-lookup x)
-                                                             (fix-param (first params)))
-                                        rest-params (if is-db params
-                                                              (rest params))
-                                        acc (conj acc next-param)]
+                                        next-arg (if is-db (get db-lookup x)
+                                                           (fix-param (first args)))
+                                        args (if is-db args (rest args))
+                                        acc (conj acc next-arg)]
                                     (if xs
-                                      (recur acc rest-params xs)
-                                      [acc rest-params])))]]
+                                      (recur acc args xs)
+                                      [acc args])))]]
     ;(assert (= 0 (count (filter nil? params')))) ; datomic will give a data source error
     ; validation. better to show the query and overlay the params or something?
     (cond (seq unused) (either/left {:message "unused param" :data {:query q :params params' :unused unused}})
@@ -110,11 +109,11 @@
 (defn request-for-fiddle [fiddle ctx]
   (case @(reactive/cursor fiddle [:fiddle/type])
     :query (mlet [q (hc-string/memoized-safe-read-edn-string @(reactive/cursor fiddle [:fiddle/query]))
-                  params (validate-query-params q (get-in ctx [:route :request-params]) ctx)]
-             (return (->QueryRequest q params)))
+                  args (validate-query-params q (get-in ctx [:route 1]) ctx)]
+             (return (->QueryRequest q args)))
 
     :entity
-    (let [[e #_"fat" a :as params] (get-in ctx [:route :request-params])
+    (let [[_ [e #_"fat" a :as args]] (get-in ctx [:route])
           uri (try (let [dbname (.-dbname e)]               ;todo report this exception better
                      (get-in ctx [:hypercrud.browser/domain :domain/environment dbname]))
                    (catch #?(:clj Exception :cljs js/Error) e nil))
@@ -123,7 +122,7 @@
                            first)
                        ['*])]
       (if (or (nil? uri) (nil? (:db/id e)))
-        (either/left {:message "malformed entity param" :data {:params params}})
+        (either/left {:message "malformed entity param" :data {:params args}})
         (either/right
           (->EntityRequest
             (:db/id e) a (hc/db (:peer ctx) uri (:branch ctx)) pull-exp))))

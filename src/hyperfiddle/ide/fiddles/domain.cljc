@@ -50,7 +50,7 @@
                                        (cats/extract))
                                    (filter (fn [[k v]] (and (string? k) (string/starts-with? k "$") (instance? URI v))))
                                    (map (fn [[$db _]]
-                                          (let [props {:route {:fiddle-id (keyword "hyperfiddle.schema" $db)}}]
+                                          (let [props {:route [(keyword "hyperfiddle.schema" $db)]}]
                                             ^{:key $db}
                                             [(:navigate-cmp ctx) props (str $db " schema")])))
                                    (doall))]))))))

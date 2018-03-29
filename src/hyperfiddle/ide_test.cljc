@@ -27,16 +27,15 @@
             (r/cursor state path))))
 
 (def tests
-  {
-   {:fiddle-id :hyperblog/post, :request-params [#entity["$" :capitalism]]}
+  {[:hyperblog/post [#entity["$" :capitalism]]]
    ;"/:hyperblog!post/~entity('$',:capitalism)"
    "/:capitalism"
 
-   {:fiddle-id :hyperblog/post, :request-params [#entity["$" 1234]]}
+   [:hyperblog/post [#entity["$" 1234]]]
    ;"/:hyperblog!post/~entity('$',1234)"
    "/1234"
 
-   {:fiddle-id :hyperblog/index, :request-params [#entity["$" :personal]]}
+   [:hyperblog/index [#entity["$" :personal]]]
    ;{:fiddle-id :hyperblog/index, :request-params [#entity["$" :personal]]}
    "/:personal/"
    })

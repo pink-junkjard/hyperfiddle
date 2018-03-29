@@ -1,5 +1,5 @@
 (fn [ctx multi-color-tx modal-route]
-  (let [entity-id (get-in modal-route [:request-params 0 :db/id]) ; e.g. table-cell value or form-field value
+  (let [[_ [{entity-id :db/id}]] (get-in modal-route [:request-params]) ; e.g. table-cell value or form-field value
         parent-id (-> ctx :cell-data deref :db/id)          ; e.g. table-row entity or form entity
         attr (:hypercrud.browser/attribute ctx)
         parent-child-ref (hypercrud.client.tx/edit-entity parent-id attr [] [entity-id])]

@@ -1,6 +1,6 @@
 (ns hypercrud.browser.router
   (:require [cuerdas.core :as str]
-            [hypercrud.util.core :refer [split-first]]
+            [hypercrud.util.core :refer [split-first rtrim-coll]]
             [hypercrud.compile.reader :as reader]
             [contrib.rfc3986 :refer [encode-rfc3986-pchar decode-rfc3986-pchar encode-ednish decode-ednish]]))
 
@@ -9,8 +9,7 @@
 (def -decode-url-ednish (comp reader/read-string decode-ednish decode-rfc3986-pchar))
 
 (comment
-  {:fiddle-id :hyperfiddle.blog/post
-   :request-params [#entity["$" [:user/sub "google-oauth2|116635422485042503270"]]]})
+  [:hyperfiddle.blog/post [#entity["$" [:user/sub "google-oauth2|116635422485042503270"]]]])
 
 (defn -encode-fiddle-id [fiddle]
   (if (vector? fiddle)
@@ -21,9 +20,9 @@
     fiddle))
 
 (defn encode [route]
-  (let [fiddle (:fiddle-id route)                           ; ident, long (not entity - $ is extraneous)
-        fiddle-args (->> (dissoc route :fiddle-id :request-params) sort vals) ; positional
-        datomic-args (:request-params route)
+  ; fiddle is keyword (not entity - $ is extraneous)
+  (let [[fiddle datomic-args] route
+        fiddle-args []                                      ; (->> (dissoc route :fiddle-id :request-params) sort vals)
         service-args {}
         state {}]
     (str "/"
@@ -42,10 +41,12 @@
         [datomic-args-segment s] (split-first s "?")
         datomic-args (->> (str/split datomic-args-segment "/")) ; careful: (str/split "" "/") => [""]
         [query fragment] (split-first s "#")]
-    (merge
-      {:fiddle-id (-decode-url-ednish fiddle)}
-      (if-let [as (seq (remove str/empty-or-nil? datomic-args))]
-        {:request-params (mapv -decode-url-ednish as)})
-      #_(map -decode-url-ednish fiddle-args)                ; fiddle-args is not a map, its positional
-      #_{:state (-decode-url-ednish fragment)
-         :service-args (-decode-url-ednish query)})))
+
+    (->>
+      [(-decode-url-ednish fiddle)
+       #_(mapv -decode-url-ednish fiddle-args)
+       (if-let [as (->> datomic-args (remove str/empty-or-nil?) seq)]
+         (mapv -decode-url-ednish as))
+       #_{:state (-decode-url-ednish fragment)
+          :service-args (-decode-url-ednish query)}]
+      (rtrim-coll nil?))))

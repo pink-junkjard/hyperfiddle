@@ -121,7 +121,7 @@
 
 (defn auto-find-elements [result fiddle request route schemas]
   (case @(reactive/cursor fiddle [:fiddle/type])
-    :entity (mlet [:let [[e] (:request-params route)]
+    :entity (mlet [:let [[_ [e]] route]
                    source-symbol (try-either (.-dbname e))
                    :let [fe-name "entity"
                          pull-pattern @(reactive/cursor request [:pull-exp])]]

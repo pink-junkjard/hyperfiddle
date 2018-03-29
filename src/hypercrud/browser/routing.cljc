@@ -18,32 +18,29 @@
               (hypercrud.types.ThinEntity ThinEntity))))
 
 
-(defn invalid-route? [route]
-  (cond
-    (not (map? route))
-    (ex-info "Invalid route" {:hyperfiddle.io/http-status-code 400
-                              :route route})
-    (nil? (:fiddle-id route))
-    (ex-info "Invalid route: Missing fiddle-id" {:hyperfiddle.io/http-status-code 400
-                                                 :route route})
-    (not (keyword? (:fiddle-id route)))
-    (ex-info "Invalid route: fiddle-id must be a keyword" {:hyperfiddle.io/http-status-code 400
-                                                           :route route})))
+(defn invalid-route? [[fiddle args :as route]]
+  (if-let [msg (cond
+                 (map? route) "legacy format"
+                 (nil? fiddle) "missing fiddle"
+                 (not (keyword? fiddle)) "fiddle must be a keyword")]
+    (ex-info (str "Invalid route: " msg)
+             {:hyperfiddle.io/http-status-code 400 :route route})))
 
-(defn invert-route [domain route invert-id]
-  (-> (walk/postwalk (fn [v]
-                       (cond
-                         (instance? Entity v) (assert false "hyperfiddle/hyperfiddle.net#150")
+(defn invert-route [domain [fiddle args] invert-id]
+  (let [args (->> {:request-params args}                    ; code compat
+                  (walk/postwalk (fn [v]                    ; works on [args] instead of (:request-param args) ?
+                                   (cond
+                                     (instance? Entity v) (assert false "hyperfiddle/hyperfiddle.net#150")
 
-                         (instance? ThinEntity v)
-                         (let [uri (get-in domain [:domain/environment (.-dbname v)])
-                               id (invert-id (.-id v) uri)]
-                           (->ThinEntity (.-dbname v) id))
+                                     (instance? ThinEntity v)
+                                     (let [uri (get-in domain [:domain/environment (.-dbname v)])
+                                           id (invert-id (.-id v) uri)]
+                                       (->ThinEntity (.-dbname v) id))
 
-                         :else v))
-                     route)
-      (update :fiddle-id (let [uri (:domain/fiddle-repo domain)]
-                           #(invert-id % uri)))))
+                                     :else v))))]
+    #_(update :fiddle-id (let [uri (:domain/fiddle-repo domain)]
+                           #(invert-id % uri)))
+    [fiddle (:request-params args)]))
 
 (defn ctx->id-lookup [uri ctx]
   ; todo what about if the tempid is on a higher branch in the uri?
@@ -99,7 +96,7 @@
     ;_ (timbre/debug args (-> (:link/formula link) meta :str))
     (cats/return
       (id->tempid
-        {:fiddle-id fiddle-id :request-params (normalize-args (:request-params args))}
+        [fiddle-id (normalize-args (:request-params args))]
         ctx))))
 
 (def encode router/encode)

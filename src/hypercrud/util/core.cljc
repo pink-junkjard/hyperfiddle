@@ -111,7 +111,7 @@
 (defn filter-keys [f? m]
   (->> m (filter (fn [[k v]] (f? k))) (into {})))
 
-(defn orp "or with custom predicate" [f? & args]                                       ; todo macro
+(defn orp "or with custom predicate" [f? & args]            ; todo macro
   (first (remove f? args)))
 
 (defn or-str [& args]                                       ; todo macro
@@ -128,3 +128,9 @@
 (defn split-first [s sep]
   (let [[x & xs] (str/split s sep)]
     [x (str/join sep xs)]))
+
+(defn rtrim-coll [f? xs]
+  (->> xs
+       (split-with (complement f?))
+       first
+       (into (empty xs))))

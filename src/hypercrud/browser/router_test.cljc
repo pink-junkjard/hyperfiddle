@@ -3,42 +3,36 @@
              #?(:clj :refer :cljs :refer-macros) [deftest is]]
             [hypercrud.compile.reader]
             [hypercrud.browser.router :refer [encode decode]]
+            [hypercrud.browser.routing :refer [normalize-args]]
             ))
 
 
-
-(def kobe {:fiddle-id :hyperfiddle.blog/post
-           :domain-ident "kobe"
-           :request-params [#entity["$" [:user/sub "google-oauth2|116635422485042503270"]]
-                            #{"events" "news"}]})
-
-(def route-args1 {:fiddle-id :hyperfiddle.blog/post :request-params #entity["$" [:user/sub "google-oauth2|116635422485042503270"]]})
-(def route-args1-seq {:fiddle-id :hyperfiddle.blog/post :request-params [#entity["$" [:user/sub "google-oauth2|116635422485042503270"]]]})
+(def route-args2 [:hyperfiddle.blog/post [#entity["$" [:user/sub "google-oauth2|116635422485042503270"]] #{"events" "news"}]])
+(def route-args1 [:hyperfiddle.blog/post #entity["$" [:user/sub "google-oauth2|116635422485042503270"]]])
+(def route-args1-seq [:hyperfiddle.blog/post [#entity["$" [:user/sub "google-oauth2|116635422485042503270"]]]])
 
 (deftest router-basic
   []
-  (is (= (encode kobe) "/:hyperfiddle.blog!post;'kobe'/~entity('$',(:user!sub,'google-oauth2%7C116635422485042503270'))/~%7B'news','events'%7D"))
-  (is (= (decode "/17592186045933/") {:fiddle-id 17592186045933}))
-  (is (= ((comp decode encode) (dissoc kobe :domain-ident))
-         (dissoc kobe :domain-ident)))
-  ;(is (= ((comp decode encode) kobe) kobe)) ; not implemented
-  #_(is (= ((comp decode encode) route-args1) route-args1))
+  (is (= (encode route-args2) "/:hyperfiddle.blog!post/~entity('$',(:user!sub,'google-oauth2%7C116635422485042503270'))/~%7B'news','events'%7D"))
+  (is (= (decode "/17592186045933/") [17592186045933]))     ; legacy, doesnt happen anymore?
+  (is (= ((comp decode encode) route-args2) route-args2))
+  #_ (is (= ((comp decode encode) route-args1) (update route-args1 1 normalize-args)))
   (is (= ((comp decode encode) route-args1-seq) route-args1-seq))
   #_(is (= ((comp decode encode) route-args1) ((comp decode encode) route-args1-seq)))
-  #?(:clj (is (not (nil? (java.net.URI. (encode kobe))))))
-  (is (= (encode {:fiddle-id :hyperfiddle.blog/post})
-         (encode {:fiddle-id :hyperfiddle.blog/post :request-params nil})
-         (encode {:fiddle-id :hyperfiddle.blog/post :request-params []})
-         (encode {:fiddle-id :hyperfiddle.blog/post :request-params '()})
+  #?(:clj (is (not (nil? (java.net.URI. (encode route-args2))))))
+  (is (= (encode [:hyperfiddle.blog/post])
+         (encode [:hyperfiddle.blog/post])
+         (encode [:hyperfiddle.blog/post])
+         (encode [:hyperfiddle.blog/post '()])
          "/:hyperfiddle.blog!post/"))
-  (is (= (encode {:fiddle-id 17592186045502})
-         (encode {:fiddle-id 17592186045502 :request-params nil})
-         (encode {:fiddle-id 17592186045502 :request-params []})
-         (encode {:fiddle-id 17592186045502 :request-params '()})
+  (is (= (encode [17592186045502])
+         (encode [17592186045502 nil])
+         (encode [17592186045502 []])
+         (encode [17592186045502 '()])
          "/17592186045502/"))
-  #_(is (= (encode {:fiddle-id :hyperfiddle.blog/post :request-params []}) "/:hyperfiddle.blog!post/"))
+  (is (= (encode [:hyperfiddle.blog/post []]) "/:hyperfiddle.blog!post/"))
 
-  (is (= (encode {:fiddle-id :hyperblog/post, :request-params [#entity["$" 17592186045826]]})
+  (is (= (encode [:hyperblog/post [#entity["$" 17592186045826]]])
          "/:hyperblog!post/~entity('$',17592186045826)"))
 
   )

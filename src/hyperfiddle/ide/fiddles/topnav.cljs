@@ -28,15 +28,15 @@
     (str domain "/login?client=" client-id "&callbackURL=" callback-url)))
 
 ; inline sys-link data when the entity is a system-fiddle
-(letfn [(-shadow-fiddle [ctx fiddle]
-          (let [[e a] (get-in ctx [:route :request-params])
-                [_ fiddle-id] (:db/id e)]
-            (if (system-fiddle/system-fiddle? fiddle-id)    ; this fiddle does not actually exist, conjure it up
-              (-> (unwrap (system-fiddle/hydrate-system-fiddle fiddle-id))
+(letfn [(-shadow-fiddle [ctx fiddle-val]
+          (let [[target-fiddle] (get-in ctx [:route 1])     ; can't we get this from the fiddle-val
+                [_ target-fiddle-ident] (:db/id target-fiddle)]
+            (if (system-fiddle/system-fiddle? target-fiddle-ident) ; this fiddle does not actually exist, conjure it up
+              (-> (unwrap (system-fiddle/hydrate-system-fiddle target-fiddle-ident))
                   (update :fiddle/bindings #(or (-> % meta :str) %))
                   (update :fiddle/renderer #(or (-> % meta :str) %))
                   (update :fiddle/request #(or (-> % meta :str) %)))
-              fiddle)))]
+              fiddle-val)))]
   (defn shadow-fiddle [ctx]
     {:pre [(-> ctx :hypercrud.browser/result)]}
     (update ctx :hypercrud.browser/result (partial reactive/fmap (reactive/partial -shadow-fiddle ctx)))))

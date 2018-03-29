@@ -53,10 +53,8 @@
                                                              :domain-name hf-domain-name}))
                     domain))))))
 
-(defn ide-route [route]
-  {:fiddle-id :hyperfiddle/topnav
-   ;:fiddle-params (:fiddle-params route)
-   :request-params [#entity["$" (base/legacy-fiddle-ident->lookup-ref (:fiddle-id route))]]})
+(defn ide-route [[fiddle args :as route]]
+  [:hyperfiddle/topnav [#entity["$" (base/legacy-fiddle-ident->lookup-ref fiddle)]]])
 
 (let [always-user (atom :user)
       constantly-nil (constantly nil)]
@@ -126,15 +124,13 @@
 
 (defn bidi->hf [[handler & ?route-params :as ?r]]
   (if ?r
-    (merge {:fiddle-id handler}
-           (let [ps (->> ?route-params                      ; bidi gives us alternating k/v
-                         (partition-all 2)
-                         (map vec)
-                         sort                               ; order by keys for hyperfiddle, router should use kw or int
-                         (mapv second)                      ; drop keys; hyperfiddle params are associative by index
-                         )]
-             (if (seq ps)
-               {:request-params ps})))))
+    [handler
+     (->> ?route-params                                     ; bidi gives us alternating k/v
+          (partition-all 2)
+          (map vec)
+          sort                                              ; order by keys for hyperfiddle, router should use kw or int
+          (mapv second)                                     ; drop keys; hyperfiddle params are associative by index
+          )]))
 
 (defn bidi-match->path-for "adapt bidi's inconsistent interface" [[h & ps :as ?r]]
   (if ?r {:handler h :route-params ps}))
@@ -143,16 +139,21 @@
   (map (comp keyword str) "abcdefghijklmnopqrstuvwxyz")     ; this version works in clojurescript
   #_(->> (range) (map (comp keyword str char #(+ % (int \a))))))
 
-(defn ->bidi [{:keys [fiddle-id request-params] :as ?r}]
-  (assert (not (system-fiddle? fiddle-id)) "bidi router doesn't handle sys links")
+(defn ->bidi [[fiddle args :as ?r]]
+  (assert (not (system-fiddle? fiddle)) "bidi router doesn't handle sys links")
   ; this is going to generate param names of 0, 1, ... which maybe doesn't work for all routes
   ; we would need to disallow bidi keywords for this to be valid. Can bidi use ints? I think not :(
-  (if ?r (apply conj [fiddle-id] (mapcat vector (abc) request-params))))
+  (if ?r (apply conj [fiddle] (mapcat vector (abc) args))))
+
+(defn home-route-legacy-adapter [route]
+  (if (map? route)
+    [(:fiddle-id route) (:request-params route)]
+    route))
 
 (defn route-decode [rt s]
   {:pre [(string? s)]}
   (let [domain @(runtime/state rt [:hyperfiddle.runtime/domain])
-        home-route (some-> domain :domain/home-route safe-read-edn-string unwrap)
+        home-route (some-> domain :domain/home-route safe-read-edn-string unwrap home-route-legacy-adapter)
         router (some-> domain :domain/router safe-read-edn-string unwrap)]
     (case s
       "/" (if router (bidi->hf home-route) home-route)      ; compat
@@ -160,13 +161,13 @@
           (some-> router (bidi/match-route s) ->bidi-consistency-wrapper bidi->hf)
           (routing/decode s)))))
 
-(defn route-encode [rt route]
+(defn route-encode [rt [fiddle :as route]]
   (let [domain @(runtime/state rt [:hyperfiddle.runtime/domain])
         router (some-> domain :domain/router safe-read-edn-string unwrap)
         home-route (some-> domain :domain/home-route safe-read-edn-string unwrap)
         home-route (if router (bidi->hf home-route) home-route)]
     (or
-      (if (system-fiddle? (:fiddle-id route)) (str "/_" (routing/encode route)))
+      (if (system-fiddle? fiddle) (str "/_" (routing/encode route)))
       (if (= route home-route) "/")
       (if router (apply bidi/path-for router (->bidi route)))
       (routing/encode route))))
