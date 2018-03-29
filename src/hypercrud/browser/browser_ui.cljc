@@ -6,6 +6,7 @@
             [hypercrud.browser.link :as link]
             [hypercrud.browser.routing :as routing]
     #?(:cljs [hypercrud.react.react-fragment :refer [react-fragment]])
+            [hypercrud.types.Err :as Err]
             [hypercrud.ui.css :refer [css-slugify classes]]
             [hypercrud.ui.native-event-listener :refer [native-on-click-listener]]
     #?(:cljs [hypercrud.ui.safe-render :refer [safe-reagent-call]])
@@ -76,13 +77,16 @@
       :browse' browse')))
 
 (defn e->map [e]
-  (if (map? e)
-    e
-    {:message #?(:clj  (.getMessage e)
-                 :cljs (ex-message e))
-     :data (ex-data e)
-     :cause #?(:clj  (.getCause e)
-               :cljs (ex-cause e))}))
+  (cond
+    (Err/Err? e) {:message (:msg e)
+                  :data (:data e)}
+    (map? e) e
+    (string? e) {:message e}
+    :else {:message #?(:clj  (.getMessage e)
+                       :cljs (ex-message e))
+           :data (ex-data e)
+           :cause #?(:clj  (.getCause e)
+                     :cljs (ex-cause e))}))
 
 (defn ui-error-inline [e ctx]
   (let [dev-open? true
