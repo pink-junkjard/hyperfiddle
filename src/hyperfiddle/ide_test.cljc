@@ -28,15 +28,12 @@
 
 (def tests
   {[:hyperblog/post [#entity["$" :capitalism]]]
-   ;"/:hyperblog!post/~entity('$',:capitalism)"
    "/:capitalism"
 
    [:hyperblog/post [#entity["$" 1234]]]
-   ;"/:hyperblog!post/~entity('$',1234)"
    "/1234"
 
    [:hyperblog/index [#entity["$" :personal]]]
-   ;{:fiddle-id :hyperblog/index, :request-params [#entity["$" :personal]]}
    "/:personal/"
    })
 

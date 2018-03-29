@@ -22,7 +22,7 @@
 (defn encode [route]
   ; fiddle is keyword (not entity - $ is extraneous)
   (let [[fiddle datomic-args] route
-        fiddle-args []                                      ; (->> (dissoc route :fiddle-id :request-params) sort vals)
+        fiddle-args []
         service-args {}
         state {}]
     (str "/"

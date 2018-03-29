@@ -33,7 +33,7 @@
                :body body]]))
 
 ; props = {
-;   :route    {:keys [code-database fiddle-id request-params ...]}
+;   :route    [fiddle args]
 ;   :tooltip  [Keyword Hiccup]
 ;   :popover  {:showing?  Atom
 ;              :body      Component

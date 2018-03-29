@@ -78,11 +78,7 @@
          args (if user-fn
                 (try-either (user-fn ctx))
                 (either/right nil))
-         :let [args (if-not (and (map? args) (contains? args :request-params)) ; guard 'contains? not supported on type ThinEntity'
-                      ; compat, the :request-param wrap is legacy, its adapted backwards because of shadow-link technical debt
-                      {:request-params args}
-                      args)
-               args (->> args
+         :let [args (->> {:remove-this-wrapper args}        ; walk trees wants a map
                          ; shadow-links can be hdyrated here, and we need to talk them.
                          ; Technical debt. Once shadow-links are identities, this is just a mapv.
                          (walk/postwalk (fn [v]
@@ -93,9 +89,7 @@
                          (into {}))]]
     ;_ (timbre/debug args (-> (:link/formula link) meta :str))
     (cats/return
-      (id->tempid
-        [fiddle-id (normalize-args (:request-params args))]
-        ctx))))
+      (id->tempid [fiddle-id (normalize-args (:remove-this-wrapper args))] ctx))))
 
 (def encode router/encode)
 (def decode router/decode)
