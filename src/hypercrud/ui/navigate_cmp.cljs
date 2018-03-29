@@ -6,14 +6,14 @@
 
 
 (defn dissoc-non-native-props [hypercrud-props]
-  (dissoc hypercrud-props :route :tooltip :popover :hidden :external-hostname))
+  (dissoc hypercrud-props :route :tooltip :popover :hidden))
 
 (defn anchor-cmp [route-encode hypercrud-props label]
   {:pre [(not (:on-click hypercrud-props))]}
   (let [anchor-props (-> hypercrud-props
                          (dissoc-non-native-props)
                          (assoc :href (if (:route hypercrud-props)
-                                        (route-encode (:route hypercrud-props) (:external-hostname hypercrud-props))
+                                        (route-encode (:route hypercrud-props))
                                         nil #_"javascript:void 0;")))]
     [:a anchor-props label]))
 
