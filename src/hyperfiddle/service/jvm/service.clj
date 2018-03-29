@@ -1,17 +1,13 @@
 (ns hyperfiddle.service.jvm.service
   (:refer-clojure :exclude [sync])
-  (:require [hypercrud.browser.routing :as routing]
-            [hypercrud.compile.reader :as reader]
+  (:require [hypercrud.compile.reader :as reader]
             [hypercrud.transit :as hc-t]
             [hypercrud.types.Err :refer [->Err]]
             [hypercrud.util.base-64-url-safe :as base-64-url-safe]
-            [hypercrud.util.reactive :as reactive]
-            [hyperfiddle.appval.state.reducers :as reducers]
-            [hyperfiddle.foundation.actions :as foundation-actions]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-requests]]
             [hyperfiddle.io.sync :refer [sync]]
             [hyperfiddle.io.transact :refer [transact!]]
-            [hyperfiddle.runtime :as runtime]
+            [hyperfiddle.service.http :as http-service]
             [hyperfiddle.service.lib.jwt :as jwt]
             [hyperfiddle.service.jvm.lib.http :as http]
             [hyperfiddle.service.jvm.global-basis :refer [->GlobalBasisRuntime]]
@@ -31,6 +27,21 @@
   {:status (or (:hyperfiddle.io/http-status-code (ex-data e)) 500)
    :headers {}                                              ; todo retry-after on 503
    :body (->Err (.getMessage e))})
+
+(def platform-response->pedestal-response identity)
+
+(defn build-pedestal-req-handler [env platform-req-handler ->Runtime]
+  (interceptor/handler
+    (fn [req]
+      (-> (platform-req-handler
+            ->Runtime
+            :hostname (:server-name req)
+            :path-params (:path-params req)
+            :request-body (:body-params req)
+            :hyperfiddle-hostname (:HF_HOSTNAME env)
+            :service-uri nil
+            :user-profile (:user req))
+          (p/then platform-response->pedestal-response)))))
 
 (defn http-index [req]
   (ring-resp/response "Hypercrud Server Running!"))
@@ -62,83 +73,13 @@
       (e->response e))))
 
 (defn http-global-basis [env]
-  (interceptor/handler
-    (fn [req]
-      (let [hostname (:server-name req)
-            state-val (-> {:user-profile (:user req)}
-                          (reducers/root-reducer nil))
-            rt (->GlobalBasisRuntime (:HF_HOSTNAME env) hostname (reactive/atom state-val))]
-        (-> (runtime/global-basis rt)
-            (p/then (fn [global-basis]
-                      {:status 200
-                       :headers {"Cache-Control" "max-age=0"}
-                       :body global-basis}))
-            (p/catch (fn [e]
-                       (timbre/error e)
-                       (e->response e))))))))
+  (build-pedestal-req-handler env http-service/global-basis-handler ->GlobalBasisRuntime))
 
 (defn http-local-basis [env]
-  (interceptor/handler
-    (fn [{:keys [path-params] :as req}]
-      (try
-        (let [hostname (:server-name req)
-              global-basis (-> (:global-basis path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
-              route (-> (:encoded-route path-params) base-64-url-safe/decode reader/read-edn-string)
-              _  (when-let [e (routing/invalid-route? route)] (throw e))
-              branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string)
-              branch-aux (some-> (:branch-aux path-params) base-64-url-safe/decode reader/read-edn-string)
-              initial-state {:user-profile (:user req)
-                             ::runtime/global-basis global-basis
-                             ::runtime/partitions {branch {:route route
-                                                           :hyperfiddle.runtime/branch-aux branch-aux}}}
-              rt (->LocalBasis (:HF_HOSTNAME env) hostname
-                               (reactive/atom (reducers/root-reducer initial-state nil))
-                               reducers/root-reducer)]
-          (-> (foundation-actions/refresh-domain rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
-              (p/then (fn [_] (runtime/local-basis rt global-basis route branch branch-aux)))
-              (p/then (fn [local-basis]
-                        {:status 200
-                         :headers {"Cache-Control" "max-age=31536000"}
-                         :body local-basis}))
-              (p/catch (fn [e]
-                         (timbre/error e)
-                         (e->response e)))))
-        (catch Exception e
-          (timbre/error e)
-          (e->response e))))))
+  (build-pedestal-req-handler env http-service/local-basis-handler ->LocalBasis))
 
 (defn http-hydrate-route [env]
-  (interceptor/handler
-    (fn [{:keys [body-params path-params] :as req}]
-      (try
-        (let [hostname (:server-name req)
-              local-basis (-> (:local-basis path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
-              route (-> (:encoded-route path-params) base-64-url-safe/decode reader/read-edn-string)
-              _  (when-let [e (routing/invalid-route? route)] (throw e))
-              branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string)
-              branch-aux (some-> (:branch-aux path-params) base-64-url-safe/decode reader/read-edn-string)
-              initial-state (-> {:user-profile (:user req)
-                                 :stage body-params
-                                 ; should this be constructed with reducers?
-                                 ; why dont we need to preheat the tempid lookups here for parent branches?
-                                 ::runtime/partitions {branch {:local-basis local-basis
-                                                               :route route
-                                                               :hyperfiddle.runtime/branch-aux branch-aux}}})
-              rt (->HydrateRoute (:HF_HOSTNAME env) hostname
-                                 (reactive/atom (reducers/root-reducer initial-state nil))
-                                 reducers/root-reducer)]
-          (-> (foundation-actions/refresh-domain rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
-              (p/then (fn [_] (runtime/hydrate-route rt local-basis route branch branch-aux (:stage initial-state))))
-              (p/then (fn [data]
-                        {:status 200
-                         :headers {"Cache-Control" "max-age=31536000"} ; todo max-age=0 if POST
-                         :body data}))
-              (p/catch (fn [e]
-                         (timbre/error e)
-                         (e->response e)))))
-        (catch Exception e
-          (timbre/error e)
-          (e->response e))))))
+  (build-pedestal-req-handler env http-service/hydrate-route-handler ->HydrateRoute))
 
 (defn with-user [env]
   (interceptor/on-request

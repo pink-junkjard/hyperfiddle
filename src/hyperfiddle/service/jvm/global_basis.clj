@@ -2,14 +2,21 @@
   (:refer-clojure :exclude [sync])
   (:require [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
+            [hypercrud.util.reactive :as reactive]
             [hyperfiddle.io.global-basis :refer [global-basis]]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-requests stage-val->staged-branches]]
             [hyperfiddle.io.sync :refer [sync]]
             [hyperfiddle.runtime :as runtime]
+            [hyperfiddle.state :as state]
             [promesa.core :as p]))
 
 
-(deftype GlobalBasisRuntime [hyperfiddle-hostname hostname state-atom]
+(deftype GlobalBasisRuntime [hyperfiddle-hostname hostname service-uri state-atom root-reducer]
+  runtime/State
+  (dispatch! [rt action-or-func] (state/dispatch! state-atom root-reducer action-or-func))
+  (state [rt] state-atom)
+  (state [rt path] (reactive/cursor state-atom path))
+
   runtime/AppFnGlobalBasis
   (global-basis [rt]
     (global-basis rt hyperfiddle-hostname hostname))

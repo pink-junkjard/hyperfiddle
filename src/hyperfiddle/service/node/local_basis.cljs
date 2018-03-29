@@ -1,23 +1,14 @@
 (ns hyperfiddle.service.node.local-basis
-  (:require [hypercrud.browser.routing :as routing]
-            [hypercrud.client.core :as hc]
+  (:require [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
-            [hypercrud.compile.reader :as reader]
-            [hypercrud.transit :as transit]
-            [hypercrud.util.base-64-url-safe :as base-64-url-safe]
             [hypercrud.util.reactive :as reactive]
-            [hyperfiddle.appval.state.reducers :as reducers]
             [hyperfiddle.foundation :as foundation]
-            [hyperfiddle.foundation.actions :as foundation-actions]
             [hyperfiddle.ide :as ide]
             [hyperfiddle.io.global-basis :refer [global-basis-rpc!]]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-requests-rpc!]]
             [hyperfiddle.io.sync :refer [sync-rpc!]]
             [hyperfiddle.runtime :as runtime]
-            [hyperfiddle.service.node.lib :as lib]
-            [hyperfiddle.state :as state]
-            [promesa.core :as p]
-            [taoensso.timbre :as timbre]))
+            [hyperfiddle.state :as state]))
 
 
 ; Todo this is same runtime as HydrateRoute
@@ -73,32 +64,3 @@
 
   IHash
   (-hash [this] (goog/getUid this)))
-
-(defn http-local-basis [env req res path-params query-params]
-  (try
-    (let [hostname (.-hostname req)
-          global-basis (-> path-params :global-basis base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
-          route (-> (:encoded-route path-params) base-64-url-safe/decode reader/read-edn-string)
-          _  (when-let [e (routing/invalid-route? route)] (throw e))
-          branch (some-> (:branch path-params) base-64-url-safe/decode reader/read-edn-string) ; todo this can throw
-          branch-aux (some-> (:branch-aux path-params) base-64-url-safe/decode reader/read-edn-string)
-          initial-state {:user-profile (lib/req->user-profile env req)
-                         ::runtime/global-basis global-basis
-                         ::runtime/partitions {branch {:route route
-                                                       :hyperfiddle.runtime/branch-aux branch-aux}}}
-          rt (->LocalBasisRuntime (:HF_HOSTNAME env) hostname (lib/req->service-uri env req)
-                                  (reactive/atom (reducers/root-reducer initial-state nil))
-                                  reducers/root-reducer)]
-      (-> (foundation-actions/refresh-domain rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
-          (p/then #(runtime/local-basis rt global-basis route branch branch-aux))
-          (p/then (fn [local-basis]
-                    (doto res
-                      (.status 200)
-                      (.append "Cache-Control" "max-age=31536000")
-                      (.format #js {"application/transit+json" #(.send res (transit/encode local-basis))}))))
-          (p/catch (fn [e]
-                     (timbre/error e)
-                     (lib/e->response res e)))))
-    (catch :default e
-      (timbre/error e)
-      (lib/e->response res e))))

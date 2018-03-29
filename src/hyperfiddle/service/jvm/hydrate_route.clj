@@ -16,7 +16,7 @@
             [promesa.core :as p]))
 
 
-(deftype HydrateRoute [hyperfiddle-hostname hostname state-atom root-reducer]
+(deftype HydrateRoute [hyperfiddle-hostname hostname service-uri state-atom root-reducer]
   runtime/State
   (dispatch! [rt action-or-func] (state/dispatch! state-atom root-reducer action-or-func))
   (state [rt] state-atom)
@@ -67,7 +67,7 @@
                          "user" :leaf
                          "ide" :leaf)]
       (hydrate-loop rt (request-fn-adapter local-basis route stage ctx
-                                           #(HydrateRoute. hyperfiddle-hostname hostname (reactive/atom %) root-reducer)
+                                           #(HydrateRoute. hyperfiddle-hostname hostname service-uri (reactive/atom %) root-reducer)
                                            #(foundation/api page-or-leaf route % ide/api))
                     local-basis branch stage data-cache)))
 
