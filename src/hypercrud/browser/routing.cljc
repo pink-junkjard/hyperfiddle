@@ -62,38 +62,44 @@
                       (get tempid->id temp-id temp-id)))]
     (invert-route (:hypercrud.browser/domain ctx) route invert-id)))
 
-(defn normalize-params [porps]
+(defn normalize-args [porps]
   {:pre [(not (:entity porps)) #_"legacy"
          ; There is some weird shit hitting this assert, like {:db/id nil}
-         #_(not (map? porps)) #_"legacy"]}
+         #_(not (map? porps)) #_"legacy"]
+   :post [(vector? %) #_"route args are associative by position"]}
 
   ; careful here -
   ; (seq [1]) - truthy
   ; (seq? [1]) - false
   ; (seq 1) - IllegalArgumentException
   (cond (instance? ThinEntity porps) [porps]                ; entity is also a map so do this first
-        :else (xorxs porps)))
+        :else (vec (xorxs porps))))
 
 (defn ^:export build-route' [link ctx]
   (mlet [fiddle-id (if-let [page (:link/fiddle link)]
                      (either/right (:fiddle/ident page))
                      (either/left {:message "link has no fiddle" :data {:link link}}))
          user-fn (eval/eval-str (:link/formula link))
-         user-route-params (if user-fn
-                             (try-either (user-fn ctx))
-                             (either/right nil))
-         :let [route-params (->> user-route-params
-                                 (walk/postwalk (fn [v]
-                                                  (if (instance? Entity v)
-                                                    (let [dbname (some-> v .-uri (dbname/uri->dbname ctx))]
-                                                      (->ThinEntity dbname (or (:db/ident v) (:db/id v))))
-                                                    v)))
-                                 (into {}))
-               ;_ (timbre/debug route-params (-> (:link/formula link) meta :str))
-               route-params (update-existing route-params :request-params normalize-params)]]
+         args (if user-fn
+                (try-either (user-fn ctx))
+                (either/right nil))
+         :let [args (if-not (and (map? args) (contains? args :request-params)) ; guard 'contains? not supported on type ThinEntity'
+                      ; compat, the :request-param wrap is legacy, its adapted backwards because of shadow-link technical debt
+                      {:request-params args}
+                      args)
+               args (->> args
+                         ; shadow-links can be hdyrated here, and we need to talk them.
+                         ; Technical debt. Once shadow-links are identities, this is just a mapv.
+                         (walk/postwalk (fn [v]
+                                          (if (instance? Entity v)
+                                            (let [dbname (some-> v .-uri (dbname/uri->dbname ctx))]
+                                              (->ThinEntity dbname (or (:db/ident v) (:db/id v))))
+                                            v)))
+                         (into {}))]]
+    ;_ (timbre/debug args (-> (:link/formula link) meta :str))
     (cats/return
       (id->tempid
-        (merge route-params {:fiddle-id fiddle-id})
+        {:fiddle-id fiddle-id :request-params (normalize-args (:request-params args))}
         ctx))))
 
 (def encode router/encode)

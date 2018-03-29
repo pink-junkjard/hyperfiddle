@@ -5,30 +5,23 @@
 ;entity edit
 {:d? true :a false}
 ==
-(fn [ctx]
-  {:request-params @(:cell-data ctx)})
-
-
+(comp deref :cell-data)
 ==
 {:d? true :a true}
 ==
 (fn [ctx]
   (case @(hypercrud.util.reactive/cursor (:hypercrud.browser/fat-attribute ctx) [:db/cardinality :db/ident])
-    :db.cardinality/one {:request-params @(:value ctx)}
+    :db.cardinality/one @(:value ctx)
 
     ; "find children of parent entity at attr"
     ; :entity would be better named :parent. See base ->EntityRequest
-    :db.cardinality/many {:request-params [@(:cell-data ctx) (:hypercrud.browser/attribute ctx)]}))
-
-
+    :db.cardinality/many [@(:cell-data ctx) (:hypercrud.browser/attribute ctx)]))
 ==
 {:d? false :a false}
 ==
-(fn [ctx] nil)
-
-
+(constantly nil)
 ==
 {:d? false :a true}
 ==
-(fn [ctx] nil)
+(constantly nil)
 ==
