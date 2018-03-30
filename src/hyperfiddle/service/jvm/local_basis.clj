@@ -3,7 +3,7 @@
   (:require [cats.core :refer [mlet return]]
             [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
-            [hypercrud.util.reactive :as reactive]
+            [contrib.reactive :as reactive]
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.ide :as ide]
             [hyperfiddle.io.global-basis :refer [global-basis]]

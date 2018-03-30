@@ -1,9 +1,9 @@
 (ns hyperfiddle.service.jvm.service
   (:refer-clojure :exclude [sync])
-  (:require [hypercrud.compile.reader :as reader]
+  (:require [contrib.reader :refer [read-edn-string]]
             [hypercrud.transit :as hc-t]
             [hypercrud.types.Err :refer [->Err]]
-            [hypercrud.util.base-64-url-safe :as base-64-url-safe]
+            [contrib.base-64-url-safe :as base-64-url-safe]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-requests]]
             [hyperfiddle.io.sync :refer [sync]]
             [hyperfiddle.io.transact :refer [transact!]]
@@ -49,7 +49,7 @@
 (defn http-hydrate-requests [req]
   (try
     (let [{:keys [body-params path-params]} req
-          local-basis (some-> (:local-basis path-params) base-64-url-safe/decode reader/read-edn-string)
+          local-basis (some-> (:local-basis path-params) base-64-url-safe/decode read-edn-string)
           {staged-branches :staged-branches request :request} body-params
           r (hydrate-requests local-basis request staged-branches)]
       (ring-resp/response r))

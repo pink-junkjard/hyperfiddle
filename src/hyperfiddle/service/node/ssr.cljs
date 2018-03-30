@@ -2,9 +2,9 @@
   (:require [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
             [hypercrud.transit :as transit]
-            [hypercrud.util.core :refer [unwrap]]
-            [hypercrud.util.reactive :as reactive]
-            [hypercrud.util.template :as template]
+            [contrib.data :refer [unwrap]]
+            [contrib.reactive :as reactive]
+            [contrib.template :refer [load-resource]]
             [hyperfiddle.appval.state.reducers :as reducers]
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.ide :as ide]
@@ -29,7 +29,7 @@
   (binding [rutil/*non-reactive* true]
     (.renderToNodeStream (reagent-server/module) (tmpl/as-element component))))
 
-(def analytics (template/load-resource "analytics.html"))
+(def analytics (load-resource "analytics.html"))
 
 (defn full-html [env state-val serve-js? app-component]
   (let [resource-base (str (:STATIC_RESOURCES env) "/" (:BUILD env))]

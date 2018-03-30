@@ -2,7 +2,7 @@
   (:refer-clojure :exclude [sync])
   (:require [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
-            [hypercrud.util.reactive :as reactive]
+            [contrib.reactive :as reactive]
             [hyperfiddle.io.global-basis :refer [global-basis]]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-requests stage-val->staged-branches]]
             [hyperfiddle.io.sync :refer [sync]]
