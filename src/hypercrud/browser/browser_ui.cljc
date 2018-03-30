@@ -1,21 +1,21 @@
 (ns hypercrud.browser.browser-ui
   (:require [cats.core :as cats :refer [mlet]]
             [cats.monad.either :as either]
+            [contrib.css :refer [css-slugify classes]]
+            [contrib.data :as util :refer [unwrap or-str]]
+            [contrib.reactive :as r]
+    #?(:cljs [contrib.reagent :refer [fragment]])
+            [contrib.string :refer [memoized-safe-read-edn-string]]
+            [contrib.try :refer [try-either]]
             [hypercrud.browser.base :as base]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.link :as link]
             [hypercrud.browser.routing :as routing]
-    #?(:cljs [contrib.reagent :refer [fragment]])
             [hypercrud.types.Err :as Err]
-            [contrib.css :refer [css-slugify classes]]
             [hypercrud.ui.native-event-listener :refer [native-on-click-listener]]
     #?(:cljs [hypercrud.ui.safe-render :refer [safe-reagent-call]])
             [hypercrud.ui.stale :as stale]
     ;#?(:cljs [hypercrud.ui.form :as form])
-            [contrib.data :as util :refer [unwrap or-str]]
-            [contrib.try :refer [try-either]]
-            [contrib.reactive :as reactive]
-            [contrib.string :refer [memoized-safe-read-edn-string]]
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.foundation.actions :as foundation-actions]
             [hyperfiddle.runtime :as runtime]))
@@ -29,31 +29,31 @@
 ; defn because hypercrud.ui.result/view cannot be required from this ns
 (defn f-mode-config []
   {:from-ctx :user-renderer
-   :from-fiddle (fn [fiddle] @(reactive/cursor fiddle [:fiddle/renderer]))
+   :from-fiddle (fn [fiddle] @(r/cursor fiddle [:fiddle/renderer]))
    :with-user-fn #?(:clj  (assert false "todo")
                     :cljs (fn [user-fn]
                             (fn [ctx]
                               #_(fragment :_) #_(list)
                               [:div
-                               [safe-reagent-call user-fn ctx (css-slugify @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/ident]))]
-                               [fiddle-css-renderer @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]])))
+                               [safe-reagent-call user-fn ctx (css-slugify @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/ident]))]
+                               [fiddle-css-renderer @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]])))
    ; todo ui binding should be provided by a RT
    :default #?(:clj  (assert false "todo")
                :cljs (fn [ctx]
                        #_(fragment :_) #_(list)
                        [:div
-                        [hypercrud.ui.result/view ctx (css-slugify @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/ident]))]
-                        [fiddle-css-renderer @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]]))})
+                        [hypercrud.ui.result/view ctx (css-slugify @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/ident]))]
+                        [fiddle-css-renderer @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]]))})
 
 (letfn [(browse [rel ctx & args]
           (let [{[user-renderer & args] nil :as kwargs} (util/kwargs args)
-                {:keys [:link/dependent? :link/path] :as link} @(reactive/track link/rel->link rel ctx)
+                {:keys [:link/dependent? :link/path] :as link} @(r/track link/rel->link rel ctx)
                 ctx (-> (context/relation-path ctx (into [dependent?] (unwrap (memoized-safe-read-edn-string (str "[" path "]")))))
                         (as-> ctx (if user-renderer (assoc ctx :user-renderer user-renderer #_(if f #(apply f %1 %2 %3 %4 args))) ctx)))]
             [ui-from-link link ctx (:class kwargs)]))
         (anchor [rel ctx label & args]
           (let [kwargs (util/kwargs args)
-                {:keys [:link/dependent? :link/path] :as link} @(reactive/track link/rel->link rel ctx)
+                {:keys [:link/dependent? :link/path] :as link} @(r/track link/rel->link rel ctx)
                 ctx (context/relation-path ctx (into [dependent?] (unwrap (memoized-safe-read-edn-string (str "[" path "]")))))
                 props (-> (link/build-link-props link ctx)
                           #_(dissoc :style) #_"custom renderers don't want colored links")]
@@ -62,11 +62,11 @@
           #?(:clj nil
              :cljs [hypercrud.ui.form/Cell (context/relation-path ctx [d i a])]))
         (browse' [ident ctx]
-          (->> (base/data-from-link @(reactive/track link/rel->link ident ctx) ctx)
+          (->> (base/data-from-link @(r/track link/rel->link ident ctx) ctx)
                (cats/fmap :hypercrud.browser/result)
                (cats/fmap deref)))
         (anchor* [ident ctx]
-          (link/build-link-props @(reactive/track link/rel->link ident ctx) ctx))]
+          (link/build-link-props @(r/track link/rel->link ident ctx) ctx))]
   ; convenience functions, should be declared fns in this or another ns and accessed out of band of ctx
   (defn ui-bindings [ctx]
     (assoc ctx
@@ -118,8 +118,8 @@
     (.stopPropagation event)))
 
 (defn wrap-ui [either-v route ctx & [class]]
-  (let [on-click (reactive/partial (or (:hypercrud.browser/page-on-click ctx) (constantly nil))
-                                   route)
+  (let [on-click (r/partial (or (:hypercrud.browser/page-on-click ctx) (constantly nil))
+                            route)
         either-v (or (some-> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :error]) either/left)
                      either-v)]
     [native-on-click-listener {:on-click on-click}
