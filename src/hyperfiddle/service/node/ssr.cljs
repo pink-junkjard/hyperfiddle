@@ -31,8 +31,9 @@
 
 (def analytics (load-resource "analytics.html"))
 
-(defn full-html [env state-val serve-js? app-component]
-  (let [resource-base (str (:STATIC_RESOURCES env) "/" (:BUILD env))]
+(defn full-html [env state-val serve-js? params app-component]
+  (let [resource-base (str (:STATIC_RESOURCES env) "/" (:BUILD env))
+        params (assoc params :hyperfiddle-hostname (:HF_HOSTNAME env))]
     [:html {:lang "en"}
      [:head
       [:title "Hyperfiddle"]
@@ -47,7 +48,7 @@
       (when serve-js?
         ; env vars for client side rendering
         [:script {:id "params" :type "text/edn"
-                  :dangerouslySetInnerHTML {:__html (transit/encode {:hyperfiddle-hostname (:HF_HOSTNAME env)})}}])
+                  :dangerouslySetInnerHTML {:__html (transit/encode params)}}])
       (when serve-js?
         [:script {:id "state" :type "text/edn"
                   :dangerouslySetInnerHTML {:__html (transit/encode state-val)}}])
@@ -133,16 +134,11 @@
                             (reactive/atom (reducers/root-reducer initial-state nil))
                             reducers/root-reducer)
         serve-js? true #_(not aliased?)
-        browser-initial-state (fn []
-                                (let [bootstrapped-state @(runtime/state rt)
-                                      alias? (foundation/alias? (foundation/hostname->hf-domain-name hostname (:HF_HOSTNAME env)))]
-                                  ; initial-state to force the browser to re-run the data bootstrapping when not aliased
-                                  (if alias?
-                                    bootstrapped-state
-                                    (merge initial-state (select-keys bootstrapped-state [::runtime/auto-transact])))))
-        ; careful setting load-level to LOCAL-BASIS; it is not supported as an init-level in the browser yet
-        ; how can the browser know if hydrate page has or has not happened yet?
-        load-level foundation/LEVEL-HYDRATE-PAGE]
+        load-level foundation/LEVEL-HYDRATE-PAGE
+        browser-init-level (if (foundation/alias? (foundation/hostname->hf-domain-name hostname (:HF_HOSTNAME env)))
+                             load-level
+                             ;force the browser to re-run the data bootstrapping when not aliased
+                             foundation/LEVEL-NONE)]
     (-> (foundation/bootstrap-data rt foundation/LEVEL-NONE load-level (.-path req))
         (p/then (fn []
                   (let [action [:disable-auto-transact]
@@ -154,7 +150,8 @@
         (p/then (constantly 200))
         (p/catch #(or (:hyperfiddle.io/http-status-code (ex-data %)) 500))
         (p/then (fn [http-status-code]
-                  (let [html [full-html env (browser-initial-state) serve-js?
+                  (let [params {:hyperfiddle.bootstrap/init-level browser-init-level}
+                        html [full-html env @(runtime/state rt) serve-js? params
                               (runtime/ssr rt @(runtime/state rt [::runtime/partitions nil :route]))]]
                     (doto res
                       (.status http-status-code)
