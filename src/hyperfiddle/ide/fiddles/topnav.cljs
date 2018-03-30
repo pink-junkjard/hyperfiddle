@@ -1,25 +1,23 @@
 (ns hyperfiddle.ide.fiddles.topnav
   (:require [cats.core :as cats]
             [cats.monad.either :as either]
-            [cuerdas.core :as string]
+            [contrib.data :refer [kwargs unwrap]]
+            [contrib.datomic-tx :as tx]
+            [contrib.reactive :as reactive]
+            [contrib.reagent :refer [fragment]]
             [hypercrud.browser.base :as base]
             [hypercrud.browser.browser-ui :as browser-ui]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.link :as link]
             [hypercrud.browser.system-fiddle :as system-fiddle]
-            [contrib.datomic-tx :as tx]
-            [contrib.reagent :refer [fragment]]
             [hypercrud.ui.control.markdown-rendered :refer [markdown-rendered*]]
             [hypercrud.ui.radio :as radio]
             [hypercrud.ui.result :as result]
             [hypercrud.ui.tooltip :refer [tooltip]]
-            [contrib.data :as util :refer [unwrap]]
-            [contrib.reactive :as reactive]
             [hyperfiddle.foundation :as foundation :refer [staging]]
             [hyperfiddle.foundation.actions :as foundation-actions]
             [hyperfiddle.ide.fiddles.topnav-bindings :as topnav-bindings]
-            [hyperfiddle.runtime :as runtime]
-            [reagent.core :as reagent]))
+            [hyperfiddle.runtime :as runtime]))
 
 
 (defn stateless-login-url [ctx]
@@ -76,7 +74,7 @@
         ; hack until hyperfiddle.net#156 is complete
         fake-managed-anchor (fn [ident ctx label & args]
                               ; mostly copied from browser-ui
-                              (let [kwargs (util/kwargs args)
+                              (let [kwargs (kwargs args)
                                     link (-> @(reactive/track link/rel->link ident ctx) (assoc :link/managed? true))
                                     props (-> (link/build-link-props link ctx true)
                                               #_(dissoc :style) #_"custom renderers don't want colored links")]
