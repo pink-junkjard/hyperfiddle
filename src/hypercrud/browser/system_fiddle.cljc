@@ -18,7 +18,7 @@
   {:fiddle/ident :hyperfiddle.system/edit
    :fiddle/type :entity})
 
-(defn fiddle-blank-system-remove []
+(def fiddle-blank-system-remove
   {:fiddle/ident :hyperfiddle.system/remove
    :fiddle/type :blank
    :fiddle/renderer (str-and-code
@@ -26,13 +26,13 @@
                         [:p "Retract entity?"]))})
 
 
-(defn hydrate-system-fiddle [fiddle-id]
+(defn hydrate-system-fiddle [ident]
   (try-either                                               ; catch all the pre assertions
     (cond
-      (= fiddle-id :hyperfiddle.system/edit) fiddle-system-edit
-      (= fiddle-id :hyperfiddle.system/remove) fiddle-blank-system-remove
-      :else (let [$db (name fiddle-id)]
-              (condp = (namespace fiddle-id)
+      (= ident :hyperfiddle.system/edit) fiddle-system-edit
+      (= ident :hyperfiddle.system/remove) fiddle-blank-system-remove
+      :else (let [$db (name ident)]
+              (condp = (namespace ident)
                 "hyperfiddle.schema" (schema/schema $db)
                 "hyperfiddle.schema.db-cardinality-options" (schema/db-cardinality-options $db)
                 "hyperfiddle.schema.db-unique-options" (schema/db-unique-options $db)
