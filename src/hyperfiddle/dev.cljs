@@ -1,4 +1,4 @@
-(ns hc.dev
+(ns hyperfiddle.dev
   (:require [cljs.pprint :as pprint]
             [hypercrud.browser.routing :as routing]
             [contrib.reagent :refer [fragment]]
