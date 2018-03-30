@@ -1,7 +1,7 @@
 (ns hyperfiddle.ide-test
   (:require [#?(:clj clojure.test :cljs cljs.test)
              #?(:clj :refer :cljs :refer-macros) [deftest is]]
-            [hypercrud.compile.reader]
+            [contrib.reader]                                ; wrong dependency?
             [bidi.bidi :as bidi]
             [hyperfiddle.runtime :as hfr]
             [hypercrud.util.reactive :as r]

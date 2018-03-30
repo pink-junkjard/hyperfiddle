@@ -8,7 +8,7 @@
             [hypercrud.ui.input :as input]
             [hypercrud.ui.label :refer [label]]
             [hypercrud.util.reactive :as reactive]
-            [hypercrud.react.react-fragment :refer [react-fragment]]))
+            [contrib.reagent :refer [fragment]]))
 
 
 (defn new-field-state-container [ctx]
@@ -35,7 +35,7 @@
 (defn ui-block-border-wrap [ctx class & children]
   [:div {:class (classes class "hyperfiddle-form-cell" (-> ctx :hypercrud.browser/attribute str css-slugify))
          :style {:border-color (connection-color/connection-color ctx)}}
-   (apply react-fragment :_ children)])
+   (apply fragment :_ children)])
 
 (defn form-cell [control -field ctx & [class]]              ; safe to return nil or seq
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]

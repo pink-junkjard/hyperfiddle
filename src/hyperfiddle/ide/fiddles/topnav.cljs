@@ -8,7 +8,7 @@
             [hypercrud.browser.link :as link]
             [hypercrud.browser.system-fiddle :as system-fiddle]
             [hypercrud.client.tx :as tx]
-            [hypercrud.react.react-fragment :refer [react-fragment]]
+            [contrib.reagent :refer [fragment]]
             [hypercrud.ui.control.markdown-rendered :refer [markdown-rendered*]]
             [hypercrud.ui.radio :as radio]
             [hypercrud.ui.result :as result]
@@ -123,7 +123,7 @@
                               :target %
                               :value @(:value ctx)
                               :change! change!})))]
-    [:span.qe.radio-group (apply react-fragment :_ options)]))
+    [:span.qe.radio-group (apply fragment :_ options)]))
 
 (defn ^:export stage-ui [ctx]
   (let [writes-allowed? (or (foundation/alias? (foundation/hostname->hf-domain-name ctx))

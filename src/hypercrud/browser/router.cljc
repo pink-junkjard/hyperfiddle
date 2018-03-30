@@ -1,12 +1,13 @@
 (ns hypercrud.browser.router
+  (:refer-clojure :exclude [read-string])
   (:require [cuerdas.core :as str]
             [hypercrud.util.core :refer [split-first rtrim-coll]]
-            [hypercrud.compile.reader :as reader]
+            [contrib.reader :refer [read-string]]
             [contrib.rfc3986 :refer [encode-rfc3986-pchar decode-rfc3986-pchar encode-ednish decode-ednish]]))
 
 
 (def -encode-pchar (comp encode-rfc3986-pchar encode-ednish pr-str)) ; strings get quotes, its okay
-(def -decode-url-ednish (comp reader/read-string decode-ednish decode-rfc3986-pchar))
+(def -decode-url-ednish (comp read-string decode-ednish decode-rfc3986-pchar))
 
 (comment
   [:hyperfiddle.blog/post [#entity["$" [:user/sub "google-oauth2|116635422485042503270"]]]])

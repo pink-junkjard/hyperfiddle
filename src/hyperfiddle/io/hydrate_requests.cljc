@@ -3,7 +3,7 @@
             [cats.monad.either :as either]
             [cuerdas.core :as str]
             [hyperfiddle.io.http.core :refer [http-request!]]
-            [hypercrud.util.base-64-url-safe :as base-64-url-safe]
+            [contrib.base-64-url-safe :as base-64-url-safe]
     #?(:clj
             [hyperfiddle.io.datomic.hydrate-requests :as datomic-hydrate-requests])
             [hyperfiddle.io.util :refer [process-result v-not-nil?]]

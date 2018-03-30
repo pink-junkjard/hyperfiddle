@@ -1,7 +1,7 @@
-(ns hypercrud.readers-test
+(ns hyperfiddle.readers-test
   (:require [#?(:clj clojure.test :cljs cljs.test) #?(:clj :refer :cljs :refer-macros) [deftest is]]
             [hypercrud.compile.eval :as eval]
-            [hypercrud.compile.reader :as reader]
+            [contrib.reader :refer [read-string read-edn-string]]
             [hypercrud.transit :as transit]
             [hypercrud.types.DbVal :refer [->DbVal]]
             [hypercrud.types.Entity :refer [->Entity]]
@@ -18,13 +18,13 @@
 
 (defn test-runtime-read [control strd]
   (is (= control
-         (reader/read-string (pr-str control))
-         (reader/read-string strd))))
+         (read-string (pr-str control))
+         (read-string strd))))
 
 (defn test-edn-read [control strd]
   (is (= control
-         (reader/read-edn-string (pr-str control))
-         (reader/read-edn-string strd))))
+         (read-edn-string (pr-str control))
+         (read-edn-string strd))))
 
 (defn test-eval [control strd]
   (is (= control

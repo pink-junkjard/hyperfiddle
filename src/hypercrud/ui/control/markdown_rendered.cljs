@@ -1,12 +1,11 @@
 (ns hypercrud.ui.control.markdown-rendered
-  (:require [hyperfiddle.core]
+  (:require [contrib.string :refer [memoized-safe-read-edn-string]]
+            [hyperfiddle.core]
             [hypercrud.browser.context :as context]
             [hypercrud.ui.user-attribute-renderer :refer [safe-eval-user-expr]]
             [hypercrud.ui.control.code]
             [hypercrud.ui.css :refer [css-slugify classes]]
             [hypercrud.util.core :as util :refer [unwrap or-str]]
-            [hypercrud.util.reactive :as r]
-            [hypercrud.util.string :refer [memoized-safe-read-edn-string]]
             [goog.object]
             [reagent.core :as reagent]
             [hypercrud.util.reactive :as r]))

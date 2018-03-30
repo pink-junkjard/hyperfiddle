@@ -1,7 +1,7 @@
 (ns hc.dev
   (:require [cljs.pprint :as pprint]
             [hypercrud.browser.routing :as routing]
-            [hypercrud.react.react-fragment :as react-fragment]
+            [contrib.reagent :refer [fragment]]
             [hypercrud.util.core :refer [pprint-str update-existing]]
             [hyperfiddle.runtime :as runtime]
             [hyperfiddle.foundation.actions :as foundation-actions]))
@@ -45,7 +45,7 @@
                                  (-> js/document.location.pathname
                                      routing/decode
                                      pprint-str)))
-  (aset global "react_fragment" react-fragment/react-fragment)
+  (aset global "react_fragment" fragment)
 
   (aset global "toggle_stage"
         (fn []

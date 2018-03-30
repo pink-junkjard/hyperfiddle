@@ -2,7 +2,7 @@
   (:require [cats.monad.either :refer [#?(:cljs Left)]]
             [#?(:clj clojure.test :cljs cljs.test) #?(:clj :refer :cljs :refer-macros) [deftest is]]
             [hypercrud.compile.eval :as eval]
-            [hypercrud.compile.macros :refer [str-and-code]]
+            [contrib.macros :refer [str-and-code]]
             [taoensso.timbre :as timbre])
   #?(:clj
      (:import [cats.monad.either Left])))

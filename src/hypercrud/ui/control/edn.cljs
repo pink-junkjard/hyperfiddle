@@ -1,8 +1,8 @@
 (ns hypercrud.ui.control.edn
   (:require [cats.monad.either :as either]
+            [contrib.string :refer [safe-read-edn-string]]
             [hypercrud.ui.control.code :as code]
             [hypercrud.util.core :refer [pprint-str]]
-            [hypercrud.util.string :refer [safe-read-edn-string]]
             [taoensso.timbre :as timbre]))
 
 

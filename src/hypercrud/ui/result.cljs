@@ -1,6 +1,7 @@
 (ns hypercrud.ui.result
   (:require [cats.core :refer [fmap]]
             [cats.monad.either :as either]
+            [contrib.try :refer [try-either]]
             [hypercrud.browser.context :as context]
             [hypercrud.ui.control.link-controls :as link-controls]
             [hypercrud.ui.control.markdown-rendered :refer [markdown-relation]]
@@ -8,7 +9,6 @@
             [hypercrud.ui.form :as form]
             [hypercrud.ui.table :as table]
             [hypercrud.util.core :as util :refer [or-str]]
-            [hypercrud.util.non-fatal :refer [try-either]]
             [hypercrud.util.reactive :as reactive]))
 
 

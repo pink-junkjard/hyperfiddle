@@ -1,7 +1,7 @@
 (ns hypercrud.browser.system-fiddle
   (:require [clojure.string :as str]
-            [hypercrud.compile.macros :refer [str-and-code]]
-            [hypercrud.util.non-fatal :refer [try-either]]
+            [contrib.try :refer [try-either]]
+            [contrib.macros :refer [str-and-code]]
             [hyperfiddle.ide.fiddles.schema :as schema]))
 
 

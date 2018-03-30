@@ -1,16 +1,12 @@
 (ns hypercrud.browser.context
-  (:require [cats.monad.either :refer [branch]]
+  (:require [cats.core :as cats]
+            [cats.monad.either :refer [right branch]]
+            [datascript.parser :as parser]
             [hypercrud.browser.routing :as routing]
             [hypercrud.util.reactive :as reactive]
             [hyperfiddle.foundation.actions :as foundation-actions]
             [hyperfiddle.runtime :as runtime]
-
-
-            [cats.core :as cats]
-            [cats.monad.either :as either]
-            [datascript.parser :as parser]
-            [hypercrud.util.non-fatal :refer [try-either]]
-            [hypercrud.util.reactive :as reactive]))
+            [contrib.try :refer [try-either]]))
 
 
 (defn clean [ctx]
@@ -70,7 +66,7 @@
 
                            :db.cardinality/many
                            (relations ctx (reactive/fmap (reactive/partial mapv vector) (:hypercrud.browser/result ctx))))))))
-              (either/right (relation ctx (reactive/fmap vector (:hypercrud.browser/result ctx)))))
+              (right (relation ctx (reactive/fmap vector (:hypercrud.browser/result ctx)))))
     :query (->> (try-either @(reactive/fmap query-type (reactive/cursor (:hypercrud.browser/request ctx) [:query])))
                 (cats/fmap
                   #(condp = %
@@ -78,8 +74,8 @@
                      datascript.parser.FindColl (relations ctx (reactive/fmap (reactive/partial mapv vector) (:hypercrud.browser/result ctx)))
                      datascript.parser.FindTuple (relation ctx (reactive/fmap vec (:hypercrud.browser/result ctx)))
                      datascript.parser.FindScalar (relation ctx (reactive/fmap vector (:hypercrud.browser/result ctx))))))
-    :blank (either/right ctx)
-    (either/right ctx)))
+    :blank (right ctx)
+    (right ctx)))
 
 (letfn [(user-with [rt ctx branch uri tx]
           (runtime/dispatch! rt (foundation-actions/with rt (:hypercrud.browser/invert-route ctx) branch uri tx)))]

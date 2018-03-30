@@ -6,7 +6,7 @@
 
     hypercrud.client.tx-test
     hypercrud.compile.eval-test
-    hypercrud.readers-test
+    hyperfiddle.readers-test
     hypercrud.ui.control.link-controls-test
     hyperfiddle.foundation-test
     hyperfiddle.ide-test
@@ -20,7 +20,7 @@
   (doo-tests
     'hypercrud.client.tx-test
     'hypercrud.compile.eval-test
-    'hypercrud.readers-test
+    'hyperfiddle.readers-test
     'hypercrud.ui.control.link-controls-test
     'hyperfiddle.foundation-test
     'hyperfiddle.ide-test

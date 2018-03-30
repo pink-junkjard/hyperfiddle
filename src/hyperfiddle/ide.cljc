@@ -1,17 +1,17 @@
 (ns hyperfiddle.ide
   (:require [bidi.bidi :as bidi]
+            [contrib.string :refer [safe-read-edn-string]]
             [hypercrud.browser.base :as base]
     #?(:cljs [hypercrud.browser.browser-ui :as browser-ui])
             [hypercrud.browser.core :as browser]
             [hypercrud.browser.routing :as routing]
             [hypercrud.browser.system-fiddle :refer [system-fiddle?]]
             [hypercrud.client.core :as hc]
-    #?(:cljs [hypercrud.react.react-fragment :refer [react-fragment]])
+    #?(:cljs [contrib.reagent :refer [fragment]])
     #?(:cljs [hypercrud.ui.navigate-cmp :as navigate-cmp])
     #?(:cljs [hypercrud.ui.stale :as stale])
             [hypercrud.util.core :refer [unwrap abc]]
             [hypercrud.util.reactive :as reactive]
-            [hypercrud.util.string :refer [safe-read-edn-string]]
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-one!]]
             [hyperfiddle.runtime :as runtime]
@@ -21,7 +21,7 @@
 
     ; pull in public ui deps
     ; todo these hc.ui.* should be reduced to one require e.g. [hypercrud.ui]
-    #?(:cljs [hypercrud.react.react-fragment])
+    #?(:cljs [contrib.reagent])
             [hypercrud.ui.auto-control]
     #?(:cljs [hypercrud.ui.result])
 
@@ -198,7 +198,7 @@
    (defn view-page [?route ctx]
      (let [ide-active (activate-ide? (foundation/hostname->hf-domain-name ctx))
            ctx (assoc ctx :navigate-cmp (reagent/partial navigate-cmp/navigate-cmp (reagent/partial runtime/encode-route (:peer ctx))))]
-       (react-fragment
+       (fragment
          :view-page
          (when ide-active
            [stale/loading

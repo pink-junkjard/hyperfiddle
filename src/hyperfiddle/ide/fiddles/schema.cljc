@@ -1,6 +1,6 @@
 (ns hyperfiddle.ide.fiddles.schema
   (:require [hyperfiddle.ide.fiddles.schema-attribute :as schema-attribute]
-            [hypercrud.compile.macros :refer [str-and-code]]))
+            [contrib.macros :refer [str-and-code]]))
 
 
 (defn db-cardinality-options [$db]

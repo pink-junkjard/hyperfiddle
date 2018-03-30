@@ -4,10 +4,12 @@
                [cljs.js :as cljs]
                [cljs.tagged-literals :as tags]])
             [clojure.string :as string]
-            [hypercrud.compile.reader :refer [hc-data-readers]]
-            [hypercrud.readers :as hc-readers]
-            [hypercrud.util.non-fatal :refer [try-either]]
-            [taoensso.timbre :as timbre]))
+            [contrib.try :refer [try-either]]
+            [taoensso.timbre :as timbre]
+
+    ; This is contrib code, shouldn't be hyperfiddle deps
+            [hyperfiddle.hc_data_readers :refer [hc-data-readers]]
+            [hyperfiddle.readers :as hc-readers]))
 
 
 (defn eval-string [code-str]

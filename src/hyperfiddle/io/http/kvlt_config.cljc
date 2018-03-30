@@ -1,6 +1,6 @@
 (ns hyperfiddle.io.http.kvlt-config
   (:require [#?(:clj clojure.pprint :cljs cljs.pprint) :as pprint]
-            [hypercrud.compile.reader :as reader]
+            [contrib.reader :refer [read-edn-string]]
             [hypercrud.transit :as transit]
             [kvlt.middleware]
             [kvlt.middleware.params]))
@@ -27,5 +27,5 @@
     (with-out-str (pprint/pprint form-params))))
 
 (defmethod kvlt.middleware/from-content-type :application/edn [resp]
-  (let [decoded-val (reader/read-edn-string (:body resp))]  ; todo this can throw
+  (let [decoded-val (read-edn-string (:body resp))]  ; todo this can throw
     (assoc resp :body decoded-val)))

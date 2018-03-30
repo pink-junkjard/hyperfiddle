@@ -1,7 +1,7 @@
 (ns hypercrud.browser.system-link                           ; this namespace is public extern
   (:require [clojure.string :as str]
-            [hypercrud.browser.system-fiddle :as system-fiddle]
-            [hypercrud.util.vedn :as vedn]))
+            [contrib.vedn :as vedn]
+            [hypercrud.browser.system-fiddle :as system-fiddle]))
 
 
 (defn ^:export system-link? [link-id]

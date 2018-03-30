@@ -1,7 +1,7 @@
 (ns hypercrud.browser.router-test
   (:require [#?(:clj clojure.test :cljs cljs.test)
              #?(:clj :refer :cljs :refer-macros) [deftest is]]
-            [hypercrud.compile.reader]
+            [contrib.reader]
             [hypercrud.browser.router :refer [encode decode]]
             [hypercrud.browser.routing :refer [normalize-args]]
             ))

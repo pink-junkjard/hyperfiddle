@@ -4,7 +4,7 @@
             [clojure.string :as string]
             [hypercrud.client.core :as hc]
             [hypercrud.util.core :as util :refer [tee]]
-            [hypercrud.util.string :as hc-string]
+            [contrib.string :refer [memoized-safe-read-edn-string]]
             [taoensso.timbre :as timbre]))
 
 
@@ -21,7 +21,7 @@
        (remove #(string/starts-with? % "$"))))
 
 (defn safe-parse-query-validated [fiddle]
-  (mlet [q (hc-string/memoized-safe-read-edn-string (:fiddle/query fiddle))]
+  (mlet [q (memoized-safe-read-edn-string (:fiddle/query fiddle))]
     (if (vector? q)
       (cats/return q)
       (either/left {:message (str "Invalid query '" (pr-str q) "', only vectors supported")}))))

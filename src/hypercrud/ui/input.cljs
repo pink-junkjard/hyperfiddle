@@ -1,11 +1,11 @@
 (ns hypercrud.ui.input
   (:require [cats.monad.either :as either]
             [hypercrud.util.reactive :as reactive]
-            [hypercrud.util.string :as hc-string]))
+            [contrib.string :refer [safe-read-edn-string]]))
 
 
 (defn read-string-or-nil [code-str]
-  (either/branch (hc-string/safe-read-edn-string code-str)
+  (either/branch (safe-read-edn-string code-str)
                  (constantly nil)
                  identity))
 
@@ -45,7 +45,7 @@
 (defn edn-input* [value on-change! & [props]]
   (let [parse-string read-string-or-nil
         to-string pr-str
-        valid? #(either/branch (hc-string/safe-read-edn-string %) ; differentiate between read `nil` and error
+        valid? #(either/branch (safe-read-edn-string %) ; differentiate between read `nil` and error
                                (constantly false)
                                (constantly true))]
     ^{:key value}

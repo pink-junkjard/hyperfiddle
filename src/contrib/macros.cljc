@@ -1,5 +1,5 @@
-(ns hypercrud.compile.macros
-  #?(:cljs (:require-macros [hypercrud.compile.macros :refer [str-and-code]]))
+(ns contrib.macros                                          ; put this in eval?
+  #?(:cljs (:require-macros [contrib.macros :refer [str-and-code]]))
   (:require [hypercrud.util.core :as util]))
 
 

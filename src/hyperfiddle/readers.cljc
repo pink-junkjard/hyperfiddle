@@ -1,4 +1,4 @@
-(ns hypercrud.readers
+(ns hyperfiddle.readers
   (:require [hypercrud.types.ThinEntity :refer [read-ThinEntity]]
             [hypercrud.types.URI :refer [read-URI]]))
 

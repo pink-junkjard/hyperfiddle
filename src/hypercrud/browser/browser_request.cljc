@@ -8,7 +8,7 @@
             [hypercrud.browser.routing :as routing]
             [hypercrud.client.schema :as schema-util]
             [hypercrud.util.core :refer [unwrap]]
-            [hypercrud.util.non-fatal :refer [try-catch-non-fatal try-either]]
+            [contrib.try :refer [try-catch-non-fatal try-either]]
             [hypercrud.util.reactive :as reactive]
             [hyperfiddle.runtime :as runtime]
             [taoensso.timbre :as timbre]))

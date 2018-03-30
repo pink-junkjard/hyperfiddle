@@ -6,8 +6,8 @@
             [hypercrud.util.branch :as branch]
             [hypercrud.util.core :as util]
             [hypercrud.util.reactive :as reactive]
-            [hypercrud.util.string :as hc-string]
-            [hypercrud.util.vedn :as vedn]
+            [contrib.string :refer [memoized-safe-read-edn-string]]
+            [contrib.vedn :as vedn]
             [hyperfiddle.runtime :as runtime]
             [taoensso.timbre :as timbre])
   #?(:clj
@@ -70,7 +70,7 @@
            no-fe)))
 
 (defn auto-formula [link]
-  (-> (hc-string/memoized-safe-read-edn-string (str "[" (:link/path link) "]"))
+  (-> (memoized-safe-read-edn-string (str "[" (:link/path link) "]"))
       (either/branch
         (fn [e]
           (timbre/error e)

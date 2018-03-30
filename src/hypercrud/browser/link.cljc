@@ -1,16 +1,16 @@
 (ns hypercrud.browser.link
   (:require [cats.core :as cats]
             [cats.monad.either :as either]
+            [hypercrud.compile.eval :as eval]
+            [hypercrud.util.reactive :as reactive]
+            [contrib.string :refer [memoized-safe-read-edn-string]]
+            [contrib.try :refer [try-either]]
             [hypercrud.browser.base :as base]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.popovers :as popovers]
             [hypercrud.browser.q-util :as q-util]
             [hypercrud.browser.routing :as routing]
-            [hypercrud.compile.eval :as eval]
             [hypercrud.util.core :refer [pprint-str unwrap]]
-            [hypercrud.util.non-fatal :refer [try-either]]
-            [hypercrud.util.reactive :as reactive]
-            [hypercrud.util.string :as hc-string]
             [hyperfiddle.foundation.actions :as foundation-actions]
             [hyperfiddle.runtime :as runtime]
             [promesa.core :as p]
@@ -23,7 +23,7 @@
 (defn same-path-as? [path]
   (fn [link]
     (either/branch
-      (hc-string/memoized-safe-read-edn-string (str "[" (:link/path link) "]"))
+      (memoized-safe-read-edn-string (str "[" (:link/path link) "]"))
       (fn [e]
         (timbre/error e)                                    ; swallow the error
         false)

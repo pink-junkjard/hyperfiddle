@@ -1,9 +1,10 @@
 (ns hyperfiddle.foundation
+  (:refer-clojure :exclude [read-string])
   (:require [clojure.string :as string]
             [cuerdas.core :as cuerdas]
             [hypercrud.browser.routing :as routing]
             [hypercrud.client.core :as hc]
-            [hypercrud.compile.reader :as reader]
+            [contrib.reader :refer [read-string read-edn-string]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.Err :as Err]
     #?(:cljs [hypercrud.ui.control.code :refer [code*]])
@@ -72,7 +73,7 @@
        [:pre (.-stack e)]]])])
 
 (defn process-domain [domain]
-  (-> (into {} domain) (update-existing :domain/environment reader/read-string) #_"todo this can throw"))
+  (-> (into {} domain) (update-existing :domain/environment read-string) #_"todo this can throw"))
 
 (defn context [ctx route]
   (let [domain @(runtime/state (:peer ctx) [::runtime/domain])
@@ -95,7 +96,7 @@
      (let [stage-val @(runtime/state peer [:stage])
            edn (util/pprint-str stage-val 70)]
        ; todo this can throw
-       [code* edn #(runtime/dispatch! peer (foundation-actions/reset-stage peer (reader/read-edn-string %)))])))
+       [code* edn #(runtime/dispatch! peer (foundation-actions/reset-stage peer (read-edn-string %)))])))
 
 #?(:cljs
    (defn leaf-view [route ctx f]

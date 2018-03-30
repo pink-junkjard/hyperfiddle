@@ -4,13 +4,14 @@
             [cats.monad.either :as either]
             [clojure.set :as set]
             [clojure.walk :as walk]
+            [contrib.try :refer [try-either]]
             [hypercrud.browser.dbname :as dbname]
             [hypercrud.browser.router :as router]
             [hypercrud.compile.eval :as eval]
-            [hypercrud.compile.reader :as reader]
+            [contrib.reader :refer [read-edn-string]]
             [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
             [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
-            [hypercrud.util.non-fatal :refer [try-either]]
+
             [hypercrud.util.core :refer [update-existing xorxs]]
             [hyperfiddle.runtime :as runtime])
   #?(:clj
@@ -119,7 +120,7 @@
   (transform-param [this]
     (fn [v]
       (let [$ (.-dbname this)                               ; the "$" is provided by entity placeholder in the route
-            e (reader/read-edn-string v)]                   ; the reader will need to subs ! to /
+            e (read-edn-string v)]                   ; the reader will need to subs ! to /
         (->ThinEntity $ e))))
   (matches? [this s]
     (let [r (re-pattern
@@ -134,7 +135,7 @@
   bidi/Pattern
   (match-pattern [this env]
     ; is this even in play? I don't think I ever hit this bp
-    (let [read (reader/read-edn-string (:remainder env))]
+    (let [read (read-edn-string (:remainder env))]
       (-> env
           (update-in [:route-params] assoc (.-id this) (->ThinEntity (.-dbname this) read))
           ; totally not legit to count read bc whitespace

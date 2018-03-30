@@ -1,5 +1,5 @@
-(ns hypercrud.util.template
-  #?(:cljs (:require-macros [hypercrud.util.template :refer [load-resource]])
+(ns contrib.template
+  #?(:cljs (:require-macros [contrib.template :refer [load-resource]])
      :clj
            (:require [clojure.java.io :as io])))
 

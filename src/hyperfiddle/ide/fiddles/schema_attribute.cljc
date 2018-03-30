@@ -1,7 +1,7 @@
 (ns hyperfiddle.ide.fiddles.schema-attribute
   (:require [clojure.set :as set]
             [hypercrud.client.tx :as tx]
-            [hypercrud.compile.macros :refer [str-and-code']]
+            [contrib.macros :refer [str-and-code']]
             [hypercrud.util.reactive :as reactive]
     #?(:cljs [reagent.core :as reagent])))
 

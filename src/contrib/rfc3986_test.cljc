@@ -1,10 +1,9 @@
 (ns contrib.rfc3986-test
   (:require [#?(:clj clojure.test :cljs cljs.test)
              #?(:clj :refer :cljs :refer-macros) [deftest is]]
-            [hypercrud.compile.reader]
+            [contrib.reader]                                ; [hyperfiddle.readers]  i think is real dependency
             [contrib.rfc3986 :refer [encode-rfc3986-pchar decode-rfc3986-pchar
-                                     encode-ednish decode-ednish]]
-            ))
+                                     encode-ednish decode-ednish]]))
 
 (deftest url-encode-1
   []

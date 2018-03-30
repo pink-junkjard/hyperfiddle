@@ -2,13 +2,13 @@
   (:require [cats.core :as cats]
             [cats.monad.either :as either]
             [clojure.string :as string]
+            [contrib.string :refer [safe-read-edn-string]]
             [hypercrud.browser.browser-request :as browser-request]
             [hypercrud.browser.context :as context]
-            [hypercrud.compile.macros :refer [str-and-code]]
+            [contrib.macros :refer [str-and-code]]
             [hypercrud.types.URI #?@(:cljs [:refer [URI]])]
     #?(:cljs [hypercrud.ui.auto-control :as auto-control])
-            [hypercrud.util.reactive :as reactive]
-            [hypercrud.util.string :as hc-string])
+            [hypercrud.util.reactive :as reactive])
   #?(:clj
      (:import (java.net URI))))
 
@@ -23,7 +23,7 @@
   #?(:clj  ctx
      :cljs (-> ctx
                (assoc-in [:fields :domain/ident :renderer]
-                         (hypercrud.compile.macros/str-and-code'
+                         (contrib.macros/str-and-code'
                            (fn [maybe-field props ctx]
                              [:div.value
                               [hypercrud.ui.auto-control/auto-control nil nil nil ctx]
@@ -44,7 +44,7 @@
                              [:div
                               [(auto-control/attribute-control ctx) field props ctx]
                               (->> (-> @(:value ctx)
-                                       (hc-string/safe-read-edn-string)
+                                       (safe-read-edn-string) ; memoized?
                                        ; todo something with this error
                                        (cats/mplus (either/right nil))
                                        (cats/extract))

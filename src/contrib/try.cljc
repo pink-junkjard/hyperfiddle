@@ -1,5 +1,5 @@
-(ns hypercrud.util.non-fatal
-  #?(:cljs (:require-macros [hypercrud.util.non-fatal :refer [try-catch-non-fatal try-either]]))
+(ns contrib.try
+  #?(:cljs (:require-macros [contrib.try :refer [try-catch-non-fatal try-either]]))
   (:require [cats.monad.either :as either]))
 
 

@@ -1,4 +1,4 @@
-(ns hypercrud.util.base-64
+(ns contrib.base-64
   #?(:cljs (:require [goog.crypt.base64 :as base64]))
   #?(:clj
      (:import (java.util.Base64))))

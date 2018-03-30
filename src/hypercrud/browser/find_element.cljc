@@ -2,10 +2,10 @@
   (:require [cats.core :as cats :refer [mlet]]
             [cats.monad.either :as either]
             [clojure.set :as set]
+            [contrib.try :refer [try-either]]
             [datascript.parser :as parser]
             [hypercrud.browser.context :as context]
             [hypercrud.util.core :as util]
-            [hypercrud.util.non-fatal :refer [try-either]]
             [hypercrud.util.reactive :as reactive]))
 
 

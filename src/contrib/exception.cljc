@@ -1,4 +1,4 @@
-(ns hypercrud.util.exception)
+(ns contrib.exception)                                      ; dead code ?
 
 
 ; a platform agnostic Error/Exception ctor

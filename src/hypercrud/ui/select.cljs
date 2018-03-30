@@ -1,10 +1,10 @@
 (ns hypercrud.ui.select
   (:require [cats.core :as cats]
             [cats.monad.either :as either]
+            [contrib.try :refer [try-either]]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.core :as browser]
             [hypercrud.client.tx :as tx]
-            [hypercrud.util.non-fatal :refer [try-either]]
             [hypercrud.util.reactive :as reactive]))
 
 

@@ -1,6 +1,9 @@
 (ns hypercrud.browser.base
   (:require [cats.core :as cats :refer [mlet return]]
             [cats.monad.either :as either]
+            [hypercrud.util.reactive :as reactive]
+            [contrib.string :refer [memoized-safe-read-edn-string]]
+            [contrib.try :refer [try-either]]
             [hypercrud.browser.auto-link :refer [auto-links]]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.find-element :as find-element]
@@ -14,10 +17,7 @@
             [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
-            [hypercrud.types.ThinEntity :refer [#?(:cljs ThinEntity)]]
-            [hypercrud.util.non-fatal :refer [try-either]]
-            [hypercrud.util.reactive :as reactive]
-            [hypercrud.util.string :as hc-string])
+            [hypercrud.types.ThinEntity :refer [#?(:cljs ThinEntity)]])
   #?(:clj
      (:import (hypercrud.types.Entity Entity)
               (hypercrud.types.ThinEntity ThinEntity))))
@@ -107,7 +107,7 @@
 
 (defn request-for-fiddle [fiddle ctx]
   (case @(reactive/cursor fiddle [:fiddle/type])
-    :query (mlet [q (hc-string/memoized-safe-read-edn-string @(reactive/cursor fiddle [:fiddle/query]))
+    :query (mlet [q (memoized-safe-read-edn-string @(reactive/cursor fiddle [:fiddle/query]))
                   args (validate-query-params q (get-in ctx [:route 1]) ctx)]
              (return (->QueryRequest q args)))
 
@@ -116,7 +116,7 @@
           uri (try (let [dbname (.-dbname e)]               ;todo report this exception better
                      (get-in ctx [:hypercrud.browser/domain :domain/environment dbname]))
                    (catch #?(:clj Exception :cljs js/Error) e nil))
-          pull-exp (or (-> (hc-string/memoized-safe-read-edn-string @(reactive/cursor fiddle [:fiddle/pull]))
+          pull-exp (or (-> (memoized-safe-read-edn-string @(reactive/cursor fiddle [:fiddle/pull]))
                            (either/branch (constantly nil) identity)
                            first)
                        ['*])]

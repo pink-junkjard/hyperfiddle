@@ -5,7 +5,7 @@
             [hypercrud.browser.context :as context]
             [hypercrud.browser.link :as link]
             [hypercrud.browser.routing :as routing]
-    #?(:cljs [hypercrud.react.react-fragment :refer [react-fragment]])
+    #?(:cljs [contrib.reagent :refer [fragment]])
             [hypercrud.types.Err :as Err]
             [hypercrud.ui.css :refer [css-slugify classes]]
             [hypercrud.ui.native-event-listener :refer [native-on-click-listener]]
@@ -13,9 +13,9 @@
             [hypercrud.ui.stale :as stale]
     ;#?(:cljs [hypercrud.ui.form :as form])
             [hypercrud.util.core :as util :refer [unwrap or-str]]
-            [hypercrud.util.non-fatal :refer [try-either]]
+            [contrib.try :refer [try-either]]
             [hypercrud.util.reactive :as reactive]
-            [hypercrud.util.string :refer [memoized-safe-read-edn-string]]
+            [contrib.string :refer [memoized-safe-read-edn-string]]
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.foundation.actions :as foundation-actions]
             [hyperfiddle.runtime :as runtime]))
@@ -33,14 +33,14 @@
    :with-user-fn #?(:clj  (assert false "todo")
                     :cljs (fn [user-fn]
                             (fn [ctx]
-                              #_(react-fragment :_) #_(list)
+                              #_(fragment :_) #_(list)
                               [:div
                                [safe-reagent-call user-fn ctx (css-slugify @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/ident]))]
                                [fiddle-css-renderer @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]])))
    ; todo ui binding should be provided by a RT
    :default #?(:clj  (assert false "todo")
                :cljs (fn [ctx]
-                       #_(react-fragment :_) #_(list)
+                       #_(fragment :_) #_(list)
                        [:div
                         [hypercrud.ui.result/view ctx (css-slugify @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/ident]))]
                         [fiddle-css-renderer @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]]))})

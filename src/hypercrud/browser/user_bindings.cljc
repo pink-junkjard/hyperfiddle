@@ -1,8 +1,8 @@
 (ns hypercrud.browser.user-bindings
   (:require [cats.core :as cats :refer [mlet]]
             [cats.monad.either :as either]
+            [contrib.try :refer [try-either]]
             [hypercrud.compile.eval :as eval]
-            [hypercrud.util.non-fatal :refer [try-either]]
             [hypercrud.util.reactive :as reactive]
             [taoensso.timbre :as timbre]))
 

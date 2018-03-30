@@ -1,9 +1,10 @@
-(ns hypercrud.util.vedn
-  #?(:cljs (:require-macros [hypercrud.util.vedn :refer [load-vedn-from-file]]))
+(ns contrib.vedn
+  (:refer-clojure :exclude [read-string])
+  #?(:cljs (:require-macros [contrib.vedn :refer [load-vedn-from-file]]))
   (:require [clojure.string :as string]
-            [hypercrud.compile.macros :refer [str-and-code']]
-            [hypercrud.compile.reader :as reader]
-            [hypercrud.util.template :as template]))
+            [contrib.macros :refer [str-and-code']]
+            [contrib.reader :refer [read-string]]
+            [contrib.template :as template]))
 
 
 (def vedn-delimiter "(?m)^==")
@@ -21,7 +22,7 @@
           (partition 2)
           (mapv (fn [[k v]]
                   (let [code-str (string/trim v)
-                        code (reader/read-string code-str)]
+                        code (read-string code-str)]
                     ; cannot str-and-code' until runtime https://dev.clojure.org/jira/browse/CLJ-1206
-                    [(reader/read-string k) `(str-and-code' ~code ~code-str)])))
+                    [(read-string k) `(str-and-code' ~code ~code-str)])))
           (into {}))))

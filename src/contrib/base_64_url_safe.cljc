@@ -1,6 +1,6 @@
-(ns hypercrud.util.base-64-url-safe
+(ns contrib.base-64-url-safe
   (:require [clojure.string :as string]
-            [hypercrud.util.base-64 :as base-64]))
+            [contrib.base-64 :as base-64]))
 
 
 (defn encode [s]
