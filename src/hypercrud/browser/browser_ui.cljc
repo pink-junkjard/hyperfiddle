@@ -12,7 +12,6 @@
             [hypercrud.browser.link :as link]
             [hypercrud.browser.routing :as routing]
             [hypercrud.types.Err :as Err]
-            [hypercrud.ui.auto-control :refer [auto-control' control-props]]
             [hypercrud.ui.native-event-listener :refer [native-on-click-listener]]
     #?(:cljs [hypercrud.ui.safe-render :refer [safe-reagent-call]])
             [hypercrud.ui.stale :as stale]
@@ -65,10 +64,12 @@
         (value [path ctx & args]
           (let [{[f & args] nil :as kwargs} (util/kwargs args)
                 ctx (context/relation-path ctx path)
-                control (or f (auto-control' ctx))
+                ; Awful hacks to solve a circular reference by using legacy auto-control interface
+                ;control (or f (hypercrud.ui.auto-control/auto-control' ctx))
                 field (:hypercrud.browser/field ctx)
-                control-props (merge (control-props ctx) kwargs)]
-            (control field control-props ctx)))
+                ;control-props (merge (hypercrud.ui.auto-control/control-props ctx) kwargs)
+                ]
+            #?(:cljs [hypercrud.ui.auto-control/auto-control field {} nil ctx])))
         (browse' [ident ctx]
           (->> (base/data-from-link @(r/track link/rel->link ident ctx) ctx)
                (cats/fmap :hypercrud.browser/result)
