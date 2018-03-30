@@ -4,7 +4,7 @@
             [hypercrud.browser.routing :as routing]
             [hypercrud.client.peer :as peer]
             [hypercrud.client.schema :as schema]
-            [hypercrud.client.tx :as tx]
+            [contrib.datomic-tx :as tx]
             [hypercrud.types.DbVal :refer [->DbVal]]
             [hypercrud.util.branch :as branch]
             [contrib.data :refer [map-values map-keys]]

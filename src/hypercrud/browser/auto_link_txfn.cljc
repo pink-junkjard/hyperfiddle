@@ -7,7 +7,7 @@
             [contrib.reader :refer [read-string]]
             [contrib.string :refer [memoized-safe-read-edn-string]]
             [contrib.template :as template]
-            [hypercrud.client.tx]                           ; for resource loading
+            [contrib.datomic-tx]                           ; for resource loading
 
             [taoensso.timbre :as timbre]))
 

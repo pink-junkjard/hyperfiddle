@@ -4,7 +4,7 @@
             [contrib.try :refer [try-either]]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.core :as browser]
-            [hypercrud.client.tx :as tx]
+            [contrib.datomic-tx :as tx]
             [contrib.reactive :as reactive]))
 
 

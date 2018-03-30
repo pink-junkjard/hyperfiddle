@@ -1,4 +1,4 @@
-(ns hypercrud.ui.tracker
+(ns contrib.reactive-debug
   (:require [taoensso.timbre :as timbre]))
 
 
@@ -29,4 +29,4 @@
          (into [c] args)))))
 
 (defmacro track [c & args]
-  (into ['hypercrud.ui.tracker/track-cmp (str c) c] args))
+  (into ['contrib.reactive-debug/track-cmp (str c) c] args))

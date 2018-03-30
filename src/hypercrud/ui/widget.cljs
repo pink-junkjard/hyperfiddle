@@ -1,7 +1,7 @@
 (ns hypercrud.ui.widget
   (:refer-clojure :exclude [boolean keyword long])
   (:require [hypercrud.browser.link :as link]
-            [hypercrud.client.tx :as tx]
+            [contrib.datomic-tx :as tx]
             [hypercrud.ui.attribute.tristate-boolean :as tristate-boolean]
             [hypercrud.ui.control.link-controls :as link-controls]
             [hypercrud.ui.input :as input]

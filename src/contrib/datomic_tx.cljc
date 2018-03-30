@@ -1,4 +1,4 @@
-(ns hypercrud.client.tx
+(ns contrib.datomic-tx
   (:require [clojure.walk :as walk]))
 
 

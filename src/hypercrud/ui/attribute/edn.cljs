@@ -1,7 +1,7 @@
 (ns hypercrud.ui.attribute.edn
   (:require [clojure.set :as set]
             [hypercrud.browser.link :as link]
-            [hypercrud.client.tx :as tx]
+            [contrib.datomic-tx :as tx]
             [hypercrud.ui.control.edn :refer [edn-block* edn-inline-block*]]
             [hypercrud.ui.control.link-controls :as link-controls]
             [contrib.reactive :as reactive]))

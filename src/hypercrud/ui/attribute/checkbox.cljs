@@ -1,5 +1,5 @@
 (ns hypercrud.ui.attribute.checkbox
-  (:require [hypercrud.client.tx :as tx]
+  (:require [contrib.datomic-tx :as tx]
             [hypercrud.ui.control.checkbox :refer [checkbox*]]
             [hypercrud.ui.control.link-controls :as link-controls]))
 

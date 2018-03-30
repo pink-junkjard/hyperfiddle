@@ -1,7 +1,7 @@
-(ns hypercrud.client.tx-test
+(ns contrib.datomic-tx-test
   (:require [#?(:clj clojure.test :cljs cljs.test) #?(:clj :refer :cljs :refer-macros) [deftest is]]
             [clojure.set :refer [difference]]
-            [hypercrud.client.tx :refer [into-tx]]))
+            [contrib.datomic-tx :refer [into-tx]]))
 
 
 (defn check-tx [in expected-out]

@@ -1,5 +1,5 @@
 (ns hypercrud.ui.attribute.code
-  (:require [hypercrud.client.tx :as tx]
+  (:require [contrib.datomic-tx :as tx]
             [hypercrud.ui.control.code :as code]
             [hypercrud.ui.control.link-controls :as link-controls]))
 

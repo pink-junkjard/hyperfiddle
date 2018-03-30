@@ -1,5 +1,5 @@
 (ns hypercrud.ui.attribute.instant
-  (:require [hypercrud.client.tx :as tx]
+  (:require [contrib.datomic-tx :as tx]
             [hypercrud.ui.control.instant :as instant]
             [hypercrud.ui.control.link-controls :as link-controls]))
 

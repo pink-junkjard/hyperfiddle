@@ -7,7 +7,7 @@
             [hypercrud.browser.context :as context]
             [hypercrud.browser.link :as link]
             [hypercrud.browser.system-fiddle :as system-fiddle]
-            [hypercrud.client.tx :as tx]
+            [contrib.datomic-tx :as tx]
             [contrib.reagent :refer [fragment]]
             [hypercrud.ui.control.markdown-rendered :refer [markdown-rendered*]]
             [hypercrud.ui.radio :as radio]

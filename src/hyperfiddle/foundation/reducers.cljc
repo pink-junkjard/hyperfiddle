@@ -1,5 +1,5 @@
 (ns hyperfiddle.foundation.reducers
-  (:require [hypercrud.client.tx :as tx]
+  (:require [contrib.datomic-tx :as tx]
             [hypercrud.types.Err :refer [->Err]]
             [hypercrud.util.branch :as branch]
             [contrib.data :refer [map-values pprint-str]]))
