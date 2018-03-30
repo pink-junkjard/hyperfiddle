@@ -51,13 +51,13 @@
 ; this is currently making assumptions on dbholes
 (defn validated-route' [fiddle route ctx]
   ; We specifically hydrate this deep just so we can validate anchors like this.
-  (let [[_ params] route]
+  (let [[_ [$1 :as params]] route]
     (case (:fiddle/type fiddle)
       ; todo check fe conn
       ; todo merge in dbhole lookup, see: hypercrud.browser.base/request-for-link
       :query (let [q (unwrap (q-util/safe-parse-query-validated fiddle))]
                (base/validate-query-params q params ctx))
-      :entity (if (not= nil params)                         ; handles `e` but no logic for `[e a]`
+      :entity (if (not= nil $1)                             ; handles `e` but no logic for `[e a]`
                 ; todo check fe conn
                 (either/right route)
                 (either/left {:message "malformed entity param" :data {:params params}}))
