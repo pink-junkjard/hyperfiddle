@@ -45,7 +45,7 @@
                                                          :hypercrud/sys? true
                                                          :anchor/prompt (str "remove-" (:name fe))
                                                          :link/rel (keyword (str "sys-remove-" (:name fe)))
-                                                         :link/fiddle (system-fiddle/fiddle-blank-system-remove)
+                                                         :link/fiddle system-fiddle/fiddle-blank-system-remove
                                                          :link/dependent? true
                                                          :link/path (str fe-pos)
                                                          :link/managed? true
