@@ -27,8 +27,9 @@
 
 ; inline sys-link data when the entity is a system-fiddle
 (letfn [(-shadow-fiddle [ctx fiddle-val]
-          (let [[target-fiddle] (get-in ctx [:route 1])     ; can't we get this from the fiddle-val
-                [_ target-fiddle-ident] (:db/id target-fiddle)]
+          (let [route (:route ctx)
+                [_ [e]] route                               ; [:hyperfiddle/topnav [#entity["$" [:fiddle/ident :hyperfiddle.system/remove]]]]
+                [_ target-fiddle-ident] (:db/id e)]
             (if (system-fiddle/system-fiddle? target-fiddle-ident) ; this fiddle does not actually exist, conjure it up
               (-> (unwrap (system-fiddle/hydrate-system-fiddle target-fiddle-ident))
                   (update :fiddle/bindings #(or (-> % meta :str) %))
