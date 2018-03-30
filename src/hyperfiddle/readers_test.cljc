@@ -1,6 +1,6 @@
 (ns hyperfiddle.readers-test
   (:require [#?(:clj clojure.test :cljs cljs.test) #?(:clj :refer :cljs :refer-macros) [deftest is]]
-            [hypercrud.compile.eval :as eval]
+            [contrib.eval :as eval]
             [contrib.reader :refer [read-string read-edn-string]]
             [hypercrud.transit :as transit]
             [hypercrud.types.DbVal :refer [->DbVal]]

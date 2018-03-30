@@ -1,5 +1,6 @@
 (ns hyperfiddle.hc_data_readers
-  (:require [hyperfiddle.readers]                           ; important
+  (:require [#?(:cljs cljs.reader :clj clojure.tools.reader.default-data-readers)] ; date, uuid
+            [hyperfiddle.readers]                           ; important
             [hypercrud.types.DbVal :refer [read-DbVal]]
             [hypercrud.types.EntityRequest :refer [read-EntityRequest]]
             [hypercrud.types.Err :refer [read-Err]]

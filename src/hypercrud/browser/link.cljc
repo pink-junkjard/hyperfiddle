@@ -1,7 +1,7 @@
 (ns hypercrud.browser.link
   (:require [cats.core :as cats]
             [cats.monad.either :as either]
-            [hypercrud.compile.eval :as eval]
+            [contrib.eval :refer [eval-str]]
             [hypercrud.util.reactive :as reactive]
             [contrib.string :refer [memoized-safe-read-edn-string]]
             [contrib.try :refer [try-either]]
@@ -77,7 +77,7 @@
   (let [fiddle (:link/fiddle link)                          ; can be nil - in which case route is invalid
         [_ args :as route] (unwrap unvalidated-route')
         validated-route' (validated-route' fiddle route ctx)
-        user-props' (cats/bind (eval/eval-str (:hypercrud/props link))
+        user-props' (cats/bind (eval-str (:hypercrud/props link))
                                (fn [user-expr]
                                  (if user-expr
                                    (get-or-apply' user-expr ctx)
@@ -104,7 +104,7 @@
                    (apply str))})))
 
 (defn stage! [link route popover-id child-branch ctx]
-  (let [user-txfn (or (unwrap (eval/eval-str (:link/tx-fn link))) (constantly nil))]
+  (let [user-txfn (or (unwrap (eval-str (:link/tx-fn link))) (constantly nil))]
     (-> (p/promise
           (fn [resolve! reject!]
             (let [swap-fn (fn [multi-color-tx]

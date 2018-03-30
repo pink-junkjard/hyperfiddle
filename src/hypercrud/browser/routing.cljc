@@ -4,14 +4,13 @@
             [cats.monad.either :as either]
             [clojure.set :as set]
             [clojure.walk :as walk]
+            [contrib.eval :refer [eval-str]]
+            [contrib.reader :refer [read-edn-string]]
             [contrib.try :refer [try-either]]
             [hypercrud.browser.dbname :as dbname]
             [hypercrud.browser.router :as router]
-            [hypercrud.compile.eval :as eval]
-            [contrib.reader :refer [read-edn-string]]
             [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
             [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
-
             [hypercrud.util.core :refer [update-existing xorxs]]
             [hyperfiddle.runtime :as runtime])
   #?(:clj
@@ -75,7 +74,7 @@
   (mlet [fiddle-id (if-let [page (:link/fiddle link)]
                      (either/right (:fiddle/ident page))
                      (either/left {:message "link has no fiddle" :data {:link link}}))
-         user-fn (eval/eval-str (:link/formula link))
+         user-fn (eval-str (:link/formula link))
          args (if user-fn
                 (try-either (user-fn ctx))
                 (either/right nil))

@@ -2,7 +2,6 @@
   (:refer-clojure :exclude [read-string])
   (:require [#?(:clj clojure.tools.reader :cljs cljs.tools.reader) :as reader]
             [#?(:clj clojure.tools.reader.edn :cljs cljs.tools.reader.edn) :as edn-reader]
-            [#?(:cljs cljs.reader :clj clojure.tools.reader.default-data-readers)] ; date, uuid
             [hyperfiddle.hc_data_readers :refer [hc-data-readers]]))
 
 ; cljs.tagged-literals is the cljs compile-time stuff, I chose

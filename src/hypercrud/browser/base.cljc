@@ -2,6 +2,7 @@
   (:require [cats.core :as cats :refer [mlet return]]
             [cats.monad.either :as either]
             [hypercrud.util.reactive :as reactive]
+            [contrib.eval :refer [eval-str]]
             [contrib.string :refer [memoized-safe-read-edn-string]]
             [contrib.try :refer [try-either]]
             [hypercrud.browser.auto-link :refer [auto-links]]
@@ -13,7 +14,6 @@
             [hypercrud.browser.user-bindings :as user-bindings]
             [hypercrud.client.core :as hc]
             [hypercrud.client.schema :as schema-util]
-            [hypercrud.compile.eval :as eval]
             [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
@@ -134,7 +134,7 @@
   (let [{:keys [from-ctx from-fiddle with-user-fn default]} f-mode-config]
     (case @(:hypercrud.ui/display-mode ctx)
       :user (->> (or (some-> (from-ctx ctx) either/right)
-                     (eval/eval-str (from-fiddle fiddle)))
+                     (eval-str (from-fiddle fiddle)))
                  (cats/fmap #(if % (with-user-fn %) default)))
       :xray (either/right default))))
 

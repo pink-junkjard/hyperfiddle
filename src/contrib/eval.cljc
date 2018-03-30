@@ -1,4 +1,4 @@
-(ns hypercrud.compile.eval
+(ns contrib.eval
   (:require [cats.monad.either :as either]
     #?@(:cljs [[cljs.analyzer :as analyzer]
                [cljs.js :as cljs]

@@ -5,7 +5,7 @@
     [reagent.dom.server]                                    ; needed for hypercrud.ui.safe-render
 
     hypercrud.client.tx-test
-    hypercrud.compile.eval-test
+    contrib.eval-test
     hyperfiddle.readers-test
     hypercrud.ui.control.link-controls-test
     hyperfiddle.foundation-test
@@ -19,7 +19,7 @@
 (defn run []
   (doo-tests
     'hypercrud.client.tx-test
-    'hypercrud.compile.eval-test
+    'contrib.eval-test
     'hyperfiddle.readers-test
     'hypercrud.ui.control.link-controls-test
     'hyperfiddle.foundation-test
