@@ -49,7 +49,6 @@
                    :link/render-inline?
                    :link/tx-fn]}
    :fiddle/markdown
-   :fiddle/name                                             ; legacy
    :fiddle/pull
    :fiddle/query
    :fiddle/renderer
