@@ -7,9 +7,11 @@
 
 (defn- serializable-error [e]
   ; need errors to be serializable, so crapily pr-str
-  (if-let [message #?(:clj (.getMessage e) :cljs (ex-message e))]
-    (assoc (->Err (str message)) :data (util/pprint-str (ex-data e)))
-    (pr-str e)))
+  (let [?message #?(:clj (.getMessage e) :cljs (ex-message e))]
+    (cond
+      (string? e) e
+      ?message (assoc (->Err (str ?message)) :data (util/pprint-str (ex-data e)))
+      :else (pr-str e))))
 
 (defn stage-reducer [stage action & args]
   (let [discard (fn [stage branch]
