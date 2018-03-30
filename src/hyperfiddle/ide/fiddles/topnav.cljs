@@ -1,6 +1,7 @@
 (ns hyperfiddle.ide.fiddles.topnav
   (:require [cats.core :as cats]
             [cats.monad.either :as either]
+            [contrib.base-64-url-safe :as base64-url-safe]
             [contrib.data :refer [kwargs unwrap]]
             [contrib.datomic-tx :as tx]
             [contrib.reactive :as reactive]
@@ -107,7 +108,8 @@
        ((:anchor ctx) :new-fiddle ctx "new-fiddle")
        (if (:user-profile ctx)
          ((:anchor ctx) :account ctx (get-in ctx [:user-profile :email]))
-         [:span.nav-link.auth [:a {:href (str (stateless-login-url ctx) "&state=" (runtime/encode-route (:peer ctx) (:target-route ctx)))} "Login"]])]]
+         (let [auth-state (base64-url-safe/encode (runtime/encode-route (:peer ctx) (:target-route ctx)))]
+           [:span.nav-link.auth [:a {:href (str (stateless-login-url ctx) "&state=" auth-state)} "Login"]]))]]
      [:div.hyperfiddle-topnav-fiddle-controls
       ((:cell ctx) [true 0 :fiddle/type] ctx)
       ((:cell ctx) [true 0 :fiddle/pull] ctx)
