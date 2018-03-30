@@ -12,6 +12,7 @@
             [hypercrud.browser.link :as link]
             [hypercrud.browser.routing :as routing]
             [hypercrud.types.Err :as Err]
+            [hypercrud.ui.auto-control :refer [auto-control' control-props]]
             [hypercrud.ui.native-event-listener :refer [native-on-click-listener]]
     #?(:cljs [hypercrud.ui.safe-render :refer [safe-reagent-call]])
             [hypercrud.ui.stale :as stale]
@@ -61,6 +62,13 @@
         (cell [[d i a] ctx & args]                          ; form only
           #?(:clj nil
              :cljs [hypercrud.ui.form/Cell (context/relation-path ctx [d i a])]))
+        (value [path ctx & args]
+          (let [{[f & args] nil :as kwargs} (util/kwargs args)
+                ctx (context/relation-path ctx path)
+                control (or f (auto-control' ctx))
+                field (:hypercrud.browser/field ctx)
+                control-props (merge (control-props ctx) kwargs)]
+            (control field control-props ctx)))
         (browse' [ident ctx]
           (->> (base/data-from-link @(r/track link/rel->link ident ctx) ctx)
                (cats/fmap :hypercrud.browser/result)
@@ -73,6 +81,7 @@
       :anchor anchor
       :browse browse
       :cell cell
+      :value value
       :anchor* anchor*
       :browse' browse')))
 

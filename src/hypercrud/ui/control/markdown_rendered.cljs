@@ -1,17 +1,20 @@
 (ns hypercrud.ui.control.markdown-rendered
-  (:require [contrib.string :refer [memoized-safe-read-edn-string]]
+  (:require [contrib.css :refer [css-slugify classes]]
+            [contrib.data :refer [map-values unwrap or-str]]
+            [contrib.reagent :refer [fragment]]
+            [contrib.reactive :as r]
+            [contrib.string :refer [memoized-safe-read-edn-string]]
             [hyperfiddle.core]
             [hypercrud.browser.context :as context]
             [hypercrud.ui.user-attribute-renderer :refer [safe-eval-user-expr]]
             [hypercrud.ui.control.code]
-            [contrib.css :refer [css-slugify classes]]
-            [contrib.data :refer [map-values unwrap or-str]]
+
             [goog.object]
-            [reagent.core :as reagent]
-            [contrib.reactive :as r]))
+            [reagent.core :as reagent]))
 
 
 (declare markdown)
+(declare markdown-relation)
 (declare remarkInstance)
 
 (defn code-editor-wrap-argv [{:keys [value change!] :as props}]
@@ -20,57 +23,70 @@
 ; Reagent + react-context:
 ; https://github.com/reagent-project/reagent/commit/a8ec0d219bbd507f51a4d9276c4a1dcc020245af
 
-(defn child-with-ctx [f]
+(defn md-extension [f]
   (reagent/create-class
     {:context-types #js {:ctx js/propTypes.object}
-     :reagent-render (fn [props]
-                       (let [ctx (goog.object/get (.-context (reagent/current-component)) "ctx")]
-                         (f props ctx)))}))
+     :reagent-render (fn [{:keys [content argument] :as props}]
+                       (let [ctx (goog.object/get (.-context (reagent/current-component)) "ctx")
+                             content (if-not (= content "undefined") content)
+                             argument (if-not (= argument "undefined") argument)]
+                         (f content argument (dissoc props :content :argument) ctx)))}))
 
 (def eval
-  (child-with-ctx
-    (fn [{:keys [value] :as props} ctx]
+  (md-extension
+    (fn [content argument props ctx]
       (binding [hyperfiddle.core/*ctx* ctx]
-        (safe-eval-user-expr value)))))
+        (safe-eval-user-expr content)))))
 
 (def browse
-  (child-with-ctx
-    (fn [{:keys [renderer ident] :as props} ctx]
-      (let [kwargs (flatten (seq (dissoc props :value :ident)))]
-        (apply (:browse ctx) (keyword ident) ctx kwargs)))))
+  (md-extension
+    (fn [content argument props ctx]
+      (let [kwargs (flatten (seq props))]
+        (apply (:browse ctx) (keyword argument) ctx kwargs)))))
 
 (def anchor
-  (child-with-ctx
-    (fn [{:keys [label ident] :as props} ctx]
-      (let [kwargs (flatten (seq (dissoc props :prompt :ident)))
+  (md-extension
+    (fn [content argument props ctx]
+      (let [kwargs (flatten (seq props))
             ; https://github.com/medfreeman/remark-generic-extensions/issues/45
-            label (or-str (if-not (= label "undefined") label) ident)]
-        (apply (:anchor ctx) (keyword ident) ctx label kwargs)))))
+            label (or-str content argument)]
+        (apply (:anchor ctx) (keyword argument) ctx label kwargs)))))
 
 (def cell
-  (child-with-ctx
-    (fn [{:keys [path] :as props} ctx]
-      (let [kwargs (flatten (seq (dissoc props :prompt :ident)))
-            path (into [true] (unwrap (memoized-safe-read-edn-string (str "[" path "]"))))]
+  (md-extension
+    (fn [content argument props ctx]
+      (let [kwargs (flatten (seq props))
+            path (into [true] (unwrap (memoized-safe-read-edn-string (str "[" argument "]"))))]
         (apply (:cell ctx) path ctx kwargs)))))
 
 (def table
-  (child-with-ctx
-    (fn [{:keys [class] :as props} ctx]
+  (md-extension
+    (fn [content argument {:keys [class] :as props} ctx]
       (let [kwargs (flatten (seq (dissoc props :class)))]
         (hypercrud.ui.table/Table ctx)))))
 
-(def md-list
-  (child-with-ctx
+(def list-
+  (md-extension
     (letfn [(keyfn [relation] (hash (map #(or (:db/id %) %) relation)))]
-      (fn [{:keys [content argument class] :as props} ctx]
-        (let [argument (safe-eval-user-expr argument)]      ; (fn f [content ctx & [?class]])
-          [:div {:class (classes class)}
-           (->> (:relations ctx)
-                (r/unsequence keyfn)
-                (map (fn [[relation k]]
-                       (argument k content (context/relation ctx relation) (str k))))
-                (doall))])))))
+      (fn [content argument {:keys [class] :as props} ctx]
+        [:div {:class (classes class)}
+         (->> (:relations ctx)
+              (r/unsequence keyfn)
+              (map (fn [[relation k]]
+                     ^{:key k} [markdown-relation k content (context/relation ctx relation)]))
+              (doall))]))))
+
+(def value
+  (md-extension
+    (fn [content argument props ctx]
+      (let [content (if content (safe-eval-user-expr content))
+            path (into [true] (unwrap (memoized-safe-read-edn-string (str "[" argument "]"))))]
+        (fragment path ((:value ctx) path ctx content))))))
+
+#_(fragment
+    k
+    (binding [hyperfiddle.core/*ctx* (context/relation ctx relation)]
+      (safe-eval-user-expr content))) ; (fn f [content ctx & [?class]])
 
 (def markdown
   ; remark creates react components which don't evaluate in this stack frame
@@ -101,7 +117,8 @@
    "anchor" anchor
    "cell" cell
    "table" table
-   "list" md-list
+   "list" list-
+   "value" value
    ; relations ; table renderer with docs above and below
    ; relation ? (for setting a title and docs, and then rendering the form by default links and all. Maybe can filter the relation down to a cell path?
 
@@ -118,14 +135,15 @@
                                 {"elements"
                                  {"span" {"html" {"properties" {"content" "::content::"}}}
                                   "p" {"html" {"properties" {"content" "::content::"}}}
-                                  "CodeEditor" {"html" {"properties" {"value" "::content::"}}}
-                                  "block" {"html" {"properties" {"value" "::content::"}}}
-                                  "cljs" {"html" {"properties" {"value" "::content::"}}}
-                                  "browse" {"html" {"properties" {"renderer" "::content::" "ident" "::argument::"}}}
-                                  "anchor" {"html" {"properties" {"label" "::content::" "ident" "::argument::"}}}
-                                  "cell" {"html" {"properties" {"f" "::content::" "path" "::argument::"}}}
-                                  "table" {"html" {"properties" {"f" "::content::"}}}
+                                  "CodeEditor" {"html" {"properties" {"content" "::content::"}}}
+                                  "block" {"html" {"properties" {"content" "::content::"}}}
+                                  "cljs" {"html" {"properties" {"content" "::content::"}}}
+                                  "browse" {"html" {"properties" {"content" "::content::" "argument" "::argument::"}}}
+                                  "anchor" {"html" {"properties" {"content" "::content::" "argument" "::argument::"}}}
+                                  "cell" {"html" {"properties" {"content" "::content::" "argument" "::argument::"}}}
+                                  "table" {"html" {"properties" {"content" "::content::"}}}
                                   "list" {"html" {"properties" {"content" "::content::" "argument" "::argument::"}}}
+                                  "value" {"html" {"properties" {"content" "::content::" "argument" "::argument::"}}}
                                   }}))
                         (.use js/remarkGridTables)
                         (.use js/remarkReact
