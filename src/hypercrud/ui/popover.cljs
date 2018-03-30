@@ -1,5 +1,5 @@
 (ns hypercrud.ui.popover
-  (:require [hypercrud.util.reactive :as reactive]
+  (:require [contrib.reactive :as reactive]
             [re-com.core :as re-com]))
 
 

@@ -1,5 +1,5 @@
 (ns hypercrud.ui.safe-render
-  (:require [hypercrud.util.cljs-platform :refer [code-for-browser code-for-nodejs]]
+  (:require [contrib.cljs-platform :refer [code-for-browser code-for-nodejs]]
             [reagent.core :as reagent]))
 
 

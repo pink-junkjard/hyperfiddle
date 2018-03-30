@@ -6,7 +6,7 @@
             [hypercrud.ui.control.link-controls :as link-controls]
             [hypercrud.ui.input :as input]
             [hypercrud.ui.select :refer [select*]]
-            [hypercrud.util.reactive :as reactive]
+            [contrib.reactive :as reactive]
 
     ;user land (todo these should be in a core hc.ui namespace; widget is arbitrary)
             [hypercrud.ui.attribute.checkbox :refer [checkbox]]

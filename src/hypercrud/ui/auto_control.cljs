@@ -6,7 +6,7 @@
             [hypercrud.ui.table-cell :as table-cell]
             [hypercrud.ui.user-attribute-renderer :refer [safe-eval-user-control-fn]]
             [hypercrud.ui.widget :as widget]
-            [hypercrud.util.reactive :as reactive]))
+            [contrib.reactive :as reactive]))
 
 
 (defn schema-control-form [ctx]

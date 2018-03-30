@@ -10,8 +10,8 @@
     #?(:cljs [contrib.reagent :refer [fragment]])
     #?(:cljs [hypercrud.ui.navigate-cmp :as navigate-cmp])
     #?(:cljs [hypercrud.ui.stale :as stale])
-            [hypercrud.util.core :refer [unwrap abc]]
-            [hypercrud.util.reactive :as reactive]
+            [contrib.data :refer [unwrap abc]]
+            [contrib.reactive :as reactive]
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-one!]]
             [hyperfiddle.runtime :as runtime]

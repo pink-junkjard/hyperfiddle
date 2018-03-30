@@ -8,10 +8,10 @@
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.Err :as Err]
     #?(:cljs [hypercrud.ui.control.code :refer [code*]])
-    #?(:cljs [hypercrud.ui.css :refer [classes]])
+    #?(:cljs [contrib.css :refer [classes]])
     #?(:cljs [hypercrud.ui.stale :as stale])
-            [hypercrud.util.core :as util :refer [update-existing]]
-            [hypercrud.util.reactive :as reactive]
+            [contrib.data :as util :refer [update-existing]]
+            [contrib.reactive :as reactive]
             [hyperfiddle.foundation.actions :as foundation-actions]
             [hyperfiddle.runtime :as runtime]
             [promesa.core :as p #?(:cljs :refer-macros :clj :refer) [do*]]))

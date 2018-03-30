@@ -11,7 +11,7 @@
     hyperfiddle.foundation-test
     hyperfiddle.ide-test
     hypercrud.browser.router-test
-    hypercrud.util.core-test
+    contrib.data-test
     contrib.char-test
     contrib.rfc3986-test
     ))
@@ -25,6 +25,6 @@
     'hyperfiddle.foundation-test
     'hyperfiddle.ide-test
     'hypercrud.browser.router-test
-    'hypercrud.util.core-test
+    'contrib.data-test
     'contrib.char-test
     'contrib.rfc3986-test))

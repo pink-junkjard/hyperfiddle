@@ -6,9 +6,9 @@
             [hypercrud.ui.auto-control :refer [auto-control' control-props]]
             [hypercrud.ui.connection-color :as connection-color]
             [hypercrud.ui.control.link-controls :as link-controls]
-            [hypercrud.ui.css :refer [css-slugify classes]]
+            [contrib.css :refer [css-slugify classes]]
             [hypercrud.ui.label :refer [label]]
-            [hypercrud.util.reactive :as reactive]))
+            [contrib.reactive :as reactive]))
 
 
 (defn attr-sortable? [fe attribute ctx]

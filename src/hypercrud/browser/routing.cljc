@@ -11,7 +11,7 @@
             [hypercrud.browser.router :as router]
             [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
             [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
-            [hypercrud.util.core :refer [update-existing xorxs]]
+            [contrib.data :refer [update-existing xorxs]]
             [hyperfiddle.runtime :as runtime])
   #?(:clj
      (:import (hypercrud.types.Entity Entity)

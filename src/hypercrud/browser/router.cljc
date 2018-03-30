@@ -1,7 +1,7 @@
 (ns hypercrud.browser.router
   (:refer-clojure :exclude [read-string])
   (:require [cuerdas.core :as str]
-            [hypercrud.util.core :refer [split-first rtrim-coll]]
+            [contrib.data :refer [split-first rtrim-coll]]
             [contrib.reader :refer [read-string]]
             [contrib.rfc3986 :refer [encode-rfc3986-pchar decode-rfc3986-pchar encode-ednish decode-ednish]]))
 

@@ -1,4 +1,4 @@
-(ns hypercrud.ui.css
+(ns contrib.css
   (:require [cuerdas.core :as str]))
 
 

@@ -7,9 +7,9 @@
             [hypercrud.browser.popovers :as popovers]
             [hypercrud.browser.routing :as routing]
             [hypercrud.client.schema :as schema-util]
-            [hypercrud.util.core :refer [unwrap]]
+            [contrib.data :refer [unwrap]]
             [contrib.try :refer [try-catch-non-fatal try-either]]
-            [hypercrud.util.reactive :as reactive]
+            [contrib.reactive :as reactive]
             [hyperfiddle.runtime :as runtime]
             [taoensso.timbre :as timbre]))
 

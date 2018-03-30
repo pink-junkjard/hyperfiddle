@@ -2,7 +2,7 @@
   (:require [cuerdas.core :as str]
             [hypercrud.ui.control.markdown-rendered :refer [markdown]]
             [hypercrud.ui.tooltip :refer [tooltip-thick]]
-            [hypercrud.util.reactive :as reactive]))
+            [contrib.reactive :as reactive]))
 
 
 (defn fqn->name [s]

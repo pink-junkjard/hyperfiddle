@@ -3,7 +3,7 @@
             [clojure.test :refer [deftest is]]
             [hypercrud.browser.link :as link]
             [hypercrud.ui.control.link-controls :as link-controls]
-            [hypercrud.util.reactive :as reactive]))
+            [contrib.reactive :as reactive]))
 
 
 (def mock-links

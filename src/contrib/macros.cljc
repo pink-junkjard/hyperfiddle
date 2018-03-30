@@ -1,6 +1,6 @@
 (ns contrib.macros                                          ; put this in eval?
   #?(:cljs (:require-macros [contrib.macros :refer [str-and-code]]))
-  (:require [hypercrud.util.core :as util]))
+  (:require [contrib.data :as util]))
 
 
 (defn str-and-code' [code code-str]

@@ -1,4 +1,4 @@
-(ns hypercrud.util.core
+(ns contrib.data
   (:require [cats.monad.either :as either]
             [cuerdas.core :as str]
             [clojure.string :as clojure-str]

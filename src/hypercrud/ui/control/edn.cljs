@@ -2,7 +2,7 @@
   (:require [cats.monad.either :as either]
             [contrib.string :refer [safe-read-edn-string]]
             [hypercrud.ui.control.code :as code]
-            [hypercrud.util.core :refer [pprint-str]]
+            [contrib.data :refer [pprint-str]]
             [taoensso.timbre :as timbre]))
 
 

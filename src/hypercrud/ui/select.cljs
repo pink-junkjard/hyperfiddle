@@ -5,7 +5,7 @@
             [hypercrud.browser.context :as context]
             [hypercrud.browser.core :as browser]
             [hypercrud.client.tx :as tx]
-            [hypercrud.util.reactive :as reactive]))
+            [contrib.reactive :as reactive]))
 
 
 (defn default-label-renderer [v ctx]

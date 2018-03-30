@@ -1,7 +1,7 @@
 (ns hypercrud.browser.base
   (:require [cats.core :as cats :refer [mlet return]]
             [cats.monad.either :as either]
-            [hypercrud.util.reactive :as reactive]
+            [contrib.reactive :as reactive]
             [contrib.eval :refer [eval-str]]
             [contrib.string :refer [memoized-safe-read-edn-string]]
             [contrib.try :refer [try-either]]

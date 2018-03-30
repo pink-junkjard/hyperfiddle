@@ -5,11 +5,11 @@
             [hypercrud.browser.context :as context]
             [hypercrud.ui.control.link-controls :as link-controls]
             [hypercrud.ui.control.markdown-rendered :refer [markdown-relation]]
-            [hypercrud.ui.css :refer [classes]]
+            [contrib.css :refer [classes]]
             [hypercrud.ui.form :as form]
             [hypercrud.ui.table :as table]
-            [hypercrud.util.core :as util :refer [or-str]]
-            [hypercrud.util.reactive :as reactive]))
+            [contrib.data :as util :refer [or-str]]
+            [contrib.reactive :as reactive]))
 
 
 (defn result-renderer [ctx]                                 ; should have explicit mapcat, like markdown.

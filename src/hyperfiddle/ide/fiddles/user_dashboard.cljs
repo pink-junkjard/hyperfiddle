@@ -1,7 +1,7 @@
 (ns hyperfiddle.ide.fiddles.user-dashboard
   (:require [hypercrud.ui.markdown :refer [markdown]]
             [hypercrud.ui.native-event-listener :refer [native-on-click-listener]]
-            [hypercrud.util.reactive :as reactive]
+            [contrib.reactive :as reactive]
             [hyperfiddle.ide.actions :as ide-actions]
             [hyperfiddle.runtime :as runtime]))
 

@@ -2,7 +2,7 @@
   (:require [cljs.pprint :as pprint]
             [hypercrud.browser.routing :as routing]
             [contrib.reagent :refer [fragment]]
-            [hypercrud.util.core :refer [pprint-str update-existing]]
+            [contrib.data :refer [pprint-str update-existing]]
             [hyperfiddle.runtime :as runtime]
             [hyperfiddle.foundation.actions :as foundation-actions]))
 

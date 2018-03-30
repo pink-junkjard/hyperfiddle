@@ -2,7 +2,7 @@
   (:require
     #?(:cljs [hyperfiddle.io.http.kvlt-config])
     [hypercrud.types.Err :as Err]
-    [hypercrud.util.performance :as perf]
+    [contrib.performance :as perf]
     #?(:cljs [kvlt.core :as kvlt])
     [taoensso.timbre :as timbre]
     [promesa.core :as p]))

@@ -75,7 +75,7 @@
                                    :checked @hide-datomic?
                                    :on-change #(swap! hide-datomic? not)}]
                           " Hide Datomic attributes?"]
-                         (let [ctx (update ctx :hypercrud.browser/result (partial hypercrud.util.reactive/fmap datomic-filter))]
+                         (let [ctx (update ctx :hypercrud.browser/result (partial contrib.reactive/fmap datomic-filter))]
                            [hypercrud.ui.result/view ctx])]))))]
   (defn schema [$db]
     {:fiddle/ident (keyword "hyperfiddle.schema" $db)

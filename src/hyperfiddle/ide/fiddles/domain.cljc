@@ -8,7 +8,7 @@
             [contrib.macros :refer [str-and-code]]
             [hypercrud.types.URI #?@(:cljs [:refer [URI]])]
     #?(:cljs [hypercrud.ui.auto-control :as auto-control])
-            [hypercrud.util.reactive :as reactive])
+            [contrib.reactive :as reactive])
   #?(:clj
      (:import (java.net URI))))
 
@@ -27,7 +27,7 @@
                            (fn [maybe-field props ctx]
                              [:div.value
                               [hypercrud.ui.auto-control/auto-control nil nil nil ctx]
-                              (let [href (str "http://" @(hypercrud.util.reactive/cursor (:cell-data ctx) [:domain/ident]) "." (:hyperfiddle-hostname ctx))]
+                              (let [href (str "http://" @(contrib.reactive/cursor (:cell-data ctx) [:domain/ident]) "." (:hyperfiddle-hostname ctx))]
                                 [:a {:href href} href])])
                            "todo we dont need a str repr hyperfiddle/hyperfiddle#60"))
 

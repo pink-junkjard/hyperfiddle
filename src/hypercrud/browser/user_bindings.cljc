@@ -3,7 +3,7 @@
             [cats.monad.either :as either]
             [contrib.try :refer [try-either]]
             [contrib.eval :refer [eval-str]]
-            [hypercrud.util.reactive :as reactive]
+            [contrib.reactive :as reactive]
             [taoensso.timbre :as timbre]))
 
 

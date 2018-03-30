@@ -2,7 +2,7 @@
   (:require [hypercrud.browser.auto-link-formula :refer [auto-formula]]
             [hypercrud.browser.auto-link-txfn :refer [auto-txfn]]
             [hypercrud.browser.system-link :as system-link]
-            [hypercrud.util.reactive :as reactive]))
+            [contrib.reactive :as reactive]))
 
 
 (defn auto-link [link]

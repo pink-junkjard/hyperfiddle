@@ -1,7 +1,7 @@
-(ns hypercrud.util.reactive
+(ns contrib.reactive
   (:refer-clojure :exclude [atom partial])
   (:require [cats.core :as cats]
-            [hypercrud.util.core :as util]
+            [contrib.data :as util]
     #?(:cljs [reagent.core :as reagent])
     #?(:cljs [reagent.ratom :refer [IReactiveAtom]]))
   #?(:clj

@@ -1,5 +1,5 @@
-(ns hypercrud.util.cljs-platform
-  #?(:cljs (:require-macros [hypercrud.util.cljs-platform :refer [code-for-nodejs]])))
+(ns contrib.cljs-platform
+  #?(:cljs (:require-macros [contrib.cljs-platform :refer [code-for-nodejs]])))
 
 
 (defn- nodejs-target? []

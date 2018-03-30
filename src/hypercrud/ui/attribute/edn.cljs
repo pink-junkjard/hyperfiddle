@@ -4,7 +4,7 @@
             [hypercrud.client.tx :as tx]
             [hypercrud.ui.control.edn :refer [edn-block* edn-inline-block*]]
             [hypercrud.ui.control.link-controls :as link-controls]
-            [hypercrud.util.reactive :as reactive]))
+            [contrib.reactive :as reactive]))
 
 
 (defn edn-many [maybe-field props ctx]

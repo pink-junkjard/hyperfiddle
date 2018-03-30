@@ -3,7 +3,7 @@
             [cats.monad.either :refer [right branch]]
             [datascript.parser :as parser]
             [hypercrud.browser.routing :as routing]
-            [hypercrud.util.reactive :as reactive]
+            [contrib.reactive :as reactive]
             [hyperfiddle.foundation.actions :as foundation-actions]
             [hyperfiddle.runtime :as runtime]
             [contrib.try :refer [try-either]]))

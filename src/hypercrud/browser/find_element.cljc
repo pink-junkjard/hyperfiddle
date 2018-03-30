@@ -5,8 +5,8 @@
             [contrib.try :refer [try-either]]
             [datascript.parser :as parser]
             [hypercrud.browser.context :as context]
-            [hypercrud.util.core :as util]
-            [hypercrud.util.reactive :as reactive]))
+            [contrib.data :as util]
+            [contrib.reactive :as reactive]))
 
 
 (defrecord FindElement [name fields source-symbol splat? type])

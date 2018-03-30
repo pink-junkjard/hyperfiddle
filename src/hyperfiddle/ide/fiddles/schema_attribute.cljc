@@ -2,7 +2,7 @@
   (:require [clojure.set :as set]
             [hypercrud.client.tx :as tx]
             [contrib.macros :refer [str-and-code']]
-            [hypercrud.util.reactive :as reactive]
+            [contrib.reactive :as reactive]
     #?(:cljs [reagent.core :as reagent])))
 
 

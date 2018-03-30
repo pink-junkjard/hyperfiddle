@@ -2,7 +2,7 @@
   (:require [hypercrud.client.tx :as tx]
             [hypercrud.types.Err :refer [->Err]]
             [hypercrud.util.branch :as branch]
-            [hypercrud.util.core :as util]))
+            [contrib.data :refer [map-values pprint-str]]))
 
 
 (defn- serializable-error [e]
@@ -10,7 +10,7 @@
   (let [?message #?(:clj (.getMessage e) :cljs (ex-message e))]
     (cond
       (string? e) e
-      ?message (assoc (->Err (str ?message)) :data (util/pprint-str (ex-data e)))
+      ?message (assoc (->Err (str ?message)) :data (pprint-str (ex-data e)))
       :else (pr-str e))))
 
 (defn stage-reducer [stage action & args]
@@ -20,7 +20,7 @@
                (update-in stage [branch uri] tx/into-tx tx))
         clean (fn [stage]
                 (->> stage
-                     (util/map-values (fn [multi-color-tx]
+                     (map-values (fn [multi-color-tx]
                                         (->> multi-color-tx
                                              (remove (fn [[uri tx]] (nil? tx)))
                                              (into {}))))
@@ -133,7 +133,7 @@
                           (update-in partitions [branch :popovers] disj popover-id))
 
          (or partitions {}))
-       (util/map-values (fn [partition]
+       (map-values (fn [partition]
                           ; apply defaults
                           (->> {:hydrate-id identity
                                 :popovers #(or % #{})

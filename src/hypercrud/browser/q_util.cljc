@@ -3,7 +3,7 @@
             [cats.monad.either :as either]
             [clojure.string :as string]
             [hypercrud.client.core :as hc]
-            [hypercrud.util.core :as util :refer [tee]]
+            [contrib.data :as util :refer [tee]]
             [contrib.string :refer [memoized-safe-read-edn-string]]
             [taoensso.timbre :as timbre]))
 

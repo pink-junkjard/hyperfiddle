@@ -10,7 +10,7 @@
 {:d? true :a true}
 ==
 (fn [ctx]
-  (case @(hypercrud.util.reactive/cursor (:hypercrud.browser/fat-attribute ctx) [:db/cardinality :db/ident])
+  (case @(contrib.reactive/cursor (:hypercrud.browser/fat-attribute ctx) [:db/cardinality :db/ident])
     :db.cardinality/one @(:value ctx)
 
     ; "find children of parent entity at attr"

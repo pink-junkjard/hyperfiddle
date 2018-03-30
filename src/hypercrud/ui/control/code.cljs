@@ -1,5 +1,5 @@
 (ns hypercrud.ui.control.code
-  (:require [hypercrud.util.reactive :as reactive]
+  (:require [contrib.reactive :as reactive]
             [re-com.core :as re-com]
             [reagent.core :as reagent]))
 

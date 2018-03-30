@@ -3,7 +3,7 @@
             [hypercrud.types.DbVal :refer [->DbVal]]
             [hypercrud.types.URI :refer [is-uri?]]
             [hypercrud.util.branch :as branch]
-            [hypercrud.util.reactive :as reactive]
+            [contrib.reactive :as reactive]
             [hyperfiddle.io.util :refer [process-result]]))
 
 

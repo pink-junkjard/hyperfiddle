@@ -1,7 +1,7 @@
-(ns hypercrud.util.core-test
+(ns contrib.data-test
   (:require [#?(:clj clojure.test :cljs cljs.test)
              #?(:clj :refer :cljs :refer-macros) [deftest is]]
-            [hypercrud.util.core :refer [split-first rtrim-coll abc]]))
+            [contrib.data :refer [split-first rtrim-coll abc]]))
 
 
 

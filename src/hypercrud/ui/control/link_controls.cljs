@@ -1,8 +1,8 @@
 (ns hypercrud.ui.control.link-controls
   (:require [hypercrud.browser.core :as browser]
             [hypercrud.browser.link :as link]
-            [hypercrud.util.reactive :as reactive]
-            [hypercrud.util.core :refer [kwargs]]))
+            [contrib.reactive :as reactive]
+            [contrib.data :refer [kwargs]]))
 
 
 (defn prompt [link-ref]

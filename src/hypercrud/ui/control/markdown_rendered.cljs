@@ -4,11 +4,11 @@
             [hypercrud.browser.context :as context]
             [hypercrud.ui.user-attribute-renderer :refer [safe-eval-user-expr]]
             [hypercrud.ui.control.code]
-            [hypercrud.ui.css :refer [css-slugify classes]]
-            [hypercrud.util.core :as util :refer [unwrap or-str]]
+            [contrib.css :refer [css-slugify classes]]
+            [contrib.data :refer [map-values unwrap or-str]]
             [goog.object]
             [reagent.core :as reagent]
-            [hypercrud.util.reactive :as r]))
+            [contrib.reactive :as r]))
 
 
 (declare markdown)
@@ -131,7 +131,7 @@
                         (.use js/remarkReact
                               (clj->js
                                 {"sanitize" false
-                                 "remarkReactComponents" (->> whitelist-reagent (util/map-values reagent/reactify-component))}))))
+                                 "remarkReactComponents" (->> whitelist-reagent (map-values reagent/reactify-component))}))))
 
 
 ; Todo; remove div.markdown; that should be default and style the inverse.

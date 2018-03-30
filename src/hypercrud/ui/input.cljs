@@ -1,6 +1,6 @@
 (ns hypercrud.ui.input
   (:require [cats.monad.either :as either]
-            [hypercrud.util.reactive :as reactive]
+            [contrib.reactive :as reactive]
             [contrib.string :refer [safe-read-edn-string]]))
 
 

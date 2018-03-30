@@ -4,8 +4,8 @@
             [hypercrud.client.core :as hc]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hypercrud.types.URI :refer [#?(:cljs URI)]]
-            [hypercrud.util.core :as util]
-            [hypercrud.util.reactive :as reactive])
+            [contrib.data :refer [group-by-assume-unique map-values]]
+            [contrib.reactive :as reactive])
   #?(:clj
      (:import (java.net URI))))
 
@@ -36,8 +36,8 @@
                      (fn [root-data]
                        (let [indexed-root (->> root-data
                                                (map #(into {} %))
-                                               (util/group-by-assume-unique :attribute/ident)
-                                               (util/map-values #(dissoc % :attribute/ident :db/id)))]
+                                               (group-by-assume-unique :attribute/ident)
+                                               (map-values #(dissoc % :attribute/ident :db/id)))]
 
                          (->> (get-in ctx [:hypercrud.browser/domain :domain/environment])
                               (filter (fn [[k v]] (and (string? k) (string/starts-with? k "$") (instance? URI v))))
@@ -48,7 +48,7 @@
                                                           [dbname
                                                            (->> schema
                                                                 (map #(into {} %))
-                                                                (util/group-by-assume-unique :db/ident)
+                                                                (group-by-assume-unique :db/ident)
                                                                 (merge-with #(merge %2 %1) indexed-root))]))))))
                               (cats/sequence)
                               (cats/fmap #(into {} %)))))))]

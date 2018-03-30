@@ -4,7 +4,7 @@
             [hypercrud.browser.browser-ui :as browser-ui]
             [hypercrud.browser.system-fiddle :as system-fiddle]
             [hypercrud.ui.result :as result]
-            [hypercrud.util.reactive :as reactive]))
+            [contrib.reactive :as reactive]))
 
 (defn links->result [links]
   (->> @links

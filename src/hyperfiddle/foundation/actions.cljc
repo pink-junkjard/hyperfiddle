@@ -7,7 +7,7 @@
             [hypercrud.client.tx :as tx]
             [hypercrud.types.DbVal :refer [->DbVal]]
             [hypercrud.util.branch :as branch]
-            [hypercrud.util.core :as util]
+            [contrib.data :refer [map-values map-keys]]
             [hyperfiddle.io.util :refer [v-not-nil?]]
             [hyperfiddle.runtime :as runtime]
             [promesa.core :as p]
@@ -34,7 +34,7 @@
         (p/then (fn [{:keys [ptm tempid-lookups]}]
                   (let [partition-val (partition-state)]
                     (if (= hydrate-id (:hydrate-id partition-val))
-                      (let [ptm (util/map-keys (partial peer/partitioned-request partition-val stage) ptm)]
+                      (let [ptm (map-keys (partial peer/partitioned-request partition-val stage) ptm)]
                         (dispatch! [:hydrate!-success branch ptm tempid-lookups]))
                       (timbre/info (str "Ignoring response for " hydrate-id))))))
         (p/catch (fn [error]
@@ -119,7 +119,7 @@
 
 (defn transact! [rt invert-route tx-groups dispatch! get-state & {:keys [route post-tx]}]
   (dispatch! [:transact!-start])
-  (let [tx-groups (util/map-values (partial filter v-not-nil?) ; hack because the ui still generates some garbage tx
+  (let [tx-groups (map-values (partial filter v-not-nil?) ; hack because the ui still generates some garbage tx
                                    tx-groups)]
     (-> (runtime/transact! rt tx-groups)
         (p/catch (fn [error]

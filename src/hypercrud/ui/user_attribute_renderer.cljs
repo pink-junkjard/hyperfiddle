@@ -2,8 +2,8 @@
   (:require [cats.monad.either :as either]
             [contrib.eval :refer [eval-str]]
             [hypercrud.ui.safe-render :refer [safe-reagent-call]]
-            [hypercrud.util.core :refer [pprint-str]]
-            [hypercrud.util.reactive :as reactive]))
+            [contrib.data :refer [pprint-str]]
+            [contrib.reactive :as reactive]))
 
 
 (let [safe-reagent-f (fn [f & args]

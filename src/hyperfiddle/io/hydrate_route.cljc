@@ -6,8 +6,8 @@
             [hypercrud.types.EntityRequest :refer [#?(:cljs EntityRequest)]]
             [hypercrud.types.QueryRequest :refer [#?(:cljs QueryRequest)]]
             [contrib.base-64-url-safe :as base-64-url-safe]
-            [hypercrud.util.core :as util]
-            [hypercrud.util.performance :as perf]
+            [contrib.data :as util]
+            [contrib.performance :as perf]
             [hyperfiddle.appval.state.reducers :as reducers] ; this import is immoral
             [hyperfiddle.runtime :as runtime]
             [promesa.core :as p]
