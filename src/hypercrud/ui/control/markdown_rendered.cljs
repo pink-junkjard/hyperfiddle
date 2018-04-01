@@ -125,19 +125,7 @@
                         ;(.use js/remarkCustomBlocks (clj->js {"some" "a"}))
                         (.use js/remarkGenericExtensions
                               (clj->js
-                                {"elements"
-                                 {"span" {"html" {"properties" {"content" "::content::"}}}
-                                  "p" {"html" {"properties" {"content" "::content::"}}}
-                                  "CodeEditor" {"html" {"properties" {"content" "::content::"}}}
-                                  "block" {"html" {"properties" {"content" "::content::"}}}
-                                  "cljs" {"html" {"properties" {"content" "::content::"}}}
-                                  "browse" {"html" {"properties" {"content" "::content::" "argument" "::argument::"}}}
-                                  "anchor" {"html" {"properties" {"content" "::content::" "argument" "::argument::"}}}
-                                  "cell" {"html" {"properties" {"content" "::content::" "argument" "::argument::"}}}
-                                  "table" {"html" {"properties" {"content" "::content::"}}}
-                                  "list" {"html" {"properties" {"content" "::content::" "argument" "::argument::"}}}
-                                  "value" {"html" {"properties" {"content" "::content::" "argument" "::argument::"}}}
-                                  }}))
+                                {"elements" (into {} (map vector (keys whitelist-reagent) (repeat {"html" {"properties" {"content" "::content::" "argument" "::argument::"}}})))}))
                         (.use js/remarkGridTables)
                         (.use js/remarkReact
                               (clj->js
