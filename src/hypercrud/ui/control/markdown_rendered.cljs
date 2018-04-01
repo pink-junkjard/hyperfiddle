@@ -86,7 +86,7 @@
 #_(fragment
     k
     (binding [hyperfiddle.core/*ctx* (context/relation ctx relation)]
-      (safe-eval-user-expr content))) ; (fn f [content ctx & [?class]])
+      (safe-eval-user-expr content)))                       ; (fn f [content ctx & [?class]])
 
 (def markdown
   ; remark creates react components which don't evaluate in this stack frame
@@ -108,10 +108,16 @@
 (def whitelist-reagent
   ; Div is not needed, use it with block syntax and it hits React.createElement and works
   ; see https://github.com/medfreeman/remark-generic-extensions/issues/30
-  {"span" (fn [props] [:span (dissoc props :children :content) (:content props)])
-   "p" (fn [props] [:div (-> props (dissoc :children :content) (update :class #(classes "p" %))) (:children props)])
+  {"span" (md-extension (fn [content argument props ctx]
+                          [:span (dissoc props :children) content]))
+   "p" (md-extension (fn [content argument props ctx]
+                       [:div (-> props
+                                 (dissoc :children)
+                                 (update :class #(classes "p" %)))
+                        (:children props)]))
    "CodeEditor" code-editor-wrap-argv
-   "block" (fn [props] [:div (dissoc props :children :value) [markdown (:value props)]])
+   "block" (md-extension (fn [content argument props ctx]
+                           [:div props [markdown content]]))
    "cljs" eval
    "browse" browse
    "anchor" anchor
