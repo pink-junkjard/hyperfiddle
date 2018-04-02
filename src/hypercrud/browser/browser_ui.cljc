@@ -98,6 +98,13 @@
            :cause #?(:clj  (.getCause e)
                      :cljs (ex-cause e))}))
 
+(defn ex-data->ui [{:keys [ident human soup] :as data}]
+  (if ident
+    [:div
+     [:h2 (pr-str ident)]
+     [:p human]]
+    (util/pprint-str data)))
+
 (defn ui-error-inline [e ctx]
   (let [dev-open? true
         {:keys [cause data message]} (e->map e)
@@ -107,7 +114,7 @@
 (defn ui-error-block [e ctx]
   (let [dev-open? true
         {:keys [cause data message]} (e->map e)
-        detail (if dev-open? (util/pprint-str data))]
+        detail (if dev-open? (ex-data->ui data))]
     ; todo we don't always return an error with a message
     [:pre (or message "Error") "\n" detail]))
 

@@ -1,5 +1,6 @@
 (ns hyperfiddle.io.util
   (:require [cats.monad.either :as either]
+            [contrib.datomic-errors :refer [datomic-error-cleaner]]
             [hypercrud.types.Err :refer [#?(:cljs Err)]])
   #?(:clj
      (:import (hypercrud.types.Err Err))))
@@ -11,7 +12,7 @@
       ; what about EntityRequests? why are datomic errors not sufficient?
       (if-not (empty? unfilled-holes)
         {:message "Invalid query" :data {:datomic-error (.-msg e) :query (.-query req) :missing unfilled-holes}}))
-  (ex-info "Datomic error" {:datomic-error (.-msg e)}))
+  (datomic-error-cleaner (.-msg e)))
 
 ; this can be removed; #err can natively be Either
 (defn process-result [resultset-or-error request]
