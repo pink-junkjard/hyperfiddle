@@ -1,13 +1,13 @@
 # Hyperfiddle — a Hypermedia Function
 
-Hyperfiddle abstracts over client/server data sync for APIs. If React.js is managed DOM, Hyperfiddle is managed database and network. Managed I/O is not the point. The point is: *what does managed I/O make possible that wasn't possible before?* 
-
-## Sandbox: <http://sandbox.hyperfiddle.net/gender>
+Hyperfiddle abstracts over client/server data sync for APIs. If React.js is managed DOM, Hyperfiddle is managed database and network. Hyperfiddle extends Datomic's immutable database semantics to the API. Unlike REST/GraphQL/whatever, Hyperfiddle's 
+data sync *composes*.
 
 Hyperfiddle models API inter-dependencies as a graph (I need query-X and also query-Y which depends query-Z). This graph lets the I/O runtime understand the structure and data flows of the application, which permits interesting optimization opportunities.
 
-Hyperfiddle extends Datomic's immutable database semantics to the API. Unlike REST/GraphQL/whatever, Hyperfiddle's 
-data sync *composes*.
+Managed I/O is not the point. The point is: *what does managed I/O make possible that wasn't possible before?* 
+
+## Live Demo: <http://sandbox.hyperfiddle.net/:todomvc/>
 
 # Dependency coordinates — Todo
 
@@ -15,12 +15,13 @@ data sync *composes*.
 
 # Roadmap
 
-We're nearing a 0.1 open-source release in Q1 2018.
+We are in early access / private beta, contact us.
+
+We're nearing a 0.1 open-source release in Q2 2018.
 
 ### Blocking 0.1.0: 
 
-Performance (Hyperfiddle must respond as fast as a Clojure repl)
-
+- [x] Performance (Hyperfiddle must respond as fast as a Clojure repl)
 - [x] API: data loop running in JVM
 - [x] API: automatically optimize hydrates for cache locality (using link graph)
 - [x] UI: Full reactivity everywhere
@@ -30,12 +31,9 @@ Performance (Hyperfiddle must respond as fast as a Clojure repl)
 
 ### 0.2.0
 
+- [ ] IDE developer experience
 - [ ] release Hyperblog, a markdown ~~static site generator~~ *static application* backed by Datomic
-- [ ] Edit React.js/Reagent expressions side-by-side with the running app (like JSFiddle)
-- [ ] IDE user experience, including links panel
-- [ ] UI: improve popovers, finish stage/discard UX
-- [ ] UI: Fix query param tooltips when you hover an anchor
-- [ ] API: Release CLI to serve your fiddles (no http/backend boilerplate for application developers)
+- [ ] CLI to run hyperfiddle.server on your dev machine
 
 # Overview
 
