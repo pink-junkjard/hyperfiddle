@@ -119,8 +119,8 @@
 
 (defn transact! [rt invert-route tx-groups dispatch! get-state & {:keys [route post-tx]}]
   (dispatch! [:transact!-start])
-  (let [tx-groups (map-values (partial filter v-not-nil?) ; hack because the ui still generates some garbage tx
-                                   tx-groups)]
+  (let [tx-groups (map-values (partial filter v-not-nil?)   ; hack because the ui still generates some garbage tx
+                              tx-groups)]
     (-> (runtime/transact! rt tx-groups)
         (p/catch (fn [error]
                    #?(:cljs (js/alert (pr-str error)))
@@ -169,8 +169,8 @@
                     (dispatch! (apply batch (concat with-actions on-start)))
                     ; todo what if transact throws?
                     (transact! rt invert-route (get-in (get-state) [:stage branch]) dispatch! get-state
-                               {:post-tx [(discard-partition branch)]
-                                :route app-route}))
+                               :post-tx [(discard-partition branch)]
+                               :route app-route))
                   (let [e (some-> app-route routing/invalid-route?)
                         actions (concat
                                   with-actions
