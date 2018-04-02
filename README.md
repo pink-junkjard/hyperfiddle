@@ -1,4 +1,4 @@
-# Hyperfiddle — Functional data sync for Datomic APIs
+# Hyperfiddle — a Hypermedia Function
 
 Hyperfiddle abstracts over client/server data sync for APIs. If React.js is managed DOM, Hyperfiddle is managed database and network. Managed I/O is not the point. The point is: *what does managed I/O make possible that wasn't possible before?* 
 
