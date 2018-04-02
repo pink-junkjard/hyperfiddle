@@ -98,25 +98,21 @@
            :cause #?(:clj  (.getCause e)
                      :cljs (ex-cause e))}))
 
-(defn ex-data->ui [{:keys [ident human soup] :as data}]
-  (if ident
-    [:div
-     [:h2 (pr-str ident)]
-     [:p human]]
-    (util/pprint-str data)))
+(defn ex-data->human-detail [{:keys [ident human soup] :as data}]
+  (or human soup (util/pprint-str data)))
 
 (defn ui-error-inline [e ctx]
   (let [dev-open? true
-        {:keys [cause data message]} (e->map e)
-        detail (if dev-open? (str " -- " (if-let [s (:ident data)] (pr-str s) (pr-str data))))]
-    [:code message " " detail]))
+        {:keys [cause data message]} (e->map e)]
+    [:code message " " (if dev-open? (str " -- " (ex-data->human-detail data)))]))
 
 (defn ui-error-block [e ctx]
   (let [dev-open? true
-        {:keys [cause data message]} (e->map e)
-        detail (if dev-open? (ex-data->ui data))]
+        {:keys [cause data message]} (e->map e)]
     ; todo we don't always return an error with a message
-    [:pre (or message "Error") "\n" detail]))
+    [:pre
+     [:h4 (or message "Unrecognized error (please open a ticket)")]
+     (if dev-open? [:p (ex-data->human-detail data)])]))
 
 (defn ui-error [e ctx]
   ; :find-element :attribute :value
