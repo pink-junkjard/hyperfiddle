@@ -108,7 +108,7 @@
 (defn ui-error-inline [e ctx]
   (let [dev-open? true
         {:keys [cause data message]} (e->map e)
-        detail (if dev-open? (str " -- " (pr-str data)))]
+        detail (if dev-open? (str " -- " (if-let [s (:ident data)] (pr-str s) (pr-str data))))]
     [:code message " " detail]))
 
 (defn ui-error-block [e ctx]
