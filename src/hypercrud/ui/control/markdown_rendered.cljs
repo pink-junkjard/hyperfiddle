@@ -67,7 +67,7 @@
   (let [kwargs (flatten (seq props))
         ; https://github.com/medfreeman/remark-generic-extensions/issues/45
         label (or-str content argument)]
-    (apply (:anchor ctx) (keyword argument) ctx label kwargs)))
+    (apply (:anchor ctx) (unwrap (memoized-safe-read-edn-string argument)) ctx label kwargs)))
 
 (defn cell [content argument props ctx]
   (let [kwargs (flatten (seq props))
