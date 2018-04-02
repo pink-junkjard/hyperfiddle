@@ -138,19 +138,19 @@
                                    (foundation-actions/close-popover (:branch ctx) popover-id)
                                    (foundation-actions/discard-partition child-branch))))
 
-(defn managed-popover-body [link route popover-id child-branch dont-branch? ctx]
-  [:div.hyperfiddle-popover-body
-   ; NOTE: this ctx logic and structure is the same as the popover branch of browser-request/recurse-request
-   (let [ctx (-> (if dont-branch? ctx (assoc ctx :branch child-branch))
-                 (context/clean))]
-     #?(:clj  (assert false "todo")
-        :cljs [hypercrud.browser.core/ui-from-route route ctx])) ; cycle
-   (when-not dont-branch?
-     [:button {:on-click (reactive/partial stage! link route popover-id child-branch ctx)} "stage"])
-   ; TODO also cancel on escape
-   (if dont-branch?
-     [:button {:on-click (reactive/partial close! popover-id ctx)} "close"]
-     [:button {:on-click (reactive/partial cancel! popover-id child-branch ctx)} "cancel"])])
+#?(:cljs
+   (defn managed-popover-body [link route popover-id child-branch dont-branch? close! cancel! ctx]
+     [:div.hyperfiddle-popover-body
+      ; NOTE: this ctx logic and structure is the same as the popover branch of browser-request/recurse-request
+      (let [ctx (-> (if dont-branch? ctx (assoc ctx :branch child-branch))
+                    (context/clean))]
+        #?(:clj  (assert false "todo")
+           :cljs [hypercrud.browser.core/ui-from-route route ctx])) ; cycle
+      (when-not dont-branch?
+        [:button {:on-click (reactive/partial stage! link route popover-id child-branch ctx)} "stage"])
+      (if dont-branch?
+        [:button {:on-click close!} "close"]
+        [:button {:on-click cancel!} "cancel"])]))
 
 (defn open! [route popover-id child-branch dont-branch? ctx]
   (runtime/dispatch! (:peer ctx)
@@ -177,8 +177,13 @@
                         (if-let [route (and (:link/managed? link) (either/right? route') (cats/extract route'))]
                           ; If no route, there's nothing to draw, and the anchor tooltip shows the error.
                           (let [popover-id (popovers/popover-id link ctx)
-                                child-branch (popovers/branch ctx link)]
+                                child-branch (popovers/branch ctx link)
+                                open! (reactive/partial open! route popover-id child-branch dont-branch? ctx)
+                                close! (reactive/partial close! popover-id ctx)
+                                cancel! (reactive/partial cancel! popover-id child-branch ctx)]
                             {:showing? (runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :popovers popover-id])
-                             :body [managed-popover-body link route popover-id child-branch dont-branch? ctx]
-                             :open! (reactive/partial open! route popover-id child-branch dont-branch? ctx)})))]
+                             :body #?(:cljs [managed-popover-body link route popover-id child-branch dont-branch? close! cancel! ctx]
+                                      :clj nil)
+                             :open! open!
+                             :close! (if dont-branch? close! cancel!)})))]
     (merge hypercrud-props {:popover popover-props})))

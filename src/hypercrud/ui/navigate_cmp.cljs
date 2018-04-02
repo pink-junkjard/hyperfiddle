@@ -1,5 +1,6 @@
 (ns hypercrud.ui.navigate-cmp
   (:require [contrib.css :refer [classes]]
+            [contrib.keypress :refer [with-keychord]]
             [hypercrud.ui.native-event-listener :refer [native-on-click-listener]]
             [hypercrud.ui.tooltip :refer [tooltip]]
             [re-com.core :as re-com]))
@@ -18,19 +19,21 @@
     [:a anchor-props label]))
 
 (defn popover-cmp [hypercrud-props label]
-  (let [{:keys [showing? body open! cancel!]} (:popover hypercrud-props)]
-    [re-com/popover-anchor-wrapper
-     :showing? showing?
-     :position :below-center
-     :anchor (let [btn-props (-> hypercrud-props
-                                 (dissoc-non-native-props)
-                                 (assoc :on-click open!)
-                                 ; use twbs btn coloring but not "btn" itself
-                                 (update :class #(classes % "btn-default")))]
-               [:button btn-props [:span (str label "▾")]])
-     :popover [re-com/popover-content-wrapper
-               :no-clip? true
-               :body body]]))
+  (let [{:keys [showing? body open! close!]} (:popover hypercrud-props)]
+    [with-keychord
+     "esc" #(do (js/console.warn "esc") (close!))
+     [re-com/popover-anchor-wrapper
+      :showing? showing?
+      :position :below-center
+      :anchor (let [btn-props (-> hypercrud-props
+                                  (dissoc-non-native-props)
+                                  (assoc :on-click open!)
+                                  ; use twbs btn coloring but not "btn" itself
+                                  (update :class #(classes % "btn-default")))]
+                [:button btn-props [:span (str label "▾")]])
+      :popover [re-com/popover-content-wrapper
+                :no-clip? true
+                :body body]]]))
 
 ; props = {
 ;   :route    [fiddle args]
