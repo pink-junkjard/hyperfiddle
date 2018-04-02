@@ -1,9 +1,7 @@
 (ns hypercrud.browser.core
   (:require [hypercrud.browser.base :as base]
             [hypercrud.browser.browser-request :as browser-request]
-            [hypercrud.browser.browser-ui :as browser-ui]
-    ; legacy
-            [hypercrud.browser.auto-anchor-formula]))
+            [hypercrud.browser.browser-ui :as browser-ui]))
 
 
 (def data base/data-from-link)
