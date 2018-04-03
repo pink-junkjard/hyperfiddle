@@ -19,10 +19,10 @@
                           (if @can-be-loading?
                             (loading v)
                             (do
-                              (reset! prev-v e)
+                              (reset! prev-v (error e))
                               (error e)))
                           (do
-                            (reset! prev-v e)
+                            (reset! prev-v (error e))
                             (error e))))
                       (fn [v]
                         (reset! prev-v v)
