@@ -12,25 +12,25 @@
 (defn clean [ctx]
   ; why not code-database-uri and all the custom ui/render fns?
   (dissoc ctx
-    :keep-disabled-anchors? :route
-    :fiddle                                                 ; deprecated
-    :fe-pos :uri :user-with!
-    :cell-data :value
-    :layout :field
-    :label
+          :keep-disabled-anchors? :route
+          :fiddle                                           ; deprecated
+          :fe-pos :uri :user-with!
+          :cell-data :value
+          :layout :field
+          :label
 
-    :hypercrud.browser/cell                           ; TODO :cell should cascade
-    :hypercrud.browser/attribute
-    :hypercrud.browser/fat-attribute
-    :hypercrud.browser/fiddle
-    :hypercrud.browser/find-element
-    :hypercrud.browser/links
-    :hypercrud.browser/ordered-fes
-    :hypercrud.browser/request
-    :hypercrud.browser/result
-    :relations :relation
-    :hypercrud.browser/schema
-    :hypercrud.browser/schemas))
+          :hypercrud.browser/cell                           ; TODO :cell should cascade
+          :hypercrud.browser/attribute
+          :hypercrud.browser/fat-attribute
+          :hypercrud.browser/fiddle
+          :hypercrud.browser/find-element
+          :hypercrud.browser/links
+          :hypercrud.browser/ordered-fes
+          :hypercrud.browser/request
+          :hypercrud.browser/result
+          :relations :relation
+          :hypercrud.browser/schema
+          :hypercrud.browser/schemas))
 
 (defn route [ctx route]
   {:pre [(if-let [params (second route)] (vector? params) true) ; validate normalized already
