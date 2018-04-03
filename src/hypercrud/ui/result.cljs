@@ -1,15 +1,13 @@
 (ns hypercrud.ui.result
   (:require [cats.core :refer [fmap]]
-            [cats.monad.either :as either]
-            [contrib.try :refer [try-either]]
+            [contrib.css :refer [classes]]
+            [contrib.data :as util :refer [or-str]]
+            [contrib.reactive :as reactive]
             [hypercrud.browser.context :as context]
             [hypercrud.ui.control.link-controls :as link-controls]
             [hypercrud.ui.control.markdown-rendered :refer [markdown-relation]]
-            [contrib.css :refer [classes]]
             [hypercrud.ui.form :as form]
-            [hypercrud.ui.table :as table]
-            [contrib.data :as util :refer [or-str]]
-            [contrib.reactive :as reactive]))
+            [hypercrud.ui.table :as table]))
 
 
 (defn ^:export result [ctx & [f]]                           ; should have explicit mapcat, like markdown.
