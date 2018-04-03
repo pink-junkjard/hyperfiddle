@@ -55,6 +55,7 @@
 
 (defn with-relations "Process results into a relation or list of relations"
   [ctx]
+  {:pre [(nil? (:relations ctx)) (nil? (:relation ctx))]}
   (case @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/type]) ; fiddle/type not relevant outside this fn
     :entity (if-not @(reactive/fmap nil? (reactive/cursor (:hypercrud.browser/request ctx) [:a]))
               (let [[_ [e a]] (get-in ctx [:route])]

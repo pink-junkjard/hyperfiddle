@@ -14,10 +14,7 @@
   ; This is not a reagent component; it returns a component-or-list-of-components (or nil).
   ; Thus it cannot be used from hiccup syntax. It needs to be wrapped into a :div or a react-fragment.
   ; Which means at that point it might as well return monad and let the wrapper sort out the errors?
-  (let [ctx (context/with-relations ctx)]
-    ((or f (if (:relations ctx) table/Table form/Relation)) ctx)))
-
-; (fn [ctx] (if (:relations ctx) (table/Table ctx) (form/Relation ctx)))
+  ((or f (if (:relations ctx) table/Table form/Relation)) ctx))
 
 (def ^:deprecated ^:export result-renderer result)
 
@@ -32,8 +29,7 @@
 
 (defn ^:export fiddle-markdown "Call this from your fiddle renderer"
   [ctx & [class]]
-  (let [ctx (context/with-relations ctx)
-        content @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/markdown])]
+  (let [content @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/markdown])]
     (markdown-relation nil content ctx class)))
 
 (defn ^:export view [ctx & [class]]

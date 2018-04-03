@@ -39,7 +39,10 @@
               fiddle-val)))]
   (defn shadow-fiddle [ctx]
     {:pre [(-> ctx :hypercrud.browser/result)]}
-    (update ctx :hypercrud.browser/result (partial reactive/fmap (reactive/partial -shadow-fiddle ctx)))))
+    (-> ctx
+        (dissoc :relation :relations)
+        (update :hypercrud.browser/result (partial reactive/fmap (reactive/partial -shadow-fiddle ctx)))
+        (context/with-relations))))
 
 ; ugly hacks to recursively fix the ui for sys links
 (defn hijack-renderer [ctx]
@@ -69,8 +72,8 @@
       [re-com.core/throbber :size :smaller]]]))
 
 (defn renderer [ctx]
-  (let [ctx (context/with-relations ctx)
-        display-mode @(runtime/state (:peer ctx) [:display-mode])
+  {:pre [(or (:relations ctx) (:relation ctx))]}
+  (let [display-mode @(runtime/state (:peer ctx) [:display-mode])
         dirty? (not (empty? @(runtime/state (:peer ctx) [:stage])))
         ctx (shadow-fiddle ctx)
         ; hack until hyperfiddle.net#156 is complete

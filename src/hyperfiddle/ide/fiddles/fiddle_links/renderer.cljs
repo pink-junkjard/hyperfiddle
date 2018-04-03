@@ -4,7 +4,8 @@
             [hypercrud.browser.browser-ui :as browser-ui]
             [hypercrud.browser.system-fiddle :as system-fiddle]
             [hypercrud.ui.result :as result]
-            [contrib.reactive :as reactive]))
+            [contrib.reactive :as reactive]
+            [hypercrud.browser.context :as context]))
 
 (defn links->result [links]
   (->> @links
@@ -28,4 +29,8 @@
            (browser-ui/ui-error e ctx)
            (result/view ctx)])
         (fn [{:keys [:hypercrud.browser/links]}]
-          (result/view (assoc ctx :hypercrud.browser/result (reactive/track links->result links)))))))
+          (result/view
+            (-> ctx
+                (dissoc :relation :relations)
+                (assoc :hypercrud.browser/result (reactive/track links->result links))
+                context/with-relations))))))
