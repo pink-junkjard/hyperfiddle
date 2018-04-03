@@ -87,7 +87,7 @@
                                                (remove :link/dependent?)
                                                (filter (link/same-path-as? [fe-pos (:hypercrud.browser/attribute ctx)]))
                                                (mapcat #(recurse-request % ctx))))))))))))
-      (if-let [ctx (unwrap (context/with-relations ctx))]
+      (if-let [ctx (context/with-relations ctx)]
         (if (:relations ctx)
           (table-requests ctx)
           (form-requests ctx))))))

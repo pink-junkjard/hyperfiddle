@@ -69,7 +69,7 @@
       [re-com.core/throbber :size :smaller]]]))
 
 (defn renderer [ctx]
-  (let [ctx (unwrap (context/with-relations ctx))
+  (let [ctx (context/with-relations ctx)
         display-mode @(runtime/state (:peer ctx) [:display-mode])
         dirty? (not (empty? @(runtime/state (:peer ctx) [:stage])))
         ctx (shadow-fiddle ctx)

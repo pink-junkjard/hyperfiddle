@@ -83,16 +83,10 @@
   (case @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/type])
     :entity [select-error-cmp "Only fiddle type `query` is supported for select options"]
     :blank [select-error-cmp "Only fiddle type `query` is supported for select options"]
-    :query (-> (context/with-relations ctx)
-               (either/branch
-                 (fn [e] (throw e))                         ; this exception is always embedded in a safe-user-renderer, so it surfaces safely
-                 (fn [ctx-options]
-                   (if (:relations ctx-options)
-                     (fn [ctx-cell]
-                       [select-anchor-renderer' props ctx-options])
-                     (constantly
-                       [select-error-cmp
-                        "Tuples and scalars are unsupported for select options. Please fix your options query to return a relation or collection"])))))
+    :query (let [ctx-options (context/with-relations ctx)]
+             (if (:relations ctx-options)
+               (fn [ctx-cell] [select-anchor-renderer' props ctx-options])
+               (constantly [select-error-cmp "Tuples and scalars are unsupported for select options. Please fix your options query to return a relation or collection"])))
     ; default
     [select-error-cmp "Only fiddle type `query` is supported for select options"]))
 

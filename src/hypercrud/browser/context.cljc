@@ -1,6 +1,7 @@
 (ns hypercrud.browser.context
   (:require [cats.core :as cats]
             [cats.monad.either :refer [right branch]]
+            [contrib.data :refer [unwrap]]
             [datascript.parser :as parser]
             [hypercrud.browser.routing :as routing]
             [contrib.reactive :as reactive]
@@ -52,30 +53,26 @@
       :qfind
       type))
 
-(defn with-relations "Process results into a relation or list of relations" ; "relation-or-relations", and can the either be hoisted out?
+(defn with-relations "Process results into a relation or list of relations"
   [ctx]
   (case @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/type]) ; fiddle/type not relevant outside this fn
     :entity (if-not @(reactive/fmap nil? (reactive/cursor (:hypercrud.browser/request ctx) [:a]))
               (let [[_ [e a]] (get-in ctx [:route])]
-                (->> (try-either (.-dbname e))
-                     (cats/fmap
-                       (fn [source-symbol]
-                         (case @(reactive/cursor (:hypercrud.browser/schemas ctx) [(str source-symbol) a :db/cardinality :db/ident])
-                           :db.cardinality/one
-                           (relation ctx (reactive/fmap vector (:hypercrud.browser/result ctx)))
+                (let [source-symbol (unwrap (try-either (.-dbname e)))] ; make failure impossible
+                  (case @(reactive/cursor (:hypercrud.browser/schemas ctx) [(str source-symbol) a :db/cardinality :db/ident])
+                    :db.cardinality/one
+                    (relation ctx (reactive/fmap vector (:hypercrud.browser/result ctx)))
 
-                           :db.cardinality/many
-                           (relations ctx (reactive/fmap (reactive/partial mapv vector) (:hypercrud.browser/result ctx))))))))
-              (right (relation ctx (reactive/fmap vector (:hypercrud.browser/result ctx)))))
-    :query (->> (try-either @(reactive/fmap query-type (reactive/cursor (:hypercrud.browser/request ctx) [:query])))
-                (cats/fmap
-                  #(condp = %
-                     datascript.parser.FindRel (relations ctx (reactive/fmap (reactive/partial mapv vec) (:hypercrud.browser/result ctx)))
-                     datascript.parser.FindColl (relations ctx (reactive/fmap (reactive/partial mapv vector) (:hypercrud.browser/result ctx)))
-                     datascript.parser.FindTuple (relation ctx (reactive/fmap vec (:hypercrud.browser/result ctx)))
-                     datascript.parser.FindScalar (relation ctx (reactive/fmap vector (:hypercrud.browser/result ctx))))))
-    :blank (right ctx)
-    (right ctx)))
+                    :db.cardinality/many
+                    (relations ctx (reactive/fmap (reactive/partial mapv vector) (:hypercrud.browser/result ctx))))))
+              (relation ctx (reactive/fmap vector (:hypercrud.browser/result ctx))))
+    :query (condp = (query-type @(reactive/cursor (:hypercrud.browser/request ctx) [:query]))
+             datascript.parser.FindRel (relations ctx (reactive/fmap (reactive/partial mapv vec) (:hypercrud.browser/result ctx)))
+             datascript.parser.FindColl (relations ctx (reactive/fmap (reactive/partial mapv vector) (:hypercrud.browser/result ctx)))
+             datascript.parser.FindTuple (relation ctx (reactive/fmap vec (:hypercrud.browser/result ctx)))
+             datascript.parser.FindScalar (relation ctx (reactive/fmap vector (:hypercrud.browser/result ctx))))
+    :blank ctx
+    ctx))
 
 (letfn [(user-with [rt ctx branch uri tx]
           (runtime/dispatch! rt (foundation-actions/with rt (:hypercrud.browser/invert-route ctx) branch uri tx)))]
