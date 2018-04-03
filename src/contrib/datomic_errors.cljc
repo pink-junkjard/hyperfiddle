@@ -3,8 +3,10 @@
 
 (defn parse-datomic-error-soup [e]
   (or
-    (if-let [[match a b] (re-find #"^(java\.lang\.IllegalArgumentException: :db.error/insufficient-binding )(.+)$" e)] [:db.error/insufficient-binding b])
-    (if-let [[match a b c] (re-find #"^(java\.lang\.Exception: (.+) :db.error/not-an-entity )(.+)$" e)] [:db.error/not-an-entity c])))
+    (if-let [[match a b] (re-find #"^(.+ :db.error/insufficient-binding )(.+)$" e)] [:db.error/insufficient-binding b])
+    (if-let [[match a b] (re-find #"^(.+ :db.error/not-an-entity )(.+)$" e)] [:db.error/not-an-entity b])
+    (if-let [[match a b] (re-find #"^(.+ :hyperfiddle.error/basis-stale )(.+)$" e)] [:hyperfiddle.error/basis-stale b])
+    ))
 
 (defn datomic-error-cleaner [error-str]
   (let [[title data] (if-let [[ident human] (parse-datomic-error-soup error-str)]

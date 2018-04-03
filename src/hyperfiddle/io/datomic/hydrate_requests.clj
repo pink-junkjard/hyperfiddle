@@ -86,7 +86,7 @@
       datascript.parser.FindScalar (process-scalar params-lookup qfind result))))
 
 ; todo i18n
-(def ERROR-BRANCH-PAST "Branching the past is currently unsupported, please update your basis")
+(def ERROR-BRANCH-PAST ":hyperfiddle.error/basis-stale Branching the past is currently unsupported, please refresh your basis by refreshing the page")
 
 (defn build-get-secure-db-with [staged-branches db-with-lookup local-basis]
   {:pre [(not-any? nil? (vals local-basis))]}
