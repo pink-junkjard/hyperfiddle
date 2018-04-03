@@ -12,10 +12,10 @@
 
 
 (defn hyperfiddle-hostname [env request-hostname]
-  {:post [%]}
-  (->> (:HF_HOSTNAMES env)
-       (filter #(.endsWith request-hostname (str "." %)))
-       first))
+  (or (->> (:HF_HOSTNAMES env)
+           (filter #(.endsWith request-hostname (str "." %)))
+           first)
+      (first (:HF_HOSTNAMES env))))
 
 (defn e->platform-response [e]
   ; todo there are a subset of requests that are cacheable
