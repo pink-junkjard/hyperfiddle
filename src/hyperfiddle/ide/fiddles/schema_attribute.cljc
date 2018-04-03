@@ -95,4 +95,5 @@
                        (assoc-in [:fields :db/cardinality :renderer] valueType-and-cardinality-renderer)
                        (assoc-in [:fields :db/valueType :renderer] valueType-and-cardinality-renderer)
                        (assoc-in [:fields :db/ident :renderer] ident-renderer))]
-           (hypercrud.ui.result/view ctx))))))
+           ; Elide doc and ident
+           [:div (hypercrud.ui.result/result ctx)])))))
