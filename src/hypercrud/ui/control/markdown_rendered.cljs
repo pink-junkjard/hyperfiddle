@@ -74,13 +74,12 @@
     (apply (:cell ctx) path ctx kwargs)))
 
 (defn ^:deprecated -table [content argument {:keys [class] :as props} ctx]
-  (let [kwargs (flatten (seq (dissoc props :class)))]
-    (hypercrud.ui.table/Table ctx)))
+  (hypercrud.ui.table/Table ctx))
 
 (defn result [content argument {:keys [class] :as props} ctx]
-  (let [kwargs (flatten (seq (dissoc props :class)))
-        f (unwrap (eval-str content))]
-    (hypercrud.ui.result/result ctx f)))
+  (let [f (unwrap (eval-str content))]
+    [:div.why
+     (hypercrud.ui.result/result ctx f)]))
 
 (letfn [(keyfn [relation] (hash (map #(or (:db/id %) %) relation)))]
   (defn list- [content argument {:keys [class] :as props} ctx]

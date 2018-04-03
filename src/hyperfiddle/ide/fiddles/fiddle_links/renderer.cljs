@@ -29,7 +29,7 @@
            (browser-ui/ui-error e ctx)
            (result/view ctx)])
         (fn [{:keys [:hypercrud.browser/links]}]
-          (result/view
+          (result/result
             (-> ctx
                 (dissoc :relation :relations)
                 (assoc :hypercrud.browser/result (reactive/track links->result links))

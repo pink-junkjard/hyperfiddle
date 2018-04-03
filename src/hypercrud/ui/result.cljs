@@ -5,7 +5,7 @@
             [contrib.reactive :as reactive]
             [hypercrud.browser.context :as context]
             [hypercrud.ui.control.link-controls :as link-controls]
-            [hypercrud.ui.control.markdown-rendered :refer [markdown-relation]]
+            [hypercrud.ui.control.markdown-rendered :refer [markdown-relation markdown-rendered*]]
             [hypercrud.ui.form :as form]
             [hypercrud.ui.table :as table]))
 
@@ -22,14 +22,16 @@
 
 (def ^:deprecated ^:export result-renderer result)
 
+(defn ident [ctx]
+  (markdown-rendered* (-> ctx
+                          :hypercrud.browser/fiddle
+                          (reactive/cursor [:fiddle/ident])
+                          (as-> % (reactive/fmap name %))
+                          deref
+                          (as-> % (str "### " %)))))
+
 (defn doc [ctx]
-  (markdown-relation nil (or-str @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:db/doc])
-                                 (->> @(-> ctx
-                                           :hypercrud.browser/fiddle
-                                           (reactive/cursor [:fiddle/ident])
-                                           (as-> % (reactive/fmap name %)))
-                                      (str "### ")))
-                     nil))
+  (markdown-rendered* @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:db/doc])))
 
 (defn ^:export fiddle-markdown "Call this from your fiddle renderer"
   [ctx & [class]]
@@ -39,6 +41,7 @@
 (defn ^:export view [ctx & [class]]
   (let [index-ctx (dissoc ctx :isComponent)]
     [:div {:class (classes "auto-result" class)}
+     (ident ctx)
      (doc ctx)
      (link-controls/render-nav-cmps [] false index-ctx :class "hyperfiddle-link-index")
      (result ctx)
