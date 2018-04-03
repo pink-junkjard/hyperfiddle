@@ -52,11 +52,11 @@
 #_(fragment
     k
     (binding [hyperfiddle.core/*ctx* (context/relation ctx relation)]
-      (eval-str content)))                       ; (fn f [content ctx & [?class]])
+      (unwrap (eval-str content))))                       ; (fn f [content ctx & [?class]])
 
 (defn eval [content argument props ctx]
   (binding [hyperfiddle.core/*ctx* ctx]
-    (eval-str content)))
+    (unwrap (eval-str content))))
 
 (defn browse [content argument props ctx]
   (let [kwargs (flatten (seq props))]
@@ -91,7 +91,7 @@
           (doall))]))
 
 (defn value [content argument props ctx]
-  (let [content (eval-str content)
+  (let [content (unwrap (eval-str content))
         path (into [true] (unwrap (memoized-safe-read-edn-string (str "[" argument "]"))))]
     (fragment path ((:value ctx) path ctx content))))
 
