@@ -3,7 +3,8 @@
             [contrib.datomic-tx :as tx]
             [contrib.macros :refer [str-and-code']]
             [contrib.reactive :as reactive]
-    #?(:cljs [reagent.core :as reagent])))
+    #?(:cljs [reagent.core :as reagent])
+            [hypercrud.browser.context :as context]))
 
 
 (def special-case-attrs #{:db/ident :db/cardinality :db/valueType})
@@ -90,7 +91,9 @@
            reactive-merge #(merge-in-tx % @special-attrs-state ctx)]
        (fn [ctx]
          (let [ctx (-> ctx
+                       (dissoc :relation :relations)
                        (update :hypercrud.browser/result (partial reactive/fmap reactive-merge))
+                       (context/with-relations)
                        (assoc :read-only read-only)
                        (assoc-in [:fields :db/cardinality :renderer] valueType-and-cardinality-renderer)
                        (assoc-in [:fields :db/valueType :renderer] valueType-and-cardinality-renderer)

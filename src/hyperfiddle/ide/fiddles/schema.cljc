@@ -1,7 +1,8 @@
 (ns hyperfiddle.ide.fiddles.schema
   (:require [contrib.data :refer [pprint-str]]
             [contrib.macros :refer [str-and-code]]
-            [hyperfiddle.ide.fiddles.schema-attribute :as schema-attribute]))
+            [hyperfiddle.ide.fiddles.schema-attribute :as schema-attribute]
+            [hypercrud.browser.context :as context]))
 
 
 (defn db-cardinality-options [$db]
@@ -76,7 +77,10 @@
                                    :checked @hide-datomic?
                                    :on-change #(swap! hide-datomic? not)}]
                           " Hide Datomic attributes?"]
-                         (let [ctx (update ctx :hypercrud.browser/result (partial contrib.reactive/fmap datomic-filter))]
+                         (let [ctx (-> ctx
+                                       (dissoc :relation :relations)
+                                       (update :hypercrud.browser/result (partial contrib.reactive/fmap datomic-filter))
+                                       (hypercrud.browser.context/with-relations))]
                            [hypercrud.ui.result/view ctx])]))))]
   (defn schema [$db]
     {:fiddle/ident (keyword "hyperfiddle.schema" $db)

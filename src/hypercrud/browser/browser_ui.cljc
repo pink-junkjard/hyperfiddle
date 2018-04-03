@@ -149,7 +149,7 @@
 (defn hf-ui [route ctx]                                     ; returns an Either[Error, DOM]
   (mlet [ctx (base/data-from-route route ctx)
          ui-fn (base/fn-from-mode (f-mode-config) (:hypercrud.browser/fiddle ctx) ctx)]
-    (cats/return (ui-fn (context/with-relations (ui-bindings ctx))))))
+    (cats/return (ui-fn (ui-bindings ctx)))))
 
 (defn ui-from-route [route ctx & [class]]
   [wrap-ui (hf-ui route ctx) route ctx class])

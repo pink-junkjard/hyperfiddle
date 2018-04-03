@@ -50,12 +50,12 @@
                             (filter (link/same-path-as? [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]))
                             (mapcat #(recurse-request % ctx))))))))))
 
-(defn form-requests [ctx]                          ; ui equivalent of form
+(defn form-requests [ctx]                                   ; ui equivalent of form
   (->> (reactive/unsequence (:hypercrud.browser/ordered-fes ctx))
        (mapcat (fn [[fe i]]
                  (cell-dependent-requests (context/find-element ctx i))))))
 
-(defn table-requests [ctx]                        ; ui equivalent of table
+(defn table-requests [ctx]                                  ; ui equivalent of table
   ; the request side does NOT need the cursors to be equiv between loops
   (->> (reactive/unsequence (:relations ctx))
        (mapcat (fn [[relation i]]
@@ -87,10 +87,9 @@
                                                (remove :link/dependent?)
                                                (filter (link/same-path-as? [fe-pos (:hypercrud.browser/attribute ctx)]))
                                                (mapcat #(recurse-request % ctx))))))))))))
-      (if-let [ctx (context/with-relations ctx)]
-        (if (:relations ctx)
-          (table-requests ctx)
-          (form-requests ctx))))))
+      (cond (:relation ctx) (form-requests ctx)
+            (:relations ctx) (table-requests ctx)
+            :blank nil))))
 
 (defn f-mode-config []
   {:from-ctx :user-request
