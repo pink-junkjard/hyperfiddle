@@ -89,7 +89,7 @@
       (fake-managed-anchor :domain ctx (get-in ctx [:target-domain :domain/ident]))
       " / "
       (let [ident @(reactive/cursor (:hypercrud.browser/result ctx) [:fiddle/ident])]
-        (fake-managed-anchor :fiddle-more (assoc ctx :user-renderer hijack-renderer) (str ident)))
+        (fake-managed-anchor :fiddle-more (assoc ctx :user-renderer hijack-renderer) (name ident)))
       " · "
       (fake-managed-anchor :links (assoc ctx :user-renderer hijack-renderer) "links")
       (fake-managed-anchor :ui (assoc ctx :user-renderer hijack-renderer) "view")
