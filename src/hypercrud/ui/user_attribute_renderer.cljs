@@ -13,9 +13,3 @@
         (either/branch
           (fn l [e] [:pre (pprint-str e)])
           (fn r [f] (when f (reactive/partial safe-reagent-f f)))))))
-
-(defn safe-eval-user-expr [s]
-  (-> (eval-str s)
-      (either/branch
-        (fn l [e] [:pre (pprint-str e)])
-        (fn r [v] v))))

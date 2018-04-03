@@ -1,14 +1,13 @@
 (ns hypercrud.ui.control.markdown-rendered
   (:require [contrib.css :refer [css-slugify classes]]
             [contrib.data :refer [map-values unwrap or-str]]
+            [contrib.eval :refer [eval-str]]
             [contrib.reagent :refer [fragment]]
             [contrib.reactive :as r]
             [contrib.string :refer [memoized-safe-read-edn-string]]
             [hyperfiddle.core]
             [hypercrud.browser.context :as context]
-            [hypercrud.ui.user-attribute-renderer :refer [safe-eval-user-expr]]
             [hypercrud.ui.control.code]
-
             [goog.object]
             [reagent.core :as reagent]))
 
@@ -53,11 +52,11 @@
 #_(fragment
     k
     (binding [hyperfiddle.core/*ctx* (context/relation ctx relation)]
-      (safe-eval-user-expr content)))                       ; (fn f [content ctx & [?class]])
+      (eval-str content)))                       ; (fn f [content ctx & [?class]])
 
 (defn eval [content argument props ctx]
   (binding [hyperfiddle.core/*ctx* ctx]
-    (safe-eval-user-expr content)))
+    (eval-str content)))
 
 (defn browse [content argument props ctx]
   (let [kwargs (flatten (seq props))]
@@ -74,9 +73,14 @@
         path (into [true] (unwrap (memoized-safe-read-edn-string (str "[" argument "]"))))]
     (apply (:cell ctx) path ctx kwargs)))
 
-(defn table [content argument {:keys [class] :as props} ctx]
+(defn ^:deprecated -table [content argument {:keys [class] :as props} ctx]
   (let [kwargs (flatten (seq (dissoc props :class)))]
     (hypercrud.ui.table/Table ctx)))
+
+(defn result [content argument {:keys [class] :as props} ctx]
+  (let [kwargs (flatten (seq (dissoc props :class)))
+        f (unwrap (eval-str content))]
+    (hypercrud.ui.result/result ctx f)))
 
 (letfn [(keyfn [relation] (hash (map #(or (:db/id %) %) relation)))]
   (defn list- [content argument {:keys [class] :as props} ctx]
@@ -88,7 +92,7 @@
           (doall))]))
 
 (defn value [content argument props ctx]
-  (let [content (if content (safe-eval-user-expr content))
+  (let [content (eval-str content)
         path (into [true] (unwrap (memoized-safe-read-edn-string (str "[" argument "]"))))]
     (fragment path ((:value ctx) path ctx content))))
 
@@ -109,7 +113,8 @@
    "browse" browse
    "anchor" anchor
    "cell" cell
-   "table" table
+   "table" -table
+   "result" result
    "list" list-
    "value" value
    ; relations ; table renderer with docs above and below
