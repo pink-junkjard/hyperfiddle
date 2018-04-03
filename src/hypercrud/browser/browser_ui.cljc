@@ -26,6 +26,11 @@
 (defn fiddle-css-renderer [s]
   [:style {:dangerouslySetInnerHTML {:__html s}}])
 
+(defn auto-ui-css-class [ctx]
+  (classes (let [ident @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/ident])]
+             [(css-slugify (namespace ident))
+              (css-slugify ident)])))
+
 ; defn because hypercrud.ui.result/view cannot be required from this ns
 (defn f-mode-config []
   {:from-ctx :user-renderer
@@ -35,14 +40,14 @@
                             (fn [ctx]
                               #_(fragment :_) #_(list)
                               [:div
-                               [safe-reagent-call user-fn ctx (css-slugify @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/ident]))]
+                               [safe-reagent-call user-fn ctx (auto-ui-css-class ctx)]
                                [fiddle-css-renderer @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]])))
    ; todo ui binding should be provided by a RT
    :default #?(:clj  (assert false "todo")
                :cljs (fn [ctx]
                        #_(fragment :_) #_(list)
                        [:div
-                        [hypercrud.ui.result/view ctx (css-slugify @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/ident]))]
+                        [hypercrud.ui.result/view ctx (auto-ui-css-class ctx)]
                         [fiddle-css-renderer @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]]))})
 
 (letfn [(browse [rel ctx & args]
