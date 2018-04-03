@@ -1,5 +1,7 @@
 (ns hyperfiddle.service.lib.env
-  #?(:cljs (:require [cljs.nodejs :as node]))
+  (:require
+    #?(:cljs [cljs.nodejs :as node])
+    [clojure.string :as string])
   #?(:clj
      (:import [clojure.lang ILookup])))
 
@@ -7,7 +9,7 @@
 ; These are constants loaded when the process starts. Restart the process to change them.
 (defn get-env []
   (let [required #{:BUILD
-                   :HF_HOSTNAME
+                   :HF_HOSTNAMES
                    :AUTH0_DOMAIN
                    :AUTH0_CLIENT_ID
                    :AUTH0_CLIENT_SECRET
@@ -29,7 +31,8 @@
                                  (assoc acc k (get env (name k))))
                                {}))
                   ; todo this check is garbage
-                  (update :ANALYTICS #(not= % "false"))))]
+                  (update :ANALYTICS #(not= % "false"))
+                  (update :HF_HOSTNAMES #(string/split % #";"))))]
     (doseq [v required]
       (assert (not (nil? (get env v))) (str "Environment variable for '" v "' not found")))
     env))

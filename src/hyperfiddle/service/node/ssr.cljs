@@ -13,6 +13,7 @@
             [hyperfiddle.io.hydrate-route :refer [hydrate-route-rpc!]]
             [hyperfiddle.io.sync :refer [sync-rpc!]]
             [hyperfiddle.runtime :as runtime]
+            [hyperfiddle.service.http :as http-service]
             [hyperfiddle.service.node.lib :as lib :refer [req->service-uri]]
             [hyperfiddle.state :as state]
             [promesa.core :as p]
@@ -32,8 +33,7 @@
 (def analytics (load-resource "analytics.html"))
 
 (defn full-html [env state-val serve-js? params app-component]
-  (let [resource-base (str (:STATIC_RESOURCES env) "/" (:BUILD env))
-        params (assoc params :hyperfiddle-hostname (:HF_HOSTNAME env))]
+  (let [resource-base (str (:STATIC_RESOURCES env) "/" (:BUILD env))]
     [:html {:lang "en"}
      [:head
       [:title "Hyperfiddle"]
@@ -128,21 +128,22 @@
 
 (defn http-edge [env req res path-params query-params]
   (let [hostname (.-hostname req)
+        hyperfiddle-hostname (http-service/hyperfiddle-hostname env hostname)
         user-profile (lib/req->user-profile env req)
         initial-state {:user-profile user-profile}
-        rt (->IdeSsrRuntime (:HF_HOSTNAME env) hostname (req->service-uri env req)
+        rt (->IdeSsrRuntime hyperfiddle-hostname hostname (req->service-uri env req)
                             (reactive/atom (reducers/root-reducer initial-state nil))
                             reducers/root-reducer)
         serve-js? true #_(not aliased?)
         load-level foundation/LEVEL-HYDRATE-PAGE
-        browser-init-level (if (foundation/alias? (foundation/hostname->hf-domain-name hostname (:HF_HOSTNAME env)))
+        browser-init-level (if (foundation/alias? (foundation/hostname->hf-domain-name hostname hyperfiddle-hostname))
                              load-level
                              ;force the browser to re-run the data bootstrapping when not aliased
                              foundation/LEVEL-NONE)]
     (-> (foundation/bootstrap-data rt foundation/LEVEL-NONE load-level (.-path req))
         (p/then (fn []
                   (let [action [:disable-auto-transact]
-                        #_(if (or (foundation/alias? (foundation/hostname->hf-domain-name hostname (:HF_HOSTNAME env)))
+                        #_(if (or (foundation/alias? (foundation/hostname->hf-domain-name hostname hyperfiddle-hostname))
                                   (foundation/domain-owner? user-profile @(runtime/state rt [::runtime/domain])))
                             [:enable-auto-transact]
                             [:disable-auto-transact])]
@@ -150,7 +151,8 @@
         (p/then (constantly 200))
         (p/catch #(or (:hyperfiddle.io/http-status-code (ex-data %)) 500))
         (p/then (fn [http-status-code]
-                  (let [params {:hyperfiddle.bootstrap/init-level browser-init-level}
+                  (let [params {:hyperfiddle-hostname hyperfiddle-hostname
+                                :hyperfiddle.bootstrap/init-level browser-init-level}
                         html [full-html env @(runtime/state rt) serve-js? params
                               (runtime/ssr rt @(runtime/state rt [::runtime/partitions nil :route]))]]
                     (doto res

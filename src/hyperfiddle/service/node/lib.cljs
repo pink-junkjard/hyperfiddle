@@ -1,6 +1,6 @@
 (ns hyperfiddle.service.node.lib
-  (:require [hypercrud.types.Err :refer [->Err]]
-            [hypercrud.types.URI :refer [->URI]]
+  (:require [hypercrud.types.URI :refer [->URI]]
+            [hyperfiddle.service.http :as http-service]
             [hyperfiddle.service.lib.jwt :as jwt]
             [hypercrud.transit :as transit]
             [promesa.core :as p]))
@@ -25,12 +25,13 @@
 
 (defn build-node-req-handler [platform-req-handler ->Runtime]
   (fn [env req res path-params query-params]
-    (-> (platform-req-handler
-          ->Runtime
-          :hostname (.-hostname req)
-          :path-params path-params
-          :request-body (some-> req .-body hack-buggy-express-body-text-parser transit/decode)
-          :hyperfiddle-hostname (:HF_HOSTNAME env)
-          :service-uri (req->service-uri env req)
-          :user-profile (req->user-profile env req))
-        (p/then (partial platform-response->express-response res)))))
+    (let [hostname (.-hostname req)]
+      (-> (platform-req-handler
+            ->Runtime
+            :hostname hostname
+            :path-params path-params
+            :request-body (some-> req .-body hack-buggy-express-body-text-parser transit/decode)
+            :hyperfiddle-hostname (http-service/hyperfiddle-hostname env hostname)
+            :service-uri (req->service-uri env req)
+            :user-profile (req->user-profile env req))
+          (p/then (partial platform-response->express-response res))))))

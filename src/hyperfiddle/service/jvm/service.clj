@@ -33,15 +33,16 @@
 (defn build-pedestal-req-handler [env platform-req-handler ->Runtime]
   (interceptor/handler
     (fn [req]
-      (-> (platform-req-handler
-            ->Runtime
-            :hostname (:server-name req)
-            :path-params (:path-params req)
-            :request-body (:body-params req)
-            :hyperfiddle-hostname (:HF_HOSTNAME env)
-            :service-uri nil
-            :user-profile (:user req))
-          (p/then platform-response->pedestal-response)))))
+      (let [hostname (:server-name req)]
+        (-> (platform-req-handler
+              ->Runtime
+              :hostname hostname
+              :path-params (:path-params req)
+              :request-body (:body-params req)
+              :hyperfiddle-hostname (http-service/hyperfiddle-hostname env hostname)
+              :service-uri nil
+              :user-profile (:user req))
+            (p/then platform-response->pedestal-response))))))
 
 (defn http-index [req]
   (ring-resp/response "Hypercrud Server Running!"))

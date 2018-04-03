@@ -11,6 +11,12 @@
             [taoensso.timbre :as timbre]))
 
 
+(defn hyperfiddle-hostname [env request-hostname]
+  {:post [%]}
+  (->> (:HF_HOSTNAMES env)
+       (filter #(.endsWith request-hostname (str "." %)))
+       first))
+
 (defn e->platform-response [e]
   ; todo there are a subset of requests that are cacheable
   ; todo retry-after on 503
