@@ -1,6 +1,7 @@
 (ns hyperfiddle.ide.fiddles.schema
-  (:require [hyperfiddle.ide.fiddles.schema-attribute :as schema-attribute]
-            [contrib.macros :refer [str-and-code]]))
+  (:require [contrib.data :refer [pprint-str]]
+            [contrib.macros :refer [str-and-code]]
+            [hyperfiddle.ide.fiddles.schema-attribute :as schema-attribute]))
 
 
 (defn db-cardinality-options [$db]
@@ -60,7 +61,7 @@
                     :link/rel :sys-remove-entity
                     :link/disabled? true}}})
 
-(let [renderer (str
+(let [renderer (pprint-str
                  '(fn [ctx]
                     (let [hide-datomic? (reagent.core/atom true)
                           datomic-filter (fn [attributes]
