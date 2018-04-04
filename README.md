@@ -1,12 +1,12 @@
 # Hyperfiddle — a Hypermedia Function
 
+<http://www.hyperfiddle.net/> – demos and overview
+
 Hyperfiddle abstracts over client/server data sync for Datomic APIs. Hyperfiddle extends Datomic's immutable database semantics to the API. Unlike REST/GraphQL/whatever, Hyperfiddle's data sync *composes*. If React.js is managed DOM, Hyperfiddle is managed database and network.
 
 Hyperfiddle models API inter-dependencies as a graph (I need query-X and also query-Y which depends query-Z). This graph lets the I/O runtime understand the structure and data flows of the application, which permits interesting optimization opportunities.
 
 Managed I/O is not the point. The point is: *what does managed I/O make possible that wasn't possible before?* 
-
-## Live Demo: <http://sandbox.hyperfiddle.net/:todomvc/>
 
 # Dependency coordinates — Todo
 
@@ -27,9 +27,10 @@ We are in early access / private beta, contact us.
 - [x] UI: Stabalize Hyperblog URLs
 - [ ] UI: developer experience
 
-### 0.2.0: Self-host datomic devtool & open source beta
+### 0.2.0: Open source beta
 
-- [ ] command line interface for your dev machine or environment
+- [ ] self-host from github
+- [ ] command line interface to run against local datomic
 
 # Overview
 
@@ -40,9 +41,7 @@ Hyperfiddle is built in layers. Higher layers are optional and implemented in te
 3. **Data-driven UI:** automatic UI (like Swagger)
 4. **IDE for applications:** structural editor for APIs
 
-Hyperfiddle IDE, the structural editor (<http://www.hyperfiddle.net>) is also the open-source reference application to teach you how Hyperfiddle works.
-
-## \#1. API as a function – a composable data sync primitive
+## \#1. API as a function – composable data sync primitive
 
 A simple API fn:
 
@@ -116,7 +115,7 @@ Data model is a graph:
 
 ## \#3. Data-driven UI, like Swagger UI
 
-Batteries included tooling, your API "just works" out of the box.
+Out-of-the-box tooling, batteries included. A structural editor for fiddle graphs.
 
 > <img src="https://i.imgur.com/ZtYAlTE.png" width="720px">
 >
