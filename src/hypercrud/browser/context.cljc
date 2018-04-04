@@ -14,7 +14,6 @@
   ; why not code-database-uri and all the custom ui/render fns?
   (dissoc ctx
           :keep-disabled-anchors? :route
-          :fiddle                                           ; deprecated
           :fe-pos :uri :user-with!
           :cell-data :value
           :layout :field
