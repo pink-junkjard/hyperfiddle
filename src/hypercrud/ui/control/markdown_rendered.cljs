@@ -1,7 +1,7 @@
 (ns hypercrud.ui.control.markdown-rendered
   (:require [contrib.css :refer [css-slugify classes]]
             [contrib.data :refer [map-values unwrap or-str]]
-            [contrib.eval :refer [eval-str]]
+            [contrib.eval :refer [read-eval-with-hyperfiddle-bindings]]
             [contrib.reagent :refer [fragment]]
             [contrib.reactive :as r]
             [contrib.string :refer [memoized-safe-read-edn-string]]
@@ -49,14 +49,10 @@
 (defn code-editor-wrap-argv [content argument props ctx]
   [hypercrud.ui.control.code/code* content #() props])
 
-#_(fragment
-    k
-    (binding [hyperfiddle.core/*ctx* (context/relation ctx relation)]
-      (unwrap (eval-str content))))                       ; (fn f [content ctx & [?class]])
+#_(fragment k (unwrap (eval-with-hyperfiddle-bindings content (context/relation ctx relation))))
 
 (defn eval [content argument props ctx]
-  (binding [hyperfiddle.core/*ctx* ctx]
-    (unwrap (eval-str content))))
+  (unwrap (read-eval-with-hyperfiddle-bindings content ctx)))
 
 (defn browse [content argument props ctx]
   (let [kwargs (flatten (seq props))]
@@ -77,7 +73,7 @@
   (hypercrud.ui.table/Table ctx))
 
 (defn result [content argument {:keys [class] :as props} ctx]
-  (let [f (unwrap (eval-str content))]
+  (let [f (unwrap (read-eval-with-hyperfiddle-bindings content))]
     [:div.why
      (hypercrud.ui.result/result ctx f)]))
 
@@ -91,7 +87,7 @@
           (doall))]))
 
 (defn value [content argument props ctx]
-  (let [content (unwrap (eval-str content))
+  (let [content (unwrap (read-eval-with-hyperfiddle-bindings content))
         path (into [true] (unwrap (memoized-safe-read-edn-string (str "[" argument "]"))))]
     (fragment path ((:value ctx) path ctx content))))
 

@@ -60,3 +60,7 @@ use dynamic scope instead of args."
   (if (fn? user-v)
     (try-either (apply user-v args))                        ; userland fn can crash
     (either/right user-v)))
+
+(defn read-eval-with-hyperfiddle-bindings [content & [ctx]]
+  (binding [hyperfiddle.core/*ctx* ctx]
+    (eval-str content)))
