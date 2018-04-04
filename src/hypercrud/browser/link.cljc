@@ -1,7 +1,7 @@
 (ns hypercrud.browser.link
   (:require [cats.core :as cats]
             [cats.monad.either :as either]
-            [contrib.eval :refer [eval-str]]
+            [contrib.eval :refer [eval-str -get-or-apply']]
             [contrib.reactive :as reactive]
             [contrib.string :refer [memoized-safe-read-edn-string]]
             [contrib.try :refer [try-either]]
@@ -64,11 +64,6 @@
       :blank (either/right route)
       (either/left {:message "route has no fiddle" :data {:route route}}))))
 
-(defn get-or-apply' [expr & args]
-  (if (fn? expr)
-    (try-either (apply expr args))
-    (either/right expr)))
-
 (defn ^:export build-link-props-raw [unvalidated-route' link ctx] ; ctx is for display-mode
 
   ; this is a fine place to eval, put error message in the tooltip prop
@@ -80,10 +75,10 @@
         user-props' (cats/bind (eval-str (:hypercrud/props link))
                                (fn [user-expr]
                                  (if user-expr
-                                   (get-or-apply' user-expr ctx)
+                                   (-get-or-apply' user-expr ctx) ; Use dynamic scope for ctx instead of argument
                                    (either/right nil))))
         user-props-map-raw (cats/extract (cats/mplus user-props' (either/right nil)))
-        user-prop-val's (map #(get-or-apply' % ctx) (vals user-props-map-raw))
+        user-prop-val's (map #(-get-or-apply' % ctx) (vals user-props-map-raw))
         user-prop-vals (map unwrap user-prop-val's)
         errors (->> (concat [user-props' unvalidated-route' validated-route'] user-prop-val's)
                     (filter either/left?) (map cats/extract) (into #{}))

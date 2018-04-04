@@ -53,3 +53,10 @@
     (eval-str code-str)
     (fn [e] (throw e))
     identity))
+
+(defn -get-or-apply' "Apply a userland fn or return the val. The fn can crash. This should not exist, unify the apply with the eval and
+use dynamic scope instead of args."
+  [user-v & args]
+  (if (fn? user-v)
+    (try-either (apply user-v args))                        ; userland fn can crash
+    (either/right user-v)))
