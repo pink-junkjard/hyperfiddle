@@ -38,7 +38,7 @@
   (let [content @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/markdown])]
     (markdown-relation nil content ctx class)))
 
-(defn ^:export view [ctx & [class]]
+(defn ^:export view [ctx & [class]]                         ; hyperfiddle.ui/fiddle :docstring true :ident false
   (let [index-ctx (dissoc ctx :isComponent)]
     [:div {:class (classes "auto-result" class)}
      (ident ctx)
