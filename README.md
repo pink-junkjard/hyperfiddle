@@ -2,7 +2,7 @@
 
 > <http://www.hyperfiddle.net/> – demos and overview
 
-Hyperfiddle abstracts over client/server data sync for Datomic APIs. Hyperfiddle extends Datomic's immutable database semantics to the API. Unlike REST/GraphQL/whatever, Hyperfiddle's data sync *composes*. If React.js is managed DOM, Hyperfiddle is managed database and network.
+Hyperfiddle abstracts over client/server data sync for Datomic APIs by extending Datomic's immutable database semantics to the API. Unlike REST/GraphQL/whatever, Hyperfiddle's data sync *composes*. If React.js is managed DOM, Hyperfiddle is managed database and network.
 
 Hyperfiddle models API inter-dependencies as a graph (I need query-X and also query-Y which depends query-Z). This graph lets the I/O runtime understand the structure and data flows of the application, which permits interesting optimization opportunities.
 
