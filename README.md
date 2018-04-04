@@ -124,9 +124,11 @@ Batteries included tooling, your API "just works" out of the box.
 
 Links are pink (links are edges in the graph). Select options are iframes with style. `:link/rel` has semantic meaning like html, `:options` matches up with the [`:db.type/ref` renderer](https://github.com/hyperfiddle/hyperfiddle/blob/bd61dfb07cbff75d5002b15999d1abc6c3c6af3c/src/hypercrud/ui/widget.cljs#L74). If you override the `:db.type/ref` renderer, you may care to use `:link/rel` as semantic hint, or not. Imagine a [link/rel registry like HTML](https://www.iana.org/assignments/link-relations/link-relations.xhtml).
 
+All Hyperfiddle APIs must resolve to a single function. The fiddle graph interpreter function is *Hyperfiddle Browser – a Hypermedia function*.
+
 *web browser : HTML documents :: hyperfiddle browser :: hyperfiddle EDN values*
 
-All Hyperfiddle APIs must resolve to a single function. The fiddle graph interpreter function is the *Hyperfiddle Browser*.
+The hypermedia function is coded in CLJC and in simultaneously in jvm, browser and node, which is how Hyperfiddle is able to coordinate I/O correctly, performantly and automatically. 
 
 ### Views rendered through `eval`, progressive enhancement at any layer
 
