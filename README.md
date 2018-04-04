@@ -1,6 +1,6 @@
 # Hyperfiddle — a Hypermedia Function
 
-<http://www.hyperfiddle.net/> – demos and overview
+> <http://www.hyperfiddle.net/> – demos and overview
 
 Hyperfiddle abstracts over client/server data sync for Datomic APIs. Hyperfiddle extends Datomic's immutable database semantics to the API. Unlike REST/GraphQL/whatever, Hyperfiddle's data sync *composes*. If React.js is managed DOM, Hyperfiddle is managed database and network.
 
