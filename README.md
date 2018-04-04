@@ -18,7 +18,7 @@ We are in early access / private beta, contact us.
 
 We're nearing a 0.1 open-source release in Q2 2018.
 
-### Blocking 0.1.0: 
+### Blocking 0.1.0: Cloud beta
 
 - [x] Performance (Hyperfiddle must respond as fast as a Clojure repl)
 - [x] API: data loop running in JVM
@@ -29,9 +29,9 @@ We're nearing a 0.1 open-source release in Q2 2018.
 - [x] UI: Stabalize Hyperblog URLs
 - [ ] UI: developer experience
 
-### 0.2.0
+### 0.2.0: self-host beta
 
-- [ ] CLI to run hyperfiddle.server on your dev machine
+- [ ] command line interface to run hyperfiddle.server on your dev machine
 
 # Overview
 
@@ -42,29 +42,21 @@ Hyperfiddle is built in layers. Higher layers are optional and implemented in te
 3. **Data-driven UI:** automatic UI (like Swagger)
 4. **IDE for applications:** structural editor for APIs
 
-Hyperfiddle IDE, the structural editor (<http://www.hyperfiddle.net>) is also the open-source reference application to teach you how Hyperfiddle works. Hyperfiddle IDE runs on your machine from a CLI (`hyperfiddle serve datomic:free://localhost:4334/my-fiddles`); it runs in your application as a jar file from github, and as managed elastic cloud infrastructure.
+Hyperfiddle IDE, the structural editor (<http://www.hyperfiddle.net>) is also the open-source reference application to teach you how Hyperfiddle works.
 
-The dashboard UI components are built with Reagent and support SSR, but it should be straightforward to use any managed dom rendering strategy.
-
-Hyperfiddle makes forms and such really easy to write (something a web designer can do), because when I/O is managed, there is nothing left but markup. Hyperfiddle comes batteries included with a library of UI components, but you don't have to use them.
-
-Hyperfiddle's data sync loop runs in the JVM (to solve N+1 problem of REST). 
-
-## \#1. API as a function
+## \#1. API as a function – a composable data sync primitive
 
 A simple API fn:
 
 ```clojure
 (def datomic-samples-blog #uri "datomic:free://datomic:4334/samples-blog")
-(def db-branch nil) ; This is the datomic time-basis; nil is HEAD
+(def db-branch nil) ; This is the datomic time-basis, nil is HEAD
 
 (def race-registration-query
-  '[:find (pull ?e [:db/id :reg/email :reg/gender :reg/shirt-size])
-    :in $ :where [?e :reg/email]])
+  '[:find (pull ?e [:db/id :reg/email :reg/gender :reg/shirt-size]) :where [?e :reg/email]])
 
 (def gender-options-query
-  '[:find (pull ?e [:db/id :reg.gender/ident])
-    :in $ :where [?e :reg.gender/ident]])
+  '[:find (pull ?e [:db/id :reg.gender/ident]) :where [?e :reg.gender/ident]])
 
 (defn api [state peer]
   (let [$ (hc/db peer datomic-samples-blog db-branch)]            
@@ -72,18 +64,21 @@ A simple API fn:
      (->QueryRequest gender-options-query [$])]))
 ```
                         
-Notes:
 * I/O runtime will call API fn repeatedly until its return value stabalizes
 * This permits queries that depend on the results of earlier queries  
 * Data loop typically runs in JVM Datomic Peer, so no network hops or N+1 problem like REST & ORM
 * Data loop sometimes runs in browser (e.g. in response to incremental ui state change)
 * all I/O responses are immutable, all requests have a time-basis
 
-Now that we have a properly composable I/O primitive, we can use it as a basis to build *composable abstractions:*
+This is the basis on which we build *composable abstractions:*
 
 ## \#2. API defined in EDN
 
-An API defined as EDN ("fiddle"). Fiddles have links to other fiddles, this forms a graph.
+Data model is a graph:
+
+* *Fiddles* have a *query* (at the top)
+* Fiddles have *links* to other fiddles (links are pink)
+* Three types of link: *anchors* & *iframes* (hypermedia), and *buttons* (eval)
 
 ```clojure
 {:db/id 17592186045418,                                     ; Root query
@@ -105,7 +100,7 @@ An API defined as EDN ("fiddle"). Fiddles have links to other fiddles, this form
                   :link/render-inline? true,                ; embedded like an iframe
                   :link/dependent? true,                    ; dependency on parent fiddle's data
                   :link/path "0 :reg/shirt-size",
-                  :link/formula "(fn [ctx] {:request-params (get-in ctx [:cell-data :reg/gender])})",
+                  :link/formula "(fn [ctx] @(contrib.reactive/cursor (:cell-data ctx) [:reg/gender]))",
                   :link/fiddle #:db{:id 17592186045435}     ; shirt size options query omitted
                   }
                  {:db/id 17592186045481,                    ; link to new-registration form
@@ -116,30 +111,35 @@ An API defined as EDN ("fiddle"). Fiddles have links to other fiddles, this form
 
 ### API as a graph permits optimizations that human-coded I/O cannot do:  
 
-* Automatic I/O partitioning and batching, optimized for cache hits
-* Server preloading, prefetching and optimistic push
-* Machine learning can analyze the graph to do optimzations
-
-We do some of this already today.
+* Today: Automatic I/O partitioning and batching, optimized for cache hits
+* Today: Exact and total page responses without accidental over-fetching
+* Future: Smart server prefetching and optimistic push
+* Future: Machine learning
 
 ## \#3. Data-driven UI, like Swagger UI
 
-Batteries included tooling, your API "just works" out of the box. A picture is worth 1000 words:
+Batteries included tooling, your API "just works" out of the box.
 
 > <img src="https://i.imgur.com/ZtYAlTE.png" width="720px">
 >
 > *Above EDN definition, rendered. Pink highlights indicate a link to another fiddle. live fiddle: <http://sandbox.hyperfiddle.net/gender>*
 
-All Hyperfiddle APIs must resolve to a function, and this is no different. Fiddles are interpreted by a very special function called the *Hyperfiddle Browser*. The Browser interprets fiddles by navigating the link graph.
+Links are pink (links are edges in the graph). Select options are iframes with style. `:link/rel` has semantic meaning like html, `:options` matches up with the [`:db.type/ref` renderer](https://github.com/hyperfiddle/hyperfiddle/blob/bd61dfb07cbff75d5002b15999d1abc6c3c6af3c/src/hypercrud/ui/widget.cljs#L74). When the gender semantic renderer is toggled off, the link is in the header, because the query runs once, not per-row. If you override the `:db.type/ref` renderer, you may care to use `:link/rel` as semantic hint, or not. Imagine a [link/rel registry like HTML](https://www.iana.org/assignments/link-relations/link-relations.xhtml).*
 
 *web browser : HTML documents :: hyperfiddle browser :: hyperfiddle EDN values*
 
-The Browser has the following hook points for progressive enhancement with Reagent expressions:
+All Hyperfiddle APIs must resolve to a single function. The fiddle graph interpreter function is the *Hyperfiddle Browser*.
 
-* Fiddle root
-* Datomic attributes #{:post/content :post/title :post/date ...}
+### Views rendered through `eval`, progressive enhancement at any layer
+
 * Datomic type #{string keyword bool inst long ref ...}
-* UI controls #{form table tr th label value ...}
+* Datomic attributes #{:post/content :post/title :post/date ...}
+* Form and table renderers #{form table tr th label value ...}
+* Markdown with hyperfiddle extensions
+* Fiddle renderer
+* Hyperfiddle Browser
+
+Each layer is composed from the layer above, so you can change as or as little as you like.
 
 > <img src="https://i.imgur.com/pQk6g0a.png" width="720px">
 > 
@@ -163,8 +163,6 @@ Here is a fiddle root renderer:
 
 Here is the [Datomic schema renderer](https://github.com/hyperfiddle/hyperfiddle/blob/bd61dfb07cbff75d5002b15999d1abc6c3c6af3c/src/hypercrud/ui/auto_control.cljs#L15-L30), TODO this should be a core.match config stored in a database...
 
-Views are very easy to code since they're just functions.
-
 The dashboard is backed by an API, which hydrates a route (URL), except instead of HTML the server
 the server returns EDN (transit). There is also an "open" API for development that will respond to any query, not just valid routes. The "open" API has future implications for the semantic web.
 
@@ -173,15 +171,9 @@ the server returns EDN (transit). There is also an "open" API for development th
 Once you start coding "data" (data-ing?), a few ideas form:
 
 1. Data is vastly more productive than code, the surface area for bugs is tiny–mostly just typos
-2. Working with EDN-serialized text on a filesystem is stupid
+2. Working with EDN-serialized text on a filesystem is stupid and causes the [project.clj chaos problem](https://github.com/technomancy/leiningen/blob/2d8ceda7cb69dfd1ae32540c68902573f38a9908/sample.project.clj).
 
-Hyperfiddles are graphs, not text, so instead of git they are stored in Datomic. This means you can query the graph e.g. "which fiddles link to me". Like git and the web, there is no central database. The future implications of this are profound.
-
-Hyperfiddle IDE is out of scope for this readme, but here is a picture.
-
-> <img src="https://i.imgur.com/JxzWUIq.gif" width="720px">
-> 
-> *Select options are iframes with style. `:link/rel` has semantic meaning like html, `:options` matches up with the [`:db.type/ref` renderer](https://github.com/hyperfiddle/hyperfiddle/blob/bd61dfb07cbff75d5002b15999d1abc6c3c6af3c/src/hypercrud/ui/widget.cljs#L74). When the gender semantic renderer is toggled off, the link is in the header, because the query runs once, not per-row. If you override the `:db.type/ref` renderer, you may care to use `:link/rel` as semantic hint, or not. Imagine a [link/rel registry like HTML](https://www.iana.org/assignments/link-relations/link-relations.xhtml).*
+Hyperfiddles are graphs, not text, so instead of git they are stored in Datomic. This means you can query the graph e.g. "which fiddles link to me". Like git and the web, there is no central database, rather many little ones distributed. The future implications of this are profound.
 
 ## Hyperfiddle.net is 100% built in Hyperfiddle (EDN style)
 
@@ -211,11 +203,7 @@ reframe or any other rendering strategy.
 Why Reagent? Vanilla React is memoized rendering oriented around values. It's not fast enough; Hyperfiddle UIs 
 can get very sophisticated very fast, the reactive abstraction is required to feel snappy.
 
-Query subscription issues: Relational/graph databases aren't designed for this, because in the general case you'd
-need to re-run all the queries on a page to know if new data impacts them (and on Facebook there are hundreds
-of queries per page). However in the average case, we just want 
-subscriptions on simple queries for which a heuristic works, or for only specific queries, which I believe the Posh 
-project has working, see this [reddit thread](https://www.reddit.com/r/Clojure/comments/6rncgw/arachneframeworkfactui/dl7r1xs/?context=2)
+Query subscriptions: This is a Datomic question and it is possible for straightforward queries, see this [reddit thread](https://www.reddit.com/r/Clojure/comments/6rncgw/arachneframeworkfactui/dl7r1xs/?context=2).
 
 * Eric: I would like to understand where caching actually happens
 * Eric: What happens from top to bottom when a form is rendered
