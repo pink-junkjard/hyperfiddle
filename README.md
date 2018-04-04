@@ -16,8 +16,6 @@ Managed I/O is not the point. The point is: *what does managed I/O make possible
 
 We are in early access / private beta, contact us.
 
-We're nearing a 0.1 open-source release in Q2 2018.
-
 ### Blocking 0.1.0: Cloud beta
 
 - [x] Performance (Hyperfiddle must respond as fast as a Clojure repl)
@@ -29,9 +27,9 @@ We're nearing a 0.1 open-source release in Q2 2018.
 - [x] UI: Stabalize Hyperblog URLs
 - [ ] UI: developer experience
 
-### 0.2.0: self-host beta
+### 0.2.0: Self-host datomic devtool & open source beta
 
-- [ ] command line interface to run hyperfiddle.server on your dev machine
+- [ ] command line interface for your dev machine or environment
 
 # Overview
 
