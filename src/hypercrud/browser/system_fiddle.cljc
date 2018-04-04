@@ -22,7 +22,7 @@
   {:fiddle/ident :hyperfiddle.system/remove
    :fiddle/type :blank
    :fiddle/renderer (str-and-code
-                      (fn [result fes anchors ctx]
+                      (fn [ctx]
                         [:p "Retract entity?"]))})
 
 
