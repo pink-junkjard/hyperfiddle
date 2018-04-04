@@ -156,7 +156,6 @@
                        :read-only (or (:read-only ctx) never-read-only)
 
                        ;deprecated
-                       :result reactive-result
                        :fiddle @fiddle)
                  ctx (context/with-relations ctx)]
            ctx (user-bindings/user-bindings' fiddle ctx)
