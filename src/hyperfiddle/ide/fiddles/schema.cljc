@@ -2,7 +2,8 @@
   (:require [contrib.data :refer [pprint-str]]
             [contrib.macros :refer [str-and-code]]
             [hyperfiddle.ide.fiddles.schema-attribute :as schema-attribute]
-            [hypercrud.browser.context :as context]))
+            [hypercrud.browser.context :as context]
+            [clojure.string :as str]))
 
 
 (defn db-cardinality-options [$db]
@@ -64,30 +65,31 @@
 
 (let [renderer (pprint-str
                  '(fn [ctx]
-                    (let [hide-datomic? (reagent.core/atom true)
-                          datomic-filter (fn [attributes]
-                                           (if @hide-datomic?
-                                             (filter #(> (:db/id %) 62) attributes)
-                                             attributes))]
+                    (let [hide-datomic (reagent.core/atom true)
+                          hide-archived (reagent.core/atom true)
+                          db-attr? #(<= (:db/id %) 62)
+                          archived? #(clojure.string/starts-with? (namespace (:db/ident %)) "zzz.")
+                          do-filter-reactive (fn [xs] ; perf sensitive
+                                               (as-> xs xs
+                                                     (if @hide-datomic (remove db-attr? xs) xs)
+                                                     (if @hide-archived (remove archived? xs) xs)))]
                       (fn [ctx]
-                        [:div.hyperfiddle-attributes
-                         [:label {:for "hide-datomic"}
-                          [:input {:type "checkbox"
-                                   :id "hide-datomic"
-                                   :checked @hide-datomic?
-                                   :on-change #(swap! hide-datomic? not)}]
-                          " Hide Datomic attributes?"]
+                        [:div.hyperfiddle-schema
+                         (hypercrud.ui.result/ident ctx)
+                         (hypercrud.ui.result/doc ctx)
+                         [:label {:style {:font-weight "400" :display "block"}} [:input {:type "checkbox" :checked @hide-datomic :on-change #(swap! hide-datomic not)}] " hide Datomic system attributes"]
+                         [:label {:style {:font-weight "400" :display "block"}} [:input {:type "checkbox" :checked @hide-archived :on-change #(swap! hide-archived not)}] " hide Hyperfiddle archived attributes"]
                          (let [ctx (-> ctx
                                        (dissoc :relation :relations)
-                                       (update :hypercrud.browser/result (partial contrib.reactive/fmap datomic-filter))
+                                       (update :hypercrud.browser/result (partial contrib.reactive/fmap do-filter-reactive #_(contrib.reactive/partial filter f?)))
                                        (hypercrud.browser.context/with-relations))]
-                           [hypercrud.ui.result/view ctx])]))))]
+                           [hypercrud.ui.result/result ctx])]))))]
   (defn schema [$db]
     {:fiddle/ident (keyword "hyperfiddle.schema" $db)
+     :db/doc (str "Datomic schema for " $db)
      :fiddle/query (let [$db (symbol $db)]
-                     (str [:find [(list 'pull $db '?attr [:db/id :db/ident :db/valueType :db/cardinality :db/doc :db/unique :db/isComponent :db/fulltext]) '...]
-                           :in $db
-                           :where [$db :db.part/db :db.install/attribute '?attr]]))
+                     (pprint-str [:in $db :find [(list 'pull $db '?attr [:db/id :db/ident :db/valueType :db/cardinality :db/doc :db/unique :db/isComponent :db/fulltext]) '...]
+                                  :where [$db :db.part/db :db.install/attribute '?attr]]))
      :fiddle/type :query
      :fiddle/bindings (str-and-code (fn [param-ctx] (assoc param-ctx :read-only (constantly true))))
      :fiddle/renderer renderer
