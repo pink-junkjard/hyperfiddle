@@ -211,7 +211,7 @@ room to go. Imagine a world of composable applications.
 
 # Documentation and community
 
-Hyperfiddle is beta software. The programming API is not frozen.
+Hyperfiddle is alpha software. The programming API is not frozen.
 
 <https://www.reddit.com/r/hyperfiddle/> will aggregate all our scattered blog posts, tutorials
 and documentation.
