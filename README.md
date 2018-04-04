@@ -173,33 +173,20 @@ Once you start coding "data" (data-ing?), a few ideas form:
 
 Hyperfiddles are graphs, not text, so instead of git they are stored in Datomic. This means you can query the graph e.g. "which fiddles link to me". Like git and the web, there is no central database, rather many little ones distributed. The future implications of this are profound.
 
-## Hyperfiddle.net is 100% built in Hyperfiddle (EDN style)
-
-The following screenshot is fully defined as Hyperfiddle EDN and simple Reagent expressions that a web 
-designer could write.
+## Hyperfiddle.net is 100% built in Hyperfiddle
 
 > <img src="https://i.imgur.com/DCPtHN3.png" width="720px">
 > 
-> *The radio control on `:fiddle/type` is a custom attribute renderer, `qe-picker-control`, which is defined 
-> in the view menu and eval'ed at runtime. `:fiddle/query`'s custom renderer is a CodeMirror with syntax 
-> highlighting, balanced parens etc. The fiddle's own layout (including button labels and local state) 
-> is a fiddle renderer, about 100 lines of Reagent markup, defined in the view menu and eval'ed at runtime.
-> Each menu is a `:button` link to another fiddle, with its own data dependencies and renderers.*
+> *The radio control on `:fiddle/type` is a custom attribute renderer, `qe-picker-control`, which is eval'ed at runtime. `:fiddle/query`'s custom renderer is a CodeMirror. The fiddle's own layout (including button labels and local state) is a fiddle renderer, about 100 lines of Reagent markup eval'ed at runtime. Each menu is a link to another fiddle, with its own data dependencies and renderers.*
 
 # FAQ and anti-features
 
 Integration with REST/fiat APIs: Hyperfiddle can't help you with foreign data sync but it doesn't get in the way either.
-Do what you'd do in React. You'll lose out-of-the-box SSR.
+Run a custom backend next to hyperfiddle.server (or integrate with hyperfiddle.server) and do legacy web development.
 
-Local state in UI: Hyperfiddle is about data sync; Do what you'd do in React. Keep in mind that Hyperfiddle data sync
-is so fast (on par with static sites) that you may not need much local state; just use page navigation (the URL is a 
-perfectly good place to store state). Local state is perfectly allowable and idiomatic
+Local state in UI: Hyperfiddle is about data sync and has no opinion about how your views work. Local state is perfectly allowable, do what you've always done. Keep in mind that Hyperfiddle data sync is so fast (on par with static sites) that you may not need much local state; just use page navigation (the URL is a perfectly good place to store state).
 
-Reframe: Reframe does not support SSR, and we want SSR by default. It should be straightforward to swap in
-reframe or any other rendering strategy.
-
-Why Reagent? Vanilla React is memoized rendering oriented around values. It's not fast enough; Hyperfiddle UIs 
-can get very sophisticated very fast, the reactive abstraction is required to feel snappy.
+Reframe: Reframe does not support SSR and the degree of local state which reframe encourages is not idiomatic in Hyperfiddle-in-the-large. Hyperfiddle internally uses a redux-like action/reducer pattern. Your custom renderers (including the root renderer) have no restrictions and you should have no trouble using Reframe.
 
 Query subscriptions: This is a Datomic question and it is possible for straightforward queries, see this [reddit thread](https://www.reddit.com/r/Clojure/comments/6rncgw/arachneframeworkfactui/dl7r1xs/?context=2).
 
@@ -224,7 +211,7 @@ room to go. Imagine a world of composable applications.
 
 # Documentation and community
 
-Hyperfiddle is alpha software. The programming API is not frozen.
+Hyperfiddle is beta software. The programming API is not frozen.
 
 <https://www.reddit.com/r/hyperfiddle/> will aggregate all our scattered blog posts, tutorials
 and documentation.
