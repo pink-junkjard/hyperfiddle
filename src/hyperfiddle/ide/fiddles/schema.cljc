@@ -75,7 +75,7 @@
                                                      (if @hide-archived (remove archived? xs) xs)))]
                       (fn [ctx]
                         [:div.hyperfiddle-schema
-                         (hypercrud.ui.result/ident ctx)
+                         #_(hypercrud.ui.result/ident ctx)
                          (hypercrud.ui.result/doc ctx)
                          [:label {:style {:font-weight "400" :display "block"}} [:input {:type "checkbox" :checked @hide-datomic :on-change #(swap! hide-datomic not)}] " hide Datomic system attributes"]
                          [:label {:style {:font-weight "400" :display "block"}} [:input {:type "checkbox" :checked @hide-archived :on-change #(swap! hide-archived not)}] " hide Hyperfiddle archived attributes"]
@@ -86,7 +86,7 @@
                            [hypercrud.ui.result/result ctx])]))))]
   (defn schema [$db]
     {:fiddle/ident (keyword "hyperfiddle.schema" $db)
-     :db/doc (str "Datomic schema for " $db)
+     :db/doc (str "### Datomic schema for " $db)
      :fiddle/query (let [$db (symbol $db)]
                      (pprint-str [:in $db :find [(list 'pull $db '?attr [:db/id :db/ident :db/valueType :db/cardinality :db/doc :db/unique :db/isComponent :db/fulltext]) '...]
                                   :where [$db :db.part/db :db.install/attribute '?attr]]))
