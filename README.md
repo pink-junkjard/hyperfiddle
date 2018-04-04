@@ -123,11 +123,11 @@ Out-of-the-box tooling, batteries included.
 
 Links are pink (links are edges in the graph). Select options are iframes with style. `:link/rel` has semantic meaning like html, `:options` matches up with the [`:db.type/ref` renderer](https://github.com/hyperfiddle/hyperfiddle/blob/bd61dfb07cbff75d5002b15999d1abc6c3c6af3c/src/hypercrud/ui/widget.cljs#L74). If you override the `:db.type/ref` renderer, you may care to use `:link/rel` as semantic hint, or not. Imagine a [link/rel registry like HTML](https://www.iana.org/assignments/link-relations/link-relations.xhtml).
 
-All Hyperfiddle APIs must resolve to a single function. The fiddle graph interpreter function is *Hyperfiddle Browser – a Hypermedia function*.
+All Hyperfiddle APIs must resolve to a single function. The fiddle graph interpreter function is *Hyperfiddle Browser*. You can of course provide your own function, but the Browser is special because it is a *hypermedia function*:
 
-<p align="center">*web browser : HTML documents :: hyperfiddle browser :: hyperfiddle EDN values*</p>
+<p align="center">web browser : HTML documents :: hyperfiddle browser :: hyperfiddle EDN values</p>
 
-The hypermedia function is coded in CLJC and in simultaneously in jvm, browser and node, which is how Hyperfiddle is able to coordinate I/O correctly, performantly and automatically. 
+The Browser is coded in CLJC and evaluates simultaneously in jvm, browser and node, which is how Hyperfiddle is able to coordinate I/O correctly, performantly and automatically.
 
 ### Views rendered through `eval`, progressive enhancement at any layer
 
@@ -206,12 +206,11 @@ How high can we abstract? We aren't sure yet. It will scale until Datomic's app-
 at which point programmers will manually optimize their Datomic services. Datomic Peer vs Client vs Cloud makes a 
 difference here as they all have different stories for code/data locality. 
 
-Hyperfiddle's abstraction has scaled quite far already, see Hyperfiddle-in-Hyperfiddle. We think there is much more 
-room to go. Imagine a world of composable applications.
+Hyperfiddle's abstraction has scaled quite far already, see Hyperfiddle-in-Hyperfiddle.
 
 > ![](https://i.imgur.com/OZyH0P5.png)
 > 
-> *We think it will scale at least this far and probably much further*
+> *We think it will scale at least this far, and there is much more room to go. Can you imagine a world of composable applications?*
 
 # Documentation and community
 
