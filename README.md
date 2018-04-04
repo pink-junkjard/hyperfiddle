@@ -27,11 +27,10 @@ We're nearing a 0.1 open-source release in Q2 2018.
 - [x] UI: Userland custom router
 - [x] UI: Human readable URLs
 - [x] UI: Stabalize Hyperblog URLs
+- [ ] UI: developer experience
 
 ### 0.2.0
 
-- [ ] IDE developer experience
-- [ ] release Hyperblog, a markdown ~~static site generator~~ *static application* backed by Datomic
 - [ ] CLI to run hyperfiddle.server on your dev machine
 
 # Overview
