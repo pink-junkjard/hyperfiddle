@@ -125,7 +125,7 @@ Links are pink (links are edges in the graph). Select options are iframes with s
 
 All Hyperfiddle APIs must resolve to a single function. The fiddle graph interpreter function is *Hyperfiddle Browser – a Hypermedia function*.
 
-*web browser : HTML documents :: hyperfiddle browser :: hyperfiddle EDN values*
+<p align="center">*web browser : HTML documents :: hyperfiddle browser :: hyperfiddle EDN values*</p>
 
 The hypermedia function is coded in CLJC and in simultaneously in jvm, browser and node, which is how Hyperfiddle is able to coordinate I/O correctly, performantly and automatically. 
 
