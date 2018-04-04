@@ -16,7 +16,7 @@ Managed I/O is not the point. The point is: *what does managed I/O make possible
 
 We are in early access / private beta, contact us.
 
-### Blocking 0.1.0: Cloud beta
+### 0.1.0: Fast and stable in cloud
 
 - [x] Performance (Hyperfiddle must respond as fast as a Clojure repl)
 - [x] API: data loop running in JVM
@@ -27,7 +27,7 @@ We are in early access / private beta, contact us.
 - [x] UI: Stabalize Hyperblog URLs
 - [ ] UI: developer experience
 
-### 0.2.0: Open source beta
+### 0.2.0: Self-host
 
 - [ ] self-host from github
 - [ ] command line interface to run against local datomic
