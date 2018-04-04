@@ -1,39 +1,39 @@
 (ns hypercrud.ui.select
-  (:require [cats.core :as cats]
-            [cats.monad.either :as either]
-            [contrib.try :refer [try-either]]
-            [hypercrud.browser.context :as context]
-            [hypercrud.browser.core :as browser]
+  (:require [cats.core :refer [fmap sequence]]
+            [cats.monad.either :refer [right left branch]]
             [contrib.datomic-tx :as tx]
-            [contrib.reactive :as reactive]))
+            [contrib.data :refer [unwrap]]
+            [contrib.eval :refer [eval-str]]
+            [contrib.reactive :as reactive]
+            [contrib.try :refer [try-either]]
+            [hypercrud.browser.core :as browser]))
 
 
 (defn default-label-renderer [v ctx]
-  (cond
-    (instance? cljs.core/Keyword v) (name v)
-    :else (str v))
+  (if (instance? cljs.core/Keyword v)
+    (name v)                                                ; A sensible default for userland whose idents usually share a long namespace.
+    (str v))
   #_(condp (fn [x c] (instance? c x)) v
       cljs.core/Keyword (name v)
       (str v)))
 
-(defn build-label [relation ctx]
-  (->> (map (fn [cell-data fe]
-              (->> (:fields fe)
-                   (mapv (fn [field {:keys [attribute]}]
-                           ; Custom label renderers? Can't use the attribute renderer, since that
-                           ; is how we are in a select options in the first place.
-                           (let [value ((:cell-data->value field) cell-data)
-                                 renderer (get-in ctx [:fields attribute :label-renderer] default-label-renderer)]
-                             (try-either (renderer value ctx)))))))
-            relation
-            @(:hypercrud.browser/ordered-fes ctx))
-       (apply concat)
-       (cats/sequence)
-       (cats/fmap (fn [labels]
-                    (->> labels
-                         (interpose ", ")
-                         (remove nil?)
-                         (apply str))))))
+(defn label-fn [relation ctx]                               ; It's perfectly possible to properly report this error properly upstream. (later - is it?)
+  ; This whole thing is legacy, migrate it to link props
+  (let [label'
+        (->> (map (fn [cell-data fe]
+                    (->> (:fields fe)
+                         (mapv (fn [field {:keys [attribute]}]
+                                 ; Custom label renderers? Can't use the attribute renderer, since that
+                                 ; is how we are in a select options in the first place.
+                                 (let [value ((:cell-data->value field) cell-data)
+                                       renderer (get-in ctx [:fields attribute :label-renderer] default-label-renderer)]
+                                   (try-either (renderer value ctx)))))))
+                  relation
+                  @(:hypercrud.browser/ordered-fes ctx))
+             (apply concat)
+             sequence
+             (fmap #(->> % (interpose ", ") (remove nil?) (apply str))))]
+    (branch label' pr-str identity)))
 
 (defn select-boolean* [value props ctx]
   (let [props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
@@ -45,7 +45,7 @@
                                      "false" false)]
                              ((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) v)))
                :disabled (if (:read-only props) true false)}]
-    [:select props
+    [:select (dissoc props :label-fn)
      [:option {:key true :value "true"} "True"]
      [:option {:key false :value "false"} "False"]
      [:option {:key :nil :value ""} "--"]]))
@@ -62,15 +62,12 @@
                                                     (let [id (js/parseInt select-value 10)]
                                                       (if (< id 0) (str id) id)))]
                                            (on-change id)))))
-                  (update :disabled #(or % no-options?)))]
+                  (update :disabled #(or % no-options?)))
+        label-fn (:label-fn props label-fn)]
     [:select.select props
      (conj
        (->> @(:relations ctx)
-            (mapv (fn [relation]
-                    (let [label (-> (build-label relation ctx)
-                                    ; It's perfectly possible to properly report this error properly upstream.
-                                    (either/branch (fn [e] (pr-str e)) identity))]
-                      [(:db/id (first relation)) label])))
+            (mapv (juxt (comp :db/id first) #(label-fn % ctx)))
             (sort-by second)
             (map (fn [[id label]]
                    [:option {:key (str id) :value id} label])))
@@ -91,21 +88,16 @@
 
 (def always-user (atom :user))
 
-(defn anchor->select [props anchor ctx]
-  (let [renderer (reactive/partial select-anchor-renderer props)]
-    [browser/ui anchor (assoc ctx
-                         :hypercrud.ui/display-mode always-user
-                         :user-renderer renderer)]))
-
 (let [on-change (fn [ctx id]
                   ((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) id)))]
-  (defn select* [options-anchor props ctx]
-    (let [props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
-                 :value (cond
-                          (nil? @(:value ctx)) ""
-                          :else (str (:db/id @(:value ctx))))
-
-                 ;; reconstruct the typed value
-                 :on-change (reactive/partial on-change ctx)
-                 :disabled (:read-only props)}]
-      [anchor->select props options-anchor ctx])))
+  (defn select* [options-link props ctx]
+    (let [props (merge (unwrap (eval-str (:hypercrud/props options-link))) ; get-or-apply
+                       ; normalize value for the dom - nil, kw or eid
+                       {:value (if (nil? @(:value ctx))
+                                 ""
+                                 (str (:db/id @(:value ctx))))
+                        :on-change (reactive/partial on-change ctx) ; reconstruct the typed value
+                        :disabled (:read-only props)})]
+      [browser/ui options-link (assoc ctx
+                                 :hypercrud.ui/display-mode always-user
+                                 :user-renderer (reactive/partial select-anchor-renderer props))])))
