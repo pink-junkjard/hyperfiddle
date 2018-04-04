@@ -113,9 +113,9 @@ Data model is a graph:
 * Future: Smart server prefetching and optimistic push
 * Future: Machine learning
 
-## \#3. Data-driven UI, like Swagger UI
+## \#3. Data-driven UI
 
-Out-of-the-box tooling, batteries included. A structural editor for fiddle graphs.
+Out-of-the-box tooling, batteries included.
 
 > <img src="https://i.imgur.com/ZtYAlTE.png" width="720px">
 >
@@ -162,10 +162,9 @@ Here is a fiddle root renderer:
 
 Here is the [Datomic schema renderer](https://github.com/hyperfiddle/hyperfiddle/blob/bd61dfb07cbff75d5002b15999d1abc6c3c6af3c/src/hypercrud/ui/auto_control.cljs#L15-L30), TODO this should be a core.match config stored in a database...
 
-The dashboard is backed by an API, which hydrates a route (URL), except instead of HTML the server
-the server returns EDN (transit). There is also an "open" API for development that will respond to any query, not just valid routes. The "open" API has future implications for the semantic web.
+All fiddles are url addressable. You can hydrate fiddle urls as HTML (as a webpage), or as EDN (as an API).
 
-## \#4. Hyperfiddle IDE: a Structural Editor for APIs
+## \#4. Structural Editor
 
 Once you start coding "data" (data-ing?), a few ideas form:
 
