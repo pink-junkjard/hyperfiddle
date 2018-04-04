@@ -84,7 +84,7 @@
                                    (either/right nil))))
         user-props-map-raw (cats/extract (cats/mplus user-props' (either/right nil)))
         user-prop-val's (map #(get-or-apply' % ctx) (vals user-props-map-raw))
-        user-prop-vals (map #(cats/extract (cats/mplus % (either/right nil))) user-prop-val's)
+        user-prop-vals (map unwrap user-prop-val's)
         errors (->> (concat [user-props' unvalidated-route' validated-route'] user-prop-val's)
                     (filter either/left?) (map cats/extract) (into #{}))
         user-props (zipmap (keys user-props-map-raw) user-prop-vals)]
