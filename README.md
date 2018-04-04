@@ -209,6 +209,10 @@ difference here as they all have different stories for code/data locality.
 Hyperfiddle's abstraction has scaled quite far already, see Hyperfiddle-in-Hyperfiddle. We think there is much more 
 room to go. Imagine a world of composable applications.
 
+> ![](https://i.imgur.com/OZyH0P5.png)
+> 
+> *We think it will scale at least this far and probably much further*
+
 # Documentation and community
 
 Hyperfiddle is alpha software. The programming API is not frozen.
