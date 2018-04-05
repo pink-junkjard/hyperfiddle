@@ -6,10 +6,7 @@
 
 
 (defn prompt [link-ref]
-  (-> (or (:anchor/prompt @link-ref)                        ; hyperfiddle/hyperfiddle.net#124
-          (:link/rel @link-ref)
-          "_")
-      str))
+  (str (or (:link/rel @link-ref) "_")))
 
 ; garbage wrapper for reactivity capturing
 (defn- reactive-nav-cmp [link-ref ctx class]
