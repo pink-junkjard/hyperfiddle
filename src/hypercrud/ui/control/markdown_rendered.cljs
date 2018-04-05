@@ -56,7 +56,7 @@
 (defn browse [content argument props ctx]
   (let [kwargs (flatten (seq props))
         [_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
-        rel (keyword srel)                                  ; why is this keyword and not read-edn? this is inconsistent with anchor
+        rel (unwrap (memoized-safe-read-edn-string srel))
         path (unwrap (memoized-safe-read-edn-string (str "[" spath "]")))]
     (apply (:browse ctx) rel path ctx kwargs)))
 
