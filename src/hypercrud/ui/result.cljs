@@ -26,7 +26,7 @@
   (markdown-rendered* (-> ctx
                           :hypercrud.browser/fiddle
                           (reactive/cursor [:fiddle/ident])
-                          (as-> % (reactive/fmap name %))
+                          (as-> % (reactive/fmap (fnil name :_) %))
                           deref
                           (as-> % (str "### " %)))))
 

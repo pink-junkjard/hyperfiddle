@@ -28,7 +28,7 @@
 
 (defn auto-ui-css-class [ctx]
   (classes (let [ident @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/ident])]
-             [(css-slugify (namespace ident))
+             [(css-slugify (some-> ident namespace))
               (css-slugify ident)])))
 
 ; defn because hypercrud.ui.result/view cannot be required from this ns
