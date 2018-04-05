@@ -123,7 +123,7 @@ All fiddles are url addressable. You can hydrate fiddle urls as HTML (as a webpa
 
 <img src="https://i.imgur.com/ZtYAlTE.png" width="720px">
 
-> *Above EDN definition, rendered. Pink highlights indicate a link to another fiddle. live fiddle: <http://sandbox.hyperfiddle.net/gender>*
+> *Above EDN definition, rendered. Live: <http://sandbox.hyperfiddle.net/gender>*
 
 Links are pink (links are edges in the graph). Select options are iframes with style. `:link/rel` has semantic meaning like html, `:options` matches up with the [`:db.type/ref` renderer](https://github.com/hyperfiddle/hyperfiddle/blob/bd61dfb07cbff75d5002b15999d1abc6c3c6af3c/src/hypercrud/ui/widget.cljs#L74). If you override the `:db.type/ref` renderer, you may care to use `:link/rel` as semantic hint, or not. Imagine a [link/rel registry like HTML](https://www.iana.org/assignments/link-relations/link-relations.xhtml).
 
@@ -135,22 +135,18 @@ The Browser is coded in CLJC and evaluates simultaneously in jvm, browser and no
 
 ### Views rendered through `eval`, progressive enhancement at any layer
 
-* Datomic type #{string keyword bool inst long ref ...}
+* [Datomic type #{string keyword bool inst long ref ...}](https://github.com/hyperfiddle/hyperfiddle/blob/bd61dfb07cbff75d5002b15999d1abc6c3c6af3c/src/hypercrud/ui/auto_control.cljs#L15-L30)
 * Datomic attributes #{:post/content :post/title :post/date ...}
 * Form and table renderers #{form table tr th label value ...}
-* Markdown `!result[foo.bar/my-table-renderer]` `!link` `!browse` etc
+* Markdown `!anchor[All Todos](:all)` `!result[foo.bar/my-table-renderer]` `!link` `!browse` etc
 * Fiddle (page) renderer
 * Hyperfiddle Browser - the interpreter itself
 
-Attribute renderer:
+#### Fiddle (page) markdown renderer
 
-<img src="https://i.imgur.com/Kok1tz9.png">
+![](https://i.imgur.com/7BqlUdn.png)
 
-> *On the left, we see `:post/content` attribute is a Datomic `:db.type/string`,
-> being rendered as a CodeMirror with markdown syntax highlighting. On the right, we 
-> see it wired up. Renderers can be any ClojureScript expression and are eval'ed at runtime.*
-
-Fiddle (page) renderer:
+#### Fiddle (page) Reagent renderer:
 
 <img src="https://i.imgur.com/KP90ClH.png">
 
@@ -158,7 +154,13 @@ Fiddle (page) renderer:
 > we've rendered the data as HTML. On the right, we see the Reagent expression.
 > The data/view toggles the fiddle renderer, so you can always get to the admin dashboard.*
 
-* [Default Datomic type renderers](https://github.com/hyperfiddle/hyperfiddle/blob/bd61dfb07cbff75d5002b15999d1abc6c3c6af3c/src/hypercrud/ui/auto_control.cljs#L15-L30), TODO should be a core.match definition stored in a database...
+#### Attribute renderer:
+
+<img src="https://i.imgur.com/Kok1tz9.png">
+
+> *On the left, we see `:post/content` attribute is a Datomic `:db.type/string`,
+> being rendered as a CodeMirror with markdown syntax highlighting. On the right, we 
+> see it wired up. Renderers can be any ClojureScript expression and are eval'ed at runtime.*
 
 ## \#4. Structural Editor
 
