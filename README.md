@@ -77,6 +77,8 @@ Data model is a graph:
 * Fiddles have *links* to other fiddles (links are pink)
 * Three types of link: *anchors* & *iframes* (hypermedia), and *buttons* (eval)
 
+All fiddles are url addressable. You can hydrate fiddle urls as HTML (as a webpage), or as EDN (as an API).
+
 ```clojure
 {:db/id 17592186045418,                                     ; Root query
  :fiddle/type :query,
@@ -113,9 +115,7 @@ Data model is a graph:
 * Future: Smart server prefetching and optimistic push
 * Future: Machine learning
 
-## \#3. Data-driven UI
-
-Out-of-the-box tooling, batteries included.
+## \#3. Data-driven UI means out-of-the-box tooling, batteries included
 
 > <img src="https://i.imgur.com/ZtYAlTE.png" width="720px">
 >
@@ -135,14 +135,12 @@ The Browser is coded in CLJC and evaluates simultaneously in jvm, browser and no
 * Datomic attributes #{:post/content :post/title :post/date ...}
 * Form and table renderers #{form table tr th label value ...}
 * Markdown with hyperfiddle extensions
-* Fiddle renderer
-* Hyperfiddle Browser
-
-Each layer is composed from the layer above, so you can change as or as little as you like.
+* Fiddle (page) renderer
+* Hyperfiddle Browser - the interpreter itself
 
 > <img src="https://i.imgur.com/pQk6g0a.png" width="720px">
 > 
-> *This dashboard is fully data driven. The markdown editor is defined by ClojureScript code, stored in a database and eval'ed at runtime.*
+> *Markdown editor is defined by ClojureScript code, stored in a database and eval'ed at runtime.*
 
 Here is a markdown attribute renderer:
 
@@ -161,8 +159,6 @@ Here is a fiddle root renderer:
 > The data/view toggles the fiddle renderer, so you can always get to the admin dashboard.*
 
 Here is the [Datomic schema renderer](https://github.com/hyperfiddle/hyperfiddle/blob/bd61dfb07cbff75d5002b15999d1abc6c3c6af3c/src/hypercrud/ui/auto_control.cljs#L15-L30), TODO this should be a core.match config stored in a database...
-
-All fiddles are url addressable. You can hydrate fiddle urls as HTML (as a webpage), or as EDN (as an API).
 
 ## \#4. Structural Editor
 
