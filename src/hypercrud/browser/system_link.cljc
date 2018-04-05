@@ -23,7 +23,7 @@
                                            (let [edit {:db/id (keyword "hyperfiddle.browser.system-link" (str "edit-" (:name fe)))
                                                        :hypercrud/sys? true
                                                        :anchor/prompt (str "edit-" (:name fe))
-                                                       :link/rel (keyword (str "sys-edit-" (:name fe)))
+                                                       :link/rel :hyperfiddle/edit
                                                        :link/fiddle system-fiddle/fiddle-system-edit
                                                        :link/dependent? true
                                                        :link/managed? false
@@ -34,7 +34,7 @@
                                                  new {:db/id (keyword "hyperfiddle.browser.system-link" (str "new-" (:name fe)))
                                                       :hypercrud/sys? true
                                                       :anchor/prompt (str "new-" (:name fe))
-                                                      :link/rel (keyword (str "sys-new-" (:name fe)))
+                                                      :link/rel :hyperfiddle/new
                                                       :link/fiddle system-fiddle/fiddle-system-edit
                                                       :link/dependent? false ; not managed, no parent-child ref
                                                       :link/path (str fe-pos)
@@ -44,7 +44,7 @@
                                                  remove {:db/id (keyword "hyperfiddle.browser.system-link" (str "remove-" (:name fe)))
                                                          :hypercrud/sys? true
                                                          :anchor/prompt (str "remove-" (:name fe))
-                                                         :link/rel (keyword (str "sys-remove-" (:name fe)))
+                                                         :link/rel :hyperfiddle/remove
                                                          :link/fiddle system-fiddle/fiddle-blank-system-remove
                                                          :link/dependent? true
                                                          :link/path (str fe-pos)
@@ -73,7 +73,7 @@
                                                             [{:db/id (keyword "hyperfiddle.browser.system-link" (str "edit-" (hash [(:name fe) attribute])))
                                                               :hypercrud/sys? true
                                                               :anchor/prompt (str "edit") ; conserve space in label
-                                                              :link/rel (keyword (str "sys-edit-" (:name fe) "-" attribute))
+                                                              :link/rel :hyperfiddle/edit
                                                               :link/dependent? true
                                                               :link/path (str fe-pos " " attribute)
                                                               :link/managed? false
@@ -82,7 +82,7 @@
                                                              {:db/id (keyword "hyperfiddle.browser.system-link" (str "new-" (hash [(:name fe) attribute])))
                                                               :hypercrud/sys? true
                                                               :anchor/prompt (str "new") ; conserve space in label
-                                                              :link/rel (keyword (str "sys-new-" (:name fe) "-" attribute))
+                                                              :link/rel :hyperfiddle/new
                                                               :link/dependent? true ; manged - need parent-child ref
                                                               :link/path (str fe-pos " " attribute)
                                                               :link/managed? true
@@ -93,7 +93,7 @@
                                                              {:db/id (keyword "hyperfiddle.browser.system-link" (str "remove-" (hash [(:name fe) attribute])))
                                                               :hypercrud/sys? true
                                                               :anchor/prompt (str "remove")
-                                                              :link/rel (keyword (str "sys-remove-" (:name fe) "-" attribute))
+                                                              :link/rel :hyperfiddle/remove
                                                               :link/fiddle system-fiddle/fiddle-blank-system-remove
                                                               :link/path (str fe-pos " " attribute)
                                                               :link/dependent? true

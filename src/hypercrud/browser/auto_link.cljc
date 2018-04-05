@@ -1,8 +1,9 @@
 (ns hypercrud.browser.auto-link
-  (:require [hypercrud.browser.auto-link-formula :refer [auto-formula]]
+  (:require [contrib.data :as util]
+            [contrib.reactive :as reactive]
+            [hypercrud.browser.auto-link-formula :refer [auto-formula]]
             [hypercrud.browser.auto-link-txfn :refer [auto-txfn]]
-            [hypercrud.browser.system-link :as system-link]
-            [contrib.reactive :as reactive]))
+            [hypercrud.browser.system-link :as system-link]))
 
 
 (defn auto-link [link]
@@ -17,17 +18,19 @@
 
 (defn merge-links [sys-links links]
   (->> (reduce (fn [grouped-links sys-link]
-                 (update grouped-links
-                         (:link/rel sys-link)
-                         (fn [maybe-links]
-                           (if maybe-links
-                             (map (partial merge sys-link) maybe-links)
-                             [sys-link]))))
+                 (update-in grouped-links
+                            [(:link/rel sys-link) (:link/path sys-link)]
+                            (fn [maybe-links]
+                              (if maybe-links
+                                (map (partial merge sys-link) maybe-links)
+                                [sys-link]))))
                (->> links
                     (map #(into {} %))
-                    (group-by #(or (:link/rel %) (:db/id %))))
+                    (group-by #(or (:link/rel %) (:db/id %)))
+                    (util/map-values #(group-by :link/path %)))
                sys-links)
        vals
+       (map vals)
        flatten
        doall))
 

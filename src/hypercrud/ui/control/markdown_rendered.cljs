@@ -54,14 +54,20 @@
   (unwrap (read-eval-with-bindings content ctx)))
 
 (defn browse [content argument props ctx]
-  (let [kwargs (flatten (seq props))]
-    (apply (:browse ctx) (keyword argument) ctx kwargs)))
+  (let [kwargs (flatten (seq props))
+        [_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
+        rel (keyword srel)                                  ; why is this keyword and not read-edn? this is inconsistent with anchor
+        path (unwrap (memoized-safe-read-edn-string (str "[" spath "]")))]
+    (apply (:browse ctx) rel path ctx kwargs)))
 
 (defn anchor [content argument props ctx]
   (let [kwargs (flatten (seq props))
+        [_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
+        rel (unwrap (memoized-safe-read-edn-string srel))
+        path (unwrap (memoized-safe-read-edn-string (str "[" spath "]")))
         ; https://github.com/medfreeman/remark-generic-extensions/issues/45
-        label (or-str content argument)]
-    (apply (:anchor ctx) (unwrap (memoized-safe-read-edn-string argument)) ctx label kwargs)))
+        label (or-str content srel)]
+    (apply (:anchor ctx) rel path ctx label kwargs)))
 
 (defn cell [content argument props ctx]
   (let [kwargs (flatten (seq props))

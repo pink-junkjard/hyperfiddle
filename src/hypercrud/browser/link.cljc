@@ -35,16 +35,13 @@
 
 (def options-processor (partial remove options-link?))
 
-(defn options-link [path ctx]
+(defn rel->link [rel path ctx]
   (->> @(:hypercrud.browser/links ctx)
        (filter (same-path-as? path))
-       (filter options-link?)
-       first))
-
-(defn rel->link [rel ctx]
-  (->> @(:hypercrud.browser/links ctx)
        (filter #(= (:link/rel %) rel))
        first))
+
+(defn options-link [path ctx] (rel->link :options path ctx))
 
 ; todo belongs in routing ns
 ; this is same business logic as base/request-for-link

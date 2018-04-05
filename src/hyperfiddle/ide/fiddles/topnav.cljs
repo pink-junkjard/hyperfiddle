@@ -77,28 +77,28 @@
         dirty? (not (empty? @(runtime/state (:peer ctx) [:stage])))
         ctx (shadow-fiddle ctx)
         ; hack until hyperfiddle.net#156 is complete
-        fake-managed-anchor (fn [ident ctx label & args]
+        fake-managed-anchor (fn [rel path ctx label & args]
                               ; mostly copied from browser-ui
                               (let [kwargs (kwargs args)
-                                    link (-> @(reactive/track link/rel->link ident ctx) (assoc :link/managed? true))
+                                    link (-> @(reactive/track link/rel->link rel path ctx) (assoc :link/managed? true))
                                     props (-> (link/build-link-props link ctx true)
                                               #_(dissoc :style) #_"custom renderers don't want colored links")]
                                 [(:navigate-cmp ctx) props label (:class kwargs)]))]
     [:div.hyperfiddle-topnav
      [:div.hyperfiddle-topnav-root-controls
-      (fake-managed-anchor :domain ctx (get-in ctx [:target-domain :domain/ident]))
+      (fake-managed-anchor :domain [] ctx (get-in ctx [:target-domain :domain/ident]))
       " / "
       (let [ident @(reactive/cursor (:hypercrud.browser/result ctx) [:fiddle/ident])]
-        (fake-managed-anchor :fiddle-more (assoc ctx :user-renderer hijack-renderer) (some-> ident name)))
+        (fake-managed-anchor :fiddle-more [] (assoc ctx :user-renderer hijack-renderer) (some-> ident name)))
       " · "
-      (fake-managed-anchor :links (assoc ctx :user-renderer hijack-renderer) "links")
-      (fake-managed-anchor :ui (assoc ctx :user-renderer hijack-renderer) "view")
+      (fake-managed-anchor :links [] (assoc ctx :user-renderer hijack-renderer) "links")
+      (fake-managed-anchor :ui [] (assoc ctx :user-renderer hijack-renderer) "view")
       (if @(runtime/state (:peer ctx) [::runtime/auto-transact])
         [:div
          [:input {:id ::auto-transact :type "checkbox" :checked true
                   :on-click (fn [] (runtime/dispatch! (:peer ctx) [:disable-auto-transact]))}]
          [:label {:for ::auto-transact} "auto-transact"]]
-        (fake-managed-anchor :stage ctx "stage" :class (if dirty? "stage-dirty")))
+        (fake-managed-anchor :stage [] ctx "stage" :class (if dirty? "stage-dirty")))
 
       (let [change! #(runtime/dispatch! (:peer ctx) (foundation-actions/set-display-mode %))]
         [:span.radio-group
@@ -108,9 +108,9 @@
       [:div.right-nav {:key "right-nav"}                    ; CAREFUL; this key prevents popover flickering
        [loading-spinner ctx]
        ; ignore results; don't display the fiddle's data, just the anchors
-       ((:anchor ctx) :new-fiddle ctx "new-fiddle")
+       ((:anchor ctx) :new-fiddle [0] ctx "new-fiddle")
        (if (:user-profile ctx)
-         ((:anchor ctx) :account ctx (get-in ctx [:user-profile :email]))
+         ((:anchor ctx) :account [] ctx (get-in ctx [:user-profile :email]))
          (let [auth-state (base64-url-safe/encode (runtime/encode-route (:peer ctx) (:target-route ctx)))]
            [:span.nav-link.auth [:a {:href (str (stateless-login-url ctx) "&state=" auth-state)} "Login"]]))]]
      [:div.hyperfiddle-topnav-fiddle-controls

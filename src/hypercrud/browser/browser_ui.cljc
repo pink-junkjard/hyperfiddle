@@ -50,15 +50,15 @@
                         [hypercrud.ui.result/view ctx (auto-ui-css-class ctx)]
                         [fiddle-css-renderer @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]]))})
 
-(letfn [(browse [rel ctx & args]
+(letfn [(browse [rel #_dependent? path ctx & args]
           (let [{[user-renderer & args] nil :as kwargs} (util/kwargs args)
-                {:keys [:link/dependent? :link/path] :as link} @(r/track link/rel->link rel ctx)
+                {:keys [:link/dependent? :link/path] :as link} @(r/track link/rel->link rel path ctx)
                 ctx (-> (context/relation-path ctx (into [dependent?] (unwrap (memoized-safe-read-edn-string (str "[" path "]")))))
                         (as-> ctx (if user-renderer (assoc ctx :user-renderer user-renderer #_(if f #(apply f %1 %2 %3 %4 args))) ctx)))]
             [ui-from-link link ctx (:class kwargs)]))
-        (anchor [rel ctx label & args]
+        (anchor [rel #_dependent? path ctx label & args]
           (let [kwargs (util/kwargs args)
-                {:keys [:link/dependent? :link/path] :as link} @(r/track link/rel->link rel ctx)
+                {:keys [:link/dependent? :link/path] :as link} @(r/track link/rel->link rel path ctx)
                 ctx (context/relation-path ctx (into [dependent?] (unwrap (memoized-safe-read-edn-string (str "[" path "]")))))
                 props (-> (link/build-link-props link ctx)
                           #_(dissoc :style) #_"custom renderers don't want colored links")]
@@ -75,12 +75,12 @@
                 ;control-props (merge (hypercrud.ui.auto-control/control-props ctx) kwargs)
                 ]
             #?(:cljs [hypercrud.ui.auto-control/auto-control field {} nil ctx])))
-        (browse' [ident ctx]
-          (->> (base/data-from-link @(r/track link/rel->link ident ctx) ctx)
+        (browse' [rel #_dependent? path ctx]
+          (->> (base/data-from-link @(r/track link/rel->link rel path ctx) ctx)
                (cats/fmap :hypercrud.browser/result)
                (cats/fmap deref)))
-        (anchor* [ident ctx]
-          (link/build-link-props @(r/track link/rel->link ident ctx) ctx))]
+        (anchor* [rel #_dependent? path ctx]
+          (link/build-link-props @(r/track link/rel->link rel path ctx) ctx))]
   ; convenience functions, should be declared fns in this or another ns and accessed out of band of ctx
   (defn ui-bindings [ctx]
     (assoc ctx

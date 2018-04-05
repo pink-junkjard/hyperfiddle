@@ -93,7 +93,7 @@ All fiddles are url addressable. You can hydrate fiddle urls as HTML (as a webpa
                                 :fiddle/type :query,
                                 :fiddle/query "[:find (pull ?e [:db/id :reg.gender/ident]) :where [?e :reg.gender/ident]]",
                                 :fiddle/links #{{:db/id 17592186045474, ; link to new-gender-option form
-                                                 :link/rel :sys-new-?e,
+                                                 :link/rel :hyperfiddle/new,
                                                  :link/fiddle #:db{:id 17592186045475} ; new-gender form omitted
                                                  }}}}
                  {:db/id 17592186045434,                    ; link to shirt-size options
@@ -105,7 +105,7 @@ All fiddles are url addressable. You can hydrate fiddle urls as HTML (as a webpa
                   :link/fiddle #:db{:id 17592186045435}     ; shirt size options query omitted
                   }
                  {:db/id 17592186045481,                    ; link to new-registration form
-                  :link/rel :sys-new-?e,
+                  :link/rel :hyperfiddle/new,
                   :link/fiddle #:db{:id 17592186045482}     ; new-registration form omitted
                   }}}
 ```

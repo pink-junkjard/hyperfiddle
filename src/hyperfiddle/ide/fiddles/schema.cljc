@@ -60,7 +60,7 @@
                     :link/rel :options
                     :link/path "0 :db/valueType"}
                    {:db/id :system-anchor-remove            ; XXX
-                    :link/rel :sys-remove-entity
+                    :link/rel :hyperfiddle/remove
                     :link/disabled? true}}})
 
 (let [renderer (pprint-str
@@ -109,11 +109,11 @@
                       :link/rel :options
                       :link/path "0 :db/valueType"}
                      {:db/id :system-anchor-edit            ; XXX
-                      :link/rel :sys-edit-?attr
+                      :link/rel :hyperfiddle/edit
                       :link/fiddle (db-attribute-edit $db)}
                      {:db/id :system-anchor-new             ; XXX
-                      :link/rel :sys-new-?attr
+                      :link/rel :hyperfiddle/new
                       :link/fiddle (db-attribute-edit $db)}
                      {:db/id :system-anchor-remove          ; XXX
-                      :link/rel :sys-remove-?attr
+                      :link/rel :hyperfiddle/remove
                       :link/disabled? true}}}))
