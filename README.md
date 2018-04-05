@@ -142,11 +142,11 @@ The Browser is coded in CLJC and evaluates simultaneously in jvm, browser and no
 * Fiddle (page) renderer
 * Hyperfiddle Browser - the interpreter itself
 
-#### Fiddle (page) markdown renderer
+### Markdown fiddle renderer:
 
 ![](https://i.imgur.com/7BqlUdn.png)
 
-#### Fiddle (page) Reagent renderer:
+### Reagent fiddle renderer:
 
 <img src="https://i.imgur.com/KP90ClH.png">
 
@@ -154,7 +154,7 @@ The Browser is coded in CLJC and evaluates simultaneously in jvm, browser and no
 > we've rendered the data as HTML. On the right, we see the Reagent expression.
 > The data/view toggles the fiddle renderer, so you can always get to the admin dashboard.*
 
-#### Attribute renderer:
+### Attribute renderer:
 
 <img src="https://i.imgur.com/Kok1tz9.png">
 
