@@ -142,13 +142,19 @@ The Browser is coded in CLJC and evaluates simultaneously in jvm, browser and no
 * Fiddle (page) renderer
 * Hyperfiddle Browser - the interpreter itself
 
-### Markdown fiddle renderer:
+### TodoMVC with a markdown fiddle renderer:
 
 ![](https://i.imgur.com/7BqlUdn.png)
 
 > This list item template is defined by markdown extensions. Inject view-specific renderers through markdown `!result[foo.bar/my-table-renderer]`, or even your own markdown implementation with `eval`
 
-### Reagent fiddle renderer:
+### TodoMVC default UI, no progressive enhancement:
+
+![](https://i.imgur.com/ieLlI7M.png)
+
+> It is a fully functional application though, this view always works even when you break your custom views
+
+### Reagent fiddle renderer for the blog:
 
 <img src="https://i.imgur.com/KP90ClH.png">
 
