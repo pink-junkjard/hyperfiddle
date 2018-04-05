@@ -145,7 +145,7 @@ The Browser is coded in CLJC and evaluates simultaneously in jvm, browser and no
 
 ![](https://i.imgur.com/7BqlUdn.png)
 
-> This list item template is defined by markdown extensions. Inject view-specific renderers through markdown `!result[foo.bar/my-table-renderer]`, or even your own markdown implementation with `eval`
+> This list item template is defined by markdown extensions. Inject view-specific renderers through markdown `!result[foo.bar/my-table-renderer]`, or even your own markdown implementation with `eval`. <http://sandbox.hyperfiddle.net/:tbd!all/>
 
 ### TodoMVC default UI, no progressive enhancement:
 
