@@ -72,10 +72,19 @@
             dbval (hc/db (:peer ctx) (get-in ctx [:hypercrud.browser/domain :domain/fiddle-repo]) (:branch ctx))]
         (->EntityRequest (legacy-fiddle-ident->lookup-ref fiddle) nil dbval meta-pull-exp-for-link)))))
 
+(defn validate-fiddle [fiddle]
+  (if-not (:db/id fiddle)
+    (either/left (ex-info (str :hyperfiddle.error/fiddle-not-found)
+                          {:ident :hyperfiddle.error/fiddle-not-found
+                           :human "Fiddle not found (did you just edit :fiddle/ident?)"
+                           :fiddle fiddle}))
+    (either/right fiddle)))
+
 (defn hydrate-fiddle [meta-fiddle-request ctx]
   (if (system-fiddle/system-fiddle? (get-in ctx [:route 0]))
     (system-fiddle/hydrate-system-fiddle (get-in ctx [:route 0]))
-    @(hc/hydrate (:peer ctx) (:branch ctx) @meta-fiddle-request)))
+    (mlet [fiddle @(hc/hydrate (:peer ctx) (:branch ctx) @meta-fiddle-request)]
+      (validate-fiddle fiddle))))
 
 (defn- fix-param [param]
   (cond
