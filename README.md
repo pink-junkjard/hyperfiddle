@@ -9,7 +9,6 @@ Hyperfiddle models API inter-dependencies as a graph (I need query-X and also qu
 Managed I/O is not the point. The point is: *what does managed I/O make possible that wasn't possible before?* 
 
 ![](https://i.imgur.com/b1g6ANj.png)
-> *Entirely data driven. No backend. Just EDN.*
 
 # Dependency coordinates — Todo
 
