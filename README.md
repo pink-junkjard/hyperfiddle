@@ -131,13 +131,13 @@ All Hyperfiddle APIs must resolve to a single function. The fiddle graph interpr
 
 <p align="center">web browser : HTML documents :: hyperfiddle browser :: hyperfiddle EDN values</p>
 
-The Browser is coded in CLJC and evaluates simultaneously in jvm, browser and node, which is how the service is able to predict what the browser will ask for, to coordinate I/O automatically with 100% accuracy.
+The Browser is coded in CLJC and evaluates simultaneously in jvm, browser and node, which is how the service knows in advance what the UI will ask for.
 
 ### Views rendered through `eval`, progressive enhancement at any layer
 
-* [Datomic type #{string keyword bool inst long ref ...}](https://github.com/hyperfiddle/hyperfiddle/blob/bd61dfb07cbff75d5002b15999d1abc6c3c6af3c/src/hypercrud/ui/auto_control.cljs#L15-L30)
-* Datomic attributes #{:post/content :post/title :post/date ...}
-* Form and table renderers #{form table tr th label value ...}
+* Datomic type #{string keyword bool inst long ref ...}
+* Datomic attribute #{:post/content :post/title :post/date ...}
+* Table, form, label, value, etc
 * Markdown extensions
 * Fiddle (page) renderer
 * Hyperfiddle Browser - the interpreter itself
