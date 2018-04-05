@@ -123,7 +123,7 @@ All fiddles are url addressable. You can hydrate fiddle urls as HTML (as a webpa
 
 <img src="https://i.imgur.com/ZtYAlTE.png" width="720px">
 
-*Above EDN definition, rendered. Pink highlights indicate a link to another fiddle. live fiddle: <http://sandbox.hyperfiddle.net/gender>*
+> *Above EDN definition, rendered. Pink highlights indicate a link to another fiddle. live fiddle: <http://sandbox.hyperfiddle.net/gender>*
 
 Links are pink (links are edges in the graph). Select options are iframes with style. `:link/rel` has semantic meaning like html, `:options` matches up with the [`:db.type/ref` renderer](https://github.com/hyperfiddle/hyperfiddle/blob/bd61dfb07cbff75d5002b15999d1abc6c3c6af3c/src/hypercrud/ui/widget.cljs#L74). If you override the `:db.type/ref` renderer, you may care to use `:link/rel` as semantic hint, or not. Imagine a [link/rel registry like HTML](https://www.iana.org/assignments/link-relations/link-relations.xhtml).
 
@@ -144,16 +144,16 @@ The Browser is coded in CLJC and evaluates simultaneously in jvm, browser and no
 
 Attribute renderer:
 
-> <img src="https://i.imgur.com/Kok1tz9.png">
-> 
+<img src="https://i.imgur.com/Kok1tz9.png">
+
 > *On the left, we see `:post/content` attribute is a Datomic `:db.type/string`,
 > being rendered as a CodeMirror with markdown syntax highlighting. On the right, we 
 > see it wired up. Renderers can be any ClojureScript expression and are eval'ed at runtime.*
 
 Fiddle (page) renderer:
 
-> <img src="https://i.imgur.com/KP90ClH.png">
-> 
+<img src="https://i.imgur.com/KP90ClH.png">
+
 > *On the left, we see the fiddle's final rendering. It is no longer a form at all,
 > we've rendered the data as HTML. On the right, we see the Reagent expression.
 > The data/view toggles the fiddle renderer, so you can always get to the admin dashboard.*
@@ -169,10 +169,10 @@ Once you start coding "data" (data-ing?), a few ideas form:
 
 Hyperfiddles are graphs, not text, so instead of git they are stored in Datomic. This means you can query the graph e.g. "which fiddles link to me". Like git and the web, there is no central database, rather many little ones distributed. The future implications of this are profound.
 
-## Hyperfiddle.net is 100% built in Hyperfiddle
+## Hyperfiddle is built in Hyperfiddle
 
-> <img src="https://i.imgur.com/DCPtHN3.png" width="720px">
-> 
+<img src="https://i.imgur.com/DCPtHN3.png" width="720px">
+
 > *The radio control on `:fiddle/type` is a custom attribute renderer, `qe-picker-control`, which is eval'ed at runtime. `:fiddle/query`'s custom renderer is a CodeMirror. The fiddle's own layout (including button labels and local state) is a fiddle renderer, about 100 lines of Reagent markup eval'ed at runtime. Each menu is a link to another fiddle, with its own data dependencies and renderers.*
 
 # FAQ and anti-features
@@ -204,8 +204,8 @@ difference here as they all have different stories for code/data locality.
 
 Hyperfiddle's abstraction has scaled quite far already, see Hyperfiddle-in-Hyperfiddle.
 
-> ![](https://i.imgur.com/OZyH0P5.png)
-> 
+![](https://i.imgur.com/OZyH0P5.png)
+
 > *We think it will scale at least this far, and there is much more room to go. Can you imagine a world of composable applications?*
 
 # Documentation and community
