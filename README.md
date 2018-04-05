@@ -127,7 +127,7 @@ All Hyperfiddle APIs must resolve to a single function. The fiddle graph interpr
 
 <p align="center">web browser : HTML documents :: hyperfiddle browser :: hyperfiddle EDN values</p>
 
-The Browser is coded in CLJC and evaluates simultaneously in jvm, browser and node, which is how Hyperfiddle is able to coordinate I/O correctly, performantly and automatically.
+The Browser is coded in CLJC and evaluates simultaneously in jvm, browser and node, which is how the service is able to predict what the browser will ask for, to coordinate I/O automatically with 100% accuracy.
 
 ### Views rendered through `eval`, progressive enhancement at any layer
 
