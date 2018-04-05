@@ -8,9 +8,9 @@ Hyperfiddle models API inter-dependencies as a graph (I need query-X and also qu
 
 Managed I/O is not the point. The point is: *what does managed I/O make possible that wasn't possible before?* 
 
-> <img src="https://i.imgur.com/pQk6g0a.png" width="720px">
-> 
-> *This is what data driven API feels like. UI is 100% auto generated from data and fully dynamic*
+<img src="https://i.imgur.com/pQk6g0a.png" width="720px">
+
+*This is what data driven API feels like. UI is 100% auto generated from data and fully dynamic*
 
 # Dependency coordinates — Todo
 
@@ -122,9 +122,9 @@ All fiddles are url addressable. You can hydrate fiddle urls as HTML (as a webpa
 
 ## \#3. Data-driven UI means out-of-the-box tooling, batteries included
 
-> <img src="https://i.imgur.com/ZtYAlTE.png" width="720px">
->
-> *Above EDN definition, rendered. Pink highlights indicate a link to another fiddle. live fiddle: <http://sandbox.hyperfiddle.net/gender>*
+<img src="https://i.imgur.com/ZtYAlTE.png" width="720px">
+
+*Above EDN definition, rendered. Pink highlights indicate a link to another fiddle. live fiddle: <http://sandbox.hyperfiddle.net/gender>*
 
 Links are pink (links are edges in the graph). Select options are iframes with style. `:link/rel` has semantic meaning like html, `:options` matches up with the [`:db.type/ref` renderer](https://github.com/hyperfiddle/hyperfiddle/blob/bd61dfb07cbff75d5002b15999d1abc6c3c6af3c/src/hypercrud/ui/widget.cljs#L74). If you override the `:db.type/ref` renderer, you may care to use `:link/rel` as semantic hint, or not. Imagine a [link/rel registry like HTML](https://www.iana.org/assignments/link-relations/link-relations.xhtml).
 
