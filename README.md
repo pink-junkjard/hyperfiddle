@@ -150,7 +150,7 @@ The Browser is coded in CLJC and evaluates simultaneously in jvm, browser and no
 
 ### TodoMVC default UI, no progressive enhancement:
 
-![](https://i.imgur.com/ieLlI7M.png)
+<img src="https://i.imgur.com/ieLlI7M.png" width="500px">
 
 > It is a fully functional application though, this view always works even when you break your custom views
 
