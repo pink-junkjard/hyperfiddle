@@ -8,6 +8,10 @@ Hyperfiddle models API inter-dependencies as a graph (I need query-X and also qu
 
 Managed I/O is not the point. The point is: *what does managed I/O make possible that wasn't possible before?* 
 
+> <img src="https://i.imgur.com/pQk6g0a.png" width="720px">
+> 
+> *This is what data driven API feels like. UI is 100% auto generated from data and fully dynamic*
+
 # Dependency coordinates — Todo
 
     [com.hyperfiddle/hyperfiddle "0.0.0"]
@@ -134,15 +138,11 @@ The Browser is coded in CLJC and evaluates simultaneously in jvm, browser and no
 * Datomic type #{string keyword bool inst long ref ...}
 * Datomic attributes #{:post/content :post/title :post/date ...}
 * Form and table renderers #{form table tr th label value ...}
-* Markdown with hyperfiddle extensions
+* Markdown `!result[foo.bar/my-table-renderer]` `!link` `!browse` etc
 * Fiddle (page) renderer
 * Hyperfiddle Browser - the interpreter itself
 
-> <img src="https://i.imgur.com/pQk6g0a.png" width="720px">
-> 
-> *Markdown editor is defined by ClojureScript code, stored in a database and eval'ed at runtime.*
-
-Here is a markdown attribute renderer:
+Attribute renderer:
 
 > <img src="https://i.imgur.com/Kok1tz9.png">
 > 
@@ -150,7 +150,7 @@ Here is a markdown attribute renderer:
 > being rendered as a CodeMirror with markdown syntax highlighting. On the right, we 
 > see it wired up. Renderers can be any ClojureScript expression and are eval'ed at runtime.*
 
-Here is a fiddle root renderer:
+Fiddle (page) renderer:
 
 > <img src="https://i.imgur.com/KP90ClH.png">
 > 
@@ -158,7 +158,7 @@ Here is a fiddle root renderer:
 > we've rendered the data as HTML. On the right, we see the Reagent expression.
 > The data/view toggles the fiddle renderer, so you can always get to the admin dashboard.*
 
-Here is the [Datomic schema renderer](https://github.com/hyperfiddle/hyperfiddle/blob/bd61dfb07cbff75d5002b15999d1abc6c3c6af3c/src/hypercrud/ui/auto_control.cljs#L15-L30), TODO this should be a core.match config stored in a database...
+* [Default Datomic type renderers](https://github.com/hyperfiddle/hyperfiddle/blob/bd61dfb07cbff75d5002b15999d1abc6c3c6af3c/src/hypercrud/ui/auto_control.cljs#L15-L30), TODO should be a core.match definition stored in a database...
 
 ## \#4. Structural Editor
 
