@@ -138,13 +138,15 @@ The Browser is coded in CLJC and evaluates simultaneously in jvm, browser and no
 * [Datomic type #{string keyword bool inst long ref ...}](https://github.com/hyperfiddle/hyperfiddle/blob/bd61dfb07cbff75d5002b15999d1abc6c3c6af3c/src/hypercrud/ui/auto_control.cljs#L15-L30)
 * Datomic attributes #{:post/content :post/title :post/date ...}
 * Form and table renderers #{form table tr th label value ...}
-* Markdown `!anchor[All Todos](:all)` `!result[foo.bar/my-table-renderer]` `!link` `!browse` etc
+* Markdown extensions
 * Fiddle (page) renderer
 * Hyperfiddle Browser - the interpreter itself
 
 ### Markdown fiddle renderer:
 
 ![](https://i.imgur.com/7BqlUdn.png)
+
+> Inject view-specific renderers through markdown `!result[foo.bar/my-table-renderer]`, or even your own markdown implementation with `eval`
 
 ### Reagent fiddle renderer:
 
