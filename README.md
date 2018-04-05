@@ -111,6 +111,7 @@ All fiddles are url addressable. You can hydrate fiddle urls as HTML (as a webpa
                   :link/fiddle #:db{:id 17592186045482}     ; new-registration form omitted
                   }}}
 ```
+> `:link/formula` is how Datomic query arguments are filled from a context. This line is noteworthy: `(fn [ctx] @(contrib.reactive/cursor (:cell-data ctx) [:reg/gender]))` Why is it reactive? Because in a Reagent UI, if the context updates then the arguments need to be recomputed and the query re-run. Why shim a `contrib.reactive` namespace? Because formulas also evaluate inside Datomic Peer, to predict data dependencies before the downstream API consumer asks for them.
 
 ### API as a graph permits optimizations that human-coded I/O cannot do:  
 
