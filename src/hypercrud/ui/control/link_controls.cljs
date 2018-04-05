@@ -6,7 +6,7 @@
 
 
 (defn prompt [link-ref]
-  (str (or (:link/rel @link-ref) "_")))
+  (str (or (some-> (:link/rel @link-ref) name) "_")))
 
 ; garbage wrapper for reactivity capturing
 (defn- reactive-nav-cmp [link-ref ctx class]
