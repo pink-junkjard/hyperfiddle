@@ -61,6 +61,7 @@
                     :link/path "0 :db/valueType"}
                    {:db/id :system-anchor-remove            ; XXX
                     :link/rel :hyperfiddle/remove
+                    :link/path "0"
                     :link/disabled? true}}})
 
 (let [renderer (pprint-str
@@ -110,10 +111,13 @@
                       :link/path "0 :db/valueType"}
                      {:db/id :system-anchor-edit            ; XXX
                       :link/rel :hyperfiddle/edit
+                      :link/path "0"
                       :link/fiddle (db-attribute-edit $db)}
                      {:db/id :system-anchor-new             ; XXX
                       :link/rel :hyperfiddle/new
+                      :link/path "0"
                       :link/fiddle (db-attribute-edit $db)}
                      {:db/id :system-anchor-remove          ; XXX
                       :link/rel :hyperfiddle/remove
+                      :link/path "0"
                       :link/disabled? true}}}))
