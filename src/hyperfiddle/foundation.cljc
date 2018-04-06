@@ -25,7 +25,7 @@
    (hostname->hf-domain-name (:hostname ctx) (:hyperfiddle-hostname ctx)))
   ([hostname hyperfiddle-hostname]
    (-> (string/replace hostname (str "." hyperfiddle-hostname) "") ; buggy
-       cuerdas/slug                                         ; no unicode for now. Slug what we actually got, so we don't care what's in the database.
+       #_cuerdas/slug                                         ; no unicode for now. Slug what we actually got, so we don't care what's in the database.
        )))
 
 (defn alias? [hf-domain-name]
