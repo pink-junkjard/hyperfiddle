@@ -25,10 +25,10 @@ We are in early access / private beta, contact us.
 - [x] UI: Userland custom router
 - [x] UI: Human readable URLs
 - [x] UI: Stabalize Hyperblog URLs
+
+On deck
+
 - [ ] UI: developer experience
-
-### 0.2.0: Self-host
-
 - [ ] self-host from github
 - [ ] command line interface to run against local datomic
 
