@@ -1,5 +1,5 @@
 (ns hyperfiddle.ide.fiddles.schema
-  (:require [contrib.data :refer [pprint-str]]
+  (:require [contrib.data :refer [mpprint-str pprint-str]]
             [contrib.macros :refer [str-and-code]]
             [hyperfiddle.ide.fiddles.schema-attribute :as schema-attribute]
             [hypercrud.browser.context :as context]
@@ -64,7 +64,7 @@
                     :link/path "0"
                     :link/disabled? true}}})
 
-(let [renderer (pprint-str
+(let [renderer (mpprint-str
                  '(fn [ctx]
                     (let [hide-datomic (reagent.core/atom true)
                           hide-archived (reagent.core/atom true)

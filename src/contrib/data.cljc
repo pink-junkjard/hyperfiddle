@@ -1,4 +1,5 @@
 (ns contrib.data
+  #?(:cljs (:require-macros [contrib.data :refer [mpprint-str]]))
   (:require [cats.monad.either :as either]
             [cuerdas.core :as str]
             [clojure.string :as clojure-str]
@@ -76,6 +77,8 @@
       (with-out-str
         (pprint/pprint v)
         #_(packed-printer/pprint v :width (or columns pprint/*print-right-margin*))))))
+
+#?(:clj (defmacro mpprint-str [& args] (apply pprint-str args)))
 
 (defn fallback [p v not-found]
   (if-not (p v) v not-found))
