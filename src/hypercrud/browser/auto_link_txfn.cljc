@@ -21,27 +21,26 @@
        `(str-and-code' ~code ~code-str))))
 
 (def auto-tx-fn-lookup
-  (let [fe {{:fe true :c? false :d? true :a false} nil
-            {:fe true :c? false :d? true :a true} nil
-            {:fe true :c? false :d? false :a false} nil
-            {:fe true :c? false :d? false :a true} nil
+  {{:fe true :c? false :d? true :a false} nil
+   {:fe true :c? false :d? true :a true} nil
+   {:fe true :c? false :d? false :a false} nil
+   {:fe true :c? false :d? false :a true} nil
 
-            {:fe true :c? true :d? true :a false} nil
-            {:fe true :c? true :d? true :a true} (load-fn "auto-txfn/mt-fet-at.edn")
-            {:fe true :c? true :d? false :a false} nil
-            {:fe true :c? true :d? false :a true} nil}
+   {:fe true :c? true :d? true :a false} nil
+   {:fe true :c? true :d? true :a true} (load-fn "auto-txfn/mt-fet-at.edn")
+   {:fe true :c? true :d? false :a false} nil
+   {:fe true :c? true :d? false :a true} nil
 
-        ; no fe = index or relation links
-        no-fe {{:fe false :c? false :d? true :a false} nil
-               {:fe false :c? false :d? true :a true} nil
-               {:fe false :c? false :d? false :a false} nil
-               {:fe false :c? false :d? false :a true} nil
+   ; no fe = index or relation links
+   {:fe false :c? false :d? true :a false} nil
+   {:fe false :c? false :d? true :a true} nil
+   {:fe false :c? false :d? false :a false} nil
+   {:fe false :c? false :d? false :a true} nil
 
-               {:fe false :c? true :d? true :a false} nil
-               {:fe false :c? true :d? true :a true} nil
-               {:fe false :c? true :d? false :a false} nil
-               {:fe false :c? true :d? false :a true} nil}]
-    (merge fe no-fe)))
+   {:fe false :c? true :d? true :a false} nil
+   {:fe false :c? true :d? true :a true} nil
+   {:fe false :c? true :d? false :a false} nil
+   {:fe false :c? true :d? false :a true} nil})
 
 (defn auto-txfn [link]
   ; tx-fn is not applicable if the link is not managed

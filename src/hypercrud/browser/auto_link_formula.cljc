@@ -1,4 +1,5 @@
 (ns hypercrud.browser.auto-link-formula                     ; namespace is public export runtime
+  #?(:cljs (:require-macros [hypercrud.browser.auto-link-formula :refer [build-auto-formula-lookup]]))
   (:require [cats.monad.either :as either]
             [hypercrud.browser.dbname :as dbname]
             [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
@@ -52,22 +53,25 @@
               (:uri ctx))]
     (->ThinEntity (dbname/uri->dbname uri ctx) (deterministic-ident ctx))))
 
-(def auto-formula-lookup
-  (let [fe-no-create (vedn/load-vedn-from-file "auto-formula/fe-no-create.vedn")
-        fe-create (vedn/load-vedn-from-file "auto-formula/fe-create.vedn")
-        ; no fe = index or relation links
-        no-fe {{:fe false :c? false :d? true :a false} nil
-               {:fe false :c? false :d? true :a true} nil
-               {:fe false :c? false :d? false :a false} (get fe-no-create {:d? false :a false})
-               {:fe false :c? false :d? false :a true} nil
+#?(:clj
+   (defmacro build-auto-formula-lookup []
+     (let [fe-no-create (macroexpand `(vedn/load-vedn-from-file "auto-formula/fe-no-create.vedn"))
+           fe-create (macroexpand `(vedn/load-vedn-from-file "auto-formula/fe-create.vedn"))
+           ; no fe = index or relation links
+           no-fe {{:fe false :c? false :d? true :a false} nil
+                  {:fe false :c? false :d? true :a true} nil
+                  {:fe false :c? false :d? false :a false} (get fe-no-create {:d? false :a false})
+                  {:fe false :c? false :d? false :a true} nil
 
-               {:fe false :c? true :d? true :a false} nil
-               {:fe false :c? true :d? true :a true} nil
-               {:fe false :c? true :d? false :a false} (get fe-create {:d? false :a false})
-               {:fe false :c? true :d? false :a true} nil}]
-    (merge (util/map-keys #(assoc % :fe true :c? true) fe-create)
-           (util/map-keys #(assoc % :fe true :c? false) fe-no-create)
-           no-fe)))
+                  {:fe false :c? true :d? true :a false} nil
+                  {:fe false :c? true :d? true :a true} nil
+                  {:fe false :c? true :d? false :a false} (get fe-create {:d? false :a false})
+                  {:fe false :c? true :d? false :a true} nil}]
+       (merge (util/map-keys #(assoc % :fe true :c? true) fe-create)
+              (util/map-keys #(assoc % :fe true :c? false) fe-no-create)
+              no-fe))))
+
+(def auto-formula-lookup (build-auto-formula-lookup))
 
 (defn auto-formula [link]
   (-> (memoized-safe-read-edn-string (str "[" (:link/path link) "]"))
