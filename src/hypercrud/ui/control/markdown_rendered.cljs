@@ -66,7 +66,7 @@
         rel (unwrap (memoized-safe-read-edn-string srel))
         path (unwrap (memoized-safe-read-edn-string (str "[" spath "]")))
         ; https://github.com/medfreeman/remark-generic-extensions/issues/45
-        label (or-str content srel)]
+        label (or-str content (name rel))]
     (apply (:anchor ctx) rel path ctx label kwargs)))
 
 (defn cell [content argument props ctx]
