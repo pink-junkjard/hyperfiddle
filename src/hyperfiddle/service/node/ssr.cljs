@@ -134,7 +134,6 @@
         rt (->IdeSsrRuntime hyperfiddle-hostname hostname (req->service-uri env req)
                             (reactive/atom (reducers/root-reducer initial-state nil))
                             reducers/root-reducer)
-        serve-js? true #_(not aliased?)
         load-level foundation/LEVEL-HYDRATE-PAGE
         browser-init-level (if (foundation/alias? (foundation/hostname->hf-domain-name hostname hyperfiddle-hostname))
                              load-level
@@ -151,7 +150,8 @@
         (p/then (constantly 200))
         (p/catch #(or (:hyperfiddle.io/http-status-code (ex-data %)) 500))
         (p/then (fn [http-status-code]
-                  (let [params {:hyperfiddle-hostname hyperfiddle-hostname
+                  (let [serve-js? (not @(runtime/state rt [::runtime/domain :domain/disable-javascript]))
+                        params {:hyperfiddle-hostname hyperfiddle-hostname
                                 :hyperfiddle.bootstrap/init-level browser-init-level}
                         html [full-html env @(runtime/state rt) serve-js? params
                               (runtime/ssr rt @(runtime/state rt [::runtime/partitions nil :route]))]]
