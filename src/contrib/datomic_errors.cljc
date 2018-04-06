@@ -6,6 +6,7 @@
     (if-let [[match a b] (re-find #"^(.+ :db.error/insufficient-binding )(.+)$" e)] [:db.error/insufficient-binding b])
     (if-let [[match a b] (re-find #"^(.+ :db.error/not-an-entity )(.+)$" e)] [:db.error/not-an-entity b])
     (if-let [[match a b] (re-find #"^(.+ :hyperfiddle.error/basis-stale )(.+)$" e)] [:hyperfiddle.error/basis-stale b])
+    (if-let [[match a b] (re-find #"^(.+ :db.error/invalid-entity-id )(.+)$" e)] [:db.error/invalid-entity-id b])
     (if-let [[match a b] (re-find #"^(.+ message: Unable to find data source: )(.+)$" e)] [:hyperfiddle.error/query-arity (str "message: Unable to find data source: " b)])
     ))
 
