@@ -16,13 +16,15 @@ Managed I/O is not the point. The point is: *what does managed I/O make possible
 
 We are in early access / private beta, contact us.
 
-### Blocking 0.1.0:
+### Blocking open source release:
 
-- [ ] Decouple service from infrastructure
+- [ ] Developer ease of use
+  - [ ] make nodejs runtime optional
+  - [ ] decouple I/O runtime from cloud
 
 On deck
 
-- [ ] developer user experience
+- [ ] user experience
 - [ ] command line interface
 
 # Overview
