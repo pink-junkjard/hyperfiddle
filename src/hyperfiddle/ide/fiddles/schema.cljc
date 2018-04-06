@@ -3,7 +3,7 @@
             [contrib.macros :refer [str-and-code]]
             [hyperfiddle.ide.fiddles.schema-attribute :as schema-attribute]
             [hypercrud.browser.context :as context]
-            [clojure.string :as str]))
+            [cuerdas.core :as str]))
 
 
 (defn db-cardinality-options [$db]
@@ -69,7 +69,7 @@
                     (let [hide-datomic (reagent.core/atom true)
                           hide-archived (reagent.core/atom true)
                           db-attr? #(<= (:db/id %) 62)
-                          archived? #(clojure.string/starts-with? (namespace (:db/ident %)) "zzz") ; "zzz/" and "zzz.", we are inconsistent. It should be modeled and queried and never shown
+                          archived? #(cuerdas.core/starts-with? (namespace (:db/ident %)) "zzz") ; "zzz/" and "zzz.", we are inconsistent. It should be modeled and queried and never shown
                           do-filter-reactive (fn [xs] ; perf sensitive
                                                (as-> xs xs
                                                      (if @hide-datomic (remove db-attr? xs) xs)
