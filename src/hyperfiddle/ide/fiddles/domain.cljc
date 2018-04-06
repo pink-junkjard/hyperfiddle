@@ -13,38 +13,36 @@
      (:import (java.net URI))))
 
 
+(defn ^:export domain-ident-renderer [field props ctx]
+  (let [ident @(contrib.reactive/cursor (:cell-data ctx) [:domain/ident])
+        href (str "http://" ident "." (:hyperfiddle-hostname ctx))]
+    [:a {:href href} href]))
+
 (defn set-userland-$ [ctx]
   ; The user's links & schema are in the userland database, not root
   (let [domain @(:cell-data ctx)
         $ (:domain/fiddle-repo domain)]
     (-> ctx (update-in [:hypercrud.browser/domain :domain/environment] merge {"$" $}))))
 
-(defn bindings [ctx]
-  #?(:clj  ctx
-     :cljs (-> ctx
-               (assoc-in [:fields :domain/home-route :renderer]
-                         (str-and-code
-                           (fn [field props ctx]
-                             (let [ctx (set-userland-$ ctx)
-                                   control (auto-control/auto-control' (update-in ctx [:fields :domain/home-route] dissoc :renderer) #_ "guard inifinite recursion")]
-                               [control field props ctx]))))
+(defn ^:export domain-home-route-renderer [field props ctx]
+  [hypercrud.ui.attribute.code/code field props (set-userland-$ ctx)])
 
-               (assoc-in [:fields :domain/environment :renderer]
-                         (str-and-code
-                           (fn [field props ctx]
-                             [:div
-                              [(auto-control/attribute-control ctx) field props ctx]
-                              (->> (-> @(:value ctx)
-                                       (safe-read-edn-string) ; memoized?
-                                       ; todo something with this error
-                                       (cats/mplus (either/right nil))
-                                       (cats/extract))
-                                   (filter (fn [[k v]] (and (string? k) (string/starts-with? k "$") (instance? URI v))))
-                                   (map (fn [[$db _]]
-                                          (let [props {:route [(keyword "hyperfiddle.schema" $db)]}]
-                                            ^{:key $db}
-                                            [(:navigate-cmp ctx) props (str $db " schema")])))
-                                   (doall))]))))))
+(defn ^:export domain-environment-renderer [field props ctx]
+  [:div
+   [hypercrud.ui.attribute.code/code field props ctx]
+   (->> (-> @(:value ctx)
+            (safe-read-edn-string)                          ; memoized?
+            ; todo something with this error
+            (cats/mplus (either/right nil))
+            (cats/extract))
+        (filter (fn [[k v]] (and (string? k) (string/starts-with? k "$") (instance? URI v))))
+        (map (fn [[$db _]]
+               (let [props {:route [(keyword "hyperfiddle.schema" $db)]}]
+                 ^{:key $db}
+                 [(:navigate-cmp ctx) props (str $db " schema")])))
+        (doall))])
+
+(defn bindings [ctx] ctx)
 
 (defn request [ctx]
   (let [{[available-pages] true links false} (->> @(:hypercrud.browser/links ctx)
