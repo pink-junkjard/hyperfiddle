@@ -40,6 +40,7 @@
                      (hc/db peer domain-uri nil)
                      [:db/id
                       :domain/aliases
+                      :domain/disable-javascript
                       :domain/environment
                       :domain/fiddle-repo
                       :domain/home-route
