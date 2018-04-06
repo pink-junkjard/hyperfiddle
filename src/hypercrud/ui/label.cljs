@@ -6,10 +6,14 @@
 
 
 (defn fqn->name [s]
-  ; both cljs and js work with cljs eval
-  (-> (if (str/includes? s "/")
-        (str/split s "/")
-        (str/split s "."))
+  (-> s
+      (str/split "n" 2)
+      (first)
+
+      ; both cljs and js work with cljs eval
+      (as-> s (if (str/includes? s "/")
+                (str/split s "/")
+                (str/split s ".")))
       last))
 
 (defn attribute-schema-human [attr]

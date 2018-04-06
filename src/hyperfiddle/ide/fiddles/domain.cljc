@@ -22,15 +22,6 @@
 (defn bindings [ctx]
   #?(:clj  ctx
      :cljs (-> ctx
-               (assoc-in [:fields :domain/ident :renderer]
-                         (contrib.macros/str-and-code'
-                           (fn [maybe-field props ctx]
-                             [:div.value
-                              [hypercrud.ui.auto-control/auto-control nil nil nil ctx]
-                              (let [href (str "http://" @(contrib.reactive/cursor (:cell-data ctx) [:domain/ident]) "." (:hyperfiddle-hostname ctx))]
-                                [:a {:href href} href])])
-                           "todo we dont need a str repr hyperfiddle/hyperfiddle#60"))
-
                (assoc-in [:fields :domain/home-route :renderer]
                          (str-and-code
                            (fn [field props ctx]
