@@ -141,11 +141,10 @@
                              foundation/LEVEL-NONE)]
     (-> (foundation/bootstrap-data rt foundation/LEVEL-NONE load-level (.-path req) (::runtime/global-basis initial-state))
         (p/then (fn []
-                  (let [action [:disable-auto-transact]
-                        #_(if (or (foundation/alias? (foundation/hostname->hf-domain-name hostname hyperfiddle-hostname))
-                                  (foundation/domain-owner? user-profile @(runtime/state rt [::runtime/domain])))
-                            [:enable-auto-transact]
-                            [:disable-auto-transact])]
+                  (let [action (if (or (foundation/alias? (foundation/hostname->hf-domain-name hostname hyperfiddle-hostname))
+                                       #_(foundation/domain-owner? user-profile @(runtime/state rt [::runtime/domain])))
+                                 [:enable-auto-transact]
+                                 [:disable-auto-transact])]
                     (runtime/dispatch! rt action))))
         (p/then (constantly 200))
         (p/catch #(or (:hyperfiddle.io/http-status-code (ex-data %)) 500))
