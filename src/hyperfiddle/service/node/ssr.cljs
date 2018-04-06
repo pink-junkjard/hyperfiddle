@@ -139,7 +139,7 @@
                              load-level
                              ;force the browser to re-run the data bootstrapping when not aliased
                              foundation/LEVEL-NONE)]
-    (-> (foundation/bootstrap-data rt foundation/LEVEL-NONE load-level (.-path req))
+    (-> (foundation/bootstrap-data rt foundation/LEVEL-NONE load-level (.-path req) (::runtime/global-basis initial-state))
         (p/then (fn []
                   (let [action [:disable-auto-transact]
                         #_(if (or (foundation/alias? (foundation/hostname->hf-domain-name hostname hyperfiddle-hostname))
