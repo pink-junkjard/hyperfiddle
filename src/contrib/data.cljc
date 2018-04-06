@@ -74,8 +74,8 @@
     ; Previously, pprint/*print-miser-width* was set to nil in main
     (binding [pprint/*print-right-margin* (or columns pprint/*print-right-margin*)]
       (with-out-str
-        #_(pprint/pprint v)
-        (packed-printer/pprint v :width (or columns pprint/*print-right-margin*))))))
+        (pprint/pprint v)
+        #_(packed-printer/pprint v :width (or columns pprint/*print-right-margin*))))))
 
 (defn fallback [p v not-found]
   (if-not (p v) v not-found))
