@@ -26,29 +26,21 @@
              (reagent-server/render-to-string [:pre (pr-str e)])))}}])))
 
 (code-for-browser
-  (defn safe-render! [this]
-    (let [[react-ctor user-fn & props] (reagent/argv this)
-          dom-el (reagent/dom-node this)
+  (defn safe-reagent-call [user-fn & props]
+    (let [e-state (reagent/atom nil)]
+      (reagent/create-class
+        {:reagent-render (fn [user-fn & props]
+                           (if-let [e @e-state]
+                             [:pre (pr-str e)]              ; todo inject error cmp
+                             [:div.hyperfiddle-userportal
+                              [:div.hyperfiddle-userroot {:key (hash user-fn)}
+                               ; if we comment out "vector" it works with react-fragments
+                               ; but not hiccup syntax, which is necessary to work with reagent-style
+                               ; components with closure-constructor pattern.
+                               (apply vector user-fn props)]]))
 
-          ; if we comment out "vector" it works with react-fragments
-          ; but not hiccup syntax, which is necessary to work with reagent-style
-          ; components with closure-constructor pattern.
-          user-result (apply vector user-fn props)
-          explicit-container [:div.hyperfiddle-userroot {:key (hash user-fn)}
-                              user-result]]
-      (try
-        (reagent/render explicit-container dom-el)
-        (catch js/Error e
-          (reagent/render [:pre (pr-str e)] dom-el)))))
-
-  (def safe-reagent-call
-    (reagent/create-class
-      {:reagent-render (fn [user-fn & props] [:div.hyperfiddle-userportal])
-       :component-did-mount safe-render!
-       :component-will-unmount
-       (fn [this]
-         (reagent/unmount-component-at-node (reagent/dom-node this)))
-       :component-did-update safe-render!})))
+         :component-did-catch (fn [#_this e info]           ; args will need updating in reagent0.8.x
+                                (reset! e-state e))}))))
 
 (defn foo [control & args]
   [:div.hyperfiddle-userportal
