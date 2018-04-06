@@ -138,18 +138,18 @@
         browser-init-level (if (foundation/alias? (foundation/hostname->hf-domain-name hostname hyperfiddle-hostname))
                              load-level
                              ;force the browser to re-run the data bootstrapping when not aliased
-                             foundation/LEVEL-NONE)]
+                             foundation/LEVEL-NONE)
+        alias? (foundation/alias? (foundation/hostname->hf-domain-name hostname hyperfiddle-hostname))]
     (-> (foundation/bootstrap-data rt foundation/LEVEL-NONE load-level (.-path req) (::runtime/global-basis initial-state))
         (p/then (fn []
-                  (let [action (if (or (foundation/alias? (foundation/hostname->hf-domain-name hostname hyperfiddle-hostname))
-                                       #_(foundation/domain-owner? user-profile @(runtime/state rt [::runtime/domain])))
+                  (let [action (if (or alias? #_(foundation/domain-owner? user-profile @(runtime/state rt [::runtime/domain])))
                                  [:enable-auto-transact]
                                  [:disable-auto-transact])]
                     (runtime/dispatch! rt action))))
         (p/then (constantly 200))
         (p/catch #(or (:hyperfiddle.io/http-status-code (ex-data %)) 500))
         (p/then (fn [http-status-code]
-                  (let [serve-js? (not @(runtime/state rt [::runtime/domain :domain/disable-javascript]))
+                  (let [serve-js? (or (not alias?) (not @(runtime/state rt [::runtime/domain :domain/disable-javascript])))
                         params {:hyperfiddle-hostname hyperfiddle-hostname
                                 :hyperfiddle.bootstrap/init-level browser-init-level}
                         html [full-html env @(runtime/state rt) serve-js? params
