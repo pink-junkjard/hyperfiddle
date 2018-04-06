@@ -113,16 +113,17 @@
     [:code message " " (if dev-open? (str " -- " (ex-data->human-detail data)))]))
 
 (defn ui-error-block [e ctx]
-  (let [dev-open? true
-        {:keys [cause data message]} (e->map e)]
-    ; todo we don't always return an error with a message
-    [:pre
-     (if message
-       [:h4 message]
-       [markdown-rendered* "#### Unrecognized error (please comment on [#170](https://github.com/hyperfiddle/hyperfiddle/issues/170))"])
-     (if dev-open? [:p (ex-data->human-detail data)])
-     (if (= :hyperfiddle.error/unrecognized (:ident data))
-       [markdown-rendered* "Please comment this error at [hyperfiddle/170](https://github.com/hyperfiddle/hyperfiddle/issues/170) so we can match it"])]))
+  #?(:cljs
+     (let [dev-open? true
+           {:keys [cause data message]} (e->map e)]
+       ; todo we don't always return an error with a message
+       [:pre
+        (if message
+          [:h4 message]
+          [markdown-rendered* "#### Unrecognized error (please comment on [#170](https://github.com/hyperfiddle/hyperfiddle/issues/170))"])
+        (if dev-open? [:p (ex-data->human-detail data)])
+        (if (= :hyperfiddle.error/unrecognized (:ident data))
+          [markdown-rendered* "Please comment this error at [hyperfiddle/170](https://github.com/hyperfiddle/hyperfiddle/issues/170) so we can match it"])])))
 
 (defn ui-error [e ctx]
   ; :find-element :attribute :value
