@@ -12,7 +12,7 @@
             [hypercrud.browser.link :as link]
             [hypercrud.browser.routing :as routing]
             [hypercrud.types.Err :as Err]
-            [hypercrud.ui.control.markdown-rendered :refer [markdown-rendered*]]
+    #?(:cljs [hypercrud.ui.control.markdown-rendered :refer [markdown-rendered*]])
             [hypercrud.ui.native-event-listener :refer [native-on-click-listener]]
     #?(:cljs [hypercrud.ui.safe-render :refer [safe-reagent-call]])
             [hypercrud.ui.stale :as stale]
