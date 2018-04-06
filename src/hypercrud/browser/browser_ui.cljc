@@ -12,6 +12,7 @@
             [hypercrud.browser.link :as link]
             [hypercrud.browser.routing :as routing]
             [hypercrud.types.Err :as Err]
+            [hypercrud.ui.control.markdown-rendered :refer [markdown-rendered*]]
             [hypercrud.ui.native-event-listener :refer [native-on-click-listener]]
     #?(:cljs [hypercrud.ui.safe-render :refer [safe-reagent-call]])
             [hypercrud.ui.stale :as stale]
@@ -116,8 +117,12 @@
         {:keys [cause data message]} (e->map e)]
     ; todo we don't always return an error with a message
     [:pre
-     [:h4 (or message "Unrecognized error (please open a ticket)")]
-     (if dev-open? [:p (ex-data->human-detail data)])]))
+     (if message
+       [:h4 message]
+       [markdown-rendered* "#### Unrecognized error (please comment on [#170](https://github.com/hyperfiddle/hyperfiddle/issues/170))"])
+     (if dev-open? [:p (ex-data->human-detail data)])
+     (if (= :hyperfiddle.error/unrecognized (:ident data))
+       [markdown-rendered* "Please comment this error at [#170](https://github.com/hyperfiddle/hyperfiddle/issues/170))"])]))
 
 (defn ui-error [e ctx]
   ; :find-element :attribute :value
