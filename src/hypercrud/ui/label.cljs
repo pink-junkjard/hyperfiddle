@@ -7,7 +7,7 @@
 
 (defn fqn->name [s]
   (-> s
-      (str/split "n" 2)
+      (str/split "\n" 2)
       (first)
 
       ; both cljs and js work with cljs eval
