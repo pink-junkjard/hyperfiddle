@@ -31,12 +31,12 @@ On deck
 
 Hyperfiddle is built in layers. Higher layers are optional and implemented in terms of lower.
 
-1. **Managed I/O primitives:** API defined as a function
-2. **API modeled as graph:** data-driven CRUD model, API defined in EDN
-3. **Data-driven UI:** automatic UI (like Swagger)
-4. **IDE for applications:** structural editor for APIs
+1. API as a function
+2. API as a graph
+3. reflective user interface
+4. a user interface for editing user interfaces
 
-## \#1. API as a function – composable data sync primitive
+## \#1. Composable data sync primitive: API as a function
 
 A simple API fn:
 
@@ -62,62 +62,44 @@ A simple API fn:
 * Data loop sometimes runs in browser (e.g. in response to incremental ui state change)
 * all I/O responses are immutable, all requests have a time-basis
 
-This is the basis on which we build *composable abstractions:*
+## \#2. API as a graph
 
-## \#2. API defined in EDN
+API as a function can be used to build an interpreter, it interprets *fiddles* which form a graph:
 
-Data model is a graph:
+* *Fiddles* have a *query*, a *view*, and *links* to other fiddles
+* Three types of link: *anchors*, *iframes*, and *buttons*
 
-* *Fiddles* have a *query* (at the top)
-* Fiddles have *links* to other fiddles (links are pink)
-* Three types of link: *anchors* & *iframes* (hypermedia), and *buttons* (eval)
+All fiddles are url addressable, as HTML (webpage) or as data (API). Any query arguments go in the URL. It's the link's job to decide the parameters with a *forumla*.
 
-All fiddles are url addressable. You can hydrate fiddle urls as HTML (as a webpage), or as EDN (as an API).
+Here is a rendering of a fiddle graph followed by a slice of the graph as EDN.
+
+<img src="https://i.imgur.com/ZtYAlTE.png" width="720px">
+
+> *Links (graph edges) are pink. Select options are iframes with style. Live demo: <http://sandbox.hyperfiddle.net/gender>*
 
 ```clojure
-{:db/id 17592186045418,                                     ; Root query
- :fiddle/type :query,
+{:fiddle/type :query,
  :fiddle/query "[:find (pull ?e [:db/id :reg/email :reg/gender :reg/shirt-size]) :where [?e :reg/email]]",
- :fiddle/links #{{:db/id 17592186045427,                    ; link to gender options
-                  :link/rel :options,
-                  :link/render-inline? true,                ; embedded like an iframe
-                  :link/path "0 :reg/gender",
-                  :link/fiddle {:db/id 17592186045428,      ; select options query
-                                :fiddle/type :query,
+ :fiddle/links #{{:link/rel :options, :link/render-inline? true, :link/path "0 :reg/gender",
+                  :link/fiddle {:fiddle/type :query,
                                 :fiddle/query "[:find (pull ?e [:db/id :reg.gender/ident]) :where [?e :reg.gender/ident]]",
-                                :fiddle/links #{{:db/id 17592186045474, ; link to new-gender-option form
-                                                 :link/rel :hyperfiddle/new,
-                                                 :link/fiddle #:db{:id 17592186045475} ; new-gender form omitted
-                                                 }}}}
-                 {:db/id 17592186045434,                    ; link to shirt-size options
-                  :link/rel :options,
-                  :link/render-inline? true,                ; embedded like an iframe
-                  :link/dependent? true,                    ; dependency on parent fiddle's data
-                  :link/path "0 :reg/shirt-size",
+                                :fiddle/links #{{:link/rel :hyperfiddle/new, :link/fiddle #:db{:id 17592186045475}}}}}
+                 {:link/rel :options, :link/render-inline? true, :link/dependent? true, :link/path "0 :reg/shirt-size",
                   :link/formula "(fn [ctx] @(contrib.reactive/cursor (:cell-data ctx) [:reg/gender]))",
-                  :link/fiddle #:db{:id 17592186045435}     ; shirt size options query omitted
-                  }
-                 {:db/id 17592186045481,                    ; link to new-registration form
-                  :link/rel :hyperfiddle/new,
-                  :link/fiddle #:db{:id 17592186045482}     ; new-registration form omitted
-                  }}}
+                  :link/fiddle #:db{:id 17592186045435}}
+                 {:link/rel :hyperfiddle/new, :link/fiddle #:db{:id 17592186045482}}}}
 ```
-> `:link/formula` is how Datomic query arguments are filled from a context. This line is noteworthy: `(fn [ctx] @(contrib.reactive/cursor (:cell-data ctx) [:reg/gender]))` Why is it reactive? Because in a Reagent UI, if the context updates then the arguments need to be recomputed and the query re-run. Why shim a `contrib.reactive` namespace? Because formulas also evaluate inside Datomic Peer, to predict data dependencies before the downstream API consumer asks for them.
+> `:link/formula` is how Datomic query arguments are filled at the link site. Noteworthy: `(fn [ctx] @(contrib.reactive/cursor (:cell-data ctx) [:reg/gender]))` Why is it reactive? Because in a Reagent UI, if the dependency updates then the arguments need to be recomputed and the query re-run. Why shim a `contrib.reactive` namespace? Formulas also evaluate inside Datomic Peer, to predict data dependencies before the downstream API consumer asks for them.
+
+> `:link/rel` has semantic meaning like html, `:options` matches up with the `:db.type/ref` renderer which is a data driven extension point. If you override the `:db.type/ref` renderer, you may care to use `:link/rel :options` as semantic hint to render like select options, or not.
 
 ### API as a graph permits optimizations that human-coded I/O cannot do:  
 
 * Today: Automatic I/O partitioning and batching, optimized for cache hits
 * Today: Exact and total page responses without accidental over-fetching
 * Future: Smart server prefetching and optimistic push
-* Future: Machine learning
 
-## \#3. Data-driven UI means out-of-the-box tooling, batteries included
-
-<img src="https://i.imgur.com/ZtYAlTE.png" width="720px">
-
-> *Above EDN definition, rendered. Live: <http://sandbox.hyperfiddle.net/gender>*
-
-Links are pink (links are edges in the graph). Select options are iframes with style. `:link/rel` has semantic meaning like html, `:options` matches up with the [`:db.type/ref` renderer](https://github.com/hyperfiddle/hyperfiddle/blob/bd61dfb07cbff75d5002b15999d1abc6c3c6af3c/src/hypercrud/ui/widget.cljs#L74). If you override the `:db.type/ref` renderer, you may care to use `:link/rel` as semantic hint, or not. Imagine a [link/rel registry like HTML](https://www.iana.org/assignments/link-relations/link-relations.xhtml).
+## \#3. Data-driven UI means free tooling
 
 All Hyperfiddle APIs must resolve to a single function. The fiddle graph interpreter function is *Hyperfiddle Browser*. You can of course provide your own function, but the Browser is special because it is a *hypermedia function*:
 
@@ -125,7 +107,7 @@ All Hyperfiddle APIs must resolve to a single function. The fiddle graph interpr
 
 The Browser is coded in CLJC and evaluates simultaneously in jvm, browser and node, which is how the service knows in advance what the UI will ask for.
 
-### Views rendered through `eval`, progressive enhancement at any layer
+Views are rendered through `eval`, progressive enhancement at any layer
 
 * Datomic type #{string keyword bool inst long ref ...}
 * Datomic attribute #{:post/content :post/title :post/date ...}
