@@ -45,8 +45,6 @@
                     [(:navigate-cmp ctx) props (str $db " schema")])))
            (doall))]))
 
-(defn bindings [ctx] ctx)
-
 (defn request [ctx]
   (let [{[available-pages] true links false} (->> @(:hypercrud.browser/links ctx)
                                                   (group-by #(= (:link/rel %) :available-pages)))]
