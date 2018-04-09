@@ -159,21 +159,6 @@ Hyperfiddles are graphs, not text, so instead of git they are stored in Datomic.
 
 > *The radio control on `:fiddle/type` is a custom attribute renderer, `qe-picker-control`, which is eval'ed at runtime. `:fiddle/query`'s custom renderer is a CodeMirror. The fiddle's own layout (including button labels and local state) is a fiddle renderer, about 100 lines of Reagent markup eval'ed at runtime. Each menu is a link to another fiddle, with its own data dependencies and renderers.*
 
-# FAQ and anti-features
-
-Integration with REST/fiat APIs: Hyperfiddle can't help you with foreign data sync but it doesn't get in the way either.
-Run a custom backend next to hyperfiddle.server (or integrate with hyperfiddle.server) and do legacy web development.
-
-Local state in UI: Hyperfiddle is about data sync and has no opinion about how your views work. Local state is perfectly allowable, do what you've always done. Keep in mind that Hyperfiddle data sync is so fast (on par with static sites) that you may not need much local state; just use page navigation (the URL is a perfectly good place to store state).
-
-Reframe: Reframe does not support SSR and the degree of local state which reframe encourages is not idiomatic in Hyperfiddle-in-the-large. Hyperfiddle internally uses a redux-like action/reducer pattern. Your custom renderers (including the root renderer) have no restrictions and you should have no trouble using Reframe.
-
-Query subscriptions: This is a Datomic question and it is possible for straightforward queries, see this [reddit thread](https://www.reddit.com/r/Clojure/comments/6rncgw/arachneframeworkfactui/dl7r1xs/?context=2).
-
-* Eric: I would like to understand where caching actually happens
-* Eric: What happens from top to bottom when a form is rendered
-* Eric: synchronous and reactive - what does this mean?
-
 ## How far will it scale?
 
 Without immutability in the database, all efforts to abstract higher will fail; because to achieve the 
@@ -198,3 +183,26 @@ Hyperfiddle is alpha software. The programming API is not frozen.
 
 <https://www.reddit.com/r/hyperfiddle/> will aggregate all our scattered blog posts, tutorials
 and documentation.
+
+# FAQ and anti-features
+
+Integration with REST/fiat APIs: Hyperfiddle can't help you with foreign data sync but it doesn't get in the way either.
+Run a custom backend next to hyperfiddle.server (or integrate with hyperfiddle.server) and do legacy web development.
+
+Local state in UI: Hyperfiddle is about data sync and has no opinion about how your views work. Local state is perfectly allowable, do what you've always done. Keep in mind that Hyperfiddle data sync is so fast (on par with static sites) that you may not need much local state; just use page navigation (the URL is a perfectly good place to store state).
+
+Reframe: Reframe does not support SSR so we can't use it in hyperfiddle core. Hyperfiddle has no opinion or technical constraints on what userland apps do for view rendering or state management. It remains to be seen whether something like reframe is desirable for Hyperfiddle views in practice.
+
+Query subscriptions: This is a Datomic question and it is possible for straightforward queries, see this [reddit thread](https://www.reddit.com/r/Clojure/comments/6rncgw/arachneframeworkfactui/dl7r1xs/?context=2).
+
+* Eric: I would like to understand where caching actually happens
+* Eric: What happens from top to bottom when a form is rendered
+* Eric: synchronous and reactive - what does this mean?
+
+ivar: would hyperfiddle be reasonable for a chat service ? what are example apps (real or imagined) that would a) benefit from and b) be a bad fit for hyperfiddle?
+
+dustingetz: @ivar your questions are insightful. The short answer is the I/O runtime is about 1000 line "kernel" and can be replaced, so if you want realtime push over websockets, you can drop down to that level and code it like usual. The I/O runtime implementations are general purpose and could be shared or plugged into any other hyperfiddle app. The point is that userland is sheltered from all that
+
+ivar: so the plan (or existing state) is to support different swappable IO implementations?
+
+dustingetz: Yes, we have a couple, different apps have different I/O needs. A simple example is you can serve the app completely without javascript and rely only on server side rendering, hyperfiddle-consulting.com works like that
