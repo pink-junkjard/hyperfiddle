@@ -21,7 +21,7 @@
                 form/Relation))]
     (f ctx)))
 
-(defn ident [ctx]
+(defn ^:deprecated ^:export ident [ctx]                                           ; simplify and inline
   (markdown-rendered* (-> ctx
                           :hypercrud.browser/fiddle
                           (reactive/cursor [:fiddle/ident])
@@ -29,28 +29,28 @@
                           deref
                           (as-> % (str "### " %)))))
 
-(defn doc [ctx]
+(defn ^:deprecated ^:export doc [ctx]                                             ; simplify and inline
   (markdown-rendered* @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:db/doc])))
 
-(defn ^:export fiddle [ctx & [class]]
+(defn ^:export fiddle [ctx & [class]]                       ; should be a string template to inline in userland for editing.
   (let [index-ctx (dissoc ctx :isComponent)]
-    [:div {:class class}
+    [:div {:class (classes "auto-result" class)}            ; auto-result ?
      (ident ctx)
      (doc ctx)
      (link-controls/render-nav-cmps [] false index-ctx :class "hyperfiddle-link-index")
      (let [content @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/markdown])]
-       (markdown-relation nil (or content "!result[]") ctx))
+       (markdown-rendered* (or content "!result[]") ctx))
      (link-controls/render-inline-links [] false index-ctx)]))
 
-(defn ^:export ^:deprecated view [ctx & [class]]                         ; hyperfiddle.ui/fiddle :docstring true :ident false
+(defn fiddle-xray [ctx class]
   (let [index-ctx (dissoc ctx :isComponent)]
-    [:div {:class (classes "auto-result" class)}
+    [:div {:class (classes "auto-result" class)}            ; auto-result ?
      (ident ctx)
      (doc ctx)
      (link-controls/render-nav-cmps [] false index-ctx :class "hyperfiddle-link-index")
      (result ctx)
      (link-controls/render-inline-links [] false index-ctx)]))
 
-
 (def ^:deprecated ^:export result-renderer result)
 (def ^:deprecated ^:export fiddle-markdown fiddle)
+(def ^:deprecated ^:export view fiddle)

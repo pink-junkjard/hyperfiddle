@@ -28,7 +28,7 @@
         (fn [e]
           [:div
            [(ui-error/error-comp ctx) e]
-           (result/view ctx)])
+           (result/fiddle ctx)])
         (fn [{:keys [:hypercrud.browser/links]}]
           (result/result
             (-> ctx

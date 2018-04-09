@@ -136,7 +136,7 @@
         anonymous? (nil? (:user-profile ctx))
         stage @(runtime/state (:peer ctx) [:stage])]
     [:div.hyperfiddle-topnav-stage
-     (result/view ctx)                                      ; for docstring
+     (result/fiddle ctx)                                    ; for docstring
      (let [disabled? (or (not writes-allowed?) (not (empty? stage)))]
        [tooltip (cond (and (not writes-allowed?) anonymous?) {:status :warning :label "please login"}
                       (not writes-allowed?) {:status :warning :label "Writes restricted"}

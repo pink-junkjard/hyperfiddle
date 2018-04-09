@@ -47,7 +47,7 @@
                :cljs (fn [ctx]
                        #_(fragment :_) #_(list)
                        [:div
-                        [hypercrud.ui.result/view ctx (auto-ui-css-class ctx)]
+                        [hypercrud.ui.result/fiddle-xray ctx (auto-ui-css-class ctx)]
                         [fiddle-css-renderer @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]]))})
 
 (letfn [(browse [rel #_dependent? path ctx & args]
