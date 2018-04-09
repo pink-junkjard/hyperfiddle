@@ -8,6 +8,7 @@
             [hypercrud.browser.system-fiddle :refer [system-fiddle?]]
             [hypercrud.client.core :as hc]
     #?(:cljs [contrib.reagent :refer [fragment]])
+    #?(:cljs [hypercrud.ui.error :as ui-error])
     #?(:cljs [hypercrud.ui.navigate-cmp :as navigate-cmp])
     #?(:cljs [hypercrud.ui.stale :as stale])
             [contrib.data :refer [unwrap abc]]
@@ -211,7 +212,7 @@
                [:pre (pr-str e)]])
             (fn [ide-domain]
               (let [ctx (-> (page-ide-context ctx ide-domain ?route)
-                            (assoc :hypercrud.ui/ui-error browser-ui/ui-error-inline))]
+                            (assoc :hypercrud.ui/error (reactive/constantly ui-error/error-inline)))]
                 [browser/ui-from-route (ide-route ?route) ctx "topnav hidden-print"]))])
          (if ?route
            (let [class (str "hyperfiddle-user" (if ide-active " hyperfiddle-ide-user" ""))]

@@ -2,7 +2,7 @@
   (:require [cats.core :as cats :refer [mlet]]
             [cats.monad.either :as either]
             [contrib.css :refer [css-slugify classes]]
-            [contrib.data :as util :refer [unwrap or-str]]
+            [contrib.data :as util :refer [unwrap]]
             [contrib.reactive :as r]
     #?(:cljs [contrib.reagent :refer [fragment]])
             [contrib.string :refer [memoized-safe-read-edn-string]]
@@ -11,12 +11,11 @@
             [hypercrud.browser.context :as context]
             [hypercrud.browser.link :as link]
             [hypercrud.browser.routing :as routing]
-            [hypercrud.types.Err :as Err]
-    #?(:cljs [hypercrud.ui.control.markdown-rendered :refer [markdown-rendered*]])
+    #?(:cljs [hypercrud.ui.error :as ui-error])
+    ;#?(:cljs [hypercrud.ui.form :as form])
             [hypercrud.ui.native-event-listener :refer [native-on-click-listener]]
     #?(:cljs [hypercrud.ui.safe-render :refer [safe-reagent-call]])
             [hypercrud.ui.stale :as stale]
-    ;#?(:cljs [hypercrud.ui.form :as form])
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.foundation.actions :as foundation-actions]
             [hyperfiddle.runtime :as runtime]))
@@ -41,7 +40,7 @@
                             (fn [ctx]
                               #_(fragment :_) #_(list)
                               [:div
-                               [safe-reagent-call user-fn ctx (auto-ui-css-class ctx)]
+                               [safe-reagent-call (ui-error/error-comp ctx) user-fn ctx (auto-ui-css-class ctx)]
                                [fiddle-css-renderer @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]])))
    ; todo ui binding should be provided by a RT
    :default #?(:clj  (assert false "todo")
@@ -71,7 +70,7 @@
           (let [{[f & args] nil :as kwargs} (util/kwargs args)
                 ctx (context/relation-path ctx path)
                 field (:hypercrud.browser/field ctx)
-                #_#_ control-props (merge (hypercrud.ui.auto-control/control-props ctx) kwargs)]
+                #_#_control-props (merge (hypercrud.ui.auto-control/control-props ctx) kwargs)]
             #?(:cljs [(or f (partial hypercrud.ui.auto-control/auto-control field {} nil)) ctx])))
         (browse' [rel #_dependent? path ctx]
           (->> (base/data-from-link @(r/track link/rel->link rel path ctx) ctx)
@@ -89,48 +88,6 @@
       :anchor* anchor*
       :browse' browse')))
 
-(defn e->map [e]
-  (cond
-    (Err/Err? e) {:message (:msg e)
-                  :data (:data e)}
-    (map? e) e
-    (string? e) {:message e}
-    :else {:message #?(:clj  (.getMessage e)
-                       :cljs (ex-message e))
-           :data (ex-data e)
-           :cause #?(:clj  (.getCause e)
-                     :cljs (ex-cause e))}))
-
-(defn ex-data->human-detail [{:keys [ident human soup] :as data}]
-  (or human soup (util/pprint-str data)))
-
-(defn ui-error-inline [e ctx]
-  (let [dev-open? true
-        {:keys [cause data message]} (e->map e)]
-    [:code message " " (if dev-open? (str " -- " (ex-data->human-detail data)))]))
-
-(defn ui-error-block [e ctx]
-  #?(:cljs
-     (let [dev-open? true
-           {:keys [cause data message]} (e->map e)]
-       ; todo we don't always return an error with a message
-       [:pre
-        (if message
-          [:h4 message]
-          [markdown-rendered* "#### Unrecognized error (please comment on [#170](https://github.com/hyperfiddle/hyperfiddle/issues/170))"])
-        (if dev-open? [:p (ex-data->human-detail data)])
-        (if (= :hyperfiddle.error/unrecognized (:ident data))
-          [markdown-rendered* "Please comment this error at [hyperfiddle/170](https://github.com/hyperfiddle/hyperfiddle/issues/170) so we can match it"])])))
-
-(defn ui-error [e ctx]
-  ; :find-element :attribute :value
-  (let [C (cond
-            (:hypercrud.ui/ui-error ctx) (:hypercrud.ui/ui-error ctx)
-            (:hypercrud.browser/attribute ctx) ui-error-inline ; table: header or cell, form: header or cell
-            (:hypercrud.browser/find-element ctx) ui-error-inline
-            :else ui-error-block)]                          ; browser including inline true links
-    [C e ctx]))
-
 (defn page-on-click [rt branch branch-aux route event]
   (when (and route (.-altKey event))
     (runtime/dispatch! rt (fn [dispatch! get-state]
@@ -142,10 +99,12 @@
   (let [on-click (r/partial (or (:hypercrud.browser/page-on-click ctx) (constantly nil))
                             route)
         either-v (or (some-> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :error]) either/left)
-                     either-v)]
+                     either-v)
+        error-comp #?(:cljs (ui-error/error-comp ctx)
+                      :clj  (assert false "todo"))]
     [native-on-click-listener {:on-click on-click}
      [stale/loading (stale/can-be-loading? ctx) either-v
-      (fn [e] [:div {:class (classes "ui" class "hyperfiddle-error")} (ui-error e ctx)])
+      (fn [e] [:div {:class (classes "ui" class "hyperfiddle-error")} [error-comp e]])
       (fn [v] [:div {:class (classes "ui" class)} v])
       (fn [v] [:div {:class (classes "ui" class "hyperfiddle-loading")} v])]]))
 

@@ -1,8 +1,8 @@
 (ns hyperfiddle.ide.fiddles.fiddle-links.renderer
   (:require [cats.monad.either :as either]
             [hypercrud.browser.base :as base]
-            [hypercrud.browser.browser-ui :as browser-ui]
             [hypercrud.browser.system-fiddle :as system-fiddle]
+            [hypercrud.ui.error :as ui-error]
             [hypercrud.ui.result :as result]
             [contrib.reactive :as reactive]
             [hypercrud.browser.context :as context]))
@@ -27,7 +27,7 @@
       (either/branch
         (fn [e]
           [:div
-           (browser-ui/ui-error e ctx)
+           [(ui-error/error-comp ctx) e]
            (result/view ctx)])
         (fn [{:keys [:hypercrud.browser/links]}]
           (result/result

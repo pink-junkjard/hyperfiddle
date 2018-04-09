@@ -6,10 +6,10 @@
             [contrib.reactive :as reactive]))
 
 
-(let [safe-reagent-f (fn [f & args]
-                       (into [safe-reagent-call f] args))]
-  (defn safe-eval-user-control-fn [s]
+(let [safe-reagent-f (fn [with-error f & args]
+                       (into [safe-reagent-call with-error f] args))]
+  (defn safe-eval-user-control-fn [with-error s]
     (-> (eval-str s)
         (either/branch
           (fn l [e] [:pre (pprint-str e)])
-          (fn r [f] (when f (reactive/partial safe-reagent-f f)))))))
+          (fn r [f] (when f (reactive/partial safe-reagent-f with-error f)))))))

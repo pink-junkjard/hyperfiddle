@@ -13,22 +13,22 @@
 ; Which abstracts the codebase from caring if we are in a portal or not.
 
 (code-for-nodejs
-  (defn safe-reagent-call [user-fn & props]
+  (defn safe-reagent-call [with-error user-fn & props]
     [:div.hyperfiddle-userportal
      {:dangerouslySetInnerHTML
       {:__html
        (try
          (reagent-server/render-to-string (apply vector user-fn props))
          (catch js/Error e
-           (reagent-server/render-to-string [:pre (pr-str e)])))}}]))
+           (reagent-server/render-to-string [with-error e])))}}]))
 
 (code-for-browser
-  (defn safe-reagent-call [user-fn & props]
+  (defn safe-reagent-call [with-error user-fn & props]
     (let [e-state (reagent/atom nil)]
       (reagent/create-class
-        {:reagent-render (fn [user-fn & props]
+        {:reagent-render (fn [with-error user-fn & props]
                            (if-let [e @e-state]
-                             [:pre (pr-str e)]              ; todo inject error cmp
+                             [with-error e]
                              [:div.hyperfiddle-userportal
                               ; if we comment out "vector" it works with react-fragments
                               ; but not hiccup syntax, which is necessary to work with reagent-style
