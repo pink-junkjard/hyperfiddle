@@ -6,7 +6,7 @@ Hyperfiddle abstracts over client/server data sync for Datomic APIs by extending
 
 Hyperfiddle models API inter-dependencies as a graph (I need query-X and also query-Y which depends query-Z). This graph lets the I/O runtime understand the structure and data flows of the application, which permits interesting optimization opportunities.
 
-Managed I/O is not the point. The point is: *what does managed I/O make possible that wasn't possible before?* 
+Managed I/O means, as a web dev, you are no longer concerned with remote data fetching. But managed I/O is not the point. The point is: *what does managed I/O make possible that wasn't possible before?* 
 
 # Dependency coordinates — Todo
 
