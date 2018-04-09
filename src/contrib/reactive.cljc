@@ -1,5 +1,5 @@
 (ns contrib.reactive
-  (:refer-clojure :exclude [atom partial])
+  (:refer-clojure :exclude [atom constantly partial])
   (:require [cats.core :as cats]
             [contrib.data :as util]
     #?(:cljs [reagent.core :as reagent])
@@ -27,6 +27,41 @@
 (defn partial [f & args]
   (apply #?(:clj clojure.core/partial :cljs reagent/partial) f args))
 
+#?(:cljs
+   (deftype Constantly [v]
+     Fn
+     IFn
+     (-invoke [_] v)
+     (-invoke [_ a] v)
+     (-invoke [_ a b] v)
+     (-invoke [_ a b c] v)
+     (-invoke [_ a b c d] v)
+     (-invoke [_ a b c d e] v)
+     (-invoke [_ a b c d e f] v)
+     (-invoke [_ a b c d e f g] v)
+     (-invoke [_ a b c d e f g h] v)
+     (-invoke [_ a b c d e f g h i] v)
+     (-invoke [_ a b c d e f g h i j] v)
+     (-invoke [_ a b c d e f g h i j k] v)
+     (-invoke [_ a b c d e f g h i j k l] v)
+     (-invoke [_ a b c d e f g h i j k l m] v)
+     (-invoke [_ a b c d e f g h i j k l m n] v)
+     (-invoke [_ a b c d e f g h i j k l m n o] v)
+     (-invoke [_ a b c d e f g h i j k l m n o p] v)
+     (-invoke [_ a b c d e f g h i j k l m n o p q] v)
+     (-invoke [_ a b c d e f g h i j k l m n o p q r] v)
+     (-invoke [_ a b c d e f g h i j k l m n o p q r s] v)
+     (-invoke [_ a b c d e f g h i j k l m n o p q r s t] v)
+     (-invoke [_ a b c d e f g h i j k l m n o p q r s t rest] v)
+     IEquiv
+     (-equiv [_ other] (= v (.-v other)))
+     IHash
+     (-hash [_] (hash v))))
+
+(defn constantly [v]
+  #?(:clj  (clojure.core/constantly v)
+     :cljs (->Constantly v)))
+
 (defn track [f & args]
   ; todo support more than just IDeref
   #?(:clj  (delay (apply f args))
@@ -46,7 +81,7 @@
 ; Reactive[Monad[_]] => Reactive[Monad[Reactive[_]]]
 ; useful for reacting on the Either (left v right), but not the Right's value
 ; this should probably fall out eventually
-(let [f (fn [rmv] (cats/fmap (constantly (fmap cats/extract rmv)) @rmv))]
+(let [f (fn [rmv] (cats/fmap (clojure.core/constantly (fmap cats/extract rmv)) @rmv))]
   (defn apply-inner-r [rmv]
     (track f rmv)))
 
