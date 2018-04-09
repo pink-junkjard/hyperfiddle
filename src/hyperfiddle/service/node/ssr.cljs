@@ -40,17 +40,17 @@
       [:link {:rel "stylesheet" :href (str resource-base "/styles.css")}]
       [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
       [:meta {:charset "UTF-8"}]
-      [:script {:id "build" :type "text/edn" :dangerouslySetInnerHTML {:__html (:BUILD env)}}]]
+      [:script {:id "build" :type "text/plain" :dangerouslySetInnerHTML {:__html (:BUILD env)}}]]
      [:body
       [:div {:id "root"} app-component]
       (when (:ANALYTICS env)
         [:div {:dangerouslySetInnerHTML {:__html analytics}}])
       (when serve-js?
         ; env vars for client side rendering
-        [:script {:id "params" :type "text/edn"
+        [:script {:id "params" :type "application/transit-json"
                   :dangerouslySetInnerHTML {:__html (transit/encode params)}}])
       (when serve-js?
-        [:script {:id "state" :type "text/edn"
+        [:script {:id "state" :type "application/transit-json"
                   :dangerouslySetInnerHTML {:__html (transit/encode state-val)}}])
       (when serve-js?
         [:script {:id "preamble" :src (str resource-base "/preamble.js")}])
