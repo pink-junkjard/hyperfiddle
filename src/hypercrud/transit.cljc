@@ -66,7 +66,7 @@
   [x & {:keys [type opts]
         :or {type :json-verbose opts {:handlers write-handlers}}}]
   #?(:clj  (let [out (ByteArrayOutputStream.)
-                 writer (t/writer out :json-verbose opts)]
+                 writer (t/writer out type opts)]
              (t/write writer x)
              (.toString out))
      :cljs (let [wrtr (t/writer type opts)]
