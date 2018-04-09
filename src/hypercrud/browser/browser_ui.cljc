@@ -70,12 +70,9 @@
         (value [path ctx & args]
           (let [{[f & args] nil :as kwargs} (util/kwargs args)
                 ctx (context/relation-path ctx path)
-                ; Awful hacks to solve a circular reference by using legacy auto-control interface
-                ;control (or f (hypercrud.ui.auto-control/auto-control' ctx))
                 field (:hypercrud.browser/field ctx)
-                ;control-props (merge (hypercrud.ui.auto-control/control-props ctx) kwargs)
-                ]
-            #?(:cljs [hypercrud.ui.auto-control/auto-control field {} nil ctx])))
+                #_#_ control-props (merge (hypercrud.ui.auto-control/control-props ctx) kwargs)]
+            #?(:cljs [(or f (partial hypercrud.ui.auto-control/auto-control field {} nil)) ctx])))
         (browse' [rel #_dependent? path ctx]
           (->> (base/data-from-link @(r/track link/rel->link rel path ctx) ctx)
                (cats/fmap :hypercrud.browser/result)
