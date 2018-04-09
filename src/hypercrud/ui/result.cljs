@@ -10,7 +10,8 @@
             [hypercrud.ui.table :as table]))
 
 
-(defn ^:export result [ctx & [f]]                           ; should have explicit mapcat, like markdown.
+(defn ^:export result "f is parameterized by markdown e.g. !result[hypercrud.ui.result/list]()"
+  [ctx & [f]]                           ; should have explicit mapcat, like markdown.
   ; This is not a reagent component; it returns a component-or-list-of-components (or nil).
   ; Thus it cannot be used from hiccup syntax. It needs to be wrapped into a :div or a react-fragment.
   ; Which means at that point it might as well return monad and let the wrapper sort out the errors?
@@ -19,8 +20,6 @@
                 table/Table
                 form/Relation))]
     (f ctx)))
-
-(def ^:deprecated ^:export result-renderer result)
 
 (defn ident [ctx]
   (markdown-rendered* (-> ctx
@@ -33,12 +32,17 @@
 (defn doc [ctx]
   (markdown-rendered* @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:db/doc])))
 
-(defn ^:export fiddle-markdown "Call this from your fiddle renderer"
-  [ctx & [class]]
-  (let [content @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/markdown])]
-    (markdown-relation nil content ctx class)))
+(defn ^:export fiddle [ctx & [class]]
+  (let [index-ctx (dissoc ctx :isComponent)]
+    [:div {:class class}
+     (ident ctx)
+     (doc ctx)
+     (link-controls/render-nav-cmps [] false index-ctx :class "hyperfiddle-link-index")
+     (let [content @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/markdown])]
+       (markdown-relation nil (or content "!result[]") ctx))
+     (link-controls/render-inline-links [] false index-ctx)]))
 
-(defn ^:export view [ctx & [class]]                         ; hyperfiddle.ui/fiddle :docstring true :ident false
+(defn ^:export ^:deprecated view [ctx & [class]]                         ; hyperfiddle.ui/fiddle :docstring true :ident false
   (let [index-ctx (dissoc ctx :isComponent)]
     [:div {:class (classes "auto-result" class)}
      (ident ctx)
@@ -46,3 +50,7 @@
      (link-controls/render-nav-cmps [] false index-ctx :class "hyperfiddle-link-index")
      (result ctx)
      (link-controls/render-inline-links [] false index-ctx)]))
+
+
+(def ^:deprecated ^:export result-renderer result)
+(def ^:deprecated ^:export fiddle-markdown fiddle)
