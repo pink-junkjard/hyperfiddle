@@ -205,4 +205,4 @@ dustingetz: @ivar your questions are insightful. The short answer is the I/O run
 
 ivar: so the plan (or existing state) is to support different swappable IO implementations?
 
-dustingetz: Yes, we have a couple, different apps have different I/O needs. A simple example is you can serve the app completely without javascript and rely only on server side rendering, hyperfiddle-consulting.com works like that
+dustingetz: Yes, we have a couple, different apps have different I/O needs. A simple example is you can serve the app completely without javascript and rely only on server side rendering, hyperfiddle-consulting.com works like that. It turns out that disabling javascript is actually slower, Hyperfiddle is similar to https://www.gatsbyjs.org/ and is faster with javascript once the entire app data dependencies are in browser cache. Its up to the I/O runtime to make those decisions, the default one is very good, most apps dont need to think about this
