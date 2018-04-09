@@ -34,7 +34,7 @@
 (defn test-transit [control transit-strd]
   (is (= control
          (transit/decode (transit/encode control))
-         (transit/decode transit-strd))))
+         (transit/decode transit-strd :type :json-verbose))))
 
 (defn test-all-forms [control literal-read strd transit-strd]
   (test-compile-read control literal-read)

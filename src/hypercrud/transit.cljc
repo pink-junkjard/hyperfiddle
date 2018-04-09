@@ -54,7 +54,7 @@
 (defn decode
   "Transit decode an object from `s`."
   [s & {:keys [type opts]
-        :or {type :json-verbose opts {:handlers read-handlers}}}]
+        :or {type :json opts {:handlers read-handlers}}}]
   #?(:clj  (let [in (ByteArrayInputStream. (.getBytes s *string-encoding*))
                  rdr (t/reader in type opts)]
              (t/read rdr))
@@ -64,7 +64,7 @@
 (defn encode
   "Transit encode `x` into a String."
   [x & {:keys [type opts]
-        :or {type :json-verbose opts {:handlers write-handlers}}}]
+        :or {type :json opts {:handlers write-handlers}}}]
   #?(:clj  (let [out (ByteArrayOutputStream.)
                  writer (t/writer out type opts)]
              (t/write writer x)
