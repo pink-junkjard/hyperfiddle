@@ -64,7 +64,7 @@
                     :link/path "0"
                     :link/disabled? true}}})
 
-(let [renderer (mpprint-str
+(let [renderer (pprint-str
                  '(fn [ctx]
                     (let [hide-datomic (reagent.core/atom true)
                           hide-archived (reagent.core/atom true)
