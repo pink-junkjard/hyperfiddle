@@ -9,6 +9,7 @@
     (if-let [[match a b] (re-find #"^(.+ :db.error/invalid-entity-id )(.+)$" e)] [:db.error/invalid-entity-id b])
     (if-let [[match a b] (re-find #"^(.+ :db.error/datoms-conflict )(.+)$" e)] [:db.error/datoms-conflict b])
     (if-let [[match a b] (re-find #"^(.+ :db.error/wrong-type-for-attribute )(.+)$" e)] [:db.error/wrong-type-for-attribute b])
+    (if-let [[match a b] (re-find #"^(com.google.common.util.concurrent.UncheckedExecutionException: java.lang.IllegalArgumentException: )(.+)$" e)] [:hyperfiddle.error/invalid-pull b])
     (if-let [[match a b] (re-find #"^(.+ message: Unable to find data source: )(.+)$" e)] [:hyperfiddle.error/query-arity (str "message: Unable to find data source: " b)])
     ))
 
