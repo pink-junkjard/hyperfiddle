@@ -119,15 +119,15 @@
     datascript.parser.Aggregate
     (aggregate->fe element)))
 
-(defn auto-find-elements [result fiddle request route schemas]
-  (case @(reactive/cursor fiddle [:fiddle/type])
-    :entity (mlet [:let [[_ [e]] route]
+(defn auto-find-elements [{:keys [:hypercrud.browser/result :hypercrud.browser/request] :as ctx}]
+  (case @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/type])
+    :entity (mlet [:let [[_ [e]] (:route ctx)]
                    source-symbol (try-either (.-dbname e))
                    :let [fe-name "entity"
                          pull-pattern @(reactive/cursor request [:pull-exp])]]
               (cats/return
                 (if-let [a @(reactive/cursor request [:a])]
-                  (case @(reactive/cursor schemas [(str source-symbol) a :db/cardinality :db/ident])
+                  (case @(reactive/cursor (:hypercrud.browser/schemas ctx) [(str source-symbol) a :db/cardinality :db/ident])
                     :db.cardinality/one
                     [(pull-cell->fe @result source-symbol fe-name pull-pattern)]
 

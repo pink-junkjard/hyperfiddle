@@ -35,10 +35,11 @@
        doall))
 
 ; todo tighter reactivity
-(defn auto-links [fiddle ordered-fes schemas & [keep-disabled-anchors?]]
-  (let [sys-links (system-link/system-links @fiddle @ordered-fes @schemas)
+(defn auto-links [ctx]
+  (let [fiddle (:hypercrud.browser/fiddle ctx)
+        sys-links (system-link/system-links @fiddle @(:hypercrud.browser/ordered-fes ctx) @(:hypercrud.browser/schemas ctx))
         links (->> (merge-links sys-links @(reactive/cursor fiddle [:fiddle/links]))
                    (map auto-link))]
-    (if keep-disabled-anchors?
+    (if (:keep-disabled-anchors? ctx)
       links
       (remove :link/disabled? links))))

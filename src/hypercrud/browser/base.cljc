@@ -153,12 +153,11 @@
                        ; provide defaults before user-bindings run.
                        :read-only (or (:read-only ctx) never-read-only))
                  ctx (context/with-relations ctx)]
-           ctx (user-bindings/user-bindings' fiddle ctx)
-           reactive-fes @(reactive/apply-inner-r (reactive/track find-element/auto-find-elements reactive-result fiddle request (:route ctx) reactive-schemas))]
-      (cats/return
-        (assoc ctx
-          :hypercrud.browser/ordered-fes reactive-fes
-          :hypercrud.browser/links (reactive/track auto-links fiddle reactive-fes reactive-schemas (:keep-disabled-anchors? ctx)))))))
+           ctx (user-bindings/user-bindings ctx)
+           reactive-fes @(reactive/apply-inner-r (reactive/track find-element/auto-find-elements ctx))
+           :let [ctx (assoc ctx :hypercrud.browser/ordered-fes reactive-fes)
+                 ctx (assoc ctx :hypercrud.browser/links (reactive/track auto-links ctx))]]
+      (cats/return ctx))))
 
 (defn data-from-route [route ctx]                           ; todo rename
   (let [ctx (context/route ctx route)]

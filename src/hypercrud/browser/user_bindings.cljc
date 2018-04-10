@@ -7,9 +7,9 @@
             [taoensso.timbre :as timbre]))
 
 
-(defn user-bindings' [fiddle ctx]
+(defn user-bindings [ctx]
   {:post [(not (nil? %))]}
-  (mlet [:let [bindings @(reactive/cursor fiddle [:fiddle/bindings])]
+  (mlet [:let [bindings @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/bindings])]
          user-fn (eval-str bindings)]
     (if user-fn
       (mlet [ctx (try-either (user-fn ctx))]
