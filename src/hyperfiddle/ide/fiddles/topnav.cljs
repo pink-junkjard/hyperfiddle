@@ -1,17 +1,16 @@
 (ns hyperfiddle.ide.fiddles.topnav
-  (:require [cats.core :as cats]
-            [cats.monad.either :as either]
+  (:require [cats.monad.either :as either]
             [contrib.base-64-url-safe :as base64-url-safe]
             [contrib.data :refer [kwargs unwrap]]
             [contrib.datomic-tx :as tx]
             [contrib.reactive :as reactive]
             [contrib.reagent :refer [fragment]]
-            [hypercrud.browser.base :as base]
             [hypercrud.browser.browser-ui :as browser-ui]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.link :as link]
             [hypercrud.browser.system-fiddle :as system-fiddle]
             [hypercrud.ui.control.markdown-rendered :refer [markdown-rendered*]]
+            [hypercrud.ui.error :as ui-error]
             [hypercrud.ui.radio :as radio]
             [hypercrud.ui.result :as result]
             [hypercrud.ui.tooltip :refer [tooltip]]
@@ -45,12 +44,12 @@
 
 ; ugly hacks to recursively fix the ui for sys links
 (defn hijack-renderer [ctx]
-  (let [ctx (dissoc ctx :user-renderer)
-        f-mode-config (browser-ui/f-mode-config)
-        ui-fn (-> (base/fn-from-mode f-mode-config (:hypercrud.browser/fiddle ctx) ctx)
-                  (cats/mplus (either/right (:default f-mode-config)))
-                  deref)]
-    (ui-fn (shadow-fiddle ctx))))
+  (let [ctx (-> (dissoc ctx :user-renderer)
+                (shadow-fiddle))]
+    (-> (browser-ui/ui-comp ctx)
+        (either/branch
+          (ui-error/error-comp ctx)
+          identity))))
 
 (defn any-loading? [peer]
   (some (comp not nil? :hydrate-id val) @(runtime/state peer [::runtime/partitions])))

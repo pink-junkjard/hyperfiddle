@@ -3,6 +3,7 @@
             [cats.monad.either :as either]
             [contrib.css :refer [css-slugify classes]]
             [contrib.data :as util :refer [unwrap]]
+            [contrib.eval :as eval]
             [contrib.reactive :as r]
             [contrib.string :refer [memoized-safe-read-edn-string]]
             [contrib.try :refer [try-either]]
@@ -23,29 +24,12 @@
 (declare ui-from-link)
 
 (defn fiddle-css-renderer [s]
-  [:style {:dangerouslySetInnerHTML {:__html s}}])
+  [:style {:dangerouslySetInnerHTML {:__html @s}}])
 
 (defn auto-ui-css-class [ctx]
   (classes (let [ident @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/ident])]
              [(css-slugify (some-> ident namespace))
               (css-slugify ident)])))
-
-; defn because hypercrud.ui.result/view cannot be required from this ns
-(defn f-mode-config []
-  {:from-ctx :user-renderer
-   :from-fiddle (fn [fiddle] @(r/cursor fiddle [:fiddle/renderer]))
-   :with-user-fn (fn [user-fn]
-                   (fn [ctx]
-                     #_(fragment :_) #_(list)
-                     [:div
-                      [safe-reagent-call (ui-error/error-comp ctx) user-fn ctx (auto-ui-css-class ctx)]
-                      [fiddle-css-renderer @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]]))
-   ; todo ui binding should be provided by a RT
-   :default (fn [ctx]
-              #_(fragment :_) #_(list)
-              [:div
-               [hypercrud.ui.result/fiddle-xray ctx (auto-ui-css-class ctx)]
-               [fiddle-css-renderer @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]])})
 
 (letfn [(browse [rel #_dependent? path ctx & args]
           (let [{[user-renderer & args] nil :as kwargs} (util/kwargs args)
@@ -103,13 +87,29 @@
       (fn [v] [:div {:class (classes "ui" class)} v])
       (fn [v] [:div {:class (classes "ui" class "hyperfiddle-loading")} v])]]))
 
-(defn hf-ui [route ctx]                                     ; returns an Either[Error, DOM]
-  (mlet [ctx (base/data-from-route route ctx)
-         ui-fn (base/fn-from-mode (f-mode-config) (:hypercrud.browser/fiddle ctx) ctx)]
-    (cats/return (ui-fn (ui-bindings ctx)))))
+(defn ui-comp [ctx]                                         ; returns Either[Error, DOM]
+  (case @(:hypercrud.ui/display-mode ctx)
+    :user (->> (or (some-> (:user-renderer ctx) either/right)
+                   (eval/eval-str @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/renderer])))
+               (cats/fmap (fn [user-fn]
+                            (if user-fn
+                              [safe-reagent-call (ui-error/error-comp ctx) user-fn ctx (auto-ui-css-class ctx)]
+                              ; todo ui.result should be injected
+                              [hypercrud.ui.result/fiddle ctx (auto-ui-css-class ctx)]))))
+    :xray (either/right
+            ; todo ui.result should be injected
+            [hypercrud.ui.result/fiddle-xray ctx (auto-ui-css-class ctx)])))
+
+(defn hf-ui [ctx]                                           ; returns Either[Error, DOM]
+  (->> (ui-comp ctx)
+       (cats/fmap (fn [dom]
+                    [:div dom
+                     [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]]))))
 
 (defn ui-from-route [route ctx & [class]]
-  [wrap-ui (hf-ui route ctx) route ctx class])
+  (let [v' (mlet [ctx (base/data-from-route route ctx)]
+             (hf-ui (ui-bindings ctx)))]
+    [wrap-ui v' route ctx class]))
 
 (defn ui-from-link [link ctx & [class]]
   (let [link-props' (try-either (link/build-link-props link ctx))
@@ -117,7 +117,9 @@
              ; todo should filter hidden links out before recursing (in render-inline-links)
              (if (:hidden link-props)
                (either/right [:noscript])
-               (cats/bind (routing/build-route' link ctx)
-                          #(hf-ui % (context/clean ctx)))))
+               (mlet [route (routing/build-route' link ctx)
+                      :let [ctx (context/clean ctx)]
+                      ctx (base/data-from-route route ctx)]
+                 (hf-ui (ui-bindings ctx)))))
         route (unwrap (cats/fmap :route link-props'))]
     [wrap-ui v' route ctx (classes class (css-slugify (:link/rel link)))]))

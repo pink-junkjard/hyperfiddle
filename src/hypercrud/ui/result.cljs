@@ -3,6 +3,7 @@
             [contrib.css :refer [classes]]
             [contrib.data :as util :refer [or-str]]
             [contrib.reactive :as reactive]
+            [cuerdas.core :as string]
             [hypercrud.browser.context :as context]
             [hypercrud.ui.control.link-controls :as link-controls]
             [hypercrud.ui.control.markdown-rendered :refer [markdown-relation markdown-rendered*]]
@@ -39,7 +40,10 @@
      (doc ctx)
      (link-controls/render-nav-cmps [] false index-ctx :class "hyperfiddle-link-index")
      (let [content @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/markdown])]
-       (markdown-rendered* (or content "!result[]") ctx))
+       (markdown-rendered* (if (and (string? content) (not (string/blank? content)))
+                             content
+                             "!result[]")
+                           ctx))
      (link-controls/render-inline-links [] false index-ctx)]))
 
 (defn fiddle-xray [ctx class]

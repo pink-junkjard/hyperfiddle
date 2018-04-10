@@ -2,7 +2,6 @@
   (:require [cats.core :as cats :refer [mlet return]]
             [cats.monad.either :as either]
             [contrib.reactive :as reactive]
-            [contrib.eval :refer [eval-str]]
             [contrib.string :refer [memoized-safe-read-edn-string]]
             [contrib.try :refer [try-either]]
             [hypercrud.browser.auto-link :refer [auto-links]]
@@ -136,14 +135,6 @@
     :blank (either/right nil)
 
     (either/right nil)))
-
-(defn fn-from-mode [f-mode-config fiddle ctx]
-  (let [{:keys [from-ctx from-fiddle with-user-fn default]} f-mode-config]
-    (case @(:hypercrud.ui/display-mode ctx)
-      :user (->> (or (some-> (from-ctx ctx) either/right)
-                     (eval-str (from-fiddle fiddle)))
-                 (cats/fmap #(if % (with-user-fn %) default)))
-      :xray (either/right default))))
 
 (let [never-read-only (constantly false)
       nil-or-hydrate (fn [peer branch request]
