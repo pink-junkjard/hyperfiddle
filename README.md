@@ -33,8 +33,8 @@ Hyperfiddle is built in layers. Higher layers are optional and implemented in te
 
 1. API as a function
 2. API as a graph
-3. reflective user interface
-4. a user interface for editing user interfaces
+3. Reflective user interface
+4. Structural editor for apps
 
 ## \#1. Composable data sync primitive: API as a function
 
@@ -99,7 +99,7 @@ Here is a rendering of a fiddle graph followed by a slice of the graph as EDN.
 * Today: Exact and total page responses without accidental over-fetching
 * Future: Smart server prefetching and optimistic push
 
-## \#3. Data-driven UI means free tooling
+## \#3. Reflective (data-driven) user interface
 
 All Hyperfiddle APIs must resolve to a single function. The fiddle graph interpreter function is *Hyperfiddle Browser*. You can of course provide your own function, but the Browser is special because it is a *hypermedia function*:
 
@@ -144,7 +144,7 @@ Views are rendered through `eval`, progressive enhancement at any layer
 > being rendered as a CodeMirror with markdown syntax highlighting. On the right, we 
 > see it wired up. Renderers can be any ClojureScript expression and are eval'ed at runtime.*
 
-## \#4. Structural Editor
+## \#4. Structural editor for apps
 
 Once you start coding "data" (data-ing?), a few ideas form:
 
