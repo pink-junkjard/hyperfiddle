@@ -51,7 +51,6 @@
    :fiddle/pull
    :fiddle/query
    :fiddle/renderer
-   :fiddle/request
    :fiddle/type])
 
 (defn legacy-fiddle-ident->lookup-ref [fiddle]              ; SHould be an ident but sometimes is a long today

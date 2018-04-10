@@ -8,10 +8,8 @@
             [hypercrud.browser.routing :as routing]
             [hypercrud.client.schema :as schema-util]
             [contrib.data :refer [unwrap]]
-            [contrib.try :refer [try-catch-non-fatal try-either]]
             [contrib.reactive :as reactive]
-            [hyperfiddle.runtime :as runtime]
-            [taoensso.timbre :as timbre]))
+            [hyperfiddle.runtime :as runtime]))
 
 
 (declare request-from-route)
@@ -91,23 +89,6 @@
             (:relations ctx) (table-requests ctx)
             :blank nil))))
 
-(defn f-mode-config []
-  {:from-ctx :user-request
-   :from-fiddle (fn [fiddle] @(reactive/cursor fiddle [:fiddle/request]))
-   :with-user-fn (fn [user-fn]
-                   (fn [ctx]
-                     ; todo report invocation errors back to the user
-                     ; user-fn HAS to return a seqable value, we want to throw right here if it doesn't
-                     (try-catch-non-fatal (seq (user-fn ctx))
-                                          e (do
-                                              (timbre/error e)
-                                              nil))))
-   :default fiddle-dependent-requests})
-
-(defn process-data [ctx]
-  (mlet [request-fn (base/fn-from-mode (f-mode-config) (:hypercrud.browser/fiddle ctx) ctx)]
-    (cats/return (request-fn ctx))))
-
 (defn request-from-route [route ctx]
   (let [ctx (context/route ctx route)]
     (when-let [meta-fiddle-request (unwrap @(reactive/apply-inner-r (reactive/track base/meta-request-for-fiddle ctx)))]
@@ -121,9 +102,9 @@
                     (concat
                       (some-> @fiddle-request vector)
                       (schema-util/schema-requests-for-link ctx)
-                      (-> (base/process-results fiddle fiddle-request ctx)
-                          (cats/bind process-data)
-                          unwrap)))))))))
+                      (->> (base/process-results fiddle fiddle-request ctx)
+                           (cats/fmap fiddle-dependent-requests)
+                           unwrap)))))))))
 
 (defn request-from-link [link ctx]
   (unwrap (base/from-link link ctx (fn [route ctx]
