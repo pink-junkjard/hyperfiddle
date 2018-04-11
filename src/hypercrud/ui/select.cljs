@@ -81,8 +81,8 @@
     :entity [select-error-cmp "Only fiddle type `query` is supported for select options"]
     :blank [select-error-cmp "Only fiddle type `query` is supported for select options"]
     :query (if (:relations ctx-options)
-             (fn [ctx-cell] [select-anchor-renderer' props ctx-options])
-             (constantly [select-error-cmp "Tuples and scalars are unsupported for select options. Please fix your options query to return a relation or collection"]))
+             [select-anchor-renderer' props ctx-options]
+             [select-error-cmp "Tuples and scalars are unsupported for select options. Please fix your options query to return a relation or collection"])
     ; default
     [select-error-cmp "Only fiddle type `query` is supported for select options"]))
 
