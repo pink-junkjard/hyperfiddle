@@ -14,7 +14,7 @@
             [hypercrud.ui.error :as ui-error]
     ; [hypercrud.ui.form :as form]
             [hypercrud.ui.native-event-listener :refer [native-on-click-listener]]
-            [hypercrud.ui.safe-render :refer [safe-reagent-call]]
+            [hypercrud.ui.safe-render :refer [user-portal]]
             [hypercrud.ui.stale :as stale]
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.foundation.actions :as foundation-actions]
@@ -93,7 +93,9 @@
                    (eval/eval-str @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/renderer])))
                (cats/fmap (fn [user-fn]
                             (if user-fn
-                              [safe-reagent-call (ui-error/error-comp ctx) user-fn ctx (auto-ui-css-class ctx)]
+                              ^{:key (hash user-fn)}
+                              [user-portal (ui-error/error-comp ctx)
+                               [user-fn ctx (auto-ui-css-class ctx)]]
                               ; todo ui.result should be injected
                               [hypercrud.ui.result/fiddle ctx (auto-ui-css-class ctx)]))))
     :xray (either/right
