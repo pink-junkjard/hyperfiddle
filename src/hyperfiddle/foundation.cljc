@@ -148,7 +148,7 @@
 ; it makes no sense for clients to forward domains along requests (same as global-basis),
 ; so we need to inject into the domain level and then continue on at the appropriate level.
 ; could also handle dirty staging areas for browser
-(defn bootstrap-data [rt init-level load-level encoded-route initial-global-basis] ;branch and aux as parameter?
+(defn bootstrap-data [rt init-level load-level encoded-route initial-global-basis & [dirty-stage?]] ;branch and aux as parameter?
   (if (>= init-level load-level)
     (p/resolved nil)
     (-> (condp = (inc init-level)
@@ -163,7 +163,7 @@
                                (runtime/dispatch! rt [:set-error e])
                                (p/rejected e))))
           LEVEL-LOCAL-BASIS (foundation-actions/refresh-partition-basis rt nil (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
-          LEVEL-HYDRATE-PAGE (if (not= initial-global-basis @(runtime/state rt [::runtime/global-basis]))
+          LEVEL-HYDRATE-PAGE (if (or (not= initial-global-basis @(runtime/state rt [::runtime/global-basis])) dirty-stage?)
                                (foundation-actions/hydrate-partition rt nil nil (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
                                (p/resolved nil)))
-        (p/then #(bootstrap-data rt (inc init-level) load-level encoded-route initial-global-basis)))))
+        (p/then #(bootstrap-data rt (inc init-level) load-level encoded-route initial-global-basis dirty-stage?)))))
