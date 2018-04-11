@@ -69,9 +69,7 @@ API as a function can be used to build an interpreter, it interprets *fiddles* w
 * *Fiddles* have a *query*, a *view*, and *links* to other fiddles
 * Three types of link: *anchors*, *iframes*, and *buttons*
 
-All fiddles are url addressable, as HTML (webpage) or as data (API). Any query arguments go in the URL. It's the link's job to decide the parameters with a *forumla*.
-
-Here is a rendering of a fiddle graph followed by a slice of the graph as EDN.
+All fiddles are url addressable, as `text/HTML` (application) or `application/transit+json` (API). Any query arguments go in the URL. It's the link's job to decide the parameters with a *forumla*. Buttons call *transaction functions* and transact the result.
 
 <img src="https://i.imgur.com/ZtYAlTE.png" width="720px">
 
@@ -89,14 +87,14 @@ Here is a rendering of a fiddle graph followed by a slice of the graph as EDN.
                   :link/fiddle #:db{:id 17592186045435}}
                  {:link/rel :hyperfiddle/new, :link/fiddle #:db{:id 17592186045482}}}}
 ```
-> `:link/formula` is how Datomic query arguments are filled at the link site. Noteworthy: `(fn [ctx] @(contrib.reactive/cursor (:cell-data ctx) [:reg/gender]))` Why is it reactive? Because in a Reagent UI, if the dependency updates then the arguments need to be recomputed and the query re-run. Why shim a `contrib.reactive` namespace? Formulas also evaluate inside Datomic Peer, to predict data dependencies before the downstream API consumer asks for them.
+> `:link/formula` is how Datomic query arguments are filled at the link site. Noteworthy: `(fn [ctx] @(contrib.reactive/cursor (:cell-data ctx) [:reg/gender]))` (this is cumbersome and will get simpler it should reduce to `:reg/gender`). Why is it reactive? Because in a live UI, if a dependency updates then the arguments need to be recomputed and the query re-run. Why shim a `contrib.reactive` namespace? Formulas also evaluate inside Datomic Peer, to coordinate data dependencies before the downstream API consumer asks for them.
 
 > `:link/rel` has semantic meaning like html, `:options` matches up with the `:db.type/ref` renderer which is a data driven extension point. If you override the `:db.type/ref` renderer, you may care to use `:link/rel :options` as semantic hint to render like select options, or not.
 
 ### API as a graph permits optimizations that human-coded I/O cannot do:  
 
 * Today: Automatic I/O partitioning and batching, optimized for cache hits
-* Today: Exact and total page responses without accidental over-fetching
+* Today: Exact and total page responses without over-fetching
 * Future: Smart server prefetching and optimistic push
 
 ## \#3. Reflective (data-driven) user interface
@@ -114,7 +112,7 @@ Views are rendered through `eval`, progressive enhancement at any layer
 * Table, form, label, value, etc
 * Markdown extensions
 * Fiddle (page) renderer
-* Hyperfiddle Browser - the interpreter itself
+* Hyperfiddle Browser - you can replace the interpreter itself
 
 ### TodoMVC with a markdown fiddle renderer:
 
