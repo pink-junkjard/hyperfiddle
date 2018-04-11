@@ -69,7 +69,7 @@ API as a function can be used to build an interpreter, it interprets *fiddles* w
 * *Fiddles* have a *query*, a *view*, and *links* to other fiddles
 * Three types of link: *anchors*, *iframes*, and *buttons*
 
-All fiddles are url addressable, as `text/HTML` (application) or `application/transit+json` (API). Any query arguments go in the URL. It's the link's job to decide the parameters with a *forumla*. Buttons call *transaction functions* and transact the result.
+All fiddles are url addressable, as `text/HTML` (application) or `application/transit+json` (API). If the query takes input arguments, it's the link's job to decide the parameters with a *forumla* and put them in the url. Buttons execute effects which are specified by *transaction functions*.
 
 <img src="https://i.imgur.com/ZtYAlTE.png" width="720px">
 
