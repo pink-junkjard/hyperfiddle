@@ -20,7 +20,7 @@
   (defn- safe-reagent-call-impl [with-error user-fn & args]
     (let [e-state (reagent/atom nil)]
       (reagent/create-class
-        {:reagent-render (fn [with-error user-fn & props]
+        {:reagent-render (fn [with-error user-fn & args]
                            [:div.hyperfiddle-userportal
                             (if-let [e @e-state]
                               [with-error e]
