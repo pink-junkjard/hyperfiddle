@@ -45,13 +45,8 @@
                              argument (if-not (= argument "undefined") argument)]
                          (f content argument (dissoc props :content :argument) ctx)))}))
 
-
-(declare markdown-relation)
-
 (defn code-editor-wrap-argv [content argument props ctx]
   [hypercrud.ui.control.code/code* content #() props])
-
-#_(fragment k (unwrap (read-eval-with-bindings content (context/relation ctx relation))))
 
 (defn eval [content argument props ctx]
   (unwrap (read-eval-with-bindings content ctx)))
@@ -90,7 +85,7 @@
      (->> (:relations ctx)
           (r/unsequence keyfn)
           (map (fn [[relation k]]
-                 ^{:key k} [markdown-relation k content (context/relation ctx relation)]))
+                 ^{:key k} [markdown content (context/relation ctx relation)]))
           (doall))]))
 
 (defn value [content argument props ctx]
@@ -140,11 +135,5 @@
                                                                 (comp reagent/reactify-component
                                                                       md-extension)))}))))
 
-
-; Todo; remove div.markdown; that should be default and style the inverse.
-(defn markdown-rendered* [md & [?ctx class]]
-  #_[:div {:class (classes "markdown" class)}]
+(defn ^:deprecated markdown-rendered* [md & [?ctx]]
   [markdown md ?ctx])
-
-(defn markdown-relation [k content ctx & class]
-  ^{:key k} [markdown-rendered* content ctx class])

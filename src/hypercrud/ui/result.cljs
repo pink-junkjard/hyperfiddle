@@ -1,12 +1,11 @@
 (ns hypercrud.ui.result
   (:require [cats.core :refer [fmap]]
             [contrib.css :refer [classes]]
-            [contrib.data :as util :refer [or-str]]
+            [contrib.data :refer [or-str]]
             [contrib.reactive :as reactive]
             [cuerdas.core :as string]
-            [hypercrud.browser.context :as context]
             [hypercrud.ui.control.link-controls :as link-controls]
-            [hypercrud.ui.control.markdown-rendered :refer [markdown-relation markdown-rendered*]]
+            [hypercrud.ui.control.markdown-rendered :refer [markdown]]
             [hypercrud.ui.form :as form]
             [hypercrud.ui.table :as table]))
 
@@ -23,15 +22,15 @@
     (f ctx)))
 
 (defn ^:export ident [ctx]                                  ; simplify and inline
-  (markdown-rendered* (-> ctx
-                          :hypercrud.browser/fiddle
-                          (reactive/cursor [:fiddle/ident])
-                          (as-> % (reactive/fmap (fnil name :_) %))
-                          deref
-                          (as-> % (str "### " %)))))
+  [markdown (-> ctx
+                :hypercrud.browser/fiddle
+                (reactive/cursor [:fiddle/ident])
+                (as-> % (reactive/fmap (fnil name :_) %))
+                deref
+                (as-> % (str "### " %)))])
 
 (defn ^:export doc [ctx]                                    ; simplify and inline
-  (markdown-rendered* @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:db/doc])))
+  [markdown @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:db/doc])])
 
 (defn ^:export fiddle [ctx & [class]]                       ; should be a string template to inline in userland for editing.
   (let [index-ctx (dissoc ctx :isComponent)]
@@ -39,11 +38,9 @@
      (ident ctx)
      (doc ctx)
      (link-controls/render-nav-cmps [] false index-ctx :class "hyperfiddle-link-index")
-     (let [content @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/markdown])]
-       (markdown-rendered* (if (and (string? content) (not (string/blank? content)))
-                             content
-                             "!result[]")
-                           ctx))
+     (let [content (or-str @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/markdown])
+                           "!result[]")]
+       [markdown content ctx])
      (link-controls/render-inline-links [] false index-ctx)]))
 
 (defn fiddle-xray [ctx class]

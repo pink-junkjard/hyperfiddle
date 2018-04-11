@@ -2,7 +2,7 @@
   (:require
     [contrib.data :as data]
     [hypercrud.types.Err :as Err]
-    [hypercrud.ui.control.markdown-rendered :refer [markdown-rendered*]]))
+    [hypercrud.ui.control.markdown-rendered :refer [markdown]]))
 
 
 (defn e->map [e]
@@ -30,10 +30,10 @@
     [:pre
      (if message
        [:h4 message]
-       [markdown-rendered* "#### Unrecognized error (please comment on [#170](https://github.com/hyperfiddle/hyperfiddle/issues/170))"])
+       [markdown "#### Unrecognized error (please comment on [#170](https://github.com/hyperfiddle/hyperfiddle/issues/170))"])
      (if dev-open? [:p (ex-data->human-detail data)])
      (if (= :hyperfiddle.error/unrecognized (:ident data))
-       [markdown-rendered* "Please comment this error at [hyperfiddle/170](https://github.com/hyperfiddle/hyperfiddle/issues/170) so we can match it"])]))
+       [markdown "Please comment this error at [hyperfiddle/170](https://github.com/hyperfiddle/hyperfiddle/issues/170) so we can match it"])]))
 
 (defn error-comp [ctx]
   ; :find-element :attribute :value
