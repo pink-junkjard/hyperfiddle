@@ -131,9 +131,9 @@
   #?(:clj  (throw (ex-info "confirm unsupported by platform" nil))
      :cljs (js/confirm message)))
 
-(defn navigable? [route {:keys [::runtime/partitions] :as state}]
-  (and (not= route (get-in partitions [nil :route]))
-       (or (empty? (dissoc partitions nil))
+(defn navigable? [route state]
+  (and (not= route (get-in state [::runtime/partitions nil :route]))
+       (or (empty? (dissoc (:stage state) nil))
            (confirm "Unstaged work will be lost on navigate, are you sure?"))))
 
 (def LEVEL-NONE 0)
