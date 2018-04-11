@@ -3,7 +3,6 @@
             [contrib.css :refer [classes]]
             [contrib.data :refer [or-str]]
             [contrib.reactive :as reactive]
-            [cuerdas.core :as string]
             [hypercrud.ui.control.link-controls :as link-controls]
             [hypercrud.ui.control.markdown-rendered :refer [markdown]]
             [hypercrud.ui.form :as form]
@@ -51,7 +50,3 @@
      (link-controls/render-nav-cmps [] false index-ctx :class "hyperfiddle-link-index")
      (result ctx)
      (link-controls/render-inline-links [] false index-ctx)]))
-
-(def ^:deprecated ^:export result-renderer result)
-(def ^:deprecated ^:export fiddle-markdown fiddle)
-(def ^:deprecated ^:export view fiddle)
