@@ -20,10 +20,13 @@
   ; remark creates react components which don't evaluate in this stack frame
   ; so dynamic scope is not helpful to communicate values to remark plugins
   (reagent/create-class
-    {:reagent-render
+    {:display-name "markdown"
+     :reagent-render
      (fn [value & [?ctx]]
        (when (and (string? value) (not (empty? value)))
-         (-> remarkInstance (.processSync value {"commonmark" true}) .-contents)))
+         (let [c (-> remarkInstance (.processSync value #js {"commonmark" true}) .-contents)
+               content (-> c .-props .-children) #_ "Throw away remark wrapper div"]
+           content)))
 
      :get-child-context
      (fn []
@@ -79,8 +82,7 @@
 
 (defn result [content argument {:keys [class] :as props} ctx]
   (let [f (unwrap (read-eval-with-bindings content))]
-    [:div.why
-     (hypercrud.ui.result/result ctx f)]))
+    [:div.unp (hypercrud.ui.result/result ctx f)]))
 
 (letfn [(keyfn [relation] (hash (map #(or (:db/id %) %) relation)))]
   (defn list- [content argument {:keys [class] :as props} ctx]
@@ -127,11 +129,9 @@
 ; https://github.com/zestedesavoir/zmarkdown/tree/master/packages/remark-custom-blocks
 
 (def remarkInstance (-> (js/remark)
-                        ;(.use js/remarkCustomBlocks (clj->js {"some" "a"}))
                         (.use js/remarkGenericExtensions
                               (clj->js
                                 {"elements" (into {} (map vector (keys whitelist-reagent) (repeat {"html" {"properties" {"content" "::content::" "argument" "::argument::"}}})))}))
-                        (.use js/remarkGridTables)
                         (.use js/remarkReact
                               (clj->js
                                 {"sanitize" false
@@ -143,8 +143,8 @@
 
 ; Todo; remove div.markdown; that should be default and style the inverse.
 (defn markdown-rendered* [md & [?ctx class]]
-  [:div {:class (classes "markdown" class)}
-   [markdown md ?ctx]])
+  #_[:div {:class (classes "markdown" class)}]
+  [markdown md ?ctx])
 
 (defn markdown-relation [k content ctx & class]
   ^{:key k} [markdown-rendered* content ctx class])
