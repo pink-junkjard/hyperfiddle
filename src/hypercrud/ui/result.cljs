@@ -12,7 +12,7 @@
 
 
 (defn ^:export result "f is parameterized by markdown e.g. !result[hypercrud.ui.result/list]()"
-  [ctx & [f]]                           ; should have explicit mapcat, like markdown.
+  [ctx & [f]]                                               ; should have explicit mapcat, like markdown.
   ; This is not a reagent component; it returns a component-or-list-of-components (or nil).
   ; Thus it cannot be used from hiccup syntax. It needs to be wrapped into a :div or a react-fragment.
   ; Which means at that point it might as well return monad and let the wrapper sort out the errors?
@@ -22,7 +22,7 @@
                 form/Relation))]
     (f ctx)))
 
-(defn ^:deprecated ^:export ident [ctx]                                           ; simplify and inline
+(defn ^:export ident [ctx]                                  ; simplify and inline
   (markdown-rendered* (-> ctx
                           :hypercrud.browser/fiddle
                           (reactive/cursor [:fiddle/ident])
@@ -30,7 +30,7 @@
                           deref
                           (as-> % (str "### " %)))))
 
-(defn ^:deprecated ^:export doc [ctx]                                             ; simplify and inline
+(defn ^:export doc [ctx]                                    ; simplify and inline
   (markdown-rendered* @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:db/doc])))
 
 (defn ^:export fiddle [ctx & [class]]                       ; should be a string template to inline in userland for editing.
