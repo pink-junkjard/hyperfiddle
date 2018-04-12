@@ -153,7 +153,11 @@ Once you start coding "data" (data-ing?), a few ideas form:
 
 Hyperfiddles are graphs, not text, so instead of git they are stored in Datomic. This means you can query the graph e.g. "which fiddles link to me". Like git and the web, there is no central database, rather many little ones distributed. The future implications of this are profound.
 
-## Hyperfiddle is built in Hyperfiddle
+### Hyperfiddle is built in Hyperfiddle
+
+Since hyperfiddle apps are graphs, it is straightforward to build an editor for those graphs, almost trivial. It's 90% a single reagent view.
+
+<img src="https://i.imgur.com/LrLb2nT.png" width="720px">
 
 <img src="https://i.imgur.com/DCPtHN3.png" width="720px">
 
