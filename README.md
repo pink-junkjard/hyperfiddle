@@ -153,7 +153,7 @@ Hyperfiddles are graphs, not text, so instead of git they are stored in Datomic.
 
 ### Hyperfiddle is built in Hyperfiddle
 
-Since hyperfiddle apps are graphs, it is straightforward to build an editor for those graphs, almost trivial. It's 90% a single reagent view.
+Since hyperfiddle apps are graphs, it is straightforward to build an editor for those graphs, almost trivial. 90% of the work is a single reagent view. The backend and API is auto-generated like any other hyperfiddle app.
 
 ![](https://i.imgur.com/tGjsT0G.png)
 
