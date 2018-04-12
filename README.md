@@ -56,11 +56,9 @@ A simple API fn:
      (->QueryRequest gender-options-query [$])]))
 ```
                         
-* I/O runtime will call API fn repeatedly until its return value stabalizes
-* This permits queries that depend on the results of earlier queries  
-* Data loop typically runs in JVM Datomic Peer, so no network hops or N+1 problem like REST & ORM
-* Data loop sometimes runs in browser (e.g. in response to incremental ui state change)
-* all I/O responses are immutable, all requests have a time-basis
+* I/O runtime will call API fn repeatedly until its return value stabalizes. The loop permits queries that depend on the result of earlier queries. Better than a loop would be a reactive model like Hoplon but for the server.
+* Data loop typically runs in JVM Datomic Peer, so no network hops or N+1 problem like REST & ORM. Data loop sometimes runs in browser (e.g. in response to incremental ui state change).
+* All API responses are immutable, because all requests have a time-basis – very very important for performance
 
 ## \#2. API as a graph
 
