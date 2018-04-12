@@ -155,9 +155,7 @@ Hyperfiddles are graphs, not text, so instead of git they are stored in Datomic.
 
 Since hyperfiddle apps are graphs, it is straightforward to build an editor for those graphs, almost trivial. It's 90% a single reagent view.
 
-<img src="https://i.imgur.com/LrLb2nT.png" width="720px">
-
-<img src="https://i.imgur.com/DCPtHN3.png" width="720px">
+<img src="https://i.imgur.com/YmRQZSc.png" width="720px">   
 
 > *The radio control on `:fiddle/type` is a custom attribute renderer, `qe-picker-control`, which is eval'ed at runtime. `:fiddle/query`'s custom renderer is a CodeMirror. The fiddle's own layout (including button labels and local state) is a fiddle renderer, about 100 lines of Reagent markup eval'ed at runtime. Each menu is a link to another fiddle, with its own data dependencies and renderers.*
 
