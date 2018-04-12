@@ -39,8 +39,7 @@
                                       (if @hide-archived (remove archived? xs) xs)))]
        (fn [ctx]
          [:div.hyperfiddle-schema
-          #_(hypercrud.ui.result/ident ctx)
-          (hypercrud.ui.result/doc ctx)
+          [hypercrud.ui.control.markdown-rendered/markdown (-> ctx :hypercrud.browser/fiddle deref :db/doc)]
           [:label {:style {:font-weight "400" :display "block"}} [:input {:type "checkbox" :checked @hide-datomic :on-change #(swap! hide-datomic not)}] " hide Datomic system attributes"]
           [:label {:style {:font-weight "400" :display "block"}} [:input {:type "checkbox" :checked @hide-archived :on-change #(swap! hide-archived not)}] " hide Hyperfiddle archived attributes"]
           (let [ctx (-> ctx

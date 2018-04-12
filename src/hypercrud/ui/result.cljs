@@ -20,22 +20,11 @@
                 form/Relation))]
     (f ctx)))
 
-(defn ^:export ident [ctx]                                  ; simplify and inline
-  [markdown (-> ctx
-                :hypercrud.browser/fiddle
-                (reactive/cursor [:fiddle/ident])
-                (as-> % (reactive/fmap (fnil name :_) %))
-                deref
-                (as-> % (str "### " %)))])
-
-(defn ^:export doc [ctx]                                    ; simplify and inline
-  [markdown @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:db/doc])])
-
 (defn ^:export fiddle [ctx & [class]]                       ; should be a string template to inline in userland for editing.
   (let [index-ctx (dissoc ctx :isComponent)]
     [:div {:class (classes "auto-result" class)}            ; auto-result ?
-     (ident ctx)
-     (doc ctx)
+     [:h3 (some-> ctx :hypercrud.browser/fiddle deref :db/ident name)]
+     [markdown (-> ctx :hypercrud.browser/fiddle deref :db/doc)]
      (link-controls/render-nav-cmps [] false index-ctx :class "hyperfiddle-link-index")
      (let [content (or-str @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/markdown])
                            "!result[]")]
@@ -45,8 +34,8 @@
 (defn fiddle-xray [ctx class]
   (let [index-ctx (dissoc ctx :isComponent)]
     [:div {:class (classes "auto-result" class)}            ; auto-result ?
-     (ident ctx)
-     (doc ctx)
+     [:h3 (some-> ctx :hypercrud.browser/fiddle deref :db/ident name)]
+     [markdown (-> ctx :hypercrud.browser/fiddle deref :db/doc)]
      (link-controls/render-nav-cmps [] false index-ctx :class "hyperfiddle-link-index")
      (result ctx)
      (link-controls/render-inline-links [] false index-ctx)]))
