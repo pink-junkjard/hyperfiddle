@@ -11,31 +11,29 @@
             [contrib.reagent :refer [fragment]]))
 
 
+(defn ui-block-border-wrap [ctx class & children]
+  [:div {:class (classes class "hyperfiddle-form-cell" (-> ctx :hypercrud.browser/attribute str css-slugify))
+         :style {:border-color (connection-color/connection-color ctx)}}
+   (apply fragment :_ children)])
+
 (defn new-field-state-container [ctx]
   (let [attr-ident (reactive/atom nil)]
     (fn [ctx]
-      ;busted
-      [:div.field {:style {:border-color (connection-color/connection-color ctx)}}
-       [:div.hc-label
-        [:label
-         (let [on-change! #(reset! attr-ident %)]
-           [input/keyword-input* @attr-ident on-change!])]]
-       (let [on-change! #(let [tx [[:db/add (:db/id @(:cell-data ctx)) @attr-ident %]]]
-                           ; todo cardinality many
-                           ((:user-with! ctx) tx))
-             props (if (nil? @attr-ident) {:read-only true})]
-         [input/edn-input* nil on-change! props])])))
+      (ui-block-border-wrap
+        ctx "field"
+        [:div (let [on-change! #(reset! attr-ident %)]
+                [input/keyword-input* @attr-ident on-change!])]
+        (let [on-change! #(let [tx [[:db/add (:db/id @(:cell-data ctx)) @attr-ident %]]]
+                            ; todo cardinality many
+                            ((:user-with! ctx) tx))
+              props nil #_(if (nil? @attr-ident) {:read-only true})]
+          [input/edn-input* nil on-change! props])))))
 
 (defn new-field [ctx]
   ^{:key (hash (keys @(:cell-data ctx)))}
   [new-field-state-container ctx])
 
 (def always-read-only (constantly true))
-
-(defn ui-block-border-wrap [ctx class & children]
-  [:div {:class (classes class "hyperfiddle-form-cell" (-> ctx :hypercrud.browser/attribute str css-slugify))
-         :style {:border-color (connection-color/connection-color ctx)}}
-   (apply fragment :_ children)])
 
 (defn form-cell [control -field ctx & [class]]              ; safe to return nil or seq
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
