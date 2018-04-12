@@ -4,6 +4,7 @@
             [contrib.reagent :refer [fragment]]
             [contrib.reactive :as r]
             [contrib.string :refer [memoized-safe-read-edn-string]]
+            [cuerdas.core :as str]
             [hyperfiddle.core :refer [read-eval-with-bindings]]
             [hypercrud.browser.context :as context]
             [hypercrud.ui.control.code]
@@ -23,9 +24,9 @@
     {:display-name "markdown"
      :reagent-render
      (fn [value & [?ctx]]
-       (when (and (string? value) (not (empty? value)))
+       (when-not (or (nil? value) (str/blank? value))
          (let [c (-> remarkInstance (.processSync value #js {"commonmark" true}) .-contents)
-               content (-> c .-props .-children) #_ "Throw away remark wrapper div"]
+               content (-> c .-props .-children) #_"Throw away remark wrapper div"]
            content)))
 
      :get-child-context
