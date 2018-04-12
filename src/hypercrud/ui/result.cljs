@@ -23,7 +23,7 @@
 (defn ^:export fiddle [ctx & [class]]                       ; should be a string template to inline in userland for editing.
   (let [index-ctx (dissoc ctx :isComponent)]
     [:div {:class (classes "auto-result" class)}            ; auto-result ?
-     [:h3 (some-> ctx :hypercrud.browser/fiddle deref :db/ident name)]
+     [:h3 (some-> ctx :hypercrud.browser/fiddle deref :fiddle/ident name)]
      [markdown (-> ctx :hypercrud.browser/fiddle deref :db/doc)]
      (link-controls/render-nav-cmps [] false index-ctx :class "hyperfiddle-link-index")
      (let [content (or-str @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/markdown])
@@ -34,7 +34,7 @@
 (defn fiddle-xray [ctx class]
   (let [index-ctx (dissoc ctx :isComponent)]
     [:div {:class (classes "auto-result" class)}            ; auto-result ?
-     [:h3 (some-> ctx :hypercrud.browser/fiddle deref :db/ident name)]
+     [:h3 (some-> ctx :hypercrud.browser/fiddle deref :fiddle/ident name)]
      [markdown (-> ctx :hypercrud.browser/fiddle deref :db/doc)]
      (link-controls/render-nav-cmps [] false index-ctx :class "hyperfiddle-link-index")
      (result ctx)
