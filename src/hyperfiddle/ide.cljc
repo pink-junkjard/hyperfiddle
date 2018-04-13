@@ -223,7 +223,7 @@
                 (fragment                                   ; These are the same data, just different views.
                   :_
                   [browser/ui-from-route (ide-route ?route)
-                   (assoc ctx :user-renderer hyperfiddle.ide.fiddles.topnav/renderer)
+                   ctx #_(assoc ctx :user-renderer hyperfiddle.ide.fiddles.topnav/renderer)
                    "topnav hidden-print"]
                   (if src
                     [browser/ui-from-route (ide-route ?route)
