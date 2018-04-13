@@ -69,13 +69,16 @@
   ((map-pad 0) + [1 1 1] [1 1 1 1])                         ;=> (2 2 2 1)
   )
 
+(defn slow-pprint-str [v & [columns]]
+  (with-out-str
+    (packed-printer/pprint v :width (or columns pprint/*print-right-margin*))))
+
 (defn pprint-str [v & [columns]]
   (clojure-str/trimr
     ; Previously, pprint/*print-miser-width* was set to nil in main
     (binding [pprint/*print-right-margin* (or columns pprint/*print-right-margin*)]
       (with-out-str
-        (pprint/pprint v)
-        #_(packed-printer/pprint v :width (or columns pprint/*print-right-margin*))))))
+        (pprint/pprint v)))))
 
 (defn fallback [p v not-found]
   (if-not (p v) v not-found))

@@ -8,7 +8,7 @@
 
 ; put this in eval?
 (defmacro str-and-code [code]
-  `(str-and-code' ~code ~(util/pprint-str code)))
+  `(str-and-code' ~code ~(util/slow-pprint-str code)))
 
 (defmacro cond-let [& clauses]
   (when clauses
