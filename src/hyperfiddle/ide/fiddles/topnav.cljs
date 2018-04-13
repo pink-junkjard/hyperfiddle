@@ -108,7 +108,7 @@
          ((:anchor ctx) :account [] ctx (get-in ctx [:user-profile :email]))
          (let [auth-state (base64-url-safe/encode (runtime/encode-route (:peer ctx) (:target-route ctx)))]
            [:span.nav-link.auth [:a {:href (str (stateless-login-url ctx) "&state=" auth-state)} "Login"]]))]]
-     #_[:div.hyperfiddle-topnav-fiddle-controls
+     [:div.hyperfiddle-topnav-fiddle-controls
       ((:cell ctx) [true 0 :fiddle/type] ctx)
       ((:cell ctx) [true 0 :fiddle/pull] ctx)
       ((:cell ctx) [true 0 :fiddle/query] ctx)]]))
