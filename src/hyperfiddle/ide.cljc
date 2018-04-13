@@ -31,7 +31,7 @@
             [hyperfiddle.ide.fiddles.domain]
             [hyperfiddle.ide.fiddles.fiddle-links.bindings]
     #?(:cljs [hyperfiddle.ide.fiddles.fiddle-links.renderer])
-            [hyperfiddle.ide.fiddles.topnav]
+    #?(:cljs [hyperfiddle.ide.fiddles.topnav])
     #?(:cljs [hyperfiddle.ide.fiddles.user-dashboard])
             [hyperfiddle.ide.util]))
 
