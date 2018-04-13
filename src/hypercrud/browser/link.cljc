@@ -6,7 +6,6 @@
             [contrib.string :refer [memoized-safe-read-edn-string]]
             [contrib.try :refer [try-either]]
             [hypercrud.browser.base :as base]
-            [hypercrud.browser.context :as context]
             [hypercrud.browser.popovers :as popovers]
             [hypercrud.browser.q-util :as q-util]
             [hypercrud.browser.routing :as routing]
@@ -134,10 +133,8 @@
    (defn managed-popover-body [link route popover-id child-branch dont-branch? close! cancel! ctx]
      [:div.hyperfiddle-popover-body
       ; NOTE: this ctx logic and structure is the same as the popover branch of browser-request/recurse-request
-      (let [ctx (-> (if dont-branch? ctx (assoc ctx :branch child-branch))
-                    (context/clean))]
-        #?(:clj  (assert false "todo")
-           :cljs [hypercrud.browser.core/ui-from-route route ctx])) ; cycle
+      (let [ctx (if dont-branch? ctx (assoc ctx :branch child-branch))]
+        [hypercrud.browser.core/ui-from-route route ctx])   ; cycle
       (when-not dont-branch?
         [:button {:on-click (reactive/partial stage! link route popover-id child-branch ctx)} "stage"])
       (if dont-branch?

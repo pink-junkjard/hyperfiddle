@@ -160,7 +160,8 @@
       (cats/return ctx))))
 
 (defn data-from-route [route ctx]                           ; todo rename
-  (let [ctx (context/route ctx route)]
+  (let [ctx (-> (context/clean ctx)
+                (context/route route))]
     (mlet [meta-fiddle-request @(reactive/apply-inner-r (reactive/track meta-request-for-fiddle ctx))
            fiddle @(reactive/apply-inner-r (reactive/track hydrate-fiddle meta-fiddle-request ctx))
            fiddle-request @(reactive/apply-inner-r (reactive/track request-for-fiddle fiddle ctx))]
@@ -169,7 +170,7 @@
 (defn from-link [link ctx with-route]
   (mlet [route (routing/build-route' link ctx)]
     ; entire context must be encoded in the route
-    (with-route route (context/clean ctx))))
+    (with-route route ctx)))
 
 (defn data-from-link [link ctx]                             ; todo rename
   (from-link link ctx data-from-route))

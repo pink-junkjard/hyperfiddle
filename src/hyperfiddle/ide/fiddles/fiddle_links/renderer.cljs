@@ -20,10 +20,9 @@
 
 (defn renderer [ctx]
   (-> (base/data-from-route (:target-route ctx)
-                            (let [ctx (context/clean ctx)]
-                              (assoc ctx
-                                :hypercrud.browser/domain (:target-domain ctx)
-                                :keep-disabled-anchors? true)))
+                            (assoc ctx
+                              :hypercrud.browser/domain (:target-domain ctx)
+                              :keep-disabled-anchors? true))
       (either/branch
         (fn [e]
           [:div

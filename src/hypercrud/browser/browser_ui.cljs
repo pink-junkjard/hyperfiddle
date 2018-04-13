@@ -120,7 +120,6 @@
              (if (:hidden link-props)
                (either/right [:noscript])
                (mlet [route (routing/build-route' link ctx)
-                      :let [ctx (context/clean ctx)]
                       ctx (base/data-from-route route ctx)]
                  (hf-ui (ui-bindings ctx)))))
         route (unwrap (cats/fmap :route link-props'))]

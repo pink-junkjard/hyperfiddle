@@ -23,9 +23,7 @@
         ; if the anchor IS a popover, we need to run the same logic as link/managed-popover-body
         ; the ctx needs to be updated (branched, etc), but NOT BEFORE determining the route
         ; that MUST happen in the parent context
-        (let [ctx (-> ctx
-                      (assoc :branch (popovers/branch ctx link))
-                      (context/clean))]
+        (let [ctx (assoc ctx :branch (popovers/branch ctx link))]
           (either/branch route'
                          (constantly nil)
                          #(request-from-route % ctx)))))
@@ -90,7 +88,8 @@
             :blank nil))))
 
 (defn request-from-route [route ctx]
-  (let [ctx (context/route ctx route)]
+  (let [ctx (-> (context/clean ctx)
+                (context/route route))]
     (when-let [meta-fiddle-request (unwrap @(reactive/apply-inner-r (reactive/track base/meta-request-for-fiddle ctx)))]
       (assert (reactive/reactive? meta-fiddle-request))
       (concat [@meta-fiddle-request]
