@@ -32,6 +32,7 @@
             [hyperfiddle.ide.fiddles.fiddle-links.bindings]
     #?(:cljs [hyperfiddle.ide.fiddles.fiddle-links.renderer])
     #?(:cljs [hyperfiddle.ide.fiddles.topnav])
+    #?(:cljs [hyperfiddle.ide.fiddles.fiddle-src :refer [fiddle-src-renderer]])
     #?(:cljs [hyperfiddle.ide.fiddles.user-dashboard])
             [hyperfiddle.ide.util]))
 
@@ -220,11 +221,13 @@
                             (assoc :hypercrud.ui/error (reactive/constantly ui-error/error-inline)))]
                 (fragment                                   ; These are the same data, just different views.
                   :_
-                  [browser/ui-from-route (ide-route ?route) ctx "topnav hidden-print"]
+                  [browser/ui-from-route (ide-route ?route)
+                   (assoc ctx :user-renderer hyperfiddle.ide.fiddles.topnav/renderer)
+                   "topnav hidden-print"]
                   (if src
-                    (let [ctx (assoc ctx :user-renderer (fn [ctx]
-                                                          [:pre.hi (pr-str (keys ctx))]))]
-                      [browser/ui-from-route (ide-route ?route) ctx "devsrc"])))))])
+                    [browser/ui-from-route (ide-route ?route)
+                     (assoc ctx :user-renderer fiddle-src-renderer)
+                     "devsrc"]))))])
 
          ; Production
          (if (and ?route (not src))
