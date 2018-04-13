@@ -1,7 +1,7 @@
 (ns hypercrud.ui.result
-  (:require [cats.core :refer [fmap]]
-            [contrib.css :refer [classes]]
+  (:require [contrib.css :refer [classes]]
             [contrib.data :refer [or-str]]
+            [contrib.macros :refer [str-and-code]]
             [contrib.reactive :as reactive]
             [hypercrud.ui.control.link-controls :as link-controls]
             [hypercrud.ui.control.markdown-rendered :refer [markdown]]
@@ -20,15 +20,16 @@
                 form/Relation))]
     (f ctx)))
 
-(defn ^:export fiddle [ctx & [class]]                       ; should be a string template to inline in userland for editing.
-  [:div {:class (classes "auto-result" class)}              ; auto-result ?
-   [:h3 (some-> ctx :hypercrud.browser/fiddle deref :fiddle/ident name)]
-   [markdown (-> ctx :hypercrud.browser/fiddle deref :db/doc)]
-   (link-controls/render-nav-cmps [] false ctx :class "hyperfiddle-link-index")
-   (let [content (or-str @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/markdown])
-                         "!result[]")]
-     [markdown content ctx])
-   (link-controls/render-inline-links [] false ctx)])
+(def ^:export fiddle
+  (str-and-code
+    (fn [ctx & [class]]
+      [:div {:class (contrib.css/classes "auto-result" class)} ; auto-result ?
+       [:h3 (some-> ctx :hypercrud.browser/fiddle deref :fiddle/ident name)]
+       [hypercrud.ui.control.markdown-rendered/markdown (-> ctx :hypercrud.browser/fiddle deref :db/doc)]
+       (hypercrud.ui.control.link-controls/render-nav-cmps [] false ctx :class "hyperfiddle-link-index")
+       (let [content (contrib.data/or-str @(contrib.reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/markdown]) "!result[]")]
+         [hypercrud.ui.control.markdown-rendered/markdown content ctx])
+       (hypercrud.ui.control.link-controls/render-inline-links [] false ctx)])))
 
 (defn fiddle-xray [ctx class]
   [:div {:class (classes "auto-result" class)}              ; auto-result ?
