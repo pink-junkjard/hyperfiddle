@@ -15,7 +15,7 @@
        (either/branch either-v
                       (fn [e]
                         (if-let [ev (and (= "Loading" (:message e)) @prev-ev)]
-                          (if @can-be-loading?
+                          (if @can-be-loading
                             (either/branch ev error loading)
                             (do
                               (reset! prev-ev either-v)
