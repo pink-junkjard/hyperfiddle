@@ -195,29 +195,40 @@
       "user" (if route
                (browser/request-from-route route (leaf-target-context ctx route))))))
 
+(defn -dumb-loading [e]
+  ; todo inline staging area?
+  [:div
+   [:h3 "Fatal error"]
+   [:pre (pr-str e)]])
+
 #?(:cljs
    (defn view-page [?route ctx]
-     (let [ide-active (activate-ide? (foundation/hostname->hf-domain-name ctx))
+     (let [dev (activate-ide? (foundation/hostname->hf-domain-name ctx))
+           src false
            ctx (assoc ctx :navigate-cmp (reagent/partial navigate-cmp/navigate-cmp (reagent/partial runtime/encode-route (:peer ctx))))]
        (fragment
          :view-page
-         (when ide-active
+
+         ; IDE
+         (when dev
            [stale/loading
             (stale/can-be-loading? ctx)
             @(hc/hydrate (:peer ctx) (:branch ctx) (foundation/domain-request "hyperfiddle" (:peer ctx)))
-            (fn [e]
-              ; todo inline staging area?
-              [:div
-               [:h3 "Fatal error"]
-               [:pre (pr-str e)]])
-            (fn [ide-domain]
+            -dumb-loading
+            (fn topnav [ide-domain]
               (let [ctx (-> (page-ide-context ctx ide-domain ?route)
                             (assoc :hypercrud.ui/error (reactive/constantly ui-error/error-inline)))]
-                [browser/ui-from-route (ide-route ?route) ctx "topnav hidden-print"]))])
-         (if ?route
-           (let [class (str "hyperfiddle-user" (if ide-active " hyperfiddle-ide-user" ""))]
-             ; This is different than foo=user because it is special css at root attach point
-             [browser/ui-from-route ?route (page-target-context ctx ?route) class]))))))
+                (fragment                                   ; These are the same data, just different views.
+                  :_
+                  [browser/ui-from-route (ide-route ?route) ctx "topnav hidden-print"]
+                  (if src
+                    (let [ctx (assoc ctx :user-renderer (fn [ctx]
+                                                          [:pre.hi (pr-str (keys ctx))]))]
+                      [browser/ui-from-route (ide-route ?route) ctx "devsrc"])))))])
+
+         ; Production
+         (if (and ?route (not src))
+           [browser/ui-from-route ?route (page-target-context ctx ?route) (str "hyperfiddle-user" (if dev " hyperfiddle-ide-user" ""))]))))) ; This is different than foo=user because it is special css at root attach point
 
 #?(:cljs
    (defn view [route ctx]                                   ; pass most as ref for reactions
