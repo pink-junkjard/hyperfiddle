@@ -1,9 +1,10 @@
 (ns hypercrud.browser.browser-ui
-  (:require [cats.core :as cats :refer [mlet]]
+  (:require [cats.core :as cats]
             [cats.monad.either :as either]
             [contrib.css :refer [css-slugify classes]]
             [contrib.data :as util :refer [unwrap]]
             [contrib.eval :as eval]
+            [contrib.macros :refer [cond-let]]
             [contrib.reactive :as r]
             [contrib.string :refer [memoized-safe-read-edn-string]]
             [contrib.try :refer [try-either]]
@@ -75,52 +76,67 @@
                               (foundation-actions/set-route rt route branch false dispatch! get-state))))
     (.stopPropagation event)))
 
-(defn wrap-ui [either-v route ctx & [class]]
-  (let [on-click (r/partial (or (:hypercrud.browser/page-on-click ctx) (constantly nil))
-                            route)
-        either-v (or (some-> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :error]) either/left)
-                     either-v)
-        error-comp (ui-error/error-comp ctx)]
-    [native-on-click-listener {:on-click on-click}
-     [stale/loading (stale/can-be-loading? ctx) either-v
-      (fn [e] [:div {:class (classes "ui" class "hyperfiddle-error")} [error-comp e]])
-      (fn [v] [:div {:class (classes "ui" class)} v])
-      (fn [v] [:div {:class (classes "ui" class "hyperfiddle-loading")} v])]]))
+; defer eval until render cycle inside userportal
+(defn- eval-comp [str & args]
+  (let [renderer (either/branch (eval/eval-str str) (fn [e] (throw e)) identity)]
+    (into [renderer] args)))
 
-(defn ui-comp [ctx]                                         ; returns Either[Error, DOM]
+(defn ui-comp [ctx]
   (case @(:hypercrud.ui/display-mode ctx)
-    :user (->> (or (some-> (:user-renderer ctx) either/right)
-                   (eval/eval-str @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/renderer])))
-               (cats/fmap (fn [user-fn]
-                            (if user-fn
-                              ^{:key (hash user-fn)}
-                              [user-portal (ui-error/error-comp ctx)
-                               [user-fn ctx (auto-ui-css-class ctx)]]
-                              ; todo ui.result should be injected
-                              [hypercrud.ui.result/fiddle ctx (auto-ui-css-class ctx)]))))
-    :xray (either/right
-            ; todo ui.result should be injected
-            [hypercrud.ui.result/fiddle-xray ctx (auto-ui-css-class ctx)])))
+    :user (cond-let
+            [user-renderer (:user-renderer ctx)]
+            ^{:key (hash user-renderer)}
+            [user-portal (ui-error/error-comp ctx)
+             [user-renderer ctx (auto-ui-css-class ctx)]]
 
-(defn hf-ui [ctx]                                           ; returns Either[Error, DOM]
-  (->> (ui-comp ctx)
-       (cats/fmap (fn [dom]
-                    [:div dom
-                     [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]]))))
+            [renderer (let [renderer @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/renderer])]
+                        (when (eval/will-eval? renderer) renderer))]
+            ^{:key (hash renderer)}
+            [user-portal (ui-error/error-comp ctx)
+             [eval-comp renderer ctx (auto-ui-css-class ctx)]]
+
+            [_ :else]
+            ; todo ui.result should be injected
+            [hypercrud.ui.result/fiddle ctx (auto-ui-css-class ctx)])
+
+    ; todo ui.result should be injected
+    :xray [hypercrud.ui.result/fiddle-xray ctx (auto-ui-css-class ctx)]))
 
 (defn ui-from-route [route ctx & [class]]
-  (let [v' (mlet [ctx (base/data-from-route route ctx)]
-             (hf-ui (ui-bindings ctx)))]
-    [wrap-ui v' route ctx class]))
+  (let [click-fn (or (:hypercrud.browser/page-on-click ctx) (constantly nil)) ; parent ctx receives click event, not child frame
+        either-v (->> (or (some-> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :error]) either/left)
+                          (base/data-from-route route ctx))
+                      (cats/fmap ui-bindings))
+        error-comp (ui-error/error-comp ctx)]
+    [stale/loading (stale/can-be-loading? ctx) either-v
+     (fn [e]
+       (let [on-click (r/partial click-fn route)]
+         [native-on-click-listener {:on-click on-click}
+          [:div {:class (classes "ui" class "hyperfiddle-error")}
+           [error-comp e]]]))
+     (fn [ctx]
+       (let [on-click (r/partial click-fn (:route ctx))]
+         [native-on-click-listener {:on-click on-click}
+          [:div {:class (classes "ui" class)}
+           [ui-comp ctx]
+           [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]]]))
+     (fn [ctx]
+       (let [on-click (r/partial click-fn (:route ctx))]
+         ; use the stale ctx's route, otherwise alt clicking while loading could take you to the new route, which is jarring
+         [native-on-click-listener {:on-click on-click}
+          [:div {:class (classes "ui" class "hyperfiddle-loading")}
+           [ui-comp ctx]
+           [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]]]))]))
 
 (defn ui-from-link [link ctx & [class]]
-  (let [link-props' (try-either (link/build-link-props link ctx))
-        v' (mlet [link-props link-props']
-             ; todo should filter hidden links out before recursing (in render-inline-links)
-             (if (:hidden link-props)
-               (either/right [:noscript])
-               (mlet [route (routing/build-route' link ctx)
-                      ctx (base/data-from-route route ctx)]
-                 (hf-ui (ui-bindings ctx)))))
-        route (unwrap (cats/fmap :route link-props'))]
-    [wrap-ui v' route ctx (classes class (css-slugify (:link/rel link)))]))
+  (let [error-comp (ui-error/error-comp ctx)
+        hidden' (->> (try-either (link/build-link-props link ctx)) ; todo we want the actual error from the link props
+                     (cats/fmap :hidden))]
+    [stale/loading (stale/can-be-loading? ctx) hidden'
+     (fn [e] [error-comp e])
+     (fn [link-props]
+       (if (:hidden link-props)
+         [:noscript]
+         [stale/loading (stale/can-be-loading? ctx) (routing/build-route' link ctx)
+          (fn [e] [error-comp e])
+          (fn [route] [ui-from-route route ctx (classes class (css-slugify (:link/rel link)))])]))]))

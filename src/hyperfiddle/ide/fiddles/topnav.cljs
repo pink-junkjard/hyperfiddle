@@ -46,10 +46,7 @@
 (defn hijack-renderer [ctx]
   (let [ctx (-> (dissoc ctx :user-renderer)
                 (shadow-fiddle))]
-    (-> (browser-ui/ui-comp ctx)
-        (either/branch
-          (ui-error/error-comp ctx)
-          identity))))
+    (browser-ui/ui-comp ctx)))
 
 (defn any-loading? [peer]
   (some (comp not nil? :hydrate-id val) @(runtime/state peer [::runtime/partitions])))

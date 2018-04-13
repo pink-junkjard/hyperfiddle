@@ -37,6 +37,10 @@
                    error (either/left (ex-info "cljs eval failed" {:cljs-input code-str :cljs-result eval-result}))
                    :else (either/right value)))))))
 
+(defn will-eval? [code-str]
+  (or (:str (meta code-str))
+      (and (string? code-str) (not (string/blank? code-str)))))
+
 ; todo cannot return stack traces inside a memoized fn
 (def eval-str
   (memoize
