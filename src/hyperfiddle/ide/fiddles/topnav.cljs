@@ -25,31 +25,34 @@
     (str domain "/login?client=" client-id "&callbackURL=" callback-url)))
 
 ; inline sys-link data when the entity is a system-fiddle
-(letfn [(-shadow-fiddle [ctx fiddle-val]
+(letfn [(-renderer [renderer]
+          (if (or (nil? renderer) (string/blank? renderer))
+            (-> hypercrud.ui.result/fiddle meta :str)
+            renderer))
+        (-shadow-fiddle [omit-renderer ctx fiddle-val]
           (let [route (:route ctx)
                 [_ [e]] route                               ; [:hyperfiddle/topnav [#entity["$" [:fiddle/ident :hyperfiddle.system/remove]]]]
                 [_ target-fiddle-ident] (:db/id e)]
-            (-> (if (system-fiddle/system-fiddle? target-fiddle-ident) ; this fiddle does not actually exist, conjure it up
-                  (-> (unwrap (system-fiddle/hydrate-system-fiddle target-fiddle-ident))
-                      (update :fiddle/bindings #(or (-> % meta :str) %))
-                      (update :fiddle/renderer #(or (-> % meta :str) %)))
-                  (into {} fiddle-val))
-                (update :fiddle/renderer
-                        (fn [renderer]
-                          (if (or (nil? renderer) (string/blank? renderer))
-                            (-> hypercrud.ui.result/fiddle meta :str)
-                            renderer))))))]
-  (defn shadow-fiddle [ctx]
+            (if (system-fiddle/system-fiddle? target-fiddle-ident) ; this fiddle does not actually exist, conjure it up
+              (-> (unwrap (system-fiddle/hydrate-system-fiddle target-fiddle-ident))
+                  (update :fiddle/bindings #(or (-> % meta :str) %))
+                  (update :fiddle/renderer #(or (-> % meta :str) %))
+                  (update :fiddle/renderer -renderer))
+              (if omit-renderer
+                fiddle-val
+                (-> (into {} fiddle-val)
+                    (update :fiddle/renderer -renderer))))))]
+  (defn shadow-fiddle [ctx & [omit-renderer]]
     {:pre [(-> ctx :hypercrud.browser/result)]}
     (-> ctx
         (dissoc :relation :relations)
-        (update :hypercrud.browser/result (partial reactive/fmap (reactive/partial -shadow-fiddle ctx)))
+        (update :hypercrud.browser/result (partial reactive/fmap (reactive/partial -shadow-fiddle omit-renderer ctx)))
         (context/with-relations))))
 
 ; ugly hacks to recursively fix the ui for sys links
-(defn hijack-renderer [ctx]
+(defn hijack-renderer [omit-renderer ctx]
   (let [ctx (-> (dissoc ctx :user-renderer)
-                (shadow-fiddle))]
+                (shadow-fiddle omit-renderer))]
     (browser-ui/ui-comp ctx)))
 
 (defn any-loading? [peer]
@@ -88,10 +91,10 @@
       (fake-managed-anchor :domain [] ctx (get-in ctx [:target-domain :domain/ident]))
       " / "
       (let [ident @(reactive/cursor (:hypercrud.browser/result ctx) [:fiddle/ident])]
-        (fake-managed-anchor :fiddle-more [] (assoc ctx :user-renderer hijack-renderer) (some-> ident name)))
+        (fake-managed-anchor :fiddle-more [] (assoc ctx :user-renderer (reactive/partial hijack-renderer false)) (some-> ident name)))
       " · "
-      (fake-managed-anchor :links [] (assoc ctx :user-renderer hijack-renderer) "links")
-      (fake-managed-anchor :ui [] (assoc ctx :user-renderer hijack-renderer) "view")
+      (fake-managed-anchor :links [] (assoc ctx :user-renderer (reactive/partial hijack-renderer true)) "links")
+      (fake-managed-anchor :ui [] (assoc ctx :user-renderer (reactive/partial hijack-renderer false)) "view")
       (if @(runtime/state (:peer ctx) [::runtime/auto-transact])
         [:div
          [:input {:id ::auto-transact :type "checkbox" :checked true
