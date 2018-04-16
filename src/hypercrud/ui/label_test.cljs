@@ -1,5 +1,5 @@
 (ns hypercrud.ui.label-test
-  (:require [cljs.test :refer-macros [deftest is]]
+  (:require [clojure.test :refer [deftest is]]
             [hypercrud.ui.label :refer [fqn->name]]))
 
 

@@ -1,6 +1,5 @@
 (ns contrib.datomic-errors-test
-  (:require [#?(:clj clojure.test :cljs cljs.test)
-             #?(:clj :refer :cljs :refer-macros) [deftest is]]
+  (:require [clojure.test :refer [deftest is]]
             [contrib.datomic-errors :refer [parse-datomic-error-soup datomic-error-cleaner]]))
 
 

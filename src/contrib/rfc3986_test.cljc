@@ -1,6 +1,5 @@
 (ns contrib.rfc3986-test
-  (:require [#?(:clj clojure.test :cljs cljs.test)
-             #?(:clj :refer :cljs :refer-macros) [deftest is]]
+  (:require [clojure.test :refer [deftest is]]
             [contrib.reader]                                ; [hyperfiddle.readers]  i think is real dependency
             [contrib.rfc3986 :refer [encode-rfc3986-pchar decode-rfc3986-pchar
                                      encode-ednish decode-ednish]]))

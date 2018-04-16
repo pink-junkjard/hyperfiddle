@@ -1,5 +1,5 @@
 (ns hyperfiddle.readers-test
-  (:require [#?(:clj clojure.test :cljs cljs.test) #?(:clj :refer :cljs :refer-macros) [deftest is]]
+  (:require [clojure.test :refer [deftest is]]
             [contrib.eval :as eval]
             [contrib.reader :refer [read-string read-edn-string]]
             [hypercrud.transit :as transit]

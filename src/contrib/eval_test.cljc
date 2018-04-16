@@ -1,6 +1,6 @@
 (ns contrib.eval-test
   (:require [cats.monad.either :refer [#?(:cljs Left)]]
-            [#?(:clj clojure.test :cljs cljs.test) #?(:clj :refer :cljs :refer-macros) [deftest is]]
+            [clojure.test :refer [deftest is]]
             [contrib.eval :refer [eval-str-and-throw eval-str]]
             [contrib.macros :refer [str-and-code]]
             [taoensso.timbre :as timbre])

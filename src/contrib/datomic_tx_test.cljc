@@ -1,5 +1,5 @@
 (ns contrib.datomic-tx-test
-  (:require [#?(:clj clojure.test :cljs cljs.test) #?(:clj :refer :cljs :refer-macros) [deftest is]]
+  (:require [clojure.test :refer [deftest is]]
             [clojure.set :refer [difference]]
             [contrib.datomic-tx :refer [into-tx]]))
 

@@ -1,5 +1,5 @@
 (ns hyperfiddle.foundation-test
-  (:require [#?(:clj clojure.test :cljs cljs.test) #?(:clj :refer :cljs :refer-macros) [deftest is]]
+  (:require [clojure.test :refer [deftest is]]
             #_[hyperfiddle.foundation :refer [hostname->hf-domain-name alias?]]))
 
 
