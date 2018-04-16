@@ -12,17 +12,14 @@
             [hyperfiddle.readers :as hc-readers]))
 
 
+; native, CAN throw
 (defn eval-string [code-str]
   {:pre [(string? code-str)
          (not (string/blank? code-str))]}
   ;; Hack - we don't understand why cljs compiler doesn't handle top level forms naturally
   ;; but wrapping in identity fixes the problem
   (let [code-str' (str "(identity\n" code-str "\n)")]
-    #?(:clj  (try (either/right (load-string code-str'))
-                  (catch Exception e
-                    (timbre/debug code-str)
-                    (timbre/error e)
-                    (either/left e)))
+    #?(:clj  (load-string code-str')
        :cljs (binding [analyzer/*cljs-warning-handlers* []
                        tags/*cljs-data-readers* (merge tags/*cljs-data-readers*
                                                        hc-data-readers
@@ -34,30 +31,42 @@
                                                                                 {:eval cljs/js-eval}
                                                                                 identity)]
                  (cond
-                   error (either/left (ex-info "cljs eval failed" {:cljs-input code-str :cljs-result eval-result}))
-                   :else (either/right value)))))))
+                   error (throw (ex-info "cljs eval failed" {:cljs-input code-str :cljs-result eval-result}))
+                   :else value))))))
 
+; ideally this exists for legacy support
+; consumers of eval-string should handle exceptions and memoization on a case by case basis
+(defn safe-eval-string [code-str]
+  (let [v' (try-either (eval-string code-str))]
+    (when-let [e (and (either/left? v') @v')]
+      (timbre/debug code-str)
+      (timbre/error e))
+    v'))
+
+; legacy?
 (defn will-eval? [code-str]
   (or (:str (meta code-str))
       (and (string? code-str) (not (string/blank? code-str)))))
 
-; todo cannot return stack traces inside a memoized fn
+; legacy?
 (def eval-str
   (memoize
     (fn [code-str]
       (cond
         (:str (meta code-str)) (either/right code-str)      ; if there is a string rep in the meta, the object itself is code
 
-        (and (string? code-str) (not (string/blank? code-str))) (eval-string code-str)
+        (and (string? code-str) (not (string/blank? code-str))) (safe-eval-string code-str)
 
         :else (either/right nil)))))
 
+; legacy?
 (defn eval-str-and-throw [code-str]
   (either/branch
     (eval-str code-str)
     (fn [e] (throw e))
     identity))
 
+; legacy?
 (defn -get-or-apply' "Apply a userland fn or return the val. The fn can crash. This should not exist, unify the apply with the eval and
 use dynamic scope instead of args."
   [user-v & args]

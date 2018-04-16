@@ -1,7 +1,6 @@
 (ns hypercrud.browser.system-fiddle
   (:require [clojure.string :as str]
             [contrib.try :refer [try-either]]
-            [contrib.macros :refer [str-and-code]]
             [hyperfiddle.ide.fiddles.schema :as schema]))
 
 
@@ -21,9 +20,7 @@
 (def fiddle-blank-system-remove
   {:fiddle/ident :hyperfiddle.system/remove
    :fiddle/type :blank
-   :fiddle/renderer (str-and-code
-                      (fn [ctx]
-                        [:p "Retract entity?"]))})
+   :fiddle/renderer (str '(fn [ctx] [:p "Retract entity?"]))})
 
 
 (defn hydrate-system-fiddle [ident]

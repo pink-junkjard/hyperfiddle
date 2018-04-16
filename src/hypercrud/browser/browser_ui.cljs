@@ -8,6 +8,7 @@
             [contrib.reactive :as r]
             [contrib.string :refer [memoized-safe-read-edn-string]]
             [contrib.try :refer [try-either]]
+            [cuerdas.core :as string]
             [hypercrud.browser.base :as base]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.link :as link]
@@ -77,9 +78,13 @@
     (.stopPropagation event)))
 
 ; defer eval until render cycle inside userportal
-(defn- eval-comp [str & args]
-  (let [renderer (either/branch (eval/eval-str str) (fn [e] (throw e)) identity)]
-    (into [renderer] args)))
+(let [safe-eval-string #(try-either (eval/eval-string %))
+      memoized-eval-string (memoize safe-eval-string)]
+  (defn- eval-comp [str & args]
+    (either/branch
+      (memoized-eval-string str)
+      (fn [e] (throw e))
+      (fn [f] (into [f] args)))))
 
 (defn ui-comp [ctx]
   (case @(:hypercrud.ui/display-mode ctx)
@@ -90,7 +95,8 @@
              [user-renderer ctx (auto-ui-css-class ctx)]]
 
             [renderer (let [renderer @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/renderer])]
-                        (when (eval/will-eval? renderer) renderer))]
+                        (when (and (string? renderer) (not (string/blank? renderer)))
+                          renderer))]
             ^{:key (hash renderer)}
             [user-portal (ui-error/error-comp ctx)
              [eval-comp renderer ctx (auto-ui-css-class ctx)]]

@@ -1,5 +1,6 @@
 (ns contrib.string
   (:refer-clojure :exclude [read-string])
+  #?(:cljs (:require-macros [contrib.data]))
   (:require [cats.monad.either :as either]
             [contrib.data :refer [orp]]
             [contrib.try :refer [try-either]]
@@ -55,6 +56,8 @@
     (binding [pprint/*print-right-margin* (or columns pprint/*print-right-margin*)]
       (with-out-str
         (pprint/pprint v)))))
+
+#?(:clj (defmacro mpprint-str [& args] (apply slow-pprint-str args)))
 
 (defn or-str [& args]                                       ; todo macro
   (apply orp str/empty-or-nil? args))
