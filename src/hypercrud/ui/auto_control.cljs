@@ -1,13 +1,14 @@
 (ns hypercrud.ui.auto-control
-  (:require [cuerdas.core :as str]
+  (:require [cats.monad.either :as either]
+            [contrib.eval :refer [eval-str]]
+            [contrib.reactive :as reactive]
+            [cuerdas.core :as str]
             [hypercrud.ui.attribute.edn :as edn]
             [hypercrud.ui.attribute.instant :as instant]
             [hypercrud.ui.error :as ui-error]
-            [hypercrud.ui.safe-render :refer [unify-portal-markup]]
+            [hypercrud.ui.safe-render :refer [unify-portal-markup user-portal]]
             [hypercrud.ui.table-cell :as table-cell]
-            [hypercrud.ui.user-attribute-renderer :refer [safe-eval-user-control-fn]]
-            [hypercrud.ui.widget :as widget]
-            [contrib.reactive :as reactive]))
+            [hypercrud.ui.widget :as widget]))
 
 
 (defn schema-control-form [ctx]
@@ -49,15 +50,21 @@
                  :else edn/edn)]
     widget))
 
+(defn- ^:private safe-reagent-f [with-error f & args]
+  ^{:key (hash f)}
+  [user-portal with-error
+   (into [f] args)])
+
 (defn fiddle-field-control [ctx]                            ; TODO :renderer -> :control
-  ;(timbre/info "using fiddle ctx/field renderer" (-> attr :db/ident str) user-str)
-  (->> (get-in ctx [:fields (:hypercrud.browser/attribute ctx) :renderer])
-       (safe-eval-user-control-fn (ui-error/error-comp ctx))))
+  (some->> (get-in ctx [:fields (:hypercrud.browser/attribute ctx) :renderer])
+           (reactive/partial safe-reagent-f (ui-error/error-comp ctx))))
 
 (defn attribute-control [ctx]
-  ;(timbre/info "using attribute/renderer " (-> attr :db/ident str) user-str)
-  (->> @(reactive/cursor (:hypercrud.browser/fat-attribute ctx) [:attribute/renderer])
-       (safe-eval-user-control-fn (ui-error/error-comp ctx))))
+  (let [with-error (ui-error/error-comp ctx)]
+    (either/branch
+      (eval-str @(reactive/cursor (:hypercrud.browser/fat-attribute ctx) [:attribute/renderer]))
+      (fn [e] [with-error e])
+      (fn [f] (when f (reactive/partial safe-reagent-f with-error f))))))
 
 (defn auto-control' [ctx]
   ; todo binding renderers should be pathed for aggregates and values

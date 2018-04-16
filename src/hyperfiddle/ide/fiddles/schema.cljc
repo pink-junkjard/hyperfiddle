@@ -1,9 +1,7 @@
 (ns hyperfiddle.ide.fiddles.schema
   (:require [contrib.data :refer [pprint-str]]
             [contrib.macros :refer [str-and-code]]
-            [hyperfiddle.ide.fiddles.schema-attribute :as schema-attribute]
-            [hypercrud.browser.context :as context]
-            [cuerdas.core :as str]))
+            [hyperfiddle.ide.fiddles.schema-attribute :as schema-attribute]))
 
 
 (defn db-cardinality-options [$db]

@@ -1,10 +1,10 @@
 (ns hyperfiddle.ide.fiddles.schema-attribute
   (:require [clojure.set :as set]
             [contrib.datomic-tx :as tx]
-            [contrib.macros :refer [str-and-code']]
-            [contrib.reactive :as reactive]
-    #?(:cljs [reagent.core :as reagent])
-            [hypercrud.browser.context :as context]))
+            [contrib.reactive :as r]
+            [hypercrud.browser.context :as context]
+    #?(:cljs [hypercrud.ui.auto-control :refer [auto-control]])
+    #?(:cljs [hypercrud.ui.result :refer [result]])))
 
 
 (def special-case-attrs #{:db/ident :db/cardinality :db/valueType})
@@ -19,7 +19,7 @@
   (reduce (fn [entity [op e a v]]
             ; todo this fn has bare minimum support for this page
             ; e.g. doesnt support card/many or nested modals
-            (let [valueType @(reactive/cursor (:hypercrud.browser/schemas ctx) ["$" a :db/valueType :db/ident])
+            (let [valueType @(r/cursor (:hypercrud.browser/schemas ctx) ["$" a :db/valueType :db/ident])
                   v (if (= :db.type/ref valueType)
                       {:db/id v}
                       v)]
@@ -49,11 +49,9 @@
 
                             [true true]
                             (user-with! tx))))]
-       (str-and-code'
-         (fn [field props ctx]
-           (let [ctx (update ctx :user-with! #(reactive/partial user-with! ctx %))]
-             (hypercrud.ui.auto-control/auto-control field nil props ctx)))
-         "todo"))))
+       (fn [field props ctx]
+         (let [ctx (update ctx :user-with! #(r/partial user-with! ctx %))]
+           (auto-control field props nil ctx))))))
 
 #?(:cljs
    (defn- build-ident-renderer [special-attrs-state]
@@ -75,28 +73,26 @@
 
                             [true true]
                             (user-with! tx))))]
-       (str-and-code'
-         (fn [field props ctx]
-           (let [ctx (update ctx :user-with! #(reactive/partial user-with! ctx %))]
-             (hypercrud.ui.auto-control/auto-control field nil props ctx)))
-         "todo"))))
+       (fn [field props ctx]
+         (let [ctx (update ctx :user-with! #(r/partial user-with! ctx %))]
+           (auto-control field props nil ctx))))))
 
 (declare renderer)
 
 #?(:cljs
    (defn renderer [ctx]
-     (let [special-attrs-state (reagent/atom nil)
+     (let [special-attrs-state (r/atom nil)
            valueType-and-cardinality-renderer (build-valueType-and-cardinality-renderer special-attrs-state)
            ident-renderer (build-ident-renderer special-attrs-state)
            reactive-merge #(merge-in-tx % @special-attrs-state ctx)]
        (fn [ctx]
          (let [ctx (-> ctx
                        (dissoc :relation :relations)
-                       (update :hypercrud.browser/result (partial reactive/fmap reactive-merge))
+                       (update :hypercrud.browser/result (partial r/fmap reactive-merge))
                        (context/with-relations)
                        (assoc :read-only read-only)
                        (assoc-in [:fields :db/cardinality :renderer] valueType-and-cardinality-renderer)
                        (assoc-in [:fields :db/valueType :renderer] valueType-and-cardinality-renderer)
                        (assoc-in [:fields :db/ident :renderer] ident-renderer))]
            ; Elide doc and ident
-           [:div (hypercrud.ui.result/result ctx)])))))
+           [:div (result ctx)])))))
