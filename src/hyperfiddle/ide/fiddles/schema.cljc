@@ -1,7 +1,6 @@
 (ns hyperfiddle.ide.fiddles.schema
   (:require [contrib.data :refer [pprint-str]]
-            [contrib.macros :refer [str-and-code]]
-            [hyperfiddle.ide.fiddles.schema-attribute :as schema-attribute]))
+            [contrib.macros :refer [str-and-code]]))
 
 
 (defn db-cardinality-options [$db]
@@ -41,7 +40,7 @@
                        :db/unique
                        :db/isComponent
                        :db/fulltext]])
-   :fiddle/renderer (str `schema-attribute/renderer)
+   :fiddle/renderer (str 'hyperfiddle.ide.fiddles.schema-attribute/renderer)
    :fiddle/links #{{:db/id (keyword "hyperfiddle.schema.db-cardinality-options" $db)
                     :link/fiddle (db-cardinality-options $db)
                     :link/render-inline? true

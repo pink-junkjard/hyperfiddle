@@ -1,7 +1,8 @@
 (ns hypercrud.browser.system-fiddle
   (:require [clojure.string :as str]
             [contrib.try :refer [try-either]]
-            [contrib.macros :refer [str-and-code]]))
+            [contrib.macros :refer [str-and-code]]
+            [hyperfiddle.ide.fiddles.schema :as schema]))
 
 
 (defn system-fiddle? [fiddle-ident]
@@ -32,9 +33,8 @@
       (= ident :hyperfiddle.system/remove) fiddle-blank-system-remove
       :else (let [$db (name ident)]
               (condp = (namespace ident)
-                ; ide cannot be imported from browser ns, creates circular deps
-                "hyperfiddle.schema" (hyperfiddle.ide.fiddles.schema/schema $db)
-                "hyperfiddle.schema.db-cardinality-options" (hyperfiddle.ide.fiddles.schema/db-cardinality-options $db)
-                "hyperfiddle.schema.db-unique-options" (hyperfiddle.ide.fiddles.schema/db-unique-options $db)
-                "hyperfiddle.schema.db-valueType-options" (hyperfiddle.ide.fiddles.schema/db-valueType-options $db)
-                "hyperfiddle.schema.db-attribute-edit" (hyperfiddle.ide.fiddles.schema/db-attribute-edit $db))))))
+                "hyperfiddle.schema" (schema/schema $db)
+                "hyperfiddle.schema.db-cardinality-options" (schema/db-cardinality-options $db)
+                "hyperfiddle.schema.db-unique-options" (schema/db-unique-options $db)
+                "hyperfiddle.schema.db-valueType-options" (schema/db-valueType-options $db)
+                "hyperfiddle.schema.db-attribute-edit" (schema/db-attribute-edit $db))))))

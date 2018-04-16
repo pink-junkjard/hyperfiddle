@@ -32,6 +32,7 @@
             [hyperfiddle.ide.fiddles.fiddle-links.bindings]
     #?(:cljs [hyperfiddle.ide.fiddles.fiddle-links.renderer])
             [hyperfiddle.ide.fiddles.schema]
+    #?(:cljs [hyperfiddle.ide.fiddles.schema-attribute])
     #?(:cljs [hyperfiddle.ide.fiddles.topnav])
             [hyperfiddle.ide.fiddles.topnav-bindings]
     #?(:cljs [hyperfiddle.ide.fiddles.fiddle-src :refer [fiddle-src-renderer]])
