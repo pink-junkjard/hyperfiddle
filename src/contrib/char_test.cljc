@@ -1,6 +1,5 @@
 (ns contrib.char-test
-  (:require [#?(:clj clojure.test :cljs cljs.test)
-             #?(:clj :refer :cljs :refer-macros) [deftest is]]
+  (:require [clojure.test :refer [deftest is]]
             [contrib.char :refer [char-code dec->hex hex->dec char->hex-str hex-str->char]]))
 
 
