@@ -70,7 +70,7 @@
                    (str [:in $db :find [(list 'pull $db '?attr [:db/id :db/ident :db/valueType :db/cardinality :db/doc :db/unique :db/isComponent :db/fulltext]) '...]
                          :where [$db :db.part/db :db.install/attribute '?attr]]))
    :fiddle/type :query
-   :fiddle/bindings (str-and-code (fn [ctx] (assoc ctx :read-only (constantly true))))
+   :fiddle/bindings (mpprint-str (fn [ctx] (assoc ctx :read-only (constantly true))))
    :fiddle/renderer (mpprint-str
                       ; -- THIS IS A LIST OF SYMBOLS, ONLY READ, NEVER EVALUATED IN THIS NAMESPACE --
                       (fn [ctx]

@@ -2,20 +2,22 @@
   (:require [cats.core :as cats :refer [mlet]]
             [cats.monad.either :as either]
             [contrib.try :refer [try-either]]
-            [contrib.eval :refer [eval-str]]
+            [contrib.eval :as eval]
             [contrib.reactive :as reactive]
+            [cuerdas.core :as string]
             [taoensso.timbre :as timbre]))
 
 
-(defn user-bindings [ctx]
-  {:post [(not (nil? %))]}
-  (mlet [:let [bindings @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/bindings])]
-         user-fn (eval-str bindings)]
-    (if user-fn
-      (mlet [ctx (try-either (user-fn ctx))]
-        (if (and (not= nil ctx) (map? ctx))
-          (cats/return ctx)
-          (either/left (let [err (ex-info "user-bindings invalid" {:user-input bindings :user-result ctx})]
-                         (timbre/error err)
-                         err))))
-      (cats/return ctx))))
+(let [eval-string #(try-either (eval/eval-string %))
+      memoized-eval-string (memoize eval-string)]
+  (defn user-bindings [ctx]
+    (let [bindings-str @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/bindings])]
+      (if (and (string? bindings-str) (not (string/blank? bindings-str)))
+        (mlet [f (memoized-eval-string bindings-str)
+               ctx (try-either (f ctx))]
+          (if (and (not (nil? ctx)) (map? ctx))
+            (cats/return ctx)
+            (either/left (let [err (ex-info "user-bindings invalid" {:user-input bindings-str :user-result ctx})]
+                           (timbre/error err)
+                           err))))
+        (either/right ctx)))))

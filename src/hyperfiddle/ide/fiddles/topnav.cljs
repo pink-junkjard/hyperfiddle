@@ -35,7 +35,6 @@
                 [_ target-fiddle-ident] (:db/id e)]
             (if (system-fiddle/system-fiddle? target-fiddle-ident) ; this fiddle does not actually exist, conjure it up
               (-> (unwrap (system-fiddle/hydrate-system-fiddle target-fiddle-ident))
-                  (update :fiddle/bindings #(or (-> % meta :str) %))
                   (update :fiddle/renderer -renderer))
               (if omit-renderer
                 fiddle-val
