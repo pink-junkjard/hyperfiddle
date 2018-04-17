@@ -11,8 +11,9 @@
     #?(:cljs [hypercrud.ui.error :as ui-error])
     #?(:cljs [hypercrud.ui.navigate-cmp :as navigate-cmp])
     #?(:cljs [hypercrud.ui.stale :as stale])
-            [contrib.data :refer [unwrap abc]]
+            [contrib.data :refer [unwrap]]
             [contrib.reactive :as reactive]
+            [contrib.string :refer [abc]]
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-one!]]
             [hyperfiddle.runtime :as runtime]

@@ -1,5 +1,5 @@
 (ns hyperfiddle.ide.fiddles.schema
-  (:require [contrib.data :refer [pprint-str]]
+  (:require [contrib.string :refer [pprint-str]]
             [contrib.macros :refer [str-and-code]]))
 
 

@@ -1,11 +1,5 @@
 (ns contrib.data
-  (:require [cats.monad.either :as either]
-            [cuerdas.core :as str]
-            [clojure.string :as clojure-str]
-            [net.cgrand.packed-printer :as packed-printer]
-    #?(:clj
-            [clojure.pprint :as pprint]
-       :cljs [cljs.pprint :as pprint])))
+  (:require [cats.monad.either :as either]))
 
 
 (defn map-values [f m]
@@ -64,22 +58,6 @@
           cols (map #(pad n zero %) cols)]
       (apply map f cols))))
 
-(comment
-  (map + [1 1 1] [1 1 1 1])                                 ;=> (2 2 2)
-  ((map-pad 0) + [1 1 1] [1 1 1 1])                         ;=> (2 2 2 1)
-  )
-
-(defn slow-pprint-str [v & [columns]]
-  (with-out-str
-    (packed-printer/pprint v :width (or columns pprint/*print-right-margin*))))
-
-(defn pprint-str [v & [columns]]
-  (clojure-str/trimr
-    ; Previously, pprint/*print-miser-width* was set to nil in main
-    (binding [pprint/*print-right-margin* (or columns pprint/*print-right-margin*)]
-      (with-out-str
-        (pprint/pprint v)))))
-
 (defn fallback [p v not-found]
   (if-not (p v) v not-found))
 
@@ -116,28 +94,3 @@
 
 (defn orp "or with custom predicate" [f? & args]            ; todo macro
   (first (remove f? args)))
-
-(defn or-str [& args]                                       ; todo macro
-  (apply orp str/empty-or-nil? args))
-
-;(defn split-last [s sep]
-;  (let [[x & xs] (str/split (reverse s) sep)]
-;    [x (reverse (str/join xs))]))
-;
-;(comment
-;  (split-last "asdf#frag" "#")
-;  (split-last "asdf#frag" "#"))
-
-(defn split-first [s sep]
-  (let [[x & xs] (str/split s sep)]
-    [x (str/join sep xs)]))
-
-(defn rtrim-coll [f? xs]
-  (->> xs
-       (split-with (complement f?))
-       first
-       (into (empty xs))))
-
-(defn abc []
-  (map (comp keyword str) "abcdefghijklmnopqrstuvwxyz")     ; this version works in clojurescript
-  #_(->> (range) (map (comp keyword str char #(+ % (int \a))))))

@@ -5,7 +5,7 @@
             [contrib.try :refer [try-either]]
             [datascript.parser :as parser]
             [hypercrud.browser.context :as context]
-            [contrib.data :as util]
+            [contrib.data :refer [transpose]]
             [contrib.reactive :as reactive]))
 
 
@@ -138,7 +138,7 @@
     :query (mlet [{:keys [qfind]} (try-either (parser/parse-query @(reactive/cursor request [:query])))]
              (cats/return
                (condp = (type qfind)
-                 datascript.parser.FindRel (let [results-by-column (util/transpose @result)]
+                 datascript.parser.FindRel (let [results-by-column (transpose @result)]
                                              (->> (:elements qfind)
                                                   (map-indexed (fn [idx element]
                                                                  (auto-fe-many-cells element (get results-by-column idx))))

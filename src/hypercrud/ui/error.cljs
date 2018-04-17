@@ -1,6 +1,6 @@
 (ns hypercrud.ui.error
   (:require
-    [contrib.data :as data]
+    [contrib.string :refer [pprint-str]]
     [hypercrud.types.Err :as Err]
     [hypercrud.ui.control.markdown-rendered :refer [markdown]]))
 
@@ -16,7 +16,7 @@
            :cause (ex-cause e)}))
 
 (defn ex-data->human-detail [{:keys [ident human soup] :as data}]
-  (or human soup (data/pprint-str data)))
+  (or human soup (pprint-str data)))
 
 (defn error-inline [e]
   (let [dev-open? true

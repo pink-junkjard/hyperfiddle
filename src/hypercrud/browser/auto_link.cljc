@@ -1,5 +1,5 @@
 (ns hypercrud.browser.auto-link
-  (:require [contrib.data :as util]
+  (:require [contrib.data :refer [map-values]]
             [contrib.reactive :as reactive]
             [hypercrud.browser.auto-link-formula :refer [auto-formula]]
             [hypercrud.browser.auto-link-txfn :refer [auto-txfn]]
@@ -27,7 +27,7 @@
                (->> links
                     (map #(into {} %))
                     (group-by #(or (:link/rel %) (:db/id %)))
-                    (util/map-values #(group-by :link/path %)))
+                    (map-values #(group-by :link/path %)))
                sys-links)
        vals
        (map vals)

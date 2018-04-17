@@ -2,7 +2,7 @@
   (:require [cats.core :as cats]
             [cats.monad.either :as either]
             [contrib.css :refer [css-slugify classes]]
-            [contrib.data :as util :refer [unwrap]]
+            [contrib.data :refer [unwrap kwargs]]
             [contrib.eval :as eval]
             [contrib.macros :refer [cond-let]]
             [contrib.reactive :as r]
@@ -33,13 +33,13 @@
               (css-slugify ident)])))
 
 (letfn [(browse [rel #_dependent? path ctx & args]
-          (let [{[user-renderer & args] nil :as kwargs} (util/kwargs args)
+          (let [{[user-renderer & args] nil :as kwargs} (kwargs args)
                 {:keys [:link/dependent? :link/path] :as link} @(r/track link/rel->link rel path ctx)
                 ctx (-> (context/relation-path ctx (into [dependent?] (unwrap (memoized-safe-read-edn-string (str "[" path "]")))))
                         (as-> ctx (if user-renderer (assoc ctx :user-renderer user-renderer #_(if f #(apply f %1 %2 %3 %4 args))) ctx)))]
             [ui-from-link link ctx (:class kwargs)]))
         (anchor [rel #_dependent? path ctx label & args]
-          (let [kwargs (util/kwargs args)
+          (let [kwargs (kwargs args)
                 {:keys [:link/dependent? :link/path] :as link} @(r/track link/rel->link rel path ctx)
                 ctx (context/relation-path ctx (into [dependent?] (unwrap (memoized-safe-read-edn-string (str "[" path "]")))))
                 props (-> (link/build-link-props link ctx)
@@ -48,7 +48,7 @@
         (cell [[d i a] ctx & args]                          ; form only
           [hypercrud.ui.form/Cell (context/relation-path ctx [d i a])])
         (value [path ctx & args]
-          (let [{[f & args] nil :as kwargs} (util/kwargs args)
+          (let [{[f & args] nil :as kwargs} (kwargs args)
                 ctx (context/relation-path ctx path)
                 field (:hypercrud.browser/field ctx)
                 #_#_control-props (merge (hypercrud.ui.auto-control/control-props ctx) kwargs)]

@@ -2,7 +2,8 @@
   (:require [contrib.datomic-tx :as tx]
             [hypercrud.types.Err :refer [->Err]]
             [hypercrud.util.branch :as branch]
-            [contrib.data :refer [map-values pprint-str]]))
+            [contrib.data :refer [map-values]]
+            [contrib.string :refer [pprint-str]]))
 
 
 (defn- serializable-error [e]

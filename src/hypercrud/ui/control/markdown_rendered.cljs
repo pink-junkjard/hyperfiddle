@@ -1,9 +1,9 @@
 (ns hypercrud.ui.control.markdown-rendered
   (:require [contrib.css :refer [css-slugify classes]]
-            [contrib.data :refer [map-values unwrap or-str]]
+            [contrib.data :refer [map-values unwrap]]
             [contrib.reagent :refer [fragment]]
             [contrib.reactive :as r]
-            [contrib.string :refer [memoized-safe-read-edn-string]]
+            [contrib.string :refer [memoized-safe-read-edn-string or-str]]
             [cuerdas.core :as str]
             [hyperfiddle.core :refer [read-eval-with-bindings]]
             [hypercrud.browser.context :as context]

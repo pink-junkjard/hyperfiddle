@@ -1,13 +1,13 @@
 (ns hyperfiddle.io.hydrate-route
   (:require [clojure.set :as set]
             [cuerdas.core :as str]
+            [contrib.base-64-url-safe :as base-64-url-safe]
+            [contrib.data :refer [map-keys]]
+            [contrib.performance :as perf]
             [hypercrud.client.peer :as peer]
             [hyperfiddle.io.http.core :refer [http-request!]]
             [hypercrud.types.EntityRequest :refer [#?(:cljs EntityRequest)]]
             [hypercrud.types.QueryRequest :refer [#?(:cljs QueryRequest)]]
-            [contrib.base-64-url-safe :as base-64-url-safe]
-            [contrib.data :as util]
-            [contrib.performance :as perf]
             [hyperfiddle.appval.state.reducers :as reducers] ; this import is immoral
             [hyperfiddle.runtime :as runtime]
             [promesa.core :as p]
@@ -62,7 +62,7 @@
 (defn request-fn-adapter [local-basis route stage ctx ->Runtime f]
   ; Hacks because the hydrate-loop doesn't write to the state atom.
   (fn [tempid-lookups ptm]
-    (let [ptm (util/map-keys #(peer/partitioned-request route (::runtime/branch-aux ctx) local-basis stage %) ptm)
+    (let [ptm (map-keys #(peer/partitioned-request route (::runtime/branch-aux ctx) local-basis stage %) ptm)
           ctx (update ctx :peer (fn [peer]
                                   (-> @(runtime/state peer)
                                       ; want to keep all user/ui and bootstrapping state, just use overwrite the partition state.

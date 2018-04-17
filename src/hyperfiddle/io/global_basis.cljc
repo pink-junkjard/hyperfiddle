@@ -4,7 +4,7 @@
             [clojure.set :as set]
             [cuerdas.core :as str]
             [hyperfiddle.io.http.core :refer [http-request!]]
-            [contrib.data :as util :refer [filter-keys]]
+            [contrib.data :refer [filter-keys]]
             [contrib.performance :as perf]
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-all-or-nothing!]]

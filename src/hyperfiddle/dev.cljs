@@ -1,8 +1,9 @@
 (ns hyperfiddle.dev
-  (:require [cljs.pprint :as pprint]
+  (:require [cljs.pprint :as pprint]                        ; clojure.pprint
             [hypercrud.browser.routing :as routing]
             [contrib.reagent :refer [fragment]]
-            [contrib.data :refer [pprint-str update-existing]]
+            [contrib.data :refer [update-existing]]
+            [contrib.string :refer [pprint-str]]
             [hyperfiddle.runtime :as runtime]
             [hyperfiddle.foundation.actions :as foundation-actions]))
 

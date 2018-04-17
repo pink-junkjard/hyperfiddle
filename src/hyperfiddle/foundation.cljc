@@ -1,17 +1,18 @@
 (ns hyperfiddle.foundation
   (:refer-clojure :exclude [read-string])
   (:require [clojure.string :as string]
-            [cuerdas.core :as cuerdas]
+            [cuerdas.core :as str]
+    #?(:cljs [contrib.css :refer [classes]])
+            [contrib.data :refer [update-existing]]
+            [contrib.reactive :as reactive]
+            [contrib.reader :refer [read-string read-edn-string]]
+            [contrib.string :refer [pprint-str]]
             [hypercrud.browser.routing :as routing]
             [hypercrud.client.core :as hc]
-            [contrib.reader :refer [read-string read-edn-string]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.Err :as Err]
     #?(:cljs [hypercrud.ui.control.code :refer [code*]])
-    #?(:cljs [contrib.css :refer [classes]])
     #?(:cljs [hypercrud.ui.stale :as stale])
-            [contrib.data :as util :refer [update-existing]]
-            [contrib.reactive :as reactive]
             [hyperfiddle.foundation.actions :as foundation-actions]
             [hyperfiddle.runtime :as runtime]
             [promesa.core :as p #?(:cljs :refer-macros :clj :refer) [do*]]))
@@ -56,7 +57,7 @@
         (contains? (set (:domain/members domain)) sub))))
 
 (defn user-profile->ident [user-profile]
-  (-> user-profile :email (cuerdas/replace #"\@.+$" "") (cuerdas/slug)))
+  (-> user-profile :email (str/replace #"\@.+$" "") (str/slug)))
 
 (defn error-cmp [e]
   [:div
@@ -96,7 +97,7 @@
 #?(:cljs
    (defn staging [peer]
      (let [stage-val @(runtime/state peer [:stage])
-           edn (util/pprint-str stage-val 70)]
+           edn (pprint-str stage-val 70)]
        ; todo this can throw
        [code* edn #(runtime/dispatch! peer (foundation-actions/reset-stage peer (read-edn-string %)))])))
 

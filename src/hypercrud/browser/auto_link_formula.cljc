@@ -5,7 +5,7 @@
             [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
             [hypercrud.types.ThinEntity :refer [->ThinEntity]]
             [hypercrud.util.branch :as branch]
-            [contrib.data :as util]
+            [contrib.data :refer [abs-normalized map-keys]]
             [contrib.reactive :as reactive]
             [contrib.string :refer [memoized-safe-read-edn-string]]
             [contrib.vedn :as vedn]
@@ -20,7 +20,7 @@
   ; So tx-fns must inspect the modal-route, they can't re-create the dbid.
   (assert (:uri ctx) "no uri in dynamic scope (If it can't be inferred, add as bindings)")
   (let [branch-val (branch/branch-val (:uri ctx) (:branch ctx) @(runtime/state (:peer ctx) [:stage]))
-        id (-> branch-val hash util/abs-normalized - str)]
+        id (-> branch-val hash abs-normalized - str)]
     (->ThinEntity (dbname/uri->dbname (:uri ctx) ctx) id)))
 
 ; todo there are collisions when two links share the same 'location'
@@ -44,7 +44,7 @@
               :db.cardinality/one nil
               :db.cardinality/many (hash (into #{} (mapv :db/id @v))) ; todo scalar
               nil nil #_":db/id has a faked attribute with no cardinality, need more thought to make elegant"))
-       hash util/abs-normalized - str)))
+       hash abs-normalized - str)))
 
 (defn auto-entity [ctx]
   (let [cell-data @(:cell-data ctx)
@@ -67,8 +67,8 @@
                   {:fe false :c? true :d? true :a true} nil
                   {:fe false :c? true :d? false :a false} (get fe-create {:d? false :a false})
                   {:fe false :c? true :d? false :a true} nil}]
-       (merge (util/map-keys #(assoc % :fe true :c? true) fe-create)
-              (util/map-keys #(assoc % :fe true :c? false) fe-no-create)
+       (merge (map-keys #(assoc % :fe true :c? true) fe-create)
+              (map-keys #(assoc % :fe true :c? false) fe-no-create)
               no-fe))))
 
 (def auto-formula-lookup (build-auto-formula-lookup))

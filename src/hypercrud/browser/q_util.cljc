@@ -3,7 +3,7 @@
             [cats.monad.either :as either]
             [clojure.string :as string]
             [hypercrud.client.core :as hc]
-            [contrib.data :as util :refer [tee]]
+            [contrib.data :refer [tee parse-query-element]]
             [contrib.string :refer [memoized-safe-read-edn-string]]
             [taoensso.timbre :as timbre]))
 
@@ -11,7 +11,7 @@
 (defn parse-holes [q]
   {:pre [(vector? q)]
    :post [(vector? %)]}
-  (as-> (util/parse-query-element q :in) elements
+  (as-> (parse-query-element q :in) elements
         (if (empty? elements) ['$] elements)
         ;; the string conversion should happen at the other side imo
         (mapv str elements)))
