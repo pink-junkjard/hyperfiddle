@@ -2,10 +2,10 @@
   (:require [cats.core :as cats]
             [cats.monad.either :as either]
             [contrib.data :refer [unwrap]]
-            [contrib.eval :as eval :refer [eval-str -get-or-apply']]
+            [contrib.eval :as eval]
             [contrib.reactive :as reactive]
             [contrib.string :refer [memoized-safe-read-edn-string pprint-str]]
-            [contrib.try :refer [try-promise]]
+            [contrib.try :refer [try-either try-promise]]
             [cuerdas.core :as string]
             [hypercrud.browser.base :as base]
             [hypercrud.browser.popovers :as popovers]
@@ -61,25 +61,27 @@
       :blank (either/right route)
       (either/left {:message "route has no fiddle" :data {:route route}}))))
 
-(defn ^:export build-link-props-raw [unvalidated-route' link ctx] ; ctx is for display-mode
+(let [safe-eval-props #(try-either (eval/eval-string %))
+      memoized-eval-props (memoize safe-eval-props)]
+  (defn eval-hc-props [props-str ctx]
+    (if (and (string? props-str) (not (string/blank? props-str)))
+      (cats/bind (memoized-eval-props props-str)
+                 (fn [f-or-v]
+                   (if (fn? f-or-v)
+                     (try-either (f-or-v ctx))
+                     (either/right f-or-v))))
+      (either/right nil))))
 
+(defn ^:export build-link-props-raw [unvalidated-route' link ctx] ; ctx is for display-mode
   ; this is a fine place to eval, put error message in the tooltip prop
   ; each prop might have special rules about his default, for example :visible is default true, does this get handled here?
-
   (let [fiddle (:link/fiddle link)                          ; can be nil - in which case route is invalid
         [_ args :as route] (unwrap unvalidated-route')
         validated-route' (validated-route' fiddle route ctx)
-        user-props' (cats/bind (eval-str (:hypercrud/props link))
-                               (fn [user-expr]
-                                 (if user-expr
-                                   (-get-or-apply' user-expr ctx) ; Use dynamic scope for ctx instead of argument
-                                   (either/right nil))))
-        user-props-map-raw (cats/extract (cats/mplus user-props' (either/right nil)))
-        user-prop-val's (map #(-get-or-apply' % ctx) (vals user-props-map-raw))
-        user-prop-vals (map unwrap user-prop-val's)
-        errors (->> (concat [user-props' unvalidated-route' validated-route'] user-prop-val's)
-                    (filter either/left?) (map cats/extract) (into #{}))
-        user-props (zipmap (keys user-props-map-raw) user-prop-vals)]
+        user-props' (eval-hc-props (:hypercrud/props link) ctx)
+        user-props (unwrap user-props')
+        errors (->> [user-props' unvalidated-route' validated-route']
+                    (filter either/left?) (map cats/extract) (into #{}))]
     (merge
       user-props                                            ; e.g. disabled, tooltip, style, class - anything, it gets passed to a renderer maybe user renderer
       ; doesn't handle tx-fn - meant for the self-link. Weird and prob bad.

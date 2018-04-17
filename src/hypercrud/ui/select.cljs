@@ -1,12 +1,12 @@
 (ns hypercrud.ui.select
   (:require [cats.core :refer [fmap sequence]]
-            [cats.monad.either :refer [right left branch]]
+            [cats.monad.either :as either]
             [contrib.datomic-tx :as tx]
-            [contrib.data :refer [unwrap]]
-            [contrib.eval :refer [eval-str]]
             [contrib.reactive :as reactive]
             [contrib.try :refer [try-either]]
-            [hypercrud.browser.core :as browser]))
+            [hypercrud.browser.core :as browser]
+            [hypercrud.browser.link :as link]
+            [hypercrud.ui.error :as ui-error]))
 
 
 (defn default-label-renderer [v ctx]
@@ -33,7 +33,7 @@
              (apply concat)
              sequence
              (fmap #(->> % (interpose ", ") (remove nil?) (apply str))))]
-    (branch label' pr-str identity)))
+    (either/branch label' pr-str identity)))
 
 (defn select-boolean* [value props ctx]
   (let [props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
@@ -91,13 +91,17 @@
 (let [on-change (fn [ctx id]
                   ((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) id)))]
   (defn select* [options-link props ctx]
-    (let [props (merge (unwrap (eval-str (:hypercrud/props options-link))) ; get-or-apply
-                       ; normalize value for the dom - nil, kw or eid
-                       {:value (if (nil? @(:value ctx))
-                                 ""
-                                 (str (:db/id @(:value ctx))))
-                        :on-change (reactive/partial on-change ctx) ; reconstruct the typed value
-                        :disabled (:read-only props)})]
-      [browser/ui options-link (assoc ctx
-                                 :hypercrud.ui/display-mode always-user
-                                 :user-renderer (reactive/partial select-anchor-renderer props))])))
+    (either/branch
+      (link/eval-hc-props (:hypercrud/props options-link) ctx)
+      (fn [e] [(ui-error/error-comp ctx) e])
+      (fn [hc-props]
+        (let [props (merge hc-props
+                           ; normalize value for the dom - nil, kw or eid
+                           {:value (if (nil? @(:value ctx))
+                                     ""
+                                     (str (:db/id @(:value ctx))))
+                            :on-change (reactive/partial on-change ctx) ; reconstruct the typed value
+                            :disabled (:read-only props)})]
+          [browser/ui options-link (assoc ctx
+                                     :hypercrud.ui/display-mode always-user
+                                     :user-renderer (reactive/partial select-anchor-renderer props))])))))
