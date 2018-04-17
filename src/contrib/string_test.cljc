@@ -1,10 +1,14 @@
 (ns contrib.string-test
   (:require [clojure.test :refer [deftest is]]
-            [contrib.string :refer [split-first rtrim-coll abc]]
+            [contrib.string :refer [split-first rtrim-coll abc empty->nil]]
             [clojure.pprint]
             [net.cgrand.packed-printer :as packed-printer]))
 
 
+(deftest empty->nil-1
+  (is (= (empty->nil nil) nil))
+  (is (= (empty->nil "") nil))
+  (is (= (empty->nil "a") "a")))
 
 (def s "0/1/2?3?4#5#6")
 (deftest split-first-1
@@ -13,6 +17,12 @@
   (is (= (split-first s "?") ["0/1/2" "3?4#5#6"]))
   (is (= (split-first s "#") ["0/1/2?3?4" "5#6"])))
 
+(deftest split-first-2
+  (is (= (split-first "a" "#") ["a" nil]))
+  (is (= (split-first "a#" "#") ["a" nil]))
+  (is (= (split-first "a#b" "#") ["a" "b"]))
+  (is (= (split-first "#b" "#") [nil "b"]))
+  (is (= (split-first "#" "#") [nil nil])))
 
 (deftest seq-rtrim-1
   []

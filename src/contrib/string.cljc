@@ -20,9 +20,12 @@
 ;  (split-last "asdf#frag" "#")
 ;  (split-last "asdf#frag" "#"))
 
+(defn empty->nil [s]
+  (if (str/empty-or-nil? s) nil s))
+
 (defn split-first [s sep]
   (let [[x & xs] (str/split s sep)]
-    [x (str/join sep xs)]))
+    [(empty->nil x) (empty->nil (str/join sep xs))]))
 
 (defn rtrim-coll [f? xs]
   (->> xs
