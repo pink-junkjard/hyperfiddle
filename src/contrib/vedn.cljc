@@ -1,9 +1,7 @@
 (ns contrib.vedn
-  (:refer-clojure :exclude [read-string])
-  #?(:cljs (:require-macros [contrib.vedn :refer [load-vedn-from-file]]))
-  (:require [clojure.string :as string]
-            [contrib.macros :refer [str-and-code']]
-            [contrib.reader :refer [read-string]]
+  #?(:cljs (:require-macros [contrib.vedn]))
+  (:require [contrib.reader :as reader]
+            [clojure.string :as string]
             [contrib.template :as template]))
 
 
@@ -20,5 +18,5 @@
           (split-vedn-list)
           (drop 1)
           (partition 2)
-          (map (fn [[k v]] [(read-string k) (string/trim v)]))
+          (map (fn [[k v]] [(reader/read-string k) (string/trim v)]))
           (into {}))))

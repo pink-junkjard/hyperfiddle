@@ -1,6 +1,5 @@
 (ns hyperfiddle.ide.fiddles.schema
-  (:require [contrib.string :refer [mpprint-str pprint-str]]
-            [contrib.macros :refer [str-and-code]]))
+  (:require [contrib.string :refer [mpprint-str pprint-str]]))
 
 
 (defn db-cardinality-options [$db]
