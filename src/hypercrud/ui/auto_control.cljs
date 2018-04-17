@@ -1,8 +1,8 @@
 (ns hypercrud.ui.auto-control
   (:require [cats.monad.either :as either]
-            [contrib.eval :refer [eval-str]]
             [contrib.reactive :as reactive]
-            [cuerdas.core :as str]
+            [cuerdas.core :as string]
+            [hypercrud.browser.browser-ui :as browser-ui]
             [hypercrud.ui.attribute.edn :as edn]
             [hypercrud.ui.attribute.instant :as instant]
             [hypercrud.ui.error :as ui-error]
@@ -60,11 +60,11 @@
            (reactive/partial safe-reagent-f (ui-error/error-comp ctx))))
 
 (defn attribute-control [ctx]
-  (let [with-error (ui-error/error-comp ctx)]
-    (either/branch
-      (eval-str @(reactive/cursor (:hypercrud.browser/fat-attribute ctx) [:attribute/renderer]))
-      (fn [e] [with-error e])
-      (fn [f] (when f (reactive/partial safe-reagent-f with-error f))))))
+  (let [renderer @(reactive/cursor (:hypercrud.browser/fat-attribute ctx) [:attribute/renderer])]
+    (when (and (string? renderer) (not (string/blank? renderer)))
+      (let [with-error (ui-error/error-comp ctx)
+            f browser-ui/eval-renderer-comp]
+        (reactive/partial safe-reagent-f with-error f renderer)))))
 
 (defn auto-control' [ctx]
   ; todo binding renderers should be pathed for aggregates and values
@@ -114,7 +114,7 @@
   (def validators {"clojure" #(-> (safe-read-edn-string %) (either/right?))})
 
   (let [valid? ((get validators (:mode props) (constantly true)))
-        class (str/join " " (list (if (:readOnly props) "read-only")
-                                  (if (not valid?) "invalid")))])
+        class (string/join " " (list (if (:readOnly props) "read-only")
+                                     (if (not valid?) "invalid")))])
 
   )

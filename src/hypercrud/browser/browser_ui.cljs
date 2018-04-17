@@ -80,7 +80,7 @@
 ; defer eval until render cycle inside userportal
 (let [safe-eval-string #(try-either (eval/eval-string %))
       memoized-eval-string (memoize safe-eval-string)]
-  (defn- eval-comp [str & args]
+  (defn eval-renderer-comp [str & args]
     (either/branch
       (memoized-eval-string str)
       (fn [e] (throw e))
@@ -99,7 +99,7 @@
                           renderer))]
             ^{:key (hash renderer)}
             [user-portal (ui-error/error-comp ctx)
-             [eval-comp renderer ctx (auto-ui-css-class ctx)]]
+             [eval-renderer-comp renderer ctx (auto-ui-css-class ctx)]]
 
             [_ :else]
             ; todo ui.result should be injected
