@@ -1,8 +1,6 @@
 (ns hypercrud.browser.auto-link-formula                     ; namespace is public export runtime
   #?(:cljs (:require-macros [hypercrud.browser.auto-link-formula :refer [build-auto-formula-lookup]]))
   (:require [cats.monad.either :as either]
-            [contrib.macros :refer [str-and-code']]
-            [contrib.reader :as reader]
             [hypercrud.browser.dbname :as dbname]
             [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
             [hypercrud.types.ThinEntity :refer [->ThinEntity]]
@@ -57,12 +55,8 @@
 
 #?(:clj
    (defmacro build-auto-formula-lookup []
-     (let [fe-no-create (->> (macroexpand `(vedn/load-vedn-from-file "auto-formula/fe-no-create.vedn"))
-                             ; cannot str-and-code' until runtime https://dev.clojure.org/jira/browse/CLJ-1206
-                             (util/map-values (fn [s] `(str-and-code' ~(reader/read-string s) ~s))))
-           fe-create (->> (macroexpand `(vedn/load-vedn-from-file "auto-formula/fe-create.vedn"))
-                          ; cannot str-and-code' until runtime https://dev.clojure.org/jira/browse/CLJ-1206
-                          (util/map-values (fn [s] `(str-and-code' ~(reader/read-string s) ~s))))
+     (let [fe-no-create (macroexpand `(vedn/load-vedn-from-file "auto-formula/fe-no-create.vedn"))
+           fe-create (macroexpand `(vedn/load-vedn-from-file "auto-formula/fe-create.vedn"))
            ; no fe = index or relation links
            no-fe {{:fe false :c? false :d? true :a false} nil
                   {:fe false :c? false :d? true :a true} nil

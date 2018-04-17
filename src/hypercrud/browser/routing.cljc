@@ -4,9 +4,10 @@
             [cats.monad.either :as either]
             [clojure.set :as set]
             [clojure.walk :as walk]
-            [contrib.eval :refer [eval-str]]
+            [contrib.eval :as eval]
             [contrib.reader :refer [read-edn-string]]
             [contrib.try :refer [try-either]]
+            [cuerdas.core :as string]
             [hypercrud.browser.dbname :as dbname]
             [hypercrud.browser.router :as router]
             [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
@@ -70,26 +71,29 @@
   (cond (instance? ThinEntity porps) [porps]                ; entity is also a map so do this first
         :else (vec (xorxs porps))))
 
-(defn ^:export build-route' [link ctx]
-  (mlet [fiddle-id (if-let [page (:link/fiddle link)]
-                     (either/right (:fiddle/ident page))
-                     (either/left {:message "link has no fiddle" :data {:link link}}))
-         user-fn (eval-str (:link/formula link))
-         args (if user-fn
-                (try-either (user-fn ctx))
-                (either/right nil))
-         :let [args (->> {:remove-this-wrapper args}        ; walk trees wants a map
-                         ; shadow-links can be hdyrated here, and we need to talk them.
-                         ; Technical debt. Once shadow-links are identities, this is just a mapv.
-                         (walk/postwalk (fn [v]
-                                          (if (instance? Entity v)
-                                            (let [dbname (some-> v .-uri (dbname/uri->dbname ctx))]
-                                              (->ThinEntity dbname (or (:db/ident v) (:db/id v))))
-                                            v)))
-                         (into {}))]]
-    ;_ (timbre/debug args (-> (:link/formula link) meta :str))
-    (cats/return
-      (id->tempid [fiddle-id (normalize-args (:remove-this-wrapper args))] ctx))))
+(let [safe-eval-string #(try-either (eval/eval-string %))
+      memoized-eval-string (memoize safe-eval-string)]
+  (defn ^:export build-route' [link ctx]
+    (mlet [fiddle-id (if-let [page (:link/fiddle link)]
+                       (either/right (:fiddle/ident page))
+                       (either/left {:message "link has no fiddle" :data {:link link}}))
+           formula (let [formula-str (:link/formula link)]
+                     (if (and (string? formula-str) (not (string/blank? formula-str)))
+                       (memoized-eval-string formula-str)
+                       (either/right (constantly nil))))
+           args (try-either (formula ctx))
+           :let [args (->> {:remove-this-wrapper args}      ; walk trees wants a map
+                           ; shadow-links can be hdyrated here, and we need to talk them.
+                           ; Technical debt. Once shadow-links are identities, this is just a mapv.
+                           (walk/postwalk (fn [v]
+                                            (if (instance? Entity v)
+                                              (let [dbname (some-> v .-uri (dbname/uri->dbname ctx))]
+                                                (->ThinEntity dbname (or (:db/ident v) (:db/id v))))
+                                              v)))
+                           (into {}))]]
+      ;_ (timbre/debug args (-> (:link/formula link) meta :str))
+      (cats/return
+        (id->tempid [fiddle-id (normalize-args (:remove-this-wrapper args))] ctx)))))
 
 (def encode router/encode)
 (def decode router/decode)

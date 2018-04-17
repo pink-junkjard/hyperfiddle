@@ -12,10 +12,9 @@
        ;(sort-by (juxt :link/disabled :link/rel)
        ;         (fn [[a b] [a' b']] (if (= a a') (< b b') (< a a'))))
        (mapv (fn [link]
-               (-> (if (system-fiddle/system-fiddle? (get-in link [:link/fiddle :db/ident]))
-                     (dissoc link :link/fiddle)
-                     link)
-                   (update :link/formula #(or (-> % meta :str) %)))))))
+               (if (system-fiddle/system-fiddle? (get-in link [:link/fiddle :db/ident]))
+                 (dissoc link :link/fiddle)
+                 link)))))
 
 (defn renderer [ctx]
   (-> (base/data-from-route (:target-route ctx)
