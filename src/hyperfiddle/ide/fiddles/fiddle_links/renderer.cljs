@@ -15,8 +15,7 @@
                (-> (if (system-fiddle/system-fiddle? (get-in link [:link/fiddle :db/ident]))
                      (dissoc link :link/fiddle)
                      link)
-                   (update :link/formula #(or (-> % meta :str) %))
-                   (update :link/tx-fn #(or (-> % meta :str) %)))))))
+                   (update :link/formula #(or (-> % meta :str) %)))))))
 
 (defn renderer [ctx]
   (-> (base/data-from-route (:target-route ctx)

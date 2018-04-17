@@ -1,24 +1,10 @@
 (ns hypercrud.browser.auto-link-txfn
-  (:refer-clojure :exclude [read-string])
-  #?(:cljs (:require-macros [hypercrud.browser.auto-link-txfn :refer [load-fn]]))
   (:require [cats.monad.either :as either]
-            [contrib.macros :refer [str-and-code']]
             [clojure.string :as string]
-            [contrib.reader :refer [read-string]]
             [contrib.string :refer [memoized-safe-read-edn-string]]
             [contrib.template :as template]
-            [contrib.datomic-tx]                           ; for resource loading
-
             [taoensso.timbre :as timbre]))
 
-
-#?(:clj
-   (defmacro load-fn [filename]
-     (let [code-str (-> (macroexpand `(template/load-resource ~filename))
-                        (string/trim))
-           code (read-string code-str)]
-       ; cannot str-and-code' until runtime https://dev.clojure.org/jira/browse/CLJ-1206
-       `(str-and-code' ~code ~code-str))))
 
 (def auto-tx-fn-lookup
   {{:fe true :c? false :d? true :a false} nil
@@ -27,7 +13,7 @@
    {:fe true :c? false :d? false :a true} nil
 
    {:fe true :c? true :d? true :a false} nil
-   {:fe true :c? true :d? true :a true} (load-fn "auto-txfn/mt-fet-at.edn")
+   {:fe true :c? true :d? true :a true} (-> (template/load-resource "auto-txfn/mt-fet-at.edn") string/trim)
    {:fe true :c? true :d? false :a false} nil
    {:fe true :c? true :d? false :a true} nil
 

@@ -1,6 +1,7 @@
 (ns contrib.try
   #?(:cljs (:require-macros [contrib.try :refer [try-catch-non-fatal try-either]]))
-  (:require [cats.monad.either :as either]))
+  (:require [cats.monad.either :as either]
+            [promesa.core :as p]))
 
 
 #?(:clj
@@ -26,3 +27,12 @@
      [& body]
      (let [e (gensym)]
        `(try-catch-non-fatal (either/right (do ~@body)) ~e (either/left ~e)))))
+
+#?(:clj
+   (defmacro try-promise
+     "Try to evalute the body and return the result as a promise.
+     If a non-fatal throwable is thrown return the exception as rejected,
+     otherwise return the result as resolved."
+     [& body]
+     (let [e (gensym)]
+       `(try-catch-non-fatal (p/resolved (do ~@body)) ~e (p/rejected ~e)))))

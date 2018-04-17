@@ -2,10 +2,11 @@
   (:require [cats.core :as cats]
             [cats.monad.either :as either]
             [contrib.data :refer [unwrap]]
-            [contrib.eval :refer [eval-str -get-or-apply']]
+            [contrib.eval :as eval :refer [eval-str -get-or-apply']]
             [contrib.reactive :as reactive]
             [contrib.string :refer [memoized-safe-read-edn-string pprint-str]]
-            [contrib.try :refer [try-either]]
+            [contrib.try :refer [try-promise]]
+            [cuerdas.core :as string]
             [hypercrud.browser.base :as base]
             [hypercrud.browser.popovers :as popovers]
             [hypercrud.browser.q-util :as q-util]
@@ -94,28 +95,34 @@
                    (interpose " ")
                    (apply str))})))
 
-(defn stage! [link route popover-id child-branch ctx]
-  (let [user-txfn (or (unwrap (eval-str (:link/tx-fn link))) (constantly nil))]
-    (-> (p/promise
-          (fn [resolve! reject!]
-            (let [swap-fn (fn [multi-color-tx]
-                            ; todo why does the user-txfn have access to the parent fiddle's context
-                            (let [result (let [result (user-txfn ctx multi-color-tx route)]
-                                           ; txfn may be sync or async
-                                           (if-not (p/promise? result) (p/resolved result) result))]
-                              ; let the caller of this :stage fn know the result
-                              ; This is super funky, a swap-fn should not be effecting, but seems like it would work.
-                              (p/branch result
-                                        (fn [v] (resolve! nil))
-                                        (fn [e]
-                                          (reject! e)
-                                          (timbre/warn e)))
+(let [safe-eval-string #(try-promise (eval/eval-string %))
+      memoized-eval-string (memoize safe-eval-string)]
+  (defn stage! [link route popover-id child-branch ctx]
+    (-> (let [tx-fn-str (:link/tx-fn link)]
+          (if (and (string? tx-fn-str) (not (string/blank? tx-fn-str)))
+            (memoized-eval-string tx-fn-str)
+            (p/resolved (constantly nil))))
+        (p/then
+          (fn [user-txfn]
+            (p/promise
+              (fn [resolve! reject!]
+                (let [swap-fn (fn [multi-color-tx]
+                                (let [result (let [result (user-txfn ctx multi-color-tx route)]
+                                               ; txfn may be sync or async
+                                               (if-not (p/promise? result) (p/resolved result) result))]
+                                  ; let the caller of this :stage fn know the result
+                                  ; This is super funky, a swap-fn should not be effecting, but seems like it would work.
+                                  (p/branch result
+                                            (fn [v] (resolve! nil))
+                                            (fn [e]
+                                              (reject! e)
+                                              (timbre/warn e)))
 
-                              ; return the result to the action, it could be a promise
-                              result))]
-              (runtime/dispatch! (:peer ctx)
-                                 (foundation-actions/stage-popover (:peer ctx) (:hypercrud.browser/invert-route ctx) child-branch swap-fn
-                                                                   (foundation-actions/close-popover (:branch ctx) popover-id))))))
+                                  ; return the result to the action, it could be a promise
+                                  result))]
+                  (runtime/dispatch! (:peer ctx)
+                                     (foundation-actions/stage-popover (:peer ctx) (:hypercrud.browser/invert-route ctx) child-branch swap-fn
+                                                                       (foundation-actions/close-popover (:branch ctx) popover-id))))))))
         ; todo something better with these exceptions (could be user error)
         (p/catch (fn [err]
                    #?(:clj  (throw err)
@@ -172,7 +179,7 @@
                                 cancel! (reactive/partial cancel! popover-id child-branch ctx)]
                             {:showing? (runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :popovers popover-id])
                              :body #?(:cljs [managed-popover-body link route popover-id child-branch dont-branch? close! cancel! ctx]
-                                      :clj nil)
+                                      :clj  nil)
                              :open! open!
                              :close! (if dont-branch? close! cancel!)})))]
     (merge hypercrud-props {:popover popover-props})))
