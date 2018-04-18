@@ -4,6 +4,7 @@
                [cljs.js :as cljs]
                [cljs.tagged-literals :as tags]])
     [clojure.string :as string]
+    [contrib.try :refer [try-either]]
     ; This is contrib code, shouldn't be hyperfiddle deps
     [hyperfiddle.hc_data_readers :refer [hc-data-readers]]
     [hyperfiddle.readers :as hc-readers]))
@@ -29,3 +30,6 @@
                  (cond
                    error (throw (ex-info "cljs eval failed" {:cljs-input code-str :cljs-result eval-result}))
                    :else value))))))
+
+(defn safe-eval-string [& args]
+  (try-either (apply eval-string args)))

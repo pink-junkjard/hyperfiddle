@@ -6,8 +6,7 @@
 
 (def ^:dynamic ^:export *ctx* nil)
 
-(let [safe-eval #(try-either (eval/eval-string (str "(fn [ctx] (binding [hyperfiddle.core/*ctx* ctx]\n" % "\n))")))
-      memoized-eval (memoize safe-eval)]
+(let [memoized-eval (memoize eval/safe-eval-string)]
   (defn read-eval-with-bindings [content & [ctx]]
-    (cats/bind (memoized-eval content)
+    (cats/bind (memoized-eval (str "(fn [ctx] (binding [hyperfiddle.core/*ctx* ctx]\n" content "\n))"))
                (fn [f] (try-either (f ctx))))))

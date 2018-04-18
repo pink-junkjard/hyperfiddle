@@ -61,8 +61,7 @@
       :blank (either/right route)
       (either/left {:message "route has no fiddle" :data {:route route}}))))
 
-(let [safe-eval-props #(try-either (eval/eval-string %))
-      memoized-eval-props (memoize safe-eval-props)]
+(let [memoized-eval-props (memoize eval/safe-eval-string)]
   (defn eval-hc-props [props-str ctx]
     (if (and (string? props-str) (not (string/blank? props-str)))
       (cats/bind (memoized-eval-props props-str)

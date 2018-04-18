@@ -78,7 +78,7 @@
     (.stopPropagation event)))
 
 ; defer eval until render cycle inside userportal
-(let [safe-eval-string #(try-either (eval/eval-string %))
+(let [safe-eval-string #(try-either (eval/eval-string %))   ; don't actually need to safely eval, just want to memoize exceptions
       memoized-eval-string (memoize safe-eval-string)]
   (defn eval-renderer-comp [str & args]
     (either/branch

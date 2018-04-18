@@ -8,8 +8,7 @@
             [taoensso.timbre :as timbre]))
 
 
-(let [eval-string #(try-either (eval/eval-string %))
-      memoized-eval-string (memoize eval-string)]
+(let [memoized-eval-string (memoize eval/safe-eval-string)]
   (defn user-bindings [ctx]
     (let [bindings-str @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/bindings])]
       (if (and (string? bindings-str) (not (string/blank? bindings-str)))

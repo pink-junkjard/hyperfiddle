@@ -71,8 +71,7 @@
   (cond (instance? ThinEntity porps) [porps]                ; entity is also a map so do this first
         :else (vec (xorxs porps))))
 
-(let [safe-eval-string #(try-either (eval/eval-string %))
-      memoized-eval-string (memoize safe-eval-string)]
+(let [memoized-eval-string (memoize eval/safe-eval-string)]
   (defn ^:export build-route' [link ctx]
     (mlet [fiddle-id (if-let [page (:link/fiddle link)]
                        (either/right (:fiddle/ident page))
