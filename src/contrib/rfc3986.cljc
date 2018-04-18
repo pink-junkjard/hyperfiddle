@@ -1,7 +1,8 @@
 (ns contrib.rfc3986
   (:require [clojure.string :as str]
             [clojure.set :as set]
-            [contrib.char :refer [char-code dec->hex hex->dec char->hex-str hex-str->char]]))
+            [contrib.char :refer [char-code dec->hex hex->dec char->hex-str hex-str->char]]
+            [contrib.string :refer [split-first]]))
 
 
 ; https://tools.ietf.org/html/rfc3986#appendix-A
@@ -62,3 +63,9 @@ coalesce into lists and are not disambiguated."
 
 (defn decode-ednish [ednish-str]
   (reduce (fn [a [k v]] (str/replace a k v)) ednish-str (set/map-invert -edn-dialect-mappings)))
+
+(defn split-fragment [s]
+  (split-first s "#"))
+
+(defn parse-fragment [s]                                 ; user gets full control of this value?
+  (second (split-fragment s)))

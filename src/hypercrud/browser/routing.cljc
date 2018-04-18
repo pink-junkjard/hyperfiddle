@@ -19,7 +19,7 @@
               (hypercrud.types.ThinEntity ThinEntity))))
 
 
-(defn invalid-route? [[fiddle args :as route]]
+(defn invalid-route? [[fiddle ?datomic-args ?initial-state :as route]]
   (if-let [msg (cond
                  (map? route) "legacy format"
                  (nil? fiddle) "missing fiddle"

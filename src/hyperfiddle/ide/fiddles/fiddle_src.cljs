@@ -1,24 +1,27 @@
 (ns hyperfiddle.ide.fiddles.fiddle-src
-  (:require [cats.monad.either :as either]
-            [contrib.base-64-url-safe :as base64-url-safe]
-            [contrib.data :refer [kwargs unwrap]]
-            [contrib.datomic-tx :as tx]
-            [contrib.reactive :as reactive]
+  (:require [contrib.data :refer [kwargs unwrap]]
             [contrib.reagent :refer [fragment]]
-            [hypercrud.browser.browser-ui :as browser-ui]
-            [hypercrud.browser.context :as context]
-            [hypercrud.browser.link :as link]
-            [hypercrud.browser.system-fiddle :as system-fiddle]
             [hypercrud.ui.control.markdown-rendered :refer [markdown]]
-            [hypercrud.ui.error :as ui-error]
-            [hypercrud.ui.radio :as radio]
-            [hypercrud.ui.result :as result]
             [hypercrud.ui.tooltip :refer [tooltip]]
-            [hyperfiddle.foundation :as foundation :refer [staging]]
-            [hyperfiddle.foundation.actions :as foundation-actions]
-            [hyperfiddle.ide.fiddles.topnav-bindings :as topnav-bindings]
-            [hyperfiddle.runtime :as runtime]))
+            [hyperfiddle.ide.fiddles.topnav :refer [shadow-fiddle hijack-renderer loading-spinner]]))
 
 
 (defn fiddle-src-renderer [ctx]
-  [:pre (pr-str (keys ctx))])
+  (let [#_#_ctx (shadow-fiddle ctx)]
+    [:div
+     ((:cell ctx) [true 0 :fiddle/type] ctx)
+     ((:cell ctx) [true 0 :fiddle/pull] ctx)
+     ((:cell ctx) [true 0 :fiddle/query] ctx)
+     ((:browse ctx) :ui [] ctx (partial hijack-renderer false))
+     ((:browse ctx) :links [] ctx (partial hijack-renderer true))]))
+
+(comment
+  (let [rtype (-> ctx :cell-data deref :fiddle/type)
+        visible (case (:attribute field)
+                  :fiddle/ident false
+                  :fiddle/query (= rtype :query)
+                  :fiddle/pull (= rtype :entity)
+                  true)]
+    (if visible
+      ; Omit form-cell, we don't want any cell markup at all.
+      [control field {} ctx])))

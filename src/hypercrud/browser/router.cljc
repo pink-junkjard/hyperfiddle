@@ -35,6 +35,10 @@
          (if (seq service-args) (str "?" (str/join "&" (->> service-args (map (fn [[k v]] (-encode-pchar k "=" (-encode-pchar v))))))))
          (if (seq state) (str "#" (str/join "&" (->> state (map (fn [[k v]] (-encode-pchar k "=" (-encode-pchar v)))))))))))
 
+(defn canonicalize "(apply canonicalize route)"
+  [& [fiddle #_?fiddle-args ?datomic-args ?service-args ?initial-state]]
+  (rtrim-coll nil? [fiddle ?datomic-args ?service-args ?initial-state]))
+
 (defn decode [s]
   (let [[root s] (split-first s "/")
         [fiddle-segment s] (split-first s "/")
@@ -43,11 +47,15 @@
         datomic-args (->> (str/split datomic-args-segment "/")) ; careful: (str/split "" "/") => [""]
         [query fragment] (split-first s "#")]
 
-    (->>
-      [(-decode-url-ednish fiddle)
-       #_(mapv -decode-url-ednish fiddle-args)
-       (if-let [as (->> datomic-args (remove str/empty-or-nil?) seq)]
-         (mapv -decode-url-ednish as))
-       #_{:state (-decode-url-ednish fragment)
-          :service-args (-decode-url-ednish query)}]
-      (rtrim-coll nil?))))
+    (canonicalize
+      (-decode-url-ednish fiddle)
+      ;(mapv -decode-url-ednish fiddle-args)
+      (if-let [as (->> datomic-args (remove str/empty-or-nil?) seq)]
+        (mapv -decode-url-ednish as))
+      (-decode-url-ednish query)
+      (-decode-url-ednish fragment))))
+
+(defn assoc-frag [[fiddle ?datomic-args ?service-args ?initial-state] frag]
+  {:pre [(nil? ?initial-state)]}
+  (let [x (canonicalize fiddle ?datomic-args ?service-args frag)]
+    x))

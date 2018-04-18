@@ -2,8 +2,10 @@
   (:require [contrib.base-64-url-safe :as base64-url-safe]
             [contrib.data :refer [kwargs unwrap]]
             [contrib.datomic-tx :as tx]
+            [contrib.reader :refer [read-edn-string]]
             [contrib.reactive :as reactive]
             [contrib.reagent :refer [fragment]]
+            [contrib.rfc3986 :refer [encode-ednish decode-ednish encode-rfc3986-pchar decode-rfc3986-pchar]]
             [cuerdas.core :as string]
             [hypercrud.browser.browser-ui :as browser-ui]
             [hypercrud.browser.context :as context]
@@ -15,7 +17,6 @@
             [hypercrud.ui.tooltip :refer [tooltip]]
             [hyperfiddle.foundation :as foundation :refer [staging]]
             [hyperfiddle.foundation.actions :as foundation-actions]
-            [hyperfiddle.ide.fiddles.topnav-bindings :as topnav-bindings]
             [hyperfiddle.runtime :as runtime]))
 
 
@@ -71,6 +72,9 @@
                     :z-index -1}}
       [re-com.core/throbber :size :smaller]]]))
 
+(defn src-mode? [frag]
+  (= :src (read-edn-string (decode-ednish (decode-rfc3986-pchar frag)))))
+
 (defn renderer [ctx]
   {:pre [(or (:relations ctx) (:relation ctx))]}
   (let [display-mode @(runtime/state (:peer ctx) [:display-mode])
@@ -91,8 +95,6 @@
       (let [ident @(reactive/cursor (:hypercrud.browser/result ctx) [:fiddle/ident])]
         (fake-managed-anchor :fiddle-more [] (assoc ctx :user-renderer (reactive/partial hijack-renderer false)) (some-> ident name)))
       " · "
-      (fake-managed-anchor :links [] (assoc ctx :user-renderer (reactive/partial hijack-renderer true)) "links")
-      (fake-managed-anchor :ui [] (assoc ctx :user-renderer (reactive/partial hijack-renderer false)) "view")
       (if @(runtime/state (:peer ctx) [::runtime/auto-transact])
         [:div
          [:input {:id ::auto-transact :type "checkbox" :checked true
@@ -105,6 +107,12 @@
          (radio/option {:label "data" :tooltip "Edit data directly" :target :xray :value display-mode :change! change!})
          (radio/option {:label "view" :tooltip "View end-user UI" :target :user :value display-mode :change! change!})])
 
+      (let [src-mode (src-mode? (-> ctx :target-route (get 3)))
+            href (if-not src-mode
+                   (str "#" (encode-rfc3986-pchar (encode-ednish (pr-str :src))))
+                   "#")]
+        [:a {:href href} (if src-mode "unsrc" "src")])
+
       [:div.right-nav {:key "right-nav"}                    ; CAREFUL; this key prevents popover flickering
        [loading-spinner ctx]
        ; ignore results; don't display the fiddle's data, just the anchors
@@ -112,11 +120,7 @@
        (if (:user-profile ctx)
          ((:anchor ctx) :account [] ctx (get-in ctx [:user-profile :email]))
          (let [auth-state (base64-url-safe/encode (runtime/encode-route (:peer ctx) (:target-route ctx)))]
-           [:span.nav-link.auth [:a {:href (str (stateless-login-url ctx) "&state=" auth-state)} "Login"]]))]]
-     [:div.hyperfiddle-topnav-fiddle-controls
-      ((:cell ctx) [true 0 :fiddle/type] ctx)
-      ((:cell ctx) [true 0 :fiddle/pull] ctx)
-      ((:cell ctx) [true 0 :fiddle/query] ctx)]]))
+           [:span.nav-link.auth [:a {:href (str (stateless-login-url ctx) "&state=" auth-state)} "Login"]]))]]]))
 
 (defn ^:export qe-picker-control [field props ctx]
   (let [enums [:query :entity :blank]
@@ -161,5 +165,3 @@
 
 *WARNING:* Datomic schema alterations cannot be used in the same transaction, for now you'll
 need to transact the schema before using, see [#6](https://github.com/hyperfiddle/hyperfiddle/issues/6)."]]))
-
-(defn bindings [ctx] (topnav-bindings/bindings ctx))

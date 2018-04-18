@@ -3,11 +3,13 @@
             [contrib.data :refer [unwrap]]
             [contrib.reactive :as reactive]
     #?(:cljs [contrib.reagent :refer [fragment]])
+            [contrib.rfc3986 :refer [split-fragment]]
             [contrib.string :refer [abc safe-read-edn-string]]
             [hypercrud.browser.base :as base]
     #?(:cljs [hypercrud.browser.browser-ui :as browser-ui])
             [hypercrud.browser.core :as browser]
             [hypercrud.browser.routing :as routing]
+            [hypercrud.browser.router :as router]
             [hypercrud.browser.system-fiddle :refer [system-fiddle?]]
             [hypercrud.client.core :as hc]
     #?(:cljs [hypercrud.ui.error :as ui-error])
@@ -34,8 +36,7 @@
     #?(:cljs [hyperfiddle.ide.fiddles.fiddle-src :refer [fiddle-src-renderer]])
             [hyperfiddle.ide.fiddles.schema]
     #?(:cljs [hyperfiddle.ide.fiddles.schema-attribute])
-    #?(:cljs [hyperfiddle.ide.fiddles.topnav])
-            [hyperfiddle.ide.fiddles.topnav-bindings]
+    #?(:cljs [hyperfiddle.ide.fiddles.topnav :as topnav])
     #?(:cljs [hyperfiddle.ide.fiddles.user-dashboard])))
 
 (defn domain [rt hyperfiddle-hostname hostname]
@@ -57,7 +58,8 @@
                                                              :domain-name hf-domain-name}))
                     domain))))))
 
-(defn ide-route [[fiddle args :as route]]
+(defn ide-route [[fiddle datomic-args service-args frag :as route]]
+  ; Don't impact the request! Topnav can always use :target-route
   [:hyperfiddle/topnav [#entity["$" (base/legacy-fiddle-ident->lookup-ref fiddle)]]])
 
 (let [always-user (atom :user)
@@ -145,16 +147,17 @@
   ; we would need to disallow bidi keywords for this to be valid. Can bidi use ints? I think not :(
   (if ?r (apply conj [fiddle] (mapcat vector (abc) args))))
 
-(defn route-decode [rt s]
-  {:pre [(string? s)]}
-  (let [domain @(runtime/state rt [:hyperfiddle.runtime/domain])
+(defn route-decode [rt path-and-frag]
+  {:pre [(string? path-and-frag)]}
+  (let [[path frag] (split-fragment path-and-frag)
+        domain @(runtime/state rt [:hyperfiddle.runtime/domain])
         home-route (some-> domain :domain/home-route safe-read-edn-string unwrap) ; in hf format
         router (some-> domain :domain/router safe-read-edn-string unwrap)]
-    (case s
-      "/" home-route
-      (or (if (= "/_/" (subs s 0 3)) (routing/decode (subs s 2) #_"include leading /"))
-          (some-> router (bidi/match-route s) ->bidi-consistency-wrapper bidi->hf)
-          (routing/decode s)))))
+    (case path
+      "/" (router/assoc-frag home-route frag)
+      (or (if (= "/_/" (subs path-and-frag 0 3)) (routing/decode (subs path-and-frag 2) #_"include leading /"))
+          (some-> router (bidi/match-route path-and-frag) ->bidi-consistency-wrapper bidi->hf)
+          (routing/decode path-and-frag)))))
 
 (defn route-encode [rt [fiddle :as route]]
   (let [domain @(runtime/state rt [:hyperfiddle.runtime/domain])
@@ -207,7 +210,7 @@
 #?(:cljs
    (defn view-page [?route ctx]
      (let [dev (activate-ide? (foundation/hostname->hf-domain-name ctx))
-           src false
+           src-mode (let [[_ _ _ frag] ?route] (topnav/src-mode? frag)) ; Immoral - :src bit is tunneled in userland fragment space
            ctx (assoc ctx :navigate-cmp (reagent/partial navigate-cmp/navigate-cmp (reagent/partial runtime/encode-route (:peer ctx))))]
        (fragment
          :view-page
@@ -226,13 +229,13 @@
                   [browser/ui-from-route (ide-route ?route)
                    ctx #_(assoc ctx :user-renderer hyperfiddle.ide.fiddles.topnav/renderer)
                    "topnav hidden-print"]
-                  (if src
+                  (if src-mode
                     [browser/ui-from-route (ide-route ?route)
                      (assoc ctx :user-renderer fiddle-src-renderer)
                      "devsrc"]))))])
 
          ; Production
-         (if (and ?route (not src))
+         (if (and ?route (not src-mode))
            [browser/ui-from-route ?route (page-target-context ctx ?route) (str "hyperfiddle-user" (if dev " hyperfiddle-ide-user" ""))]))))) ; This is different than foo=user because it is special css at root attach point
 
 #?(:cljs
