@@ -1,8 +1,8 @@
 (ns hypercrud.ui.label
-  (:require [cuerdas.core :as str]
+  (:require [contrib.reactive :as reactive]
+            [cuerdas.core :as str]
             [hypercrud.ui.control.markdown-rendered :refer [markdown]]
-            [hypercrud.ui.tooltip :refer [tooltip-thick]]
-            [contrib.reactive :as reactive]))
+            [hypercrud.ui.tooltip :refer [tooltip-thick]]))
 
 
 (defn fqn->name [s]

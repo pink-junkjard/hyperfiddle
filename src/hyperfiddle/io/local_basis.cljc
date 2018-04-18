@@ -1,7 +1,7 @@
 (ns hyperfiddle.io.local-basis
-  (:require [cuerdas.core :as str]
+  (:require [contrib.base-64-url-safe :as base-64-url-safe]
+            [cuerdas.core :as str]
             [hyperfiddle.io.http.core :refer [http-request!]]
-            [contrib.base-64-url-safe :as base-64-url-safe]
             [promesa.core :as p]))
 
 

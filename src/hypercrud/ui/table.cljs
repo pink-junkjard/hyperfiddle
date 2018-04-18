@@ -1,14 +1,13 @@
 (ns hypercrud.ui.table
-  (:require [hypercrud.browser.system-link :refer [system-link?]]
+  (:require [contrib.css :refer [css-slugify classes]]
+            [contrib.reactive :as reactive]
+            [hypercrud.browser.system-link :refer [system-link?]]
             [hypercrud.browser.context :as context]
-            [hypercrud.browser.find-element :as find-element]
             [hypercrud.browser.link :as link]
             [hypercrud.ui.auto-control :refer [auto-control' control-props]]
             [hypercrud.ui.connection-color :as connection-color]
             [hypercrud.ui.control.link-controls :as link-controls]
-            [contrib.css :refer [css-slugify classes]]
-            [hypercrud.ui.label :refer [label]]
-            [contrib.reactive :as reactive]))
+            [hypercrud.ui.label :refer [label]]))
 
 
 (defn attr-sortable? [fe attribute ctx]

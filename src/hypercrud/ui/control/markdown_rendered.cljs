@@ -1,14 +1,14 @@
 (ns hypercrud.ui.control.markdown-rendered
-  (:require [contrib.css :refer [css-slugify classes]]
+  (:require [contrib.css :refer [classes]]
             [contrib.data :refer [map-values unwrap]]
-            [contrib.reagent :refer [fragment]]
             [contrib.reactive :as r]
+            [contrib.reagent :refer [fragment]]
             [contrib.string :refer [memoized-safe-read-edn-string or-str]]
             [cuerdas.core :as str]
-            [hyperfiddle.core :refer [read-eval-with-bindings]]
+            [goog.object]
             [hypercrud.browser.context :as context]
             [hypercrud.ui.control.code]
-            [goog.object]
+            [hyperfiddle.core :refer [read-eval-with-bindings]]
             [reagent.core :as reagent]))
 
 

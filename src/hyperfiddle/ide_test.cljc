@@ -1,17 +1,17 @@
 (ns hyperfiddle.ide-test
-  (:require [clojure.test :refer [deftest is]]
-            [contrib.reader]                                ; wrong dependency?
-            [bidi.bidi :as bidi]
-            [hyperfiddle.runtime :as hfr]
+  (:require [bidi.bidi :as bidi]
+            [clojure.test :refer [deftest is]]
             [contrib.reactive :as r]
+            [contrib.reader]                                ; wrong dependency?
+            [hyperfiddle.foundation :as foundation]
             [hyperfiddle.ide :refer [route-encode route-decode ->bidi-consistency-wrapper bidi->hf ->bidi
                                      activate-ide?]]
-            [hyperfiddle.foundation :as foundation]))
+            [hyperfiddle.runtime :as runtime]))
 
 
 (def state
   (atom
-    {:hyperfiddle.runtime/domain
+    {::runtime/domain
      {:domain/home-route (pr-str
                            [:hyperblog/index :a #entity["$" :highlights]])
       :domain/router (pr-str
@@ -21,7 +21,7 @@
                          [#entity["$" :a] "/"] :hyperblog/index
                          [#entity["$" :a]] :hyperblog/post}])}}))
 
-(def rt (reify hfr/State
+(def rt (reify runtime/State
           (state [_ path]
             (r/cursor state path))))
 

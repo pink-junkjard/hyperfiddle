@@ -1,12 +1,12 @@
 (ns hyperfiddle.foundation
   (:refer-clojure :exclude [read-string])
   (:require [clojure.string :as string]
-            [cuerdas.core :as str]
     #?(:cljs [contrib.css :refer [classes]])
             [contrib.data :refer [update-existing]]
             [contrib.reactive :as reactive]
             [contrib.reader :refer [read-string read-edn-string]]
             [contrib.string :refer [pprint-str]]
+            [cuerdas.core :as str]
             [hypercrud.browser.routing :as routing]
             [hypercrud.client.core :as hc]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
@@ -15,7 +15,7 @@
     #?(:cljs [hypercrud.ui.stale :as stale])
             [hyperfiddle.foundation.actions :as foundation-actions]
             [hyperfiddle.runtime :as runtime]
-            [promesa.core :as p #?(:cljs :refer-macros :clj :refer) [do*]]))
+            [promesa.core :as p]))
 
 
 (def domain-uri #uri "datomic:free://datomic:4334/domains")
@@ -26,7 +26,7 @@
    (hostname->hf-domain-name (:hostname ctx) (:hyperfiddle-hostname ctx)))
   ([hostname hyperfiddle-hostname]
    (-> (string/replace hostname (str "." hyperfiddle-hostname) "") ; buggy
-       #_cuerdas/slug                                         ; no unicode for now. Slug what we actually got, so we don't care what's in the database.
+       #_cuerdas/slug                                       ; no unicode for now. Slug what we actually got, so we don't care what's in the database.
        )))
 
 (defn alias? [hf-domain-name]

@@ -1,11 +1,11 @@
 (ns hyperfiddle.io.http.core
   (:require
-    #?(:cljs [hyperfiddle.io.http.kvlt-config])
-    [hypercrud.types.Err :as Err]
     [contrib.performance :as perf]
+    [hypercrud.types.Err :as Err]
+    #?(:cljs [hyperfiddle.io.http.kvlt-config])
     #?(:cljs [kvlt.core :as kvlt])
-    [taoensso.timbre :as timbre]
-    [promesa.core :as p]))
+    [promesa.core :as p]
+    [taoensso.timbre :as timbre]))
 
 
 (defn http-request! [req]

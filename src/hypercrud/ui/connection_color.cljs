@@ -1,5 +1,4 @@
-(ns hypercrud.ui.connection-color
-  (:require [hypercrud.types.Entity :refer [entity?]]))
+(ns hypercrud.ui.connection-color)
 
 
 ; http://martin.ankerl.com/2009/12/09/how-to-create-random-colors-programmatically/

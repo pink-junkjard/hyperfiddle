@@ -1,5 +1,5 @@
 (ns contrib.template
-  #?(:cljs (:require-macros [contrib.template :refer [load-resource]])
+  #?(:cljs (:require-macros [contrib.template])
      :clj
            (:require [clojure.java.io :as io])))
 

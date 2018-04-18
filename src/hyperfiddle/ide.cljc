@@ -1,19 +1,18 @@
 (ns hyperfiddle.ide
   (:require [bidi.bidi :as bidi]
-            [contrib.string :refer [safe-read-edn-string]]
+            [contrib.data :refer [unwrap]]
+            [contrib.reactive :as reactive]
+    #?(:cljs [contrib.reagent :refer [fragment]])
+            [contrib.string :refer [abc safe-read-edn-string]]
             [hypercrud.browser.base :as base]
     #?(:cljs [hypercrud.browser.browser-ui :as browser-ui])
             [hypercrud.browser.core :as browser]
             [hypercrud.browser.routing :as routing]
             [hypercrud.browser.system-fiddle :refer [system-fiddle?]]
             [hypercrud.client.core :as hc]
-    #?(:cljs [contrib.reagent :refer [fragment]])
     #?(:cljs [hypercrud.ui.error :as ui-error])
     #?(:cljs [hypercrud.ui.navigate-cmp :as navigate-cmp])
     #?(:cljs [hypercrud.ui.stale :as stale])
-            [contrib.data :refer [unwrap]]
-            [contrib.reactive :as reactive]
-            [contrib.string :refer [abc]]
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-one!]]
             [hyperfiddle.runtime :as runtime]
@@ -32,11 +31,11 @@
             [hyperfiddle.ide.fiddles.domain]
             [hyperfiddle.ide.fiddles.fiddle-links.bindings]
     #?(:cljs [hyperfiddle.ide.fiddles.fiddle-links.renderer])
+    #?(:cljs [hyperfiddle.ide.fiddles.fiddle-src :refer [fiddle-src-renderer]])
             [hyperfiddle.ide.fiddles.schema]
     #?(:cljs [hyperfiddle.ide.fiddles.schema-attribute])
     #?(:cljs [hyperfiddle.ide.fiddles.topnav])
             [hyperfiddle.ide.fiddles.topnav-bindings]
-    #?(:cljs [hyperfiddle.ide.fiddles.fiddle-src :refer [fiddle-src-renderer]])
     #?(:cljs [hyperfiddle.ide.fiddles.user-dashboard])
             [hyperfiddle.ide.util]))
 

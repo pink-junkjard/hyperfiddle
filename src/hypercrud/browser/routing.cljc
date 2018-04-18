@@ -4,6 +4,7 @@
             [cats.monad.either :as either]
             [clojure.set :as set]
             [clojure.walk :as walk]
+            [contrib.data :refer [xorxs]]
             [contrib.eval :as eval]
             [contrib.reader :refer [read-edn-string]]
             [contrib.try :refer [try-either]]
@@ -12,7 +13,6 @@
             [hypercrud.browser.router :as router]
             [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
             [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
-            [contrib.data :refer [update-existing xorxs]]
             [hyperfiddle.runtime :as runtime])
   #?(:clj
      (:import (hypercrud.types.Entity Entity)
@@ -122,7 +122,7 @@
   (transform-param [this]
     (fn [v]
       (let [$ (.-dbname this)                               ; the "$" is provided by entity placeholder in the route
-            e (read-edn-string v)]                   ; the reader will need to subs ! to /
+            e (read-edn-string v)]                          ; the reader will need to subs ! to /
         (->ThinEntity $ e))))
   (matches? [this s]
     (let [r (re-pattern

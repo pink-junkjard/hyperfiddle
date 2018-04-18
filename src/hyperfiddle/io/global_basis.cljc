@@ -2,11 +2,11 @@
   (:require [cats.core :as cats :refer [mlet]]
             [cats.labs.promise]
             [clojure.set :as set]
-            [cuerdas.core :as str]
-            [hyperfiddle.io.http.core :refer [http-request!]]
             [contrib.data :refer [filter-keys]]
             [contrib.performance :as perf]
+            [cuerdas.core :as str]
             [hyperfiddle.foundation :as foundation]
+            [hyperfiddle.io.http.core :refer [http-request!]]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-all-or-nothing!]]
             [hyperfiddle.runtime :as api]
             [promesa.core :as p]
@@ -38,15 +38,15 @@
                  ide-domain-uris (uris-for-domain ide-domain) ; still a map (the whole environment) (local basis reqs us to declare these up front)
                  uris (set/union user-domain-uris ide-domain-uris)]
            sync (api/sync rt uris)]
-          (cats/return                                      ; Just return the sync and reconstruct which is what in local-basis
-            #_sync
-            {:domain domain-basis
-             :ide (->> ide-domain-uris                      ; Not allowed structure here
-                       (map (juxt identity #(get sync %)))
-                       (into {}))
-             :user (->> user-domain-uris
-                        (map (juxt identity #(get sync %)))
-                        (into {}))}))
+      (cats/return                                          ; Just return the sync and reconstruct which is what in local-basis
+        #_sync
+        {:domain domain-basis
+         :ide (->> ide-domain-uris                          ; Not allowed structure here
+                   (map (juxt identity #(get sync %)))
+                   (into {}))
+         :user (->> user-domain-uris
+                    (map (juxt identity #(get sync %)))
+                    (into {}))}))
     (fn [err get-total-time]
       (timbre/debug "global-basis failure;" "total time:" (get-total-time)))
     (fn [success get-total-time]

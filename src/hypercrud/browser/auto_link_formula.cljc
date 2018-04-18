@@ -1,14 +1,14 @@
 (ns hypercrud.browser.auto-link-formula                     ; namespace is public export runtime
   #?(:cljs (:require-macros [hypercrud.browser.auto-link-formula :refer [build-auto-formula-lookup]]))
   (:require [cats.monad.either :as either]
-            [hypercrud.browser.dbname :as dbname]
-            [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
-            [hypercrud.types.ThinEntity :refer [->ThinEntity]]
-            [hypercrud.util.branch :as branch]
             [contrib.data :refer [abs-normalized map-keys]]
             [contrib.reactive :as reactive]
             [contrib.string :refer [memoized-safe-read-edn-string]]
             [contrib.vedn :as vedn]
+            [hypercrud.browser.dbname :as dbname]
+            [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
+            [hypercrud.types.ThinEntity :refer [->ThinEntity]]
+            [hypercrud.util.branch :as branch]
             [hyperfiddle.runtime :as runtime]
             [taoensso.timbre :as timbre])
   #?(:clj

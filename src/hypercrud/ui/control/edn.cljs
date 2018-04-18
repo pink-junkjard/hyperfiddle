@@ -11,9 +11,9 @@
   (let [change! (fn [user-edn-str]
                   (-> (safe-read-edn-string user-edn-str)
                       (either/branch
-                        (fn [e] (timbre/warn (pr-str e)) nil)  ; report error
+                        (fn [e] (timbre/warn (pr-str e)) nil) ; report error
                         (fn [v] (change! v)))))]
-    [code-control props (pprint-str value) change!])) ; not reactive
+    [code-control props (pprint-str value) change!]))       ; not reactive
 
 
 (defn edn-block* [value change! props]

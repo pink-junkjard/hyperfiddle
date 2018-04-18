@@ -1,10 +1,10 @@
 (ns hypercrud.ui.attribute.edn
   (:require [clojure.set :as set]
-            [hypercrud.browser.link :as link]
             [contrib.datomic-tx :as tx]
+            [contrib.reactive :as reactive]
+            [hypercrud.browser.link :as link]
             [hypercrud.ui.control.edn :refer [edn-block* edn-inline-block*]]
-            [hypercrud.ui.control.link-controls :as link-controls]
-            [contrib.reactive :as reactive]))
+            [hypercrud.ui.control.link-controls :as link-controls]))
 
 
 (defn edn-many [maybe-field props ctx]

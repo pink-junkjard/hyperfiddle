@@ -1,6 +1,6 @@
 (ns contrib.performance
-  #?(:cljs (:require-macros [contrib.performance :refer [time time-promise]]))
   (:refer-clojure :exclude [time])
+  #?(:cljs (:require-macros [contrib.performance]))
   (:require [promesa.core :as p]))
 
 

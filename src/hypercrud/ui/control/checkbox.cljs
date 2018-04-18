@@ -1,5 +1,4 @@
-(ns hypercrud.ui.control.checkbox
-  (:require))
+(ns hypercrud.ui.control.checkbox)
 
 
 (defn checkbox* [r change! & [props]]

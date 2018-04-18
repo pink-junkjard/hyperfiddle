@@ -83,5 +83,5 @@
 
 (def read-ThinEntity #(apply ->ThinEntity %))
 
-(defn thinentity? [o] (instance? ThinEntity o))                  ; this is hard to implement portably outside this file
+(defn thinentity? [o] (instance? ThinEntity o))             ; this is hard to implement portably outside this file
 

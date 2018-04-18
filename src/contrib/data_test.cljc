@@ -1,6 +1,6 @@
 (ns contrib.data-test
   (:require [clojure.test :refer [deftest is]]
-            [contrib.data :refer [cond-let pad map-pad rtrim-coll]]))
+            [contrib.data :refer [cond-let map-pad pad rtrim-coll]]))
 
 
 (comment

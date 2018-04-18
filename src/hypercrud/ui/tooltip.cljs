@@ -1,6 +1,6 @@
 (ns hypercrud.ui.tooltip
-  (:require [hypercrud.ui.popover :as popover]
-            [contrib.reactive :as reactive]
+  (:require [contrib.reactive :as reactive]
+            [hypercrud.ui.popover :as popover]
             [re-com.core :as re-com]))
 
 

@@ -1,5 +1,5 @@
 (ns contrib.try
-  #?(:cljs (:require-macros [contrib.try :refer [try-catch-non-fatal try-either]]))
+  #?(:cljs (:require-macros [contrib.try]))
   (:require [cats.monad.either :as either]
             [promesa.core :as p]))
 

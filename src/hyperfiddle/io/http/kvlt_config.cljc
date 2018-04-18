@@ -27,5 +27,5 @@
     (with-out-str (pprint/pprint form-params))))
 
 (defmethod kvlt.middleware/from-content-type :application/edn [resp]
-  (let [decoded-val (read-edn-string (:body resp))]  ; todo this can throw
+  (let [decoded-val (read-edn-string (:body resp))]         ; todo this can throw
     (assoc resp :body decoded-val)))

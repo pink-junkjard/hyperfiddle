@@ -1,7 +1,6 @@
 (ns hypercrud.ui.navigate-cmp
   (:require [contrib.css :refer [classes]]
             [contrib.keypress :refer [with-keychord]]
-            [hypercrud.ui.native-event-listener :refer [native-on-click-listener]]
             [hypercrud.ui.tooltip :refer [tooltip]]
             [re-com.core :as re-com]))
 

@@ -1,9 +1,8 @@
 (ns hypercrud.browser.router-test
-  (:require [clojure.test #?(:clj :refer :cljs :refer-macros) [deftest is]]
+  (:require [clojure.test :refer [deftest is]]
             [contrib.reader]
             [hypercrud.browser.router :refer [encode decode]]
-            [hypercrud.browser.routing :refer [normalize-args]]
-            ))
+            [hypercrud.browser.routing :refer [normalize-args]]))
 
 
 (def route-args2 [:hyperfiddle.blog/post [#entity["$" [:user/sub "google-oauth2|116635422485042503270"]] #{"events" "news"}]])
@@ -15,7 +14,7 @@
   (is (= (encode route-args2) "/:hyperfiddle.blog!post/~entity('$',(:user!sub,'google-oauth2%7C116635422485042503270'))/~%7B'news','events'%7D"))
   (is (= (decode "/17592186045933/") [17592186045933]))     ; legacy, doesnt happen anymore?
   (is (= ((comp decode encode) route-args2) route-args2))
-  #_ (is (= ((comp decode encode) route-args1) (update route-args1 1 normalize-args)))
+  #_(is (= ((comp decode encode) route-args1) (update route-args1 1 normalize-args)))
   (is (= ((comp decode encode) route-args1-seq) route-args1-seq))
   #_(is (= ((comp decode encode) route-args1) ((comp decode encode) route-args1-seq)))
   #?(:clj (is (not (nil? (java.net.URI. (encode route-args2))))))

@@ -3,10 +3,7 @@
             [cats.monad.either :as either]
             [clojure.string :as string]
             [contrib.string :refer [safe-read-edn-string]]
-            [hypercrud.types.URI #?@(:cljs [:refer [URI]])]
-    #?(:cljs [hypercrud.ui.auto-control :as auto-control]))
-  #?(:clj
-     (:import (java.net URI))))
+            [hypercrud.types.URI :refer [is-uri?]]))
 
 
 #?(:cljs
@@ -24,7 +21,7 @@
                ; todo something with this error
                (cats/mplus (either/right nil))
                (cats/extract))
-           (filter (fn [[k v]] (and (string? k) (string/starts-with? k "$") (instance? URI v))))
+           (filter (fn [[k v]] (and (string? k) (string/starts-with? k "$") (is-uri? v))))
            (map (fn [[$db _]]
                   (let [props {:route [(keyword "hyperfiddle.schema" $db)]}]
                     ^{:key $db}

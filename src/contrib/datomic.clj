@@ -1,7 +1,7 @@
 (ns contrib.datomic
-  (:require [datomic.api :as d]
-            [loom.alg-generic :as loom]
-            [clojure.walk :refer [prewalk]]))
+  (:require [clojure.walk :refer [prewalk]]
+            [datomic.api :as d]
+            [loom.alg-generic :as loom]))
 
 
 (defn ref? [$ k]

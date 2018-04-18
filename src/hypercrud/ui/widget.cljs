@@ -1,18 +1,18 @@
 (ns hypercrud.ui.widget
   (:refer-clojure :exclude [boolean keyword long])
-  (:require [hypercrud.browser.link :as link]
-            [contrib.datomic-tx :as tx]
-            [hypercrud.ui.attribute.tristate-boolean :as tristate-boolean]
+  (:require [contrib.datomic-tx :as tx]
+            [contrib.reactive :as reactive]
+            [hypercrud.browser.link :as link]
             [hypercrud.ui.control.link-controls :as link-controls]
             [hypercrud.ui.input :as input]
-            [hypercrud.ui.select :refer [select*]]
-            [contrib.reactive :as reactive]
 
     ;user land (todo these should be in a core hc.ui namespace; widget is arbitrary)
             [hypercrud.ui.attribute.checkbox :refer [checkbox]]
             [hypercrud.ui.attribute.code]
             [hypercrud.ui.attribute.markdown-editor]
+            [hypercrud.ui.attribute.tristate-boolean]
             [hypercrud.ui.radio]
+            [hypercrud.ui.select :refer [select*]]
             [hypercrud.ui.textarea]))
 
 

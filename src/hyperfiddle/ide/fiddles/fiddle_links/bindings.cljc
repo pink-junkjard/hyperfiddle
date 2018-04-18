@@ -1,6 +1,6 @@
 (ns hyperfiddle.ide.fiddles.fiddle-links.bindings
-  (:require [hypercrud.browser.system-link :refer [system-link?]]
-            [contrib.reactive :as reactive]))
+  (:require [contrib.reactive :as reactive]
+            [hypercrud.browser.system-link :refer [system-link?]]))
 
 
 (let [read-only (fn [attribute ctx]

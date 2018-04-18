@@ -1,32 +1,32 @@
 (ns hyperfiddle.test-runner
   (:require
-    [clojure.test :refer [deftest is]]
     [doo.runner :refer-macros [doo-tests]]
     [reagent.dom.server]                                    ; needed for hypercrud.ui.safe-render
 
+    contrib.char-test
+    contrib.data-test
     contrib.datomic-tx-test
     contrib.eval-test
     contrib.reactive-test
-    hyperfiddle.readers-test
+    contrib.rfc3986-test
+    hypercrud.browser.router-test
     hypercrud.ui.control.link-controls-test
     hyperfiddle.foundation-test
     hyperfiddle.ide-test
-    hypercrud.browser.router-test
-    contrib.data-test
-    contrib.char-test
-    contrib.rfc3986-test
+    hyperfiddle.readers-test
     ))
 
 (defn run []
   (doo-tests
+    'contrib.char-test
+    'contrib.data-test
     'contrib.datomic-tx-test
     'contrib.eval-test
     'contrib.reactive-test
-    'hyperfiddle.readers-test
+    'contrib.rfc3986-test
+    'hypercrud.browser.router-test
     'hypercrud.ui.control.link-controls-test
     'hyperfiddle.foundation-test
     'hyperfiddle.ide-test
-    'hypercrud.browser.router-test
-    'contrib.data-test
-    'contrib.char-test
-    'contrib.rfc3986-test))
+    'hyperfiddle.readers-test
+    ))

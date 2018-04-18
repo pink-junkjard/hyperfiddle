@@ -1,7 +1,7 @@
 (ns hypercrud.browser.popovers
-  (:require [hypercrud.browser.auto-link-formula :as auto-link-formula]
-            [hypercrud.util.branch :as branch]
-            [contrib.data :refer [abs-normalized]]))
+  (:require [contrib.data :refer [abs-normalized]]
+            [hypercrud.browser.auto-link-formula :as auto-link-formula]
+            [hypercrud.util.branch :as branch]))
 
 
 ; todo same implementation as branch generation

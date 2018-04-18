@@ -28,7 +28,7 @@
 (deftest ednish-1
   []
   (is (= (encode-ednish (pr-str :hyperfiddle.blog/post))
-         ":hyperfiddle.blog!post" ))
+         ":hyperfiddle.blog!post"))
   (is (= (encode-ednish (pr-str "kobe"))
          "'kobe'"))
   (is (= (encode-ednish (pr-str #entity["$" [:user/sub "google-oauth2|116635422485042503270"]]))

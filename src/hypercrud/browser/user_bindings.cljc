@@ -1,9 +1,9 @@
 (ns hypercrud.browser.user-bindings
   (:require [cats.core :as cats :refer [mlet]]
             [cats.monad.either :as either]
-            [contrib.try :refer [try-either]]
             [contrib.eval :as eval]
             [contrib.reactive :as reactive]
+            [contrib.try :refer [try-either]]
             [cuerdas.core :as string]
             [taoensso.timbre :as timbre]))
 

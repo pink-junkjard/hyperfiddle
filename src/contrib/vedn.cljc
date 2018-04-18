@@ -1,7 +1,7 @@
 (ns contrib.vedn
   #?(:cljs (:require-macros [contrib.vedn]))
-  (:require [contrib.reader :as reader]
-            [clojure.string :as string]
+  (:require [clojure.string :as string]
+            [contrib.reader :as reader]
             [contrib.template :as template]))
 
 

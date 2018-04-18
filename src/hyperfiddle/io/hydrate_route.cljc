@@ -5,10 +5,10 @@
             [contrib.data :refer [map-keys]]
             [contrib.performance :as perf]
             [hypercrud.client.peer :as peer]
-            [hyperfiddle.io.http.core :refer [http-request!]]
             [hypercrud.types.EntityRequest :refer [#?(:cljs EntityRequest)]]
             [hypercrud.types.QueryRequest :refer [#?(:cljs QueryRequest)]]
             [hyperfiddle.appval.state.reducers :as reducers] ; this import is immoral
+            [hyperfiddle.io.http.core :refer [http-request!]]
             [hyperfiddle.runtime :as runtime]
             [promesa.core :as p]
             [taoensso.timbre :as timbre])

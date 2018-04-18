@@ -2,11 +2,10 @@
   (:require [cats.core :as cats :refer [mlet]]
             [cats.monad.either :as either]
             [clojure.set :as set]
-            [contrib.try :refer [try-either]]
-            [datascript.parser :as parser]
-            [hypercrud.browser.context :as context]
             [contrib.data :refer [transpose]]
-            [contrib.reactive :as reactive]))
+            [contrib.try :refer [try-either]]
+            [contrib.reactive :as reactive]
+            [datascript.parser :as parser]))
 
 
 (defrecord FindElement [name fields source-symbol splat? type])

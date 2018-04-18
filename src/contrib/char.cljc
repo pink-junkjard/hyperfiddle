@@ -1,6 +1,6 @@
 (ns contrib.char
-  (:require [clojure.string :as str]
-            [clojure.set :as set]))
+  (:require [clojure.set :as set]
+            [clojure.string :as str]))
 
 
 (defn char-upper [c]

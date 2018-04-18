@@ -1,7 +1,7 @@
 (ns contrib.string-test
-  (:require [clojure.test :refer [deftest is]]
-            [contrib.string :refer [split-first abc empty->nil]]
-            [clojure.pprint]
+  (:require [clojure.pprint]
+            [clojure.test :refer [deftest is]]
+            [contrib.string :refer [abc empty->nil split-first]]
             [net.cgrand.packed-printer :as packed-printer]))
 
 
@@ -38,7 +38,7 @@
            hide-archived (reagent.core/atom true)
            db-attr? #(<= (:db/id %) 62)
            archived? #(cuerdas.core/starts-with? (namespace (:db/ident %)) "zzz") ; "zzz/" and "zzz.", we are inconsistent. It should be modeled and queried and never shown
-           do-filter-reactive (fn [xs] ; perf sensitive
+           do-filter-reactive (fn [xs]                      ; perf sensitive
                                 (as-> xs xs
                                       (if @hide-datomic (remove db-attr? xs) xs)
                                       (if @hide-archived (remove archived? xs) xs)))]

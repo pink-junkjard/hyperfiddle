@@ -2,9 +2,9 @@
   (:require [cats.core :as cats :refer [mlet]]
             [cats.monad.either :as either]
             [clojure.string :as string]
-            [hypercrud.client.core :as hc]
             [contrib.data :refer [tee parse-query-element]]
             [contrib.string :refer [memoized-safe-read-edn-string]]
+            [hypercrud.client.core :as hc]
             [taoensso.timbre :as timbre]))
 
 

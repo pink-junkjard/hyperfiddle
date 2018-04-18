@@ -1,12 +1,11 @@
 (ns contrib.string
-  (:refer-clojure :exclude [read-string])
-  #?(:cljs (:require-macros [contrib.data]))
+  #?(:cljs (:require-macros [contrib.string]))
   (:require [cats.monad.either :as either]
-            [contrib.data :refer [orp]]
-            [contrib.try :refer [try-either]]
-            [contrib.reader :refer [read-edn-string]]
-            [cuerdas.core :as str]
             [clojure.string]
+            [contrib.data :refer [orp]]
+            [contrib.reader :refer [read-edn-string]]
+            [contrib.try :refer [try-either]]
+            [cuerdas.core :as str]
             [net.cgrand.packed-printer :as packed-printer]
     #?(:clj
             [clojure.pprint :as pprint]

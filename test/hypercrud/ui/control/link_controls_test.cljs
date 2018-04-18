@@ -1,9 +1,9 @@
 (ns hypercrud.ui.control.link-controls-test
   (:require [clojure.set :as set]
             [clojure.test :refer [deftest is]]
+            [contrib.reactive :as reactive]
             [hypercrud.browser.link :as link]
-            [hypercrud.ui.control.link-controls :as link-controls]
-            [contrib.reactive :as reactive]))
+            [hypercrud.ui.control.link-controls :as link-controls]))
 
 
 (def mock-links

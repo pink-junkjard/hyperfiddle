@@ -1,7 +1,7 @@
 (ns hyperfiddle.readers-test
   (:require [clojure.test :refer [deftest is]]
             [contrib.eval :as eval]
-            [contrib.reader :refer [read-string read-edn-string]]
+            [contrib.reader :as reader :refer [read-edn-string]]
             [hypercrud.transit :as transit]
             [hypercrud.types.DbVal :refer [->DbVal]]
             [hypercrud.types.Entity :refer [->Entity]]
@@ -18,8 +18,8 @@
 
 (defn test-runtime-read [control strd]
   (is (= control
-         (read-string (pr-str control))
-         (read-string strd))))
+         (reader/read-string (pr-str control))
+         (reader/read-string strd))))
 
 (defn test-edn-read [control strd]
   (is (= control
@@ -84,8 +84,9 @@
                   #uri "foo"
                   "#uri \"foo\""
                   "{\"~#'\":\"~rfoo\"}"))
+
 (deftest inst []
-         (test-all-forms #?(:cljs (js/Date. "2017-12-31") :clj #inst "2017-12-31")
-                         #inst "2017-12-31"
-                         "#inst \"2017-12-31\""
-                         "{\"~#t\":\"2017-12-31\"}"))
+  (test-all-forms #?(:cljs (js/Date. "2017-12-31") :clj #inst "2017-12-31")
+                  #inst "2017-12-31"
+                  "#inst \"2017-12-31\""
+                  "{\"~#t\":\"2017-12-31\"}"))

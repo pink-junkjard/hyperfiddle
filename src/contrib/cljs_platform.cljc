@@ -1,5 +1,5 @@
 (ns contrib.cljs-platform
-  #?(:cljs (:require-macros [contrib.cljs-platform :refer [code-for-nodejs]])))
+  #?(:cljs (:require-macros [contrib.cljs-platform])))
 
 
 (defn- nodejs-target? []

@@ -1,13 +1,11 @@
 (ns hypercrud.browser.context
-  (:require [cats.core :as cats]
-            [cats.monad.either :refer [right branch]]
-            [contrib.data :refer [unwrap]]
+  (:require [contrib.data :refer [unwrap]]
+            [contrib.reactive :as reactive]
+            [contrib.try :refer [try-either]]
             [datascript.parser :as parser]
             [hypercrud.browser.routing :as routing]
-            [contrib.reactive :as reactive]
             [hyperfiddle.foundation.actions :as foundation-actions]
-            [hyperfiddle.runtime :as runtime]
-            [contrib.try :refer [try-either]]))
+            [hyperfiddle.runtime :as runtime]))
 
 
 (defn clean [ctx]

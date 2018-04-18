@@ -34,7 +34,7 @@ are probably safe today."
              [c & ss] (seq s)]
         (if-not c
           decoded                                           ; done
-          (if (= 37 (char-code c))                         ; 37 is \% written portably
+          (if (= 37 (char-code c))                          ; 37 is \% written portably
             (recur (conj decoded (hex-str->char (str/join (take 2 ss)))) (drop 2 ss))
             (recur (conj decoded c) ss))))
       str/join))

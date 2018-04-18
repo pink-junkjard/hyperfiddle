@@ -1,11 +1,11 @@
 (ns hyperfiddle.ide.fiddles.fiddle-links.renderer
   (:require [cats.monad.either :as either]
+            [contrib.reactive :as reactive]
             [hypercrud.browser.base :as base]
+            [hypercrud.browser.context :as context]
             [hypercrud.browser.system-fiddle :as system-fiddle]
             [hypercrud.ui.error :as ui-error]
-            [hypercrud.ui.result :as result]
-            [contrib.reactive :as reactive]
-            [hypercrud.browser.context :as context]))
+            [hypercrud.ui.result :as result]))
 
 (defn links->result [links]
   (->> @links

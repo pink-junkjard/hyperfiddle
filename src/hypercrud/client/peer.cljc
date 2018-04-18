@@ -1,9 +1,8 @@
 (ns hypercrud.client.peer
   (:require [cats.monad.either :as either]
+            [contrib.reactive :as reactive]
             [hypercrud.types.DbVal :refer [->DbVal]]
             [hypercrud.types.URI :refer [is-uri?]]
-            [hypercrud.util.branch :as branch]
-            [contrib.reactive :as reactive]
             [hyperfiddle.io.util :refer [process-result]]))
 
 

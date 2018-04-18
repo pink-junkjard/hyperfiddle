@@ -1,7 +1,6 @@
 (ns hypercrud.ui.result
   (:require-macros [hypercrud.ui.result :refer [-build-fiddle]])
   (:require [contrib.css :refer [classes]]
-            [contrib.string :refer [or-str]]
             [hypercrud.ui.control.link-controls :as link-controls]
             [hypercrud.ui.control.markdown-rendered :refer [markdown]]
             [hypercrud.ui.form :as form]

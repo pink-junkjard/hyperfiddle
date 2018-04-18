@@ -1,11 +1,11 @@
 (ns hyperfiddle.io.hydrate-requests
   (:require [cats.core :as cats]
             [cats.monad.either :as either]
-            [cuerdas.core :as str]
-            [hyperfiddle.io.http.core :refer [http-request!]]
             [contrib.base-64-url-safe :as base-64-url-safe]
+            [cuerdas.core :as str]
     #?(:clj
             [hyperfiddle.io.datomic.hydrate-requests :as datomic-hydrate-requests])
+            [hyperfiddle.io.http.core :refer [http-request!]]
             [hyperfiddle.io.util :refer [process-result v-not-nil?]]
             [hyperfiddle.runtime :as runtime]
             [promesa.core :as p]

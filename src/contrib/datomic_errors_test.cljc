@@ -1,6 +1,6 @@
 (ns contrib.datomic-errors-test
   (:require [clojure.test :refer [deftest is]]
-            [contrib.datomic-errors :refer [parse-datomic-error-soup datomic-error-cleaner]]))
+            [contrib.datomic-errors :refer [parse-datomic-error-soup]]))
 
 
 (def errors

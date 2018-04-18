@@ -4,7 +4,7 @@
 
 ;(defprotocol Keypress
 ;  (simple-combo [this])
-;  (simple-combo [this el])
+;  (simple-combo [this el])l
 ;  (register-combo [this el]))
 ;
 ;
@@ -31,7 +31,7 @@
              el (r/dom-node this)
              listener (js/keypress.Listener. el)]
          #_(.register-combo listener #js {"keys" "esc"
-                                        "on_keydown" f!
-                                        "prevent_repeat" true})
+                                          "on_keydown" f!
+                                          "prevent_repeat" true})
          (.simple-combo listener chord f!)))
      }))

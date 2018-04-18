@@ -27,4 +27,4 @@
 (def read-URI #(->URI %))
 
 (defn is-uri? [o] #?(:cljs (instance? URI o)
-                     :clj (instance? java.net.URI o)))
+                     :clj  (instance? java.net.URI o)))

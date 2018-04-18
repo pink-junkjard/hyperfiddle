@@ -1,11 +1,11 @@
 (ns hyperfiddle.dev
   (:require [cljs.pprint :as pprint]                        ; clojure.pprint
-            [hypercrud.browser.routing :as routing]
-            [contrib.reagent :refer [fragment]]
             [contrib.data :refer [update-existing]]
+            [contrib.reagent :refer [fragment]]
             [contrib.string :refer [pprint-str]]
-            [hyperfiddle.runtime :as runtime]
-            [hyperfiddle.foundation.actions :as foundation-actions]))
+            [hypercrud.browser.routing :as routing]
+            [hyperfiddle.foundation.actions :as foundation-actions]
+            [hyperfiddle.runtime :as runtime]))
 
 
 (def ^:dynamic root-ctx)                                    ; debug backdoor to dispatch!

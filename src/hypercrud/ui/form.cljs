@@ -1,14 +1,14 @@
 (ns hypercrud.ui.form
-  (:require [hypercrud.browser.context :as context]
+  (:require [contrib.css :refer [css-slugify classes]]
+            [contrib.reactive :as reactive]
+            [contrib.reagent :refer [fragment]]
+            [hypercrud.browser.context :as context]
             [hypercrud.browser.link :as link]
             [hypercrud.ui.auto-control :refer [auto-control' control-props]]
             [hypercrud.ui.connection-color :as connection-color]
             [hypercrud.ui.control.link-controls :as link-controls]
-            [contrib.css :refer [css-slugify classes]]
             [hypercrud.ui.input :as input]
-            [hypercrud.ui.label :refer [label]]
-            [contrib.reactive :as reactive]
-            [contrib.reagent :refer [fragment]]))
+            [hypercrud.ui.label :refer [label]]))
 
 
 (defn ui-block-border-wrap [ctx class & children]

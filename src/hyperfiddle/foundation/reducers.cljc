@@ -1,9 +1,9 @@
 (ns hyperfiddle.foundation.reducers
-  (:require [contrib.datomic-tx :as tx]
+  (:require [contrib.data :refer [map-values]]
+            [contrib.datomic-tx :as tx]
+            [contrib.string :refer [pprint-str]]
             [hypercrud.types.Err :refer [->Err]]
-            [hypercrud.util.branch :as branch]
-            [contrib.data :refer [map-values]]
-            [contrib.string :refer [pprint-str]]))
+            [hypercrud.util.branch :as branch]))
 
 
 (defn- serializable-error [e]
@@ -22,9 +22,9 @@
         clean (fn [stage]
                 (->> stage
                      (map-values (fn [multi-color-tx]
-                                        (->> multi-color-tx
-                                             (remove (fn [[uri tx]] (nil? tx)))
-                                             (into {}))))
+                                   (->> multi-color-tx
+                                        (remove (fn [[uri tx]] (nil? tx)))
+                                        (into {}))))
                      (remove (fn [[branch multi-color-tx]] (empty? multi-color-tx)))
                      (into {})))]
     (-> (case action
@@ -139,21 +139,21 @@
 
          (or partitions {}))
        (map-values (fn [partition]
-                          ; apply defaults
-                          (->> {:hydrate-id identity
-                                :popovers #(or % #{})
+                     ; apply defaults
+                     (->> {:hydrate-id identity
+                           :popovers #(or % #{})
 
-                                ; data needed to hydrate a partition
-                                :route identity
-                                :hyperfiddle.runtime/branch-aux identity
-                                :stage identity
-                                :local-basis identity
+                           ; data needed to hydrate a partition
+                           :route identity
+                           :hyperfiddle.runtime/branch-aux identity
+                           :stage identity
+                           :local-basis identity
 
-                                ; response data of hydrating a partition
-                                :error identity
-                                :ptm identity
-                                :tempid-lookups identity}
-                               (reduce (fn [v [k f]] (update v k f)) partition))))))
+                           ; response data of hydrating a partition
+                           :error identity
+                           :ptm identity
+                           :tempid-lookups identity}
+                          (reduce (fn [v [k f]] (update v k f)) partition))))))
 
 (defn auto-transact-reducer [auto-tx action & args]
   (case action

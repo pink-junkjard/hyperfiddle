@@ -1,7 +1,7 @@
 (ns hypercrud.browser.router-base64
   (:require [cuerdas.core :as str]
             [contrib.base-64-url-safe :as base64]
-            [contrib.reader :refer [read-string]]))
+            [contrib.reader :as reader]))
 
 
 ; Keeping this around because the ednish router has issues
@@ -27,7 +27,7 @@
     (cond
       (not (nil? route-encoded-and-query-params))
       (let [[route-encoded url-param-garbage] (str/split route-encoded-and-query-params #"\?")]
-        (read-string (base64/decode route-encoded)))
+        (reader/read-string (base64/decode route-encoded)))
 
       ; no route, or garbage from http crawlers
       :else nil)))
