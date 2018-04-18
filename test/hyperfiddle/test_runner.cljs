@@ -6,7 +6,6 @@
 
     contrib.datomic-tx-test
     contrib.eval-test
-    contrib.macros-test
     contrib.reactive-test
     hyperfiddle.readers-test
     hypercrud.ui.control.link-controls-test
@@ -22,7 +21,6 @@
   (doo-tests
     'contrib.datomic-tx-test
     'contrib.eval-test
-    'contrib.macros-test
     'contrib.reactive-test
     'hyperfiddle.readers-test
     'hypercrud.ui.control.link-controls-test

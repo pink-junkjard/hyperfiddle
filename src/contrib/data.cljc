@@ -1,4 +1,5 @@
 (ns contrib.data
+  #?(:cljs (:require-macros [contrib.data]))
   (:require [cats.monad.either :as either]))
 
 
@@ -94,3 +95,9 @@
 
 (defn orp "or with custom predicate" [f? & args]            ; todo macro
   (first (remove f? args)))
+
+(defmacro cond-let [& clauses]
+  (when clauses
+    (list 'if-let (first clauses)
+          (second clauses)
+          (cons `cond-let (next (next clauses))))))
