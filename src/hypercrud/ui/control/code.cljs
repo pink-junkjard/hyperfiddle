@@ -1,5 +1,5 @@
 (ns hypercrud.ui.control.code
-  (:require [contrib.reactive :as reactive]
+  (:require [contrib.reactive :as r]
             [re-com.core :as re-com]
             [reagent.core :as reagent]))
 
@@ -60,7 +60,7 @@
     [code* value change! props]))
 
 (defn code-inline-block* [& args]
-  (let [showing? (reactive/atom false)]
+  (let [showing? (r/atom false)]
     (fn [props value change!]
       [:div
        [re-com/popover-anchor-wrapper

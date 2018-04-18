@@ -3,7 +3,7 @@
             [cats.monad.either :as either]
             [contrib.data :refer [unwrap]]
             [contrib.eval :as eval]
-            [contrib.reactive :as reactive]
+            [contrib.reactive :as r]
             [contrib.string :refer [memoized-safe-read-edn-string pprint-str]]
             [contrib.try :refer [try-either try-promise]]
             [cuerdas.core :as string]
@@ -144,7 +144,7 @@
       (let [ctx (if dont-branch? ctx (assoc ctx :branch child-branch))]
         [hypercrud.browser.core/ui-from-route route ctx])   ; cycle
       (when-not dont-branch?
-        [:button {:on-click (reactive/partial stage! link route popover-id child-branch ctx)} "stage"])
+        [:button {:on-click (r/partial stage! link route popover-id child-branch ctx)} "stage"])
       (if dont-branch?
         [:button {:on-click close!} "close"]
         [:button {:on-click cancel!} "cancel"])]))
@@ -175,9 +175,9 @@
                           ; If no route, there's nothing to draw, and the anchor tooltip shows the error.
                           (let [popover-id (popovers/popover-id link ctx)
                                 child-branch (popovers/branch ctx link)
-                                open! (reactive/partial open! route popover-id child-branch dont-branch? ctx)
-                                close! (reactive/partial close! popover-id ctx)
-                                cancel! (reactive/partial cancel! popover-id child-branch ctx)]
+                                open! (r/partial open! route popover-id child-branch dont-branch? ctx)
+                                close! (r/partial close! popover-id ctx)
+                                cancel! (r/partial cancel! popover-id child-branch ctx)]
                             {:showing? (runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :popovers popover-id])
                              :body #?(:cljs [managed-popover-body link route popover-id child-branch dont-branch? close! cancel! ctx]
                                       :clj  nil)

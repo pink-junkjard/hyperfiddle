@@ -1,7 +1,7 @@
 (ns hypercrud.ui.control.link-controls-test
   (:require [clojure.set :as set]
             [clojure.test :refer [deftest is]]
-            [contrib.reactive :as reactive]
+            [contrib.reactive :as r]
             [hypercrud.browser.link :as link]
             [hypercrud.ui.control.link-controls :as link-controls]))
 
@@ -25,7 +25,7 @@
                  :link/dependent? true
                  :link/render-inline? true
                  :link/managed? false}))
-         (set (link-controls/ui-contextual-links [] true true (reactive/atom mock-links) nil))))
+         (set (link-controls/ui-contextual-links [] true true (r/atom mock-links) nil))))
 
   (is (= (apply set/union (for [rel [:my/link :options]]
                             #{{:link/rel rel
@@ -43,11 +43,11 @@
                                :link/dependent? false
                                :link/render-inline? true
                                :link/managed? true}}))
-         (into #{} (link-controls/ui-contextual-links [0] false false (reactive/atom mock-links) nil))))
+         (into #{} (link-controls/ui-contextual-links [0] false false (r/atom mock-links) nil))))
 
   (is (= (set [{:link/rel :my/link
                 :link/path "0 :some/attr"
                 :link/dependent? false
                 :link/render-inline? true
                 :link/managed? false}])
-         (set (link-controls/ui-contextual-links [0 :some/attr] false true (reactive/atom mock-links) [link/options-processor])))))
+         (set (link-controls/ui-contextual-links [0 :some/attr] false true (r/atom mock-links) [link/options-processor])))))

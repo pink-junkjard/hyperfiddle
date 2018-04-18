@@ -1,5 +1,5 @@
 (ns hyperfiddle.ide.fiddles.user-dashboard
-  (:require [contrib.reactive :as reactive]
+  (:require [contrib.reactive :as r]
             [hypercrud.ui.control.markdown-rendered :refer [markdown]]
             [hypercrud.ui.native-event-listener :refer [native-on-click-listener]]
             [hyperfiddle.ide.actions :as ide-actions]
@@ -15,11 +15,11 @@
   [:div.hyperfiddle-user-dashboard
    (if (-> ctx :user-profile)
      [native-on-click-listener
-      {:key :logout :on-click (reactive/partial logout! (:peer ctx))}
+      {:key :logout :on-click (r/partial logout! (:peer ctx))}
       ; todo https://auth0.com/docs/logout
       [:span.nav-link.auth {:key :logout}
        [:a {:href "/logout"} "logout"]]])
-   [markdown (reactive/cursor (:hypercrud.browser/fiddle ctx) [:db/doc])]
+   [markdown (r/cursor (:hypercrud.browser/fiddle ctx) [:db/doc])]
    [:ul.link-list
     (->> @(:hypercrud.browser/result ctx)
          (sort-by :domain/ident)

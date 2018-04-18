@@ -1,14 +1,14 @@
 (ns hypercrud.ui.attribute.edn
   (:require [clojure.set :as set]
             [contrib.datomic-tx :as tx]
-            [contrib.reactive :as reactive]
+            [contrib.reactive :as r]
             [hypercrud.browser.link :as link]
             [hypercrud.ui.control.edn :refer [edn-block* edn-inline-block*]]
             [hypercrud.ui.control.link-controls :as link-controls]))
 
 
 (defn edn-many [maybe-field props ctx]
-  (let [valueType @(reactive/cursor (:hypercrud.browser/fat-attribute ctx) [:db/valueType :db/ident])
+  (let [valueType @(r/cursor (:hypercrud.browser/fat-attribute ctx) [:db/valueType :db/ident])
         value (-> (if (= valueType :db.type/ref)
                     (map :db/id @(:value ctx))
                     @(:value ctx))

@@ -2,7 +2,7 @@
   #?(:cljs (:require-macros [hypercrud.browser.auto-link-formula :refer [build-auto-formula-lookup]]))
   (:require [cats.monad.either :as either]
             [contrib.data :refer [abs-normalized map-keys]]
-            [contrib.reactive :as reactive]
+            [contrib.reactive :as r]
             [contrib.string :refer [memoized-safe-read-edn-string]]
             [contrib.vedn :as vedn]
             [hypercrud.browser.dbname :as dbname]
@@ -36,11 +36,11 @@
     ; [fe e a v] quad is sufficient to answer "where are we".
     ; Why Db is omitted?
     ; Why value is only inspected in :many for unique hashing?
-   (-> (str (some-> fe (reactive/cursor [:name]) deref) "."
-            (or (some-> cell-data (reactive/cursor [:db/id]) deref)
+   (-> (str (some-> fe (r/cursor [:name]) deref) "."
+            (or (some-> cell-data (r/cursor [:db/id]) deref)
                 (hash (some-> cell-data deref))) "."
-            (some-> a (reactive/cursor [:db/ident]) deref) "."
-            (case (some-> a (reactive/cursor [:db/cardinality :db/ident]) deref)
+            (some-> a (r/cursor [:db/ident]) deref) "."
+            (case (some-> a (r/cursor [:db/cardinality :db/ident]) deref)
               :db.cardinality/one nil
               :db.cardinality/many (hash (into #{} (mapv :db/id @v))) ; todo scalar
               nil nil #_":db/id has a faked attribute with no cardinality, need more thought to make elegant"))

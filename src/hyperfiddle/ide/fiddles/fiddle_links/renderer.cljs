@@ -1,6 +1,6 @@
 (ns hyperfiddle.ide.fiddles.fiddle-links.renderer
   (:require [cats.monad.either :as either]
-            [contrib.reactive :as reactive]
+            [contrib.reactive :as r]
             [hypercrud.browser.base :as base]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.system-fiddle :as system-fiddle]
@@ -30,5 +30,5 @@
           (result/result
             (-> ctx
                 (dissoc :relation :relations)
-                (assoc :hypercrud.browser/result (reactive/track links->result links))
+                (assoc :hypercrud.browser/result (r/track links->result links))
                 context/with-relations))))))

@@ -1,6 +1,6 @@
 (ns hypercrud.ui.control.link-controls
   (:require [contrib.data :refer [kwargs]]
-            [contrib.reactive :as reactive]
+            [contrib.reactive :as r]
             [hypercrud.browser.core :as browser]
             [hypercrud.browser.link :as link]))
 
@@ -10,7 +10,7 @@
 
 ; garbage wrapper for reactivity capturing
 (defn- reactive-nav-cmp [link-ref ctx class]
-  [(:navigate-cmp ctx) (link/build-link-props @link-ref ctx) @(reactive/track prompt link-ref) class])
+  [(:navigate-cmp ctx) (link/build-link-props @link-ref ctx) @(r/track prompt link-ref) class])
 
 (defn- reactive-ui [link-ref ctx class]
   [browser/ui @link-ref ctx class])
@@ -31,8 +31,8 @@
 
 (defn render-nav-cmps [path dependent? ctx & args]
   (let [{processors nil :as args} (kwargs args)]
-    (->> (reactive/track ui-contextual-links path dependent? false (:hypercrud.browser/links ctx) processors)
-         (reactive/unsequence :db/id)
+    (->> (r/track ui-contextual-links path dependent? false (:hypercrud.browser/links ctx) processors)
+         (r/unsequence :db/id)
          (map (fn [[link-ref link-id]]
                 (if (not= :table (:layout ctx))
                   ^{:key (hash link-id)} [hypercrud.ui.form/ui-block-border-wrap ctx nil [reactive-nav-cmp link-ref ctx (:class args)]]
@@ -41,8 +41,8 @@
 
 (defn render-inline-links [path dependent? ctx & args]
   (let [{processors nil :as args} (kwargs args)]
-    (->> (reactive/track ui-contextual-links path dependent? true (:hypercrud.browser/links ctx) processors)
-         (reactive/unsequence :db/id)
+    (->> (r/track ui-contextual-links path dependent? true (:hypercrud.browser/links ctx) processors)
+         (r/unsequence :db/id)
          (map (fn [[link-ref link-id]]
                 (if (not= :table (:layout ctx))
                   ^{:key (hash link-id)} [hypercrud.ui.form/ui-block-border-wrap ctx nil [reactive-ui link-ref ctx (:class args)]]

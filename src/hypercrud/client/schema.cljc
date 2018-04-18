@@ -5,7 +5,7 @@
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hypercrud.types.URI :refer [#?(:cljs URI)]]
             [contrib.data :refer [group-by-assume-unique map-values]]
-            [contrib.reactive :as reactive])
+            [contrib.reactive :as r])
   #?(:clj
      (:import (java.net URI))))
 
@@ -54,4 +54,4 @@
                               (cats/fmap #(into {} %)))))))]
   (defn hydrate-schema [ctx]
     (->> (hc/hydrate (:peer ctx) (:branch ctx) (hc-attr-request ctx))
-         (reactive/fmap (reactive/partial with-root-data ctx)))))
+         (r/fmap (r/partial with-root-data ctx)))))

@@ -1,7 +1,7 @@
 (ns hypercrud.ui.widget
   (:refer-clojure :exclude [boolean keyword long])
   (:require [contrib.datomic-tx :as tx]
-            [contrib.reactive :as reactive]
+            [contrib.reactive :as r]
             [hypercrud.browser.link :as link]
             [hypercrud.ui.control.link-controls :as link-controls]
             [hypercrud.ui.input :as input]
@@ -55,7 +55,7 @@
     [:div.value
      [:div.editable-select
       [:div.anchors (link-controls/render-nav-cmps path true ctx link/options-processor)] ;todo can this be lifted out of editable-select?
-      (if-let [options-link @(reactive/track link/options-link path ctx)]
+      (if-let [options-link @(r/track link/options-link path ctx)]
         [:div.select                                        ; helps the weird link float left css thing
          (select* options-link props ctx)]
         (id* props ctx))]
@@ -63,7 +63,7 @@
 
 (defn ref-component [maybe-field props ctx]
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
-    (assert (not @(reactive/track link/options-link path ctx)) "ref-components don't have options; todo handle gracefully")
+    (assert (not @(r/track link/options-link path ctx)) "ref-components don't have options; todo handle gracefully")
     #_(assert (> (count (filter :link/render-inline? my-links)) 0))
     #_(ref maybe-field my-links props ctx)
     [:div.value
@@ -73,7 +73,7 @@
 
 (defn ref-many-table [maybe-field props ctx]
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
-    (assert (not @(reactive/track link/options-link path ctx)) "ref-component-many don't have options; todo handle gracefully")
+    (assert (not @(r/track link/options-link path ctx)) "ref-component-many don't have options; todo handle gracefully")
     [:div.value
      #_[:pre (pr-str maybe-field)]
      [:div.anchors (link-controls/render-nav-cmps path true ctx)]
@@ -90,7 +90,7 @@
     [:div.value
      [:div.anchors (link-controls/render-nav-cmps path true ctx)]
      [:span.text
-      (case @(reactive/cursor (:hypercrud.browser/fat-attribute ctx) [:db/cardinality :db/ident])
+      (case @(r/cursor (:hypercrud.browser/fat-attribute ctx) [:db/cardinality :db/ident])
         :db.cardinality/many (map pr-str @(:value ctx))
         (pr-str @(:value ctx)))]
      (link-controls/render-inline-links path true ctx)]))

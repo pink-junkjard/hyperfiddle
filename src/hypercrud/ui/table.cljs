@@ -1,6 +1,6 @@
 (ns hypercrud.ui.table
   (:require [contrib.css :refer [css-slugify classes]]
-            [contrib.reactive :as reactive]
+            [contrib.reactive :as r]
             [hypercrud.browser.system-link :refer [system-link?]]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.link :as link]
@@ -12,7 +12,7 @@
 
 (defn attr-sortable? [fe attribute ctx]
   (if-let [source-symbol (:source-symbol fe)]
-    (let [{:keys [:db/cardinality :db/valueType]} @(reactive/cursor (:hypercrud.browser/schemas ctx) [(str source-symbol) attribute])]
+    (let [{:keys [:db/cardinality :db/valueType]} @(r/cursor (:hypercrud.browser/schemas ctx) [(str source-symbol) attribute])]
       (and
         (= (:db/ident cardinality) :db.cardinality/one)
         ; ref requires more work (inspect label-prop)
@@ -44,7 +44,7 @@
   (let [ctx (context/field ctx field)
         path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]
         sortable? (and (attr-sortable? @(:hypercrud.browser/find-element ctx) (:attribute field) ctx)
-                       @(reactive/track links-dont-break-sorting? path ctx))
+                       @(r/track links-dont-break-sorting? path ctx))
         sort-direction (let [[sort-fe-pos sort-attr direction] @sort-col]
                          (if (and (= (:fe-pos ctx) sort-fe-pos) (= sort-attr (:attribute field)))
                            direction))
@@ -68,7 +68,7 @@
 
 (defn LinkCell [dependent? ctx]
   [(if dependent? :td.link-cell :th.link-cell)
-   (->> (reactive/unsequence (:hypercrud.browser/ordered-fes ctx))
+   (->> (r/unsequence (:hypercrud.browser/ordered-fes ctx))
         (mapcat (fn [[fe i]]
                   (let [ctx (context/find-element ctx i)
                         ctx (if dependent? (context/cell-data ctx) ctx) ; bit in ctx?
@@ -79,18 +79,18 @@
 
 (defn THead [sort-col ctx]
   [:tr
-   (->> (reactive/unsequence (:hypercrud.browser/ordered-fes ctx))
+   (->> (r/unsequence (:hypercrud.browser/ordered-fes ctx))
         (mapcat (fn [[fe i]]
                   (let [ctx (context/find-element ctx i)]   ; "Entity"
                     ; This is contorted to be more parallel to form
-                    (->> @(reactive/cursor (:hypercrud.browser/find-element ctx) [:fields])
+                    (->> @(r/cursor (:hypercrud.browser/find-element ctx) [:fields])
                          (map (fn [field]
                                 ^{:key (:id field)}
                                 [col-head field sort-col ctx])))))))
    [LinkCell false ctx]])
 
 (defn table-cell [control -field ctx]
-  (let [shadow-link @(reactive/fmap system-link? (reactive/cursor (:cell-data ctx) [:db/id]))]
+  (let [shadow-link @(r/fmap system-link? (r/cursor (:cell-data ctx) [:db/id]))]
     [:td {:class (classes "hyperfiddle-table-cell" "truncate")
           ; todo use cell renderer for shadow-link styles
           :style {:border-color (if-not shadow-link (connection-color/connection-color ctx))}}
@@ -103,23 +103,23 @@
 
 (defn Entity [ctx]
   (let [ctx (context/cell-data ctx)]
-    (->> (reactive/cursor (:hypercrud.browser/find-element ctx) [:fields])
-         (reactive/unsequence :id)
+    (->> (r/cursor (:hypercrud.browser/find-element ctx) [:fields])
+         (r/unsequence :id)
          (mapv (fn [[field id]]
                  (let [field @field
                        ctx (-> (context/field ctx field)
-                               (context/value (reactive/fmap (:cell-data->value field) (:cell-data ctx))))]
+                               (context/value (r/fmap (:cell-data->value field) (:cell-data ctx))))]
                    ^{:key id}
                    [Cell ctx]))))))
 
 (defn Relation [ctx]
-  (->> (reactive/unsequence (:hypercrud.browser/ordered-fes ctx))
+  (->> (r/unsequence (:hypercrud.browser/ordered-fes ctx))
        (mapcat (fn [[fe i]]
                  (Entity (context/find-element ctx i))))))
 
 (letfn [(sort-fn [sort-col ctx relations-val]
           (let [[sort-fe-pos sort-attr direction] @sort-col
-                fe @(reactive/cursor (:hypercrud.browser/ordered-fes ctx) [sort-fe-pos])
+                fe @(r/cursor (:hypercrud.browser/ordered-fes ctx) [sort-fe-pos])
                 attr (->> (map :attribute (:fields fe))
                           (filter #(= % sort-attr))
                           first)]
@@ -135,8 +135,8 @@
               relations-val)))
         (key-fn [relation] (hash (map #(or (:db/id %) %) relation)))]
   (defn TBody [sort-col ctx]
-    (->> (reactive/fmap (reactive/partial sort-fn sort-col ctx) (:relations ctx))
-         (reactive/unsequence key-fn)
+    (->> (r/fmap (r/partial sort-fn sort-col ctx) (:relations ctx))
+         (r/unsequence key-fn)
          (map (fn [[relation key]]
                 (let [ctx (context/relation ctx relation)]
                   ^{:key key}
@@ -146,7 +146,7 @@
          (doall))))
 
 (defn Table-inner [ctx]
-  (let [sort-col (reactive/atom nil)]
+  (let [sort-col (r/atom nil)]
     (fn [ctx]
       (let [ctx (assoc ctx :layout (:layout ctx :table))]
         [:table.ui-table

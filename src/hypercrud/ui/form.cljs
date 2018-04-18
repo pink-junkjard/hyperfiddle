@@ -1,6 +1,6 @@
 (ns hypercrud.ui.form
   (:require [contrib.css :refer [css-slugify classes]]
-            [contrib.reactive :as reactive]
+            [contrib.reactive :as r]
             [contrib.reagent :refer [fragment]]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.link :as link]
@@ -17,7 +17,7 @@
    (apply fragment :_ children)])
 
 (defn new-field-state-container [ctx]
-  (let [attr-ident (reactive/atom nil)]
+  (let [attr-ident (r/atom nil)]
     (fn [ctx]
       (ui-block-border-wrap
         ctx "field"
@@ -59,19 +59,19 @@
       (let [ctx (context/cell-data ctx)]
         (concat
           (conj
-            (->> (reactive/cursor (:hypercrud.browser/find-element ctx) [:fields])
-                 (reactive/unsequence :id)
+            (->> (r/cursor (:hypercrud.browser/find-element ctx) [:fields])
+                 (r/unsequence :id)
                  (mapv (fn [[field id]]
                          ; unify with context/relation-path then remove
                          (let [field @field
                                ctx (as-> (context/field ctx field) $
-                                         (context/value $ (reactive/fmap (:cell-data->value field) (:cell-data ctx)))
+                                         (context/value $ (r/fmap (:cell-data->value field) (:cell-data ctx)))
                                          (if (or (nil? (:attribute field)) (= (:attribute field) :db/id))
                                            (assoc $ :read-only always-read-only)
                                            $))]
                            ^{:key id}
                            [Cell ctx]))))
-            (if @(reactive/cursor (:hypercrud.browser/find-element ctx) [:splat?])
+            (if @(r/cursor (:hypercrud.browser/find-element ctx) [:splat?])
               ^{:key :new-field}
               [new-field ctx]))
           (link-controls/render-nav-cmps path true ctx :class "hyperfiddle-link-entity-dependent")
@@ -82,6 +82,6 @@
   ; No wrapper div; it limits layout e.g. floating. The pyramid mapcats out to a flat list of dom elements that comprise the form
   ; This is not compatible with hiccup syntax; this is a fn
   (let [ctx (assoc ctx :layout (:layout ctx :block))]       ; first point in time we know we're a form? can this be removed?
-    (->> (reactive/unsequence (:hypercrud.browser/ordered-fes ctx))
+    (->> (r/unsequence (:hypercrud.browser/ordered-fes ctx))
          (mapcat (fn [[fe i]]
                    (Entity (context/find-element ctx i)))))))

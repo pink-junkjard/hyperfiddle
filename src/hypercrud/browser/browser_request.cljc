@@ -2,7 +2,7 @@
   (:require [cats.core :as cats :refer [mlet]]
             [cats.monad.either :as either]
             [contrib.data :refer [unwrap]]
-            [contrib.reactive :as reactive]
+            [contrib.reactive :as r]
             [hypercrud.browser.base :as base]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.link :as link]
@@ -37,23 +37,23 @@
            (filter :link/dependent?)
            (filter (link/same-path-as? [(:fe-pos ctx)]))
            (mapcat #(recurse-request % ctx)))
-      (->> @(reactive/cursor (:hypercrud.browser/find-element ctx) [:fields])
+      (->> @(r/cursor (:hypercrud.browser/find-element ctx) [:fields])
            (mapcat (fn [field]
                      (let [ctx (-> (context/field ctx field)
-                                   (context/value (reactive/fmap (:cell-data->value field) (:cell-data ctx))))]
+                                   (context/value (r/fmap (:cell-data->value field) (:cell-data ctx))))]
                        (->> @(:hypercrud.browser/links ctx)
                             (filter :link/dependent?)
                             (filter (link/same-path-as? [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]))
                             (mapcat #(recurse-request % ctx))))))))))
 
 (defn form-requests [ctx]                                   ; ui equivalent of form
-  (->> (reactive/unsequence (:hypercrud.browser/ordered-fes ctx))
+  (->> (r/unsequence (:hypercrud.browser/ordered-fes ctx))
        (mapcat (fn [[fe i]]
                  (cell-dependent-requests (context/find-element ctx i))))))
 
 (defn table-requests [ctx]                                  ; ui equivalent of table
   ; the request side does NOT need the cursors to be equiv between loops
-  (->> (reactive/unsequence (:relations ctx))
+  (->> (r/unsequence (:relations ctx))
        (mapcat (fn [[relation i]]
                  (form-requests (context/relation ctx relation))))))
 
@@ -61,13 +61,13 @@
 
 (defn fiddle-dependent-requests [ctx]
   ; at this point we only care about inline links
-  (let [ctx (update ctx :hypercrud.browser/links (partial reactive/fmap filter-inline))]
+  (let [ctx (update ctx :hypercrud.browser/links (partial r/fmap filter-inline))]
     (concat
       (->> @(:hypercrud.browser/links ctx)
            (remove :link/dependent?)
            (filter (link/same-path-as? []))
            (mapcat #(recurse-request % ctx)))
-      (->> (reactive/unsequence (:hypercrud.browser/ordered-fes ctx)) ; might have empty results-- DJG Dont know what this prior comment means?
+      (->> (r/unsequence (:hypercrud.browser/ordered-fes ctx)) ; might have empty results-- DJG Dont know what this prior comment means?
            (mapcat (fn [[fe i]]
                      (let [ctx (context/find-element ctx i)
                            fe-pos (:fe-pos ctx)]
@@ -76,7 +76,7 @@
                               (remove :link/dependent?)
                               (filter (link/same-path-as? [fe-pos]))
                               (mapcat #(recurse-request % ctx)))
-                         (->> @(reactive/cursor (:hypercrud.browser/find-element ctx) [:fields])
+                         (->> @(r/cursor (:hypercrud.browser/find-element ctx) [:fields])
                               (mapcat (fn [field]
                                         (let [ctx (context/field ctx field)]
                                           (->> @(:hypercrud.browser/links ctx)
@@ -90,13 +90,13 @@
 (defn request-from-route [route ctx]
   (let [ctx (-> (context/clean ctx)
                 (context/route route))]
-    (when-let [meta-fiddle-request (unwrap @(reactive/apply-inner-r (reactive/track base/meta-request-for-fiddle ctx)))]
-      (assert (reactive/reactive? meta-fiddle-request))
+    (when-let [meta-fiddle-request (unwrap @(r/apply-inner-r (r/track base/meta-request-for-fiddle ctx)))]
+      (assert (r/reactive? meta-fiddle-request))
       (concat [@meta-fiddle-request]
               (unwrap
-                (mlet [fiddle @(reactive/apply-inner-r (reactive/track base/hydrate-fiddle meta-fiddle-request ctx))
-                       fiddle-request @(reactive/apply-inner-r (reactive/track base/request-for-fiddle fiddle ctx))]
-                  (assert (reactive/reactive? fiddle-request))
+                (mlet [fiddle @(r/apply-inner-r (r/track base/hydrate-fiddle meta-fiddle-request ctx))
+                       fiddle-request @(r/apply-inner-r (r/track base/request-for-fiddle fiddle ctx))]
+                  (assert (r/reactive? fiddle-request))
                   (cats/return
                     (concat
                       (some-> @fiddle-request vector)

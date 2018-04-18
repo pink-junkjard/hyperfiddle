@@ -1,5 +1,5 @@
 (ns hypercrud.ui.label
-  (:require [contrib.reactive :as reactive]
+  (:require [contrib.reactive :as r]
             [cuerdas.core :as str]
             [hypercrud.ui.control.markdown-rendered :refer [markdown]]
             [hypercrud.ui.tooltip :refer [tooltip-thick]]))
@@ -29,10 +29,10 @@
 #_{:label help-text :position :below-right}
 
 (defn label [field ctx]
-  (let [dbdoc (let [dbdoc @(reactive/cursor (:hypercrud.browser/fat-attribute ctx) [:db/doc])]
+  (let [dbdoc (let [dbdoc @(r/cursor (:hypercrud.browser/fat-attribute ctx) [:db/doc])]
                 (when (and (string? dbdoc) (not (empty? dbdoc)))
                   dbdoc))
-        typedoc (apply str (interpose " " @(reactive/track attribute-schema-human (:hypercrud.browser/fat-attribute ctx))))
+        typedoc (apply str (interpose " " @(r/track attribute-schema-human (:hypercrud.browser/fat-attribute ctx))))
         help-md (str (if dbdoc (str dbdoc "\n\n"))          ; markdown needs double line-break
                      "`" typedoc "`")]
     ; There is always help-md rn but maybe there wont be and

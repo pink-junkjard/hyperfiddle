@@ -1,5 +1,5 @@
 (ns hypercrud.ui.popover
-  (:require [contrib.reactive :as reactive]
+  (:require [contrib.reactive :as r]
             [re-com.core :as re-com]))
 
 
@@ -36,7 +36,7 @@
                    :body (:body t-props)]}))))
 
 (defn click-popover-managed* [& args]
-  (let [state (reactive/atom false)]
+  (let [state (r/atom false)]
     (fn [& args]
       (apply click-popover* state args))))
 
@@ -61,7 +61,7 @@
                    :body (:label t-props)]}))))
 
 (defn- hover-popover-managed* [& args]
-  (let [state (reactive/atom false)]
+  (let [state (r/atom false)]
     (fn [& args]
       (apply hover-popover* state args))))
 

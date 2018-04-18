@@ -1,6 +1,6 @@
 (ns hypercrud.ui.auto-control
   (:require [cats.monad.either :as either]
-            [contrib.reactive :as reactive]
+            [contrib.reactive :as r]
             [cuerdas.core :as string]
             [hypercrud.browser.browser-ui :as browser-ui]
             [hypercrud.ui.attribute.edn :as edn]
@@ -12,9 +12,9 @@
 
 
 (defn schema-control-form [ctx]
-  (let [isComponent @(reactive/cursor (:hypercrud.browser/fat-attribute ctx) [:db/isComponent])
-        valueType @(reactive/cursor (:hypercrud.browser/fat-attribute ctx) [:db/valueType :db/ident])
-        cardinality @(reactive/cursor (:hypercrud.browser/fat-attribute ctx) [:db/cardinality :db/ident])
+  (let [isComponent @(r/cursor (:hypercrud.browser/fat-attribute ctx) [:db/isComponent])
+        valueType @(r/cursor (:hypercrud.browser/fat-attribute ctx) [:db/valueType :db/ident])
+        cardinality @(r/cursor (:hypercrud.browser/fat-attribute ctx) [:db/cardinality :db/ident])
         widget (cond
                  (and (= valueType :db.type/boolean) (= cardinality :db.cardinality/one)) widget/boolean
                  (and (= valueType :db.type/keyword) (= cardinality :db.cardinality/one)) widget/keyword
@@ -31,9 +31,9 @@
 
 ; Can be unified; inspect (:layout ctx)
 (defn schema-control-table [ctx]
-  (let [isComponent @(reactive/cursor (:hypercrud.browser/fat-attribute ctx) [:db/isComponent])
-        valueType @(reactive/cursor (:hypercrud.browser/fat-attribute ctx) [:db/valueType :db/ident])
-        cardinality @(reactive/cursor (:hypercrud.browser/fat-attribute ctx) [:db/cardinality :db/ident])
+  (let [isComponent @(r/cursor (:hypercrud.browser/fat-attribute ctx) [:db/isComponent])
+        valueType @(r/cursor (:hypercrud.browser/fat-attribute ctx) [:db/valueType :db/ident])
+        cardinality @(r/cursor (:hypercrud.browser/fat-attribute ctx) [:db/cardinality :db/ident])
         widget (cond
                  (and (= valueType :db.type/boolean) (= cardinality :db.cardinality/one)) widget/boolean
                  (and (= valueType :db.type/keyword) (= cardinality :db.cardinality/one)) widget/keyword
@@ -57,14 +57,14 @@
 
 (defn fiddle-field-control [ctx]                            ; TODO :renderer -> :control
   (some->> (get-in ctx [:fields (:hypercrud.browser/attribute ctx) :renderer])
-           (reactive/partial safe-reagent-f (ui-error/error-comp ctx))))
+           (r/partial safe-reagent-f (ui-error/error-comp ctx))))
 
 (defn attribute-control [ctx]
-  (let [renderer @(reactive/cursor (:hypercrud.browser/fat-attribute ctx) [:attribute/renderer])]
+  (let [renderer @(r/cursor (:hypercrud.browser/fat-attribute ctx) [:attribute/renderer])]
     (when (and (string? renderer) (not (string/blank? renderer)))
       (let [with-error (ui-error/error-comp ctx)
             f browser-ui/eval-renderer-comp]
-        (reactive/partial safe-reagent-f with-error f renderer)))))
+        (r/partial safe-reagent-f with-error f renderer)))))
 
 (defn auto-control' [ctx]
   ; todo binding renderers should be pathed for aggregates and values

@@ -1,5 +1,5 @@
 (ns contrib.keypress
-  (:require [reagent.core :as r]))
+  (:require [reagent.core :as reagent]))
 
 
 ;(defprotocol Keypress
@@ -21,14 +21,14 @@
 ;    ))
 
 (def with-keychord
-  (r/create-class
+  (reagent/create-class
     {:display-name "with-keychord"
      :reagent-render (fn [chord f! child]
                        child)
      :component-did-mount
      (fn [this]
-       (let [[_ chord f! child] (r/argv this)
-             el (r/dom-node this)
+       (let [[_ chord f! child] (reagent/argv this)
+             el (reagent/dom-node this)
              listener (js/keypress.Listener. el)]
          #_(.register-combo listener #js {"keys" "esc"
                                           "on_keydown" f!

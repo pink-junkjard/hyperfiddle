@@ -1,7 +1,7 @@
 (ns hypercrud.browser.base
   (:require [cats.core :as cats :refer [mlet return]]
             [cats.monad.either :as either]
-            [contrib.reactive :as reactive]
+            [contrib.reactive :as r]
             [contrib.string :refer [memoized-safe-read-edn-string]]
             [contrib.try :refer [try-either]]
             [hypercrud.browser.auto-link :refer [auto-links]]
@@ -112,8 +112,8 @@
           :else-valid (either/right params'))))
 
 (defn request-for-fiddle [fiddle ctx]
-  (case @(reactive/cursor fiddle [:fiddle/type])
-    :query (mlet [q (memoized-safe-read-edn-string @(reactive/cursor fiddle [:fiddle/query]))
+  (case @(r/cursor fiddle [:fiddle/type])
+    :query (mlet [q (memoized-safe-read-edn-string @(r/cursor fiddle [:fiddle/query]))
                   args (validate-query-params q (get-in ctx [:route 1]) ctx)]
              (return (->QueryRequest q args)))
 
@@ -122,7 +122,7 @@
           uri (try (let [dbname (.-dbname e)]               ;todo report this exception better
                      (get-in ctx [:hypercrud.browser/domain :domain/environment dbname]))
                    (catch #?(:clj Exception :cljs js/Error) e nil))
-          pull-exp (or (-> (memoized-safe-read-edn-string @(reactive/cursor fiddle [:fiddle/pull]))
+          pull-exp (or (-> (memoized-safe-read-edn-string @(r/cursor fiddle [:fiddle/pull]))
                            (either/branch (constantly nil) identity)
                            first)
                        ['*])]
@@ -142,8 +142,8 @@
                          @(hc/hydrate peer branch request)
                          (either/right nil)))]
   (defn process-results [fiddle request ctx]
-    (mlet [reactive-schemas @(reactive/apply-inner-r (schema-util/hydrate-schema ctx))
-           reactive-result @(reactive/apply-inner-r (reactive/track nil-or-hydrate (:peer ctx) (:branch ctx) request))
+    (mlet [reactive-schemas @(r/apply-inner-r (schema-util/hydrate-schema ctx))
+           reactive-result @(r/apply-inner-r (r/track nil-or-hydrate (:peer ctx) (:branch ctx) request))
            :let [ctx (assoc ctx
                        :hypercrud.browser/fiddle fiddle     ; for :db/doc
                        :hypercrud.browser/request request
@@ -154,17 +154,17 @@
                        :read-only (or (:read-only ctx) never-read-only))
                  ctx (context/with-relations ctx)]
            ctx (user-bindings/user-bindings ctx)
-           reactive-fes @(reactive/apply-inner-r (reactive/track find-element/auto-find-elements ctx))
+           reactive-fes @(r/apply-inner-r (r/track find-element/auto-find-elements ctx))
            :let [ctx (assoc ctx :hypercrud.browser/ordered-fes reactive-fes)
-                 ctx (assoc ctx :hypercrud.browser/links (reactive/track auto-links ctx))]]
+                 ctx (assoc ctx :hypercrud.browser/links (r/track auto-links ctx))]]
       (cats/return ctx))))
 
 (defn data-from-route [route ctx]                           ; todo rename
   (let [ctx (-> (context/clean ctx)
                 (context/route route))]
-    (mlet [meta-fiddle-request @(reactive/apply-inner-r (reactive/track meta-request-for-fiddle ctx))
-           fiddle @(reactive/apply-inner-r (reactive/track hydrate-fiddle meta-fiddle-request ctx))
-           fiddle-request @(reactive/apply-inner-r (reactive/track request-for-fiddle fiddle ctx))]
+    (mlet [meta-fiddle-request @(r/apply-inner-r (r/track meta-request-for-fiddle ctx))
+           fiddle @(r/apply-inner-r (r/track hydrate-fiddle meta-fiddle-request ctx))
+           fiddle-request @(r/apply-inner-r (r/track request-for-fiddle fiddle ctx))]
       (process-results fiddle fiddle-request ctx))))
 
 (defn from-link [link ctx with-route]

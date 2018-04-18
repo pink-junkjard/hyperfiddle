@@ -3,7 +3,7 @@
   (:require [clojure.string :as string]
     #?(:cljs [contrib.css :refer [classes]])
             [contrib.data :refer [update-existing]]
-            [contrib.reactive :as reactive]
+            [contrib.reactive :as r]
             [contrib.reader :refer [read-string read-edn-string]]
             [contrib.string :refer [pprint-str]]
             [cuerdas.core :as str]
@@ -84,7 +84,7 @@
         domain (process-domain domain)]
     (assoc ctx
       :hypercrud.browser/domain domain
-      :hypercrud.browser/invert-route (reactive/partial routing/invert-route domain))))
+      :hypercrud.browser/invert-route (r/partial routing/invert-route domain))))
 
 (defn local-basis [page-or-leaf global-basis route ctx f]
   (concat

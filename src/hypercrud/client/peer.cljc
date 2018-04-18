@@ -1,6 +1,6 @@
 (ns hypercrud.client.peer
   (:require [cats.monad.either :as either]
-            [contrib.reactive :as reactive]
+            [contrib.reactive :as r]
             [hypercrud.types.DbVal :refer [->DbVal]]
             [hypercrud.types.URI :refer [is-uri?]]
             [hyperfiddle.io.util :refer [process-result]]))
@@ -35,12 +35,12 @@
 ; react on the answer, not the question
 ; todo this signature should be [partition-cursor request]
 (defn trackable-hydrate [state-atom branch request]
-  (let [partition @(reactive/cursor state-atom [:hyperfiddle.runtime/partitions branch])
-        stage-val @(reactive/cursor state-atom [:stage])]
+  (let [partition @(r/cursor state-atom [:hyperfiddle.runtime/partitions branch])
+        stage-val @(r/cursor state-atom [:stage])]
     (hydrate-val partition stage-val request)))
 
 (defn hydrate [state-atom branch request]
-  (reactive/track trackable-hydrate state-atom branch request))
+  (r/track trackable-hydrate state-atom branch request))
 
 (defn db-pointer [uri ?branch-name]
   {:pre [uri (is-uri? uri)]}

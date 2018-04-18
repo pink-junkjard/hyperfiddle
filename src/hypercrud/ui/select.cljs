@@ -2,7 +2,7 @@
   (:require [cats.core :refer [fmap sequence]]
             [cats.monad.either :as either]
             [contrib.datomic-tx :as tx]
-            [contrib.reactive :as reactive]
+            [contrib.reactive :as r]
             [contrib.try :refer [try-either]]
             [hypercrud.browser.core :as browser]
             [hypercrud.browser.link :as link]
@@ -77,7 +77,7 @@
   [:span msg])
 
 (defn select-anchor-renderer [props ctx-options]
-  (case @(reactive/cursor (:hypercrud.browser/fiddle ctx-options) [:fiddle/type])
+  (case @(r/cursor (:hypercrud.browser/fiddle ctx-options) [:fiddle/type])
     :entity [select-error-cmp "Only fiddle type `query` is supported for select options"]
     :blank [select-error-cmp "Only fiddle type `query` is supported for select options"]
     :query (if (:relations ctx-options)
@@ -100,8 +100,8 @@
                            {:value (if (nil? @(:value ctx))
                                      ""
                                      (str (:db/id @(:value ctx))))
-                            :on-change (reactive/partial on-change ctx) ; reconstruct the typed value
+                            :on-change (r/partial on-change ctx) ; reconstruct the typed value
                             :disabled (:read-only props)})]
           [browser/ui options-link (assoc ctx
                                      :hypercrud.ui/display-mode always-user
-                                     :user-renderer (reactive/partial select-anchor-renderer props))])))))
+                                     :user-renderer (r/partial select-anchor-renderer props))])))))

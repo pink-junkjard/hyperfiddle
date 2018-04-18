@@ -3,8 +3,8 @@
             [cats.monad.either :as either]
             [clojure.set :as set]
             [contrib.data :refer [transpose]]
+            [contrib.reactive :as r]
             [contrib.try :refer [try-either]]
-            [contrib.reactive :as reactive]
             [datascript.parser :as parser]))
 
 
@@ -119,14 +119,14 @@
     (aggregate->fe element)))
 
 (defn auto-find-elements [{:keys [:hypercrud.browser/result :hypercrud.browser/request] :as ctx}]
-  (case @(reactive/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/type])
+  (case @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/type])
     :entity (mlet [:let [[_ [e]] (:route ctx)]
                    source-symbol (try-either (.-dbname e))
                    :let [fe-name "entity"
-                         pull-pattern @(reactive/cursor request [:pull-exp])]]
+                         pull-pattern @(r/cursor request [:pull-exp])]]
               (cats/return
-                (if-let [a @(reactive/cursor request [:a])]
-                  (case @(reactive/cursor (:hypercrud.browser/schemas ctx) [(str source-symbol) a :db/cardinality :db/ident])
+                (if-let [a @(r/cursor request [:a])]
+                  (case @(r/cursor (:hypercrud.browser/schemas ctx) [(str source-symbol) a :db/cardinality :db/ident])
                     :db.cardinality/one
                     [(pull-cell->fe @result source-symbol fe-name pull-pattern)]
 
@@ -134,7 +134,7 @@
                     [(pull-many-cells->fe @result source-symbol fe-name pull-pattern)])
                   [(pull-cell->fe @result source-symbol fe-name pull-pattern)])))
 
-    :query (mlet [{:keys [qfind]} (try-either (parser/parse-query @(reactive/cursor request [:query])))]
+    :query (mlet [{:keys [qfind]} (try-either (parser/parse-query @(r/cursor request [:query])))]
              (cats/return
                (condp = (type qfind)
                  datascript.parser.FindRel (let [results-by-column (transpose @result)]

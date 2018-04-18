@@ -1,6 +1,6 @@
 (ns hypercrud.browser.auto-link
   (:require [contrib.data :refer [map-values]]
-            [contrib.reactive :as reactive]
+            [contrib.reactive :as r]
             [hypercrud.browser.auto-link-formula :refer [auto-formula]]
             [hypercrud.browser.auto-link-txfn :refer [auto-txfn]]
             [hypercrud.browser.system-link :as system-link]))
@@ -38,7 +38,7 @@
 (defn auto-links [ctx]
   (let [fiddle (:hypercrud.browser/fiddle ctx)
         sys-links (system-link/system-links @fiddle @(:hypercrud.browser/ordered-fes ctx) @(:hypercrud.browser/schemas ctx))
-        links (->> (merge-links sys-links @(reactive/cursor fiddle [:fiddle/links]))
+        links (->> (merge-links sys-links @(r/cursor fiddle [:fiddle/links]))
                    (map auto-link))]
     (if (:keep-disabled-anchors? ctx)
       links

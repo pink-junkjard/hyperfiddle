@@ -1,5 +1,5 @@
 (ns hypercrud.ui.tooltip
-  (:require [contrib.reactive :as reactive]
+  (:require [contrib.reactive :as r]
             [hypercrud.ui.popover :as popover]
             [re-com.core :as re-com]))
 
@@ -62,9 +62,9 @@
 (defn tooltip [t-props anchor]
   (if-not (:label t-props)
     anchor
-    (reactive/partial tooltip* (reactive/atom false))))
+    (r/partial tooltip* (r/atom false))))
 
 (defn tooltip-thick [body anchor]
   (if-not body
     anchor
-    (reactive/partial tooltip-thick* (reactive/atom false))))
+    (r/partial tooltip-thick* (r/atom false))))
