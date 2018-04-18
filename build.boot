@@ -1,7 +1,8 @@
 (def datomic-dep '[com.datomic/datomic-free "0.9.5561" :scope "provided" :exclusions [org.slf4j/slf4j-nop]])
 (def +version+ "0.3.0-SNAPSHOT")
 (let [dependencies
-      '[[com.taoensso/timbre "4.10.0"]
+      '[[aysylu/loom "1.0.0"]
+        [com.taoensso/timbre "4.10.0"]
         [datascript "0.16.2"]
         [bidi "2.1.3"]
         [funcool/cats "2.2.0"]
