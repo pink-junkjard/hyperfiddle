@@ -1,6 +1,6 @@
 (ns hyperfiddle.service.node.ssr
   (:require [contrib.data :refer [unwrap]]
-            [contrib.reactive :as reactive]
+            [contrib.reactive :as r]
             [contrib.template :refer [load-resource]]
             [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
@@ -61,7 +61,7 @@
   runtime/State
   (dispatch! [rt action-or-func] (state/dispatch! state-atom root-reducer action-or-func))
   (state [rt] state-atom)
-  (state [rt path] (reactive/cursor state-atom path))
+  (state [rt path] (r/cursor state-atom path))
 
   runtime/AppFnGlobalBasis
   (global-basis [rt]
@@ -132,7 +132,7 @@
         user-profile (lib/req->user-profile env req)
         initial-state {:user-profile user-profile}
         rt (->IdeSsrRuntime hyperfiddle-hostname hostname (req->service-uri env req)
-                            (reactive/atom (reducers/root-reducer initial-state nil))
+                            (r/atom (reducers/root-reducer initial-state nil))
                             reducers/root-reducer)
         load-level foundation/LEVEL-HYDRATE-PAGE
         browser-init-level (if (foundation/alias? (foundation/hostname->hf-domain-name hostname hyperfiddle-hostname))

@@ -1,6 +1,6 @@
 (ns hyperfiddle.service.http
   (:require [contrib.base-64-url-safe :as base-64-url-safe]
-            [contrib.reactive :as reactive]
+            [contrib.reactive :as r]
             [contrib.reader :refer [read-edn-string]]
             [hypercrud.browser.routing :as routing]
             [hypercrud.types.Err :refer [->Err]]
@@ -26,7 +26,7 @@
 (defn global-basis-handler [->Runtime & {:keys [hostname hyperfiddle-hostname service-uri user-profile]}]
   (let [state-val (-> {:user-profile user-profile}
                       (reducers/root-reducer nil))
-        rt (->Runtime hyperfiddle-hostname hostname service-uri (reactive/atom state-val) reducers/root-reducer)]
+        rt (->Runtime hyperfiddle-hostname hostname service-uri (r/atom state-val) reducers/root-reducer)]
     (-> (runtime/global-basis rt)
         (p/then (fn [global-basis]
                   {:status 200
@@ -48,7 +48,7 @@
                          ::runtime/partitions {branch {:route route
                                                        :hyperfiddle.runtime/branch-aux branch-aux}}}
           rt (->Runtime hyperfiddle-hostname hostname service-uri
-                        (reactive/atom (reducers/root-reducer initial-state nil))
+                        (r/atom (reducers/root-reducer initial-state nil))
                         reducers/root-reducer)]
       (-> (foundation-actions/refresh-domain rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
           (p/then (fn [_] (runtime/local-basis rt global-basis route branch branch-aux)))
@@ -78,7 +78,7 @@
                                                            :route route
                                                            :hyperfiddle.runtime/branch-aux branch-aux}}})
           rt (->Runtime hyperfiddle-hostname hostname service-uri
-                        (reactive/atom (reducers/root-reducer initial-state nil))
+                        (r/atom (reducers/root-reducer initial-state nil))
                         reducers/root-reducer)]
       (-> (foundation-actions/refresh-domain rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
           (p/then (fn [_] (runtime/hydrate-route rt local-basis route branch branch-aux (:stage initial-state))))

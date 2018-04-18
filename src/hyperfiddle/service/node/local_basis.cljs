@@ -1,5 +1,5 @@
 (ns hyperfiddle.service.node.local-basis
-  (:require [contrib.reactive :as reactive]
+  (:require [contrib.reactive :as r]
             [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
             [hyperfiddle.foundation :as foundation]
@@ -16,7 +16,7 @@
   runtime/State
   (dispatch! [rt action-or-func] (state/dispatch! state-atom root-reducer action-or-func))
   (state [rt] state-atom)
-  (state [rt path] (reactive/cursor state-atom path))
+  (state [rt path] (r/cursor state-atom path))
 
   runtime/AppFnGlobalBasis
   (global-basis [rt]

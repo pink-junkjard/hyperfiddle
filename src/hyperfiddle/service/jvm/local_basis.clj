@@ -2,7 +2,7 @@
   (:refer-clojure :exclude [sync])
   (:require [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
-            [contrib.reactive :as reactive]
+            [contrib.reactive :as r]
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.ide :as ide]
             [hyperfiddle.io.global-basis :refer [global-basis]]
@@ -18,7 +18,7 @@
   runtime/State
   (dispatch! [rt action-or-func] (state/dispatch! state-atom root-reducer action-or-func))
   (state [rt] state-atom)
-  (state [rt path] (reactive/cursor state-atom path))
+  (state [rt path] (r/cursor state-atom path))
 
   runtime/AppFnGlobalBasis
   (global-basis [rt]

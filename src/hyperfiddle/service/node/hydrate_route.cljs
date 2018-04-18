@@ -1,6 +1,6 @@
 (ns hyperfiddle.service.node.hydrate-route
   (:require [contrib.data :refer [unwrap]]
-            [contrib.reactive :as reactive]
+            [contrib.reactive :as r]
             [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
             [hyperfiddle.foundation :as foundation]
@@ -17,7 +17,7 @@
   runtime/State
   (dispatch! [rt action-or-func] (state/dispatch! state-atom root-reducer action-or-func))
   (state [rt] state-atom)
-  (state [rt path] (reactive/cursor state-atom path))
+  (state [rt path] (r/cursor state-atom path))
 
   ;runtime/AppFnGlobalBasis
   ;(global-basis [rt]
@@ -62,7 +62,7 @@
                          "user" :leaf
                          "ide" :leaf)]
       (hydrate-loop rt (request-fn-adapter local-basis route stage ctx
-                                           #(HydrateRouteRuntime. hyperfiddle-hostname hostname service-uri (reactive/atom %) root-reducer)
+                                           #(HydrateRouteRuntime. hyperfiddle-hostname hostname service-uri (r/atom %) root-reducer)
                                            #(foundation/api page-or-leaf route % ide/api))
                     local-basis branch stage data-cache)))
 
