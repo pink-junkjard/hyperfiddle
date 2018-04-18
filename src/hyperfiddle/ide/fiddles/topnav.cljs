@@ -27,7 +27,7 @@
 ; inline sys-link data when the entity is a system-fiddle
 (letfn [(-renderer [renderer]
           (if (or (nil? renderer) (string/blank? renderer))
-            (-> hypercrud.ui.result/fiddle meta :str)
+            (-> hypercrud.ui.result/fiddle meta :expr-str)
             renderer))
         (-shadow-fiddle [omit-renderer ctx fiddle-val]
           (let [route (:route ctx)

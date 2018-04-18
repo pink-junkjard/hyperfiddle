@@ -20,7 +20,7 @@
 (def fiddle-blank-system-remove
   {:fiddle/ident :hyperfiddle.system/remove
    :fiddle/type :blank
-   :fiddle/renderer (str '(fn [ctx] [:p "Retract entity?"]))})
+   :fiddle/renderer (str '[:p "Retract entity?"])})
 
 
 (defn hydrate-system-fiddle [ident]

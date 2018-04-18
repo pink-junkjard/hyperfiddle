@@ -80,9 +80,9 @@
 ; defer eval until render cycle inside userportal
 (let [safe-eval-string #(try-either (eval/eval-string %))   ; don't actually need to safely eval, just want to memoize exceptions
       memoized-eval-string (memoize safe-eval-string)]
-  (defn eval-renderer-comp [str & args]
+  (defn eval-renderer-comp [renderer-str & args]
     (either/branch
-      (memoized-eval-string str)
+      (memoized-eval-string renderer-str)
       (fn [e] (throw e))
       (fn [f] (into [f] args)))))
 
@@ -94,12 +94,12 @@
             [user-portal (ui-error/error-comp ctx)
              [user-renderer ctx (auto-ui-css-class ctx)]]
 
-            [renderer (let [renderer @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/renderer])]
-                        (when (and (string? renderer) (not (string/blank? renderer)))
-                          renderer))]
-            ^{:key (hash renderer)}
+            [renderer-str (let [renderer-str @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/renderer])]
+                            (when (and (string? renderer-str) (not (string/blank? renderer-str)))
+                              renderer-str))]
+            ^{:key (hash renderer-str)}
             [user-portal (ui-error/error-comp ctx)
-             [eval-renderer-comp renderer ctx (auto-ui-css-class ctx)]]
+             [eval-renderer-comp (str "(fn [ctx & [class]]\n" renderer-str ")") ctx (auto-ui-css-class ctx)]]
 
             [_ :else]
             ; todo ui.result should be injected
