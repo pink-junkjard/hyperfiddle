@@ -103,7 +103,7 @@
           (cons `cond-let (next (next clauses))))))
 
 (defn rtrim-coll [f? xs]
-  (->> xs
-       (split-with (complement f?))
-       first
+  (->> (reverse xs)
+       (drop-while f?)
+       (reverse)
        (into (empty xs))))

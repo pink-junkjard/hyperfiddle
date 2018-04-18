@@ -28,5 +28,6 @@
 
 (deftest seq-rtrim-1
   []
-  (is (= (rtrim-coll nil? [:post nil]) [:post])))
-
+  (is (= (rtrim-coll nil? [:post nil]) [:post]))
+  (is (= (rtrim-coll nil? [:post nil nil "frag"]) [:post nil nil "frag"]))
+  )
