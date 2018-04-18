@@ -101,3 +101,9 @@
     (list 'if-let (first clauses)
           (second clauses)
           (cons `cond-let (next (next clauses))))))
+
+(defn rtrim-coll [f? xs]
+  (->> xs
+       (split-with (complement f?))
+       first
+       (into (empty xs))))

@@ -1,6 +1,6 @@
 (ns contrib.string-test
   (:require [clojure.test :refer [deftest is]]
-            [contrib.string :refer [split-first rtrim-coll abc empty->nil]]
+            [contrib.string :refer [split-first abc empty->nil]]
             [clojure.pprint]
             [net.cgrand.packed-printer :as packed-printer]))
 
@@ -23,10 +23,6 @@
   (is (= (split-first "a#b" "#") ["a" "b"]))
   (is (= (split-first "#b" "#") [nil "b"]))
   (is (= (split-first "#" "#") [nil nil])))
-
-(deftest seq-rtrim-1
-  []
-  (is (= (rtrim-coll nil? [:post nil]) [:post])))
 
 (deftest abc-1
   []

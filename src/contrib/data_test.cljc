@@ -1,6 +1,6 @@
 (ns contrib.data-test
   (:require [clojure.test :refer [deftest is]]
-            [contrib.data :refer [cond-let pad map-pad]]))
+            [contrib.data :refer [cond-let pad map-pad rtrim-coll]]))
 
 
 (comment
@@ -25,3 +25,8 @@
 
   (is (nil? (cond-let
               [a nil] (inc a)))))
+
+(deftest seq-rtrim-1
+  []
+  (is (= (rtrim-coll nil? [:post nil]) [:post])))
+

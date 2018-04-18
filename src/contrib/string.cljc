@@ -28,12 +28,6 @@
   (let [[x & xs] (str/split s sep)]
     [(empty->nil x) (empty->nil (str/join sep xs))]))
 
-(defn rtrim-coll [f? xs]
-  (->> xs
-       (split-with (complement f?))
-       first
-       (into (empty xs))))
-
 (defn abc []
   (map (comp keyword str) "abcdefghijklmnopqrstuvwxyz")     ; this version works in clojurescript
   #_(->> (range) (map (comp keyword str char #(+ % (int \a))))))
