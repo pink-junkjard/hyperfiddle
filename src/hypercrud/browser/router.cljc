@@ -1,9 +1,10 @@
 (ns hypercrud.browser.router
   (:refer-clojure :exclude [read-string])
   (:require [cuerdas.core :as str]
-            [contrib.string :refer [split-first rtrim-coll]]
+            [contrib.data :refer [rtrim-coll]]
             [contrib.reader :refer [read-string]]
-            [contrib.rfc3986 :refer [encode-rfc3986-pchar decode-rfc3986-pchar encode-ednish decode-ednish]]))
+            [contrib.rfc3986 :refer [encode-rfc3986-pchar decode-rfc3986-pchar encode-ednish decode-ednish]]
+            [contrib.string :refer [split-first]]))
 
 
 (def -encode-pchar (comp encode-rfc3986-pchar encode-ednish pr-str)) ; strings get quotes, its okay
