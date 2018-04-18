@@ -1,7 +1,6 @@
 (ns hyperfiddle.service.jvm.hydrate-route
   (:refer-clojure :exclude [sync])
-  (:require [cats.core :refer [return mlet]]
-            [hypercrud.client.core :as hc]
+  (:require [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
             [contrib.data :refer [unwrap]]
             [contrib.reactive :as reactive]

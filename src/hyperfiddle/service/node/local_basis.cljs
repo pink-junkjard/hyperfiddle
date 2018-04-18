@@ -1,7 +1,7 @@
 (ns hyperfiddle.service.node.local-basis
-  (:require [hypercrud.client.core :as hc]
+  (:require [contrib.reactive :as reactive]
+            [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
-            [contrib.reactive :as reactive]
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.ide :as ide]
             [hyperfiddle.io.global-basis :refer [global-basis-rpc!]]

@@ -1,8 +1,8 @@
 (ns hyperfiddle.service.node.hydrate-route
-  (:require [hypercrud.client.core :as hc]
-            [hypercrud.client.peer :as peer]
-            [contrib.data :refer [unwrap]]
+  (:require [contrib.data :refer [unwrap]]
             [contrib.reactive :as reactive]
+            [hypercrud.client.core :as hc]
+            [hypercrud.client.peer :as peer]
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.ide :as ide]
             [hyperfiddle.io.global-basis :refer [global-basis-rpc!]]

@@ -1,7 +1,6 @@
 (ns hyperfiddle.service.jvm.local-basis
   (:refer-clojure :exclude [sync])
-  (:require [cats.core :refer [mlet return]]
-            [hypercrud.client.core :as hc]
+  (:require [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
             [contrib.reactive :as reactive]
             [hyperfiddle.foundation :as foundation]

@@ -1,8 +1,8 @@
 (ns hyperfiddle.service.node.lib
-  (:require [hypercrud.types.URI :refer [->URI]]
+  (:require [hypercrud.transit :as transit]
+            [hypercrud.types.URI :refer [->URI]]
             [hyperfiddle.service.http :as http-service]
             [hyperfiddle.service.lib.jwt :as jwt]
-            [hypercrud.transit :as transit]
             [promesa.core :as p]))
 
 

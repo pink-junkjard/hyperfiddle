@@ -1,9 +1,9 @@
 (ns hyperfiddle.service.http
-  (:require [contrib.reader :refer [read-edn-string]]
+  (:require [contrib.base-64-url-safe :as base-64-url-safe]
+            [contrib.reactive :as reactive]
+            [contrib.reader :refer [read-edn-string]]
             [hypercrud.browser.routing :as routing]
             [hypercrud.types.Err :refer [->Err]]
-            [contrib.base-64-url-safe :as base-64-url-safe]
-            [contrib.reactive :as reactive]
             [hyperfiddle.appval.state.reducers :as reducers]
             [hyperfiddle.foundation.actions :as foundation-actions]
             [hyperfiddle.runtime :as runtime]
