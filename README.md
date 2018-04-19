@@ -18,7 +18,7 @@ We are in early access / private beta, contact us.
 
 ### Blocking open source release:
 
-- [ ] user experience
+- [x] user experience
 - [ ] developer experience
   - [ ] make nodejs runtime optional
   - [ ] decouple I/O runtime from cloud
