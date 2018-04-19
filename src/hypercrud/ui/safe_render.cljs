@@ -35,10 +35,6 @@
          :component-did-catch (fn [#_this e info]           ; args will need updating in reagent0.8.x
                                 (reset! e-state e))}))))
 
-(defn foo [control & args]
+(defn portal-markup [control & args]
   [:div.hyperfiddle-userportal
-   (apply vector control args)])
-
-(defn unify-portal-markup [control]
-  (assert control)
-  (reagent/partial foo control))
+   (into [control] args)])
