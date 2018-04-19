@@ -72,7 +72,7 @@
   ; Old comment, what does this mean now: (I think it means nothing, field is dead)
   ; --What is the user-field allowed to change? The ctx. Can it change links or anchors? no.
   ;
-  ; todo control can have access to repeating contextual values (color, owner, result, entity, value, etc) but field should NOT
+  ; todo control can have access to repeating contextual values (color, result, entity, value, etc) but field should NOT
   ; this leads to inconsistent location formulas between non-repeating links in tables vs forms
   ;
   ; Return value just needs a ctx.

@@ -36,8 +36,7 @@
     #?(:cljs [hyperfiddle.ide.fiddles.schema-attribute])
     #?(:cljs [hyperfiddle.ide.fiddles.topnav])
             [hyperfiddle.ide.fiddles.topnav-bindings]
-    #?(:cljs [hyperfiddle.ide.fiddles.user-dashboard])
-            [hyperfiddle.ide.util]))
+    #?(:cljs [hyperfiddle.ide.fiddles.user-dashboard])))
 
 (defn domain [rt hyperfiddle-hostname hostname]
   (let [domain-basis (if-let [global-basis @(runtime/state rt [::runtime/global-basis])]

@@ -87,14 +87,10 @@
         :uri uri
         :user-with! user-with!))))
 
-(let [f (fn [cell-data ctx]
-          (if-let [owner-fn (:owner-fn ctx)]
-            (owner-fn @cell-data ctx)))]
-  (defn cell-data [ctx]                                     ; "dependent"
-    {:pre [(:fe-pos ctx)]}
-    (let [cell-data (r/cursor (:relation ctx) [(:fe-pos ctx)])]
-      (assoc ctx :owner (r/track f cell-data ctx)
-                 :cell-data cell-data))))
+(defn cell-data [ctx]                                       ; "dependent"
+  {:pre [(:fe-pos ctx)]}
+  (let [cell-data (r/cursor (:relation ctx) [(:fe-pos ctx)])]
+    (assoc ctx :cell-data cell-data)))
 
 (letfn [(default [default-v v] (or v default-v))]
   (defn field [ctx field]
