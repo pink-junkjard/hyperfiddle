@@ -136,8 +136,7 @@
 
     (either/right nil)))
 
-(let [never-read-only (constantly false)
-      nil-or-hydrate (fn [peer branch request]
+(let [nil-or-hydrate (fn [peer branch request]
                        (if-let [request @request]
                          @(hc/hydrate peer branch request)
                          (either/right nil)))]
@@ -151,7 +150,7 @@
                        :hypercrud.browser/schemas reactive-schemas ; For tx/entity->statements in userland.
 
                        ; provide defaults before user-bindings run.
-                       :read-only (or (:read-only ctx) never-read-only))
+                       :read-only (or (:read-only ctx) (r/constantly false)))
                  ctx (context/with-relations ctx)]
            ctx (user-bindings/user-bindings ctx)
            reactive-fes @(r/apply-inner-r (r/track find-element/auto-find-elements ctx))

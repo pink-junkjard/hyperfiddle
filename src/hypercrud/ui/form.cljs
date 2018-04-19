@@ -33,8 +33,6 @@
   ^{:key (hash (keys @(:cell-data ctx)))}
   [new-field-state-container ctx])
 
-(def always-read-only (constantly true))
-
 (defn form-cell [control -field ctx & [class]]              ; safe to return nil or seq
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     (ui-block-border-wrap
@@ -67,7 +65,7 @@
                                ctx (as-> (context/field ctx field) $
                                          (context/value $ (r/fmap (:cell-data->value field) (:cell-data ctx)))
                                          (if (or (nil? (:attribute field)) (= (:attribute field) :db/id))
-                                           (assoc $ :read-only always-read-only)
+                                           (assoc $ :read-only (r/constantly true))
                                            $))]
                            ^{:key id}
                            [Cell ctx]))))
