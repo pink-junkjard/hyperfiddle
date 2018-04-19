@@ -9,6 +9,7 @@
     contrib.eval-test
     contrib.reactive-test
     contrib.rfc3986-test
+    hypercrud.browser.auto-link-formula-test
     hypercrud.browser.auto-link-txfn-test
     hypercrud.browser.router-test
     hypercrud.browser.system-link-test
@@ -26,6 +27,7 @@
     'contrib.eval-test
     'contrib.reactive-test
     'contrib.rfc3986-test
+    'hypercrud.browser.auto-link-formula-test
     'hypercrud.browser.auto-link-txfn-test
     'hypercrud.browser.router-test
     'hypercrud.browser.system-link-test
