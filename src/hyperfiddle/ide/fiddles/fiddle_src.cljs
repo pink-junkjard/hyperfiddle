@@ -7,21 +7,13 @@
 
 
 (defn fiddle-src-renderer [ctx]
-  (let [#_#_ctx (shadow-fiddle ctx)]
+  (let [#_#_ctx (shadow-fiddle ctx)
+        rtype (:fiddle/type @(:hypercrud.browser/result ctx))]
     [:div
      ((:cell ctx) [true 0 :fiddle/type] ctx)
-     ((:cell ctx) [true 0 :fiddle/pull] ctx)
-     ((:cell ctx) [true 0 :fiddle/query] ctx)
+     (case rtype
+       :entity ((:cell ctx) [true 0 :fiddle/pull] ctx)
+       :query ((:cell ctx) [true 0 :fiddle/query] ctx)
+       nil)
      ((:browse ctx) :ui [] ctx (partial hijack-renderer false))
      ((:browse ctx) :links [] ctx (partial hijack-renderer true))]))
-
-(comment
-  (let [rtype (-> ctx :cell-data deref :fiddle/type)
-        visible (case (:attribute field)
-                  :fiddle/ident false
-                  :fiddle/query (= rtype :query)
-                  :fiddle/pull (= rtype :entity)
-                  true)]
-    (if visible
-      ; Omit form-cell, we don't want any cell markup at all.
-      [control field {} ctx])))
