@@ -2,7 +2,7 @@
   (:require [contrib.data :refer [rtrim-coll]]
             [contrib.reader :as reader]
             [contrib.rfc3986 :refer [encode-rfc3986-pchar decode-rfc3986-pchar encode-ednish decode-ednish]]
-            [contrib.string :refer [split-first]]
+            [contrib.string :refer [split-first empty->nil]]
             [cuerdas.core :as str]))
 
 
@@ -20,12 +20,9 @@
         fiddle))
     fiddle))
 
-(defn encode [route]
+(defn encode [[fiddle datomic-args service-args frag :as route]]
   ; fiddle is keyword (not entity - $ is extraneous)
-  (let [[fiddle datomic-args] route
-        fiddle-args []
-        service-args {}
-        state {}]
+  (let [fiddle-args []]
     (str "/"
          (str/join ";" (->> (cons (-encode-pchar fiddle) (map -encode-pchar fiddle-args))))
          "/"
@@ -33,7 +30,7 @@
 
          ; hash and query aren't used today, todo i would prefer to encode as edn hashmap instead of k=v
          (if (seq service-args) (str "?" (str/join "&" (->> service-args (map (fn [[k v]] (-encode-pchar k "=" (-encode-pchar v))))))))
-         (if (seq state) (str "#" (str/join "&" (->> state (map (fn [[k v]] (-encode-pchar k "=" (-encode-pchar v)))))))))))
+         (if (empty->nil frag) (str "#" (-> frag encode-ednish encode-rfc3986-pchar))))))
 
 (defn canonicalize "(apply canonicalize route)"
   [& [fiddle #_?fiddle-args ?datomic-args ?service-args ?initial-state]]
@@ -43,7 +40,7 @@
   (let [[root s] (split-first s "/")
         [fiddle-segment s] (split-first s "/")
         [fiddle & fiddle-args] (str/split fiddle-segment ";")
-        [s fragment] (split-first s "#")
+        [s frag] (split-first s "#")
         [datomic-args-segment query] (split-first s "?")
         datomic-args (->> (str/split datomic-args-segment "/"))] #_ "careful: (str/split \"\" \"/\") => [\"\"]"
 
@@ -53,7 +50,7 @@
       (if-let [as (->> datomic-args (remove str/empty-or-nil?) seq)]
         (mapv -decode-url-ednish as))
       (-decode-url-ednish query)
-      fragment)))
+      (-> frag decode-rfc3986-pchar decode-ednish empty->nil))))
 
 (defn assoc-frag [[fiddle ?datomic-args ?service-args ?initial-state] frag]
   {:pre [(nil? ?initial-state)]}

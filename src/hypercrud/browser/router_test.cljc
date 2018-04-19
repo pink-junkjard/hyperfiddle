@@ -36,6 +36,10 @@
   (is (= (decode "/:hyperfiddle.blog!post/~entity('$',:hyperfiddle.blog!homepage)") [:hyperfiddle.blog/post [#entity["$" :hyperfiddle.blog/homepage]]]))
   (is (= (decode "/:hyperfiddle.blog!post/~entity('$',:hyperfiddle.blog!homepage)?#:src") [:hyperfiddle.blog/post [#entity["$" :hyperfiddle.blog/homepage]] nil ":src"]))
   (is (= (decode "/:hyperfiddle.blog!post/~entity('$',:hyperfiddle.blog!homepage)#:src") [:hyperfiddle.blog/post [#entity["$" :hyperfiddle.blog/homepage]] nil ":src"]))
+
+  (is (= "/:hyperfiddle.blog!post/~entity('$',:hyperfiddle.blog!homepage)" (encode [:hyperfiddle.blog/post [#entity["$" :hyperfiddle.blog/homepage]]])))
+  ;(is (= "/:hyperfiddle.blog!post/~entity('$',:hyperfiddle.blog!homepage)?#:src" (encode [:hyperfiddle.blog/post [#entity["$" :hyperfiddle.blog/homepage]] nil ":src"])))
+  (is (= "/:hyperfiddle.blog!post/~entity('$',:hyperfiddle.blog!homepage)#:src" (encode [:hyperfiddle.blog/post [#entity["$" :hyperfiddle.blog/homepage]] nil ":src"])))
   )
 
 (deftest router-malformed-1
