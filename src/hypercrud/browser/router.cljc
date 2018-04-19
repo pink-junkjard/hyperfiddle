@@ -43,9 +43,9 @@
   (let [[root s] (split-first s "/")
         [fiddle-segment s] (split-first s "/")
         [fiddle & fiddle-args] (str/split fiddle-segment ";")
-        [datomic-args-segment s] (split-first s "?")
-        datomic-args (->> (str/split datomic-args-segment "/")) ; careful: (str/split "" "/") => [""]
-        [query fragment] (split-first s "#")]
+        [s fragment] (split-first s "#")
+        [datomic-args-segment query] (split-first s "?")
+        datomic-args (->> (str/split datomic-args-segment "/"))] #_ "careful: (str/split \"\" \"/\") => [\"\"]"
 
     (canonicalize
       (-decode-url-ednish fiddle)
@@ -53,7 +53,7 @@
       (if-let [as (->> datomic-args (remove str/empty-or-nil?) seq)]
         (mapv -decode-url-ednish as))
       (-decode-url-ednish query)
-      (-decode-url-ednish fragment))))
+      fragment)))
 
 (defn assoc-frag [[fiddle ?datomic-args ?service-args ?initial-state] frag]
   {:pre [(nil? ?initial-state)]}
