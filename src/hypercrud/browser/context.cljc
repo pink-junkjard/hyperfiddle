@@ -107,27 +107,26 @@
   {:pre [(r/reactive? rv)]}
   (assoc ctx :value rv))
 
-(defn -field-getter-dumb [ctx a]
-  #_(r/cursor (:hypercrud.browser/find-element ctx) [:fields i])
-  (->> @(r/cursor (:hypercrud.browser/find-element ctx) [:fields])
-       (filter #(= (:attribute %) a))
-       first))
-
 (letfn [(get-value-f [attr fields]
           (->> fields
                (filter #(= (:attribute %) attr))
                first
-               :cell-data->value))]
+               :cell-data->value))
+        (field-from-attribute [ctx a]
+          (->> @(r/cursor (:hypercrud.browser/find-element ctx) [:fields #_i])
+               (filter #(= (:attribute %) a))
+               first
+               (field ctx)))
+        (value-from-attribute [ctx a]
+          (let [cell-extractor (->> (r/cursor (:hypercrud.browser/find-element ctx) [:fields])
+                                    (r/fmap (r/partial get-value-f a)))]
+            (value ctx (r/fapply cell-extractor (:cell-data ctx)))))]
   (defn relation-path [ctx [dependent i a]]
-    (as-> ctx ctx
-          (assoc ctx :layout :block)
-          ;(with-relations)                                    ; already here
-          ;(relation (reactive/atom [domain]))                 ; already here
-          (if (and i) (find-element ctx i) ctx)
-          (if (and i dependent) (cell-data ctx) ctx)
-          (if (and i a) (field ctx (-field-getter-dumb ctx a)) ctx)
-          (if (and i dependent a)
-            (let [cell-extractor @(->> (r/cursor (:hypercrud.browser/find-element ctx) [:fields])
-                                       (r/fmap (r/partial get-value-f a)))]
-              (value ctx (r/fmap cell-extractor (:cell-data ctx))))
-            ctx))))
+    (-> (assoc ctx :layout :block)
+        ;(with-relations)                                    ; already here
+        ;(relation (reactive/atom [domain]))                 ; already here
+        (cond->
+          (and i) (find-element i)
+          (and i dependent) (cell-data)
+          (and i a) (field-from-attribute a)
+          (and i dependent a) (value-from-attribute a)))))
