@@ -86,26 +86,29 @@
 (defn close-popover [branch popover-id]
   [:close-popover branch popover-id])
 
-(defn set-route [rt route branch keep-popovers? dispatch! get-state]
+(defn set-route [rt route branch keep-popovers? force dispatch! get-state]
   (assert (nil? branch) "Non-nil branches currently unsupported")
-  (if-let [e (routing/invalid-route? route)]
-    (do (dispatch! [:set-error e])
-        (p/rejected e))
-    ; currently branches only have relationships to parents, need to be able to find all children from a parent
-    ; this would allow us to discard/close ourself and our children
-    ; for now we are always nil branch, so blast everything
-    (let [actions (->> (::runtime/partitions (get-state))
-                       (mapcat (fn [[ident partition]]
-                                 (conj (if (and (= branch ident) keep-popovers?)
-                                         (vector)
-                                         (mapv (partial close-popover ident) (:popovers partition)))
-                                       (if (= branch ident)
-                                         [:partition-route ident route] ; dont blast nil stage
-                                         (discard-partition ident))))))]
-      (dispatch! (apply batch actions))
-      ; should just call foundation/bootstrap-data
-      (-> (refresh-partition-basis rt branch dispatch! get-state)
-          (p/then #(hydrate-partition rt branch nil dispatch! get-state))))))
+  (let [current-route (get-in get-state [::runtime/partitions branch :route])]
+    (if (and (not force) (routing/compare-routes route current-route) (not= route current-route))
+      (dispatch! [:partition-route branch route])           ; just update state without re-hydrating
+      (if-let [e (routing/invalid-route? route)]
+        (do (dispatch! [:set-error e])
+            (p/rejected e))
+        ; currently branches only have relationships to parents, need to be able to find all children from a parent
+        ; this would allow us to discard/close ourself and our children
+        ; for now we are always nil branch, so blast everything
+        (let [actions (->> (::runtime/partitions (get-state))
+                           (mapcat (fn [[ident partition]]
+                                     (conj (if (and (= branch ident) keep-popovers?)
+                                             (vector)
+                                             (mapv (partial close-popover ident) (:popovers partition)))
+                                           (if (= branch ident)
+                                             [:partition-route ident route] ; dont blast nil stage
+                                             (discard-partition ident))))))]
+          (dispatch! (apply batch actions))
+          ; should just call foundation/bootstrap-data
+          (-> (refresh-partition-basis rt branch dispatch! get-state)
+              (p/then #(hydrate-partition rt branch nil dispatch! get-state))))))))
 
 (defn update-to-tempids [get-state branch uri tx]
   (let [{:keys [stage ::runtime/partitions]} (get-state)
@@ -136,10 +139,10 @@
                                current-route (get-in (get-state) [::runtime/partitions nil :route])
                                route' (-> (or route current-route)
                                           (invert-route invert-id))
-                               keep-popovers? (or (nil? route) (= route current-route))]]
+                               keep-popovers? (or (nil? route) (routing/compare-routes route current-route))]]
                     ; todo we want to overwrite our current browser location with this new url
                     ; currently this new route breaks the back button
-                    (set-route rt route' nil keep-popovers? dispatch! get-state)))))))
+                    (set-route rt route' nil keep-popovers? true dispatch! get-state)))))))
 
 (defn should-transact!? [branch get-state]
   (and (nil? branch) (::runtime/auto-transact (get-state))))

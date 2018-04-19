@@ -94,6 +94,11 @@
       (cats/return
         (id->tempid [fiddle-id (normalize-args (:remove-this-wrapper args))] ctx)))))
 
+(defn compare-routes [a b]
+  ; return true if = ignoring fragment
+  (= (apply router/canonicalize (take 3 a))
+     (apply router/canonicalize (take 3 b))))
+
 (def encode router/encode)
 (def decode router/decode)
 
