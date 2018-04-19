@@ -15,6 +15,7 @@
     hypercrud.browser.system-link-test
     hypercrud.ui.control.link-controls-test
     hyperfiddle.foundation-test
+    hyperfiddle.ide.fiddles.schema_test
     hyperfiddle.ide-test
     hyperfiddle.readers-test
     ))
@@ -33,6 +34,7 @@
     'hypercrud.browser.system-link-test
     'hypercrud.ui.control.link-controls-test
     'hyperfiddle.foundation-test
+    'hyperfiddle.ide.fiddles.schema_test
     'hyperfiddle.ide-test
     'hyperfiddle.readers-test
     ))

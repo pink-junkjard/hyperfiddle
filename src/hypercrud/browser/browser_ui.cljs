@@ -85,6 +85,8 @@
       (fn [e] (throw e))
       (fn [f] (into [f] args)))))
 
+(defn build-renderer-str [user-str] (str "(fn [ctx & [class]]\n" user-str ")"))
+
 (defn ui-comp [ctx]
   (case @(:hypercrud.ui/display-mode ctx)
     :user (cond-let
@@ -98,7 +100,7 @@
                               renderer-str))]
             ^{:key (hash renderer-str)}
             [user-portal (ui-error/error-comp ctx)
-             [eval-renderer-comp (str "(fn [ctx & [class]]\n" renderer-str ")") ctx (auto-ui-css-class ctx)]]
+             [eval-renderer-comp (build-renderer-str renderer-str) ctx (auto-ui-css-class ctx)]]
 
             [_ :else]
             ; todo ui.result should be injected
