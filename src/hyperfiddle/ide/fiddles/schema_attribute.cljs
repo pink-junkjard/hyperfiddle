@@ -11,9 +11,9 @@
 
 (defn- has-required-attrs? [entity] (set/subset? special-case-attrs (set (keys entity))))
 
-(defn- read-only [attr ctx]
+(defn- read-only [ctx]
   (not (or (has-required-attrs? @(:cell-data ctx))
-           (#{:db/ident :db/doc :db/valueType :db/cardinality} (:db/ident attr)))))
+           (#{:db/ident :db/doc :db/valueType :db/cardinality} (:hypercrud.browser/attribute ctx)))))
 
 (defn- merge-in-tx [entity tx ctx]
   (reduce (fn [entity [op e a v]]

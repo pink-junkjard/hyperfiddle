@@ -100,7 +100,8 @@
 (defn control-props [ctx]
   ; why does this need the field - it needs the ident for readonly in "Edit Anchors"
   ; todo clean this interface up
-  {:read-only ((get ctx :read-only) @(:hypercrud.browser/fat-attribute ctx) ctx)})
+  (cond-> {}
+    (:read-only ctx) (assoc :read-only ((:read-only ctx) ctx))))
 
 (defn auto-control [maybe-field props _ ctx]                ; compat
   [(some-> (case (:layout ctx :block)
