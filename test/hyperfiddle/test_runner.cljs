@@ -9,7 +9,9 @@
     contrib.eval-test
     contrib.reactive-test
     contrib.rfc3986-test
+    hypercrud.browser.auto-link-txfn-test
     hypercrud.browser.router-test
+    hypercrud.browser.system-link-test
     hypercrud.ui.control.link-controls-test
     hyperfiddle.foundation-test
     hyperfiddle.ide-test
@@ -24,7 +26,9 @@
     'contrib.eval-test
     'contrib.reactive-test
     'contrib.rfc3986-test
+    'hypercrud.browser.auto-link-txfn-test
     'hypercrud.browser.router-test
+    'hypercrud.browser.system-link-test
     'hypercrud.ui.control.link-controls-test
     'hyperfiddle.foundation-test
     'hyperfiddle.ide-test
