@@ -29,7 +29,7 @@
 ; NOTE: this ctx logic and structure is the same as the inline branch of browser-request/recurse-request
 ; don't test link validity, we need to render the failure. If this is a dependent link, use visibility predicate to hide the error.
 
-(defn render-nav-cmps [path dependent? ctx & args]
+(defn anchors [path dependent? ctx & args]
   (let [{processors nil :as args} (kwargs args)]
     (->> (r/track ui-contextual-links path dependent? false (:hypercrud.browser/links ctx) processors)
          (r/unsequence :db/id)
@@ -39,7 +39,7 @@
                   ^{:key (hash link-id)} [reactive-nav-cmp link-ref ctx (:class args)])))
          (doall))))
 
-(defn render-inline-links [path dependent? ctx & args]
+(defn iframes [path dependent? ctx & args]
   (let [{processors nil :as args} (kwargs args)]
     (->> (r/track ui-contextual-links path dependent? true (:hypercrud.browser/links ctx) processors)
          (r/unsequence :db/id)

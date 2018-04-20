@@ -8,9 +8,9 @@
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div.value
      [:div.editable-select {:key (:hypercrud.browser/attribute ctx)}
-      [:div.anchors (link-controls/render-nav-cmps path true ctx)]
+      [:div.anchors (link-controls/anchors path true ctx)]
       (let [change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx)
                                                                @(:hypercrud.browser/fat-attribute ctx)
                                                                (not @(:value ctx))))]
         (checkbox* (:value ctx) change!))]
-     (link-controls/render-inline-links path true ctx)]))
+     (link-controls/iframes path true ctx)]))

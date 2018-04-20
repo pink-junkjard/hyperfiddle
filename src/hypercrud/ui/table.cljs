@@ -63,8 +63,8 @@
      ; todo unsafe execution of user code: label
      ((:label ctx (partial vector label)) field ctx)
      [:div.anchors
-      (link-controls/render-nav-cmps path false ctx link/options-processor)
-      (link-controls/render-inline-links path false ctx link/options-processor)]]))
+      (link-controls/anchors path false ctx link/options-processor)
+      (link-controls/iframes path false ctx link/options-processor)]]))
 
 (defn LinkCell [dependent? ctx]
   [(if dependent? :td.link-cell :th.link-cell)
@@ -73,9 +73,9 @@
                   (let [ctx (context/find-element ctx i)
                         ctx (if dependent? (context/cell-data ctx) ctx) ; bit in ctx?
                         path [(:fe-pos ctx)]]
-                    (link-controls/render-nav-cmps path dependent? ctx)
+                    (link-controls/anchors path dependent? ctx)
                     ; inline entity-anchors are not yet implemented
-                    #_(link-controls/render-inline-links path dependent? ctx)))))])
+                    #_(link-controls/iframes path dependent? ctx)))))])
 
 (defn THead [sort-col ctx]
   [:tr

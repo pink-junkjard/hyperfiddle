@@ -39,8 +39,8 @@
       ctx (str class " field")
       ; todo unsafe execution of user code: label
       [:div ((:label ctx (partial vector label)) -field ctx)
-       (link-controls/render-nav-cmps path false ctx link/options-processor)
-       (link-controls/render-inline-links path false ctx link/options-processor)]
+       (link-controls/anchors path false ctx link/options-processor)
+       (link-controls/iframes path false ctx link/options-processor)]
       ; todo unsafe execution of user code: control
       [control -field (control-props ctx) ctx])))
 
@@ -53,7 +53,7 @@
 (defn Entity [ctx]
   (let [path [(:fe-pos ctx)]]
     (concat
-      (link-controls/render-nav-cmps path false ctx :class "hyperfiddle-link-entity-independent")
+      (link-controls/anchors path false ctx :class "hyperfiddle-link-entity-independent")
       (let [ctx (context/cell-data ctx)]
         (concat
           (conj
@@ -72,9 +72,9 @@
             (if @(r/cursor (:hypercrud.browser/find-element ctx) [:splat?])
               ^{:key :new-field}
               [new-field ctx]))
-          (link-controls/render-nav-cmps path true ctx :class "hyperfiddle-link-entity-dependent")
-          (link-controls/render-inline-links path true ctx)))
-      (link-controls/render-inline-links path false ctx))))
+          (link-controls/anchors path true ctx :class "hyperfiddle-link-entity-dependent")
+          (link-controls/iframes path true ctx)))
+      (link-controls/iframes path false ctx))))
 
 (defn Relation [ctx]
   ; No wrapper div; it limits layout e.g. floating. The pyramid mapcats out to a flat list of dom elements that comprise the form

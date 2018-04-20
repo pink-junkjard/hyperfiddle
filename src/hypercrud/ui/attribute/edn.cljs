@@ -25,9 +25,9 @@
                                    :table edn-inline-block*)
         path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div.value
-     [:div.anchors (link-controls/render-nav-cmps path true ctx link/options-processor)]
+     [:div.anchors (link-controls/anchors path true ctx link/options-processor)]
      [widget value change! props]
-     (link-controls/render-inline-links path true ctx link/options-processor)]))
+     (link-controls/iframes path true ctx link/options-processor)]))
 
 (defn edn [maybe-field props ctx]
   (let [change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))
@@ -36,6 +36,6 @@
                                    :table edn-inline-block*)
         path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div.value
-     [:div.anchors (link-controls/render-nav-cmps path true ctx link/options-processor)]
+     [:div.anchors (link-controls/anchors path true ctx link/options-processor)]
      [widget @(:value ctx) change! props]
-     (link-controls/render-inline-links path true ctx link/options-processor)]))
+     (link-controls/iframes path true ctx link/options-processor)]))

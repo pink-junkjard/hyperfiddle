@@ -13,8 +13,8 @@
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div
      #_(pr-str (:db/id @(:value ctx)))
-     [:div.anchors (link-controls/render-nav-cmps path true ctx)]
-     (link-controls/render-inline-links path true ctx)]))
+     [:div.anchors (link-controls/anchors path true ctx)]
+     (link-controls/iframes path true ctx)]))
 
 (defn ref-many [field props ctx]
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
@@ -22,8 +22,8 @@
      #_(->> (mapv :db/id @(:value ctx))
             (pr-str)
             (ellipsis 15))
-     [:div.anchors (link-controls/render-nav-cmps path true ctx)]
-     (link-controls/render-inline-links path true ctx)]))
+     [:div.anchors (link-controls/anchors path true ctx)]
+     (link-controls/iframes path true ctx)]))
 
 (defn other-many [field props ctx]
   [:div

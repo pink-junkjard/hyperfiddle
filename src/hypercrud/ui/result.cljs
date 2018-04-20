@@ -24,6 +24,6 @@
   [:div {:class (classes "auto-result" class)}              ; auto-result ?
    [:h3 (some-> ctx :hypercrud.browser/fiddle deref :fiddle/ident name)]
    [markdown (-> ctx :hypercrud.browser/fiddle deref :db/doc)]
-   (link-controls/render-nav-cmps [] false ctx :class "hyperfiddle-link-index")
+   (link-controls/anchors [] false ctx :class "hyperfiddle-link-index")
    (result ctx)
-   (link-controls/render-inline-links [] false ctx)])
+   (link-controls/iframes [] false ctx)])
