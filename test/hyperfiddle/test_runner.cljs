@@ -3,12 +3,16 @@
     [doo.runner :refer-macros [doo-tests]]
     [reagent.dom.server]                                    ; needed for hypercrud.ui.safe-render
 
+    ; NOT clj tests, this is only for CLJS tests
+
     contrib.char-test
     contrib.data-test
+    contrib.datomic-errors-test
     contrib.datomic-tx-test
     contrib.eval-test
     contrib.reactive-test
     contrib.rfc3986-test
+    contrib.string-test
     hypercrud.browser.auto-link-formula-test
     hypercrud.browser.auto-link-txfn-test
     hypercrud.browser.router-test
@@ -24,10 +28,12 @@
   (doo-tests
     'contrib.char-test
     'contrib.data-test
+    'contrib.datomic-errors-test
     'contrib.datomic-tx-test
     'contrib.eval-test
     'contrib.reactive-test
     'contrib.rfc3986-test
+    'contrib.string-test
     'hypercrud.browser.auto-link-formula-test
     'hypercrud.browser.auto-link-txfn-test
     'hypercrud.browser.router-test
