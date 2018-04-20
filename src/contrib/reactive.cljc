@@ -76,7 +76,7 @@
 (letfn [(-fapply [rf rv] (@rf @rv))]
   (defn fapply [rf & rvs]
     {:pre [(reactive? rf) (every? reactive? rvs)]}
-    (reduce (partial track -fapply rf) rvs)))
+    (reduce (partial track -fapply) rf rvs)))
 
 ; Reactive[Monad[_]] => Reactive[Monad[Reactive[_]]]
 ; useful for reacting on the Either (left v right), but not the Right's value
