@@ -88,26 +88,23 @@
 (defn build-renderer-str [user-str] (str "(fn [ctx & [class]]\n" user-str ")"))
 
 (defn ui-comp [ctx]
-  (case @(:hypercrud.ui/display-mode ctx)
-    :user (cond-let
-            [user-renderer (:user-renderer ctx)]
-            ^{:key (hash user-renderer)}
-            [user-portal (ui-error/error-comp ctx)
-             [user-renderer ctx (auto-ui-css-class ctx)]]
+  [user-portal (ui-error/error-comp ctx)
+   (case @(:hypercrud.ui/display-mode ctx)
+     :user (cond-let
+             [user-renderer (:user-renderer ctx)]
+             [user-renderer ctx (auto-ui-css-class ctx)]
 
-            [renderer-str (let [renderer-str @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/renderer])]
-                            (when (and (string? renderer-str) (not (string/blank? renderer-str)))
-                              renderer-str))]
-            ^{:key (hash renderer-str)}
-            [user-portal (ui-error/error-comp ctx)
-             [eval-renderer-comp (build-renderer-str renderer-str) ctx (auto-ui-css-class ctx)]]
+             [renderer-str (let [renderer-str @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/renderer])]
+                             (when (and (string? renderer-str) (not (string/blank? renderer-str)))
+                               renderer-str))]
+             [eval-renderer-comp (build-renderer-str renderer-str) ctx (auto-ui-css-class ctx)]
 
-            [_ :else]
-            ; todo ui.result should be injected
-            [hypercrud.ui.result/fiddle ctx (auto-ui-css-class ctx)])
+             [_ :else]
+             ; todo ui.result should be injected
+             [hypercrud.ui.result/fiddle ctx (auto-ui-css-class ctx)])
 
-    ; todo ui.result should be injected
-    :xray [hypercrud.ui.result/fiddle-xray ctx (auto-ui-css-class ctx)]))
+     ; todo ui.result should be injected
+     :xray [hypercrud.ui.result/fiddle-xray ctx (auto-ui-css-class ctx)])])
 
 (defn ui-from-route [route ctx & [class]]
   (let [click-fn (or (:hypercrud.browser/page-on-click ctx) (constantly nil)) ; parent ctx receives click event, not child frame
