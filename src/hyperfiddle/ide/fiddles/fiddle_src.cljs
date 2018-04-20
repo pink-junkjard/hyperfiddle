@@ -15,7 +15,7 @@
      ((:browse ctx) :attribute-renderers [] ctx (partial hijack-renderer true))
      ((:browse ctx) :links [] ctx (partial hijack-renderer true))]
 
-  (let [#_#_ctx (shadow-fiddle ctx)
+  (let [ctx (shadow-fiddle ctx)
         rtype (:fiddle/type @(:hypercrud.browser/result ctx))]
     [:div {:class class}
      [:h3 "fiddle src"]
