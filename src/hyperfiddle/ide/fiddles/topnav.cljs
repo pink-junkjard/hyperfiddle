@@ -90,17 +90,11 @@
                                 [(:navigate-cmp ctx) props label (:class kwargs)]))]
     [:div {:class class}
      [:div.hyperfiddle-topnav-root-controls
-      (fake-managed-anchor :domain [] ctx (get-in ctx [:target-domain :domain/ident]))
-      " / "
-      (let [ident @(reactive/cursor (:hypercrud.browser/result ctx) [:fiddle/ident])]
-        (fake-managed-anchor :fiddle-more [] (assoc ctx :user-renderer (reactive/partial hijack-renderer false)) (some-> ident name)))
-      " · "
-      (if @(runtime/state (:peer ctx) [::runtime/auto-transact])
-        [:div
-         [:input {:id ::auto-transact :type "checkbox" :checked true
-                  :on-click (fn [] (runtime/dispatch! (:peer ctx) [:disable-auto-transact]))}]
-         [:label {:for ::auto-transact} "auto-transact"]]
-        (fake-managed-anchor :stage [] ctx "stage" :class (if dirty? "stage-dirty")))
+      [tooltip {:label nil}
+       (fake-managed-anchor :domain [] ctx (get-in ctx [:target-domain :domain/ident]))]
+
+      [tooltip {:label "Fiddle ident"}
+       (some-> @(reactive/cursor (:hypercrud.browser/result ctx) [:fiddle/ident]) name)]
 
       (let [change! #(runtime/dispatch! (:peer ctx) (foundation-actions/set-display-mode %))]
         [:span.radio-group
@@ -111,11 +105,17 @@
             href (if-not src-mode
                    (str "#" (encode-rfc3986-pchar (encode-ednish (pr-str :src))))
                    "#")]
-        [:a {:href href} (if src-mode "unsrc" "src")])
+        [tooltip {:label (if src-mode "View fiddle" "View fiddle source")}
+         [:a {:href href} (if src-mode "unsrc" "src")]])
 
       [:div.right-nav {:key "right-nav"}                    ; CAREFUL; this key prevents popover flickering
        [loading-spinner ctx]
-       ; ignore results; don't display the fiddle's data, just the anchors
+       (if @(runtime/state (:peer ctx) [::runtime/auto-transact])
+         [:div
+          [:input {:id ::auto-transact :type "checkbox" :checked true
+                   :on-click (fn [] (runtime/dispatch! (:peer ctx) [:disable-auto-transact]))}]
+          [:label {:for ::auto-transact} "auto-transact"]]
+         (fake-managed-anchor :stage [] ctx "stage" :class (if dirty? "stage-dirty")))
        ((:anchor ctx) :new-fiddle [0] ctx "new-fiddle")
        (if (:user-profile ctx)
          ((:anchor ctx) :account [] ctx (get-in ctx [:user-profile :email]))
