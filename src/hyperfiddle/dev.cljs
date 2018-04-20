@@ -29,7 +29,7 @@
                                               :value])
                                 (update-existing :hypercrud.browser/find-element deref)
                                 (update-existing :cell-data deref)
-                                (update-existing :value deref)
+                                ;(update-existing :value deref)
                                 #_{:hypercrud.browser/attribute identity
                                    :fe-pos identity
                                    :hypercrud.browser/find-element deref
