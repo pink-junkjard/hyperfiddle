@@ -66,7 +66,9 @@
    :fiddle/query (let [$db (symbol $db)]
                    ; pprint-str is slow and its runtime generated so can't define it as a .edn resource with whitespace
                    ; Real problem is that userland can even see this string - its a sys fiddle, you shouldn't see it in the IDE
-                   (str [:in $db :find [(list 'pull $db '?attr [:db/id :db/ident :db/valueType :db/cardinality :db/doc :db/unique :db/isComponent :db/fulltext]) '...]
+                   (str [:in $db :find [(list 'pull $db '?attr
+                                              [:db/id :db/ident :db/valueType :db/cardinality :db/unique
+                                               :db/isComponent :db/fulltext :db/doc]) '...]
                          :where [$db :db.part/db :db.install/attribute '?attr]]))
    :fiddle/type :query
    :fiddle/bindings (mpprint-str (fn [ctx] (assoc ctx :read-only (constantly true))))
