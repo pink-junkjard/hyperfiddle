@@ -19,6 +19,7 @@
         rtype (:fiddle/type @(:hypercrud.browser/result ctx))]
     [:div {:class class}
      [:h3 "fiddle src"]
+     ((:cell ctx) [true 0 :fiddle/ident] ctx)
      ((:cell ctx) [true 0 :fiddle/type] ctx)
      (case rtype
        :entity ((:cell ctx) [true 0 :fiddle/pull] ctx)
@@ -28,5 +29,8 @@
      ((:cell ctx) [true 0 :fiddle/markdown] ctx)
      ((:cell ctx) [true 0 :fiddle/renderer] ctx)
      ((:cell ctx) [true 0 :fiddle/css] ctx)
+     ((:cell ctx) [true 0 :fiddle/entrypoint?] ctx)
+     ((:cell ctx) [true 0 :fiddle/bindings] ctx)
      ((:browse ctx) :attribute-renderers [] ctx (partial hijack-renderer true))
-     ((:browse ctx) :links [] ctx (partial hijack-renderer true))]))
+     ((:browse ctx) :links [] ctx (partial hijack-renderer true))
+     ]))

@@ -75,7 +75,7 @@
 (defn src-mode? [frag]
   (= :src (read-edn-string (decode-ednish (decode-rfc3986-pchar frag)))))
 
-(defn renderer [ctx]
+(defn renderer [ctx class]
   {:pre [(or (:relations ctx) (:relation ctx))]}
   (let [display-mode @(runtime/state (:peer ctx) [:display-mode])
         dirty? (not (empty? @(runtime/state (:peer ctx) [:stage])))
@@ -88,7 +88,7 @@
                                     props (-> (link/build-link-props link ctx true)
                                               #_(dissoc :style) #_"custom renderers don't want colored links")]
                                 [(:navigate-cmp ctx) props label (:class kwargs)]))]
-    [:div.hyperfiddle-topnav
+    [:div {:class class}
      [:div.hyperfiddle-topnav-root-controls
       (fake-managed-anchor :domain [] ctx (get-in ctx [:target-domain :domain/ident]))
       " / "
