@@ -50,7 +50,7 @@
   [hypercrud.ui.control.code/code* content #() props])
 
 (defn eval [content argument props ctx]
-  (unwrap (read-eval-with-bindings content ctx)))
+  (read-eval-with-bindings content ctx))
 
 (defn browse [content argument props ctx]
   (let [kwargs (flatten (seq props))
@@ -77,7 +77,7 @@
   (hypercrud.ui.table/Table ctx))
 
 (defn result [content argument {:keys [class] :as props} ctx]
-  (let [f (unwrap (read-eval-with-bindings content))]
+  (let [f (read-eval-with-bindings content)]
     [:div.unp (hypercrud.ui.result/result ctx f)]))
 
 (letfn [(keyfn [relation] (hash (map #(or (:db/id %) %) relation)))]
@@ -90,7 +90,7 @@
           (doall))]))
 
 (defn value [content argument props ctx]
-  (let [content (unwrap (read-eval-with-bindings content))
+  (let [content (read-eval-with-bindings content)
         path (into [true] (unwrap (memoized-safe-read-edn-string (str "[" argument "]"))))]
     (fragment path ((:value ctx) path ctx content))))
 
