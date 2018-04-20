@@ -24,15 +24,20 @@
 
 (code-for-browser
   (defn user-portal [with-error & children]
-    (let [e-state (reagent/atom nil)]
+    (let [show-error (atom false)
+          e-state (reagent/atom nil)]
       (reagent/create-class
         {:reagent-render (fn [with-error & children]
                            (into [:div.hyperfiddle-userportal]
-                                 (if-let [e @e-state]
-                                   [[with-error e]]
-                                   children)))
+                                 (let [e @e-state]
+                                   (if (and @show-error e)
+                                     (do
+                                       (reset! show-error false) ; only show the error once, retry after that
+                                       [[with-error e]])
+                                     children))))
 
          :component-did-catch (fn [#_this e info]           ; args will need updating in reagent0.8.x
+                                (reset! show-error true)
                                 (reset! e-state e))}))))
 
 (defn portal-markup [control & args]
