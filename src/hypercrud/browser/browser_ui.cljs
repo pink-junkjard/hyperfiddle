@@ -42,8 +42,7 @@
           (let [kwargs (kwargs args)
                 {:keys [:link/dependent? :link/path] :as link} @(r/track link/rel->link rel path ctx)
                 ctx (context/relation-path ctx (into [dependent?] (unwrap (memoized-safe-read-edn-string (str "[" path "]")))))
-                props (-> (link/build-link-props link ctx)
-                          #_(dissoc :style) #_"custom renderers don't want colored links")]
+                props (link/build-link-props link ctx)]
             [(:navigate-cmp ctx) props label (:class kwargs)]))
         (cell [[d i a] ctx & args]                          ; form only
           [hypercrud.ui.form/Cell (context/relation-path ctx [d i a])])
