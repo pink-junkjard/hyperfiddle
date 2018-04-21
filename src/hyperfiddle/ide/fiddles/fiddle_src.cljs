@@ -8,14 +8,7 @@
 
 (defn fiddle-src-renderer [ctx class]
   #_(hypercrud.ui.result/fiddle ctx)
-  #_[:div {:class class}
-     [:h3 "fiddle src"]
-     [hypercrud.ui.control.markdown-rendered/markdown (-> ctx :hypercrud.browser/fiddle deref :db/doc)]
-     [hypercrud.ui.control.markdown-rendered/markdown "!result[]" ctx]
-     ((:browse ctx) :attribute-renderers [] ctx (partial hijack-renderer true))
-     ((:browse ctx) :links [] ctx (partial hijack-renderer true))]
-
-  (let [ctx (shadow-fiddle ctx)
+  (let [ctx (-> (shadow-fiddle ctx) (dissoc :user-renderer))
         rtype (:fiddle/type @(:hypercrud.browser/result ctx))]
     [:div {:class class}
      [:h3 "fiddle src"]
@@ -31,6 +24,7 @@
      ((:cell ctx) [true 0 :fiddle/css] ctx)
      ((:cell ctx) [true 0 :fiddle/entrypoint?] ctx)
      ((:cell ctx) [true 0 :fiddle/bindings] ctx)
+     ((:anchor ctx) :hyperfiddle/remove [0] ctx "Remove fiddle")
      ((:browse ctx) :attribute-renderers [] ctx (partial hijack-renderer true))
      ((:browse ctx) :links [] ctx (partial hijack-renderer true))
      ]))
