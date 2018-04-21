@@ -89,38 +89,40 @@
                                               #_(dissoc :style) #_"custom renderers don't want colored links")]
                                 [(:navigate-cmp ctx) props label (:class kwargs)]))]
     [:div {:class class}
-     [:div.hyperfiddle-topnav-root-controls
+     [:div.left-nav
       [tooltip {:label nil}
        (fake-managed-anchor :domain [] ctx (get-in ctx [:target-domain :domain/ident]))]
 
       [tooltip {:label "Fiddle ident"}
-       (some-> @(reactive/cursor (:hypercrud.browser/result ctx) [:fiddle/ident]) name)]
+       (some-> @(reactive/cursor (:hypercrud.browser/result ctx) [:fiddle/ident]) str)]]
 
+     [loading-spinner ctx]
+
+     [:div.right-nav
       (let [change! #(runtime/dispatch! (:peer ctx) (foundation-actions/set-display-mode %))]
         [:span.radio-group
          (radio/option {:label "data" :tooltip "Edit data directly" :target :xray :value display-mode :change! change!})
          (radio/option {:label "view" :tooltip "View end-user UI" :target :user :value display-mode :change! change!})])
-
       (let [src-mode (src-mode? (-> ctx :target-route (get 3)))
             href (if-not src-mode
                    (str "#" (encode-rfc3986-pchar (encode-ednish (pr-str :src))))
                    "#")]
         [tooltip {:label (if src-mode "View fiddle" "View fiddle source")}
-         [:a {:href href} (if src-mode "unsrc" "src")]])
+         [:a {:href href} (if src-mode "unsrc" "src")]])]
 
-      [:div.right-nav {:key "right-nav"}                    ; CAREFUL; this key prevents popover flickering
-       [loading-spinner ctx]
-       (if @(runtime/state (:peer ctx) [::runtime/auto-transact])
-         [:div
-          [:input {:id ::auto-transact :type "checkbox" :checked true
-                   :on-click (fn [] (runtime/dispatch! (:peer ctx) [:disable-auto-transact]))}]
-          [:label {:for ::auto-transact} "auto-transact"]]
-         (fake-managed-anchor :stage [] ctx "stage" :class (if dirty? "stage-dirty")))
-       ((:anchor ctx) :new-fiddle [0] ctx "new-fiddle")
-       (if (:user-profile ctx)
-         ((:anchor ctx) :account [] ctx (get-in ctx [:user-profile :email]))
-         (let [auth-state (base64-url-safe/encode (runtime/encode-route (:peer ctx) (:target-route ctx)))]
-           [:span.nav-link.auth [:a {:href (str (stateless-login-url ctx) "&state=" auth-state)} "Login"]]))]]]))
+     [:div.right-nav {:key "right-nav"}                     ; CAREFUL; this key prevents popover flickering
+
+      (if @(runtime/state (:peer ctx) [::runtime/auto-transact])
+        [:div
+         [:input {:id ::auto-transact :type "checkbox" :checked true
+                  :on-click (fn [] (runtime/dispatch! (:peer ctx) [:disable-auto-transact]))}]
+         [:label {:for ::auto-transact} "auto-transact"]]
+        (fake-managed-anchor :stage [] ctx "stage" :class (if dirty? "stage-dirty")))
+      ((:anchor ctx) :new-fiddle [0] ctx "new-fiddle")
+      (if (:user-profile ctx)
+        ((:anchor ctx) :account [] ctx (get-in ctx [:user-profile :email]))
+        (let [auth-state (base64-url-safe/encode (runtime/encode-route (:peer ctx) (:target-route ctx)))]
+          [:span.nav-link.auth [:a {:href (str (stateless-login-url ctx) "&state=" auth-state)} "Login"]]))]]))
 
 (defn ^:export qe-picker-control [field props ctx]
   (let [enums [:query :entity :blank]
