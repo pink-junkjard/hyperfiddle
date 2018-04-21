@@ -88,18 +88,17 @@
       [loading-spinner ctx]]
 
      [:div.right-nav
-      (let [change! #(runtime/dispatch! (:peer ctx) (foundation-actions/set-display-mode %))]
+      (let [src-mode (src-mode? (-> ctx :target-route (get 3)))
+            change! #(runtime/dispatch! (:peer ctx) (foundation-actions/set-display-mode %))]
         [:span.radio-group
-         (radio/option {:label "data" :tooltip "Edit data directly" :target :xray :value display-mode :change! change!})
-         (radio/option {:label "view" :tooltip "View end-user UI" :target :user :value display-mode :change! change!})
+         (radio/option {:label "data" :tooltip "Edit data directly" :target :xray :value (if src-mode :src display-mode) :change! change!})
+         (radio/option {:label "view" :tooltip "View end-user UI" :target :user :value (if src-mode :src display-mode) :change! change!})
          (radio/option {:label
-                        (let [src-mode (src-mode? (-> ctx :target-route (get 3)))
-                              href (if-not src-mode
+                        (let [href (if-not src-mode
                                      (str "#" (encode-rfc3986-pchar (encode-ednish (pr-str :src))))
                                      "#")]
                           [:a {:href href} (if src-mode "unsrc" "src")])
-                        :tooltip "View fiddle source" :target :src :value display-mode :change! change!})
-         ])]
+                        :tooltip "View fiddle source" :target :src :value (if src-mode :src display-mode) :change! change!})])]
 
      [:div.right-nav {:key "right-nav"}                     ; CAREFUL; this key prevents popover flickering
 
