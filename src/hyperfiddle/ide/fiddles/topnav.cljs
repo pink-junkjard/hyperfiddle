@@ -57,20 +57,9 @@
 (defn any-loading? [peer]
   (some (comp not nil? :hydrate-id val) @(runtime/state peer [::runtime/partitions])))
 
-(defn loading-spinner [ctx]
+(defn loading-spinner [ctx & [?class]]
   (if @(reactive/track any-loading? (:peer ctx))
-    [:span {:style {:height "20px"
-                    :width "23px"
-                    :float "left"
-                    :margin-right "1px"
-                    :background-color "white"
-                    :position "relative"
-                    :z-index 0}}
-     [:div {:style {:height "1em"
-                    :margin-top "-2px"
-                    :position "absolute"
-                    :z-index -1}}
-      [re-com.core/throbber :size :smaller]]]))
+    [:div.display-inline-flex [re-com.core/throbber]]))
 
 (defn src-mode? [frag]
   (= :src (read-edn-string (decode-ednish (decode-rfc3986-pchar frag)))))
@@ -94,9 +83,9 @@
        (fake-managed-anchor :domain [] ctx (get-in ctx [:target-domain :domain/ident]))]
 
       [tooltip {:label "Fiddle ident"}
-       (some-> @(reactive/cursor (:hypercrud.browser/result ctx) [:fiddle/ident]) str)]]
+       (some-> @(reactive/cursor (:hypercrud.browser/result ctx) [:fiddle/ident]) str)]
 
-     [loading-spinner ctx]
+      [loading-spinner ctx]]
 
      [:div.right-nav
       (let [change! #(runtime/dispatch! (:peer ctx) (foundation-actions/set-display-mode %))]
