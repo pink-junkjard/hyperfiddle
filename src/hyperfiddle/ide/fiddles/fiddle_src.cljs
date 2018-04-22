@@ -25,7 +25,7 @@
      ((:cell ctx') [true 0 :fiddle/css] ctx')
      ((:cell ctx') [true 0 :fiddle/links] ctx-real)
      ((:cell ctx') [true 0 :fiddle/entrypoint?] ctx')
-     ((:cell ctx') [true 0 :fiddle/bindings] ctx')
+     ;((:cell ctx') [true 0 :fiddle/bindings] ctx')
      ((:anchor ctx') :hyperfiddle/remove [0] ctx' "Remove fiddle")
      ((:browse ctx') :attribute-renderers [] ctx' (partial hijack-renderer true))
      ]))
