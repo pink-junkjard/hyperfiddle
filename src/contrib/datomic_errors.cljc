@@ -3,7 +3,9 @@
 
 (defn parse-datomic-error-soup [e req]
   (or
-    (if-let [[match a b] (re-find #"(?s)^(.+ :db.error/datoms-conflict )(.+)$" e)]
+    (if-let [[match a b]
+             #_(re-find #"(?s)^(.+ :db.error/datoms-conflict )(.+)$" e)
+             (re-find #"^(.+ :db.error/datoms-conflict )(.+)" e)]
       [:db.error/datoms-conflict b
        "Hyperfiddle has generated an invalid Datomic transaction ([hyperfiddle#24](https://github.com/hyperfiddle/hyperfiddle/issues/24)).
        Please repair it by hand in the staging area. If this happens too much,
