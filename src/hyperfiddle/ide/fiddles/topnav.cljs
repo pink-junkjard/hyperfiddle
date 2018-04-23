@@ -37,7 +37,7 @@
             (if (system-fiddle/system-fiddle? target-fiddle-ident) ; this fiddle does not actually exist, conjure it up
               (-> (unwrap (system-fiddle/hydrate-system-fiddle target-fiddle-ident))
                   (update :fiddle/renderer -renderer))
-              (if omit-renderer
+              (if (or omit-renderer (nil? (:db/id fiddle-val)))
                 fiddle-val
                 (-> (into {} fiddle-val)
                     (update :fiddle/renderer -renderer))))))]
