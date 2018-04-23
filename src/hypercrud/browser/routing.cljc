@@ -27,7 +27,7 @@
     (ex-info (str "Invalid route: " msg)
              {:hyperfiddle.io/http-status-code 400 :route route})))
 
-(defn invert-route [domain [fiddle args] invert-id]
+(defn invert-route [domain [_ args :as route] invert-id]
   (let [args (->> {:request-params args}                    ; code compat
                   (walk/postwalk (fn [v]                    ; works on [args] instead of (:request-param args) ?
                                    (cond
@@ -38,8 +38,9 @@
                                            id (invert-id (.-id v) uri)]
                                        (->ThinEntity (.-dbname v) id))
 
-                                     :else v))))]
-    [fiddle (:request-params args)]))
+                                     :else v)))
+                  :request-params)]
+    (assoc route 1 args)))
 
 (defn ctx->id-lookup [uri ctx]
   ; todo what about if the tempid is on a higher branch in the uri?
