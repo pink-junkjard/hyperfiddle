@@ -21,5 +21,5 @@
 
 (deftest parse-datomic-error-soup-1
   []
-  (for [[k v] errors]
+  (doseq [[k v] errors]
     (is (= v (parse-datomic-error-soup k nil)))))
