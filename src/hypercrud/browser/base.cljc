@@ -73,8 +73,8 @@
   (if-not (:db/id fiddle)
     (either/left (ex-info (str :hyperfiddle.error/fiddle-not-found)
                           {:ident :hyperfiddle.error/fiddle-not-found
-                           :human "Fiddle not found (did you just edit :fiddle/ident?)"
-                           :fiddle fiddle}))
+                           :error-msg "Fiddle not found"
+                           :human-hint "Did you just edit :fiddle/ident?"}))
     (either/right fiddle)))
 
 (defn hydrate-fiddle [meta-fiddle-request ctx]

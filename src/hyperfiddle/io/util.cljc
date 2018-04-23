@@ -12,7 +12,7 @@
       ; what about EntityRequests? why are datomic errors not sufficient?
       (if-not (empty? unfilled-holes)
         {:message "Invalid query" :data {:datomic-error (.-msg e) :query (.-query req) :missing unfilled-holes}}))
-  (datomic-error-cleaner (.-msg e)))
+  (datomic-error-cleaner (.-msg e) req))
 
 ; this can be removed; #err can natively be Either
 (defn process-result [resultset-or-error request]

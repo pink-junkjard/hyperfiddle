@@ -2,7 +2,8 @@
   (:require
     [contrib.string :refer [pprint-str]]
     [hypercrud.types.Err :as Err]
-    [hypercrud.ui.control.markdown-rendered :refer [markdown]]))
+    [hypercrud.ui.control.markdown-rendered :refer [markdown]]
+    [hyperfiddle.foundation :as foundation]))
 
 
 (defn e->map [e]
@@ -15,25 +16,20 @@
            :data (ex-data e)
            :cause (ex-cause e)}))
 
-(defn ex-data->human-detail [{:keys [ident human soup] :as data}]
-  (or human soup (pprint-str data)))
+(defn ex-data->human-detail [{:keys [ident error-msg] :as data}]
+  (or error-msg (pprint-str data)))
 
 (defn error-inline [e]
-  (let [dev-open? true
-        {:keys [cause data message]} (e->map e)]
-    [:code message " " (if dev-open? (str " -- " (ex-data->human-detail data)))]))
+  (let [{:keys [cause data message]} (e->map e)]
+    (str message " " (str " -- " (ex-data->human-detail data)))))
 
 (defn error-block [e]
-  (let [dev-open? true
-        {:keys [cause data message]} (e->map e)]
-    ; todo we don't always return an error with a message
+  (let [{:keys [cause data message]} (e->map e)]            ; we don't always return an error with a message
     [:pre
-     (if message
-       [:h4 message]
-       [markdown "#### Unrecognized error (please comment on [#170](https://github.com/hyperfiddle/hyperfiddle/issues/170))"])
-     (if dev-open? [:p (ex-data->human-detail data)])
-     (if (= :hyperfiddle.error/unrecognized (:ident data))
-       [markdown "Please comment this error at [hyperfiddle/170](https://github.com/hyperfiddle/hyperfiddle/issues/170) so we can match it"])]))
+     [:h3 message]
+     [markdown (str "```\n" (ex-data->human-detail data) "\n```")]
+     (if (:human-hint data) [markdown (str "Hint: " (:human-hint data))])
+     #_(if (:query data) [markdown (str "```\n" (:query data) "\n```")])]))
 
 (defn error-comp [ctx]
   ; :find-element :attribute :value
@@ -41,4 +37,9 @@
     (:hypercrud.ui/error ctx) ((:hypercrud.ui/error ctx) ctx)
     (:hypercrud.browser/attribute ctx) error-inline         ; table: header or cell, form: header or cell
     (:hypercrud.browser/find-element ctx) error-inline
-    :else error-block))                                     ; browser including inline true links
+    ; browser including inline true links
+    :else (fn [e]
+            [:div
+             [error-block e]
+             (if (some-> e e->map :data :ident (= :db.error/datoms-conflict))
+               [foundation/staging (:peer ctx)])])))
