@@ -12,5 +12,5 @@
       (let [change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx)
                                                                @(:hypercrud.browser/fat-attribute ctx)
                                                                (not @(:value ctx))))]
-        (checkbox* (:value ctx) change!))]
+        (checkbox* (:value ctx) change! props))]
      (link-controls/iframes path true ctx)]))
