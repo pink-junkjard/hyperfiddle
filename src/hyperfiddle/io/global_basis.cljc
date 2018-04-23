@@ -1,4 +1,5 @@
 (ns hyperfiddle.io.global-basis
+  (:refer-clojure :exclude [compare])
   (:require [cats.core :as cats :refer [mlet]]
             [cats.labs.promise]
             [clojure.set :as set]
@@ -81,3 +82,32 @@
                       :accept :application/transit+json :as :auto
                       :method :get})
       (p/then :body)))
+
+(def ERROR-MISMATCHED-URIS "Bases cannot be compared; mismatched uris")
+(def ERROR-BOTH-GREATER-AND-LESS-THAN "Bases cannot be compared; different values are > and <")
+
+(letfn [(zero->nil [i] (when-not (= 0 i) i))
+        (compare-uri-maps [x y]
+          (if-not (= (keys x) (keys y))
+            (throw (ex-info ERROR-MISMATCHED-URIS {:x x :y y}))
+            (reduce
+              (fn [acc [xk xv]]
+                (let [r (clojure.core/compare xv (get y xk))]
+                  (cond
+                    (= 0 acc) r
+                    (= 0 r) acc
+                    (not= acc r) (throw (ex-info ERROR-BOTH-GREATER-AND-LESS-THAN {:x x :y y}))
+                    :else acc)))
+              0
+              x)))]
+  (defn compare [x y]
+    (cond
+      (identical? x y) 0
+      (nil? x) -1
+      (nil? y) 1
+      :else (if-let [d (zero->nil (compare-uri-maps (:domain x) (:domain y)))]
+              ; compare domain first, if different, the user/ide keys might be different which is ok
+              d
+              (let [xm (merge (:ide x) (:user x))
+                    ym (merge (:ide y) (:user y))]
+                (compare-uri-maps xm ym))))))
