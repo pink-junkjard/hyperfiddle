@@ -7,7 +7,7 @@
 
     contrib.char-test
     contrib.data-test
-    contrib.datomic-errors-test
+    #_contrib.datomic-errors-test
     contrib.datomic-tx-test
     contrib.eval-test
     contrib.reactive-test
@@ -28,7 +28,7 @@
   (doo-tests
     'contrib.char-test
     'contrib.data-test
-    'contrib.datomic-errors-test
+    #_'contrib.datomic-errors-test
     'contrib.datomic-tx-test
     'contrib.eval-test
     'contrib.reactive-test
