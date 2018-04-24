@@ -22,4 +22,4 @@
 (deftest parse-datomic-error-soup-1
   []
   (doseq [[k v] errors]
-    (is (= v (parse-datomic-error-soup k nil)))))
+    (is (= v (take 2 (parse-datomic-error-soup k nil))))))
