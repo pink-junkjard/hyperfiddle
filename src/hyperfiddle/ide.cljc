@@ -222,12 +222,12 @@
             @(hc/hydrate (:peer ctx) (:branch ctx) (foundation/domain-request "hyperfiddle" (:peer ctx)))
             -dumb-loading
             (fn topnav [ide-domain]
-              (let [ctx (-> (page-ide-context ctx ide-domain ?route)
-                            (assoc :hypercrud.ui/error (reactive/constantly ui-error/error-inline)))]
+              (let [ctx (page-ide-context ctx ide-domain ?route)]
                 (fragment                                   ; These are the same data, just different views.
                   :_
                   [browser/ui-from-route (ide-route ?route)
-                   ctx #_(assoc ctx :user-renderer hyperfiddle.ide.fiddles.topnav/renderer)
+                   (assoc ctx :hypercrud.ui/error (reactive/constantly ui-error/error-inline)
+                              #_#_ :user-renderer hyperfiddle.ide.fiddles.topnav/renderer)
                    "topnav hidden-print"]
                   (if src-mode
                     [browser/ui-from-route (ide-route ?route)
