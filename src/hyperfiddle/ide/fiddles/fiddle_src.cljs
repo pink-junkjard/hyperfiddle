@@ -1,6 +1,10 @@
 (ns hyperfiddle.ide.fiddles.fiddle-src
-  (:require [contrib.data :refer [kwargs unwrap]]
+  (:require [cats.core :as cats]
+            [cuerdas.core :as str]
+            [contrib.data :refer [kwargs unwrap]]
             [contrib.reagent :refer [fragment]]
+            [contrib.string :refer [safe-read-edn-string]]
+            [hypercrud.types.URI :refer [is-uri?]]
             [hypercrud.ui.control.markdown-rendered :refer [markdown]]
             [hypercrud.ui.tooltip :refer [tooltip]]
             [hyperfiddle.ide.fiddles.topnav :refer [shadow-fiddle hijack-renderer loading-spinner]]))
@@ -29,3 +33,15 @@
      ((:anchor ctx') :hyperfiddle/remove [0] ctx' "Remove fiddle")
      ((:browse ctx') :attribute-renderers [] ctx' (partial hijack-renderer true))
      ]))
+
+
+(defn ^:export fiddle-query-renderer [field props ctx]
+  [:div
+   [hypercrud.ui.attribute.code/code field props ctx]
+   (->> (-> ctx :target-domain :domain/environment)
+        (filter (fn [[k v]] (and (str/starts-with? k "$") (is-uri? v))))
+        (map (fn [[$db _]]
+               (let [props {:route [(keyword "hyperfiddle.schema" $db)]}]
+                 ^{:key $db}
+                 [(:navigate-cmp ctx) props (str $db " schema")])))
+        (doall))])
