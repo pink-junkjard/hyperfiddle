@@ -41,5 +41,5 @@
     :else (fn [e]
             [:div
              [error-block e]
-             (if (some-> e e->map :data :ident (= :db.error/datoms-conflict))
-               [foundation/staging (:peer ctx)])])))
+             #_(if (some-> e e->map :data :ident (= :db.error/datoms-conflict)))
+             [foundation/staging (:peer ctx)]])))
