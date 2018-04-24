@@ -71,7 +71,7 @@ All fiddles are url addressable, as `text/HTML` (application) or `application/tr
 
 <img src="https://i.imgur.com/ZtYAlTE.png" width="720px">
 
-> *Links (graph edges) are pink. Select options are iframes with style. Live demo: <http://sandbox.hyperfiddle.net/gender>*
+> *Links (graph edges) are pink. Select options are iframes with style. Live demo: <http://sandbox.hyperfiddle.net/:gender/>*
 
 ```clojure
 {:fiddle/type :query,
