@@ -2,6 +2,7 @@
   (:refer-clojure :exclude [boolean keyword long])
   (:require [contrib.datomic-tx :as tx]
             [contrib.reactive :as r]
+            [contrib.string :refer [empty->nil]]
             [hypercrud.browser.link :as link]
             [hypercrud.ui.control.link-controls :as link-controls]
             [hypercrud.ui.input :as input]
@@ -28,7 +29,7 @@
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div.value
      [:div.anchors (link-controls/anchors path true ctx)]
-     (let [on-change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))]
+     (let [on-change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) (empty->nil %)))]
        [input/input* @(:value ctx) on-change! props])
      (link-controls/iframes path true ctx)]))
 

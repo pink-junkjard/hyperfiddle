@@ -19,20 +19,21 @@
                           {:keys [:db/ident :db/cardinality :db/valueType] :as attribute}
                           new-val]
   {:pre [#_(not (js/isNaN new-val)) #_"What if new-val is nil or ##NaN etc? #88"
-         (not (nil? new-val))]}
+         #_(not (nil? new-val))]}
   (let [{:keys [old new]} (let [old-val (get entity ident)]
                             (if (= (:db/ident valueType) :db.type/ref)
                               (case (:db/ident cardinality)
                                 :db.cardinality/one {:old (let [old-val (:db/id old-val)]
                                                             (if (nil? old-val) [] [old-val]))
-                                                     :new [new-val]}
+                                                     :new (if (nil? new-val) [] [new-val])}
                                 :db.cardinality/many {:old (map #(:db/id %) old-val)
-                                                      :new new-val})
+
+                                                      :new (if (nil? new-val) [] new-val)})
                               (case (:db/ident cardinality)
                                 :db.cardinality/one {:old (if (nil? old-val) [] [old-val])
-                                                     :new [new-val]}
+                                                     :new (if (nil? new-val) [] [new-val])}
                                 :db.cardinality/many {:old old-val
-                                                      :new new-val})))]
+                                                      :new (if (nil? new-val) [] new-val)})))]
     (edit-entity id ident old new)))
 
 (defn simplify [simplified-tx next-stmt]

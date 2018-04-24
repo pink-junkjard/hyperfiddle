@@ -1,13 +1,15 @@
 (ns hypercrud.ui.attribute.code
   (:require [contrib.datomic-tx :as tx]
+            [contrib.string :refer [empty->nil]]
             [hypercrud.ui.control.code :as code]
             [hypercrud.ui.control.link-controls :as link-controls]))
 
 
 (defn ^:export code [field props ctx]
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]
-        change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))]
-    ;^{:key ident}
+        change! (fn [%]
+                  (let [tx (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) (empty->nil %))]
+                    ((:user-with! ctx) tx)))]
     [:div.value
      [:div.anchors (link-controls/anchors path true ctx)]
      (let [control (case (:layout ctx :block)

@@ -1,12 +1,13 @@
 (ns hypercrud.ui.attribute.markdown-editor
   (:require [contrib.datomic-tx :as tx]
+            [contrib.string :refer [empty->nil]]
             [hypercrud.ui.control.code :as code]
             [hypercrud.ui.control.link-controls :as link-controls]))
 
 
 (defn ^:export markdown-editor [field props ctx]
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]
-        change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))]
+        change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) (empty->nil %)))]
     ;^{:key ident}
     [:div.value
      [:div.anchors (link-controls/anchors path true ctx)]

@@ -131,6 +131,17 @@
                   :attribute/renderer "hypercrud.ui.attribute.code/code"})
   (def fiddle (->Entity nil {:db/id "-1"
                              :fiddle/renderer "a"}))
+
+  ; This abstraction is broken. I have hacked some stuff in. It needs to be re-thought.
+
   (is (= (update-entity-attr fiddle attribute "b")
          [[:db/retract "-1" :fiddle/renderer "a"]
-          [:db/add "-1" :fiddle/renderer "b"]])))
+          [:db/add "-1" :fiddle/renderer "b"]]))
+
+  (is (= (update-entity-attr fiddle attribute nil)
+         [[:db/retract "-1" :fiddle/renderer "a"]]))
+
+  (is (= (update-entity-attr fiddle attribute "")
+         [[:db/retract "-1" :fiddle/renderer "a"]
+          [:db/add "-1" :fiddle/renderer ""]]))
+  )
