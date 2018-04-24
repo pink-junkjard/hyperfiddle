@@ -3,26 +3,26 @@
 
 (defn parse-datomic-error-soup [e req]
   (or
-    (if-let [[match a b]
-             #_(re-find #"(?s)^(.+ :db.error/datoms-conflict )(.+)$" e)
-             (re-find #"^(.+ :db.error/datoms-conflict )(.+)" e)]
-      [:db.error/datoms-conflict b
+    (if-let [[match msg]
+             #_(re-find #"(?s)^.+ :db.error/datoms-conflict (.+)$" e)
+             (re-find #"^.+ :db.error/datoms-conflict (.+)" e)]
+      [:db.error/datoms-conflict msg
        "Hyperfiddle has generated an invalid Datomic transaction ([hyperfiddle#24](https://github.com/hyperfiddle/hyperfiddle/issues/24)).
        Please repair it by hand in the staging area. If this happens too much,
        you can avoid this with auto-transact. Sometimes this is a \"merge conflict\"
        and essential complexity. Sometimes it is a buggy form widget."])
-    (if-let [[match a b] (re-find #"^(.+ :db.error/invalid-entity-id )(.+)$" e)] [:db.error/invalid-entity-id b])
-    (if-let [[match a b] (re-find #"^(.+ :db.error/insufficient-binding )(.+)$" e)]
-      [:db.error/insufficient-binding b
+    (if-let [[match msg] (re-find #"^.+ :db.error/invalid-entity-id (.+)$" e)] [:db.error/invalid-entity-id msg])
+    (if-let [[match msg] (re-find #"^.+ :db.error/insufficient-binding (.+)$" e)]
+      [:db.error/insufficient-binding msg
        (str "Use 'src' view to fix the query." #_#_#_"\n```\n" (some-> req .-query pr-str) "\n```")])
-    (if-let [[match a b] (re-find #"^(.+ :db.error/not-a-data-function )(.+)$" e)] [:db.error/not-a-data-function b])
-    (if-let [[match a b] (re-find #"^(.+ :db.error/not-an-entity )(.+)$" e)] [:db.error/not-an-entity b])
-    (if-let [[match a b] (re-find #"^(.+ :db.error/wrong-type-for-attribute )(.+)$" e)] [:db.error/wrong-type-for-attribute b])
-    (if-let [[match a b] (re-find #"^(.+ :hyperfiddle.error/basis-stale )(.+)$" e)] [:hyperfiddle.error/basis-stale b])
+    (if-let [[match msg] (re-find #"^.+ :db.error/not-a-data-function (.+)$" e)] [:db.error/not-a-data-function msg])
+    (if-let [[match msg] (re-find #"^.+ :db.error/not-an-entity (.+)$" e)] [:db.error/not-an-entity msg])
+    (if-let [[match msg] (re-find #"^.+ :db.error/wrong-type-for-attribute (.+)$" e)] [:db.error/wrong-type-for-attribute msg])
+    (if-let [[match msg] (re-find #"^.+ :hyperfiddle.error/basis-stale (.+)$" e)] [:hyperfiddle.error/basis-stale msg])
 
     ; It is the Clojure way.
-    (if-let [[match a b] (re-find #"^(com.google.common.util.concurrent.UncheckedExecutionException: java.lang.IllegalArgumentException: )(.+)$" e)] [:hyperfiddle.error/invalid-pull b])
-    (if-let [[match a b] (re-find #"^(.+ message: Unable to find data source: )(.+)$" e)] [:hyperfiddle.error/query-arity (str "message: Unable to find data source: " b)])
+    (if-let [[match msg] (re-find #"^com.google.common.util.concurrent.UncheckedExecutionException: java.lang.IllegalArgumentException: (.+)$" e)] [:hyperfiddle.error/invalid-pull msg])
+    (if-let [[match msg] (re-find #"^.+ message: Unable to find data source: (.+)$" e)] [:hyperfiddle.error/query-arity (str "message: Unable to find data source: " msg)])
     ))
 
 (defn datomic-error-cleaner [error-str req]
