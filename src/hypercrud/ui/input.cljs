@@ -10,7 +10,9 @@
                  identity))
 
 (defn adapt-props-to-input [props]
-  {:disabled (:read-only props)})
+  (merge
+    props
+    {:disabled (:read-only props)}))
 
 (defn- validated-input' [value on-change! parse-string to-string valid? props]
   (let [intermediate-val (r/atom (to-string value))]
@@ -35,24 +37,18 @@
   [validated-input' value on-change! identity identity (constantly true) props])
 
 (defn keyword-input* [value on-change! & [props]]
-  (let [parse-string read-string-or-nil
-        to-string pr-str
-        valid? #(let [value (read-string-or-nil %)]
+  (let [valid? #(let [value (read-string-or-nil %)]
                   (or (nil? value) (keyword? value)))]
     ^{:key value}
-    [validated-input' value on-change! parse-string to-string valid? props]))
+    [validated-input' value on-change! read-string-or-nil #(some-> % pr-str) valid? props]))
 
 (defn edn-input* [value on-change! & [props]]
-  (let [parse-string read-string-or-nil
-        to-string pr-str
-        valid? #(either/branch (safe-read-edn-string %)     ; differentiate between read `nil` and error
+  (let [valid? #(either/branch (safe-read-edn-string %)     ; differentiate between read `nil` and error
                                (constantly false)
                                (constantly true))]
     ^{:key value}
-    [validated-input' value on-change! parse-string to-string valid? props]))
+    [validated-input' value on-change! read-string-or-nil #(some-> % pr-str) valid? props]))
 
 (defn id-input [value on-change! & [props]]
   ^{:key (:db/id value)}
-  [validated-input' (:db/id value) on-change! read-string-or-nil pr-str
-   read-string-or-nil
-   props])
+  [validated-input' (:db/id value) on-change! read-string-or-nil pr-str read-string-or-nil props])

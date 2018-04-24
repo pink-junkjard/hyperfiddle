@@ -22,12 +22,12 @@
       (ui-block-border-wrap
         ctx "field"
         [:div (let [on-change! #(reset! attr-ident %)]
-                [input/keyword-input* @attr-ident on-change!])]
+                [input/keyword-input* @attr-ident on-change! {:placeholder ":task/title"}])]
         (let [on-change! #(let [tx [[:db/add (:db/id @(:cell-data ctx)) @attr-ident %]]]
                             ; todo cardinality many
                             ((:user-with! ctx) tx))
-              props nil #_(if (nil? @attr-ident) {:read-only true})]
-          [input/edn-input* nil on-change! props])))))
+              #_#_props (if (nil? @attr-ident) {:read-only true})]
+          [input/edn-input* nil on-change! {:placeholder (pr-str "mow the lawn")}])))))
 
 (defn new-field [ctx]
   ^{:key (hash (keys @(:cell-data ctx)))}
