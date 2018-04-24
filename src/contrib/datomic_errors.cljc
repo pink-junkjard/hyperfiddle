@@ -8,17 +8,18 @@
     [msg #_(re-find #"(?s)^.+ :db.error/datoms-conflict (.+)$" e)
      (some-> (string/split e #"^.+ :db\.error/datoms-conflict ") second)]
     [:db.error/datoms-conflict msg
-     "Hyperfiddle has generated an invalid Datomic transaction ([hyperfiddle#24](https://github.com/hyperfiddle/hyperfiddle/issues/24)).
+     "Hint: Hyperfiddle has generated an invalid Datomic transaction ([hyperfiddle#24](https://github.com/hyperfiddle/hyperfiddle/issues/24)).
      Please repair it by hand in the staging area. If this happens too much,
      you can avoid this with auto-transact. Sometimes this is a \"merge conflict\"
      and essential complexity. Sometimes it is a buggy form widget."]
     [[match msg] (re-find #"^.+ :db.error/invalid-entity-id (.+)$" e)] [:db.error/invalid-entity-id msg]
-    [[match msg] (re-find #"^.+ :db.error/insufficient-binding (.+)$" e)] [:db.error/insufficient-binding msg
-                                                                           (str "Use 'src' view to fix the query." #_#_#_"\n```\n" (some-> req .-query pr-str) "\n```")]
+    [[match msg] (re-find #"^.+ :db.error/insufficient-binding (.+)$" e)]
+    [:db.error/insufficient-binding msg
+     (str (some-> req .-query pr-str) "\n\n" "Hint: Click 'src' to see and edit the query.")]
     [[match msg] (re-find #"^.+ :db.error/not-a-data-function (.+)$" e)] [:db.error/not-a-data-function msg]
     [[match msg] (re-find #"^.+ :db.error/not-an-entity (.+)$" e)]
     [:db.error/not-an-entity msg
-     "If this is a schema attribute, does it exist?
+     "Hint: If this is a schema attribute, does it exist?
      This can happen if you both create a schema entity and use it in the
      same transaction. Transact the schema before using it. Also try auto-transact."]
     [[match msg] (re-find #"^.+ :db.error/wrong-type-for-attribute (.+)$" e)] [:db.error/wrong-type-for-attribute msg]

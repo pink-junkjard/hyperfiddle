@@ -27,8 +27,8 @@
   (let [{:keys [cause data message]} (e->map e)]            ; we don't always return an error with a message
     [:pre
      [:h3 message]
-     [markdown (str "```\n" (ex-data->human-detail data) "\n```")]
-     (if (:human-hint data) [markdown (str "Hint: " (:human-hint data))])
+     [markdown (str "```\n" (ex-data->human-detail data) "\n```\n")]
+     (if (:human-hint data) [markdown (:human-hint data)])
      #_(if (:query data) [markdown (str "```\n" (:query data) "\n```")])]))
 
 (defn error-comp [ctx]
