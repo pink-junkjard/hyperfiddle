@@ -85,11 +85,11 @@
                       (validate-fiddle fiddle)))]
       (return
         (shadow-entity fiddle #(merge-with or-str %
-                                           #?(:clj nil
-                                              :cljs {:fiddle/markdown "!result[]"
-                                                     :fiddle/renderer hypercrud.ui.result/fiddle})
+                                           {:fiddle/markdown "!result[]"
+                                            :fiddle/renderer #?(:cljs hypercrud.ui.result/fiddle :clj nil)}
                                            (if-not auto-fiddle ; crashes the fiddle dunno why
-                                             {:fiddle/pull "[[:db/id]]"})))))))
+                                             {:fiddle/pull "[[:db/id *]]"
+                                              :fiddle/query "[:find (pull ?e [:db/id *]) :where\n [?e]]"})))))))
 
 (defn- fix-param [param]
   (cond
