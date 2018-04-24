@@ -30,7 +30,8 @@
 (defn auto-ui-css-class [ctx]
   (classes (let [ident @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/ident])]
              [(css-slugify (some-> ident namespace))
-              (css-slugify ident)])))
+              (css-slugify ident)
+              "auto-result"])))
 
 (letfn [(browse [rel #_dependent? path ctx & args]
           (let [{[user-renderer & args] nil :as kwargs} (kwargs args)

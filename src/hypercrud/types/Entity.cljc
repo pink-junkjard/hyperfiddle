@@ -96,3 +96,6 @@
        (= (.-coll o) (.-coll other))))
 
 (defn entity? [o] (instance? Entity o))                     ; this is hard to implement portably outside this file
+
+(defn shadow-entity [entity f]
+  (->Entity (.-uri entity) (f (.-coll entity))))

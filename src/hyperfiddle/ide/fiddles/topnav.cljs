@@ -6,6 +6,7 @@
             [contrib.reactive :as reactive]
             [contrib.reagent :refer [fragment]]
             [contrib.rfc3986 :refer [encode-ednish decode-ednish encode-rfc3986-pchar decode-rfc3986-pchar]]
+            [contrib.string :refer [or-str]]
             [cuerdas.core :as string]
             [hypercrud.browser.browser-ui :as browser-ui]
             [hypercrud.browser.context :as context]
@@ -26,21 +27,25 @@
     (str domain "/login?client=" client-id "&callbackURL=" callback-url)))
 
 ; inline sys-link data when the entity is a system-fiddle
-(letfn [(-renderer [renderer]
+(letfn [#_(-renderer [renderer]
           (if (or (nil? renderer) (string/blank? renderer))
             (-> hypercrud.ui.result/fiddle meta :expr-str)
             renderer))
         (-shadow-fiddle [omit-renderer ctx fiddle-val]
           (let [route (:route ctx)
                 [_ [e]] route                               ; [:hyperfiddle/topnav [#entity["$" [:fiddle/ident :hyperfiddle.system/remove]]]]
-                [_ target-fiddle-ident] (:db/id e)]
-            (if (system-fiddle/system-fiddle? target-fiddle-ident) ; this fiddle does not actually exist, conjure it up
+                [_ target-fiddle-ident] (:db/id e)
+                auto-fiddle (system-fiddle/system-fiddle? target-fiddle-ident)]
+            (if auto-fiddle ; this fiddle does not actually exist, conjure it up
               (-> (unwrap (system-fiddle/hydrate-system-fiddle target-fiddle-ident))
-                  (update :fiddle/renderer -renderer))
+                  (update :fiddle/renderer #(or-str % (-> hypercrud.ui.result/fiddle meta :expr-str))))
               (if (or omit-renderer (nil? (:db/id fiddle-val)))
                 fiddle-val
                 (-> (into {} fiddle-val)
-                    (update :fiddle/renderer -renderer))))))]
+                    (update :fiddle/renderer #(or-str % (-> hypercrud.ui.result/fiddle meta :expr-str)))
+                    (update :fiddle/markdown #(or-str % "!result[]"))
+                    #_(update :fiddle/pull #(or-str % "[[:db/id]]"))
+                    #_(update :fiddle/query #(or-str % "[:find ?e]")))))))]
   (defn shadow-fiddle [ctx & [omit-renderer]]
     {:pre [(-> ctx :hypercrud.browser/result)]}
     (-> ctx

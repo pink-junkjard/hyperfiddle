@@ -1,7 +1,8 @@
 (ns hypercrud.browser.system-fiddle
   (:require [clojure.string :as str]
             [contrib.try :refer [try-either]]
-            [hyperfiddle.ide.fiddles.schema :as schema]))
+            [hyperfiddle.ide.fiddles.schema :as schema]
+            [hypercrud.types.Entity :refer [->Entity]]))
 
 
 (defn system-fiddle? [fiddle-ident]
@@ -25,13 +26,15 @@
 
 (defn hydrate-system-fiddle [ident]
   (try-either                                               ; catch all the pre assertions
-    (cond
-      (= ident :hyperfiddle.system/edit) fiddle-system-edit
-      (= ident :hyperfiddle.system/remove) fiddle-blank-system-remove
-      :else (let [$db (name ident)]
-              (condp = (namespace ident)
-                "hyperfiddle.schema" (schema/schema $db)
-                "hyperfiddle.schema.db-cardinality-options" (schema/db-cardinality-options $db)
-                "hyperfiddle.schema.db-unique-options" (schema/db-unique-options $db)
-                "hyperfiddle.schema.db-valueType-options" (schema/db-valueType-options $db)
-                "hyperfiddle.schema.db-attribute-edit" (schema/db-attribute-edit $db))))))
+    (->Entity
+      nil
+      (cond
+        (= ident :hyperfiddle.system/edit) fiddle-system-edit
+        (= ident :hyperfiddle.system/remove) fiddle-blank-system-remove
+        :else (let [$db (name ident)]
+                (condp = (namespace ident)
+                  "hyperfiddle.schema" (schema/schema $db)
+                  "hyperfiddle.schema.db-cardinality-options" (schema/db-cardinality-options $db)
+                  "hyperfiddle.schema.db-unique-options" (schema/db-unique-options $db)
+                  "hyperfiddle.schema.db-valueType-options" (schema/db-valueType-options $db)
+                  "hyperfiddle.schema.db-attribute-edit" (schema/db-attribute-edit $db)))))))

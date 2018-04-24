@@ -1,8 +1,8 @@
 (ns hypercrud.browser.base
-  (:require [cats.core :as cats :refer [mlet return]]
-            [cats.monad.either :as either]
+  (:require [cats.core :as cats :refer [mlet return fmap]]
+            [cats.monad.either :as either :refer [branch-right]]
             [contrib.reactive :as r]
-            [contrib.string :refer [memoized-safe-read-edn-string]]
+            [contrib.string :refer [memoized-safe-read-edn-string or-str]]
             [contrib.try :refer [try-either]]
             [hypercrud.browser.auto-link :refer [auto-links]]
             [hypercrud.browser.context :as context]
@@ -13,7 +13,7 @@
             [hypercrud.browser.user-bindings :as user-bindings]
             [hypercrud.client.core :as hc]
             [hypercrud.client.schema :as schema-util]
-            [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
+            [hypercrud.types.Entity :refer [#?(:cljs Entity) shadow-entity]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hypercrud.types.ThinEntity :refer [#?(:cljs ThinEntity)]])
@@ -78,10 +78,18 @@
     (either/right fiddle)))
 
 (defn hydrate-fiddle [meta-fiddle-request ctx]
-  (if (system-fiddle/system-fiddle? (get-in ctx [:route 0]))
-    (system-fiddle/hydrate-system-fiddle (get-in ctx [:route 0]))
-    (mlet [fiddle @(hc/hydrate (:peer ctx) (:branch ctx) @meta-fiddle-request)]
-      (validate-fiddle fiddle))))
+  (let [auto-fiddle (system-fiddle/system-fiddle? (get-in ctx [:route 0]))]
+    (mlet [fiddle (if auto-fiddle
+                    (system-fiddle/hydrate-system-fiddle (get-in ctx [:route 0]))
+                    (mlet [fiddle @(hc/hydrate (:peer ctx) (:branch ctx) @meta-fiddle-request)]
+                      (validate-fiddle fiddle)))]
+      (return
+        (shadow-entity fiddle #(merge-with or-str %
+                                           #?(:clj nil
+                                              :cljs {:fiddle/markdown "!result[]"
+                                                     :fiddle/renderer hypercrud.ui.result/fiddle})
+                                           (if-not auto-fiddle ; crashes the fiddle dunno why
+                                             {:fiddle/pull "[[:db/id]]"})))))))
 
 (defn- fix-param [param]
   (cond
