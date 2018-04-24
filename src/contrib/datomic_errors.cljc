@@ -1,12 +1,12 @@
 (ns contrib.datomic-errors
-  (:require [contrib.data :refer [cond-let]]))
+  (:require [contrib.data :refer [cond-let]]
+            [cuerdas.core :as string]))
 
 
 (defn parse-datomic-error-soup [e req]
   (cond-let
-    [[match msg]
-     #_(re-find #"(?s)^.+ :db.error/datoms-conflict (.+)$" e)
-     (re-find #"^.+ :db.error/datoms-conflict (.+)" e)]
+    [msg #_(re-find #"(?s)^.+ :db.error/datoms-conflict (.+)$" e)
+     (some-> (string/split e #"^.+ :db\.error/datoms-conflict ") second)]
     [:db.error/datoms-conflict msg
      "Hyperfiddle has generated an invalid Datomic transaction ([hyperfiddle#24](https://github.com/hyperfiddle/hyperfiddle/issues/24)).
      Please repair it by hand in the staging area. If this happens too much,
@@ -39,10 +39,3 @@
                          (str "Please comment this error at [hyperfiddle#170](https://github.com/hyperfiddle/hyperfiddle/issues/170) so we can match it."
                               "\n\n```\n" (pr-str req) "\n```")}])]
     (ex-info title data)))
-
-(comment
-  (def e "java.lang.IllegalArgumentException: :db.error/datoms-conflict Two datoms in the same transaction conflict
-{:d1 [17592186045931 :fiddle/type :entity 13194139534826 true],
- :d2 [17592186045931 :fiddle/type :query 13194139534826 true]}
-")
-  )
