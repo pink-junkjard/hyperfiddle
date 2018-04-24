@@ -1,7 +1,8 @@
 (ns contrib.datomic-tx-test
   (:require [clojure.test :refer [deftest is]]
             [clojure.set :refer [difference]]
-            [contrib.datomic-tx :refer [into-tx]]))
+            [contrib.datomic-tx :refer [into-tx update-entity-attr]]
+            [hypercrud.types.Entity :refer [shadow-entity ->Entity]]))
 
 
 (defn check-tx [in expected-out]
@@ -120,3 +121,16 @@
      [:db/retract 1 :community/type 2]
      [:db/add 1 :community/type 2]]
     []))
+
+(deftest edit-1 []
+  (def attribute {:db/id 72,
+                  :db/ident :fiddle/renderer,
+                  :db/valueType {:db/ident :db.type/string},
+                  :db/cardinality {:db/ident :db.cardinality/one},
+                  :db/doc "Reactive expression evaluating to Reagent hiccup. No `(ns (:require ...))` yet so vars must be fully qualified. If blank, a default renderer will be provided which you should modify. In lexical scope is `class` (an automatic css class for this domain and fiddle) and `ctx` (managed 'cursor' into resultsets used by renderers).",
+                  :attribute/renderer "hypercrud.ui.attribute.code/code"})
+  (def fiddle (->Entity nil {:db/id "-1"
+                             :fiddle/renderer "a"}))
+  (is (= (update-entity-attr fiddle attribute "b")
+         [[:db/retract "-1" :fiddle/renderer "a"]
+          [:db/add "-1" :fiddle/renderer "b"]])))
