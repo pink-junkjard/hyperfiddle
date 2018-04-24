@@ -13,11 +13,12 @@
      you can avoid this with auto-transact. Sometimes this is a \"merge conflict\"
      and essential complexity. Sometimes it is a buggy form widget."]
     [[match msg] (re-find #"^.+ :db.error/invalid-entity-id (.+)$" e)] [:db.error/invalid-entity-id msg]
-    [[match msg] (re-find #"^.+ :db.error/insufficient-binding (.+)$" e)]
-    [:db.error/insufficient-binding msg
-     (str "Use 'src' view to fix the query." #_#_#_"\n```\n" (some-> req .-query pr-str) "\n```")]
+    [[match msg] (re-find #"^.+ :db.error/insufficient-binding (.+)$" e)] [:db.error/insufficient-binding msg
+                                                                           (str "Use 'src' view to fix the query." #_#_#_"\n```\n" (some-> req .-query pr-str) "\n```")]
     [[match msg] (re-find #"^.+ :db.error/not-a-data-function (.+)$" e)] [:db.error/not-a-data-function msg]
-    [[match msg] (re-find #"^.+ :db.error/not-an-entity (.+)$" e)] [:db.error/not-an-entity msg]
+    [[match msg] (re-find #"^.+ :db.error/not-an-entity (.+)$" e)] [:db.error/not-an-entity msg
+                                                                    "This can happen if you both create a schema entity and use it in the
+                                                                    same transaction. Transact the schema before using it. Also try auto-transact."]
     [[match msg] (re-find #"^.+ :db.error/wrong-type-for-attribute (.+)$" e)] [:db.error/wrong-type-for-attribute msg]
     [[match msg] (re-find #"^.+ :hyperfiddle.error/basis-stale (.+)$" e)] [:hyperfiddle.error/basis-stale msg]
 
