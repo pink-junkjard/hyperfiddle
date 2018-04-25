@@ -158,6 +158,7 @@
 
 (defn auto-transact-reducer [auto-tx action & args]
   (case action
+    :set-auto-transact (first args)
     :enable-auto-transact true
     :disable-auto-transact false
     (if (boolean? auto-tx)
