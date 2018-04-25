@@ -7,7 +7,7 @@ The "web framework of the 2020s" must solve data sync. That's the most important
 * Clojure and ClojureScript, React.js and Reagent, EDN and Transit, Datomic and Datascript, Pedestal
 * storage ↔ database ↔ service ↔ web ↔ client ↔ view
 
-However this is an infrastructure heavy problem any way you frame it. There are gonna be CDNs and cloud lambdas and distributed caches involved, it's going to be more than a jar file.
+However this is an infrastructure heavy problem any way you frame it. There are gonna be CDNs and cloud lambdas and distributed caches involved, it's going to be more than a jar file. This is called an *I/O runtime* — a kernel implementing an I/O strategy and coordinating infrastructure — to get the right data to the right places. You can swap in different I/O runtimes for diverse I/O needs (client/server http, server rendered pages, predictive prefetching, realtime) without changing the application.
 
 ### Composable data sync 
 
@@ -38,7 +38,7 @@ On deck
 
 # Overview
 
-This readme is focused on "Hyperfiddle" the composable application medium, and not the I/O infrastructure.
+This readme is focused on "Hyperfiddle" the composable application medium and not the I/O runtime.
 
 Hyperfiddle is built in layers. Higher layers are optional and implemented in terms of lower.
 
