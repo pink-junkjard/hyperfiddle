@@ -7,7 +7,7 @@ The "web framework of the 2020s" must solve data sync. That's the most important
 * Clojure and ClojureScript, React.js and Reagent, EDN and Transit, Datomic and Datascript, Pedestal
 * storage ↔ database ↔ service ↔ web ↔ client ↔ view
 
-However this is an infrastructure heavy problem any way you frame it. There are gonna be CDNs and cloud lambdas and distributed caches involved, it's going to be more than a jar file. This is called an *I/O runtime* — a kernel implementing an I/O strategy and coordinating infrastructure — to get the right data to the right places. You can swap in different I/O runtimes for diverse I/O needs (client/server http, server rendered pages, predictive prefetching, realtime) without changing the application.
+However this is an infrastructure heavy problem any way you frame it. There are gonna be CDNs and cloud lambdas and distributed caches involved, it's going to be more than a jar file. This is called an *I/O runtime* — a kernel implementing an I/O strategy and coordinating infrastructure — to get the right data to the right places. You can swap in different I/O runtimes for diverse I/O needs (client/server http, server rendered pages, predictive prefetching, realtime) without changing the application. This type of I/O code is abstraction-resistant in any other stack; but end-to-end immutability (including through the database) permits a much more general solution than was possible before.
 
 ### Composable data sync 
 
