@@ -1,6 +1,6 @@
 # Hyperfiddle — a Hypermedia Function
 
-> <http://www.hyperfiddle.net/> – demos and overview
+> composable application medium, built on managed data-sync infrastructure. <http://www.hyperfiddle.net/>
 
 The "web framework of the 2020s" must solve data sync, the most important thing left that doesn't compose, because of all the network side effects involved. The Cognitect stack has the right primitives to build composable data sync by orienting the entire stack, end to end, around values and immutability.
 
@@ -9,7 +9,7 @@ The "web framework of the 2020s" must solve data sync, the most important thing 
 
 However this is an infrastructure heavy problem any way you frame it. There are gonna be CDNs and cloud lambdas and distributed caches involved, it's going to be more than a jar file.
 
-### Hyperfiddle is infrastructure for data sync
+### Composable data sync 
 
 Hyperfiddle abstracts over client/server data sync for APIs by extending Datomic's immutable database semantics to the API. Unlike REST/GraphQL/whatever, Hyperfiddle's data sync *composes*. If React.js is managed DOM, Hyperfiddle is managed database and network.
 
