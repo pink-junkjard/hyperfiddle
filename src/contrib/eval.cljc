@@ -10,6 +10,8 @@
     [hyperfiddle.readers :as hc-readers]))
 
 
+#?(:cljs (def ^:private -cljs-empty-state-val @(cljs/empty-state)))
+
 (defn eval-string [code-str]
   {:pre [(string? code-str)
          (not (string/blank? code-str))]}
@@ -22,7 +24,7 @@
                                                        hc-data-readers
                                                        {'entity hc-readers/entity
                                                         'uri hc-readers/uri})]
-               (let [{value :value error :error :as eval-result} (cljs/eval-str (cljs/empty-state)
+               (let [{value :value error :error :as eval-result} (cljs/eval-str (atom -cljs-empty-state-val)
                                                                                 code-str'
                                                                                 nil
                                                                                 {:eval cljs/js-eval}
