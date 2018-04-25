@@ -1,7 +1,7 @@
 (ns hypercrud.browser.router-test
   (:require [clojure.test :refer [deftest is]]
             [contrib.reader]
-            [hypercrud.browser.router :refer [encode decode]]
+            [hypercrud.browser.router :refer [encode decode canonicalize]]
             [hypercrud.browser.routing :refer [normalize-args]]))
 
 
@@ -48,4 +48,9 @@
   ;(decode "/") [nil [nil]]
   ;(decode "/garbagasdf..23425649=//e")
   ;(decode "/asdf/asdf/asdf?asdf?asdf?sadf")
+  )
+
+(deftest canonicalize-1 []
+  (is (= (apply canonicalize [nil nil nil nil]) nil))
+  (is (= (apply canonicalize []) nil))
   )

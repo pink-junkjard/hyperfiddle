@@ -153,11 +153,14 @@
         domain @(runtime/state rt [:hyperfiddle.runtime/domain])
         home-route (some-> domain :domain/home-route safe-read-edn-string unwrap) ; in hf format
         router (some-> domain :domain/router safe-read-edn-string unwrap)]
-    (case path
-      "/" (router/assoc-frag home-route frag)
-      (or (if (= "/_/" (subs path-and-frag 0 3)) (routing/decode (subs path-and-frag 2) #_"include leading /"))
-          (some-> router (bidi/match-route path-and-frag) ->bidi-consistency-wrapper bidi->hf)
-          (routing/decode path-and-frag)))))
+
+    (or
+      (case path
+        "/" (router/assoc-frag home-route frag)
+        (or (if (= "/_/" (subs path-and-frag 0 3)) (routing/decode (subs path-and-frag 2) #_"include leading /"))
+            (some-> router (bidi/match-route path-and-frag) ->bidi-consistency-wrapper bidi->hf)
+            (routing/decode path-and-frag)))
+      [:hyperfiddle.system/not-found])))
 
 (defn route-encode [rt [fiddle :as route]]
   (let [domain @(runtime/state rt [:hyperfiddle.runtime/domain])
@@ -227,7 +230,7 @@
                   :_
                   [browser/ui-from-route (ide-route ?route)
                    (assoc ctx :hypercrud.ui/error (reactive/constantly ui-error/error-inline)
-                              #_#_ :user-renderer hyperfiddle.ide.fiddles.topnav/renderer)
+                              #_#_:user-renderer hyperfiddle.ide.fiddles.topnav/renderer)
                    "topnav hidden-print"]
                   (if src-mode
                     [browser/ui-from-route (ide-route ?route)

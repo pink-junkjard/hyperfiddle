@@ -2,6 +2,7 @@
   (:require [clojure.string :as str]
             [contrib.try :refer [try-either]]
             [hyperfiddle.ide.fiddles.schema :as schema]
+            [hyperfiddle.ide.fiddles.not-found :as not-found]
             [hypercrud.types.Entity :refer [->Entity]]))
 
 
@@ -31,6 +32,7 @@
       (cond
         (= ident :hyperfiddle.system/edit) fiddle-system-edit
         (= ident :hyperfiddle.system/remove) fiddle-blank-system-remove
+        (= ident :hyperfiddle.system/not-found) not-found/not-found
         :else (let [$db (name ident)]
                 (condp = (namespace ident)
                   "hyperfiddle.schema" (schema/schema $db)

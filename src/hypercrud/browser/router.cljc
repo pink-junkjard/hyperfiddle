@@ -1,5 +1,5 @@
 (ns hypercrud.browser.router
-  (:require [contrib.data :refer [rtrim-coll]]
+  (:require [contrib.data :refer [rtrim-coll orp]]
             [contrib.reader :as reader]
             [contrib.rfc3986 :refer [encode-rfc3986-pchar decode-rfc3986-pchar encode-ednish decode-ednish]]
             [contrib.string :refer [split-first empty->nil]]
@@ -34,7 +34,7 @@
 
 (defn canonicalize "(apply canonicalize route)"
   [& [fiddle #_?fiddle-args ?datomic-args ?service-args ?initial-state]]
-  (rtrim-coll nil? [fiddle ?datomic-args ?service-args ?initial-state]))
+  (orp empty? (rtrim-coll nil? [fiddle ?datomic-args ?service-args ?initial-state])))
 
 (defn decode [s]
   (let [[root s] (split-first s "/")
