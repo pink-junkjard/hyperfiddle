@@ -48,17 +48,3 @@
   (let [f (eval/eval-string (get auto-formula-lookup {:fe true :c? false :d? false :a true}))
         ctx {}]
     (is (nil? (f ctx)))))
-
-(deftest fe-create []
-  (let [f (eval/eval-string (get auto-formula-lookup {:fe true :c? true :d? true :a false}))]
-    (is (= f auto-entity)))
-
-  (let [f (eval/eval-string (get auto-formula-lookup {:fe true :c? true :d? true :a true}))]
-    (is (= f auto-entity)))
-
-  (let [f (eval/eval-string (get auto-formula-lookup {:fe true :c? true :d? false :a false}))]
-    (is (= f auto-entity-from-stage)))
-
-  (let [f (eval/eval-string (get auto-formula-lookup {:fe true :c? true :d? false :a true}))]
-    (is (= f auto-entity-from-stage))))
-

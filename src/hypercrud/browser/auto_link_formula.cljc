@@ -56,7 +56,10 @@
 #?(:clj
    (defmacro build-auto-formula-lookup []
      (let [fe-no-create (macroexpand `(vedn/load-vedn-from-file "auto-formula/fe-no-create.vedn"))
-           fe-create (macroexpand `(vedn/load-vedn-from-file "auto-formula/fe-create.vedn"))
+           fe-create {{:d? true :a false} (str `auto-entity)
+                      {:d? true :a true} (str `auto-entity)
+                      {:d? false :a false} (str `auto-entity-from-stage)
+                      {:d? false :a true} (str `auto-entity-from-stage)}
            ; no fe = index or relation links
            no-fe {{:fe false :c? false :d? true :a false} nil
                   {:fe false :c? false :d? true :a true} nil
