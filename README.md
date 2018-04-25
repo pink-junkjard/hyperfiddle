@@ -38,6 +38,8 @@ On deck
 
 # Overview
 
+This readme is focused on "Hyperfiddle" the composable application medium, and not the I/O infrastructure.
+
 Hyperfiddle is built in layers. Higher layers are optional and implemented in terms of lower.
 
 1. API as a function
