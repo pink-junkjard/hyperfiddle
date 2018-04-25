@@ -64,7 +64,7 @@
                                            (on-change id)))))
                   (update :disabled #(or % no-options?)))
         label-fn (:label-fn props label-fn)]
-    [:select.select props
+    [:select.select (dissoc props :label-fn)
      (conj
        (->> @(:relations ctx)
             (mapv (juxt (comp :db/id first) #(label-fn % ctx)))
