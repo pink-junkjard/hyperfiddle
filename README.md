@@ -2,7 +2,16 @@
 
 > <http://www.hyperfiddle.net/> – demos and overview
 
-Hyperfiddle abstracts over client/server data sync for Datomic APIs by extending Datomic's immutable database semantics to the API. Unlike REST/GraphQL/whatever, Hyperfiddle's data sync *composes*. If React.js is managed DOM, Hyperfiddle is managed database and network.
+The "web framework of the 2020s" must solve data sync. Data sync is the most important thing left that doesn't compose, because of all the network side effects involved. The Cognitect stack has the right primitives to make data sync compose by orienting the entire stack, end to end, around values and immutability.
+
+* Clojure and ClojureScript, React.js and Reagent, EDN and Transit, Datomic and Datascript, Pedestal
+* storage ↔ database ↔ service ↔ web ↔ client ↔ view
+
+However this is an infrastructure heavy problem any way you frame it. There are gonna be CDNs and cloud lambdas and distributed caches involved, it's going to be more than a jar file.
+
+### Hyperfiddle is managed infrastructure for data sync
+
+Hyperfiddle abstracts over client/server data sync for APIs by extending Datomic's immutable database semantics to the API. Unlike REST/GraphQL/whatever, Hyperfiddle's data sync *composes*. If React.js is managed DOM, Hyperfiddle is managed database and network.
 
 Hyperfiddle models API inter-dependencies as a graph (I need query-X and also query-Y which depends query-Z). This graph lets the I/O runtime understand the structure and data flows of the application, which permits interesting optimization opportunities.
 
