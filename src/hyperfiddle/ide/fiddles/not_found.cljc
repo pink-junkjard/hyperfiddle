@@ -5,5 +5,5 @@
 (def not-found
   {:fiddle/ident :hyperfiddle.system/not-found
    :fiddle/type :blank
-   :fiddle/markdown "# Not found"})
+   :fiddle/markdown "# Fiddle not found"})
 
