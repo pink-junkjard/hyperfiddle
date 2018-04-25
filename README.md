@@ -2,7 +2,7 @@
 
 > composable application medium, built on managed data-sync infrastructure. <http://www.hyperfiddle.net/>
 
-The "web framework of the 2020s" must solve data sync, the most important thing left that doesn't compose, because of all the network side effects involved. The Cognitect stack has the right primitives to build composable data sync by orienting the entire stack, end to end, around values and immutability.
+The "web framework of the 2020s" must solve data sync. That's the most important thing left that doesn't compose, because of all the network side effects involved. The Cognitect stack has the right primitives to build composable data sync by orienting the entire stack, end to end, around values and immutability.
 
 * Clojure and ClojureScript, React.js and Reagent, EDN and Transit, Datomic and Datascript, Pedestal
 * storage ↔ database ↔ service ↔ web ↔ client ↔ view
