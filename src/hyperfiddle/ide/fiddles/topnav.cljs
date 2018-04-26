@@ -104,10 +104,9 @@
      [:div.right-nav {:key "right-nav"}                     ; CAREFUL; this key prevents popover flickering
 
       (if @(runtime/state (:peer ctx) [::runtime/auto-transact])
-        [:div
-         [:input {:id ::auto-transact :type "checkbox" :checked true
-                  :on-click (fn [] (runtime/dispatch! (:peer ctx) [:disable-auto-transact]))}]
-         [:label {:for ::auto-transact} "auto-transact"]]
+        (fragment :_ [:input {:id ::auto-transact :type "checkbox" :checked true
+                              :on-click (fn [] (runtime/dispatch! (:peer ctx) [:disable-auto-transact]))}]
+                  [:label {:for ::auto-transact} "auto-transact"])
         (fake-managed-anchor :stage [] ctx "stage" :class (if dirty? "stage-dirty")))
       ((:anchor ctx) :new-fiddle [0] ctx "new-fiddle")
       (if (:user-profile ctx)
