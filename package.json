@@ -4,7 +4,6 @@
   "repository": "git@github.com:hyperfiddle/hyperfiddle.git",
   "dependencies": {
     "base-64": "0.1.0",
-    "color": "^1.0.3",
     "create-react-class": "^15.6.3",
     "eventsource": "0.2.1",
     "prop-types": "15.6.1",

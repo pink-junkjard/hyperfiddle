@@ -4,7 +4,6 @@
 
 (enable-console-print!)
 
-(aset js/global "Color" (node/require "color"))
 (aset js/global "propTypes" (node/require "prop-types"))
 (aset js/global "React" (node/require "react"))
 (aset js/global "createReactClass" (node/require "create-react-class"))
