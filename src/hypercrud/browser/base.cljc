@@ -1,11 +1,12 @@
 (ns hypercrud.browser.base
   (:require [cats.core :as cats :refer [mlet return fmap]]
-            [cats.monad.either :as either :refer [branch-right]]
+            [cats.monad.either :as either :refer [right left branch-right]]
             [contrib.reactive :as r]
             [contrib.string :refer [memoized-safe-read-edn-string or-str]]
             [contrib.try :refer [try-either]]
             [hypercrud.browser.auto-link :refer [auto-links]]
             [hypercrud.browser.context :as context]
+            [hypercrud.browser.fiddle :as fiddle]
             [hypercrud.browser.find-element :as find-element]
             [hypercrud.browser.q-util :as q-util]
             [hypercrud.browser.routing :as routing]
@@ -84,12 +85,7 @@
                     (mlet [fiddle @(hc/hydrate (:peer ctx) (:branch ctx) @meta-fiddle-request)]
                       (validate-fiddle fiddle)))]
       (return
-        (shadow-entity fiddle #(merge-with or-str %
-                                           {:fiddle/markdown "!result[]"
-                                            :fiddle/renderer #?(:cljs hypercrud.ui.result/fiddle :clj nil)}
-                                           (if-not auto-fiddle ; crashes the fiddle dunno why
-                                             {:fiddle/pull "[[:db/id *]]"
-                                              :fiddle/query "[:find (pull ?e [:db/id *]) :where\n [?e]]"})))))))
+        (if auto-fiddle fiddle (shadow-entity fiddle fiddle/fiddle-defaults))))))
 
 (defn- fix-param [param]
   (cond
