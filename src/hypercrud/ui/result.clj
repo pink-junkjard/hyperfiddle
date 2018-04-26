@@ -3,7 +3,7 @@
     [contrib.string :refer [slow-pprint-str]]))
 
 
-(defmacro -build-fiddle []
+(defmacro -build-fiddle []                                  ; Pretty print at compile-time
     (let [expr '[:div {:class class}
                  [:h3 (some-> ctx :hypercrud.browser/fiddle deref :fiddle/ident name)]
                  (hypercrud.ui.control.link-controls/anchors [] false ctx :class "hyperfiddle-link-index")
