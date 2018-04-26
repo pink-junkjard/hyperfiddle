@@ -21,7 +21,7 @@
 
 (defn error-inline [e]
   (let [{:keys [cause data message]} (e->map e)]
-    (str message " " (str " -- " (ex-data->human-detail data)))))
+    (str message #_#_" " (str " -- " (ex-data->human-detail data)))))
 
 (defn error-block [e]
   (let [{:keys [cause data message]} (e->map e)]            ; we don't always return an error with a message
