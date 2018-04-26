@@ -24,8 +24,8 @@
                               :db/cardinality {:db/ident :db.cardinality/one}}
                   :some/attr-many {:db/ident :some/attr-many
                                    :db/cardinality {:db/ident :db.cardinality/many}}}
-        base-ctx {:hypercrud.browser/ordered-fes (atom [{:source-symbol "$"}])
-                  :hypercrud.browser/schemas (atom {"$" $-schema})}]
+        base-ctx {:hypercrud.browser/ordered-fes (r/atom [{:source-symbol "$"}])
+                  :hypercrud.browser/schemas (r/atom {"$" $-schema})}]
 
     (let [f (eval-formula (-auto-formula-impl base-ctx [0] :create? false :dependent? true))
           e (->Entity #uri "test" {:db/id "entity"})
