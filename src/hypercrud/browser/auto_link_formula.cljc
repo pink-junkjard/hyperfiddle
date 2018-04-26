@@ -1,10 +1,8 @@
 (ns hypercrud.browser.auto-link-formula                     ; namespace is public export runtime
-  #?(:cljs (:require-macros [hypercrud.browser.auto-link-formula :refer [build-auto-formula-lookup]]))
   (:require [cats.monad.either :as either]
-            [contrib.data :refer [abs-normalized map-keys]]
+            [contrib.data :refer [abs-normalized]]
             [contrib.reactive :as r]
             [contrib.string :refer [memoized-safe-read-edn-string]]
-            [contrib.vedn :as vedn]
             [hypercrud.browser.dbname :as dbname]
             [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
             [hypercrud.types.ThinEntity :refer [->ThinEntity]]
@@ -53,38 +51,35 @@
               (:uri ctx))]
     (->ThinEntity (dbname/uri->dbname uri ctx) (deterministic-ident ctx))))
 
-#?(:clj
-   (defmacro build-auto-formula-lookup []
-     (let [fe-no-create (macroexpand `(vedn/load-vedn-from-file "auto-formula/fe-no-create.vedn"))
-           fe-create {{:d? true :a false} (str `auto-entity)
-                      {:d? true :a true} (str `auto-entity)
-                      {:d? false :a false} (str `auto-entity-from-stage)
-                      {:d? false :a true} (str `auto-entity-from-stage)}
-           ; no fe = index or relation links
-           no-fe {{:fe false :c? false :d? true :a false} nil
-                  {:fe false :c? false :d? true :a true} nil
-                  {:fe false :c? false :d? false :a false} (get fe-no-create {:d? false :a false})
-                  {:fe false :c? false :d? false :a true} nil
+(defn -auto-formula-impl [ctx path & {:keys [create? dependent?]}]
+  (case {:fe (not (nil? (first path))) :c? (or create? false) :d? (or dependent? false)}
+    {:fe true :c? false :d? true} (if (nil? (second path))
+                                    "(comp deref :cell-data)"
+                                    (let [dbname (str @(r/cursor (:hypercrud.browser/ordered-fes ctx) [(first path) :source-symbol]))]
+                                      (case @(r/cursor (:hypercrud.browser/schemas ctx) [dbname (second path) :db/cardinality :db/ident])
+                                        :db.cardinality/one "(comp deref :value)"
 
-                  {:fe false :c? true :d? true :a false} nil
-                  {:fe false :c? true :d? true :a true} nil
-                  {:fe false :c? true :d? false :a false} (get fe-create {:d? false :a false})
-                  {:fe false :c? true :d? false :a true} nil}]
-       (merge (map-keys #(assoc % :fe true :c? true) fe-create)
-              (map-keys #(assoc % :fe true :c? false) fe-no-create)
-              no-fe))))
+                                        ; "find children of parent entity at attr". See base ->EntityRequest
+                                        :db.cardinality/many "(juxt (comp deref :cell-data) :hypercrud.browser/attribute)"
 
-(def auto-formula-lookup (build-auto-formula-lookup))
+                                        ; the attribute doesnt exist
+                                        nil "(comp deref :value)")))
+    {:fe true :c? false :d? false} nil
+    {:fe true :c? true :d? true} "hypercrud.browser.auto-link-formula/auto-entity"
+    {:fe true :c? true :d? false} "hypercrud.browser.auto-link-formula/auto-entity-from-stage"
 
-(defn auto-formula [link]
+    ; no fe = index or relation links
+    {:fe false :c? false :d? true} nil
+    {:fe false :c? false :d? false} nil
+    {:fe false :c? true :d? true} nil
+    {:fe false :c? true :d? false} (when (nil? (second path))
+                                     "hypercrud.browser.auto-link-formula/auto-entity-from-stage")))
+
+(defn auto-formula [ctx link]
   (-> (memoized-safe-read-edn-string (str "[" (:link/path link) "]"))
       (either/branch
         (fn [e]
           (timbre/error e)
           nil)
         (fn [path]
-          (get auto-formula-lookup
-               {:fe (not (nil? (first path)))
-                :c? (or (:link/create? link) false)
-                :d? (or (:link/dependent? link) false)
-                :a (not (nil? (second path)))})))))
+          (-auto-formula-impl ctx path :create? (:link/create? link) :dependent? (:link/dependent? link))))))

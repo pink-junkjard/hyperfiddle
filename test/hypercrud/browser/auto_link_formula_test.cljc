@@ -2,9 +2,7 @@
   (:require [clojure.test :refer [deftest is]]
             [contrib.eval :as eval]
             [contrib.reactive :as r]
-            [hypercrud.browser.auto-link-formula :refer [auto-entity auto-entity-from-stage
-                                                         auto-formula-lookup
-                                                         deterministic-ident]]
+            [hypercrud.browser.auto-link-formula :refer [-auto-formula-impl deterministic-ident]]
             [hypercrud.types.Entity :refer [->Entity]]))
 
 
@@ -17,34 +15,42 @@
                :value nil}]
       (is (= "-2095329786" (deterministic-ident ctx)))))
 
+(defn eval-formula [?s]
+  (or (some-> ?s eval/eval-string)
+      (constantly nil)))
+
 (deftest fe-no-create []
-  (let [f (eval/eval-string (get auto-formula-lookup {:fe true :c? false :d? true :a false}))
-        e (->Entity #uri "test" {:db/id "entity"})
-        ctx {:cell-data (r/atom e)}]
-    (is (= (f ctx) e)))
+  (let [$-schema {:some/attr {:db/ident :some/attr
+                              :db/cardinality {:db/ident :db.cardinality/one}}
+                  :some/attr-many {:db/ident :some/attr-many
+                                   :db/cardinality {:db/ident :db.cardinality/many}}}
+        base-ctx {:hypercrud.browser/ordered-fes (atom [{:source-symbol "$"}])
+                  :hypercrud.browser/schemas (atom {"$" $-schema})}]
 
-  (let [f (eval/eval-string (get auto-formula-lookup {:fe true :c? false :d? true :a true}))
-        e (->Entity #uri "test" {:db/id "entity"})
-        ctx {:cell-data (r/atom e)
-             :hypercrud.browser/attribute :some/attr
-             :hypercrud.browser/fat-attribute (r/atom {:db/ident :some/attr
-                                                       :db/cardinality {:db/ident :db.cardinality/one}})
-             :value (r/atom 1)}]
-    (is (= (f ctx) 1)))
+    (let [f (eval-formula (-auto-formula-impl base-ctx [0] :create? false :dependent? true))
+          e (->Entity #uri "test" {:db/id "entity"})
+          ctx (assoc base-ctx :cell-data (r/atom e))]
+      (is (= (f ctx) e)))
 
-  (let [f (eval/eval-string (get auto-formula-lookup {:fe true :c? false :d? true :a true}))
-        e (->Entity #uri "test" {:db/id "entity"})
-        ctx {:cell-data (r/atom e)
-             :hypercrud.browser/attribute :some/attr-many
-             :hypercrud.browser/fat-attribute (r/atom {:db/ident :some/attr-many
-                                                       :db/cardinality {:db/ident :db.cardinality/many}})
-             :value (r/atom 1)}]
-    (is (= (f ctx) [e :some/attr-many])))
+    (let [f (eval-formula (-auto-formula-impl base-ctx [0 :some/attr] :create? false :dependent? true))
+          ctx (assoc base-ctx :value (r/atom 1))]
+      (is (= (f ctx) 1)))
 
-  (let [f (eval/eval-string (get auto-formula-lookup {:fe true :c? false :d? false :a false}))
-        ctx {}]
-    (is (nil? (f ctx))))
+    (let [f (eval-formula (-auto-formula-impl base-ctx [0 :some/attr-many] :create? false :dependent? true))
+          e (->Entity #uri "test" {:db/id "entity"})
+          ctx (assoc base-ctx
+                :cell-data (r/atom e)
+                :hypercrud.browser/attribute :some/attr-many)]
+      (is (= (f ctx) [e :some/attr-many])))
 
-  (let [f (eval/eval-string (get auto-formula-lookup {:fe true :c? false :d? false :a true}))
-        ctx {}]
-    (is (nil? (f ctx)))))
+    (let [f (eval-formula (-auto-formula-impl base-ctx [0 :some/non-real-attr] :create? false :dependent? true))
+          ctx (assoc base-ctx :value (r/atom 1))]
+      (is (= (f ctx) 1)))
+
+    (let [f (eval-formula (-auto-formula-impl base-ctx [0] :create? false :dependent? false))
+          ctx base-ctx]
+      (is (nil? (f ctx))))
+
+    (let [f (eval-formula (-auto-formula-impl base-ctx [0 :some/attr] :create? false :dependent? false))
+          ctx base-ctx]
+      (is (nil? (f ctx))))))

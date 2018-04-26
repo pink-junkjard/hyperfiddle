@@ -6,7 +6,7 @@
             [hypercrud.browser.system-link :as system-link]))
 
 
-(defn auto-link [link]
+(defn auto-link [ctx link]
   (let [auto-fn (fn [link attr auto-f]
                   (let [v (get link attr)]
                     (if (or (not v) (and (string? v) (empty? v)))
@@ -14,7 +14,7 @@
                       link)))]
     (-> link
         (auto-fn :link/tx-fn auto-txfn)
-        (auto-fn :link/formula auto-formula))))
+        (auto-fn :link/formula (partial auto-formula ctx)))))
 
 (defn merge-links [sys-links links]
   (->> (reduce (fn [grouped-links sys-link]
@@ -39,7 +39,7 @@
   (let [fiddle (:hypercrud.browser/fiddle ctx)
         sys-links (system-link/system-links @fiddle @(:hypercrud.browser/ordered-fes ctx) @(:hypercrud.browser/schemas ctx))
         links (->> (merge-links sys-links @(r/cursor fiddle [:fiddle/links]))
-                   (map auto-link))]
+                   (map (partial auto-link ctx)))]
     (if (:keep-disabled-anchors? ctx)
       links
       (remove :link/disabled? links))))
