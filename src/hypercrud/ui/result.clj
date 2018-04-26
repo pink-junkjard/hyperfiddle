@@ -1,6 +1,7 @@
 (ns hypercrud.ui.result
   (:require
-    [contrib.string :refer [slow-pprint-str]]))
+    [contrib.string :refer [slow-pprint-str]]
+    [cuerdas.core :as str]))
 
 
 (defmacro -build-fiddle []                                  ; Pretty print at compile-time
@@ -10,4 +11,5 @@
                  [hypercrud.ui.control.markdown-rendered/markdown (some-> ctx :hypercrud.browser/fiddle deref :fiddle/markdown) ctx]
                  (hypercrud.ui.control.link-controls/iframes [] false ctx)]]
       `(with-meta (~'fn ~'[ctx & [class]] ~expr)
-                  {:expr-str ~(slow-pprint-str expr)})))
+                  {:expr-str ~(str/rtrim                    ; pretty printer adds undesired newline
+                                (slow-pprint-str expr))})))
