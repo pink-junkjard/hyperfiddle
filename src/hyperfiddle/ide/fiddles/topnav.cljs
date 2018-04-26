@@ -9,6 +9,7 @@
             [contrib.string :refer [or-str]]
             [hypercrud.browser.browser-ui :as browser-ui]
             [hypercrud.browser.context :as context]
+            [hypercrud.browser.fiddle :as fiddle]
             [hypercrud.browser.link :as link]
             [hypercrud.browser.system-fiddle :as system-fiddle]
             [hypercrud.types.Entity :refer [shadow-entity]]
@@ -37,12 +38,7 @@
                    (shadow-entity #(merge-with or-str % {:fiddle/renderer (-> hypercrud.ui.result/fiddle meta :expr-str)})))
               (if (or omit-renderer (nil? (:db/id fiddle-val)))
                 fiddle-val
-                (shadow-entity
-                  fiddle-val
-                  #(merge-with or-str % {:fiddle/renderer (-> hypercrud.ui.result/fiddle meta :expr-str)
-                                         :fiddle/markdown "!result[]"
-                                         :fiddle/pull "[[:db/id *]]"
-                                         :fiddle/query "[:find (pull ?e [:db/id *]) :where\n [?e]]"}))))))]
+                (shadow-entity fiddle-val fiddle/fiddle-defaults)))))]
   (defn shadow-fiddle [ctx & [omit-renderer]]
     {:pre [(-> ctx :hypercrud.browser/result)]}
     (-> ctx
