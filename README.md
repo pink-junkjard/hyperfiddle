@@ -2,12 +2,13 @@
 
 > composable application medium, built on managed data-sync infrastructure. <http://www.hyperfiddle.net/>
 
-The "web framework of the 2020s" must solve data sync. That's the most important thing left that doesn't compose, because of all the network side effects involved. The Cognitect stack has the right primitives to build composable data sync by orienting the entire stack, end to end, around values and immutability.
+The "web framework of the 2020s" must solve data sync — a slow, asynchronous, failure-prone concern wired throughout almost the entire codebase — the last remaining icky bit that fit into functional programming due to all the network side effects involved. The Cognitect stack has the right primitives to build composable data sync by orienting the entire stack — storage ↔ database ↔ service ↔ web ↔ client ↔ view — around values and immutability.
 
-* Clojure and ClojureScript, React.js and Reagent, EDN and Transit, Datomic and Datascript, Pedestal
-* storage ↔ database ↔ service ↔ web ↔ client ↔ view
+> Cognitect stack: Clojure/Script, EDN, Transit, Datomic, and Pedestal, supplemented with React.js and Reagent
 
-However this is an infrastructure heavy problem any way you frame it. There are gonna be CDNs and cloud lambdas and distributed caches involved, it's going to be more than a jar file. This is called an *I/O runtime* — a kernel implementing an I/O strategy and coordinating infrastructure — to get the right data to the right places. You can swap in different I/O runtimes for diverse I/O needs (client/server http, server rendered pages, predictive prefetching, realtime) without changing the application. This type of I/O code is abstraction-resistant in any other stack; but end-to-end immutability (including through the database) permits a much more general solution than was possible before.
+However this is an infrastructure heavy problem any way you frame it. There are gonna be CDNs and cloud lambdas and distributed caches involved, it's going to be more than a jar file. This infrastructure is called an *I/O runtime*: a small kernel implementing an I/O strategy and coordinating infrastructure, to get the right data to the right places, so that userland can program with functions and values, blissfully unaware
+
+. You can swap in different I/O runtimes for diverse I/O needs (client/server http, server rendered pages, predictive prefetching, realtime) without changing the application. This type of I/O code is abstraction-resistant in any other stack; but end-to-end immutability (including through the database) permits a much more general solution than was possible before.
 
 ### Composable data sync 
 
