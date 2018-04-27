@@ -2,19 +2,18 @@
 
 > composable application medium, built on managed data-sync infrastructure. <http://www.hyperfiddle.net/>
 
-The "web framework of the 2020s" must solve data sync — a slow, asynchronous, failure-prone concern wired throughout almost the entire codebase — the last remaining icky bit that fit into functional programming due to all the network side effects involved. The Cognitect stack has the right primitives to build composable data sync by orienting the entire stack — storage ↔ database ↔ service ↔ web ↔ client ↔ view — around values and immutability.
+If React.js is managed DOM, Hyperfiddle is managed database and network.
 
-> Cognitect stack: Clojure/Script, EDN, Transit, Datomic, and Pedestal, supplemented with React.js and Reagent
+The "web framework of the 2020s" must solve data sync — a slow, asynchronous, failure-prone concern wired throughout almost the entire codebase — the last remaining icky bit that fit into functional programming due to all the network side effects involved. The Cognitect stack has the right primitives to build composable data sync by orienting the entire stack — storage ↔ database ↔ service ↔ web ↔ client ↔ view — around values and immutability. Unlike REST/GraphQL/whatever, Hyperfiddle's data sync *composes*.
 
-However this is an infrastructure heavy problem any way you frame it. There are gonna be CDNs and cloud lambdas and distributed caches involved, it's going to be more than a jar file. This infrastructure is called an *I/O runtime*: a small kernel implementing an I/O strategy and coordinating infrastructure, to get the right data to the right places, so that userland can program with functions and values, blissfully unaware
+> Cognitect stack is a uniform medium for programming with values that can reach any platform: 
+> * Clojure/Script - platform independent functions
+> * EDN - platform independent extensible values
+> * Transit - transmit values efficiently across platforms
+> * Datomic - model and sophisticated values
+> * (This stack is supplemented with React.js and Reagent – UI as a value)
 
-. You can swap in different I/O runtimes for diverse I/O needs (client/server http, server rendered pages, predictive prefetching, realtime) without changing the application. This type of I/O code is abstraction-resistant in any other stack; but end-to-end immutability (including through the database) permits a much more general solution than was possible before.
-
-### Composable data sync 
-
-Hyperfiddle abstracts over client/server data sync for APIs by extending Datomic's immutable database semantics to the API. Unlike REST/GraphQL/whatever, Hyperfiddle's data sync *composes*. If React.js is managed DOM, Hyperfiddle is managed database and network.
-
-Hyperfiddle models API inter-dependencies as a graph (I need query-X and also query-Y which depends query-Z). This graph lets the I/O runtime understand the structure and data flows of the application, which permits interesting optimization opportunities.
+However this is an infrastructure heavy problem any way you frame it. There are gonna be CDNs and cloud lambdas and distributed caches involved, it's going to be more than a jar file. This infrastructure is called an *I/O runtime*: a small kernel implementing an I/O strategy and coordinating infrastructure, to get the right data to the right places, so that userland can program with functions and values, blissfully unconcerned with the real-world effects underlying. I/O runtimes are general purpose and pluggable; you can swap in different I/O runtimes for diverse I/O needs — client/server http, server rendered pages, predictive prefetching, realtime — without changing the application. This type of I/O code is abstraction-resistant in any other stack; but end-to-end immutability (including through the database) is a fundamental breakthrough.
 
 Managed I/O means, as a web dev, you are no longer concerned with remote data fetching or coding HTTP backends. But managed I/O is not the point. The point is: *what does managed I/O make possible that wasn't possible before?* 
 
@@ -74,7 +73,7 @@ A simple API fn:
 
 ## \#2. API as a graph
 
-API as a function can be used to build an interpreter, it interprets *fiddles* which form a graph:
+API as a function can be used to build an interpreter function, it interprets *fiddles* which form a graph. The fiddle graph captures API inter-dependencies as data (I need query-X and also query-Y which depends query-Z). This graph lets the I/O runtime understand the structure and data flows of the application, which permits interesting optimization opportunities.
 
 * *Fiddles* have a *query*, a *view*, and *links* to other fiddles
 * Three types of link: *anchors*, *iframes*, and *buttons*
