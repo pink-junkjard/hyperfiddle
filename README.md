@@ -9,9 +9,9 @@ The "web framework of the 2020s" must solve data sync — a slow, asynchronous, 
 > Cognitect stack brings values to every platform, at every layer: storage ↔ database ↔ service ↔ web ↔ client ↔ view.
 >
 > * Clojure/Script - platform independent functions
-> * EDN - platform independent extensible values
-> * Transit - transmit values efficiently across platforms
-> * Datomic - model and sophisticated values
+> * EDN - platform independent values
+> * Transit - platform independent value interchange
+> * Datomic - flexible storage of sophisticated values
 > * (This stack is supplemented with React.js and Reagent – UI as a value)
 
 Hyperfiddle uses the Cognitect stack as a basis to abstract over client/server data sync for APIs, by extending Datomic's immutable database semantics to the API. Unlike REST/GraphQL/whatever, Hyperfiddle's data sync *composes*.
