@@ -4,7 +4,7 @@
 
 If React.js is managed DOM, Hyperfiddle is managed database and network.
 
-The "web framework of the 2020s" must solve data sync — a slow, asynchronous, failure-prone concern wired throughout almost the entire codebase — the last remaining icky bit that fit into functional programming due to all the network side effects involved. The Cognitect stack has the right primitives to build composable data sync by orienting the entire stack around values and immutability.
+The "web framework of the 2020s" must solve data sync — a slow, asynchronous, failure-prone concern wired throughout almost the entire codebase — the last remaining icky bit that doesn't quite fit into functional programming due to all the network side effects involved. The Cognitect stack has the right primitives to build composable data sync by orienting the entire stack around values and immutability.
 
 > Cognitect stack brings values to every platform, at every layer: storage ↔ database ↔ service ↔ web ↔ client ↔ view.
 >
