@@ -32,7 +32,7 @@ are probably safe today."
 
 (defn decode-rfc3986-pchar [s]
   (-> (loop [decoded []
-             [c & ss] (seq s)]
+             [c & ss] s]
         (if-not c
           decoded                                           ; done
           (if (= 37 (char-code c))                          ; 37 is \% written portably
