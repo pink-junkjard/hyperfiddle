@@ -53,8 +53,7 @@
                         (hypercrud.browser.context/with-relations))]
             [hypercrud.ui.result/result ctx])]))))
 
-(deftest pprint-performance-1
-  []
+#_(deftest pprint-performance-1 []
 
   (time
     (with-out-str
