@@ -3,28 +3,38 @@
     [bidi.bidi :as bidi]
     [clojure.test :refer [deftest is]]
     [contrib.reader]
-    [hypercrud.browser.router-bidi :refer [->bidi-consistency-wrapper bidi->hf ->bidi]]))
+    [hypercrud.browser.router-bidi :refer [decode]]))
 
 
-(deftest router-1 []
-  (is (= nil nil)))
+(def router ["/"
+             {"drafts/" :hyperblog/drafts
+              "pairing/" :user/pairing
+              [#entity["$" :a]] :hyperblog/post}])
+
+(deftest bidi-raw []
+  (is (= (some-> router (bidi/match-route "/:rdbms-denormalize")) {:route-params {:a #entity["$" :rdbms-denormalize]}, :handler :hyperblog/post})))
+
+(deftest bidi-hf-1 []
+  (is (= (decode router "/:rdbms-denormalize") [:hyperblog/post [#entity["$" :rdbms-denormalize]]])))
+
+(deftest bidi-hf-2 []
+  (def tests-2
+    {"/:rdbms-denormalize" [:hyperblog/post [#entity["$" :rdbms-denormalize]]]
+     "/:capitalism#:src" [:hyperblog/post [#entity["$" :capitalism]] nil ":src"]})
+  (doseq [[url route] tests-2]
+    (is (= (decode router url) (doto route prn))))
+  )
+
+
+
+
+
+
+
+
 
 (comment
-  ; An example user router (this is provided on the domain)
-  (def router                                               ; only needs to support fq routes
-    ["/"
-     {"drafts/" :hyperblog/drafts
-      [#entity["$" :a] "/"] :hyperblog/index
-      [#entity["$" :a]] :hyperblog/post}]
-    #_["/"
-       {"drafts/" :hyperblog/drafts
-        [#entity["$" :a] "/"] :hyperblog/index
-        #{[#entity["$" :a] "/" :b]
-          [#entity["$" :a]]} :hyperblog/post}])
-
   ;[#entity["$" :a] "/"] 17592186045454 ;IllegalArgumentException: No implementation of method: :unresolve-handler of protocol: #'bidi.bidi/Matched found for class: java.lang.Long
-
-  (some-> router (bidi/match-route "/:idddd/slug"))
 
   (->> [
         (some-> router (bidi/match-route "/1/"))

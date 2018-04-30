@@ -90,3 +90,6 @@
   ; we would need to disallow bidi keywords for this to be valid. Can bidi use ints? I think not :(
   (if ?r (apply conj [fiddle] (mapcat vector (abc) args))))
 
+; used from tests? Why not ide?
+(defn decode [router url]
+  (some-> router (bidi/match-route url) ->bidi-consistency-wrapper bidi->hf))

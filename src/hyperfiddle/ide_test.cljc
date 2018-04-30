@@ -28,6 +28,9 @@
 
    [:hyperblog/post [#entity["$" 1234]]]
    "/1234"
+
+   [:hyperblog/post [#entity["$" :capitalism]] nil ":src"]
+   "/:capitalism#:src"
    })
 
 (deftest user-router-1 []

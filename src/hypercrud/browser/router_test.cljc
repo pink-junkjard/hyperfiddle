@@ -39,7 +39,7 @@
 
   (is (= "/:hyperfiddle.blog!post/~entity('$',:hyperfiddle.blog!homepage)" (encode [:hyperfiddle.blog/post [#entity["$" :hyperfiddle.blog/homepage]]])))
   ;(is (= "/:hyperfiddle.blog!post/~entity('$',:hyperfiddle.blog!homepage)?#:src" (encode [:hyperfiddle.blog/post [#entity["$" :hyperfiddle.blog/homepage]] nil ":src"])))
-  (is (= "/:hyperfiddle.blog!post/~entity('$',:hyperfiddle.blog!homepage)#:src" (encode [:hyperfiddle.blog/post [#entity["$" :hyperfiddle.blog/homepage]] nil ":src"])))
+
   )
 
 (deftest router-malformed-1
@@ -54,3 +54,7 @@
   (is (= (apply canonicalize [nil nil nil nil]) nil))
   (is (= (apply canonicalize []) nil))
   )
+
+(deftest fragment-1 []
+  (is (= "/:hyperfiddle.blog!post/~entity('$',:hyperfiddle.blog!homepage)#:src" (encode [:hyperfiddle.blog/post [#entity["$" :hyperfiddle.blog/homepage]] nil ":src"])))
+  (is (= "/:hyperblog!post/~entity('$',:capitalism)#:src" (encode [:hyperblog/post [#entity["$" :capitalism]] nil ":src"]))))
