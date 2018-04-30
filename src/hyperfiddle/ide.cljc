@@ -4,12 +4,13 @@
             [contrib.reactive :as reactive]
     #?(:cljs [contrib.reagent :refer [fragment]])
             [contrib.rfc3986 :refer [split-fragment]]
-            [contrib.string :refer [abc safe-read-edn-string]]
+            [contrib.string :refer [safe-read-edn-string]]
             [hypercrud.browser.base :as base]
     #?(:cljs [hypercrud.browser.browser-ui :as browser-ui])
             [hypercrud.browser.core :as browser]
             [hypercrud.browser.routing :as routing]
             [hypercrud.browser.router :as router]
+            [hypercrud.browser.router-bidi :as router-bidi]
             [hypercrud.browser.system-fiddle :refer [system-fiddle?]]
             [hypercrud.client.core :as hc]
     #?(:cljs [hypercrud.ui.error :as ui-error])
@@ -122,31 +123,6 @@
   (-> (assoc ctx ::runtime/branch-aux {::foo "user"})
       (*-target-context route)))
 
-(defn ->bidi-consistency-wrapper [{:keys [handler route-params] :as ?r}]
-  ; Bidi's interface is inconsistent and makes you understand two ways to identify a route
-  ; "bidi/match" return val syntax, is the bad one
-  ; Canonicalize on the "bidi/path-for" syntax
-  (if ?r (apply conj [handler] (mapcat identity route-params))))
-
-(defn bidi->hf [[handler & ?route-params :as ?r]]
-  (if ?r
-    [handler
-     (->> ?route-params                                     ; bidi gives us alternating k/v
-          (partition-all 2)
-          (map vec)
-          sort                                              ; order by keys for hyperfiddle, router should use kw or int
-          (mapv second)                                     ; drop keys; hyperfiddle params are associative by index
-          )]))
-
-(defn bidi-match->path-for "adapt bidi's inconsistent interface" [[h & ps :as ?r]]
-  (if ?r {:handler h :route-params ps}))
-
-(defn ->bidi [[fiddle args :as ?r]]
-  (assert (not (system-fiddle? fiddle)) "bidi router doesn't handle sys links")
-  ; this is going to generate param names of 0, 1, ... which maybe doesn't work for all routes
-  ; we would need to disallow bidi keywords for this to be valid. Can bidi use ints? I think not :(
-  (if ?r (apply conj [fiddle] (mapcat vector (abc) args))))
-
 (defn route-decode [rt path-and-frag]
   {:pre [(string? path-and-frag)]}
   (let [[path frag] (split-fragment path-and-frag)
@@ -158,7 +134,7 @@
       (case path
         "/" (router/assoc-frag home-route frag)
         (or (if (= "/_/" (subs path-and-frag 0 3)) (routing/decode (subs path-and-frag 2) #_"include leading /"))
-            (some-> router (bidi/match-route path-and-frag) ->bidi-consistency-wrapper bidi->hf)
+            (some-> router (bidi/match-route path-and-frag) router-bidi/->bidi-consistency-wrapper router-bidi/bidi->hf)
             (routing/decode path-and-frag)))
       [:hyperfiddle.system/not-found])))
 
@@ -166,11 +142,11 @@
   (let [domain @(runtime/state rt [:hyperfiddle.runtime/domain])
         router (some-> domain :domain/router safe-read-edn-string unwrap)
         home-route (some-> domain :domain/home-route safe-read-edn-string unwrap)
-        home-route (if router (bidi->hf home-route) home-route)]
+        home-route (if router (router-bidi/bidi->hf home-route) home-route)]
     (or
       (if (system-fiddle? fiddle) (str "/_" (routing/encode route)))
       (if (= route home-route) "/")
-      (if router (apply bidi/path-for router (->bidi route)))
+      (if router (apply bidi/path-for router (router-bidi/->bidi route)))
       (routing/encode route))))
 
 (defn local-basis [global-basis route ctx]
