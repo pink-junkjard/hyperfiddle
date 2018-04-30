@@ -17,17 +17,13 @@
 (deftest bidi-hf-1 []
   (is (= (decode router "/:rdbms-denormalize") [:hyperblog/post [#entity["$" :rdbms-denormalize]]]))
   (is (= (decode router "/:rdbms-denormalize#:src") [:hyperblog/post [#entity["$" :rdbms-denormalize]] nil ":src"]))
-  )
+  (is (= (decode router "/:capitalism") [:hyperblog/post [#entity["$" :capitalism]]]))
+  (is (= (decode router "/:capitalism#:src") [:hyperblog/post [#entity["$" :capitalism]] nil ":src"]))
 
-(deftest bidi-hf-2 []
-  (def tests-2
-    {"/:rdbms-denormalize" [:hyperblog/post [#entity["$" :rdbms-denormalize]]]
-     "/:rdbms-denormalize#:src" [:hyperblog/post [#entity["$" :rdbms-denormalize]] nil ":src"]
-     "/:capitalism" [:hyperblog/post [#entity["$" :capitalism]]]
-     "/:capitalism#:src" [:hyperblog/post [#entity["$" :capitalism]] nil ":src"]
-     })
-  (doseq [[url route] tests-2]
-    (is (= (decode router url) route))))
+  ; Unhandled routes are not handled here
+  (is (= (decode router "/:hyperblog.2!tag/:hyperfiddle") nil))
+  (is (= (decode router "/:hyperblog.2!tag/:hyperfiddle#:src") nil))
+  )
 
 (comment
   ;[#entity["$" :a] "/"] 17592186045454 ;IllegalArgumentException: No implementation of method: :unresolve-handler of protocol: #'bidi.bidi/Matched found for class: java.lang.Long

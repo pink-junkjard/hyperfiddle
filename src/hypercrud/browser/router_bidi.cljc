@@ -92,11 +92,23 @@
   ; we would need to disallow bidi keywords for this to be valid. Can bidi use ints? I think not :(
   (if ?r (apply conj [fiddle] (mapcat vector (abc) ?datomic-args))))
 
-; used from tests? Why not ide?
+
 (defn decode [router path-and-frag]
   (let [[path frag] (split-fragment path-and-frag)
-        route (some-> router (bidi/match-route path) ->bidi-consistency-wrapper bidi->hf)]
-    (assoc-frag route (empty->nil frag))))
+        route (some-> (bidi/match-route router path) ->bidi-consistency-wrapper bidi->hf)]
+    (if route (assoc-frag route (empty->nil frag)))))
+
+(comment
+  (def path-and-frag "/:hyperblog.2!tag/:hyperfiddle#:src")
+  (def path-and-frag "/:hyperblog.2!tag/:hyperfiddle")
+  (def router ["/"
+               {"drafts/" :hyperblog/drafts
+                "pairing/" :user/pairing
+                [#entity["$" :a]] :hyperblog/post}])
+  (def path "/:hyperblog.2!tag/:hyperfiddle")
+
+  (decode router path-and-frag)
+  )
 
 (defn encode [router route]
   (let [[_ _ _ frag] route
