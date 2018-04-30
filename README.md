@@ -6,13 +6,13 @@ If React.js is managed DOM, Hyperfiddle is managed database and network.
 
 The "web framework of the 2020s" must solve data sync — a slow, asynchronous, failure-prone concern wired throughout almost the entire codebase — the last remaining icky bit that doesn't quite fit into functional programming due to all the network side effects involved. The Cognitect stack has the right primitives to build "functional" data sync by orienting the entire stack around values and immutability.
 
-> Cognitect stack brings values to every platform, at every layer: storage ↔ database ↔ service ↔ web ↔ client ↔ view.
+> Cognitect stack: value-orientation at every layer: storage ↔ database ↔ service ↔ web ↔ client ↔ view
 >
-> * Clojure/Script - platform independent functions
-> * EDN - platform independent values
-> * Transit - platform independent value interchange
-> * Datomic - flexible storage of sophisticated values
-> * (This stack is supplemented with React.js and Reagent – UI as a value)
+> * Clojure/Script - Value-oriented programming on any platform
+> * EDN - Notation for values
+> * Transit - Value interchange between systems
+> * Datomic - Database as a value
+> * (supplemented with React.js/Reagent – View as a value)
 
 Hyperfiddle uses the Cognitect stack as a basis to abstract over client/server data sync for APIs, by extending Datomic's immutable database semantics to the API. Unlike REST/GraphQL/whatever, Hyperfiddle's data sync *composes*.
 
