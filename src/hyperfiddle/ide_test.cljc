@@ -8,7 +8,7 @@
 
 
 (def state
-  (atom
+  (r/atom
     {::runtime/domain
      {:domain/home-route (pr-str
                            [:hyperblog/index :a #entity["$" :highlights]])
