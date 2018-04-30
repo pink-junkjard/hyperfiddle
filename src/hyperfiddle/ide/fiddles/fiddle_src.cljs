@@ -1,9 +1,5 @@
 (ns hyperfiddle.ide.fiddles.fiddle-src
-  (:require [cats.core :as cats]
-            [cuerdas.core :as str]
-            [contrib.data :refer [kwargs unwrap]]
-            [contrib.reagent :refer [fragment]]
-            [contrib.string :refer [safe-read-edn-string]]
+  (:require [cuerdas.core :as str]
             [hypercrud.types.URI :refer [is-uri?]]
             [hypercrud.ui.control.markdown-rendered :refer [markdown]]
             [hypercrud.ui.tooltip :refer [tooltip]]

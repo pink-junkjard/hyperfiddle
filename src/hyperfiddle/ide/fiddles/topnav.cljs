@@ -3,8 +3,8 @@
             [contrib.base-64-url-safe :as base64-url-safe]
             [contrib.data :refer [kwargs unwrap]]
             [contrib.datomic-tx :as tx]
+            [contrib.reactive :as r]
             [contrib.reader :refer [read-edn-string]]
-            [contrib.reactive :as reactive]
             [contrib.reagent :refer [fragment]]
             [contrib.rfc3986 :refer [encode-ednish decode-ednish encode-rfc3986-pchar decode-rfc3986-pchar]]
             [hypercrud.browser.context :as context]
@@ -43,14 +43,14 @@
           [_ target-fiddle-ident] (:db/id e)]
       (-> ctx
           (dissoc :relation :relations)
-          (update :hypercrud.browser/result (partial reactive/fmap (reactive/partial -shadow-fiddle target-fiddle-ident)))
+          (update :hypercrud.browser/result (partial r/fmap (r/partial -shadow-fiddle target-fiddle-ident)))
           (context/with-relations)))))
 
 (defn any-loading? [peer]
   (some (comp not nil? :hydrate-id val) @(runtime/state peer [::runtime/partitions])))
 
 (defn loading-spinner [ctx & [?class]]
-  (if @(reactive/track any-loading? (:peer ctx))
+  (if @(r/track any-loading? (:peer ctx))
     [:div.display-inline-flex [re-com.core/throbber]]))
 
 (defn src-mode? [frag]
@@ -65,7 +65,7 @@
         fake-managed-anchor (fn [rel path ctx label & args]
                               ; mostly copied from browser-ui
                               (let [kwargs (kwargs args)
-                                    link (-> @(reactive/track link/rel->link rel path ctx) (assoc :link/managed? true))
+                                    link (-> @(r/track link/rel->link rel path ctx) (assoc :link/managed? true))
                                     props (-> (link/build-link-props link ctx true)
                                               #_(dissoc :style) #_"custom renderers don't want colored links")]
                                 [(:navigate-cmp ctx) props label (:class kwargs)]))]
@@ -75,7 +75,7 @@
        (fake-managed-anchor :domain [] ctx (get-in ctx [:target-domain :domain/ident]))]
 
       [tooltip {:label "Fiddle ident"}
-       (some-> @(reactive/cursor (:hypercrud.browser/result ctx) [:fiddle/ident]) str)]
+       (some-> @(r/cursor (:hypercrud.browser/result ctx) [:fiddle/ident]) str)]
 
       [loading-spinner ctx]]
 
@@ -117,8 +117,8 @@
 
 (defn ^:export stage-ui [ctx]
   (let [writes-allowed? (or (foundation/alias? (foundation/hostname->hf-domain-name ctx))
-                            @(reactive/fmap (reactive/partial foundation/domain-owner? (:user-profile ctx))
-                                            (runtime/state (:peer ctx) [::runtime/domain])))
+                            @(r/fmap (r/partial foundation/domain-owner? (:user-profile ctx))
+                                     (runtime/state (:peer ctx) [::runtime/domain])))
         anonymous? (nil? (:user-profile ctx))
         stage @(runtime/state (:peer ctx) [:stage])]
     [:div.hyperfiddle-topnav-stage

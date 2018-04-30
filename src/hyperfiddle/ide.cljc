@@ -1,7 +1,7 @@
 (ns hyperfiddle.ide
   (:require [bidi.bidi :as bidi]
             [contrib.data :refer [unwrap]]
-            [contrib.reactive :as reactive]
+            [contrib.reactive :as r]
     #?(:cljs [contrib.reagent :refer [fragment]])
             [contrib.rfc3986 :refer [split-fragment]]
             [contrib.string :refer [safe-read-edn-string]]
@@ -104,7 +104,7 @@
 (defn- *-target-context [ctx route]
   (assoc ctx
     :hypercrud.browser/page-on-click (let [branch-aux {:hyperfiddle.ide/foo "page"}]
-                                       #?(:cljs (reactive/partial browser-ui/page-on-click (:peer ctx) nil branch-aux)))
+                                       #?(:cljs (r/partial browser-ui/page-on-click (:peer ctx) nil branch-aux)))
     :hypercrud.ui/display-mode (runtime/state (:peer ctx) [:display-mode])
     :ide-active (activate-ide? (foundation/hostname->hf-domain-name ctx))
     :user-profile @(runtime/state (:peer ctx) [:user-profile])
@@ -205,7 +205,7 @@
                 (fragment                                   ; These are the same data, just different views.
                   :_
                   [browser/ui-from-route (ide-route ?route)
-                   (assoc ctx :hypercrud.ui/error (reactive/constantly ui-error/error-inline)
+                   (assoc ctx :hypercrud.ui/error (r/constantly ui-error/error-inline)
                               #_#_:user-renderer hyperfiddle.ide.fiddles.topnav/renderer)
                    "topnav hidden-print"]
                   (if src-mode
