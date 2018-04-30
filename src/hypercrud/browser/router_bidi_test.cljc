@@ -15,23 +15,19 @@
   (is (= (some-> router (bidi/match-route "/:rdbms-denormalize")) {:route-params {:a #entity["$" :rdbms-denormalize]}, :handler :hyperblog/post})))
 
 (deftest bidi-hf-1 []
-  (is (= (decode router "/:rdbms-denormalize") [:hyperblog/post [#entity["$" :rdbms-denormalize]]])))
+  (is (= (decode router "/:rdbms-denormalize") [:hyperblog/post [#entity["$" :rdbms-denormalize]]]))
+  (is (= (decode router "/:rdbms-denormalize#:src") [:hyperblog/post [#entity["$" :rdbms-denormalize]] nil ":src"]))
+  )
 
 (deftest bidi-hf-2 []
   (def tests-2
     {"/:rdbms-denormalize" [:hyperblog/post [#entity["$" :rdbms-denormalize]]]
-     "/:capitalism#:src" [:hyperblog/post [#entity["$" :capitalism]] nil ":src"]})
+     "/:rdbms-denormalize#:src" [:hyperblog/post [#entity["$" :rdbms-denormalize]] nil ":src"]
+     "/:capitalism" [:hyperblog/post [#entity["$" :capitalism]]]
+     "/:capitalism#:src" [:hyperblog/post [#entity["$" :capitalism]] nil ":src"]
+     })
   (doseq [[url route] tests-2]
-    (is (= (decode router url) (doto route prn))))
-  )
-
-
-
-
-
-
-
-
+    (is (= (decode router url) route))))
 
 (comment
   ;[#entity["$" :a] "/"] 17592186045454 ;IllegalArgumentException: No implementation of method: :unresolve-handler of protocol: #'bidi.bidi/Matched found for class: java.lang.Long

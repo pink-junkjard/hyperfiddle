@@ -2,7 +2,9 @@
   (:require
     [bidi.bidi :as bidi]
     [contrib.reader :refer [read-edn-string]]
-    [contrib.string :refer [abc]]
+    [contrib.rfc3986 :refer [split-fragment]]
+    [contrib.string :refer [abc split-first empty->nil]]
+    [hypercrud.browser.router :refer [assoc-frag]]
     [hypercrud.browser.system-fiddle :refer [system-fiddle?]]
     [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]])
   #?(:clj
@@ -84,12 +86,19 @@
 (defn bidi-match->path-for "adapt bidi's inconsistent interface" [[h & ps :as ?r]]
   (if ?r {:handler h :route-params ps}))
 
-(defn ->bidi [[fiddle args :as ?r]]
+(defn ->bidi [[fiddle ?datomic-args ?serivce-args ?frag :as ?r]]
   (assert (not (system-fiddle? fiddle)) "bidi router doesn't handle sys links")
   ; this is going to generate param names of 0, 1, ... which maybe doesn't work for all routes
   ; we would need to disallow bidi keywords for this to be valid. Can bidi use ints? I think not :(
-  (if ?r (apply conj [fiddle] (mapcat vector (abc) args))))
+  (if ?r (apply conj [fiddle] (mapcat vector (abc) ?datomic-args))))
 
 ; used from tests? Why not ide?
-(defn decode [router url]
-  (some-> router (bidi/match-route url) ->bidi-consistency-wrapper bidi->hf))
+(defn decode [router path-and-frag]
+  (let [[path frag] (split-fragment path-and-frag)
+        route (some-> router (bidi/match-route path) ->bidi-consistency-wrapper bidi->hf)]
+    (assoc-frag route (empty->nil frag))))
+
+(defn encode [router route]
+  (let [[_ _ _ frag] route
+        url (apply bidi/path-for router (->bidi route))]
+    (if (empty->nil frag) (str url "#" frag) url)))

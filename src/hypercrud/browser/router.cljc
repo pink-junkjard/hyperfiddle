@@ -42,7 +42,7 @@
         [fiddle & fiddle-args] (str/split fiddle-segment ";")
         [s frag] (split-first s "#")
         [datomic-args-segment query] (split-first s "?")
-        datomic-args (->> (str/split datomic-args-segment "/"))] #_ "careful: (str/split \"\" \"/\") => [\"\"]"
+        datomic-args (->> (str/split datomic-args-segment "/"))] #_"careful: (str/split \"\" \"/\") => [\"\"]"
 
     (canonicalize
       (-decode-url-ednish fiddle)

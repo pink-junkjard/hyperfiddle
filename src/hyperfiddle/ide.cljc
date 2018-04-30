@@ -134,7 +134,7 @@
       (case path
         "/" (router/assoc-frag home-route frag)
         (or (if (= "/_/" (subs path-and-frag 0 3)) (routing/decode (subs path-and-frag 2) #_"include leading /"))
-            (some-> router (bidi/match-route path-and-frag) router-bidi/->bidi-consistency-wrapper router-bidi/bidi->hf)
+            (router-bidi/decode router path-and-frag)
             (routing/decode path-and-frag)))
       [:hyperfiddle.system/not-found])))
 
@@ -146,7 +146,7 @@
     (or
       (if (system-fiddle? fiddle) (str "/_" (routing/encode route)))
       (if (= route home-route) "/")
-      (if router (apply bidi/path-for router (router-bidi/->bidi route)))
+      (if router (router-bidi/encode router route))
       (routing/encode route))))
 
 (defn local-basis [global-basis route ctx]
