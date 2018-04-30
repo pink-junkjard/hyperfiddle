@@ -8,11 +8,9 @@
             [contrib.try :refer [try-either try-promise]]
             [cuerdas.core :as string]
             [hypercrud.browser.base :as base]
-            [hypercrud.browser.fiddle :as fiddle]
             [hypercrud.browser.popovers :as popovers]
             [hypercrud.browser.q-util :as q-util]
             [hypercrud.browser.routing :as routing]
-            [hypercrud.types.Entity :refer [shadow-entity]]
             [hyperfiddle.foundation.actions :as foundation-actions]
             [hyperfiddle.runtime :as runtime]
             [promesa.core :as p]
@@ -54,8 +52,7 @@
     (case (:fiddle/type fiddle)
       ; todo check fe conn
       ; todo merge in dbhole lookup, see: hypercrud.browser.base/request-for-link
-      :query (let [q (unwrap (q-util/safe-parse-query-validated
-                               (shadow-entity fiddle fiddle/fiddle-defaults)))]
+      :query (let [q (unwrap (q-util/safe-parse-query-validated fiddle))]
                (base/validate-query-params q params ctx))
       :entity (if (not= nil $1)                             ; handles `e` but no logic for `[e a]`
                 ; todo check fe conn

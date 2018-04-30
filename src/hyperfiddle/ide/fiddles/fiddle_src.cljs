@@ -7,7 +7,7 @@
             [hypercrud.types.URI :refer [is-uri?]]
             [hypercrud.ui.control.markdown-rendered :refer [markdown]]
             [hypercrud.ui.tooltip :refer [tooltip]]
-            [hyperfiddle.ide.fiddles.topnav :refer [shadow-fiddle hijack-renderer loading-spinner]]))
+            [hyperfiddle.ide.fiddles.topnav :refer [shadow-fiddle]]))
 
 
 (defn fiddle-src-renderer [ctx-real class]
@@ -31,7 +31,7 @@
      ((:cell ctx') [true 0 :fiddle/entrypoint?] ctx')
      ;((:cell ctx') [true 0 :fiddle/bindings] ctx')
      ((:anchor ctx') :hyperfiddle/remove [0] ctx' "Remove fiddle")
-     ((:browse ctx') :attribute-renderers [] ctx' (partial hijack-renderer true))
+     ((:browse ctx-real) :attribute-renderers [] ctx-real)
      ]))
 
 

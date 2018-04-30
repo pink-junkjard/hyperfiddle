@@ -27,16 +27,14 @@
 
 (defn hydrate-system-fiddle [ident]
   (try-either                                               ; catch all the pre assertions
-    (->Entity
-      nil
-      (cond
-        (= ident :hyperfiddle.system/edit) fiddle-system-edit
-        (= ident :hyperfiddle.system/remove) fiddle-blank-system-remove
-        (= ident :hyperfiddle.system/not-found) not-found/not-found
-        :else (let [$db (name ident)]
-                (condp = (namespace ident)
-                  "hyperfiddle.schema" (schema/schema $db)
-                  "hyperfiddle.schema.db-cardinality-options" (schema/db-cardinality-options $db)
-                  "hyperfiddle.schema.db-unique-options" (schema/db-unique-options $db)
-                  "hyperfiddle.schema.db-valueType-options" (schema/db-valueType-options $db)
-                  "hyperfiddle.schema.db-attribute-edit" (schema/db-attribute-edit $db)))))))
+    (cond
+      (= ident :hyperfiddle.system/edit) fiddle-system-edit
+      (= ident :hyperfiddle.system/remove) fiddle-blank-system-remove
+      (= ident :hyperfiddle.system/not-found) not-found/not-found
+      :else (let [$db (name ident)]
+              (condp = (namespace ident)
+                "hyperfiddle.schema" (schema/schema $db)
+                "hyperfiddle.schema.db-cardinality-options" (schema/db-cardinality-options $db)
+                "hyperfiddle.schema.db-unique-options" (schema/db-unique-options $db)
+                "hyperfiddle.schema.db-valueType-options" (schema/db-valueType-options $db)
+                "hyperfiddle.schema.db-attribute-edit" (schema/db-attribute-edit $db))))))

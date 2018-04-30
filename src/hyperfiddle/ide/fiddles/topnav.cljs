@@ -1,18 +1,17 @@
 (ns hyperfiddle.ide.fiddles.topnav
-  (:require [contrib.base-64-url-safe :as base64-url-safe]
+  (:require [cats.core :refer [fmap]]
+            [contrib.base-64-url-safe :as base64-url-safe]
             [contrib.data :refer [kwargs unwrap]]
             [contrib.datomic-tx :as tx]
             [contrib.reader :refer [read-edn-string]]
             [contrib.reactive :as reactive]
             [contrib.reagent :refer [fragment]]
             [contrib.rfc3986 :refer [encode-ednish decode-ednish encode-rfc3986-pchar decode-rfc3986-pchar]]
-            [contrib.string :refer [or-str]]
-            [hypercrud.browser.browser-ui :as browser-ui]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.fiddle :as fiddle]
             [hypercrud.browser.link :as link]
             [hypercrud.browser.system-fiddle :as system-fiddle]
-            [hypercrud.types.Entity :refer [shadow-entity]]
+            [hypercrud.types.Entity :refer [->Entity shadow-entity]]
             [hypercrud.ui.control.markdown-rendered :refer [markdown]]
             [hypercrud.ui.radio :as radio]
             [hypercrud.ui.result :as result]
@@ -28,29 +27,24 @@
     (str domain "/login?client=" client-id "&callbackURL=" callback-url)))
 
 ; inline sys-link data when the entity is a system-fiddle
-(letfn [(-shadow-fiddle [omit-renderer ctx fiddle-val]
-          (let [route (:route ctx)
-                [_ [e]] route                               ; [:hyperfiddle/topnav [#entity["$" [:fiddle/ident :hyperfiddle.system/remove]]]]
-                [_ target-fiddle-ident] (:db/id e)
-                auto-fiddle (system-fiddle/system-fiddle? target-fiddle-ident)]
-            (if auto-fiddle                                 ; this fiddle does not actually exist, conjure it up
-              (->> (unwrap (system-fiddle/hydrate-system-fiddle target-fiddle-ident))
-                   (shadow-entity #(merge-with or-str % {:fiddle/renderer (-> hypercrud.ui.result/fiddle meta :expr-str)})))
-              (if (or omit-renderer (nil? (:db/id fiddle-val)))
-                fiddle-val
-                (shadow-entity fiddle-val fiddle/fiddle-defaults)))))]
-  (defn shadow-fiddle [ctx & [omit-renderer]]
-    {:pre [(-> ctx :hypercrud.browser/result)]}
-    (-> ctx
-        (dissoc :relation :relations)
-        (update :hypercrud.browser/result (partial reactive/fmap (reactive/partial -shadow-fiddle omit-renderer ctx)))
-        (context/with-relations))))
+(letfn [(-shadow-fiddle [target-ident fiddle-val]
+          (cond
+            (system-fiddle/system-fiddle? target-ident) (->> (system-fiddle/hydrate-system-fiddle target-ident)
+                                                             (fmap fiddle/fiddle-defaults)
+                                                             unwrap
+                                                             (->Entity nil))
 
-; ugly hacks to recursively fix the ui for sys links
-(defn hijack-renderer [omit-renderer ctx]
-  (let [ctx (-> (dissoc ctx :user-renderer)
-                (shadow-fiddle omit-renderer))]
-    (browser-ui/ui-comp ctx)))
+            (nil? (:db/id fiddle-val)) fiddle-val
+            :else (shadow-entity fiddle-val fiddle/fiddle-defaults)))]
+  (defn shadow-fiddle [ctx]
+    {:pre [(-> ctx :hypercrud.browser/result)]}
+    (let [route (:route ctx)
+          [_ [e]] route                                     ; [:hyperfiddle/topnav [#entity["$" [:fiddle/ident :hyperfiddle.system/remove]]]]
+          [_ target-fiddle-ident] (:db/id e)]
+      (-> ctx
+          (dissoc :relation :relations)
+          (update :hypercrud.browser/result (partial reactive/fmap (reactive/partial -shadow-fiddle target-fiddle-ident)))
+          (context/with-relations)))))
 
 (defn any-loading? [peer]
   (some (comp not nil? :hydrate-id val) @(runtime/state peer [::runtime/partitions])))

@@ -14,7 +14,7 @@
             [hypercrud.browser.user-bindings :as user-bindings]
             [hypercrud.client.core :as hc]
             [hypercrud.client.schema :as schema-util]
-            [hypercrud.types.Entity :refer [#?(:cljs Entity) shadow-entity]]
+            [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hypercrud.types.ThinEntity :refer [#?(:cljs ThinEntity)]])
@@ -83,9 +83,9 @@
     (mlet [fiddle (if auto-fiddle
                     (system-fiddle/hydrate-system-fiddle (get-in ctx [:route 0]))
                     (mlet [fiddle @(hc/hydrate (:peer ctx) (:branch ctx) @meta-fiddle-request)]
-                      (validate-fiddle fiddle)))]
+                      (validate-fiddle (into {} fiddle))))]
       (return
-        (if auto-fiddle fiddle (shadow-entity fiddle fiddle/fiddle-defaults))))))
+        (fiddle/fiddle-defaults fiddle)))))
 
 (defn- fix-param [param]
   (cond

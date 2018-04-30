@@ -3,6 +3,7 @@
             [contrib.reactive :as r]
             [hypercrud.browser.auto-link-formula :refer [auto-formula]]
             [hypercrud.browser.auto-link-txfn :refer [auto-txfn]]
+            [hypercrud.browser.fiddle :as fiddle]
             [hypercrud.browser.system-link :as system-link]))
 
 
@@ -13,6 +14,7 @@
                       (assoc link attr (auto-f link))
                       link)))]
     (-> link
+        (update :link/fiddle #(fiddle/data-defaults (into {} %)))
         (auto-fn :link/tx-fn auto-txfn)
         (auto-fn :link/formula (partial auto-formula ctx)))))
 
