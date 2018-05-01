@@ -4,7 +4,7 @@
             [contrib.reactive :as r]
     #?(:cljs [contrib.reagent :refer [fragment]])
             [contrib.rfc3986 :refer [split-fragment]]
-            [contrib.string :refer [safe-read-edn-string]]
+            [contrib.string :refer [safe-read-edn-string empty->nil]]
             [hypercrud.browser.base :as base]
     #?(:cljs [hypercrud.browser.browser-ui :as browser-ui])
             [hypercrud.browser.core :as browser]
@@ -134,18 +134,18 @@
       (case path
         "/" (router/assoc-frag home-route frag)
         (or (if (= "/_/" (subs path-and-frag 0 3)) (routing/decode (subs path-and-frag 2) #_"include leading /"))
-            (router-bidi/decode router path-and-frag)
+            (if router (router-bidi/decode router path-and-frag))
             (routing/decode path-and-frag)))
       [:hyperfiddle.system/not-found])))
 
-(defn route-encode [rt [fiddle :as route]]
+(defn route-encode [rt [fiddle _ _ frag :as route]]
   (let [domain @(runtime/state rt [:hyperfiddle.runtime/domain])
         router (some-> domain :domain/router safe-read-edn-string unwrap)
         home-route (some-> domain :domain/home-route safe-read-edn-string unwrap)
         home-route (if router (router-bidi/bidi->hf home-route) home-route)]
     (or
       (if (system-fiddle? fiddle) (str "/_" (routing/encode route)))
-      (if (= route home-route) "/")
+      (if (= (router/dissoc-frag route) home-route) (if (empty->nil frag) (str "/#" frag) "/"))
       (if router (router-bidi/encode router route))
       (routing/encode route))))
 

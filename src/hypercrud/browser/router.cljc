@@ -56,3 +56,8 @@
   {:pre [fiddle (nil? ?initial-state)]}
   (let [x (canonicalize fiddle ?datomic-args ?service-args frag)]
     x))
+
+(defn dissoc-frag [[fiddle ?datomic-args ?service-args _]]
+  {:pre [fiddle]}
+  (let [x (canonicalize fiddle ?datomic-args ?service-args nil)]
+    x))

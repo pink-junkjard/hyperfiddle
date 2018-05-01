@@ -88,7 +88,7 @@
 
 (defn set-route [rt route branch keep-popovers? force dispatch! get-state]
   (assert (nil? branch) "Non-nil branches currently unsupported")
-  (let [current-route (get-in get-state [::runtime/partitions branch :route])]
+  (let [current-route (get-in (get-state) [::runtime/partitions branch :route])]
     (if (and (not force) (routing/compare-routes route current-route) (not= route current-route))
       (dispatch! [:partition-route branch route])           ; just update state without re-hydrating
       (if-let [e (routing/invalid-route? route)]

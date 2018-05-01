@@ -3,13 +3,15 @@
             [contrib.base-64-url-safe :as base64-url-safe]
             [contrib.data :refer [kwargs unwrap]]
             [contrib.datomic-tx :as tx]
+            [contrib.document :as document]
             [contrib.reactive :as r]
             [contrib.reader :refer [read-edn-string]]
             [contrib.reagent :refer [fragment]]
-            [contrib.rfc3986 :refer [encode-ednish decode-ednish encode-rfc3986-pchar decode-rfc3986-pchar]]
+            [contrib.rfc3986 :refer [split-fragment encode-ednish decode-ednish encode-rfc3986-pchar decode-rfc3986-pchar]]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.fiddle :as fiddle]
             [hypercrud.browser.link :as link]
+            [hypercrud.browser.router :as router]
             [hypercrud.browser.system-fiddle :as system-fiddle]
             [hypercrud.types.Entity :refer [->Entity shadow-entity]]
             [hypercrud.ui.control.markdown-rendered :refer [markdown]]
@@ -85,9 +87,10 @@
         [:span.radio-group
          (radio/option {:label "data" :tooltip "Ignore :fiddle/renderer" :target :xray :change! change! :value (if src-mode :src display-mode) :disabled src-mode})
          (radio/option {:label "view" :tooltip "Use :fiddle/renderer" :target :user :value (if src-mode :src display-mode) :change! change! :disabled src-mode})
-         (radio/option {:label (let [href (if-not src-mode
-                                            (str "#" (encode-rfc3986-pchar (encode-ednish (pr-str :src))))
-                                            "#")]
+         (radio/option {:label (let [root-rel-path (runtime/encode-route (:peer ctx) (router/dissoc-frag (:target-route ctx)))
+                                     href (if-not src-mode
+                                            (str root-rel-path "#" (encode-rfc3986-pchar (encode-ednish (pr-str :src))))
+                                            (str root-rel-path "#"))]
                                  [:a {:href href} (if src-mode "unsrc" "src")])
                         :tooltip "View fiddle source" :target :src :value (if src-mode :src display-mode) :change! change! :disabled (not src-mode)})])]
 

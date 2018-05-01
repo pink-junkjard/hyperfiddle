@@ -2,7 +2,17 @@
   #?(:cljs (:require-macros [contrib.cljs-platform])))
 
 
-(defn- nodejs-target? []
+; https://cljs.github.io/api/cljs.core/STARtargetSTAR
+
+(defn nodejs? []
+  #?(:cljs (= *target "nodejs")
+     :clj false #_ "compiler"))
+
+(defn browser? []
+  #?(:cljs (= *target* "default")
+     :clj false #_ "compiler"))
+
+(defn- nodejs-target? "only works in macros" []
   (= :nodejs (get-in @cljs.env/*compiler* [:options :target])))
 
 ; a compile time check for environment
