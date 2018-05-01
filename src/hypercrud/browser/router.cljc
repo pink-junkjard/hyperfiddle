@@ -58,6 +58,6 @@
     x))
 
 (defn dissoc-frag [[fiddle ?datomic-args ?service-args _]]
-  {:pre [fiddle]}
+  ;{:pre [fiddle]} ; Dissoc-frag should nil-pun for bootstrapping case
   (let [x (canonicalize fiddle ?datomic-args ?service-args nil)]
     x))
