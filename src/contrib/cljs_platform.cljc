@@ -5,7 +5,7 @@
 ; https://cljs.github.io/api/cljs.core/STARtargetSTAR
 
 (defn nodejs? []
-  #?(:cljs (= *target "nodejs")
+  #?(:cljs (= *target* "nodejs")
      :clj false #_ "compiler"))
 
 (defn browser? []
