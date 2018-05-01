@@ -38,7 +38,8 @@
             [hyperfiddle.ide.fiddles.schema]
     #?(:cljs [hyperfiddle.ide.fiddles.schema-attribute])
     #?(:cljs [hyperfiddle.ide.fiddles.topnav :as topnav])
-    #?(:cljs [hyperfiddle.ide.fiddles.user-dashboard])))
+    #?(:cljs [hyperfiddle.ide.fiddles.user-dashboard])
+            [clojure.string :as str]))
 
 (defn domain [rt hyperfiddle-hostname hostname]
   (let [domain-basis (if-let [global-basis @(runtime/state rt [::runtime/global-basis])]
@@ -139,6 +140,7 @@
       [:hyperfiddle.system/not-found])))
 
 (defn route-encode [rt [fiddle _ _ frag :as route]]
+  {:post [(str/starts-with? % "/")]}
   (let [domain @(runtime/state rt [:hyperfiddle.runtime/domain])
         router (some-> domain :domain/router safe-read-edn-string unwrap)
         home-route (some-> domain :domain/home-route safe-read-edn-string unwrap)

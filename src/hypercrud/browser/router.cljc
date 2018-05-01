@@ -21,6 +21,7 @@
     fiddle))
 
 (defn encode [[fiddle datomic-args service-args frag :as route]]
+  {:post [(str/starts-with? % "/")]}
   ; fiddle is keyword (not entity - $ is extraneous)
   (let [fiddle-args []]
     (str "/"

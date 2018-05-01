@@ -111,6 +111,8 @@
   )
 
 (defn encode [router route]
-  (let [[_ _ _ frag] route
-        url (apply bidi/path-for router (->bidi route))]
-    (if (empty->nil frag) (str url "#" frag) url)))
+  (let [[_ _ _ frag] route]
+    (if-let [url (apply bidi/path-for router (->bidi route))]
+      (if (empty->nil frag)
+        (str url "#" frag)
+        url))))
