@@ -133,7 +133,7 @@
 
     (or
       (case path
-        "/" (router/assoc-frag home-route frag)
+        "/" (if home-route (router/assoc-frag home-route frag))
         (or (if (= "/_/" (subs path-and-frag 0 3)) (routing/decode (subs path-and-frag 2) #_"include leading /"))
             (if router (router-bidi/decode router path-and-frag))
             (routing/decode path-and-frag)))
