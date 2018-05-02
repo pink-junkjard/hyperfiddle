@@ -92,7 +92,7 @@
                                             (str root-rel-path "#" (encode-rfc3986-pchar (encode-ednish (pr-str :src))))
                                             (str root-rel-path "#"))]
                                  [:a {:href href} (if src-mode "unsrc" "src")])
-                        :tooltip "View fiddle source" :target :src :value (if src-mode :src display-mode) :change! change! :disabled (not src-mode)})])]
+                        :tooltip "View fiddle source (can open in new tab)" :target :src :value (if src-mode :src display-mode) :change! change! :disabled (not src-mode)})])]
 
      [:div.right-nav {:key "right-nav"}                     ; CAREFUL; this key prevents popover flickering
 
