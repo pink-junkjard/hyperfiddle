@@ -14,6 +14,7 @@
     [:div {:class (str class " fiddle-src")}
      [:h3 "fiddle src"]
      ((:cell ctx') [true 0 :fiddle/ident] ctx')
+     ((:cell ctx') [true 0 :db/doc] ctx')
      ((:cell ctx') [true 0 :fiddle/type] ctx')
      (case rtype
        :entity ((:cell ctx') [true 0 :fiddle/pull] ctx')
