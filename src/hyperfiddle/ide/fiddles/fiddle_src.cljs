@@ -23,7 +23,7 @@
   [:div
    [(auto-control' ctx) field props ctx]
    "schema: " (schema-links ctx)
-   [markdown  "See [example queries](http://www.hyperfiddle.net/:docs!query-crash-course/) and
+   [markdown "See [example queries](http://www.hyperfiddle.net/:docs!query-crash-course/) and
    the [Datomic query docs](https://docs.datomic.com/on-prem/query.html). If you pull, `:db/id`
    is required. No rules yet, no nested pull yet, no d/log or d/history yet."]])
 
@@ -34,14 +34,16 @@
    [markdown "See [Datomic pull docs](https://docs.datomic.com/on-prem/pull.html). `:db/id` is
    currently required. No nested pull yet. Just keep it simple for now."]])
 
-(defn fiddle-markdown [field props ctx]
-  [:div
-   [(auto-control' ctx) field props ctx]
-   [markdown "See [Hyperfiddle markdown examples](http://www.hyperfiddle.net/:docs!markdown-basics/)."]])
+(defn control-with-doc [doc]
+  (fn [field props ctx]
+    [:div
+     [(auto-control' ctx) field props ctx]
+     [markdown doc]]))
 
-(defn cell-wrap [control]
+(defn cell-wrap [& [?control]]
   (fn [ctx]
-    [form-cell control (:hypercrud.browser/field ctx) ctx]))
+    (let [control (or ?control (auto-control' ctx))]
+      [form-cell control (:hypercrud.browser/field ctx) ctx])))
 
 (defn fiddle-src-renderer [ctx-real class]
   #_(hypercrud.ui.result/fiddle ctx-real)
@@ -58,9 +60,9 @@
        :query ((:cell ctx') [true 0 :fiddle/query] ctx' (cell-wrap fiddle-query))
        :blank nil
        nil nil)
-     ((:cell ctx') [true 0 :fiddle/markdown] ctx' (cell-wrap fiddle-markdown))
-     ((:cell ctx') [true 0 :fiddle/renderer] ctx')
-     ((:cell ctx') [true 0 :fiddle/css] ctx')
+     ((:cell ctx') [true 0 :fiddle/markdown] ctx' (cell-wrap (control-with-doc "See [:fiddle/markdown examples](http://www.hyperfiddle.net/:docs!markdown-basics/).")))
+     ((:cell ctx') [true 0 :fiddle/renderer] ctx' (cell-wrap (control-with-doc "See [:fiddle/renderer examples](http://www.hyperfiddle.net/:docs!renderers/)")))
+     ((:cell ctx') [true 0 :fiddle/css] ctx' (cell-wrap (control-with-doc "See [:fiddle/css examples](http://www.hyperfiddle.net/:docs!fiddle-css/)")))
      ((:cell ctx') [true 0 :fiddle/links] ctx-real)
      ((:cell ctx') [true 0 :fiddle/entrypoint?] ctx')
      ;((:cell ctx') [true 0 :fiddle/bindings] ctx')
