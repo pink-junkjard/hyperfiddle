@@ -91,7 +91,9 @@
                                      href (if-not src-mode
                                             (str root-rel-path "#" (encode-rfc3986-pchar (encode-ednish (pr-str :src))))
                                             (str root-rel-path "#"))]
-                                 [:a {:href href :target "_blank"} (if src-mode "unsrc" "src")])
+                                 (if-not src-mode
+                                   [:a {:href href :target "_blank"} "src"]
+                                   [:span "src"]))
                         :tooltip "View fiddle source" :target :src :value (if src-mode :src display-mode) :change! change! :disabled (not src-mode)})])
 
       (if @(runtime/state (:peer ctx) [::runtime/auto-transact])
