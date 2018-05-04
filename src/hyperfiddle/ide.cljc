@@ -1,5 +1,6 @@
 (ns hyperfiddle.ide
   (:require [bidi.bidi :as bidi]
+            [contrib.css :refer [classes]]
             [contrib.data :refer [unwrap]]
             [contrib.reactive :as r]
     #?(:cljs [contrib.reagent :refer [fragment]])
@@ -217,7 +218,10 @@
 
          ; Production
          (if (and ?route (not src-mode))
-           [browser/ui-from-route ?route (page-target-context ctx ?route) (str "hyperfiddle-user" (if dev " hyperfiddle-ide-user" ""))]))))) ; This is different than foo=user because it is special css at root attach point
+           (let [ctx (page-target-context ctx ?route)]
+             [browser/ui-from-route ?route ctx (classes (some-> ctx :hypercrud.ui/display-mode deref name)
+                                                        "hyperfiddle-user"
+                                                        (if dev "hyperfiddle-ide-user"))]))))))
 
 #?(:cljs
    (defn view [route ctx]                                   ; pass most as ref for reactions
