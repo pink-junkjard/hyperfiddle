@@ -43,13 +43,13 @@
        :entity ((:cell ctx') [true 0 :fiddle/pull] ctx'
                  (cell-wrap
                    (control-with-unders
-                     "schema: " (schema-links ctx')
+                     [:span.schema "schema: " (schema-links ctx')]
                      [markdown "`:db/id` is currently required. No nested pull yet. Just keep it simple for now. See
                      [Datomic pull docs](https://docs.datomic.com/on-prem/pull.html)."])))
        :query ((:cell ctx') [true 0 :fiddle/query] ctx'
                 (cell-wrap
                   (control-with-unders
-                    "schema: " (schema-links ctx')
+                    [:span.schema "schema: " (schema-links ctx')]
                     [markdown "See [:fiddle/query examples](http://www.hyperfiddle.net/:docs!fiddle-query/) and
                     the [Datomic query docs](https://docs.datomic.com/on-prem/query.html). If you pull, `:db/id` is
                     required. No rules yet, no nested pull yet, no d/log or d/history yet."])))
