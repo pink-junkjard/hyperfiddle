@@ -37,7 +37,7 @@
 (defn fiddle-markdown [field props ctx]
   [:div
    [(auto-control' ctx) field props ctx]
-   [markdown "See [Hyperfiddle markdown examples](http://sandbox.hyperfiddle.net/:docs!markdown-basics)."]])
+   [markdown "See [Hyperfiddle markdown examples](http://www.hyperfiddle.net/:docs!markdown-basics/)."]])
 
 (defn cell-wrap [control]
   (fn [ctx]
