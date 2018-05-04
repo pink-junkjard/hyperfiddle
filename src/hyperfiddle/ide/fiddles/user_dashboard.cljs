@@ -19,7 +19,7 @@
       ; todo https://auth0.com/docs/logout
       [:span.nav-link.auth {:key :logout}
        [:a {:href "/logout"} "logout"]]])
-   [markdown @(r/cursor (:hypercrud.browser/fiddle ctx) [:db/doc])]
+   [hypercrud.ui.control.markdown-rendered/markdown (some-> ctx :hypercrud.browser/fiddle deref :fiddle/markdown) ctx]
    [:ul.link-list
     (->> @(:hypercrud.browser/result ctx)
          (sort-by :domain/ident)
