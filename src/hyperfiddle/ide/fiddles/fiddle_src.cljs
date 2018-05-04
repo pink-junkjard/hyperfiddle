@@ -19,26 +19,10 @@
                 [(:navigate-cmp ctx) props $db])))
        (doall)))
 
-(defn fiddle-query [field props ctx]
-  [:div
-   [(auto-control' ctx) field props ctx]
-   "schema: " (schema-links ctx)
-   [markdown "See [example queries](http://www.hyperfiddle.net/:docs!query-crash-course/) and
-   the [Datomic query docs](https://docs.datomic.com/on-prem/query.html). If you pull, `:db/id`
-   is required. No rules yet, no nested pull yet, no d/log or d/history yet."]])
-
-(defn fiddle-pull [field props ctx]
-  [:div
-   [(auto-control' ctx) field props ctx]
-   "schema: " (schema-links ctx)
-   [markdown "See [Datomic pull docs](https://docs.datomic.com/on-prem/pull.html). `:db/id` is
-   currently required. No nested pull yet. Just keep it simple for now."]])
-
-(defn control-with-doc [doc]
+(defn control-with-unders [& children]
   (fn [field props ctx]
-    [:div
-     [(auto-control' ctx) field props ctx]
-     [markdown doc]]))
+    (let [control [(auto-control' ctx) field props ctx]]
+      (into [:div control] children))))
 
 (defn cell-wrap [& [?control]]
   (fn [ctx]
@@ -56,13 +40,24 @@
      ((:cell ctx') [true 0 :db/doc] ctx')
      ((:cell ctx') [true 0 :fiddle/type] ctx')
      (case rtype
-       :entity ((:cell ctx') [true 0 :fiddle/pull] ctx' (cell-wrap fiddle-pull))
-       :query ((:cell ctx') [true 0 :fiddle/query] ctx' (cell-wrap fiddle-query))
+       :entity ((:cell ctx') [true 0 :fiddle/pull] ctx'
+                 (cell-wrap
+                   (control-with-unders
+                     "schema: " (schema-links ctx')
+                     [markdown "See [Datomic pull docs](https://docs.datomic.com/on-prem/pull.html). `:db/id` is
+                     currently required. No nested pull yet. Just keep it simple for now."])))
+       :query ((:cell ctx') [true 0 :fiddle/query] ctx'
+                (cell-wrap
+                  (control-with-unders
+                    "schema: " (schema-links ctx')
+                    [markdown "See [:fiddle/query examples](http://www.hyperfiddle.net/:docs!query-crash-course/) and
+                    the [Datomic query docs](https://docs.datomic.com/on-prem/query.html). If you pull, `:db/id` is
+                    required. No rules yet, no nested pull yet, no d/log or d/history yet."])))
        :blank nil
        nil nil)
-     ((:cell ctx') [true 0 :fiddle/markdown] ctx' (cell-wrap (control-with-doc "See [:fiddle/markdown examples](http://www.hyperfiddle.net/:docs!markdown-basics/).")))
-     ((:cell ctx') [true 0 :fiddle/renderer] ctx' (cell-wrap (control-with-doc "See [:fiddle/renderer examples](http://www.hyperfiddle.net/:docs!renderers/)")))
-     ((:cell ctx') [true 0 :fiddle/css] ctx' (cell-wrap (control-with-doc "See [:fiddle/css examples](http://www.hyperfiddle.net/:docs!fiddle-css/)")))
+     ((:cell ctx') [true 0 :fiddle/markdown] ctx' (cell-wrap (control-with-unders [markdown "See [:fiddle/markdown examples](http://www.hyperfiddle.net/:docs!markdown-basics/)."])))
+     ((:cell ctx') [true 0 :fiddle/renderer] ctx' (cell-wrap (control-with-unders [markdown "See [:fiddle/renderer examples](http://www.hyperfiddle.net/:docs!renderers/)"])))
+     ((:cell ctx') [true 0 :fiddle/css] ctx' (cell-wrap (control-with-unders [markdown "See [:fiddle/css examples](http://www.hyperfiddle.net/:docs!fiddle-css/)"])))
      ((:cell ctx') [true 0 :fiddle/links] ctx-real)
      ((:cell ctx') [true 0 :fiddle/entrypoint?] ctx')
      ;((:cell ctx') [true 0 :fiddle/bindings] ctx')
