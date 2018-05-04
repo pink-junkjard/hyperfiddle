@@ -1,0 +1,25 @@
+{:paths ["src" "resources"]
+ :deps {
+        aysylu/loom {:mvn/version "1.0.0"}
+        bidi {:mvn/version "2.1.3"}
+        com.cognitect/transit-clj {:mvn/version "0.8.300"}
+        com.cognitect/transit-cljs {:mvn/version "0.8.243"}
+        ;com.datomic/datomic-free {:mvn/version "0.9.5561" :exclusions [org.slf4j/slf4j-nop]} ; test-cljs chokes on this for some reason
+        com.taoensso/timbre {:mvn/version "4.10.0"}
+        datascript {:mvn/version "0.16.2"}
+        funcool/cats {:mvn/version "2.2.0"}
+        funcool/cuerdas {:mvn/version "2.0.4"}
+        funcool/promesa {:mvn/version "1.8.1"}
+        io.nervous/kvlt {:mvn/version "0.1.4"}
+        net.cgrand/packed-printer {:mvn/version "0.2.1"}
+        org.clojure/clojure {:mvn/version "1.8.0"}
+        org.clojure/clojurescript {:mvn/version "1.9.946"}
+        re-com {:mvn/version "2.0.0"}
+        reagent {:mvn/version "0.7.0" :exclusions [cljsjs/react cljsjs/react-dom cljsjs/react-dom-server cljsjs/create-react-class]}
+        }
+ :aliases {:test-clj {:extra-paths ["test"]
+                      :extra-deps
+                      {com.datomic/datomic-free {:mvn/version "0.9.5561" :exclusions [org.slf4j/slf4j-nop]}}}
+           :test-cljs {:extra-paths ["test"]
+                       :extra-deps
+                       {doo {:mvn/version "0.1.8"}}}}}
