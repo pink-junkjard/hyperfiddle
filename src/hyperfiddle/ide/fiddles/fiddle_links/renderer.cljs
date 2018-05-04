@@ -4,6 +4,7 @@
             [hypercrud.browser.base :as base]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.system-fiddle :as system-fiddle]
+            [hypercrud.ui.control.markdown-rendered :refer [markdown]]
             [hypercrud.ui.error :as ui-error]
             [hypercrud.ui.result :as result]))
 
@@ -16,19 +17,20 @@
                  (dissoc link :link/fiddle)
                  link)))))
 
-(defn renderer [ctx]
+(defn renderer [ctx class]
   (-> (base/data-from-route (:target-route ctx)
                             (assoc ctx
                               :hypercrud.browser/domain (:target-domain ctx)
                               :keep-disabled-anchors? true))
       (either/branch
         (fn [e]
-          [:div
+          [:div {:class class}
            [(ui-error/error-comp ctx) e]
            (result/fiddle ctx)])
         (fn [{:keys [:hypercrud.browser/links]}]
-          (result/result
-            (-> ctx
-                (dissoc :relation :relations)
-                (assoc :hypercrud.browser/result (r/track links->result links))
-                context/with-relations))))))
+          (let [ctx (-> ctx
+                        (dissoc :relation :relations)
+                        (assoc :hypercrud.browser/result (r/track links->result links))
+                        context/with-relations)]
+            [:div {:class class}
+             [markdown (some-> ctx :hypercrud.browser/fiddle deref :fiddle/markdown) ctx]])))))
