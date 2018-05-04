@@ -75,13 +75,13 @@
      [:div.left-nav
       [tooltip {:label nil}
        (fake-managed-anchor :domain [] ctx (get-in ctx [:target-domain :domain/ident]))]
-
       [tooltip {:label "Fiddle ident"}
-       (some-> @(r/cursor (:hypercrud.browser/result ctx) [:fiddle/ident]) str)]
+       [:div (some-> @(r/cursor (:hypercrud.browser/result ctx) [:fiddle/ident]) str)]]]
 
-      [loading-spinner ctx]]
+     [:div.right-nav {:key "right-nav"}                     ; CAREFUL; this key prevents popover flickering
 
-     [:div.right-nav
+      [loading-spinner ctx]
+
       (let [src-mode (src-mode? (-> ctx :target-route (get 3)))
             change! #(runtime/dispatch! (:peer ctx) (foundation-actions/set-display-mode %))]
         [:span.radio-group
@@ -91,10 +91,8 @@
                                      href (if-not src-mode
                                             (str root-rel-path "#" (encode-rfc3986-pchar (encode-ednish (pr-str :src))))
                                             (str root-rel-path "#"))]
-                                 [:a {:href href} (if src-mode "unsrc" "src")])
-                        :tooltip "View fiddle source (can open in new tab)" :target :src :value (if src-mode :src display-mode) :change! change! :disabled (not src-mode)})])]
-
-     [:div.right-nav {:key "right-nav"}                     ; CAREFUL; this key prevents popover flickering
+                                 [:a {:href href :target "_blank"} (if src-mode "unsrc" "src")])
+                        :tooltip "View fiddle source" :target :src :value (if src-mode :src display-mode) :change! change! :disabled (not src-mode)})])
 
       (if @(runtime/state (:peer ctx) [::runtime/auto-transact])
         (fragment :_ [:input {:id ::auto-transact :type "checkbox" :checked true
