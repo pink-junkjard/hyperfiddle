@@ -46,7 +46,10 @@
                 props (link/build-link-props link ctx)]
             [(:navigate-cmp ctx) props label (:class kwargs)]))
         (cell [[d i a] ctx & args]                          ; form only
-          [hypercrud.ui.form/Cell (context/relation-path ctx [d i a])])
+          (let [{[f & args] nil :as kwargs} (kwargs args)]
+            [(or f
+                 hypercrud.ui.form/Cell)
+             (context/relation-path ctx [d i a])]))
         (value [path ctx & args]
           (let [{[f & args] nil :as kwargs} (kwargs args)
                 ctx (context/relation-path ctx path)
