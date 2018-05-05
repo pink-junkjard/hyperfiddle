@@ -14,7 +14,8 @@
   (if (string? buggy-body) buggy-body nil))
 
 (defn req->user-profile [env req]
-  (some-> req .-cookies .-jwt (jwt/verify (:AUTH0_CLIENT_SECRET env))))
+  (let [verify (jwt/build-verifier env)]
+    (some-> req .-cookies .-jwt verify)))
 
 (defn platform-response->express-response [express-response platform-response]
   (doseq [[k v] (:headers platform-response)]

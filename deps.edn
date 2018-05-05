@@ -1,7 +1,7 @@
 {:paths ["src"]
  :deps {
         bidi {:mvn/version "2.1.3"}
-        com.auth0/java-jwt {:mvn/version "2.2.0"}
+        com.auth0/java-jwt {:mvn/version "3.3.0"}
         com.cognitect/transit-clj {:mvn/version "0.8.300"}
         com.hyperfiddle/hyperfiddle {:mvn/version "0.3.0-SNAPSHOT"}
         com.taoensso/timbre {:mvn/version "4.10.0"}

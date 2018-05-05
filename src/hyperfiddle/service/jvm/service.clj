@@ -83,11 +83,12 @@
   (build-pedestal-req-handler env http-service/hydrate-route-handler ->HydrateRoute))
 
 (defn with-user [env]
-  (interceptor/on-request
-    (fn [request]
-      (let [user (some-> (get-in (:cookies request) ["jwt" :value])
-                         (jwt/verify (:AUTH0_CLIENT_SECRET env)))]
-        (assoc request :user user)))))
+  (let [verify (jwt/build-verifier env)]
+    (interceptor/on-request
+      (fn [request]
+        (let [user (some-> (get-in (:cookies request) ["jwt" :value])
+                           (verify))]
+          (assoc request :user user))))))
 
 (defn routes [env]
   (let [service-root (str "/api/" (:BUILD env))]
