@@ -1,31 +1,11 @@
-(def deps-edn (-> "deps.edn" slurp clojure.edn/read-string))
-
-(defn boot-deps [& [alias]]
-  {:dependencies (->> (if alias
-                        (-> (get-in deps-edn [:aliases alias])
-                            (select-keys [:extra-deps :default-deps :override-deps])
-                            vals
-                            (->> (apply concat)))
-                        (:deps deps-edn))
-                      (reduce
-                        (fn [deps [artifact info]]
-                          (if-let [version (:mvn/version info)]
-                            (conj deps
-                                  (transduce cat conj [artifact version]
-                                             (select-keys info [:classifier :extension :exclusions])))
-                            deps))
-                        []))
-   :resource-paths (->> (if alias
-                          (get-in deps-edn [:aliases alias :extra-paths])
-                          (:paths deps-edn))
-                        set)})
-
 (set-env!
   :dependencies '[[adzerk/bootlaces "0.1.13" :scope "test"]
+                  [deps-to-boot "1.0.0" :scope "test"]
                   [sparkfund/boot-lein-generate "0.3.0" :scope "test"]])
 
 (require '[adzerk.bootlaces :refer [push-snapshot]]
-         'boot.lein)
+         'boot.lein
+         '[deps-to-boot.core :refer [boot-deps]])
 
 (let [env (boot-deps)]
   ; Show intellij the mvn artifacts; show boot the submodule'd src
