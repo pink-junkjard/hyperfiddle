@@ -12,7 +12,7 @@
 (defn build-verifier [env]
   #?(:clj  (let [jwt-verifier (-> (Algorithm/HMAC256 (:AUTH0_CLIENT_SECRET env))
                                   (JWT/require)
-                                  (.withIssuer (:AUTH0_DOMAIN env))
+                                  (.withIssuer (str (:AUTH0_DOMAIN env) "/"))
                                   (.build))]
              (fn [token]
                (-> (.verify jwt-verifier token)
