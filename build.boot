@@ -31,7 +31,9 @@
   ; Show intellij the mvn artifacts; show boot the submodule'd src
   ; we don't want util snapshot to be resolved to a real id when generating a project.clj [com.hyperfiddle/hyperfiddle "0.3.0-20170725.174645-3"]
   ; intellij will only join the module if the project.clj is written like: [com.hyperfiddle/hyperfiddle "0.3.0-SNAPSHOT"]
-  (->> (assoc-in env [:boot.lein/project-clj :dependencies] (:dependencies env))
+  (->> (assoc-in env [:boot.lein/project-clj :dependencies] (->> (:dependencies env)
+                                                                 (sort-by (comp str first))
+                                                                 vec))
        (apply concat)
        (apply merge-env!)))
 
