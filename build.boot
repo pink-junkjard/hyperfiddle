@@ -1,30 +1,9 @@
-(def deps-edn (-> "deps.edn" slurp clojure.edn/read-string))
-
-(defn boot-deps [& [alias]]
-  {:dependencies (->> (if alias
-                        (-> (get-in deps-edn [:aliases alias])
-                            (select-keys [:extra-deps :default-deps :override-deps])
-                            vals
-                            (->> (apply concat)))
-                        (:deps deps-edn))
-                      (reduce
-                        (fn [deps [artifact info]]
-                          (if-let [version (:mvn/version info)]
-                            (conj deps
-                                  (transduce cat conj [artifact version]
-                                             (select-keys info [:classifier :extension :exclusions])))
-                            deps))
-                        []))
-   :resource-paths (->> (if alias
-                          (get-in deps-edn [:aliases alias :extra-paths])
-                          (:paths deps-edn))
-                        set)})
-
 (set-env!
   :dependencies '[[adzerk/boot-cljs "2.1.4" :scope "test"]
                   [adzerk/boot-test "1.2.0" :scope "test"]
                   [adzerk/bootlaces "0.1.13" :scope "test"]
                   [crisptrutski/boot-cljs-test "0.3.4" :scope "test"]
+                  [deps-to-boot "1.0.0" :scope "test"]
                   [seancorfield/boot-tools-deps "0.4.5" :scope "test"]
                   [sparkfund/boot-lein-generate "0.3.0" :scope "test"]])
 
@@ -33,11 +12,12 @@
          '[adzerk.bootlaces :refer [push-snapshot]]
          'boot.lein
          '[boot-tools-deps.core :refer [deps]]
-         '[crisptrutski.boot-cljs-test :as boot-cljs-test])
+         '[crisptrutski.boot-cljs-test :as boot-cljs-test]
+         '[deps-to-boot.core :as deps-to-boot :refer [boot-deps]])
 
 (->> (let [env (boot-deps)]
        (assoc env
-         :boot.lein/project-clj {:dependencies (->> (keys (:aliases deps-edn))
+         :boot.lein/project-clj {:dependencies (->> (keys (:aliases deps-to-boot/deps-edn))
                                                     (map boot-deps)
                                                     (cons env)
                                                     (mapcat :dependencies)
