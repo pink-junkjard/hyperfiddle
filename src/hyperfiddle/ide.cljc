@@ -190,7 +190,7 @@
    [:pre (pr-str e)]])
 
 #?(:cljs
-   (defn view-page [?route ctx]
+   (defn view-page [omit-target ?route ctx]
      (let [dev (activate-ide? (foundation/hostname->hf-domain-name ctx))
            src-mode (let [[_ _ _ frag] ?route] (topnav/src-mode? frag)) ; Immoral - :src bit is tunneled in userland fragment space
            ctx (assoc ctx :navigate-cmp (reagent/partial navigate-cmp/navigate-cmp (reagent/partial runtime/encode-route (:peer ctx))))]
@@ -217,18 +217,21 @@
                      "devsrc"]))))])
 
          ; Production
-         (if (and ?route (not src-mode))
+         (if (and (not omit-target) ?route (not src-mode))
            (let [ctx (page-target-context ctx ?route)]
              [browser/ui-from-route ?route ctx (classes (some-> ctx :hypercrud.ui/display-mode deref name)
                                                         "hyperfiddle-user"
                                                         (if dev "hyperfiddle-ide-user"))]))))))
 
 #?(:cljs
-   (defn view [route ctx]                                   ; pass most as ref for reactions
-     (let [ide-domain (hc/hydrate-api (:peer ctx) (:branch ctx) (foundation/domain-request "hyperfiddle" (:peer ctx)))]
-       (case (get-in ctx [::runtime/branch-aux ::foo])
-         "page" (view-page route ctx)                       ; component, seq-component or nil
-         ; On SSR side this is only ever called as "page", but it could be differently (e.g. turbolinks)
-         ; On Browser side, also only ever called as "page", but it could be configured differently (client side render the ide, server render userland...?)
-         "ide" [browser/ui-from-route route (leaf-ide-context ctx ide-domain)]
-         "user" [browser/ui-from-route route (leaf-target-context ctx route)]))))
+   (defn view
+     ([route ctx]
+      (view false route ctx))
+     ([omit-target route ctx]                               ; pass most as ref for reactions
+      (let [ide-domain (hc/hydrate-api (:peer ctx) (:branch ctx) (foundation/domain-request "hyperfiddle" (:peer ctx)))]
+        (case (get-in ctx [::runtime/branch-aux ::foo])
+          "page" (view-page omit-target route ctx)          ; component, seq-component or nil
+          ; On SSR side this is only ever called as "page", but it could be differently (e.g. turbolinks)
+          ; On Browser side, also only ever called as "page", but it could be configured differently (client side render the ide, server render userland...?)
+          "ide" [browser/ui-from-route route (leaf-ide-context ctx ide-domain)]
+          "user" [browser/ui-from-route route (leaf-target-context ctx route)])))))
