@@ -24,10 +24,20 @@
     (let [control [(auto-control' ctx) field props ctx]]
       (into [:div control] children))))
 
-(defn cell-wrap [& [?control]]
-  (fn [ctx]
-    (let [control (or ?control (auto-control' ctx))]
-      [form-cell control (:hypercrud.browser/field ctx) ctx])))
+(defn cell-wrap [control ctx]
+  (let [control (or control (auto-control' ctx))]
+    [form-cell control (:hypercrud.browser/field ctx) ctx]))
+
+(def underdocs
+  {:fiddle/pull "`:db/id` is currently required. No nested pull yet. Just keep it simple for now. See
+  [Datomic pull docs](https://docs.datomic.com/on-prem/pull.html)."
+   :fiddle/query "See [:fiddle/query examples](http://www.hyperfiddle.net/:docs!fiddle-query/) and
+   the [Datomic query docs](https://docs.datomic.com/on-prem/query.html). If you pull, `:db/id` is
+   required. No rules yet, no nested pull yet, no d/log or d/history yet."
+   :fiddle/markdown "See [:fiddle/markdown examples](http://www.hyperfiddle.net/:docs!fiddle-markdown/)."
+   :fiddle/css "See [:fiddle/css examples](http://www.hyperfiddle.net/:docs!fiddle-css/)."
+   :fiddle/renderer "See [:fiddle/renderer examples](http://www.hyperfiddle.net/:docs!fiddle-renderer/)."
+   :fiddle/links "See [:fiddle/links examples](http://www.hyperfiddle.net/:docs!fiddle-links/)."})
 
 (defn fiddle-src-renderer [ctx-real class]
   #_(hypercrud.ui.result/fiddle ctx-real)
@@ -37,28 +47,23 @@
     [:div {:class (str class " fiddle-src")}
      [:h3 "fiddle src"]
      ((:cell ctx') [true 0 :fiddle/ident] ctx')
-     ((:cell ctx') [true 0 :db/doc] ctx')
+     ;((:cell ctx') [true 0 :db/doc] ctx')
      ((:cell ctx') [true 0 :fiddle/type] ctx')
      (case rtype
        :entity ((:cell ctx') [true 0 :fiddle/pull] ctx'
-                 (cell-wrap
-                   (control-with-unders
-                     [:span.schema "schema: " (schema-links ctx')]
-                     [markdown "`:db/id` is currently required. No nested pull yet. Just keep it simple for now. See
-                     [Datomic pull docs](https://docs.datomic.com/on-prem/pull.html)."])))
+                 (r/partial cell-wrap (control-with-unders
+                                        [:span.schema "schema: " (schema-links ctx')]
+                                        [markdown (:fiddle/pull underdocs)])))
        :query ((:cell ctx') [true 0 :fiddle/query] ctx'
-                (cell-wrap
-                  (control-with-unders
-                    [:span.schema "schema: " (schema-links ctx')]
-                    [markdown "See [:fiddle/query examples](http://www.hyperfiddle.net/:docs!fiddle-query/) and
-                    the [Datomic query docs](https://docs.datomic.com/on-prem/query.html). If you pull, `:db/id` is
-                    required. No rules yet, no nested pull yet, no d/log or d/history yet."])))
+                (r/partial cell-wrap (control-with-unders
+                                       [:span.schema "schema: " (schema-links ctx')]
+                                       [markdown (:fiddle/query underdocs)])))
        :blank nil
        nil nil)
-     ((:cell ctx') [true 0 :fiddle/markdown] ctx' (cell-wrap (control-with-unders [markdown "See [:fiddle/markdown examples](http://www.hyperfiddle.net/:docs!fiddle-markdown/)."])))
-     ((:cell ctx') [true 0 :fiddle/renderer] ctx' (cell-wrap (control-with-unders [markdown "See [:fiddle/renderer examples](http://www.hyperfiddle.net/:docs!fiddle-renderer/)."])))
-     ((:cell ctx') [true 0 :fiddle/css] ctx' (cell-wrap (control-with-unders [markdown "See [:fiddle/css examples](http://www.hyperfiddle.net/:docs!fiddle-css/)."])))
-     ((:cell ctx') [true 0 :fiddle/links] ctx-real (cell-wrap (control-with-unders [markdown "See [:fiddle/links examples](http://www.hyperfiddle.net/:docs!fiddle-links/)."])))
+     ((:cell ctx') [true 0 :fiddle/markdown] ctx' (r/partial cell-wrap (control-with-unders [markdown (:fiddle/markdown underdocs)])))
+     ((:cell ctx') [true 0 :fiddle/css] ctx' (r/partial cell-wrap (control-with-unders [markdown (:fiddle/css underdocs)])))
+     ((:cell ctx') [true 0 :fiddle/renderer] ctx' (r/partial cell-wrap (control-with-unders [markdown (:fiddle/renderer underdocs)])))
+     ((:cell ctx') [true 0 :fiddle/links] ctx-real (r/partial cell-wrap (control-with-unders [markdown (:fiddle/links underdocs)])))
      ((:cell ctx') [true 0 :fiddle/entrypoint?] ctx')
      ;((:cell ctx') [true 0 :fiddle/bindings] ctx')
      ((:anchor ctx') :hyperfiddle/remove [0] ctx' "Remove fiddle")
