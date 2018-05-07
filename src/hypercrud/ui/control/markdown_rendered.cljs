@@ -57,8 +57,9 @@
   (let [kwargs (flatten (seq props))
         [_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
         rel (unwrap (memoized-safe-read-edn-string srel))
-        path (unwrap (memoized-safe-read-edn-string (str "[" spath "]")))]
-    (apply (:browse ctx) rel path ctx kwargs)))
+        path (unwrap (memoized-safe-read-edn-string (str "[" spath "]")))
+        f (read-eval-with-bindings content)]
+    (apply (:browse ctx) rel path ctx f kwargs)))
 
 (defn anchor [content argument props ctx]
   (let [kwargs (flatten (seq props))
