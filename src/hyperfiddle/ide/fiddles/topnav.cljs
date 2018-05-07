@@ -3,11 +3,10 @@
             [contrib.base-64-url-safe :as base64-url-safe]
             [contrib.data :refer [kwargs unwrap]]
             [contrib.datomic-tx :as tx]
-            [contrib.document :as document]
             [contrib.reactive :as r]
             [contrib.reader :refer [read-edn-string]]
             [contrib.reagent :refer [fragment]]
-            [contrib.rfc3986 :refer [split-fragment encode-ednish decode-ednish encode-rfc3986-pchar decode-rfc3986-pchar]]
+            [contrib.rfc3986 :refer [encode-ednish encode-rfc3986-pchar]]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.fiddle :as fiddle]
             [hypercrud.browser.link :as link]
@@ -56,7 +55,7 @@
     [:div.display-inline-flex [re-com.core/throbber]]))
 
 (defn src-mode? [frag]
-  (= :src (read-edn-string (decode-ednish (decode-rfc3986-pchar frag)))))
+  (= :src (some-> frag read-edn-string)))
 
 (defn renderer [ctx class]
   {:pre [(or (:relations ctx) (:relation ctx))]}
