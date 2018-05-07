@@ -14,7 +14,8 @@
        (filter (fn [[k v]] (and (str/starts-with? k "$") (is-uri? v))))
        sort
        (map (fn [[$db _]]
-              (let [props {:route [(keyword "hyperfiddle.schema" $db)]}]
+              (let [props {:route [(keyword "hyperfiddle.schema" $db)]
+                           :target "_blank"}]
                 ^{:key $db}
                 [(:navigate-cmp ctx) props $db])))
        (doall)))
