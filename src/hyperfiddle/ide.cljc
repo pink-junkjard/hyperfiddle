@@ -190,9 +190,9 @@
    [:pre (pr-str e)]])
 
 #?(:cljs
-   (defn view-page [omit-target ?route ctx]
+   (defn view-page [omit-target route ctx]
      (let [dev (activate-ide? (foundation/hostname->hf-domain-name ctx))
-           src-mode (let [[_ _ _ frag] ?route] (topnav/src-mode? frag)) ; Immoral - :src bit is tunneled in userland fragment space
+           src-mode (let [[_ _ _ frag] route] (topnav/src-mode? frag)) ; Immoral - :src bit is tunneled in userland fragment space
            ctx (assoc ctx :navigate-cmp (reagent/partial navigate-cmp/navigate-cmp (reagent/partial runtime/encode-route (:peer ctx))))]
        (fragment
          :view-page
@@ -204,22 +204,22 @@
             @(hc/hydrate (:peer ctx) (:branch ctx) (foundation/domain-request "hyperfiddle" (:peer ctx)))
             -dumb-loading
             (fn topnav [ide-domain]
-              (let [ctx (page-ide-context ctx ide-domain ?route)]
+              (let [ctx (page-ide-context ctx ide-domain route)]
                 (fragment                                   ; These are the same data, just different views.
                   :_
-                  [browser/ui-from-route (ide-route ?route)
+                  [browser/ui-from-route (ide-route route)
                    (assoc ctx :hypercrud.ui/error (r/constantly ui-error/error-inline)
                               #_#_:user-renderer hyperfiddle.ide.fiddles.topnav/renderer)
                    "topnav hidden-print"]
                   (if src-mode
-                    [browser/ui-from-route (ide-route ?route)
+                    [browser/ui-from-route (ide-route route)
                      (assoc ctx :user-renderer fiddle-src-renderer)
                      "devsrc"]))))])
 
          ; Production
-         (if (and (not omit-target) ?route (not src-mode))
-           (let [ctx (page-target-context ctx ?route)]
-             [browser/ui-from-route ?route ctx (classes (some-> ctx :hypercrud.ui/display-mode deref name)
+         (if (and (not omit-target) (not src-mode))
+           (let [ctx (page-target-context ctx route)]
+             [browser/ui-from-route route ctx (classes (some-> ctx :hypercrud.ui/display-mode deref name)
                                                         "hyperfiddle-user"
                                                         (if dev "hyperfiddle-ide-user"))]))))))
 
