@@ -54,10 +54,7 @@
        :entity ((:cell ctx') [true 0 :fiddle/pull] ctx'
                  (r/partial cell-wrap (r/partial control-with-unders (fragment :_ [:span.schema "schema: " (schema-links ctx')] [markdown (:fiddle/pull underdocs)]))))
        :query ((:cell ctx') [true 0 :fiddle/query] ctx'
-                (r/partial cell-wrap (r/partial control-with-unders
-
-                                                [:span.schema "schema: " (schema-links ctx')]
-                                                [markdown (:fiddle/query underdocs)])))
+                (r/partial cell-wrap (r/partial control-with-unders (fragment :_ [:span.schema "schema: " (schema-links ctx')] [markdown (:fiddle/query underdocs)]))))
        :blank nil
        nil nil)
      ((:cell ctx') [true 0 :fiddle/markdown] ctx' (r/partial cell-wrap (r/partial control-with-unders [markdown (:fiddle/markdown underdocs)])))
