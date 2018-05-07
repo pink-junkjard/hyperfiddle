@@ -38,7 +38,7 @@
                 {:keys [:link/dependent? :link/path] :as link} @(r/track link/rel->link rel path ctx)
                 ctx (-> (context/relation-path ctx (into [dependent?] (unwrap (memoized-safe-read-edn-string (str "[" path "]")))))
                         (as-> ctx (if user-renderer (assoc ctx :user-renderer user-renderer #_(if f #(apply f %1 %2 %3 %4 args))) ctx)))]
-            [ui-from-link link ctx (:class kwargs)]))
+            (into [ui-from-link link ctx (:class kwargs)] (apply concat (dissoc kwargs :class :children nil)))))
         (anchor [rel #_dependent? path ctx label & args]
           (let [kwargs (kwargs args)
                 {:keys [:link/dependent? :link/path] :as link} @(r/track link/rel->link rel path ctx)
@@ -135,8 +135,9 @@
            [ui-comp ctx]
            [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]]]))]))
 
-(defn ui-from-link [link ctx & [class]]
-  (let [error-comp (ui-error/error-comp ctx)
+(defn ui-from-link [link ctx ?class & args]
+  (let [kwargs (kwargs args)
+        error-comp (ui-error/error-comp ctx)
         hidden' (->> (try-either (link/build-link-props link ctx)) ; todo we want the actual error from the link props
                      (cats/fmap :hidden))]
     [stale/loading (stale/can-be-loading? ctx) hidden'
@@ -144,6 +145,6 @@
      (fn [link-props]
        (if (:hidden link-props)
          [:noscript]
-         [stale/loading (stale/can-be-loading? ctx) (routing/build-route' link ctx)
+         [stale/loading (stale/can-be-loading? ctx) (routing/build-route' link ctx (:frag kwargs))
           (fn [e] [error-comp e])
-          (fn [route] [ui-from-route route ctx (classes class (css-slugify (:link/rel link)))])]))]))
+          (fn [route] [ui-from-route route ctx (classes ?class (css-slugify (:link/rel link)))])]))]))

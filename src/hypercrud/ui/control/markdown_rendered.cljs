@@ -1,5 +1,6 @@
 (ns hypercrud.ui.control.markdown-rendered
-  (:require [contrib.css :refer [classes]]
+  (:require [clojure.walk :refer [keywordize-keys]]
+            [contrib.css :refer [classes]]
             [contrib.data :refer [map-values unwrap]]
             [contrib.reactive :as r]
             [contrib.reagent :refer [fragment]]
@@ -69,7 +70,7 @@
     (apply (:anchor ctx) rel path ctx label kwargs)))
 
 (defn cell [content argument props ctx]
-  (let [kwargs (flatten (seq props))
+  (let [kwargs (flatten (seq (keywordize-keys props)))
         path (into [true] (unwrap (memoized-safe-read-edn-string (str "[" argument "]"))))]
     (apply (:cell ctx) path ctx kwargs)))
 

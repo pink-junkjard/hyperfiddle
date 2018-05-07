@@ -71,7 +71,7 @@
         :else (vec (xorxs porps))))
 
 (let [memoized-eval-string (memoize eval/safe-eval-string)]
-  (defn ^:export build-route' [link ctx]
+  (defn ^:export build-route' [link ctx & [?frag]]
     (mlet [fiddle-id (if-let [page (:link/fiddle link)]
                        (either/right (:fiddle/ident page))
                        (either/left {:message "link has no fiddle" :data {:link link}}))
@@ -91,7 +91,7 @@
                            (into {}))]]
       ;_ (timbre/debug args (-> (:link/formula link) meta :str))
       (cats/return
-        (id->tempid [fiddle-id (normalize-args (:remove-this-wrapper args))] ctx)))))
+        (id->tempid (router/canonicalize fiddle-id (normalize-args (:remove-this-wrapper args)) nil ?frag) ctx)))))
 
 (defn compare-routes [a b]
   (= (router/dissoc-frag a) (router/dissoc-frag b)))
