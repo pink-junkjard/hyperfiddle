@@ -1,6 +1,7 @@
 (ns hyperfiddle.ide.fiddles.fiddle-src
   (:require [cuerdas.core :as str]
             [contrib.reactive :as r]
+            [contrib.reagent :refer [fragment]]
             [hypercrud.types.URI :refer [is-uri?]]
             [hypercrud.ui.auto-control :refer [auto-control']]
             [hypercrud.ui.control.markdown-rendered :refer [markdown]]
@@ -20,10 +21,9 @@
                 [(:navigate-cmp ctx) props $db])))
        (doall)))
 
-(defn control-with-unders [& children]
-  (fn [field props ctx]
-    (let [control [(auto-control' ctx) field props ctx]]
-      (into [:div control] children))))
+(defn control-with-unders [frag field props ctx]
+  (let [control [(auto-control' ctx) field props ctx]]
+    [:div control frag]))
 
 (defn cell-wrap [control ctx]
   (let [control (or control (auto-control' ctx))]
@@ -52,19 +52,18 @@
      ((:cell ctx') [true 0 :fiddle/type] ctx')
      (case rtype
        :entity ((:cell ctx') [true 0 :fiddle/pull] ctx'
-                 (r/partial cell-wrap (control-with-unders
-                                        [:span.schema "schema: " (schema-links ctx')]
-                                        [markdown (:fiddle/pull underdocs)])))
+                 (r/partial cell-wrap (r/partial control-with-unders (fragment :_ [:span.schema "schema: " (schema-links ctx')] [markdown (:fiddle/pull underdocs)]))))
        :query ((:cell ctx') [true 0 :fiddle/query] ctx'
-                (r/partial cell-wrap (control-with-unders
-                                       [:span.schema "schema: " (schema-links ctx')]
-                                       [markdown (:fiddle/query underdocs)])))
+                (r/partial cell-wrap (r/partial control-with-unders
+
+                                                [:span.schema "schema: " (schema-links ctx')]
+                                                [markdown (:fiddle/query underdocs)])))
        :blank nil
        nil nil)
-     ((:cell ctx') [true 0 :fiddle/markdown] ctx' (r/partial cell-wrap (control-with-unders [markdown (:fiddle/markdown underdocs)])))
-     ((:cell ctx') [true 0 :fiddle/css] ctx' (r/partial cell-wrap (control-with-unders [markdown (:fiddle/css underdocs)])))
-     ((:cell ctx') [true 0 :fiddle/renderer] ctx' (r/partial cell-wrap (control-with-unders [markdown (:fiddle/renderer underdocs)])))
-     ((:cell ctx') [true 0 :fiddle/links] ctx-real (r/partial cell-wrap (control-with-unders [markdown (:fiddle/links underdocs)])))
+     ((:cell ctx') [true 0 :fiddle/markdown] ctx' (r/partial cell-wrap (r/partial control-with-unders [markdown (:fiddle/markdown underdocs)])))
+     ((:cell ctx') [true 0 :fiddle/css] ctx' (r/partial cell-wrap (r/partial control-with-unders [markdown (:fiddle/css underdocs)])))
+     ((:cell ctx') [true 0 :fiddle/renderer] ctx' (r/partial cell-wrap (r/partial control-with-unders [markdown (:fiddle/renderer underdocs)])))
+     ((:cell ctx') [true 0 :fiddle/links] ctx-real (r/partial cell-wrap (r/partial control-with-unders [markdown (:fiddle/links underdocs)])))
      ((:cell ctx') [true 0 :fiddle/entrypoint?] ctx')
      ;((:cell ctx') [true 0 :fiddle/bindings] ctx')
      ((:anchor ctx') :hyperfiddle/remove [0] ctx' "Remove fiddle")
