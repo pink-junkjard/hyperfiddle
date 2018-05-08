@@ -111,7 +111,7 @@
                :peer rt-page
                ::runtime/branch-aux {::ide/foo "page"}}
           alias (foundation/alias? (foundation/hostname->hf-domain-name hostname hyperfiddle-hostname))]
-      [foundation/view :page route ctx (partial ide/view (not alias))]))
+      [foundation/view :page route ctx (if alias (partial ide/view false) (constantly [:div "loading..."]))]))
 
   hc/Peer
   (hydrate [this branch request]
