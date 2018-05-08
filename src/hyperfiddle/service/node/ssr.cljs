@@ -143,7 +143,11 @@
         alias? (foundation/alias? (foundation/hostname->hf-domain-name hostname hyperfiddle-hostname))]
     (-> (foundation/bootstrap-data rt foundation/LEVEL-NONE load-level (.-path req) (::runtime/global-basis initial-state))
         (p/then (fn []
-                  (let [action (if (or alias? #_(foundation/domain-owner? user-profile @(runtime/state rt [::runtime/domain])))
+                  (let [domain @(runtime/state rt [::runtime/domain])
+                        owner (foundation/domain-owner? user-profile domain)
+                        writable (and (not= "www" (:domain/ident domain))
+                                      (or alias? owner))
+                        action (if writable
                                  [:enable-auto-transact]
                                  [:disable-auto-transact])]
                     (runtime/dispatch! rt action))))
