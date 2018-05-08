@@ -110,8 +110,8 @@
                :hyperfiddle-hostname hyperfiddle-hostname
                :peer rt-page
                ::runtime/branch-aux {::ide/foo "page"}}
-          omit-target false #_(foundation/alias? (foundation/hostname->hf-domain-name hostname hyperfiddle-hostname))]
-      [foundation/view :page route ctx (partial ide/view omit-target)]))
+          alias (foundation/alias? (foundation/hostname->hf-domain-name hostname hyperfiddle-hostname))]
+      [foundation/view :page route ctx (partial ide/view (not alias))]))
 
   hc/Peer
   (hydrate [this branch request]
