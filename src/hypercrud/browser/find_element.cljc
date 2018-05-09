@@ -43,10 +43,10 @@
     (map->FindElement
       {:name fe-name
        :fields (let [splat-attrs (when splat?
-                                      (-> (set (keys cell))
-                                          (set/difference (set pull-pattern))
-                                          vec))]
-                    (pull->fields pull-pattern splat-attrs fe-name))
+                                   (-> (set (keys cell))
+                                       (set/difference (set pull-pattern))
+                                       vec))]
+                 (pull->fields pull-pattern splat-attrs fe-name))
        :source-symbol source-symbol
        :splat? splat?
        :type :pull})))
@@ -56,16 +56,16 @@
     (map->FindElement
       {:name fe-name
        :fields (let [splat-attrs (when splat?
-                                     (-> (reduce (fn [acc cell]
-                                                   (-> (keys cell)
-                                                       (set)
-                                                       (into acc)))
-                                                 #{}
-                                                 column-cells)
-                                         (set/difference (set pull-pattern))
-                                         sort
-                                         vec))]
-                   (pull->fields pull-pattern splat-attrs fe-name))
+                                   (-> (reduce (fn [acc cell]
+                                                 (-> (keys cell)
+                                                     (set)
+                                                     (into acc)))
+                                               #{}
+                                               column-cells)
+                                       (set/difference (set pull-pattern))
+                                       sort
+                                       vec))]
+                 (pull->fields pull-pattern splat-attrs fe-name))
        :source-symbol source-symbol
        :splat? splat?
        :type :pull})))
