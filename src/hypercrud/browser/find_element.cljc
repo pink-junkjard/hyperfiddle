@@ -136,7 +136,12 @@
                                                                  (auto-fe-many-cells element (get results-by-column idx))))
                                                   vec))
                  datascript.parser.FindColl [(auto-fe-many-cells (:element qfind) @result)]
-                 datascript.parser.FindTuple (mapv auto-fe-one-cell (:elements qfind) @result)
+                 datascript.parser.FindTuple (let [result-value @result]
+                                               (assert (or (nil? result-value) (vector? result-value)) (str "Expected list, got " (type result-value)))
+                                               (->> (:elements qfind)
+                                                    (map-indexed (fn [idx element]
+                                                                   (auto-fe-one-cell element (get result-value idx))))
+                                                    vec))
                  datascript.parser.FindScalar [(auto-fe-one-cell (:element qfind) @result)])))
 
     :blank (either/right [])

@@ -146,8 +146,7 @@
 
 (deftest query-tuple []
   (let [pull->req #(->QueryRequest [:find [(list 'pull '?e %)] :in '$ '?e] {"$" nil "?e" 1})]
-    ; https://github.com/hyperfiddle/hyperfiddle.net/issues/276
-    #_(test-defined-pull {:fiddle/type :query} pull->req)
+    (test-defined-pull {:fiddle/type :query} pull->req)
     (test-splat {:fiddle/type :query} pull->req [{:db/id 1
                                                   :a/x {:db/id 11 :b/x "asdf"}
                                                   :a/y "qwerty"
