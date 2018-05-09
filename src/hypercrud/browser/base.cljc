@@ -28,7 +28,7 @@
    :db/doc
    :fiddle/bindings
    :fiddle/css
-   :fiddle/entrypoint
+   :fiddle/entrypoint?
    :fiddle/ident
    {:fiddle/links [:db/id
                    :hypercrud/props
