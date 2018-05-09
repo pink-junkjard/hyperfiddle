@@ -40,7 +40,7 @@
    :fiddle/renderer "See [:fiddle/renderer examples](http://www.hyperfiddle.net/:docs!fiddle-renderer/)."
    :fiddle/links "See [:fiddle/links examples](http://www.hyperfiddle.net/:docs!fiddle-links/)."})
 
-(defn fiddle-src-renderer [ctx-real class]
+(defn fiddle-src-renderer [ctx-real class & {:keys [embed-mode]}]
   #_(hypercrud.ui.result/fiddle ctx-real)
   (let [ctx-real (dissoc ctx-real :user-renderer)           ; this needs to not escape this level; inline links can't ever get it
         ctx' (shadow-fiddle ctx-real)
@@ -60,9 +60,12 @@
      ((:cell ctx') [true 0 :fiddle/markdown] ctx' (r/partial cell-wrap (r/partial control-with-unders [markdown (:fiddle/markdown underdocs)])))
      ((:cell ctx') [true 0 :fiddle/css] ctx' (r/partial cell-wrap (r/partial control-with-unders [markdown (:fiddle/css underdocs)])))
      ((:cell ctx') [true 0 :fiddle/renderer] ctx' (r/partial cell-wrap (r/partial control-with-unders [markdown (:fiddle/renderer underdocs)])))
-     ((:cell ctx') [true 0 :fiddle/links] ctx-real (r/partial cell-wrap (r/partial control-with-unders [markdown (:fiddle/links underdocs)])))
+     (when-not embed-mode
+       ((:cell ctx') [true 0 :fiddle/links] ctx-real (r/partial cell-wrap (r/partial control-with-unders [markdown (:fiddle/links underdocs)]))))
      ((:cell ctx') [true 0 :fiddle/entrypoint?] ctx')
      ;((:cell ctx') [true 0 :fiddle/bindings] ctx')
-     ((:anchor ctx') :hyperfiddle/remove [0] ctx' "Remove fiddle")
-     ((:browse ctx-real) :attribute-renderers [] ctx-real)
+     (when-not embed-mode
+       ((:anchor ctx') :hyperfiddle/remove [0] ctx' "Remove fiddle"))
+     (when-not embed-mode
+       ((:browse ctx-real) :attribute-renderers [] ctx-real))
      ]))

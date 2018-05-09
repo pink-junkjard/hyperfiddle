@@ -1,17 +1,18 @@
 (ns hypercrud.browser.browser-ui
-  (:require [cats.core :as cats]
+  (:require [cats.core :as cats :refer [mlet]]
             [cats.monad.either :as either]
             [contrib.css :refer [css-slugify classes]]
-            [contrib.data :refer [cond-let unwrap kwargs]]
+            [contrib.data :refer [cond-let map-values unwrap kwargs]]
             [contrib.eval :as eval]
             [contrib.reactive :as r]
-            [contrib.string :refer [memoized-safe-read-edn-string]]
+            [contrib.string :refer [memoized-safe-read-edn-string pprint-str]]
             [contrib.try :refer [try-either]]
             [cuerdas.core :as string]
             [hypercrud.browser.base :as base]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.link :as link]
             [hypercrud.browser.routing :as routing]
+            [hypercrud.types.ThinEntity :refer [->ThinEntity]]
             [hypercrud.ui.error :as ui-error]
     ; [hypercrud.ui.form :as form]
             [hypercrud.ui.native-event-listener :refer [native-on-click-listener]]
@@ -91,24 +92,37 @@
 
 (defn build-renderer-str [user-str] (str "(fn [ctx & [class]]\n" user-str ")"))
 
+(defn src-mode [ctx]
+  (either/branch
+    (mlet [request @(r/apply-inner-r (r/track base/meta-request-for-fiddle ctx))
+           :let [fiddle (r/atom {:fiddle/type :entity})     ; turns out we dont need fiddle for much if we already know the request
+                 ctx (-> (context/source-mode ctx)
+                         (context/clean)
+                         (context/route [nil [(->ThinEntity "$" [:fiddle/ident (first (:route ctx))])]]))]]
+      (base/process-results fiddle request ctx))
+    (fn [e] (throw e))                                      ; just throw, this is inside a user-portal
+    (fn [ctx] [hyperfiddle.ide.fiddles.fiddle-src/fiddle-src-renderer ctx (auto-ui-css-class ctx) :embed-mode true])))
+
 (defn ui-comp [ctx]
   [user-portal (ui-error/error-comp ctx)
-   (case @(:hypercrud.ui/display-mode ctx)
-     :user (cond-let
-             [user-renderer (:user-renderer ctx)]
-             [user-renderer ctx (auto-ui-css-class ctx)]
+   (if (hyperfiddle.ide.fiddles.topnav/src-mode? (get (:route ctx) 3))
+     [src-mode ctx]
+     (case @(:hypercrud.ui/display-mode ctx)
+       :user (cond-let
+               [user-renderer (:user-renderer ctx)]
+               [user-renderer ctx (auto-ui-css-class ctx)]
 
-             [renderer-str (let [renderer-str @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/renderer])]
-                             (when (and (string? renderer-str) (not (string/blank? renderer-str)))
-                               renderer-str))]
-             [eval-renderer-comp (build-renderer-str renderer-str) ctx (auto-ui-css-class ctx)]
+               [renderer-str (let [renderer-str @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/renderer])]
+                               (when (and (string? renderer-str) (not (string/blank? renderer-str)))
+                                 renderer-str))]
+               [eval-renderer-comp (build-renderer-str renderer-str) ctx (auto-ui-css-class ctx)]
 
-             [_ :else]
-             ; todo ui.result should be injected
-             [hypercrud.ui.result/fiddle ctx (auto-ui-css-class ctx)])
+               [_ :else]
+               ; todo ui.result should be injected
+               [hypercrud.ui.result/fiddle ctx (auto-ui-css-class ctx)])
 
-     ; todo ui.result should be injected
-     :xray [hypercrud.ui.result/fiddle-xray ctx (auto-ui-css-class ctx)])])
+       ; todo ui.result should be injected
+       :xray [hypercrud.ui.result/fiddle-xray ctx (auto-ui-css-class ctx)]))])
 
 (defn ui-from-route [route ctx & [class]]
   (let [click-fn (or (:hypercrud.browser/page-on-click ctx) (constantly nil)) ; parent ctx receives click event, not child frame
