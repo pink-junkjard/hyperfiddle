@@ -98,7 +98,7 @@
   ; To userland this "www" constant would require more complicated rules
   ; for mapping a hostname to a domain-ident
   (let [should-be-active (and (not (foundation/alias? x))
-                              (not (= "www" x)))
+                              (not= "www" x))
         ; WWW needs a way to activate this. For now we can mirror the domain on www2
         explicitly-active false]
     (or explicitly-active should-be-active)))
