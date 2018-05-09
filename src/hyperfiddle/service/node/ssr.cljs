@@ -113,7 +113,7 @@
           domain-name (foundation/hostname->hf-domain-name hostname hyperfiddle-hostname)
           alias (or (foundation/alias? domain-name)
                     (= "www" domain-name))]
-      [foundation/view :page route ctx (if alias (partial ide/view false) (constantly [:div "loading... "]))]))
+      [foundation/view :page route ctx (if alias ide/view (constantly [:div "loading... "]))]))
 
   hc/Peer
   (hydrate [this branch request]
