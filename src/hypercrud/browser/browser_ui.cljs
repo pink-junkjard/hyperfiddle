@@ -50,12 +50,13 @@
             [(or f
                  hypercrud.ui.form/Cell)
              (context/relation-path ctx [d i a])]))
-        (value [path ctx & args]
-          (let [{[f & args] nil :as kwargs} (kwargs args)
-                ctx (context/relation-path ctx path)
+        (value [path ctx & [?f ?props]]
+          ; The most important thing to do here is override the renderer.
+          ; Then, optionally pass props. kwargs can partial props but we don't need that here? Why partial a :class?
+          (let [ctx (context/relation-path ctx path)
                 field (:hypercrud.browser/field ctx)
-                #_#_control-props (merge (hypercrud.ui.auto-control/control-props ctx) kwargs)]
-            [(or f (partial hypercrud.ui.auto-control/auto-control field {} nil)) ctx]))
+                #_#_control-props (merge (hypercrud.ui.auto-control/control-props ctx) ?props)]
+            [(or ?f (partial hypercrud.ui.auto-control/auto-control field {} nil)) ctx]))
         (browse' [rel #_dependent? path ctx]
           (->> (base/data-from-link @(r/track link/rel->link rel path ctx) ctx)
                (cats/fmap :hypercrud.browser/result)
