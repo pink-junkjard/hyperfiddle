@@ -97,7 +97,7 @@
   (let [source-domain-req (domain-request "hyperfiddle" (:peer ctx))]
     (into [source-domain-req]
           (when-let [source-domain (hc/hydrate-api (:peer ctx) (:branch ctx) source-domain-req)]
-            (let [ctx (context route source-domain)]
+            (let [ctx (context ctx source-domain)]
               (f route ctx))))))
 
 #?(:cljs
