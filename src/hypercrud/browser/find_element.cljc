@@ -27,6 +27,7 @@
   (let [top-level-attrs (reduce (fn [acc sym]
                                   (cond
                                     (= sym '*) (into acc splat-attrs)
+                                    (map? sym) (into acc (keys sym))
                                     :else (conj acc sym)))
                                 []
                                 pull-pattern)]

@@ -10,19 +10,22 @@
 
 
 (def test-dbname "test")
-(def test-schema {:a/x {:db/ident :a/x
-                        :db/cardinality {:db/ident :db.cardinality/one}
-                        :db/valueType {:db/ident :db.type/string}}
-                  :a/j {:db/ident :a/j
+(def test-schema {:a/j {:db/ident :a/j
                         :db/cardinality {:db/ident :db.cardinality/one}
                         :db/valueType {:db/ident :db.type/string}}
                   :a/k {:db/ident :a/k
                         :db/cardinality {:db/ident :db.cardinality/one}
                         :db/valueType {:db/ident :db.type/string}}
+                  :a/x {:db/ident :a/x
+                        :db/cardinality {:db/ident :db.cardinality/one}
+                        :db/valueType {:db/ident :db.type/ref}}
                   :a/y {:db/ident :a/y
                         :db/cardinality {:db/ident :db.cardinality/one}
                         :db/valueType {:db/ident :db.type/string}}
                   :a/z {:db/ident :a/z
+                        :db/cardinality {:db/ident :db.cardinality/one}
+                        :db/valueType {:db/ident :db.type/string}}
+                  :b/x {:db/ident :b/x
                         :db/cardinality {:db/ident :db.cardinality/one}
                         :db/valueType {:db/ident :db.type/string}}
                   :e/a-one {:db/ident :e/a-one
@@ -42,7 +45,8 @@
 #?(:clj
    (defmacro test-defined-pull [fiddle pull->request]
      (macroexpand
-       `(let [attributes# (->> @(auto-find-elements (build-ctx ~fiddle (~pull->request [:db/id :a/x :a/y :a/z]) nil))
+       `(let [pull# [:db/id {:a/x [:db/id :b/x]} :a/y :a/z]
+              attributes# (->> @(auto-find-elements (build-ctx ~fiddle (~pull->request pull#) nil))
                                (mapcat :fields)
                                (mapv :attribute))]
           (is (~'= [:a/x :a/y :a/z] attributes#))))))
@@ -75,7 +79,7 @@
   (let [pull->req #(->EntityRequest 1 nil (->DbVal nil nil) %)]
     (test-defined-pull {:fiddle/type :entity} pull->req)
     (test-splat {:fiddle/type :entity} pull->req {:db/id 1
-                                                  :a/x "asdf"
+                                                  :a/x {:db/id 11 :b/x "asdf"}
                                                   :a/y "qwerty"
                                                   :a/z "zxcv"})
     (test-partial-splat {:fiddle/type :entity} pull->req {:db/id 1
@@ -87,7 +91,7 @@
   (let [pull->req #(->EntityRequest 1 :e/a-one (->DbVal nil nil) %)]
     (test-defined-pull {:fiddle/type :entity} pull->req)
     (test-splat {:fiddle/type :entity} pull->req {:db/id 1
-                                                  :a/x "asdf"
+                                                  :a/x {:db/id 11 :b/x "asdf"}
                                                   :a/y "qwerty"
                                                   :a/z "zxcv"})
     (test-partial-splat {:fiddle/type :entity} pull->req {:db/id 1
@@ -99,11 +103,11 @@
   (let [pull->req #(->EntityRequest 1 :e/a-many (->DbVal nil nil) %)]
     (test-defined-pull {:fiddle/type :entity} pull->req)
     (test-splat {:fiddle/type :entity} pull->req [{:db/id 1
-                                                   :a/x "asdf"
+                                                   :a/x {:db/id 11 :b/x "asdf"}
                                                    :a/y "qwerty"
                                                    :a/z "zxcv"}
-                                                  {:db/id 1
-                                                   :a/x "asdf"
+                                                  {:db/id 2
+                                                   :a/x {:db/id 21 :b/x "hjkl"}
                                                    :a/z "zxcv"}])
     (test-partial-splat {:fiddle/type :entity} pull->req [{:db/id 1
                                                            :a/k "qwerty"
@@ -116,7 +120,7 @@
   (let [pull->req #(->QueryRequest [:find (list 'pull '?e %) :in '$ '?e] {"$" nil "?e" 1})]
     (test-defined-pull {:fiddle/type :query} pull->req)
     (test-splat {:fiddle/type :query} pull->req [[{:db/id 1
-                                                   :a/x "asdf"
+                                                   :a/x {:db/id 11 :b/x "asdf"}
                                                    :a/y "qwerty"
                                                    :a/z "zxcv"}]])
     (test-partial-splat {:fiddle/type :query} pull->req [[{:db/id 1
@@ -130,7 +134,7 @@
   (let [pull->req #(->QueryRequest [:find [(list 'pull '?e %) '...] :in '$ '?e] {"$" nil "?e" 1})]
     (test-defined-pull {:fiddle/type :query} pull->req)
     (test-splat {:fiddle/type :query} pull->req [{:db/id 1
-                                                  :a/x "asdf"
+                                                  :a/x {:db/id 11 :b/x "asdf"}
                                                   :a/y "qwerty"
                                                   :a/z "zxcv"}])
     (test-partial-splat {:fiddle/type :query} pull->req [{:db/id 1
@@ -145,7 +149,7 @@
     ; https://github.com/hyperfiddle/hyperfiddle.net/issues/276
     #_(test-defined-pull {:fiddle/type :query} pull->req)
     (test-splat {:fiddle/type :query} pull->req [{:db/id 1
-                                                  :a/x "asdf"
+                                                  :a/x {:db/id 11 :b/x "asdf"}
                                                   :a/y "qwerty"
                                                   :a/z "zxcv"}])
     (test-partial-splat {:fiddle/type :query} pull->req [{:db/id 1
@@ -157,7 +161,7 @@
   (let [pull->req #(->QueryRequest [:find (list 'pull '?e %) '. :in '$ '?e] {"$" nil "?e" 1})]
     (test-defined-pull {:fiddle/type :query} pull->req)
     (test-splat {:fiddle/type :query} pull->req {:db/id 1
-                                                 :a/x "asdf"
+                                                 :a/x {:db/id 11 :b/x "asdf"}
                                                  :a/y "qwerty"
                                                  :a/z "zxcv"})
     (test-partial-splat {:fiddle/type :query} pull->req {:db/id 1
