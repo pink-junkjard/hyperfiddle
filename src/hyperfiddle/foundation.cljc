@@ -1,9 +1,10 @@
 (ns hyperfiddle.foundation
   (:refer-clojure :exclude [read-string])
-  (:require [cats.monad.either :as either]
+  (:require [cats.monad.either :as either :refer [branch left right]]
             [clojure.string :as string]
     #?(:cljs [contrib.css :refer [classes]])
             [contrib.data :refer [update-existing]]
+            [contrib.eval :as eval]
             [contrib.reactive :as r]
             [contrib.reader :refer [read-string read-edn-string]]
             [contrib.string :refer [pprint-str]]
@@ -43,6 +44,7 @@
                      (hc/db peer domain-uri nil)
                      [:db/id
                       :domain/aliases
+                      :domain/code
                       :domain/disable-javascript
                       :domain/environment
                       :domain/fiddle-repo
@@ -114,11 +116,33 @@
      (f route ctx)))
 
 #?(:cljs
+   (defn domain-init! [domain f]
+     (let [result (if-let [cljs (:domain/code domain)]
+                    (eval/safe-eval-string cljs)
+                    (right nil))]
+       (fn reagent-render [domain f]
+         (branch
+           result
+           (fn error [e]
+             (js/console.warn ":domain/code eval: " e)
+             (f))
+           (fn []
+             (f)))))))
+
+#?(:cljs
    (defn page-view [route ctx f]
      [:div {:class (apply classes "hyperfiddle-foundation" @(runtime/state (:peer ctx) [:pressed-keys]))}
       (f route ctx)                                         ; nil, seq or reagent component
       (if @(runtime/state (:peer ctx) [:staging-open])
         [staging (:peer ctx)])]))
+
+#?(:cljs
+   (defn page-or-leaf1 [page-or-leaf route ctx f]
+     (case page-or-leaf
+       ; The foundation comes with special root markup which means the foundation/view knows about page/user (not ide)
+       ; Can't ide/user (not page) be part of the userland route?
+       :page (page-view route ctx f)
+       :leaf (leaf-view route ctx f))))
 
 #?(:cljs
    (defn view [page-or-leaf route ctx f]
@@ -128,13 +152,11 @@
          [:div.hyperfiddle-foundation
           [error-cmp e]
           [staging (:peer ctx)]]
-
-         (let [ctx (context ctx @source-domain)]
-           (case page-or-leaf
-             ; The foundation comes with special root markup which means the foundation/view knows about page/user (not ide)
-             ; Can't ide/user (not page) be part of the userland route?
-             :page (page-view route ctx f)
-             :leaf (leaf-view route ctx f)))))))
+         (let [ctx (context ctx @source-domain)
+               domain (:hypercrud.browser/domain ctx)]
+           ; f is nil, seq or reagent component
+           ^{:key domain}
+           [domain-init! domain (r/partial page-or-leaf1 page-or-leaf route ctx f)])))))
 
 (defn confirm [message]
   #?(:clj  (throw (ex-info "confirm unsupported by platform" nil))

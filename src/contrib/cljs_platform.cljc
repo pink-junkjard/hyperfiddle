@@ -6,11 +6,11 @@
 
 (defn nodejs? []
   #?(:cljs (= *target* "nodejs")
-     :clj false #_ "compiler"))
+     :clj  false #_"compiler"))
 
 (defn browser? []
   #?(:cljs (= *target* "default")
-     :clj false #_ "compiler"))
+     :clj  false #_"compiler"))
 
 (defn- nodejs-target? "only works in macros" []
   (= :nodejs (get-in @cljs.env/*compiler* [:options :target])))
@@ -28,3 +28,13 @@
   [& body]
   (when-not (nodejs-target?)
     `(do ~@body)))
+
+#?(:cljs
+   (defn global! []
+     (cond (nodejs?) js/global
+           (browser?) js/window)))
+
+(defn install-on-global! [m]
+  (let [g (global!)]
+    (doseq [[k v] m]
+      (aset g k v))))
