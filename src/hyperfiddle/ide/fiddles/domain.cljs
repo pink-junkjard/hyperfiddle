@@ -1,10 +1,8 @@
 (ns hyperfiddle.ide.fiddles.domain
-  (:require [cats.core :as cats]
-            [cats.monad.either :as either]
-            [contrib.data :refer [unwrap]]
-            [clojure.string :as string]
-            [contrib.string :refer [safe-read-edn-string]]
-            [hypercrud.types.URI :refer [is-uri?]]))
+  (:require
+    [contrib.data :refer [unwrap]]
+    [contrib.string :refer [safe-read-edn-string]]
+    [hypercrud.types.URI :refer [is-uri?]]))
 
 
 (defn ^:export domain-ident-renderer [field props ctx]
