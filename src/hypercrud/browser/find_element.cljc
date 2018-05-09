@@ -23,26 +23,29 @@
        :splat? false
        :type :variable})))
 
+(defn pull->fields [pull-pattern splat-attrs fe-name]
+  (let [top-level-attrs (reduce (fn [acc sym]
+                                  (cond
+                                    (= sym '*) (into acc splat-attrs)
+                                    :else (conj acc sym)))
+                                []
+                                pull-pattern)]
+    (->> top-level-attrs
+         (remove #(= :db/id %))
+         (mapv (fn [attr]
+                 (map->Field {:id (hash [fe-name attr])
+                              :attribute attr
+                              :cell-data->value attr}))))))
+
 (defn pull-cell->fe [cell source-symbol fe-name pull-pattern]
   (let [splat? (not (empty? (filter #(= '* %) pull-pattern)))]
     (map->FindElement
       {:name fe-name
-       :fields (let [unsplatted-pattern (if-not splat?
-                                          pull-pattern
-                                          (let [splat-attrs (-> (set (keys cell))
-                                                                (set/difference (set pull-pattern))
-                                                                vec)]
-                                            (->> pull-pattern
-                                                 (mapcat (fn [sym]
-                                                           (if (= sym '*)
-                                                             splat-attrs
-                                                             [sym]))))))]
-                 (->> unsplatted-pattern
-                      (remove #(= :db/id %))
-                      (mapv (fn [attr]
-                              (map->Field {:id (hash [fe-name attr])
-                                           :attribute attr
-                                           :cell-data->value attr})))))
+       :fields (let [splat-attrs (when splat?
+                                      (-> (set (keys cell))
+                                          (set/difference (set pull-pattern))
+                                          vec))]
+                    (pull->fields pull-pattern splat-attrs fe-name))
        :source-symbol source-symbol
        :splat? splat?
        :type :pull})))
@@ -51,28 +54,17 @@
   (let [splat? (not (empty? (filter #(= '* %) pull-pattern)))]
     (map->FindElement
       {:name fe-name
-       :fields (let [unsplatted-pattern (if-not splat?
-                                          pull-pattern
-                                          (let [splat-attrs (-> (reduce (fn [acc cell]
-                                                                          (-> (keys cell)
-                                                                              (set)
-                                                                              (into acc)))
-                                                                        #{}
-                                                                        column-cells)
-                                                                (set/difference (set pull-pattern))
-                                                                sort
-                                                                vec)]
-                                            (->> pull-pattern
-                                                 (mapcat (fn [sym]
-                                                           (if (= sym '*)
-                                                             splat-attrs
-                                                             [sym]))))))]
-                 (->> unsplatted-pattern
-                      (remove #(= :db/id %))
-                      (mapv (fn [attr]
-                              (map->Field {:id (hash [fe-name attr])
-                                           :attribute attr
-                                           :cell-data->value attr})))))
+       :fields (let [splat-attrs (when splat?
+                                     (-> (reduce (fn [acc cell]
+                                                   (-> (keys cell)
+                                                       (set)
+                                                       (into acc)))
+                                                 #{}
+                                                 column-cells)
+                                         (set/difference (set pull-pattern))
+                                         sort
+                                         vec))]
+                   (pull->fields pull-pattern splat-attrs fe-name))
        :source-symbol source-symbol
        :splat? splat?
        :type :pull})))
