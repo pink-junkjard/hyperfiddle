@@ -52,9 +52,15 @@
           (is (~'= [:a/x :a/y :a/z] attributes#))))))
 
 #?(:clj
-   (defmacro test-splat [fiddle pull->request result]
+   (defmacro test-splat [fiddle pull->request result-builder]
      (macroexpand
-       `(let [attributes# (->> @(auto-find-elements (build-ctx ~fiddle (~pull->request [(symbol "*")]) ~result))
+       `(let [result# (~result-builder [{:db/id 1
+                                         :a/y "qwerty"
+                                         :a/z "asdf"}
+                                        {:db/id 2
+                                         :a/x {:db/id 21 :b/x "hjkl"}
+                                         :a/z "zxcv"}])
+              attributes# (->> @(auto-find-elements (build-ctx ~fiddle (~pull->request [(symbol "*")]) result#))
                                (mapcat :fields)
                                (mapv :attribute)
                                (into #{}))]
@@ -62,108 +68,64 @@
           (is (~'= #{:a/x :a/y :a/z} attributes#))))))
 
 #?(:clj
-   (defmacro test-partial-splat [fiddle pull->request result]
+   (defmacro test-partial-splat [fiddle pull->request result-builder]
      (macroexpand
-       `(let [attributes# (->> @(auto-find-elements (build-ctx ~fiddle (~pull->request [:a/a (symbol "*") :a/z]) ~result))
+       `(let [result# (~result-builder [{:db/id 1
+                                         :a/k "uiop"
+                                         :a/z "asdf"}
+                                        {:db/id 2
+                                         :a/j "qwerty"
+                                         :a/x {:db/id 21 :b/x "hjkl"}
+                                         :a/z "zxcv"}])
+              attributes# (->> @(auto-find-elements (build-ctx ~fiddle (~pull->request [:a/a (symbol "*") :a/z]) result#))
                                (mapcat :fields)
                                (mapv :attribute))]
           ; can only test order of defined attributes in relation to splat
-          (is (~'= (first attributes#) :a/a))
-          (is (~'= (last attributes#) :a/z))
-          (is (~'= #{:a/a :a/j :a/k :a/z} (into #{} attributes#)))))))
+          (is (~'= :a/a (first attributes#)))
+          (is (~'= :a/z (last attributes#)))
+          (is (~'= #{:a/a :a/j :a/k :a/x :a/z} (into #{} attributes#)))))))
+
+#?(:clj
+   (defmacro pull->attr-tests [fiddle pull->request result-builder]
+     (macroexpand
+       `(do (test-defined-pull ~fiddle ~pull->request)
+            (test-splat ~fiddle ~pull->request ~result-builder)
+            (test-partial-splat ~fiddle ~pull->request ~result-builder)))))
 
 (deftest blank []
   (is (= [] @(auto-find-elements {:hypercrud.browser/fiddle (r/atom {:fiddle/type :blank})}))))
 
 (deftest entity []
-  (let [pull->req #(->EntityRequest 1 nil (->DbVal nil nil) %)]
-    (test-defined-pull {:fiddle/type :entity} pull->req)
-    (test-splat {:fiddle/type :entity} pull->req {:db/id 1
-                                                  :a/x {:db/id 11 :b/x "asdf"}
-                                                  :a/y "qwerty"
-                                                  :a/z "zxcv"})
-    (test-partial-splat {:fiddle/type :entity} pull->req {:db/id 1
-                                                          :a/j "qwerty"
-                                                          :a/k "qwerty"
-                                                          :a/z "zxcv"})))
+  (pull->attr-tests {:fiddle/type :entity}
+                    #(->EntityRequest 1 nil (->DbVal nil nil) %)
+                    (partial apply merge)))
 
 (deftest entity-attr-one []
-  (let [pull->req #(->EntityRequest 1 :e/a-one (->DbVal nil nil) %)]
-    (test-defined-pull {:fiddle/type :entity} pull->req)
-    (test-splat {:fiddle/type :entity} pull->req {:db/id 1
-                                                  :a/x {:db/id 11 :b/x "asdf"}
-                                                  :a/y "qwerty"
-                                                  :a/z "zxcv"})
-    (test-partial-splat {:fiddle/type :entity} pull->req {:db/id 1
-                                                          :a/j "qwerty"
-                                                          :a/k "qwerty"
-                                                          :a/z "zxcv"})))
+  (pull->attr-tests {:fiddle/type :entity}
+                    #(->EntityRequest 1 :e/a-one (->DbVal nil nil) %)
+                    (partial apply merge)))
 
 (deftest entity-attr-many []
-  (let [pull->req #(->EntityRequest 1 :e/a-many (->DbVal nil nil) %)]
-    (test-defined-pull {:fiddle/type :entity} pull->req)
-    (test-splat {:fiddle/type :entity} pull->req [{:db/id 1
-                                                   :a/x {:db/id 11 :b/x "asdf"}
-                                                   :a/y "qwerty"
-                                                   :a/z "zxcv"}
-                                                  {:db/id 2
-                                                   :a/x {:db/id 21 :b/x "hjkl"}
-                                                   :a/z "zxcv"}])
-    (test-partial-splat {:fiddle/type :entity} pull->req [{:db/id 1
-                                                           :a/k "qwerty"
-                                                           :a/z "zxcv"}
-                                                          {:db/id 2
-                                                           :a/j "qwerty"
-                                                           :a/z "zxcv"}])))
+  (pull->attr-tests {:fiddle/type :entity}
+                    #(->EntityRequest 1 :e/a-many (->DbVal nil nil) %)
+                    identity))
 
 (deftest query-rel []
-  (let [pull->req #(->QueryRequest [:find (list 'pull '?e %) :in '$ '?e] {"$" nil "?e" 1})]
-    (test-defined-pull {:fiddle/type :query} pull->req)
-    (test-splat {:fiddle/type :query} pull->req [[{:db/id 1
-                                                   :a/x {:db/id 11 :b/x "asdf"}
-                                                   :a/y "qwerty"
-                                                   :a/z "zxcv"}]])
-    (test-partial-splat {:fiddle/type :query} pull->req [[{:db/id 1
-                                                           :a/k "qwerty"
-                                                           :a/z "zxcv"}]
-                                                         [{:db/id 2
-                                                           :a/j "qwerty"
-                                                           :a/z "zxcv"}]])))
+  (pull->attr-tests {:fiddle/type :query}
+                    #(->QueryRequest [:find (list 'pull '?e %) :in '$ '?e] {"$" nil "?e" 1})
+                    (partial map vector)))
 
 (deftest query-coll []
-  (let [pull->req #(->QueryRequest [:find [(list 'pull '?e %) '...] :in '$ '?e] {"$" nil "?e" 1})]
-    (test-defined-pull {:fiddle/type :query} pull->req)
-    (test-splat {:fiddle/type :query} pull->req [{:db/id 1
-                                                  :a/x {:db/id 11 :b/x "asdf"}
-                                                  :a/y "qwerty"
-                                                  :a/z "zxcv"}])
-    (test-partial-splat {:fiddle/type :query} pull->req [{:db/id 1
-                                                          :a/k "qwerty"
-                                                          :a/z "zxcv"}
-                                                         {:db/id 2
-                                                          :a/j "qwerty"
-                                                          :a/z "zxcv"}])))
+  (pull->attr-tests {:fiddle/type :query}
+                    #(->QueryRequest [:find [(list 'pull '?e %) '...] :in '$ '?e] {"$" nil "?e" 1})
+                    identity))
 
 (deftest query-tuple []
-  (let [pull->req #(->QueryRequest [:find [(list 'pull '?e %)] :in '$ '?e] {"$" nil "?e" 1})]
-    (test-defined-pull {:fiddle/type :query} pull->req)
-    (test-splat {:fiddle/type :query} pull->req [{:db/id 1
-                                                  :a/x {:db/id 11 :b/x "asdf"}
-                                                  :a/y "qwerty"
-                                                  :a/z "zxcv"}])
-    (test-partial-splat {:fiddle/type :query} pull->req [{:db/id 1
-                                                          :a/j "qwerty"
-                                                          :a/k "qwerty"
-                                                          :a/z "zxcv"}])))
+  (pull->attr-tests {:fiddle/type :query}
+                    #(->QueryRequest [:find [(list 'pull '?e %)] :in '$ '?e] {"$" nil "?e" 1})
+                    (comp vector (partial apply merge))))
 
 (deftest query-scalar []
-  (let [pull->req #(->QueryRequest [:find (list 'pull '?e %) '. :in '$ '?e] {"$" nil "?e" 1})]
-    (test-defined-pull {:fiddle/type :query} pull->req)
-    (test-splat {:fiddle/type :query} pull->req {:db/id 1
-                                                 :a/x {:db/id 11 :b/x "asdf"}
-                                                 :a/y "qwerty"
-                                                 :a/z "zxcv"})
-    (test-partial-splat {:fiddle/type :query} pull->req {:db/id 1
-                                                         :a/j "qwerty"
-                                                         :a/k "qwerty"
-                                                         :a/z "zxcv"})))
+  (pull->attr-tests {:fiddle/type :query}
+                    #(->QueryRequest [:find (list 'pull '?e %) '. :in '$ '?e] {"$" nil "?e" 1})
+                    (partial apply merge)))
