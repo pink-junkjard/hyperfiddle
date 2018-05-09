@@ -1,5 +1,5 @@
 (ns hyperfiddle.ide
-  (:require [bidi.bidi :as bidi]
+  (:require [clojure.string :as str]
             [contrib.css :refer [classes]]
             [contrib.data :refer [unwrap]]
             [contrib.reactive :as r]
@@ -14,7 +14,6 @@
             [hypercrud.browser.router :as router]
             [hypercrud.browser.router-bidi :as router-bidi]
             [hypercrud.browser.system-fiddle :refer [system-fiddle?]]
-            [hypercrud.client.core :as hc]
     #?(:cljs [hypercrud.ui.error :as ui-error])
     #?(:cljs [hypercrud.ui.navigate-cmp :as navigate-cmp])
     #?(:cljs [hypercrud.ui.stale :as stale])
@@ -39,8 +38,7 @@
             [hyperfiddle.ide.fiddles.schema]
     #?(:cljs [hyperfiddle.ide.fiddles.schema-attribute])
     #?(:cljs [hyperfiddle.ide.fiddles.topnav :as topnav])
-    #?(:cljs [hyperfiddle.ide.fiddles.user-dashboard])
-            [clojure.string :as str]))
+    #?(:cljs [hyperfiddle.ide.fiddles.user-dashboard])))
 
 (defn domain [rt hyperfiddle-hostname hostname]
   (let [domain-basis (if-let [global-basis @(runtime/state rt [::runtime/global-basis])]
