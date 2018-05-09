@@ -1,6 +1,7 @@
 (ns hyperfiddle.foundation
   (:refer-clojure :exclude [read-string])
-  (:require [clojure.string :as string]
+  (:require [cats.monad.either :as either]
+            [clojure.string :as string]
     #?(:cljs [contrib.css :refer [classes]])
             [contrib.data :refer [update-existing]]
             [contrib.reactive :as r]
@@ -78,21 +79,26 @@
 (defn process-domain [domain]
   (-> (into {} domain) (update-existing :domain/environment read-string) #_"todo this can throw"))
 
-(defn context [ctx route]
+(defn context [ctx source-domain]
   (let [domain @(runtime/state (:peer ctx) [::runtime/domain])
         _ (assert domain "Bootstrapping failed to fetch the domain")
         domain (process-domain domain)]
     (assoc ctx
       :hypercrud.browser/domain domain
-      :hypercrud.browser/invert-route (r/partial routing/invert-route domain))))
+      :hypercrud.browser/invert-route (r/partial routing/invert-route domain)
+      :hypercrud.browser/source-domain (process-domain source-domain))))
 
 (defn local-basis [page-or-leaf global-basis route ctx f]
   (concat
     (:domain global-basis)
-    (f global-basis route (context ctx route))))
+    (f global-basis route ctx)))
 
 (defn api [page-or-leaf route ctx f]
-  (f route (context ctx route)))
+  (let [source-domain-req (domain-request "hyperfiddle" (:peer ctx))]
+    (into [source-domain-req]
+          (when-let [source-domain (hc/hydrate-api (:peer ctx) (:branch ctx) source-domain-req)]
+            (let [ctx (context route source-domain)]
+              (f route ctx))))))
 
 #?(:cljs
    (defn staging [peer]
@@ -105,28 +111,30 @@
    (defn leaf-view [route ctx f]
      ; A malformed stage can break bootstrap hydrates, but the root-page is bust, so ignore here
      ; Fix this by branching userland so bootstrap is sheltered from staging area? (There are chickens and eggs)
-     (f route (context ctx route))))
+     (f route ctx)))
 
 #?(:cljs
    (defn page-view [route ctx f]
-     (if-let [e @(runtime/state (:peer ctx) [::runtime/fatal-error])]
-       [:div.hyperfiddle-foundation
-        [error-cmp e]
-        [staging (:peer ctx)]]
-
-       (let [ctx (context ctx route)]
-         [:div {:class (apply classes "hyperfiddle-foundation" @(runtime/state (:peer ctx) [:pressed-keys]))}
-          (f route ctx)                                     ; nil, seq or reagent component
-          (if @(runtime/state (:peer ctx) [:staging-open])
-            [staging (:peer ctx)])]))))
+     [:div {:class (apply classes "hyperfiddle-foundation" @(runtime/state (:peer ctx) [:pressed-keys]))}
+      (f route ctx)                                         ; nil, seq or reagent component
+      (if @(runtime/state (:peer ctx) [:staging-open])
+        [staging (:peer ctx)])]))
 
 #?(:cljs
    (defn view [page-or-leaf route ctx f]
-     (case page-or-leaf
-       ; The foundation comes with special root markup which means the foundation/view knows about page/user (not ide)
-       ; Can't ide/user (not page) be part of the userland route?
-       :page (page-view route ctx f)
-       :leaf (leaf-view route ctx f))))
+     (let [source-domain @(hc/hydrate (:peer ctx) (:branch ctx) (domain-request "hyperfiddle" (:peer ctx)))]
+       (if-let [e (or @(runtime/state (:peer ctx) [::runtime/fatal-error])
+                      (when (either/left? source-domain) @source-domain))]
+         [:div.hyperfiddle-foundation
+          [error-cmp e]
+          [staging (:peer ctx)]]
+
+         (let [ctx (context ctx @source-domain)]
+           (case page-or-leaf
+             ; The foundation comes with special root markup which means the foundation/view knows about page/user (not ide)
+             ; Can't ide/user (not page) be part of the userland route?
+             :page (page-view route ctx f)
+             :leaf (leaf-view route ctx f)))))))
 
 (defn confirm [message]
   #?(:clj  (throw (ex-info "confirm unsupported by platform" nil))

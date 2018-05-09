@@ -8,6 +8,7 @@
             [contrib.string :refer [safe-read-edn-string empty->nil]]
             [hypercrud.browser.base :as base]
     #?(:cljs [hypercrud.browser.browser-ui :as browser-ui])
+            [hypercrud.browser.context :as context]
             [hypercrud.browser.core :as browser]
             [hypercrud.browser.routing :as routing]
             [hypercrud.browser.router :as router]
@@ -21,7 +22,6 @@
             [hyperfiddle.io.hydrate-requests :refer [hydrate-one!]]
             [hyperfiddle.runtime :as runtime]
             [promesa.core :as p]
-    #?(:cljs [reagent.core :as reagent])
             [taoensso.timbre :as timbre]
 
     ; pull in public ui deps
@@ -65,34 +65,27 @@
   ; Don't impact the request! Topnav can always use :target-route
   [:hyperfiddle/topnav [#entity["$" (base/legacy-fiddle-ident->lookup-ref fiddle)]]])
 
-(let [always-user (atom :user)
-      constantly-nil (constantly nil)]
-  ; ide is overloaded, these ide-context functions are exclusive to (top)
-  ; despite being in the namespace (hyperfiddle.ide) which encompasses the union of target/user (bottom) and ide (top)
-  (defn- *-ide-context [ctx ide-domain]
-    {:pre [ide-domain]}
-    (-> ctx
-        (assoc :hypercrud.browser/page-on-click constantly-nil ; disable alt-nav up top
-               :hypercrud.ui/display-mode always-user
-               :target-domain (:hypercrud.browser/domain ctx) ; todo rename :target-domain to :hyperfiddle.ide/target-domain
-               :user-profile @(runtime/state (:peer ctx) [:user-profile]))
-        (update :hypercrud.browser/domain
-                (fn [domain]
-                  (-> (foundation/process-domain ide-domain)
-                      (assoc-in [:domain/environment "$"] (:domain/fiddle-repo domain))))))))
+; ide is overloaded, these ide-context functions are exclusive to (top)
+; despite being in the namespace (hyperfiddle.ide) which encompasses the union of target/user (bottom) and ide (top)
+(defn- *-ide-context [ctx]
+  (-> ctx
+      (assoc :hypercrud.ui/display-mode (r/track identity :user)
+             :target-domain (:hypercrud.browser/domain ctx) ; todo rename :target-domain to :hyperfiddle.ide/target-domain
+             :user-profile @(runtime/state (:peer ctx) [:user-profile]))
+      (context/source-mode)))
 
-(defn leaf-ide-context [ctx ide-domain]
+(defn leaf-ide-context [ctx]
   ; ide leaf-context does not have enough information to set hyperfiddle.ide/target-route
   ; this means ide popovers CANNOT access it
-  (*-ide-context ctx ide-domain))
+  (*-ide-context ctx))
 
-(defn page-ide-context [ctx ide-domain target-route]
+(defn page-ide-context [ctx target-route]
   {:pre [target-route]}
   (-> (assoc ctx
         ::runtime/branch-aux {::foo "ide"}
         ; hyperfiddle.ide/target-route is ONLY available to inlined IDE (no deferred popovers)
         :target-route target-route)                         ; todo rename :target-route to :hyperfiddle.ide/target-route
-      (*-ide-context ide-domain)))
+      (*-ide-context)))
 
 (defn activate-ide? [x]
   ; To userland this "www" constant would require more complicated rules
@@ -166,72 +159,44 @@
 
 ; Reactive pattern obfuscates params
 (defn api [route ctx]
-  {:pre [route (not (string? route))]
-   :post [#_(seq %)]}
-  ; We can actually call into the foundation a second time here to get the ide-domain
-  (let [ide-domain-q (foundation/domain-request "hyperfiddle" (:peer ctx))
-        ide-domain (hc/hydrate-api (:peer ctx) (:branch ctx) ide-domain-q)]
-    (case (get-in ctx [::runtime/branch-aux ::foo])
-      "page" (concat [ide-domain-q]
-                     (if route
-                       (browser/request-from-route route (page-target-context ctx route)))
-                     (if (and (activate-ide? (foundation/hostname->hf-domain-name ctx)) ide-domain)
-                       (browser/request-from-route (ide-route route) (page-ide-context ctx ide-domain route))))
-      "ide" (concat [ide-domain-q]
-                    (if ide-domain
-                      (browser/request-from-route route (leaf-ide-context ctx ide-domain))))
-      "user" (if route
-               (browser/request-from-route route (leaf-target-context ctx route))))))
-
-(defn -dumb-loading [e]
-  ; todo inline staging area?
-  [:div
-   [:h3 "Fatal error"]
-   [:pre (pr-str e)]])
+  {:pre [route (not (string? route))]}
+  (case (get-in ctx [::runtime/branch-aux ::foo])
+    "page" (into (browser/request-from-route route (page-target-context ctx route))
+                 (when (activate-ide? (foundation/hostname->hf-domain-name ctx))
+                   (browser/request-from-route (ide-route route) (page-ide-context ctx route))))
+    "ide" (browser/request-from-route route (leaf-ide-context ctx))
+    "user" (browser/request-from-route route (leaf-target-context ctx route))))
 
 #?(:cljs
-   (defn view-page [omit-target route ctx]
+   (defn view-page [route ctx]
      (let [dev (activate-ide? (foundation/hostname->hf-domain-name ctx))
            src-mode (let [[_ _ _ frag] route] (topnav/src-mode? frag)) ; Immoral - :src bit is tunneled in userland fragment space
-           ctx (assoc ctx :navigate-cmp (reagent/partial navigate-cmp/navigate-cmp (reagent/partial runtime/encode-route (:peer ctx))))]
-       (fragment
+           ctx (assoc ctx :navigate-cmp (r/partial navigate-cmp/navigate-cmp (r/partial runtime/encode-route (:peer ctx))))
+           ide-ctx (page-ide-context ctx route)]
+       (fragment                                            ; These are the same data, just different views.
          :view-page
-
-         ; IDE
          (when dev
-           [stale/loading
-            (stale/can-be-loading? ctx)
-            @(hc/hydrate (:peer ctx) (:branch ctx) (foundation/domain-request "hyperfiddle" (:peer ctx)))
-            -dumb-loading
-            (fn topnav [ide-domain]
-              (let [ctx (page-ide-context ctx ide-domain route)]
-                (fragment                                   ; These are the same data, just different views.
-                  :_
-                  [browser/ui-from-route (ide-route route)
-                   (assoc ctx :hypercrud.ui/error (r/constantly ui-error/error-inline)
-                              #_#_:user-renderer hyperfiddle.ide.fiddles.topnav/renderer)
-                   "topnav hidden-print"]
-                  (if src-mode
-                    [browser/ui-from-route (ide-route route)
-                     (assoc ctx :user-renderer fiddle-src-renderer)
-                     "devsrc"]))))])
+           [browser/ui-from-route (ide-route route)
+            (assoc ide-ctx :hypercrud.ui/error (r/constantly ui-error/error-inline)
+                           #_#_:user-renderer hyperfiddle.ide.fiddles.topnav/renderer)
+            "topnav hidden-print"])
 
-         ; Production
-         (if (and (not omit-target) (not src-mode))
+         (when (and dev src-mode)
+           [browser/ui-from-route (ide-route route)
+            (assoc ide-ctx :user-renderer fiddle-src-renderer)
+            "devsrc"])
+
+         (when-not src-mode
            (let [ctx (page-target-context ctx route)]
              [browser/ui-from-route route ctx (classes (some-> ctx :hypercrud.ui/display-mode deref name)
-                                                        "hyperfiddle-user"
-                                                        (if dev "hyperfiddle-ide-user"))]))))))
+                                                       "hyperfiddle-user"
+                                                       (if dev "hyperfiddle-ide-user"))]))))))
 
 #?(:cljs
-   (defn view
-     ([route ctx]
-      (view false route ctx))
-     ([omit-target route ctx]                               ; pass most as ref for reactions
-      (let [ide-domain (hc/hydrate-api (:peer ctx) (:branch ctx) (foundation/domain-request "hyperfiddle" (:peer ctx)))]
-        (case (get-in ctx [::runtime/branch-aux ::foo])
-          "page" (view-page omit-target route ctx)          ; component, seq-component or nil
-          ; On SSR side this is only ever called as "page", but it could be differently (e.g. turbolinks)
-          ; On Browser side, also only ever called as "page", but it could be configured differently (client side render the ide, server render userland...?)
-          "ide" [browser/ui-from-route route (leaf-ide-context ctx ide-domain)]
-          "user" [browser/ui-from-route route (leaf-target-context ctx route)])))))
+   (defn view [route ctx]                                   ; pass most as ref for reactions
+     (case (get-in ctx [::runtime/branch-aux ::foo])
+       "page" (view-page route ctx)                         ; component, seq-component or nil
+       ; On SSR side this is only ever called as "page", but it could be differently (e.g. turbolinks)
+       ; On Browser side, also only ever called as "page", but it could be configured differently (client side render the ide, server render userland...?)
+       "ide" [browser/ui-from-route route (leaf-ide-context ctx)]
+       "user" [browser/ui-from-route route (leaf-target-context ctx route)])))
