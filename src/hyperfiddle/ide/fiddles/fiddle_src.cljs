@@ -77,13 +77,12 @@
           ctx (shadow-fiddle ctx-real)
           {:keys [:fiddle/ident]} @(:hypercrud.browser/result ctx)
           controls
-          {:fiddle/pull (r/partial cell-wrap (r/partial control-with-unders (fragment :_ [:span.schema "schema: " (schema-links ctx)] [markdown (:fiddle/pull underdocs)])))
-           :fiddle/query (r/partial cell-wrap (r/partial control-with-unders (fragment :_ [:span.schema "schema: " (schema-links ctx)] [markdown (:fiddle/query underdocs)])))
-           :fiddle/markdown (r/partial cell-wrap (r/partial control-with-unders [markdown (:fiddle/markdown underdocs)]))
-           :fiddle/css (r/partial cell-wrap (r/partial control-with-unders [markdown (:fiddle/css underdocs)]))
-           :fiddle/renderer (r/partial cell-wrap (r/partial control-with-unders [markdown (:fiddle/renderer underdocs)]))
-           :fiddle/links (r/partial cell-wrap (r/partial control-with-unders [markdown (:fiddle/links underdocs)]))
-           }]
+          {:fiddle/pull (r/partial cell-wrap (r/partial control-with-unders (fragment :_ [:span.schema "schema: " (schema-links ctx)])))
+           :fiddle/query (r/partial cell-wrap (r/partial control-with-unders (fragment :_ [:span.schema "schema: " (schema-links ctx)])))
+           :fiddle/markdown (r/partial cell-wrap nil)
+           :fiddle/css (r/partial cell-wrap nil)
+           :fiddle/renderer (r/partial cell-wrap nil)
+           :fiddle/links (r/partial cell-wrap nil)}]
       (fn [ctx-real class & {:keys [embed-mode]}]
         (into
           [:div.fiddle-src {:class class}
