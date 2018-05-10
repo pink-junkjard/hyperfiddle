@@ -23,20 +23,24 @@
        :splat? false
        :type :variable})))
 
-(defn pull->fields [pull-pattern splat-attrs fe-name]
-  (let [top-level-attrs (reduce (fn [acc sym]
-                                  (cond
-                                    (= sym '*) (into acc splat-attrs)
-                                    (map? sym) (into acc (keys sym))
-                                    (or (vector? sym) (seq? sym)) (conj acc (condp = (first sym)
-                                                                              'default (second sym)
-                                                                              'limit (second sym)
-                                                                              ; otherwise attr-with-opts
-                                                                              (first sym)))
-                                    :else (conj acc sym)))
-                                []
-                                pull-pattern)]
-    (->> top-level-attrs
+(defn pull->fields [pull-pattern inferred-attrs fe-name]
+  (let [explicit-attrs (reduce (fn [acc sym]
+                                 (cond
+                                   (map? sym) (into acc (keys sym))
+                                   (or (vector? sym) (seq? sym)) (conj acc (condp = (first sym)
+                                                                             'default (second sym)
+                                                                             'limit (second sym)
+                                                                             ; otherwise attr-with-opts
+                                                                             (first sym)))
+                                   ; attr or wildcard
+                                   :else (conj acc sym)))
+                               []
+                               pull-pattern)]
+    (->> explicit-attrs
+         (mapcat (fn [attr]
+                   (if (= '* attr)
+                     (sort (set/difference (set inferred-attrs) (set explicit-attrs)))
+                     [attr])))
          (remove #(= :db/id %))
          (mapv (fn [attr]
                  (map->Field {:id (hash [fe-name attr])
@@ -47,10 +51,7 @@
   (let [splat? (not (empty? (filter #(= '* %) pull-pattern)))]
     (map->FindElement
       {:name fe-name
-       :fields (let [splat-attrs (when splat?
-                                   (-> (set (keys cell))
-                                       (set/difference (set pull-pattern))
-                                       vec))]
+       :fields (let [splat-attrs (when splat? (keys cell))]
                  (pull->fields pull-pattern splat-attrs fe-name))
        :source-symbol source-symbol
        :splat? splat?
@@ -61,15 +62,9 @@
     (map->FindElement
       {:name fe-name
        :fields (let [splat-attrs (when splat?
-                                   (-> (reduce (fn [acc cell]
-                                                 (-> (keys cell)
-                                                     (set)
-                                                     (into acc)))
-                                               #{}
-                                               column-cells)
-                                       (set/difference (set pull-pattern))
-                                       sort
-                                       vec))]
+                                   (->> column-cells
+                                        (map keys)
+                                        (reduce into #{})))]
                  (pull->fields pull-pattern splat-attrs fe-name))
        :source-symbol source-symbol
        :splat? splat?

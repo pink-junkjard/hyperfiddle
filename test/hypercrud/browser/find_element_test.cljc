@@ -76,7 +76,7 @@
 
 #?(:clj
    (defmacro test-partial-splat [fiddle pull->request result-builder]
-     (let [pull ''[:a/a * (limit :a/v 1) (default :a/z "a/z default")]]
+     (let [pull ''[:a/a * (limit :a/v 1) {:a/x [*]} (default :a/z "a/z default")]]
        (macroexpand
          `(let [result# (~result-builder [{:db/id 1
                                            :a/k "uiop"
@@ -92,6 +92,7 @@
             ; can only test order of defined attributes in relation to splat
             (is (~'= :a/a (first attributes#)))
             (is (~'= :a/z (last attributes#)))
+            (is (~'= (count attributes#) (count (into #{} attributes#))))
             (is (~'= #{:a/a :a/j :a/k :a/v :a/x :a/z} (into #{} attributes#))))))))
 
 #?(:clj
