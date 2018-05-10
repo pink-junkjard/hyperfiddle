@@ -12,6 +12,8 @@
   #?(:cljs (= *target* "default")
      :clj  false #_"compiler"))
 
+;Loading src/contrib/cljs_platform.cljc...
+;CompilerException java.lang.ClassNotFoundException: cljs.env, compiling:(/Users/dustin/src/hfnet/hyperfiddle/src/contrib/cljs_platform.cljc:16:14)
 (defn- nodejs-target? "only works in macros" []
   (= :nodejs (get-in @cljs.env/*compiler* [:options :target])))
 
