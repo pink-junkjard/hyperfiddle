@@ -31,12 +31,13 @@
   (when-not (nodejs-target?)
     `(do ~@body)))
 
-#?(:cljs
+#?(:cljs                                                    ; runtime only
    (defn global! []
      (cond (nodejs?) js/global
            (browser?) js/window)))
 
-(defn install-on-global! [m]
-  (let [g (global!)]
-    (doseq [[k v] m]
-      (aset g k v))))
+#?(:cljs                                                    ; runtime only
+   (defn merge-global! [m]
+     (let [g (global!)]
+       (doseq [[k v] m]
+         (aset g k v)))))
