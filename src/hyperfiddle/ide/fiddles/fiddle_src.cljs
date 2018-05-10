@@ -52,24 +52,23 @@
          :fiddle/renderer (r/partial cell-wrap (r/partial control-with-unders [markdown (:fiddle/renderer underdocs)]))
          :fiddle/links (r/partial cell-wrap (r/partial control-with-unders [markdown (:fiddle/links underdocs)]))
          }]
-    (fn [ctx-real class & {:keys [embed-mode]}]
-      [:div.fiddle-src {:class class}
-       [:h3 (str ident) " source"]
-       ((:cell ctx) [true 0 :fiddle/ident] ctx)
-       ((:cell ctx) [true 0 :fiddle/type] ctx)
-       (case type
-         :entity ((:cell ctx) [true 0 :fiddle/pull] ctx (controls :fiddle/pull))
-         :query ((:cell ctx) [true 0 :fiddle/query] ctx (controls :fiddle/query))
-         :blank nil
-         nil nil)
-       ((:cell ctx) [true 0 :fiddle/markdown] ctx (controls :fiddle/markdown))
-       ((:cell ctx) [true 0 :fiddle/css] ctx (controls :fiddle/css))
-       ((:cell ctx) [true 0 :fiddle/renderer] ctx (controls :fiddle/renderer))
-       (when-not embed-mode ((:cell ctx) [true 0 :fiddle/links] ctx-real (controls :fiddle/links)))
-       ((:cell ctx) [true 0 :fiddle/entrypoint?] ctx)
-       (when-not embed-mode ((:anchor ctx) :hyperfiddle/remove [0] ctx "Remove fiddle"))
-       (when-not embed-mode ((:browse ctx-real) :attribute-renderers [] ctx-real))
-       ])))
+    [:div.fiddle-src {:class class}
+     [:h3 (str ident) " source"]
+     ((:cell ctx) [true 0 :fiddle/ident] ctx)
+     ((:cell ctx) [true 0 :fiddle/type] ctx)
+     (case type
+       :entity ((:cell ctx) [true 0 :fiddle/pull] ctx (controls :fiddle/pull))
+       :query ((:cell ctx) [true 0 :fiddle/query] ctx (controls :fiddle/query))
+       :blank nil
+       nil nil)
+     ((:cell ctx) [true 0 :fiddle/markdown] ctx (controls :fiddle/markdown))
+     ((:cell ctx) [true 0 :fiddle/css] ctx (controls :fiddle/css))
+     ((:cell ctx) [true 0 :fiddle/renderer] ctx (controls :fiddle/renderer))
+     (when-not embed-mode ((:cell ctx) [true 0 :fiddle/links] ctx-real (controls :fiddle/links)))
+     ((:cell ctx) [true 0 :fiddle/entrypoint?] ctx)
+     (when-not embed-mode ((:anchor ctx) :hyperfiddle/remove [0] ctx "Remove fiddle"))
+     (when-not embed-mode ((:browse ctx-real) :attribute-renderers [] ctx-real))
+     ]))
 
 (defn docs-embed [& attrs]
   (fn [ctx-real class & {:keys [embed-mode]}]
