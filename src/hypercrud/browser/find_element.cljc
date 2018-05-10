@@ -28,6 +28,11 @@
                                   (cond
                                     (= sym '*) (into acc splat-attrs)
                                     (map? sym) (into acc (keys sym))
+                                    (or (vector? sym) (seq? sym)) (conj acc (condp = (first sym)
+                                                                              'default (second sym)
+                                                                              'limit (second sym)
+                                                                              ; otherwise attr-with-opts
+                                                                              (first sym)))
                                     :else (conj acc sym)))
                                 []
                                 pull-pattern)]

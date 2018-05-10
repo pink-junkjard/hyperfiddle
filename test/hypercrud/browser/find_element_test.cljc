@@ -16,6 +16,9 @@
                   :a/k {:db/ident :a/k
                         :db/cardinality {:db/ident :db.cardinality/one}
                         :db/valueType {:db/ident :db.type/string}}
+                  :a/v {:db/ident :a/v
+                        :db/cardinality {:db/ident :db.cardinality/many}
+                        :db/valueType {:db/ident :db.type/string}}
                   :a/x {:db/ident :a/x
                         :db/cardinality {:db/ident :db.cardinality/one}
                         :db/valueType {:db/ident :db.type/ref}}
@@ -44,12 +47,16 @@
 
 #?(:clj
    (defmacro test-defined-pull [fiddle pull->request]
-     (macroexpand
-       `(let [pull# [:db/id {:a/x [:db/id :b/x]} :a/y :a/z]
-              attributes# (->> @(auto-find-elements (build-ctx ~fiddle (~pull->request pull#) nil))
-                               (mapcat :fields)
-                               (mapv :attribute))]
-          (is (~'= [:a/x :a/y :a/z] attributes#))))))
+     (let [pull ''[:db/id
+                   [limit :a/v 1]
+                   {:a/x [:db/id :b/x]}
+                   [default :a/y "a/y default"]
+                   :a/z]]
+       (macroexpand
+         `(let [attributes# (->> @(auto-find-elements (build-ctx ~fiddle (~pull->request ~pull) nil))
+                                 (mapcat :fields)
+                                 (mapv :attribute))]
+            (is (~'= [:a/v :a/x :a/y :a/z] attributes#)))))))
 
 #?(:clj
    (defmacro test-splat [fiddle pull->request result-builder]
@@ -69,21 +76,23 @@
 
 #?(:clj
    (defmacro test-partial-splat [fiddle pull->request result-builder]
-     (macroexpand
-       `(let [result# (~result-builder [{:db/id 1
-                                         :a/k "uiop"
-                                         :a/z "asdf"}
-                                        {:db/id 2
-                                         :a/j "qwerty"
-                                         :a/x {:db/id 21 :b/x "hjkl"}
-                                         :a/z "zxcv"}])
-              attributes# (->> @(auto-find-elements (build-ctx ~fiddle (~pull->request [:a/a (symbol "*") :a/z]) result#))
-                               (mapcat :fields)
-                               (mapv :attribute))]
-          ; can only test order of defined attributes in relation to splat
-          (is (~'= :a/a (first attributes#)))
-          (is (~'= :a/z (last attributes#)))
-          (is (~'= #{:a/a :a/j :a/k :a/x :a/z} (into #{} attributes#)))))))
+     (let [pull ''[:a/a * (limit :a/v 1) (default :a/z "a/z default")]]
+       (macroexpand
+         `(let [result# (~result-builder [{:db/id 1
+                                           :a/k "uiop"
+                                           :a/z "asdf"}
+                                          {:db/id 2
+                                           :a/j "qwerty"
+                                           :a/v ["vbnm"]
+                                           :a/x {:db/id 21 :b/x "hjkl"}
+                                           :a/z "zxcv"}])
+                attributes# (->> @(auto-find-elements (build-ctx ~fiddle (~pull->request ~pull) result#))
+                                 (mapcat :fields)
+                                 (mapv :attribute))]
+            ; can only test order of defined attributes in relation to splat
+            (is (~'= :a/a (first attributes#)))
+            (is (~'= :a/z (last attributes#)))
+            (is (~'= #{:a/a :a/j :a/k :a/v :a/x :a/z} (into #{} attributes#))))))))
 
 #?(:clj
    (defmacro pull->attr-tests [fiddle pull->request result-builder]
