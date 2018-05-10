@@ -34,12 +34,12 @@
               (css-slugify ident)
               "auto-result"])))
 
-(letfn [(browse [rel #_dependent? path ctx & args]
-          (let [{[user-renderer & args] nil :as kwargs} (kwargs args)
+(letfn [(browse [rel #_dependent? path ctx ?f & ?args]
+          (let [props (kwargs ?args)
                 {:keys [:link/dependent? :link/path] :as link} @(r/track link/rel->link rel path ctx)
                 ctx (-> (context/relation-path ctx (into [dependent?] (unwrap (memoized-safe-read-edn-string (str "[" path "]")))))
-                        (as-> ctx (if user-renderer (assoc ctx :user-renderer user-renderer #_(if f #(apply f %1 %2 %3 %4 args))) ctx)))]
-            (into [ui-from-link link ctx (:class kwargs)] (apply concat (dissoc kwargs :class :children nil)))))
+                        (as-> ctx (if ?f (assoc ctx :user-renderer ?f #_(if ?f #(apply ?f %1 %2 %3 %4 ?args))) ctx)))]
+            (into [ui-from-link link ctx (:class props)] (apply concat (dissoc props :class :children nil)))))
         (anchor [rel #_dependent? path ctx label & args]
           (let [kwargs (kwargs args)
                 {:keys [:link/dependent? :link/path] :as link} @(r/track link/rel->link rel path ctx)
@@ -47,7 +47,7 @@
                 props (link/build-link-props link ctx)]
             [(:navigate-cmp ctx) props label (:class kwargs)]))
         (cell [[d i a] ctx & args]                          ; form only
-          (let [{[f & args] nil :as kwargs} (kwargs args)]
+          (let [{[f & args] nil :as props} (kwargs args)]
             [(or f
                  hypercrud.ui.form/Cell)
              (context/relation-path ctx [d i a])]))
@@ -101,7 +101,9 @@
                          (context/route [nil [(->ThinEntity "$" [:fiddle/ident (first (:route ctx))])]]))]]
       (base/process-results fiddle request ctx))
     (fn [e] (throw e))                                      ; just throw, this is inside a user-portal
-    (fn [ctx] [hyperfiddle.ide.fiddles.fiddle-src/fiddle-src-renderer ctx (auto-ui-css-class ctx) :embed-mode true])))
+    (fn [ctx]
+      (let [f (or (:user-renderer ctx) hyperfiddle.ide.fiddles.fiddle-src/fiddle-src-renderer)]
+        [f ctx (auto-ui-css-class ctx) :embed-mode true]))))
 
 (defn ui-comp [ctx]
   [user-portal (ui-error/error-comp ctx)
@@ -151,7 +153,7 @@
            [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]]]))]))
 
 (defn ui-from-link [link ctx ?class & args]
-  (let [kwargs (kwargs args)
+  (let [props (kwargs args)
         error-comp (ui-error/error-comp ctx)
         hidden' (->> (try-either (link/build-link-props link ctx)) ; todo we want the actual error from the link props
                      (cats/fmap :hidden))]
@@ -160,6 +162,6 @@
      (fn [link-props]
        (if (:hidden link-props)
          [:noscript]
-         [stale/loading (stale/can-be-loading? ctx) (routing/build-route' link ctx (:frag kwargs))
+         [stale/loading (stale/can-be-loading? ctx) (routing/build-route' link ctx (:frag props))
           (fn [e] [error-comp e])
           (fn [route] [ui-from-route route ctx (classes ?class (css-slugify (:link/rel link)))])]))]))

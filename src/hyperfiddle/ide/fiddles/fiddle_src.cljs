@@ -40,32 +40,44 @@
    :fiddle/renderer "See [:fiddle/renderer examples](http://www.hyperfiddle.net/:docs!fiddle-renderer/)."
    :fiddle/links "See [:fiddle/links examples](http://www.hyperfiddle.net/:docs!fiddle-links/)."})
 
+(def controls
+  {:fiddle/pull (r/partial cell-wrap (r/partial control-with-unders (fragment :_ [:span.schema "schema: " (schema-links ctx)] [markdown (:fiddle/pull underdocs)])))
+   :fiddle/query (r/partial cell-wrap (r/partial control-with-unders (fragment :_ [:span.schema "schema: " (schema-links ctx)] [markdown (:fiddle/query underdocs)])))
+   :fiddle/markdown (r/partial cell-wrap (r/partial control-with-unders [markdown (:fiddle/markdown underdocs)]))
+   :fiddle/css (r/partial cell-wrap (r/partial control-with-unders [markdown (:fiddle/css underdocs)]))
+   :fiddle/renderer (r/partial cell-wrap (r/partial control-with-unders [markdown (:fiddle/renderer underdocs)]))
+   :fiddle/links (r/partial cell-wrap (r/partial control-with-unders [markdown (:fiddle/links underdocs)]))
+   })
+
 (defn fiddle-src-renderer [ctx-real class & {:keys [embed-mode]}]
-  #_(hypercrud.ui.result/fiddle ctx-real)
   (let [ctx-real (dissoc ctx-real :user-renderer)           ; this needs to not escape this level; inline links can't ever get it
-        ctx' (shadow-fiddle ctx-real)
-        rtype (:fiddle/type @(:hypercrud.browser/result ctx'))]
-    [:div {:class (str class " fiddle-src")}
-     [:h3 "fiddle src"]
-     ((:cell ctx') [true 0 :fiddle/ident] ctx')
-     ;((:cell ctx') [true 0 :db/doc] ctx')
-     ((:cell ctx') [true 0 :fiddle/type] ctx')
-     (case rtype
-       :entity ((:cell ctx') [true 0 :fiddle/pull] ctx'
-                 (r/partial cell-wrap (r/partial control-with-unders (fragment :_ [:span.schema "schema: " (schema-links ctx')] [markdown (:fiddle/pull underdocs)]))))
-       :query ((:cell ctx') [true 0 :fiddle/query] ctx'
-                (r/partial cell-wrap (r/partial control-with-unders (fragment :_ [:span.schema "schema: " (schema-links ctx')] [markdown (:fiddle/query underdocs)]))))
+        ctx (shadow-fiddle ctx-real)
+        {:keys [:fiddle/type :fiddle/ident]} @(:hypercrud.browser/result ctx)]
+    [:div.fiddle-src {:class class}
+     [:h3 (str ident) " source"]
+     ((:cell ctx) [true 0 :fiddle/ident] ctx)
+     ((:cell ctx) [true 0 :fiddle/type] ctx)
+     (case type
+       :entity ((:cell ctx) [true 0 :fiddle/pull] ctx (:fiddle/pull controls))
+       :query ((:cell ctx) [true 0 :fiddle/query] ctx (:fiddle/query controls))
        :blank nil
        nil nil)
-     ((:cell ctx') [true 0 :fiddle/markdown] ctx' (r/partial cell-wrap (r/partial control-with-unders [markdown (:fiddle/markdown underdocs)])))
-     ((:cell ctx') [true 0 :fiddle/css] ctx' (r/partial cell-wrap (r/partial control-with-unders [markdown (:fiddle/css underdocs)])))
-     ((:cell ctx') [true 0 :fiddle/renderer] ctx' (r/partial cell-wrap (r/partial control-with-unders [markdown (:fiddle/renderer underdocs)])))
-     (when-not embed-mode
-       ((:cell ctx') [true 0 :fiddle/links] ctx-real (r/partial cell-wrap (r/partial control-with-unders [markdown (:fiddle/links underdocs)]))))
-     ((:cell ctx') [true 0 :fiddle/entrypoint?] ctx')
-     ;((:cell ctx') [true 0 :fiddle/bindings] ctx')
-     (when-not embed-mode
-       ((:anchor ctx') :hyperfiddle/remove [0] ctx' "Remove fiddle"))
-     (when-not embed-mode
-       ((:browse ctx-real) :attribute-renderers [] ctx-real))
+     ((:cell ctx) [true 0 :fiddle/markdown] ctx (:fiddle/markdown controls))
+     ((:cell ctx) [true 0 :fiddle/css] ctx (:fiddle/css controls))
+     ((:cell ctx) [true 0 :fiddle/renderer] ctx (:fiddle/renderer controls))
+     (when-not embed-mode ((:cell ctx) [true 0 :fiddle/links] ctx-real (:fiddle/links controls)))
+     ((:cell ctx) [true 0 :fiddle/entrypoint?] ctx)
+     (when-not embed-mode ((:anchor ctx) :hyperfiddle/remove [0] ctx "Remove fiddle"))
+     (when-not embed-mode ((:browse ctx-real) :attribute-renderers [] ctx-real))
      ]))
+
+(defn docs-embed [& attrs]
+  (fn [ctx-real class & {:keys [embed-mode]}]
+    (let [ctx-real (dissoc ctx-real :user-renderer)         ; this needs to not escape this level; inline links can't ever get it
+          ctx (shadow-fiddle ctx-real)
+          {:keys [:fiddle/ident]} @(:hypercrud.browser/result ctx)]
+      (into
+        [:div.fiddle-src {:class class}
+         #_[:h3 (str ident) " source"]]
+        (for [k attrs]
+          ((:cell ctx) [true 0 k] ctx (controls ctx)))))))
