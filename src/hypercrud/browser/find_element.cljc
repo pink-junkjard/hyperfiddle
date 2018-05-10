@@ -26,7 +26,16 @@
 (defn pull->fields [pull-pattern inferred-attrs fe-name]
   (let [explicit-attrs (reduce (fn [acc sym]
                                  (cond
-                                   (map? sym) (into acc (keys sym))
+                                   (map? sym) (->> (keys sym)
+                                                   (map (fn [k]
+                                                          (cond
+                                                            (or (vector? k) (seq? k)) (if (= 'limit (first k))
+                                                                                        (second k)
+                                                                                        ; else something is missing from the pull spec
+                                                                                        nil)
+                                                            ; attr
+                                                            :else k)))
+                                                   (into acc))
                                    (or (vector? sym) (seq? sym)) (conj acc (condp = (first sym)
                                                                              'default (second sym)
                                                                              'limit (second sym)
