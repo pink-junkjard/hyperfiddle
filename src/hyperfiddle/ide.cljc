@@ -160,7 +160,7 @@
   {:pre [route (not (string? route))]}
   (case (get-in ctx [::runtime/branch-aux ::foo])
     "page" (into (browser/request-from-route route (page-target-context ctx route))
-                 (when (activate-ide? (foundation/hostname->hf-domain-name ctx))
+                 (when true #_(activate-ide? (foundation/hostname->hf-domain-name ctx))
                    (browser/request-from-route (ide-route route) (page-ide-context ctx route))))
     "ide" (browser/request-from-route route (leaf-ide-context ctx))
     "user" (browser/request-from-route route (leaf-target-context ctx route))))

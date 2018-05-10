@@ -19,7 +19,7 @@
          (->> children
               (map reagent-server/render-to-string)
               (string/join "\n"))
-         (catch js/Error e
+         (catch :default e                                  ; sometimes we throw loading hashmaps
            (reagent-server/render-to-string [with-error e])))}}]))
 
 (code-for-browser
