@@ -23,24 +23,23 @@
        :splat? false
        :type :variable})))
 
+(defn attr-with-opts-or-expr [list-or-vec]
+  (condp = (first list-or-vec)
+    'default (second list-or-vec)
+    'limit (second list-or-vec)
+    ; otherwise attr-with-opts
+    (first list-or-vec)))
+
 (defn pull->fields [pull-pattern inferred-attrs fe-name]
   (let [explicit-attrs (reduce (fn [acc sym]
                                  (cond
                                    (map? sym) (->> (keys sym)
                                                    (map (fn [k]
-                                                          (cond
-                                                            (or (vector? k) (seq? k)) (if (= 'limit (first k))
-                                                                                        (second k)
-                                                                                        ; else something is missing from the pull spec
-                                                                                        nil)
-                                                            ; attr
-                                                            :else k)))
+                                                          (if (or (vector? k) (seq? k))
+                                                            (attr-with-opts-or-expr k)
+                                                            k)))
                                                    (into acc))
-                                   (or (vector? sym) (seq? sym)) (conj acc (condp = (first sym)
-                                                                             'default (second sym)
-                                                                             'limit (second sym)
-                                                                             ; otherwise attr-with-opts
-                                                                             (first sym)))
+                                   (or (vector? sym) (seq? sym)) (conj acc (attr-with-opts-or-expr sym))
                                    ; attr or wildcard
                                    :else (conj acc sym)))
                                []

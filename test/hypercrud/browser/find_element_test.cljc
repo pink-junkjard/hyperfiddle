@@ -16,6 +16,12 @@
                   :a/k {:db/ident :a/k
                         :db/cardinality {:db/ident :db.cardinality/one}
                         :db/valueType {:db/ident :db.type/string}}
+                  :a/s {:db/ident :a/s
+                        :db/cardinality {:db/ident :db.cardinality/one}
+                        :db/valueType {:db/ident :db.type/ref}}
+                  :a/t {:db/ident :a/t
+                        :db/cardinality {:db/ident :db.cardinality/one}
+                        :db/valueType {:db/ident :db.type/ref}}
                   :a/u {:db/ident :a/u
                         :db/cardinality {:db/ident :db.cardinality/many}
                         :db/valueType {:db/ident :db.type/ref}}
@@ -58,7 +64,8 @@
                    [:a/j :limit 1]
                    [:a/k :default "k default"]
                    [limit :a/v 1]
-                   {[limit :a/u nil] [*]
+                   {[:a/t :as "T"] [*]
+                    [limit :a/u nil] [*]
                     :a/x [:db/id :b/x]}
                    [default :a/y "a/y default"]
                    :a/z]]
@@ -66,7 +73,7 @@
          `(let [attributes# (->> @(auto-find-elements (build-ctx ~fiddle (~pull->request ~pull) nil))
                                  (mapcat :fields)
                                  (mapv :attribute))]
-            (is (~'= [:a/a :a/j :a/k :a/v :a/u :a/x :a/y :a/z] attributes#)))))))
+            (is (~'= [:a/a :a/j :a/k :a/v :a/t :a/u :a/x :a/y :a/z] attributes#)))))))
 
 #?(:clj
    (defmacro test-splat [fiddle pull->request result-builder]
@@ -89,17 +96,21 @@
      (let [pull ''[:a/a
                    *
                    (limit :a/v 1)
-                   {(limit :a/u 2) [*]
+                   {(default :a/s {}) [*]
+                    [:a/t :as "T"] [*]
+                    (limit :a/u 2) [*]
                     :a/x [*]}
                    (default :a/z "a/z default")]]
        (macroexpand
          `(let [result# (~result-builder [{:db/id 1
                                            :a/k "uiop"
+                                           :a/s {}
                                            :a/u [{:db/id 31 :b/y "fghj"}
                                                  {:db/id 32 :b/y "qazwsx"}]
                                            :a/z "asdf"}
                                           {:db/id 2
                                            :a/j "qwerty"
+                                           :a/s {}
                                            :a/v ["vbnm"]
                                            :a/x {:db/id 21 :b/x "hjkl"}
                                            :a/z "zxcv"}])
@@ -110,7 +121,7 @@
             (is (~'= :a/a (first attributes#)))
             (is (~'= :a/z (last attributes#)))
             (is (~'= (count attributes#) (count (into #{} attributes#))))
-            (is (~'= #{:a/a :a/j :a/k :a/u :a/v :a/x :a/z} (into #{} attributes#))))))))
+            (is (~'= #{:a/a :a/j :a/k :a/s :a/t :a/u :a/v :a/x :a/z} (into #{} attributes#))))))))
 
 #?(:clj
    (defmacro pull->attr-tests [fiddle pull->request result-builder]
