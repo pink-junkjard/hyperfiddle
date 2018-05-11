@@ -1,5 +1,5 @@
 (ns hypercrud.browser.find-element-test
-  #?(:cljs (:require-macros [hypercrud.browser.find-element-test :refer [test-defined-pull test-partial-splat test-splat]]))
+  #?(:cljs (:require-macros [hypercrud.browser.find-element-test :refer [pull->attr-tests test-defined-pull test-partial-splat test-splat]]))
   (:require [clojure.test :refer [deftest is]]
             [contrib.reactive :as r]
             [hypercrud.browser.find-element :refer [auto-find-elements]]
