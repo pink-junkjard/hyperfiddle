@@ -52,6 +52,7 @@
                      [attr])))
          (remove #(= :db/id %))
          (mapv (fn [attr]
+                 ;{:pre [(keyword? attr)]}
                  (map->Field {:id (hash [fe-name attr])
                               :attribute attr
                               :cell-data->value attr}))))))
