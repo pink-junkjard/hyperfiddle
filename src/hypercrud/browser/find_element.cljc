@@ -23,38 +23,51 @@
        :splat? false
        :type :variable})))
 
-(defn attr-with-opts-or-expr [list-or-vec]
-  (condp = (first list-or-vec)
-    'default (second list-or-vec)
-    'limit (second list-or-vec)
-    ; otherwise attr-with-opts
-    (first list-or-vec)))
+(let [alias->value (fn [alias cell-data] (get cell-data alias))]
+  (defn attr-with-opts-or-expr [fe-name list-or-vec]
+    (if (#{'default 'limit} (first list-or-vec))
+      (let [attr (second list-or-vec)]
+        (map->Field {:id (hash [fe-name attr])
+                     :attribute attr
+                     :cell-data->value attr}))
+      ; otherwise attr-with-opts
+      (let [[attr & {:as opts}] list-or-vec]
+        (map->Field {:id (hash [fe-name attr])
+                     :attribute attr
+                     :cell-data->value (or (some->> (:as opts) (r/partial alias->value)) attr)})))))
 
 (defn pull->fields [pull-pattern inferred-attrs fe-name]
-  (let [explicit-attrs (reduce (fn [acc sym]
-                                 (cond
-                                   (map? sym) (->> (keys sym)
-                                                   (map (fn [k]
-                                                          (if (or (vector? k) (seq? k))
-                                                            (attr-with-opts-or-expr k)
-                                                            k)))
-                                                   (into acc))
-                                   (or (vector? sym) (seq? sym)) (conj acc (attr-with-opts-or-expr sym))
-                                   ; attr or wildcard
-                                   :else (conj acc sym)))
-                               []
-                               pull-pattern)]
-    (->> explicit-attrs
-         (mapcat (fn [attr]
-                   (if (= '* attr)
-                     (sort (set/difference (set inferred-attrs) (set explicit-attrs)))
-                     [attr])))
-         (remove #(= :db/id %))
-         (mapv (fn [attr]
-                 ;{:pre [(keyword? attr)]}
-                 (map->Field {:id (hash [fe-name attr])
-                              :attribute attr
-                              :cell-data->value attr}))))))
+  (let [explicit-fields (reduce (fn [acc sym]
+                                  (cond
+                                    (map? sym) (->> (keys sym)
+                                                    (map (fn [k]
+                                                           (if (or (vector? k) (seq? k))
+                                                             (attr-with-opts-or-expr fe-name k)
+                                                             (map->Field {:id (hash [fe-name k])
+                                                                          :attribute k
+                                                                          :cell-data->value k}))))
+                                                    (into acc))
+                                    (or (vector? sym) (seq? sym)) (conj acc (attr-with-opts-or-expr fe-name sym))
+                                    (= '* sym) (conj acc sym)
+                                    :else (conj acc (map->Field {:id (hash [fe-name sym])
+                                                                 :attribute sym
+                                                                 :cell-data->value sym}))))
+                                []
+                                pull-pattern)]
+    (->> explicit-fields
+         (mapcat (fn [field-or-wildcard]
+                   (if (= '* field-or-wildcard)
+                     (let [explicit-attrs (->> explicit-fields
+                                               (remove #(= '* %))
+                                               (map :attribute))]
+                       (->> (set/difference (set inferred-attrs) (set explicit-attrs))
+                            (sort)
+                            (map #(map->Field {:id (hash [fe-name %])
+                                               :attribute %
+                                               :cell-data->value %}))))
+                     [field-or-wildcard])))
+         (remove #(= :db/id (:attribute %)))
+         vec)))
 
 (defn pull-cell->fe [cell source-symbol fe-name pull-pattern]
   (let [splat? (not (empty? (filter #(= '* %) pull-pattern)))]
