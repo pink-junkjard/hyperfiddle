@@ -37,6 +37,7 @@
       ; otherwise attr-with-opts
       (let [[attr & {:as opts}] list-or-vec]
         (map->Field {:id (hash [fe-name attr])
+                     :-alias (:as opts)
                      :label (if-let [alias (:as opts)]
                               (if (string? alias) alias (pr-str alias))
                               (keyword->label attr))
@@ -68,7 +69,7 @@
                    (if (= '* field-or-wildcard)
                      (let [explicit-attrs (->> explicit-fields
                                                (remove #(= '* %))
-                                               (map :attribute))]
+                                               (map #(or (:-alias %) (:attribute %))))]
                        (->> (set/difference (set inferred-attrs) (set explicit-attrs))
                             (sort)
                             (map #(map->Field {:id (hash [fe-name %])

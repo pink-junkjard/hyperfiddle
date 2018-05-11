@@ -105,6 +105,7 @@
          `(let [result# (~result-builder [{:db/id 1
                                            :a/k "uiop"
                                            :a/s {}
+                                           "T" {}
                                            :a/u [{:db/id 31 :b/y "fghj"}
                                                  {:db/id 32 :b/y "qazwsx"}]
                                            :a/z "asdf"}
