@@ -41,5 +41,5 @@
                      [:div.docstring [markdown help-md]])
      [:label {:class (if help-md "help-available")}
       ; common crash point; todo use field, attribute is explicitly NOT always defined
-      (some-> (:hypercrud.browser/attribute ctx) name str)
+      (:label field)
       (if help-md [:sup "†"])]]))

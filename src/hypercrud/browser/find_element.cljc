@@ -10,13 +10,16 @@
 
 (defrecord FindElement [name fields source-symbol splat? type])
 
-(defrecord Field [id attribute cell-data->value])
+(defrecord Field [id label attribute cell-data->value])
+
+(def keyword->label #(some-> % name str))
 
 (defn variable->fe [element]
   (let [name (str (:symbol element))]
     (map->FindElement
       {:name name
        :fields [(map->Field {:id (hash name)
+                             :label name
                              :attribute nil
                              :cell-data->value identity})]
        :source-symbol nil
@@ -28,11 +31,15 @@
     (if (#{'default 'limit} (first list-or-vec))
       (let [attr (second list-or-vec)]
         (map->Field {:id (hash [fe-name attr])
+                     :label (keyword->label attr)
                      :attribute attr
                      :cell-data->value attr}))
       ; otherwise attr-with-opts
       (let [[attr & {:as opts}] list-or-vec]
         (map->Field {:id (hash [fe-name attr])
+                     :label (if-let [alias (:as opts)]
+                              (if (string? alias) alias (pr-str alias))
+                              (keyword->label attr))
                      :attribute attr
                      :cell-data->value (or (some->> (:as opts) (r/partial alias->value)) attr)})))))
 
@@ -44,12 +51,14 @@
                                                            (if (or (vector? k) (seq? k))
                                                              (attr-with-opts-or-expr fe-name k)
                                                              (map->Field {:id (hash [fe-name k])
+                                                                          :label (keyword->label k)
                                                                           :attribute k
                                                                           :cell-data->value k}))))
                                                     (into acc))
                                     (or (vector? sym) (seq? sym)) (conj acc (attr-with-opts-or-expr fe-name sym))
                                     (= '* sym) (conj acc sym)
                                     :else (conj acc (map->Field {:id (hash [fe-name sym])
+                                                                 :label (keyword->label sym)
                                                                  :attribute sym
                                                                  :cell-data->value sym}))))
                                 []
@@ -63,6 +72,7 @@
                        (->> (set/difference (set inferred-attrs) (set explicit-attrs))
                             (sort)
                             (map #(map->Field {:id (hash [fe-name %])
+                                               :label (keyword->label %)
                                                :attribute %
                                                :cell-data->value %}))))
                      [field-or-wildcard])))
@@ -99,6 +109,7 @@
     (map->FindElement
       {:name name
        :fields [(map->Field {:id (hash name)
+                             :label name
                              :attribute nil
                              :cell-data->value identity})]
        :source-symbol nil
