@@ -54,6 +54,9 @@
 #?(:clj
    (defmacro test-defined-pull [fiddle pull->request]
      (let [pull ''[:db/id
+                   [:a/a :as "A"]
+                   [:a/j :limit 1]
+                   [:a/k :default "k default"]
                    [limit :a/v 1]
                    {[limit :a/u nil] [*]
                     :a/x [:db/id :b/x]}
@@ -63,7 +66,7 @@
          `(let [attributes# (->> @(auto-find-elements (build-ctx ~fiddle (~pull->request ~pull) nil))
                                  (mapcat :fields)
                                  (mapv :attribute))]
-            (is (~'= [:a/v :a/u :a/x :a/y :a/z] attributes#)))))))
+            (is (~'= [:a/a :a/j :a/k :a/v :a/u :a/x :a/y :a/z] attributes#)))))))
 
 #?(:clj
    (defmacro test-splat [fiddle pull->request result-builder]
