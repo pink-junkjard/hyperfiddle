@@ -83,7 +83,16 @@
            :fiddle/links (r/partial cell-wrap nil)}]
       (fn [ctx-real class & {:keys [embed-mode]}]
         (into
-          [:div.fiddle-src {:class class}
-           #_[:h3 (str ident) " source"]]
+          [:div.fiddle-src {:class class}]
           (for [k attrs]
-            ((:cell ctx) [true 0 k] ctx (controls k))))))))
+            [(:cell ctx) [true 0 k] ctx (controls k)]))))))
+
+(defn ^:export hyperfiddle-live [rel ctx & fiddle-attrs]
+  [:div.hyperfiddle-live-editor.unp
+   [:div.row
+    [:div.col-sm-7
+     [:div "Live Hyperfiddle editor:"]
+     ((:browse ctx) rel [] ctx (apply docs-embed fiddle-attrs) :frag ":src" :class "devsrc")]
+    [:div.col-sm-5
+     [:div "Result:"]
+     ((:browse ctx) rel [] ctx)]]])
