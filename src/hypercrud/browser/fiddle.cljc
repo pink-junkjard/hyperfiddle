@@ -1,6 +1,7 @@
 (ns hypercrud.browser.fiddle
   (:require
-    [contrib.string :refer [or-str]]))
+    [contrib.string :refer [or-str]]
+    [cuerdas.core :as str]))
 
 
 (defn data-defaults [fiddle]
@@ -12,5 +13,5 @@
 
 (defn fiddle-defaults [fiddle]
   (-> (data-defaults fiddle)
-      (update :fiddle/markdown or-str "!result[]")
+      (update :fiddle/markdown or-str (str/fmt "### %s\n\n!result[]" (some-> fiddle :fiddle/ident name)))
       (update :fiddle/renderer or-str #?(:clj nil :cljs (-> hypercrud.ui.result/fiddle meta :expr-str)))))

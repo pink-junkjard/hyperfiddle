@@ -4,12 +4,21 @@
     [cuerdas.core :as str]))
 
 
+(def expr
+  '[:div {:class class}
+    (let [fiddle @(:hypercrud.browser/fiddle ctx)]
+      [hyperfiddle.ui/markdown (:fiddle/markdown fiddle) ctx])])
+
+(def expr-manually-formatted
+  ; Format this manually because:
+  ; - Syntax quote will expand @ into `(clojure.core/deref ..)`
+  ; - pretty printers suck at clojure, even the slow one
+  ; embedded newline lets this pass the cursive clojure formatter
+  "
+[:div {:class class}
+ (let [fiddle @(:hypercrud.browser/fiddle ctx)]
+   [hyperfiddle.ui/markdown (:fiddle/markdown fiddle) ctx])]")
+
 (defmacro -build-fiddle []                                  ; Pretty print at compile-time
-    (let [expr '[:div {:class class}
-                 [:h3 (some-> ctx :hypercrud.browser/fiddle deref :fiddle/ident name)]
-                 (hypercrud.ui.control.link-controls/anchors [] false ctx :class "hyperfiddle-link-index")
-                 [hypercrud.ui.control.markdown-rendered/markdown (some-> ctx :hypercrud.browser/fiddle deref :fiddle/markdown) ctx]
-                 (hypercrud.ui.control.link-controls/iframes [] false ctx)]]
-      `(with-meta (~'fn ~'[ctx & [class]] ~expr)
-                  {:expr-str ~(str/rtrim                    ; pretty printer adds undesired newline
-                                (slow-pprint-str expr))})))
+  `(with-meta (~'fn ~'[ctx & [class]] ~expr)
+              {:expr-str ~(str/ltrim expr-manually-formatted "\n")}))

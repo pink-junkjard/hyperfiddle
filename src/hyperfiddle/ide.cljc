@@ -28,6 +28,7 @@
     #?(:cljs [contrib.reagent])
             [hypercrud.ui.auto-control]
     #?(:cljs [hypercrud.ui.result])
+    #?(:cljs [hyperfiddle.ui])                              ; todo all ui deps here
 
     ; pull in the entire ide app for reference from user-land
             [hyperfiddle.ide.actions]
