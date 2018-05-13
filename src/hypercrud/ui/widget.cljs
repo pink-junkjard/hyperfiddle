@@ -6,15 +6,9 @@
             [hypercrud.browser.link :as link]
             [hypercrud.ui.control.link-controls :as link-controls]
             [hypercrud.ui.input :as input]
-
-    ;user land (todo these should be in a core hc.ui namespace; widget is arbitrary)
             [hypercrud.ui.attribute.checkbox :refer [checkbox]]
-            [hypercrud.ui.attribute.code]
-            [hypercrud.ui.attribute.markdown-editor]
-            [hypercrud.ui.attribute.tristate-boolean]
-            [hypercrud.ui.radio]
             [hypercrud.ui.select :refer [select*]]
-            [hypercrud.ui.textarea]))
+            ))
 
 
 (defn keyword [maybe-field props ctx]

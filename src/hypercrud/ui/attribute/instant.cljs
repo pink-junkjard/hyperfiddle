@@ -1,6 +1,6 @@
 (ns hypercrud.ui.attribute.instant
   (:require [contrib.datomic-tx :as tx]
-            [hypercrud.ui.control.instant :as instant]
+            [contrib.ui.recom-date :refer [recom-date]]
             [hypercrud.ui.control.link-controls :as link-controls]))
 
 
@@ -9,8 +9,8 @@
     [:div.value.hyperfiddle-ui-instant
      [:div.anchors (link-controls/anchors path true ctx)]
      (let [change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))
-           widget (case (:layout ctx) :block instant/recom-date*
-                                      :inline-block instant/recom-date*
-                                      :table instant/recom-date*)]
+           widget (case (:layout ctx) :block recom-date
+                                      :inline-block recom-date
+                                      :table recom-date)]
        [widget @(:value ctx) change! props])
      (link-controls/iframes path true ctx)]))

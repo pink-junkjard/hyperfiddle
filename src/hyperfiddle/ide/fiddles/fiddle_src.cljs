@@ -4,7 +4,7 @@
             [contrib.reagent :refer [fragment]]
             [hypercrud.types.URI :refer [is-uri?]]
             [hypercrud.ui.auto-control :refer [auto-control']]
-            [hypercrud.ui.control.markdown-rendered :refer [markdown]]
+            [hyperfiddle.ui :refer [markdown]]
             [hypercrud.ui.form :refer [form-cell]]
             [hypercrud.ui.tooltip :refer [tooltip]]
             [hyperfiddle.ide.fiddles.topnav :refer [shadow-fiddle]]))

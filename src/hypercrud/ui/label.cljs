@@ -1,7 +1,7 @@
 (ns hypercrud.ui.label
   (:require [contrib.reactive :as r]
             [cuerdas.core :as str]
-            [hypercrud.ui.control.markdown-rendered :refer [markdown]]
+            [hyperfiddle.ui :refer [markdown]]
             [hypercrud.ui.tooltip :refer [tooltip-thick]]))
 
 

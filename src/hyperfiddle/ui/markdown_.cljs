@@ -11,7 +11,7 @@
     [cuerdas.core :as str]
     [goog.object]
     [hypercrud.browser.context :as context]
-    [hyperfiddle.core :refer [read-eval-with-bindings]]
+    [hyperfiddle.eval :refer [read-eval-with-bindings]]
     [reagent.core :as reagent]))
 
 

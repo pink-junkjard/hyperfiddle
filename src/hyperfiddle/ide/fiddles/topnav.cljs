@@ -13,7 +13,7 @@
             [hypercrud.browser.router :as router]
             [hypercrud.browser.system-fiddle :as system-fiddle]
             [hypercrud.types.Entity :refer [->Entity shadow-entity]]
-            [hypercrud.ui.control.markdown-rendered :refer [markdown]]
+            [hyperfiddle.ui :refer [markdown]]
             [hypercrud.ui.radio :as radio]
             [hypercrud.ui.result :as result]
             [hypercrud.ui.tooltip :refer [tooltip]]

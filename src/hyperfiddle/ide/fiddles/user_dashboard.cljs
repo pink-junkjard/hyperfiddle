@@ -1,6 +1,6 @@
 (ns hyperfiddle.ide.fiddles.user-dashboard
   (:require [contrib.reactive :as r]
-            [hypercrud.ui.control.markdown-rendered :refer [markdown]]
+            [hyperfiddle.ui :refer [markdown]]
             [hypercrud.ui.native-event-listener :refer [native-on-click-listener]]
             [hyperfiddle.ide.actions :as ide-actions]
             [hyperfiddle.runtime :as runtime]))
@@ -19,7 +19,7 @@
       ; todo https://auth0.com/docs/logout
       [:span.nav-link.auth {:key :logout}
        [:a {:href "/logout"} "logout"]]])
-   [hypercrud.ui.control.markdown-rendered/markdown (some-> ctx :hypercrud.browser/fiddle deref :fiddle/markdown) ctx]
+   [hyperfiddle.ui/markdown (some-> ctx :hypercrud.browser/fiddle deref :fiddle/markdown) ctx]
    [:ul.link-list
     (->> @(:hypercrud.browser/result ctx)
          (sort-by :domain/ident)

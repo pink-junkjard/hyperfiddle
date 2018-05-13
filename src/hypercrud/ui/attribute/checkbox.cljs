@@ -1,6 +1,6 @@
 (ns hypercrud.ui.attribute.checkbox
   (:require [contrib.datomic-tx :as tx]
-            [hypercrud.ui.control.checkbox :refer [checkbox*]]
+            [contrib.ui]
             [hypercrud.ui.control.link-controls :as link-controls]))
 
 
@@ -12,5 +12,5 @@
       (let [change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx)
                                                                @(:hypercrud.browser/fat-attribute ctx)
                                                                (not @(:value ctx))))]
-        (checkbox* (:value ctx) change! props))]
+        (contrib.ui/checkbox (:value ctx) change! props))]
      (link-controls/iframes path true ctx)]))

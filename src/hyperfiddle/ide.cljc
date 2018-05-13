@@ -23,15 +23,6 @@
             [promesa.core :as p]
             [taoensso.timbre :as timbre]
 
-    ; pull in public ui deps
-    ; todo these hc.ui.* should be reduced to one require e.g. [hypercrud.ui]
-    #?(:cljs [contrib.reagent])
-            [hypercrud.ui.auto-control]
-    #?(:cljs [hypercrud.ui.result])
-    #?(:cljs [contrib.ui])
-    #?(:cljs [hyperfiddle.ui])
-
-
     ; pull in the entire ide app for reference from user-land
             [hyperfiddle.ide.actions]
     #?(:cljs [hyperfiddle.ide.fiddles.domain])

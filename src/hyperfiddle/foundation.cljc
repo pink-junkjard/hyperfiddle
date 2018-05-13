@@ -13,7 +13,7 @@
             [hypercrud.client.core :as hc]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.Err :as Err]
-    #?(:cljs [hypercrud.ui.control.code :refer [code*]])
+    #?(:cljs [contrib.ui :refer [code]])
     #?(:cljs [hypercrud.ui.stale :as stale])
             [hyperfiddle.foundation.actions :as foundation-actions]
             [hyperfiddle.runtime :as runtime]
@@ -108,7 +108,7 @@
      (let [stage-val @(runtime/state peer [:stage])
            edn (pprint-str stage-val 70)]
        ; todo this can throw
-       [code* edn #(runtime/dispatch! peer (foundation-actions/reset-stage peer (read-edn-string %)))])))
+       [code edn #(runtime/dispatch! peer (foundation-actions/reset-stage peer (read-edn-string %)))])))
 
 #?(:cljs
    (defn leaf-view [route ctx f]

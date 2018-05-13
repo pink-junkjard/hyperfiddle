@@ -4,9 +4,9 @@
             [hypercrud.browser.base :as base]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.system-fiddle :as system-fiddle]
-            [hypercrud.ui.control.markdown-rendered :refer [markdown]]
             [hypercrud.ui.error :as ui-error]
-            [hypercrud.ui.result :as result]))
+            [hypercrud.ui.result :as result]
+            [hyperfiddle.ui :refer [markdown]]))
 
 (defn links->result [links]
   (->> @links

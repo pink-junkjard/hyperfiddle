@@ -1,6 +1,6 @@
 (ns hypercrud.ui.control.markdown-rendered
   (:require
-    [hyperfiddle.ui.markdown-]))
+    [hyperfiddle.ui]))
 
 
-(def ^:export markdown hyperfiddle.ui.markdown-/markdown-)
+(def ^:export markdown hyperfiddle.ui/markdown)
