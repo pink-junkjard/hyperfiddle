@@ -122,10 +122,6 @@
 
    })
 
-; https://github.com/medfreeman/remark-generic-extensions
-; https://github.com/zestedesavoir/zmarkdown/tree/master/packages/remark-grid-tables
-; https://github.com/zestedesavoir/zmarkdown/tree/master/packages/remark-custom-blocks
-
 (def remarkInstance (-> (js/remark)
                         (.use js/remarkGenericExtensions
                               (clj->js

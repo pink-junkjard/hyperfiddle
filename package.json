@@ -13,8 +13,6 @@
     "react-dom": "16.2.0",
     "react-slick": "^0.23.1",
     "remark": "^8.0.0",
-    "remark-custom-blocks": "^1.0.6",
-    "remark-grid-tables": "^1.0.6",
     "remark-react": "^4.0.1",
     "request": "2.81.0",
     "slick-carousel": "^1.8.1",

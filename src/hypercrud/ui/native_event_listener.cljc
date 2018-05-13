@@ -1,6 +1,7 @@
 (ns hypercrud.ui.native-event-listener
-  #?(:cljs (:require [reagent.core :as reagent]
-             [reagent.impl.util :refer [PartialFn]])))
+  (:require
+    #?(:cljs [reagent.core :as reagent])
+    #?(:cljs [reagent.impl.util :refer [PartialFn]])))
 
 
 ; this doesn't handle component-did-update
