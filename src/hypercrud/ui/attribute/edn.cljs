@@ -2,8 +2,8 @@
   (:require [clojure.set :as set]
             [contrib.datomic-tx :as tx]
             [contrib.reactive :as r]
+            [contrib.ui :refer [edn-block edn-inline-block]]
             [hypercrud.browser.link :as link]
-            [hypercrud.ui.control.edn :refer [edn-block* edn-inline-block*]]
             [hypercrud.ui.control.link-controls :as link-controls]))
 
 
@@ -20,9 +20,9 @@
                     ((:user-with! ctx) (tx/edit-entity (-> ctx :cell-data deref :db/id)
                                                        (:hypercrud.browser/attribute ctx)
                                                        rets adds))))
-        widget (case (:layout ctx) :block edn-block*
-                                   :inline-block edn-inline-block*
-                                   :table edn-inline-block*)
+        widget (case (:layout ctx) :block edn-block
+                                   :inline-block edn-inline-block
+                                   :table edn-inline-block)
         path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div.value
      [:div.anchors (link-controls/anchors path true ctx link/options-processor)]
@@ -31,9 +31,9 @@
 
 (defn edn [maybe-field props ctx]
   (let [change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))
-        widget (case (:layout ctx) :block edn-block*
-                                   :inline-block edn-inline-block*
-                                   :table edn-inline-block*)
+        widget (case (:layout ctx) :block edn-block
+                                   :inline-block edn-inline-block
+                                   :table edn-inline-block)
         path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div.value
      [:div.anchors (link-controls/anchors path true ctx link/options-processor)]

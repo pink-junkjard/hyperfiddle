@@ -48,7 +48,7 @@
                          (f content argument (dissoc props :content :argument) ctx)))}))
 
 (defn code-editor-wrap-argv [content argument props ctx]
-  [hypercrud.ui.control.code/code* content #() props])
+  [contrib.ui/code content #() props])
 
 (defn eval [content argument props ctx]
   (read-eval-with-bindings content ctx))
@@ -133,6 +133,3 @@
                                                               (map-values
                                                                 (comp reagent/reactify-component
                                                                       md-extension)))}))))
-
-(defn ^:deprecated markdown-rendered* [md & [?ctx]]
-  [markdown md ?ctx])

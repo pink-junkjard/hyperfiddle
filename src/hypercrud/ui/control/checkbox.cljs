@@ -1,8 +1,6 @@
-(ns hypercrud.ui.control.checkbox)
+(ns hypercrud.ui.control.checkbox
+  (:require
+    [contrib.ui]))
 
 
-(defn checkbox* [r change! & [props]]
-  [:input {:type "checkbox"
-           :checked @r
-           :disabled (:read-only props)
-           :on-change change!}])
+(def ^:export checkbox* contrib.ui/checkbox)

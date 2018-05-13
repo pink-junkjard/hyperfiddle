@@ -3,4 +3,4 @@
     [hypercrud.ui.control.markdown-rendered]))
 
 
-(def markdown hypercrud.ui.control.markdown-rendered/markdown)
+(def ^:export markdown hypercrud.ui.control.markdown-rendered/markdown)
