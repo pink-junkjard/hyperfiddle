@@ -1,6 +1,5 @@
 (ns contrib.ui.codemirror
   (:require
-    [contrib.reactive :as r]
     [reagent.core :as reagent]))
 
 
