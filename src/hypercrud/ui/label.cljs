@@ -1,8 +1,8 @@
-(ns hypercrud.ui.label
+(ns hypercrud.ui.label                                      ; hyperfiddle.ui/label
   (:require [contrib.reactive :as r]
+            [contrib.ui.tooltip :refer [tooltip-thick]]
             [cuerdas.core :as str]
-            [hyperfiddle.ui :refer [markdown]]
-            [hypercrud.ui.tooltip :refer [tooltip-thick]]))
+            [hyperfiddle.ui :refer [markdown]]))
 
 
 (defn fqn->name [s]

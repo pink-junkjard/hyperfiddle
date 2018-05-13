@@ -5,7 +5,7 @@
             [contrib.string :refer [empty->nil]]
             [hypercrud.browser.link :as link]
             [hypercrud.ui.control.link-controls :as link-controls]
-            [hypercrud.ui.input :as input]
+            [contrib.ui.input :as input]
             [hypercrud.ui.attribute.checkbox :refer [checkbox]]
             [hypercrud.ui.select :refer [select*]]
             ))

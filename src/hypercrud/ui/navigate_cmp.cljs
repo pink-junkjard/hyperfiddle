@@ -1,7 +1,7 @@
 (ns hypercrud.ui.navigate-cmp
   (:require [contrib.css :refer [classes]]
             [contrib.keypress :refer [with-keychord]]
-            [hypercrud.ui.tooltip :refer [tooltip]]
+            [contrib.ui.tooltip :refer [tooltip]]
             [re-com.core :as re-com]))
 
 

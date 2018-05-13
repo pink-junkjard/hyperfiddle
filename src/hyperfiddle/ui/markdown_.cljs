@@ -15,7 +15,7 @@
     [reagent.core :as reagent]))
 
 
-(declare remarkInstance)
+(declare hf-markdown-remark-instance)
 
 (def markdown-
   ; remark creates react components which don't evaluate in this stack frame
@@ -26,7 +26,7 @@
      :reagent-render
      (fn [value & [?ctx]]
        (when-not (or (nil? value) (str/blank? value))
-         (remark/remark-render remarkInstance value)))
+         (remark/remark-render hf-markdown-remark-instance value)))
 
      :get-child-context
      (fn []
@@ -115,4 +115,4 @@
    "value" value
    })
 
-(def remarkInstance (remark/remark whitelist-reagent md-extension))
+(def hf-markdown-remark-instance (remark/remark whitelist-reagent md-extension))

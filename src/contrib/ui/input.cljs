@@ -1,4 +1,4 @@
-(ns hypercrud.ui.input
+(ns contrib.ui.input
   (:require [cats.monad.either :as either]
             [contrib.reactive :as r]
             [contrib.string :refer [safe-read-edn-string]]))

@@ -1,6 +1,7 @@
-(ns hypercrud.ui.popover
-  (:require [contrib.reactive :as r]
-            [re-com.core :as re-com]))
+(ns contrib.ui.popover
+  (:require
+    [contrib.reactive :as r]
+    [re-com.core :as re-com]))
 
 
 ;(defn popover [& {:as props}]

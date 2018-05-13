@@ -1,5 +1,6 @@
-(ns hypercrud.ui.radio
-  (:require [hypercrud.ui.tooltip :refer [tooltip]]))
+(ns contrib.ui.radio
+  (:require
+    [contrib.ui.tooltip :refer [tooltip]]))
 
 
 (defn option [props]

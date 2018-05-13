@@ -6,7 +6,7 @@
             [hypercrud.ui.auto-control :refer [auto-control']]
             [hyperfiddle.ui :refer [markdown]]
             [hypercrud.ui.form :refer [form-cell]]
-            [hypercrud.ui.tooltip :refer [tooltip]]
+            [contrib.ui.tooltip :refer [tooltip]]
             [hyperfiddle.ide.fiddles.topnav :refer [shadow-fiddle]]))
 
 

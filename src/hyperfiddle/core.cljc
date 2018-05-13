@@ -6,17 +6,17 @@
     ; pull in public ui deps
     #?(:cljs [contrib.reagent])
     #?(:cljs [contrib.ui])
-    #?(:cljs [hyperfiddle.ui])
-
-    ;user land (todo these should be in a core hc.ui namespace; widget is arbitrary)
-    #?(:cljs [hypercrud.ui.attribute.code])
-    #?(:cljs [hypercrud.ui.attribute.markdown-editor])
-    #?(:cljs [hypercrud.ui.attribute.tristate-boolean])
-    #?(:cljs [hypercrud.ui.radio])
+    #?(:cljs [contrib.ui.radio])
     #?(:cljs [hypercrud.ui.textarea])
 
-    ;legacy
+    #?(:cljs [hyperfiddle.ui])
+    ;user land (todo these should be in a core hc.ui namespace; widget is arbitrary)
+    #?(:cljs [hypercrud.ui.attribute.code])
     #?(:cljs [hypercrud.ui.attribute.checkbox])
+    #?(:cljs [hypercrud.ui.attribute.markdown-editor])
+    #?(:cljs [hypercrud.ui.attribute.tristate-boolean])
+
+    ; deprecated - migrate userland
     #?(:cljs [hypercrud.ui.control.markdown-rendered])
     ))
 

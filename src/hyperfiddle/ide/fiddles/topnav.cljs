@@ -14,9 +14,9 @@
             [hypercrud.browser.system-fiddle :as system-fiddle]
             [hypercrud.types.Entity :refer [->Entity shadow-entity]]
             [hyperfiddle.ui :refer [markdown]]
-            [hypercrud.ui.radio :as radio]
+            [contrib.ui.radio :as radio]
             [hypercrud.ui.result :as result]
-            [hypercrud.ui.tooltip :refer [tooltip]]
+            [contrib.ui.tooltip :refer [tooltip]]
             [hyperfiddle.foundation :as foundation :refer [staging]]
             [hyperfiddle.foundation.actions :as foundation-actions]
             [hyperfiddle.runtime :as runtime]))

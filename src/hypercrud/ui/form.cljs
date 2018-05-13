@@ -7,7 +7,7 @@
             [hypercrud.ui.auto-control :refer [auto-control' control-props]]
             [hypercrud.ui.connection-color :as connection-color]
             [hypercrud.ui.control.link-controls :as link-controls]
-            [hypercrud.ui.input :as input]
+            [contrib.ui.input :as input]
             [hypercrud.ui.label :refer [label]]))
 
 

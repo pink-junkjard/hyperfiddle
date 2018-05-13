@@ -1,7 +1,7 @@
 (ns contrib.ui.recom-date
   (:require
     [goog.date.UtcDateTime]
-    [hypercrud.ui.input :as input]
+    [contrib.ui.input :as input]
     [re-com.core :as re-com]))
 
 
