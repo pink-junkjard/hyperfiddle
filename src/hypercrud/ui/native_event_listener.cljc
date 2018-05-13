@@ -4,14 +4,6 @@
     #?(:cljs [reagent.impl.util :refer [PartialFn]])))
 
 
-; this doesn't handle component-did-update
-; https://github.com/erikras/react-native-listener/issues/15
-(def native-listener
-  #?(:clj  (fn [& args] (assert false "todo"))
-     :cljs (if (= *target* "nodejs")
-             (fn [props child] child)                       ; todo this node implementation is wrong
-             (reagent/adapt-react-class js/NativeListener))))
-
 #?(:cljs
    ; addEventListener chokes HARD on reagent/partialed functions,
    ; it wants a javascript function or an object:
