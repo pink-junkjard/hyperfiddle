@@ -15,9 +15,6 @@
     #?(:cljs [hypercrud.ui.attribute.checkbox])
     #?(:cljs [hypercrud.ui.attribute.markdown-editor])
     #?(:cljs [hypercrud.ui.attribute.tristate-boolean])
-
-    ; deprecated - migrate userland
-    #?(:cljs [hypercrud.ui.control.markdown-rendered])
     ))
 
 
