@@ -41,6 +41,6 @@
 (def a-ctx-1 {:hyperfiddle-hostname "hyperfiddle.net"})
 
 (deftest activate-ide-1 []
-  (is (not (activate-ide?
-             (foundation/hostname->hf-domain-name
-               (assoc a-ctx-1 :hostname "www.hyperfiddle.net"))))))
+  (is #_(not) (activate-ide?
+                (foundation/hostname->hf-domain-name
+                  (assoc a-ctx-1 :hostname "www.hyperfiddle.net")))))
