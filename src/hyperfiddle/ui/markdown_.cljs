@@ -66,9 +66,10 @@
     (apply (:anchor ctx) rel path ctx label kwargs)))
 
 (defn cell [content argument props ctx]
-  (let [kwargs (flatten (seq (keywordize-keys props)))
+  (let [content (read-eval-with-bindings content)
+        kwargs (flatten (seq (keywordize-keys props)))
         path (into [true] (unwrap (memoized-safe-read-edn-string (str "[" argument "]"))))]
-    (apply (:cell ctx) path ctx nil kwargs)))
+    (apply (:cell ctx) path ctx content kwargs)))
 
 (defn ^:deprecated -table [content argument {:keys [class] :as props} ctx]
   (hypercrud.ui.table/Table ctx))

@@ -44,11 +44,13 @@
       ; todo unsafe execution of user code: control
       [control -field (control-props ctx) ctx])))
 
-(defn Cell [ctx]
-  (assert @(:hypercrud.ui/display-mode ctx))
-  ; todo unsafe execution of user code: cell[ctx i]
-  (let [user-cell (case @(:hypercrud.ui/display-mode ctx) :xray form-cell (:hypercrud.browser/cell ctx form-cell))]
-    [user-cell (auto-control' ctx) (:hypercrud.browser/field ctx) ctx]))
+(defn Cell
+  ([ctx] (Cell nil ctx))
+  ([?f ctx]                                                 ; fiddle-src wants to fallback by passing nil here explicitly
+   (assert @(:hypercrud.ui/display-mode ctx))
+    ; todo unsafe execution of user code: cell[ctx i]
+   (let [user-cell (case @(:hypercrud.ui/display-mode ctx) :xray form-cell (:hypercrud.browser/cell ctx form-cell))]
+     [user-cell (or ?f (auto-control' ctx)) (:hypercrud.browser/field ctx) ctx])))
 
 (defn Entity [ctx]
   (let [path [(:fe-pos ctx)]]

@@ -46,10 +46,9 @@
                 ctx (context/relation-path ctx (into [dependent?] (unwrap (memoized-safe-read-edn-string (str "[" path "]")))))
                 props (link/build-link-props link ctx)]
             [(:navigate-cmp ctx) props label (:class kwargs)]))
-        (cell [[d i a] ctx & args]                          ; form only
-          (let [{[f & args] nil :as props} (kwargs args)]
-            [(or f
-                 hypercrud.ui.form/Cell)
+        (cell [[d i a] ctx ?f & args]                       ; form only
+          (let [props (kwargs args)]
+            [(r/partial hypercrud.ui.form/Cell ?f)            ; Intentional explicit nil
              (context/relation-path ctx [d i a])]))
         (value [path ctx & [?f ?props]]
           ; The most important thing to do here is override the renderer.
@@ -57,7 +56,7 @@
           (let [ctx (context/relation-path ctx path)
                 field (:hypercrud.browser/field ctx)
                 #_#_control-props (merge (hypercrud.ui.auto-control/control-props ctx) ?props)]
-            [(or ?f (partial hypercrud.ui.auto-control/auto-control field {} nil)) ctx]))
+            [(or ?f (r/partial hypercrud.ui.auto-control/auto-control field {} nil)) ctx]))
         (browse' [rel #_dependent? path ctx]
           (->> (base/data-from-link @(r/track link/rel->link rel path ctx) ctx)
                (cats/fmap :hypercrud.browser/result)
