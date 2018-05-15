@@ -1,5 +1,5 @@
 (ns hyperfiddle.io.http.kvlt-config
-  (:require [#?(:clj clojure.pprint :cljs cljs.pprint) :as pprint]
+  (:require [clojure.pprint :as pprint]
             [contrib.reader :refer [read-edn-string]]
             [hypercrud.transit :as transit]
             [kvlt.middleware]
