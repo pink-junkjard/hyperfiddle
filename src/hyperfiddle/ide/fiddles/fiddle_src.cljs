@@ -30,11 +30,12 @@
     [form-cell control (:hypercrud.browser/field ctx) ctx]))
 
 (def underdocs
-  {:fiddle/pull "`:db/id` is currently required. No nested pull yet. Just keep it simple for now. See
-  [Datomic pull docs](https://docs.datomic.com/on-prem/pull.html)."
-   :fiddle/query "See [:fiddle/query examples](http://www.hyperfiddle.net/:docs!fiddle-query/) and
-   the [Datomic query docs](https://docs.datomic.com/on-prem/query.html). If you pull, `:db/id` is
-   required. No rules yet, no nested pull yet, no d/log or d/history yet."
+  {:fiddle/pull "See [:fiddle/pull examples](http://www.hyperfiddle.net/:docs!fiddle-pull/) and the
+  [Datomic pull docs](https://docs.datomic.com/on-prem/pull.html). `:db/id` is currently required. No nested pull yet.
+  Just keep it simple for now."
+   :fiddle/query "See [:fiddle/query examples](http://www.hyperfiddle.net/:docs!fiddle-query/) and the
+   [Datomic query docs](https://docs.datomic.com/on-prem/query.html). If you pull, `:db/id` is required. No rules yet,
+   no nested pull yet, no d/log or d/history yet."
    :fiddle/markdown "See [:fiddle/markdown examples](http://www.hyperfiddle.net/:docs!fiddle-markdown/)."
    :fiddle/css "See [:fiddle/css examples](http://www.hyperfiddle.net/:docs!fiddle-css/)."
    :fiddle/renderer "See [:fiddle/renderer examples](http://www.hyperfiddle.net/:docs!fiddle-renderer/)."
