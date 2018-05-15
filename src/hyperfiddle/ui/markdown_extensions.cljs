@@ -35,7 +35,7 @@
   (let [content (read-eval-with-bindings content)
         kwargs (flatten (seq (keywordize-keys props)))
         path (into [true] (unwrap (memoized-safe-read-edn-string (str "[" argument "]"))))]
-    [:div.unp (apply (:cell ctx) path ctx content kwargs)]))
+    (apply (:cell ctx) path ctx content :class "unp" kwargs)))
 
 (defn ^:deprecated -table [content argument {:keys [class] :as props} ctx]
   (hypercrud.ui.table/Table ctx))

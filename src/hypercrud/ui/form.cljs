@@ -1,5 +1,6 @@
 (ns hypercrud.ui.form
   (:require [contrib.css :refer [css-slugify classes]]
+            [contrib.data :refer [kwargs]]
             [contrib.reactive :as r]
             [contrib.reagent :refer [fragment]]
             [hypercrud.browser.context :as context]
@@ -46,11 +47,12 @@
 
 (defn Cell
   ([ctx] (Cell nil ctx))
-  ([?f ctx]                                                 ; fiddle-src wants to fallback by passing nil here explicitly
+  ([?f ctx & args]                                          ; fiddle-src wants to fallback by passing nil here explicitly
    (assert @(:hypercrud.ui/display-mode ctx))
     ; todo unsafe execution of user code: cell[ctx i]
-   (let [user-cell (case @(:hypercrud.ui/display-mode ctx) :xray form-cell (:hypercrud.browser/cell ctx form-cell))]
-     [user-cell (or ?f (auto-control' ctx)) (:hypercrud.browser/field ctx) ctx])))
+   (let [props (kwargs args)
+         user-cell (case @(:hypercrud.ui/display-mode ctx) :xray form-cell (:hypercrud.browser/cell ctx form-cell))]
+     [user-cell (or ?f (auto-control' ctx)) (:hypercrud.browser/field ctx) ctx (:class props)])))
 
 (defn Entity [ctx]
   (let [path [(:fe-pos ctx)]]

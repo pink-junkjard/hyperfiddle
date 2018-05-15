@@ -48,8 +48,9 @@
             [(:navigate-cmp ctx) props label (:class kwargs)]))
         (cell [[d i a] ctx ?f & args]                       ; form only
           (let [props (kwargs args)]
-            [(r/partial hypercrud.ui.form/Cell ?f)            ; Intentional explicit nil
-             (context/relation-path ctx [d i a])]))
+            (into [(r/partial hypercrud.ui.form/Cell ?f)    ; Intentional explicit nil
+                   (context/relation-path ctx [d i a])]
+                  args)))
         (value [path ctx & [?f ?props]]
           ; The most important thing to do here is override the renderer.
           ; Then, optionally pass props. kwargs can partial props but we don't need that here? Why partial a :class?
