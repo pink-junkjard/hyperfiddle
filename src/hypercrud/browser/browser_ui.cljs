@@ -15,7 +15,7 @@
             [hypercrud.types.ThinEntity :refer [->ThinEntity]]
             [hypercrud.ui.error :as ui-error]
     ; [hypercrud.ui.form :as form]
-            [hypercrud.ui.native-event-listener :refer [native-on-click-listener]]
+            [contrib.ui.native-event-listener :refer [native-on-click-listener]]
             [hypercrud.ui.safe-render :refer [user-portal]]
             [hypercrud.ui.stale :as stale]
             [hyperfiddle.foundation :as foundation]

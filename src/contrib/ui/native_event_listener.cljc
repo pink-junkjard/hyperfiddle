@@ -1,4 +1,4 @@
-(ns hypercrud.ui.native-event-listener
+(ns contrib.ui.native-event-listener
   (:require
     #?(:cljs [reagent.core :as reagent])
     #?(:cljs [reagent.impl.util :refer [PartialFn]])))
