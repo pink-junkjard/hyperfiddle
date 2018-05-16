@@ -5,7 +5,7 @@
             [hypercrud.ui.control.link-controls :as link-controls]))
 
 
-(defn ^:export markdown-editor [props ctx]
+(defn ^:export markdown-editor [ctx props]
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]
         change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) (empty->nil %)))]
     ;^{:key ident}

@@ -4,7 +4,7 @@
             [hypercrud.ui.control.link-controls :as link-controls]))
 
 
-(defn checkbox [props ctx]
+(defn checkbox [ctx props]
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div.value
      [:div.editable-select {:key (:hypercrud.browser/attribute ctx)}

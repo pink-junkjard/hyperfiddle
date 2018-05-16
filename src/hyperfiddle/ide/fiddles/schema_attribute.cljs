@@ -48,9 +48,9 @@
 
                          [true true]
                          (user-with! tx))))]
-    (fn [props ctx]
+    (fn [ctx props]
       (let [ctx (update ctx :user-with! #(r/partial user-with! ctx %))]
-        (auto-control props nil ctx)))))
+        (auto-control ctx props)))))
 
 (defn- build-ident-renderer [special-attrs-state]
   (let [user-with! (fn [ctx user-with! tx]
@@ -71,9 +71,9 @@
 
                          [true true]
                          (user-with! tx))))]
-    (fn [props ctx]
+    (fn [ctx props]
       (let [ctx (update ctx :user-with! #(r/partial user-with! ctx %))]
-        (auto-control props nil ctx)))))
+        (auto-control ctx props)))))
 
 (declare renderer)
 
@@ -92,4 +92,5 @@
                     (assoc-in [:fields :db/valueType :renderer] valueType-and-cardinality-renderer)
                     (assoc-in [:fields :db/ident :renderer] ident-renderer))]
         ; Elide doc and ident
+        ; refactor to cell api
         [:div (result ctx)]))))

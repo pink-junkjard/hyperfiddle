@@ -21,8 +21,8 @@
                 [(:navigate-cmp ctx) props $db])))
        (doall)))
 
-(defn control-with-unders [frag props ctx]
-  [:div [(auto-control' ctx) props ctx] frag])
+(defn control-with-unders [frag ctx props]
+  [:div [(auto-control' ctx) ctx props] frag])
 
 (def underdocs
   {:fiddle/pull "See [:fiddle/pull examples](http://www.hyperfiddle.net/:docs!fiddle-pull/) and the

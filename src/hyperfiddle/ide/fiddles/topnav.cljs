@@ -106,7 +106,7 @@
         (let [auth-state (base64-url-safe/encode (runtime/encode-route (:peer ctx) (:target-route ctx)))]
           [:span.nav-link.auth [:a {:href (str (stateless-login-url ctx) "&state=" auth-state)} "Login"]]))]]))
 
-(defn ^:export qe-picker-control [props ctx]
+(defn ^:export qe-picker-control [ctx props]
   (let [enums [:query :entity :blank]
         change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))
         options (->> enums

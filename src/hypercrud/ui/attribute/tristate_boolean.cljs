@@ -3,7 +3,7 @@
             [hypercrud.ui.select :refer [select-boolean*]]))
 
 
-(defn tristate-boolean [props ctx]
+(defn tristate-boolean [ctx props]
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div.value
      [:div.editable-select {:key (:hypercrud.browser/attribute ctx)}

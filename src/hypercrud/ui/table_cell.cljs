@@ -9,14 +9,14 @@
            s
            (str (subs s 0 (- c 3)) "..."))))
 
-(defn ref-one-component [props ctx]
+(defn ref-one-component [ctx props]
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div
      #_(pr-str (:db/id @(:value ctx)))
      [:div.anchors (link-controls/anchors path true ctx)]
      (link-controls/iframes path true ctx)]))
 
-(defn ref-many [props ctx]
+(defn ref-many [ctx props]
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div
      #_(->> (mapv :db/id @(:value ctx))
@@ -25,7 +25,7 @@
      [:div.anchors (link-controls/anchors path true ctx)]
      (link-controls/iframes path true ctx)]))
 
-(defn other-many [props ctx]
+(defn other-many [ctx props]
   [:div
    [:button {:on-click #(js/alert "todo")} "Edit"]
    " "

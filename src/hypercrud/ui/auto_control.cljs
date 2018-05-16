@@ -55,7 +55,7 @@
   [user-portal with-error
    (into [f] args)])
 
-(defn fiddle-field-control [ctx]                            ; TODO :renderer -> :control
+(defn ^:deprecated fiddle-field-control [ctx]               ; use cell api
   (some->> (get-in ctx [:fields (:hypercrud.browser/attribute ctx) :renderer])
            (r/partial safe-reagent-f (ui-error/error-comp ctx))))
 
@@ -83,8 +83,7 @@
   ; knowledge of this pipeline.
 
   (or (case @(:hypercrud.ui/display-mode ctx) :user (some->> (:control ctx) (r/partial portal-markup)) :xray nil)
-      ;(case @(:hypercrud.ui/display-mode ctx) :user (fiddle-field-control ctx) :xray nil) -- unused, remove, old bindings api
-      ;(case @(:display-mode ctx) :user (fiddle-control ctx) :xray nil)
+      (case @(:hypercrud.ui/display-mode ctx) :user (fiddle-field-control ctx) :xray nil)
       (attribute-control ctx)
       (some->> (case (:layout ctx :block)
                  :block (schema-control-form ctx)
@@ -92,23 +91,16 @@
                  :table (schema-control-table ctx))
                (r/partial portal-markup))))
 
-; What even is this scar
-; Not clear if auto-control needs props. For now this is compat as the next
-; layer down of controls (aka widgets) take props.
-; hypercrud/props is on links. I dont think there is even a way for users
-; to pass props here. But, how do you pass through things to the native widget?
-(defn control-props [ctx]
-  ; why does this need the field - it needs the ident for readonly in "Edit Anchors"
-  ; todo clean this interface up
-  (cond-> {}
-    (:read-only ctx) (assoc :read-only ((:read-only ctx) ctx))))
+(defn ^:deprecated control-props [ctx]
+  ; Only used by fiddle-links/bindings which are legacy, we do that stuff in a renderer now.
+  (cond-> {} (:read-only ctx) (assoc :read-only ((:read-only ctx) ctx))))
 
-(defn auto-control [props _ ctx]                ; compat
+(defn auto-control [ctx props]                              ; compat - and should take kwargs
   [(some-> (case (:layout ctx :block)
              :block (schema-control-form ctx)
              :inline-block (schema-control-table ctx)
              :table (schema-control-table ctx)))
-   props ctx])
+   ctx props])
 
 (comment
   ; Find a home for this:

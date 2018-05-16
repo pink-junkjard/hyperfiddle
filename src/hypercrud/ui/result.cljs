@@ -23,6 +23,6 @@
 (defn fiddle-xray [ctx class]
   [:div {:class class}
    [:h3 (some-> ctx :hypercrud.browser/fiddle deref :fiddle/ident name)]
-   (link-controls/anchors [] false ctx :class "hyperfiddle-link-index")
+   (link-controls/anchors [] false ctx nil {:class "hyperfiddle-link-index"})
    (result ctx)
    (link-controls/iframes [] false ctx)])

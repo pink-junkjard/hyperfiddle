@@ -34,30 +34,25 @@
               (css-slugify ident)
               "auto-result"])))
 
-(letfn [(browse [rel #_dependent? path ctx ?f & ?args]
-          (let [props (kwargs ?args)
+(letfn [(browse [rel #_dependent? path ctx ?f & args]
+          (let [props (kwargs args)
                 {:keys [:link/dependent? :link/path] :as link} @(r/track link/rel->link rel path ctx)
                 ctx (-> (context/relation-path ctx (into [dependent?] (unwrap (memoized-safe-read-edn-string (str "[" path "]")))))
-                        (as-> ctx (if ?f (assoc ctx :user-renderer ?f #_(if ?f #(apply ?f %1 %2 %3 %4 ?args))) ctx)))]
+                        (as-> ctx (if ?f (assoc ctx :user-renderer ?f #_(if ?f #(apply ?f %1 %2 %3 %4 args))) ctx)))]
             (into [ui-from-link link ctx (:class props)] (apply concat (dissoc props :class :children nil)))))
         (anchor [rel #_dependent? path ctx label & args]
-          (let [kwargs (kwargs args)
-                {:keys [:link/dependent? :link/path] :as link} @(r/track link/rel->link rel path ctx)
+          (let [{:keys [:link/dependent? :link/path] :as link} @(r/track link/rel->link rel path ctx)
                 ctx (context/relation-path ctx (into [dependent?] (unwrap (memoized-safe-read-edn-string (str "[" path "]")))))
-                props (link/build-link-props link ctx)]
-            [(:navigate-cmp ctx) props label (:class kwargs)]))
+                props (merge (kwargs args) (link/build-link-props link ctx))]
+            [(:navigate-cmp ctx) props label (:class props)]))
         (cell [[d i a] ctx ?f & args]                       ; form only
-          (let [props (kwargs args)]
-            (into [(r/partial hypercrud.ui.form/Cell ?f)    ; Intentional explicit nil
-                   (context/relation-path ctx [d i a])]
-                  args)))
-        (value [path ctx & [?f ?props]]
-          ; The most important thing to do here is override the renderer.
-          ; Then, optionally pass props. kwargs can partial props but we don't need that here? Why partial a :class?
-          (let [ctx (context/relation-path ctx path)
-                field (:hypercrud.browser/field ctx)
-                #_#_control-props (merge (hypercrud.ui.auto-control/control-props ctx) ?props)]
-            [(or ?f (r/partial hypercrud.ui.auto-control/auto-control {} nil)) ctx]))
+          [(r/partial hypercrud.ui.form/Cell ?f)            ; Intentional explicit nil
+           (context/relation-path ctx [d i a])
+           (kwargs args)])
+        (value [path ctx ?f & args]
+          [(or ?f (hypercrud.ui.auto-control/auto-control' ctx))
+           (context/relation-path ctx path)
+           (merge (hypercrud.ui.auto-control/control-props ctx) (kwargs args))])
         (browse' [rel #_dependent? path ctx]
           (->> (base/data-from-link @(r/track link/rel->link rel path ctx) ctx)
                (cats/fmap :hypercrud.browser/result)

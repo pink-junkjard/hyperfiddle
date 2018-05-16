@@ -1,6 +1,5 @@
 (ns hypercrud.ui.form
   (:require [contrib.css :refer [css-slugify classes]]
-            [contrib.data :refer [kwargs]]
             [contrib.reactive :as r]
             [contrib.reagent :refer [fragment]]
             [hypercrud.browser.context :as context]
@@ -34,28 +33,27 @@
   ^{:key (hash (keys @(:cell-data ctx)))}
   [new-field-state-container ctx])
 
-(defn form-cell [control ctx & [class]]              ; safe to return nil or seq
+(defn form-cell [control ctx props]                         ; safe to return nil or seq
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     (ui-block-border-wrap
-      ctx (str class " field")
+      ctx (str (:class props) " field")
       [:div
        [label ctx]
        (link-controls/anchors path false ctx link/options-processor)
        (link-controls/iframes path false ctx link/options-processor)]
       ; todo unsafe execution of user code: control
-      [control (control-props ctx) ctx])))
+      [control ctx (merge (control-props ctx) props)])))
 
 (defn Cell
-  ([ctx] (Cell nil ctx))
-  ([?f ctx & args]                                          ; fiddle-src wants to fallback by passing nil here explicitly
+  ([ctx] (Cell nil ctx nil))
+  ([?f ctx props]                                           ; fiddle-src wants to fallback by passing nil here explicitly
    (assert @(:hypercrud.ui/display-mode ctx))
-   (let [props (kwargs args)]
-     [form-cell (or ?f (auto-control' ctx)) ctx (:class props)])))
+   [form-cell (or ?f (auto-control' ctx)) ctx props]))
 
 (defn Entity [ctx]
   (let [path [(:fe-pos ctx)]]
     (concat
-      (link-controls/anchors path false ctx :class "hyperfiddle-link-entity-independent")
+      (link-controls/anchors path false ctx nil {:class "hyperfiddle-link-entity-independent"})
       (let [ctx (context/cell-data ctx)]
         (concat
           (conj
@@ -74,7 +72,7 @@
             (if @(r/cursor (:hypercrud.browser/find-element ctx) [:splat?])
               ^{:key :new-field}
               [new-field ctx]))
-          (link-controls/anchors path true ctx :class "hyperfiddle-link-entity-dependent")
+          (link-controls/anchors path true ctx nil {:class "hyperfiddle-link-entity-dependent"})
           (link-controls/iframes path true ctx)))
       (link-controls/iframes path false ctx))))
 

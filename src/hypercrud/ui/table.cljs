@@ -88,16 +88,16 @@
                                 [col-head field sort-col ctx])))))))
    [LinkCell false ctx]])
 
-(defn table-cell [control ctx]
+(defn table-cell [control ctx props]
   (let [shadow-link @(r/fmap system-link? (r/cursor (:cell-data ctx) [:db/id]))]
     [:td {:class (classes "hyperfiddle-table-cell" "truncate")
           ; todo use cell renderer for shadow-link styles
           :style {:border-color (if-not shadow-link (connection-color/connection-color ctx))}}
      ; todo unsafe execution of user code: control
-     [control (control-props ctx) ctx]]))
+     [control ctx (merge (control-props ctx) props)]]))
 
 (defn Cell [ctx]
-  [table-cell (auto-control' ctx) ctx])
+  [table-cell (auto-control' ctx) ctx {}])
 
 (defn Entity [ctx]
   (let [ctx (context/cell-data ctx)]

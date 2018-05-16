@@ -15,8 +15,9 @@
 (defn- reactive-ui [link-ref ctx class]
   [browser/ui @link-ref ctx class])
 
-(defn ui-contextual-links [path dependent? inline? links processors]
-  (->> (reduce (fn [links f] (f links)) @links processors)
+(defn ui-contextual-links [path dependent? inline? links ?processor]
+  ; There is only one processor ?
+  (->> (reduce (fn [links f] (f links)) @links (if ?processor [?processor]))
        ((if inline? filter remove) (fn [link]
                                      (and (not (link/popover-link? link))
                                           (:link/render-inline? link))))
@@ -29,22 +30,22 @@
 ; NOTE: this ctx logic and structure is the same as the inline branch of browser-request/recurse-request
 ; don't test link validity, we need to render the failure. If this is a dependent link, use visibility predicate to hide the error.
 
-(defn anchors [path dependent? ctx & args]
-  (let [{processors nil :as args} (kwargs args)]
-    (->> (r/track ui-contextual-links path dependent? false (:hypercrud.browser/links ctx) processors)
-         (r/unsequence :db/id)
-         (map (fn [[link-ref link-id]]
-                (if (not= :table (:layout ctx))
-                  ^{:key (hash link-id)} [hypercrud.ui.form/ui-block-border-wrap ctx nil [reactive-nav-cmp link-ref ctx (:class args)]]
-                  ^{:key (hash link-id)} [reactive-nav-cmp link-ref ctx (:class args)])))
-         (doall))))
+(defn anchors
+  ([path dependent? ctx & [?f props]]
+   (->> (r/track ui-contextual-links path dependent? false (:hypercrud.browser/links ctx) ?f)
+        (r/unsequence :db/id)
+        (map (fn [[link-ref link-id]]
+               (if (not= :table (:layout ctx))
+                 ^{:key (hash link-id)} [hypercrud.ui.form/ui-block-border-wrap ctx nil [reactive-nav-cmp link-ref ctx (:class props)]]
+                 ^{:key (hash link-id)} [reactive-nav-cmp link-ref ctx (:class props)])))
+        (doall))))
 
-(defn iframes [path dependent? ctx & args]
-  (let [{processors nil :as args} (kwargs args)]
-    (->> (r/track ui-contextual-links path dependent? true (:hypercrud.browser/links ctx) processors)
-         (r/unsequence :db/id)
-         (map (fn [[link-ref link-id]]
-                (if (not= :table (:layout ctx))
-                  ^{:key (hash link-id)} [hypercrud.ui.form/ui-block-border-wrap ctx nil [reactive-ui link-ref ctx (:class args)]]
-                  ^{:key (hash link-id)} [reactive-ui link-ref ctx (:class args)])))
-         (doall))))
+(defn iframes
+  ([path dependent? ctx & [?f props]]
+   (->> (r/track ui-contextual-links path dependent? true (:hypercrud.browser/links ctx) ?f)
+        (r/unsequence :db/id)
+        (map (fn [[link-ref link-id]]
+               (if (not= :table (:layout ctx))
+                 ^{:key (hash link-id)} [hypercrud.ui.form/ui-block-border-wrap ctx nil [reactive-ui link-ref ctx (:class props)]]
+                 ^{:key (hash link-id)} [reactive-ui link-ref ctx (:class props)])))
+        (doall))))
