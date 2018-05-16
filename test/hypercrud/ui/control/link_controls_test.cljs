@@ -50,4 +50,4 @@
                 :link/dependent? false
                 :link/render-inline? true
                 :link/managed? false}])
-         (set (link-controls/ui-contextual-links [0 :some/attr] false true (r/atom mock-links) [link/options-processor])))))
+         (set (link-controls/ui-contextual-links [0 :some/attr] false true (r/atom mock-links) link/options-processor)))))

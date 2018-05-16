@@ -7,7 +7,8 @@
 
 
 (deftest schema-renderer []
-  (let [ctx {:hypercrud.browser/attribute (r/atom nil)
+  (let [ctx {:cell (constantly [:pre])
+             :hypercrud.browser/attribute (r/atom nil)
              :hypercrud.browser/fiddle (r/atom nil)
              :hypercrud.browser/find-element (r/atom nil)
              :hypercrud.browser/links (r/atom nil)
@@ -21,7 +22,8 @@
     (is (not (nil? (test-renderer-str (:fiddle/renderer (schema/schema "$")) ctx))))))
 
 (deftest db-attribute-renderer []
-  (let [ctx {:hypercrud.browser/attribute (r/atom nil)
+  (let [ctx {:cell (constantly [:pre])
+             :hypercrud.browser/attribute (r/atom nil)
              :hypercrud.browser/fiddle (r/atom nil)
              :hypercrud.browser/find-element (r/atom nil)
              :hypercrud.browser/links (r/atom nil)
