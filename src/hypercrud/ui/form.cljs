@@ -4,7 +4,7 @@
             [contrib.reagent :refer [fragment]]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.link :as link]
-            [hypercrud.ui.auto-control :refer [auto-control' control-props]]
+            [hypercrud.ui.auto-control :refer [auto-control control-props]]
             [hypercrud.ui.connection-color :as connection-color]
             [hypercrud.ui.control.link-controls :as link-controls]
             [contrib.ui.input :as input]
@@ -48,7 +48,7 @@
   ([ctx] (Cell nil ctx nil))
   ([?f ctx props]                                           ; fiddle-src wants to fallback by passing nil here explicitly
    (assert @(:hypercrud.ui/display-mode ctx))
-   [form-cell (or ?f (auto-control' ctx)) ctx props]))
+   [form-cell (or ?f (auto-control ctx)) ctx props]))
 
 (defn Entity [ctx]
   (let [path [(:fe-pos ctx)]]

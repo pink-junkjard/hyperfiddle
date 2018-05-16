@@ -3,7 +3,7 @@
             [contrib.reactive :as r]
             [contrib.reagent :refer [fragment]]
             [hypercrud.types.URI :refer [is-uri?]]
-            [hypercrud.ui.auto-control :refer [auto-control']]
+            [hypercrud.ui.auto-control :refer [auto-control]]
             [hyperfiddle.ui :refer [markdown]]
             [hypercrud.ui.form :refer [form-cell]]
             [contrib.ui.tooltip :refer [tooltip]]
@@ -22,7 +22,7 @@
        (doall)))
 
 (defn control-with-unders [frag ctx props]
-  [:div [(auto-control' ctx) ctx props] frag])
+  [:div [(auto-control ctx) ctx props] frag])
 
 (def underdocs
   {:fiddle/pull "See [:fiddle/pull examples](http://www.hyperfiddle.net/:docs!fiddle-pull/) and the

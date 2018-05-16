@@ -66,7 +66,7 @@
             f browser-ui/eval-renderer-comp]
         (r/partial safe-reagent-f with-error f renderer)))))
 
-(defn auto-control' [ctx]
+(defn auto-control [ctx]
   ; todo binding renderers should be pathed for aggregates and values
   ;
   ; Old comment, what does this mean now: (I think it means nothing, field is dead)

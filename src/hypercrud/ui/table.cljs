@@ -4,7 +4,7 @@
             [hypercrud.browser.system-link :refer [system-link?]]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.link :as link]
-            [hypercrud.ui.auto-control :refer [auto-control' control-props]]
+            [hypercrud.ui.auto-control :refer [auto-control control-props]]
             [hypercrud.ui.connection-color :as connection-color]
             [hypercrud.ui.control.link-controls :as link-controls]
             [hypercrud.ui.label :refer [label]]))
@@ -97,7 +97,7 @@
      [control ctx (merge (control-props ctx) props)]]))
 
 (defn Cell [ctx]
-  [table-cell (auto-control' ctx) ctx {}])
+  [table-cell (auto-control ctx) ctx {}])
 
 (defn Entity [ctx]
   (let [ctx (context/cell-data ctx)]

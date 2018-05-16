@@ -3,7 +3,7 @@
             [contrib.datomic-tx :as tx]
             [contrib.reactive :as r]
             [hypercrud.browser.context :as context]
-            [hypercrud.ui.auto-control :refer [auto-control']]
+            [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.result :refer [result]]))
 
 
@@ -49,7 +49,7 @@
                          [true true]
                          (user-with! tx))))]
     (fn [ctx props]
-      [(auto-control' ctx)
+      [(auto-control ctx)
        (update ctx :user-with! #(r/partial user-with! ctx %))
        props])))
 
@@ -73,7 +73,7 @@
                          [true true]
                          (user-with! tx))))]
     (fn [ctx props]
-      [(auto-control' ctx)
+      [(auto-control ctx)
        (update ctx :user-with! #(r/partial user-with! ctx %))
        props])))
 
