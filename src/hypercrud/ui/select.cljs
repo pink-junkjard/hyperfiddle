@@ -50,7 +50,7 @@
      [:option {:key false :value "false"} "False"]
      [:option {:key :nil :value ""} "--"]]))
 
-(defn select-anchor-renderer' [props ctx]
+(defn select-anchor-renderer' [ctx props]
   ; hack in the selected value if we don't have options hydrated?
   ; Can't, since we only have the #DbId hydrated, and it gets complicated with relaton vs entity etc
   (let [no-options? (empty? @(:relations ctx))
@@ -81,7 +81,7 @@
     :entity [select-error-cmp "Only fiddle type `query` is supported for select options"]
     :blank [select-error-cmp "Only fiddle type `query` is supported for select options"]
     :query (if (:relations ctx-options)
-             [select-anchor-renderer' props ctx-options]
+             [select-anchor-renderer' ctx-options props]
              [select-error-cmp "Tuples and scalars are unsupported for select options. Please fix your options query to return a relation or collection"])
     ; default
     [select-error-cmp "Only fiddle type `query` is supported for select options"]))
@@ -90,7 +90,7 @@
 
 (let [on-change (fn [ctx id]
                   ((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) id)))]
-  (defn select* [options-link props ctx]
+  (defn select* [options-link ctx props]
     (either/branch
       (link/eval-hc-props (:hypercrud/props options-link) ctx)
       (fn [e] [(ui-error/error-comp ctx) e])
