@@ -68,9 +68,10 @@
   "arg format is kwargs first; trailing non-kw args are nil key
       [:a 1 :b 2 'a 'b 'c] => {nil (a b c), :b 2, :a 1}"
   [as]
-  (let [[kwargs args] (split-with (comp keyword? first) (partition-all 2 as))]
+  (let [[kwargs args] (split-with (comp keyword? first) (partition-all 2 as))
+        args (flatten args)]
     (-> (apply hash-map (flatten kwargs))
-        (assoc nil (flatten args)))))
+        (as-> $ (if (seq args) (assoc $ nil args) $)))))
 
 (defn abs-normalized [x]
   #?(:clj  (if x (Math/abs x) 0)
