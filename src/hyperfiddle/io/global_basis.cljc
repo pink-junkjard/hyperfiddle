@@ -55,28 +55,6 @@
 
 ; This knows about userland api fn (but has no assumptions e.g. that it is the browser-api-fn)
 
-(comment
-  (def global-basis {#uri"datomic:free://datomic:4334/domains" 1316
-                     #uri"datomic:free://datomic:4334/root" 16754,
-                     #uri"datomic:free://datomic:4334/kalzumeus" 1037,
-                     #uri"datomic:free://datomic:4334/hyperblog" 1115})
-
-  (= (local-basis _ _ global-basis _ {:type "page"})
-     {#uri"datomic:free://datomic:4334/domains" 1316,
-      #uri"datomic:free://datomic:4334/hyperblog" 1115,
-      #uri"datomic:free://datomic:4334/kalzumeus" 1037,
-      #uri"datomic:free://datomic:4334/root" 16754})
-
-  (= (local-basis _ _ global-basis _ {:type "ide"})
-     {#uri"datomic:free://datomic:4334/domains" 1316,
-      #uri"datomic:free://datomic:4334/hyperblog" 1115,
-      #uri"datomic:free://datomic:4334/root" 16754})
-
-  (= (local-basis _ _ global-basis _ {:type "user"})
-     {#uri"datomic:free://datomic:4334/domains" 1316,
-      #uri"datomic:free://datomic:4334/hyperblog" 1115,
-      #uri"datomic:free://datomic:4334/kalzumeus" 1037}))
-
 (defn global-basis-rpc! [service-uri]
   (-> (http-request! {:url (str service-uri "global-basis")
                       :accept :application/transit+json :as :auto
