@@ -3,7 +3,7 @@
             [contrib.datomic-tx :as tx]
             [contrib.reactive :as r]
             [hypercrud.browser.context :as context]
-            [hypercrud.ui.auto-control :refer [auto-control]]
+            [hypercrud.ui.auto-control :refer [auto-control']]
             [hypercrud.ui.result :refer [result]]))
 
 
@@ -11,9 +11,9 @@
 
 (defn- has-required-attrs? [entity] (set/subset? special-case-attrs (set (keys entity))))
 
-(defn- read-only [ctx]
-  (not (or (has-required-attrs? @(:cell-data ctx))
-           (#{:db/ident :db/doc :db/valueType :db/cardinality} (:hypercrud.browser/attribute ctx)))))
+(defn- read-only [attr record]
+  (not (or (has-required-attrs? record)
+           (#{:db/ident :db/doc :db/valueType :db/cardinality} attr))))
 
 (defn- merge-in-tx [entity tx ctx]
   (reduce (fn [entity [op e a v]]
@@ -49,8 +49,9 @@
                          [true true]
                          (user-with! tx))))]
     (fn [ctx props]
-      (let [ctx (update ctx :user-with! #(r/partial user-with! ctx %))]
-        (auto-control ctx props)))))
+      [(auto-control' ctx)
+       (update ctx :user-with! #(r/partial user-with! ctx %))
+       props])))
 
 (defn- build-ident-renderer [special-attrs-state]
   (let [user-with! (fn [ctx user-with! tx]
@@ -72,25 +73,29 @@
                          [true true]
                          (user-with! tx))))]
     (fn [ctx props]
-      (let [ctx (update ctx :user-with! #(r/partial user-with! ctx %))]
-        (auto-control ctx props)))))
+      [(auto-control' ctx)
+       (update ctx :user-with! #(r/partial user-with! ctx %))
+       props])))
 
 (declare renderer)
 
+(def attrs [:db/ident :db/valueType :db/cardinality :db/doc
+            :db/unique :db/isComponent :db/fulltext])
+
 (defn renderer [ctx]
   (let [special-attrs-state (r/atom nil)
-        valueType-and-cardinality-renderer (build-valueType-and-cardinality-renderer special-attrs-state)
-        ident-renderer (build-ident-renderer special-attrs-state)
-        reactive-merge #(merge-in-tx % @special-attrs-state ctx)]
+        reactive-merge #(merge-in-tx % @special-attrs-state ctx)
+        controls {:db/cardinality (build-valueType-and-cardinality-renderer special-attrs-state)
+                  :db/valueType (build-valueType-and-cardinality-renderer special-attrs-state)
+                  :db/ident (build-ident-renderer special-attrs-state)}]
     (fn [ctx]
       (let [ctx (-> ctx
                     (dissoc :relation :relations)
                     (update :hypercrud.browser/result (partial r/fmap reactive-merge))
-                    (context/with-relations)
-                    (assoc :read-only read-only)
-                    (assoc-in [:fields :db/cardinality :renderer] valueType-and-cardinality-renderer)
-                    (assoc-in [:fields :db/valueType :renderer] valueType-and-cardinality-renderer)
-                    (assoc-in [:fields :db/ident :renderer] ident-renderer))]
-        ; Elide doc and ident
-        ; refactor to cell api
-        [:div (result ctx)]))))
+                    (context/with-relations))]
+        ; Elide doc and ident -- this comment is from before, what does this mean
+        (into
+          [:div]
+          (for [k attrs]
+            (let [ro (read-only k @(:hypercrud.browser/result ctx))]
+              [(:cell ctx) [true 0 k] ctx (controls k) :read-only ro])))))))

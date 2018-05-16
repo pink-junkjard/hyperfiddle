@@ -83,7 +83,6 @@
   ; knowledge of this pipeline.
 
   (or (case @(:hypercrud.ui/display-mode ctx) :user (some->> (:control ctx) (r/partial portal-markup)) :xray nil)
-      (case @(:hypercrud.ui/display-mode ctx) :user (fiddle-field-control ctx) :xray nil)
       (attribute-control ctx)
       (some->> (case (:layout ctx :block)
                  :block (schema-control-form ctx)
@@ -94,13 +93,6 @@
 (defn ^:deprecated control-props [ctx]
   ; Only used by fiddle-links/bindings which are legacy, we do that stuff in a renderer now.
   (cond-> {} (:read-only ctx) (assoc :read-only ((:read-only ctx) ctx))))
-
-(defn auto-control [ctx props]                              ; compat - and should take kwargs
-  [(some-> (case (:layout ctx :block)
-             :block (schema-control-form ctx)
-             :inline-block (schema-control-table ctx)
-             :table (schema-control-table ctx)))
-   ctx props])
 
 (comment
   ; Find a home for this:
