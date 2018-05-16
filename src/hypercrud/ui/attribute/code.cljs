@@ -5,7 +5,7 @@
             [hypercrud.ui.control.link-controls :as link-controls]))
 
 
-(defn ^:export code [field props ctx]
+(defn ^:export code [props ctx]
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]
         change! (fn [%]
                   (let [tx (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) (empty->nil %))]

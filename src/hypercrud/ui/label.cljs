@@ -28,7 +28,7 @@
 ; (eval/validate-user-code-str (-> ctx :attribute :db/doc))
 #_{:label help-text :position :below-right}
 
-(defn label [field ctx]
+(defn label [ctx]
   (let [dbdoc (let [dbdoc @(r/cursor (:hypercrud.browser/fat-attribute ctx) [:db/doc])]
                 (when (and (string? dbdoc) (not (empty? dbdoc)))
                   dbdoc))
@@ -41,5 +41,5 @@
                      [:div.docstring [markdown help-md]])
      [:label {:class (if help-md "help-available")}
       ; common crash point; todo use field, attribute is explicitly NOT always defined
-      (:label field)
+      (:label (:hypercrud.browser/field ctx))
       (if help-md [:sup "†"])]]))

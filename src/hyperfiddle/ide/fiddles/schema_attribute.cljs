@@ -48,9 +48,9 @@
 
                          [true true]
                          (user-with! tx))))]
-    (fn [field props ctx]
+    (fn [props ctx]
       (let [ctx (update ctx :user-with! #(r/partial user-with! ctx %))]
-        (auto-control field props nil ctx)))))
+        (auto-control props nil ctx)))))
 
 (defn- build-ident-renderer [special-attrs-state]
   (let [user-with! (fn [ctx user-with! tx]
@@ -71,9 +71,9 @@
 
                          [true true]
                          (user-with! tx))))]
-    (fn [field props ctx]
+    (fn [props ctx]
       (let [ctx (update ctx :user-with! #(r/partial user-with! ctx %))]
-        (auto-control field props nil ctx)))))
+        (auto-control props nil ctx)))))
 
 (declare renderer)
 

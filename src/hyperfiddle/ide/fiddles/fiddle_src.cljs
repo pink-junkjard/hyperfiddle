@@ -21,13 +21,8 @@
                 [(:navigate-cmp ctx) props $db])))
        (doall)))
 
-(defn control-with-unders [frag field props ctx]
-  (let [control [(auto-control' ctx) field props ctx]]
-    [:div control frag]))
-
-(defn cell-wrap [control ctx]
-  (let [control (or control (auto-control' ctx))]
-    [form-cell control (:hypercrud.browser/field ctx) ctx]))
+(defn control-with-unders [frag props ctx]
+  [:div [(auto-control' ctx) props ctx] frag])
 
 (def underdocs
   {:fiddle/pull "See [:fiddle/pull examples](http://www.hyperfiddle.net/:docs!fiddle-pull/) and the

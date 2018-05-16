@@ -5,7 +5,7 @@
     [hypercrud.types.URI :refer [is-uri?]]))
 
 
-(defn ^:export domain-ident-renderer [field props ctx]
+(defn ^:export domain-ident-renderer [props ctx]
   (let [ident @(contrib.reactive/cursor (:cell-data ctx) [:domain/ident])
         href (str "http://" ident "." (:hyperfiddle-hostname ctx))]
     [:a {:href href} href]))

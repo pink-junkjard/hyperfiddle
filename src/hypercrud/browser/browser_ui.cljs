@@ -57,7 +57,7 @@
           (let [ctx (context/relation-path ctx path)
                 field (:hypercrud.browser/field ctx)
                 #_#_control-props (merge (hypercrud.ui.auto-control/control-props ctx) ?props)]
-            [(or ?f (r/partial hypercrud.ui.auto-control/auto-control field {} nil)) ctx]))
+            [(or ?f (r/partial hypercrud.ui.auto-control/auto-control {} nil)) ctx]))
         (browse' [rel #_dependent? path ctx]
           (->> (base/data-from-link @(r/track link/rel->link rel path ctx) ctx)
                (cats/fmap :hypercrud.browser/result)

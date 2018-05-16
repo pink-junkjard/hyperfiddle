@@ -83,7 +83,7 @@
   ; knowledge of this pipeline.
 
   (or (case @(:hypercrud.ui/display-mode ctx) :user (some->> (:control ctx) (r/partial portal-markup)) :xray nil)
-      (case @(:hypercrud.ui/display-mode ctx) :user (fiddle-field-control ctx) :xray nil)
+      ;(case @(:hypercrud.ui/display-mode ctx) :user (fiddle-field-control ctx) :xray nil) -- unused, remove, old bindings api
       ;(case @(:display-mode ctx) :user (fiddle-control ctx) :xray nil)
       (attribute-control ctx)
       (some->> (case (:layout ctx :block)
@@ -103,12 +103,12 @@
   (cond-> {}
     (:read-only ctx) (assoc :read-only ((:read-only ctx) ctx))))
 
-(defn auto-control [maybe-field props _ ctx]                ; compat
+(defn auto-control [props _ ctx]                ; compat
   [(some-> (case (:layout ctx :block)
              :block (schema-control-form ctx)
              :inline-block (schema-control-table ctx)
              :table (schema-control-table ctx)))
-   maybe-field props ctx])
+   props ctx])
 
 (comment
   ; Find a home for this:

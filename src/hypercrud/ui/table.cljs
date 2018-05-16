@@ -60,8 +60,7 @@
                           (some-> sort-direction name))
           :style {:background-color (connection-color/connection-color ctx)}
           :on-click on-click}
-     ; todo unsafe execution of user code: label
-     ((:label ctx (partial vector label)) field ctx)
+     [label ctx]
      [:div.anchors
       (link-controls/anchors path false ctx link/options-processor)
       (link-controls/iframes path false ctx link/options-processor)]]))
@@ -89,17 +88,16 @@
                                 [col-head field sort-col ctx])))))))
    [LinkCell false ctx]])
 
-(defn table-cell [control -field ctx]
+(defn table-cell [control ctx]
   (let [shadow-link @(r/fmap system-link? (r/cursor (:cell-data ctx) [:db/id]))]
     [:td {:class (classes "hyperfiddle-table-cell" "truncate")
           ; todo use cell renderer for shadow-link styles
           :style {:border-color (if-not shadow-link (connection-color/connection-color ctx))}}
      ; todo unsafe execution of user code: control
-     [control -field (control-props ctx) ctx]]))
+     [control (control-props ctx) ctx]]))
 
 (defn Cell [ctx]
-  (let [user-cell (case @(:hypercrud.ui/display-mode ctx) :xray table-cell :user table-cell #_(:cell ctx table-cell))]
-    [user-cell (auto-control' ctx) (:hypercrud.browser/field ctx) ctx]))
+  [table-cell (auto-control' ctx) ctx])
 
 (defn Entity [ctx]
   (let [ctx (context/cell-data ctx)]

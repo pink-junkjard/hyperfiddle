@@ -4,7 +4,7 @@
             [hypercrud.ui.control.link-controls :as link-controls]))
 
 
-(defn instant [maybe-field props ctx]
+(defn instant [props ctx]
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div.value.hyperfiddle-ui-instant
      [:div.anchors (link-controls/anchors path true ctx)]

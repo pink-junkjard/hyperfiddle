@@ -34,25 +34,23 @@
   ^{:key (hash (keys @(:cell-data ctx)))}
   [new-field-state-container ctx])
 
-(defn form-cell [control -field ctx & [class]]              ; safe to return nil or seq
+(defn form-cell [control ctx & [class]]              ; safe to return nil or seq
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     (ui-block-border-wrap
       ctx (str class " field")
-      ; todo unsafe execution of user code: label
-      [:div ((:label ctx (partial vector label)) -field ctx)
+      [:div
+       [label ctx]
        (link-controls/anchors path false ctx link/options-processor)
        (link-controls/iframes path false ctx link/options-processor)]
       ; todo unsafe execution of user code: control
-      [control -field (control-props ctx) ctx])))
+      [control (control-props ctx) ctx])))
 
 (defn Cell
   ([ctx] (Cell nil ctx))
   ([?f ctx & args]                                          ; fiddle-src wants to fallback by passing nil here explicitly
    (assert @(:hypercrud.ui/display-mode ctx))
-    ; todo unsafe execution of user code: cell[ctx i]
-   (let [props (kwargs args)
-         user-cell (case @(:hypercrud.ui/display-mode ctx) :xray form-cell (:hypercrud.browser/cell ctx form-cell))]
-     [user-cell (or ?f (auto-control' ctx)) (:hypercrud.browser/field ctx) ctx (:class props)])))
+   (let [props (kwargs args)]
+     [form-cell (or ?f (auto-control' ctx)) ctx (:class props)])))
 
 (defn Entity [ctx]
   (let [path [(:fe-pos ctx)]]

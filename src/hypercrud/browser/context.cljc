@@ -14,10 +14,8 @@
           :route
           :fe-pos :uri :user-with!
           :cell-data :value
-          :layout :field
-          :label
+          :layout
 
-          :hypercrud.browser/cell                           ; TODO :cell should cascade
           :hypercrud.browser/attribute
           :hypercrud.browser/fat-attribute
           :hypercrud.browser/fiddle
@@ -26,7 +24,7 @@
           :hypercrud.browser/ordered-fes
           :hypercrud.browser/request
           :hypercrud.browser/result
-          :relations :relation
+          :relations :relation                              ; fixme
           :hypercrud.browser/schema
           :hypercrud.browser/schemas))
 
