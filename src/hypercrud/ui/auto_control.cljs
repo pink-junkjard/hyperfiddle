@@ -55,10 +55,6 @@
   [user-portal with-error
    (into [f] args)])
 
-(defn ^:deprecated fiddle-field-control [ctx]               ; use cell api
-  (some->> (get-in ctx [:fields (:hypercrud.browser/attribute ctx) :renderer])
-           (r/partial safe-reagent-f (ui-error/error-comp ctx))))
-
 (defn attribute-control [ctx]
   (let [renderer @(r/cursor (:hypercrud.browser/fat-attribute ctx) [:attribute/renderer])]
     (when (and (string? renderer) (not (string/blank? renderer)))
