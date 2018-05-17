@@ -5,6 +5,7 @@
             [hypercrud.types.URI :refer [is-uri?]]
             [hypercrud.ui.auto-control :refer [auto-control]]
             [hyperfiddle.ui :refer [markdown]]
+            [hypercrud.ui.attribute.edn :refer [edn-many]]
             [hypercrud.ui.form :refer [form-cell]]
             [contrib.ui.tooltip :refer [tooltip]]
             [hyperfiddle.ide.fiddles.topnav :refer [shadow-fiddle]]))
@@ -65,6 +66,16 @@
      (when-not embed-mode [(:browse ctx-real) :attribute-renderers [] ctx-real])
      ]))
 
+(defn hacked-links [ctx props]
+  [:div
+   [:pre (->> @(:value ctx)
+              (remove :link/disabled?)
+              (map #(select-keys % [:link/rel :link/path :link/fiddle :link/render-inline? :link/formula]))
+              (map #(update % :link/fiddle :fiddle/ident))
+              (map pr-str)
+              (interpose "\n"))]
+   [:div.hf-underdoc [markdown "Hacked link renderer – due to an issue in the live embed, the links are shown as EDN until we fix it. You can always alt-click on any pink box to see the real thing."]]])
+
 (defn docs-embed [& attrs]
   (fn [ctx-real class & {:keys [embed-mode]}]
     (let [ctx-real (dissoc ctx-real :user-renderer)         ; this needs to not escape this level; inline links can't ever get it
@@ -72,7 +83,8 @@
           {:keys [:fiddle/ident]} @(:hypercrud.browser/result ctx)
           controls
           {:fiddle/pull (r/partial control-with-unders (fragment :_ [:span.schema "schema: " (schema-links ctx)]))
-           :fiddle/query (r/partial control-with-unders (fragment :_ [:span.schema "schema: " (schema-links ctx)]))}]
+           :fiddle/query (r/partial control-with-unders (fragment :_ [:span.schema "schema: " (schema-links ctx)]))
+           :fiddle/links hacked-links}]
       (fn [ctx-real class & {:keys [embed-mode]}]
         (into
           [:div.fiddle-src {:class class}]
