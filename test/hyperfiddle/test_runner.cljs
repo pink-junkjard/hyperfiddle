@@ -15,6 +15,7 @@
     contrib.string-test
     hypercrud.browser.auto-link-formula-test
     hypercrud.browser.auto-link-txfn-test
+    hypercrud.browser.fiddle-test
     hypercrud.browser.find-element-test
     hypercrud.browser.router-test
     hypercrud.browser.system-link-test
@@ -37,6 +38,7 @@
     'contrib.string-test
     'hypercrud.browser.auto-link-formula-test
     'hypercrud.browser.auto-link-txfn-test
+    'hypercrud.browser.fiddle-test
     'hypercrud.browser.find-element-test
     'hypercrud.browser.router-test
     'hypercrud.browser.system-link-test
