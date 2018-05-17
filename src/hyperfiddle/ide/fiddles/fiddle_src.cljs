@@ -74,7 +74,9 @@
               (map #(update % :link/fiddle :fiddle/ident))
               (map pr-str)
               (interpose "\n"))]
-   [:div.hf-underdoc [markdown "Hacked link renderer – due to an issue in the live embed, the links are shown as EDN until we fix it. You can always alt-click on any pink box to see the real thing."]]])
+   [:div.hf-underdoc [markdown "Hacked link renderer – due to an issue in the live embed, the links are shown as EDN
+   until we fix it \uD83D\uDE1E. However, you can alt-click any pink box to navigate, including this one - if you load
+   this embed directly in its own tab, you can stage changes that way which will work. Try it out!"]]])
 
 (defn docs-embed [& attrs]
   (fn [ctx-real class & {:keys [embed-mode]}]
