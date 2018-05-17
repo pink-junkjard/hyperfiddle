@@ -7,6 +7,7 @@
             [hypercrud.client.peer :as peer]
             [hypercrud.client.schema :as schema]
             [hypercrud.types.DbVal :refer [->DbVal]]
+            [hypercrud.types.Err :as Err]
             [hypercrud.util.branch :as branch]
             [hyperfiddle.io.util :refer [v-not-nil?]]
             [hyperfiddle.runtime :as runtime]
@@ -125,10 +126,16 @@
   (let [tx-groups (map-values (partial filter v-not-nil?)   ; hack because the ui still generates some garbage tx
                               tx-groups)]
     (-> (runtime/transact! rt tx-groups)
-        (p/catch (fn [error]
-                   #?(:cljs (js/alert (pr-str error)))
-                   (dispatch! [:transact!-failure error])
-                   (throw error)))
+        (p/catch (fn [e]
+                   #?(:cljs
+                      (let [message (cond
+                                      (string? e) e
+                                      (Err/Err? e) (:msg e)
+                                      (map? e) (:message e)
+                                      :else (ex-message e))]
+                        (js/alert message)))
+                   (dispatch! [:transact!-failure e])
+                   (throw e)))
         (p/then (fn [{:keys [tempid->id]}]
                   (dispatch! (apply batch [:transact!-success] post-tx))
                   ; todo should just call foundation/bootstrap-data
