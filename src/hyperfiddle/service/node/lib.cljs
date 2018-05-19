@@ -34,5 +34,6 @@
             :request-body (some-> req .-body hack-buggy-express-body-text-parser transit/decode)
             :hyperfiddle-hostname (http-service/hyperfiddle-hostname env hostname)
             :service-uri (req->service-uri env req)
+            :jwt (some-> req .-cookies .-jwt)
             :user-profile (req->user-profile env req))
           (p/then (partial platform-response->express-response res))))))

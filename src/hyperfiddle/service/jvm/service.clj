@@ -42,6 +42,7 @@
               :request-body (:body-params req)
               :hyperfiddle-hostname (http-service/hyperfiddle-hostname env hostname)
               :service-uri nil
+              :jwt (:jwt req)
               :user-profile (:user req))
             (p/then platform-response->pedestal-response))))))
 
@@ -93,12 +94,14 @@
                                   (second))]
           (cond
             (or (nil? jwt-header)
-                (= jwt-cookie jwt-header)) (->> (some-> jwt-cookie (verify))
-                                                ; todo clear the cookie when verifciation fails
-                                                (assoc-in context [:request :user]))
+                (= jwt-cookie jwt-header)) (-> context
+                                               ; todo clear the cookie when verifciation fails
+                                               (assoc-in [:request :user] (some-> jwt-cookie (verify)))
+                                               (assoc-in [:request :jwt] jwt-header))
 
-            (nil? jwt-cookie) (->> (some-> jwt-header (verify))
-                                   (assoc-in context [:request :user]))
+            (nil? jwt-cookie) (-> context
+                                  (assoc-in [:request :user] (some-> jwt-header (verify)))
+                                  (assoc-in [:request :jwt] jwt-header))
 
             :else (-> (terminate context)
                       (assoc :response {:status 400 :body {:message "Conflicting cookies and auth bearer"}}))))))))

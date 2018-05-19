@@ -9,7 +9,7 @@
             [hyperfiddle.state :as state]))
 
 
-(deftype GlobalBasisRuntime [hyperfiddle-hostname hostname service-uri state-atom root-reducer]
+(deftype GlobalBasisRuntime [hyperfiddle-hostname hostname service-uri state-atom root-reducer jwt]
   runtime/State
   (dispatch! [rt action-or-func] (state/dispatch! state-atom root-reducer action-or-func))
   (state [rt] state-atom)
@@ -21,11 +21,11 @@
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
-    (hydrate-requests-rpc! service-uri local-basis stage requests))
+    (hydrate-requests-rpc! service-uri local-basis stage requests jwt))
 
   runtime/AppFnSync
   (sync [rt dbs]
-    (sync-rpc! service-uri dbs))
+    (sync-rpc! service-uri dbs jwt))
 
   hc/Peer
   (hydrate [this branch request]

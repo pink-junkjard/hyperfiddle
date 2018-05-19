@@ -23,10 +23,10 @@
   {:status (or (:hyperfiddle.io/http-status-code (ex-data e)) 500)
    :body (->Err #?(:cljs (ex-message e) :clj (.getMessage e)))})
 
-(defn global-basis-handler [->Runtime & {:keys [hostname hyperfiddle-hostname service-uri user-profile]}]
+(defn global-basis-handler [->Runtime & {:keys [hostname hyperfiddle-hostname jwt service-uri user-profile jwt]}]
   (let [state-val (-> {:user-profile user-profile}
                       (reducers/root-reducer nil))
-        rt (->Runtime hyperfiddle-hostname hostname service-uri (r/atom state-val) reducers/root-reducer)]
+        rt (->Runtime hyperfiddle-hostname hostname service-uri (r/atom state-val) reducers/root-reducer jwt)]
     (-> (runtime/global-basis rt)
         (p/then (fn [global-basis]
                   {:status 200
@@ -36,7 +36,7 @@
                    (timbre/error e)
                    (e->platform-response e))))))
 
-(defn local-basis-handler [->Runtime & {:keys [hostname path-params hyperfiddle-hostname service-uri user-profile]}]
+(defn local-basis-handler [->Runtime & {:keys [hostname path-params hyperfiddle-hostname service-uri user-profile jwt]}]
   (try
     (let [global-basis (-> (:global-basis path-params) base-64-url-safe/decode read-edn-string) ; todo this can throw
           route (-> (:encoded-route path-params) base-64-url-safe/decode read-edn-string)
@@ -49,7 +49,7 @@
                                                        :hyperfiddle.runtime/branch-aux branch-aux}}}
           rt (->Runtime hyperfiddle-hostname hostname service-uri
                         (r/atom (reducers/root-reducer initial-state nil))
-                        reducers/root-reducer)]
+                        reducers/root-reducer jwt)]
       (-> (foundation-actions/refresh-domain rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
           (p/then (fn [_] (runtime/local-basis rt global-basis route branch branch-aux)))
           (p/then (fn [local-basis]
@@ -63,7 +63,7 @@
       (timbre/error e)
       (p/resolved (e->platform-response e)))))
 
-(defn hydrate-route-handler [->Runtime & {:keys [hostname path-params request-body hyperfiddle-hostname service-uri user-profile]}]
+(defn hydrate-route-handler [->Runtime & {:keys [hostname path-params request-body hyperfiddle-hostname service-uri user-profile jwt]}]
   (try
     (let [local-basis (-> (:local-basis path-params) base-64-url-safe/decode read-edn-string) ; todo this can throw
           route (-> (:encoded-route path-params) base-64-url-safe/decode read-edn-string)
@@ -79,7 +79,7 @@
                                                            :hyperfiddle.runtime/branch-aux branch-aux}}})
           rt (->Runtime hyperfiddle-hostname hostname service-uri
                         (r/atom (reducers/root-reducer initial-state nil))
-                        reducers/root-reducer)]
+                        reducers/root-reducer jwt)]
       (-> (foundation-actions/refresh-domain rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
           (p/then (fn [_] (runtime/hydrate-route rt local-basis route branch branch-aux (:stage initial-state))))
           (p/then (fn [data]

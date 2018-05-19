@@ -14,7 +14,7 @@
 
 
 ; This is allowed to hydrate route, this runtime is probably the same as hydrate-route runtime
-(deftype LocalBasis [hyperfiddle-hostname hostname service-uri state-atom root-reducer]
+(deftype LocalBasis [hyperfiddle-hostname hostname service-uri state-atom root-reducer jwt]
   runtime/State
   (dispatch! [rt action-or-func] (state/dispatch! state-atom root-reducer action-or-func))
   (state [rt] state-atom)

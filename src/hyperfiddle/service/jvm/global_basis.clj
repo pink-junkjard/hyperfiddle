@@ -11,7 +11,7 @@
             [promesa.core :as p]))
 
 
-(deftype GlobalBasisRuntime [hyperfiddle-hostname hostname service-uri state-atom root-reducer]
+(deftype GlobalBasisRuntime [hyperfiddle-hostname hostname service-uri state-atom root-reducer jwt]
   runtime/State
   (dispatch! [rt action-or-func] (state/dispatch! state-atom root-reducer action-or-func))
   (state [rt] state-atom)

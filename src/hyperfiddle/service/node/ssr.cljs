@@ -57,7 +57,7 @@
       (when serve-js?
         [:script {:id "main" :src (str resource-base "/main.js")}])]]))
 
-(deftype IdeSsrRuntime [hyperfiddle-hostname hostname service-uri state-atom root-reducer]
+(deftype IdeSsrRuntime [hyperfiddle-hostname hostname service-uri state-atom root-reducer jwt]
   runtime/State
   (dispatch! [rt action-or-func] (state/dispatch! state-atom root-reducer action-or-func))
   (state [rt] state-atom)
@@ -65,7 +65,7 @@
 
   runtime/AppFnGlobalBasis
   (global-basis [rt]
-    (global-basis-rpc! service-uri))
+    (global-basis-rpc! service-uri jwt))
 
   runtime/Route
   (decode-route [rt s]
@@ -94,15 +94,15 @@
 
   runtime/AppValHydrate
   (hydrate-route [rt local-basis route branch branch-aux stage]
-    (hydrate-route-rpc! service-uri local-basis route branch branch-aux stage))
+    (hydrate-route-rpc! service-uri local-basis route branch branch-aux stage jwt))
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
-    (hydrate-requests-rpc! service-uri local-basis stage requests))
+    (hydrate-requests-rpc! service-uri local-basis stage requests jwt))
 
   runtime/AppFnSync
   (sync [rt dbs]
-    (sync-rpc! service-uri dbs))
+    (sync-rpc! service-uri dbs jwt))
 
   runtime/AppFnRenderPageRoot
   (ssr [rt-page route]
@@ -136,7 +136,7 @@
         initial-state {:user-profile user-profile}
         rt (->IdeSsrRuntime hyperfiddle-hostname hostname (req->service-uri env req)
                             (r/atom (reducers/root-reducer initial-state nil))
-                            reducers/root-reducer)
+                            reducers/root-reducer (some-> req .-cookies .-jwt))
         load-level foundation/LEVEL-HYDRATE-PAGE
         browser-init-level (if (foundation/alias? (foundation/hostname->hf-domain-name hostname hyperfiddle-hostname))
                              load-level
