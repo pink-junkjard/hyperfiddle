@@ -16,6 +16,7 @@
             [io.pedestal.http.body-params :as body-params]
             [io.pedestal.http.ring-middlewares :as ring-middlewares]
             [io.pedestal.http.route :refer [expand-routes]]
+            [io.pedestal.interceptor.chain :refer [terminate]]
             [io.pedestal.interceptor.helpers :as interceptor]
             [promesa.core :as p]
             [ring.util.response :as ring-resp]
@@ -84,11 +85,23 @@
 
 (defn with-user [env]
   (let [verify (jwt/build-verifier env)]
-    (interceptor/on-request
-      (fn [request]
-        (let [user (some-> (get-in (:cookies request) ["jwt" :value])
-                           (verify))]
-          (assoc request :user user))))))
+    (interceptor/before
+      (fn [context]
+        (let [jwt-cookie (get-in context [:request :cookies "jwt" :value])
+              jwt-header (some->> (get-in context [:request :headers "authorization"])
+                                  (re-find #"^Bearer (.+)$")
+                                  (second))]
+          (cond
+            (or (nil? jwt-header)
+                (= jwt-cookie jwt-header)) (->> (some-> jwt-cookie (verify))
+                                                ; todo clear the cookie when verifciation fails
+                                                (assoc-in context [:request :user]))
+
+            (nil? jwt-cookie) (->> (some-> jwt-header (verify))
+                                   (assoc-in context [:request :user]))
+
+            :else (-> (terminate context)
+                      (assoc :response {:status 400 :body {:message "Conflicting cookies and auth bearer"}}))))))))
 
 (defn routes [env]
   (let [service-root (str "/api/" (:BUILD env))]
