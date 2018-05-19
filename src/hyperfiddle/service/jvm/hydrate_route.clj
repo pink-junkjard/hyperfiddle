@@ -66,7 +66,7 @@
                          "user" :leaf
                          "ide" :leaf)]
       (hydrate-loop rt (request-fn-adapter local-basis route stage ctx
-                                           #(HydrateRoute. hyperfiddle-hostname hostname service-uri (r/atom %) root-reducer)
+                                           #(HydrateRoute. hyperfiddle-hostname hostname service-uri (r/atom %) root-reducer jwt)
                                            #(foundation/api page-or-leaf route % ide/api))
                     local-basis branch stage data-cache)))
 

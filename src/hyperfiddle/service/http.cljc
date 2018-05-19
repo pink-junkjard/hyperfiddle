@@ -23,7 +23,7 @@
   {:status (or (:hyperfiddle.io/http-status-code (ex-data e)) 500)
    :body (->Err #?(:cljs (ex-message e) :clj (.getMessage e)))})
 
-(defn global-basis-handler [->Runtime & {:keys [hostname hyperfiddle-hostname jwt service-uri user-profile jwt]}]
+(defn global-basis-handler [->Runtime & {:keys [hostname hyperfiddle-hostname service-uri user-profile jwt]}]
   (let [state-val (-> {:user-profile user-profile}
                       (reducers/root-reducer nil))
         rt (->Runtime hyperfiddle-hostname hostname service-uri (r/atom state-val) reducers/root-reducer jwt)]
