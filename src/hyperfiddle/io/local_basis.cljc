@@ -5,7 +5,7 @@
             [promesa.core :as p]))
 
 
-(defn local-basis-rpc! [service-uri global-basis route branch branch-aux]
+(defn local-basis-rpc! [service-uri global-basis route branch branch-aux & [jwt]]
   (-> {:url (str/format "%(service-uri)slocal-basis/$global-basis/$encoded-route/$branch/$branch-aux"
                         {:service-uri service-uri
                          :global-basis (base-64-url-safe/encode (pr-str global-basis))
@@ -14,5 +14,6 @@
                          :branch-aux (base-64-url-safe/encode (pr-str branch-aux))})
        :accept :application/transit+json :as :auto
        :method :get}
+      (into (when jwt {:auth {:bearer jwt}}))
       (http-request!)
       (p/then :body)))

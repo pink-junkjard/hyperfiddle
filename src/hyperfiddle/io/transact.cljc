@@ -20,12 +20,13 @@
                                    (into {}))]
            {:tempid->id tempid-lookups})))))
 
-(defn transact!-rpc! [service-uri tx-groups]
-  (-> (http-request!
-        {:url (str service-uri "transact")
-         :accept :application/transit+json :as :auto
-         :method :post :form tx-groups
-         :content-type :application/transit+json})
+(defn transact!-rpc! [service-uri tx-groups & [jwt]]
+  (-> {:url (str service-uri "transact")
+       :accept :application/transit+json :as :auto
+       :method :post :form tx-groups
+       :content-type :application/transit+json}
+      (into (when jwt {:auth {:bearer jwt}}))
+      (http-request!)
       (p/then (fn [resp]
                 (if (= 200 (:status resp))
                   ; clear master stage

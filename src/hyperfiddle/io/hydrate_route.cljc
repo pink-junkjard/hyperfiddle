@@ -78,7 +78,7 @@
                                       (->Runtime))))]
       (f ctx))))
 
-(defn hydrate-route-rpc! [service-uri local-basis route branch branch-aux stage]
+(defn hydrate-route-rpc! [service-uri local-basis route branch branch-aux stage & [jwt]]
   ; matrix params instead of path params
   (-> (merge {:url (str/format "%(service-uri)shydrate-route/$local-basis/$encoded-route/$branch/$branch-aux"
                                {:service-uri service-uri
@@ -87,6 +87,7 @@
                                 :branch (base-64-url-safe/encode (pr-str branch))
                                 :branch-aux (base-64-url-safe/encode (pr-str branch-aux))})
               :accept :application/transit+json :as :auto}
+             (when jwt {:auth {:bearer jwt}})
              (if (empty? stage)
                {:method :get}                               ; Try to hit CDN
                {:method :post

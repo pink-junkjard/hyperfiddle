@@ -42,11 +42,13 @@
             (timbre/error e)
             (throw e)))))
 
-(defn sync-rpc! [service-uri dbs]
-  (-> (http-request! {:url (str service-uri "sync")
-                      :accept :application/transit+json :as :auto
-                      :method :post :form dbs
-                      :content-type :application/transit+json})
+(defn sync-rpc! [service-uri dbs & [jwt]]
+  (-> {:url (str service-uri "sync")
+       :accept :application/transit+json :as :auto
+       :method :post :form dbs
+       :content-type :application/transit+json}
+      (into (when jwt {:auth {:bearer jwt}}))
+      (http-request!)
       (p/then (fn [{:keys [body]}]
                 (->> body
                      (apply concat)

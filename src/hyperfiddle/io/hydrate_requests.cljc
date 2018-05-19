@@ -35,14 +35,15 @@
                     (cats/sequence)
                     (either/branch p/rejected p/resolved))))))
 
-(defn hydrate-requests-rpc! [service-uri local-basis stage-val requests]
+(defn hydrate-requests-rpc! [service-uri local-basis stage-val requests & [jwt]]
   (let [staged-branches (stage-val->staged-branches stage-val)
         ; Note the UI-facing interface contains stage-val; the API accepts staged-branches
-        req {:url (str service-uri "hydrate-requests/" ((comp base-64-url-safe/encode pr-str) local-basis)) ; serialize kvseq
-             :accept :application/transit+json :as :auto
-             :method :post                                  ; hydrate-requests always has a POST body, though it has a basis and is cachable
-             :form {:staged-branches staged-branches :request requests}
-             :content-type :application/transit+json}]
+        req (into {:url (str service-uri "hydrate-requests/" ((comp base-64-url-safe/encode pr-str) local-basis)) ; serialize kvseq
+                   :accept :application/transit+json :as :auto
+                   :method :post                            ; hydrate-requests always has a POST body, though it has a basis and is cachable
+                   :form {:staged-branches staged-branches :request requests}
+                   :content-type :application/transit+json}
+                  (when jwt {:auth {:bearer jwt}}))]
     (timbre/debugf "hydrate-requests! request count= %s basis= %s form= %s" (count requests) (pr-str local-basis) (str/prune (pr-str (:form req)) 100))
     (-> (http-request! req)
         (p/then (fn [{:keys [body]}]

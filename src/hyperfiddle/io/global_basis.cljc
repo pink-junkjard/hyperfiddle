@@ -55,10 +55,12 @@
 
 ; This knows about userland api fn (but has no assumptions e.g. that it is the browser-api-fn)
 
-(defn global-basis-rpc! [service-uri]
-  (-> (http-request! {:url (str service-uri "global-basis")
-                      :accept :application/transit+json :as :auto
-                      :method :get})
+(defn global-basis-rpc! [service-uri & [jwt]]
+  (-> {:url (str service-uri "global-basis")
+       :accept :application/transit+json :as :auto
+       :method :get}
+      (into (when jwt {:auth {:bearer jwt}}))
+      (http-request!)
       (p/then :body)))
 
 (def ERROR-MISMATCHED-URIS "Bases cannot be compared; mismatched uris")
