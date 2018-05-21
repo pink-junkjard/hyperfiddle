@@ -13,7 +13,7 @@
             [hyperfiddle.state :as state]))
 
 
-(deftype HydrateRouteRuntime [hyperfiddle-hostname hostname service-uri state-atom root-reducer jwt]
+(deftype HydrateRouteRuntime [hyperfiddle-hostname hostname service-uri state-atom root-reducer jwt ?subject]
   runtime/State
   (dispatch! [rt action-or-func] (state/dispatch! state-atom root-reducer action-or-func))
   (state [rt] state-atom)
@@ -62,7 +62,7 @@
                          "user" :leaf
                          "ide" :leaf)]
       (hydrate-loop rt (request-fn-adapter local-basis route stage ctx
-                                           #(HydrateRouteRuntime. hyperfiddle-hostname hostname service-uri (r/atom %) root-reducer)
+                                           #(HydrateRouteRuntime. hyperfiddle-hostname hostname service-uri (r/atom %) root-reducer jwt ?subject)
                                            #(foundation/api page-or-leaf route % ide/api))
                     local-basis branch stage data-cache)))
 

@@ -26,7 +26,7 @@
 (defn global-basis-handler [->Runtime & {:keys [hostname hyperfiddle-hostname service-uri user-profile jwt]}]
   (let [state-val (-> {:user-profile user-profile}
                       (reducers/root-reducer nil))
-        rt (->Runtime hyperfiddle-hostname hostname service-uri (r/atom state-val) reducers/root-reducer jwt)]
+        rt (->Runtime hyperfiddle-hostname hostname service-uri (r/atom state-val) reducers/root-reducer jwt (:sub user-profile))]
     (-> (runtime/global-basis rt)
         (p/then (fn [global-basis]
                   {:status 200
@@ -49,7 +49,7 @@
                                                        :hyperfiddle.runtime/branch-aux branch-aux}}}
           rt (->Runtime hyperfiddle-hostname hostname service-uri
                         (r/atom (reducers/root-reducer initial-state nil))
-                        reducers/root-reducer jwt)]
+                        reducers/root-reducer jwt (:sub user-profile))]
       (-> (foundation-actions/refresh-domain rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
           (p/then (fn [_] (runtime/local-basis rt global-basis route branch branch-aux)))
           (p/then (fn [local-basis]
@@ -79,7 +79,7 @@
                                                            :hyperfiddle.runtime/branch-aux branch-aux}}})
           rt (->Runtime hyperfiddle-hostname hostname service-uri
                         (r/atom (reducers/root-reducer initial-state nil))
-                        reducers/root-reducer jwt)]
+                        reducers/root-reducer jwt (:sub user-profile))]
       (-> (foundation-actions/refresh-domain rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
           (p/then (fn [_] (runtime/hydrate-route rt local-basis route branch branch-aux (:stage initial-state))))
           (p/then (fn [data]

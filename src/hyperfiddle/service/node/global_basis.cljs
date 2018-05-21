@@ -9,7 +9,7 @@
             [hyperfiddle.state :as state]))
 
 
-(deftype GlobalBasisRuntime [hyperfiddle-hostname hostname service-uri state-atom root-reducer jwt]
+(deftype GlobalBasisRuntime [hyperfiddle-hostname hostname service-uri state-atom root-reducer jwt ?subject]
   runtime/State
   (dispatch! [rt action-or-func] (state/dispatch! state-atom root-reducer action-or-func))
   (state [rt] state-atom)

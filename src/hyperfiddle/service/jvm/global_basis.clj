@@ -11,7 +11,7 @@
             [promesa.core :as p]))
 
 
-(deftype GlobalBasisRuntime [hyperfiddle-hostname hostname service-uri state-atom root-reducer jwt]
+(deftype GlobalBasisRuntime [hyperfiddle-hostname hostname service-uri state-atom root-reducer jwt ?subject]
   runtime/State
   (dispatch! [rt action-or-func] (state/dispatch! state-atom root-reducer action-or-func))
   (state [rt] state-atom)
@@ -25,7 +25,7 @@
   (hydrate-requests [rt local-basis stage requests]
     ;(hydrate-requests! service-uri local-basis stage requests)
     (let [staged-branches (stage-val->staged-branches stage)]
-      (p/resolved (hydrate-requests local-basis requests staged-branches))))
+      (p/resolved (hydrate-requests local-basis requests staged-branches ?subject))))
 
   runtime/AppFnSync
   (sync [rt dbs]

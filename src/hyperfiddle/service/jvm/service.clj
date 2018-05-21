@@ -4,6 +4,7 @@
             [contrib.reader :refer [read-edn-string]]
             [hypercrud.transit :as hc-t]
             [hypercrud.types.Err :refer [->Err]]
+            [hyperfiddle.io.bindings :refer [*subject*]]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-requests]]
             [hyperfiddle.io.sync :refer [sync]]
             [hyperfiddle.io.transact :refer [transact!]]
@@ -54,7 +55,7 @@
     (let [{:keys [body-params path-params]} req
           local-basis (some-> (:local-basis path-params) base-64-url-safe/decode read-edn-string)
           {staged-branches :staged-branches request :request} body-params
-          r (hydrate-requests local-basis request staged-branches)]
+          r (hydrate-requests local-basis request staged-branches (-> req :user :sub))]
       (ring-resp/response r))
     (catch Exception e
       (timbre/error e)

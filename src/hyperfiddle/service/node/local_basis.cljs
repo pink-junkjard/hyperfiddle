@@ -12,7 +12,7 @@
 
 
 ; Todo this is same runtime as HydrateRoute
-(deftype LocalBasisRuntime [hyperfiddle-hostname hostname service-uri state-atom root-reducer jwt]
+(deftype LocalBasisRuntime [hyperfiddle-hostname hostname service-uri state-atom root-reducer jwt ?subject]
   runtime/State
   (dispatch! [rt action-or-func] (state/dispatch! state-atom root-reducer action-or-func))
   (state [rt] state-atom)
