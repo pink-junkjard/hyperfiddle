@@ -12,6 +12,7 @@
             [hypercrud.types.QueryRequest]
             [hypercrud.util.branch :as branch]
             [hypercrud.util.identity :refer [tempid?]]
+            [hyperfiddle.io.bindings]                       ; userland
             [taoensso.timbre :as timbre])
   (:import (hypercrud.types.DbVal DbVal)
            (hypercrud.types.EntityRequest EntityRequest)
@@ -142,24 +143,25 @@
             internal-secure-db (get-secure-db-from-branch branch)]
         (->SecureDbWith (:secure-db internal-secure-db) (:id->tempid internal-secure-db))))))
 
-(defn hydrate-requests [local-basis requests staged-branches] ; theoretically, requests are grouped by basis for cache locality
+(defn hydrate-requests [local-basis requests staged-branches ?subject] ; theoretically, requests are grouped by basis for cache locality
   {:pre [requests
          (not-any? nil? requests)
          (every? #(or (instance? EntityRequest %) (instance? QueryRequest %)) requests)]}
   (timbre/debug (->> (map (comp #(str/prune % 400) pr-str) [local-basis staged-branches (count requests)]) (interpose ", ") (apply str "hydrate-requests: ")))
-  (let [db-with-lookup (atom {})
-        get-secure-db-with (build-get-secure-db-with staged-branches db-with-lookup (into {} local-basis) #_":: ([uri 1234]), but there are some duck type shenanigans happening")
-        pulled-trees (->> requests
-                          (map #(try (hydrate-request* % get-secure-db-with)
-                                     (catch Throwable e
-                                       (timbre/error e)
-                                       (->Err (str e)))))
-                          (doall))
-        ; this can also stream, as the request hydrates.
-        tempid-lookups (reduce (fn [acc [branch internal-secure-db]]
-                                 (assoc-in acc [(:branch-ident branch) (:uri branch)] (:id->tempid internal-secure-db)))
-                               {}
-                               @db-with-lookup)
-        result {:pulled-trees pulled-trees
-                :tempid-lookups tempid-lookups}]
-    result))
+  (binding [hyperfiddle.io.bindings/*subject* ?subject]
+    (let [db-with-lookup (atom {})
+          get-secure-db-with (build-get-secure-db-with staged-branches db-with-lookup (into {} local-basis) #_":: ([uri 1234]), but there are some duck type shenanigans happening")
+          pulled-trees (->> requests
+                            (map #(try (hydrate-request* % get-secure-db-with)
+                                       (catch Throwable e
+                                         (timbre/error e)
+                                         (->Err (str e)))))
+                            (doall))
+          ; this can also stream, as the request hydrates.
+          tempid-lookups (reduce (fn [acc [branch internal-secure-db]]
+                                   (assoc-in acc [(:branch-ident branch) (:uri branch)] (:id->tempid internal-secure-db)))
+                                 {}
+                                 @db-with-lookup)
+          result {:pulled-trees pulled-trees
+                  :tempid-lookups tempid-lookups}]
+      result)))
