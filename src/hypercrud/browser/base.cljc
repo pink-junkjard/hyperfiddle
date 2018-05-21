@@ -111,7 +111,7 @@
                                       [acc args])))]]
     ;(assert (= 0 (count (filter nil? params')))) ; datomic will give a data source error
     ; validation. better to show the query and overlay the params or something?
-    (cond (seq unused) (either/left {:message "unused param" :data {:query q :params params' :unused unused}})
+    (cond #_#_(seq unused) (either/left {:message "unused param" :data {:query q :params params' :unused unused}})
           (not= (count params') (count query-holes)) (either/left {:message "missing params" :data {:query q :params params' :unused unused}})
           :else-valid (either/right params'))))
 
