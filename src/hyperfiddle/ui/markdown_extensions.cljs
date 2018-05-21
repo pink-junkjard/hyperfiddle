@@ -40,17 +40,17 @@
 (defn ^:deprecated -table [content argument {:keys [class] :as props} ctx]
   (hypercrud.ui.table/Table ctx))
 
-(defn result [content argument {:keys [class] :as props} ctx]
+(defn result [content argument props ctx]
   (let [f (read-eval-with-bindings content)]
     [:div.unp (hypercrud.ui.result/result ctx f)]))
 
 (letfn [(keyfn [relation] (hash (map #(or (:db/id %) %) relation)))]
-  (defn list- [content argument {:keys [class] :as props} ctx]
-    [:div {:class (classes class)}
+  (defn list- [content argument props ctx]
+    [:ul props
      (->> (:relations ctx)
           (r/unsequence keyfn)
           (map (fn [[relation k]]
-                 ^{:key k} [hyperfiddle.ui/markdown content (context/relation ctx relation)]))
+                 ^{:key k} [:li [hyperfiddle.ui/markdown content (context/relation ctx relation)]]))
           (doall))]))
 
 (defn value [content argument props ctx]
