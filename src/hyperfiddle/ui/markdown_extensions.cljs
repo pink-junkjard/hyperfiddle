@@ -55,8 +55,9 @@
 
 (defn value [content argument props ctx]
   (let [content (read-eval-with-bindings content)
+        kwargs (flatten (seq (keywordize-keys props)))
         path (into [true] (unwrap (memoized-safe-read-edn-string (str "[" argument "]"))))]
-    (fragment path ((:value ctx) path ctx content))))
+    (apply (:value ctx) path ctx content kwargs)))
 
 (def extensions
   ; Div is not needed, use it with block syntax and it hits React.createElement and works
