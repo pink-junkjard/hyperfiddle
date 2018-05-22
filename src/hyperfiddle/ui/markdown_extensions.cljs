@@ -35,7 +35,8 @@
   (let [?f (read-eval-with-bindings content)
         kwargs (flatten (seq (keywordize-keys props)))
         path (into [true] (unwrap (memoized-safe-read-edn-string (str "[" argument "]"))))]
-    (apply (:cell ctx) path ctx (if ?f (dress :div (fix-arity ?f 1))) kwargs)))
+    (apply (:cell ctx) path ctx (if ?f (dress :div (fix-arity ?f 1)))
+           :class "unp" #_ "fix font size" kwargs)))
 
 (defn ^:deprecated -table [content argument {:keys [class] :as props} ctx]
   [:div.unp (hypercrud.ui.table/Table ctx)])
