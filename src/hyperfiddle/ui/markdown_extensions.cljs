@@ -4,7 +4,7 @@
     [contrib.css :refer [classes]]
     [contrib.data :refer [unwrap fix-arity]]
     [contrib.reactive :as r]
-    [contrib.reagent :refer [fragment]]
+    [contrib.reagent :refer [fragment dress]]
     [contrib.string :refer [memoized-safe-read-edn-string or-str]]
     [contrib.ui]
     [hypercrud.browser.context :as context]
@@ -35,7 +35,7 @@
   (let [?f (read-eval-with-bindings content)
         kwargs (flatten (seq (keywordize-keys props)))
         path (into [true] (unwrap (memoized-safe-read-edn-string (str "[" argument "]"))))]
-    (apply (:cell ctx) path ctx (fix-arity ?f 1) :class "unp" kwargs)))
+    (apply (:cell ctx) path ctx (dress :div (fix-arity ?f 1)) kwargs)))
 
 (defn ^:deprecated -table [content argument {:keys [class] :as props} ctx]
   [:div.unp (hypercrud.ui.table/Table ctx)])
