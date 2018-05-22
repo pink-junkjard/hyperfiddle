@@ -2,7 +2,7 @@
   (:require
     [clojure.walk :refer [keywordize-keys]]
     [contrib.css :refer [classes]]
-    [contrib.data :refer [unwrap]]
+    [contrib.data :refer [unwrap fix-arity]]
     [contrib.reactive :as r]
     [contrib.reagent :refer [fragment]]
     [contrib.string :refer [memoized-safe-read-edn-string or-str]]
@@ -19,8 +19,8 @@
         [_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
         rel (unwrap (memoized-safe-read-edn-string srel))
         path (unwrap (memoized-safe-read-edn-string (str "[" spath "]")))
-        f (read-eval-with-bindings content)]
-    (apply (:browse ctx) rel path ctx f kwargs)))
+        f? (read-eval-with-bindings content)]
+    (apply (:browse ctx) rel path ctx f? kwargs)))
 
 (defn anchor [content argument props ctx]
   (let [kwargs (flatten (seq props))
@@ -32,17 +32,17 @@
     (apply (:anchor ctx) rel path ctx label kwargs)))
 
 (defn cell [content argument props ctx]
-  (let [content (read-eval-with-bindings content)
+  (let [?f (read-eval-with-bindings content)
         kwargs (flatten (seq (keywordize-keys props)))
         path (into [true] (unwrap (memoized-safe-read-edn-string (str "[" argument "]"))))]
-    (apply (:cell ctx) path ctx content :class "unp" kwargs)))
+    (apply (:cell ctx) path ctx (fix-arity ?f 1) :class "unp" kwargs)))
 
 (defn ^:deprecated -table [content argument {:keys [class] :as props} ctx]
-  (hypercrud.ui.table/Table ctx))
+  [:div.unp (hypercrud.ui.table/Table ctx)])
 
 (defn result [content argument props ctx]
-  (let [f (read-eval-with-bindings content)]
-    [:div.unp (hypercrud.ui.result/result ctx f)]))
+  (let [?f (read-eval-with-bindings content)]
+    [:div.unp (hypercrud.ui.result/result ctx ?f)]))
 
 (letfn [(keyfn [relation] (hash (map #(or (:db/id %) %) relation)))]
   (defn list- [content argument props ctx]
@@ -54,10 +54,10 @@
           (doall))]))
 
 (defn value [content argument props ctx]
-  (let [content (read-eval-with-bindings content)
+  (let [?f (read-eval-with-bindings content)
         kwargs (flatten (seq (keywordize-keys props)))
         path (into [true] (unwrap (memoized-safe-read-edn-string (str "[" argument "]"))))]
-    (apply (:value ctx) path ctx content kwargs)))
+    (apply (:value ctx) path ctx (fix-arity ?f 1) kwargs)))
 
 (def extensions
   ; Div is not needed, use it with block syntax and it hits React.createElement and works

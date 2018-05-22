@@ -43,15 +43,15 @@
         (anchor [rel #_dependent? path ctx label & args]
           (let [{:keys [:link/dependent? :link/path] :as link} @(r/track link/rel->link rel path ctx)
                 ctx (context/relation-path ctx (into [dependent?] (unwrap (memoized-safe-read-edn-string (str "[" path "]")))))
-                props (merge (kwargs args) (link/build-link-props link ctx))]
-            [(:navigate-cmp ctx) props label (:class props)]))
+                props (kwargs args)]
+            [(:navigate-cmp ctx) (merge props (link/build-link-props link ctx)) label (:class props)]))
         (cell [[d i a] ctx ?f & args]                       ; form only
           [(r/partial hypercrud.ui.form/Cell ?f)            ; Intentional explicit nil
            (context/relation-path ctx [d i a])
            (kwargs args)])
         (value [path ctx ?f & args]
           (let [ctx (context/relation-path ctx path)]
-            [(or ?f (hypercrud.ui.auto-control/auto-control ctx)) ctx (kwargs args)]))
+            [(or ?f (hypercrud.ui.auto-control/auto-control ctx)) @(:value ctx) ctx (kwargs args)]))
         (browse' [rel #_dependent? path ctx]
           (->> (base/data-from-link @(r/track link/rel->link rel path ctx) ctx)
                (cats/fmap :hypercrud.browser/result)

@@ -94,7 +94,7 @@
           ; todo use cell renderer for shadow-link styles
           :style {:border-color (if-not shadow-link (connection-color/connection-color ctx))}}
      ; todo unsafe execution of user code: control
-     [control ctx (merge (control-props ctx) props)]]))
+     [control @(:value ctx) ctx (merge (control-props ctx) props)]]))
 
 (defn Cell [ctx]
   [table-cell (auto-control ctx) ctx {}])

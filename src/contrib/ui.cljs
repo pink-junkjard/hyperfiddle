@@ -10,9 +10,9 @@
     [taoensso.timbre :as timbre]))
 
 
-(defn ^:export checkbox [r change! & [props]]
+(defn ^:export checkbox [value change! & [props]]
   [:input {:type "checkbox"
-           :checked @r
+           :checked value
            :disabled (:read-only props)
            :on-change change!}])
 

@@ -11,28 +11,28 @@
             ))
 
 
-(defn keyword [ctx props]
+(defn keyword [value ctx props]
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div
      [:div.anchors (link-controls/anchors path true ctx)]
      (let [on-change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))]
-       [input/keyword-input* @(:value ctx) on-change! props])
+       [input/keyword-input* value on-change! props])
      (link-controls/iframes path true ctx)]))
 
-(defn string [ctx props]
+(defn string [value ctx props]
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div
      [:div.anchors (link-controls/anchors path true ctx)]
      (let [on-change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) (empty->nil %)))]
-       [input/input* @(:value ctx) on-change! props])
+       [input/input* value on-change! props])
      (link-controls/iframes path true ctx)]))
 
-(defn long [ctx props]
+(defn long [value ctx props]
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div
      [:div.anchors (link-controls/anchors path true ctx)]
      [input/validated-input
-      @(:value ctx) #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))
+      value #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))
       #(js/parseInt % 10) (fnil str "")
       #(or #_(= "" %) (integer? (js/parseInt % 10)))
       props]
@@ -40,12 +40,12 @@
 
 (def boolean checkbox)
 
-(defn id* [ctx props]
+(defn id* [value ctx props]
   (let [on-change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))]
-    (input/id-input @(:value ctx) on-change! props)))
+    (input/id-input value on-change! props)))
 
 ; this can be used sometimes, on the entity page, but not the query page
-(defn ref [ctx props]
+(defn ref [value ctx props]
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div
      [:div.editable-select
@@ -53,38 +53,38 @@
       (if-let [options-link @(r/track link/options-link path ctx)]
         [:div.select                                        ; helps the weird link float left css thing
          (select* options-link ctx props)]
-        (id* ctx props))]
+        (id* value ctx props))]
      (link-controls/iframes path true ctx link/options-processor)]))
 
-(defn ref-component [ctx props]
+(defn ref-component [value ctx props]
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     (assert (not @(r/track link/options-link path ctx)) "ref-components don't have options; todo handle gracefully")
     #_(assert (> (count (filter :link/render-inline? my-links)) 0))
     #_(ref my-links props ctx)
     [:div
      [:div.anchors (link-controls/anchors path true ctx)]
-     #_[:pre (pr-str @(:value ctx))]
+     #_[:pre (pr-str value)]
      (link-controls/iframes path true ctx)]))
 
-(defn ref-many-table [ctx props]
+(defn ref-many-table [value ctx props]
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     (assert (not @(r/track link/options-link path ctx)) "ref-component-many don't have options; todo handle gracefully")
     [:div
      [:div.anchors (link-controls/anchors path true ctx)]
      (link-controls/iframes path true ctx)]))
 
-(defn ref-many-component-table [ctx props]
+(defn ref-many-component-table [value ctx props]
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div
      [:div.anchors (link-controls/anchors path true ctx)]
      (link-controls/iframes path true ctx)]))
 
-(defn text [ctx props]
+(defn text [value ctx props]
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div
      [:div.anchors (link-controls/anchors path true ctx)]
      [:span.text
       (case @(r/cursor (:hypercrud.browser/fat-attribute ctx) [:db/cardinality :db/ident])
-        :db.cardinality/many (map pr-str @(:value ctx))
-        (pr-str @(:value ctx)))]
+        :db.cardinality/many (map pr-str value)
+        (pr-str value))]
      (link-controls/iframes path true ctx)]))

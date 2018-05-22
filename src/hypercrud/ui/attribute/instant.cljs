@@ -4,7 +4,7 @@
             [hypercrud.ui.control.link-controls :as link-controls]))
 
 
-(defn instant [ctx props]
+(defn ^:export instant [value ctx props]
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div.hyperfiddle-ui-instant
      [:div.anchors (link-controls/anchors path true ctx)]
@@ -12,5 +12,5 @@
            widget (case (:layout ctx) :block recom-date
                                       :inline-block recom-date
                                       :table recom-date)]
-       [widget @(:value ctx) change! props])
+       [widget value change! props])
      (link-controls/iframes path true ctx)]))

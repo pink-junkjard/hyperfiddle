@@ -22,8 +22,8 @@
                 [(:navigate-cmp ctx) props $db])))
        (doall)))
 
-(defn control-with-unders [frag ctx props]
-  [:div [(auto-control ctx) ctx props] frag])
+(defn control-with-unders [frag value ctx props]
+  [:div [(auto-control ctx) value ctx props] frag])
 
 (def underdocs
   {:fiddle/pull "See [:fiddle/pull examples](http://www.hyperfiddle.net/:docs!fiddle-pull/) and the
@@ -66,9 +66,9 @@
      (when-not embed-mode [(:browse ctx-real) :attribute-renderers [] ctx-real])
      ]))
 
-(defn hacked-links [ctx props]
+(defn hacked-links [value ctx props]
   [:div
-   [:pre (->> @(:value ctx)
+   [:pre (->> value
               (remove :link/disabled?)
               (map #(select-keys % [:link/rel :link/path :link/fiddle :link/render-inline? :link/formula]))
               (map #(update % :link/fiddle :fiddle/ident))

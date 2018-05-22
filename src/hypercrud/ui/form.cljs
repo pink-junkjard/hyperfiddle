@@ -42,7 +42,7 @@
        (link-controls/anchors path false ctx link/options-processor)
        (link-controls/iframes path false ctx link/options-processor)]
       ; todo unsafe execution of user code: control
-      [control ctx (merge (control-props ctx) props)])))
+      [control @(:value ctx) ctx (merge (control-props ctx) props)])))
 
 (defn Cell
   ([ctx] (Cell nil ctx nil))

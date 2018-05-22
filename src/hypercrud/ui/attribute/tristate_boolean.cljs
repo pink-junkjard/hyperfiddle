@@ -3,10 +3,10 @@
             [hypercrud.ui.select :refer [select-boolean*]]))
 
 
-(defn tristate-boolean [ctx props]
+(defn ^:export tristate-boolean [value ctx props]
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
-    [:div.value
+    [:div
      [:div.editable-select {:key (:hypercrud.browser/attribute ctx)}
       [:div.anchors (link-controls/anchors path true ctx)]
-      (select-boolean* @(:value ctx) props ctx)]
+      (select-boolean* value props ctx)]
      (link-controls/iframes path true ctx)]))

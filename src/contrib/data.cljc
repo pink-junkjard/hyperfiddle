@@ -59,8 +59,12 @@
           cols (map #(pad n zero %) cols)]
       (apply map f cols))))
 
-(defn fallback [p v not-found]
-  (if-not (p v) v not-found))
+;(defn fallback [p v not-found]
+;  (if-not (p v) v not-found))
+
+(defn fvor [f default]
+  (fn [v & args]
+    (or (if v (apply f v args)) default)))
 
 (defn tee [g f!] (fn [v] (f! v) (g v)))
 
@@ -108,3 +112,8 @@
        (drop-while f?)
        (reverse)
        (into (empty xs))))
+
+(defn fix-arity [f n]
+  (if f
+    (fn [& args]
+      (apply f (take n args)))))

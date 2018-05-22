@@ -48,8 +48,9 @@
 
                          [true true]
                          (user-with! tx))))]
-    (fn [ctx props]
+    (fn [value ctx props]
       [(auto-control ctx)
+       value
        (update ctx :user-with! #(r/partial user-with! ctx %))
        props])))
 
@@ -72,8 +73,9 @@
 
                          [true true]
                          (user-with! tx))))]
-    (fn [ctx props]
+    (fn [value ctx props]
       [(auto-control ctx)
+       value
        (update ctx :user-with! #(r/partial user-with! ctx %))
        props])))
 

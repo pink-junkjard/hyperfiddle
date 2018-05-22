@@ -7,7 +7,7 @@
             [hypercrud.ui.table :as table]))
 
 
-(defn ^:export result "f is parameterized by markdown e.g. !result[hypercrud.ui.result/list]()"
+(defn ^:export result                                       ; is the ?f arity used?
   [ctx & [f]]                                               ; should have explicit mapcat, like markdown.
   ; This is not a reagent component; it returns a component-or-list-of-components (or nil).
   ; Thus it cannot be used from hiccup syntax. It needs to be wrapped into a :div or a react-fragment.

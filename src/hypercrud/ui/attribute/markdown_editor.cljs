@@ -5,15 +5,14 @@
             [hypercrud.ui.control.link-controls :as link-controls]))
 
 
-(defn ^:export markdown-editor [ctx props]
+(defn ^:export markdown-editor [value ctx props]
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]
         change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) (empty->nil %)))]
-    ;^{:key ident}
     [:div.value
      [:div.anchors (link-controls/anchors path true ctx)]
      (let [widget (case (:layout ctx) :block code-block
                                       :inline-block code-inline-block
                                       :table code-inline-block)
            props (assoc props :mode "markdown" :lineWrapping true)]
-       [widget props @(:value ctx) change!])                 ; backwards args - props last
+       [widget props value change!])                 ; backwards args - props last
      (link-controls/iframes path true ctx)]))

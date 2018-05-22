@@ -7,11 +7,11 @@
             [hypercrud.ui.control.link-controls :as link-controls]))
 
 
-(defn edn-many [ctx props]
+(defn ^:export edn-many [value ctx props]
   (let [valueType @(r/cursor (:hypercrud.browser/fat-attribute ctx) [:db/valueType :db/ident])
         value (-> (if (= valueType :db.type/ref)
-                    (map :db/id @(:value ctx))
-                    @(:value ctx))
+                    (map :db/id value)
+                    value)
                   set)
         change! (fn [user-val]
                   (let [user-val (set user-val)
@@ -29,7 +29,7 @@
      [widget value change! props]
      (link-controls/iframes path true ctx link/options-processor)]))
 
-(defn edn [ctx props]
+(defn ^:export edn [value ctx props]
   (let [change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))
         widget (case (:layout ctx) :block edn-block
                                    :inline-block edn-inline-block
@@ -37,5 +37,5 @@
         path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div
      [:div.anchors (link-controls/anchors path true ctx link/options-processor)]
-     [widget @(:value ctx) change! props]
+     [widget value change! props]
      (link-controls/iframes path true ctx link/options-processor)]))

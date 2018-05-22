@@ -106,14 +106,14 @@
         (let [auth-state (base64-url-safe/encode (runtime/encode-route (:peer ctx) (:target-route ctx)))]
           [:span.nav-link.auth [:a {:href (str (stateless-login-url ctx) "&state=" auth-state)} "Login"]]))]]))
 
-(defn ^:export qe-picker-control [ctx props]
+(defn ^:export qe-picker-control [value ctx props]
   (let [enums [:query :entity :blank]
         change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))
         options (->> enums
                      (map #(radio/option
                              {:label (case % :query "query" :entity "pull" :blank "blank")
                               :target %
-                              :value @(:value ctx)
+                              :value value
                               :change! change!})))]
     [:span.qe.radio-group (apply fragment :_ options)]))
 
