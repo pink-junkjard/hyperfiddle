@@ -46,7 +46,7 @@
 
 (letfn [(keyfn [relation] (hash (map #(or (:db/id %) %) relation)))]
   (defn list- [content argument props ctx]
-    [:ul props
+    [:ul.unp props
      (->> (:relations ctx)
           (r/unsequence keyfn)
           (map (fn [[relation k]]
