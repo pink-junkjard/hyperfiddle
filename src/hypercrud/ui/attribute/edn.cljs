@@ -24,7 +24,7 @@
                                    :inline-block edn-inline-block
                                    :table edn-inline-block)
         path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
-    [:div.value
+    [:div
      [:div.anchors (link-controls/anchors path true ctx link/options-processor)]
      [widget value change! props]
      (link-controls/iframes path true ctx link/options-processor)]))
@@ -35,7 +35,7 @@
                                    :inline-block edn-inline-block
                                    :table edn-inline-block)
         path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
-    [:div.value
+    [:div
      [:div.anchors (link-controls/anchors path true ctx link/options-processor)]
      [widget @(:value ctx) change! props]
      (link-controls/iframes path true ctx link/options-processor)]))

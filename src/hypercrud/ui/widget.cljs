@@ -13,7 +13,7 @@
 
 (defn keyword [ctx props]
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
-    [:div.value
+    [:div
      [:div.anchors (link-controls/anchors path true ctx)]
      (let [on-change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))]
        [input/keyword-input* @(:value ctx) on-change! props])
@@ -21,7 +21,7 @@
 
 (defn string [ctx props]
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
-    [:div.value
+    [:div
      [:div.anchors (link-controls/anchors path true ctx)]
      (let [on-change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) (empty->nil %)))]
        [input/input* @(:value ctx) on-change! props])
@@ -29,7 +29,7 @@
 
 (defn long [ctx props]
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
-    [:div.value
+    [:div
      [:div.anchors (link-controls/anchors path true ctx)]
      [input/validated-input
       @(:value ctx) #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))
@@ -47,7 +47,7 @@
 ; this can be used sometimes, on the entity page, but not the query page
 (defn ref [ctx props]
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
-    [:div.value
+    [:div
      [:div.editable-select
       [:div.anchors (link-controls/anchors path true ctx link/options-processor)] ;todo can this be lifted out of editable-select?
       (if-let [options-link @(r/track link/options-link path ctx)]
@@ -61,7 +61,7 @@
     (assert (not @(r/track link/options-link path ctx)) "ref-components don't have options; todo handle gracefully")
     #_(assert (> (count (filter :link/render-inline? my-links)) 0))
     #_(ref my-links props ctx)
-    [:div.value
+    [:div
      [:div.anchors (link-controls/anchors path true ctx)]
      #_[:pre (pr-str @(:value ctx))]
      (link-controls/iframes path true ctx)]))
@@ -69,19 +69,19 @@
 (defn ref-many-table [ctx props]
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     (assert (not @(r/track link/options-link path ctx)) "ref-component-many don't have options; todo handle gracefully")
-    [:div.value
+    [:div
      [:div.anchors (link-controls/anchors path true ctx)]
      (link-controls/iframes path true ctx)]))
 
 (defn ref-many-component-table [ctx props]
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
-    [:div.value
+    [:div
      [:div.anchors (link-controls/anchors path true ctx)]
      (link-controls/iframes path true ctx)]))
 
 (defn text [ctx props]
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
-    [:div.value
+    [:div
      [:div.anchors (link-controls/anchors path true ctx)]
      [:span.text
       (case @(r/cursor (:hypercrud.browser/fat-attribute ctx) [:db/cardinality :db/ident])

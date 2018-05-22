@@ -6,7 +6,7 @@
 
 (defn instant [ctx props]
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
-    [:div.value.hyperfiddle-ui-instant
+    [:div.hyperfiddle-ui-instant
      [:div.anchors (link-controls/anchors path true ctx)]
      (let [change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))
            widget (case (:layout ctx) :block recom-date
