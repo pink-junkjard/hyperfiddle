@@ -9,7 +9,7 @@
     (println (pr-str fiddle)))
   (cond-> fiddle
     (= :query (:fiddle/type fiddle)) (update :fiddle/query or-str "[:find (pull ?e [:db/id *]) :where\n [?e :db/ident :db/add]]")
-    (= :entity (:fiddle/type fiddle)) (update :fiddle/pull or-str "[[:db/id *]]")))
+    (= :entity (:fiddle/type fiddle)) (update :fiddle/pull or-str "[:db/id *]")))
 
 (defn fiddle-defaults [fiddle]
   (-> (data-defaults fiddle)

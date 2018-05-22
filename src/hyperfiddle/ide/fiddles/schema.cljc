@@ -31,14 +31,14 @@
 (defn db-attribute-edit [$db]
   {:fiddle/ident (keyword "hyperfiddle.schema.db-attribute-edit" $db)
    :fiddle/type :entity
-   :fiddle/pull (str [[:db/id
-                       :db/ident
-                       :db/valueType
-                       :db/cardinality
-                       :db/doc
-                       :db/unique
-                       :db/isComponent
-                       :db/fulltext]])
+   :fiddle/pull (str [:db/id
+                      :db/ident
+                      :db/valueType
+                      :db/cardinality
+                      :db/doc
+                      :db/unique
+                      :db/isComponent
+                      :db/fulltext])
    :fiddle/renderer (str '[hyperfiddle.ide.fiddles.schema-attribute/renderer ctx])
    :fiddle/links #{{:db/id (keyword "hyperfiddle.schema.db-cardinality-options" $db)
                     :link/fiddle (db-cardinality-options $db)

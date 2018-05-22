@@ -127,8 +127,7 @@
                      (get-in ctx [:hypercrud.browser/domain :domain/environment dbname]))
                    (catch #?(:clj Exception :cljs js/Error) e nil))
           pull-exp (or (-> (memoized-safe-read-edn-string @(r/cursor fiddle [:fiddle/pull]))
-                           (either/branch (constantly nil) identity)
-                           first)
+                           (either/branch (constantly nil) identity))
                        ['*])]
       (if (or (nil? uri) (nil? (:db/id e)))
         (either/left {:message "malformed entity param" :data {:params args}})
