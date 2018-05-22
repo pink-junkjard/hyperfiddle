@@ -62,17 +62,19 @@
 (def extensions
   ; Div is not needed, use it with block syntax and it hits React.createElement and works
   ; see https://github.com/medfreeman/remark-generic-extensions/issues/30
-  {"span" (fn [content argument props ctx]
-            [:span (dissoc props :children) content])
+  {; Replace default elements with our classes, hacks
+   ;"ul" (fn [content argument props ctx]
+   ;       [:ul.p (dissoc props :children) (:children props)])
+   "li" (fn [content argument props ctx]
+          [:li.p (dissoc props :children) (:children props)])
    "p" (fn [content argument props ctx]
-         [:div (-> props
-                   (dissoc :children)
-                   (update :class #(classes "p" %)))
-          (:children props)])
-   "CodeEditor" (fn [content argument props ctx]
-                  [contrib.ui/code content #() props])
+         [:div.p (dissoc props :children) (:children props)])
+   "span" (fn [content argument props ctx]
+            [:span (dissoc props :children) content])
    "block" (fn [content argument props ctx]
              [:div props [hyperfiddle.ui/markdown content]])
+   "CodeEditor" (fn [content argument props ctx]
+                  [contrib.ui/code content #() props])
    "cljs" eval
    "browse" browse
    "anchor" anchor
