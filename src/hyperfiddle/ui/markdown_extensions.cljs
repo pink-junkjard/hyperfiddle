@@ -33,14 +33,16 @@
 
 (defn cell [content argument props ctx]
   (let [?f (read-eval-with-bindings content)
-        kwargs (flatten (seq (keywordize-keys props)))
+        props (keywordize-keys props)
+        props (clojure.set/rename-keys props {:className :class})
+        props (update props :class classes "unp")  #_"fix font size"
         path (into [true] (unwrap (memoized-safe-read-edn-string (str "[" argument "]"))))]
     (apply (:cell ctx) path ctx (if ?f (fn control [value ctx props]
                                          [with-react-context
                                           {:ctx ctx :props props}
                                           ; the whole point of the gymnastics is to apply ?f as arity-1 (so `str` works)
                                           [?f #_(wrap-naked-string :div ?f) value]]))
-           :class "unp" #_"fix font size" kwargs)))
+           (flatten (seq props)))))
 
 (defn ^:deprecated -table [content argument {:keys [class] :as props} ctx]
   [:div.unp (hypercrud.ui.table/Table ctx)])
@@ -60,7 +62,7 @@
 
 (defn value [content argument props ctx]
   (let [?f (read-eval-with-bindings content)
-        kwargs (flatten (seq (keywordize-keys props)))
+        props (keywordize-keys props)
         path (into [true] (unwrap (memoized-safe-read-edn-string (str "[" argument "]"))))]
     (apply (:value ctx) path ctx
            (if ?f (fn control [value ctx props]
@@ -68,7 +70,7 @@
                      {:ctx ctx :props props}
                      ; the whole point of the gymnastics is to apply ?f as arity-1 (so `str` works)
                      [?f #_(wrap-naked-string :div ?f) value]]))
-           kwargs)))
+           (flatten (seq props)))))
 
 (def extensions
   ; Div is not needed, use it with block syntax and it hits React.createElement and works

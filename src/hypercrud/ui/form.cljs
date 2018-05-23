@@ -36,7 +36,7 @@
 (defn form-cell [control ctx props]                         ; safe to return nil or seq
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     (ui-block-border-wrap
-      ctx (str (:class props) " field")
+      ctx (classes "field" (:class props) #_ ":class is for the control, these props came from !cell{}")
       [:div
        [label ctx]
        (link-controls/anchors path false ctx link/options-processor)
