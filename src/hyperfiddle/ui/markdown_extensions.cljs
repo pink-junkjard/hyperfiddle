@@ -4,7 +4,7 @@
     [contrib.css :refer [classes]]
     [contrib.data :refer [unwrap fix-arity]]
     [contrib.reactive :as r]
-    [contrib.reagent :refer [fragment dress]]
+    [contrib.reagent :refer [fragment with-react-context]]
     [contrib.string :refer [memoized-safe-read-edn-string or-str]]
     [contrib.ui]
     [hypercrud.browser.context :as context]
@@ -35,8 +35,12 @@
   (let [?f (read-eval-with-bindings content)
         kwargs (flatten (seq (keywordize-keys props)))
         path (into [true] (unwrap (memoized-safe-read-edn-string (str "[" argument "]"))))]
-    (apply (:cell ctx) path ctx (if ?f (dress :div (fix-arity ?f 1)))
-           :class "unp" #_ "fix font size" kwargs)))
+    (apply (:cell ctx) path ctx (if ?f (fn control [value ctx props]
+                                         [with-react-context
+                                          {:ctx ctx :props props}
+                                          ; the whole point of the gymnastics is to apply ?f as arity-1 (so `str` works)
+                                          [?f #_(wrap-naked-string :div ?f) value]]))
+           :class "unp" #_"fix font size" kwargs)))
 
 (defn ^:deprecated -table [content argument {:keys [class] :as props} ctx]
   [:div.unp (hypercrud.ui.table/Table ctx)])
@@ -58,7 +62,13 @@
   (let [?f (read-eval-with-bindings content)
         kwargs (flatten (seq (keywordize-keys props)))
         path (into [true] (unwrap (memoized-safe-read-edn-string (str "[" argument "]"))))]
-    (apply (:value ctx) path ctx (fix-arity ?f 1) kwargs)))
+    (apply (:value ctx) path ctx
+           (if ?f (fn control [value ctx props]
+                    [with-react-context
+                     {:ctx ctx :props props}
+                     ; the whole point of the gymnastics is to apply ?f as arity-1 (so `str` works)
+                     [?f #_(wrap-naked-string :div ?f) value]]))
+           kwargs)))
 
 (def extensions
   ; Div is not needed, use it with block syntax and it hits React.createElement and works

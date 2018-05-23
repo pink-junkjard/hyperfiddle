@@ -1,6 +1,7 @@
 (ns hyperfiddle.ui
   (:require
     [contrib.ui.remark :as remark]
+    [contrib.reagent :refer [from-react-context]]
     [hyperfiddle.ui.markdown-extensions :refer [extensions]]))
 
 
@@ -12,3 +13,8 @@
 
 (defn ^:export markdown [& args]
   (into [remark/markdown -remark-instance] args))
+
+(def ^:export img
+  (from-react-context
+    (fn [{:keys [ctx props]} value]
+      [:img (merge props {:src value})])))
