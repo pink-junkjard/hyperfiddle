@@ -1,31 +1,27 @@
 (ns hyperfiddle.ide.fiddles.topnav
   (:require [cats.core :refer [fmap]]
-            [contrib.base-64-url-safe :as base64-url-safe]
             [contrib.data :refer [kwargs unwrap]]
             [contrib.datomic-tx :as tx]
             [contrib.reactive :as r]
             [contrib.reader :refer [read-edn-string]]
             [contrib.reagent :refer [fragment]]
             [contrib.rfc3986 :refer [encode-ednish encode-rfc3986-pchar]]
+            [contrib.ui.radio :as radio]
+            [contrib.ui.tooltip :refer [tooltip]]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.fiddle :as fiddle]
             [hypercrud.browser.link :as link]
             [hypercrud.browser.router :as router]
             [hypercrud.browser.system-fiddle :as system-fiddle]
             [hypercrud.types.Entity :refer [->Entity shadow-entity]]
-            [hyperfiddle.ui :refer [markdown]]
-            [contrib.ui.radio :as radio]
             [hypercrud.ui.result :as result]
-            [contrib.ui.tooltip :refer [tooltip]]
             [hyperfiddle.foundation :as foundation :refer [staging]]
             [hyperfiddle.foundation.actions :as foundation-actions]
-            [hyperfiddle.runtime :as runtime]))
+            [hyperfiddle.runtime :as runtime]
+            [hyperfiddle.ui :refer [markdown]]
+            [hyperfiddle.ui.login :as login]))
 
-
-(defn stateless-login-url [ctx]
-  (let [{:keys [domain client-id]} (get-in ctx [:hypercrud.browser/domain :domain/environment :auth0 (:hyperfiddle-hostname ctx)])
-        callback-url (str "http://" (:hostname ctx) foundation/auth0-redirect-path)]
-    (str domain "/login?client=" client-id "&callbackURL=" callback-url)))
+(def ^:export stateless-login-url login/stateless-login-url)
 
 ; inline sys-link data when the entity is a system-fiddle
 (letfn [(-shadow-fiddle [target-ident fiddle-val]
@@ -103,8 +99,7 @@
       ((:anchor ctx) :new-fiddle [0] ctx "new-fiddle")
       (if (:user-profile ctx)
         ((:anchor ctx) :account [] ctx (get-in ctx [:user-profile :email]))
-        (let [auth-state (base64-url-safe/encode (runtime/encode-route (:peer ctx) (:target-route ctx)))]
-          [:span.nav-link.auth [:a {:href (str (stateless-login-url ctx) "&state=" auth-state)} "Login"]]))]]))
+        [:span.nav-link.auth [:a {:href (login/stateless-login-url ctx)} "Login"]])]]))
 
 (defn ^:export qe-picker-control [value ctx props]
   (let [enums [:query :entity :blank]
