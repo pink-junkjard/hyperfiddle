@@ -96,9 +96,11 @@
 (defn ^:export hyperfiddle-live [rel ctx & fiddle-attrs]
   [:div.hyperfiddle-live-editor.unp
    [:div.row
-    [:div.col-sm-7
+    ; Reverse order so it looks right on mobile, larger views reorder
+    [:div.col-sm-5.col-sm-push-7
+     [:div "Result:"]
+     ((:browse ctx) rel [] ctx)]
+    [:div.col-sm-7.col-sm-pull-5
      [:div "Live Hyperfiddle editor:"]
      ((:browse ctx) rel [] ctx (apply docs-embed fiddle-attrs) :frag ":src" :class "devsrc")]
-    [:div.col-sm-5
-     [:div "Result:"]
-     ((:browse ctx) rel [] ctx)]]])
+    ]])
