@@ -195,7 +195,7 @@ Hyperfiddle's abstraction has scaled quite far already, see Hyperfiddle-in-Hyper
 
 # Documentation and community
 
-Hyperfiddle is alpha software. The programming API is not frozen.
+hyperfiddle.cljc is alpha software, the interfaces are not finalized.
 
 <https://www.reddit.com/r/hyperfiddle/> will aggregate all our scattered blog posts, tutorials
 and documentation.
