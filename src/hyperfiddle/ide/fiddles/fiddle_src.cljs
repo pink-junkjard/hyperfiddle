@@ -74,9 +74,7 @@
               (map #(update % :link/fiddle :fiddle/ident))
               (map pr-str)
               (interpose "\n"))]
-   [:div.hf-underdoc [markdown "Hacked link renderer – due to an issue in the live embed, the links are shown as EDN
-   until we fix it \uD83D\uDE1E. However, you can alt-click any pink box to navigate, including this one - if you load
-   this embed directly in its own tab, you can stage changes that way which will work. Try it out!"]]])
+   [:div.hf-underdoc [markdown "Due to an issue in the live embed, the links are shown as EDN until we fix it."]]])
 
 (defn docs-embed [& attrs]
   (fn [ctx-real class & {:keys [embed-mode]}]
@@ -101,6 +99,6 @@
      [:div "Result:"]
      ((:browse ctx) rel [] ctx)]
     [:div.col-sm-7.col-sm-pull-5
-     [:div "Live Hyperfiddle editor:"]
+     [:div "Interactive Hyperfiddle editor:"]
      ((:browse ctx) rel [] ctx (apply docs-embed fiddle-attrs) :frag ":src" :class "devsrc")]
     ]])
