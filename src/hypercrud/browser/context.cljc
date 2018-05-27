@@ -61,14 +61,17 @@
   {:pre [(nil? (:relations ctx)) (nil? (:relation ctx))]}
   (case @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/type]) ; fiddle/type not relevant outside this fn
     :entity (if-not @(r/fmap nil? (r/cursor (:hypercrud.browser/request ctx) [:a]))
-              (let [[_ [e a]] (get-in ctx [:route])]
-                (let [source-symbol (unwrap (try-either (.-dbname e)))] ; make failure impossible
-                  (case @(r/cursor (:hypercrud.browser/schemas ctx) [(str source-symbol) a :db/cardinality :db/ident])
+              (let [[_ [?e a]] (get-in ctx [:route])]       ; [:hyperfiddle.ide/edit-fiddle-links [{:db/id nil} :fiddle/links]]
+                ; Draw what you can if there's no parameter in the url
+                ; better to if ?e, but the types are f'ed
+                (if-let [?source-symbol (unwrap (try-either (.-dbname ?e)))] ; make failure impossible
+                  (case @(r/cursor (:hypercrud.browser/schemas ctx) [(str ?source-symbol) a :db/cardinality :db/ident])
                     :db.cardinality/one
                     (relation ctx (r/fmap vector (:hypercrud.browser/result ctx)))
 
                     :db.cardinality/many
-                    (relations ctx (r/fmap (r/partial mapv vector) (:hypercrud.browser/result ctx))))))
+                    (relations ctx (r/fmap (r/partial mapv vector) (:hypercrud.browser/result ctx))))
+                  ctx))
               (relation ctx (r/fmap vector (:hypercrud.browser/result ctx))))
     :query (condp = (query-type @(r/cursor (:hypercrud.browser/request ctx) [:query]))
              datascript.parser.FindRel (relations ctx (r/fmap (r/partial mapv vec) (:hypercrud.browser/result ctx)))
@@ -79,6 +82,7 @@
     ctx))
 
 (letfn [(user-with [rt ctx branch uri tx]
+          (assert uri "https://github.com/hyperfiddle/hyperfiddle/issues/49")
           (runtime/dispatch! rt (foundation-actions/with rt (:hypercrud.browser/invert-route ctx) branch uri tx)))]
   (defn find-element [ctx fe-pos]
     (let [fe (r/cursor (:hypercrud.browser/ordered-fes ctx) [fe-pos])

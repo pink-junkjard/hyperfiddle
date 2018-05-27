@@ -23,9 +23,11 @@
         ctx "field"
         [:div (let [on-change! #(reset! attr-ident %)]
                 [input/keyword-input* @attr-ident on-change! {:placeholder ":task/title"}])]
-        (let [on-change! #(let [tx [[:db/add (:db/id @(:cell-data ctx)) @attr-ident %]]]
+        (let [on-change! #(let [{:keys [db/id]} @(:cell-data ctx)]
+                            (assert id "https://github.com/hyperfiddle/hyperfiddle/issues/49")
+                            (assert @attr-ident)
                             ; todo cardinality many
-                            ((:user-with! ctx) tx))
+                            ((:user-with! ctx) [[:db/add id @attr-ident %]]))
               #_#_props (if (nil? @attr-ident) {:read-only true})]
           [input/edn-input* nil on-change! {:placeholder (pr-str "mow the lawn")}])))))
 
@@ -36,7 +38,7 @@
 (defn form-cell [control ctx props]                         ; safe to return nil or seq
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     (ui-block-border-wrap
-      ctx (classes "field" (:class props) #_ ":class is for the control, these props came from !cell{}")
+      ctx (classes "field" (:class props) #_":class is for the control, these props came from !cell{}")
       [:div
        [label ctx]
        (link-controls/anchors path false ctx link/options-processor)

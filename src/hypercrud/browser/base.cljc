@@ -122,26 +122,26 @@
              (return (->QueryRequest q args)))
 
     :entity
-    (let [[_ [e #_"fat" a :as args]] (get-in ctx [:route])
-          uri (try (let [dbname (.-dbname e)]               ;todo report this exception better
-                     (get-in ctx [:hypercrud.browser/domain :domain/environment dbname]))
-                   (catch #?(:clj Exception :cljs js/Error) e nil))
+    ; Missing entity param is valid state now https://github.com/hyperfiddle/hyperfiddle/issues/268
+    (let [[_ [?e #_"fat" a :as args]] (get-in ctx [:route])
+
+          ?uri (try ; guard java.lang.IllegalArgumentException: No matching field found: dbname for class clojure.lang.PersistentArrayMap
+                 (if-let [dbname (some-> ?e .-dbname)]
+                   (get-in ctx [:hypercrud.browser/domain :domain/environment dbname]))
+                 (catch #?(:clj Exception :cljs js/Error) ex nil))
           pull-exp (or (-> (memoized-safe-read-edn-string @(r/cursor fiddle [:fiddle/pull]))
                            (either/branch (constantly nil) identity))
-                       ['*])]
-      (if (or (nil? uri) (nil? (:db/id e)))
-        (either/left {:message "malformed entity param" :data {:params args}})
-        (either/right
-          (->EntityRequest
-            (:db/id e) a (hc/db (:peer ctx) uri (:branch ctx)) pull-exp))))
+                       ['*])
+          ?db (if ?uri (hc/db (:peer ctx) ?uri (:branch ctx)))]
+      (either/right (->EntityRequest (:db/id ?e) a ?db pull-exp)))
 
     :blank (either/right nil)
 
     (either/right nil)))
 
 (let [nil-or-hydrate (fn [peer branch request]
-                       (if-let [request @request]
-                         @(hc/hydrate peer branch request)
+                       (if-let [?request @request]
+                         @(hc/hydrate peer branch ?request)
                          (either/right nil)))]
   (defn process-results [fiddle request ctx]
     (mlet [reactive-schemas @(r/apply-inner-r (schema-util/hydrate-schema ctx))
@@ -165,6 +165,7 @@
     (mlet [meta-fiddle-request @(r/apply-inner-r (r/track meta-request-for-fiddle ctx))
            fiddle @(r/apply-inner-r (r/track hydrate-fiddle meta-fiddle-request ctx))
            fiddle-request @(r/apply-inner-r (r/track request-for-fiddle fiddle ctx))]
+      ; fiddle request can be nil for no-arg pulls (just draw readonly form)
       (process-results fiddle fiddle-request ctx))))
 
 (defn from-link [link ctx with-route]
