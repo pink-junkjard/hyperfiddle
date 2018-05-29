@@ -51,7 +51,9 @@
    :fiddle/pull
    :fiddle/query
    :fiddle/renderer
-   :fiddle/type])
+   :fiddle/type
+   '*                                                       ; For hyperblog, so we can access :hyperblog.post/title etc from the fiddle renderer
+   ])
 
 (defn legacy-fiddle-ident->lookup-ref [fiddle]              ; SHould be an ident but sometimes is a long today
   ; Keywords are not a db/ident, turn it into the fiddle-id lookup ref.
