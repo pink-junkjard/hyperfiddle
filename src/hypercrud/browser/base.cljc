@@ -114,8 +114,8 @@
     ;(assert (= 0 (count (filter nil? params')))) ; datomic will give a data source error
     ; validation. better to show the query and overlay the params or something?
     (cond #_#_(seq unused) (either/left {:message "unused param" :data {:query q :params params' :unused unused}})
-          (not= (count params') (count query-holes)) (either/left {:message "missing params" :data {:query q :params params' :unused unused}})
-          :else-valid (either/right params'))))
+      (not= (count params') (count query-holes)) (either/left {:message "missing params" :data {:query q :params params' :unused unused}})
+      :else-valid (either/right params'))))
 
 (defn request-for-fiddle [fiddle ctx]
   (case @(r/cursor fiddle [:fiddle/type])
@@ -127,7 +127,7 @@
     ; Missing entity param is valid state now https://github.com/hyperfiddle/hyperfiddle/issues/268
     (let [[_ [?e #_"fat" a :as args]] (get-in ctx [:route])
 
-          ?uri (try ; guard java.lang.IllegalArgumentException: No matching field found: dbname for class clojure.lang.PersistentArrayMap
+          ?uri (try                                         ; guard java.lang.IllegalArgumentException: No matching field found: dbname for class clojure.lang.PersistentArrayMap
                  (if-let [dbname (some-> ?e .-dbname)]
                    (get-in ctx [:hypercrud.browser/domain :domain/environment dbname]))
                  (catch #?(:clj Exception :cljs js/Error) ex nil))
