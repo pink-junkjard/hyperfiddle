@@ -4,6 +4,7 @@
             [contrib.reader :refer [read-edn-string]]
             [hypercrud.transit :as hc-t]
             [hypercrud.types.Err :refer [->Err]]
+            [hyperfiddle.foundation :as foundation]
             [hyperfiddle.io.bindings :refer [*subject*]]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-requests]]
             [hyperfiddle.io.sync :refer [sync]]
@@ -63,7 +64,7 @@
 
 (defn http-transact! [req]
   (try
-    (-> (transact! (:body-params req))
+    (-> (transact! foundation/domain-uri (get-in req [:user :sub]) (:body-params req))
         (ring-resp/response))
     (catch Exception e
       (timbre/error e)
