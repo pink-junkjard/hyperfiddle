@@ -1,24 +1,44 @@
 (ns hyperfiddle.io.transact
-  (:require #?(:clj [datomic.api :as d])
-                    [hyperfiddle.io.http.core :refer [http-request!]]
-                    [promesa.core :as p]))
+  (:require [cats.monad.either :as either]
+            [contrib.eval :as eval]
+    #?(:clj
+            [datomic.api :as d])
+            [hyperfiddle.io.http.core :refer [http-request!]]
+    #?(:clj
+            [hyperfiddle.security :as security])
+            [promesa.core :as p]
+            [taoensso.timbre :as timbre]))
 
 #?(:clj
-   (defn transact! [tx-groups]
-     (let [valid? (every? (fn [[uri tx]]
-                            (let [db (d/db (d/connect (str uri)))
-                                  ; todo look up tx validator
-                                  validate-tx (constantly true)]
-                              (validate-tx db tx)))
-                          tx-groups)]
-       (if-not valid?
-         (throw (RuntimeException. "user tx failed validation"))
-         (let [tempid-lookups (->> tx-groups
-                                   (mapv (fn [[uri dtx]]
-                                           (let [{:keys [tempids]} @(d/transact (d/connect (str uri)) dtx)]
-                                             [uri tempids])))
-                                   (into {}))]
-           {:tempid->id tempid-lookups})))))
+   (let [memoized-safe-eval-string (memoize eval/safe-eval-string)]
+     (defn process-tx [domains-uri subject uri tx]
+       (let [hf-db (-> (d/db (d/connect (str domains-uri)))
+                       (d/entity [:database/uri uri]))
+             f (case (:database/write-security hf-db :hyperfiddle.security/allow-anonymous) ; todo yank this default
+                 :hyperfiddle.security/owner-only security/write-owner-only
+                 :hyperfiddle.security/authenticated-users-only security/write-authenticated-users-only
+                 :hyperfiddle.security/allow-anonymous security/write-allow-anonymous
+                 :hyperfiddle.security/custom (-> (memoized-safe-eval-string (:database/custom-write-sec hf-db))
+                                                  (either/branch
+                                                    (fn [e]
+                                                      (timbre/error e)
+                                                      (throw (ex-info "Misconfigured database security" {:hyperfiddle.io/http-status-code 500
+                                                                                                         :uri uri
+                                                                                                         :additional-info (.getMessage e)})))
+                                                    identity)))]
+         (f hf-db subject tx)))))
+
+#?(:clj
+   (defn transact! [domains-uri subject tx-groups]
+     (let [tempid-lookups (->> tx-groups
+                               (map (fn [[uri tx]]
+                                      [uri (process-tx domains-uri subject uri tx)]))
+                               (doall)                      ; allow any exceptions to fire before transacting anythng
+                               (map (fn [[uri dtx]]
+                                      (let [{:keys [tempids]} @(d/transact (d/connect (str uri)) dtx)]
+                                        [uri tempids])))
+                               (into {}))]
+       {:tempid->id tempid-lookups})))
 
 (defn transact!-rpc! [service-uri tx-groups & [jwt]]
   (-> {:url (str service-uri "transact")
