@@ -31,7 +31,7 @@
         label (or-str content (name rel))]
     (apply (:anchor ctx) rel path ctx label kwargs)))
 
-(defn cell [content argument props ctx]
+(defn field [content argument props ctx]
   (let [?f (read-eval-with-bindings content)
         props (keywordize-keys props)
         props (clojure.set/rename-keys props {:className :class})
@@ -91,7 +91,8 @@
    "cljs" eval
    "browse" browse
    "anchor" anchor
-   "cell" cell
+   "cell" field                                             ; legacy
+   "field" field
    "table" -table
    "result" result
    "list" list-
