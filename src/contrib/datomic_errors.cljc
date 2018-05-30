@@ -1,5 +1,5 @@
 (ns contrib.datomic-errors
-  (:require [contrib.data :refer [cond-let]]
+  (:require [contrib.data :refer [cond-let parse-query-element]]
             [cuerdas.core :as string]))
 
 
@@ -8,10 +8,9 @@
     [msg #_(re-find #"(?s)^.+ :db.error/datoms-conflict (.+)$" e)
      (some-> (string/split e #"^.+ :db\.error/datoms-conflict ") second)]
     [:db.error/datoms-conflict msg
-     "Hint: Hyperfiddle has generated an invalid Datomic transaction ([hyperfiddle#24](https://github.com/hyperfiddle/hyperfiddle/issues/24)).
-     Please repair it by hand in the staging area. If this happens too much,
-     you can avoid this with auto-transact. Sometimes this is a \"merge conflict\"
-     and essential complexity. Sometimes it is a buggy form widget."]
+     "Hint: Hyperfiddle has generated an invalid Datomic transaction. If you are using the staging area, this is
+     probably a 'merge conflict' which must be reconciled by editing the staging area by hand. If it is a buggy
+     widget, please file an issue."]
     [[match msg] (re-find #"^.+ :db.error/invalid-entity-id (.+)$" e)] [:db.error/invalid-entity-id msg]
     [[match msg] (re-find #"^.+ :db.error/insufficient-binding (.+)$" e)]
     [:db.error/insufficient-binding msg
@@ -27,8 +26,11 @@
 
     ; It is the Clojure way.
     [[match msg] (re-find #"^com.google.common.util.concurrent.UncheckedExecutionException: java.lang.IllegalArgumentException: (.+)$" e)] [:hyperfiddle.error/invalid-pull msg]
-    [[match msg] (re-find #"^.+ message: Unable to find data source: (.+)$" e)] [:hyperfiddle.error/query-arity (str "message: Unable to find data source: " msg)]
-    ))
+    [[match msg] (re-find #"^.+ message: Unable to find data source: (.+)$" e)]
+    (let [expected (parse-query-element (some-> req .-query) :in)]
+      [:hyperfiddle.error/query-arity
+       (str "Query argument missing: " msg " which corresponds with " expected ".\n"
+            "Hint: add a link/formula or edit the URL.")])))
 
 (defn datomic-error-cleaner [error-str req]
   (let [[title data] (if-let [[ident error-msg human-hint] (parse-datomic-error-soup error-str req)]
