@@ -71,7 +71,6 @@
                                                :db/isComponent :db/fulltext :db/doc]) '...]
                          :where [$db :db.part/db :db.install/attribute '?attr]]))
    :fiddle/type :query
-   :fiddle/bindings (mpprint-str (fn [ctx] (assoc ctx :read-only (constantly true))))
    :fiddle/renderer (mpprint-str
                       ; -- THIS IS A LIST OF SYMBOLS, ONLY READ, NEVER EVALUATED IN THIS NAMESPACE --
                       (let [hide-datomic (reagent.core/atom true)
@@ -91,7 +90,10 @@
                            (let [ctx (-> ctx
                                          (dissoc :relation :relations)
                                          (update :hypercrud.browser/result (partial contrib.reactive/fmap do-filter-reactive #_(contrib.reactive/partial filter f?)))
-                                         (hypercrud.browser.context/with-relations))]
+                                         (hypercrud.browser.context/with-relations)
+                                         (assoc :read-only (fn [ctx]
+                                                             (let [attrs #{:db/ident :db/doc :db/isComponent}]
+                                                               (not (contains? attrs (:hypercrud.browser/attribute ctx)))))))]
                              [hypercrud.ui.result/result ctx])])))
    :fiddle/links #{{:db/id (keyword "hyperfiddle.schema.db-cardinality-options-link" $db)
                     :link/fiddle (db-cardinality-options $db)
