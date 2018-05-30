@@ -148,7 +148,7 @@
 (defn auto-find-elements [{:keys [:hypercrud.browser/result :hypercrud.browser/request] :as ctx}]
   (case @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/type])
     :entity (let [[_ [?e]] (:route ctx)
-                  ?source-symbol (unwrap (try-either (some-> ?e .-dbname))) ; java.lang.IllegalArgumentException: No matching field found: dbname for class clojure.lang.PersistentArrayMap
+                  ?source-symbol (some-> (unwrap (try-either (some-> ?e .-dbname))) symbol) ; java.lang.IllegalArgumentException: No matching field found: dbname for class clojure.lang.PersistentArrayMap
                   fe-name "entity"
                   pull-pattern @(r/cursor request [:pull-exp])]
               (if ?source-symbol                            ; https://github.com/hyperfiddle/hyperfiddle/issues/268

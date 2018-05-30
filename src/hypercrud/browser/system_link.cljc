@@ -19,7 +19,7 @@
   [parent-fiddle ordered-fes schemas]
   (let [entity-links (->> ordered-fes
                           (map-indexed (fn [fe-pos fe]
-                                         (when (:source-symbol fe)
+                                         (when-let [dbname (some-> (:source-symbol fe) str)]
                                            (let [edit {:db/id (keyword "hyperfiddle.browser.system-link" (str "edit-" (:name fe)))
                                                        :hypercrud/sys? true
                                                        :link/rel :hyperfiddle/edit
@@ -60,8 +60,8 @@
         attr-links (if (not= :blank (:fiddle/type parent-fiddle))
                      (->> ordered-fes
                           (map-indexed (fn [fe-pos fe]
-                                         (when (:source-symbol fe)
-                                           (let [schema (get-in schemas [(str (:source-symbol fe))])]
+                                         (when-let [dbname (some-> (:source-symbol fe) str)]
+                                           (let [schema (get schemas dbname)]
                                              (->> (:fields fe)
                                                   (filter (fn [{:keys [attribute]}]
                                                             (and (not= attribute :db/id)
