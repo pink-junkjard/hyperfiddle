@@ -89,7 +89,8 @@
 (defn src-mode [ctx]
   (either/branch
     (mlet [request @(r/apply-inner-r (r/track base/meta-request-for-fiddle ctx))
-           :let [fiddle (r/atom {:fiddle/type :entity})     ; turns out we dont need fiddle for much if we already know the request
+           :let [fiddle (r/atom {:fiddle/type :entity
+                                 :fiddle/pull-database "$"}) ; turns out we dont need fiddle for much if we already know the request
                  ctx (-> (context/source-mode ctx)
                          (context/clean)
                          (context/route [nil [(->ThinEntity "$" [:fiddle/ident (first (:route ctx))])]]))]]
