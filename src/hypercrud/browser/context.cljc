@@ -76,7 +76,6 @@
     ctx))
 
 (letfn [(user-with [rt ctx branch uri tx]
-          (assert uri "https://github.com/hyperfiddle/hyperfiddle/issues/49")
           (runtime/dispatch! rt (foundation-actions/with rt (:hypercrud.browser/invert-route ctx) branch uri tx)))]
   (defn find-element [ctx fe-pos]
     (let [fe (r/cursor (:hypercrud.browser/ordered-fes ctx) [fe-pos])
