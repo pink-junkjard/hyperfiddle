@@ -155,7 +155,7 @@
                 (if-let [a @(r/cursor request [:a])]
                   (case @(r/cursor (:hypercrud.browser/schemas ctx) [dbname a :db/cardinality :db/ident])
                     :db.cardinality/one
-                    ([(pull-cell->fe @result source-symbol fe-name pull-pattern)])
+                    [(pull-cell->fe @result source-symbol fe-name pull-pattern)]
 
                     :db.cardinality/many
                     [(pull-many-cells->fe @result source-symbol fe-name pull-pattern)])

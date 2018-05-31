@@ -1,6 +1,6 @@
 (ns hypercrud.browser.find-element-test
   #?(:cljs (:require-macros [hypercrud.browser.find-element-test :refer [pull->attr-tests test-defined-pull test-partial-splat test-splat]]))
-  (:require [clojure.test :refer [deftest is]]
+  (:require [clojure.test :refer [deftest is testing]]
             [contrib.reactive :as r]
             [hypercrud.browser.find-element :refer [auto-find-elements]]
             [hypercrud.types.DbVal :refer [->DbVal]]
@@ -135,17 +135,20 @@
   (is (= [] @(auto-find-elements {:hypercrud.browser/fiddle (r/atom {:fiddle/type :blank})}))))
 
 (deftest entity []
-  (pull->attr-tests {:fiddle/type :entity}
+  (pull->attr-tests {:fiddle/type :entity
+                     :fiddle/pull-database test-dbname}
                     #(->EntityRequest 1 nil (->DbVal nil nil) %)
                     (partial apply merge)))
 
 (deftest entity-attr-one []
-  (pull->attr-tests {:fiddle/type :entity}
+  (pull->attr-tests {:fiddle/type :entity
+                     :fiddle/pull-database test-dbname}
                     #(->EntityRequest 1 :e/a-one (->DbVal nil nil) %)
                     (partial apply merge)))
 
 (deftest entity-attr-many []
-  (pull->attr-tests {:fiddle/type :entity}
+  (pull->attr-tests {:fiddle/type :entity
+                     :fiddle/pull-database test-dbname}
                     #(->EntityRequest 1 :e/a-many (->DbVal nil nil) %)
                     identity))
 
