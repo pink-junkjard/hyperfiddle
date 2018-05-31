@@ -157,7 +157,12 @@
            ctx (user-bindings/user-bindings ctx)
            reactive-fes @(r/apply-inner-r (r/track find-element/auto-find-elements ctx))
            :let [ctx (assoc ctx :hypercrud.browser/ordered-fes reactive-fes)
-                 ctx (assoc ctx :hypercrud.browser/links (r/track auto-links ctx))]]
+                 ctx (assoc ctx :hypercrud.browser/links (r/track auto-links ctx))
+                 ctx (if (and (= :entity @(r/cursor fiddle [:fiddle/type]))
+                              ; e is nil on the EntityRequest
+                              (-> ctx :route second first nil?))
+                       (assoc ctx :read-only (r/constantly true))
+                       ctx)]]
       (cats/return ctx))))
 
 (defn data-from-route [route ctx]                           ; todo rename
