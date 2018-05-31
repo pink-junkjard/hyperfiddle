@@ -58,8 +58,8 @@
                 ; todo check fe conn
                 (either/right route)
                 (either/left {:message "malformed entity param" :data {:params params}}))
-      :blank (either/right route)
-      (either/left {:message "route has no fiddle" :data {:route route}}))))
+      ; nil means :blank
+      (either/right route))))
 
 (let [memoized-eval-props (memoize eval/safe-eval-string)]
   (defn eval-hc-props [props-str ctx]
