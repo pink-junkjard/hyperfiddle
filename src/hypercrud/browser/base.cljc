@@ -1,8 +1,8 @@
 (ns hypercrud.browser.base
-  (:require [cats.core :as cats :refer [mlet return fmap]]
-            [cats.monad.either :as either :refer [right left branch-right]]
+  (:require [cats.core :as cats :refer [mlet return]]
+            [cats.monad.either :as either]
             [contrib.reactive :as r]
-            [contrib.string :refer [memoized-safe-read-edn-string or-str]]
+            [contrib.string :refer [memoized-safe-read-edn-string]]
             [contrib.try :refer [try-either]]
             [hypercrud.browser.auto-link :refer [auto-links]]
             [hypercrud.browser.context :as context]
@@ -49,6 +49,7 @@
                    :link/tx-fn]}
    :fiddle/markdown
    :fiddle/pull
+   :fiddle/pull-database
    :fiddle/query
    :fiddle/renderer
    :fiddle/type
@@ -124,18 +125,16 @@
              (return (->QueryRequest q args)))
 
     :entity
-    ; Missing entity param is valid state now https://github.com/hyperfiddle/hyperfiddle/issues/268
-    (let [[_ [?e #_"fat" a :as args]] (get-in ctx [:route])
-
-          ?uri (try                                         ; guard java.lang.IllegalArgumentException: No matching field found: dbname for class clojure.lang.PersistentArrayMap
-                 (if-let [dbname (some-> ?e .-dbname)]
-                   (get-in ctx [:hypercrud.browser/domain :domain/environment dbname]))
-                 (catch #?(:clj Exception :cljs js/Error) ex nil))
-          pull-exp (or (-> (memoized-safe-read-edn-string @(r/cursor fiddle [:fiddle/pull]))
-                           (either/branch (constantly nil) identity))
-                       ['*])
-          ?db (if ?uri (hc/db (:peer ctx) ?uri (:branch ctx)))]
-      (either/right (->EntityRequest (:db/id ?e) a ?db pull-exp)))
+    (if-let [dbname @(r/cursor fiddle [:fiddle/pull-database])]
+      (if-let [uri (get-in ctx [:hypercrud.browser/domain :domain/environment dbname])]
+        (let [[_ [?e a :as args]] (get-in ctx [:route])     ; Missing entity param is valid state now https://github.com/hyperfiddle/hyperfiddle/issues/268
+              db (hc/db (:peer ctx) uri (:branch ctx))
+              pull-exp (or (-> (memoized-safe-read-edn-string @(r/cursor fiddle [:fiddle/pull]))
+                               (either/branch (constantly nil) identity))
+                           ['*])]
+          (either/right (->EntityRequest (:db/id ?e) a db pull-exp)))
+        (either/left (ex-info (str "Invalid :fiddle/pull-database " dbname) {})))
+      (either/left (ex-info "Missing :fiddle/pull-database" {:fiddle @(r/cursor fiddle [:fiddle/ident])})))
 
     :blank (either/right nil)
 

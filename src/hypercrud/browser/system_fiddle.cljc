@@ -1,5 +1,5 @@
 (ns hypercrud.browser.system-fiddle
-  (:require [clojure.string :as str]
+  (:require [cuerdas.core :as str]
             [contrib.try :refer [try-either]]
             [hyperfiddle.ide.fiddles.schema :as schema]
             [hyperfiddle.ide.fiddles.not-found :as not-found]
@@ -15,26 +15,26 @@
 
 ; these need to be thick/hydrated params bc we are manufacturing a pulled tree here.
 
-(def fiddle-system-edit
-  {:fiddle/ident :hyperfiddle.system/edit
-   :fiddle/type :entity})
+(defn fiddle-system-edit [dbname]
+  {:fiddle/ident (keyword "hyperfiddle.system" (str "edit-" dbname))
+   :fiddle/type :entity
+   :fiddle/pull-database dbname})
 
 (def fiddle-blank-system-remove
   {:fiddle/ident :hyperfiddle.system/remove
    :fiddle/type :blank
    :fiddle/renderer (str '[:p "Retract entity?"])})
 
-
 (defn hydrate-system-fiddle [ident]
   (try-either                                               ; catch all the pre assertions
-    (cond
-      (= ident :hyperfiddle.system/edit) fiddle-system-edit
-      (= ident :hyperfiddle.system/remove) fiddle-blank-system-remove
-      (= ident :hyperfiddle.system/not-found) not-found/not-found
-      :else (let [$db (name ident)]
-              (condp = (namespace ident)
-                "hyperfiddle.schema" (schema/schema $db)
-                "hyperfiddle.schema.db-cardinality-options" (schema/db-cardinality-options $db)
-                "hyperfiddle.schema.db-unique-options" (schema/db-unique-options $db)
-                "hyperfiddle.schema.db-valueType-options" (schema/db-valueType-options $db)
-                "hyperfiddle.schema.db-attribute-edit" (schema/db-attribute-edit $db))))))
+    (let [name' (name ident)]
+      (case (namespace ident)
+        "hyperfiddle.system" (cond
+                               (= name' "remove") fiddle-blank-system-remove
+                               (= name' "not-found") not-found/not-found
+                               (str/starts-with? name' "edit-") (fiddle-system-edit (str/strip-prefix name' "edit-")))
+        "hyperfiddle.schema" (schema/schema name')
+        "hyperfiddle.schema.db-cardinality-options" (schema/db-cardinality-options name')
+        "hyperfiddle.schema.db-unique-options" (schema/db-unique-options name')
+        "hyperfiddle.schema.db-valueType-options" (schema/db-valueType-options name')
+        "hyperfiddle.schema.db-attribute-edit" (schema/db-attribute-edit name')))))

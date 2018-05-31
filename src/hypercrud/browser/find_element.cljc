@@ -2,7 +2,7 @@
   (:require [cats.core :as cats :refer [mlet]]
             [cats.monad.either :as either]
             [clojure.set :as set]
-            [contrib.data :refer [transpose unwrap]]
+            [contrib.data :refer [transpose]]
             [contrib.reactive :as r]
             [contrib.try :refer [try-either]]
             [datascript.parser :as parser]))
@@ -80,13 +80,13 @@
          (remove #(= :db/id (:attribute %)))
          vec)))
 
-(defn pull-cell->fe [cell ?source-symbol fe-name pull-pattern]
+(defn pull-cell->fe [cell source-symbol fe-name pull-pattern]
   (let [splat? (not (empty? (filter #(= '* %) pull-pattern)))]
     (map->FindElement
       {:name fe-name
        :fields (let [splat-attrs (when splat? (keys cell))]
                  (pull->fields pull-pattern splat-attrs fe-name))
-       :source-symbol ?source-symbol
+       :source-symbol source-symbol
        :splat? splat?
        :type :pull})))
 
@@ -147,21 +147,19 @@
 
 (defn auto-find-elements [{:keys [:hypercrud.browser/result :hypercrud.browser/request] :as ctx}]
   (case @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/type])
-    :entity (let [[_ [?e]] (:route ctx)
-                  ?source-symbol (some-> (unwrap (try-either (some-> ?e .-dbname))) symbol) ; java.lang.IllegalArgumentException: No matching field found: dbname for class clojure.lang.PersistentArrayMap
+    :entity (let [dbname @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/pull-database])
+                  source-symbol (symbol dbname)
                   fe-name "entity"
                   pull-pattern @(r/cursor request [:pull-exp])]
-              (if ?source-symbol                            ; https://github.com/hyperfiddle/hyperfiddle/issues/268
-                (either/right
-                  (if-let [a @(r/cursor request [:a])]
-                    (case @(r/cursor (:hypercrud.browser/schemas ctx) [(str ?source-symbol) a :db/cardinality :db/ident])
-                      :db.cardinality/one
-                      [(pull-cell->fe @result ?source-symbol fe-name pull-pattern)]
+              (either/right
+                (if-let [a @(r/cursor request [:a])]
+                  (case @(r/cursor (:hypercrud.browser/schemas ctx) [dbname a :db/cardinality :db/ident])
+                    :db.cardinality/one
+                    ([(pull-cell->fe @result source-symbol fe-name pull-pattern)])
 
-                      :db.cardinality/many
-                      [(pull-many-cells->fe @result ?source-symbol fe-name pull-pattern)])
-                    [(pull-cell->fe @result ?source-symbol fe-name pull-pattern)]))
-                (either/right [])))
+                    :db.cardinality/many
+                    [(pull-many-cells->fe @result source-symbol fe-name pull-pattern)])
+                  [(pull-cell->fe @result source-symbol fe-name pull-pattern)])))
 
     :query (mlet [{:keys [qfind]} (try-either (parser/parse-query @(r/cursor request [:query])))]
              (cats/return

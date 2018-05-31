@@ -38,19 +38,17 @@
 (defmulti hydrate-request* (fn [this & args] (class this)))
 
 (defmethod hydrate-request* EntityRequest [{:keys [e a db pull-exp]} get-secure-db-with]
-  (if-not db
-    nil                                                     ; Malformed entity requests still come up, should nil-pun to nothing
-    (let [{pull-db :db} (get-secure-db-with (:uri db) (:branch db))
-          pull-exp (if a [{a pull-exp}] pull-exp)
-          pulled-tree (if (tempid? e)
-                        (if a
-                          nil
-                          ; todo return a positive id here
-                          {:db/id e})
-                        (d/pull pull-db pull-exp e))
-          pulled-tree (recursively-add-entity-types pulled-tree db)
-          pulled-tree (if a (get pulled-tree a) pulled-tree)]
-      pulled-tree)))
+  (let [{pull-db :db} (get-secure-db-with (:uri db) (:branch db))
+        pull-exp (if a [{a pull-exp}] pull-exp)
+        pulled-tree (if (tempid? e)
+                      (if a
+                        nil
+                        ; todo return a positive id here
+                        {:db/id e})
+                      (d/pull pull-db pull-exp e))
+        pulled-tree (recursively-add-entity-types pulled-tree db)
+        pulled-tree (if a (get pulled-tree a) pulled-tree)]
+    pulled-tree))
 
 (defn process-result [user-params fe result]
   (condp = (type fe)

@@ -1,7 +1,5 @@
 (ns hypercrud.browser.context
-  (:require [contrib.data :refer [unwrap]]
-            [contrib.reactive :as r]
-            [contrib.try :refer [try-either]]
+  (:require [contrib.reactive :as r]
             [datascript.parser :as parser]
             [hypercrud.browser.routing :as routing]
             [hyperfiddle.foundation.actions :as foundation-actions]
@@ -60,18 +58,14 @@
   [ctx]
   {:pre [(nil? (:relations ctx)) (nil? (:relation ctx))]}
   (case @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/type]) ; fiddle/type not relevant outside this fn
-    :entity (if-not @(r/fmap nil? (r/cursor (:hypercrud.browser/request ctx) [:a]))
-              (let [[_ [?e a]] (get-in ctx [:route])]       ; [:hyperfiddle.ide/edit-fiddle-links [{:db/id nil} :fiddle/links]]
-                ; Draw what you can if there's no parameter in the url
-                ; better to if ?e, but the types are f'ed
-                (if-let [?source-symbol (unwrap (try-either (.-dbname ?e)))] ; make failure impossible
-                  (case @(r/cursor (:hypercrud.browser/schemas ctx) [(str ?source-symbol) a :db/cardinality :db/ident])
-                    :db.cardinality/one
-                    (relation ctx (r/fmap vector (:hypercrud.browser/result ctx)))
+    :entity (if-let [a @(r/cursor (:hypercrud.browser/request ctx) [:a])]
+              (let [dbname @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/pull-database])]
+                (case @(r/cursor (:hypercrud.browser/schemas ctx) [dbname a :db/cardinality :db/ident])
+                  :db.cardinality/one
+                  (relation ctx (r/fmap vector (:hypercrud.browser/result ctx)))
 
-                    :db.cardinality/many
-                    (relations ctx (r/fmap (r/partial mapv vector) (:hypercrud.browser/result ctx))))
-                  ctx))
+                  :db.cardinality/many
+                  (relations ctx (r/fmap (r/partial mapv vector) (:hypercrud.browser/result ctx)))))
               (relation ctx (r/fmap vector (:hypercrud.browser/result ctx))))
     :query (condp = (query-type @(r/cursor (:hypercrud.browser/request ctx) [:query]))
              datascript.parser.FindRel (relations ctx (r/fmap (r/partial mapv vec) (:hypercrud.browser/result ctx)))

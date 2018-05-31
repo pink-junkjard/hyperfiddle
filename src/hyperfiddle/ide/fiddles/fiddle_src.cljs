@@ -53,7 +53,8 @@
      [(:cell ctx) [true 0 :fiddle/ident] ctx]
      [(:cell ctx) [true 0 :fiddle/type] ctx]
      (case @(r/cursor (:hypercrud.browser/result ctx) [:fiddle/type])
-       :entity [(:cell ctx) [true 0 :fiddle/pull] ctx (controls :fiddle/pull)]
+       :entity (fragment :_ [(:cell ctx) [true 0 :fiddle/pull-database] ctx]
+                         [(:cell ctx) [true 0 :fiddle/pull] ctx (controls :fiddle/pull)])
        :query [(:cell ctx) [true 0 :fiddle/query] ctx (controls :fiddle/query)]
        :blank nil
        nil nil)

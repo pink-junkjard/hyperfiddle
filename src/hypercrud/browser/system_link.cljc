@@ -23,7 +23,7 @@
                                            (let [edit {:db/id (keyword "hyperfiddle.browser.system-link" (str "edit-" (:name fe)))
                                                        :hypercrud/sys? true
                                                        :link/rel :hyperfiddle/edit
-                                                       :link/fiddle system-fiddle/fiddle-system-edit
+                                                       :link/fiddle (system-fiddle/fiddle-system-edit dbname)
                                                        :link/dependent? true
                                                        :link/managed? false
                                                        :link/path (str fe-pos)}
@@ -33,7 +33,7 @@
                                                  new {:db/id (keyword "hyperfiddle.browser.system-link" (str "new-" (:name fe)))
                                                       :hypercrud/sys? true
                                                       :link/rel :hyperfiddle/new
-                                                      :link/fiddle system-fiddle/fiddle-system-edit
+                                                      :link/fiddle (system-fiddle/fiddle-system-edit dbname)
                                                       :link/dependent? false ; not managed, no parent-child ref
                                                       :link/path (str fe-pos)
                                                       :link/managed? true
@@ -74,7 +74,7 @@
                                                               :link/path (str fe-pos " " attribute)
                                                               :link/managed? false
                                                               :link/disabled? true
-                                                              :link/fiddle system-fiddle/fiddle-system-edit}
+                                                              :link/fiddle (system-fiddle/fiddle-system-edit dbname)}
                                                              {:db/id (keyword "hyperfiddle.browser.system-link" (str "new-" (hash [(:name fe) attribute])))
                                                               :hypercrud/sys? true
                                                               :link/rel :hyperfiddle/new
@@ -84,7 +84,7 @@
                                                               :link/create? true
                                                               :link/render-inline? true
                                                               :link/disabled? true
-                                                              :link/fiddle system-fiddle/fiddle-system-edit}
+                                                              :link/fiddle (system-fiddle/fiddle-system-edit dbname)}
                                                              {:db/id (keyword "hyperfiddle.browser.system-link" (str "remove-" (hash [(:name fe) attribute])))
                                                               :hypercrud/sys? true
                                                               :link/rel :hyperfiddle/remove
