@@ -166,3 +166,8 @@
               :db/cas cas
               :db.fn/cas cas)]
       (f id->tempid schema stmt))))
+
+(defn find-datom "not a good abstraction" [tx e-needle a-needle]
+  (let [[[_ _ _ v]] (->> tx (filter (fn [[op e a v]]
+                                      (= [op e a] [:db/add e-needle a-needle]))))]
+    v))
