@@ -15,7 +15,8 @@
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div
      [:div.anchors (link-controls/anchors path true ctx)]
-     (let [on-change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))]
+     (let [props (update props :read-only #(or % (nil? @(r/cursor (:cell-data ctx) [:db/id]))))
+           on-change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))]
        [input/keyword-input* value on-change! props])
      (link-controls/iframes path true ctx)]))
 
@@ -23,16 +24,19 @@
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div
      [:div.anchors (link-controls/anchors path true ctx)]
-     (let [on-change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) (empty->nil %)))]
+     (let [props (update props :read-only #(or % (nil? @(r/cursor (:cell-data ctx) [:db/id]))))
+           on-change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) (empty->nil %)))]
        [input/input* value on-change! props])
      (link-controls/iframes path true ctx)]))
 
 (defn long [value ctx props]
-  (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
+  (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]
+        props (update props :read-only #(or % (nil? @(r/cursor (:cell-data ctx) [:db/id]))))
+        on-change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))]
     [:div
      [:div.anchors (link-controls/anchors path true ctx)]
      [input/validated-input
-      value #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))
+      value on-change!
       #(js/parseInt % 10) (fnil str "")
       #(or #_(= "" %) (integer? (js/parseInt % 10)))
       props]
@@ -41,7 +45,8 @@
 (def boolean checkbox)
 
 (defn id* [value ctx props]
-  (let [on-change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))]
+  (let [props (update props :read-only #(or % (nil? @(r/cursor (:cell-data ctx) [:db/id]))))
+        on-change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))]
     (input/id-input value on-change! props)))
 
 ; this can be used sometimes, on the entity page, but not the query page

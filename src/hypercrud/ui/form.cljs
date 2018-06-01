@@ -19,17 +19,18 @@
 (defn new-field-state-container [ctx]
   (let [attr-ident (r/atom nil)]
     (fn [ctx]
-      (ui-block-border-wrap
-        ctx "field"
-        [:div (let [on-change! #(reset! attr-ident %)]
-                [input/keyword-input* @attr-ident on-change! {:placeholder ":task/title"}])]
-        (let [on-change! #(let [{:keys [db/id]} @(:cell-data ctx)]
-                            (assert id "https://github.com/hyperfiddle/hyperfiddle/issues/49")
-                            (assert @attr-ident)
-                            ; todo cardinality many
-                            ((:user-with! ctx) [[:db/add id @attr-ident %]]))
-              #_#_props (if (nil? @attr-ident) {:read-only true})]
-          [input/edn-input* nil on-change! {:placeholder (pr-str "mow the lawn")}])))))
+      (let [missing-dbid (nil? @(r/cursor (:cell-data ctx) [:db/id]))]
+        (ui-block-border-wrap
+          ctx "field"
+          [:div (let [on-change! #(reset! attr-ident %)]
+                  [input/keyword-input* @attr-ident on-change! {:read-only missing-dbid
+                                                                :placeholder ":task/title"}])]
+          (let [on-change! #(let [id @(r/cursor (:cell-data ctx) [:db/id])]
+                              ; todo cardinality many
+                              ((:user-with! ctx) [[:db/add id @attr-ident %]]))
+                props {:read-only (or missing-dbid (nil? @attr-ident))
+                       :placeholder (pr-str "mow the lawn")}]
+            [input/edn-input* nil on-change! props]))))))
 
 (defn new-field [ctx]
   ^{:key (hash (keys @(:cell-data ctx)))}

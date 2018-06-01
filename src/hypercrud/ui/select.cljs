@@ -44,7 +44,8 @@
                                      "true" true
                                      "false" false)]
                              ((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) v)))
-               :disabled (if (:read-only props) true false)}]
+               :disabled (or (boolean (:read-only props))
+                             (nil? @(r/cursor (:cell-data ctx) [:db/id])))}]
     [:select (dissoc props :label-fn)
      [:option {:key true :value "true"} "True"]
      [:option {:key false :value "false"} "False"]
@@ -101,7 +102,8 @@
                                      ""
                                      (str (:db/id @(:value ctx))))
                             :on-change (r/partial on-change ctx) ; reconstruct the typed value
-                            :disabled (:read-only props)})]
+                            :disabled (or (boolean (:read-only props))
+                                          (nil? @(r/cursor (:cell-data ctx) [:db/id])))})]
           [browser/ui options-link (assoc ctx
                                      :hypercrud.ui/display-mode always-user
                                      :user-renderer (r/partial select-anchor-renderer props))])))))

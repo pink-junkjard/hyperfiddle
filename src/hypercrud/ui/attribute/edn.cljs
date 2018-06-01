@@ -13,6 +13,7 @@
                     (map :db/id value)
                     value)
                   set)
+        props (update props :read-only #(or % (nil? @(r/cursor (:cell-data ctx) [:db/id]))))
         change! (fn [user-val]
                   (let [user-val (set user-val)
                         rets (set/difference value user-val)
@@ -30,7 +31,8 @@
      (link-controls/iframes path true ctx link/options-processor)]))
 
 (defn ^:export edn [value ctx props]
-  (let [change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))
+  (let [props (update props :read-only #(or % (nil? @(r/cursor (:cell-data ctx) [:db/id]))))
+        change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))
         widget (case (:layout ctx) :block edn-block
                                    :inline-block edn-inline-block
                                    :table edn-inline-block)
