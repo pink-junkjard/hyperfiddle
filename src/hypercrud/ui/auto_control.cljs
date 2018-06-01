@@ -60,7 +60,7 @@
     (when (and (string? renderer) (not (string/blank? renderer)))
       (let [with-error (ui-error/error-comp ctx)
             f browser-ui/eval-renderer-comp]
-        (r/partial safe-reagent-f with-error f renderer)))))
+        (r/partial safe-reagent-f with-error f nil renderer)))))
 
 (defn auto-control [ctx]
   ; todo binding renderers should be pathed for aggregates and values

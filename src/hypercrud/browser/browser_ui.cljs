@@ -1,11 +1,11 @@
 (ns hypercrud.browser.browser-ui
-  (:require [cats.core :as cats :refer [mlet]]
+  (:require [cats.core :as cats :refer [mlet >>=]]
             [cats.monad.either :as either]
             [contrib.css :refer [css-slugify classes]]
             [contrib.data :refer [cond-let map-values unwrap kwargs]]
             [contrib.eval :as eval]
             [contrib.reactive :as r]
-            [contrib.string :refer [memoized-safe-read-edn-string pprint-str]]
+            [contrib.string :refer [memoized-safe-read-edn-string pprint-str blank->nil]]
             [contrib.try :refer [try-either]]
             [cuerdas.core :as string]
             [hypercrud.browser.base :as base]
@@ -76,15 +76,21 @@
     (.stopPropagation event)))
 
 ; defer eval until render cycle inside userportal
-(let [safe-eval-string #(try-either (eval/eval-string %))   ; don't actually need to safely eval, just want to memoize exceptions
+(let [safe-eval-string #(try-either (when % (eval/eval-string %))) ; don't actually need to safely eval, just want to memoize exceptions
       memoized-eval-string (memoize safe-eval-string)]
-  (defn eval-renderer-comp [renderer-str & args]
-    (either/branch
-      (memoized-eval-string renderer-str)
-      (fn [e] (throw e))
-      (fn [f] (into [f] args)))))
+  (defn eval-renderer-comp [?fiddle-cljs-ns-str fiddle-renderer-str & args]
+    (let [result (>>= (memoized-eval-string ?fiddle-cljs-ns-str)
+                      (constantly
+                        ; eval ns for the effect on the cljs namespaces
+                        (memoized-eval-string fiddle-renderer-str)))]
+      (either/branch
+        result
+        (fn [e]
+          (throw e))
+        (fn [f]
+          (into [f] args))))))
 
-(defn build-renderer-str [user-str] (str "(fn [ctx & [class]]\n" user-str ")"))
+(defn build-wrapped-render-expr-str [user-str] (str "(fn [ctx & [class]]\n" user-str ")"))
 
 (defn src-mode [ctx]
   (either/branch
@@ -105,19 +111,12 @@
    (if (hyperfiddle.ide.fiddles.topnav/src-mode? (get (:route ctx) 3))
      [src-mode ctx]
      (case @(:hypercrud.ui/display-mode ctx)
-       :user (cond-let
-               [user-renderer (:user-renderer ctx)]
+       :user (if-let [user-renderer (:user-renderer ctx)]
                [user-renderer ctx (auto-ui-css-class ctx)]
-
-               [renderer-str (let [renderer-str @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/renderer])]
-                               (when (and (string? renderer-str) (not (string/blank? renderer-str)))
-                                 renderer-str))]
-               [eval-renderer-comp (build-renderer-str renderer-str) ctx (auto-ui-css-class ctx)]
-
-               [_ :else]
-               ; todo ui.result should be injected
-               [hypercrud.ui.result/fiddle ctx (auto-ui-css-class ctx)])
-
+               [eval-renderer-comp
+                (some-> @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/cljs-ns]) blank->nil)
+                (some-> @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/renderer]) blank->nil build-wrapped-render-expr-str)
+                ctx (auto-ui-css-class ctx)])
        ; todo ui.result should be injected
        :xray [hypercrud.ui.result/fiddle-xray ctx (auto-ui-css-class ctx)]))])
 

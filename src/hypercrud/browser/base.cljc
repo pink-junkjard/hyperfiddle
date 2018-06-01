@@ -51,6 +51,7 @@
    :fiddle/pull
    :fiddle/pull-database
    :fiddle/query
+   :fiddle/cljs-ns
    :fiddle/renderer
    :fiddle/type
    '*                                                       ; For hyperblog, so we can access :hyperblog.post/title etc from the fiddle renderer
