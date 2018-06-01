@@ -44,12 +44,13 @@
               nil nil #_":db/id has a faked attribute with no cardinality, need more thought to make elegant"))
        hash abs-normalized - str)))
 
-(defn auto-entity [ctx]
-  (let [cell-data @(:cell-data ctx)
-        uri (if (instance? Entity cell-data)
-              (.-uri cell-data)
-              (:uri ctx))]
-    (->ThinEntity (dbname/uri->dbname uri ctx) (deterministic-ident ctx))))
+(let [get-uri (fn [default cell-data]
+                (if (instance? Entity cell-data)
+                  (.-uri cell-data)
+                  default))]
+  (defn auto-entity [ctx]
+    (let [uri @(r/fmap (partial get-uri (:uri ctx)) (:cell-data ctx))]
+      (->ThinEntity (dbname/uri->dbname uri ctx) (deterministic-ident ctx)))))
 
 (defn -auto-formula-impl [ctx path & {:keys [create? dependent?]}]
   (case {:fe (not (nil? (first path))) :c? (or create? false) :d? (or dependent? false)}
