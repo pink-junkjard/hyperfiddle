@@ -53,7 +53,7 @@
                                                              :domain-name hf-domain-name}))
                     domain))))))
 
-(defn ide-route [[fiddle datomic-args service-args frag :as route]]
+(defn ide-fiddle-route [[fiddle datomic-args service-args frag :as route]]
   ; Don't impact the request! Topnav can always use :target-route
   [:hyperfiddle/topnav [#entity["$" (base/legacy-fiddle-ident->lookup-ref fiddle)]]])
 
@@ -117,10 +117,12 @@
         home-route (some-> domain :domain/home-route safe-read-edn-string unwrap) ; in hf format
         router (some-> domain :domain/router safe-read-edn-string unwrap)]
 
+    ;(if (= "/!ide/" (subs path-and-frag 0 6)) (routing/decode (subs path-and-frag 5)))
     (or
       (case path
         "/" (if home-route (router/assoc-frag home-route frag))
         (or (if (= "/_/" (subs path-and-frag 0 3)) (routing/decode (subs path-and-frag 2) #_"include leading /"))
+            ; fiddle namespace, hyperfiddle.ide, overlays userland route space
             (if router (router-bidi/decode router path-and-frag))
             (routing/decode path-and-frag)))
       [:hyperfiddle.system/not-found])))
@@ -131,9 +133,11 @@
         router (some-> domain :domain/router safe-read-edn-string unwrap)
         home-route (some-> domain :domain/home-route safe-read-edn-string unwrap)
         home-route (if router (router-bidi/bidi->hf home-route) home-route)]
+    ;(case (namespace fiddle)) "hyperfiddle.ide" (str "/!ide/" (routing/encode route))
     (or
       (if (system-fiddle? fiddle) (str "/_" (routing/encode route)))
       (if (= (router/dissoc-frag route) home-route) (if (empty->nil frag) (str "/#" frag) "/"))
+      ; fiddle namespace, hyperfiddle.ide, overlays userland route space
       (if router (router-bidi/encode router route))
       (routing/encode route))))
 
@@ -150,45 +154,62 @@
     basis))
 
 ; Reactive pattern obfuscates params
-(defn api [route ctx]
+(defn api [[fiddle :as route] ctx]
   {:pre [route (not (string? route))]}
   (case (get-in ctx [::runtime/branch-aux ::foo])
-    "page" (into (browser/request-from-route route (page-target-context ctx route))
-                 (when true #_(activate-ide? (foundation/hostname->hf-domain-name ctx))
-                   (browser/request-from-route (ide-route route) (page-ide-context ctx route))))
+    "page" (into
+             (when true #_(activate-ide? (foundation/hostname->hf-domain-name ctx)) ;-- embedded src mode????
+               (browser/request-from-route (ide-fiddle-route route) (page-ide-context ctx route)))
+             (case (namespace fiddle)
+               "hyperfiddle.ide" (browser/request-from-route route (page-ide-context ctx route))
+               (browser/request-from-route route (page-target-context ctx route))))
     "ide" (browser/request-from-route route (leaf-ide-context ctx))
     "user" (browser/request-from-route route (leaf-target-context ctx route))))
 
 #?(:cljs
-   (defn view-page [route ctx]
-     (let [dev (activate-ide? (foundation/hostname->hf-domain-name ctx))
+   (defn view-page [[fiddle :as route] ctx]
+     (let [ide (activate-ide? (foundation/hostname->hf-domain-name ctx))
            src-mode (let [[_ _ _ frag] route] (topnav/src-mode? frag)) ; Immoral - :src bit is tunneled in userland fragment space
            ctx (assoc ctx :navigate-cmp (r/partial navigate-cmp/navigate-cmp (r/partial runtime/encode-route (:peer ctx))))
            ide-ctx (page-ide-context ctx route)]
+
        (fragment                                            ; These are the same data, just different views.
+
          :view-page
-         (when dev
-           [browser/ui-from-route (ide-route route)
+         (when ide                                          ; topnav
+           [browser/ui-from-route (ide-fiddle-route route)
             (assoc ide-ctx :hypercrud.ui/error (r/constantly ui-error/error-inline)
                            #_#_:user-renderer hyperfiddle.ide.fiddles.topnav/renderer)
             "topnav hidden-print"])
 
-         (when (and dev src-mode)
-           [browser/ui-from-route (ide-route route)
-            (assoc ide-ctx :user-renderer fiddle-src-renderer)
-            "devsrc"])
+         ; Content area
+         (case (namespace fiddle)
 
-         (when-not src-mode
-           (let [ctx (page-target-context ctx route)]
-             [browser/ui-from-route route ctx (classes (some-> ctx :hypercrud.ui/display-mode deref name)
-                                                       "hyperfiddle-user"
-                                                       (if dev "hyperfiddle-ide-user"))]))))))
+           ; bottom, blue background (IDE), injected route like /!ide/:domain
+           "hyperfiddle.ide" ^{:key :primary-content} [browser/ui-from-route route ide-ctx #_"devsrc"]
+
+           (fragment
+             :primary-content
+
+             (when (and ide src-mode)                       ; primary, blue background (IDE)   /:posts/:hello-world#:src
+               [browser/ui-from-route (ide-fiddle-route route) ; srcmode is equal to topnav route but a diff renderer
+                (assoc ide-ctx :user-renderer fiddle-src-renderer)
+                "devsrc"])
+
+             ; User content view in both prod and ide. What if src-mode and not-dev ? This draws nothing
+             (when-not src-mode                             ; primary, white background (User)   /:posts/:hello-world
+               (let [ctx (page-target-context ctx route)]
+                 [browser/ui-from-route route ctx (classes (some-> ctx :hypercrud.ui/display-mode deref name)
+                                                           "hyperfiddle-user"
+                                                           (if ide "hyperfiddle-ide-user"))]))))))))
 
 #?(:cljs
-   (defn view [route ctx]                                   ; pass most as ref for reactions
-     (case (get-in ctx [::runtime/branch-aux ::foo])
-       "page" (view-page route ctx)                         ; component, seq-component or nil
-       ; On SSR side this is only ever called as "page", but it could be differently (e.g. turbolinks)
-       ; On Browser side, also only ever called as "page", but it could be configured differently (client side render the ide, server render userland...?)
-       "ide" [browser/ui-from-route route (leaf-ide-context ctx)]
-       "user" [browser/ui-from-route route (leaf-target-context ctx route)])))
+   (defn view [[fiddle :as route] ctx]                      ; pass most as ref for reactions
+     (case (namespace fiddle)
+       ;"hyperfiddle.ide" [browser/ui-from-route route (leaf-ide-context ctx)]
+       (case (get-in ctx [::runtime/branch-aux ::foo])
+         "page" (view-page route ctx)                       ; component, seq-component or nil
+         ; On SSR side this is only ever called as "page", but it could be differently (e.g. turbolinks)
+         ; On Browser side, also only ever called as "page", but it could be configured differently (client side render the ide, server render userland...?)
+         "ide" [browser/ui-from-route route (leaf-ide-context ctx)]
+         "user" [browser/ui-from-route route (leaf-target-context ctx route)]))))
