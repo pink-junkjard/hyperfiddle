@@ -68,9 +68,10 @@
                                 [(:navigate-cmp ctx) props label (:class kwargs)]))]
     [:div {:class class}
      [:div.left-nav
-      [tooltip {:label nil}
-       (fake-managed-anchor :domain [] ctx (get-in ctx [:target-domain :domain/ident]))]
-      [tooltip {:label "Fiddle ident"}
+      [tooltip {:label "Home"} [:a {:href "/"} (get-in ctx [:target-domain :domain/ident])]]
+      #_[tooltip {:label nil} (fake-managed-anchor :shortcuts [] ctx "shortcuts")]
+      [tooltip {:label "Domain administration"} ((:anchor ctx) :domain [] ctx "domain")]
+      [tooltip {:label "This fiddle"}
        [:div (some-> @(r/cursor (:hypercrud.browser/result ctx) [:fiddle/ident]) str)]]]
 
      [:div.right-nav {:key "right-nav"}                     ; CAREFUL; this key prevents popover flickering
