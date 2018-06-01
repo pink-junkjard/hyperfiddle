@@ -91,7 +91,7 @@
                                      href (if-not src-mode
                                             (str root-rel-path "#" (encode-rfc3986-pchar (encode-ednish (pr-str :src))))
                                             (str root-rel-path "#"))]
-                                 (if (and src-mode (not no-target-fiddle))
+                                 (if (and (not src-mode) (not no-target-fiddle))
                                    [:a {:href href :target "_blank"} "src"]
                                    [:span "src"]))
                         :tooltip "View fiddle source" :target :src :value (if src-mode :src display-mode) :change! change!
