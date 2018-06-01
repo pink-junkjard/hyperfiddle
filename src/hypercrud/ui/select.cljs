@@ -72,7 +72,7 @@
             (sort-by second)
             (map (fn [[id label]]
                    [:option (assoc option-props :key (str id) :value id) label])))
-       [:option {:key :blank :value ""} "--"])]))
+       [:option (assoc option-props :key :blank :value "") "--"])]))
 
 (defn select-error-cmp [msg]
   [:span msg])
