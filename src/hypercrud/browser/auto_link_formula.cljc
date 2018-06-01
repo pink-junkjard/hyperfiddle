@@ -54,18 +54,21 @@
 (defn -auto-formula-impl [ctx path & {:keys [create? dependent?]}]
   (case {:fe (not (nil? (first path))) :c? (or create? false) :d? (or dependent? false)}
     {:fe true :c? false :d? true} (if (nil? (second path))
-                                    "(comp deref :cell-data)"
+                                    (when @(r/cursor (:hypercrud.browser/ordered-fes ctx) [(first path) :entity])
+                                      "(comp deref :cell-data)")
                                     (let [dbname (str @(r/cursor (:hypercrud.browser/ordered-fes ctx) [(first path) :source-symbol]))]
                                       (case @(r/cursor (:hypercrud.browser/schemas ctx) [dbname (second path) :db/cardinality :db/ident])
                                         :db.cardinality/one "(comp deref :value)"
 
                                         ; "find children of parent entity at attr". See base ->EntityRequest
-                                        :db.cardinality/many "(juxt (comp deref :cell-data) :hypercrud.browser/attribute)"
+                                        :db.cardinality/many (when @(r/cursor (:hypercrud.browser/ordered-fes ctx) [(first path) :entity])
+                                                               "(juxt (comp deref :cell-data) :hypercrud.browser/attribute)")
 
                                         ; the attribute doesnt exist
                                         nil "(comp deref :value)")))
     {:fe true :c? false :d? false} nil
-    {:fe true :c? true :d? true} "hypercrud.browser.auto-link-formula/auto-entity"
+    {:fe true :c? true :d? true} (when @(r/cursor (:hypercrud.browser/ordered-fes ctx) [(first path) :entity])
+                                   "hypercrud.browser.auto-link-formula/auto-entity")
     {:fe true :c? true :d? false} "hypercrud.browser.auto-link-formula/auto-entity-from-stage"
 
     ; no fe = index or relation links
