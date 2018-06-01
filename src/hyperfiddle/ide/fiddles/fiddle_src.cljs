@@ -64,7 +64,6 @@
      (when-not embed-mode [(:cell ctx) [true 0 :fiddle/links] ctx-real (controls :fiddle/links)])
      [(:cell ctx) [true 0 :fiddle/entrypoint?] ctx]
      (when-not embed-mode [(:anchor ctx) :hyperfiddle/remove [0] ctx "Remove fiddle"])
-     (when-not embed-mode [(:browse ctx-real) :attribute-renderers [] ctx-real])
      ]))
 
 (defn hacked-links [value ctx props]
