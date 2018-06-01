@@ -153,6 +153,10 @@
     #_(determine-local-basis (hydrate-route route ...))
     basis))
 
+(defn magic-ide-fiddle? [fiddle ctx]
+  (and (not= "hyperfiddle" (-> ctx :hypercrud.browser/domain :domain/ident))
+       (= "hyperfiddle.ide" (namespace fiddle))))
+
 ; Reactive pattern obfuscates params
 (defn api [[fiddle :as route] ctx]
   {:pre [route (not (string? route))]}
@@ -160,8 +164,8 @@
     "page" (into
              (when true #_(activate-ide? (foundation/hostname->hf-domain-name ctx)) ;-- embedded src mode????
                (browser/request-from-route (ide-fiddle-route route) (page-ide-context ctx route)))
-             (case (namespace fiddle)
-               "hyperfiddle.ide" (browser/request-from-route route (page-ide-context ctx route))
+             (if (magic-ide-fiddle? fiddle ctx)
+               (browser/request-from-route route (page-ide-context ctx route))
                (browser/request-from-route route (page-target-context ctx route))))
     "ide" (browser/request-from-route route (leaf-ide-context ctx))
     "user" (browser/request-from-route route (leaf-target-context ctx route))))
@@ -173,24 +177,24 @@
            ctx (assoc ctx :navigate-cmp (r/partial navigate-cmp/navigate-cmp (r/partial runtime/encode-route (:peer ctx))))
            ide-ctx (page-ide-context ctx route)]
 
-       (fragment                                            ; These are the same data, just different views.
-
+       (fragment
          :view-page
-         (when ide                                          ; topnav
+
+         ; Topnav
+         (when ide
            [browser/ui-from-route (ide-fiddle-route route)
             (assoc ide-ctx :hypercrud.ui/error (r/constantly ui-error/error-inline)
                            #_#_:user-renderer hyperfiddle.ide.fiddles.topnav/renderer)
             "topnav hidden-print"])
 
          ; Content area
-         (case (namespace fiddle)
+         (if (magic-ide-fiddle? fiddle ctx)
 
-           ; bottom, blue background (IDE), injected route like /!ide/:domain
-           "hyperfiddle.ide" ^{:key :primary-content} [browser/ui-from-route route ide-ctx #_"devsrc"]
+           ^{:key :primary-content}
+           [browser/ui-from-route route ide-ctx "devsrc"] ; primary, blue background (IDE), magic ide route like /hyperfiddle.ide/domain
 
            (fragment
              :primary-content
-
              (when (and ide src-mode)                       ; primary, blue background (IDE)   /:posts/:hello-world#:src
                [browser/ui-from-route (ide-fiddle-route route) ; srcmode is equal to topnav route but a diff renderer
                 (assoc ide-ctx :user-renderer fiddle-src-renderer)
