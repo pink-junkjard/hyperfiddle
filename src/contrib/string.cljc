@@ -23,6 +23,11 @@
 (defn empty->nil [s]
   (if (str/empty-or-nil? s) nil s))
 
+(defn blank->nil [s]
+  (if (and (string? s)
+           (not (str/blank? s)))
+    s))
+
 (defn split-first [s sep]
   (let [[x & xs] (str/split s sep)]
     [(empty->nil x) (empty->nil (str/join sep xs))]))

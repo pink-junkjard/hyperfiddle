@@ -1,7 +1,7 @@
 (ns contrib.string-test
   (:require [clojure.pprint]
             [clojure.test :refer [deftest is]]
-            [contrib.string :refer [abc empty->nil split-first]]
+            [contrib.string :refer [abc empty->nil blank->nil split-first]]
             [net.cgrand.packed-printer :as packed-printer]))
 
 
@@ -9,6 +9,15 @@
   (is (= (empty->nil nil) nil))
   (is (= (empty->nil "") nil))
   (is (= (empty->nil "a") "a")))
+
+(deftest blank->nil-1
+  (is (= (blank->nil nil) nil))
+  (is (= (blank->nil "") nil))
+  (is (= (blank->nil " ") nil))
+  (is (= (blank->nil "      ") nil))
+  (is (not= (blank->nil "a") nil))
+  (is (not= (blank->nil "   a") nil))
+  (is (not= (blank->nil "   a   ") nil)))
 
 (def s "0/1/2?3?4#5#6")
 (deftest split-first-1
