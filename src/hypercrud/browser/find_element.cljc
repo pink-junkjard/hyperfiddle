@@ -8,7 +8,7 @@
             [datascript.parser :as parser]))
 
 
-(defrecord FindElement [name fields source-symbol splat? type])
+(defrecord FindElement [name entity fields source-symbol splat? type])
 
 (defrecord Field [id label attribute cell-data->value])
 
@@ -18,6 +18,7 @@
   (let [name (str (:symbol element))]
     (map->FindElement
       {:name name
+       :entity false
        :fields [(map->Field {:id (hash name)
                              :label name
                              :attribute nil
@@ -80,10 +81,14 @@
          (remove #(= :db/id (:attribute %)))
          vec)))
 
+(defn entity? [pull-pattern]
+  (boolean (some #{'* :db/id} pull-pattern)))
+
 (defn pull-cell->fe [cell source-symbol fe-name pull-pattern]
   (let [splat? (not (empty? (filter #(= '* %) pull-pattern)))]
     (map->FindElement
       {:name fe-name
+       :entity (entity? pull-pattern)
        :fields (let [splat-attrs (when splat? (keys cell))]
                  (pull->fields pull-pattern splat-attrs fe-name))
        :source-symbol source-symbol
@@ -94,6 +99,7 @@
   (let [splat? (not (empty? (filter #(= '* %) pull-pattern)))]
     (map->FindElement
       {:name fe-name
+       :entity (entity? pull-pattern)
        :fields (let [splat-attrs (when splat?
                                    (->> column-cells
                                         (map keys)
@@ -109,6 +115,7 @@
                              (:args element))))]
     (map->FindElement
       {:name name
+       :entity false
        :fields [(map->Field {:id (hash name)
                              :label name
                              :attribute nil
