@@ -102,7 +102,7 @@
                               :on-click (fn [] (runtime/dispatch! (:peer ctx) [:disable-auto-transact]))}]
                   [:label {:for ::auto-transact} "auto-transact"])
         (fake-managed-anchor :stage [] ctx "stage" :class (if dirty? "stage-dirty")))
-      ((:anchor ctx) :new-fiddle [0] ctx "new-fiddle")
+      ((:anchor ctx) :new-fiddle [] ctx "new-fiddle")
       (if (:user-profile ctx)
         ((:anchor ctx) :account [] ctx (get-in ctx [:user-profile :email]))
         [:span.nav-link.auth [:a {:href (login/stateless-login-url ctx)} "Login"]])]]))
