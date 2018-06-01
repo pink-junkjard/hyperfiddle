@@ -53,9 +53,14 @@
                                                              :domain-name hf-domain-name}))
                     domain))))))
 
-(defn ide-fiddle-route [[fiddle datomic-args service-args frag :as route]]
+(defn magic-ide-fiddle? [fiddle-ident domain-ident]
+  (and (not= "hyperfiddle" domain-ident)
+       (= "hyperfiddle.ide" (namespace fiddle-ident))))
+
+(defn ide-fiddle-route [[fiddle datomic-args service-args frag :as route] ctx]
   ; Don't impact the request! Topnav can always use :target-route
-  [:hyperfiddle/topnav [#entity["$" (base/legacy-fiddle-ident->lookup-ref fiddle)]]])
+  [:hyperfiddle/topnav (if-not (magic-ide-fiddle? fiddle (get-in ctx [:hypercrud.browser/domain :domain/ident]))
+                         [#entity["$" (base/legacy-fiddle-ident->lookup-ref fiddle)]])])
 
 ; ide is overloaded, these ide-context functions are exclusive to (top)
 ; despite being in the namespace (hyperfiddle.ide) which encompasses the union of target/user (bottom) and ide (top)
@@ -153,18 +158,14 @@
     #_(determine-local-basis (hydrate-route route ...))
     basis))
 
-(defn magic-ide-fiddle? [fiddle ctx]
-  (and (not= "hyperfiddle" (-> ctx :hypercrud.browser/domain :domain/ident))
-       (= "hyperfiddle.ide" (namespace fiddle))))
-
 ; Reactive pattern obfuscates params
 (defn api [[fiddle :as route] ctx]
   {:pre [route (not (string? route))]}
   (case (get-in ctx [::runtime/branch-aux ::foo])
     "page" (into
              (when true #_(activate-ide? (foundation/hostname->hf-domain-name ctx)) ;-- embedded src mode????
-               (browser/request-from-route (ide-fiddle-route route) (page-ide-context ctx route)))
-             (if (magic-ide-fiddle? fiddle ctx)
+               (browser/request-from-route (ide-fiddle-route route ctx) (page-ide-context ctx route)))
+             (if (magic-ide-fiddle? fiddle (get-in ctx [:hypercrud.browser/domain :domain/ident]))
                (browser/request-from-route route (page-ide-context ctx route))
                (browser/request-from-route route (page-target-context ctx route))))
     "ide" (browser/request-from-route route (leaf-ide-context ctx))
@@ -182,13 +183,13 @@
 
          ; Topnav
          (when ide
-           [browser/ui-from-route (ide-fiddle-route route)
+           [browser/ui-from-route (ide-fiddle-route route ctx)
             (assoc ide-ctx :hypercrud.ui/error (r/constantly ui-error/error-inline)
                            #_#_:user-renderer hyperfiddle.ide.fiddles.topnav/renderer)
             "topnav hidden-print"])
 
          ; Content area
-         (if (magic-ide-fiddle? fiddle ctx)
+         (if (magic-ide-fiddle? fiddle (get-in ctx [:hypercrud.browser/domain :domain/ident]))
 
            ^{:key :primary-content}
            [browser/ui-from-route route ide-ctx "devsrc"] ; primary, blue background (IDE), magic ide route like /hyperfiddle.ide/domain
@@ -196,7 +197,7 @@
            (fragment
              :primary-content
              (when (and ide src-mode)                       ; primary, blue background (IDE)   /:posts/:hello-world#:src
-               [browser/ui-from-route (ide-fiddle-route route) ; srcmode is equal to topnav route but a diff renderer
+               [browser/ui-from-route (ide-fiddle-route route ctx) ; srcmode is equal to topnav route but a diff renderer
                 (assoc ide-ctx :user-renderer fiddle-src-renderer)
                 "devsrc"])
 

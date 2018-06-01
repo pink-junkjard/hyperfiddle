@@ -57,7 +57,8 @@
   {:pre [(or (:relations ctx) (:relation ctx))]}
   (let [display-mode @(runtime/state (:peer ctx) [:display-mode])
         dirty? (not (empty? @(runtime/state (:peer ctx) [:stage])))
-        ctx (shadow-fiddle ctx)
+        {:keys [hypercrud.browser/result
+                hypercrud.browser/fiddle] :as ctx} (shadow-fiddle ctx)
         ; hack until hyperfiddle.net#156 is complete
         fake-managed-anchor (fn [rel path ctx label & args]
                               ; mostly copied from browser-ui
@@ -79,10 +80,13 @@
       [loading-spinner ctx]
 
       (let [src-mode (src-mode? (-> ctx :target-route (get 3)))
+            no-target-fiddle (nil? (:db/id @result))        ; ide-route omits fiddle for ide routes
             change! #(runtime/dispatch! (:peer ctx) (foundation-actions/set-display-mode %))]
         [:span.radio-group
-         (radio/option {:label "data" :tooltip "Ignore :fiddle/renderer" :target :xray :change! change! :value (if src-mode :src display-mode) :disabled src-mode})
-         (radio/option {:label "view" :tooltip "Use :fiddle/renderer" :target :user :value (if src-mode :src display-mode) :change! change! :disabled src-mode})
+         (radio/option {:label "data" :tooltip "Ignore :fiddle/renderer" :target :xray :change! change! :value (if src-mode :src display-mode)
+                        :disabled (or src-mode no-target-fiddle)})
+         (radio/option {:label "view" :tooltip "Use :fiddle/renderer" :target :user :value (if src-mode :src display-mode) :change! change!
+                        :disabled (or src-mode no-target-fiddle)})
          (radio/option {:label (let [root-rel-path (runtime/encode-route (:peer ctx) (router/dissoc-frag (:target-route ctx)))
                                      href (if-not src-mode
                                             (str root-rel-path "#" (encode-rfc3986-pchar (encode-ednish (pr-str :src))))
@@ -90,7 +94,8 @@
                                  (if-not src-mode
                                    [:a {:href href :target "_blank"} "src"]
                                    [:span "src"]))
-                        :tooltip "View fiddle source" :target :src :value (if src-mode :src display-mode) :change! change! :disabled (not src-mode)})])
+                        :tooltip "View fiddle source" :target :src :value (if src-mode :src display-mode) :change! change!
+                        :disabled (or (not src-mode) no-target-fiddle)})])
 
       (if @(runtime/state (:peer ctx) [::runtime/auto-transact])
         (fragment :_ [:input {:id ::auto-transact :type "checkbox" :checked true
