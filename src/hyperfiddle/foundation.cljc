@@ -11,6 +11,7 @@
             [cuerdas.core :as str]
             [hypercrud.browser.routing :as routing]
             [hypercrud.client.core :as hc]
+            [hypercrud.types.Entity :refer [shadow-entity]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.Err :as Err]
     #?(:cljs [contrib.ui :refer [code]])
@@ -44,16 +45,29 @@
                      (hc/db peer domain-uri nil)
                      [:db/id
                       :domain/aliases
-                      :domain/code
-                      :domain/css                           ; domain-css
                       :domain/disable-javascript
                       :domain/environment
                       :domain/fiddle-repo
-                      :domain/home-route
                       :domain/members
                       :domain/ident
+                      :user/sub
+
+                      ; These are insecure fields, they should be redundant here, but there is order of operation issues
+                      :domain/code
+                      :domain/css
                       :domain/router
-                      :user/sub])))
+                      :domain/home-route
+                      ])))
+
+(defn domain-request-insecure [hf-domain-name peer branch]
+  (let [e (if (alias? hf-domain-name)
+            [:domain/aliases hf-domain-name]
+            [:domain/ident hf-domain-name])]
+    (->EntityRequest e nil (hc/db peer domain-uri branch)
+                     [:domain/code
+                      :domain/css
+                      :domain/router
+                      :domain/home-route])))
 
 (defn domain-owner? [user-profile domain]
   (let [sub (:sub user-profile)]
@@ -82,10 +96,11 @@
 (defn process-domain [domain]
   (-> (into {} domain) (update-existing :domain/environment read-string) #_"todo this can throw"))
 
-(defn context [ctx source-domain]
+(defn context [ctx source-domain user-domain-insecure]
   (let [domain @(runtime/state (:peer ctx) [::runtime/domain])
         _ (assert domain "Bootstrapping failed to fetch the domain")
-        domain (process-domain domain)]
+        domain (merge (process-domain domain)               ; Secure first, which is backwards, see `domain-request` comment
+                      (into {} user-domain-insecure))]
     (assoc ctx
       :hypercrud.browser/domain domain
       :hypercrud.browser/invert-route (r/partial routing/invert-route domain)
@@ -97,11 +112,14 @@
     (f global-basis route ctx)))
 
 (defn api [page-or-leaf route ctx f]
-  (let [source-domain-req (domain-request "hyperfiddle" (:peer ctx))]
-    (into [source-domain-req]
-          (when-let [source-domain (hc/hydrate-api (:peer ctx) (:branch ctx) source-domain-req)]
-            (let [ctx (context ctx source-domain)]
-              (f route ctx))))))
+  (let [source-domain-req (domain-request "hyperfiddle" (:peer ctx))
+        user-domain-insecure-req (domain-request-insecure (hostname->hf-domain-name ctx) (:peer ctx) (:branch ctx))]
+    (into [source-domain-req user-domain-insecure-req]
+          (let [source-domain (hc/hydrate-api (:peer ctx) (:branch ctx) source-domain-req)
+                user-domain-insecure (hc/hydrate-api (:peer ctx) (:branch ctx) user-domain-insecure-req)]
+            (when (and source-domain user-domain-insecure)
+              (let [ctx (context ctx source-domain user-domain-insecure)]
+                (f route ctx)))))))
 
 #?(:cljs
    (defn staging [peer]
@@ -148,13 +166,14 @@
 
 #?(:cljs
    (defn view [page-or-leaf route ctx f]
-     (let [source-domain @(hc/hydrate (:peer ctx) (:branch ctx) (domain-request "hyperfiddle" (:peer ctx)))]
+     (let [source-domain @(hc/hydrate (:peer ctx) (:branch ctx) (domain-request "hyperfiddle" (:peer ctx)))
+           user-domain-insecure @(hc/hydrate (:peer ctx) (:branch ctx) (domain-request-insecure (hostname->hf-domain-name ctx) (:peer ctx) (:branch ctx)))]
        (if-let [e (or @(runtime/state (:peer ctx) [::runtime/fatal-error])
                       (when (either/left? source-domain) @source-domain))]
          [:div.hyperfiddle-foundation
           [error-cmp e]
           [staging (:peer ctx)]]
-         (let [ctx (context ctx @source-domain)
+         (let [ctx (context ctx @source-domain @user-domain-insecure)
                domain (:hypercrud.browser/domain ctx)]
            ; f is nil, seq or reagent component
            ^{:key domain}
