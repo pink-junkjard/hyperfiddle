@@ -62,7 +62,6 @@
      [(:cell ctx) [true 0 :fiddle/css] ctx (controls :fiddle/css)]
      [(:cell ctx) [true 0 :fiddle/renderer] ctx (controls :fiddle/renderer)]
      (when-not embed-mode [(:cell ctx) [true 0 :fiddle/links] ctx-real (controls :fiddle/links)])
-     [(:cell ctx) [true 0 :fiddle/entrypoint?] ctx]
      (when-not embed-mode [(:anchor ctx) :hyperfiddle/remove [0] ctx "Remove fiddle"])
      ]))
 
