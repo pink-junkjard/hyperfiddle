@@ -7,6 +7,8 @@
     [contrib.reagent :refer [fragment with-react-context]]
     [contrib.string :refer [memoized-safe-read-edn-string or-str]]
     [contrib.ui]
+    [cuerdas.core :as str]
+    [goog.object]
     [hypercrud.browser.context :as context]
     [hyperfiddle.eval :refer [read-eval-with-bindings]]))
 
@@ -86,8 +88,15 @@
             [:span (dissoc props :children) content])
    "block" (fn [content argument props ctx]
              [:div props [hyperfiddle.ui/markdown content]])
+   "pre" (fn [content argument props ctx]
+           ; Remark generates pre>code; deep inspect and rip out the content
+           ; Don't hook :code because that is used by inline snippets
+           (let [content (-> props :children (goog.object/getValueByKeys 0 "props" "children" 0)) ; get(props, kw('children'))[0].props.children[0]
+                 content (str/rtrim content "\n") #_"Remark yields an unavoidable newline that we don't want"]
+             ; No way to get props here from userland
+             [contrib.ui/code-block {:read-only true} content #()]))
    "CodeEditor" (fn [content argument props ctx]
-                  [contrib.ui/code content #() props])
+                  [contrib.ui/code-block props content #()])
    "cljs" eval
    "browse" browse
    "anchor" anchor
