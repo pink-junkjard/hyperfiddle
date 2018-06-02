@@ -27,14 +27,13 @@
 
 (def underdocs
   {:fiddle/pull "See [:fiddle/pull examples](http://www.hyperfiddle.net/:docs!fiddle-pull/) and the
-  [Datomic pull docs](https://docs.datomic.com/on-prem/pull.html). `:db/id` is currently required. No nested pull yet.
-  Just keep it simple for now."
+  [Datomic pull docs](https://docs.datomic.com/on-prem/pull.html)."
    :fiddle/query "See [:fiddle/query examples](http://www.hyperfiddle.net/:docs!fiddle-query/) and the
-   [Datomic query docs](https://docs.datomic.com/on-prem/query.html). If you pull, `:db/id` is required. No rules yet,
-   no nested pull yet, no d/log or d/history yet."
+   [Datomic query docs](https://docs.datomic.com/on-prem/query.html)."
    :fiddle/markdown "See [:fiddle/markdown examples](http://www.hyperfiddle.net/:docs!fiddle-markdown/)."
    :fiddle/css "See [:fiddle/css examples](http://www.hyperfiddle.net/:docs!fiddle-css/)."
-   :fiddle/renderer "See [:fiddle/renderer examples](http://www.hyperfiddle.net/:docs!fiddle-renderer/)."
+   :fiddle/renderer "See [:fiddle/renderer examples](http://www.hyperfiddle.net/:docs!fiddle-renderer/). `ctx` and
+   `class` are in lexical scope. No `(ns (:require ...))` yet so vars must be fully qualified."
    :fiddle/links "See [:fiddle/links examples](http://www.hyperfiddle.net/:docs!fiddle-links/)."})
 
 (defn fiddle-src-renderer [ctx-real class & {:keys [embed-mode]}]
@@ -90,6 +89,8 @@
           (for [k attrs]
             [(:cell ctx) [true 0 k] ctx (controls k)]))))))
 
+; This is in source control because all hyperblogs want it.
+; But, they also want to tweak it surely. Can we store this with the fiddle ontology?
 (defn ^:export hyperfiddle-live [rel ctx & fiddle-attrs]
   [:div.hyperfiddle-live-editor.unp
    [:div.row
