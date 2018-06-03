@@ -88,16 +88,15 @@
                                 [col-head field sort-col ctx])))))))
    [LinkCell false ctx]])
 
-(defn table-cell [control ctx props]
-  (let [shadow-link @(r/fmap system-link? (r/cursor (:cell-data ctx) [:db/id]))]
-    [:td {:class (classes "hyperfiddle-table-cell" "truncate")
-          ; todo use cell renderer for shadow-link styles
-          :style {:border-color (if-not shadow-link (connection-color/connection-color ctx))}}
-     ; todo unsafe execution of user code: control
-     [control @(:value ctx) ctx (merge (control-props ctx) props)]]))
-
-(defn Cell [ctx]
-  [table-cell (auto-control ctx) ctx {}])
+(defn Cell
+  ([ctx] (Cell nil ctx nil))
+  ([?f ctx props]                                           ; arity 3 is unused untested
+   (let [shadow-link @(r/fmap system-link? (r/cursor (:cell-data ctx) [:db/id]))]
+     [:td {:class (classes "hyperfiddle-table-cell" "truncate")
+           ; todo use cell renderer for shadow-link styles
+           :style {:border-color (if-not shadow-link (connection-color/connection-color ctx))}}
+      ; todo unsafe execution of user code: control
+      [(or ?f (auto-control ctx)) @(:value ctx) ctx (merge (control-props ctx) props)]])))
 
 (defn Entity [ctx]
   (let [ctx (context/cell-data ctx)]
