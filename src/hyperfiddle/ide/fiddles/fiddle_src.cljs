@@ -47,7 +47,7 @@
          :fiddle/renderer (r/partial control-with-unders [:div.hf-underdoc [markdown (:fiddle/renderer underdocs)]])
          :fiddle/links (r/partial control-with-unders [:div.hf-underdoc [markdown (:fiddle/links underdocs)]])
          }]
-    [:div.fiddle-src {:class class}
+    [:div.container-fluid.fiddle-src {:class class}
      [:h3 (str @(r/cursor (:hypercrud.browser/result ctx) [:fiddle/ident])) " source"]
      [(:cell ctx) [true 0 :fiddle/ident] ctx]
      [(:cell ctx) [true 0 :fiddle/type] ctx]

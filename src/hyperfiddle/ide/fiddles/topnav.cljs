@@ -69,11 +69,10 @@
                                 [(:navigate-cmp ctx) props label (:class kwargs)]))]
     [:div {:class class}
      [:div.left-nav
-      [tooltip {:label "Home"} [:a {:href "/"} (get-in ctx [:target-domain :domain/ident])]]
-      #_[tooltip {:label nil} (fake-managed-anchor :shortcuts [] ctx "shortcuts")]
-      [tooltip {:label "Domain administration"} ((:anchor ctx) :domain [] ctx "domain")]
-      [tooltip {:label "This fiddle"}
-       [:div (some-> @(r/cursor (:hypercrud.browser/result ctx) [:fiddle/ident]) str)]]]
+      [tooltip {:label "Home"} [:a.hf-auto-nav {:href "/"} (get-in ctx [:target-domain :domain/ident])]]
+      [tooltip {:label "This fiddle"}                       ; also a good place for the route
+       [:span.hf-auto-nav (some-> @(r/cursor (:hypercrud.browser/result ctx) [:fiddle/ident]) str)]
+       #_[tooltip {:label nil} (fake-managed-anchor :shortcuts [] ctx "shortcuts")]]]
 
      [:div.right-nav {:key "right-nav"}                     ; CAREFUL; this key prevents popover flickering
 
@@ -103,6 +102,7 @@
                   [:label {:for ::auto-transact} "auto-transact"])
         (fake-managed-anchor :stage [] ctx "stage" :class (if dirty? "stage-dirty")))
       ((:anchor ctx) :new-fiddle [] ctx "new-fiddle")
+      [tooltip {:label "Domain administration"} ((:anchor ctx) :domain [] ctx "domain")]
       (if (:user-profile ctx)
         ((:anchor ctx) :account [] ctx (get-in ctx [:user-profile :email]))
         [:span.nav-link.auth [:a {:href (login/stateless-login-url ctx)} "Login"]])]]))
