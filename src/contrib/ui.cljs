@@ -2,8 +2,9 @@
   (:require
     [cats.monad.either :as either]
     [contrib.cljs-platform :refer [global!]]
+    [contrib.pprint :refer [pprint-str]]
     [contrib.reactive :as r]
-    [contrib.string :refer [safe-read-edn-string pprint-str]]
+    [contrib.string :refer [safe-read-edn-string]]
     [contrib.ui.codemirror :refer [-codemirror]]
     [re-com.core :as re-com]
     [reagent.core :as reagent]

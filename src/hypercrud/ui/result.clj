@@ -1,6 +1,6 @@
 (ns hypercrud.ui.result
   (:require
-    [contrib.string :refer [slow-pprint-str]]
+    [contrib.pprint :refer [slow-pprint-str]]
     [cuerdas.core :as str]))
 
 

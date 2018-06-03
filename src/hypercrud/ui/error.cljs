@@ -1,6 +1,6 @@
 (ns hypercrud.ui.error
   (:require
-    [contrib.string :refer [pprint-str]]
+    [contrib.pprint :refer [pprint-str]]
     [hypercrud.types.Err :as Err]
     [hyperfiddle.ui :refer [markdown]]
     [hyperfiddle.foundation :as foundation]))

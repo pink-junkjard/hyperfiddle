@@ -7,7 +7,7 @@
             [contrib.eval :as eval]
             [contrib.reactive :as r]
             [contrib.reader :refer [read-string read-edn-string]]
-            [contrib.string :refer [pprint-str]]
+            [contrib.pprint :refer [pprint-str]]
             [cuerdas.core :as str]
             [hypercrud.browser.routing :as routing]
             [hypercrud.client.core :as hc]

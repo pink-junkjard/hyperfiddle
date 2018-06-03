@@ -2,7 +2,7 @@
   (:require [cljs.pprint :as pprint]                        ; clojure.pprint
             [contrib.data :refer [update-existing]]
             [contrib.reagent :refer [fragment]]
-            [contrib.string :refer [pprint-str]]
+            [contrib.pprint :refer [pprint-str]]
             [hypercrud.browser.routing :as routing]
             [hyperfiddle.foundation.actions :as foundation-actions]
             [hyperfiddle.runtime :as runtime]))

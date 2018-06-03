@@ -1,7 +1,7 @@
 (ns hyperfiddle.foundation.reducers
   (:require [contrib.data :refer [map-values]]
             [contrib.datomic-tx :as tx]
-            [contrib.string :refer [pprint-str]]
+            [contrib.pprint :refer [pprint-str]]
             [hypercrud.browser.routing :as routing]
             [hypercrud.types.Err :refer [->Err]]
             [hypercrud.util.branch :as branch]))

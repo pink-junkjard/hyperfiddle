@@ -1,15 +1,11 @@
 (ns contrib.string
-  #?(:cljs (:require-macros [contrib.string]))
   (:require [cats.monad.either :as either]
             [clojure.string]
+            [contrib.pprint]
             [contrib.data :refer [orp]]
             [contrib.reader :refer [read-edn-string]]
             [contrib.try :refer [try-either]]
-            [cuerdas.core :as str]
-            [net.cgrand.packed-printer :as packed-printer]
-    #?(:clj
-            [clojure.pprint :as pprint]
-       :cljs [cljs.pprint :as pprint])))
+            [cuerdas.core :as str]))
 
 
 ;(defn split-last [s sep]
@@ -44,18 +40,7 @@
 
 (def memoized-safe-read-edn-string (memoize safe-read-edn-string))
 
-(defn slow-pprint-str [v & [columns]]
-  (with-out-str
-    (packed-printer/pprint v :width (or columns pprint/*print-right-margin*))))
-
-(defn pprint-str [v & [columns]]
-  (clojure.string/trimr
-    ; Previously, pprint/*print-miser-width* was set to nil in main
-    (binding [pprint/*print-right-margin* (or columns pprint/*print-right-margin*)]
-      (with-out-str
-        (pprint/pprint v)))))
-
-#?(:clj (defmacro mpprint-str [& args] (apply slow-pprint-str args)))
+(def ^:export ^:deprecated pprint-str contrib.pprint/pprint-str)
 
 (defn or-str [& args]                                       ; todo macro
   (apply orp str/empty-or-nil? args))
