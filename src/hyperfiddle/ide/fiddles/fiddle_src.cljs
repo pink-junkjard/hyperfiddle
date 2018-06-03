@@ -6,6 +6,7 @@
             [hypercrud.ui.auto-control :refer [auto-control]]
             [hyperfiddle.ui :refer [markdown]]
             [hypercrud.ui.attribute.edn :refer [edn-many]]
+            [hypercrud.ui.form :refer [form-cell]]
             [contrib.ui.tooltip :refer [tooltip]]
             [hyperfiddle.ide.fiddles.topnav :refer [shadow-fiddle]]))
 

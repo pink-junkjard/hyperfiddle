@@ -36,19 +36,22 @@
   ^{:key (hash (keys @(:cell-data ctx)))}
   [new-field-state-container ctx])
 
+(defn form-cell [control ctx props]                         ; safe to return nil or seq
+  (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
+    (ui-block-border-wrap
+      ctx (classes "field" (:class props) #_":class is for the control, these props came from !cell{}")
+      [:div
+       [label ctx]
+       (link-controls/anchors path false ctx link/options-processor)
+       (link-controls/iframes path false ctx link/options-processor)]
+      ; todo unsafe execution of user code: control
+      [control @(:value ctx) ctx (merge (control-props ctx) props)])))
+
 (defn Cell
   ([ctx] (Cell nil ctx nil))
   ([?f ctx props]                                           ; fiddle-src wants to fallback by passing nil here explicitly
    (assert @(:hypercrud.ui/display-mode ctx))
-   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
-     (ui-block-border-wrap
-       ctx (classes "field" (:class props) #_":class is for the control, these props came from !cell{}")
-       [:div
-        [label ctx]
-        (link-controls/anchors path false ctx link/options-processor)
-        (link-controls/iframes path false ctx link/options-processor)]
-       ; todo unsafe execution of user code: control
-       [(or ?f (auto-control ctx)) @(:value ctx) ctx (merge (control-props ctx) props)]))))
+   [form-cell (or ?f (auto-control ctx)) ctx props]))
 
 (defn Entity [ctx]
   (let [path [(:fe-pos ctx)]]
