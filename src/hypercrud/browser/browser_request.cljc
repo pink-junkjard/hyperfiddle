@@ -37,10 +37,11 @@
            (filter :link/dependent?)
            (filter (link/same-path-as? [(:fe-pos ctx)]))
            (mapcat #(recurse-request % ctx)))
-      (->> @(r/cursor (:hypercrud.browser/find-element ctx) [:fields])
-           (mapcat (fn [field]
-                     (let [ctx (-> (context/field ctx field)
-                                   (context/value (r/fmap (:cell-data->value field) (:cell-data ctx))))]
+      (->> (r/cursor (:hypercrud.browser/find-element ctx) [:fields])
+           (r/unsequence :id)
+           (mapcat (fn [[field id]]
+                     (let [ctx (context/field ctx @field)
+                           ctx (context/value ctx)]
                        (->> @(:hypercrud.browser/links ctx)
                             (filter :link/dependent?)
                             (filter (link/same-path-as? [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]))

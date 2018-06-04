@@ -46,27 +46,25 @@
                 ctx (context/relation-path ctx (into [dependent?] (unwrap (memoized-safe-read-edn-string (str "[" path "]")))))
                 props (kwargs args)]
             [(:navigate-cmp ctx) (merge props (link/build-link-props link ctx)) label (:class props)]))
-        (cell [[d i a] ctx ?f & args]                       ; form only
-          [(r/partial hypercrud.ui.form/Cell ?f)            ; Intentional explicit nil
-           (context/relation-path ctx [d i a])
-           (kwargs args)])
+        (field [[d i a] ctx ?f & args]
+          (let [cell (case (:layout ctx) :table hypercrud.ui.table/Field hypercrud.ui.form/Field)]
+            [(r/partial cell ?f)          ; Intentional explicit nil
+             (context/relation-path ctx [d i a])
+             (kwargs args)]))
         (value [path ctx ?f & args]
           (let [ctx (context/relation-path ctx path)]
             [(or ?f (hypercrud.ui.auto-control/auto-control ctx)) @(:value ctx) ctx (kwargs args)]))
         (browse' [rel #_dependent? path ctx]
           (->> (base/data-from-link @(r/track link/rel->link rel path ctx) ctx)
                (cats/fmap :hypercrud.browser/result)
-               (cats/fmap deref)))
-        (anchor* [rel #_dependent? path ctx]
-          (link/build-link-props @(r/track link/rel->link rel path ctx) ctx))]
+               (cats/fmap deref)))]
   ; convenience functions, should be declared fns in this or another ns and accessed out of band of ctx
   (defn ui-bindings [ctx]
     (assoc ctx
       :anchor anchor
       :browse browse
-      :cell cell
+      :cell field
       :value value
-      :anchor* anchor*
       :browse' browse')))
 
 (defn page-on-click [rt branch branch-aux route event]

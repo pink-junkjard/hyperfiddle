@@ -10,6 +10,7 @@
     [cuerdas.core :as str]
     [goog.object]
     [hypercrud.browser.context :as context]
+    [hypercrud.ui.table :as table]
     [hyperfiddle.eval :refer [read-eval-with-bindings]]))
 
 
@@ -35,9 +36,11 @@
 
 (defn field [content argument props ctx]
   (let [?f (read-eval-with-bindings content)
-        props (keywordize-keys props)
-        props (clojure.set/rename-keys props {:className :class})
-        props (update props :class classes "unp")  #_"fix font size"
+        props (-> props
+                  keywordize-keys
+                  (dissoc :children)
+                  (clojure.set/rename-keys {:className :class})
+                  (update :class classes "unp") #_"fix font size")
         path (into [true] (unwrap (memoized-safe-read-edn-string (str "[" argument "]"))))]
     (apply (:cell ctx) path ctx (if ?f (fn control [value ctx props]
                                          [with-react-context
@@ -46,21 +49,36 @@
                                           [?f #_(wrap-naked-string :div ?f) value]]))
            (flatten (seq props)))))
 
-(defn ^:deprecated -table [content argument {:keys [class] :as props} ctx]
-  [:div.unp (hypercrud.ui.table/Table ctx)])
-
 (defn result [content argument props ctx]
   (let [?f (read-eval-with-bindings content)]
     [:div.unp (hypercrud.ui.result/result ctx ?f)]))
 
-(letfn [(keyfn [relation] (hash (map #(or (:db/id %) %) relation)))]
-  (defn list- [content argument props ctx]
-    [:ul.unp props
-     (->> (:relations ctx)
-          (r/unsequence keyfn)
-          (map (fn [[relation k]]
-                 ^{:key k} [:li [hyperfiddle.ui/markdown content (context/relation ctx relation)]]))
-          (doall))]))
+; content be like !field(0 :user/email) !field(0 :user/name)
+; Use these directives to either draw labels or values, depending on if :relation is in scope
+(defn table' [content argument props ctx]
+  (let [sort-col (r/atom nil)]
+    (fn [content argument props ctx]
+      (let [ctx (assoc ctx :layout (:layout ctx :table)
+                           ::table/sort-col sort-col)]
+        [:table.ui-table.unp props
+         [:thead [hyperfiddle.ui/markdown content ctx]]
+         [:tbody (->> (:relations ctx)
+                      (r/unsequence table/relation-keyfn)
+                      (map (fn [[relation k]]
+                             ^{:key k}
+                             [:tr [hyperfiddle.ui/markdown content (context/relation ctx relation)]]))
+                      (doall))]]))))
+
+(defn table [content argument props ctx]
+  [table' content argument props ctx])
+
+(defn list- [content argument props ctx]
+  [:ul.unp props
+   (->> (:relations ctx)
+        (r/unsequence table/relation-keyfn)
+        (map (fn [[relation k]]
+               ^{:key k} [:li [hyperfiddle.ui/markdown content (context/relation ctx relation)]]))
+        (doall))])
 
 (defn value [content argument props ctx]
   (let [?f (read-eval-with-bindings content)
@@ -78,12 +96,11 @@
   ; Div is not needed, use it with block syntax and it hits React.createElement and works
   ; see https://github.com/medfreeman/remark-generic-extensions/issues/30
   {; Replace default elements with our classes, hacks
-   ;"ul" (fn [content argument props ctx]
-   ;       [:ul.p (dissoc props :children) (:children props)])
    "li" (fn [content argument props ctx]
           [:li.p (dissoc props :children) (:children props)])
    "p" (fn [content argument props ctx]
-         [:div.p (dissoc props :children) (:children props)])
+         (js/reactCreateFragment #js {"_" (:children props)})
+         #_[:div.p (dissoc props :children) (:children props)])
    "span" (fn [content argument props ctx]
             [:span (dissoc props :children) content])
    "block" (fn [content argument props ctx]
@@ -97,13 +114,22 @@
              [contrib.ui/code-block {:read-only true} content #()]))
    "CodeEditor" (fn [content argument props ctx]
                   [contrib.ui/code-block props content #()])
-   "cljs" eval
+
+   "cljs" eval                                              ; not quite eval, really !reagent bc it must return hiccup
+
+   ; browse, anchor and result are probably the same thing – "render named thing"
    "browse" browse
    "anchor" anchor
-   "cell" field                                             ; legacy
-   "field" field
-   "table" -table
-   "result" result
-   "list" list-
-   "value" value
+
+   "value" value                                            ; uses relation to draw just value
+   "field" field                                            ; uses relation to draw label and value
+   "result" result                                          ; render form/table, loops over relations
+   "table" table
+   "list" list-                                             ; renders ul/li, loops over relations
+
+   ; How can list collapse into result through a higher order fn? Would need two fns, wrapper and inner...
+   ; This is a similar question to a parameterized table renderer which is a 2D parameterized form/field renderer.
+
+   ; legacy
+   "cell" field
    })

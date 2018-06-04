@@ -11,8 +11,9 @@
   (dissoc ctx
           :route
           :fe-pos :uri :user-with!
-          :cell-data :value
-          :layout
+          :cell-data
+          :value                                            ; conflicts with browser_ui/:value
+          :layout                                           ; belongs in ui.table
 
           :hypercrud.browser/attribute
           :hypercrud.browser/fat-attribute
@@ -90,14 +91,15 @@
         :uri uri
         :user-with! user-with!))))
 
-(defn cell-data [ctx]                                       ; "dependent"
+(defn cell-data [ctx]
   {:pre [(:fe-pos ctx)]}
-  (let [cell-data (r/cursor (:relation ctx) [(:fe-pos ctx)])]
-    (assoc ctx :cell-data cell-data)))
+  (if (:relation ctx)
+    (assoc ctx :cell-data (r/cursor (:relation ctx) [(:fe-pos ctx)]))
+    ctx))
 
 (letfn [(default [default-v v] (or v default-v))]
   (defn field [ctx field]
-    {:pre [(not (r/reactive? field))]}
+    {:pre [(not (r/reactive? field))]}                      ; weird not reactive
     (let [attr-ident (:attribute field)
           fat-attr (->> (r/cursor (:hypercrud.browser/schema ctx) [attr-ident])
                         (r/fmap (r/partial default {:db/ident attr-ident})))]
@@ -106,24 +108,17 @@
         :hypercrud.browser/attribute attr-ident
         :hypercrud.browser/fat-attribute fat-attr))))
 
-(defn value [ctx rv]
-  {:pre [(r/reactive? rv)]}
-  (assoc ctx :value rv))
+(defn value [ctx]
+  (if (:cell-data ctx)
+    (let [rv (r/fmap (:cell-data->value (:hypercrud.browser/field ctx)) (:cell-data ctx))]
+      (assoc ctx :value rv))
+    ctx))
 
-(letfn [(get-value-f [attr fields]
-          (->> fields
-               (filter #(= (:attribute %) attr))
-               first
-               :cell-data->value))
-        (field-from-attribute [ctx a]
+(letfn [(field-from-attribute [ctx a]
           (->> @(r/cursor (:hypercrud.browser/find-element ctx) [:fields #_i])
                (filter #(= (:attribute %) a))
                first
-               (field ctx)))
-        (value-from-attribute [ctx a]
-          (let [cell-extractor (->> (r/cursor (:hypercrud.browser/find-element ctx) [:fields])
-                                    (r/fmap (r/partial get-value-f a)))]
-            (value ctx (r/fapply cell-extractor (:cell-data ctx)))))]
+               (field ctx)))]
   (defn relation-path [ctx [dependent i a]]
     (-> (assoc ctx :layout :block)
         ;(with-relations)                                    ; already here
@@ -132,4 +127,4 @@
           (and i) (find-element i)
           (and i dependent) (cell-data)
           (and i a) (field-from-attribute a)
-          (and i dependent a) (value-from-attribute a)))))
+          (and i dependent a) (value)))))

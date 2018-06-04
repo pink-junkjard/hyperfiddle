@@ -36,8 +36,8 @@
   ^{:key (hash (keys @(:cell-data ctx)))}
   [new-field-state-container ctx])
 
-(defn Cell
-  ([ctx] (Cell nil ctx nil))
+(defn Field "Form fields are label AND value. Table fields are label OR value."
+  ([ctx] (Field nil ctx nil))
   ([?f ctx props]                                           ; fiddle-src wants to fallback by passing nil here explicitly
    (assert @(:hypercrud.ui/display-mode ctx))
    (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
@@ -50,7 +50,7 @@
        ; todo unsafe execution of user code: control
        [(or ?f (auto-control ctx)) @(:value ctx) ctx (merge (control-props ctx) props)]))))
 
-(defn Entity [ctx]
+(defn FeFields "form labels AND values for a find-element" [ctx]
   (let [path [(:fe-pos ctx)]]
     (concat
       (link-controls/anchors path false ctx nil {:class "hyperfiddle-link-entity-independent"})
@@ -60,15 +60,9 @@
             (->> (r/cursor (:hypercrud.browser/find-element ctx) [:fields])
                  (r/unsequence :id)
                  (mapv (fn [[field id]]
-                         ; unify with context/relation-path then remove
-                         (let [field @field
-                               ctx (as-> (context/field ctx field) $
-                                         (context/value $ (r/fmap (:cell-data->value field) (:cell-data ctx)))
-                                         (if (or (nil? (:attribute field)) (= (:attribute field) :db/id))
-                                           (assoc $ :read-only (r/constantly true))
-                                           $))]
-                           ^{:key id}
-                           [Cell ctx]))))
+                         (let [ctx (context/field ctx @field)
+                               ctx (context/value ctx)]
+                           ^{:key id} [Field ctx]))))
             (if @(r/cursor (:hypercrud.browser/find-element ctx) [:splat?])
               ^{:key :new-field}
               [new-field ctx]))
@@ -82,4 +76,4 @@
   (let [ctx (assoc ctx :layout (:layout ctx :block))]       ; first point in time we know we're a form? can this be removed?
     (->> (r/unsequence (:hypercrud.browser/ordered-fes ctx))
          (mapcat (fn [[fe i]]
-                   (Entity (context/find-element ctx i)))))))
+                   (FeFields (context/find-element ctx i)))))))
