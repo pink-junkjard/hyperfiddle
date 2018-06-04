@@ -59,7 +59,8 @@
   (let [sort-col (r/atom nil)]
     (fn [content argument props ctx]
       (let [ctx (assoc ctx :layout (:layout ctx :table)
-                           ::table/sort-col sort-col)]
+                           ::table/sort-col sort-col
+                           ::unp true)]
         [:table.ui-table.unp props
          [:thead [hyperfiddle.ui/markdown content ctx]]
          [:tbody (->> (:relations ctx)
@@ -99,8 +100,9 @@
    "li" (fn [content argument props ctx]
           [:li.p (dissoc props :children) (:children props)])
    "p" (fn [content argument props ctx]
-         (js/reactCreateFragment #js {"_" (:children props)})
-         #_[:div.p (dissoc props :children) (:children props)])
+         (if (::unp ctx)
+           (js/reactCreateFragment #js {"_" (:children props)})
+           [:div.p (dissoc props :children) (:children props)]))
    "span" (fn [content argument props ctx]
             [:span (dissoc props :children) content])
    "block" (fn [content argument props ctx]
