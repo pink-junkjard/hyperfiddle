@@ -5,13 +5,13 @@
             [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
             [hypercrud.transit :as transit]
-            [hyperfiddle.appval.state.reducers :as reducers]
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.ide :as ide]
             [hyperfiddle.io.global-basis :refer [global-basis-rpc!]]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-requests-rpc!]]
             [hyperfiddle.io.hydrate-route :refer [hydrate-route-rpc!]]
             [hyperfiddle.io.sync :refer [sync-rpc!]]
+            [hyperfiddle.reducers :as reducers]
             [hyperfiddle.runtime :as runtime]
             [hyperfiddle.service.http :as http-service]
             [hyperfiddle.service.node.lib :as lib :refer [req->service-uri]]
@@ -132,8 +132,8 @@
 (defn http-edge [env req res path-params query-params]
   (let [hostname (.-hostname req)
         hyperfiddle-hostname (http-service/hyperfiddle-hostname env hostname)
-        user-profile (lib/req->user-profile env req)
-        initial-state {:user-profile user-profile}
+        user-id (lib/req->user-id env req)
+        initial-state {::runtime/user-id user-id}
         rt (->IdeSsrRuntime hyperfiddle-hostname hostname (req->service-uri env req)
                             (r/atom (reducers/root-reducer initial-state nil))
                             reducers/root-reducer (some-> req .-cookies .-jwt))
@@ -146,7 +146,7 @@
     (-> (foundation/bootstrap-data rt foundation/LEVEL-NONE load-level (.-path req) (::runtime/global-basis initial-state))
         (p/then (fn []
                   (let [domain @(runtime/state rt [::runtime/domain])
-                        owner (foundation/domain-owner? user-profile domain)
+                        owner (foundation/domain-owner? user-id domain)
                         writable (and (not= "www" (:domain/ident domain))
                                       (or alias? owner))
                         action (if writable

@@ -13,9 +13,11 @@
   ; no-body shows up as json {} in spite of our text body parser
   (if (string? buggy-body) buggy-body nil))
 
-(defn req->user-profile [env req]
+(defn req->user-id [env req]
   (let [verify (jwt/build-verifier env)]
-    (some-> req .-cookies .-jwt verify)))
+    (some-> req .-cookies .-jwt verify
+            :sub                                            ; legacy
+            )))
 
 (defn platform-response->express-response [express-response platform-response]
   (doseq [[k v] (:headers platform-response)]
@@ -35,5 +37,5 @@
             :hyperfiddle-hostname (http-service/hyperfiddle-hostname env hostname)
             :service-uri (req->service-uri env req)
             :jwt (some-> req .-cookies .-jwt)
-            :user-profile (req->user-profile env req))
+            :user-id (req->user-id env req))
           (p/then (partial platform-response->express-response res))))))

@@ -4,8 +4,8 @@
             [contrib.reader :refer [read-edn-string]]
             [hypercrud.browser.routing :as routing]
             [hypercrud.types.Err :refer [->Err]]
-            [hyperfiddle.appval.state.reducers :as reducers]
-            [hyperfiddle.foundation.actions :as foundation-actions]
+            [hyperfiddle.actions :as actions]
+            [hyperfiddle.reducers :as reducers]
             [hyperfiddle.runtime :as runtime]
             [promesa.core :as p]
             [taoensso.timbre :as timbre]))
@@ -23,10 +23,10 @@
   {:status (or (:hyperfiddle.io/http-status-code (ex-data e)) 500)
    :body (->Err #?(:cljs (ex-message e) :clj (.getMessage e)))})
 
-(defn global-basis-handler [->Runtime & {:keys [hostname hyperfiddle-hostname service-uri user-profile jwt]}]
-  (let [state-val (-> {:user-profile user-profile}
+(defn global-basis-handler [->Runtime & {:keys [hostname hyperfiddle-hostname service-uri user-id jwt]}]
+  (let [state-val (-> {::runtime/user-id user-id}
                       (reducers/root-reducer nil))
-        rt (->Runtime hyperfiddle-hostname hostname service-uri (r/atom state-val) reducers/root-reducer jwt (:sub user-profile))]
+        rt (->Runtime hyperfiddle-hostname hostname service-uri (r/atom state-val) reducers/root-reducer jwt user-id)]
     (-> (runtime/global-basis rt)
         (p/then (fn [global-basis]
                   {:status 200
@@ -36,21 +36,21 @@
                    (timbre/error e)
                    (e->platform-response e))))))
 
-(defn local-basis-handler [->Runtime & {:keys [hostname path-params hyperfiddle-hostname service-uri user-profile jwt]}]
+(defn local-basis-handler [->Runtime & {:keys [hostname path-params hyperfiddle-hostname service-uri user-id jwt]}]
   (try
     (let [global-basis (-> (:global-basis path-params) base-64-url-safe/decode read-edn-string) ; todo this can throw
           route (-> (:encoded-route path-params) base-64-url-safe/decode read-edn-string)
           _ (when-let [e (routing/invalid-route? route)] (throw e))
           branch (some-> (:branch path-params) base-64-url-safe/decode read-edn-string)
           branch-aux (some-> (:branch-aux path-params) base-64-url-safe/decode read-edn-string)
-          initial-state {:user-profile user-profile
+          initial-state {::runtime/user-id user-id
                          ::runtime/global-basis global-basis
                          ::runtime/partitions {branch {:route route
                                                        :hyperfiddle.runtime/branch-aux branch-aux}}}
           rt (->Runtime hyperfiddle-hostname hostname service-uri
                         (r/atom (reducers/root-reducer initial-state nil))
-                        reducers/root-reducer jwt (:sub user-profile))]
-      (-> (foundation-actions/refresh-domain rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
+                        reducers/root-reducer jwt user-id)]
+      (-> (actions/refresh-domain rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
           (p/then (fn [_] (runtime/local-basis rt global-basis route branch branch-aux)))
           (p/then (fn [local-basis]
                     {:status 200
@@ -63,14 +63,14 @@
       (timbre/error e)
       (p/resolved (e->platform-response e)))))
 
-(defn hydrate-route-handler [->Runtime & {:keys [hostname path-params request-body hyperfiddle-hostname service-uri user-profile jwt]}]
+(defn hydrate-route-handler [->Runtime & {:keys [hostname path-params request-body hyperfiddle-hostname service-uri user-id jwt]}]
   (try
     (let [local-basis (-> (:local-basis path-params) base-64-url-safe/decode read-edn-string) ; todo this can throw
           route (-> (:encoded-route path-params) base-64-url-safe/decode read-edn-string)
           _ (when-let [e (routing/invalid-route? route)] (throw e))
           branch (some-> (:branch path-params) base-64-url-safe/decode read-edn-string)
           branch-aux (some-> (:branch-aux path-params) base-64-url-safe/decode read-edn-string)
-          initial-state (-> {:user-profile user-profile
+          initial-state (-> {::runtime/user-id user-id
                              :stage request-body
                              ; should this be constructed with reducers?
                              ; why dont we need to preheat the tempid lookups here for parent branches?
@@ -79,8 +79,8 @@
                                                            :hyperfiddle.runtime/branch-aux branch-aux}}})
           rt (->Runtime hyperfiddle-hostname hostname service-uri
                         (r/atom (reducers/root-reducer initial-state nil))
-                        reducers/root-reducer jwt (:sub user-profile))]
-      (-> (foundation-actions/refresh-domain rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
+                        reducers/root-reducer jwt user-id)]
+      (-> (actions/refresh-domain rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
           (p/then (fn [_] (runtime/hydrate-route rt local-basis route branch branch-aux (:stage initial-state))))
           (p/then (fn [data]
                     {:status 200

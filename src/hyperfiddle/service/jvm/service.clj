@@ -45,7 +45,7 @@
               :hyperfiddle-hostname (http-service/hyperfiddle-hostname env hostname)
               :service-uri nil
               :jwt (:jwt req)
-              :user-profile (:user req))
+              :user-id (:user-id req))
             (p/then platform-response->pedestal-response))))))
 
 (defn http-index [req]
@@ -56,7 +56,7 @@
     (let [{:keys [body-params path-params]} req
           local-basis (some-> (:local-basis path-params) base-64-url-safe/decode read-edn-string)
           {staged-branches :staged-branches request :request} body-params
-          r (hydrate-requests local-basis request staged-branches (-> req :user :sub))]
+          r (hydrate-requests local-basis request staged-branches (:user-id req))]
       (ring-resp/response r))
     (catch Exception e
       (timbre/error e)
@@ -64,7 +64,7 @@
 
 (defn http-transact! [req]
   (try
-    (-> (transact! foundation/domain-uri (get-in req [:user :sub]) (:body-params req))
+    (-> (transact! foundation/domain-uri (:user-id req) (:body-params req))
         (ring-resp/response))
     (catch Exception e
       (timbre/error e)
@@ -98,11 +98,15 @@
             (or (nil? jwt-header)
                 (= jwt-cookie jwt-header)) (-> context
                                                ; todo clear the cookie when verifciation fails
-                                               (assoc-in [:request :user] (some-> jwt-cookie (verify)))
+                                               (assoc-in [:request :user-id] (some-> jwt-cookie (verify)
+                                                                                     :sub ; legacy
+                                                                                     ))
                                                (assoc-in [:request :jwt] jwt-header))
 
             (nil? jwt-cookie) (-> context
-                                  (assoc-in [:request :user] (some-> jwt-header (verify)))
+                                  (assoc-in [:request :user-id] (some-> jwt-header (verify)
+                                                                        :sub ; legacy
+                                                                        ))
                                   (assoc-in [:request :jwt] jwt-header))
 
             :else (-> (terminate context)
