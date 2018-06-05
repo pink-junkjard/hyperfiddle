@@ -12,7 +12,7 @@
         change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) (empty->nil %)))]
     [:div.value
      [:div.anchors (link-controls/anchors path true ctx)]
-     (let [widget (case (:hyperfiddle.ui/layout ctx)
+     (let [widget (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
                     :hyperfiddle.ui.layout/block code-block
                     :hyperfiddle.ui.layout/inline-block code-inline-block
                     :hyperfiddle.ui.layout/table code-inline-block)
