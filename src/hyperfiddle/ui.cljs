@@ -5,9 +5,9 @@
     [contrib.reactive :as r]
     [contrib.reagent :refer [from-react-context fragment]]
     [hypercrud.browser.context :as context]
+    [hypercrud.types.Entity :refer [Entity]]
     [hypercrud.ui.form]
     [hypercrud.ui.table]
-    [hypercrud.types.Entity :refer [Entity]]
     [hyperfiddle.ui.markdown-extensions :refer [extensions]]))
 
 
