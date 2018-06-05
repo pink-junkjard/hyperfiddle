@@ -107,3 +107,18 @@
       ; todo unsafe execution of user code: control
       [(or ?f (auto-control ctx)) @(:value ctx) ctx (merge (control-props ctx) props)]]
      [col-head ctx])))
+
+(defn table [form ctx]
+  (let [sort-col (r/atom nil)]
+    (fn [form ctx]
+      (let [ctx (assoc ctx :hyperfiddle.ui/layout (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/table)
+                           :hypercrud.ui.table/sort-col sort-col
+                           ::unp true)]
+        [:table.ui-table.unp
+         [:thead [form ctx]]
+         [:tbody (->> (:relations ctx)
+                      (r/unsequence hypercrud.ui.table/relation-keyfn)
+                      (map (fn [[relation k]]
+                             ^{:key k}
+                             [:tr [form (context/relation ctx relation)]]))
+                      (doall))]]))))

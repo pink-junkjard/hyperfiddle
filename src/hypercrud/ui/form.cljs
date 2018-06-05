@@ -69,3 +69,17 @@
           (link-controls/anchors path true ctx nil {:class "hyperfiddle-link-entity-dependent"})
           (link-controls/iframes path true ctx)))
       (link-controls/iframes path false ctx))))
+
+(defn form [{:keys [hypercrud.browser/ordered-fes
+                    hypercrud.browser/links] :as ctx}]
+  (let [ctx (assoc ctx :hyperfiddle.ui/layout (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block))]
+    (->> (r/unsequence ordered-fes)
+         ; Wouldn't mlet be nice here
+         (mapcat (fn [[fe i]]
+                   (->> fe
+                        (r/fmap :fields)
+                        (r/unsequence :attribute)
+                        (map (fn [[_ a]]
+                               ^{:key (str i a)}
+                               [(:field ctx) [i a] ctx])))))
+         (apply fragment :_))))

@@ -10,7 +10,8 @@
     [cuerdas.core :as str]
     [goog.object]
     [hypercrud.browser.context :as context]
-    [hyperfiddle.eval :refer [read-eval-with-bindings]]))
+    [hyperfiddle.eval :refer [read-eval-with-bindings]]
+    [hypercrud.ui.table :as table]))
 
 
 (defn eval [content argument props ctx]
@@ -47,16 +48,6 @@
                                           ; the whole point of the gymnastics is to apply ?f as arity-1 (so `str` works)
                                           [?f #_(wrap-naked-string :div ?f) value]]))
            (flatten (seq props)))))
-
-(defn result [content argument props ctx]
-  (let [?f (read-eval-with-bindings content)]
-    [:div.unp [hyperfiddle.ui/result ctx ?f]]))
-
-(defn md-fields-fn [content ctx]
-  (into [hyperfiddle.ui/markdown content] ctx))
-
-(defn table [content argument props ctx]
-  [hyperfiddle.ui/table (r/partial md-fields-fn content) props ctx])
 
 (defn list- [content argument props ctx]
   [:ul.unp props
@@ -108,10 +99,13 @@
    "browse" browse
    "anchor" anchor
 
+   "result" (fn [content argument props ctx]
+              [:div.unp [hyperfiddle.ui/result ctx (read-eval-with-bindings content)]])
    "value" value                                            ; uses relation to draw just value
    "field" field                                            ; uses relation to draw label and value
-   "result" result                                          ; render form/table, loops over relations
-   "table" table
+   "table" (letfn [(form [content ctx] (into [hyperfiddle.ui/markdown content] ctx))]
+             (fn [content argument props ctx]
+               [table/table (r/partial form content) props ctx]))
    "list" list-                                             ; renders ul/li, loops over relations
 
    ; How can list collapse into result through a higher order fn? Would need two fns, wrapper and inner...

@@ -6,7 +6,7 @@
             [hyperfiddle.ui :refer [markdown]]))
 
 
-(def ^:export result hyperfiddle.ui/result)
+(def ^:export result hyperfiddle.ui/result)                 ; (tools.sources/code-search! "result/result")
 
 (def ^:export fiddle (-build-fiddle))
 
