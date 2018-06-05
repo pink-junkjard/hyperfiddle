@@ -21,8 +21,10 @@
 (def ^:export fiddle (-build-fiddle))
 
 (defn fiddle-xray [ctx class]
-  [:div {:class class}
-   [:h3 (some-> ctx :hypercrud.browser/fiddle deref :fiddle/ident name)]
-   (link-controls/anchors [] false ctx nil {:class "hyperfiddle-link-index"})
-   (result ctx)
-   (link-controls/iframes [] false ctx)])
+  (let [{:keys [:hypercrud.browser/fiddle
+                #_:hypercrud.browser/result]} ctx]
+    [:div {:class class}
+     [:h3 (some-> @fiddle :fiddle/ident name)]
+     (link-controls/anchors [] false ctx nil {:class "hyperfiddle-link-index"})
+     (result ctx)
+     (link-controls/iframes [] false ctx)]))
