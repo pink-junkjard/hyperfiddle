@@ -50,18 +50,18 @@
          }]
     [:div.container-fluid.fiddle-src {:class class}
      [:h3 (str @(r/cursor (:hypercrud.browser/result ctx) [:fiddle/ident])) " source"]
-     [(:cell ctx) [true 0 :fiddle/ident] ctx]
-     [(:cell ctx) [true 0 :fiddle/type] ctx]
+     [(:field ctx) [0 :fiddle/ident] ctx]
+     [(:field ctx) [0 :fiddle/type] ctx]
      (case @(r/cursor (:hypercrud.browser/result ctx) [:fiddle/type])
-       :entity (fragment :_ [(:cell ctx) [true 0 :fiddle/pull-database] ctx]
-                         [(:cell ctx) [true 0 :fiddle/pull] ctx (controls :fiddle/pull)])
-       :query [(:cell ctx) [true 0 :fiddle/query] ctx (controls :fiddle/query)]
+       :entity (fragment :_ [(:field ctx) [0 :fiddle/pull-database] ctx]
+                         [(:field ctx) [0 :fiddle/pull] ctx (controls :fiddle/pull)])
+       :query [(:field ctx) [0 :fiddle/query] ctx (controls :fiddle/query)]
        :blank nil
        nil nil)
-     [(:cell ctx) [true 0 :fiddle/markdown] ctx (controls :fiddle/markdown)]
-     [(:cell ctx) [true 0 :fiddle/css] ctx (controls :fiddle/css)]
-     [(:cell ctx) [true 0 :fiddle/renderer] ctx (controls :fiddle/renderer)]
-     (when-not embed-mode [(:cell ctx) [true 0 :fiddle/links] ctx-real (controls :fiddle/links)])
+     [(:field ctx) [0 :fiddle/markdown] ctx (controls :fiddle/markdown)]
+     [(:field ctx) [0 :fiddle/css] ctx (controls :fiddle/css)]
+     [(:field ctx) [0 :fiddle/renderer] ctx (controls :fiddle/renderer)]
+     (when-not embed-mode [(:field ctx) [0 :fiddle/links] ctx-real (controls :fiddle/links)])
      (when-not embed-mode [(:anchor ctx) :hyperfiddle/remove [0] ctx "Remove fiddle"])
      ]))
 
@@ -89,7 +89,7 @@
         (into
           [:div.fiddle-src {:class class}]
           (for [k attrs]
-            [(:cell ctx) [true 0 k] ctx (controls k)]))))))
+            [(:field ctx) [0 k] ctx (controls k)]))))))
 
 (defn result-edn [& attrs]
   (fn [{:keys [hypercrud.browser/result]}]

@@ -41,7 +41,7 @@
                   (dissoc :children)
                   (clojure.set/rename-keys {:className :class})
                   (update :class classes "unp") #_"fix font size")
-        path (into [true] (unwrap (memoized-safe-read-edn-string (str "[" argument "]"))))]
+        path (unwrap (memoized-safe-read-edn-string (str "[" argument "]")))]
     (apply (:cell ctx) path ctx (if ?f (fn control [value ctx props]
                                          [with-react-context
                                           {:ctx ctx :props props}
@@ -84,7 +84,7 @@
 (defn value [content argument props ctx]
   (let [?f (read-eval-with-bindings content)
         props (keywordize-keys props)
-        path (into [true] (unwrap (memoized-safe-read-edn-string (str "[" argument "]"))))]
+        path (unwrap (memoized-safe-read-edn-string (str "[" argument "]")))]
     (apply (:value ctx) path ctx
            (if ?f (fn control [value ctx props]
                     [with-react-context

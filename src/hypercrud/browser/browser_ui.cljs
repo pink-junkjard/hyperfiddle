@@ -42,14 +42,14 @@
                 ctx (context/relation-path ctx (into [dependent?] (unwrap (memoized-safe-read-edn-string (str "[" path "]")))))
                 props (kwargs args)]
             [(:navigate-cmp ctx) (merge props (link/build-link-props link ctx)) label (:class props)]))
-        (field [[d i a] ctx ?f & args]
+        (field [[i a] ctx ?f & args]
           (let [cell (case (:layout ctx) :table table/Field form/Field)]
             [(r/partial cell ?f)                            ; Intentional explicit nil
-             (context/relation-path ctx [d i a])
+             (context/relation-path ctx [true i a])
              (kwargs args)]))
-        (value [path ctx ?f & args]
-          (let [ctx (context/relation-path ctx path)]
-            [(or ?f (auto-control/auto-control ctx)) @(:value ctx) ctx (kwargs args)]))
+        (value [[i a] ctx ?f & args]
+          (let [ctx (context/relation-path ctx [true i a])]
+            [(or ?f (hypercrud.ui.auto-control/auto-control ctx)) @(:value ctx) ctx (kwargs args)]))
         (browse' [rel #_dependent? path ctx]
           (->> (base/data-from-link @(r/track link/rel->link rel path ctx) ctx)
                (cats/fmap :hypercrud.browser/result)
@@ -59,7 +59,8 @@
     (assoc ctx
       :anchor anchor
       :browse browse
-      :cell field
+      :field field
+      :cell field                                           ; legacy
       :value value
       :browse' browse')))
 
