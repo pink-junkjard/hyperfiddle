@@ -104,8 +104,8 @@
         (fake-managed-anchor :stage [] ctx "stage" :class (if dirty? "stage-dirty")))
       ((:anchor ctx) :new-fiddle [] ctx "new-fiddle")
       [tooltip {:label "Domain administration"} ((:anchor ctx) :domain [] ctx "domain")]
-      (if-let [user-id @(runtime/state (:peer ctx) [::runtime/user-id])]
-        ((:anchor ctx) :account [] ctx (str user-id) #_(get-in ctx [:user-profile :email]))
+      (if @(runtime/state (:peer ctx) [::runtime/user-id])
+        [(:browse ctx) :account [] ctx]
         [:span.nav-link.auth [:a {:href (login/stateless-login-url ctx)} "Login"]])]]))
 
 (defn ^:export qe-picker-control [value ctx props]
