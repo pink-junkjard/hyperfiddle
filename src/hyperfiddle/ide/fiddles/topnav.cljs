@@ -80,11 +80,12 @@
 
       (let [src-mode (src-mode? (-> ctx :target-route (get 3)))
             no-target-fiddle (nil? (:db/id @result))        ; ide-route omits fiddle for ide routes
-            change! #(runtime/dispatch! (:peer ctx) (foundation-actions/set-display-mode %))]
+            change! #(runtime/dispatch! (:peer ctx) (foundation-actions/set-display-mode %))
+            value (if src-mode :src display-mode)]
         [:span.radio-group
-         (radio/option {:label "data" :tooltip "Ignore :fiddle/renderer" :target :xray :change! change! :value (if src-mode :src display-mode)
+         (radio/option {:label "data" :tooltip "Ignore :fiddle/renderer" :target :hypercrud.browser.browser-ui/xray :change! change! :value value
                         :disabled (or src-mode no-target-fiddle)})
-         (radio/option {:label "view" :tooltip "Use :fiddle/renderer" :target :user :value (if src-mode :src display-mode) :change! change!
+         (radio/option {:label "view" :tooltip "Use :fiddle/renderer" :target :hypercrud.browser.browser-ui/user :value value :change! change!
                         :disabled (or src-mode no-target-fiddle)})
          (radio/option {:label (let [root-rel-path (runtime/encode-route (:peer ctx) (router/dissoc-frag (:target-route ctx)))
                                      href (if-not src-mode
@@ -93,7 +94,7 @@
                                  (if (and (not src-mode) (not no-target-fiddle))
                                    [:a {:href href :target "_blank"} "src"]
                                    [:span "src"]))
-                        :tooltip "View fiddle source" :target :src :value (if src-mode :src display-mode) :change! change!
+                        :tooltip "View fiddle source" :target :hypercrud.browser.browser-ui/src :value value :change! change!
                         :disabled (or (not src-mode) no-target-fiddle)})])
 
       (if @(runtime/state (:peer ctx) [::runtime/auto-transact])

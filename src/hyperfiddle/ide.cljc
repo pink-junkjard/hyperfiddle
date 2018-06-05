@@ -66,7 +66,7 @@
 ; despite being in the namespace (hyperfiddle.ide) which encompasses the union of target/user (bottom) and ide (top)
 (defn- *-ide-context [ctx]
   (-> ctx
-      (assoc :hypercrud.ui/display-mode (r/track identity :user)
+      (assoc :hypercrud.ui/display-mode (r/track identity :hypercrud.browser.browser-ui/user)
              :target-domain (:hypercrud.browser/domain ctx) ; todo rename :target-domain to :hyperfiddle.ide/target-domain
              :user-profile @(runtime/state (:peer ctx) [:user-profile]))
       (context/source-mode)))

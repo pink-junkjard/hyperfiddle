@@ -87,7 +87,7 @@
     ; default
     [select-error-cmp "Only fiddle type `query` is supported for select options"]))
 
-(def always-user (atom :user))
+(def always-user (atom :hypercrud.browser.browser-ui/user))
 
 (let [on-change (fn [ctx id]
                   ((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) id)))

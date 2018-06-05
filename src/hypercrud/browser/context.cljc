@@ -30,7 +30,7 @@
 (defn source-mode [ctx]
   (-> ctx
       (assoc :hypercrud.browser/page-on-click (r/constantly nil) ; disable alt-click
-             :hypercrud.ui/display-mode (r/track identity :user))
+             :hypercrud.ui/display-mode (r/track identity :hypercrud.browser.browser-ui/user))
       (update :hypercrud.browser/domain
               (fn [domain]
                 (assoc-in (:hypercrud.browser/source-domain ctx) [:domain/environment "$"] (:domain/fiddle-repo domain))))))

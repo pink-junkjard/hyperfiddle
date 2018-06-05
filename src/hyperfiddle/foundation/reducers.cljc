@@ -80,10 +80,10 @@
 (defn display-mode-reducer [display-mode action & args]
   (case action
     :toggle-display-mode (case display-mode
-                           :xray :user
-                           :user :xray)
+                           :hypercrud.browser.browser-ui/xray :hypercrud.browser.browser-ui/user
+                           :hypercrud.browser.browser-ui/user :hypercrud.browser.browser-ui/xray)
     :set-display-mode (first args)
-    (or display-mode :user)))
+    (or display-mode :hypercrud.browser.browser-ui/user)))
 
 (defn partitions-reducer [partitions action & args]
   (->> (case action

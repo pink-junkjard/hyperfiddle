@@ -48,7 +48,7 @@
             [(:navigate-cmp ctx) (merge props (link/build-link-props link ctx)) label (:class props)]))
         (field [[d i a] ctx ?f & args]
           (let [cell (case (:layout ctx) :table hypercrud.ui.table/Field hypercrud.ui.form/Field)]
-            [(r/partial cell ?f)          ; Intentional explicit nil
+            [(r/partial cell ?f)                            ; Intentional explicit nil
              (context/relation-path ctx [d i a])
              (kwargs args)]))
         (value [path ctx ?f & args]
@@ -111,15 +111,14 @@
      [src-mode ctx]
      (let [class (auto-ui-css-class ctx)]
        (case @(:hypercrud.ui/display-mode ctx)
-         :user (if-let [user-renderer (:user-renderer ctx)]
-                 [user-renderer ctx class]
-                 [eval-renderer-comp
-                  (some-> @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/cljs-ns]) blank->nil)
-                  (some-> @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/renderer]) blank->nil build-wrapped-render-expr-str)
-                  ctx class])
+         ::user (if-let [user-renderer (:user-renderer ctx)]
+                  [user-renderer ctx class]
+                  [eval-renderer-comp
+                   (some-> @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/cljs-ns]) blank->nil)
+                   (some-> @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/renderer]) blank->nil build-wrapped-render-expr-str)
+                   ctx class])
          ; todo ui.result should be injected
-         :xray [hypercrud.ui.result/fiddle-xray ctx class]
-         :edn [hypercrud.ui.result/fiddle-edn ctx class])))])
+         ::xray [hypercrud.ui.result/fiddle-xray ctx class])))])
 
 (defn ui-from-route [route ctx & [class]]
   (let [click-fn (or (:hypercrud.browser/page-on-click ctx) (constantly nil)) ; parent ctx receives click event, not child frame

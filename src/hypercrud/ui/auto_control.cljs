@@ -78,7 +78,9 @@
   ; So it's kind of backwards right now and user-controls have
   ; knowledge of this pipeline.
 
-  (or (case @(:hypercrud.ui/display-mode ctx) :user (some->> (:control ctx) (r/partial portal-markup)) :xray nil)
+  (or (case @(:hypercrud.ui/display-mode ctx)
+        :hypercrud.browser.browser-ui/user (some->> (:control ctx) (r/partial portal-markup))
+        :hypercrud.browser.browser-ui/xray nil)
       (attribute-control ctx)
       (some->> (case (:layout ctx :block)
                  :block (schema-control-form ctx)
