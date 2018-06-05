@@ -88,7 +88,7 @@
                  :table (schema-control-table ctx))
                (r/partial portal-markup))))
 
-(defn #_^:deprecated control-props [ctx]
+(defn control-props [ctx]
   ; Only used by fiddle-links/bindings which are legacy, we do that stuff in a renderer now.
   (cond-> {} (:read-only ctx) (assoc :read-only ((:read-only ctx) ctx))))
 
