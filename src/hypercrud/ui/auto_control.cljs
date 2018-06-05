@@ -2,12 +2,12 @@
   (:require [cats.monad.either :as either]
             [contrib.reactive :as r]
             [cuerdas.core :as string]
-            [hypercrud.browser.browser-ui :as browser-ui]
             [hypercrud.ui.attribute.edn :as edn]
             [hypercrud.ui.attribute.instant :as instant]
             [hypercrud.ui.error :as ui-error]
             [hypercrud.ui.safe-render :refer [portal-markup user-portal]]
             [hypercrud.ui.table-cell :as table-cell]
+            [hypercrud.ui.util :as util]
             [hypercrud.ui.widget :as widget]))
 
 
@@ -59,7 +59,7 @@
   (let [renderer @(r/cursor (:hypercrud.browser/fat-attribute ctx) [:attribute/renderer])]
     (when (and (string? renderer) (not (string/blank? renderer)))
       (let [with-error (ui-error/error-comp ctx)
-            f browser-ui/eval-renderer-comp]
+            f util/eval-renderer-comp]
         (r/partial safe-reagent-f with-error f nil renderer)))))
 
 (defn auto-control [ctx]

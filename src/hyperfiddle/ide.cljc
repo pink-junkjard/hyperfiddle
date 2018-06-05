@@ -172,7 +172,10 @@
    (defn view-page [[fiddle :as route] ctx]
      (let [ide (activate-ide? (foundation/hostname->hf-domain-name ctx))
            src-mode (let [[_ _ _ frag] route] (topnav/src-mode? frag)) ; Immoral - :src bit is tunneled in userland fragment space
-           ctx (assoc ctx :navigate-cmp (r/partial navigate-cmp/navigate-cmp (r/partial runtime/encode-route (:peer ctx))))
+           ctx (-> ctx
+                   (assoc :navigate-cmp (r/partial navigate-cmp/navigate-cmp (r/partial runtime/encode-route (:peer ctx)))
+                          :alpha.hypercrud.browser/ui-comp browser-ui/ui-comp)
+                   (browser-ui/ui-bindings))
            ide-ctx (page-ide-context ctx route)]
 
        (fragment
