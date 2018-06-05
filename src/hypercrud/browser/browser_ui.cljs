@@ -109,15 +109,17 @@
   [user-portal (ui-error/error-comp ctx)
    (if (hyperfiddle.ide.fiddles.topnav/src-mode? (get (:route ctx) 3))
      [src-mode ctx]
-     (case @(:hypercrud.ui/display-mode ctx)
-       :user (if-let [user-renderer (:user-renderer ctx)]
-               [user-renderer ctx (auto-ui-css-class ctx)]
-               [eval-renderer-comp
-                (some-> @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/cljs-ns]) blank->nil)
-                (some-> @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/renderer]) blank->nil build-wrapped-render-expr-str)
-                ctx (auto-ui-css-class ctx)])
-       ; todo ui.result should be injected
-       :xray [hypercrud.ui.result/fiddle-xray ctx (auto-ui-css-class ctx)]))])
+     (let [class (auto-ui-css-class ctx)]
+       (case @(:hypercrud.ui/display-mode ctx)
+         :user (if-let [user-renderer (:user-renderer ctx)]
+                 [user-renderer ctx class]
+                 [eval-renderer-comp
+                  (some-> @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/cljs-ns]) blank->nil)
+                  (some-> @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/renderer]) blank->nil build-wrapped-render-expr-str)
+                  ctx class])
+         ; todo ui.result should be injected
+         :xray [hypercrud.ui.result/fiddle-xray ctx class]
+         :edn [hypercrud.ui.result/fiddle-edn ctx class])))])
 
 (defn ui-from-route [route ctx & [class]]
   (let [click-fn (or (:hypercrud.browser/page-on-click ctx) (constantly nil)) ; parent ctx receives click event, not child frame

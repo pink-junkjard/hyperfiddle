@@ -87,16 +87,30 @@
           (for [k attrs]
             [(:cell ctx) [true 0 k] ctx (controls k)]))))))
 
+(defn easy-checkbox [r label]
+  [:label {:style {:font-weight "400"}}
+   [:input {:type "checkbox"
+            :checked @r :on-change #(swap! r not)}]
+   (str " " label)])
+
+(defn result-edn [{:keys [:hypercrud.browser/result]}]
+  [contrib.ui/edn-block @result]
+  #_[:pre (js/pprint-str @result)])
+
 ; This is in source control because all hyperblogs want it.
 ; But, they also want to tweak it surely. Can we store this with the fiddle ontology?
-(defn ^:export hyperfiddle-live [rel ctx & fiddle-attrs]
-  [:div.hyperfiddle-live-editor.unp
-   [:div.row
-    ; Reverse order so it looks right on mobile, larger views reorder
-    [:div.col-sm-5.col-sm-push-7
-     [:div "Result:"]
-     ((:browse ctx) rel [] ctx)]
-    [:div.col-sm-7.col-sm-pull-5
-     [:div "Interactive Hyperfiddle editor:"]
-     ((:browse ctx) rel [] ctx (apply docs-embed fiddle-attrs) :frag ":src" :class "devsrc")]
-    ]])
+(defn hyperfiddle-live [rel ctx & fiddle-attrs]
+  (let [state (r/atom {:edn-fiddle false :edn-result false})]
+    (fn [rel ctx & fiddle-attrs]
+      [:div.hyperfiddle-live-editor.unp
+       [:div.row
+        ; Reverse order so it looks right on mobile, larger views reorder
+        (let [as-edn (r/cursor state [:edn-result])]
+          [:div.col-sm-5.col-sm-push-7
+           [:div "Result:" [easy-checkbox as-edn " EDN?"]]
+           ((:browse ctx) rel [] ctx (if @as-edn result-edn))])
+        (let [as-edn (r/cursor state [:edn-fiddle])]
+          [:div.col-sm-7.col-sm-pull-5
+           [:div "Interactive Hyperfiddle editor:" [easy-checkbox as-edn " EDN?"]]
+           ((:browse ctx) rel [] ctx (if @as-edn result-edn (apply docs-embed fiddle-attrs)) :frag ":src" :class "devsrc")])
+        ]])))
