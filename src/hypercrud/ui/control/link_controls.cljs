@@ -1,7 +1,7 @@
 (ns hypercrud.ui.control.link-controls
   (:require [contrib.data :refer [kwargs]]
             [contrib.reactive :as r]
-            [hypercrud.browser.core :as browser]
+    ;[hypercrud.browser.core :as browser]
             [hypercrud.browser.link :as link]))
 
 
@@ -13,7 +13,7 @@
   [(:navigate-cmp ctx) (link/build-link-props @link-ref ctx) @(r/track prompt link-ref) class])
 
 (defn- reactive-ui [link-ref ctx class]
-  [browser/ui @link-ref ctx class])
+  [hypercrud.browser.core/ui @link-ref ctx class])
 
 (defn ui-contextual-links [path dependent? inline? links ?processor]
   ; There is only one processor ?

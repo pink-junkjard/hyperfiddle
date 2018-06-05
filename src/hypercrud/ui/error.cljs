@@ -2,7 +2,7 @@
   (:require
     [contrib.pprint :refer [pprint-str]]
     [hypercrud.types.Err :as Err]
-    [hyperfiddle.ui :refer [markdown]]
+    [contrib.ui :refer [markdown]]
     [hyperfiddle.foundation :as foundation]))
 
 

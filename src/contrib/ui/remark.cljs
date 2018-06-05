@@ -11,7 +11,7 @@
         content (-> c .-props .-children) #_"Throw away remark wrapper div"]
     content))
 
-(defn remark [extensions]
+(defn remark [& [extensions]]
   (-> (js/remark)
       (.use js/remarkGenericExtensions
             (clj->js

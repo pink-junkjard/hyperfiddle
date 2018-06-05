@@ -6,6 +6,7 @@
     [contrib.reactive :as r]
     [contrib.string :refer [safe-read-edn-string]]
     [contrib.ui.codemirror :refer [-codemirror]]
+    [contrib.ui.remark :as remark]
     [re-com.core :as re-com]
     [reagent.core :as reagent]
     [taoensso.timbre :as timbre]))
@@ -78,3 +79,10 @@
   ; We don't have a way to differentiate tests-node from runtime-node, so check presence
   (if-let [reactSlickSlider (aget (global!) "reactSlickSlider")]
     (reagent/adapt-react-class reactSlickSlider)))
+
+; this one doesn't have extensions and no hf deps,
+; which helps break dump circular refs
+(def -remark-instance (remark/remark))
+
+(defn ^:export markdown [& args]
+  (into [remark/markdown -remark-instance] args))

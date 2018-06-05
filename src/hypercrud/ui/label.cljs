@@ -2,7 +2,7 @@
   (:require [contrib.reactive :as r]
             [contrib.ui.tooltip :refer [tooltip-thick]]
             [cuerdas.core :as str]
-            [hyperfiddle.ui :refer [markdown]]))
+            [contrib.ui :refer [markdown]]))
 
 
 (defn fqn->name [s]
