@@ -17,7 +17,7 @@
            :disabled (:read-only props)
            :on-change change!}])
 
-(defn ^:export code [value change! props]
+(defn ^:export code [value ?change! props]
   (let [defaults {:lineNumbers true
                   :matchBrackets true
                   :autoCloseBrackets true
@@ -25,19 +25,19 @@
         props (merge defaults props)]
     ; There is nothing to be done about invalid css down here.
     ; You'd have to write CodeMirror implementation-specific css.
-    [-codemirror value change! props]))
+    [-codemirror value ?change! props]))
 
-(defn ^:export code-block [props value change!]
+(defn ^:export code-block [props value ?change!]
   (let [props (if-not (nil? (:read-only props))
                 (-> props
                     (dissoc :read-only)
                     (assoc :readOnly (:read-only props)))
                 props)]
-    [code value change! props]))
+    [code value ?change! props]))
 
 (defn ^:export code-inline-block [& args]
   (let [showing? (r/atom false)]
-    (fn [props value change!]
+    (fn [props value ?change!]
       [:div
        [re-com/popover-anchor-wrapper
         :showing? showing?
@@ -48,7 +48,7 @@
                   :on-cancel #(reset! showing? false)
                   :no-clip? true
                   :width "600px"
-                  :body (code-block props value change!)]]
+                  :body (code-block props value ?change!)]]
        " " value])))
 
 (defn -edn [code-control value change! props]
