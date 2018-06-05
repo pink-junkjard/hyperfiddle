@@ -66,14 +66,15 @@
      ]))
 
 (defn hacked-links [value ctx props]
-  [:div
-   [:pre (->> value
-              (remove :link/disabled?)
-              (map #(select-keys % [:link/rel :link/path :link/fiddle :link/render-inline? :link/formula]))
-              (map #(update % :link/fiddle :fiddle/ident))
-              (map pr-str)
-              (interpose "\n"))]
-   [:div.hf-underdoc [markdown "Due to an issue in the live embed, the links are shown as EDN until we fix it."]]])
+  (let [links (->> value
+                   (remove :link/disabled?)
+                   (map #(select-keys % [:link/rel :link/path :link/fiddle :link/render-inline? :link/formula]))
+                   (map #(update % :link/fiddle :fiddle/ident))
+                   (map pr-str)
+                   (interpose "\n"))]
+    [:div
+     [:pre (if (seq links) links "No links or only auto links")]
+     [:div.hf-underdoc [markdown "Due to an issue in the live embed, the links are shown as EDN until we fix it."]]]))
 
 (defn docs-embed [& attrs]
   (fn [ctx-real class & {:keys [embed-mode]}]
@@ -90,11 +91,13 @@
           (for [k attrs]
             [(:cell ctx) [true 0 k] ctx (controls k)]))))))
 
-(defn result-edn [{:keys [:hypercrud.browser/result]}]
-  (let [s (contrib.pprint/pprint-str
-            (hyperfiddle.ui/pull-soup->tree @result)
-            40)]
-    [contrib.ui/code-block {:read-only true} s]))
+(defn result-edn [& attrs]
+  (fn [{:keys [hypercrud.browser/result]}]
+    (let [s (-> @result
+                (as-> $ (if (seq attrs) (select-keys $ attrs) $))
+                hyperfiddle.ui/pull-soup->tree
+                (contrib.pprint/pprint-str 40))]
+      [contrib.ui/code-block {:read-only true} s])))
 
 ; This is in source control because all hyperblogs want it.
 ; But, they also want to tweak it surely. Can we store this with the fiddle ontology?
@@ -107,9 +110,9 @@
         (let [as-edn (r/cursor state [:edn-result])]
           [:div.col-sm-5.col-sm-push-7
            [:div "Result:" [contrib.ui/easy-checkbox as-edn " EDN?"]]
-           ((:browse ctx) rel [] ctx (if @as-edn result-edn))])
+           ((:browse ctx) rel [] ctx (if @as-edn (result-edn)))])
         (let [as-edn (r/cursor state [:edn-fiddle])]
           [:div.col-sm-7.col-sm-pull-5
            [:div "Interactive Hyperfiddle editor:" [contrib.ui/easy-checkbox as-edn " EDN?"]]
-           ((:browse ctx) rel [] ctx (if @as-edn result-edn (apply docs-embed fiddle-attrs)) :frag ":src" :class "devsrc")])
+           ((:browse ctx) rel [] ctx (apply (if @as-edn result-edn docs-embed) fiddle-attrs) :frag ":src" :class "devsrc")])
         ]])))
