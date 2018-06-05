@@ -67,13 +67,6 @@
                              [:tr [form (context/relation ctx relation)]]))
                       (doall))]]))))
 
-;(defn result [ctx & [?f]]
-;  (let [f (or ?f (if (:relations ctx)
-;                   #(into [table] %&)
-;                   form))]
-;    (f form ctx)))
-; This is not a reagent component; it returns a component-or-list-of-components (or nil).
-; Thus it cannot be used from hiccup syntax. It needs to be wrapped into a :div or a react-fragment.
 (defn result [ctx & [?f]]
   (cond
     ?f [?f ctx]
