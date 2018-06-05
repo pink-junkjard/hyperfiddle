@@ -10,7 +10,6 @@
     [cuerdas.core :as str]
     [goog.object]
     [hypercrud.browser.context :as context]
-    ;[hypercrud.ui.table :as table]
     [hyperfiddle.eval :refer [read-eval-with-bindings]]))
 
 
@@ -51,27 +50,13 @@
 
 (defn result [content argument props ctx]
   (let [?f (read-eval-with-bindings content)]
-    [:div.unp (hypercrud.ui.result/result ctx ?f)]))
+    [:div.unp [hyperfiddle.ui/result ctx ?f]]))
 
-; content be like !field(0 :user/email) !field(0 :user/name)
-; Use these directives to either draw labels or values, depending on if :relation is in scope
-(defn table' [content argument props ctx]
-  (let [sort-col (r/atom nil)]
-    (fn [content argument props ctx]
-      (let [ctx (assoc ctx :layout (:layout ctx :table)
-                           :hypercrud.ui.table/sort-col sort-col
-                           ::unp true)]
-        [:table.ui-table.unp props
-         [:thead [hyperfiddle.ui/markdown content ctx]]
-         [:tbody (->> (:relations ctx)
-                      (r/unsequence hypercrud.ui.table/relation-keyfn)
-                      (map (fn [[relation k]]
-                             ^{:key k}
-                             [:tr [hyperfiddle.ui/markdown content (context/relation ctx relation)]]))
-                      (doall))]]))))
+(defn md-fields-fn [content ctx]
+  (into [hyperfiddle.ui/markdown content] ctx))
 
 (defn table [content argument props ctx]
-  [table' content argument props ctx])
+  [hyperfiddle.ui/table (r/partial md-fields-fn content) props ctx])
 
 (defn list- [content argument props ctx]
   [:ul.unp props

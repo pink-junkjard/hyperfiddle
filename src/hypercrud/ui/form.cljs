@@ -69,11 +69,3 @@
           (link-controls/anchors path true ctx nil {:class "hyperfiddle-link-entity-dependent"})
           (link-controls/iframes path true ctx)))
       (link-controls/iframes path false ctx))))
-
-(defn Relation [ctx]
-  ; No wrapper div; it limits layout e.g. floating. The pyramid mapcats out to a flat list of dom elements that comprise the form
-  ; This is not compatible with hiccup syntax; this is a fn
-  (let [ctx (assoc ctx :layout (:layout ctx :block))]       ; first point in time we know we're a form? can this be removed?
-    (->> (r/unsequence (:hypercrud.browser/ordered-fes ctx))
-         (mapcat (fn [[fe i]]
-                   (FeFields (context/find-element ctx i)))))))

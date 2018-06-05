@@ -107,39 +107,3 @@
       ; todo unsafe execution of user code: control
       [(or ?f (auto-control ctx)) @(:value ctx) ctx (merge (control-props ctx) props)]]
      [col-head ctx])))
-
-(defn FeFields "table labels OR values for a find-element" [ctx] ; should be row - fields (labels or values)
-  (let [ctx (context/cell-data ctx)]
-    (->> (r/cursor (:hypercrud.browser/find-element ctx) [:fields])
-         (r/unsequence :id)
-         (mapv (fn [[field id]]
-                 (let [ctx (context/field ctx @field)
-                       ctx (context/value ctx)]
-                   ^{:key id} [Field ctx]))))))
-
-(defn Relation [ctx]
-  (->> (r/unsequence (:hypercrud.browser/ordered-fes ctx))
-       (mapcat (fn [[fe i]]
-                 (FeFields (context/find-element ctx i))))))
-
-(defn Row [ctx]
-  [:tr (Relation ctx) [LinkCell ctx]])
-
-(defn Table-inner [ctx]
-  (let [sort-col (r/atom nil)]
-    (fn [ctx]
-      (let [ctx (assoc ctx :layout (:layout ctx :table)
-                           ::sort-col sort-col)]
-        [:table.ui-table
-         [:thead (Row ctx)]
-         [:tbody
-          (->> (r/fmap (r/partial sort-fn sort-col ctx) (:relations ctx))
-               (r/unsequence relation-keyfn)
-               (map (fn [[relation k]]
-                      ^{:key k} [Row (context/relation ctx relation)]))
-               (doall))]]))))
-
-(defn Table [ctx]
-  ; Relations could be in the ctx, but I chose not for now, because the user renderers don't get to see it i think.
-  ; The framework does the mapping and calls userland with a single relation the right number of times.
-  [Table-inner ctx])
