@@ -132,7 +132,7 @@
               pull-exp (or (-> (memoized-safe-read-edn-string @(r/cursor fiddle [:fiddle/pull]))
                                (either/branch (constantly nil) identity))
                            ['*])]
-          (either/right (->EntityRequest (:db/id ?e) a db pull-exp)))
+          (either/right (->EntityRequest (or (:db/id ?e) ?e) a db pull-exp)))
         (either/left (ex-info (str "Invalid :fiddle/pull-database " dbname) {})))
       (either/left (ex-info "Missing :fiddle/pull-database" {:fiddle @(r/cursor fiddle [:fiddle/ident])})))
 
