@@ -2,7 +2,7 @@
   (:require [contrib.reactive :as r]
             [datascript.parser :as parser]
             [hypercrud.browser.routing :as routing]
-            [hyperfiddle.foundation.actions :as foundation-actions]
+            [hyperfiddle.actions :as actions]
             [hyperfiddle.runtime :as runtime]))
 
 
@@ -77,7 +77,7 @@
     ctx))
 
 (letfn [(user-with [rt ctx branch uri tx]
-          (runtime/dispatch! rt (foundation-actions/with rt (:hypercrud.browser/invert-route ctx) branch uri tx)))]
+          (runtime/dispatch! rt (actions/with rt (:hypercrud.browser/invert-route ctx) branch uri tx)))]
   (defn find-element [ctx fe-pos]
     (let [fe (r/cursor (:hypercrud.browser/ordered-fes ctx) [fe-pos])
           dbname (str @(r/cursor fe [:source-symbol]))

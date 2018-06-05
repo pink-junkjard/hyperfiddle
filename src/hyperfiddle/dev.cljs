@@ -4,7 +4,7 @@
             [contrib.reagent :refer [fragment]]
             [contrib.pprint :refer [pprint-str]]
             [hypercrud.browser.routing :as routing]
-            [hyperfiddle.foundation.actions :as foundation-actions]
+            [hyperfiddle.actions :as actions]
             [hyperfiddle.runtime :as runtime]))
 
 
@@ -50,15 +50,15 @@
 
   (aset global "toggle_stage"
         (fn []
-          (runtime/dispatch! (:peer root-ctx) (foundation-actions/toggle-staging))))
+          (runtime/dispatch! (:peer root-ctx) (actions/toggle-staging))))
 
   (aset global "transact"
         (fn []
           ; no idea what this means copy pasted from topnav
           (runtime/dispatch! (:peer root-ctx)
-                             (foundation-actions/manual-transact! (:peer root-ctx)
-                                                                  (:hypercrud.browser/invert-route root-ctx)
-                                                                  {:hyperfiddle.ide/foo "page"}))))
+                             (actions/manual-transact! (:peer root-ctx)
+                                                       (:hypercrud.browser/invert-route root-ctx)
+                                                       {:hyperfiddle.ide/foo "page"}))))
 
   (aset global "root_ctx" root-ctx)
 
@@ -71,4 +71,4 @@
 ; thing = cljs.core.hash_map(kw('hyperfiddle.ide/foo'), "page")
 ; peer = cljs.core.get(main.main.root_ctx, kw('peer'))
 ; dispatch = cljs.core.get(main.main.root_ctx, kw('dispatch!'))
-; dispatch(hyperfiddle.foundation.actions.manual_transact_BANG_(peer, domain, thing))
+; dispatch(hyperfiddle.actions.manual_transact_BANG_(peer, domain, thing))

@@ -1,4 +1,4 @@
-(ns hyperfiddle.foundation.actions
+(ns hyperfiddle.actions
   (:require [cats.core :refer [mlet]]
             [cats.monad.either :as either]
             [contrib.data :refer [map-values map-keys]]
@@ -207,3 +207,12 @@
     ; can only transact one branch
     (let [tx-groups (get-in (get-state) [:stage nil])]
       (transact! peer invert-route tx-groups dispatch! get-state))))
+
+(defn set-user-id [rt user-id]
+  (fn [dispatch! get-state]
+    (when-not (= (::runtime/user-id (get-state)) user-id)
+      (dispatch! [:set-user-id user-id])
+      ; todo what about domain?
+      (-> (refresh-partition-basis rt nil dispatch! get-state)
+          (p/then (fn [] (hydrate-partition rt nil nil dispatch! get-state))))
+      nil)))

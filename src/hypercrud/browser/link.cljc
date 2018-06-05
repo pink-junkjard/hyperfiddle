@@ -12,7 +12,7 @@
             [hypercrud.browser.popovers :as popovers]
             [hypercrud.browser.q-util :as q-util]
             [hypercrud.browser.routing :as routing]
-            [hyperfiddle.foundation.actions :as foundation-actions]
+            [hyperfiddle.actions :as actions]
             [hyperfiddle.runtime :as runtime]
             [promesa.core :as p]
             [taoensso.timbre :as timbre]))
@@ -123,20 +123,20 @@
                                   ; return the result to the action, it could be a promise
                                   result))]
                   (runtime/dispatch! (:peer ctx)
-                                     (foundation-actions/stage-popover (:peer ctx) (:hypercrud.browser/invert-route ctx) child-branch swap-fn
-                                                                       (foundation-actions/close-popover (:branch ctx) popover-id))))))))
+                                     (actions/stage-popover (:peer ctx) (:hypercrud.browser/invert-route ctx) child-branch swap-fn
+                                                            (actions/close-popover (:branch ctx) popover-id))))))))
         ; todo something better with these exceptions (could be user error)
         (p/catch (fn [err]
                    #?(:clj  (throw err)
                       :cljs (js/alert (pprint-str err))))))))
 
 (defn close! [popover-id ctx]
-  (runtime/dispatch! (:peer ctx) (foundation-actions/close-popover (:branch ctx) popover-id)))
+  (runtime/dispatch! (:peer ctx) (actions/close-popover (:branch ctx) popover-id)))
 
 (defn cancel! [popover-id child-branch ctx]
-  (runtime/dispatch! (:peer ctx) (foundation-actions/batch
-                                   (foundation-actions/close-popover (:branch ctx) popover-id)
-                                   (foundation-actions/discard-partition child-branch))))
+  (runtime/dispatch! (:peer ctx) (actions/batch
+                                   (actions/close-popover (:branch ctx) popover-id)
+                                   (actions/discard-partition child-branch))))
 
 #?(:cljs
    (defn managed-popover-body [link route popover-id child-branch dont-branch? close! cancel! ctx]
@@ -153,9 +153,9 @@
 (defn open! [route popover-id child-branch dont-branch? ctx]
   (runtime/dispatch! (:peer ctx)
                      (if dont-branch?
-                       (foundation-actions/open-popover (:branch ctx) popover-id)
-                       (foundation-actions/add-partition (:peer ctx) route child-branch (::runtime/branch-aux ctx)
-                                                         (foundation-actions/open-popover (:branch ctx) popover-id)))))
+                       (actions/open-popover (:branch ctx) popover-id)
+                       (actions/add-partition (:peer ctx) route child-branch (::runtime/branch-aux ctx)
+                                              (actions/open-popover (:branch ctx) popover-id)))))
 
 ; if this is driven by link, and not route, it needs memoized.
 ; the route is a fn of the formulas and the formulas can have effects

@@ -7,8 +7,8 @@
             [hypercrud.client.peer :as peer]
             [hypercrud.types.EntityRequest :refer [#?(:cljs EntityRequest)]]
             [hypercrud.types.QueryRequest :refer [#?(:cljs QueryRequest)]]
-            [hyperfiddle.appval.state.reducers :as reducers] ; this import is immoral
             [hyperfiddle.io.http.core :refer [http-request!]]
+            [hyperfiddle.reducers :as reducers]             ; this import is immoral
             [hyperfiddle.runtime :as runtime]
             [promesa.core :as p]
             [taoensso.timbre :as timbre])
@@ -66,7 +66,7 @@
           ctx (update ctx :peer (fn [peer]
                                   (-> @(runtime/state peer)
                                       ; want to keep all user/ui and bootstrapping state, just use overwrite the partition state.
-                                      (select-keys [:user-profile ::runtime/domain])
+                                      (select-keys [::runtime/user-id ::runtime/domain])
                                       (assoc-in [::runtime/partitions (:branch ctx)]
                                                 {:route route
                                                  ::runtime/branch-aux (::runtime/branch-aux ctx)

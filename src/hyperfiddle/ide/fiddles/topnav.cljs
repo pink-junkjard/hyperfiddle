@@ -15,8 +15,8 @@
             [hypercrud.browser.system-fiddle :as system-fiddle]
             [hypercrud.types.Entity :refer [->Entity shadow-entity]]
             [hypercrud.ui.result :as result]
+            [hyperfiddle.actions :as actions]
             [hyperfiddle.foundation :as foundation :refer [staging]]
-            [hyperfiddle.foundation.actions :as foundation-actions]
             [hyperfiddle.runtime :as runtime]
             [hyperfiddle.ui :refer [markdown]]
             [hyperfiddle.ui.login :as login]))
@@ -80,7 +80,7 @@
 
       (let [src-mode (src-mode? (-> ctx :target-route (get 3)))
             no-target-fiddle (nil? (:db/id @result))        ; ide-route omits fiddle for ide routes
-            change! #(runtime/dispatch! (:peer ctx) (foundation-actions/set-display-mode %))
+            change! #(runtime/dispatch! (:peer ctx) (actions/set-display-mode %))
             value (if src-mode :src display-mode)]
         [:span.radio-group
          (radio/option {:label "data" :tooltip "Ignore :fiddle/renderer" :target :hypercrud.browser.browser-ui/xray :change! change! :value value
@@ -104,8 +104,8 @@
         (fake-managed-anchor :stage [] ctx "stage" :class (if dirty? "stage-dirty")))
       ((:anchor ctx) :new-fiddle [] ctx "new-fiddle")
       [tooltip {:label "Domain administration"} ((:anchor ctx) :domain [] ctx "domain")]
-      (if (:user-profile ctx)
-        ((:anchor ctx) :account [] ctx (get-in ctx [:user-profile :email]))
+      (if-let [user-id @(runtime/state (:peer ctx) [::runtime/user-id])]
+        ((:anchor ctx) :account [] ctx (str user-id) #_(get-in ctx [:user-profile :email]))
         [:span.nav-link.auth [:a {:href (login/stateless-login-url ctx)} "Login"]])]]))
 
 (defn ^:export qe-picker-control [value ctx props]
@@ -121,9 +121,9 @@
 
 (defn ^:export stage-ui [ctx]
   (let [writes-allowed? (or (foundation/alias? (foundation/hostname->hf-domain-name ctx))
-                            @(r/fmap (r/partial foundation/domain-owner? (:user-profile ctx))
+                            @(r/fmap (r/partial foundation/domain-owner? @(runtime/state (:peer ctx) [::runtime/user-id]))
                                      (runtime/state (:peer ctx) [::runtime/domain])))
-        anonymous? (nil? (:user-profile ctx))
+        anonymous? (nil? @(runtime/state (:peer ctx) [::runtime/user-id]))
         stage @(runtime/state (:peer ctx) [:stage])]
     [:div.hyperfiddle-topnav-stage
      (result/fiddle ctx)                                    ; for docstring
@@ -144,7 +144,7 @@
                   :on-click (fn []
                               ; specifically dont use the SplitRuntime protocol here. the only thing that makes sense is whats in the context from the route
                               (let [nil-branch-aux {:hyperfiddle.ide/foo "page"}]
-                                (runtime/dispatch! (:peer ctx) (foundation-actions/manual-transact! (:peer ctx) (:hypercrud.browser/invert-route ctx) nil-branch-aux))))}
+                                (runtime/dispatch! (:peer ctx) (actions/manual-transact! (:peer ctx) (:hypercrud.browser/invert-route ctx) nil-branch-aux))))}
          "transact!"]])
      [staging (:peer ctx)]
      [markdown "Hyperfiddle always generates valid transactions, if it doesn't, please file a bug.

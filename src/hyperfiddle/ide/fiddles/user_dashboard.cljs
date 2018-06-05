@@ -2,18 +2,18 @@
   (:require [contrib.reactive :as r]
             [hyperfiddle.ui :refer [markdown]]
             [contrib.ui.native-event-listener :refer [native-on-click-listener]]
-            [hyperfiddle.ide.actions :as ide-actions]
+            [hyperfiddle.actions :as actions]
             [hyperfiddle.runtime :as runtime]))
 
 
 (defn logout! [rt e]
-  (runtime/dispatch! rt (ide-actions/set-user-profile rt nil))
+  (runtime/dispatch! rt (actions/set-user-id rt nil))
   (.preventDefault e)
   (.stopPropagation e))
 
 (defn renderer [ctx]
   [:div.hyperfiddle-user-dashboard
-   (if (-> ctx :user-profile)
+   (when @(runtime/state (:peer ctx) [::runtime/user-id])
      [native-on-click-listener
       {:key :logout :on-click (r/partial logout! (:peer ctx))}
       ; todo https://auth0.com/docs/logout

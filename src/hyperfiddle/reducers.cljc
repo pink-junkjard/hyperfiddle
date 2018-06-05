@@ -1,10 +1,11 @@
-(ns hyperfiddle.foundation.reducers
+(ns hyperfiddle.reducers
   (:require [contrib.data :refer [map-values]]
             [contrib.datomic-tx :as tx]
             [contrib.pprint :refer [pprint-str]]
             [hypercrud.browser.routing :as routing]
             [hypercrud.types.Err :refer [->Err]]
-            [hypercrud.util.branch :as branch]))
+            [hypercrud.util.branch :as branch]
+            [hyperfiddle.state :as state]))
 
 
 (defn- serializable-error [e]
@@ -165,11 +166,17 @@
       auto-tx
       true)))
 
+(defn user-id-reducer [user-id action & args]
+  (case action
+    :set-user-id (first args)
+    user-id))
+
 (def reducer-map {:hyperfiddle.runtime/fatal-error fatal-error-reducer
                   :hyperfiddle.runtime/domain domain-reducer
                   :hyperfiddle.runtime/global-basis global-basis-reducer
                   :hyperfiddle.runtime/partitions partitions-reducer
                   :hyperfiddle.runtime/auto-transact auto-transact-reducer
+                  :hyperfiddle.runtime/user-id user-id-reducer
 
                   ; user
                   :display-mode display-mode-reducer
@@ -179,3 +186,5 @@
                   ; needs migration
                   :stage stage-reducer
                   })
+
+(def root-reducer (state/combine-reducers reducer-map))

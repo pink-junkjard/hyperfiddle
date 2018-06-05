@@ -24,7 +24,6 @@
             [taoensso.timbre :as timbre]
 
     ; pull in the entire ide app for reference from user-land
-            [hyperfiddle.ide.actions]
     #?(:cljs [hyperfiddle.ide.fiddles.domain])
             [hyperfiddle.ide.fiddles.fiddle-links.bindings]
     #?(:cljs [hyperfiddle.ide.fiddles.fiddle-links.renderer])
@@ -67,8 +66,7 @@
 (defn- *-ide-context [ctx]
   (-> ctx
       (assoc :hypercrud.ui/display-mode (r/track identity :hypercrud.browser.browser-ui/user)
-             :target-domain (:hypercrud.browser/domain ctx) ; todo rename :target-domain to :hyperfiddle.ide/target-domain
-             :user-profile @(runtime/state (:peer ctx) [:user-profile]))
+             :target-domain (:hypercrud.browser/domain ctx)) ; todo rename :target-domain to :hyperfiddle.ide/target-domain
       (context/source-mode)))
 
 (defn leaf-ide-context [ctx]
@@ -99,7 +97,6 @@
                                        #?(:cljs (r/partial browser-ui/page-on-click (:peer ctx) nil branch-aux)))
     :hypercrud.ui/display-mode (runtime/state (:peer ctx) [:display-mode])
     :ide-active (activate-ide? (foundation/hostname->hf-domain-name ctx))
-    :user-profile @(runtime/state (:peer ctx) [:user-profile])
 
     ; these target values only exists to allow the topnav to render in the bottom/user
     ; IF we MUST to support that, this should probably be done higher up for both ide and user at the same time
@@ -192,7 +189,7 @@
          (if (magic-ide-fiddle? fiddle (get-in ctx [:hypercrud.browser/domain :domain/ident]))
 
            ^{:key :primary-content}
-           [browser/ui-from-route route ide-ctx "devsrc"] ; primary, blue background (IDE), magic ide route like /hyperfiddle.ide/domain
+           [browser/ui-from-route route ide-ctx "devsrc"]   ; primary, blue background (IDE), magic ide route like /hyperfiddle.ide/domain
 
            (fragment
              :primary-content

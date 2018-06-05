@@ -19,8 +19,8 @@
             [contrib.ui.native-event-listener :refer [native-on-click-listener]]
             [hypercrud.ui.safe-render :refer [user-portal]]
             [hypercrud.ui.stale :as stale]
+            [hyperfiddle.actions :as actions]
             [hyperfiddle.foundation :as foundation]
-            [hyperfiddle.foundation.actions :as foundation-actions]
             [hyperfiddle.runtime :as runtime]))
 
 
@@ -71,7 +71,7 @@
   (when (and route (.-altKey event))
     (runtime/dispatch! rt (fn [dispatch! get-state]
                             (when (foundation/navigable? route (get-state))
-                              (foundation-actions/set-route rt route branch false false dispatch! get-state))))
+                              (actions/set-route rt route branch false false dispatch! get-state))))
     (.stopPropagation event)))
 
 ; defer eval until render cycle inside userportal

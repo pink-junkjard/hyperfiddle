@@ -16,7 +16,7 @@
             [hypercrud.types.Err :as Err]
     #?(:cljs [contrib.ui :refer [code]])
     #?(:cljs [hypercrud.ui.stale :as stale])
-            [hyperfiddle.foundation.actions :as foundation-actions]
+            [hyperfiddle.actions :as actions]
             [hyperfiddle.runtime :as runtime]
             [promesa.core :as p]))
 
@@ -69,10 +69,9 @@
                       :domain/router
                       :domain/home-route])))
 
-(defn domain-owner? [user-profile domain]
-  (let [sub (:sub user-profile)]
-    (or (some-> (:user/sub domain) (= sub))
-        (contains? (set (:domain/members domain)) sub))))
+(defn domain-owner? [user-id domain]
+  (or (some-> (:user/sub domain) (= user-id))
+      (contains? (set (:domain/members domain)) user-id)))
 
 (defn user-profile->ident [user-profile]
   (-> user-profile :email (str/replace #"\@.+$" "") (str/slug)))
@@ -126,7 +125,7 @@
      (let [stage-val @(runtime/state peer [:stage])
            edn (pprint-str stage-val 70)]
        ; todo this can throw
-       [code edn #(runtime/dispatch! peer (foundation-actions/reset-stage peer (read-edn-string %)))])))
+       [code edn #(runtime/dispatch! peer (actions/reset-stage peer (read-edn-string %)))])))
 
 #?(:cljs
    (defn leaf-view [route ctx f]
@@ -204,8 +203,8 @@
   (if (>= init-level load-level)
     (p/resolved nil)
     (-> (condp = (inc init-level)
-          LEVEL-GLOBAL-BASIS (foundation-actions/refresh-global-basis rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
-          LEVEL-DOMAIN (foundation-actions/refresh-domain rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
+          LEVEL-GLOBAL-BASIS (actions/refresh-global-basis rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
+          LEVEL-DOMAIN (actions/refresh-domain rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
           LEVEL-ROUTE (let [branch-aux {:hyperfiddle.ide/foo "page"}] ;ide
                         (try (let [route (runtime/decode-route rt encoded-route)]
                                (when-let [e (routing/invalid-route? route)] (throw e))
@@ -214,8 +213,8 @@
                              (catch #?(:cljs :default :clj Exception) e
                                (runtime/dispatch! rt [:set-error e])
                                (p/rejected e))))
-          LEVEL-LOCAL-BASIS (foundation-actions/refresh-partition-basis rt nil (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
+          LEVEL-LOCAL-BASIS (actions/refresh-partition-basis rt nil (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
           LEVEL-HYDRATE-PAGE (if (or (not= initial-global-basis @(runtime/state rt [::runtime/global-basis])) dirty-stage?)
-                               (foundation-actions/hydrate-partition rt nil nil (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
+                               (actions/hydrate-partition rt nil nil (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
                                (p/resolved nil)))
         (p/then #(bootstrap-data rt (inc init-level) load-level encoded-route initial-global-basis dirty-stage?)))))
