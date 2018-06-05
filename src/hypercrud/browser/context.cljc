@@ -13,7 +13,7 @@
           :fe-pos :uri :user-with!
           :cell-data
           :value                                            ; conflicts with browser_ui/:value
-          :layout                                           ; belongs in ui.table
+          :hyperfiddle.ui/layout
 
           :hypercrud.browser/attribute
           :hypercrud.browser/fat-attribute

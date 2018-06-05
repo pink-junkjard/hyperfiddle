@@ -43,7 +43,7 @@
                 props (kwargs args)]
             [(:navigate-cmp ctx) (merge props (link/build-link-props link ctx)) label (:class props)]))
         (field [[i a] ctx ?f & args]
-          (let [cell (case (:layout ctx) :table table/Field form/Field)]
+          (let [cell (case (:hyperfiddle.ui/layout ctx) :hyperfiddle.ui.layout/table table/Field form/Field)]
             [(r/partial cell ?f)                            ; Intentional explicit nil
              (context/relation-path ctx [true i a])
              (kwargs args)]))

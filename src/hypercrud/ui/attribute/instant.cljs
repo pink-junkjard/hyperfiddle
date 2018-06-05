@@ -11,8 +11,9 @@
      [:div.anchors (link-controls/anchors path true ctx)]
      (let [props (update props :read-only #(or % (nil? @(r/cursor (:cell-data ctx) [:db/id]))))
            change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))
-           widget (case (:layout ctx) :block recom-date
-                                      :inline-block recom-date
-                                      :table recom-date)]
+           widget (case (:hyperfiddle.ui/layout ctx)
+                    :hyperfiddle.ui.layout/block recom-date
+                    :hyperfiddle.ui.layout/inline-block recom-date
+                    :hyperfiddle.ui.layout/table recom-date)]
        [widget value change! props])
      (link-controls/iframes path true ctx)]))

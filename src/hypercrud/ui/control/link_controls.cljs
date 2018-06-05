@@ -36,7 +36,7 @@
    (->> (r/track ui-contextual-links path dependent? false (:hypercrud.browser/links ctx) ?f)
         (r/unsequence :db/id)
         (map (fn [[link-ref link-id]]
-               (if (not= :table (:layout ctx))
+               (if (not= :hyperfiddle.ui.layout/table (:hyperfiddle.ui/layout ctx))
                  ^{:key (hash link-id)} [hypercrud.ui.form/ui-block-border-wrap ctx nil [reactive-nav-cmp link-ref ctx (:class props)]]
                  ^{:key (hash link-id)} [reactive-nav-cmp link-ref ctx (:class props)])))
         (doall))))
@@ -46,7 +46,7 @@
    (->> (r/track ui-contextual-links path dependent? true (:hypercrud.browser/links ctx) ?f)
         (r/unsequence :db/id)
         (map (fn [[link-ref link-id]]
-               (if (not= :table (:layout ctx))
+               (if (not= :hyperfiddle.ui.layout/table (:hyperfiddle.ui/layout ctx))
                  ^{:key (hash link-id)} [hypercrud.ui.form/ui-block-border-wrap ctx nil [reactive-ui link-ref ctx (:class props)]]
                  ^{:key (hash link-id)} [reactive-ui link-ref ctx (:class props)])))
         (doall))))

@@ -82,10 +82,10 @@
         :hypercrud.browser.browser-ui/user (some->> (:control ctx) (r/partial portal-markup))
         :hypercrud.browser.browser-ui/xray nil)
       (attribute-control ctx)
-      (some->> (case (:layout ctx :block)
-                 :block (schema-control-form ctx)
-                 :inline-block (schema-control-table ctx)
-                 :table (schema-control-table ctx))
+      (some->> (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
+                 :hyperfiddle.ui.layout/block (schema-control-form ctx)
+                 :hyperfiddle.ui.layout/inline-block (schema-control-table ctx)
+                 :hyperfiddle.ui.layout/table (schema-control-table ctx))
                (r/partial portal-markup))))
 
 (defn control-props [ctx]

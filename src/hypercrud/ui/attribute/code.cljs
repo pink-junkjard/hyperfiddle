@@ -14,9 +14,9 @@
                     ((:user-with! ctx) tx)))]
     [:div
      [:div.anchors (link-controls/anchors path true ctx)]
-     (let [control (case (:layout ctx :block)
-                     :block code-block
-                     :inline-block code-inline-block
-                     :table code-inline-block)]
+     (let [control (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
+                     :hyperfiddle.ui.layout/block code-block
+                     :hyperfiddle.ui.layout/inline-block code-inline-block
+                     :hyperfiddle.ui.layout/table code-inline-block)]
        [control props value change!])               ; backwards args - props last
      (link-controls/iframes path true ctx)]))

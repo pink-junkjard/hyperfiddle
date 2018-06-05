@@ -12,9 +12,10 @@
         change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) (empty->nil %)))]
     [:div.value
      [:div.anchors (link-controls/anchors path true ctx)]
-     (let [widget (case (:layout ctx) :block code-block
-                                      :inline-block code-inline-block
-                                      :table code-inline-block)
+     (let [widget (case (:hyperfiddle.ui/layout ctx)
+                    :hyperfiddle.ui.layout/block code-block
+                    :hyperfiddle.ui.layout/inline-block code-inline-block
+                    :hyperfiddle.ui.layout/table code-inline-block)
            props (assoc props :mode "markdown" :lineWrapping true)]
-       [widget props value change!])                 ; backwards args - props last
+       [widget props value change!])                        ; backwards args - props last
      (link-controls/iframes path true ctx)]))

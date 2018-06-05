@@ -33,7 +33,7 @@
 
 (defn form [{:keys [hypercrud.browser/ordered-fes
                     hypercrud.browser/links] :as ctx}]
-  (let [ctx (assoc ctx :layout (:layout ctx :block))]
+  (let [ctx (assoc ctx :hyperfiddle.ui/layout (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block))]
     (->> (r/unsequence ordered-fes)
          ; Wouldn't mlet be nice here
          (mapcat (fn [[fe i]]
@@ -48,7 +48,7 @@
 (defn table [form ctx]
   (let [sort-col (r/atom nil)]
     (fn [form ctx]
-      (let [ctx (assoc ctx :layout (:layout ctx :table)
+      (let [ctx (assoc ctx :hyperfiddle.ui/layout (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/table)
                            :hypercrud.ui.table/sort-col sort-col
                            ::unp true)]
         [:table.ui-table.unp
