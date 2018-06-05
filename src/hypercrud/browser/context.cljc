@@ -119,11 +119,11 @@
                (filter #(= (:attribute %) a))
                first
                (field ctx)))]
-  (defn relation-path [ctx [dependent i a]]
+  (defn focus [ctx d i a]
     ;(with-relations)                                    ; already here
     ;(relation (reactive/atom [domain]))                 ; already here
     (cond-> ctx
             (and i) (find-element i)
-            (and i dependent) (cell-data)
+            (and i d) (cell-data)
             (and i a) (field-from-attribute a)
-            (and i dependent a) (value))))
+            (and i d a) (value))))

@@ -12,7 +12,7 @@
     [hypercrud.browser.core :as browser]
     [hypercrud.browser.link :as link]
     [hypercrud.types.Entity :refer [Entity]]
-    [hypercrud.ui.auto-control :as auto-control]
+    [hypercrud.ui.auto-control :refer [auto-control]]
     [hypercrud.ui.form :as form]
     [hypercrud.ui.table :as table]
     [hyperfiddle.ui.markdown-extensions :refer [extensions]]))
@@ -24,30 +24,30 @@
     (:relations ctx) [table/table form/form ctx]
     (:relation ctx) [form/form ctx]))
 
-(defn browse [rel #_dependent? path ctx ?f & args]
+(defn browse [rel path ctx ?f & args]
   (let [props (kwargs args)
         {:keys [:link/dependent? :link/path] :as link} @(r/track link/rel->link rel path ctx)
-        ctx (-> (context/relation-path ctx (into [dependent?] (unwrap (memoized-safe-read-edn-string (str "[" path "]")))))
+        ctx (-> (apply context/focus ctx dependent? (unwrap (memoized-safe-read-edn-string (str "[" path "]"))))
                 (as-> ctx (if ?f (assoc ctx :user-renderer ?f #_(if ?f #(apply ?f %1 %2 %3 %4 args))) ctx)))]
     (into [browser/ui link ctx (:class props)] (apply concat (dissoc props :class :children nil)))))
 
-(defn anchor [rel #_dependent? path ctx label & args]
+(defn anchor [rel path ctx label & args]
   (let [{:keys [:link/dependent? :link/path] :as link} @(r/track link/rel->link rel path ctx)
-        ctx (context/relation-path ctx (into [dependent?] (unwrap (memoized-safe-read-edn-string (str "[" path "]")))))
+        ctx (apply context/focus ctx dependent? (unwrap (memoized-safe-read-edn-string (str "[" path "]"))))
         props (kwargs args)]
     [(:navigate-cmp ctx) (merge props (link/build-link-props link ctx)) label (:class props)]))
 
 (defn field [[i a] ctx ?f & args]
   (let [cell (case (::layout ctx) :hyperfiddle.ui.layout/table table/Field form/Field)]
     [(r/partial cell ?f)                                    ; Intentional explicit nil
-     (context/relation-path ctx [true i a])
+     (context/focus ctx true i a)
      (kwargs args)]))
 
 (defn value [[i a] ctx ?f & args]
-  (let [ctx (context/relation-path ctx [true i a])]
-    [(or ?f (auto-control/auto-control ctx)) @(:value ctx) ctx (kwargs args)]))
+  (let [ctx (context/focus ctx true i a)]
+    [(or ?f (auto-control ctx)) @(:value ctx) ctx (kwargs args)]))
 
-(defn browse' [rel #_dependent? path ctx]
+(defn browse' [rel path ctx]
   (->> (base/data-from-link @(r/track link/rel->link rel path ctx) ctx)
        (fmap :hypercrud.browser/result)
        (fmap deref)))
