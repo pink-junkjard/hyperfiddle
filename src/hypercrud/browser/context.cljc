@@ -120,11 +120,10 @@
                first
                (field ctx)))]
   (defn relation-path [ctx [dependent i a]]
-    (-> (assoc ctx :layout :block)
-        ;(with-relations)                                    ; already here
-        ;(relation (reactive/atom [domain]))                 ; already here
-        (cond->
-          (and i) (find-element i)
-          (and i dependent) (cell-data)
-          (and i a) (field-from-attribute a)
-          (and i dependent a) (value)))))
+    ;(with-relations)                                    ; already here
+    ;(relation (reactive/atom [domain]))                 ; already here
+    (cond-> ctx
+            (and i) (find-element i)
+            (and i dependent) (cell-data)
+            (and i a) (field-from-attribute a)
+            (and i dependent a) (value))))
