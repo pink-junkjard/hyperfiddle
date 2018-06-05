@@ -10,7 +10,7 @@
     [cuerdas.core :as str]
     [goog.object]
     [hypercrud.browser.context :as context]
-    [hypercrud.ui.table :as table]
+    ;[hypercrud.ui.table :as table]
     [hyperfiddle.eval :refer [read-eval-with-bindings]]))
 
 
@@ -59,12 +59,12 @@
   (let [sort-col (r/atom nil)]
     (fn [content argument props ctx]
       (let [ctx (assoc ctx :layout (:layout ctx :table)
-                           ::table/sort-col sort-col
+                           :hypercrud.ui.table/sort-col sort-col
                            ::unp true)]
         [:table.ui-table.unp props
          [:thead [hyperfiddle.ui/markdown content ctx]]
          [:tbody (->> (:relations ctx)
-                      (r/unsequence table/relation-keyfn)
+                      (r/unsequence hypercrud.ui.table/relation-keyfn)
                       (map (fn [[relation k]]
                              ^{:key k}
                              [:tr [hyperfiddle.ui/markdown content (context/relation ctx relation)]]))
@@ -76,7 +76,7 @@
 (defn list- [content argument props ctx]
   [:ul.unp props
    (->> (:relations ctx)
-        (r/unsequence table/relation-keyfn)
+        (r/unsequence hypercrud.ui.table/relation-keyfn)
         (map (fn [[relation k]]
                ^{:key k} [:li [hyperfiddle.ui/markdown content (context/relation ctx relation)]]))
         (doall))])
