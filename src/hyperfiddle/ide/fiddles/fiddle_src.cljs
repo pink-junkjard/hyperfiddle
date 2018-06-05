@@ -1,12 +1,15 @@
 (ns hyperfiddle.ide.fiddles.fiddle-src
-  (:require [cuerdas.core :as str]
-            [contrib.reactive :as r]
-            [contrib.reagent :refer [fragment]]
-            [hypercrud.types.URI :refer [is-uri?]]
-            [hypercrud.ui.auto-control :refer [auto-control]]
-            [hyperfiddle.ui :refer [markdown]]
-            [hypercrud.ui.attribute.edn :refer [edn-many]]
-            [hyperfiddle.ide.fiddles.topnav :refer [shadow-fiddle]]))
+  (:require
+    [cuerdas.core :as str]
+    [contrib.pprint]
+    [contrib.reactive :as r]
+    [contrib.reagent :refer [fragment]]
+    [contrib.ui]
+    [hypercrud.types.URI :refer [is-uri?]]
+    [hypercrud.ui.auto-control :refer [auto-control]]
+    [hyperfiddle.ui :refer [markdown]]
+    [hypercrud.ui.attribute.edn :refer [edn-many]]
+    [hyperfiddle.ide.fiddles.topnav :refer [shadow-fiddle]]))
 
 
 (defn schema-links [ctx]
@@ -87,15 +90,11 @@
           (for [k attrs]
             [(:cell ctx) [true 0 k] ctx (controls k)]))))))
 
-(defn easy-checkbox [r label]
-  [:label {:style {:font-weight "400"}}
-   [:input {:type "checkbox"
-            :checked @r :on-change #(swap! r not)}]
-   (str " " label)])
-
 (defn result-edn [{:keys [:hypercrud.browser/result]}]
-  [contrib.ui/edn-block @result]
-  #_[:pre (js/pprint-str @result)])
+  (let [s (contrib.pprint/pprint-str
+            (hyperfiddle.ui/pull-soup->tree @result)
+            40)]
+    [contrib.ui/code-block {:read-only true} s]))
 
 ; This is in source control because all hyperblogs want it.
 ; But, they also want to tweak it surely. Can we store this with the fiddle ontology?
@@ -107,10 +106,10 @@
         ; Reverse order so it looks right on mobile, larger views reorder
         (let [as-edn (r/cursor state [:edn-result])]
           [:div.col-sm-5.col-sm-push-7
-           [:div "Result:" [easy-checkbox as-edn " EDN?"]]
+           [:div "Result:" [contrib.ui/easy-checkbox as-edn " EDN?"]]
            ((:browse ctx) rel [] ctx (if @as-edn result-edn))])
         (let [as-edn (r/cursor state [:edn-fiddle])]
           [:div.col-sm-7.col-sm-pull-5
-           [:div "Interactive Hyperfiddle editor:" [easy-checkbox as-edn " EDN?"]]
+           [:div "Interactive Hyperfiddle editor:" [contrib.ui/easy-checkbox as-edn " EDN?"]]
            ((:browse ctx) rel [] ctx (if @as-edn result-edn (apply docs-embed fiddle-attrs)) :frag ":src" :class "devsrc")])
         ]])))
