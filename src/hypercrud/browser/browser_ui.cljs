@@ -49,7 +49,7 @@
              (kwargs args)]))
         (value [[i a] ctx ?f & args]
           (let [ctx (context/relation-path ctx [true i a])]
-            [(or ?f (hypercrud.ui.auto-control/auto-control ctx)) @(:value ctx) ctx (kwargs args)]))
+            [(or ?f (auto-control/auto-control ctx)) @(:value ctx) ctx (kwargs args)]))
         (browse' [rel #_dependent? path ctx]
           (->> (base/data-from-link @(r/track link/rel->link rel path ctx) ctx)
                (cats/fmap :hypercrud.browser/result)
