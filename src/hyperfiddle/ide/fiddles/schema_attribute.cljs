@@ -3,8 +3,7 @@
             [contrib.datomic-tx :as tx]
             [contrib.reactive :as r]
             [hypercrud.browser.context :as context]
-            [hypercrud.ui.auto-control :refer [auto-control]]
-            [hypercrud.ui.result :refer [result]]))
+            [hypercrud.ui.auto-control :refer [auto-control]]))
 
 
 (def special-case-attrs #{:db/ident :db/cardinality :db/valueType})
