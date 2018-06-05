@@ -70,7 +70,7 @@
   (let [?f (read-eval-with-bindings content)
         props (keywordize-keys props)
         path (unwrap (memoized-safe-read-edn-string (str "[" argument "]")))]
-    (apply (:value ctx) path ctx
+    (apply (:hyperfiddle.ui/value ctx) path ctx
            (if ?f (fn control [value ctx props]
                     [with-react-context
                      {:ctx ctx :props props}

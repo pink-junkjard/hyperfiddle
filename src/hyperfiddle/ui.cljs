@@ -1,13 +1,20 @@
 (ns hyperfiddle.ui
   (:require
+    [cats.core :refer [mlet fmap]]
     [clojure.walk :refer [prewalk]]
+    [contrib.data :refer [unwrap kwargs]]
+    [contrib.string :refer [memoized-safe-read-edn-string]]
     [contrib.ui.remark :as remark]
     [contrib.reactive :as r]
     [contrib.reagent :refer [from-react-context fragment]]
+    [hypercrud.browser.base :as base]
     [hypercrud.browser.context :as context]
+    [hypercrud.browser.core :as browser]
+    [hypercrud.browser.link :as link]
     [hypercrud.types.Entity :refer [Entity]]
-    [hypercrud.ui.form]
-    [hypercrud.ui.table]
+    [hypercrud.ui.auto-control :as auto-control]
+    [hypercrud.ui.form :as form-]
+    [hypercrud.ui.table :as table-]
     [hyperfiddle.ui.markdown-extensions :refer [extensions]]))
 
 
@@ -72,3 +79,36 @@
     ?f [?f ctx]
     (:relations ctx) [table form ctx]
     (:relation ctx) [form ctx]))
+
+(letfn [(browse [rel #_dependent? path ctx ?f & args]
+          (let [props (kwargs args)
+                {:keys [:link/dependent? :link/path] :as link} @(r/track link/rel->link rel path ctx)
+                ctx (-> (context/relation-path ctx (into [dependent?] (unwrap (memoized-safe-read-edn-string (str "[" path "]")))))
+                        (as-> ctx (if ?f (assoc ctx :user-renderer ?f #_(if ?f #(apply ?f %1 %2 %3 %4 args))) ctx)))]
+            (into [browser/ui link ctx (:class props)] (apply concat (dissoc props :class :children nil)))))
+        (anchor [rel #_dependent? path ctx label & args]
+          (let [{:keys [:link/dependent? :link/path] :as link} @(r/track link/rel->link rel path ctx)
+                ctx (context/relation-path ctx (into [dependent?] (unwrap (memoized-safe-read-edn-string (str "[" path "]")))))
+                props (kwargs args)]
+            [(:navigate-cmp ctx) (merge props (link/build-link-props link ctx)) label (:class props)]))
+        (field [[i a] ctx ?f & args]
+          (let [cell (case (::layout ctx) :hyperfiddle.ui.layout/table table-/Field form-/Field)]
+            [(r/partial cell ?f)                            ; Intentional explicit nil
+             (context/relation-path ctx [true i a])
+             (kwargs args)]))
+        (value [[i a] ctx ?f & args]
+          (let [ctx (context/relation-path ctx [true i a])]
+            [(or ?f (auto-control/auto-control ctx)) @(:value ctx) ctx (kwargs args)]))
+        (browse' [rel #_dependent? path ctx]
+          (->> (base/data-from-link @(r/track link/rel->link rel path ctx) ctx)
+               (fmap :hypercrud.browser/result)
+               (fmap deref)))]
+  ; convenience functions, should be declared fns in this or another ns and accessed out of band of ctx
+  (defn ui-bindings [ctx]
+    (assoc ctx
+      :anchor anchor
+      :browse browse
+      :field field
+      :cell field                                           ; legacy
+      ::value value
+      :browse' browse')))

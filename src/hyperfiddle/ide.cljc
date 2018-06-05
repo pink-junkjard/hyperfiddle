@@ -14,6 +14,7 @@
             [hypercrud.browser.router :as router]
             [hypercrud.browser.router-bidi :as router-bidi]
             [hypercrud.browser.system-fiddle :refer [system-fiddle?]]
+    #?(:cljs [hyperfiddle.ui :as ui])
     #?(:cljs [hypercrud.ui.error :as ui-error])
     #?(:cljs [hypercrud.ui.navigate-cmp :as navigate-cmp])
     #?(:cljs [hypercrud.ui.stale :as stale])
@@ -175,7 +176,7 @@
            ctx (-> ctx
                    (assoc :navigate-cmp (r/partial navigate-cmp/navigate-cmp (r/partial runtime/encode-route (:peer ctx)))
                           :alpha.hypercrud.browser/ui-comp browser-ui/ui-comp)
-                   (browser-ui/ui-bindings))
+                   (ui/ui-bindings))
            ide-ctx (page-ide-context ctx route)]
 
        (fragment
