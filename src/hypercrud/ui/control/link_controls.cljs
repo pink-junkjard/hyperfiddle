@@ -31,6 +31,7 @@
 ; don't test link validity, we need to render the failure. If this is a dependent link, use visibility predicate to hide the error.
 
 (defn anchors
+  ; Can't infer dependent from :relation, must use :cell-data i think
   ([path dependent? ctx & [?f props]]
    (->> (r/track ui-contextual-links path dependent? false (:hypercrud.browser/links ctx) ?f)
         (r/unsequence :db/id)
