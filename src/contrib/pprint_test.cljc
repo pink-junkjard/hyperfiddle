@@ -43,7 +43,7 @@
                         (dissoc :relation :relations)
                         (update :hypercrud.browser/result (partial contrib.reactive/fmap do-filter-reactive #_(contrib.reactive/partial filter f?)))
                         (hypercrud.browser.context/with-relations))]
-            [hypercrud.ui.result/result ctx])]))))
+            [hyperfiddle.ui/result ctx])]))))
 
 #_(deftest pprint-performance-1 []
 

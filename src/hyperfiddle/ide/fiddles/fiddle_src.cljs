@@ -95,7 +95,7 @@
   (fn [{:keys [hypercrud.browser/result]}]
     (let [s (-> @result
                 (as-> $ (if (seq attrs) (select-keys $ attrs) $))
-                hyperfiddle.ui/pull-soup->tree
+                hyperfiddle.ui.hacks/pull-soup->tree
                 (contrib.pprint/pprint-str 40))]
       [contrib.ui/code-block {:read-only true} s])))
 

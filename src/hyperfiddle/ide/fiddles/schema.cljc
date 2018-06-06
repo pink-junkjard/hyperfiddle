@@ -95,7 +95,7 @@
                                          (assoc :read-only (fn [ctx]
                                                              (let [attrs #{:db/ident :db/doc :db/isComponent}]
                                                                (not (contains? attrs (:hypercrud.browser/attribute ctx)))))))]
-                             [hypercrud.ui.result/result ctx])])))
+                             (hyperfiddle.ui/result ctx))])))
    :fiddle/links #{{:db/id (keyword "hyperfiddle.schema.db-cardinality-options-link" $db)
                     :link/fiddle (db-cardinality-options $db)
                     :link/render-inline? true

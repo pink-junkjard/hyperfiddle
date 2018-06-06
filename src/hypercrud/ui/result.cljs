@@ -16,5 +16,5 @@
     [:div {:class class}
      [:h3 (some-> @fiddle :fiddle/ident name)]
      (link-controls/anchors [] false ctx nil {:class "hyperfiddle-link-index"})
-     (result ctx)
+     (hyperfiddle.ui/result ctx)
      (link-controls/iframes [] false ctx)]))

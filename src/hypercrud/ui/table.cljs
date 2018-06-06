@@ -7,49 +7,9 @@
             [hypercrud.ui.auto-control :refer [auto-control control-props]]
             [hypercrud.ui.connection-color :as connection-color]
             [hypercrud.ui.control.link-controls :as link-controls]
-            [hypercrud.ui.label :refer [label]]))
+            [hypercrud.ui.label :refer [label]]
+            [hyperfiddle.data :as hf]))
 
-
-(defn attr-sortable? [fe attribute ctx]
-  (if-let [dbname (some-> (:source-symbol fe) str)]
-    (let [{:keys [:db/cardinality :db/valueType]} @(r/cursor (:hypercrud.browser/schemas ctx) [dbname attribute])]
-      (and
-        (= (:db/ident cardinality) :db.cardinality/one)
-        ; ref requires more work (inspect label-prop)
-        (contains? #{:db.type/keyword
-                     :db.type/string
-                     :db.type/boolean
-                     :db.type/long
-                     :db.type/bigint
-                     :db.type/float
-                     :db.type/double
-                     :db.type/bigdec
-                     :db.type/instant
-                     :db.type/uuid
-                     :db.type/uri
-                     :db.type/bytes
-                     :db.type/code}
-                   (:db/ident valueType))))
-    (not (nil? fe))))
-
-(defn relation-keyfn [relation] (hash (map #(or (:db/id %) %) relation)))
-
-(defn sort-fn [sort-col ctx relations-val]
-  (let [[sort-fe-pos sort-attr direction] @sort-col
-        fe @(r/cursor (:hypercrud.browser/ordered-fes ctx) [sort-fe-pos])
-        attr (->> (map :attribute (:fields fe))
-                  (filter #(= % sort-attr))
-                  first)]
-    (if (attr-sortable? fe attr ctx)
-      (let [sort-fn (if sort-attr
-                      #(get-in % [sort-fe-pos sort-attr])
-                      #(get % sort-fe-pos))]
-        (sort-by sort-fn
-                 (case direction
-                   :asc #(compare %1 %2)
-                   :desc #(compare %2 %1))
-                 relations-val))
-      relations-val)))
 
 ; sorting currently breaks click handling in popovers
 (defn links-dont-break-sorting? [path ctx]
@@ -73,7 +33,7 @@
 (defn col-head [ctx]
   (let [field (:hypercrud.browser/field ctx)
         path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]
-        sortable? (and (attr-sortable? @(:hypercrud.browser/find-element ctx) (:attribute field) ctx)
+        sortable? (and (hf/attr-sortable? @(:hypercrud.browser/find-element ctx) (:attribute field) ctx)
                        @(r/track links-dont-break-sorting? path ctx))
         sort-direction (let [[sort-fe-pos sort-attr direction] @(::sort-col ctx)]
                          (if (and (= (:fe-pos ctx) sort-fe-pos) (= sort-attr (:attribute field)))
@@ -107,18 +67,3 @@
       ; todo unsafe execution of user code: control
       [(or ?f (auto-control ctx)) @(:value ctx) ctx (merge (control-props ctx) props)]]
      [col-head ctx])))
-
-(defn table [form ctx]
-  (let [sort-col (r/atom nil)]
-    (fn [form ctx]
-      (let [ctx (assoc ctx :hyperfiddle.ui/layout (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/table)
-                           :hypercrud.ui.table/sort-col sort-col
-                           ::unp true)]
-        [:table.ui-table.unp
-         [:thead [form ctx]]
-         [:tbody (->> (:relations ctx)
-                      (r/unsequence hypercrud.ui.table/relation-keyfn)
-                      (map (fn [[relation k]]
-                             ^{:key k}
-                             [:tr [form (context/relation ctx relation)]]))
-                      (doall))]]))))

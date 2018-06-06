@@ -11,6 +11,7 @@
     [goog.object]
     [hypercrud.browser.context :as context]
     [hyperfiddle.eval :refer [read-eval-with-bindings]]
+    [hyperfiddle.data :as hf]
     [hypercrud.ui.table :as table]))
 
 
@@ -52,7 +53,7 @@
 (defn list- [content argument props ctx]
   [:ul.unp props
    (->> (:relations ctx)
-        (r/unsequence hypercrud.ui.table/relation-keyfn)
+        (r/unsequence hf/relation-keyfn)
         (map (fn [[relation k]]
                ^{:key k} [:li [hyperfiddle.ui/markdown content (context/relation ctx relation)]]))
         (doall))])
@@ -100,7 +101,7 @@
    "anchor" anchor
 
    "result" (fn [content argument props ctx]
-              [:div.unp [hyperfiddle.ui/result ctx (read-eval-with-bindings content)]])
+              [:div.unp (hyperfiddle.ui/result ctx (read-eval-with-bindings content))])
    "value" value                                            ; uses relation to draw just value
    "field" field                                            ; uses relation to draw label and value
    "table" (letfn [(form [content ctx] (into [hyperfiddle.ui/markdown content] ctx))]
