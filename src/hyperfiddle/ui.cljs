@@ -44,11 +44,13 @@
                           (into ^{:key k} [:tr]))))         ; strict
               (into [:tbody]))]))))
 
-(defn ^:export result [ctx & [?f]]                          ; can this return nil or list? I think yea, invoke as fn
+(defn ^:export result "Default result renderer. Invoked as fn, returns seq-hiccup, hiccup or
+nil. call site must wrap with a Reagent component"
+  [ctx & [?f]]
   (cond
     ?f [?f ctx]
     (:relations ctx) [table (r/partial hf/form field) hf/sort-fn ctx]
-    (:relation ctx) (hf/form field ctx) #_(apply fragment :_)))
+    (:relation ctx) (hf/form field ctx)))
 
 (defn browse [rel path ctx ?f & args]
   (let [props (kwargs args)
@@ -57,15 +59,15 @@
                 (as-> ctx (if ?f (assoc ctx :user-renderer ?f #_(if ?f #(apply ?f %1 %2 %3 %4 args))) ctx)))]
     (into [browser/ui link ctx (:class props)] (apply concat (dissoc props :class :children nil)))))
 
-(defn anchor [rel path ctx label & args]
+(defn link [rel path ctx ?label & args]
   (let [{:keys [:link/dependent? :link/path] :as link} @(r/track link/rel->link rel path ctx)
         ctx (apply context/focus ctx dependent? (unwrap (memoized-safe-read-edn-string (str "[" path "]"))))
         props (kwargs args)]
-    [(:navigate-cmp ctx) (merge props (link/build-link-props link ctx)) label (:class props)]))
+    [(:navigate-cmp ctx) (merge props (link/build-link-props link ctx)) (or ?label (name rel)) (:class props)]))
 
 (defn ui-bindings [ctx]                                     ; legacy
   (assoc ctx
-    :anchor anchor
+    :anchor link                                            ; legacy
     :browse browse
     :field field
     :cell field                                             ; legacy

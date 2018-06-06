@@ -24,16 +24,16 @@
         rel (unwrap (memoized-safe-read-edn-string srel))
         path (unwrap (memoized-safe-read-edn-string (str "[" spath "]")))
         f? (read-eval-with-bindings content)]
-    (apply (:browse ctx) rel path ctx f? kwargs)))
+    (apply hyperfiddle.ui/browse rel path ctx f? kwargs)))
 
-(defn anchor [content argument props ctx]
+(defn link [content argument props ctx]
   (let [kwargs (flatten (seq props))
         [_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
         rel (unwrap (memoized-safe-read-edn-string srel))
         path (unwrap (memoized-safe-read-edn-string (str "[" spath "]")))
         ; https://github.com/medfreeman/remark-generic-extensions/issues/45
         label (or-str content (name rel))]
-    (apply (:anchor ctx) rel path ctx label kwargs)))
+    (apply hyperfiddle.ui/link rel path ctx label kwargs)))
 
 (defn field [content argument props ctx]
   (let [?f (read-eval-with-bindings content)
@@ -42,13 +42,13 @@
                   (dissoc :children)
                   (clojure.set/rename-keys {:className :class})
                   (update :class classes "unp") #_"fix font size")
-        path (unwrap (memoized-safe-read-edn-string (str "[" argument "]")))]
-    (apply (:cell ctx) path ctx (if ?f (fn control [value ctx props]
-                                         [with-react-context
-                                          {:ctx ctx :props props}
-                                          ; the whole point of the gymnastics is to apply ?f as arity-1 (so `str` works)
-                                          [?f #_(wrap-naked-string :div ?f) value]]))
-           (flatten (seq props)))))
+        path (unwrap (memoized-safe-read-edn-string (str "[" argument "]")))
+        ?f (if ?f (fn control [value ctx props]
+                    [with-react-context
+                     {:ctx ctx :props props}
+                     ; the whole point of the gymnastics is to apply ?f as arity-1 (so `str` works)
+                     [?f #_(wrap-naked-string :div ?f) value]]))]
+    (apply hyperfiddle.ui/field path ctx ?f (flatten (seq props)))))
 
 (defn list- [content argument props ctx]
   [:ul.unp props
@@ -98,7 +98,7 @@
 
    ; browse, anchor and result are probably the same thing – "render named thing"
    "browse" browse
-   "anchor" anchor
+   "anchor" link
 
    "result" (fn [content argument props ctx]
               [:div.unp (hyperfiddle.ui/result ctx (read-eval-with-bindings content))])
