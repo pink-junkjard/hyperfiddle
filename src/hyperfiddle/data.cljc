@@ -23,6 +23,7 @@
                        (field [i] ctx nil))))
            vec)
       (conj (field [] ctx nil))
+      seq                                                   ; This has to seq on the way out or it will be treated as Hiccup.
       doall))
 
 (defn browse' [rel path ctx]
