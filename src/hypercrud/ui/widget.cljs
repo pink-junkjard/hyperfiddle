@@ -53,12 +53,10 @@
 (defn ref [value ctx props]
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div
-     [:div.editable-select
-      [:div.anchors (link-controls/anchors path true ctx link/options-processor)] ;todo can this be lifted out of editable-select?
-      (if-let [options-link @(r/track link/options-link path ctx)]
-        [:div.select                                        ; helps the weird link float left css thing
-         (select* options-link ctx props)]
-        (id* value ctx props))]
+     (link-controls/anchors path true ctx link/options-processor props) ;todo can this be lifted out of editable-select?
+     (if-let [options-link @(r/track link/options-link path ctx)]
+       (select* options-link ctx props)
+       (id* value ctx props))
      (link-controls/iframes path true ctx link/options-processor)]))
 
 (defn ref-component [value ctx props]

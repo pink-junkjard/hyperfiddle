@@ -52,26 +52,25 @@
        [:td {:class (classes (:class props) "hyperfiddle-table-cell" "truncate")
              :style {:border-color (if i (border-color ctx))}}
 
+        ; There can never be naked links here; that column is always empty but for the header which should be suppressed.
+
         ; cell value and dependent=true attribute links. Not element links.
-        ; This cell is empty if
         (if a
-          (fragment :_
-                    ; Widget is responsible for all the links in the cell position.
+          (fragment :_                                      ; Widget is responsible for all the links in the cell position.
                     #_(link-controls/anchors path true ctx link/options-processor)
                     #_(link-controls/iframes path true ctx link/options-processor)
                     ; todo unsafe execution of user code: control
-                    [(or ?f (auto-control ctx)) @(:value ctx) ctx (merge (control-props ctx) props)]))
+                    [(or ?f (auto-control ctx)) @(:value ctx) ctx (merge (control-props ctx) props)])) ; Add semantic css for the value, e.g. valueType and renderer
 
         (if i
           ; dependent=true element links
-          (fragment :_
-                    (link-controls/anchors path true ctx link/options-processor)
-                    (link-controls/iframes path true ctx link/options-processor)))]
+          (fragment :_                                      ; Widget is responsible for all the links in the cell position.
+                    #_(link-controls/anchors path true ctx link/options-processor)
+                    #_(link-controls/iframes path true ctx link/options-processor)))]
 
-       [:th {:class (classes "hyperfiddle-table-cell"
-                             (css-slugify (:hypercrud.browser/attribute ctx))
-                             (if (and i (sortable? ctx path)) "sortable")
-                             (some-> (sort-direction ctx) name))
+       [:th {:class (classes (:class props) "hyperfiddle-table-cell"
+                             (if (and i (sortable? ctx path)) "sortable") ; hoist
+                             (some-> (sort-direction ctx) name)) ; hoist
              :style {:background-color (connection-color/connection-color ctx)}
              :on-click (r/partial toggle-sort! ctx path)}
         (if a

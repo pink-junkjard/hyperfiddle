@@ -1,5 +1,6 @@
 (ns hyperfiddle.ui
   (:require
+    [contrib.css :refer [classes css-slugify]]
     [contrib.data :refer [unwrap kwargs]]
     [contrib.string :refer [memoized-safe-read-edn-string]]
     [contrib.ui.remark :as remark]
@@ -22,9 +23,17 @@
     [(or ?f (auto-control ctx)) @(:value ctx) ctx (kwargs args)]))
 
 (defn ^:export field [[i a] ctx ?f & args]
-  (let [view (case (::layout ctx) :hyperfiddle.ui.layout/table table/Field form/Field)]
+  (let [view (case (::layout ctx) :hyperfiddle.ui.layout/table table/Field form/Field)
+        ctx (context/focus ctx true i a)
+        props (kwargs args)
+        class (classes (:class props)
+                       (css-slugify a)
+                       (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/valueType :db/ident))
+                       (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/cardinality :db/ident))
+                       #_(css-slugify (-> ctx :hypercrud.browser/fat-attribute deref :db/isComponent)))
+        props (merge props {:class class})]
     ^{:key (str i a)}
-    [view ?f (context/focus ctx true i a) (kwargs args)]))
+    [view ?f ctx props]))
 
 (defn ^:export table "sort-fn :: (fn [col ctx v] v)" [form sort-fn ctx]
   (let [sort-col (r/atom nil)]
