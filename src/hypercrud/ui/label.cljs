@@ -39,7 +39,7 @@
     ; i like the if check on the styles
     [tooltip-thick (if help-md
                      [:div.docstring [markdown help-md]])
-     [:label {:class (if help-md "help-available")}
+     [:label
       ; common crash point; todo use field, attribute is explicitly NOT always defined
       (:label (:hypercrud.browser/field ctx))
       (if help-md [:sup "†"])]]))
