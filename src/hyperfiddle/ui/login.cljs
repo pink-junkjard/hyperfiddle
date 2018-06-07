@@ -6,7 +6,9 @@
 
 
 (defn stateless-login-url [ctx]
-  (let [{:keys [domain client-id]} (get-in ctx [:hypercrud.browser/domain :domain/environment :auth0 (:hyperfiddle-hostname ctx)])
-        callback-url (str "http://" (:hostname ctx) foundation/auth0-redirect-path)
-        auth-state (base64-url-safe/encode (runtime/encode-route (:peer ctx) (:target-route ctx)))]
-    (str domain "/login?client=" client-id "&callbackURL=" callback-url "&state=" auth-state)))
+  (let [{:keys [domain client-id]} (get-in ctx [:hypercrud.browser/domain :domain/environment :auth0 (:hyperfiddle-hostname ctx)])]
+    (str domain "/login?"
+         "client=" client-id
+         "&scope=" "openid email profile"
+         "&state=" (base64-url-safe/encode (runtime/encode-route (:peer ctx) (:target-route ctx)))
+         "&redirect_uri=" (str "http://" (:hostname ctx) foundation/auth0-redirect-path))))
