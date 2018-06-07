@@ -26,11 +26,10 @@
     (.status (:status platform-response))
     (.format #js {"application/transit+json" #(.send express-response (transit/encode (:body platform-response)))})))
 
-(defn build-node-req-handler [platform-req-handler ->Runtime]
+(defn build-node-req-handler [platform-req-handler]
   (fn [env req res path-params query-params]
     (let [hostname (.-hostname req)]
       (-> (platform-req-handler
-            ->Runtime
             :hostname hostname
             :path-params path-params
             :request-body (some-> req .-body hack-buggy-express-body-text-parser transit/decode)

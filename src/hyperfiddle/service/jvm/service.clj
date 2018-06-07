@@ -33,12 +33,11 @@
 
 (def platform-response->pedestal-response identity)
 
-(defn build-pedestal-req-handler [env platform-req-handler ->Runtime]
+(defn build-pedestal-req-handler [env platform-req-handler]
   (interceptor/handler
     (fn [req]
       (let [hostname (:server-name req)]
         (-> (platform-req-handler
-              ->Runtime
               :hostname hostname
               :path-params (:path-params req)
               :request-body (:body-params req)
@@ -78,13 +77,13 @@
       (e->response e))))
 
 (defn http-global-basis [env]
-  (build-pedestal-req-handler env http-service/global-basis-handler ->GlobalBasisRuntime))
+  (build-pedestal-req-handler env (partial http-service/global-basis-handler ->GlobalBasisRuntime)))
 
 (defn http-local-basis [env]
-  (build-pedestal-req-handler env http-service/local-basis-handler ->LocalBasis))
+  (build-pedestal-req-handler env (partial http-service/local-basis-handler ->LocalBasis)))
 
 (defn http-hydrate-route [env]
-  (build-pedestal-req-handler env http-service/hydrate-route-handler ->HydrateRoute))
+  (build-pedestal-req-handler env (partial http-service/hydrate-route-handler ->HydrateRoute)))
 
 (defn with-user [env]
   (let [verify (jwt/build-verifier env)]
