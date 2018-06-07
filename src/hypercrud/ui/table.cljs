@@ -86,6 +86,6 @@
 
         (if (not i)
           ; dependent=false naked links
-          [:div.anchors
-           (link-controls/anchors path false ctx link/options-processor)
-           (link-controls/iframes path false ctx link/options-processor)])]))))
+          (fragment :_
+                    (link-controls/anchors path false ctx link/options-processor)
+                    (link-controls/iframes path false ctx link/options-processor)))]))))

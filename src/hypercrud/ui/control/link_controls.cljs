@@ -12,8 +12,6 @@
 (defn- reactive-nav-cmp [link-ref ctx class]
   [(:navigate-cmp ctx) (link/build-link-props @link-ref ctx) @(r/track prompt link-ref) class])
 
-; [(:navigate-cmp ctx) (merge props (link/build-link-props link ctx)) (or ?label (name rel)) (:class props)]
-
 (defn- reactive-ui [link-ref ctx class]
   [hypercrud.browser.core/ui @link-ref ctx class])
 
