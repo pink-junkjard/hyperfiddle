@@ -27,7 +27,7 @@
                  :hyperfiddle.ui.layout/table edn-inline-block)
         path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div
-     [:div.anchors (link-controls/anchors path true ctx link/options-processor)]
+     (link-controls/anchors path true ctx link/options-processor)
      [widget value change! props]
      (link-controls/iframes path true ctx link/options-processor)]))
 
@@ -40,6 +40,6 @@
                  :hyperfiddle.ui.layout/block edn-block)
         path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div
-     [:div.anchors (link-controls/anchors path true ctx link/options-processor)]
+     (link-controls/anchors path true ctx link/options-processor)
      [widget value change! props]
      (link-controls/iframes path true ctx link/options-processor)]))

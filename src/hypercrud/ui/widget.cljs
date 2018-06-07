@@ -14,7 +14,7 @@
 (defn keyword [value ctx props]
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div
-     [:div.anchors (link-controls/anchors path true ctx nil)]
+     (link-controls/anchors path true ctx nil)
      (let [props (update props :read-only #(or % (nil? @(r/cursor (:cell-data ctx) [:db/id]))))
            on-change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))]
        [input/keyword-input* value on-change! props])
@@ -23,7 +23,7 @@
 (defn string [value ctx props]
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div
-     [:div.anchors (link-controls/anchors path true ctx nil)]
+     (link-controls/anchors path true ctx nil)
      (let [props (update props :read-only #(or % (nil? @(r/cursor (:cell-data ctx) [:db/id]))))
            on-change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) (empty->nil %)))]
        [input/input* value on-change! props])
@@ -34,7 +34,7 @@
         props (update props :read-only #(or % (nil? @(r/cursor (:cell-data ctx) [:db/id]))))
         on-change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))]
     [:div
-     [:div.anchors (link-controls/anchors path true ctx nil)]
+     (link-controls/anchors path true ctx nil)
      [input/validated-input
       value on-change!
       #(js/parseInt % 10) (fnil str "")
@@ -65,7 +65,7 @@
     #_(assert (> (count (filter :link/render-inline? my-links)) 0))
     #_(ref my-links props ctx)
     [:div
-     [:div.anchors (link-controls/anchors path true ctx nil)]
+     (link-controls/anchors path true ctx nil)
      #_[:pre (pr-str value)]
      (link-controls/iframes path true ctx)]))
 
@@ -73,21 +73,30 @@
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     (assert (not @(r/track link/options-link path ctx)) "ref-component-many don't have options; todo handle gracefully")
     [:div
-     [:div.anchors (link-controls/anchors path true ctx nil)]
+     (link-controls/anchors path true ctx nil)
      (link-controls/iframes path true ctx)]))
 
 (defn ref-many-component-table [value ctx props]
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div
-     [:div.anchors (link-controls/anchors path true ctx nil)]
+     (link-controls/anchors path true ctx nil)
      (link-controls/iframes path true ctx)]))
 
 (defn text [value ctx props]
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div
-     [:div.anchors (link-controls/anchors path true ctx nil)]
-     [:span.text
+     (link-controls/anchors path true ctx nil)
+     [:span
       (case @(r/cursor (:hypercrud.browser/fat-attribute ctx) [:db/cardinality :db/ident])
         :db.cardinality/many (map pr-str value)
         (pr-str value))]
      (link-controls/iframes path true ctx)]))
+
+;/*.value span.text {*/
+;    /*margin: 3px 0;*/
+;/*min-height: 15px;*/
+;/*display: inline-block;*/
+;/*line-height: normal;*/
+;/*vertical-align: top;*/
+;/*padding-left: 5px;*/
+;/*}*/
