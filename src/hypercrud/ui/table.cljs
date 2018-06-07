@@ -55,8 +55,6 @@
                       "truncate")
              :style {:border-color (if i (border-color ctx))}}
 
-        ; There can never be naked links here; that column is always empty but for the header which should be suppressed.
-
         ; cell value and dependent=true attribute links. Not element links.
         (if (and a (not= a '*))
           (fragment :_                                      ; Value renderer is responsible for attribute links in a value cell position.
@@ -65,11 +63,17 @@
                     ; todo unsafe execution of user code: control
                     [(or ?f (auto-control ctx)) @(:value ctx) ctx (merge (control-props ctx) props)])) ; Add semantic css for the value, e.g. valueType and renderer
 
-        (if i
+        (if (and i (not a))
           ; dependent=true element links
           (fragment :_                                      ; element cell position does not have a value renderer
                     (link-controls/anchors path true ctx link/options-processor)
-                    (link-controls/iframes path true ctx link/options-processor)))]
+                    (link-controls/iframes path true ctx link/options-processor)))
+
+        (if (not i)
+          ; naked links -
+          ; auto-form does not generate this case, but if they ask for it, they would be above or below the table,
+          ; so they should ask for it differently?
+          nil)]
 
        [:th {:class (classes #_"field"
                       "hyperfiddle-table-cell" (:class props)
