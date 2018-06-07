@@ -11,18 +11,23 @@
 
 (defn form [field {:keys [hypercrud.browser/ordered-fes] :as ctx}]
   ; Want element and naked links towards the right, so use vectors for conj-end
+  ; in user mode we actually don't want element or naked links unless asked for.
   (-> ordered-fes
       (r/unsequence)
       (->> (mapcat (fn [[fe i]]
-                     (conj
+                     (concat
                        (->> fe
                             (r/fmap :fields)
                             (r/unsequence :attribute)
                             (mapv (fn [[_ a]]
                                     (field [i a] ctx nil))))
-                       (field [i] ctx nil))))
+                       (case @(:hypercrud.ui/display-mode ctx)
+                         :hypercrud.browser.browser-ui/xray [(field [i] ctx nil)]
+                         nil))))
            vec)
-      (conj (field [] ctx nil))
+      (concat (case @(:hypercrud.ui/display-mode ctx)
+                :hypercrud.browser.browser-ui/xray [(field [] ctx nil)]
+                nil))
       seq                                                   ; This has to seq on the way out or it will be treated as Hiccup.
       doall))
 
