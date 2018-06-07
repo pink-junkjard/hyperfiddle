@@ -52,11 +52,12 @@
                      (fragment :_                           ; "hyperfiddle-link-entity-dependent"
                                (link-controls/anchors path true ctx link/options-processor)
                                (link-controls/iframes path true ctx link/options-processor)))))
-       (if (and a (not= a '*))
+       (if a
          ; the widget places dependent attr links
          ; todo unsafe execution of user code: control
-         [(or ?f (auto-control ctx)) @(:value ctx) ctx (merge (control-props ctx) props)])
-       (if (not i) #_(and (not i) (not a))                  ; if theres not an i, theres not an a
+         ; Safely deref :value because '* has no value
+         [(or ?f (auto-control ctx)) (some-> ctx :value deref) ctx (merge (control-props ctx) props)])
+       (if (not i)                                          ; if theres not an i, theres not an a
          (link-controls/anchors path false ctx link/options-processor)
          (link-controls/iframes path false ctx link/options-processor))))))
 
