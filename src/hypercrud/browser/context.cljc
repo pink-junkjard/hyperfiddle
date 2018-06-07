@@ -109,7 +109,7 @@
         :hypercrud.browser/fat-attribute fat-attr))))
 
 (defn value [ctx]
-  (if (:cell-data ctx)
+  (if (and (:cell-data ctx) (not= '* (:hypercrud.browser/attribute ctx)))
     (let [rv (r/fmap (:cell-data->value (:hypercrud.browser/field ctx)) (:cell-data ctx))]
       (assoc ctx :value rv))
     ctx))
@@ -126,4 +126,4 @@
             (and i) (find-element i)
             (and i d) (cell-data)
             (and i a) (field-from-attribute a)
-            (and i d a (not= a '*)) (value))))
+            (and i d a) (value))))
