@@ -59,7 +59,7 @@
 
         ; cell value and dependent=true attribute links. Not element links.
         (if a
-          (fragment :_                                      ; Widget is responsible for all the links in the cell position.
+          (fragment :_                                      ; Value renderer is responsible for attribute links in a value cell position.
                     #_(link-controls/anchors path true ctx link/options-processor)
                     #_(link-controls/iframes path true ctx link/options-processor)
                     ; todo unsafe execution of user code: control
@@ -67,9 +67,9 @@
 
         (if i
           ; dependent=true element links
-          (fragment :_                                      ; Widget is responsible for all the links in the cell position.
-                    #_(link-controls/anchors path true ctx link/options-processor)
-                    #_(link-controls/iframes path true ctx link/options-processor)))]
+          (fragment :_                                      ; element cell position does not have a value renderer
+                    (link-controls/anchors path true ctx link/options-processor)
+                    (link-controls/iframes path true ctx link/options-processor)))]
 
        [:th {:class (classes #_"field"
                       "hyperfiddle-table-cell" (:class props)
