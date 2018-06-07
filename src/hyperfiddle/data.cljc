@@ -23,8 +23,7 @@
                                     (field [i a] ctx nil))))
                        (case @(:hypercrud.ui/display-mode ctx)
                          :hypercrud.browser.browser-ui/xray [(field [i] ctx nil)]
-                         nil))))
-           vec)
+                         nil)))))
       (concat (case @(:hypercrud.ui/display-mode ctx)
                 :hypercrud.browser.browser-ui/xray [(field [] ctx nil)]
                 nil))

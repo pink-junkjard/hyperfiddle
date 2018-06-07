@@ -126,4 +126,4 @@
             (and i) (find-element i)
             (and i d) (cell-data)
             (and i a) (field-from-attribute a)
-            (and i d a) (value))))
+            (and i d a (not= a '*)) (value))))

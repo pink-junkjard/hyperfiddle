@@ -46,13 +46,13 @@
      (ui-block-border-wrap
        ctx (classes "field" "hyperfiddle-form-cell" (:class props) #_":class is for the control, these props came from !cell{}")
        (if i
-         (fragment :_
+         (fragment :_                                       ;"hyperfiddle-link-entity-independent"
                    (if a [label ctx])
                    (if (not a)
-                     (fragment :_
+                     (fragment :_                           ; "hyperfiddle-link-entity-dependent"
                                (link-controls/anchors path true ctx link/options-processor)
                                (link-controls/iframes path true ctx link/options-processor)))))
-       (if a
+       (if (and a (not= a '*))
          ; the widget places dependent attr links
          ; todo unsafe execution of user code: control
          [(or ?f (auto-control ctx)) @(:value ctx) ctx (merge (control-props ctx) props)])
@@ -60,22 +60,3 @@
          (link-controls/anchors path false ctx link/options-processor)
          (link-controls/iframes path false ctx link/options-processor))))))
 
-(defn FeFields "form labels AND values for a find-element" [ctx]
-  (let [path [(:fe-pos ctx)]]
-    (concat
-      (link-controls/anchors path false ctx nil {:class "hyperfiddle-link-entity-independent"})
-      (let [ctx (context/cell-data ctx)]
-        (concat
-          (conj
-            (->> (r/cursor (:hypercrud.browser/find-element ctx) [:fields])
-                 (r/unsequence :id)
-                 (mapv (fn [[field id]]
-                         (let [ctx (context/field ctx @field)
-                               ctx (context/value ctx)]
-                           ^{:key id} [Field ctx]))))
-            (if @(r/cursor (:hypercrud.browser/find-element ctx) [:splat?])
-              ^{:key :new-field}
-              [new-field ctx]))
-          (link-controls/anchors path true ctx nil {:class "hyperfiddle-link-entity-dependent"})
-          (link-controls/iframes path true ctx)))
-      (link-controls/iframes path false ctx))))

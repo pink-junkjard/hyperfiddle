@@ -8,7 +8,7 @@
             [datascript.parser :as parser]))
 
 
-(defrecord FindElement [name entity fields source-symbol splat? type])
+(defrecord FindElement [name entity fields source-symbol type])
 
 (defrecord Field [id label attribute cell-data->value])
 
@@ -24,7 +24,6 @@
                              :attribute nil
                              :cell-data->value identity})]
        :source-symbol nil
-       :splat? false
        :type :variable})))
 
 (let [alias->value (fn [alias cell-data] (get cell-data alias))]
@@ -71,12 +70,17 @@
                      (let [explicit-attrs (->> explicit-fields
                                                (remove #(= '* %))
                                                (map #(or (:-alias %) (:attribute %))))]
-                       (->> (set/difference (set inferred-attrs) (set explicit-attrs))
-                            (sort)
-                            (map #(map->Field {:id (hash [fe-name %])
-                                               :label (keyword->label %)
-                                               :attribute %
-                                               :cell-data->value %}))))
+                       (concat
+                         (->> (set/difference (set inferred-attrs) (set explicit-attrs))
+                              (sort)
+                              (map #(map->Field {:id (hash [fe-name %])
+                                                 :label (keyword->label %)
+                                                 :attribute %
+                                                 :cell-data->value %})))
+                         [(map->Field {:id (hash [fe-name '*])
+                                       :label nil
+                                       :attribute '*
+                                       :cell-data->value nil})]))
                      [field-or-wildcard])))
          (remove #(= :db/id (:attribute %)))
          vec)))
@@ -85,29 +89,27 @@
   (boolean (some #{'* :db/id} pull-pattern)))
 
 (defn pull-cell->fe [cell source-symbol fe-name pull-pattern]
-  (let [splat? (not (empty? (filter #(= '* %) pull-pattern)))]
-    (map->FindElement
-      {:name fe-name
-       :entity (entity? pull-pattern)
-       :fields (let [splat-attrs (when splat? (keys cell))]
-                 (pull->fields pull-pattern splat-attrs fe-name))
-       :source-symbol source-symbol
-       :splat? splat?
-       :type :pull})))
+  (map->FindElement
+    {:name fe-name
+     :entity (entity? pull-pattern)
+     :fields (let [splat? (not (empty? (filter #(= '* %) pull-pattern)))
+                   splat-attrs (when splat? (keys cell))]
+               (pull->fields pull-pattern splat-attrs fe-name))
+     :source-symbol source-symbol
+     :type :pull}))
 
 (defn pull-many-cells->fe [column-cells source-symbol fe-name pull-pattern]
-  (let [splat? (not (empty? (filter #(= '* %) pull-pattern)))]
-    (map->FindElement
-      {:name fe-name
-       :entity (entity? pull-pattern)
-       :fields (let [splat-attrs (when splat?
-                                   (->> column-cells
-                                        (map keys)
-                                        (reduce into #{})))]
-                 (pull->fields pull-pattern splat-attrs fe-name))
-       :source-symbol source-symbol
-       :splat? splat?
-       :type :pull})))
+  (map->FindElement
+    {:name fe-name
+     :entity (entity? pull-pattern)
+     :fields (let [splat? (not (empty? (filter #(= '* %) pull-pattern)))
+                   splat-attrs (when splat?
+                                 (->> column-cells
+                                      (map keys)
+                                      (reduce into #{})))]
+               (pull->fields pull-pattern splat-attrs fe-name))
+     :source-symbol source-symbol
+     :type :pull}))
 
 (defn aggregate->fe [element]
   (let [name (str (cons (get-in element [:fn :symbol])
@@ -121,7 +123,6 @@
                              :attribute nil
                              :cell-data->value identity})]
        :source-symbol nil
-       :splat? false
        :type :aggregate})))
 
 (defn auto-fe-one-cell [element cell]
