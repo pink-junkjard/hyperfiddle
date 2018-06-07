@@ -26,8 +26,8 @@
     (.status (:status platform-response))
     (.format #js {"application/transit+json" #(.send express-response (transit/encode (:body platform-response)))})))
 
-(defn build-node-req-handler [platform-req-handler]
-  (fn [env req res path-params query-params]
+(defn build-node-req-handler [env platform-req-handler]
+  (fn [req res path-params query-params]
     (let [hostname (.-hostname req)]
       (-> (platform-req-handler
             :hostname hostname
