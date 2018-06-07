@@ -12,6 +12,8 @@
 (defn- reactive-nav-cmp [link-ref ctx class]
   [(:navigate-cmp ctx) (link/build-link-props @link-ref ctx) @(r/track prompt link-ref) class])
 
+; [(:navigate-cmp ctx) (merge props (link/build-link-props link ctx)) (or ?label (name rel)) (:class props)]
+
 (defn- reactive-ui [link-ref ctx class]
   [hypercrud.browser.core/ui @link-ref ctx class])
 
@@ -32,8 +34,11 @@
 
 (defn anchors
   ; Can't infer dependent from :relation, must use :cell-data i think
-  ([path dependent? ctx & [?f props]]
-   (->> (r/track ui-contextual-links path dependent? false (:hypercrud.browser/links ctx) ?f)
+  ([?label ctx props]
+    (anchors [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]
+             (if (:relation ctx) true false) ctx nil props))
+  ([path dependent ctx ?f & [props]]
+   (->> (r/track ui-contextual-links path dependent false (:hypercrud.browser/links ctx) ?f)
         (r/unsequence :db/id)
         (map (fn [[link-ref link-id]]
                (if (not= :hyperfiddle.ui.layout/table (:hyperfiddle.ui/layout ctx))

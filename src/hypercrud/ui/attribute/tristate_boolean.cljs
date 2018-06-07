@@ -7,6 +7,6 @@
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div
      [:div.editable-select {:key (:hypercrud.browser/attribute ctx)}
-      [:div.anchors (link-controls/anchors path true ctx)]
+      [:div.anchors (link-controls/anchors path true ctx nil)]
       (select-boolean* value props ctx)]
      (link-controls/iframes path true ctx)]))

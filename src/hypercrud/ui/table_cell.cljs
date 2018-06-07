@@ -13,7 +13,7 @@
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div
      #_(pr-str (:db/id @(:value ctx)))
-     [:div.anchors (link-controls/anchors path true ctx)]
+     [:div.anchors (link-controls/anchors path true ctx nil)]
      (link-controls/iframes path true ctx)]))
 
 (defn ref-many [value ctx props]
@@ -22,7 +22,7 @@
      #_(->> (mapv :db/id @(:value ctx))
             (pr-str)
             (ellipsis 15))
-     [:div.anchors (link-controls/anchors path true ctx)]
+     [:div.anchors (link-controls/anchors path true ctx nil)]
      (link-controls/iframes path true ctx)]))
 
 (defn other-many [value ctx props]

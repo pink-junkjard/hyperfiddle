@@ -11,15 +11,29 @@
 
 (defn form [field {:keys [hypercrud.browser/ordered-fes
                           hypercrud.browser/links] :as ctx}]
-  (->> (r/unsequence ordered-fes)
-       ; Wouldn't `for` sugar be nice here
-       (mapcat (fn [[fe i]]
-                 (->> fe
-                      (r/fmap :fields)
-                      (r/unsequence :attribute)
-                      (map (fn [[_ a]]
-                             (field [i a] ctx nil))))))
-       (doall)))
+  ; Doesn't gen entity links and naked links yet
+  (let [a (->> ordered-fes
+               (r/unsequence)
+               (mapcat (fn [[fe i]]
+                         ; is there a link here?
+                         (->> fe
+                              (r/fmap :fields)
+                              (r/unsequence :attribute)
+                              (map (fn [[_ a]]
+                                     ; is there a link here? Probably handled by the field.
+                                     ; The field handles independent and dependent per cell.
+                                     (field [i a] ctx nil)))))))
+        #_#_b (->> links                                    ; all in one column
+                   (r/unsequence (juxt :link/rel :link/path))
+                   ; Entity links only. Field handles attr links.
+                   (filter (fn [[_ [rel [i a]]]]
+                             (nil? a)))
+                   (map (fn [[_ [rel path]]]
+                          (link rel path ctx nil)))
+                   (remove nil?))
+        ]
+    (doall
+      (concat a #_b))))
 
 (defn browse' [rel path ctx]
   (->> (base/data-from-link @(r/track link/rel->link rel path ctx) ctx)

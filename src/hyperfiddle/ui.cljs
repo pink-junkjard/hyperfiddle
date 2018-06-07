@@ -14,7 +14,7 @@
     [hyperfiddle.data :as hf]
     [hyperfiddle.ui.markdown-extensions :refer [extensions]]
     [hyperfiddle.ui.hacks]                                  ; exports
-    ))
+    [hypercrud.ui.control.link-controls :as link-controls]))
 
 
 (defn ^:export value [[i a] ctx ?f & args]
@@ -22,11 +22,9 @@
     [(or ?f (auto-control ctx)) @(:value ctx) ctx (kwargs args)]))
 
 (defn ^:export field [[i a] ctx ?f & args]
-  (let [field (case (::layout ctx) :hyperfiddle.ui.layout/table table/Field form/Field)]
+  (let [view (case (::layout ctx) :hyperfiddle.ui.layout/table table/Field form/Field)]
     ^{:key (str i a)}
-    [(r/partial field ?f)                                   ; Intentional explicit nil
-     (context/focus ctx true i a)
-     (kwargs args)]))
+    [view ?f (context/focus ctx true i a) (kwargs args)]))
 
 (defn ^:export table "sort-fn :: (fn [col ctx v] v)" [form sort-fn ctx]
   (let [sort-col (r/atom nil)]
@@ -44,6 +42,30 @@
                           (into ^{:key k} [:tr]))))         ; strict
               (into [:tbody]))]))))
 
+; Does it get a border or not?
+; We were inconsistent – !anchor was free, but xray mode drew borders,
+; this seems appropriate though.
+; So no border and get dependent from the ctx
+; Links are not scoped though like values are; because we need all of them.
+(defn form-link-view [?label link ctx props]                     ; not embeds, those go through browse now?
+  [(:navigate-cmp ctx) (merge props (link/build-link-props link ctx)) (or ?label (name (:link/rel link))) (:class props)]
+  #_(link-controls/anchors ?label ctx props))
+
+(defn table-link-view [?label ctx props]
+  [(if (:relation ctx) :td.link-cell :th.link-cell)
+   #_[:code (pr-str rel path ?label)]
+   (link-controls/anchors ?label ctx props)
+   ; Not embeds, those go through browse now?
+   #_(link-controls/iframes path dependent? ctx)          ; inline entity-anchors are not yet implemented
+   ])
+
+(defn link [rel path ctx ?label & args]                     ; can return nil?
+  (let [view (case (::layout ctx) :hyperfiddle.ui.layout/table table-link-view form-link-view)
+        {:keys [link/dependent?] :as link} @(r/track link/rel->link rel path ctx)]
+    ^{:key (pr-str [rel path])}
+    ; ctx used for formulas and stuff
+    [view ?label link (apply context/focus ctx dependent? path) (kwargs args)]))
+
 (defn ^:export result "Default result renderer. Invoked as fn, returns seq-hiccup, hiccup or
 nil. call site must wrap with a Reagent component"
   [ctx & [?f]]
@@ -54,16 +76,10 @@ nil. call site must wrap with a Reagent component"
 
 (defn browse [rel path ctx ?f & args]
   (let [props (kwargs args)
-        {:keys [:link/dependent? :link/path] :as link} @(r/track link/rel->link rel path ctx)
-        ctx (-> (apply context/focus ctx dependent? (unwrap (memoized-safe-read-edn-string (str "[" path "]"))))
+        {:keys [link/dependent?] :as link} @(r/track link/rel->link rel path ctx)
+        ctx (-> (apply context/focus ctx dependent? path)
                 (as-> ctx (if ?f (assoc ctx :user-renderer ?f #_(if ?f #(apply ?f %1 %2 %3 %4 args))) ctx)))]
     (into [browser/ui link ctx (:class props)] (apply concat (dissoc props :class :children nil)))))
-
-(defn link [rel path ctx ?label & args]
-  (let [{:keys [:link/dependent? :link/path] :as link} @(r/track link/rel->link rel path ctx)
-        ctx (apply context/focus ctx dependent? (unwrap (memoized-safe-read-edn-string (str "[" path "]"))))
-        props (kwargs args)]
-    [(:navigate-cmp ctx) (merge props (link/build-link-props link ctx)) (or ?label (name rel)) (:class props)]))
 
 (defn ui-bindings [ctx]                                     ; legacy
   (assoc ctx

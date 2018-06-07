@@ -9,7 +9,7 @@
   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [:div
      [:div.editable-select {:key (:hypercrud.browser/attribute ctx)}
-      [:div.anchors (link-controls/anchors path true ctx)]
+      [:div.anchors (link-controls/anchors path true ctx nil)]
       (let [props (update props :read-only #(or % (nil? @(r/cursor (:cell-data ctx) [:db/id]))))
             change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx)
                                                                @(:hypercrud.browser/fat-attribute ctx)

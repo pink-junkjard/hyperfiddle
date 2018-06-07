@@ -40,15 +40,26 @@
   ([ctx] (Field nil ctx nil))
   ([?f ctx props]                                           ; fiddle-src wants to fallback by passing nil here explicitly
    (assert @(:hypercrud.ui/display-mode ctx))
-   (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
+   (let [[i a] [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]
+         path (remove nil? [i a])]
+     ; Works for entity level stuff too, which will draw entity links and iframes.
+     ; Path can be empty
      (ui-block-border-wrap
        ctx (classes "field" (:class props) #_":class is for the control, these props came from !cell{}")
-       [:div
-        [label ctx]
-        (link-controls/anchors path false ctx link/options-processor)
-        (link-controls/iframes path false ctx link/options-processor)]
-       ; todo unsafe execution of user code: control
-       [(or ?f (auto-control ctx)) @(:value ctx) ctx (merge (control-props ctx) props)]))))
+       (if i
+         (fragment :_
+                   (if a [label ctx])
+                   (if (not a)
+                     (fragment :_
+                               (link-controls/anchors path true ctx link/options-processor)
+                               (link-controls/iframes path true ctx link/options-processor)))))
+       (if a
+         ; the widget places dependent attr links
+         ; todo unsafe execution of user code: control
+         [(or ?f (auto-control ctx)) @(:value ctx) ctx (merge (control-props ctx) props)])
+       (if (not i) #_(and (not i) (not a))                  ; if theres not an i, theres not an a
+         (link-controls/anchors path false ctx link/options-processor)
+         (link-controls/iframes path false ctx link/options-processor))))))
 
 (defn FeFields "form labels AND values for a find-element" [ctx]
   (let [path [(:fe-pos ctx)]]

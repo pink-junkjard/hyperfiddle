@@ -1,6 +1,7 @@
 (ns hypercrud.ui.table
   (:require [contrib.css :refer [css-slugify classes]]
             [contrib.reactive :as r]
+            [contrib.reagent :refer [fragment]]
             [hypercrud.browser.system-link :refer [system-link?]]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.link :as link]
@@ -19,51 +20,72 @@
        (link/options-processor)
        (not-any? link/popover-link?)))
 
-(defn LinkCell [ctx]                                        ; Drive by markdown also (forces unify)
-  [(if (:relation ctx) :td.link-cell :th.link-cell)
-   (->> (r/unsequence (:hypercrud.browser/ordered-fes ctx))
-        (mapcat (fn [[fe i]]
-                  (let [ctx (context/find-element ctx i)
-                        ctx (context/cell-data ctx)
-                        path [(:fe-pos ctx)]]
-                    (link-controls/anchors path (not (nil? (:relation ctx))) ctx)
-                    ; inline entity-anchors are not yet implemented
-                    #_(link-controls/iframes path dependent? ctx)))))])
+(defn sortable? [ctx path]
+  (and (hf/attr-sortable? @(:hypercrud.browser/find-element ctx)
+                          (:attribute (:hypercrud.browser/field ctx))
+                          ctx)
+       @(r/track links-dont-break-sorting? path ctx)))
 
-(defn col-head [ctx]
-  (let [field (:hypercrud.browser/field ctx)
-        path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]
-        sortable? (and (hf/attr-sortable? @(:hypercrud.browser/find-element ctx) (:attribute field) ctx)
-                       @(r/track links-dont-break-sorting? path ctx))
-        sort-direction (let [[sort-fe-pos sort-attr direction] @(::sort-col ctx)]
-                         (if (and (= (:fe-pos ctx) sort-fe-pos) (= sort-attr (:attribute field)))
-                           direction))
-        on-click (fn []
-                   (if sortable?
-                     (reset! (::sort-col ctx)
-                             (case sort-direction
-                               :asc [(:fe-pos ctx) (:attribute field) :desc]
-                               :desc nil
-                               [(:fe-pos ctx) (:attribute field) :asc]))))]
-    [:th {:class (classes "hyperfiddle-table-cell"
-                          (css-slugify (:hypercrud.browser/attribute ctx))
-                          (if sortable? "sortable")
-                          (some-> sort-direction name))
-          :style {:background-color (connection-color/connection-color ctx)}
-          :on-click on-click}
-     [label ctx]
-     [:div.anchors
-      (link-controls/anchors path false ctx link/options-processor)
-      (link-controls/iframes path false ctx link/options-processor)]]))
+(defn sort-direction [ctx]
+  (let [[sort-fe-pos sort-attr direction] @(::sort-col ctx)]
+    (if (and (= (:fe-pos ctx) sort-fe-pos) (= sort-attr (:attribute (:hypercrud.browser/field ctx))))
+      direction)))
+
+(defn toggle-sort! [ctx path]
+  (if (sortable? ctx path)
+    (reset! (::sort-col ctx)
+            (case (sort-direction ctx)
+              :asc [(:fe-pos ctx) (:attribute (:hypercrud.browser/field ctx)) :desc]
+              :desc nil
+              [(:fe-pos ctx) (:attribute (:hypercrud.browser/field ctx)) :asc]))))
+
+(defn border-color [ctx]
+  (let [shadow-link @(r/fmap system-link? (r/cursor (:cell-data ctx) [:db/id]))]
+    (if-not shadow-link (connection-color/connection-color ctx))))
 
 (defn Field "Form fields are label AND value. Table fields are label OR value."
   ([ctx] (Field nil ctx nil))
   ([?f ctx props]
-   (if (:relation ctx)
-     [:td {:class (classes (:class props) "hyperfiddle-table-cell" "truncate")
-           :style {:border-color
-                   (let [shadow-link @(r/fmap system-link? (r/cursor (:cell-data ctx) [:db/id]))]
-                     (if-not shadow-link (connection-color/connection-color ctx)))}}
-      ; todo unsafe execution of user code: control
-      [(or ?f (auto-control ctx)) @(:value ctx) ctx (merge (control-props ctx) props)]]
-     [col-head ctx])))
+   (let [[i a] [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]
+         path (remove nil? [i a])]
+     (if (:relation ctx)
+       [:td {:class (classes (:class props) "hyperfiddle-table-cell" "truncate")
+             :style {:border-color (if i (border-color ctx))}}
+
+        ; cell value and dependent=true attribute links. Not element links.
+        ; This cell is empty if
+        (if a
+          (fragment :_
+                    ; Widget is responsible for all the links in the cell position.
+                    #_(link-controls/anchors path true ctx link/options-processor)
+                    #_(link-controls/iframes path true ctx link/options-processor)
+                    ; todo unsafe execution of user code: control
+                    [(or ?f (auto-control ctx)) @(:value ctx) ctx (merge (control-props ctx) props)]))
+
+        (if i
+          ; dependent=true element links
+          (fragment :_
+                    (link-controls/anchors path true ctx link/options-processor)
+                    (link-controls/iframes path true ctx link/options-processor)))]
+
+       [:th {:class (classes "hyperfiddle-table-cell"
+                             (css-slugify (:hypercrud.browser/attribute ctx))
+                             (if (and i (sortable? ctx path)) "sortable")
+                             (some-> (sort-direction ctx) name))
+             :style {:background-color (connection-color/connection-color ctx)}
+             :on-click (r/partial toggle-sort! ctx path)}
+        (if a
+          ; label and dependent=false attribute links
+          [label ctx])
+
+        (if (and i (not a))
+          ; dependent=false element links
+          (fragment :_
+                    (link-controls/anchors path false ctx link/options-processor)
+                    (link-controls/iframes path false ctx link/options-processor)))
+
+        (if (not i)
+          ; dependent=false naked links
+          [:div.anchors
+           (link-controls/anchors path false ctx link/options-processor)
+           (link-controls/iframes path false ctx link/options-processor)])]))))
