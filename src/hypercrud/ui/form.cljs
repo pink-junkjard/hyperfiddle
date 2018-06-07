@@ -19,8 +19,8 @@
   (let [attr-ident (r/atom nil)]
     (fn [ctx]
       (let [missing-dbid (nil? @(r/cursor (:cell-data ctx) [:db/id]))]
-        (ui-block-border-wrap
-          ctx "field"
+        (fragment
+          :_
           [:div (let [on-change! #(reset! attr-ident %)]
                   [input/keyword-input* @attr-ident on-change! {:read-only missing-dbid
                                                                 :placeholder ":task/title"}])]
@@ -45,19 +45,21 @@
      ; Path can be empty
      (ui-block-border-wrap
        ctx (classes "field" "hyperfiddle-form-cell" (:class props) #_":class is for the control, these props came from !cell{}")
-       (if i
-         (fragment :_                                       ;"hyperfiddle-link-entity-independent"
-                   (if a [label ctx])
-                   (if (not a)
-                     (fragment :_                           ; "hyperfiddle-link-entity-dependent"
-                               (link-controls/anchors path true ctx link/options-processor)
-                               (link-controls/iframes path true ctx link/options-processor)))))
-       (if a
-         ; the widget places dependent attr links
-         ; todo unsafe execution of user code: control
-         ; Safely deref :value because '* has no value
-         [(or ?f (auto-control ctx)) (some-> ctx :value deref) ctx (merge (control-props ctx) props)])
-       (if (not i)                                          ; if theres not an i, theres not an a
-         (link-controls/anchors path false ctx link/options-processor)
-         (link-controls/iframes path false ctx link/options-processor))))))
-
+       (if (= a '*)
+         ^{:key :new-field} [new-field ctx]
+         (fragment
+           :_
+           (if i
+             (fragment :_                                   ;"hyperfiddle-link-entity-independent"
+                       (if a [label ctx])
+                       (if (not a)
+                         (fragment :_                       ; "hyperfiddle-link-entity-dependent"
+                                   (link-controls/anchors path true ctx link/options-processor)
+                                   (link-controls/iframes path true ctx link/options-processor)))))
+           (if a
+             ; the widget places dependent attr links
+             ; todo unsafe execution of user code: control
+             [(or ?f (auto-control ctx)) @(:value ctx) ctx (merge (control-props ctx) props)])
+           (if (not i)                                      ; if theres not an i, theres not an a
+             (link-controls/anchors path false ctx link/options-processor)
+             (link-controls/iframes path false ctx link/options-processor))))))))

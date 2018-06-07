@@ -58,7 +58,7 @@
         ; There can never be naked links here; that column is always empty but for the header which should be suppressed.
 
         ; cell value and dependent=true attribute links. Not element links.
-        (if a
+        (if (and a (not= a '*))
           (fragment :_                                      ; Value renderer is responsible for attribute links in a value cell position.
                     #_(link-controls/anchors path true ctx link/options-processor)
                     #_(link-controls/iframes path true ctx link/options-processor)
