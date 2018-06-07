@@ -12,8 +12,7 @@
 
 
 (defn ui-block-border-wrap [ctx class & children]
-  [:div {:class (classes class "hyperfiddle-form-cell" (-> ctx :hypercrud.browser/attribute str css-slugify))
-         :style {:border-color (connection-color/connection-color ctx)}}
+  [:div {:class class :style {:border-color (connection-color/connection-color ctx)}}
    (apply fragment :_ children)])
 
 (defn new-field-state-container [ctx]
@@ -45,7 +44,7 @@
      ; Works for entity level stuff too, which will draw entity links and iframes.
      ; Path can be empty
      (ui-block-border-wrap
-       ctx (classes "field" (:class props) #_":class is for the control, these props came from !cell{}")
+       ctx (classes "field" "hyperfiddle-form-cell" (:class props) #_":class is for the control, these props came from !cell{}")
        (if i
          (fragment :_
                    (if a [label ctx])

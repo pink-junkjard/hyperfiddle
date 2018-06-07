@@ -49,7 +49,10 @@
    (let [[i a] [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]
          path (remove nil? [i a])]
      (if (:relation ctx)
-       [:td {:class (classes (:class props) "hyperfiddle-table-cell" "truncate")
+       [:td {:class (classes #_"field"
+                      "hyperfiddle-table-cell"
+                      (:class props)
+                      "truncate")
              :style {:border-color (if i (border-color ctx))}}
 
         ; There can never be naked links here; that column is always empty but for the header which should be suppressed.
@@ -68,9 +71,10 @@
                     #_(link-controls/anchors path true ctx link/options-processor)
                     #_(link-controls/iframes path true ctx link/options-processor)))]
 
-       [:th {:class (classes (:class props) "hyperfiddle-table-cell"
-                             (if (and i (sortable? ctx path)) "sortable") ; hoist
-                             (some-> (sort-direction ctx) name)) ; hoist
+       [:th {:class (classes #_"field"
+                      "hyperfiddle-table-cell" (:class props)
+                      (if (and i (sortable? ctx path)) "sortable") ; hoist
+                      (some-> (sort-direction ctx) name))   ; hoist
              :style {:background-color (connection-color/connection-color ctx)}
              :on-click (r/partial toggle-sort! ctx path)}
         (if a
