@@ -10,8 +10,6 @@
   (hash (map #(or (:db/id %) %) relation)))
 
 (defn form [field {:keys [hypercrud.browser/ordered-fes] :as ctx}]
-  ; Want element and naked links towards the right, so use vectors for conj-end
-  ; in user mode we actually don't want element or naked links unless asked for.
   (-> ordered-fes
       (r/unsequence)
       (->> (mapcat (fn [[fe i]]
@@ -21,13 +19,11 @@
                             (r/unsequence :attribute)
                             (mapv (fn [[_ a]]
                                     (field [i a] ctx nil))))
-                       (case @(:hypercrud.ui/display-mode ctx)
-                         :hypercrud.browser.browser-ui/xray [(field [i] ctx nil)]
-                         nil)))))
+                       [(field [i] ctx nil)]))))
+      ; auto-form does not generate naked links in user mode
       (concat (case @(:hypercrud.ui/display-mode ctx)
                 :hypercrud.browser.browser-ui/xray [(field [] ctx nil)]
                 nil))
-      seq                                                   ; This has to seq on the way out or it will be treated as Hiccup.
       doall))
 
 (defn browse' [rel path ctx]
