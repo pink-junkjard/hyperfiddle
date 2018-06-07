@@ -89,7 +89,7 @@
                                (mapv :attribute)
                                (into #{}))]
           ; cant test order with splat
-          (is (~'= #{:a/x :a/y :a/z ~'* attributes#}))))))
+          (is (~'= #{:a/x :a/y :a/z (symbol "*")} attributes#))))))
 
 #?(:clj
    (defmacro test-partial-splat [fiddle pull->request result-builder]
