@@ -18,11 +18,20 @@
     [hypercrud.ui.control.link-controls :as link-controls]))
 
 
-(defn ^:export value [[i a] ctx ?f & args]
-  (let [ctx (context/focus ctx true i a)]
-    [(or ?f (auto-control ctx)) @(:value ctx) ctx (kwargs args)]))
+(defn ^:export value "Naked value renderer. Does not work in tables. Use field [] if you want a naked th/td view"
+  [[i a] ctx ?f & args]                  ; Doesn't make sense in a table context bc what do you do in the header?
+  (let [view form/value #_(case (::layout ctx) :hyperfiddle.ui.layout/table table/value form/value)
+        ctx (context/focus ctx true i a)
+        props (kwargs args)
+        class (classes (:class props)
+                       (css-slugify a)
+                       (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/valueType :db/ident))
+                       (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/cardinality :db/ident)))
+        props (merge props {:class class})]
+    [view ?f ctx props]))
 
-(defn ^:export field [[i a] ctx ?f & args]
+(defn ^:export field "Works in a form or table context. Draws label and/or value."
+  [[i a] ctx ?f & args]
   (let [view (case (::layout ctx) :hyperfiddle.ui.layout/table table/Field form/Field)
         ctx (context/focus ctx true i a)
         props (kwargs args)
@@ -30,6 +39,7 @@
                        (css-slugify a)
                        (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/valueType :db/ident))
                        (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/cardinality :db/ident))
+                       ; also :attribute/renderer
                        #_(css-slugify (-> ctx :hypercrud.browser/fat-attribute deref :db/isComponent)))
         props (merge props {:class class})]
     ^{:key (str i a)}
@@ -56,7 +66,7 @@
 ; this seems appropriate though.
 ; So no border and get dependent from the ctx
 ; Links are not scoped though like values are; because we need all of them.
-(defn form-link-view [?label link ctx props]                     ; not embeds, those go through browse now?
+(defn form-link-view [?label link ctx props]                ; not embeds, those go through browse now?
   [(:navigate-cmp ctx) (merge props (link/build-link-props link ctx)) (or ?label (name (:link/rel link))) (:class props)]
   #_(link-controls/anchors ?label ctx props))
 
@@ -65,7 +75,7 @@
    #_[:code (pr-str rel path ?label)]
    (link-controls/anchors ?label ctx props)
    ; Not embeds, those go through browse now?
-   #_(link-controls/iframes path dependent? ctx)          ; inline entity-anchors are not yet implemented
+   #_(link-controls/iframes path dependent? ctx)            ; inline entity-anchors are not yet implemented
    ])
 
 (defn link [rel path ctx ?label & args]                     ; can return nil?

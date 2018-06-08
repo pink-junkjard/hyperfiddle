@@ -35,6 +35,15 @@
   ^{:key (hash (keys @(:cell-data ctx)))}
   [new-field-state-container ctx])
 
+(defn value "Naked value view, no label, coloring or wrap."
+  [?f ctx props]
+  (let [[i a] [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
+    (if (:relation ctx)                                     ; dependent or not
+      (cond                                                 ; Only attribute is automatic; element renderers can be explicitly asked for though
+        a [(or ?f (auto-control ctx)) @(:value ctx) ctx props] ; todo unsafe execution of user code: control
+        i (if ?f [?f @(:cell-data ctx) ctx props])
+        :naked (if ?f [?f @(:cell-data ctx) ctx props])))))
+
 (defn Field "Form fields are label AND value. Table fields are label OR value."
   ([ctx] (Field nil ctx nil))
   ([?f ctx props]                                           ; fiddle-src wants to fallback by passing nil here explicitly
@@ -56,10 +65,8 @@
                          (fragment :_                       ; "hyperfiddle-link-entity-dependent"
                                    (link-controls/anchors path true ctx link/options-processor)
                                    (link-controls/iframes path true ctx link/options-processor)))))
-           (if a
-             ; the widget places dependent attr links
-             ; todo unsafe execution of user code: control
-             [(or ?f (auto-control ctx)) @(:value ctx) ctx (merge (control-props ctx) props)])
+           (if a                                            ; the widget places dependent attr links
+             (value ?f ctx props))
            (if (not i)                                      ; if theres not an i, theres not an a
              (link-controls/anchors path false ctx link/options-processor)
              (link-controls/iframes path false ctx link/options-processor))))))))
