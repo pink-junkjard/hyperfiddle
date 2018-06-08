@@ -36,7 +36,13 @@
         ctx (context/focus ctx true i a)
         props (kwargs args)
         class (classes (:class props)
-                       (css-slugify a)
+                       (css-slugify (some-> ctx :hypercrud.browser/find-element deref :source-symbol)) ; color
+                       (css-slugify (some-> ctx :hypercrud.browser/find-element deref :type))
+                       ;(css-slugify (some-> ctx :hypercrud.browser/find-element deref :entity (if-not :aggregate)))
+
+                       (css-slugify (some-> ctx :hypercrud.browser/find-element deref :name)) ; works on aggregate
+                       (css-slugify i) ; same as name, but by index which is more robust
+                       (css-slugify a) ; see attribute-schema-human
                        (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/valueType :db/ident))
                        (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/cardinality :db/ident))
                        ; also :attribute/renderer

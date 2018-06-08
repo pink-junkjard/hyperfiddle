@@ -10,7 +10,10 @@
       (str/replace "/" "-")
       (str/replace "?" "-")                                 ; legal but syntax highlighting issues
       (str/replace " " "-")
-      (str/replace "." "-")))
+      (str/replace "." "-")
+      (str/replace ")" "-")
+      (str/replace "(" "-")
+      ))
 
 (defn classes
   "&args will be flattened"

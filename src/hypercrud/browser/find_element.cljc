@@ -8,7 +8,11 @@
             [datascript.parser :as parser]))
 
 
-(defrecord FindElement [name entity fields source-symbol type])
+(defrecord FindElement [name
+                        entity                              ; semantic bit for formulas (can't navigate scalar fes)
+                        fields
+                        source-symbol
+                        type])
 
 (defrecord Field [id label attribute cell-data->value])
 

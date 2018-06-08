@@ -84,12 +84,17 @@
           uri (when dbname
                 (get-in ctx [:hypercrud.browser/domain :domain/environment dbname]))
           user-with! (r/partial user-with (:peer ctx) ctx (:branch ctx) uri)]
-      (assoc ctx
-        :hypercrud.browser/find-element fe
-        :hypercrud.browser/schema (r/cursor (:hypercrud.browser/schemas ctx) [dbname])
-        :fe-pos fe-pos
-        :uri uri
-        :user-with! user-with!))))
+      (-> ctx
+          (assoc :hypercrud.browser/find-element fe
+                 :hypercrud.browser/schema (r/cursor (:hypercrud.browser/schemas ctx) [dbname])
+                 :fe-pos fe-pos
+                 :uri uri
+                 :user-with! user-with!)
+          (as-> ctx (case (:type @fe)
+                      ; Weird that field is not reactive
+                      :aggregate (assoc ctx :hypercrud.browser/field (-> @fe :fields first))
+                      :variable (assoc ctx :hypercrud.browser/field (-> @fe :fields first))
+                      :pull ctx))))))
 
 (defn cell-data [ctx]
   {:pre [(:fe-pos ctx)]}

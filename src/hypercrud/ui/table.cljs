@@ -81,10 +81,11 @@
 
         (if (and i (not a))                                 ; dependent=false element links
           (fragment :_
+                    [label ctx]
                     (link-controls/anchors path false ctx link/options-processor)
                     (link-controls/iframes path false ctx link/options-processor)))
 
-        (if (not i)                                         ; dependent=false naked links
+        (if (not i)                                         ; naked links
           (fragment :_
                     (link-controls/anchors path false ctx link/options-processor)
                     (link-controls/iframes path false ctx link/options-processor)))]))))

@@ -1,5 +1,6 @@
 (ns hypercrud.ui.label                                      ; hyperfiddle.ui/label
   (:require [contrib.reactive :as r]
+            [contrib.string :refer [blank->nil]]
             [contrib.ui.tooltip :refer [tooltip-thick]]
             [cuerdas.core :as str]
             [contrib.ui :refer [markdown]]))
@@ -17,22 +18,20 @@
       last))
 
 (defn attribute-schema-human [attr]
-  (-> @attr ((juxt :db/ident
-                   #(some-> % :attribute/renderer fqn->name)
-                   #(some-> % :db/valueType :db/ident name)
-                   #(some-> % :db/cardinality :db/ident name)
-                   #(some-> % :db/isComponent (if :component) name)
-                   #(some-> % :db/unique :db/ident name)))))
+  (-> attr ((juxt :db/ident
+                  #(some-> % :attribute/renderer fqn->name)
+                  #(some-> % :db/valueType :db/ident name)
+                  #(some-> % :db/cardinality :db/ident name)
+                  #(some-> % :db/isComponent (if :component) name)
+                  #(some-> % :db/unique :db/ident name)))))
 
-;(apply str (interpose " " (attribute-schema-human (:attribute ctx))))
-; (eval/validate-user-code-str (-> ctx :attribute :db/doc))
 #_{:label help-text :position :below-right}
 
 (defn label [ctx]
-  (let [dbdoc (let [dbdoc @(r/cursor (:hypercrud.browser/fat-attribute ctx) [:db/doc])]
-                (when (and (string? dbdoc) (not (empty? dbdoc)))
-                  dbdoc))
-        typedoc (apply str (interpose " " @(r/track attribute-schema-human (:hypercrud.browser/fat-attribute ctx))))
+  (let [dbdoc (some-> ctx :hypercrud.browser/fat-attribute (r/cursor [:db/doc]) deref blank->nil)
+        typedoc (some->> ctx :hypercrud.browser/fat-attribute
+                         (r/fmap attribute-schema-human)
+                         deref (interpose " ") (apply str))
         help-md (str (if dbdoc (str dbdoc "\n\n"))          ; markdown needs double line-break
                      "`" typedoc "`")]
     ; There is always help-md rn but maybe there wont be and
@@ -40,6 +39,5 @@
     [tooltip-thick (if help-md
                      [:div.docstring [markdown help-md]])
      [:label
-      ; common crash point; todo use field, attribute is explicitly NOT always defined
       (:label (:hypercrud.browser/field ctx))
       (if help-md [:sup "†"])]]))
