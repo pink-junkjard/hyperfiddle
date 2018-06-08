@@ -4,9 +4,21 @@
             [hypercrud.browser.base :as base]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.system-fiddle :as system-fiddle]
+            [hypercrud.browser.system-link :refer [system-link?]]
             [hypercrud.ui.error :as ui-error]
             [hypercrud.ui.result :as result]
             [hyperfiddle.ui :refer [markdown]]))
+
+(defn read-only-link? [ctx]
+  (let [sys? (system-link? @(r/cursor (:cell-data ctx) [:db/id]))
+        shadow? @(r/cursor (:cell-data ctx) [:hypercrud/sys?])
+        cantchange (contains? #{:link/rel
+                                :link/path
+                                :link/create?
+                                :link/managed?
+                                :link/dependent?}
+                              (:hypercrud.browser/attribute ctx))]
+    (or sys? (and shadow? cantchange))))
 
 (defn links->result [links]
   (->> @links
@@ -31,6 +43,7 @@
           (let [ctx (-> ctx
                         (dissoc :relation :relations)
                         (assoc :hypercrud.browser/result (r/track links->result links))
-                        context/with-relations)]
+                        context/with-relations
+                        (assoc :read-only read-only-link?))]
             [:div {:class class}
              [markdown (some-> ctx :hypercrud.browser/fiddle deref :fiddle/markdown) ctx]])))))

@@ -2,12 +2,11 @@
   (:require [contrib.css :refer [css-slugify classes]]
             [contrib.reactive :as r]
             [contrib.reagent :refer [fragment]]
-            [hypercrud.browser.context :as context]
+            [contrib.ui.input :as input]
             [hypercrud.browser.link :as link]
             [hypercrud.ui.auto-control :refer [auto-control control-props]]
             [hypercrud.ui.connection-color :as connection-color]
             [hypercrud.ui.control.link-controls :as link-controls]
-            [contrib.ui.input :as input]
             [hypercrud.ui.label :refer [auto-label]]))
 
 
@@ -37,7 +36,8 @@
 
 (defn value "Naked value view, no label, coloring or wrap."
   [?f ctx props]
-  (let [[i a] [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
+  (let [props (merge (control-props ctx) props)
+        [i a] [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     (if (:relation ctx)                                     ; dependent or not
       (cond                                                 ; Only attribute is automatic; element renderers can be explicitly asked for though
         a [(or ?f (auto-control ctx)) @(:value ctx) ctx props] ; todo unsafe execution of user code: control
