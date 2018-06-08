@@ -21,15 +21,19 @@
   (aset global "pprint_str" pprint-str)
   (aset global "hc_where" (fn [ctx]
                             (-> ctx
-                                (select-keys [:cell-data
-                                              :fe-pos
+                                (select-keys [:route        ; ordered for glance debugging
+                                              :value
                                               :hypercrud.browser/attribute
+                                              :fe-pos
                                               :hypercrud.browser/find-element
-                                              :route
-                                              :value])
+                                              :cell-data
+                                              :relation
+                                              :relations])
                                 (update-existing :hypercrud.browser/find-element deref)
+                                (update-existing :relations deref)
+                                (update-existing :relation deref)
                                 (update-existing :cell-data deref)
-                                ;(update-existing :value deref)
+                                (update-existing :value (fnil deref (atom nil)))
                                 #_{:hypercrud.browser/attribute identity
                                    :fe-pos identity
                                    :hypercrud.browser/find-element deref
