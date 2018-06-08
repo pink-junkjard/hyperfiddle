@@ -22,7 +22,8 @@
             [io.pedestal.interceptor.helpers :as interceptor]
             [promesa.core :as p]
             [ring.util.response :as ring-resp]
-            [taoensso.timbre :as timbre]))
+            [taoensso.timbre :as timbre])
+  (:import (com.auth0.jwt.exceptions JWTVerificationException)))
 
 
 (defn e->response [e]
@@ -92,20 +93,29 @@
         (let [jwt-cookie (get-in context [:request :cookies "jwt" :value])
               jwt-header (some->> (get-in context [:request :headers "authorization"])
                                   (re-find #"^Bearer (.+)$")
-                                  (second))]
+                                  (second))
+              with-jwt (fn [jwt]
+                         (-> context
+                             (assoc-in [:request :user-id] (some-> jwt (verify) :user-id))
+                             (assoc-in [:request :jwt] jwt)))]
           (cond
-            (or (nil? jwt-header)
-                (= jwt-cookie jwt-header)) (-> context
-                                               ; todo clear the cookie when verifciation fails
-                                               (assoc-in [:request :user-id] (some-> jwt-cookie (verify) :user-id))
-                                               (assoc-in [:request :jwt] jwt-cookie))
+            (or (nil? jwt-header) (= jwt-cookie jwt-header))
+            (try (with-jwt jwt-cookie)
+                 (catch JWTVerificationException e
+                   (timbre/error e)
+                   (-> (terminate context)
+                       ; todo clear the cookie
+                       (assoc :response {:status 401 :body (->Err (.getMessage e))}))))
 
-            (nil? jwt-cookie) (-> context
-                                  (assoc-in [:request :user-id] (some-> jwt-header (verify) :user-id))
-                                  (assoc-in [:request :jwt] jwt-header))
+            (nil? jwt-cookie)
+            (try (with-jwt jwt-header)
+                 (catch JWTVerificationException e
+                   (timbre/error e)
+                   (-> (terminate context)
+                       (assoc :response {:status 401 :body (->Err (.getMessage e))}))))
 
             :else (-> (terminate context)
-                      (assoc :response {:status 400 :body {:message "Conflicting cookies and auth bearer"}}))))))))
+                      (assoc :response {:status 400 :body (->Err "Conflicting cookies and auth bearer")}))))))))
 
 (defn routes [env]
   (let [service-root (str "/api/" (:BUILD env))]
