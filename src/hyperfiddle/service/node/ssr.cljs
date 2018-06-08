@@ -129,14 +129,13 @@
   IHash
   (-hash [this] (goog/getUid this)))
 
-(defn http-edge [env req res path-params query-params]
+(defn http-edge [env req res jwt user-id path-params query-params]
   (let [hostname (.-hostname req)
         hyperfiddle-hostname (http-service/hyperfiddle-hostname env hostname)
-        user-id (lib/req->user-id env req)
         initial-state {::runtime/user-id user-id}
         rt (->IdeSsrRuntime hyperfiddle-hostname hostname (req->service-uri env req)
                             (r/atom (reducers/root-reducer initial-state nil))
-                            reducers/root-reducer (some-> req .-cookies .-jwt))
+                            reducers/root-reducer jwt)
         load-level foundation/LEVEL-HYDRATE-PAGE
         browser-init-level (if (foundation/alias? (foundation/hostname->hf-domain-name hostname hyperfiddle-hostname))
                              load-level
