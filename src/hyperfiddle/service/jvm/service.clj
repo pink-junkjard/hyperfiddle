@@ -9,6 +9,7 @@
             [hyperfiddle.io.hydrate-requests :refer [hydrate-requests]]
             [hyperfiddle.io.sync :refer [sync]]
             [hyperfiddle.io.transact :refer [transact!]]
+            [hyperfiddle.service.cookie :as cookie]
             [hyperfiddle.service.http :as http-service]
             [hyperfiddle.service.lib.jwt :as jwt]
             [hyperfiddle.service.jvm.global-basis :refer [->GlobalBasisRuntime]]
@@ -104,8 +105,12 @@
                  (catch JWTVerificationException e
                    (timbre/error e)
                    (-> (terminate context)
-                       ; todo clear the cookie
-                       (assoc :response {:status 401 :body (->Err (.getMessage e))}))))
+                       (assoc :response {:status 401
+                                         :cookies {"jwt" (-> (http-service/hyperfiddle-hostname env (get-in context [:request :server-name]))
+                                                             (cookie/jwt-options-pedestal)
+                                                             (assoc :value jwt-cookie
+                                                                    :expires "Thu, 01 Jan 1970 00:00:00 GMT"))}
+                                         :body (->Err (.getMessage e))}))))
 
             (nil? jwt-cookie)
             (try (with-jwt jwt-header)
