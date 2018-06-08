@@ -8,7 +8,6 @@
             [contrib.reactive :as r]
             [contrib.reader :refer [read-string read-edn-string]]
             [contrib.pprint :refer [pprint-str]]
-            [cuerdas.core :as str]
             [hypercrud.browser.routing :as routing]
             [hypercrud.client.core :as hc]
             [hypercrud.types.Entity :refer [shadow-entity]]
@@ -72,9 +71,6 @@
 (defn domain-owner? [user-id domain]
   (or (some-> (:user/sub domain) (= user-id))
       (contains? (set (:domain/members domain)) user-id)))
-
-(defn user-profile->ident [user-profile]
-  (-> user-profile :email (str/replace #"\@.+$" "") (str/slug)))
 
 (defn error-cmp [e]
   [:div
