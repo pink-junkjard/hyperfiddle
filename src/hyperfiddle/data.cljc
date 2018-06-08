@@ -19,7 +19,10 @@
                             (r/unsequence :attribute)
                             (mapv (fn [[_ a]]
                                     (field [i a] ctx nil))))
-                       [(field [i] ctx nil)]))))
+                       (case (:type @fe)                    ; add a links column
+                         :aggregate nil
+                         :variable nil                      ; We don't gen links for scalars, don't know if its a ref
+                         :pull [(field [i] ctx nil)])))))
       ; auto-form does not generate naked links in user mode
       (concat (case @(:hypercrud.ui/display-mode ctx)
                 :hypercrud.browser.browser-ui/xray [(field [] ctx nil)]
