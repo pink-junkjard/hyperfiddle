@@ -59,9 +59,8 @@
                     (value ?f ctx props)))
 
         (if (and i (not a))                                 ; dependent=true element links
-          ; This is wrong it's the value's job to render entity links.
-          ; So we do need a default value renderer and it will have a blank widget with links.
-          (fragment :_                                      ; element cell position does not have a value renderer
+          (fragment :_
+                    (value ?f ctx props)                    ; by default, element cell position does not have a value renderer
                     (link-controls/anchors path true ctx link/options-processor)
                     (link-controls/iframes path true ctx link/options-processor)))
 
@@ -77,11 +76,12 @@
              :on-click (r/partial toggle-sort! ctx path)}
 
         (if a                                               ; label and dependent=false attribute links
-          [label ctx])
+          ((or (:label-fn props) label) (:hypercrud.browser/field ctx) ctx props))
 
         (if (and i (not a))                                 ; dependent=false element links
           (fragment :_
-                    [label ctx]
+                    ((or (:label-fn props) label) (:hypercrud.browser/field ctx) ctx props)
+                    ; This must not render links in the "yo" column.
                     (link-controls/anchors path false ctx link/options-processor)
                     (link-controls/iframes path false ctx link/options-processor)))
 

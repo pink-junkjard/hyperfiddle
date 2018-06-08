@@ -60,7 +60,8 @@
            :_
            (if i
              (fragment :_                                   ;"hyperfiddle-link-entity-independent"
-                       (if a [label ctx])
+                       (if a
+                         ((or (:label-fn props) label) (:hypercrud.browser/field ctx) ctx props))
                        (if (not a)
                          (fragment :_                       ; "hyperfiddle-link-entity-dependent"
                                    (link-controls/anchors path true ctx link/options-processor)

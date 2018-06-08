@@ -27,17 +27,13 @@
 
 #_{:label help-text :position :below-right}
 
-(defn label [ctx]
+(defn label [field ctx props]
   (let [dbdoc (some-> ctx :hypercrud.browser/fat-attribute (r/cursor [:db/doc]) deref blank->nil)
         typedoc (some->> ctx :hypercrud.browser/fat-attribute
                          (r/fmap attribute-schema-human)
                          deref (interpose " ") (apply str))
         help-md (str (if dbdoc (str dbdoc "\n\n"))          ; markdown needs double line-break
                      "`" typedoc "`")]
-    ; There is always help-md rn but maybe there wont be and
-    ; i like the if check on the styles
     [tooltip-thick (if help-md
                      [:div.docstring [markdown help-md]])
-     [:label
-      (:label (:hypercrud.browser/field ctx))
-      (if help-md [:sup "†"])]]))
+     [:label (:label field) (if help-md [:sup "†"])]]))
