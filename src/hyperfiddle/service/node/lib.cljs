@@ -15,9 +15,7 @@
 
 (defn req->user-id [env req]
   (let [verify (jwt/build-verifier env)]
-    (some-> req .-cookies .-jwt verify
-            :sub                                            ; legacy
-            )))
+    (some-> req .-cookies .-jwt verify :user-id)))
 
 (defn platform-response->express-response [express-response platform-response]
   (doseq [[k v] (:headers platform-response)]

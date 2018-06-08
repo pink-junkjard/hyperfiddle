@@ -97,15 +97,11 @@
             (or (nil? jwt-header)
                 (= jwt-cookie jwt-header)) (-> context
                                                ; todo clear the cookie when verifciation fails
-                                               (assoc-in [:request :user-id] (some-> jwt-cookie (verify)
-                                                                                     :sub ; legacy
-                                                                                     ))
+                                               (assoc-in [:request :user-id] (some-> jwt-cookie (verify) :user-id))
                                                (assoc-in [:request :jwt] jwt-header))
 
             (nil? jwt-cookie) (-> context
-                                  (assoc-in [:request :user-id] (some-> jwt-header (verify)
-                                                                        :sub ; legacy
-                                                                        ))
+                                  (assoc-in [:request :user-id] (some-> jwt-header (verify) :user-id))
                                   (assoc-in [:request :jwt] jwt-header))
 
             :else (-> (terminate context)

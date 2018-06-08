@@ -22,3 +22,7 @@
      :cljs (fn [token]
              (some-> (.verify jwt token (:AUTH0_CLIENT_SECRET env))
                      (js->clj :keywordize-keys true)))))
+
+(defn sign [claims secret & [options]]
+  #?(:clj  (throw (RuntimeException. "Not Implemented"))    ; todo
+     :cljs (.sign jwt (clj->js claims) secret (clj->js options))))
