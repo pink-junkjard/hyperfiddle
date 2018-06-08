@@ -27,7 +27,7 @@
 
 #_{:label help-text :position :below-right}
 
-(defn label [field ctx props]
+(defn auto-label [field ctx props]
   (let [dbdoc (some-> ctx :hypercrud.browser/fat-attribute (r/cursor [:db/doc]) deref blank->nil)
         typedoc (some->> ctx :hypercrud.browser/fat-attribute
                          (r/fmap attribute-schema-human)

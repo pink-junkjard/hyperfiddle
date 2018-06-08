@@ -8,7 +8,7 @@
             [hypercrud.ui.connection-color :as connection-color]
             [hypercrud.ui.control.link-controls :as link-controls]
             [contrib.ui.input :as input]
-            [hypercrud.ui.label :refer [label]]))
+            [hypercrud.ui.label :refer [auto-label]]))
 
 
 (defn ui-block-border-wrap [ctx class & children]
@@ -61,7 +61,7 @@
            (if i
              (fragment :_                                   ;"hyperfiddle-link-entity-independent"
                        (if a
-                         ((or (:label-fn props) label) (:hypercrud.browser/field ctx) ctx props))
+                         ((or (:label-fn props) auto-label) (:hypercrud.browser/field ctx) ctx props))
                        (if (not a)
                          (fragment :_                       ; "hyperfiddle-link-entity-dependent"
                                    (link-controls/anchors path true ctx link/options-processor)

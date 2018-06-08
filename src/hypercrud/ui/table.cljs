@@ -9,7 +9,7 @@
             [hypercrud.ui.connection-color :as connection-color]
             [hypercrud.ui.control.link-controls :as link-controls]
             [hypercrud.ui.form :refer [value]]
-            [hypercrud.ui.label :refer [label]]
+            [hypercrud.ui.label :refer [auto-label]]
             [hyperfiddle.data :as hf]))
 
 
@@ -44,10 +44,20 @@
   (let [shadow-link @(r/fmap system-link? (r/cursor (:cell-data ctx) [:db/id]))]
     (if-not shadow-link (connection-color/connection-color ctx))))
 
+(defn label [field ctx props]
+  (let [[i a] [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]
+        path (remove nil? [i a])]
+    (fragment :_
+              (auto-label field ctx props)
+              (link-controls/anchors path false ctx link/options-processor)
+              (link-controls/iframes path false ctx link/options-processor))))
+
 (defn Field "Form fields are label AND value. Table fields are label OR value."
   ([ctx] (Field nil ctx nil))
   ([?f ctx props]
-   (let [[i a] [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]
+   (let [{:keys [hypercrud.browser/field
+                 hypercrud.browser/attribute]} ctx
+         [i a] [(:fe-pos ctx) attribute]
          path (remove nil? [i a])]
      (if (:relation ctx)
        [:td {:class (classes #_"field" "hyperfiddle-table-cell" (:class props) "truncate")
@@ -59,6 +69,7 @@
                     (value ?f ctx props)))
 
         (if (and i (not a))                                 ; dependent=true element links
+          ; Invert fragment, links go into auto-control matched by find-element
           (fragment :_
                     (value ?f ctx props)                    ; by default, element cell position does not have a value renderer
                     (link-controls/anchors path true ctx link/options-processor)
@@ -76,14 +87,10 @@
              :on-click (r/partial toggle-sort! ctx path)}
 
         (if a                                               ; label and dependent=false attribute links
-          ((or (:label-fn props) label) (:hypercrud.browser/field ctx) ctx props))
+          ((or (:label-fn props) label) field ctx props))
 
         (if (and i (not a))                                 ; dependent=false element links
-          (fragment :_
-                    ((or (:label-fn props) label) (:hypercrud.browser/field ctx) ctx props)
-                    ; This must not render links in the "yo" column.
-                    (link-controls/anchors path false ctx link/options-processor)
-                    (link-controls/iframes path false ctx link/options-processor)))
+          ((or (:label-fn props) label) field ctx props))
 
         (if (not i)                                         ; naked links
           (fragment :_
