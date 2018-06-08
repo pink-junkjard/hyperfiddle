@@ -15,6 +15,6 @@
                 #_:hypercrud.browser/result]} ctx]
     [:div {:class class}
      [:h3 (some-> @fiddle :fiddle/ident name)]
-     (link-controls/anchors [] false ctx nil {:class "hyperfiddle-link-index"})
+     #_(link-controls/anchors [] false ctx nil {:class "hyperfiddle-link-index"})
      (hyperfiddle.ui/result ctx)
-     (link-controls/iframes [] false ctx)]))
+     #_(link-controls/iframes [] false ctx)]))
