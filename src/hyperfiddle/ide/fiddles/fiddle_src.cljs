@@ -9,7 +9,8 @@
     [hypercrud.ui.auto-control :refer [auto-control]]
     [hyperfiddle.ui :refer [markdown]]
     [hypercrud.ui.attribute.edn :refer [edn-many]]
-    [hyperfiddle.ide.fiddles.topnav :refer [shadow-fiddle]]))
+    [hyperfiddle.ide.fiddles.topnav :refer [shadow-fiddle]]
+    [hyperfiddle.ui :refer [browse]]))
 
 
 (defn schema-links [ctx]
@@ -110,9 +111,9 @@
         (let [as-edn (r/cursor state [:edn-result])]
           [:div.col-sm-5.col-sm-push-7
            [:div "Result:" [contrib.ui/easy-checkbox as-edn " EDN?"]]
-           ((:browse ctx) rel [] ctx (if @as-edn (result-edn)))])
+           (browse rel [] ctx (if @as-edn (result-edn)))])
         (let [as-edn (r/cursor state [:edn-fiddle])]
           [:div.col-sm-7.col-sm-pull-5
            [:div "Interactive Hyperfiddle editor:" [contrib.ui/easy-checkbox as-edn " EDN?"]]
-           ((:browse ctx) rel [] ctx (apply (if @as-edn result-edn docs-embed) fiddle-attrs) :frag ":src" :class "devsrc")])
+           (browse rel [] ctx (apply (if @as-edn result-edn docs-embed) fiddle-attrs) :frag ":src" :class "devsrc")])
         ]])))
