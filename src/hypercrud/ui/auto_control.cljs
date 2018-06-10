@@ -23,6 +23,9 @@
 
     (r/partial
       portal-markup
+
+      ; Matching on scalars for compile time performance.
+      ; We can omit trailing params by matching a vector but it explodes compile times and/or OOM
       (match* [layout valueType cardinality isComponent renderer]
 
         [_ _ _ _ renderer] (attr-renderer renderer ctx)
