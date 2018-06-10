@@ -23,37 +23,37 @@
 
     (r/partial
       portal-markup
+      (if renderer
+        (attr-renderer renderer ctx)
 
-      ; Matching on scalars for compile time performance.
-      ; We can omit trailing params by matching a vector but it explodes compile times and/or OOM
-      (match* [layout valueType cardinality isComponent renderer]
+        ; Matching on scalars for compile time performance.
+        ; We can omit trailing params by matching a vector but it explodes compile times and/or OOM
+        (match* [layout valueType cardinality isComponent]
 
-        [_ _ _ _ renderer] (attr-renderer renderer ctx)
+          [:table :boolean :one _] widget/boolean
+          [:table :keyword :one _] widget/keyword
+          [:table :string :one _] widget/string
+          [:table :long :one _] widget/long
+          [:table :instant :one _] instant
+          [:table :ref :one :component] table-cell/ref-one-component
+          [:table :ref :one nil] widget/ref
+          [:table :ref :many :component] table-cell/ref-many
+          [:table :ref :many nil] edn-many
 
-        [:table :boolean :one _ _] widget/boolean
-        [:table :keyword :one _ _] widget/keyword
-        [:table :string :one _ _] widget/string
-        [:table :long :one _ _] widget/long
-        [:table :instant :one _ _] instant
-        [:table :ref :one :component _] table-cell/ref-one-component
-        [:table :ref :one nil _] widget/ref
-        [:table :ref :many :component _] table-cell/ref-many
-        [:table :ref :many nil _] edn-many
+          ; :block vs :inline-block currently handled inside the widget, todo
+          [_ :boolean :one _] widget/boolean
+          [_ :keyword :one _] widget/keyword
+          [_ :string :one _] widget/string
+          [_ :long :one _] widget/long
+          [_ :instant :one _] instant
+          [_ :ref :one :component] widget/ref-component
+          [_ :ref :one nil] widget/ref
+          [_ :ref :many :component] widget/ref-many-table
+          [_ :ref :many nil] edn-many
 
-        ; :block vs :inline-block currently handled inside the widget, todo
-        [_ :boolean :one _ _] widget/boolean
-        [_ :keyword :one _ _] widget/keyword
-        [_ :string :one _ _] widget/string
-        [_ :long :one _ _] widget/long
-        [_ :instant :one _ _] instant
-        [_ :ref :one :component _] widget/ref-component
-        [_ :ref :one nil _] widget/ref
-        [_ :ref :many :component _] widget/ref-many-table
-        [_ :ref :many nil _] edn-many
+          ; Unmatched valueType, like #uri and #uuid
+          [_ _ :many _] edn-many
+          [_ _ :one _] edn
 
-        ; Unmatched valueType, like #uri and #uuid
-        [_ _ :many _ _] edn-many
-        [_ _ :one _ _] edn
-
-        [_ nil _ _ _] widget/text                           ; something is wrong
-        ))))
+          [_ nil _ _] widget/text                           ; something is wrong
+          )))))
