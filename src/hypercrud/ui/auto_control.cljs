@@ -1,76 +1,54 @@
 (ns hypercrud.ui.auto-control
   (:require
     [contrib.reactive :as r]
+    [clojure.core.match :refer [match match*]]
     [hypercrud.ui.attribute.edn :as edn]
     [hypercrud.ui.attribute.instant :as instant]
-    [hypercrud.ui.safe-render :refer [portal-markup user-portal]]
+    [hypercrud.ui.safe-render :refer [portal-markup]]
     [hypercrud.ui.table-cell :as table-cell]
     [hypercrud.ui.util :refer [attr-renderer]]
     [hypercrud.ui.widget :as widget]))
 
 
-(defn schema-control-form [ctx]
-  (let [isComponent @(r/cursor (:hypercrud.browser/fat-attribute ctx) [:db/isComponent])
-        valueType @(r/cursor (:hypercrud.browser/fat-attribute ctx) [:db/valueType :db/ident])
-        cardinality @(r/cursor (:hypercrud.browser/fat-attribute ctx) [:db/cardinality :db/ident])
-        widget (cond
-                 (and (= valueType :db.type/boolean) (= cardinality :db.cardinality/one)) widget/boolean
-                 (and (= valueType :db.type/keyword) (= cardinality :db.cardinality/one)) widget/keyword
-                 (and (= valueType :db.type/string) (= cardinality :db.cardinality/one)) widget/string
-                 (and (= valueType :db.type/long) (= cardinality :db.cardinality/one)) widget/long
-                 (and (= valueType :db.type/instant) (= cardinality :db.cardinality/one)) instant/instant
-                 (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one) isComponent) widget/ref-component
-                 (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one)) widget/ref
-                 (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many) isComponent) widget/ref-many-table
-                 (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) edn/edn-many
-                 (nil? valueType) widget/text
-                 :else edn/edn)]
-    widget))
-
-; Can be unified; inspect (:layout ctx)
-(defn schema-control-table [ctx]
-  (let [isComponent @(r/cursor (:hypercrud.browser/fat-attribute ctx) [:db/isComponent])
-        valueType @(r/cursor (:hypercrud.browser/fat-attribute ctx) [:db/valueType :db/ident])
-        cardinality @(r/cursor (:hypercrud.browser/fat-attribute ctx) [:db/cardinality :db/ident])
-        widget (cond
-                 (and (= valueType :db.type/boolean) (= cardinality :db.cardinality/one)) widget/boolean
-                 (and (= valueType :db.type/keyword) (= cardinality :db.cardinality/one)) widget/keyword
-                 (and (= valueType :db.type/string) (= cardinality :db.cardinality/one)) widget/string
-                 (and (= valueType :db.type/long) (= cardinality :db.cardinality/one)) widget/long
-                 (and (= valueType :db.type/instant) (= cardinality :db.cardinality/one)) instant/instant
-                 (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one) isComponent) table-cell/ref-one-component
-                 (and (= valueType :db.type/ref) (= cardinality :db.cardinality/one)) widget/ref
-                 (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many) isComponent) table-cell/ref-many
-                 (and (= valueType :db.type/ref) (= cardinality :db.cardinality/many)) edn/edn-many
-                 (and (= cardinality :db.cardinality/many)) edn/edn-many
-                 (and (= cardinality :db.cardinality/one)) edn/edn
-                 (nil? valueType) widget/text
-                 :else edn/edn)]
-    widget))
-
 (defn auto-control [ctx]
-  ; todo binding renderers should be pathed for aggregates and values
-  ;
-  ; Old comment, what does this mean now: (I think it means nothing, field is dead)
-  ; --What is the user-field allowed to change? The ctx. Can it change links or anchors? no.
-  ;
-  ; todo control can have access to repeating contextual values (color, result, entity, value, etc) but field should NOT
-  ; this leads to inconsistent location formulas between non-repeating links in tables vs forms
-  ;
-  ; Return value just needs a ctx.
-  ; Dynamic logic is done; user can't further override it with the field-ctx
+  (let [attr @(:hypercrud.browser/fat-attribute ctx)
+        ;display-mode (-> @(:hypercrud.ui/display-mode ctx) name keyword)
+        layout (-> (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block) name keyword)
+        valueType (-> attr :db/valueType :db/ident name keyword)
+        cardinality (-> attr :db/cardinality :db/ident name keyword)
+        isComponent (-> attr :db/isComponent (if :component))
+        renderer (:attribute/renderer attr)]
 
-  ; This is not quite right; each stage wants to be able to wrap the stage before.
-  ; So it's kind of backwards right now and user-controls have
-  ; knowledge of this pipeline.
+    (r/partial
+      portal-markup
+      (if renderer
+        (attr-renderer renderer ctx)
+        (match* [layout valueType cardinality isComponent]
 
-  (let [attribute @(:hypercrud.browser/fat-attribute ctx)]
-    (or (case @(:hypercrud.ui/display-mode ctx)
-          :hypercrud.browser.browser-ui/user (some->> (:control ctx) (r/partial portal-markup))
-          :hypercrud.browser.browser-ui/xray nil)
-        (attr-renderer (:attribute/renderer attribute) ctx)
-        (some->> (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
-                   :hyperfiddle.ui.layout/block (schema-control-form ctx)
-                   :hyperfiddle.ui.layout/inline-block (schema-control-table ctx)
-                   :hyperfiddle.ui.layout/table (schema-control-table ctx))
-                 (r/partial portal-markup)))))
+          [:table :boolean :one _] widget/boolean
+          [:table :keyword :one _] widget/keyword
+          [:table :string :one _] widget/string
+          [:table :long :one _] widget/long
+          [:table :instant :one _] instant/instant
+          [:table :ref :one true] table-cell/ref-one-component
+          [:table :ref :one false] widget/ref
+          [:table :ref :many true] table-cell/ref-many
+          [:table :ref :many false] edn/edn-many
+
+          ; :block vs :inline-block currently handled inside the widget, todo
+          [_ :boolean :one _] widget/boolean
+          [_ :keyword :one _] widget/keyword
+          [_ :string :one _] widget/string
+          [_ :long :one _] widget/long
+          [_ :instant :one _] instant/instant
+          [_ :ref :one true] widget/ref-component
+          [_ :ref :one false] widget/ref
+          [_ :ref :many true] widget/ref-many-table
+          [_ :ref :many false] edn/edn-many
+
+          ; Unmatched valueType, like #uri and #uuid
+          [_ _ :many _] edn/edn-many
+          [_ _ :one _] edn/edn
+
+          [_ nil _ _] widget/text                           ; something is wrong
+          )))))
