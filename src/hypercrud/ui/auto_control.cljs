@@ -24,7 +24,7 @@
     (r/partial
       portal-markup
       (if renderer
-        (attr-renderer renderer ctx)
+        (attr-renderer renderer ctx)                        ; I had trouble making this work from inside the match.
 
         ; Matching on scalars for compile time performance.
         ; We can omit trailing params by matching a vector but it explodes compile times and/or OOM
