@@ -78,14 +78,16 @@ nil. call site must wrap with a Reagent component"
 
 (defn link [rel path ctx ?content & args]
   (let [props (kwargs args)
-        {:keys [link/dependent?] :as link} @(r/track link/rel->link rel path ctx)
+        {:keys [link/dependent? link/render-inline?] :as link} @(r/track link/rel->link rel path ctx)
         ctx (apply context/focus ctx dependent? path)]
+    ;(assert (not render-inline?)) -- :new-fiddle is render-inline. The nav cmp has to sort this out before this unifies.
     [(:navigate-cmp ctx) (merge props (link/build-link-props link ctx)) (or ?content (name (:link/rel link))) (:class props)]))
 
 (defn browse [rel path ctx ?content & args]
   (let [props (kwargs args)
-        {:keys [link/dependent?] :as link} @(r/track link/rel->link rel path ctx)
+        {:keys [link/dependent? link/render-inline?] :as link} @(r/track link/rel->link rel path ctx)
         ctx (apply context/focus ctx dependent? path)]
+    (assert render-inline?)
     (into
       [browser/ui link
        (if ?content (assoc ctx :user-renderer ?content #_(if ?content #(apply ?content %1 %2 %3 %4 args))) ctx)
