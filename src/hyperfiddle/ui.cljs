@@ -12,6 +12,7 @@
     [hypercrud.ui.auto-control :refer [auto-control]]
     [hypercrud.ui.form :as form]
     [hypercrud.ui.table :as table]
+    [hypercrud.ui.label :as label]
     [hyperfiddle.data :as hf]
     [hyperfiddle.ui.markdown-extensions :refer [extensions]]
     [hyperfiddle.ui.hacks]                                  ; exports
@@ -19,7 +20,7 @@
 
 
 (defn ^:export value "Naked value renderer. Does not work in tables. Use field [] if you want a naked th/td view"
-  [[i a] ctx ?f & args]                  ; Doesn't make sense in a table context bc what do you do in the header?
+  [[i a] ctx ?f & args]                                     ; Doesn't make sense in a table context bc what do you do in the header?
   (let [view form/value #_(case (::layout ctx) :hyperfiddle.ui.layout/table table/value form/value)
         ctx (context/focus ctx true i a)
         props (kwargs args)
@@ -37,16 +38,16 @@
         props (kwargs args)
         class (classes (:class props)
                        (css-slugify (some-> ctx :hypercrud.browser/find-element deref :source-symbol)) ; color
+                       (css-slugify (cond a "attribute" i "element" :else "naked"))
+                       (css-slugify i)                      ; same info as name, but by index which is more robust
                        (css-slugify (some-> ctx :hypercrud.browser/find-element deref :type))
-                       ;(css-slugify (some-> ctx :hypercrud.browser/find-element deref :entity (if-not :aggregate)))
-
                        (css-slugify (some-> ctx :hypercrud.browser/find-element deref :name)) ; works on aggregate
-                       (css-slugify i) ; same as name, but by index which is more robust
-                       (css-slugify a) ; see attribute-schema-human
+                       ;(css-slugify (some-> ctx :hypercrud.browser/find-element deref :entity (if :entity :scalar))) ; not helpful
+                       (if i (css-slugify a))               ; see attribute-schema-human
                        (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/valueType :db/ident))
+                       (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :attribute/renderer label/fqn->name))
                        (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/cardinality :db/ident))
-                       ; also :attribute/renderer
-                       #_(css-slugify (-> ctx :hypercrud.browser/fat-attribute deref :db/isComponent)))
+                       (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/isComponent (if :component))))
         props (merge props {:class class})]
     ^{:key (str i a)}
     [view ?f ctx props]))

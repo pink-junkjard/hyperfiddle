@@ -1,6 +1,6 @@
 (ns hyperfiddle.ide
   (:require [clojure.string :as str]
-            [contrib.css :refer [classes]]
+    #?(:cljs [contrib.css :refer [classes]])
             [contrib.data :refer [unwrap]]
             [contrib.reactive :as r]
     #?(:cljs [contrib.reagent :refer [fragment]])
