@@ -37,6 +37,7 @@
         ctx (context/focus ctx true i a)
         props (kwargs args)
         class (classes (:class props)
+                       ; Semantic css needs to be prefixed with - to avoid collisions.
                        (css-slugify (some-> ctx :hypercrud.browser/find-element deref :source-symbol)) ; color
                        (css-slugify (cond a "attribute" i "element" :else "naked"))
                        (css-slugify i)                      ; same info as name, but by index which is more robust
@@ -45,7 +46,7 @@
                        ;(css-slugify (some-> ctx :hypercrud.browser/find-element deref :entity (if :entity :scalar))) ; not helpful
                        (if i (css-slugify a))               ; see attribute-schema-human
                        (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/valueType :db/ident))
-                       (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :attribute/renderer label/fqn->name))
+                       (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :attribute/renderer #_label/fqn->name))
                        (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/cardinality :db/ident))
                        (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/isComponent (if :component))))
         props (merge props {:class class})]
