@@ -7,7 +7,7 @@
     [contrib.string :refer [blank->nil]]
     [contrib.try :refer [try-either]]
     [hypercrud.ui.error :as ui-error]
-    [hypercrud.ui.safe-render :refer [portal-markup user-portal]]))
+    [hypercrud.ui.safe-render :refer [user-portal]]))
 
 
 ; defer eval until render cycle inside userportal

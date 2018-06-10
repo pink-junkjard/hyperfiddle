@@ -4,6 +4,7 @@
     [clojure.core.match :refer [match match*]]
     [hypercrud.ui.attribute.edn :as edn]
     [hypercrud.ui.attribute.instant :as instant]
+    [contrib.string :refer [blank->nil]]
     [hypercrud.ui.safe-render :refer [portal-markup]]
     [hypercrud.ui.table-cell :as table-cell]
     [hypercrud.ui.util :refer [attr-renderer]]
@@ -11,13 +12,14 @@
 
 
 (defn auto-control [ctx]
+  {:post [(not (nil? %))]}
   (let [attr @(:hypercrud.browser/fat-attribute ctx)
         ;display-mode (-> @(:hypercrud.ui/display-mode ctx) name keyword)
         layout (-> (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block) name keyword)
         valueType (-> attr :db/valueType :db/ident name keyword)
         cardinality (-> attr :db/cardinality :db/ident name keyword)
         isComponent (-> attr :db/isComponent (if :component))
-        renderer (:attribute/renderer attr)]
+        renderer (blank->nil (:attribute/renderer attr))]
 
     (r/partial
       portal-markup
