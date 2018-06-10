@@ -3,7 +3,8 @@
             [contrib.datomic-tx :as tx]
             [contrib.reactive :as r]
             [hypercrud.browser.context :as context]
-            [hypercrud.ui.auto-control :refer [auto-control]]))
+            [hypercrud.ui.auto-control :refer [auto-control]]
+            [hyperfiddle.ui :refer [field]]))
 
 
 (def special-case-attrs #{:db/ident :db/cardinality :db/valueType})
@@ -99,4 +100,4 @@
           [:div]
           (for [k attrs]
             (let [ro (read-only k @(:hypercrud.browser/result ctx))]
-              [(:cell ctx) [true 0 k] ctx (controls k) :read-only ro])))))))
+              [field [0 k] ctx (controls k) :read-only ro])))))))
