@@ -1,14 +1,12 @@
 (ns hypercrud.ui.auto-control
-  (:require [cats.monad.either :as either]
-            [contrib.reactive :as r]
-            [cuerdas.core :as string]
-            [hypercrud.ui.attribute.edn :as edn]
-            [hypercrud.ui.attribute.instant :as instant]
-            [hypercrud.ui.error :as ui-error]
-            [hypercrud.ui.safe-render :refer [portal-markup user-portal]]
-            [hypercrud.ui.table-cell :as table-cell]
-            [hypercrud.ui.util :as util]
-            [hypercrud.ui.widget :as widget]))
+  (:require
+    [contrib.reactive :as r]
+    [hypercrud.ui.attribute.edn :as edn]
+    [hypercrud.ui.attribute.instant :as instant]
+    [hypercrud.ui.safe-render :refer [portal-markup user-portal]]
+    [hypercrud.ui.table-cell :as table-cell]
+    [hypercrud.ui.util :refer [attr-renderer]]
+    [hypercrud.ui.widget :as widget]))
 
 
 (defn schema-control-form [ctx]
@@ -50,18 +48,6 @@
                  :else edn/edn)]
     widget))
 
-(defn- ^:private safe-reagent-f [with-error f & args]
-  ^{:key (hash f)}
-  [user-portal with-error
-   (into [f] args)])
-
-(defn attribute-control [ctx]
-  (let [renderer @(r/cursor (:hypercrud.browser/fat-attribute ctx) [:attribute/renderer])]
-    (when (and (string? renderer) (not (string/blank? renderer)))
-      (let [with-error (ui-error/error-comp ctx)
-            f util/eval-renderer-comp]
-        (r/partial safe-reagent-f with-error f nil renderer)))))
-
 (defn auto-control [ctx]
   ; todo binding renderers should be pathed for aggregates and values
   ;
@@ -78,26 +64,17 @@
   ; So it's kind of backwards right now and user-controls have
   ; knowledge of this pipeline.
 
-  (or (case @(:hypercrud.ui/display-mode ctx)
-        :hypercrud.browser.browser-ui/user (some->> (:control ctx) (r/partial portal-markup))
-        :hypercrud.browser.browser-ui/xray nil)
-      (attribute-control ctx)
-      (some->> (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
-                 :hyperfiddle.ui.layout/block (schema-control-form ctx)
-                 :hyperfiddle.ui.layout/inline-block (schema-control-table ctx)
-                 :hyperfiddle.ui.layout/table (schema-control-table ctx))
-               (r/partial portal-markup))))
+  (let [attribute @(:hypercrud.browser/fat-attribute ctx)]
+    (or (case @(:hypercrud.ui/display-mode ctx)
+          :hypercrud.browser.browser-ui/user (some->> (:control ctx) (r/partial portal-markup))
+          :hypercrud.browser.browser-ui/xray nil)
+        (attr-renderer (:attribute/renderer attribute) ctx)
+        (some->> (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
+                   :hyperfiddle.ui.layout/block (schema-control-form ctx)
+                   :hyperfiddle.ui.layout/inline-block (schema-control-table ctx)
+                   :hyperfiddle.ui.layout/table (schema-control-table ctx))
+                 (r/partial portal-markup)))))
 
 (defn control-props [ctx]
   ; Only used by fiddle-links/bindings which are legacy, we do that stuff in a renderer now.
   (cond-> {} (:read-only ctx) (assoc :read-only ((:read-only ctx) ctx))))
-
-(comment
-  ; Find a home for this:
-  (def validators {"clojure" #(-> (safe-read-edn-string %) (either/right?))})
-
-  (let [valid? ((get validators (:mode props) (constantly true)))
-        class (string/join " " (list (if (:readOnly props) "read-only")
-                                     (if (not valid?) "invalid")))])
-
-  )
