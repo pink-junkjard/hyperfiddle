@@ -9,7 +9,8 @@
 (defn relation-keyfn [relation]
   (hash (map #(or (:db/id %) %) relation)))
 
-(defn form [field {:keys [hypercrud.browser/ordered-fes] :as ctx}]
+(defn form "Field is invoked as fn"
+  [field {:keys [hypercrud.browser/ordered-fes] :as ctx}]
   (-> ordered-fes
       (r/unsequence)
       (->> (mapcat (fn [[fe i]]

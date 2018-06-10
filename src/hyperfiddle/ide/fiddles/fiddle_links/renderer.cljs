@@ -5,20 +5,21 @@
             [hypercrud.browser.context :as context]
             [hypercrud.browser.system-fiddle :as system-fiddle]
             [hypercrud.browser.system-link :refer [system-link?]]
+            [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.error :as ui-error]
             [hypercrud.ui.result :as result]
-            [hyperfiddle.ui :refer [markdown]]))
+            [hyperfiddle.data :refer [form sort-fn]]
+            [hyperfiddle.ui :refer [table field]]))
 
-(defn read-only-link? [ctx]
+(defn read-only? [ctx]
+  {:pre [(:relation ctx)]}
   (let [sys? (system-link? @(r/cursor (:cell-data ctx) [:db/id]))
-        shadow? @(r/cursor (:cell-data ctx) [:hypercrud/sys?])
-        cantchange (contains? #{:link/rel
-                                :link/path
-                                :link/create?
-                                :link/managed?
-                                :link/dependent?}
-                              (:hypercrud.browser/attribute ctx))]
-    (or sys? (and shadow? cantchange))))
+        shadow? @(r/cursor (:cell-data ctx) [:hypercrud/sys?])]
+    (or sys? shadow?)))
+
+(defn read-only-cell [value ctx props]
+  ; Need to delay until we have the value ctx to compute this, which means its a value renderer not a field prop
+  [(auto-control ctx) value ctx (assoc props :read-only (if :relation (read-only? ctx)))])
 
 (defn links->result [links]
   (->> @links
@@ -43,7 +44,22 @@
           (let [ctx (-> ctx
                         (dissoc :relation :relations)
                         (assoc :hypercrud.browser/result (r/track links->result links))
-                        context/with-relations
-                        (assoc :read-only read-only-link?))]
+                        context/with-relations)]
             [:div {:class class}
-             [markdown (some-> ctx :hypercrud.browser/fiddle deref :fiddle/markdown) ctx]])))))
+             [table
+              #_(partial form (fn [path ctx ?f & args] (field path ctx ?f :read-only (read-only? ctx))))
+              (fn [ctx]
+                [(field [0 :link/disabled?] ctx nil)
+                 (field [0 :link/rel] ctx read-only-cell)
+                 (field [0 :link/dependent?] ctx read-only-cell)
+                 (field [0 :link/path] ctx nil read-only-cell)
+                 (field [0 :link/render-inline?] ctx nil)
+                 (field [0 :link/fiddle] ctx nil)
+                 (field [0 :link/create?] ctx nil read-only-cell)
+                 (field [0 :link/managed?] ctx nil read-only-cell)
+                 (field [0 :link/formula] ctx nil)
+                 (field [0 :link/tx-fn] ctx nil)
+                 (field [0 :hypercrud/props] ctx nil)
+                 (field [0] ctx nil)])
+              sort-fn
+              ctx]])))))
