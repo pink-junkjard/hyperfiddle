@@ -9,14 +9,13 @@
     [hypercrud.browser.context :as context]
     [hypercrud.browser.core :as browser]
     [hypercrud.browser.link :as link]
-    [hypercrud.ui.auto-control :refer [auto-control]]
+    [hypercrud.ui.control.link-controls :as link-controls]
     [hypercrud.ui.form :as form]
     [hypercrud.ui.table :as table]
-    [hypercrud.ui.label :as label]
     [hyperfiddle.data :as hf]
     [hyperfiddle.ui.markdown-extensions :refer [extensions]]
     [hyperfiddle.ui.hacks]                                  ; exports
-    [hypercrud.ui.control.link-controls :as link-controls]))
+    ))
 
 
 (defn ^:export value "Naked value renderer. Does not work in tables. Use field [] if you want a naked th/td view"
