@@ -43,13 +43,12 @@
     (->EntityRequest e nil
                      (hc/db peer domain-uri nil)
                      [:db/id
+                      :hyperfiddle/owners
                       :domain/aliases
                       :domain/disable-javascript
                       :domain/environment
                       :domain/fiddle-repo
-                      :domain/members
                       :domain/ident
-                      :user/sub
 
                       ; These are insecure fields, they should be redundant here, but there is order of operation issues
                       :domain/code
@@ -69,8 +68,7 @@
                       :domain/home-route])))
 
 (defn domain-owner? [user-id domain]
-  (or (some-> (:user/sub domain) (= user-id))
-      (contains? (set (:domain/members domain)) user-id)))
+  (contains? (set (:hyperfiddle/owners domain)) user-id))
 
 (defn error-cmp [e]
   [:div

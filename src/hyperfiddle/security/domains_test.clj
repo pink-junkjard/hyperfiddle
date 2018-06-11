@@ -3,12 +3,13 @@
             [datomic.api :as d]
             [hyperfiddle.integration-fixtures :as fixtures]
             [hyperfiddle.io.transact :as transact]
-            [hyperfiddle.security :as security]))
+            [hyperfiddle.security :as security])
+  (:import (java.util UUID)))
 
 
 (def schema
   [{:db/ident :hyperfiddle/owners
-    :db/valueType :db.type/string
+    :db/valueType :db.type/uuid
     :db/cardinality :db.cardinality/many}
 
    {:db/ident :person/email
@@ -37,7 +38,7 @@
     :db/valueType :db.type/keyword
     :db/cardinality :db.cardinality/one}])
 
-(def db-owner "db-owner")
+(def db-owner (UUID/randomUUID))
 
 (use-fixtures :each
   (join-fixtures

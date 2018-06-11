@@ -6,7 +6,7 @@
             [loom.graph :as graph]))
 
 
-(def root "hyperfiddle.security/root")
+(def root "hyperfiddle.security/root")                      ; todo uuid/real account
 
 (defn tx-validation-failure [& {:as data-map}]
   (ex-info "user tx failed validation" (into {:hyperfiddle.io/http-status-code 403} data-map)))

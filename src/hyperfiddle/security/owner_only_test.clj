@@ -2,7 +2,8 @@
   (:require [clojure.test :refer [compose-fixtures deftest is use-fixtures testing]]
             [hyperfiddle.integration-fixtures :as fixtures]
             [hyperfiddle.io.transact :as transact]
-            [hyperfiddle.security :as security]))
+            [hyperfiddle.security :as security])
+  (:import (java.util UUID)))
 
 
 (def schema
@@ -17,7 +18,7 @@
     :db/valueType :db.type/long
     :db/cardinality :db.cardinality/one}])
 
-(def db-owner "db-owner")
+(def db-owner (UUID/randomUUID))
 
 (use-fixtures :each
   (compose-fixtures

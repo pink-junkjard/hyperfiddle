@@ -23,7 +23,7 @@
    {:db/ident :hyperfiddle.security/allow-anonymous}
    {:db/ident :hyperfiddle.security/custom}
 
-   {:db/ident :hyperfiddle/owners :db/valueType :db.type/string :db/cardinality :db.cardinality/many}
+   {:db/ident :hyperfiddle/owners :db/valueType :db.type/uuid :db/cardinality :db.cardinality/many}
 
    {:db/ident :domain/aliases :db/valueType :db.type/string :db/cardinality :db.cardinality/many :db/unique :db.unique/identity :db/doc "Point your production DNS at the hyperfiddle.net IP and register the domain name here. Aliases are served without the dev toolbar."}
    {:db/ident :domain/code :db/valueType :db.type/string :db/cardinality :db.cardinality/one :db/doc "a ClojureScript form for storing view functions, evaluated on page load"}
@@ -33,9 +33,7 @@
    {:db/ident :domain/fiddle-repo :db/valueType :db.type/uri :db/cardinality :db.cardinality/one :db/doc "Datomic database uri to store fiddle data. It can be the same as your environment databases."}
    {:db/ident :domain/home-route :db/valueType :db.type/string :db/cardinality :db.cardinality/one :db/doc "Index route for this domain, it can have parameters"}
    {:db/ident :domain/ident :db/valueType :db.type/string :db/cardinality :db.cardinality/one :db/unique :db.unique/identity :db/doc "Your subdomain. Use this uri to access your fiddles in dev mode."}
-   {:db/ident :domain/members :db/valueType :db.type/string :db/cardinality :db.cardinality/many}
-   {:db/ident :domain/router :db/valueType :db.type/string :db/cardinality :db.cardinality/one :db/doc "Experimental and undocumented userland router definition"}
-   {:db/ident :user/sub :db/valueType :db.type/string :db/cardinality :db.cardinality/one :db/unique :db.unique/identity}])
+   {:db/ident :domain/router :db/valueType :db.type/string :db/cardinality :db.cardinality/one :db/doc "Experimental and undocumented userland router definition"}])
 
 (defn provision-domains-db! [uri owners]
   (assert (d/create-database (str uri)) (str "Domains db already exists: " uri))
