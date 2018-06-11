@@ -3,11 +3,8 @@
   (:require [contrib.datomic-tx :as tx]
             [contrib.reactive :as r]
             [contrib.string :refer [empty->nil]]
-            [hypercrud.browser.link :as link]
             [contrib.ui.input :as input]
-            [hypercrud.ui.attribute.checkbox :refer [checkbox]]
-            [hypercrud.ui.select :refer [select*]]
-            ))
+            [hypercrud.ui.select :refer [select*]]))
 
 
 (defn keyword [value ctx props]
@@ -32,7 +29,13 @@
       #(or #_(= "" %) (integer? (js/parseInt % 10)))
       props]]))
 
-(def boolean checkbox)
+(defn ^:export boolean [value ctx props]
+  [:div
+   (let [props (update props :read-only #(or % (nil? @(r/cursor (:cell-data ctx) [:db/id]))))
+         change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx)
+                                                            @(:hypercrud.browser/fat-attribute ctx)
+                                                            (not value)))]
+     (contrib.ui/checkbox value change! props))])
 
 (defn id* [value ctx props]
   (let [props (update props :read-only #(or % (nil? @(r/cursor (:cell-data ctx) [:db/id]))))
@@ -44,16 +47,6 @@
 
 (defn select [value ctx props]
   [:div (select* value ctx props)])
-
-(defn ref-component [value ctx props]
-  (assert (not @(r/track link/options-link ctx)) "ref-components don't have options; todo handle gracefully")
-  #_(assert (> (count (filter :link/render-inline? my-links)) 0))
-  #_(select my-links props ctx)
-  [:div])
-
-(defn ref-many-table [value ctx props]
-  (assert (not @(r/track link/options-link ctx)) "ref-component-many don't have options; todo handle gracefully")
-  [:div])
 
 (defn text [value ctx props]
   [:div

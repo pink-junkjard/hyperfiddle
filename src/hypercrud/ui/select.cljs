@@ -89,12 +89,10 @@
 
 (def always-user (atom :hypercrud.browser.browser-ui/user))
 
-(let [on-change (fn [ctx id]
+(let [on-change (fn [ctx id]                                ;reconstruct the typed value
                   ((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) id)))
-      select-value (fn [value]
-                     (if (nil? value)
-                       ""
-                       (str (:db/id value))))]
+      dom-value (fn [value]                                 ; nil, kw or eid
+                  (if (nil? value) "" (str (:db/id value))))]
   (defn select* [value ctx props]
     (let [options-link @(r/track link/options-link ctx)]
       (either/branch
@@ -102,11 +100,10 @@
         (fn [e] [(ui-error/error-comp ctx) e])
         (fn [hc-props]
           (let [option-props {:disabled (or (boolean (:read-only props))
-                                            (nil? @(r/cursor (:cell-data ctx) [:db/id])))}
+                                            (nil? (:db/id value)))}
                 props (assoc hc-props
-                        :on-change (r/partial on-change ctx) ;reconstruct the typed value
-                        ; normalize value for the dom - nil, kw or eid
-                        :value @(r/fmap select-value (:value ctx)))]
+                        :on-change (r/partial on-change ctx)
+                        :value (dom-value value))]
             [browser/ui options-link (assoc ctx
                                        :hypercrud.ui/display-mode always-user
                                        :user-renderer (r/partial select-anchor-renderer props option-props))]))))))

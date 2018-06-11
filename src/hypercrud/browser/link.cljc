@@ -36,11 +36,19 @@
 
 (def options-processor (partial remove options-link?))
 
-(defn rel->link [rel path ctx]
-  (->> @(:hypercrud.browser/links ctx)
-       (filter (same-path-as? path))
-       (filter #(= (:link/rel %) rel))
-       first))
+(defn links-here [ctx]
+  (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
+    (->> @(:hypercrud.browser/links ctx)
+         (filter (same-path-as? path)))))
+
+(defn rel->link
+  ([rel ctx] (rel->link rel [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)] ctx))
+  ([rel path ctx]
+    ; Context focus isn't set yet, we are looking up the link to set the context.
+   (->> @(:hypercrud.browser/links ctx)
+        (filter (same-path-as? path))
+        (filter #(= (:link/rel %) rel))
+        first)))
 
 (defn options-link [ctx]
   ; Needs to work with longer paths
