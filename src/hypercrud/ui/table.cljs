@@ -3,7 +3,6 @@
             [contrib.reactive :as r]
             [hypercrud.browser.system-link :refer [system-link?]]
             [hypercrud.browser.link :as link]
-            [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.connection-color :as connection-color]
             [hypercrud.ui.label :refer [auto-label]]
             [hyperfiddle.data :as hf]))

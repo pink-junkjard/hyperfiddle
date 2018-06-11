@@ -30,28 +30,21 @@
 ; NOTE: this ctx logic and structure is the same as the inline branch of browser-request/recurse-request
 ; don't test link validity, we need to render the failure. If this is a dependent link, use visibility predicate to hide the error.
 
-(defn anchors
+(defn anchors [body-or-head i a ctx ?f & [props]]
   ; Can't infer dependent from :relation, must use :cell-data i think
-  ([?label ctx props]
-   (anchors (if (:relation ctx) :body :head)
-            (:fe-pos ctx)
-            (:hypercrud.browser/attribute ctx)
-            ctx nil props))
-  ([body-or-head i a ctx ?f & [props]]
-   (->> (r/track ui-contextual-links body-or-head i a false (:hypercrud.browser/links ctx) ?f)
-        (r/unsequence :db/id)
-        (map (fn [[link-ref link-id]]
-               (if (not= :hyperfiddle.ui.layout/table (:hyperfiddle.ui/layout ctx))
-                 ^{:key (hash link-id)} [hypercrud.ui.form/ui-block-border-wrap ctx nil [reactive-nav-cmp link-ref ctx (:class props)]]
-                 ^{:key (hash link-id)} [reactive-nav-cmp link-ref ctx (:class props)])))
-        (doall))))
+  (->> (r/track ui-contextual-links body-or-head i a false (:hypercrud.browser/links ctx) ?f)
+       (r/unsequence :db/id)
+       (map (fn [[link-ref link-id]]
+              (if (not= :hyperfiddle.ui.layout/table (:hyperfiddle.ui/layout ctx))
+                ^{:key (hash link-id)} [hypercrud.ui.form/ui-block-border-wrap ctx nil [reactive-nav-cmp link-ref ctx (:class props)]]
+                ^{:key (hash link-id)} [reactive-nav-cmp link-ref ctx (:class props)])))
+       (doall)))
 
-(defn iframes
-  ([body-or-head i a ctx & [?f props]]
-   (->> (r/track ui-contextual-links body-or-head i a true (:hypercrud.browser/links ctx) ?f)
-        (r/unsequence :db/id)
-        (map (fn [[link-ref link-id]]
-               (if (not= :hyperfiddle.ui.layout/table (:hyperfiddle.ui/layout ctx))
-                 ^{:key (hash link-id)} [hypercrud.ui.form/ui-block-border-wrap ctx nil [reactive-ui link-ref ctx (:class props)]]
-                 ^{:key (hash link-id)} [reactive-ui link-ref ctx (:class props)])))
-        (doall))))
+(defn iframes [body-or-head i a ctx & [?f props]]
+  (->> (r/track ui-contextual-links body-or-head i a true (:hypercrud.browser/links ctx) ?f)
+       (r/unsequence :db/id)
+       (map (fn [[link-ref link-id]]
+              (if (not= :hyperfiddle.ui.layout/table (:hyperfiddle.ui/layout ctx))
+                ^{:key (hash link-id)} [hypercrud.ui.form/ui-block-border-wrap ctx nil [reactive-ui link-ref ctx (:class props)]]
+                ^{:key (hash link-id)} [reactive-ui link-ref ctx (:class props)])))
+       (doall)))

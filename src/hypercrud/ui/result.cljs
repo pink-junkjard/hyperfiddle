@@ -1,9 +1,7 @@
 (ns hypercrud.ui.result
   (:require-macros [hypercrud.ui.result :refer [-build-fiddle]])
-  (:require [contrib.css :refer [classes]]
-            [contrib.reagent :refer [fragment]]
-            [hypercrud.ui.control.link-controls :as link-controls]
-            [hyperfiddle.ui :refer [markdown]]))
+  (:require
+    [hyperfiddle.ui :refer [result field]]))
 
 
 (def ^:export result hyperfiddle.ui/result)                 ; (tools.sources/code-search! "result/result")
@@ -15,6 +13,5 @@
                 #_:hypercrud.browser/result]} ctx]
     [:div {:class class}
      [:h3 (some-> @fiddle :fiddle/ident name)]
-     #_(link-controls/anchors false [] ctx nil {:class "hyperfiddle-link-index"})
-     (hyperfiddle.ui/result ctx)
-     #_(link-controls/iframes false [] ctx)]))
+     (result ctx)
+     (field [] ctx nil)]))

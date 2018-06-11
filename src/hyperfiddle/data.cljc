@@ -11,25 +11,20 @@
 
 (defn form "Field is invoked as fn"
   [field {:keys [hypercrud.browser/ordered-fes] :as ctx}]
-  (-> ordered-fes
-      (r/unsequence)
-      (->> (mapcat (fn [[fe i]]
-                     (concat
-                       (->> fe
-                            (r/fmap :fields)
-                            (r/unsequence :attribute)
-                            (mapv (fn [[_ a]]
-                                    (field [i a] ctx nil))))
-                       (case (:type @fe)                    ; add a links column
-                         :aggregate nil
-                         :variable nil                      ; We don't gen links for scalars, don't know if its a ref
-                         :pull [(field [i] ctx nil)])))))
-      ; auto-form does not generate naked links in user mode
-      ; Actually currently these are handled outside the table at the result level
-      (concat (case @(:hypercrud.ui/display-mode ctx)
-                :hypercrud.browser.browser-ui/xray [(field [] ctx nil)]
-                nil))
-      doall))
+  (->> (r/unsequence ordered-fes)
+       (mapcat (fn [[fe i]]
+                 (concat
+                   (->> fe
+                        (r/fmap :fields)
+                        (r/unsequence :attribute)
+                        (mapv (fn [[_ a]]
+                                (field [i a] ctx nil))))
+                   (case (:type @fe)
+                     :pull [(field [i] ctx nil)]            ; entity links
+                     :aggregate nil
+                     :variable nil                          ; We don't gen links for scalars, don't know if its a ref
+                     ))))
+       doall))
 
 (defn browse' [rel path ctx]
   (->> (base/data-from-link @(r/track link/rel->link rel path ctx) ctx)

@@ -30,33 +30,17 @@
     (r/partial
       portal-markup
       (if renderer
-        (attr-renderer renderer ctx)                        ; I had trouble making this work from inside the match.
-
-        ; Matching on scalars for compile time performance.
-        ; We can omit trailing params by matching a vector but it explodes compile times and/or OOM
-        (match [layout a type cardinality isComponent]
-
-          ; Attrs can be explicitly matched here by storing the match config on the domain.
-
-          [_ _ :boolean :one _] widget/boolean
-          [_ _ :keyword :one _] widget/keyword
-          [_ _ :string :one _] widget/string
-          [_ _ :long :one _] widget/long
-          [_ _ :instant :one _] instant
-
-          [_ _ :ref :one nil] widget/dbid                   ; nested form?
-          [_ _ :ref :many nil] edn-many                     ; nested table?
-
-          ; These currently render empty, today we model embeds for this case
-          ; But, :component is not a thing when using pull api. It only impacts write side (retracts)
-          [:block _ :ref :one :component] widget/ref-component ; Recursion? form
-          [:block _ :ref :many :component] widget/ref-many-table ; Recursion? table
-          [:table _ :ref :one :component] table-cell/ref-one-component ; Recursion? form
-          [:table _ :ref :many :component] table-cell/ref-many ; Recursion? table
-
-          [_ _ _ :one _] edn
-          [_ _ _ :many _] edn-many
-
+        (attr-renderer renderer ctx)
+        (match [type cardinality]
+          [:boolean :one] widget/boolean
+          [:keyword :one] widget/keyword
+          [:string :one] widget/string
+          [:long :one] widget/long
+          [:instant :one] instant
+          [:ref :one] widget/dbid                       ; nested form?
+          [:ref :many] edn-many                         ; nested table?
+          [_ :one] edn
+          [_ :many] edn-many
           )))))
 
 (defn auto-control "hyper-control" [ctx]
