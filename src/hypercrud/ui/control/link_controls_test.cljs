@@ -25,7 +25,7 @@
                  :link/dependent? true
                  :link/render-inline? true
                  :link/managed? false}))
-         (set (link-controls/ui-contextual-links [] true true (r/atom mock-links) nil))))
+         (set (link-controls/ui-contextual-links :body nil nil true (r/atom mock-links) nil))))
 
   (is (= (apply set/union (for [rel [:my/link :options]]
                             #{{:link/rel rel
@@ -43,11 +43,11 @@
                                :link/dependent? false
                                :link/render-inline? true
                                :link/managed? true}}))
-         (into #{} (link-controls/ui-contextual-links [0] false false (r/atom mock-links) nil))))
+         (into #{} (link-controls/ui-contextual-links :head 0 nil false (r/atom mock-links) nil))))
 
   (is (= (set [{:link/rel :my/link
                 :link/path "0 :some/attr"
                 :link/dependent? false
                 :link/render-inline? true
                 :link/managed? false}])
-         (set (link-controls/ui-contextual-links [0 :some/attr] false true (r/atom mock-links) link/options-processor)))))
+         (set (link-controls/ui-contextual-links :head 0 :some/attr true (r/atom mock-links) link/options-processor)))))

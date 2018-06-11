@@ -1,12 +1,10 @@
 (ns hypercrud.ui.table
   (:require [contrib.css :refer [css-slugify classes]]
             [contrib.reactive :as r]
-            [contrib.reagent :refer [fragment]]
             [hypercrud.browser.system-link :refer [system-link?]]
             [hypercrud.browser.link :as link]
+            [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.connection-color :as connection-color]
-            [hypercrud.ui.control.link-controls :as link-controls]
-            [hypercrud.ui.form :refer [value]]
             [hypercrud.ui.label :refer [auto-label]]
             [hyperfiddle.data :as hf]))
 
@@ -42,55 +40,21 @@
   (let [shadow-link @(r/fmap system-link? (r/cursor (:cell-data ctx) [:db/id]))]
     (if-not shadow-link (connection-color/connection-color ctx))))
 
-(defn label [field ctx props]
-  (let [[i a] [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]
-        path (remove nil? [i a])]
-    (fragment :_
-              (auto-label field ctx props)
-              (link-controls/anchors path false ctx link/options-processor)
-              (link-controls/iframes path false ctx link/options-processor))))
-
 (defn Field "Form fields are label AND value. Table fields are label OR value."
-  ([ctx] (Field nil ctx nil))
-  ([?f ctx props]
-   (let [{:keys [hypercrud.browser/field
-                 hypercrud.browser/attribute]} ctx
-         [i a] [(:fe-pos ctx) attribute]
-         path (remove nil? [i a])]
-     (if (:relation ctx)
-       [:td {:class (classes #_"field" "hyperfiddle-table-cell" (:class props) "truncate")
-             :style {:border-color (if i (border-color ctx))}}
-        (if (and a (not= a '*))                             ; cell value and dependent=true attribute links. Not element links.
-          (fragment :_                                      ; Value renderer is responsible for attribute links in a value cell position.
-                    #_(link-controls/anchors path true ctx link/options-processor)
-                    #_(link-controls/iframes path true ctx link/options-processor)
-                    (value ?f ctx props)))
-
-        (if (and i (not a))                                 ; dependent=true element links
-          ; Invert fragment, links go into auto-control matched by find-element
-          (fragment :_
-                    (value ?f ctx props)                    ; by default, element cell position does not have a value renderer
-                    (link-controls/anchors path true ctx link/options-processor)
-                    (link-controls/iframes path true ctx link/options-processor)))
-
-        (if (not i)                                         ; naked links
-          ; auto-form does not generate naked links, but if they ask for it, they would be above
-          ; or below the table, so they should ask for it at fiddle level, not table level
-          nil)]
-
-       [:th {:class (classes #_"field" "hyperfiddle-table-cell" (:class props)
-                                       (if (and i (sortable? ctx path)) "sortable") ; hoist
-                                       (some-> (sort-direction ctx) name)) ; hoist
-             :style {:background-color (connection-color/connection-color ctx)}
-             :on-click (r/partial toggle-sort! ctx path)}
-
-        (if a                                               ; label and dependent=false attribute links
-          ((or (:label-fn props) label) field ctx props))
-
-        (if (and i (not a))                                 ; dependent=false element links
-          ((or (:label-fn props) label) field ctx props))
-
-        (if (not i)                                         ; naked links
-          (fragment :_
-                    (link-controls/anchors path false ctx link/options-processor)
-                    (link-controls/iframes path false ctx link/options-processor)))]))))
+  [f ctx props]
+  (let [{:keys [hypercrud.browser/field
+                hypercrud.browser/attribute]} ctx
+        [i a] [(:fe-pos ctx) attribute]
+        path (remove nil? [i a])]
+    (if (:relation ctx)
+      [:td {:class (classes #_"field" "hyperfiddle-table-cell" (:class props) "truncate")
+            :style {:border-color (if i (border-color ctx))}}
+       ; todo unsafe execution of user code: control
+       ; todo give the right value for this path
+       [f (some-> ctx :value deref) ctx props]]
+      [:th {:class (classes #_"field" "hyperfiddle-table-cell" (:class props)
+                                      (if (and i (sortable? ctx path)) "sortable") ; hoist
+                                      (some-> (sort-direction ctx) name)) ; hoist
+            :style {:background-color (connection-color/connection-color ctx)}
+            :on-click (r/partial toggle-sort! ctx path)}
+       ((or (:label-fn props) auto-label) field ctx props)])))

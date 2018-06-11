@@ -9,7 +9,7 @@
     [hypercrud.browser.context :as context]
     [hypercrud.browser.core :as browser]
     [hypercrud.browser.link :as link]
-    [hypercrud.ui.control.link-controls :as link-controls]
+    [hypercrud.ui.auto-control :refer [auto-control]]
     [hypercrud.ui.form :as form]
     [hypercrud.ui.table :as table]
     [hyperfiddle.data :as hf]
@@ -18,39 +18,37 @@
     ))
 
 
+(defn semantic-css [ctx]
+  ; Semantic css needs to be prefixed with - to avoid collisions. todo
+  (let [[i a] [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
+    [(css-slugify (some-> ctx :hypercrud.browser/find-element deref :source-symbol)) ; color
+     (css-slugify (cond a "attribute" i "element" :else "naked"))
+     (css-slugify i)                                        ; same info as name, but by index which is more robust
+     (css-slugify (some-> ctx :hypercrud.browser/find-element deref :type))
+     (css-slugify (some-> ctx :hypercrud.browser/find-element deref :name)) ; works on aggregate
+     ;(css-slugify (some-> ctx :hypercrud.browser/find-element der  ef :entity (if :entity :scalar))) ; not helpful
+     (if i (css-slugify a))                                 ; see attribute-schema-human
+     (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/valueType :db/ident))
+     (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :attribute/renderer #_label/fqn->name))
+     (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/cardinality :db/ident))
+     (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/isComponent (if :component)))]))
+
 (defn ^:export value "Naked value renderer. Does not work in tables. Use field [] if you want a naked th/td view"
   [[i a] ctx ?f & args]                                     ; Doesn't make sense in a table context bc what do you do in the header?
-  (let [view form/value #_(case (::layout ctx) :hyperfiddle.ui.layout/table table/value form/value)
-        ctx (context/focus ctx true i a)
+  (let [ctx (context/focus ctx true i a)
         props (kwargs args)
-        class (classes (:class props)
-                       (css-slugify a)
-                       (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/valueType :db/ident))
-                       (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/cardinality :db/ident)))
-        props (merge props {:class class})]
-    [view ?f ctx props]))
+        props (merge props {:class (apply classes (:class props) (semantic-css ctx))})]
+    ; Todo pass correct value for entity links
+    [(or ?f (auto-control ctx)) (some-> ctx :value deref) ctx props]))
 
 (defn ^:export field "Works in a form or table context. Draws label and/or value."
   [[i a] ctx ?f & args]
   (let [view (case (::layout ctx) :hyperfiddle.ui.layout/table table/Field form/Field)
         ctx (context/focus ctx true i a)
         props (kwargs args)
-        class (classes (:class props)
-                       ; Semantic css needs to be prefixed with - to avoid collisions.
-                       (css-slugify (some-> ctx :hypercrud.browser/find-element deref :source-symbol)) ; color
-                       (css-slugify (cond a "attribute" i "element" :else "naked"))
-                       (css-slugify i)                      ; same info as name, but by index which is more robust
-                       (css-slugify (some-> ctx :hypercrud.browser/find-element deref :type))
-                       (css-slugify (some-> ctx :hypercrud.browser/find-element deref :name)) ; works on aggregate
-                       ;(css-slugify (some-> ctx :hypercrud.browser/find-element deref :entity (if :entity :scalar))) ; not helpful
-                       (if i (css-slugify a))               ; see attribute-schema-human
-                       (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/valueType :db/ident))
-                       (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :attribute/renderer #_label/fqn->name))
-                       (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/cardinality :db/ident))
-                       (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/isComponent (if :component))))
-        props (merge props {:class class})]
+        props (merge props {:class (apply classes (:class props) (semantic-css ctx))})]
     ^{:key (str i a)}
-    [view ?f ctx props]))
+    [view (or ?f (auto-control ctx)) ctx props]))
 
 (defn ^:export table "sort-fn :: (fn [col ctx v] v)" [form sort-fn ctx]
   (let [sort-col (r/atom nil)]

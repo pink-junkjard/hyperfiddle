@@ -10,7 +10,7 @@
     [hyperfiddle.ui :refer [markdown]]
     [hypercrud.ui.attribute.edn :refer [edn-many]]
     [hyperfiddle.ide.fiddles.topnav :refer [shadow-fiddle]]
-    [hyperfiddle.ui :refer [browse]]))
+    [hyperfiddle.ui :refer [browse field link]]))
 
 
 (defn schema-links [ctx]
@@ -51,20 +51,20 @@
          }]
     [:div.container-fluid.fiddle-src {:class class}
      [:h3 (str @(r/cursor (:hypercrud.browser/result ctx) [:fiddle/ident])) " source"]
-     [(:field ctx) [0 :fiddle/ident] ctx]
-     [(:field ctx) [0 :fiddle/type] ctx]
+     (field [0 :fiddle/ident] ctx nil)
+     (field [0 :fiddle/type] ctx nil)
      (case @(r/cursor (:hypercrud.browser/result ctx) [:fiddle/type])
-       :entity (fragment :_ [(:field ctx) [0 :fiddle/pull-database] ctx]
-                         [(:field ctx) [0 :fiddle/pull] ctx (controls :fiddle/pull)])
-       :query [(:field ctx) [0 :fiddle/query] ctx (controls :fiddle/query)]
+       :entity (fragment :_
+                         (field [0 :fiddle/pull-database] ctx nil)
+                         (field [0 :fiddle/pull] ctx (controls :fiddle/pull)))
+       :query (field [0 :fiddle/query] ctx (controls :fiddle/query))
        :blank nil
        nil nil)
-     [(:field ctx) [0 :fiddle/markdown] ctx (controls :fiddle/markdown)]
-     [(:field ctx) [0 :fiddle/css] ctx (controls :fiddle/css)]
-     [(:field ctx) [0 :fiddle/renderer] ctx (controls :fiddle/renderer)]
-     (when-not embed-mode [(:field ctx) [0 :fiddle/links] ctx-real (controls :fiddle/links)])
-     (when-not embed-mode [(:anchor ctx) :hyperfiddle/remove [0] ctx "Remove fiddle"])
-     ]))
+     (field [0 :fiddle/markdown] ctx (controls :fiddle/markdown))
+     (field [0 :fiddle/css] ctx (controls :fiddle/css))
+     (field [0 :fiddle/renderer] ctx (controls :fiddle/renderer))
+     (when-not embed-mode (field [0 :fiddle/links] ctx-real (controls :fiddle/links)))
+     (when-not embed-mode (link :hyperfiddle/remove [0] ctx "Remove fiddle"))]))
 
 (defn hacked-links [value ctx props]
   (let [links (->> value
@@ -90,7 +90,7 @@
         (into
           [:div.fiddle-src {:class class}]
           (for [k attrs]
-            [(:field ctx) [0 k] ctx (controls k)]))))))
+            (field [0 k] ctx (controls k))))))))
 
 (defn result-edn [& attrs]
   (fn [{:keys [hypercrud.browser/result]}]

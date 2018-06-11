@@ -1,6 +1,6 @@
 (ns hypercrud.ui.table-cell
-  (:require [clojure.string :as string]
-            [hypercrud.ui.control.link-controls :as link-controls]))
+  (:require
+    [clojure.string :as string]))
 
 
 (defn ellipsis
@@ -10,20 +10,12 @@
            (str (subs s 0 (- c 3)) "..."))))
 
 (defn ref-one-component [value ctx props]
-  (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
-    [:div
-     #_(pr-str (:db/id @(:value ctx)))
-     (link-controls/anchors path true ctx nil)
-     (link-controls/iframes path true ctx)]))
+  [:div])
 
 (defn ref-many [value ctx props]
-  (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
-    [:div
-     #_(->> (mapv :db/id @(:value ctx))
-            (pr-str)
-            (ellipsis 15))
-     (link-controls/anchors path true ctx nil)
-     (link-controls/iframes path true ctx)]))
+  [:div #_(->> (mapv :db/id @(:value ctx))
+               (pr-str)
+               (ellipsis 15))])
 
 (defn other-many [value ctx props]
   [:div

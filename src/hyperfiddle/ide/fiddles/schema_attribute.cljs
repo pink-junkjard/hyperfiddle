@@ -100,4 +100,4 @@
           [:div]
           (for [k attrs]
             (let [ro (read-only k @(:hypercrud.browser/result ctx))]
-              [field [0 k] ctx (controls k) :read-only ro])))))))
+              (field [0 k] ctx (controls k) :read-only ro))))))))

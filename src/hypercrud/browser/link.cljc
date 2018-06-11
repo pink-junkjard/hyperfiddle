@@ -42,7 +42,10 @@
        (filter #(= (:link/rel %) rel))
        first))
 
-(defn options-link [path ctx] (rel->link :options path ctx))
+(defn options-link [ctx]
+  ; Needs to work with longer paths
+  (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
+    (rel->link :options path ctx)))
 
 ; todo belongs in routing ns
 ; this is same business logic as base/request-for-link

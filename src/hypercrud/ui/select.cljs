@@ -95,17 +95,18 @@
                      (if (nil? value)
                        ""
                        (str (:db/id value))))]
-  (defn select* [options-link ctx props]
-    (either/branch
-      (link/eval-hc-props (:hypercrud/props options-link) ctx)
-      (fn [e] [(ui-error/error-comp ctx) e])
-      (fn [hc-props]
-        (let [option-props {:disabled (or (boolean (:read-only props))
-                                          (nil? @(r/cursor (:cell-data ctx) [:db/id])))}
-              props (assoc hc-props
-                      :on-change (r/partial on-change ctx)  ;reconstruct the typed value
-                      ; normalize value for the dom - nil, kw or eid
-                      :value @(r/fmap select-value (:value ctx)))]
-          [browser/ui options-link (assoc ctx
-                                     :hypercrud.ui/display-mode always-user
-                                     :user-renderer (r/partial select-anchor-renderer props option-props))])))))
+  (defn select* [value ctx props]
+    (let [options-link @(r/track link/options-link ctx)]
+      (either/branch
+        (link/eval-hc-props (:hypercrud/props options-link) ctx)
+        (fn [e] [(ui-error/error-comp ctx) e])
+        (fn [hc-props]
+          (let [option-props {:disabled (or (boolean (:read-only props))
+                                            (nil? @(r/cursor (:cell-data ctx) [:db/id])))}
+                props (assoc hc-props
+                        :on-change (r/partial on-change ctx) ;reconstruct the typed value
+                        ; normalize value for the dom - nil, kw or eid
+                        :value @(r/fmap select-value (:value ctx)))]
+            [browser/ui options-link (assoc ctx
+                                       :hypercrud.ui/display-mode always-user
+                                       :user-renderer (r/partial select-anchor-renderer props option-props))]))))))

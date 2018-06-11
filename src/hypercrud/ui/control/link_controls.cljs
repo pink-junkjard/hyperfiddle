@@ -15,15 +15,15 @@
 (defn- reactive-ui [link-ref ctx class]
   [hypercrud.browser.core/ui @link-ref ctx class])
 
-(defn ui-contextual-links [path dependent? inline? links ?processor]
+(defn ui-contextual-links [body-or-head i a embed links ?processor]
   ; There is only one processor ?
   (->> (reduce (fn [links f] (f links)) @links (if ?processor [?processor]))
-       ((if inline? filter remove) (fn [link]
-                                     (and (not (link/popover-link? link))
-                                          (:link/render-inline? link))))
-       ((if dependent? filter remove) :link/dependent?)
+       ((if embed filter remove) (fn [link]
+                                   (and (not (link/popover-link? link))
+                                        (:link/render-inline? link))))
+       ((case body-or-head :body filter :head remove) :link/dependent?)
        ; path filtering is the most expensive, do it last
-       (filter (link/same-path-as? path))
+       (filter (link/same-path-as? (remove nil? [i a])))
        vec))
 
 ; ideally in the future we can infer path and dependent? from the ctx
@@ -33,10 +33,12 @@
 (defn anchors
   ; Can't infer dependent from :relation, must use :cell-data i think
   ([?label ctx props]
-    (anchors [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]
-             (if (:relation ctx) true false) ctx nil props))
-  ([path dependent ctx ?f & [props]]
-   (->> (r/track ui-contextual-links path dependent false (:hypercrud.browser/links ctx) ?f)
+   (anchors (if (:relation ctx) :body :head)
+            (:fe-pos ctx)
+            (:hypercrud.browser/attribute ctx)
+            ctx nil props))
+  ([body-or-head i a ctx ?f & [props]]
+   (->> (r/track ui-contextual-links body-or-head i a false (:hypercrud.browser/links ctx) ?f)
         (r/unsequence :db/id)
         (map (fn [[link-ref link-id]]
                (if (not= :hyperfiddle.ui.layout/table (:hyperfiddle.ui/layout ctx))
@@ -45,8 +47,8 @@
         (doall))))
 
 (defn iframes
-  ([path dependent? ctx & [?f props]]
-   (->> (r/track ui-contextual-links path dependent? true (:hypercrud.browser/links ctx) ?f)
+  ([body-or-head i a ctx & [?f props]]
+   (->> (r/track ui-contextual-links body-or-head i a true (:hypercrud.browser/links ctx) ?f)
         (r/unsequence :db/id)
         (map (fn [[link-ref link-id]]
                (if (not= :hyperfiddle.ui.layout/table (:hyperfiddle.ui/layout ctx))

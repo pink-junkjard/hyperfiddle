@@ -3,8 +3,7 @@
             [contrib.datomic-tx :as tx]
             [contrib.reactive :as r]
             [contrib.ui :refer [edn-block edn-inline-block]]
-            [hypercrud.browser.link :as link]
-            [hypercrud.ui.control.link-controls :as link-controls]))
+            [hypercrud.browser.link :as link]))
 
 
 (defn ^:export edn-many [value ctx props]
@@ -24,12 +23,9 @@
         widget (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
                  :hyperfiddle.ui.layout/block edn-block
                  :hyperfiddle.ui.layout/inline-block edn-inline-block
-                 :hyperfiddle.ui.layout/table edn-inline-block)
-        path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
+                 :hyperfiddle.ui.layout/table edn-inline-block)]
     [:div
-     (link-controls/anchors path true ctx link/options-processor)
-     [widget value change! props]
-     (link-controls/iframes path true ctx link/options-processor)]))
+     [widget value change! props]]))
 
 (defn ^:export edn [value ctx props]
   (let [props (update props :read-only #(or % (nil? @(r/cursor (:cell-data ctx) [:db/id]))))
@@ -37,9 +33,6 @@
         widget (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
                  :hyperfiddle.ui.layout/inline-block edn-inline-block
                  :hyperfiddle.ui.layout/table edn-inline-block
-                 :hyperfiddle.ui.layout/block edn-block)
-        path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
+                 :hyperfiddle.ui.layout/block edn-block)]
     [:div
-     (link-controls/anchors path true ctx link/options-processor)
-     [widget value change! props]
-     (link-controls/iframes path true ctx link/options-processor)]))
+     [widget value change! props]]))

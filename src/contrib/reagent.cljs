@@ -5,7 +5,10 @@
 
 
 (defn fragment [react-key & xs]
-  (js/reactCreateFragment (clj->js {react-key (map reagent/as-element xs)})))
+  (let [[k xs] (if (keyword? react-key)
+                 [react-key xs]
+                 [:_ (cons react-key xs)])]
+    (js/reactCreateFragment (clj->js {k (map reagent/as-element xs)}))))
 
 ;(defn wrap-naked-string "wrap naked strings into divs" [C v]
 ;  (if (string? v) [:div v] v)
