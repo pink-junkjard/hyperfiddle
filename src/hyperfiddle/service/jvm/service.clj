@@ -24,7 +24,8 @@
             [promesa.core :as p]
             [ring.util.response :as ring-resp]
             [taoensso.timbre :as timbre])
-  (:import (com.auth0.jwt.exceptions JWTVerificationException)))
+  (:import (com.auth0.jwt.exceptions JWTVerificationException)
+           (java.util UUID)))
 
 
 (defn e->response [e]
@@ -97,7 +98,7 @@
                                   (second))
               with-jwt (fn [jwt]
                          (-> context
-                             (assoc-in [:request :user-id] (some-> jwt (verify) :user-id))
+                             (assoc-in [:request :user-id] (some-> jwt (verify) :user-id UUID/fromString))
                              (assoc-in [:request :jwt] jwt)))]
           (cond
             (or (nil? jwt-header) (= jwt-cookie jwt-header))

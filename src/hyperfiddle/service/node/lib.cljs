@@ -45,7 +45,7 @@
       (either/branch
         ; todo support auth bearer
         (try-either (let [jwt-cookie (some-> req .-cookies .-jwt)]
-                      [jwt-cookie (some-> jwt-cookie verify :user-id)]))
+                      [jwt-cookie (some-> jwt-cookie verify :user-id uuid)]))
         (fn [e]
           (timbre/error e)
           (doto res
