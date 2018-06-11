@@ -11,7 +11,7 @@
 
 (defn- has-required-attrs? [entity] (set/subset? special-case-attrs (set (keys entity))))
 
-(defn- read-only [attr record]
+(defn- read-only? [attr record]
   (not (or (has-required-attrs? record)
            (#{:db/ident :db/doc :db/valueType :db/cardinality} attr))))
 
@@ -94,10 +94,10 @@
       (let [ctx (-> ctx
                     (dissoc :relation :relations)
                     (update :hypercrud.browser/result (partial r/fmap reactive-merge))
-                    (context/with-relations))]
-        ; Elide doc and ident -- this comment is from before, what does this mean
+                    (context/with-relations))
+            result @(:hypercrud.browser/result ctx)]
         (into
           [:div]
           (for [k attrs]
-            (let [ro (read-only k @(:hypercrud.browser/result ctx))]
+            (let [ro (read-only? k result)]
               (field [0 k] ctx (controls k) :read-only ro))))))))
