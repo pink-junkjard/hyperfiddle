@@ -16,7 +16,7 @@
     [hypercrud.ui.widget :as widget]))
 
 
-(defn control [ctx]
+(defn control "this is a function, which returns ?component." [ctx]
   (let [layout (-> (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block) name keyword)
         a (:hypercrud.browser/attribute ctx)
         attr (some-> ctx :hypercrud.browser/fat-attribute deref)
@@ -36,8 +36,8 @@
           [:string :one] widget/string
           [:long :one] widget/long
           [:instant :one] instant
-          [:ref :one] widget/dbid                           ; nested form?
-          [:ref :many] edn-many                             ; nested table?
+          [:ref :one] widget/dbid                           ; nested form
+          [:ref :many] (fn [value ctx props] [:noscript]) #_edn-many             ; nested table
           [_ :one] edn
           [_ :many] edn-many
           )))))
@@ -66,11 +66,12 @@
                                                                        [widget/select nil ctx (assoc props :disabled true)])
                                                                      )))
         [:head i a _] (fn [field ctx props]
-                        (fragment (if i (label field ctx props))
+                        (fragment (if i [label field ctx props])
                                   (anchors :head i a ctx nil)
                                   (iframes :head i a ctx nil)))
         [:body i a _] (fn [value ctx props]
-                        (fragment (if a ((control ctx) value ctx props))
+                        ; Control can decline to render anything and we must avoid blank divs/userportal TODO
+                        (fragment (if a [(control ctx) value ctx props])
                                   (if i (anchors :body i a ctx nil))
                                   (if i (iframes :body i a ctx nil))))
         ))))
