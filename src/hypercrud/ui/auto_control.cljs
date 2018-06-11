@@ -9,7 +9,7 @@
     [hypercrud.ui.attribute.instant :refer [instant]]
     [hypercrud.ui.control.link-controls :refer [anchors iframes]]
     ;[hypercrud.ui.form :as form]
-    [hypercrud.ui.label :refer [auto-label]]
+    [hypercrud.ui.label :refer [label]]
     ;[hypercrud.ui.table :as table]
     [hypercrud.ui.safe-render :refer [portal-markup]]
     [hypercrud.ui.table-cell :as table-cell]
@@ -60,7 +60,7 @@
         (match [dependent i a]
 
           [:head i a] (fn [field ctx props]
-                        (fragment (auto-label field ctx props)
+                        (fragment (label field ctx props)
                                   (anchors :head i a ctx nil)
                                   (iframes :head i a ctx nil)))
           [:body i a] (fn [value ctx props]
@@ -68,7 +68,7 @@
                                   (anchors :body i a ctx nil)
                                   (iframes :body i a ctx nil)))
           [:head i nil] (fn [field ctx props]
-                          (fragment (auto-label field ctx props)
+                          (fragment (label field ctx props)
                                     (anchors :head i nil ctx nil)
                                     (iframes :head i nil ctx nil)))
           [:body i nil] (fn [value ctx props]

@@ -4,7 +4,7 @@
             [hypercrud.browser.system-link :refer [system-link?]]
             [hypercrud.browser.link :as link]
             [hypercrud.ui.connection-color :as connection-color]
-            [hypercrud.ui.label :refer [auto-label]]
+            [hypercrud.ui.label :refer [label]]
             [hyperfiddle.data :as hf]))
 
 
@@ -56,4 +56,5 @@
                                       (some-> (sort-direction ctx) name)) ; hoist
             :style {:background-color (connection-color/connection-color ctx)}
             :on-click (r/partial toggle-sort! ctx path)}
-       ((or (:label-fn props) auto-label) field ctx props)])))
+       ; Use f as the label control also, because there is hypermedia up there
+       ((or (:label-fn props) f) field ctx props)])))
