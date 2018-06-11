@@ -32,8 +32,9 @@
         typedoc (some->> ctx :hypercrud.browser/fat-attribute
                          (r/fmap attribute-schema-human)
                          deref (interpose " ") (apply str))
-        help-md (str (if dbdoc (str dbdoc "\n\n"))          ; markdown needs double line-break
-                     "`" typedoc "`")]
+        help-md (blank->nil
+                  (str (if dbdoc (str dbdoc "\n\n"))        ; markdown needs double line-break
+                       (if typedoc (str "`" typedoc "`"))))]
     [tooltip-thick (if help-md
                      [:div.docstring [markdown help-md]])
      [:label (:label field) (if help-md [:sup "†"])]]))
