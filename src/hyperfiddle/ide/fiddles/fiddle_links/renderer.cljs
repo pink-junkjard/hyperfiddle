@@ -19,7 +19,7 @@
 
 (defn read-only-cell [value ctx props]
   ; Need to delay until we have the value ctx to compute this, which means its a value renderer not a field prop
-  [(auto-control ctx) value ctx (assoc props :read-only (if :relation (read-only? ctx)))])
+  [(auto-control ctx) value ctx (assoc props :read-only (if (:relation ctx) (read-only? ctx)))])
 
 (defn links->result [links]
   (->> @links
