@@ -100,7 +100,7 @@
         (fn [e] [(ui-error/error-comp ctx) e])
         (fn [hc-props]
           (let [option-props {:disabled (or (boolean (:read-only props))
-                                            (nil? (:db/id value)))}
+                                            (nil? @(r/cursor (:cell-data ctx) [:db/id])))}
                 props (assoc hc-props
                         :on-change (r/partial on-change ctx)
                         :value (dom-value value))]
