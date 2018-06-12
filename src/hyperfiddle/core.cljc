@@ -13,7 +13,6 @@
     #?(:cljs [hypercrud.ui.attribute.code])
     #?(:cljs [hypercrud.ui.attribute.checkbox])
     #?(:cljs [hypercrud.ui.attribute.markdown-editor])
-    #?(:cljs [hypercrud.ui.attribute.tristate-boolean])
     ))
 
 

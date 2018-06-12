@@ -35,22 +35,6 @@
              (fmap #(->> % (interpose ", ") (remove nil?) (apply str))))]
     (either/branch label' pr-str identity)))
 
-(defn select-boolean* [value props ctx]
-  (let [option-props {:disabled (or (boolean (:read-only props))
-                                    (nil? @(r/cursor (:cell-data ctx) [:db/id])))}
-        props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
-               :value (if (nil? value) "" (str value))
-               ;; reconstruct the typed value
-               :on-change #(let [v (case (.-target.value %)
-                                     "" nil
-                                     "true" true
-                                     "false" false)]
-                             ((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) v)))}]
-    [:select (dissoc props :label-fn)
-     [:option (assoc option-props :key true :value "true") "True"]
-     [:option (assoc option-props :key false :value "false") "False"]
-     [:option (assoc option-props :key :nil :value "") "--"]]))
-
 (defn select-anchor-renderer' [props option-props ctx]
   ; hack in the selected value if we don't have options hydrated?
   ; Can't, since we only have the #DbId hydrated, and it gets complicated with relaton vs entity etc

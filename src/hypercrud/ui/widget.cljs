@@ -37,6 +37,26 @@
                                                             (not value)))]
      (contrib.ui/checkbox value change! props))])
 
+(defn select-boolean* [value props ctx]
+  (let [option-props {:disabled (or (cljs.core/boolean (:read-only props))
+                                    (nil? @(r/cursor (:cell-data ctx) [:db/id])))}
+        props {;; normalize value for the dom - value is either nil, an :ident (keyword), or eid
+               :value (if (nil? value) "" (str value))
+               ;; reconstruct the typed value
+               :on-change #(let [v (case (.-target.value %)
+                                     "" nil
+                                     "true" true
+                                     "false" false)]
+                             ((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) v)))}]
+    [:select (dissoc props :label-fn)
+     [:option (assoc option-props :key true :value "true") "True"]
+     [:option (assoc option-props :key false :value "false") "False"]
+     [:option (assoc option-props :key :nil :value "") "--"]]))
+
+(defn ^:export tristate-boolean [value ctx props]
+  [:div
+   (select-boolean* value props ctx)])
+
 (defn id* [value ctx props]
   (let [props (update props :read-only #(or % (nil? @(r/cursor (:cell-data ctx) [:db/id]))))
         on-change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))]
