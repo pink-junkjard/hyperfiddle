@@ -47,13 +47,13 @@
         [i a] [(:fe-pos ctx) attribute]
         path (remove nil? [i a])]
     (if (:relation ctx)
-      [:td {:class (css #_"field" "hyperfiddle-table-cell" (:class props) "truncate")
+      [:td {:class (css "field" (:class props) "truncate")
             :style {:border-color (if i (border-color ctx))}}
        ; todo unsafe execution of user code: control
        [f (context/extract-focus-value ctx) ctx props]]
-      [:th {:class (css #_"field" "hyperfiddle-table-cell" (:class props)
-                                  (if (and i (sortable? ctx path)) "sortable") ; hoist
-                                  (some-> (sort-direction ctx) name)) ; hoist
+      [:th {:class (css "field" (:class props)
+                        (if (and i (sortable? ctx path)) "sortable") ; hoist
+                        (some-> (sort-direction ctx) name)) ; hoist
             :style {:background-color (connection-color/connection-color ctx)}
             :on-click (r/partial toggle-sort! ctx path)}
        ; Use f as the label control also, because there is hypermedia up there
