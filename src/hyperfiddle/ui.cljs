@@ -14,7 +14,6 @@
     [hypercrud.ui.control.link-controls :refer [anchors iframes]]
     [hyperfiddle.ui.label :refer [label]]
     [hypercrud.ui.form :as form]
-    [hypercrud.ui.safe-render :refer [portal-markup]]
     [hypercrud.ui.table :as table]
     [hypercrud.ui.util :refer [attr-renderer]]
     [hyperfiddle.data :as hf]
@@ -37,19 +36,17 @@
 
     (if renderer
       (attr-renderer renderer ctx)
-      (r/partial
-        portal-markup
-        (match [type cardinality]
-          [:boolean :one] controls/boolean
-          [:keyword :one] controls/keyword
-          [:string :one] controls/string
-          [:long :one] controls/long
-          [:instant :one] controls/instant
-          [:ref :one] controls/dbid                         ; nested form
-          [:ref :many] (fn [value ctx props] [:noscript]) #_edn-many ; nested table
-          [_ :one] controls/edn
-          [_ :many] controls/edn-many
-          )))))
+      (match [type cardinality]
+        [:boolean :one] controls/boolean
+        [:keyword :one] controls/keyword
+        [:string :one] controls/string
+        [:long :one] controls/long
+        [:instant :one] controls/instant
+        [:ref :one] controls/dbid                           ; nested form
+        [:ref :many] (fn [value ctx props] [:noscript]) #_edn-many ; nested table
+        [_ :one] controls/edn
+        [_ :many] controls/edn-many
+        ))))
 
 (defn semantic-css [ctx]
   ; Semantic css needs to be prefixed with - to avoid collisions. todo
@@ -90,8 +87,8 @@
       (match [d i type a rels]
 
         [d i _ a (true :<< #(contains? % :options))]
-        (r/partial portal-markup (case d :body select/select
-                                         :head head-select-xray))
+        (case d :body select/select :head head-select-xray)
+        ; Needs to respect the other auto links other than special rel
 
         [:head i _ a _]
         (fn [field ctx props]
@@ -101,7 +98,7 @@
 
         [:body i :aggregate _ _]
         (fn [value ctx props]
-          (fragment [portal-markup controls/string (context/extract-focus-value ctx) ctx props]
+          (fragment [controls/string (context/extract-focus-value ctx) ctx props]
                     (if i (anchors :body i a ctx nil))
                     (if i (iframes :body i a ctx nil))))
 
