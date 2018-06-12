@@ -65,15 +65,20 @@
                             :xray (if-not (-> (rel->link :options ctx) :link/dependent?)
                                     [widget/select nil ctx (assoc props :disabled true)])
                             nil))))
-        [:head i a _] (fn [field ctx props]
-                        (fragment (if i [label field ctx props])
-                                  (anchors :head i a ctx nil)
-                                  (iframes :head i a ctx nil)))
-        [:body i a _] (fn [value ctx props]
-                        ; Control can decline to render anything and we must avoid blank divs/userportal TODO
-                        (fragment (if a [(control ctx) value ctx props])
-                                  (if i (anchors :body i a ctx nil))
-                                  (if i (iframes :body i a ctx nil))))
+
+        [:head i a _]
+        (fn [field ctx props]
+          (fragment (if i [label field ctx props])
+                    (anchors :head i a ctx nil)
+                    (iframes :head i a ctx nil)))
+
+        [:body i a _]
+        (fn [value ctx props]
+          ; Control can decline to render anything and we must avoid blank divs/userportal TODO
+          (fragment (if a [(control ctx) value ctx props])
+                    (if i (anchors :body i a ctx nil))
+                    (if i (iframes :body i a ctx nil))))
+
         ))))
 
 (comment
