@@ -100,7 +100,9 @@
         (fn [e] [(ui-error/error-comp ctx) e])
         (fn [hc-props]
           (let [option-props {:disabled (or (boolean (:read-only props))
-                                            (nil? @(r/cursor (:cell-data ctx) [:db/id])))}
+                                            (nil? (:cell-data ctx)) ; no value at all
+                                            ; what is this ? I keep breaking this next line spent an hour here
+                                            (nil? (some-> (:cell-data ctx) (r/cursor [:db/id]) deref)))}
                 props (assoc hc-props
                         :on-change (r/partial on-change ctx)
                         :value (dom-value value))]
