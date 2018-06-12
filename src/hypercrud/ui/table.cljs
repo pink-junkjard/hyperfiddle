@@ -5,7 +5,8 @@
             [hypercrud.browser.link :as link]
             [hypercrud.ui.connection-color :as connection-color]
             [hypercrud.ui.label :refer [label]]
-            [hyperfiddle.data :as hf]))
+            [hyperfiddle.data :as hf]
+            [hypercrud.browser.context :as context]))
 
 
 ; sorting currently breaks click handling in popovers
@@ -49,8 +50,7 @@
       [:td {:class (classes #_"field" "hyperfiddle-table-cell" (:class props) "truncate")
             :style {:border-color (if i (border-color ctx))}}
        ; todo unsafe execution of user code: control
-       ; todo give the right value for this path
-       [f (some-> ctx :value deref) ctx props]]
+       [f (context/extract-focus-value ctx) ctx props]]
       [:th {:class (classes #_"field" "hyperfiddle-table-cell" (:class props)
                                       (if (and i (sortable? ctx path)) "sortable") ; hoist
                                       (some-> (sort-direction ctx) name)) ; hoist

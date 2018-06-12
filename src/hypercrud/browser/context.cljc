@@ -113,7 +113,7 @@
         :hypercrud.browser/attribute attr-ident
         :hypercrud.browser/fat-attribute fat-attr))))
 
-(defn value [ctx]
+(defn value [ctx]                                           ; attr-value
   (if (and (:cell-data ctx) (not= '* (:hypercrud.browser/attribute ctx)))
     (let [rv (r/fmap (:cell-data->value (:hypercrud.browser/field ctx)) (:cell-data ctx))]
       (assoc ctx :value rv))
@@ -132,3 +132,8 @@
             (and i d) (cell-data)
             (and i a) (field-from-attribute a)
             (and i d a) (value))))
+
+(defn extract-focus-value [ctx]
+  ; Aggregate, attr-value, etc, and can be nil.
+  ; the "value" does not always mean :value (latter should be named differently)
+  (some-> (or (:value ctx) (:cell-data ctx)) deref))

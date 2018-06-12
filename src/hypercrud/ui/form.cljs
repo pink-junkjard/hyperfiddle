@@ -4,7 +4,8 @@
             [contrib.reagent :refer [fragment]]
             [contrib.ui.input :as input]
             [hypercrud.ui.connection-color :as connection-color]
-            [hypercrud.ui.label :refer [label]]))
+            [hypercrud.ui.label :refer [label]]
+            [hypercrud.browser.context :as context]))
 
 
 (defn ui-block-border-wrap [ctx class & children]
@@ -37,7 +38,4 @@
     ctx (classes "field" "hyperfiddle-form-cell" (:class props) #_":class is for the control, these props came from !cell{}")
     ;(if (= a '*) ^{:key :new-field} [new-field ctx])
     [(or (:label-fn props) label) (:hypercrud.browser/field ctx) (dissoc ctx :relation) props]
-
-
-    ; Todo, give the right value. It might be the element-level value or nothing.
-    [f (some-> ctx :value deref) ctx props]))
+    [f (context/extract-focus-value ctx) ctx props]))

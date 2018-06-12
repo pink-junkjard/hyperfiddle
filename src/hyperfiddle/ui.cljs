@@ -23,6 +23,7 @@
   (let [[i a] [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     [(css-slugify (some-> ctx :hypercrud.browser/find-element deref :source-symbol)) ; color
      (css-slugify (cond a "attribute" i "element" :else "naked"))
+     (css-slugify (-> (:relation ctx) (if :body :head)))
      (css-slugify i)                                        ; same info as name, but by index which is more robust
      (css-slugify (some-> ctx :hypercrud.browser/find-element deref :type))
      (css-slugify (some-> ctx :hypercrud.browser/find-element deref :name)) ; works on aggregate
@@ -39,7 +40,7 @@
         props (kwargs args)
         props (merge props {:class (apply classes (:class props) (semantic-css ctx))})]
     ; Todo pass correct value for entity links
-    [(or ?f (auto-control ctx)) (some-> ctx :value deref) ctx props]))
+    [(or ?f (auto-control ctx)) (context/extract-focus-value ctx) ctx props]))
 
 (defn ^:export field "Works in a form or table context. Draws label and/or value."
   [[i a] ctx ?f & args]
