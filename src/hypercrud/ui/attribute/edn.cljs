@@ -22,7 +22,6 @@
                                                        rets adds))))
         widget (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
                  :hyperfiddle.ui.layout/block edn-block
-                 :hyperfiddle.ui.layout/inline-block edn-inline-block
                  :hyperfiddle.ui.layout/table edn-inline-block)]
     [:div
      [widget value change! props]]))
@@ -31,7 +30,6 @@
   (let [props (update props :read-only #(or % (nil? @(r/cursor (:cell-data ctx) [:db/id]))))
         change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))
         widget (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
-                 :hyperfiddle.ui.layout/inline-block edn-inline-block
                  :hyperfiddle.ui.layout/table edn-inline-block
                  :hyperfiddle.ui.layout/block edn-block)]
     [:div

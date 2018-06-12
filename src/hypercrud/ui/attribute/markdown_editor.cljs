@@ -12,7 +12,6 @@
     [:div
      (let [widget (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
                     :hyperfiddle.ui.layout/block code-block
-                    :hyperfiddle.ui.layout/inline-block code-inline-block
                     :hyperfiddle.ui.layout/table code-inline-block)
            props (assoc props :mode "markdown" :lineWrapping true)]
        ; backwards args - props last

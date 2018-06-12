@@ -10,6 +10,5 @@
          change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))
          widget (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
                   :hyperfiddle.ui.layout/block recom-date
-                  :hyperfiddle.ui.layout/inline-block recom-date
                   :hyperfiddle.ui.layout/table recom-date)]
      [widget value change! props])])
