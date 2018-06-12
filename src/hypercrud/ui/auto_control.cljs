@@ -5,6 +5,7 @@
     [contrib.string :refer [blank->nil]]
     [clojure.core.match :refer [match match*]]
     [hypercrud.browser.link :refer [links-here rel->link]]
+    [hypercrud.browser.context :as context]
     [hypercrud.ui.attribute.edn :refer [edn edn-many]]
     [hypercrud.ui.attribute.instant :refer [instant]]
     [hypercrud.ui.control.link-controls :refer [anchors iframes]]
@@ -49,14 +50,15 @@
         layout (-> (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block) name keyword)
         d (-> (:relation ctx) (if :body :head))
         i (:fe-pos ctx)
+        {:keys [type]} (if i @(:hypercrud.browser/find-element ctx))
         a (:hypercrud.browser/attribute ctx)
         rels (->> (links-here ctx) (map :link/rel) (into #{}))]
 
     (if (= a '*)
       (fn [field ctx props] [:code "magic-new"])
-      (match [d i a rels]
+      (match [d i type a rels]
 
-        [d i a (true :<< #(contains? % :options))]
+        [d i _ a (true :<< #(contains? % :options))]
         (fn [field ctx props]
           (case d :body widget/select
                   :head (fragment
@@ -66,13 +68,19 @@
                                     [widget/select nil ctx (assoc props :disabled true)])
                             nil))))
 
-        [:head i a _]
+        [:head i _ a _]
         (fn [field ctx props]
           (fragment (if i [label field ctx props])
                     (anchors :head i a ctx nil)
                     (iframes :head i a ctx nil)))
 
-        [:body i a _]
+        [:body i :aggregate _ _]
+        (fn [value ctx props]
+          (fragment [portal-markup widget/string (context/extract-focus-value ctx) ctx props]
+                    (if i (anchors :body i a ctx nil))
+                    (if i (iframes :body i a ctx nil))))
+
+        [:body i _ a _]
         (fn [value ctx props]
           ; Control can decline to render anything and we must avoid blank divs/userportal TODO
           (fragment (if a [(control ctx) value ctx props])
