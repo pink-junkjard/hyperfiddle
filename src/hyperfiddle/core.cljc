@@ -9,10 +9,8 @@
     #?(:cljs [hypercrud.ui.textarea])
 
     #?(:cljs [hyperfiddle.ui])
-    ;user land (todo these should be in a core hc.ui namespace; widget is arbitrary)
-    #?(:cljs [hypercrud.ui.attribute.code])
-    #?(:cljs [hypercrud.ui.attribute.checkbox])
-    #?(:cljs [hypercrud.ui.attribute.markdown-editor])
+    #?(:cljs [hypercrud.ui.attribute.markdown-editor])      ; legacy
+    #?(:cljs [hypercrud.ui.attribute.code])                 ; legacy
     ))
 
 

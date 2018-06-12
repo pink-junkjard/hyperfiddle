@@ -8,5 +8,5 @@
 (deftest fqn->name-1
   []
   (is (= (fqn->name renderer-1) "(fn [_ _ ctx]"))
-  (is (= (fqn->name "hypercrud.ui.attribute.code/code") "code"))
-  (is (= (fqn->name "hypercrud.ui.attribute.code.code") "code")))
+  (is (= (fqn->name "hyperfiddle.ui.controls/code") "code"))
+  (is (= (fqn->name "hyperfiddle.ui.controls/code") "code")))

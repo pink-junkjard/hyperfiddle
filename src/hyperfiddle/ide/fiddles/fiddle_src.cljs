@@ -6,9 +6,8 @@
     [contrib.reagent :refer [fragment]]
     [contrib.ui]
     [hypercrud.types.URI :refer [is-uri?]]
-    [hyperfiddle.ui :refer [markdown]]
-    [hypercrud.ui.attribute.edn :refer [edn-many]]
     [hyperfiddle.ide.fiddles.topnav :refer [shadow-fiddle]]
+    [hyperfiddle.ui :refer [markdown]]
     [hyperfiddle.ui :refer [browse field link hyper-control]]))
 
 

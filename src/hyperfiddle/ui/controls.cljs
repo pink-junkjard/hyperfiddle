@@ -1,9 +1,13 @@
 (ns hyperfiddle.ui.controls
   (:refer-clojure :exclude [boolean keyword long])
-  (:require [contrib.datomic-tx :as tx]
-            [contrib.reactive :as r]
-            [contrib.string :refer [empty->nil]]
-            [contrib.ui.input :as input]))
+  (:require
+    [clojure.set :as set]
+    [contrib.datomic-tx :as tx]
+    [contrib.reactive :as r]
+    [contrib.string :refer [empty->nil]]
+    [contrib.ui :refer [code-block code-inline-block edn-block edn-inline-block]]
+    [contrib.ui.input :as input]
+    [contrib.ui.recom-date :refer [recom-date]]))
 
 
 (defn keyword [value ctx props]
@@ -79,3 +83,65 @@
 ;/*vertical-align: top;*/
 ;/*padding-left: 5px;*/
 ;/*}*/
+
+(defn ^:export instant [value ctx props]
+  [:div
+   (let [props (update props :read-only #(or % (nil? @(r/cursor (:cell-data ctx) [:db/id]))))
+         change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))
+         widget (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
+                  :hyperfiddle.ui.layout/block recom-date
+                  :hyperfiddle.ui.layout/table recom-date)]
+     [widget value change! props])])
+
+(defn ^:export code [value ctx props]
+  (let [props (update props :read-only #(or % (nil? @(r/cursor (:cell-data ctx) [:db/id]))))
+        change! (fn [%]
+                  (let [tx (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) (empty->nil %))]
+                    ((:user-with! ctx) tx)))]
+    [:div
+     (let [control (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
+                     :hyperfiddle.ui.layout/block code-block
+                     :hyperfiddle.ui.layout/table code-inline-block)]
+       ; backwards args - props last
+       [control props value change!])]))
+
+(defn ^:export markdown-editor [value ctx props]
+  (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]
+        props (update props :read-only #(or % (nil? @(r/cursor (:cell-data ctx) [:db/id]))))
+        change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) (empty->nil %)))]
+    [:div
+     (let [widget (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
+                    :hyperfiddle.ui.layout/block code-block
+                    :hyperfiddle.ui.layout/table code-inline-block)
+           props (assoc props :mode "markdown" :lineWrapping true)]
+       ; backwards args - props last
+       [widget props value change!])]))
+
+(defn ^:export edn-many [value ctx props]
+  (let [valueType @(r/cursor (:hypercrud.browser/fat-attribute ctx) [:db/valueType :db/ident])
+        value (-> (if (= valueType :db.type/ref)
+                    (map :db/id value)
+                    value)
+                  set)
+        props (update props :read-only #(or % (nil? @(r/cursor (:cell-data ctx) [:db/id]))))
+        change! (fn [user-val]
+                  (let [user-val (set user-val)
+                        rets (set/difference value user-val)
+                        adds (set/difference user-val value)]
+                    ((:user-with! ctx) (tx/edit-entity (-> ctx :cell-data deref :db/id)
+                                                       (:hypercrud.browser/attribute ctx)
+                                                       rets adds))))
+        widget (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
+                 :hyperfiddle.ui.layout/block edn-block
+                 :hyperfiddle.ui.layout/table edn-inline-block)]
+    [:div
+     [widget value change! props]]))
+
+(defn ^:export edn [value ctx props]
+  (let [props (update props :read-only #(or % (nil? @(r/cursor (:cell-data ctx) [:db/id]))))
+        change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))
+        widget (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
+                 :hyperfiddle.ui.layout/table edn-inline-block
+                 :hyperfiddle.ui.layout/block edn-block)]
+    [:div
+     [widget value change! props]]))

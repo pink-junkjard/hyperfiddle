@@ -10,8 +10,6 @@
     [hypercrud.browser.context :as context]
     [hypercrud.browser.core :as browser]
     [hypercrud.browser.link :as link :refer [links-here rel->link]]
-    [hypercrud.ui.attribute.edn :refer [edn edn-many]]
-    [hypercrud.ui.attribute.instant :refer [instant]]
     [hypercrud.ui.control.link-controls :refer [anchors iframes]]
     [hypercrud.ui.label :refer [label]]
     [hypercrud.ui.form :as form]
@@ -45,11 +43,11 @@
           [:keyword :one] controls/keyword
           [:string :one] controls/string
           [:long :one] controls/long
-          [:instant :one] instant
+          [:instant :one] controls/instant
           [:ref :one] controls/dbid                         ; nested form
           [:ref :many] (fn [value ctx props] [:noscript]) #_edn-many ; nested table
-          [_ :one] edn
-          [_ :many] edn-many
+          [_ :one] controls/edn
+          [_ :many] controls/edn-many
           )))))
 
 (defn semantic-css [ctx]
