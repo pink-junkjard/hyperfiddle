@@ -5,11 +5,10 @@
             [hypercrud.browser.context :as context]
             [hypercrud.browser.system-fiddle :as system-fiddle]
             [hypercrud.browser.system-link :refer [system-link?]]
-            [hypercrud.ui.auto-control :refer [auto-control]]
             [hypercrud.ui.error :as ui-error]
             [hypercrud.ui.result :as result]
             [hyperfiddle.data :refer [form sort-fn]]
-            [hyperfiddle.ui :refer [table field]]))
+            [hyperfiddle.ui :refer [table field hyper-control]]))
 
 (defn read-only? [ctx]
   {:pre [(:relation ctx)]}
@@ -19,7 +18,7 @@
 
 (defn read-only-cell [value ctx props]
   ; Need to delay until we have the value ctx to compute this, which means its a value renderer not a field prop
-  [(auto-control ctx) value ctx (assoc props :read-only (if (:relation ctx) (read-only? ctx)))])
+  [(hyper-control ctx) value ctx (assoc props :read-only (if (:relation ctx) (read-only? ctx)))])
 
 (defn links->result [links]
   (->> @links

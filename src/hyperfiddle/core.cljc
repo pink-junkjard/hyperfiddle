@@ -1,6 +1,5 @@
 (ns hyperfiddle.core
   (:require
-    #?(:cljs [hypercrud.ui.auto-control])
     [hypercrud.ui.result]
 
     ; pull in public ui deps

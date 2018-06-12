@@ -1,22 +1,55 @@
 (ns hyperfiddle.ui
   (:require
+    [clojure.core.match :refer [match match*]]
     [contrib.css :refer [classes css-slugify]]
     [contrib.data :refer [unwrap kwargs]]
-    [contrib.string :refer [memoized-safe-read-edn-string]]
-    [contrib.ui.remark :as remark]
     [contrib.reactive :as r]
     [contrib.reagent :refer [from-react-context fragment]]
+    [contrib.string :refer [memoized-safe-read-edn-string blank->nil]]
+    [contrib.ui.remark :as remark]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.core :as browser]
-    [hypercrud.browser.link :as link]
-    [hypercrud.ui.auto-control :refer [auto-control]]
+    [hypercrud.browser.link :as link :refer [links-here rel->link]]
+    [hypercrud.ui.attribute.edn :refer [edn edn-many]]
+    [hypercrud.ui.attribute.instant :refer [instant]]
+    [hypercrud.ui.control.link-controls :refer [anchors iframes]]
+    [hypercrud.ui.label :refer [label]]
     [hypercrud.ui.form :as form]
+    [hypercrud.ui.safe-render :refer [portal-markup]]
     [hypercrud.ui.table :as table]
+    [hypercrud.ui.util :refer [attr-renderer]]
+    [hypercrud.ui.widget :as widget]
     [hyperfiddle.data :as hf]
     [hyperfiddle.ui.markdown-extensions :refer [extensions]]
     [hyperfiddle.ui.hacks]                                  ; exports
     ))
 
+
+(defn control "this is a function, which returns component" [ctx]
+  (let [layout (-> (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block) name keyword)
+        a (:hypercrud.browser/attribute ctx)
+        attr (some-> ctx :hypercrud.browser/fat-attribute deref)
+        display-mode (-> @(:hypercrud.ui/display-mode ctx) name keyword)
+        type (some-> attr :db/valueType :db/ident name keyword)
+        cardinality (some-> attr :db/cardinality :db/ident name keyword)
+        isComponent (some-> attr :db/isComponent (if :component))
+        renderer (blank->nil (:attribute/renderer attr))]
+
+    (if renderer
+      (attr-renderer renderer ctx)
+      (r/partial
+        portal-markup
+        (match [type cardinality]
+          [:boolean :one] widget/boolean
+          [:keyword :one] widget/keyword
+          [:string :one] widget/string
+          [:long :one] widget/long
+          [:instant :one] instant
+          [:ref :one] widget/dbid                           ; nested form
+          [:ref :many] (fn [value ctx props] [:noscript]) #_edn-many ; nested table
+          [_ :one] edn
+          [_ :many] edn-many
+          )))))
 
 (defn semantic-css [ctx]
   ; Semantic css needs to be prefixed with - to avoid collisions. todo
@@ -34,13 +67,66 @@
      (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/cardinality :db/ident))
      (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/isComponent (if :component)))]))
 
+(defn head-select-xray [field ctx props]
+  (fragment
+    (if (:fe-pos ctx) (label field ctx props))
+    (case (-> @(:hypercrud.ui/display-mode ctx) name keyword)
+      :xray (if-not (-> (rel->link :options ctx) :link/dependent?)
+              [widget/select nil ctx (assoc props :disabled true)])
+      nil)))
+
+(defn hyper-control [ctx]
+  {:post [(not (nil? %))]}
+  (let [display-mode (-> @(:hypercrud.ui/display-mode ctx) name keyword)
+        layout (-> (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block) name keyword)
+        d (-> (:relation ctx) (if :body :head))
+        i (:fe-pos ctx)
+        {:keys [type]} (if i @(:hypercrud.browser/find-element ctx))
+        a (:hypercrud.browser/attribute ctx)
+        rels (->> (links-here ctx) (map :link/rel) (into #{}))]
+
+    (if (= a '*)
+      (fn [field ctx props] [:code "magic-new"])
+      (match [d i type a rels]
+
+        [d i _ a (true :<< #(contains? % :options))]
+        (r/partial portal-markup (case d :body widget/select
+                                         :head head-select-xray))
+
+        [:head i _ a _]
+        (fn [field ctx props]
+          (fragment (if i [label field ctx props])
+                    (anchors :head i a ctx nil)
+                    (iframes :head i a ctx nil)))
+
+        [:body i :aggregate _ _]
+        (fn [value ctx props]
+          (fragment [portal-markup widget/string (context/extract-focus-value ctx) ctx props]
+                    (if i (anchors :body i a ctx nil))
+                    (if i (iframes :body i a ctx nil))))
+
+        [:body i _ a _]
+        (fn [value ctx props]
+          (fragment (if a [(control ctx) value ctx props])
+                    (if i (anchors :body i a ctx nil))
+                    (if i (iframes :body i a ctx nil))))
+
+        ))))
+
+(comment
+  [:block :head i '*] (fn [field ctx props] [:code "form head magic-new"])
+  [:block :body i '*] (fn [value ctx props] [:code "form body magic-new"])
+  [:table :head i '*] (fn [field ctx props] [:code "table head magic-new"])
+  [:table :body i '*] (fn [value ctx props] [:code "table body magic-new"])
+  )
+
 (defn ^:export value "Naked value renderer. Does not work in tables. Use field [] if you want a naked th/td view"
   [[i a] ctx ?f & args]                                     ; Doesn't make sense in a table context bc what do you do in the header?
   (let [ctx (context/focus ctx true i a)
         props (kwargs args)
         props (merge props {:class (apply classes (:class props) (semantic-css ctx))})]
     ; Todo pass correct value for entity links
-    [(or ?f (auto-control ctx)) (context/extract-focus-value ctx) ctx props]))
+    [(or ?f (hyper-control ctx)) (context/extract-focus-value ctx) ctx props]))
 
 (defn ^:export field "Works in a form or table context. Draws label and/or value."
   [[i a] ctx ?f & args]
@@ -49,7 +135,7 @@
         props (kwargs args)
         props (merge props {:class (apply classes (:class props) (semantic-css ctx))})]
     ^{:key (str i a)}
-    [view (or ?f (auto-control ctx)) ctx props]))
+    [view (or ?f (hyper-control ctx)) ctx props]))
 
 (defn ^:export table "sort-fn :: (fn [col ctx v] v)" [form sort-fn ctx]
   (let [sort-col (r/atom nil)]

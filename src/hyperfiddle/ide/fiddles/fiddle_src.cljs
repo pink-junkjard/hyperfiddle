@@ -6,11 +6,10 @@
     [contrib.reagent :refer [fragment]]
     [contrib.ui]
     [hypercrud.types.URI :refer [is-uri?]]
-    [hypercrud.ui.auto-control :refer [auto-control]]
     [hyperfiddle.ui :refer [markdown]]
     [hypercrud.ui.attribute.edn :refer [edn-many]]
     [hyperfiddle.ide.fiddles.topnav :refer [shadow-fiddle]]
-    [hyperfiddle.ui :refer [browse field link]]))
+    [hyperfiddle.ui :refer [browse field link hyper-control]]))
 
 
 (defn schema-links [ctx]
@@ -25,7 +24,7 @@
        (doall)))
 
 (defn control-with-unders [frag value ctx props]
-  [:div [(auto-control ctx) value ctx props] frag])
+  [:div [(hyper-control ctx) value ctx props] frag])
 
 (def underdocs
   {:fiddle/pull "See [:fiddle/pull examples](http://www.hyperfiddle.net/:docs!fiddle-pull/) and the

@@ -3,8 +3,7 @@
             [contrib.datomic-tx :as tx]
             [contrib.reactive :as r]
             [hypercrud.browser.context :as context]
-            [hypercrud.ui.auto-control :refer [auto-control]]
-            [hyperfiddle.ui :refer [field]]))
+            [hyperfiddle.ui :refer [field hyper-control]]))
 
 
 (def special-case-attrs #{:db/ident :db/cardinality :db/valueType})
@@ -49,7 +48,7 @@
                          [true true]
                          (user-with! tx))))]
     (fn [value ctx props]
-      [(auto-control ctx)
+      [(hyper-control ctx)
        value
        (update ctx :user-with! #(r/partial user-with! ctx %))
        props])))
@@ -74,7 +73,7 @@
                          [true true]
                          (user-with! tx))))]
     (fn [value ctx props]
-      [(auto-control ctx)
+      [(hyper-control ctx)
        value
        (update ctx :user-with! #(r/partial user-with! ctx %))
        props])))
