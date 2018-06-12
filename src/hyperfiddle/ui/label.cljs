@@ -35,4 +35,4 @@
                        (if typedoc (str "`" typedoc "`"))))]
     [tooltip-thick (if help-md
                      [:div.docstring [markdown help-md]])
-     [:label (:label field) (if help-md [:sup "†"])]]))
+     [:label props (:label field) (if help-md [:sup "†"])]]))
