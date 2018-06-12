@@ -27,10 +27,10 @@
         isComponent (some-> attr :db/isComponent (if :component))
         renderer (blank->nil (:attribute/renderer attr))]
 
-    (r/partial
-      portal-markup
-      (if renderer
-        (attr-renderer renderer ctx)
+    (if renderer
+      (attr-renderer renderer ctx)
+      (r/partial
+        portal-markup
         (match [type cardinality]
           [:boolean :one] widget/boolean
           [:keyword :one] widget/keyword
@@ -42,6 +42,14 @@
           [_ :one] edn
           [_ :many] edn-many
           )))))
+
+(defn head-select-xray [field ctx props]
+  (fragment
+    (if (:fe-pos ctx) (label field ctx props))
+    (case (-> @(:hypercrud.ui/display-mode ctx) name keyword)
+      :xray (if-not (-> (rel->link :options ctx) :link/dependent?)
+              [widget/select nil ctx (assoc props :disabled true)])
+      nil)))
 
 (defn auto-control "hyper-control" [ctx]
   {:post [(not (nil? %))]}
@@ -59,14 +67,8 @@
       (match [d i type a rels]
 
         [d i _ a (true :<< #(contains? % :options))]
-        (fn [field ctx props]
-          (case d :body widget/select
-                  :head (fragment
-                          (if i (label field ctx props))
-                          (case display-mode
-                            :xray (if-not (-> (rel->link :options ctx) :link/dependent?)
-                                    [widget/select nil ctx (assoc props :disabled true)])
-                            nil))))
+        (r/partial portal-markup (case d :body widget/select
+                                         :head head-select-xray))
 
         [:head i _ a _]
         (fn [field ctx props]
@@ -82,7 +84,6 @@
 
         [:body i _ a _]
         (fn [value ctx props]
-          ; Control can decline to render anything and we must avoid blank divs/userportal TODO
           (fragment (if a [(control ctx) value ctx props])
                     (if i (anchors :body i a ctx nil))
                     (if i (iframes :body i a ctx nil))))
