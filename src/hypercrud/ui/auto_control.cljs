@@ -37,7 +37,7 @@
           [:long :one] widget/long
           [:instant :one] instant
           [:ref :one] widget/dbid                           ; nested form
-          [:ref :many] (fn [value ctx props] [:noscript]) #_edn-many             ; nested table
+          [:ref :many] (fn [value ctx props] [:noscript]) #_edn-many ; nested table
           [_ :one] edn
           [_ :many] edn-many
           )))))
@@ -47,24 +47,24 @@
 
   (let [display-mode (-> @(:hypercrud.ui/display-mode ctx) name keyword)
         layout (-> (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block) name keyword)
-        dependent (-> (:relation ctx) (if :body :head))
+        d (-> (:relation ctx) (if :body :head))
         i (:fe-pos ctx)
         a (:hypercrud.browser/attribute ctx)
         rels (->> (links-here ctx) (map :link/rel) (into #{}))]
 
     (if (= a '*)
       (fn [field ctx props] [:code "magic-new"])
-      (match [dependent i a rels]
+      (match [d i a rels]
 
-        [:body i a (true :<< #(contains? % :options))] widget/select
-        [:head i a (true :<< #(contains? % :options))] (fn [field ctx props]
-                                                         (fragment (if i (label field ctx props))
-                                                                   (case display-mode
-                                                                     :user nil
-                                                                     :xray
-                                                                     (if-not (-> (rel->link :options ctx) :link/dependent?)
-                                                                       [widget/select nil ctx (assoc props :disabled true)])
-                                                                     )))
+        [d i a (true :<< #(contains? % :options))]
+        (fn [field ctx props]
+          (case d :body widget/select
+                  :head (fragment
+                          (if i (label field ctx props))
+                          (case display-mode
+                            :xray (if-not (-> (rel->link :options ctx) :link/dependent?)
+                                    [widget/select nil ctx (assoc props :disabled true)])
+                            nil))))
         [:head i a _] (fn [field ctx props]
                         (fragment (if i [label field ctx props])
                                   (anchors :head i a ctx nil)
