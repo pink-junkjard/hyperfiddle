@@ -20,7 +20,7 @@
     [hyperfiddle.ui.markdown-extensions :refer [extensions]]
     [hyperfiddle.ui.controls :as controls]
     [hyperfiddle.ui.hacks]                                  ; exports
-    [hyperfiddle.ui.select :as select]
+    [hyperfiddle.ui.select :refer [select]]
     ))
 
 
@@ -64,18 +64,9 @@
      (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/cardinality :db/ident))
      (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/isComponent (if :component)))]))
 
-(defn head-select-xray [field ctx props]
-  (fragment
-    (if (:fe-pos ctx) (label field ctx props))
-    (case (-> @(:hypercrud.ui/display-mode ctx) name keyword)
-      :xray (if-not (-> (rel->link :options ctx) :link/dependent?)
-              [select/select nil ctx (assoc props :disabled true)])
-      nil)))
-
 (defn hyper-control [ctx]
   {:post [(not (nil? %))]}
   (let [display-mode (-> @(:hypercrud.ui/display-mode ctx) name keyword)
-        layout (-> (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block) name keyword)
         d (-> (:relation ctx) (if :body :head))
         i (:fe-pos ctx)
         {:keys [type]} (if i @(:hypercrud.browser/find-element ctx))
@@ -84,31 +75,43 @@
 
     (if (= a '*)
       (fn [field ctx props] [:code "magic-new"])
-      (match [d i type a rels]
+      (letfn [(select? [rels] (contains? rels :options))]
+        (match [d i type a rels]
 
-        [d i _ a (true :<< #(contains? % :options))]
-        (case d :body select/select :head head-select-xray)
-        ; Needs to respect the other auto links other than special rel
+          [:body i _ a (true :<< select?)]
+          (fn [value ctx props]
+            (fragment (anchors :body i a ctx link/options-processor) ; Order sensitive, here be floats
+                      [select value ctx props]
+                      (iframes :body i a ctx link/options-processor)))
 
-        [:head i _ a _]
-        (fn [field ctx props]
-          (fragment (if i [label field ctx props])
-                    (anchors :head i a ctx nil)
-                    (iframes :head i a ctx nil)))
+          [:head i _ a (true :<< select?)]
+          (fn [field ctx props]
+            (fragment (if i [label field ctx props])
+                      (if (and (= :xray display-mode)
+                               (not (:link/dependent? (rel->link :options ctx))))
+                        [select nil ctx props])
+                      (anchors :head i a ctx link/options-processor)
+                      (iframes :head i a ctx link/options-processor)))
 
-        [:body i :aggregate _ _]
-        (fn [value ctx props]
-          (fragment [controls/string (context/extract-focus-value ctx) ctx props]
-                    (if i (anchors :body i a ctx nil))
-                    (if i (iframes :body i a ctx nil))))
+          [:head i _ a _]
+          (fn [field ctx props]
+            (fragment (if i [label field ctx props])
+                      (anchors :head i a ctx)
+                      (iframes :head i a ctx)))
 
-        [:body i _ a _]
-        (fn [value ctx props]
-          (fragment (if a [(control ctx) value ctx props])
-                    (if i (anchors :body i a ctx nil))
-                    (if i (iframes :body i a ctx nil))))
+          [:body i :aggregate _ _]
+          (fn [value ctx props]
+            (fragment [controls/string (context/extract-focus-value ctx) ctx props]
+                      (if i (anchors :body i a ctx))
+                      (if i (iframes :body i a ctx))))
 
-        ))))
+          [:body i _ a _]
+          (fn [value ctx props]
+            (fragment (if a [(control ctx) value ctx props])
+                      (if i (anchors :body i a ctx))
+                      (if i (iframes :body i a ctx))))
+
+          )))))
 
 (comment
   [:block :head i '*] (fn [field ctx props] [:code "form head magic-new"])

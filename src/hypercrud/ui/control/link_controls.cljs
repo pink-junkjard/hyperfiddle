@@ -1,8 +1,9 @@
 (ns hypercrud.ui.control.link-controls
-  (:require [contrib.data :refer [kwargs]]
-            [contrib.reactive :as r]
+  (:require
+    [contrib.data :refer [kwargs]]
+    [contrib.reactive :as r]
     ;[hypercrud.browser.core :as browser]
-            [hypercrud.browser.link :as link]))
+    [hypercrud.browser.link :as link]))
 
 
 (defn prompt [link-ref]
@@ -16,7 +17,6 @@
   [hypercrud.browser.core/ui @link-ref ctx class])
 
 (defn ui-contextual-links [body-or-head i a embed links ?processor]
-  ; There is only one processor ?
   (->> (reduce (fn [links f] (f links)) @links (if ?processor [?processor]))
        ((if embed filter remove) (fn [link]
                                    (and (not (link/popover-link? link))
@@ -26,12 +26,7 @@
        (filter (link/same-path-as? (remove nil? [i a])))
        vec))
 
-; ideally in the future we can infer path and dependent? from the ctx
-; NOTE: this ctx logic and structure is the same as the inline branch of browser-request/recurse-request
-; don't test link validity, we need to render the failure. If this is a dependent link, use visibility predicate to hide the error.
-
-(defn anchors [body-or-head i a ctx ?f & [props]]
-  ; Can't infer dependent from :relation, must use :cell-data i think
+(defn anchors [body-or-head i a ctx & [?f props]]           ; ?f should just be set of omitted rels
   (->> (r/track ui-contextual-links body-or-head i a false (:hypercrud.browser/links ctx) ?f)
        (r/unsequence :db/id)
        (map (fn [[link-ref link-id]]
