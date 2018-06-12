@@ -42,7 +42,7 @@
         (fn [ctx]
           (let [on-click (r/partial click-fn (:route ctx))]
             [native-on-click-listener {:on-click on-click}
-             [:div {:class (css "ui" class)}
+             [:div {:class (css "ui" class)}                ; fragment
               [(:alpha.hypercrud.browser/ui-comp ctx) ctx]
               [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]]]))
         (fn [ctx]
@@ -54,7 +54,7 @@
               [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]]]))])))
 
 #?(:cljs
-   (defn ui [link ctx ?class & args]
+   (defn ui [link ctx ?class & args]                        ; TODO don't omit user props
      (let [props (kwargs args)
            error-comp (ui-error/error-comp ctx)
            hidden' (->> (try-either (link/build-link-props link ctx)) ; todo we want the actual error from the link props

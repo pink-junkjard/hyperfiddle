@@ -49,7 +49,7 @@
                                            (on-change id)))))
                   (update :disabled #(or % no-options?)))
         label-fn (:label-fn props label-fn)]
-    [:select.select (dissoc props :label-fn)
+    [:select (dissoc props :label-fn)
      (conj
        (->> @(:relations ctx)
             (mapv (juxt (comp :db/id first) #(label-fn % ctx)))
@@ -77,7 +77,7 @@
                   ((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) id)))
       dom-value (fn [value]                                 ; nil, kw or eid
                   (if (nil? value) "" (str (:db/id value))))]
-  (defn select* [value ctx props]
+  (defn select [value ctx props]
     (let [options-link @(r/track link/options-link ctx)]
       (either/branch
         (link/eval-hc-props (:hypercrud/props options-link) ctx)
@@ -87,12 +87,10 @@
                                             (nil? (:cell-data ctx)) ; no value at all
                                             ; what is this ? I keep breaking this next line spent an hour here
                                             (nil? (some-> (:cell-data ctx) (r/cursor [:db/id]) deref)))}
-                props (assoc hc-props
-                        :on-change (r/partial on-change ctx)
-                        :value (dom-value value))]
+                props (merge props hc-props {:on-change (r/partial on-change ctx)
+                                             :value (dom-value value)})
+                f (r/partial select-anchor-renderer props option-props)]
             [browser/ui options-link (assoc ctx
                                        :hypercrud.ui/display-mode always-user
-                                       :user-renderer (r/partial select-anchor-renderer props option-props))]))))))
-
-(defn select [value ctx props]                              ; this is a hypercontrol
-  [:div (select* value ctx props)])
+                                       :user-renderer f)
+             (:class props)]))))))

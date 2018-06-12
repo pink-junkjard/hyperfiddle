@@ -1,6 +1,7 @@
 (ns contrib.ui
   (:require
     [cats.monad.either :as either]
+    [clojure.set :refer [rename-keys]]
     [contrib.cljs-platform :refer [global!]]
     [contrib.pprint :refer [pprint-str]]
     [contrib.reactive :as r]
@@ -15,6 +16,7 @@
 
 (defn ^:export checkbox [value change! & [props]]
   [:input {:type "checkbox"
+           :class (:class props)
            :checked value
            :disabled (:read-only props)
            :on-change change!}])
@@ -36,11 +38,7 @@
     [-codemirror value ?change! props]))
 
 (defn ^:export code-block [props value ?change!]
-  (let [props (if-not (nil? (:read-only props))
-                (-> props
-                    (dissoc :read-only)
-                    (assoc :readOnly (:read-only props)))
-                props)]
+  (let [props (rename-keys props {:read-only :readOnly})]
     [code value ?change! props]))
 
 (defn ^:export code-inline-block [& args]

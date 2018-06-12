@@ -1,7 +1,10 @@
 (ns contrib.ui.input
-  (:require [cats.monad.either :as either]
-            [contrib.reactive :as r]
-            [contrib.string :refer [safe-read-edn-string]]))
+  (:require
+    [cats.monad.either :as either]
+    [clojure.set :refer [rename-keys]]
+    [contrib.css :refer [css]]
+    [contrib.reactive :as r]
+    [contrib.string :refer [safe-read-edn-string]]))
 
 
 (defn read-string-or-nil [code-str]
@@ -9,19 +12,14 @@
                  (constantly nil)
                  identity))
 
-(defn adapt-props-to-input [props]
-  (merge
-    props
-    {:disabled (:read-only props)}))
-
 (defn- validated-input' [value on-change! parse-string to-string valid? props]
   (let [intermediate-val (r/atom (to-string value))]
     (fn [value on-change! parse-string to-string valid? props]
       ; todo this valid check should NOT be nil punning
       (let [valid?' (valid? @intermediate-val)]
-        [:input (merge (adapt-props-to-input props)
+        [:input (merge (rename-keys props {:read-only :disabled})
                        {:type "text"
-                        :class (if-not valid?' "invalid")
+                        :class (css (if-not valid?' "invalid") (:class props))
                         :value @intermediate-val
                         :on-change #(reset! intermediate-val (.. % -target -value))
                         :on-blur #(let [parsed (parse-string @intermediate-val)]
@@ -29,7 +27,7 @@
                                       (on-change! parsed)))})]))))
 
 (defn validated-input [value on-change! parse-string to-string valid? & [props]]
-  ^{:key value}                                             ; wut
+  ^{:key value}                                             ; This is to reset the local-state
   [validated-input' value on-change! parse-string to-string valid? props])
 
 (defn input* [value on-change! & [props]]

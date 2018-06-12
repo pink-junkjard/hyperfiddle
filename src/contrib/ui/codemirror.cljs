@@ -16,7 +16,7 @@
   (reagent/create-class
     {:reagent-render
      (fn [value change! props]
-       [:textarea (merge (select-keys props [:id]) {:default-value (str value) :auto-complete "off" :class "text"})])
+       [:textarea (merge props {:default-value (str value) :auto-complete "off"})])
 
      :component-did-mount
      (fn [this]

@@ -1,5 +1,6 @@
 (ns contrib.ui.recom-date
   (:require
+    [clojure.set :refer [rename-keys]]
     [goog.date.UtcDateTime]
     [contrib.ui.input :as input]
     [re-com.core :as re-com]))
@@ -24,9 +25,10 @@
 
 (defn recom-date [value change! props]
   ; (new goog.date.UtcDateTime(new Date())).toIsoString()
-  [re-com/datepicker-dropdown
-   :model (goog.date.UtcDateTime. value)                    ; not reactive
-   :disabled? (:disabled props)
-   :on-change #(change! (.-date %))])
-
-;(defn date-inline-block [value change! props])
+  (let [props (rename-keys props {:disabled :disabled?})
+        props (select-keys props [:class :disabled? :id])]
+    (into
+      [re-com/datepicker-dropdown
+       :model (goog.date.UtcDateTime. value)                ; not reactive
+       :on-change #(change! (.-date %))]
+      (flatten (seq props)))))
