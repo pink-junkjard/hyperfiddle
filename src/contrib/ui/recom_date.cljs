@@ -29,6 +29,6 @@
         props (select-keys props [:class :disabled? :id])]
     (into
       [re-com/datepicker-dropdown
-       :model (goog.date.UtcDateTime. value)                ; not reactive
+       :model (if value (goog.date.UtcDateTime. value))     ; not reactive
        :on-change #(change! (.-date %))]
       (flatten (seq props)))))
