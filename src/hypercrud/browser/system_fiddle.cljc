@@ -1,8 +1,8 @@
 (ns hypercrud.browser.system-fiddle
   (:require [cuerdas.core :as str]
             [contrib.try :refer [try-either]]
+            [hyperfiddle.ide.fiddles.errors :as errors]
             [hyperfiddle.ide.fiddles.schema :as schema]
-            [hyperfiddle.ide.fiddles.not-found :as not-found]
             [hypercrud.types.Entity :refer [->Entity]]))
 
 
@@ -31,7 +31,8 @@
       (case (namespace ident)
         "hyperfiddle.system" (cond
                                (= name' "remove") fiddle-blank-system-remove
-                               (= name' "not-found") not-found/not-found
+                               (= name' "not-found") errors/not-found
+                               (= name' "unauthorized") errors/unauthorized
                                (str/starts-with? name' "edit-") (fiddle-system-edit (str/strip-prefix name' "edit-")))
         "hyperfiddle.schema" (schema/schema name')
         "hyperfiddle.schema.db-cardinality-options" (schema/db-cardinality-options name')
