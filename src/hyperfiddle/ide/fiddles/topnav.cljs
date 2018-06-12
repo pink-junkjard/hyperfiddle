@@ -14,11 +14,10 @@
             [hypercrud.browser.router :as router]
             [hypercrud.browser.system-fiddle :as system-fiddle]
             [hypercrud.types.Entity :refer [->Entity shadow-entity]]
-            [hypercrud.ui.result :as result]
             [hyperfiddle.actions :as actions]
             [hyperfiddle.foundation :as foundation :refer [staging]]
             [hyperfiddle.runtime :as runtime]
-            [hyperfiddle.ui :refer [markdown]]
+            [hyperfiddle.ui :as ui :refer [markdown]]
             [hyperfiddle.ui.login :as login]))
 
 (def ^:export stateless-login-url login/stateless-login-url)
@@ -126,7 +125,7 @@
         anonymous? (nil? @(runtime/state (:peer ctx) [::runtime/user-id]))
         stage @(runtime/state (:peer ctx) [:stage])]
     [:div.hyperfiddle-topnav-stage
-     (result/fiddle ctx)                                    ; for docstring
+     (ui/fiddle ctx)                                        ; for docstring
      (let [disabled? (or (not writes-allowed?) (not (empty? stage)))]
        [tooltip (cond (and (not writes-allowed?) anonymous?) {:status :warning :label "please login"}
                       (not writes-allowed?) {:status :warning :label "Writes restricted"}

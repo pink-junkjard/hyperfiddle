@@ -1,4 +1,5 @@
 (ns hyperfiddle.ui
+  (:require-macros [hyperfiddle.ui :refer [-build-fiddle]])
   (:require
     [clojure.core.match :refer [match match*]]
     [contrib.css :refer [classes css-slugify]]
@@ -124,7 +125,6 @@
   (let [ctx (context/focus ctx true i a)
         props (kwargs args)
         props (merge props {:class (apply classes (:class props) (semantic-css ctx))})]
-    ; Todo pass correct value for entity links
     [(or ?f (hyper-control ctx)) (context/extract-focus-value ctx) ctx props]))
 
 (defn ^:export field "Works in a form or table context. Draws label and/or value."
@@ -159,6 +159,16 @@ nil. call site must wrap with a Reagent component"
     ?f [?f ctx]
     (:relations ctx) [table (r/partial hf/form field) hf/sort-fn ctx]
     (:relation ctx) (hf/form field ctx)))
+
+(def ^:export fiddle (-build-fiddle))
+
+(defn fiddle-xray [ctx class]
+  (let [{:keys [:hypercrud.browser/fiddle
+                #_:hypercrud.browser/result]} ctx]
+    [:div {:class class}
+     [:h3 (some-> @fiddle :fiddle/ident name)]
+     (result ctx)
+     (field [] ctx nil)]))
 
 (defn link [rel path ctx ?content & args]
   (let [props (kwargs args)

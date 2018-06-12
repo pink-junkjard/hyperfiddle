@@ -1,7 +1,5 @@
 (ns hyperfiddle.core
   (:require
-    [hypercrud.ui.result]
-
     ; pull in public ui deps
     #?(:cljs [contrib.reagent])
     #?(:cljs [contrib.ui])

@@ -6,9 +6,8 @@
             [hypercrud.browser.system-fiddle :as system-fiddle]
             [hypercrud.browser.system-link :refer [system-link?]]
             [hypercrud.ui.error :as ui-error]
-            [hypercrud.ui.result :as result]
             [hyperfiddle.data :refer [form sort-fn]]
-            [hyperfiddle.ui :refer [table field hyper-control]]))
+            [hyperfiddle.ui :refer [hyper-control field table fiddle]]))
 
 (defn read-only? [ctx]
   {:pre [(:relation ctx)]}
@@ -38,7 +37,7 @@
         (fn [e]
           [:div {:class class}
            [(ui-error/error-comp ctx) e]
-           (result/fiddle ctx)])
+           (fiddle ctx)])
         (fn [{:keys [:hypercrud.browser/links]}]
           (let [ctx (-> ctx
                         (dissoc :relation :relations)

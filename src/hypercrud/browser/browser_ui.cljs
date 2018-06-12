@@ -9,13 +9,13 @@
     [hypercrud.browser.context :as context]
     [hypercrud.types.ThinEntity :refer [->ThinEntity]]
     [hypercrud.ui.error :as ui-error]
-    [hypercrud.ui.result :as result]
     [hypercrud.ui.safe-render :refer [user-portal]]
     [hypercrud.ui.util :as util]
     [hyperfiddle.actions :as actions]
     [hyperfiddle.foundation :as foundation]
     [hyperfiddle.ide.fiddles.fiddle-src :as fiddle-src]
     [hyperfiddle.ide.fiddles.topnav :as topnav]
+    [hyperfiddle.ui :refer [fiddle-xray]]
     [hyperfiddle.runtime :as runtime]))
 
 
@@ -60,4 +60,4 @@
                    (some-> @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/cljs-ns]) blank->nil)
                    (some-> @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/renderer]) blank->nil build-wrapped-render-expr-str)
                    ctx class])
-         ::xray [result/fiddle-xray ctx class])))])
+         ::xray [fiddle-xray ctx class])))])
