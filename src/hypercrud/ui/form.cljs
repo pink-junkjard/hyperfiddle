@@ -4,7 +4,7 @@
             [contrib.reagent :refer [fragment]]
             [contrib.ui.input :as input]
             [hypercrud.ui.connection-color :as connection-color]
-            [hypercrud.ui.label :refer [label]]
+            [hyperfiddle.ui.label :refer [label]]
             [hypercrud.browser.context :as context]))
 
 

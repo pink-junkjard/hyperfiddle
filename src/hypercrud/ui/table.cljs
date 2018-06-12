@@ -4,7 +4,7 @@
             [hypercrud.browser.system-link :refer [system-link?]]
             [hypercrud.browser.link :as link]
             [hypercrud.ui.connection-color :as connection-color]
-            [hypercrud.ui.label :refer [label]]
+            [hyperfiddle.ui.label :refer [label]]
             [hyperfiddle.data :as hf]
             [hypercrud.browser.context :as context]))
 

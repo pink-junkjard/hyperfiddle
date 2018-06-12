@@ -1,4 +1,4 @@
-(ns hypercrud.ui.navigate-cmp
+(ns hyperfiddle.ui.navigate-cmp
   (:require [contrib.css :refer [classes]]
             [contrib.keypress :refer [with-keychord]]
             [contrib.ui.tooltip :refer [tooltip]]

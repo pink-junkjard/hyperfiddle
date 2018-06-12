@@ -5,9 +5,6 @@
     ; pull in public ui deps
     #?(:cljs [contrib.reagent])
     #?(:cljs [contrib.ui])
-    #?(:cljs [contrib.ui.radio])
-    #?(:cljs [hypercrud.ui.textarea])
-
     #?(:cljs [hyperfiddle.ui])
     #?(:cljs [hypercrud.ui.attribute.markdown-editor])      ; legacy
     #?(:cljs [hypercrud.ui.attribute.code])                 ; legacy

@@ -11,7 +11,7 @@
     [hypercrud.browser.core :as browser]
     [hypercrud.browser.link :as link :refer [links-here rel->link]]
     [hypercrud.ui.control.link-controls :refer [anchors iframes]]
-    [hypercrud.ui.label :refer [label]]
+    [hyperfiddle.ui.label :refer [label]]
     [hypercrud.ui.form :as form]
     [hypercrud.ui.safe-render :refer [portal-markup]]
     [hypercrud.ui.table :as table]

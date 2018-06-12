@@ -1,6 +1,6 @@
-(ns hypercrud.ui.label-test
+(ns hyperfiddle.ui.label-test
   (:require [clojure.test :refer [deftest is]]
-            [hypercrud.ui.label :refer [fqn->name]]))
+            [hyperfiddle.ui.label :refer [fqn->name]]))
 
 
 (defn renderer-1 "(fn [_ _ ctx]\n  (let [ident @(contrib.reactive/cursor (:cell-data ctx) [:domain/ident])\n        href (str \"http://\" ident \".\" (:hyperfiddle-hostname ctx))]\n    [:a {:href href} href]))")

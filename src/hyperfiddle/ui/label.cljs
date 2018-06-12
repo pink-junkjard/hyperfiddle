@@ -1,4 +1,4 @@
-(ns hypercrud.ui.label                                      ; hyperfiddle.ui/label
+(ns hyperfiddle.ui.label
   (:require [contrib.reactive :as r]
             [contrib.string :refer [blank->nil]]
             [contrib.ui.tooltip :refer [tooltip-thick]]
@@ -24,8 +24,6 @@
                   #(some-> % :db/cardinality :db/ident name)
                   #(some-> % :db/isComponent (if :component) name)
                   #(some-> % :db/unique :db/ident name)))))
-
-#_{:label help-text :position :below-right}
 
 (defn label [field ctx props]
   (let [dbdoc (some-> ctx :hypercrud.browser/fat-attribute (r/cursor [:db/doc]) deref blank->nil)

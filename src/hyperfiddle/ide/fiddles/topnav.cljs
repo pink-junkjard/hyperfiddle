@@ -6,7 +6,7 @@
             [contrib.reader :refer [read-edn-string]]
             [contrib.reagent :refer [fragment]]
             [contrib.rfc3986 :refer [encode-ednish encode-rfc3986-pchar]]
-            [contrib.ui.radio :as radio]
+            [contrib.ui :refer [radio-option]]
             [contrib.ui.tooltip :refer [tooltip]]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.fiddle :as fiddle]
@@ -83,11 +83,11 @@
             change! #(runtime/dispatch! (:peer ctx) (actions/set-display-mode %))
             value (if src-mode :src display-mode)]
         [:span.radio-group
-         (radio/option {:label "data" :tooltip "Ignore :fiddle/renderer" :target :hypercrud.browser.browser-ui/xray :change! change! :value value
+         (radio-option {:label "data" :tooltip "Ignore :fiddle/renderer" :target :hypercrud.browser.browser-ui/xray :change! change! :value value
                         :disabled (or src-mode no-target-fiddle)})
-         (radio/option {:label "view" :tooltip "Use :fiddle/renderer" :target :hypercrud.browser.browser-ui/user :value value :change! change!
+         (radio-option {:label "view" :tooltip "Use :fiddle/renderer" :target :hypercrud.browser.browser-ui/user :value value :change! change!
                         :disabled (or src-mode no-target-fiddle)})
-         (radio/option {:label (let [root-rel-path (runtime/encode-route (:peer ctx) (router/dissoc-frag (:target-route ctx)))
+         (radio-option {:label (let [root-rel-path (runtime/encode-route (:peer ctx) (router/dissoc-frag (:target-route ctx)))
                                      href (if-not src-mode
                                             (str root-rel-path "#" (encode-rfc3986-pchar (encode-ednish (pr-str :src))))
                                             (str root-rel-path "#"))]
@@ -112,7 +112,7 @@
   (let [enums [:query :entity :blank]
         change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))
         options (->> enums
-                     (map #(radio/option
+                     (map #(radio-option
                              {:label (case % :query "query" :entity "pull" :blank "blank")
                               :target %
                               :value value

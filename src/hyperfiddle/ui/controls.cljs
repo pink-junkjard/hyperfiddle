@@ -145,3 +145,8 @@
                  :hyperfiddle.ui.layout/block edn-block)]
     [:div
      [widget value change! props]]))
+
+(defn textarea* [{:keys [value on-change] :as props}]       ; unused
+  (let [on-change #(let [newval (.. % -target -value)]
+                     (on-change [value] [newval]))]
+    [:textarea (assoc props :on-change on-change)]))

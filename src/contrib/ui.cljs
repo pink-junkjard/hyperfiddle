@@ -6,6 +6,7 @@
     [contrib.reactive :as r]
     [contrib.string :refer [safe-read-edn-string]]
     [contrib.ui.codemirror :refer [-codemirror]]
+    [contrib.ui.tooltip :refer [tooltip]]
     [contrib.ui.remark :as remark]
     [re-com.core :as re-com]
     [reagent.core :as reagent]
@@ -86,3 +87,13 @@
 
 (defn ^:export markdown [& args]
   (into [remark/markdown -remark-instance] args))
+
+(defn radio-option [props]
+  [tooltip {:label (:tooltip props)}
+   [:label.radio-option {:class (if (:disabled props) "disabled")}
+    [:input {:type "radio"
+             :style {:width "auto"}
+             :checked (= (:value props) (:target props))
+             :on-change #((:change! props) (:target props))
+             :disabled (:disabled props)}]
+    (:label props)]])

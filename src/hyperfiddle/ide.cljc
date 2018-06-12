@@ -16,7 +16,7 @@
             [hypercrud.browser.system-fiddle :refer [system-fiddle?]]
     #?(:cljs [hyperfiddle.ui :as ui])
     #?(:cljs [hypercrud.ui.error :as ui-error])
-    #?(:cljs [hypercrud.ui.navigate-cmp :as navigate-cmp])
+    #?(:cljs [hyperfiddle.ui.navigate-cmp :as navigate-cmp])
     #?(:cljs [hypercrud.ui.stale :as stale])
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-one!]]
