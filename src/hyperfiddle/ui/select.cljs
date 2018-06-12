@@ -1,4 +1,4 @@
-(ns hypercrud.ui.select
+(ns hyperfiddle.ui.select
   (:require [cats.core :refer [fmap sequence]]
             [cats.monad.either :as either]
             [contrib.datomic-tx :as tx]
@@ -93,3 +93,6 @@
             [browser/ui options-link (assoc ctx
                                        :hypercrud.ui/display-mode always-user
                                        :user-renderer (r/partial select-anchor-renderer props option-props))]))))))
+
+(defn select [value ctx props]                              ; this is a hypercontrol
+  [:div (select* value ctx props)])

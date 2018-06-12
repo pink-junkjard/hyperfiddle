@@ -1,6 +1,6 @@
 (ns hypercrud.ui.attribute.checkbox
   (:require
-    [hypercrud.ui.widget]))
+    [hyperfiddle.ui.controls]))
 
 
-(def ^:export checkbox hypercrud.ui.widget/boolean)         ; legacy
+(def ^:export checkbox hyperfiddle.ui.controls/boolean)         ; legacy

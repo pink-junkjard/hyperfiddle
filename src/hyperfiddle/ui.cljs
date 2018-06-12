@@ -18,10 +18,11 @@
     [hypercrud.ui.safe-render :refer [portal-markup]]
     [hypercrud.ui.table :as table]
     [hypercrud.ui.util :refer [attr-renderer]]
-    [hypercrud.ui.widget :as widget]
     [hyperfiddle.data :as hf]
     [hyperfiddle.ui.markdown-extensions :refer [extensions]]
+    [hyperfiddle.ui.controls :as controls]
     [hyperfiddle.ui.hacks]                                  ; exports
+    [hyperfiddle.ui.select :as select]
     ))
 
 
@@ -40,12 +41,12 @@
       (r/partial
         portal-markup
         (match [type cardinality]
-          [:boolean :one] widget/boolean
-          [:keyword :one] widget/keyword
-          [:string :one] widget/string
-          [:long :one] widget/long
+          [:boolean :one] controls/boolean
+          [:keyword :one] controls/keyword
+          [:string :one] controls/string
+          [:long :one] controls/long
           [:instant :one] instant
-          [:ref :one] widget/dbid                           ; nested form
+          [:ref :one] controls/dbid                         ; nested form
           [:ref :many] (fn [value ctx props] [:noscript]) #_edn-many ; nested table
           [_ :one] edn
           [_ :many] edn-many
@@ -72,7 +73,7 @@
     (if (:fe-pos ctx) (label field ctx props))
     (case (-> @(:hypercrud.ui/display-mode ctx) name keyword)
       :xray (if-not (-> (rel->link :options ctx) :link/dependent?)
-              [widget/select nil ctx (assoc props :disabled true)])
+              [select/select nil ctx (assoc props :disabled true)])
       nil)))
 
 (defn hyper-control [ctx]
@@ -90,7 +91,7 @@
       (match [d i type a rels]
 
         [d i _ a (true :<< #(contains? % :options))]
-        (r/partial portal-markup (case d :body widget/select
+        (r/partial portal-markup (case d :body select/select
                                          :head head-select-xray))
 
         [:head i _ a _]
@@ -101,7 +102,7 @@
 
         [:body i :aggregate _ _]
         (fn [value ctx props]
-          (fragment [portal-markup widget/string (context/extract-focus-value ctx) ctx props]
+          (fragment [portal-markup controls/string (context/extract-focus-value ctx) ctx props]
                     (if i (anchors :body i a ctx nil))
                     (if i (iframes :body i a ctx nil))))
 

@@ -1,10 +1,9 @@
-(ns hypercrud.ui.widget
+(ns hyperfiddle.ui.controls
   (:refer-clojure :exclude [boolean keyword long])
   (:require [contrib.datomic-tx :as tx]
             [contrib.reactive :as r]
             [contrib.string :refer [empty->nil]]
-            [contrib.ui.input :as input]
-            [hypercrud.ui.select :refer [select*]]))
+            [contrib.ui.input :as input]))
 
 
 (defn keyword [value ctx props]
@@ -64,9 +63,6 @@
 
 (defn dbid [value ctx props]
   [:div (id* value ctx props)])
-
-(defn select [value ctx props]
-  [:div (select* value ctx props)])
 
 (defn text [value ctx props]
   [:div
