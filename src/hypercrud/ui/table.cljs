@@ -1,5 +1,5 @@
 (ns hypercrud.ui.table
-  (:require [contrib.css :refer [css-slugify classes]]
+  (:require [contrib.css :refer [css-slugify css]]
             [contrib.reactive :as r]
             [hypercrud.browser.system-link :refer [system-link?]]
             [hypercrud.browser.link :as link]
@@ -47,13 +47,13 @@
         [i a] [(:fe-pos ctx) attribute]
         path (remove nil? [i a])]
     (if (:relation ctx)
-      [:td {:class (classes #_"field" "hyperfiddle-table-cell" (:class props) "truncate")
+      [:td {:class (css #_"field" "hyperfiddle-table-cell" (:class props) "truncate")
             :style {:border-color (if i (border-color ctx))}}
        ; todo unsafe execution of user code: control
        [f (context/extract-focus-value ctx) ctx props]]
-      [:th {:class (classes #_"field" "hyperfiddle-table-cell" (:class props)
-                                      (if (and i (sortable? ctx path)) "sortable") ; hoist
-                                      (some-> (sort-direction ctx) name)) ; hoist
+      [:th {:class (css #_"field" "hyperfiddle-table-cell" (:class props)
+                                  (if (and i (sortable? ctx path)) "sortable") ; hoist
+                                  (some-> (sort-direction ctx) name)) ; hoist
             :style {:background-color (connection-color/connection-color ctx)}
             :on-click (r/partial toggle-sort! ctx path)}
        ; Use f as the label control also, because there is hypermedia up there

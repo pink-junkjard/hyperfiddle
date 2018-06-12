@@ -2,7 +2,7 @@
   (:refer-clojure :exclude [read-string])
   (:require [cats.monad.either :as either :refer [branch left right]]
             [clojure.string :as string]
-    #?(:cljs [contrib.css :refer [classes]])
+    #?(:cljs [contrib.css :refer [css]])
             [contrib.data :refer [update-existing]]
             [contrib.eval :as eval]
             [contrib.reactive :as r]
@@ -143,7 +143,7 @@
 
 #?(:cljs
    (defn page-view [route ctx f]
-     [:div {:class (apply classes "hyperfiddle-foundation" @(runtime/state (:peer ctx) [:pressed-keys]))}
+     [:div {:class (apply css "hyperfiddle-foundation" @(runtime/state (:peer ctx) [:pressed-keys]))}
       [:style {:dangerouslySetInnerHTML {:__html (:domain/css (:hypercrud.browser/domain ctx))}}]
       (f route ctx)                                         ; nil, seq or reagent component
       (if @(runtime/state (:peer ctx) [:staging-open])

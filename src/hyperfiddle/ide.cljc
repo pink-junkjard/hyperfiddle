@@ -1,6 +1,6 @@
 (ns hyperfiddle.ide
   (:require [clojure.string :as str]
-    #?(:cljs [contrib.css :refer [classes]])
+    #?(:cljs [contrib.css :refer [css]])
             [contrib.data :refer [unwrap]]
             [contrib.reactive :as r]
     #?(:cljs [contrib.reagent :refer [fragment]])
@@ -205,9 +205,9 @@
              ; User content view in both prod and ide. What if src-mode and not-dev ? This draws nothing
              (when-not src-mode                             ; primary, white background (User)   /:posts/:hello-world
                (let [ctx (page-target-context ctx route)]
-                 [browser/ui-from-route route ctx (classes (some-> ctx :hypercrud.ui/display-mode deref name)
-                                                           "hyperfiddle-user"
-                                                           (if ide "hyperfiddle-ide-user"))]))))))))
+                 [browser/ui-from-route route ctx (css (some-> ctx :hypercrud.ui/display-mode deref name)
+                                                       "hyperfiddle-user"
+                                                       (if ide "hyperfiddle-ide-user"))]))))))))
 
 #?(:cljs
    (defn view [[fiddle :as route] ctx]                      ; pass most as ref for reactions

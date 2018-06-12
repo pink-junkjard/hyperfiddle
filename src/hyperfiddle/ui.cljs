@@ -2,7 +2,7 @@
   (:require-macros [hyperfiddle.ui :refer [-build-fiddle]])
   (:require
     [clojure.core.match :refer [match match*]]
-    [contrib.css :refer [classes css-slugify]]
+    [contrib.css :refer [css css-slugify]]
     [contrib.data :refer [unwrap kwargs]]
     [contrib.reactive :as r]
     [contrib.reagent :refer [from-react-context fragment]]
@@ -124,7 +124,7 @@
   [[i a] ctx ?f & args]                                     ; Doesn't make sense in a table context bc what do you do in the header?
   (let [ctx (context/focus ctx true i a)
         props (kwargs args)
-        props (merge props {:class (apply classes (:class props) (semantic-css ctx))})]
+        props (merge props {:class (apply css (:class props) (semantic-css ctx))})]
     [(or ?f (hyper-control ctx)) (context/extract-focus-value ctx) ctx props]))
 
 (defn ^:export field "Works in a form or table context. Draws label and/or value."
@@ -132,7 +132,7 @@
   (let [view (case (::layout ctx) :hyperfiddle.ui.layout/table table/Field form/Field)
         ctx (context/focus ctx true i a)
         props (kwargs args)
-        props (merge props {:class (apply classes (:class props) (semantic-css ctx))})]
+        props (merge props {:class (apply css (:class props) (semantic-css ctx))})]
     ^{:key (str i a)}
     [view (or ?f (hyper-control ctx)) ctx props]))
 

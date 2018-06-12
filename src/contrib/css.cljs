@@ -22,7 +22,7 @@
         (str/replace "(" "-")
         )))
 
-(defn classes
+(defn css
   "&args will be flattened"
   [& args]
   (->> args

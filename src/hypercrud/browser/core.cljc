@@ -2,7 +2,7 @@
   (:require
     [cats.core :as cats]
     [cats.monad.either :as either]
-    #?(:cljs [contrib.css :refer [css-slugify classes]])
+    #?(:cljs [contrib.css :refer [css-slugify css]])
     [contrib.data :refer [kwargs]]
     [contrib.reactive :as r]
     [contrib.try :refer [try-either]]
@@ -37,19 +37,19 @@
         (fn [e]
           (let [on-click (r/partial click-fn route)]
             [native-on-click-listener {:on-click on-click}
-             [:div {:class (classes "ui" class "hyperfiddle-error")}
+             [:div {:class (css "ui" class "hyperfiddle-error")}
               [error-comp e]]]))
         (fn [ctx]
           (let [on-click (r/partial click-fn (:route ctx))]
             [native-on-click-listener {:on-click on-click}
-             [:div {:class (classes "ui" class)}
+             [:div {:class (css "ui" class)}
               [(:alpha.hypercrud.browser/ui-comp ctx) ctx]
               [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]]]))
         (fn [ctx]
           (let [on-click (r/partial click-fn (:route ctx))]
             ; use the stale ctx's route, otherwise alt clicking while loading could take you to the new route, which is jarring
             [native-on-click-listener {:on-click on-click}
-             [:div {:class (classes "ui" class "hyperfiddle-loading")}
+             [:div {:class (css "ui" class "hyperfiddle-loading")}
               [(:alpha.hypercrud.browser/ui-comp ctx) ctx]
               [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]]]))])))
 
@@ -66,4 +66,4 @@
             [:noscript]
             [stale/loading (stale/can-be-loading? ctx) (routing/build-route' link ctx (:frag props))
              (fn [e] [error-comp e])
-             (fn [route] [ui-from-route route ctx (classes ?class (css-slugify (:link/rel link)))])]))])))
+             (fn [route] [ui-from-route route ctx (css ?class (css-slugify (:link/rel link)))])]))])))

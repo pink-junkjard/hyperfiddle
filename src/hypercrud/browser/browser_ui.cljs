@@ -2,7 +2,7 @@
   (:require
     [cats.core :refer [mlet]]
     [cats.monad.either :as either]
-    [contrib.css :refer [css-slugify classes]]
+    [contrib.css :refer [css-slugify css]]
     [contrib.reactive :as r]
     [contrib.string :refer [blank->nil]]
     [hypercrud.browser.base :as base]
@@ -20,7 +20,7 @@
 
 
 (defn auto-ui-css-class [ctx]
-  (classes (let [ident @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/ident])]
+  (css (let [ident @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/ident])]
              [(css-slugify (some-> ident namespace))
               (css-slugify ident)
               "auto-result"])))

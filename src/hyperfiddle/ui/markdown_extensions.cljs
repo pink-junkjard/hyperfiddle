@@ -1,7 +1,7 @@
 (ns hyperfiddle.ui.markdown-extensions
   (:require
     [clojure.walk :refer [keywordize-keys]]
-    [contrib.css :refer [classes]]
+    [contrib.css :refer [css]]
     [contrib.data :refer [unwrap fix-arity]]
     [contrib.reactive :as r]
     [contrib.reagent :refer [fragment with-react-context]]
@@ -41,7 +41,7 @@
                   keywordize-keys
                   (dissoc :children)
                   (clojure.set/rename-keys {:className :class})
-                  (update :class classes "unp") #_"fix font size")
+                  (update :class css "unp") #_"fix font size")
         path (unwrap (memoized-safe-read-edn-string (str "[" argument "]")))
         ?f (if ?f (fn control [value ctx props]
                     [with-react-context

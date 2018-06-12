@@ -1,5 +1,5 @@
 (ns hyperfiddle.ui.navigate-cmp
-  (:require [contrib.css :refer [classes]]
+  (:require [contrib.css :refer [css]]
             [contrib.keypress :refer [with-keychord]]
             [contrib.ui.tooltip :refer [tooltip]]
             [re-com.core :as re-com]))
@@ -28,7 +28,7 @@
                                   (dissoc-non-native-props)
                                   (assoc :on-click open!)
                                   ; use twbs btn coloring but not "btn" itself
-                                  (update :class #(classes % "btn-default")))]
+                                  (update :class #(css % "btn-default")))]
                 [:button btn-props [:span (str label "▾")]])
       :popover [re-com/popover-content-wrapper
                 :no-clip? true
@@ -55,7 +55,7 @@
   ; props (links/build-link-props anchor ctx)
   ; and because nested router. Is that even needed now?
   (if-not (:hidden hypercrud-props)
-    (let [hypercrud-props (update hypercrud-props :class #(classes % class "hf-auto-nav"))]
+    (let [hypercrud-props (update hypercrud-props :class #(css % class "hf-auto-nav"))]
       (if (some-> hypercrud-props :popover :showing? deref)
 
         ; this means popover AND popover-showing - so omit the formula tooltip

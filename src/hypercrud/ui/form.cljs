@@ -1,5 +1,5 @@
 (ns hypercrud.ui.form
-  (:require [contrib.css :refer [css-slugify classes]]
+  (:require [contrib.css :refer [css-slugify css]]
             [contrib.reactive :as r]
             [contrib.reagent :refer [fragment]]
             [contrib.ui.input :as input]
@@ -35,7 +35,7 @@
   [f ctx props]                                             ; fiddle-src wants to fallback by passing nil here explicitly
   (assert @(:hypercrud.ui/display-mode ctx))
   (ui-block-border-wrap
-    ctx (classes "field" "hyperfiddle-form-cell" (:class props) #_":class is for the control, these props came from !cell{}")
+    ctx (css "field" "hyperfiddle-form-cell" (:class props) #_":class is for the control, these props came from !cell{}")
     ;(if (= a '*) ^{:key :new-field} [new-field ctx])
     [(or (:label-fn props) label) (:hypercrud.browser/field ctx) (dissoc ctx :relation) props]
     [f (context/extract-focus-value ctx) ctx props]))
