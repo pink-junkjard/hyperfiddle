@@ -51,7 +51,8 @@
 (defn semantic-css [ctx]
   ; Semantic css needs to be prefixed with - to avoid collisions. todo
   (let [[i a] [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
-    [(css-slugify (some-> ctx :hypercrud.browser/find-element deref :source-symbol)) ; color
+    ["hyperfiddle"
+     (css-slugify (some-> ctx :hypercrud.browser/find-element deref :source-symbol)) ; color
      (css-slugify (cond a "attribute" i "element" :else "naked"))
      (css-slugify (-> (:relation ctx) (if :body :head)))
      (css-slugify i)                                        ; same info as name, but by index which is more robust
