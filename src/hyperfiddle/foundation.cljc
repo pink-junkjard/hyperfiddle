@@ -22,6 +22,7 @@
 
 
 (def domain-uri #uri "datomic:free://datomic:4334/domains")
+(def source-domain-ident "hyperfiddle")                     ; todo this needs to be configurable
 (def auth0-redirect-path "/auth0")                          ; ide
 
 #?(:cljs

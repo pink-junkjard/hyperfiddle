@@ -54,7 +54,7 @@
                     domain))))))
 
 (defn magic-ide-fiddle? [fiddle-ident domain-ident]
-  (and (not= "hyperfiddle" domain-ident)
+  (and (not= foundation/source-domain-ident domain-ident)
        (= "hyperfiddle.ide" (namespace fiddle-ident))))
 
 (defn ide-fiddle-route [[fiddle datomic-args service-args frag :as route] ctx]

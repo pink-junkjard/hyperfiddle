@@ -24,7 +24,7 @@
   (perf/time-promise
     (mlet [:let [user-hf-domain-name (foundation/hostname->hf-domain-name hostname hyperfiddle-hostname)
                  domain-requests [(foundation/domain-request user-hf-domain-name rt)
-                                  (foundation/domain-request "hyperfiddle" rt)]]
+                                  (foundation/domain-request foundation/source-domain-ident rt)]]
            domain-basis (api/sync rt #{foundation/domain-uri})
            [user-domain foundation-domain] (hydrate-all-or-nothing! rt domain-basis nil domain-requests)
            _ (if (nil? (:db/id user-domain))
