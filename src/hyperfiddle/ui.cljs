@@ -92,18 +92,17 @@
                       (anchors :head i a ctx)
                       (iframes :head i a ctx)))
 
-          [:body i :aggregate _ _]
+          [:body i (:or :aggregate :variable) _ _]
           (fn [value ctx props]
-            (fragment [controls/string (context/extract-focus-value ctx) ctx props]
+            (fragment [controls/string (str (context/extract-focus-value ctx)) ctx props]
                       (if i (anchors :body i a ctx))
                       (if i (iframes :body i a ctx))))
 
           [:body i _ a _]
           (fn [value ctx props]
-            (fragment (if a [(control ctx) value ctx props])
+            (fragment (if a [(control ctx) value ctx props]) ; element :pull ? I am missing a permutation which this this
                       (if i (anchors :body i a ctx))
                       (if i (iframes :body i a ctx))))
-
           )))))
 
 (comment
