@@ -22,8 +22,8 @@
 
 (defn global-basis [rt hyperfiddle-hostname hostname]       ; this is foundation code, app-fn level (Just sees configured datomic URIs, no userland api fn)
   (perf/time-promise
-    (mlet [:let [user-hf-domain-name (foundation/hostname->hf-domain-name hostname hyperfiddle-hostname)
-                 domain-requests [(foundation/domain-request user-hf-domain-name rt)
+    (mlet [:let [ident-or-alias (foundation/hostname->ident-or-alias hostname hyperfiddle-hostname)
+                 domain-requests [(foundation/domain-request ident-or-alias rt)
                                   (foundation/domain-request foundation/source-domain-ident rt)]]
            domain-basis (api/sync rt #{foundation/domain-uri})
            [user-domain foundation-domain] (hydrate-all-or-nothing! rt domain-basis nil domain-requests)
@@ -31,7 +31,7 @@
                ; terminate when domain not found
                ; todo force domain hydration before global-basis
                (p/rejected (ex-info "Domain does not exist" {:hyperfiddle.io/http-status-code 404
-                                                             :domain-name user-hf-domain-name}))
+                                                             :domain-name ident-or-alias}))
                (p/resolved nil))
            :let [user-domain (foundation/process-domain user-domain)
                  ide-domain (foundation/process-domain foundation-domain)

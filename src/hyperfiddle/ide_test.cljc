@@ -42,5 +42,5 @@
 
 (deftest activate-ide-1 []
   (is #_(not) (activate-ide?
-                (foundation/hostname->hf-domain-name
+                (foundation/hostname->ident-or-alias
                   (assoc a-ctx-1 :hostname "www.hyperfiddle.net")))))

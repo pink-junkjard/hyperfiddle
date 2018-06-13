@@ -117,7 +117,7 @@
     [:span.qe.radio-group (apply fragment :_ options)]))
 
 (defn ^:export stage-ui [ctx]
-  (let [writes-allowed? (or (foundation/alias? (foundation/hostname->hf-domain-name ctx))
+  (let [writes-allowed? (or (foundation/alias? (foundation/hostname->ident-or-alias ctx))
                             @(r/fmap (r/partial foundation/domain-owner? @(runtime/state (:peer ctx) [::runtime/user-id]))
                                      (runtime/state (:peer ctx) [::runtime/domain])))
         anonymous? (nil? @(runtime/state (:peer ctx) [::runtime/user-id]))
