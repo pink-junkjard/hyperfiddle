@@ -187,7 +187,7 @@
            [browser/ui-from-route (ide-fiddle-route route ctx)
             (assoc ide-ctx :hypercrud.ui/error (r/constantly ui-error/error-inline)
                            #_#_:user-renderer hyperfiddle.ide.fiddles.topnav/renderer)
-            "topnav hidden-print"])
+            "hidden-print"])
 
          ; Content area
          (if (magic-ide-fiddle? fiddle (get-in ctx [:hypercrud.browser/domain :domain/ident]))
