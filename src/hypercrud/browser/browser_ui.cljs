@@ -21,9 +21,10 @@
 
 (defn auto-ui-css-class [ctx]
   (css (let [ident @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/ident])]
-             [(css-slugify (some-> ident namespace))
-              (css-slugify ident)
-              "auto-result"])))
+         ["hyperfiddle"
+          (css-slugify (some-> ident namespace))
+          (css-slugify ident)
+          "auto-result"])))
 
 (defn page-on-click [rt branch branch-aux route event]
   (when (and route (.-altKey event))
@@ -34,7 +35,7 @@
 
 (defn build-wrapped-render-expr-str [user-str] (str "(fn [ctx & [class]]\n" user-str ")"))
 
-(defn src-mode [ctx]
+(defn src-mode [ctx & [?class]]
   (either/branch
     (mlet [request @(r/apply-inner-r (r/track base/meta-request-for-fiddle ctx))
            :let [fiddle (r/atom {:fiddle/type :entity
@@ -46,13 +47,13 @@
     (fn [e] (throw e))                                      ; just throw, this is inside a user-portal
     (fn [ctx]
       (let [f (or (:user-renderer ctx) fiddle-src/fiddle-src-renderer)]
-        [f ctx (auto-ui-css-class ctx) :embed-mode true]))))
+        [f ctx (css ?class (auto-ui-css-class ctx)) :embed-mode true]))))
 
-(defn ui-comp [ctx]
+(defn ui-comp [ctx & [?class]]
   [user-portal (ui-error/error-comp ctx)
    (if (topnav/src-mode? (get (:route ctx) 3))
-     [src-mode ctx]
-     (let [class (auto-ui-css-class ctx)]
+     [src-mode ctx ?class]
+     (let [class (css ?class (auto-ui-css-class ctx))]
        (case @(:hypercrud.ui/display-mode ctx)
          ::user (if-let [user-renderer (:user-renderer ctx)]
                   [user-renderer ctx class]

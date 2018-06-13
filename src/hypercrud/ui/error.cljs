@@ -1,8 +1,9 @@
 (ns hypercrud.ui.error
   (:require
     [contrib.pprint :refer [pprint-str]]
-    [hypercrud.types.Err :as Err]
+    [contrib.reagent :refer [fragment]]
     [contrib.ui :refer [markdown]]
+    [hypercrud.types.Err :as Err]
     [hyperfiddle.foundation :as foundation]))
 
 
@@ -19,9 +20,10 @@
 (defn ex-data->human-detail [{:keys [ident error-msg] :as data}]
   (or error-msg (pprint-str data)))
 
-(defn error-inline [e]
+(defn error-inline [e & [?class]]
   (let [{:keys [cause data message]} (e->map e)]
-    (str message #_#_" " (str " -- " (ex-data->human-detail data)))))
+    [:span {:class ?class}
+     (str message #_#_" " (str " -- " (ex-data->human-detail data)))]))
 
 (defn error-block [e]
   (let [{:keys [cause data message]} (e->map e)]            ; we don't always return an error with a message
@@ -38,8 +40,8 @@
     (:hypercrud.browser/attribute ctx) error-inline         ; table: header or cell, form: header or cell
     (:hypercrud.browser/find-element ctx) error-inline
     ; browser including inline true links
-    :else (fn [e]
-            [:div
-             [error-block e]
-             #_(if (some-> e e->map :data :ident (= :db.error/datoms-conflict)))
-             [foundation/staging (:peer ctx)]])))
+    :else (fn [e & [?class]]
+            (fragment
+              [error-block e ?class]
+              #_(if (some-> e e->map :data :ident (= :db.error/datoms-conflict)))
+              [foundation/staging (:peer ctx)]))))

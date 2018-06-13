@@ -5,6 +5,7 @@
     #?(:cljs [contrib.css :refer [css-slugify css]])
     [contrib.data :refer [kwargs]]
     [contrib.reactive :as r]
+    #?(:cljs [contrib.reagent :refer [fragment]])
     [contrib.try :refer [try-either]]
     #?(:cljs [contrib.ui.native-event-listener :refer [native-on-click-listener]])
     [hypercrud.browser.base :as base]
@@ -27,7 +28,7 @@
 #?(:cljs (defn- fiddle-css-renderer [s] [:style {:dangerouslySetInnerHTML {:__html @s}}]))
 
 #?(:cljs
-   (defn ui-from-route [route ctx & [class]]
+   (defn ui-from-route [route ctx & [?class]]
      (let [click-fn (or (:hypercrud.browser/page-on-click ctx) (constantly nil)) ; parent ctx receives click event, not child frame
            either-v (or (some-> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :error]) either/left)
                         (base/data-from-route route ctx))
@@ -37,21 +38,20 @@
         (fn [e]
           (let [on-click (r/partial click-fn route)]
             [native-on-click-listener {:on-click on-click}
-             [:div {:class (css "ui" class "hyperfiddle-error")}
-              [error-comp e]]]))
+             [error-comp e (css "hyperfiddle-error" ?class "ui")]]))
         (fn [ctx]
           (let [on-click (r/partial click-fn (:route ctx))]
             [native-on-click-listener {:on-click on-click}
-             [:div {:class (css "ui" class)}                ; fragment
-              [(:alpha.hypercrud.browser/ui-comp ctx) ctx]
-              [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]]]))
+             (fragment
+               [(:alpha.hypercrud.browser/ui-comp ctx) ctx (css ?class "ui")]
+               [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])])]))
         (fn [ctx]
           (let [on-click (r/partial click-fn (:route ctx))]
             ; use the stale ctx's route, otherwise alt clicking while loading could take you to the new route, which is jarring
             [native-on-click-listener {:on-click on-click}
-             [:div {:class (css "ui" class "hyperfiddle-loading")}
-              [(:alpha.hypercrud.browser/ui-comp ctx) ctx]
-              [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]]]))])))
+             (fragment
+               [(:alpha.hypercrud.browser/ui-comp ctx) ctx (css "hyperfiddle-loading" ?class "ui")]
+               [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])])]))])))
 
 #?(:cljs
    (defn ui [link ctx ?class & args]                        ; TODO don't omit user props
