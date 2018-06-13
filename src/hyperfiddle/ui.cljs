@@ -87,10 +87,11 @@
 
           [:head i _ a (true :<< select?)]
           (fn [field ctx props]
-            (fragment (if i [label field ctx props])
-                      (if (and (= :xray display-mode)
+            (fragment (if (and (= :xray display-mode)
                                (not (:link/dependent? (rel->link :options ctx))))
+                        ; Float right
                         [select nil ctx props])
+                      (if i [label field ctx props])
                       (anchors :head i a ctx link/options-processor)
                       (iframes :head i a ctx link/options-processor)))
 
