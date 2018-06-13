@@ -110,9 +110,9 @@
                :hyperfiddle-hostname hyperfiddle-hostname
                :peer rt-page
                ::runtime/branch-aux {::ide/foo "page"}}
-          domain-name (foundation/hostname->hf-domain-name hostname hyperfiddle-hostname)
-          alias (or (foundation/alias? domain-name)
-                    (= "www" domain-name))]
+          ident-or-alias (foundation/hostname->ident-or-alias hostname hyperfiddle-hostname)
+          alias (or (foundation/alias? ident-or-alias)
+                    (= "www" ident-or-alias))]
       [foundation/view :page route ctx (if alias ide/view (constantly [:div "loading... "]))]))
 
   hc/Peer
@@ -137,11 +137,12 @@
                             (r/atom (reducers/root-reducer initial-state nil))
                             reducers/root-reducer jwt)
         load-level foundation/LEVEL-HYDRATE-PAGE
-        browser-init-level (if (foundation/alias? (foundation/hostname->hf-domain-name hostname hyperfiddle-hostname))
+        ident-or-alias (foundation/hostname->ident-or-alias hostname hyperfiddle-hostname)
+        browser-init-level (if (foundation/alias? ident-or-alias)
                              load-level
                              ;force the browser to re-run the data bootstrapping when not aliased
                              foundation/LEVEL-NONE)
-        alias? (foundation/alias? (foundation/hostname->hf-domain-name hostname hyperfiddle-hostname))]
+        alias? (foundation/alias? ident-or-alias)]
     (-> (foundation/bootstrap-data rt foundation/LEVEL-NONE load-level (.-path req) (::runtime/global-basis initial-state))
         (p/then (fn []
                   (let [domain @(runtime/state rt [::runtime/domain])
