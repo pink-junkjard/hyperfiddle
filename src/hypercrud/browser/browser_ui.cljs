@@ -23,8 +23,7 @@
   (css (let [ident @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/ident])]
          ["hyperfiddle"
           (css-slugify (some-> ident namespace))
-          (css-slugify ident)
-          "auto-result"])))
+          (css-slugify ident)])))
 
 (defn page-on-click [rt branch branch-aux route event]
   (when (and route (.-altKey event))
