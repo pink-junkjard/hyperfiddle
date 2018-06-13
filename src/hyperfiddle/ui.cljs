@@ -7,24 +7,26 @@
     [contrib.reactive :as r]
     [contrib.reagent :refer [from-react-context fragment]]
     [contrib.string :refer [memoized-safe-read-edn-string blank->nil]]
+    [contrib.ui]
     [contrib.ui.remark :as remark]
+    [contrib.ui.tooltip :refer [tooltip-thick]]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.core :as browser]
     [hypercrud.browser.link :as link :refer [links-here rel->link]]
+    [hypercrud.ui.connection-color :refer [connection-color]]
     [hypercrud.ui.control.link-controls :refer [anchors iframes]]
-    [hyperfiddle.ui.label :refer [label]]
-    [hypercrud.ui.form :as form]
-    [hypercrud.ui.table :as table]
-    [hypercrud.ui.util :refer [attr-renderer]]
     [hyperfiddle.data :as hf]
-    [hyperfiddle.ui.markdown-extensions :refer [extensions]]
+    [hyperfiddle.ui.docstring :refer [semantic-docstring]]
     [hyperfiddle.ui.controls :as controls]
     [hyperfiddle.ui.hacks]                                  ; exports
+    [hyperfiddle.ui.form :as form]
+    [hyperfiddle.ui.markdown-extensions :refer [extensions]]
     [hyperfiddle.ui.select :refer [select]]
-    ))
+    [hyperfiddle.ui.sort :as sort]
+    [hyperfiddle.ui.util :refer [attr-renderer]]))
 
 
-(defn control "this is a function, which returns component" [ctx]
+(defn ^:export control "this is a function, which returns component" [ctx]
   (let [layout (-> (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block) name keyword)
         a (:hypercrud.browser/attribute ctx)
         attr (some-> ctx :hypercrud.browser/fat-attribute deref)
@@ -48,24 +50,13 @@
         [_ :many] controls/edn-many
         ))))
 
-(defn semantic-css [ctx]
-  ; Semantic css needs to be prefixed with - to avoid collisions. todo
-  (let [[i a] [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
-    ["hyperfiddle"
-     (css-slugify (some-> ctx :hypercrud.browser/find-element deref :source-symbol)) ; color
-     (css-slugify (cond a "attribute" i "element" :else "naked"))
-     (css-slugify (-> (:relation ctx) (if :body :head)))
-     (css-slugify i)                                        ; same info as name, but by index which is more robust
-     (css-slugify (some-> ctx :hypercrud.browser/find-element deref :type))
-     (css-slugify (some-> ctx :hypercrud.browser/find-element deref :name)) ; works on aggregate
-     ;(css-slugify (some-> ctx :hypercrud.browser/find-element der  ef :entity (if :entity :scalar))) ; not helpful
-     (if i (css-slugify a))                                 ; see attribute-schema-human
-     (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/valueType :db/ident))
-     (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :attribute/renderer #_label/fqn->name))
-     (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/cardinality :db/ident))
-     (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/isComponent (if :component)))]))
+(defn label [field ctx props]
+  (let [help-md (semantic-docstring ctx)]
+    [tooltip-thick (if help-md
+                     [:div.docstring [contrib.ui/markdown help-md]])
+     [:label props (:label field) (if help-md [:sup "†"])]]))
 
-(defn hyper-control [ctx]
+(defn ^:export hyper-control [ctx]
   {:post [(not (nil? %))]}
   (let [display-mode (-> @(:hypercrud.ui/display-mode ctx) name keyword)
         d (-> (:relation ctx) (if :body :head))
@@ -122,6 +113,23 @@
   [:table :body i '*] (fn [value ctx props] [:code "table body magic-new"])
   )
 
+(defn ^:export semantic-css [ctx]
+  ; Semantic css needs to be prefixed with - to avoid collisions. todo
+  (let [[i a] [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
+    ["hyperfiddle"
+     (css-slugify (some-> ctx :hypercrud.browser/find-element deref :source-symbol)) ; color
+     (css-slugify (cond a "attribute" i "element" :else "naked"))
+     (css-slugify (-> (:relation ctx) (if :body :head)))
+     (css-slugify i)                                        ; same info as name, but by index which is more robust
+     (css-slugify (some-> ctx :hypercrud.browser/find-element deref :type))
+     (css-slugify (some-> ctx :hypercrud.browser/find-element deref :name)) ; works on aggregate
+     ;(css-slugify (some-> ctx :hypercrud.browser/find-element der  ef :entity (if :entity :scalar))) ; not helpful
+     (if i (css-slugify a))                                 ; see attribute-schema-human
+     (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/valueType :db/ident))
+     (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :attribute/renderer #_label/fqn->name))
+     (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/cardinality :db/ident))
+     (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/isComponent (if :component)))]))
+
 (defn ^:export value "Naked value renderer. Does not work in tables. Use field [] if you want a naked th/td view"
   [[i a] ctx ?f & args]                                     ; Doesn't make sense in a table context bc what do you do in the header?
   (let [ctx (context/focus ctx true i a)
@@ -129,20 +137,70 @@
         props (merge props {:class (apply css (:class props) (semantic-css ctx))})]
     [(or ?f (hyper-control ctx)) (context/extract-focus-value ctx) ctx props]))
 
+; define nav-cmp here, and unify browser and navcmp
+
+(defn ^:export link [rel path ctx ?content & args]
+  (let [props (kwargs args)
+        {:keys [link/dependent? link/render-inline?] :as link} @(r/track link/rel->link rel path ctx)
+        ctx (apply context/focus ctx dependent? path)]
+    ;(assert (not render-inline?)) -- :new-fiddle is render-inline. The nav cmp has to sort this out before this unifies.
+    [(:navigate-cmp ctx) (merge props (link/build-link-props link ctx)) (or ?content (name (:link/rel link))) (:class props)]))
+
+(defn ^:export browse [rel path ctx ?content & args]
+  (let [props (kwargs args)
+        {:keys [link/dependent? link/render-inline?] :as link} @(r/track link/rel->link rel path ctx)
+        ctx (apply context/focus ctx dependent? path)]
+    (assert render-inline?)
+    (into
+      [browser/ui link
+       (if ?content (assoc ctx :user-renderer ?content #_(if ?content #(apply ?content %1 %2 %3 %4 args))) ctx)
+       (:class props)]
+      (apply concat (dissoc props :class :children nil)))))
+
+(defn form-field "Form fields are label AND value. Table fields are label OR value."
+  [f ctx props]                                             ; fiddle-src wants to fallback by passing nil here explicitly
+  (assert @(:hypercrud.ui/display-mode ctx))
+  (form/ui-block-border-wrap
+    ctx (css "field" "hyperfiddle-form-cell" (:class props) #_":class is for the control, these props came from !cell{}")
+    ;(if (= a '*) ^{:key :new-field} [new-field ctx])
+    [(or (:label-fn props) label) (:hypercrud.browser/field ctx) (dissoc ctx :relation) props]
+    [f (context/extract-focus-value ctx) ctx props]))
+
+(defn table-field "Form fields are label AND value. Table fields are label OR value."
+  [f ctx props]
+  (let [{:keys [hypercrud.browser/field
+                hypercrud.browser/attribute]} ctx
+        [i a] [(:fe-pos ctx) attribute]
+        path (remove nil? [i a])]
+    (if (:relation ctx)
+      [:td {:class (css "field" (:class props) "truncate")
+            :style {:border-color (if i (form/border-color ctx))}}
+       ; todo unsafe execution of user code: control
+       [f (context/extract-focus-value ctx) ctx props]]
+      [:th {:class (css "field" (:class props)
+                        (if (and i (sort/sortable? ctx path)) "sortable") ; hoist
+                        (some-> (sort/sort-direction ctx) name)) ; hoist
+            :style {:background-color (connection-color ctx)}
+            :on-click (r/partial sort/toggle-sort! ctx path)}
+       ; Use f as the label control also, because there is hypermedia up there
+       ((or (:label-fn props) f) field ctx props)])))
+
 (defn ^:export field "Works in a form or table context. Draws label and/or value."
   [[i a] ctx ?f & args]
-  (let [view (case (::layout ctx) :hyperfiddle.ui.layout/table table/Field form/Field)
+  (let [view (case (::layout ctx) :hyperfiddle.ui.layout/table table-field form-field)
         ctx (context/focus ctx true i a)
         props (kwargs args)
         props (merge props {:class (apply css (:class props) (semantic-css ctx))})]
     ^{:key (str i a)}
     [view (or ?f (hyper-control ctx)) ctx props]))
 
-(defn ^:export table "sort-fn :: (fn [col ctx v] v)" [form sort-fn ctx]
+(defn ^:export table "Semantic table; todo all markup should be injected.
+sort-fn :: (fn [col ctx v] v)"
+  [form sort-fn ctx]
   (let [sort-col (r/atom nil)]
     (fn [form sort-fn ctx]
       (let [ctx (assoc ctx ::layout (::layout ctx :hyperfiddle.ui.layout/table)
-                           ::table/sort-col sort-col
+                           ::sort/sort-col sort-col
                            :hyperfiddle.ui.markdown-extensions/unp true)]
         [:table.ui-table.unp
          (->> (form ctx) (into [:thead]))                   ; strict
@@ -164,31 +222,13 @@ nil. call site must wrap with a Reagent component"
 
 (def ^:export fiddle (-build-fiddle))
 
-(defn fiddle-xray [ctx class]
+(defn ^:export fiddle-xray [ctx class]
   (let [{:keys [:hypercrud.browser/fiddle
                 #_:hypercrud.browser/result]} ctx]
     [:div {:class class}
      [:h3 (some-> @fiddle :fiddle/ident name)]
      (result ctx)
      (field [] ctx nil)]))
-
-(defn link [rel path ctx ?content & args]
-  (let [props (kwargs args)
-        {:keys [link/dependent? link/render-inline?] :as link} @(r/track link/rel->link rel path ctx)
-        ctx (apply context/focus ctx dependent? path)]
-    ;(assert (not render-inline?)) -- :new-fiddle is render-inline. The nav cmp has to sort this out before this unifies.
-    [(:navigate-cmp ctx) (merge props (link/build-link-props link ctx)) (or ?content (name (:link/rel link))) (:class props)]))
-
-(defn browse [rel path ctx ?content & args]
-  (let [props (kwargs args)
-        {:keys [link/dependent? link/render-inline?] :as link} @(r/track link/rel->link rel path ctx)
-        ctx (apply context/focus ctx dependent? path)]
-    (assert render-inline?)
-    (into
-      [browser/ui link
-       (if ?content (assoc ctx :user-renderer ?content #_(if ?content #(apply ?content %1 %2 %3 %4 args))) ctx)
-       (:class props)]
-      (apply concat (dissoc props :class :children nil)))))
 
 (defn ui-bindings [ctx]                                     ; legacy
   (assoc ctx

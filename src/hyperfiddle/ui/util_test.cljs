@@ -1,4 +1,4 @@
-(ns hyperfiddle.ui.label-test
+(ns hyperfiddle.ui.util-test
   (:require [clojure.test :refer [deftest is]]
             [hyperfiddle.ui.label :refer [fqn->name]]))
 

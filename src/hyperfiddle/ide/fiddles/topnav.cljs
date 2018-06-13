@@ -17,10 +17,8 @@
             [hyperfiddle.actions :as actions]
             [hyperfiddle.foundation :as foundation :refer [staging]]
             [hyperfiddle.runtime :as runtime]
-            [hyperfiddle.ui :as ui :refer [markdown]]
-            [hyperfiddle.ui.login :as login]))
+            [hyperfiddle.ui :as ui :refer [markdown]]))
 
-(def ^:export stateless-login-url login/stateless-login-url)
 
 ; inline sys-link data when the entity is a system-fiddle
 (letfn [(-shadow-fiddle [target-ident fiddle-val]
@@ -105,7 +103,7 @@
       [tooltip {:label "Domain administration"} ((:anchor ctx) :domain [] ctx "domain")]
       (if @(runtime/state (:peer ctx) [::runtime/user-id])
         [(:browse ctx) :account [] ctx]
-        [:span.nav-link.auth [:a {:href (login/stateless-login-url ctx)} "Login"]])]]))
+        [:span.nav-link.auth [:a {:href (foundation/stateless-login-url ctx)} "Login"]])]]))
 
 (defn ^:export qe-picker-control [value ctx props]
   (let [enums [:query :entity :blank]

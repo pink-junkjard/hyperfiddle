@@ -10,12 +10,12 @@
     [hypercrud.types.ThinEntity :refer [->ThinEntity]]
     [hypercrud.ui.error :as ui-error]
     [hypercrud.ui.safe-render :refer [user-portal]]
-    [hypercrud.ui.util :as util]
     [hyperfiddle.actions :as actions]
     [hyperfiddle.foundation :as foundation]
     [hyperfiddle.ide.fiddles.fiddle-src :as fiddle-src]
     [hyperfiddle.ide.fiddles.topnav :as topnav]
     [hyperfiddle.ui :refer [fiddle-xray]]
+    [hyperfiddle.ui.util :as util]
     [hyperfiddle.runtime :as runtime]))
 
 

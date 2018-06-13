@@ -11,8 +11,7 @@
     [goog.object]
     [hypercrud.browser.context :as context]
     [hyperfiddle.eval :refer [read-eval-with-bindings]]
-    [hyperfiddle.data :as hf]
-    [hypercrud.ui.table :as table]))
+    [hyperfiddle.data :as hf]))
 
 
 (defn eval [content argument props ctx]
@@ -106,7 +105,7 @@
    "field" field                                            ; uses relation to draw label and value
    "table" (letfn [(form [content ctx] (into [hyperfiddle.ui/markdown content] ctx))]
              (fn [content argument props ctx]
-               [table/table (r/partial form content) props ctx]))
+               [hyperfiddle.ui/table (r/partial form content) props ctx]))
    "list" list-                                             ; renders ul/li, loops over relations
 
    ; How can list collapse into result through a higher order fn? Would need two fns, wrapper and inner...

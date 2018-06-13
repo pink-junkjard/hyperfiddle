@@ -3,6 +3,7 @@
   (:require [cats.monad.either :as either :refer [branch left right]]
             [clojure.string :as string]
     #?(:cljs [contrib.css :refer [css]])
+            [contrib.base-64-url-safe :as base64-url-safe]
             [contrib.data :refer [update-existing]]
             [contrib.eval :as eval]
             [contrib.reactive :as r]
@@ -22,6 +23,15 @@
 
 (def domain-uri #uri "datomic:free://datomic:4334/domains")
 (def auth0-redirect-path "/auth0")                          ; ide
+
+#?(:cljs
+   (defn stateless-login-url [ctx]
+     (let [{:keys [domain client-id]} (get-in ctx [:hypercrud.browser/domain :domain/environment :auth0 (:hyperfiddle-hostname ctx)])]
+       (str domain "/login?"
+            "client=" client-id
+            "&scope=" "openid email profile"
+            "&state=" (base64-url-safe/encode (runtime/encode-route (:peer ctx) (:target-route ctx)))
+            "&redirect_uri=" (str "http://" (:hostname ctx) auth0-redirect-path)))))
 
 (defn hostname->hf-domain-name
   ([ctx]
@@ -70,21 +80,22 @@
 (defn domain-owner? [user-id domain]
   (contains? (set (:hyperfiddle/owners domain)) user-id))
 
-(defn error-cmp [e]
-  [:div
-   [:h1 "Fatal error"]
-   (if (Err/Err? e)
+#?(:cljs
+   (defn error-cmp [e]
      [:div
-      [:h3 (:msg e)]
-      (when-let [data (:data e)]
-        [:pre data])]
-     [:div
-      [:fieldset [:legend "(pr-str e)"]
-       [:pre (pr-str e)]]
-      [:fieldset [:legend "(ex-data e)"]                    ; network error
-       [:pre (:data e)]]                                    ; includes :body key
-      [:fieldset [:legend "(.-stack e)"]                    ; network error
-       [:pre (.-stack e)]]])])
+      [:h1 "Fatal error"]
+      (if (Err/Err? e)
+        [:div
+         [:h3 (:msg e)]
+         (when-let [data (:data e)]
+           [:pre data])]
+        [:div
+         [:fieldset [:legend "(pr-str e)"]
+          [:pre (pr-str e)]]
+         [:fieldset [:legend "(ex-data e)"]                 ; network error
+          [:pre (:data e)]]                                 ; includes :body key
+         [:fieldset [:legend "(.-stack e)"]                 ; network error
+          [:pre (.-stack e)]]])]))
 
 (defn process-domain [domain]
   (-> (into {} domain) (update-existing :domain/environment read-string) #_"todo this can throw"))
