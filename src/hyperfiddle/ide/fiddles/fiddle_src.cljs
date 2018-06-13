@@ -47,7 +47,7 @@
          :fiddle/renderer (r/partial control-with-unders [:div.hf-underdoc [markdown (:fiddle/renderer underdocs)]])
          :fiddle/links (r/partial control-with-unders [:div.hf-underdoc [markdown (:fiddle/links underdocs)]])
          }]
-    [:div.fiddle-src {:class class}                         ; unify fiddle-src .devsrc
+    [:div {:class class}
      [:h3 (str @(r/cursor (:hypercrud.browser/result ctx) [:fiddle/ident])) " source"]
      (field [0 :fiddle/ident] ctx nil)
      (field [0 :fiddle/type] ctx nil)
@@ -86,7 +86,7 @@
            :fiddle/links hacked-links}]
       (fn [ctx-real class & {:keys [embed-mode]}]
         (into
-          [:div.fiddle-src {:class class}]
+          [:div {:class class}]
           (for [k attrs]
             (field [0 k] ctx (controls k))))))))
 
