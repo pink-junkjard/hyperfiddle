@@ -21,9 +21,10 @@
            :disabled (:read-only props)
            :on-change change!}])
 
-(defn ^:export easy-checkbox [r label]
-  [:label {:style {:font-weight "400"}}
+(defn ^:export easy-checkbox [r label & [?class]]
+  [:label {:style {:font-weight "400"} :class ?class}
    [:input {:type "checkbox"
+            :class ?class
             :checked @r :on-change #(swap! r not)}]
    (str " " label)])
 
