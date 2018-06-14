@@ -143,7 +143,7 @@
         {:keys [link/dependent? link/render-inline?] :as link} @(r/track link/rel->link rel path ctx)
         ctx (apply context/focus ctx dependent? path)]
     ;(assert (not render-inline?)) -- :new-fiddle is render-inline. The nav cmp has to sort this out before this unifies.
-    [(:navigate-cmp ctx) (merge props (link/build-link-props link ctx)) (or ?content (name (:link/rel link))) (:class props)]))
+    [(:navigate-cmp ctx) (merge (link/build-link-props link ctx) props) (or ?content (name (:link/rel link))) (:class props)]))
 
 (defn ^:export browse [rel path ctx ?content & args]
   (let [props (kwargs args)

@@ -10,11 +10,12 @@
   (str (or (some-> (:link/rel @link-ref) name) "_")))
 
 ; garbage wrapper for reactivity capturing
-(defn- reactive-nav-cmp [link-ref ctx class]
-  [(:navigate-cmp ctx) (link/build-link-props @link-ref ctx) @(r/track prompt link-ref) class])
+(defn- reactive-nav-cmp [link-ref ctx props]
+  [(:navigate-cmp ctx) (merge (link/build-link-props @link-ref ctx) props) @(r/track prompt link-ref) (:class props)])
 
-(defn- reactive-ui [link-ref ctx class]
-  [hypercrud.browser.core/ui @link-ref ctx class])
+(defn- reactive-ui [link-ref ctx props]
+  ; kwargs (dissoc props :class)
+  [hypercrud.browser.core/ui @link-ref ctx (:class props)])
 
 (defn ui-contextual-links [body-or-head i a embed links ?processor]
   (->> (reduce (fn [links f] (f links)) @links (if ?processor [?processor]))
@@ -32,7 +33,7 @@
        (map (fn [[link-ref link-id]]
               (if (not= :hyperfiddle.ui.layout/table (:hyperfiddle.ui/layout ctx))
                 ^{:key (hash link-id)} [hyperfiddle.ui.form/ui-block-border-wrap ctx nil [reactive-nav-cmp link-ref ctx (:class props)]]
-                ^{:key (hash link-id)} [reactive-nav-cmp link-ref ctx (:class props)])))
+                ^{:key (hash link-id)} [reactive-nav-cmp link-ref ctx props])))
        (doall)))
 
 (defn iframes [body-or-head i a ctx & [?f props]]
@@ -41,5 +42,5 @@
        (map (fn [[link-ref link-id]]
               (if (not= :hyperfiddle.ui.layout/table (:hyperfiddle.ui/layout ctx))
                 ^{:key (hash link-id)} [hyperfiddle.ui.form/ui-block-border-wrap ctx nil [reactive-ui link-ref ctx (:class props)]]
-                ^{:key (hash link-id)} [reactive-ui link-ref ctx (:class props)])))
+                ^{:key (hash link-id)} [reactive-ui link-ref ctx props])))
        (doall)))

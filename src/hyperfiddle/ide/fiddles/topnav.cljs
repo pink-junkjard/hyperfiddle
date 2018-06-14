@@ -50,6 +50,11 @@
 (defn src-mode? [frag]
   (= :src (some-> frag read-edn-string)))
 
+(defn writes-allowed? [ctx]
+  (or (not (get-in ctx [:host-env :active-ide?]))
+      @(r/fmap (r/partial foundation/domain-owner? @(runtime/state (:peer ctx) [::runtime/user-id]))
+               (runtime/state (:peer ctx) [::runtime/domain]))))
+
 (defn renderer [ctx class]
   {:pre [(or (:relations ctx) (:relation ctx))]}
   (let [display-mode @(runtime/state (:peer ctx) [:display-mode])
@@ -99,10 +104,10 @@
                               :on-click (fn [] (runtime/dispatch! (:peer ctx) [:disable-auto-transact]))}]
                   [:label {:for ::auto-transact} "auto-transact"])
         (fake-managed-anchor :stage [] ctx "stage" :class (if dirty? "stage-dirty")))
-      ((:anchor ctx) :new-fiddle [] ctx "new-fiddle")
-      [tooltip {:label "Domain administration"} ((:anchor ctx) :domain [] ctx "domain")]
+      (ui/link :new-fiddle [] ctx "new-fiddle" #_#_:tooltip (if-not (writes-allowed? ctx) [:warning "Domain owners only"]))
+      [tooltip {:label "Domain administration"} (ui/link :domain [] ctx "domain")]
       (if @(runtime/state (:peer ctx) [::runtime/user-id])
-        [(:browse ctx) :account [] ctx]
+        [ui/browse :account [] ctx]
         [:span.nav-link.auth [:a {:href (foundation/stateless-login-url ctx)} "Login"]])]]))
 
 (defn ^:export qe-picker-control [value ctx props]
@@ -117,15 +122,13 @@
     [:span.qe.radio-group (apply fragment :_ options)]))
 
 (defn ^:export stage-ui [ctx]
-  (let [writes-allowed? (or (not (get-in ctx [:host-env :active-ide?]))
-                            @(r/fmap (r/partial foundation/domain-owner? @(runtime/state (:peer ctx) [::runtime/user-id]))
-                                     (runtime/state (:peer ctx) [::runtime/domain])))
+  (let [writes-allowed? (writes-allowed? ctx)
         anonymous? (nil? @(runtime/state (:peer ctx) [::runtime/user-id]))
         stage @(runtime/state (:peer ctx) [:stage])]
     [:div.hyperfiddle-topnav-stage
      (ui/fiddle ctx)                                        ; for docstring
      (let [disabled? (or (not writes-allowed?) (not (empty? stage)))]
-       [tooltip (cond (and (not writes-allowed?) anonymous?) {:status :warning :label "please login"}
+       [tooltip (cond (and anonymous? (not writes-allowed?)) {:status :warning :label "Please login"}
                       (not writes-allowed?) {:status :warning :label "Writes restricted"}
                       (not (empty? stage)) {:status :warning :label "please transact! all changes first"})
         [:button {:disabled disabled?
@@ -133,7 +136,7 @@
                   :on-click (fn [] (runtime/dispatch! (:peer ctx) [:enable-auto-transact]))}
          "Enable auto-transact"]])
      (let [disabled? (or (not writes-allowed?) (empty? stage))]
-       [tooltip (cond (and (not writes-allowed?) anonymous?) {:status :warning :label "please login"}
+       [tooltip (cond (and (not writes-allowed?) anonymous?) {:status :warning :label "Please login"}
                       (not writes-allowed?) {:status :warning :label "Writes restricted"}
                       (empty? stage) {:status :warning :label "no changes"})
         [:button {:disabled disabled?
