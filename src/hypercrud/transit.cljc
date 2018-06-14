@@ -6,7 +6,8 @@
             [hypercrud.types.Err :refer [->Err #?(:cljs Err)]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest #?(:cljs QueryRequest)]]
             [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
-            [hypercrud.types.URI :refer [->URI #?(:cljs URI)]])
+            [hypercrud.types.URI :refer [->URI #?(:cljs URI)]]
+            [hyperfiddle.runtime :refer [map->HostEnvironment #?(:cljs HostEnvironment)]])
   #?(:clj
      (:import (hypercrud.types.DbVal DbVal)
               (hypercrud.types.Entity Entity)
@@ -14,6 +15,7 @@
               (hypercrud.types.Err Err)
               (hypercrud.types.QueryRequest QueryRequest)
               (hypercrud.types.ThinEntity ThinEntity)
+              (hyperfiddle.runtime HostEnvironment)
               (java.io ByteArrayInputStream ByteArrayOutputStream))))
 
 
@@ -24,7 +26,8 @@
    "err" (t/read-handler ->Err)
    "QReq" (t/read-handler #(apply ->QueryRequest %))
    "entity" (t/read-handler #(apply ->ThinEntity %))
-   "r" (t/read-handler ->URI)})
+   "r" (t/read-handler ->URI)
+   "HostEnvironment" (t/read-handler map->HostEnvironment)})
 
 (def write-handlers
   {DbVal
@@ -44,6 +47,9 @@
 
    ThinEntity
    (t/write-handler (constantly "entity") (fn [v] [(.-dbname v) (.-id v)]))
+
+   HostEnvironment
+   (t/write-handler (constantly "HostEnvironment") #(into {} %))
 
    #?@(:cljs
        [URI

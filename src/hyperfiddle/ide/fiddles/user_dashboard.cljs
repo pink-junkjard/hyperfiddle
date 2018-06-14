@@ -25,5 +25,5 @@
          (sort-by :domain/ident)
          (map (fn [domain]
                 [:li {:key (hash (:db/id domain))}
-                 [:a {:href (str "http://" (:domain/ident domain) "." (:hyperfiddle-hostname ctx) "/")} (:domain/ident domain)]]))
+                 [:a {:href (str "http://" (:domain/ident domain) "." (get-in ctx [:host-env :ide/root]) "/")} (:domain/ident domain)]]))
          (doall))]])

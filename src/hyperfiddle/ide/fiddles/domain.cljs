@@ -4,7 +4,7 @@
 
 
 (defn domain-ident-renderer' [value ctx props]
-  (let [href (str "http://" value "." (:hyperfiddle-hostname ctx))]
+  (let [href (str "http://" value "." (get-in ctx [:host-env :ide/root]))]
     [:a {:href href} href]))
 
 (def ^:export domain-ident-renderer

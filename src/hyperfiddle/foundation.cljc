@@ -1,7 +1,6 @@
 (ns hyperfiddle.foundation
   (:refer-clojure :exclude [read-string])
   (:require [cats.monad.either :as either :refer [branch left right]]
-            [clojure.string :as string]
     #?(:cljs [contrib.css :refer [css]])
             [contrib.base-64-url-safe :as base64-url-safe]
             [contrib.data :refer [update-existing]]
@@ -27,56 +26,37 @@
 
 #?(:cljs
    (defn stateless-login-url [ctx]
-     (let [{:keys [domain client-id]} (get-in ctx [:hypercrud.browser/domain :domain/environment :auth0 (:hyperfiddle-hostname ctx)])]
+     (let [{:keys [domain client-id]} (get-in ctx [:hypercrud.browser/domain :domain/environment :auth0 (get-in ctx [:host-env :ide/root])])]
        (str domain "/login?"
             "client=" client-id
             "&scope=" "openid email profile"
             "&state=" (base64-url-safe/encode (runtime/encode-route (:peer ctx) (:target-route ctx)))
-            "&redirect_uri=" (str "http://" (:hostname ctx) auth0-redirect-path)))))
+            "&redirect_uri=" (str "http://" (get-in ctx [:host-env :hostname]) auth0-redirect-path)))))
 
-(defn hostname->ident-or-alias
-  ([ctx]
-   (hostname->ident-or-alias (:hostname ctx) (:hyperfiddle-hostname ctx)))
-  ([hostname hyperfiddle-hostname]
-   (-> (string/replace hostname (str "." hyperfiddle-hostname) "") ; buggy
-       #_cuerdas/slug                                       ; no unicode for now. Slug what we actually got, so we don't care what's in the database.
-       )))
+(defn domain-request [domain-eid peer]
+  (->EntityRequest domain-eid nil
+                   (hc/db peer domain-uri nil)
+                   [:db/id
+                    :hyperfiddle/owners
+                    :domain/aliases
+                    :domain/disable-javascript
+                    :domain/environment
+                    :domain/fiddle-repo
+                    :domain/ident
 
-(defn alias? [ident-or-alias]
-  ; 'dustingetzcom.hyperfiddle.net' 'www.hyperfiddle.net'
-  ; 'dustingetzcom', 'www', 'hyperfiddle'
-  (string/includes? ident-or-alias "."))
+                    ; These are insecure fields, they should be redundant here, but there is order of operation issues
+                    :domain/code
+                    :domain/css
+                    :domain/router
+                    :domain/home-route
+                    ]))
 
-(defn domain-request [ident-or-alias peer]
-  (let [e (if (alias? ident-or-alias)
-            [:domain/aliases ident-or-alias]
-            [:domain/ident ident-or-alias])]
-    (->EntityRequest e nil
-                     (hc/db peer domain-uri nil)
-                     [:db/id
-                      :hyperfiddle/owners
-                      :domain/aliases
-                      :domain/disable-javascript
-                      :domain/environment
-                      :domain/fiddle-repo
-                      :domain/ident
-
-                      ; These are insecure fields, they should be redundant here, but there is order of operation issues
-                      :domain/code
-                      :domain/css
-                      :domain/router
-                      :domain/home-route
-                      ])))
-
-(defn domain-request-insecure [ident-or-alias peer branch]
-  (let [e (if (alias? ident-or-alias)
-            [:domain/aliases ident-or-alias]
-            [:domain/ident ident-or-alias])]
-    (->EntityRequest e nil (hc/db peer domain-uri branch)
-                     [:domain/code
-                      :domain/css
-                      :domain/router
-                      :domain/home-route])))
+(defn domain-request-insecure [domain-eid peer branch]
+  (->EntityRequest domain-eid nil (hc/db peer domain-uri branch)
+                   [:domain/code
+                    :domain/css
+                    :domain/router
+                    :domain/home-route]))
 
 (defn domain-owner? [user-id domain]
   (contains? (set (:hyperfiddle/owners domain)) user-id))
@@ -117,8 +97,9 @@
     (f global-basis route ctx)))
 
 (defn api [page-or-leaf route ctx f]
-  (let [source-domain-req (domain-request source-domain-ident (:peer ctx))
-        user-domain-insecure-req (domain-request-insecure (hostname->ident-or-alias ctx) (:peer ctx) (:branch ctx))]
+  (let [source-domain-req (domain-request [:domain/ident source-domain-ident] (:peer ctx))
+        user-domain-insecure-req (-> [:domain/ident @(runtime/state (:peer ctx) [::runtime/domain :domain/ident])]
+                                     (domain-request-insecure (:peer ctx) (:branch ctx)))]
     (into [source-domain-req user-domain-insecure-req]
           (let [source-domain (hc/hydrate-api (:peer ctx) (:branch ctx) source-domain-req)
                 user-domain-insecure (hc/hydrate-api (:peer ctx) (:branch ctx) user-domain-insecure-req)]
@@ -171,8 +152,11 @@
 
 #?(:cljs
    (defn view [page-or-leaf route ctx f]
-     (let [source-domain @(hc/hydrate (:peer ctx) (:branch ctx) (domain-request source-domain-ident (:peer ctx)))
-           user-domain-insecure @(hc/hydrate (:peer ctx) (:branch ctx) (domain-request-insecure (hostname->ident-or-alias ctx) (:peer ctx) (:branch ctx)))]
+     (let [source-domain @(hc/hydrate (:peer ctx) (:branch ctx) (domain-request [:domain/ident source-domain-ident] (:peer ctx)))
+           user-domain-insecure (-> [:domain/ident @(runtime/state (:peer ctx) [::runtime/domain :domain/ident])]
+                                    (domain-request-insecure (:peer ctx) (:branch ctx))
+                                    (->> (hc/hydrate (:peer ctx) (:branch ctx)))
+                                    deref)]
        (if-let [e (or @(runtime/state (:peer ctx) [::runtime/fatal-error])
                       (when (either/left? source-domain) @source-domain))]
          [:div.hyperfiddle-foundation

@@ -34,7 +34,8 @@
     #?(:cljs [hyperfiddle.ide.fiddles.topnav :as topnav])
     #?(:cljs [hyperfiddle.ide.fiddles.user-dashboard])))
 
-(defn domain [rt hyperfiddle-hostname hostname]
+
+(defn domain [rt domain-eid]
   (let [domain-basis (if-let [global-basis @(runtime/state rt [::runtime/global-basis])]
                        (:domain global-basis)
                        (->> @(runtime/state rt [::runtime/partitions])
@@ -43,14 +44,13 @@
                                          (filter (fn [[k _]] (= foundation/domain-uri k)))
                                          seq)))))
         stage nil
-        ident-or-alias (foundation/hostname->ident-or-alias hostname hyperfiddle-hostname)
-        request (foundation/domain-request ident-or-alias rt)]
+        request (foundation/domain-request domain-eid rt)]
     (-> (hydrate-one! rt (into {} domain-basis) stage request)
         (p/then (fn [domain]
                   (if (nil? (:db/id domain))
                     ; terminate when domain not found
-                    (throw (ex-info "Domain does not exist" {:hyperfiddle.io/http-status-code 404
-                                                             :domain-name ident-or-alias}))
+                    (throw (ex-info "Domain not found" {:hyperfiddle.io/http-status-code 404
+                                                        :domain-eid domain-eid}))
                     domain))))))
 
 (defn magic-ide-fiddle? [fiddle-ident domain-ident]
@@ -83,21 +83,12 @@
         :target-route target-route)                         ; todo rename :target-route to :hyperfiddle.ide/target-route
       (*-ide-context)))
 
-(defn activate-ide? [ident-or-alias]
-  ; To userland this "www" constant would require more complicated rules
-  ; for mapping a hostname to a domain-ident
-  (let [should-be-active (and (not (foundation/alias? ident-or-alias))
-                              #_(not= "www" ident-or-alias))
-        ; WWW needs a way to activate this. For now we can mirror the domain on www2
-        explicitly-active false]
-    (or explicitly-active should-be-active)))
-
 (defn- *-target-context [ctx route]
   (assoc ctx
     :hypercrud.browser/page-on-click (let [branch-aux {:hyperfiddle.ide/foo "page"}]
                                        #?(:cljs (r/partial browser-ui/page-on-click (:peer ctx) nil branch-aux)))
     :hypercrud.ui/display-mode (runtime/state (:peer ctx) [:display-mode])
-    :ide-active (activate-ide? (foundation/hostname->ident-or-alias ctx))
+    :ide-active (get-in ctx [:host-env :active-ide?])
 
     ; these target values only exists to allow the topnav to render in the bottom/user
     ; IF we MUST to support that, this should probably be done higher up for both ide and user at the same time
@@ -161,7 +152,7 @@
   {:pre [route (not (string? route))]}
   (case (get-in ctx [::runtime/branch-aux ::foo])
     "page" (into
-             (when true #_(activate-ide? (foundation/hostname->ident-or-alias ctx)) ;-- embedded src mode????
+             (when true #_(get-in ctx [:host-env :active-ide?]) ; true for embedded src mode
                (browser/request-from-route (ide-fiddle-route route ctx) (page-ide-context ctx route)))
              (if (magic-ide-fiddle? fiddle (get-in ctx [:hypercrud.browser/domain :domain/ident]))
                (browser/request-from-route route (page-ide-context ctx route))
@@ -171,8 +162,7 @@
 
 #?(:cljs
    (defn view-page [[fiddle :as route] ctx]
-     (let [active-ide (activate-ide? (foundation/hostname->ident-or-alias ctx))
-           src-mode (let [[_ _ _ frag] route] (topnav/src-mode? frag)) ; Immoral - :src bit is tunneled in userland fragment space
+     (let [src-mode (let [[_ _ _ frag] route] (topnav/src-mode? frag)) ; Immoral - :src bit is tunneled in userland fragment space
            ctx (-> ctx
                    (assoc :navigate-cmp (r/partial navigate-cmp/navigate-cmp (r/partial runtime/encode-route (:peer ctx)))
                           :alpha.hypercrud.browser/ui-comp browser-ui/ui-comp)
@@ -183,7 +173,7 @@
          :view-page
 
          ; Topnav
-         (when active-ide
+         (when (get-in ctx [:host-env :active-ide?])
            [browser/ui-from-route (ide-fiddle-route route ctx)
             (assoc ide-ctx :hypercrud.ui/error (r/constantly ui-error/error-inline)
                            #_#_:user-renderer hyperfiddle.ide.fiddles.topnav/renderer)
@@ -197,7 +187,7 @@
 
            (fragment
              :primary-content
-             (when (and active-ide src-mode)                ; primary, blue background (IDE)   /:posts/:hello-world#:src
+             (when (and (get-in ctx [:host-env :active-ide?]) src-mode) ; primary, blue background (IDE)   /:posts/:hello-world#:src
                [browser/ui-from-route (ide-fiddle-route route ctx) ; srcmode is equal to topnav route but a diff renderer
                 (assoc ide-ctx :user-renderer fiddle-src-renderer)
                 (css "container-fluid" "devsrc")])
@@ -208,7 +198,7 @@
                  [browser/ui-from-route route ctx (css "container-fluid"
                                                        (some-> ctx :hypercrud.ui/display-mode deref name)
                                                        "hyperfiddle-user"
-                                                       (if active-ide "hyperfiddle-ide-user"))]))))))))
+                                                       (when (get-in ctx [:host-env :active-ide?]) "hyperfiddle-ide-user"))]))))))))
 
 #?(:cljs
    (defn view [[fiddle :as route] ctx]                      ; pass most as ref for reactions

@@ -2,8 +2,7 @@
   (:require [clojure.test :refer [deftest is]]
             [contrib.reactive :as r]
             [contrib.reader]                                ; wrong dependency?
-            [hyperfiddle.foundation :as foundation]
-            [hyperfiddle.ide :refer [route-encode route-decode activate-ide?]]
+            [hyperfiddle.ide :refer [route-encode]]
             [hyperfiddle.runtime :as runtime]))
 
 
@@ -37,10 +36,3 @@
   (doseq [[k v] tests]
     (is (= (route-encode rt k) v)))
   )
-
-(def a-ctx-1 {:hyperfiddle-hostname "hyperfiddle.net"})
-
-(deftest activate-ide-1 []
-  (is #_(not) (activate-ide?
-                (foundation/hostname->ident-or-alias
-                  (assoc a-ctx-1 :hostname "www.hyperfiddle.net")))))
