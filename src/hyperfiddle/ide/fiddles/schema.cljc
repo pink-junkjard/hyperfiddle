@@ -1,5 +1,7 @@
 (ns hyperfiddle.ide.fiddles.schema
-  (:require [contrib.pprint :refer [mpprint-str pprint-str]]))
+  (:require
+    [contrib.template :refer [load-resource]]
+    [contrib.pprint :refer [mpprint-str pprint-str]]))
 
 
 (defn db-cardinality-options [$db]
@@ -72,30 +74,7 @@
                                                :db/isComponent :db/fulltext :db/doc]) '...]
                          :where [$db :db.part/db :db.install/attribute '?attr]]))
    :fiddle/type :query
-   :fiddle/renderer (mpprint-str
-                      ; -- THIS IS A LIST OF SYMBOLS, ONLY READ, NEVER EVALUATED IN THIS NAMESPACE --
-                      (let [hide-datomic (reagent.core/atom true)
-                            hide-archived (reagent.core/atom true)
-                            db-attr? #(<= (:db/id %) 62)
-                            archived? #(cuerdas.core/starts-with? (namespace (:db/ident %)) "zzz") ; "zzz/" and "zzz.", we are inconsistent. It should be modeled and queried and never shown
-                            do-filter-reactive (fn [xs]     ; perf sensitive
-                                                 (as-> xs xs
-                                                       (if @hide-datomic (remove db-attr? xs) xs)
-                                                       (if @hide-archived (remove archived? xs) xs)))]
-                        (fn [ctx]
-                          [:div.hyperfiddle-schema
-                           [hyperfiddle.ui/markdown (-> ctx :hypercrud.browser/fiddle deref :db/doc)]
-                           [:label {:style {:font-weight "400"}} [:input {:type "checkbox" :checked @hide-datomic :on-change #(swap! hide-datomic not)}] " hide Datomic system attributes"]
-                           [:br]
-                           [:label {:style {:font-weight "400"}} [:input {:type "checkbox" :checked @hide-archived :on-change #(swap! hide-archived not)}] " hide Hyperfiddle archived attributes"]
-                           (let [ctx (-> ctx
-                                         (dissoc :relation :relations)
-                                         (update :hypercrud.browser/result (partial contrib.reactive/fmap do-filter-reactive #_(contrib.reactive/partial filter f?)))
-                                         (hypercrud.browser.context/with-relations)
-                                         (assoc :read-only (fn [ctx]
-                                                             (not (#{:db/ident :db/doc :db/isComponent}
-                                                                    (:hypercrud.browser/attribute ctx))))))]
-                             (hyperfiddle.ui/result ctx))])))
+   :fiddle/renderer (load-resource "schema_renderer.edn")
    :fiddle/links #{{:db/id (keyword "hyperfiddle.schema.db-cardinality-options-link" $db)
                     :link/fiddle (db-cardinality-options $db)
                     :link/render-inline? true
