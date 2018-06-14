@@ -31,7 +31,7 @@
 
 (def analytics (load-resource "analytics.html"))
 
-(defn full-html [env state-val serve-js? params app-component]
+(defn full-html [env state-val serve-js? hyperfiddle-dns? params app-component]
   (let [resource-base (str (:STATIC_RESOURCES env) "/" (:BUILD env))]
     [:html {:lang "en"}
      [:head
@@ -42,7 +42,7 @@
       [:script {:id "build" :type "text/plain" :dangerouslySetInnerHTML {:__html (:BUILD env)}}]]
      [:body
       [:div {:id "root"} app-component]
-      (when (:ANALYTICS env)
+      (when (and hyperfiddle-dns? (:ANALYTICS env))
         [:div {:dangerouslySetInnerHTML {:__html analytics}}])
       (when serve-js?
         ; env vars for client side rendering
@@ -151,7 +151,7 @@
                   (let [serve-js? (or (:active-ide? host-env) (not @(runtime/state rt [::runtime/domain :domain/disable-javascript])))
                         params {:host-env host-env
                                 :hyperfiddle.bootstrap/init-level browser-init-level}
-                        html [full-html env @(runtime/state rt) serve-js? params
+                        html [full-html env @(runtime/state rt) serve-js? (boolean (:auth/root host-env)) params
                               (runtime/ssr rt @(runtime/state rt [::runtime/partitions nil :route]))]]
                     (doto res
                       (.status http-status-code)
