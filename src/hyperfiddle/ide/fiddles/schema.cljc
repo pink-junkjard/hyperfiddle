@@ -93,8 +93,8 @@
                                          (update :hypercrud.browser/result (partial contrib.reactive/fmap do-filter-reactive #_(contrib.reactive/partial filter f?)))
                                          (hypercrud.browser.context/with-relations)
                                          (assoc :read-only (fn [ctx]
-                                                             (let [attrs #{:db/ident :db/doc :db/isComponent}]
-                                                               (not (contains? attrs (:hypercrud.browser/attribute ctx)))))))]
+                                                             (not (#{:db/ident :db/doc :db/isComponent}
+                                                                    (:hypercrud.browser/attribute ctx))))))]
                              (hyperfiddle.ui/result ctx))])))
    :fiddle/links #{{:db/id (keyword "hyperfiddle.schema.db-cardinality-options-link" $db)
                     :link/fiddle (db-cardinality-options $db)
