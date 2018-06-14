@@ -1,7 +1,8 @@
 (ns hyperfiddle.service.lib.env
   (:require
     #?(:cljs [cljs.nodejs :as node])
-    [clojure.string :as string])
+    [clojure.string :as string]
+    [contrib.data :refer [update-existing]])
   #?(:clj
      (:import [clojure.lang ILookup])))
 
@@ -15,7 +16,7 @@
                    :AUTH0_CLIENT_SECRET
                    :STATIC_RESOURCES
                    :NODE_PORT}
-        optional #{:ANALYTICS}
+        optional #{:ANALYTICS :HF_ALIAS_HOSTNAMES}
         env (let [env #?(:clj  (let [raw-env (System/getenv)]
                                  (reify
                                    ILookup
@@ -30,9 +31,9 @@
                        (reduce (fn [acc k]
                                  (assoc acc k (get env (name k))))
                                {}))
-                  ; todo this check is garbage
-                  (update :ANALYTICS #(not= % "false"))
-                  (update :HF_HOSTNAMES #(string/split % #";"))))]
+                  (update :ANALYTICS #(not= % "false"))     ; todo this check is garbage
+                  (update :HF_HOSTNAMES #(string/split % #";"))
+                  (update-existing :HF_ALIAS_HOSTNAMES #(string/split % #";"))))]
     (doseq [v required]
       (assert (not (nil? (get env v))) (str "Environment variable for '" v "' not found")))
     env))

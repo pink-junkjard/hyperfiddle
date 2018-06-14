@@ -2,12 +2,12 @@
 
 
 ; make sure the jwt cookie attributes are identical across platforms
-(defn jwt-options-pedestal [hyperfiddle-hostname]
+(defn jwt-options-pedestal [domain]
   {:http-only true
-   :domain hyperfiddle-hostname
+   :domain domain
    :path "/"})
 
-(defn jwt-options-express [hyperfiddle-hostname]
+(defn jwt-options-express [domain]
   {"httpOnly" true
-   "domain" hyperfiddle-hostname
+   "domain" domain
    "path" "/"})

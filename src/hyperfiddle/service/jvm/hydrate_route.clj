@@ -15,7 +15,7 @@
             [promesa.core :as p]))
 
 
-(deftype HydrateRoute [hyperfiddle-hostname hostname service-uri state-atom root-reducer jwt ?subject]
+(deftype HydrateRoute [host-env state-atom root-reducer jwt ?subject]
   runtime/State
   (dispatch! [rt action-or-func] (state/dispatch! state-atom root-reducer action-or-func))
   (state [rt] state-atom)
@@ -23,7 +23,7 @@
 
   runtime/AppFnGlobalBasis
   (global-basis [rt]
-    (global-basis rt hyperfiddle-hostname hostname))
+    (global-basis rt (:domain-eid host-env)))
 
   runtime/Route
   (decode-route [rt s]
@@ -34,12 +34,11 @@
 
   runtime/DomainRegistry
   (domain [rt]
-    (ide/domain rt hyperfiddle-hostname hostname))
+    (ide/domain rt (:domain-eid host-env)))
 
   runtime/AppValLocalBasis
   (local-basis [rt global-basis route branch branch-aux]
-    (let [ctx {:hyperfiddle-hostname hyperfiddle-hostname
-               :hostname hostname
+    (let [ctx {:host-env host-env
                :branch branch
                :hyperfiddle.runtime/branch-aux branch-aux
                :peer rt}
@@ -55,8 +54,7 @@
   (hydrate-route [rt local-basis route branch branch-aux stage]
     {:pre [route (not (string? route))]}
     (let [data-cache (-> @(runtime/state rt [::runtime/partitions branch]) (select-keys [:tempid-lookups :ptm]))
-          ctx {:hyperfiddle-hostname hyperfiddle-hostname
-               :hostname hostname
+          ctx {:host-env host-env
                :branch branch
                :hyperfiddle.runtime/branch-aux branch-aux
                :peer rt}
@@ -66,7 +64,7 @@
                          "user" :leaf
                          "ide" :leaf)]
       (hydrate-loop rt (request-fn-adapter local-basis route stage ctx
-                                           #(HydrateRoute. hyperfiddle-hostname hostname service-uri (r/atom %) root-reducer jwt ?subject)
+                                           #(HydrateRoute. host-env (r/atom %) root-reducer jwt ?subject)
                                            #(foundation/api page-or-leaf route % ide/api))
                     local-basis branch stage data-cache)))
 

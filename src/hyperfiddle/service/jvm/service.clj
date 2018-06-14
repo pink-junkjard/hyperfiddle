@@ -36,19 +36,16 @@
 
 (def platform-response->pedestal-response identity)
 
-(defn build-pedestal-req-handler [env platform-req-handler]
+(defn build-pedestal-req-handler [platform-req-handler]
   (interceptor/handler
     (fn [req]
-      (let [hostname (:server-name req)]
-        (-> (platform-req-handler
-              :hostname hostname
-              :path-params (:path-params req)
-              :request-body (:body-params req)
-              :hyperfiddle-hostname (http-service/hyperfiddle-hostname env hostname)
-              :service-uri nil
-              :jwt (:jwt req)
-              :user-id (:user-id req))
-            (p/then platform-response->pedestal-response))))))
+      (-> (platform-req-handler
+            :host-env (:host-env req)
+            :path-params (:path-params req)
+            :request-body (:body-params req)
+            :jwt (:jwt req)
+            :user-id (:user-id req))
+          (p/then platform-response->pedestal-response)))))
 
 (defn http-index [req]
   (ring-resp/response "Hypercrud Server Running!"))
@@ -79,14 +76,21 @@
     (catch Exception e
       (e->response e))))
 
-(defn http-global-basis [env]
-  (build-pedestal-req-handler env (partial http-service/global-basis-handler ->GlobalBasisRuntime)))
+(def http-global-basis
+  (build-pedestal-req-handler (partial http-service/global-basis-handler ->GlobalBasisRuntime)))
 
-(defn http-local-basis [env]
-  (build-pedestal-req-handler env (partial http-service/local-basis-handler ->LocalBasis)))
+(def http-local-basis
+  (build-pedestal-req-handler (partial http-service/local-basis-handler ->LocalBasis)))
 
-(defn http-hydrate-route [env]
-  (build-pedestal-req-handler env (partial http-service/hydrate-route-handler ->HydrateRoute)))
+(def http-hydrate-route
+  (build-pedestal-req-handler (partial http-service/hydrate-route-handler ->HydrateRoute)))
+
+(defn set-host-environment [f]
+  (interceptor/before
+    (fn [context]
+      (let [scheme (name (get-in context [:request :scheme]))
+            hostname (get-in context [:request :server-name])]
+        (assoc-in context [:request :host-env] (f scheme hostname))))))
 
 (defn with-user [env]
   (let [verify (jwt/build-verifier env)]
@@ -107,7 +111,7 @@
                    (timbre/error e)
                    (-> (terminate context)
                        (assoc :response {:status 401
-                                         :cookies {"jwt" (-> (http-service/hyperfiddle-hostname env (get-in context [:request :server-name]))
+                                         :cookies {"jwt" (-> (get-in context [:request :host-env :auth/root])
                                                              (cookie/jwt-options-pedestal)
                                                              (assoc :value jwt-cookie
                                                                     :expires "Thu, 01 Jan 1970 00:00:00 GMT"))}
@@ -133,14 +137,15 @@
                                            http/combine-body-params
                                            http/auto-content-type
                                            ring-middlewares/cookies
+                                           ~(set-host-environment (partial http-service/cloud-host-environment env))
                                            ~(with-user env)
                                            http/promise->chan]
-          ["/global-basis" {:get [:global-basis ~(http-global-basis env)]}]
-          ["/local-basis/:global-basis/:encoded-route/:branch/:branch-aux" {:get [:local-basis-get ~(http-local-basis env)]}]
-          ["/local-basis/:global-basis/:encoded-route/:branch/:branch-aux" {:post [:local-basis-post ~(http-local-basis env)]}]
+          ["/global-basis" {:get [:global-basis http-global-basis]}]
+          ["/local-basis/:global-basis/:encoded-route/:branch/:branch-aux" {:get [:local-basis-get http-local-basis]}]
+          ["/local-basis/:global-basis/:encoded-route/:branch/:branch-aux" {:post [:local-basis-post http-local-basis]}]
           ["/hydrate-requests/:local-basis" {:post [:hydrate-requests http-hydrate-requests]}]
-          ["/hydrate-route/:local-basis/:encoded-route/:branch/:branch-aux" {:get [:hydrate-route-get ~(http-hydrate-route env)]}]
-          ["/hydrate-route/:local-basis/:encoded-route/:branch/:branch-aux" {:post [:hydrate-route-post ~(http-hydrate-route env)]}]
+          ["/hydrate-route/:local-basis/:encoded-route/:branch/:branch-aux" {:get [:hydrate-route-get http-hydrate-route]}]
+          ["/hydrate-route/:local-basis/:encoded-route/:branch/:branch-aux" {:post [:hydrate-route-post http-hydrate-route]}]
           ["/transact" {:post [:transact! http-transact!]}]
           ["/sync" {:post [:latest http-sync]}]
           ]]])))

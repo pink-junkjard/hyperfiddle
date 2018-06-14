@@ -11,7 +11,7 @@
             [promesa.core :as p]))
 
 
-(deftype GlobalBasisRuntime [hyperfiddle-hostname hostname service-uri state-atom root-reducer jwt ?subject]
+(deftype GlobalBasisRuntime [host-env state-atom root-reducer jwt ?subject]
   runtime/State
   (dispatch! [rt action-or-func] (state/dispatch! state-atom root-reducer action-or-func))
   (state [rt] state-atom)
@@ -19,7 +19,7 @@
 
   runtime/AppFnGlobalBasis
   (global-basis [rt]
-    (global-basis rt hyperfiddle-hostname hostname))
+    (global-basis rt (:domain-eid host-env)))
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]

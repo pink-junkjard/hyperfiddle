@@ -12,7 +12,7 @@
 
 
 ; Todo this is same runtime as HydrateRoute
-(deftype LocalBasisRuntime [hyperfiddle-hostname hostname service-uri state-atom root-reducer jwt ?subject]
+(deftype LocalBasisRuntime [host-env state-atom root-reducer jwt ?subject]
   runtime/State
   (dispatch! [rt action-or-func] (state/dispatch! state-atom root-reducer action-or-func))
   (state [rt] state-atom)
@@ -20,7 +20,7 @@
 
   runtime/AppFnGlobalBasis
   (global-basis [rt]
-    (global-basis-rpc! service-uri jwt))
+    (global-basis-rpc! (:service-uri host-env) jwt))
 
   runtime/Route
   (encode-route [rt v]
@@ -31,12 +31,11 @@
 
   runtime/DomainRegistry
   (domain [rt]
-    (ide/domain rt hyperfiddle-hostname hostname))
+    (ide/domain rt (:domain-eid host-env)))
 
   runtime/AppValLocalBasis
   (local-basis [rt global-basis route branch branch-aux]
-    (let [ctx {:hostname hostname
-               :hyperfiddle-hostname hyperfiddle-hostname
+    (let [ctx {:host-env host-env
                :branch branch
                ::runtime/branch-aux branch-aux
                :peer rt}
@@ -49,11 +48,11 @@
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
-    (hydrate-requests-rpc! service-uri local-basis stage requests jwt))
+    (hydrate-requests-rpc! (:service-uri host-env) local-basis stage requests jwt))
 
   runtime/AppFnSync
   (sync [rt dbs]
-    (sync-rpc! service-uri dbs jwt))
+    (sync-rpc! (:service-uri host-env) dbs jwt))
 
   hc/Peer
   (hydrate [this branch request]

@@ -14,7 +14,7 @@
 
 
 ; This is allowed to hydrate route, this runtime is probably the same as hydrate-route runtime
-(deftype LocalBasis [hyperfiddle-hostname hostname service-uri state-atom root-reducer jwt ?subject]
+(deftype LocalBasis [host-env state-atom root-reducer jwt ?subject]
   runtime/State
   (dispatch! [rt action-or-func] (state/dispatch! state-atom root-reducer action-or-func))
   (state [rt] state-atom)
@@ -22,7 +22,7 @@
 
   runtime/AppFnGlobalBasis
   (global-basis [rt]
-    (global-basis rt hyperfiddle-hostname hostname))
+    (global-basis rt (:domain-eid host-env)))
 
   runtime/Route
   (decode-route [rt s]
@@ -33,12 +33,11 @@
 
   runtime/DomainRegistry
   (domain [rt]
-    (ide/domain rt hyperfiddle-hostname hostname))
+    (ide/domain rt (:domain-eid host-env)))
 
   runtime/AppValLocalBasis
   (local-basis [rt global-basis route branch branch-aux]
-    (let [ctx {:hostname hostname
-               :hyperfiddle-hostname hyperfiddle-hostname
+    (let [ctx {:host-env host-env
                :branch branch
                ::runtime/branch-aux branch-aux
                :peer rt}

@@ -2,6 +2,7 @@
   (:require [contrib.data :refer [unwrap]]
             [contrib.reactive :as r]
             [contrib.template :refer [load-resource]]
+            [goog.object :as object]
             [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
             [hypercrud.transit :as transit]
@@ -13,8 +14,6 @@
             [hyperfiddle.io.sync :refer [sync-rpc!]]
             [hyperfiddle.reducers :as reducers]
             [hyperfiddle.runtime :as runtime]
-            [hyperfiddle.service.http :as http-service]
-            [hyperfiddle.service.node.lib :as lib :refer [req->service-uri]]
             [hyperfiddle.state :as state]
             [promesa.core :as p]
             [reagent.dom.server :as reagent-server]
@@ -57,7 +56,7 @@
       (when serve-js?
         [:script {:id "main" :src (str resource-base "/main.js")}])]]))
 
-(deftype IdeSsrRuntime [hyperfiddle-hostname hostname service-uri state-atom root-reducer jwt]
+(deftype IdeSsrRuntime [host-env state-atom root-reducer jwt]
   runtime/State
   (dispatch! [rt action-or-func] (state/dispatch! state-atom root-reducer action-or-func))
   (state [rt] state-atom)
@@ -65,7 +64,7 @@
 
   runtime/AppFnGlobalBasis
   (global-basis [rt]
-    (global-basis-rpc! service-uri jwt))
+    (global-basis-rpc! (:service-uri host-env) jwt))
 
   runtime/Route
   (decode-route [rt s]
@@ -76,12 +75,11 @@
 
   runtime/DomainRegistry
   (domain [rt]
-    (ide/domain rt hyperfiddle-hostname hostname))
+    (ide/domain rt (:domain-eid host-env)))
 
   runtime/AppValLocalBasis
   (local-basis [rt global-basis route branch branch-aux]
-    (let [ctx {:hostname hostname
-               :hyperfiddle-hostname hyperfiddle-hostname
+    (let [ctx {:host-env host-env
                :branch branch
                :hyperfiddle.runtime/branch-aux branch-aux
                :peer rt}
@@ -94,26 +92,25 @@
 
   runtime/AppValHydrate
   (hydrate-route [rt local-basis route branch branch-aux stage]
-    (hydrate-route-rpc! service-uri local-basis route branch branch-aux stage jwt))
+    (hydrate-route-rpc! (:service-uri host-env) local-basis route branch branch-aux stage jwt))
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
-    (hydrate-requests-rpc! service-uri local-basis stage requests jwt))
+    (hydrate-requests-rpc! (:service-uri host-env) local-basis stage requests jwt))
 
   runtime/AppFnSync
   (sync [rt dbs]
-    (sync-rpc! service-uri dbs jwt))
+    (sync-rpc! (:service-uri host-env) dbs jwt))
 
   runtime/AppFnRenderPageRoot
-  (ssr [rt-page route]
-    (let [ctx {:hostname hostname
-               :hyperfiddle-hostname hyperfiddle-hostname
-               :peer rt-page
-               ::runtime/branch-aux {::ide/foo "page"}}
-          ident-or-alias (foundation/hostname->ident-or-alias hostname hyperfiddle-hostname)
-          alias (or (foundation/alias? ident-or-alias)
-                    (= "www" ident-or-alias))]
-      [foundation/view :page route ctx (if alias ide/view (constantly [:div "loading... "]))]))
+  (ssr [rt route]
+    (let [ctx {:host-env host-env
+               :peer rt
+               ::runtime/branch-aux {::ide/foo "page"}}]
+      [foundation/view :page route ctx (if (or (not (:active-ide? host-env))
+                                               (= "www" @(runtime/state rt [::runtime/domain :domain/ident])))
+                                         ide/view
+                                         (constantly [:div "loading... "]))]))
 
   hc/Peer
   (hydrate [this branch request]
@@ -130,25 +127,20 @@
   (-hash [this] (goog/getUid this)))
 
 (defn http-edge [env req res jwt user-id path-params query-params]
-  (let [hostname (.-hostname req)
-        hyperfiddle-hostname (http-service/hyperfiddle-hostname env hostname)
-        initial-state {::runtime/user-id user-id}
-        rt (->IdeSsrRuntime hyperfiddle-hostname hostname (req->service-uri env req)
-                            (r/atom (reducers/root-reducer initial-state nil))
-                            reducers/root-reducer jwt)
+  (let [initial-state {::runtime/user-id user-id}
+        host-env (object/get req "host-env")
+        rt (->IdeSsrRuntime host-env (r/atom (reducers/root-reducer initial-state nil)) reducers/root-reducer jwt)
         load-level foundation/LEVEL-HYDRATE-PAGE
-        ident-or-alias (foundation/hostname->ident-or-alias hostname hyperfiddle-hostname)
-        browser-init-level (if (foundation/alias? ident-or-alias)
-                             load-level
+        browser-init-level (if (:active-ide? host-env)
                              ;force the browser to re-run the data bootstrapping when not aliased
-                             foundation/LEVEL-NONE)
-        alias? (foundation/alias? ident-or-alias)]
+                             foundation/LEVEL-NONE
+                             load-level)]
     (-> (foundation/bootstrap-data rt foundation/LEVEL-NONE load-level (.-path req) (::runtime/global-basis initial-state))
         (p/then (fn []
                   (let [domain @(runtime/state rt [::runtime/domain])
                         owner (foundation/domain-owner? user-id domain)
                         writable (and (not= "www" (:domain/ident domain))
-                                      (or alias? owner))
+                                      (or (not (:active-ide? host-env)) owner))
                         action (if writable
                                  [:enable-auto-transact]
                                  [:disable-auto-transact])]
@@ -156,8 +148,8 @@
         (p/then (constantly 200))
         (p/catch #(or (:hyperfiddle.io/http-status-code (ex-data %)) 500))
         (p/then (fn [http-status-code]
-                  (let [serve-js? (or (not alias?) (not @(runtime/state rt [::runtime/domain :domain/disable-javascript])))
-                        params {:hyperfiddle-hostname hyperfiddle-hostname
+                  (let [serve-js? (or (:active-ide? host-env) (not @(runtime/state rt [::runtime/domain :domain/disable-javascript])))
+                        params {:host-env host-env
                                 :hyperfiddle.bootstrap/init-level browser-init-level}
                         html [full-html env @(runtime/state rt) serve-js? params
                               (runtime/ssr rt @(runtime/state rt [::runtime/partitions nil :route]))]]

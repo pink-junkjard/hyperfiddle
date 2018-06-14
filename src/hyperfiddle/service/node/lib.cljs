@@ -2,18 +2,14 @@
   (:require
     [cats.monad.either :as either]
     [contrib.try :refer [try-either]]
+    [goog.object :as object]
     [hypercrud.transit :as transit]
     [hypercrud.types.Err :refer [->Err]]
-    [hypercrud.types.URI :refer [->URI]]
     [hyperfiddle.service.cookie :as cookie]
-    [hyperfiddle.service.http :as http-service]
     [hyperfiddle.service.lib.jwt :as jwt]
     [promesa.core :as p]
     [taoensso.timbre :as timbre]))
 
-
-(defn req->service-uri [env req]
-  (->URI (str (.-protocol req) "://" (.-hostname req) "/api/" (:BUILD env) "/")))
 
 (defn- hack-buggy-express-body-text-parser [buggy-body]
   ; no-body shows up as json {} in spite of our text body parser
@@ -26,18 +22,15 @@
     (.status (:status platform-response))
     (.format #js {"application/transit+json" #(.send express-response (transit/encode (:body platform-response)))})))
 
-(defn build-node-req-handler [env platform-req-handler]
+(defn build-node-req-handler [platform-req-handler]
   (fn [req res jwt user-id path-params query-params]
-    (let [hostname (.-hostname req)]
-      (-> (platform-req-handler
-            :hostname hostname
-            :path-params path-params
-            :request-body (some-> req .-body hack-buggy-express-body-text-parser transit/decode)
-            :hyperfiddle-hostname (http-service/hyperfiddle-hostname env hostname)
-            :service-uri (req->service-uri env req)
-            :jwt jwt
-            :user-id user-id)
-          (p/then (partial platform-response->express-response res))))))
+    (-> (platform-req-handler
+          :host-env (object/get req "host-env")
+          :path-params path-params
+          :request-body (some-> req .-body hack-buggy-express-body-text-parser transit/decode)
+          :jwt jwt
+          :user-id user-id)
+        (p/then (partial platform-response->express-response res)))))
 
 (defn with-user [env]
   (let [verify (jwt/build-verifier env)]
@@ -50,7 +43,7 @@
           (timbre/error e)
           (doto res
             (.status 401)
-            (.clearCookie "jwt" (-> (http-service/hyperfiddle-hostname env (.-hostname req))
+            (.clearCookie "jwt" (-> (:auth/root (object/get req "host-env"))
                                     (cookie/jwt-options-express)
                                     clj->js))
             (.format #js {"application/transit+json" #(.send res (transit/encode (->Err (ex-message e))))

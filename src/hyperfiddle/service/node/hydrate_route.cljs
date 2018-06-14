@@ -13,7 +13,7 @@
             [hyperfiddle.state :as state]))
 
 
-(deftype HydrateRouteRuntime [hyperfiddle-hostname hostname service-uri state-atom root-reducer jwt ?subject]
+(deftype HydrateRouteRuntime [host-env state-atom root-reducer jwt ?subject]
   runtime/State
   (dispatch! [rt action-or-func] (state/dispatch! state-atom root-reducer action-or-func))
   (state [rt] state-atom)
@@ -32,12 +32,11 @@
 
   runtime/DomainRegistry
   (domain [rt]
-    (ide/domain rt hyperfiddle-hostname hostname))
+    (ide/domain rt (:domain-eid host-env)))
 
   runtime/AppValLocalBasis
   (local-basis [rt global-basis route branch branch-aux]
-    (let [ctx {:hostname hostname
-               :hyperfiddle-hostname hyperfiddle-hostname
+    (let [ctx {:host-env host-env
                :branch branch
                :hyperfiddle.runtime/branch-aux branch-aux
                :peer rt}
@@ -51,8 +50,7 @@
   runtime/AppValHydrate
   (hydrate-route [rt local-basis route branch branch-aux stage] ; :: ... -> DataCache on the wire
     (let [data-cache (-> @(runtime/state rt [::runtime/partitions branch]) (select-keys [:tempid-lookups :ptm]))
-          ctx {:hyperfiddle-hostname hyperfiddle-hostname
-               :hostname hostname
+          ctx {:host-env host-env
                :branch branch
                :hyperfiddle.runtime/branch-aux branch-aux
                :peer rt}
@@ -62,17 +60,17 @@
                          "user" :leaf
                          "ide" :leaf)]
       (hydrate-loop rt (request-fn-adapter local-basis route stage ctx
-                                           #(HydrateRouteRuntime. hyperfiddle-hostname hostname service-uri (r/atom %) root-reducer jwt ?subject)
+                                           #(HydrateRouteRuntime. host-env (r/atom %) root-reducer jwt ?subject)
                                            #(foundation/api page-or-leaf route % ide/api))
                     local-basis branch stage data-cache)))
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
-    (hydrate-requests-rpc! service-uri local-basis stage requests jwt))
+    (hydrate-requests-rpc! (:service-uri host-env) local-basis stage requests jwt))
 
   runtime/AppFnSync
   (sync [rt dbs]
-    (sync-rpc! service-uri dbs jwt))
+    (sync-rpc! (:service-uri host-env) dbs jwt))
 
   hc/Peer
   (hydrate [this branch request]
