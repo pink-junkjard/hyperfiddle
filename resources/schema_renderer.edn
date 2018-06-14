@@ -6,8 +6,8 @@
                            (as-> xs xs
                              (if @hide-datomic (remove db-attr? xs) xs)
                              (if @hide-archived (remove archived? xs) xs)))]
-  (fn [ctx]
-    [:div.hyperfiddle-schema
+  (fn [ctx class]
+    [:div {:class class}
      [hyperfiddle.ui/markdown (-> ctx :hypercrud.browser/fiddle deref :db/doc)]
      [:label {:style {:font-weight "400"}} [:input {:type "checkbox" :checked @hide-datomic :on-change #(swap! hide-datomic not)}] " hide Datomic system attributes"]
      [:br]
