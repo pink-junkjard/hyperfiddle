@@ -6,6 +6,7 @@
     #?(:cljs [hyperfiddle.ui])
     #?(:cljs [hypercrud.ui.attribute.markdown-editor])      ; legacy
     #?(:cljs [hypercrud.ui.attribute.code])                 ; legacy
+    #?(:cljs [hypercrud.ui.result])                         ; legacy
     ))
 
 
