@@ -10,14 +10,14 @@
             [hyperfiddle.ui :refer [hyper-control field table fiddle]]))
 
 (defn read-only? [ctx]
-  {:pre [(:relation ctx)]}
-  (let [sys? (system-link? @(r/cursor (:cell-data ctx) [:db/id]))
-        shadow? @(r/cursor (:cell-data ctx) [:hypercrud/sys?])]
-    (or sys? shadow?)))
+  (if (:relation ctx)                                       ; be robust to being called on labels
+    (let [sys? (system-link? @(r/cursor (:cell-data ctx) [:db/id]))
+          shadow? @(r/cursor (:cell-data ctx) [:hypercrud/sys?])]
+      (or sys? shadow?))))
 
 (defn read-only-cell [value ctx props]
   ; Need to delay until we have the value ctx to compute this, which means its a value renderer not a field prop
-  [(hyper-control ctx) value ctx (assoc props :read-only (if (:relation ctx) (read-only? ctx)))])
+  [(hyper-control ctx) value ctx (assoc props :read-only (read-only? ctx))])
 
 (defn links->result [links]
   (->> @links

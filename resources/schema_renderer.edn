@@ -15,8 +15,18 @@
      (let [ctx (-> ctx
                  (dissoc :relation :relations)
                  (update :hypercrud.browser/result (partial contrib.reactive/fmap do-filter-reactive #_(contrib.reactive/partial filter f?)))
-                 (hypercrud.browser.context/with-relations)
-                 (assoc :read-only (fn [ctx]
-                                     (not (#{:db/ident :db/doc :db/isComponent}
-                                            (:hypercrud.browser/attribute ctx))))))]
-       (hyperfiddle.ui/result ctx))]))
+                 (hypercrud.browser.context/with-relations))
+           read-only (fn [value ctx props]
+                       [(hyperfiddle.ui/hyper-control ctx) value ctx (assoc props :read-only true)])]
+       [hyperfiddle.ui/table
+        (fn [ctx]
+          [(hyperfiddle.ui/field [0 :db/ident] ctx)
+           (hyperfiddle.ui/field [0 :db/valueType] ctx read-only)
+           (hyperfiddle.ui/field [0 :db/cardinality] ctx read-only)
+           (hyperfiddle.ui/field [0 :db/unique] ctx read-only)
+           (hyperfiddle.ui/field [0 :db/isComponent] ctx)
+           (hyperfiddle.ui/field [0 :db/fulltext] ctx read-only)
+           (hyperfiddle.ui/field [0 :db/doc] ctx)
+           (hyperfiddle.ui/field [0] ctx)])
+        hyperfiddle.data/sort-fn
+        ctx])]))
