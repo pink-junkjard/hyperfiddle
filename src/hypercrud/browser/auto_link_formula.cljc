@@ -4,6 +4,7 @@
             [contrib.reactive :as r]
             [contrib.string :refer [memoized-safe-read-edn-string]]
             [hypercrud.browser.dbname :as dbname]
+            [hypercrud.browser.context :as context]
             [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
             [hypercrud.types.ThinEntity :refer [->ThinEntity]]
             [hypercrud.util.branch :as branch]
@@ -26,22 +27,23 @@
   ([ctx]
    (deterministic-ident
      (:hypercrud.browser/find-element ctx)
-     (:cell-data ctx)
+     (context/entity ctx)
      (:hypercrud.browser/fat-attribute ctx)
-     (:value ctx)))
-  ([fe cell-data a v]
+     (context/value ctx)))
+  ([fe cell-data attr v]
     ; Need comment explaining why.
     ; [fe e a v] quad is sufficient to answer "where are we".
     ; Why Db is omitted?
     ; Why value is only inspected in :many for unique hashing?
    (-> (str (some-> fe (r/cursor [:name]) deref) "."
-            (or (some-> cell-data (r/cursor [:db/id]) deref)
-                (hash (some-> cell-data deref))) "."
-            (some-> a (r/cursor [:db/ident]) deref) "."
-            (case (some-> a (r/cursor [:db/cardinality :db/ident]) deref)
-              :db.cardinality/one nil
-              :db.cardinality/many (hash (into #{} (mapv :db/id @v))) ; todo scalar
-              nil nil #_":db/id has a faked attribute with no cardinality, need more thought to make elegant"))
+            (if cell-data
+              (or @(r/fmap :db/id cell-data)
+                  (hash @cell-data))) "."
+            (if attr @(r/fmap :db/ident attr)) "."
+            (if attr (case @(r/cursor attr [:db/cardinality :db/ident])
+                       :db.cardinality/one nil
+                       :db.cardinality/many (hash (into #{} (mapv :db/id @v))) ; todo scalar
+                       nil nil #_":db/id has a faked attribute with no cardinality, need more thought to make elegant")))
        hash abs-normalized - str)))
 
 (let [get-uri (fn [default cell-data]

@@ -1,9 +1,10 @@
 (ns hypercrud.browser.context
-  (:require [contrib.reactive :as r]
-            [datascript.parser :as parser]
-            [hypercrud.browser.routing :as routing]
-            [hyperfiddle.actions :as actions]
-            [hyperfiddle.runtime :as runtime]))
+  (:require
+    [contrib.reactive :as r]
+    [datascript.parser :as parser]
+    ;[hypercrud.browser.routing :as routing]
+    ;[hyperfiddle.actions :as actions]
+    [hyperfiddle.runtime :as runtime]))
 
 
 (defn clean [ctx]
@@ -35,10 +36,10 @@
               (fn [domain]
                 (assoc-in (:hypercrud.browser/source-domain ctx) [:domain/environment "$"] (:domain/fiddle-repo domain))))))
 
-(defn route [ctx route]
+(defn route [ctx route]                                     ; circular, this can be done sooner
   {:pre [(if-let [params (second route)] (vector? params) true) ; validate normalized already
          (some-> ctx :hypercrud.browser/domain :domain/fiddle-repo)]}
-  (assoc ctx :route (routing/tempid->id route ctx)))
+  (assoc ctx :route (hypercrud.browser.routing/tempid->id route ctx)))
 
 (defn relations [ctx rv]
   {:pre [(r/reactive? rv)]}
@@ -77,8 +78,8 @@
     ctx))
 
 (letfn [(user-with [rt ctx branch uri tx]
-          (runtime/dispatch! rt (actions/with rt (:hypercrud.browser/invert-route ctx) branch uri tx)))]
-  (defn find-element [ctx fe-pos]
+          (runtime/dispatch! rt (hyperfiddle.actions/with rt (:hypercrud.browser/invert-route ctx) branch uri tx)))]
+  (defn set-find-element [ctx fe-pos]
     (let [fe (r/cursor (:hypercrud.browser/ordered-fes ctx) [fe-pos])
           dbname (str @(r/cursor fe [:source-symbol]))
           uri (when dbname
@@ -96,12 +97,6 @@
                       :variable (assoc ctx :hypercrud.browser/field (-> @fe :fields first))
                       :pull ctx))))))
 
-(defn cell-data [ctx]
-  {:pre [(:fe-pos ctx)]}
-  (if (:relation ctx)
-    (assoc ctx :cell-data (r/cursor (:relation ctx) [(:fe-pos ctx)]))
-    ctx))
-
 (letfn [(default [default-v v] (or v default-v))]
   (defn field [ctx field]
     {:pre [(not (r/reactive? field))]}                      ; weird not reactive
@@ -113,27 +108,45 @@
         :hypercrud.browser/attribute attr-ident
         :hypercrud.browser/fat-attribute fat-attr))))
 
-(defn value [ctx]                                           ; attr-value
+(letfn [(set-attribute [ctx a]
+          (->> @(r/cursor (:hypercrud.browser/find-element ctx) [:fields #_i])
+               (filter #(= (:attribute %) a))
+               first
+               (field ctx)))]
+  (defn focus [ctx i a]
+    ;(with-relations)                                    ; already here
+    ;(relation (reactive/atom [domain]))                 ; already here
+    (cond-> ctx
+            (and i) (set-find-element i)
+            (and i a) (set-attribute a))))
+
+(defn legacy-cell-data [ctx]
+  {:pre [(:fe-pos ctx)]}
+  (if (:relation ctx)
+    (assoc ctx :cell-data (r/cursor (:relation ctx) [(:fe-pos ctx)]))
+    ctx))
+
+(defn legacy-value [ctx]                                    ; attr-value
   (if (and (:cell-data ctx) (not= '* (:hypercrud.browser/attribute ctx)))
     (let [rv (r/fmap (:cell-data->value (:hypercrud.browser/field ctx)) (:cell-data ctx))]
       (assoc ctx :value rv))
     ctx))
 
-(letfn [(field-from-attribute [ctx a]
-          (->> @(r/cursor (:hypercrud.browser/find-element ctx) [:fields #_i])
-               (filter #(= (:attribute %) a))
-               first
-               (field ctx)))]
-  (defn focus [ctx d i a]
-    ;(with-relations)                                    ; already here
-    ;(relation (reactive/atom [domain]))                 ; already here
-    (cond-> ctx
-            (and i) (find-element i)
-            (and i d) (cell-data)
-            (and i a) (field-from-attribute a)
-            (and i d a) (value))))
+(defn legacy-ctx [ctx]                                      ; Legacy adapter for user formulas and txfns.
+  (let [[i a] [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]
+        ctx (if i (legacy-cell-data ctx) ctx)
+        ctx (if a (legacy-value ctx) ctx)]
+    ctx))
 
-(defn extract-focus-value [ctx]
-  ; Aggregate, attr-value, etc, and can be nil.
-  ; the "value" does not always mean :value (latter should be named differently)
-  (some-> (or (:value ctx) (:cell-data ctx)) deref))
+(defn entity [ctx]                                          ; misnamed, more than entity
+  (let [[i a] [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
+    (or (if i (:cell-data (legacy-cell-data ctx)))
+        (r/atom nil))))                                     ; can return nil, should return (atom nil)
+
+(defn value "Aggregate, attr-value, etc, and can be nil."
+  [ctx]
+  (let [ctx (legacy-ctx ctx)
+        [i a] [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
+    (or (if a (:value ctx))
+        (if i (:cell-data ctx))
+        (r/atom nil))))

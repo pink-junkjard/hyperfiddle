@@ -30,7 +30,7 @@
 
 (defn- build-valueType-and-cardinality-renderer [special-attrs-state]
   (let [user-with! (fn [ctx user-with! tx]
-                     (let [entity @(:cell-data ctx)
+                     (let [entity @(context/entity ctx)
                            new-entity (merge-in-tx entity tx ctx)]
                        (case [(has-required-attrs? entity) (has-required-attrs? new-entity)]
                          [false false]

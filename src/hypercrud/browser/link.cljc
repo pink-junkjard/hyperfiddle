@@ -9,6 +9,7 @@
             [contrib.try :refer [try-either try-promise]]
             [cuerdas.core :as string]
             [hypercrud.browser.base :as base]
+            [hypercrud.browser.context :as context]
             [hypercrud.browser.popovers :as popovers]
             [hypercrud.browser.q-util :as q-util]
             [hypercrud.browser.routing :as routing]
@@ -120,7 +121,7 @@
             (p/promise
               (fn [resolve! reject!]
                 (let [swap-fn (fn [multi-color-tx]
-                                (let [result (let [result (user-txfn ctx multi-color-tx route)]
+                                (let [result (let [result (user-txfn (context/legacy-ctx ctx) multi-color-tx route)]
                                                ; txfn may be sync or async
                                                (if-not (p/promise? result) (p/resolved result) result))]
                                   ; let the caller of this :stage fn know the result

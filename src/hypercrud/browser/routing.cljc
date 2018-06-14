@@ -7,6 +7,7 @@
             [contrib.eval :as eval]
             [contrib.try :refer [try-either]]
             [cuerdas.core :as string]
+            [hypercrud.browser.context :as context]
             [hypercrud.browser.dbname :as dbname]
             [hypercrud.browser.router :as router]
             [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
@@ -79,7 +80,7 @@
                      (if (and (string? formula-str) (not (string/blank? formula-str)))
                        (memoized-eval-string formula-str)
                        (either/right (constantly nil))))
-           args (try-either (formula ctx))
+           args (try-either (formula (context/legacy-ctx ctx))) ; (r/fmap formula (context/value ctx))
            :let [args (->> {:remove-this-wrapper args}      ; walk trees wants a map
                            ; shadow-links can be hdyrated here, and we need to talk them.
                            ; Technical debt. Once shadow-links are identities, this is just a mapv.

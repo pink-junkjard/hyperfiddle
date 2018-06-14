@@ -6,7 +6,9 @@
             [contrib.try :refer [try-either]]
             [hypercrud.browser.core :as browser]
             [hypercrud.browser.link :as link]
-            [hypercrud.ui.error :as ui-error]))
+            [hypercrud.ui.error :as ui-error]
+            [hypercrud.browser.context :as context]
+            [hyperfiddle.ui.controls :as controls]))
 
 
 (defn default-label-renderer [v ctx]
@@ -74,7 +76,8 @@
 (def always-user (atom :hypercrud.browser.browser-ui/user))
 
 (let [on-change (fn [ctx id]                                ;reconstruct the typed value
-                  ((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) id)))
+                  ((:user-with! ctx) (tx/update-entity-attr @(context/entity ctx)
+                                                            @(:hypercrud.browser/fat-attribute ctx) id)))
       dom-value (fn [value]                                 ; nil, kw or eid
                   (if (nil? value) "" (str (:db/id value))))]
   (defn select [value ctx props]
@@ -83,10 +86,10 @@
         (link/eval-hc-props (:hypercrud/props options-link) ctx)
         (fn [e] [(ui-error/error-comp ctx) e])
         (fn [hc-props]
-          (let [option-props {:disabled (or (boolean (:read-only props))
-                                            (nil? (:cell-data ctx)) ; no value at all
-                                            ; what is this ? I keep breaking this next line spent an hour here
-                                            (nil? (some-> (:cell-data ctx) (r/cursor [:db/id]) deref)))}
+          (let [entity (context/entity ctx)
+                option-props {:disabled (or (boolean (:read-only props))
+                                            @(r/fmap nil? entity) ; no value at all
+                                            (not @(r/fmap controls/writable-entity? entity)))}
                 props (merge props hc-props {:on-change (r/partial on-change ctx)
                                              :value (dom-value value)})
                 f (r/partial select-anchor-renderer props option-props)]

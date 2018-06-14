@@ -56,10 +56,11 @@
                      [:div.docstring [contrib.ui/markdown help-md]])
      [:label props (:label field) (if help-md [:sup "†"])]]))
 
-(defn ^:export hyper-control [ctx]
+(defn ^:export hyper-control "Handles labels too because we show links there."
+  [ctx]
   {:post [(not (nil? %))]}
   (let [display-mode (-> @(:hypercrud.ui/display-mode ctx) name keyword)
-        d (-> (:relation ctx) (if :body :head))
+        d (-> (:relation ctx) (if :body :head))             ; Be careful, data/form oversets this and must be unset at call site
         i (:fe-pos ctx)
         {:keys [type]} (if i @(:hypercrud.browser/find-element ctx))
         a (:hypercrud.browser/attribute ctx)
@@ -94,7 +95,7 @@
 
           [:body i (:or :aggregate :variable) _ _]
           (fn [value ctx props]
-            (fragment [controls/string (str (context/extract-focus-value ctx)) ctx props]
+            (fragment [controls/string (str value) ctx props]
                       (if i (anchors :body i a ctx))
                       (if i (iframes :body i a ctx))))
 
@@ -129,26 +130,27 @@
      (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/cardinality :db/ident))
      (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/isComponent (if :component)))]))
 
-(defn ^:export value "Naked value renderer. Does not work in tables. Use field [] if you want a naked th/td view"
+(defn ^:export value "Naked value renderer. Does not work in tables. Use field [] if you want a naked th/td view.
+User renderers should not be exposed to the reaction."
   [[i a] ctx ?f & args]                                     ; Doesn't make sense in a table context bc what do you do in the header?
-  (let [ctx (context/focus ctx true i a)
+  (let [ctx (context/focus ctx i a)
         props (kwargs args)
         props (merge props {:class (apply css (:class props) (semantic-css ctx))})]
-    [(or ?f (hyper-control ctx)) (context/extract-focus-value ctx) ctx props]))
+    [(or ?f (hyper-control ctx)) @(context/value ctx) ctx props]))
 
 ; define nav-cmp here, and unify browser and navcmp
 
 (defn ^:export link [rel path ctx ?content & args]
   (let [props (kwargs args)
         {:keys [link/dependent? link/render-inline?] :as link} @(r/track link/rel->link rel path ctx)
-        ctx (apply context/focus ctx dependent? path)]
+        ctx (apply context/focus ctx path)]
     ;(assert (not render-inline?)) -- :new-fiddle is render-inline. The nav cmp has to sort this out before this unifies.
     [(:navigate-cmp ctx) (merge (link/build-link-props link ctx) props) (or ?content (name (:link/rel link))) (:class props)]))
 
 (defn ^:export browse [rel path ctx ?content & args]
   (let [props (kwargs args)
         {:keys [link/dependent? link/render-inline?] :as link} @(r/track link/rel->link rel path ctx)
-        ctx (apply context/focus ctx dependent? path)]
+        ctx (apply context/focus ctx path)]
     (assert render-inline?)
     (into
       [browser/ui link
@@ -157,16 +159,17 @@
       (apply concat (dissoc props :class :children nil)))))
 
 (defn form-field "Form fields are label AND value. Table fields are label OR value."
-  [f ctx props]                                             ; fiddle-src wants to fallback by passing nil here explicitly
+  [control-fac ?f ctx props]                                ; fiddle-src wants to fallback by passing nil here explicitly
   (assert @(:hypercrud.ui/display-mode ctx))
   (form/ui-block-border-wrap
-    ctx (css "field" "hyperfiddle-form-cell" (:class props) #_":class is for the control, these props came from !cell{}")
+    ctx (css "field" (:class props))
     ;(if (= a '*) ^{:key :new-field} [new-field ctx])
-    [(or (:label-fn props) label) (:hypercrud.browser/field ctx) (dissoc ctx :relation) props]
-    [f (context/extract-focus-value ctx) ctx props]))
+    (let [head-ctx (dissoc ctx :relation)]
+      [(or (:label-fn props) (control-fac head-ctx)) (:hypercrud.browser/field head-ctx) head-ctx props])
+    [(or ?f (control-fac ctx)) @(context/value ctx) ctx props]))
 
 (defn table-field "Form fields are label AND value. Table fields are label OR value."
-  [f ctx props]
+  [control-fac ?f ctx props]
   (let [{:keys [hypercrud.browser/field
                 hypercrud.browser/attribute]} ctx
         [i a] [(:fe-pos ctx) attribute]
@@ -175,23 +178,25 @@
       [:td {:class (css "field" (:class props) "truncate")
             :style {:border-color (if i (form/border-color ctx))}}
        ; todo unsafe execution of user code: control
-       [f (context/extract-focus-value ctx) ctx props]]
+       [(or ?f (control-fac ctx)) @(context/value ctx) ctx props]]
       [:th {:class (css "field" (:class props)
                         (if (and i (sort/sortable? ctx path)) "sortable") ; hoist
                         (some-> (sort/sort-direction ctx) name)) ; hoist
             :style {:background-color (connection-color ctx)}
             :on-click (r/partial sort/toggle-sort! ctx path)}
        ; Use f as the label control also, because there is hypermedia up there
-       ((or (:label-fn props) f) field ctx props)])))
+       ((or (:label-fn props) (control-fac ctx)) field ctx props)])))
 
 (defn ^:export field "Works in a form or table context. Draws label and/or value."
   [[i a] ctx ?f & args]
   (let [view (case (::layout ctx) :hyperfiddle.ui.layout/table table-field form-field)
-        ctx (context/focus ctx true i a)
+        ctx (context/focus ctx i a)
         props (kwargs args)
-        props (merge props {:class (apply css (:class props) (semantic-css ctx))})]
+        props (merge props {:class (apply css (:class props) (semantic-css ctx))})
+        control-factory (if ?f (r/constantly ?f)            ; userland passes the actual concrete control, not a fac
+                               hyper-control)]
     ^{:key (str i a)}
-    [view (or ?f (hyper-control ctx)) ctx props]))
+    [view hyper-control ?f ctx props]))
 
 (defn ^:export table "Semantic table; todo all markup should be injected.
 sort-fn :: (fn [col ctx v] v)"
@@ -214,6 +219,7 @@ sort-fn :: (fn [col ctx v] v)"
 (defn ^:export result "Default result renderer. Invoked as fn, returns seq-hiccup, hiccup or
 nil. call site must wrap with a Reagent component"
   [ctx & [?f]]
+  ; with-relations probably gets called here. What about the request side?
   (cond
     ?f [?f ctx]
     (:relations ctx) [table (r/partial hf/form field) hf/sort-fn ctx]

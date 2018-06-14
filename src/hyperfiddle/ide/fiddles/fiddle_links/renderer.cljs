@@ -11,8 +11,9 @@
 
 (defn read-only? [ctx]
   (if (:relation ctx)                                       ; be robust to being called on labels
-    (let [sys? (system-link? @(r/cursor (:cell-data ctx) [:db/id]))
-          shadow? @(r/cursor (:cell-data ctx) [:hypercrud/sys?])]
+    (let [entity (context/entity ctx)
+          sys? (system-link? @(r/fmap :db/id entity))
+          shadow? @(r/fmap :hypercrud/sys? entity)]
       (or sys? shadow?))))
 
 (defn read-only-cell [value ctx props]

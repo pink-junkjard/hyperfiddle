@@ -112,7 +112,8 @@
 
 (defn ^:export qe-picker-control [value ctx props]
   (let [enums [:query :entity :blank]
-        change! #((:user-with! ctx) (tx/update-entity-attr @(:cell-data ctx) @(:hypercrud.browser/fat-attribute ctx) %))
+        entity (context/entity ctx)
+        change! #((:user-with! ctx) (tx/update-entity-attr @entity @(:hypercrud.browser/fat-attribute ctx) %))
         options (->> enums
                      (map #(radio-option
                              {:label (case % :query "query" :entity "pull" :blank "blank")

@@ -31,7 +31,7 @@
     (request-from-link link ctx)))
 
 (defn cell-dependent-requests [ctx]
-  (let [ctx (context/cell-data ctx)]
+  (let [ctx (context/legacy-cell-data ctx)]
     (concat
       (->> @(:hypercrud.browser/links ctx)
            (filter :link/dependent?)
@@ -41,7 +41,7 @@
            (r/unsequence :id)
            (mapcat (fn [[field id]]
                      (let [ctx (context/field ctx @field)
-                           ctx (context/value ctx)]
+                           ctx (context/legacy-value ctx)]
                        (->> @(:hypercrud.browser/links ctx)
                             (filter :link/dependent?)
                             (filter (link/same-path-as? [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]))
@@ -50,7 +50,7 @@
 (defn form-requests [ctx]                                   ; ui equivalent of form
   (->> (r/unsequence (:hypercrud.browser/ordered-fes ctx))
        (mapcat (fn [[fe i]]
-                 (cell-dependent-requests (context/find-element ctx i))))))
+                 (cell-dependent-requests (context/set-find-element ctx i))))))
 
 (defn table-requests [ctx]                                  ; ui equivalent of table
   ; the request side does NOT need the cursors to be equiv between loops
@@ -70,7 +70,7 @@
            (mapcat #(recurse-request % ctx)))
       (->> (r/unsequence (:hypercrud.browser/ordered-fes ctx)) ; might have empty results-- DJG Dont know what this prior comment means?
            (mapcat (fn [[fe i]]
-                     (let [ctx (context/find-element ctx i)
+                     (let [ctx (context/set-find-element ctx i)
                            fe-pos (:fe-pos ctx)]
                        (concat
                          (->> @(:hypercrud.browser/links ctx)

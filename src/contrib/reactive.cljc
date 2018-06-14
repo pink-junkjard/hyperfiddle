@@ -69,7 +69,8 @@
 
 (let [trackable-f (fn [rv f] (f (deref rv)))]               ; stable ref
   (defn fmap [f rv]
-    {:pre [f (reactive? rv)]}
+    {:pre [f]}
+    (assert (reactive? rv) (str rv))
     ; (track (comp f deref) rv) -- unstable fn ref breaks optimizations
     (track trackable-f rv f)))
 

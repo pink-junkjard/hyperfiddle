@@ -5,7 +5,8 @@
             [contrib.pprint :refer [pprint-str]]
             [hypercrud.browser.routing :as routing]
             [hyperfiddle.actions :as actions]
-            [hyperfiddle.runtime :as runtime]))
+            [hyperfiddle.runtime :as runtime]
+            [hypercrud.browser.context :as context]))
 
 
 (def ^:dynamic root-ctx)                                    ; debug backdoor to dispatch!
@@ -22,27 +23,17 @@
   (aset global "hc_where" (fn [ctx]
                             (-> ctx
                                 (select-keys [:route        ; ordered for glance debugging
-                                              :value
                                               :hypercrud.browser/attribute
                                               :fe-pos
                                               :hypercrud.browser/find-element
-                                              :cell-data
                                               :relation
                                               :relations])
                                 (update-existing :hypercrud.browser/find-element deref)
                                 (update-existing :relations deref)
                                 (update-existing :relation deref)
                                 (update-existing :cell-data deref)
-                                (update-existing :value (fnil deref (atom nil)))
-                                #_{:hypercrud.browser/attribute identity
-                                   :fe-pos identity
-                                   :hypercrud.browser/find-element deref
-                                   :cell-data deref
-                                   :route identity
-                                   :value deref}
-                                #_(reduce (fn [acc [k f]]
-                                            (assoc acc k (f (get ctx k))))
-                                          {})
+                                (assoc :cell-data @(context/entity ctx))
+                                (assoc :value @(context/value ctx))
                                 (pprint-str 150))))
   (aset global "hc_route" (fn [ctx] (-> ctx :route pprint-str)))
   (aset global "hc_root_route" (fn []
