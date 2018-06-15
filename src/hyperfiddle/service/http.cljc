@@ -2,7 +2,7 @@
   (:require [contrib.base-64-url-safe :as base-64-url-safe]
             [contrib.reactive :as r]
             [contrib.reader :refer [read-edn-string]]
-            [hypercrud.browser.routing :as routing]
+            [hypercrud.browser.router :as router]
             [hypercrud.types.Err :refer [->Err]]
             [hypercrud.types.URI :refer [->URI]]
             [hyperfiddle.actions :as actions]
@@ -51,7 +51,7 @@
   (try
     (let [global-basis (-> (:global-basis path-params) base-64-url-safe/decode read-edn-string) ; todo this can throw
           route (-> (:encoded-route path-params) base-64-url-safe/decode read-edn-string)
-          _ (when-let [e (routing/invalid-route? route)] (throw e))
+          _ (when-let [e (router/invalid-route? route)] (throw e))
           branch (some-> (:branch path-params) base-64-url-safe/decode read-edn-string)
           branch-aux (some-> (:branch-aux path-params) base-64-url-safe/decode read-edn-string)
           initial-state {::runtime/user-id user-id
@@ -77,7 +77,7 @@
   (try
     (let [local-basis (-> (:local-basis path-params) base-64-url-safe/decode read-edn-string) ; todo this can throw
           route (-> (:encoded-route path-params) base-64-url-safe/decode read-edn-string)
-          _ (when-let [e (routing/invalid-route? route)] (throw e))
+          _ (when-let [e (router/invalid-route? route)] (throw e))
           branch (some-> (:branch path-params) base-64-url-safe/decode read-edn-string)
           branch-aux (some-> (:branch-aux path-params) base-64-url-safe/decode read-edn-string)
           initial-state (-> {::runtime/user-id user-id
