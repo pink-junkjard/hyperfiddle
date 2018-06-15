@@ -15,7 +15,8 @@
     #?(:cljs [hypercrud.ui.stale :as stale])
     [hyperfiddle.runtime :as runtime]
     [hypercrud.browser.routing :as routing]
-    [hypercrud.browser.router :as router]))
+    [hypercrud.browser.router :as router]
+    [hypercrud.browser.context :as context]))
 
 
 (def data base/data-from-link)
@@ -64,7 +65,10 @@
         (fn [link-props]
           (if (:hidden link-props)
             [:noscript]
-            [stale/loading (stale/can-be-loading? ctx) (cats/fmap (comp #(router/assoc-frag % (:frag props)) :route) link-props')
-             (fn [e] [error-comp e])
-             ; legacy-ctx is set in build-link-props, and this is "downtree" from that
-             (fn [route] [ui-from-route route ctx (css ?class (css-slugify (:link/rel link)))])]))])))
+            ; link-props swallows bad routes (shorts them to nil),
+            ; all errors will always route through as (either/right nil)
+            (let [route' (routing/build-route' link (context/legacy-ctx ctx))]
+              [stale/loading (stale/can-be-loading? ctx) (cats/fmap #(router/assoc-frag % (:frag props)) route')
+               (fn [e] [error-comp e])
+               ; legacy-ctx is set in build-link-props, and this is "downtree" from that
+               (fn [route] [ui-from-route route ctx (css ?class (css-slugify (:link/rel link)))])])))])))
