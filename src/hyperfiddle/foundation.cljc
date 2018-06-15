@@ -53,7 +53,8 @@
 
 (defn domain-request-insecure [domain-eid peer branch]
   (->EntityRequest domain-eid nil (hc/db peer domain-uri branch)
-                   [:domain/code
+                   [:db/id
+                    :domain/code
                     :domain/css
                     :domain/router
                     :domain/home-route]))
