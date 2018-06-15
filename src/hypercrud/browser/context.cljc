@@ -9,7 +9,7 @@
 (defn clean [ctx]
   ; why not code-database-uri and all the custom ui/render fns?
   (dissoc ctx
-          :route
+          :route                                            ; Route is unrelated to the hyper-control ontology
           :fe-pos :uri :user-with!
           :cell-data
           :value                                            ; conflicts with browser_ui/:value

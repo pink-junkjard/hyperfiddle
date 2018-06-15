@@ -11,7 +11,6 @@
     [hypercrud.browser.base :as base]
     [hypercrud.browser.browser-request :as browser-request]
     [hypercrud.browser.link :as link]
-    [hypercrud.browser.routing :as routing]
     #?(:cljs [hypercrud.ui.error :as ui-error])
     #?(:cljs [hypercrud.ui.stale :as stale])
     [hyperfiddle.runtime :as runtime]))
@@ -39,7 +38,7 @@
           (let [on-click (r/partial click-fn route)]
             [native-on-click-listener {:on-click on-click}
              [error-comp e (css "hyperfiddle-error" ?class "ui")]]))
-        (fn [ctx]
+        (fn [ctx]                                           ; fresh clean ctx
           (let [on-click (r/partial click-fn (:route ctx))]
             [native-on-click-listener {:on-click on-click}
              (fragment
@@ -65,4 +64,5 @@
             [:noscript]
             [stale/loading (stale/can-be-loading? ctx) (cats/fmap :route link-props')
              (fn [e] [error-comp e])
+             ; legacy-ctx is set in build-link-props, and this is "downtree" from that
              (fn [route] [ui-from-route route ctx (css ?class (css-slugify (:link/rel link)))])]))])))
