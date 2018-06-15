@@ -112,7 +112,6 @@
                  (:hypercrud.browser/find-element ctx)]
            :post [(:hypercrud.browser/attribute %)]}
           (let [fields @(r/cursor (:hypercrud.browser/find-element ctx) [:fields #_i])]
-            (println (str "set-attribute: " a (pr-str fields)))
             (field ctx (first (filter #(= (:attribute %) a) fields)))))]
   (defn focus [ctx i a]
     ;(with-relations)                                    ; already here
