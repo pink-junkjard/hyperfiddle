@@ -181,7 +181,8 @@
   ; - broken user txfn
   ; - broken user visible fn
   ; If these fns are ommitted (nil), its not an error.
-  (let [route' (routing/build-route' link ctx)
+  (let [ctx (context/legacy-ctx ctx)
+        route' (routing/build-route' link ctx)
         hypercrud-props (build-link-props-raw route' link ctx)
         popover-props (if (popover-link? link)
                         (if-let [route (and (:link/managed? link) (either/right? route') (cats/extract route'))]

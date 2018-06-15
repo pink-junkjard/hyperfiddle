@@ -80,7 +80,7 @@
                      (if (and (string? formula-str) (not (string/blank? formula-str)))
                        (memoized-eval-string formula-str)
                        (either/right (constantly nil))))
-           args (try-either (formula (context/legacy-ctx ctx))) ; (r/fmap formula (context/value ctx))
+           args (try-either (formula ctx #_ "This is a legacy ctx, which is set in build-link-props")) ; (r/fmap formula (context/value ctx))
            :let [args (->> {:remove-this-wrapper args}      ; walk trees wants a map
                            ; shadow-links can be hdyrated here, and we need to talk them.
                            ; Technical debt. Once shadow-links are identities, this is just a mapv.
