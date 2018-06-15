@@ -66,52 +66,49 @@
         a (:hypercrud.browser/attribute ctx)
         rels (->> (links-here ctx) (map :link/rel) (into #{}))]
 
-    (if (= a '*)
-      (fn [field ctx props] [:code "magic-new"])
-      (letfn [(select? [rels] (contains? rels :options))]
-        (match [d i type a rels]
+    (letfn [(select? [rels] (contains? rels :options))]
+      (match [d i type a rels]
 
-          [:body i _ a (true :<< select?)]
-          (fn [value ctx props]
-            (fragment (anchors :body i a ctx link/options-processor) ; Order sensitive, here be floats
-                      [select value ctx props]
-                      (iframes :body i a ctx link/options-processor)))
+        [:body i _ a (true :<< select?)]
+        (fn [value ctx props]
+          (fragment (anchors :body i a ctx link/options-processor) ; Order sensitive, here be floats
+                    [select value ctx props]
+                    (iframes :body i a ctx link/options-processor)))
 
-          [:head i _ a (true :<< select?)]
-          (fn [field ctx props]
-            (fragment (if (and (= :xray display-mode)
-                               (not (:link/dependent? (rel->link :options ctx))))
-                        ; Float right
-                        [select nil ctx props])
-                      (if i [label field ctx props])
-                      (anchors :head i a ctx link/options-processor)
-                      (iframes :head i a ctx link/options-processor)))
+        [:head i _ a (true :<< select?)]
+        (fn [field ctx props]
+          (fragment (if (and (= :xray display-mode)
+                             (not (:link/dependent? (rel->link :options ctx))))
+                      ; Float right
+                      [select nil ctx props])
+                    (if i [label field ctx props])
+                    (anchors :head i a ctx link/options-processor)
+                    (iframes :head i a ctx link/options-processor)))
 
-          [:head i _ a _]
-          (fn [field ctx props]
-            (fragment (if i [label field ctx props])
-                      (anchors :head i a ctx)
-                      (iframes :head i a ctx)))
+        [d i _ '* _] (fn [v ctx props]
+                       ; (::layout ctx :hyperfiddle.ui.layout/table)
+                       (case d
+                         :head [:code "magic-new head"]
+                         :body [:code "magic-new body"]))
 
-          [:body i (:or :aggregate :variable) _ _]
-          (fn [value ctx props]
-            (fragment [controls/string (str value) ctx props]
-                      (if i (anchors :body i a ctx))
-                      (if i (iframes :body i a ctx))))
+        [:head i _ a _]
+        (fn [field ctx props]
+          (fragment (if i [label field ctx props])
+                    (anchors :head i a ctx)
+                    (iframes :head i a ctx)))
 
-          [:body i _ a _]
-          (fn [value ctx props]
-            (fragment (if a [(control ctx) value ctx props]) ; element :pull ? I am missing a permutation which this this
-                      (if i (anchors :body i a ctx))
-                      (if i (iframes :body i a ctx))))
-          )))))
+        [:body i (:or :aggregate :variable) _ _]
+        (fn [value ctx props]
+          (fragment [controls/string (str value) ctx props]
+                    (if i (anchors :body i a ctx))
+                    (if i (iframes :body i a ctx))))
 
-(comment
-  [:block :head i '*] (fn [field ctx props] [:code "form head magic-new"])
-  [:block :body i '*] (fn [value ctx props] [:code "form body magic-new"])
-  [:table :head i '*] (fn [field ctx props] [:code "table head magic-new"])
-  [:table :body i '*] (fn [value ctx props] [:code "table body magic-new"])
-  )
+        [:body i _ a _]
+        (fn [value ctx props]
+          (fragment (if a [(control ctx) value ctx props])  ; element :pull ? I am missing a permutation which this this
+                    (if i (anchors :body i a ctx))
+                    (if i (iframes :body i a ctx))))
+        ))))
 
 (defn ^:export semantic-css [ctx]
   ; Include the fiddle level ident css.
@@ -160,11 +157,10 @@ User renderers should not be exposed to the reaction."
       (apply concat (dissoc props :class :children nil)))))
 
 (defn form-field "Form fields are label AND value. Table fields are label OR value."
-  [hyper-control ?f ctx props]                                ; fiddle-src wants to fallback by passing nil here explicitly
+  [hyper-control ?f ctx props]                              ; fiddle-src wants to fallback by passing nil here explicitly
   (assert @(:hypercrud.ui/display-mode ctx))
   (form/ui-block-border-wrap
     ctx (css "field" (:class props))
-    ;(if (= a '*) ^{:key :new-field} [new-field ctx])
     (let [head-ctx (dissoc ctx :relation)]
       [(or (:label-fn props) (hyper-control head-ctx)) (:hypercrud.browser/field head-ctx) head-ctx props])
     [(or ?f (hyper-control ctx)) @(context/value ctx) ctx props]))
@@ -175,6 +171,9 @@ User renderers should not be exposed to the reaction."
                 hypercrud.browser/attribute]} ctx
         [i a] [(:fe-pos ctx) attribute]
         path (remove nil? [i a])]
+
+    ; Prevent magic-new-field ?
+
     (if (:relation ctx)
       [:td {:class (css "field" (:class props) "truncate")
             :style {:border-color (if i (form/border-color ctx))}}
