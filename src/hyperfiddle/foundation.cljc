@@ -138,7 +138,8 @@
 
 #?(:cljs
    (defn page-view [route ctx f]
-     [:div {:class (apply css "hyperfiddle-foundation" @(runtime/state (:peer ctx) [:pressed-keys]))}
+     ; Necessary wrapper div, this is returned from react-render
+     [:div {:class (apply css @(runtime/state (:peer ctx) [:pressed-keys]))}
       [:style {:dangerouslySetInnerHTML {:__html (:domain/css (:hypercrud.browser/domain ctx))}}]
       (f route ctx)                                         ; nil, seq or reagent component
       (if @(runtime/state (:peer ctx) [:staging-open])
@@ -161,7 +162,7 @@
                                     deref)]
        (if-let [e (or @(runtime/state (:peer ctx) [::runtime/fatal-error])
                       (when (either/left? source-domain) @source-domain))]
-         [:div.hyperfiddle-foundation
+         [:div                                              ; necessary wrapper div, it is the react root
           [error-cmp e]
           [staging (:peer ctx)]]
          (let [ctx (context ctx @source-domain @user-domain-insecure)
