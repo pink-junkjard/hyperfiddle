@@ -93,20 +93,27 @@
 
 (letfn [(default [default-v v] (or v default-v))]
   (defn field [ctx field]
-    {:pre [(not (r/reactive? field))]}                      ; weird not reactive
-    (let [attr-ident (:attribute field)
-          fat-attr (->> (r/cursor (:hypercrud.browser/schema ctx) [attr-ident])
-                        (r/fmap (r/partial default {:db/ident attr-ident})))]
+    {:pre [field
+           #_(:attribute field)
+           (not (r/reactive? field))]                       ; weird not reactive
+     :post [(:hypercrud.browser/field %)
+            #_(:hypercrud.browser/attribute %)              ; aggregates hit this
+            #_(:hypercrud.browser/fat-attribute %)]}
+    (let [?attr-ident (:attribute field)
+          ?fat-attr (->> (r/cursor (:hypercrud.browser/schema ctx) [?attr-ident])
+                         (r/fmap (r/partial default {:db/ident ?attr-ident})))]
       (assoc ctx
         :hypercrud.browser/field field
-        :hypercrud.browser/attribute attr-ident
-        :hypercrud.browser/fat-attribute fat-attr))))
+        :hypercrud.browser/attribute ?attr-ident
+        :hypercrud.browser/fat-attribute ?fat-attr))))
 
 (letfn [(set-attribute [ctx a]
-          (->> @(r/cursor (:hypercrud.browser/find-element ctx) [:fields #_i])
-               (filter #(= (:attribute %) a))
-               first
-               (field ctx)))]
+          {:pre [a
+                 (:hypercrud.browser/find-element ctx)]
+           :post [(:hypercrud.browser/attribute %)]}
+          (let [fields @(r/cursor (:hypercrud.browser/find-element ctx) [:fields #_i])]
+            (println (str "set-attribute: " a (pr-str fields)))
+            (field ctx (first (filter #(= (:attribute %) a) fields)))))]
   (defn focus [ctx i a]
     ;(with-relations)                                    ; already here
     ;(relation (reactive/atom [domain]))                 ; already here

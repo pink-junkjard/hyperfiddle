@@ -75,28 +75,26 @@
      [:pre (if (seq links) links "No links or only auto links")]
      [:div.hf-underdoc [markdown "Due to an issue in the live embed, the links are shown as EDN until we fix it."]]]))
 
-(defn docs-embed [& attrs]
-  (fn [ctx-real class & {:keys [embed-mode]}]
-    (let [ctx-real (dissoc ctx-real :user-renderer)         ; this needs to not escape this level; inline links can't ever get it
-          ctx (shadow-fiddle ctx-real)
-          {:keys [:fiddle/ident]} @(:hypercrud.browser/result ctx)
-          controls
-          {:fiddle/pull (r/partial control-with-unders (fragment :_ [:span.schema "schema: " (schema-links ctx)]))
-           :fiddle/query (r/partial control-with-unders (fragment :_ [:span.schema "schema: " (schema-links ctx)]))
-           :fiddle/links hacked-links}]
-      (fn [ctx-real class & {:keys [embed-mode]}]
-        (into
-          [:div {:class class}]
-          (for [k attrs]
-            (field [0 k] ctx (controls k))))))))
+(defn docs-embed [attrs ctx-real class & {:keys [embed-mode]}]
+  (let [ctx-real (dissoc ctx-real :user-renderer)           ; this needs to not escape this level; inline links can't ever get it
+        ctx (shadow-fiddle ctx-real)
+        {:keys [:fiddle/ident]} @(:hypercrud.browser/result ctx)
+        controls
+        {:fiddle/pull (r/partial control-with-unders (fragment :_ [:span.schema "schema: " (schema-links ctx)]))
+         :fiddle/query (r/partial control-with-unders (fragment :_ [:span.schema "schema: " (schema-links ctx)]))
+         :fiddle/links hacked-links}]
+    (fn [ctx-real class & {:keys [embed-mode]}]
+      (into
+        [:div {:class class}]
+        (for [k attrs]
+          (field [0 k] ctx (controls k)))))))
 
-(defn result-edn [& attrs]
-  (fn [{:keys [hypercrud.browser/result]}]
-    (let [s (-> @result
-                (as-> $ (if (seq attrs) (select-keys $ attrs) $))
-                hyperfiddle.ui.hacks/pull-soup->tree
-                (contrib.pprint/pprint-str 40))]
-      [contrib.ui/code-block {:read-only true} s])))
+(defn result-edn [attrs {:keys [hypercrud.browser/result]}]
+  (let [s (-> @result
+              (as-> $ (if (seq attrs) (select-keys $ attrs) $))
+              hyperfiddle.ui.hacks/pull-soup->tree
+              (contrib.pprint/pprint-str 40))]
+    [contrib.ui/code-block {:read-only true} s]))
 
 ; This is in source control because all hyperblogs want it.
 ; But, they also want to tweak it surely. Can we store this with the fiddle ontology?
@@ -109,9 +107,10 @@
         (let [as-edn (r/cursor state [:edn-result])]
           [:div.col-sm-6.col-sm-push-6
            [:div "Result:" [contrib.ui/easy-checkbox as-edn " EDN?" "hf-live"]]
-           (browse rel [] ctx (if @as-edn (result-edn)))])
-        (let [as-edn (r/cursor state [:edn-fiddle])]
+           (browse rel [] ctx (if @as-edn (r/partial result-edn [])))])
+        (let [as-edn (r/cursor state [:edn-fiddle])
+              f (r/partial (if @as-edn result-edn docs-embed) fiddle-attrs)]
           [:div.col-sm-6.col-sm-pull-6
            [:div "Interactive Hyperfiddle editor:" [contrib.ui/easy-checkbox as-edn " EDN?" "hf-live"]]
-           (browse rel [] ctx (apply (if @as-edn result-edn docs-embed) fiddle-attrs) :frag ":src" :class "devsrc")])
+           (browse rel [] ctx f :frag ":src" :class "devsrc")])
         ]])))

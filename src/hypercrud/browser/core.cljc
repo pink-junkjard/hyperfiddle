@@ -13,7 +13,9 @@
     [hypercrud.browser.link :as link]
     #?(:cljs [hypercrud.ui.error :as ui-error])
     #?(:cljs [hypercrud.ui.stale :as stale])
-    [hyperfiddle.runtime :as runtime]))
+    [hyperfiddle.runtime :as runtime]
+    [hypercrud.browser.routing :as routing]
+    [hypercrud.browser.router :as router]))
 
 
 (def data base/data-from-link)
@@ -62,7 +64,7 @@
         (fn [link-props]
           (if (:hidden link-props)
             [:noscript]
-            [stale/loading (stale/can-be-loading? ctx) (cats/fmap :route link-props')
+            [stale/loading (stale/can-be-loading? ctx) (cats/fmap (comp #(router/assoc-frag % (:frag props)) :route) link-props')
              (fn [e] [error-comp e])
              ; legacy-ctx is set in build-link-props, and this is "downtree" from that
              (fn [route] [ui-from-route route ctx (css ?class (css-slugify (:link/rel link)))])]))])))

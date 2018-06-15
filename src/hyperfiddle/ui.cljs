@@ -160,14 +160,14 @@ User renderers should not be exposed to the reaction."
       (apply concat (dissoc props :class :children nil)))))
 
 (defn form-field "Form fields are label AND value. Table fields are label OR value."
-  [control-fac ?f ctx props]                                ; fiddle-src wants to fallback by passing nil here explicitly
+  [hyper-control ?f ctx props]                                ; fiddle-src wants to fallback by passing nil here explicitly
   (assert @(:hypercrud.ui/display-mode ctx))
   (form/ui-block-border-wrap
     ctx (css "field" (:class props))
     ;(if (= a '*) ^{:key :new-field} [new-field ctx])
     (let [head-ctx (dissoc ctx :relation)]
-      [(or (:label-fn props) (control-fac head-ctx)) (:hypercrud.browser/field head-ctx) head-ctx props])
-    [(or ?f (control-fac ctx)) @(context/value ctx) ctx props]))
+      [(or (:label-fn props) (hyper-control head-ctx)) (:hypercrud.browser/field head-ctx) head-ctx props])
+    [(or ?f (hyper-control ctx)) @(context/value ctx) ctx props]))
 
 (defn table-field "Form fields are label AND value. Table fields are label OR value."
   [control-fac ?f ctx props]
@@ -193,9 +193,7 @@ User renderers should not be exposed to the reaction."
   (let [view (case (::layout ctx) :hyperfiddle.ui.layout/table table-field form-field)
         ctx (context/focus ctx i a)
         props (kwargs args)
-        props (merge props {:class (apply css (:class props) (semantic-css ctx))})
-        control-factory (if ?f (r/constantly ?f)            ; userland passes the actual concrete control, not a fac
-                               hyper-control)]
+        props (merge props {:class (apply css (:class props) (semantic-css ctx))})]
     ^{:key (str i a)}
     [view hyper-control ?f ctx props]))
 
