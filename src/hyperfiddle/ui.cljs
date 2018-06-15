@@ -143,16 +143,16 @@ User renderers should not be exposed to the reaction."
 
 (defn ^:export link [rel path ctx ?content & args]
   (let [props (kwargs args)
-        {:keys [link/dependent? link/render-inline?] :as link} @(r/track link/rel->link rel path ctx)
+        link @(r/track link/rel->link rel path ctx)
         ctx (apply context/focus ctx path)]
     ;(assert (not render-inline?)) -- :new-fiddle is render-inline. The nav cmp has to sort this out before this unifies.
     [(:navigate-cmp ctx) (merge (link/build-link-props link ctx) props) (or ?content (name (:link/rel link))) (:class props)]))
 
 (defn ^:export browse [rel path ctx ?content & args]
   (let [props (kwargs args)
-        {:keys [link/dependent? link/render-inline?] :as link} @(r/track link/rel->link rel path ctx)
+        link @(r/track link/rel->link rel path ctx)
         ctx (apply context/focus ctx path)]
-    (assert render-inline?)
+    ;(assert render-inline?)
     (into
       [browser/ui link
        (if ?content (assoc ctx :user-renderer ?content #_(if ?content #(apply ?content %1 %2 %3 %4 args))) ctx)
