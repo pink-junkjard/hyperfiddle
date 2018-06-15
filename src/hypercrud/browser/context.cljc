@@ -141,7 +141,7 @@
 (defn entity [ctx]                                          ; misnamed, more than entity
   (let [[i a] [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     (or (if i (:cell-data (legacy-cell-data ctx)))
-        (r/atom nil))))                                     ; can return nil, should return (atom nil)
+        (r/track identity nil))))
 
 (defn value "Aggregate, attr-value, etc, and can be nil."
   [ctx]
@@ -149,4 +149,4 @@
         [i a] [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     (or (if a (:value ctx))
         (if i (:cell-data ctx))
-        (r/atom nil))))
+        (r/track identity nil))))
