@@ -167,7 +167,7 @@
 
 (defn data-from-route [route ctx]                           ; todo rename
   (let [ctx (-> (context/clean ctx)
-                (context/route route))]
+                (routing/route route))]
     (mlet [meta-fiddle-request @(r/apply-inner-r (r/track meta-request-for-fiddle ctx))
            fiddle @(r/apply-inner-r (r/track hydrate-fiddle meta-fiddle-request ctx))
            fiddle-request @(r/apply-inner-r (r/track request-for-fiddle fiddle ctx))]

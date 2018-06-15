@@ -2,7 +2,7 @@
   (:require [contrib.data :refer [map-values]]
             [contrib.datomic-tx :as tx]
             [contrib.pprint :refer [pprint-str]]
-            [hypercrud.browser.routing :as routing]
+            [hypercrud.browser.router :as router]
             [hypercrud.types.Err :refer [->Err]]
             [hypercrud.util.branch :as branch]
             [hyperfiddle.state :as state]))
@@ -93,7 +93,7 @@
          :add-partition (let [[branch route branch-aux] args]
                           (update partitions branch
                                   (fn [current-branch]
-                                    (if (routing/compare-routes route (:route current-branch))
+                                    (if (router/compare-routes route (:route current-branch))
                                       (assoc current-branch :route route)
                                       {:route route
                                        :hyperfiddle.runtime/branch-aux branch-aux}))))

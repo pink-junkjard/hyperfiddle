@@ -7,6 +7,7 @@
     [contrib.string :refer [blank->nil]]
     [hypercrud.browser.base :as base]
     [hypercrud.browser.context :as context]
+    [hypercrud.browser.routing :as routing]
     [hypercrud.types.ThinEntity :refer [->ThinEntity]]
     [hypercrud.ui.error :as ui-error]
     [hypercrud.ui.safe-render :refer [user-portal]]
@@ -41,7 +42,7 @@
                                  :fiddle/pull-database "$"}) ; turns out we dont need fiddle for much if we already know the request
                  ctx (-> (context/source-mode ctx)
                          (context/clean)
-                         (context/route [nil [(->ThinEntity "$" [:fiddle/ident (first (:route ctx))])]]))]]
+                         (routing/route [nil [(->ThinEntity "$" [:fiddle/ident (first (:route ctx))])]]))]]
       (base/process-results fiddle request ctx))
     (fn [e] (throw e))                                      ; just throw, this is inside a user-portal
     (fn [ctx]

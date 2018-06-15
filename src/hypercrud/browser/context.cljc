@@ -2,8 +2,7 @@
   (:require
     [contrib.reactive :as r]
     [datascript.parser :as parser]
-    ;[hypercrud.browser.routing :as routing]
-    ;[hyperfiddle.actions :as actions]
+    [hyperfiddle.actions :as actions]
     [hyperfiddle.runtime :as runtime]))
 
 
@@ -35,11 +34,6 @@
       (update :hypercrud.browser/domain
               (fn [domain]
                 (assoc-in (:hypercrud.browser/source-domain ctx) [:domain/environment "$"] (:domain/fiddle-repo domain))))))
-
-(defn route [ctx route]                                     ; circular, this can be done sooner
-  {:pre [(if-let [params (second route)] (vector? params) true) ; validate normalized already
-         (some-> ctx :hypercrud.browser/domain :domain/fiddle-repo)]}
-  (assoc ctx :route (hypercrud.browser.routing/tempid->id route ctx)))
 
 (defn relations [ctx rv]
   {:pre [(r/reactive? rv)]}

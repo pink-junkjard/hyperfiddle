@@ -3,7 +3,7 @@
             [cats.monad.either :as either]
             [contrib.data :refer [map-values map-keys]]
             [contrib.datomic-tx :as tx]
-            [hypercrud.browser.routing :as routing]
+            [hypercrud.browser.router :as router]
             [hypercrud.client.peer :as peer]
             [hypercrud.client.schema :as schema]
             [hypercrud.types.DbVal :refer [->DbVal]]
@@ -72,7 +72,7 @@
 
 (defn add-partition [rt route branch branch-aux & on-start]
   (fn [dispatch! get-state]
-    (if-let [e (routing/invalid-route? route)]
+    (if-let [e (router/invalid-route? route)]
       (do
         (dispatch! [:partition-error e])
         (p/rejected e))
@@ -90,9 +90,9 @@
 (defn set-route [rt route branch keep-popovers? force dispatch! get-state]
   (assert (nil? branch) "Non-nil branches currently unsupported")
   (let [current-route (get-in (get-state) [::runtime/partitions branch :route])]
-    (if (and (not force) (routing/compare-routes route current-route) (not= route current-route))
+    (if (and (not force) (router/compare-routes route current-route) (not= route current-route))
       (dispatch! [:partition-route branch route])           ; just update state without re-hydrating
-      (if-let [e (routing/invalid-route? route)]
+      (if-let [e (router/invalid-route? route)]
         (do (dispatch! [:set-error e])
             (p/rejected e))
         ; currently branches only have relationships to parents, need to be able to find all children from a parent
@@ -146,7 +146,7 @@
                                current-route (get-in (get-state) [::runtime/partitions nil :route])
                                route' (-> (or route current-route)
                                           (invert-route invert-id))
-                               keep-popovers? (or (nil? route) (routing/compare-routes route current-route))]]
+                               keep-popovers? (or (nil? route) (router/compare-routes route current-route))]]
                     ; todo we want to overwrite our current browser location with this new url
                     ; currently this new route breaks the back button
                     (set-route rt route' nil keep-popovers? true dispatch! get-state)))))))
@@ -181,7 +181,7 @@
                     (transact! rt invert-route (get-in (get-state) [:stage branch]) dispatch! get-state
                                :post-tx [(discard-partition branch)]
                                :route app-route))
-                  (let [e (some-> app-route routing/invalid-route?)
+                  (let [e (some-> app-route router/invalid-route?)
                         actions (concat
                                   with-actions
                                   [[:merge branch]

@@ -90,7 +90,7 @@
 
 (defn request-from-route [route ctx]
   (let [ctx (-> (context/clean ctx)
-                (context/route route))]
+                (routing/route route))]
     (when-let [meta-fiddle-request (unwrap @(r/apply-inner-r (r/track base/meta-request-for-fiddle ctx)))]
       (assert (r/reactive? meta-fiddle-request))
       (concat [@meta-fiddle-request]

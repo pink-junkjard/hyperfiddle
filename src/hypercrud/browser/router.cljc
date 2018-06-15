@@ -62,3 +62,14 @@
   ;{:pre [fiddle]} ; Dissoc-frag should nil-pun for bootstrapping case
   (let [x (canonicalize fiddle ?datomic-args ?service-args nil)]
     x))
+
+(defn invalid-route? [[fiddle ?datomic-args ?initial-state :as route]]
+  (if-let [msg (cond
+                 (map? route) "legacy format"
+                 (nil? fiddle) "missing fiddle"
+                 (not (keyword? fiddle)) "fiddle must be a keyword")]
+    (ex-info (str "Invalid route: " msg)
+             {:hyperfiddle.io/http-status-code 400 :route route})))
+
+(defn compare-routes [a b]
+  (= (dissoc-frag a) (dissoc-frag b)))

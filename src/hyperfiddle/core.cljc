@@ -1,6 +1,5 @@
 (ns hyperfiddle.core
   (:require
-    [hypercrud.browser.routing]                             ; circular
 
     ; pull in public ui deps
     #?(:cljs [contrib.reagent])

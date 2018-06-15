@@ -9,6 +9,7 @@
             [contrib.reader :refer [read-string read-edn-string]]
             [contrib.pprint :refer [pprint-str]]
             [hypercrud.browser.routing :as routing]
+            [hypercrud.browser.router :as router]
             [hypercrud.client.core :as hc]
             [hypercrud.types.Entity :refer [shadow-entity]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
@@ -198,7 +199,7 @@
           LEVEL-DOMAIN (actions/refresh-domain rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
           LEVEL-ROUTE (let [branch-aux {:hyperfiddle.ide/foo "page"}] ;ide
                         (try (let [route (runtime/decode-route rt encoded-route)]
-                               (when-let [e (routing/invalid-route? route)] (throw e))
+                               (when-let [e (router/invalid-route? route)] (throw e))
                                (runtime/dispatch! rt [:add-partition nil route branch-aux]))
                              (p/resolved nil)
                              (catch #?(:cljs :default :clj Exception) e

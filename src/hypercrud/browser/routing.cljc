@@ -7,7 +7,7 @@
             [contrib.eval :as eval]
             [contrib.try :refer [try-either]]
             [cuerdas.core :as string]
-            [hypercrud.browser.context :as context]
+            [hypercrud.browser.context :as context]         ; allowed here
             [hypercrud.browser.dbname :as dbname]
             [hypercrud.browser.router :as router]
             [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
@@ -17,14 +17,6 @@
      (:import (hypercrud.types.Entity Entity)
               (hypercrud.types.ThinEntity ThinEntity))))
 
-
-(defn invalid-route? [[fiddle ?datomic-args ?initial-state :as route]]
-  (if-let [msg (cond
-                 (map? route) "legacy format"
-                 (nil? fiddle) "missing fiddle"
-                 (not (keyword? fiddle)) "fiddle must be a keyword")]
-    (ex-info (str "Invalid route: " msg)
-             {:hyperfiddle.io/http-status-code 400 :route route})))
 
 (defn invert-route [domain [_ args :as route] invert-id]
   (let [args (->> {:request-params args}                    ; code compat
@@ -57,6 +49,11 @@
                                          (set/map-invert))]
                       (get tempid->id temp-id temp-id)))]
     (invert-route (:hypercrud.browser/domain ctx) route invert-id)))
+
+(defn route [ctx route]                                     ; circular, this can be done sooner
+  {:pre [(if-let [params (second route)] (vector? params) true) ; validate normalized already
+         (some-> ctx :hypercrud.browser/domain :domain/fiddle-repo)]}
+  (assoc ctx :route (tempid->id route ctx)))
 
 (defn normalize-args [porps]
   {:pre [(not (:entity porps)) #_"legacy"
@@ -94,8 +91,7 @@
       (cats/return
         (id->tempid (router/canonicalize fiddle-id (normalize-args (:remove-this-wrapper args)) nil ?frag) ctx)))))
 
-(defn compare-routes [a b]
-  (= (router/dissoc-frag a) (router/dissoc-frag b)))
+
 
 (def encode router/encode)
 (def decode router/decode)
