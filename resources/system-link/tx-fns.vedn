@@ -19,7 +19,7 @@
 :value-remove-many
 ==
 (fn [ctx multi-color-tx modal-route]
-  (let [retracts (->> @(:value ctx)
-                      (mapv (fn [e] [:db.fn/retractEntity @(hypercrud.browser.context/value ctx)])))]
+  (let [retracts (->> @(hypercrud.browser.context/value ctx)
+                      (mapv (fn [e] [:db.fn/retractEntity (:db/id e)])))]
     {:tx {(:uri ctx) retracts}}))
 ==
