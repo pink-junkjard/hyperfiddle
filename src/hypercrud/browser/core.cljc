@@ -57,13 +57,12 @@
    (defn ui [link ctx ?class & args]                        ; TODO don't omit user props
      (let [props (kwargs args)
            error-comp (ui-error/error-comp ctx)
-           hidden' (->> (try-either (link/build-link-props link ctx)) ; todo we want the actual error from the link props
-                        (cats/fmap :hidden))]
-       [stale/loading (stale/can-be-loading? ctx) hidden'
+           link-props' (try-either (link/build-link-props link ctx))]
+       [stale/loading (stale/can-be-loading? ctx) (cats/fmap :hidden link-props') ; todo we want the actual error from the link props
         (fn [e] [error-comp e])
         (fn [link-props]
           (if (:hidden link-props)
             [:noscript]
-            [stale/loading (stale/can-be-loading? ctx) (routing/build-route' link ctx (:frag props))
+            [stale/loading (stale/can-be-loading? ctx) (cats/fmap :route link-props')
              (fn [e] [error-comp e])
              (fn [route] [ui-from-route route ctx (css ?class (css-slugify (:link/rel link)))])]))])))

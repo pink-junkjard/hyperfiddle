@@ -17,7 +17,7 @@
 
 (defn recurse-request [link ctx]
   (if (:link/managed? link)
-    (let [route' (routing/build-route' link ctx)
+    (let [route' (routing/build-route' link (context/legacy-ctx ctx)) ; Set legacy because bypassing build-link-props
           popover-id (popovers/popover-id link ctx)]
       (if @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :popovers popover-id])
         ; if the anchor IS a popover, we need to run the same logic as link/managed-popover-body
