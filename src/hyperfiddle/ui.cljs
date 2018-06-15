@@ -114,6 +114,7 @@
   )
 
 (defn ^:export semantic-css [ctx]
+  ; Include the fiddle level ident css.
   ; Semantic css needs to be prefixed with - to avoid collisions. todo
   (let [[i a] [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
     ["hyperfiddle"
@@ -206,7 +207,7 @@ sort-fn :: (fn [col ctx v] v)"
       (let [ctx (assoc ctx ::layout (::layout ctx :hyperfiddle.ui.layout/table)
                            ::sort/sort-col sort-col
                            :hyperfiddle.ui.markdown-extensions/unp true)]
-        [:table.ui-table.unp
+        [:table {:class (css "ui-table" "unp" (semantic-css ctx))}
          (->> (form ctx) (into [:thead]))                   ; strict
          (->> (:relations ctx)
               (r/fmap (r/partial sort-fn sort-col ctx))
