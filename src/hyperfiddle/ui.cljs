@@ -8,6 +8,7 @@
     [contrib.reagent :refer [from-react-context fragment]]
     [contrib.string :refer [memoized-safe-read-edn-string blank->nil]]
     [contrib.ui]
+    [contrib.ui.input :refer [keyword-input* edn-input*]]
     [contrib.ui.remark :as remark]
     [contrib.ui.tooltip :refer [tooltip-thick]]
     [hypercrud.browser.context :as context]
@@ -84,11 +85,19 @@
                     (anchors :head i a ctx link/options-processor)
                     (iframes :head i a ctx link/options-processor)))
 
-        [d i _ '* _] (fn [v ctx props]
-                       ; (::layout ctx :hyperfiddle.ui.layout/table)
-                       (case d
-                         :head [:code "magic-new head"]
-                         :body [:code "magic-new body"]))
+        [d i _ '* _]
+        (fn [_ ctx props]
+          (let [entity (context/entity ctx)
+                read-only @(r/fmap controls/writable-entity? entity)
+                state (r/cursor (::state ctx) [::magic-new-a])]
+            (case d
+              :head [keyword-input* @state (r/partial reset! state)
+                     (merge props {:read-only read-only :placeholder ":task/title"})]
+              :body (let [on-change! #((:user-with! ctx) [[:db/add @(r/fmap :db/id entity) @state %]])]
+                      ; Cardinality many is not needed, because as soon as we assoc one value, we go through hyper-control
+                      [edn-input* nil on-change!
+                       (merge props {:read-only (or read-only (nil? @state))
+                                     :placeholder (pr-str "mow the lawn")})]))))
 
         [:head i _ a _]
         (fn [field ctx props]
@@ -158,11 +167,14 @@ User renderers should not be exposed to the reaction."
 (defn form-field "Form fields are label AND value. Table fields are label OR value."
   [hyper-control ?f ctx props]                              ; fiddle-src wants to fallback by passing nil here explicitly
   (assert @(:hypercrud.ui/display-mode ctx))
-  (form/ui-block-border-wrap
-    ctx (css "field" (:class props))
-    (let [head-ctx (dissoc ctx :relation)]
-      [(or (:label-fn props) (hyper-control head-ctx)) (:hypercrud.browser/field head-ctx) head-ctx props])
-    [(or ?f (hyper-control ctx)) @(context/value ctx) ctx props]))
+  (let [state (r/atom {::magic-new-a nil})]                 ; ^{:key (hash @(r/fmap keys (context/entity ctx)))}
+    (fn [hyper-control ?f ctx props]
+      (let [ctx (assoc ctx ::state state)]
+        (form/ui-block-border-wrap
+          ctx (css "field" (:class props))
+          (let [head-ctx (dissoc ctx :relation)]
+            [(or (:label-fn props) (hyper-control head-ctx)) (:hypercrud.browser/field head-ctx) head-ctx props])
+          [(or ?f (hyper-control ctx)) @(context/value ctx) ctx props])))))
 
 (defn table-field "Form fields are label AND value. Table fields are label OR value."
   [control-fac ?f ctx props]
@@ -170,9 +182,6 @@ User renderers should not be exposed to the reaction."
                 hypercrud.browser/attribute]} ctx
         [i a] [(:fe-pos ctx) attribute]
         path (remove nil? [i a])]
-
-    ; Prevent magic-new-field ?
-
     (if (:relation ctx)
       [:td {:class (css "field" (:class props) "truncate")
             :style {:border-color (if i (form/border-color ctx))}}
@@ -188,12 +197,13 @@ User renderers should not be exposed to the reaction."
 
 (defn ^:export field "Works in a form or table context. Draws label and/or value."
   [[i a] ctx ?f & args]
-  (let [view (case (::layout ctx) :hyperfiddle.ui.layout/table table-field form-field)
-        ctx (context/focus ctx i a)
-        props (kwargs args)
-        props (merge props {:class (apply css (:class props) (semantic-css ctx))})]
-    ^{:key (str i a)}
-    [view hyper-control ?f ctx props]))
+  (if-not (and (= '* a) (= :hyperfiddle.ui.layout/table (::layout ctx)))
+    (let [view (case (::layout ctx) :hyperfiddle.ui.layout/table table-field form-field)
+          ctx (context/focus ctx i a)
+          props (kwargs args)
+          props (merge props {:class (apply css (:class props) (semantic-css ctx))})]
+      ^{:key (str i a)}
+      [view hyper-control ?f ctx props])))
 
 (defn ^:export table "Semantic table; todo all markup should be injected.
 sort-fn :: (fn [col ctx v] v)"
