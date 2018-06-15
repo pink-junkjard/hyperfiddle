@@ -16,5 +16,5 @@
              :hypercrud.browser/attribute :parent/child
              :cell-data (r/atom (->Entity uri {:db/id "parent"}))}
         modal-route [nil [{:db/id "child"}]]]
-    (is (= (f ctx nil modal-route)
+    #_(is (= (f ctx nil modal-route)
            {:tx {uri [[:db/add "parent" :parent/child "child"]]}}))))
