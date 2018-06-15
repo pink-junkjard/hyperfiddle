@@ -13,7 +13,6 @@
     [hypercrud.browser.context :as context]
     [hypercrud.browser.core :as browser]
     [hypercrud.browser.link :as link :refer [links-here rel->link]]
-    [hypercrud.ui.connection-color :refer [connection-color]]
     [hypercrud.ui.control.link-controls :refer [anchors iframes]]
     [hyperfiddle.data :as hf]
     [hyperfiddle.ui.docstring :refer [semantic-docstring]]
@@ -182,7 +181,7 @@ User renderers should not be exposed to the reaction."
       [:th {:class (css "field" (:class props)
                         (if (and i (sort/sortable? ctx path)) "sortable") ; hoist
                         (some-> (sort/sort-direction ctx) name)) ; hoist
-            :style {:background-color (connection-color ctx)}
+            :style {:background-color (form/border-color ctx)}
             :on-click (r/partial sort/toggle-sort! ctx path)}
        ; Use f as the label control also, because there is hypermedia up there
        ((or (:label-fn props) (control-fac ctx)) field ctx props)])))

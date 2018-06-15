@@ -13,7 +13,7 @@
     (if-not shadow-link (connection-color ctx))))
 
 (defn ui-block-border-wrap [ctx class & children]
-  [:div {:class class :style {:border-color (connection-color ctx)}} ; should call border-color?
+  [:div {:class class :style {:border-color (border-color ctx)}}
    (apply fragment children)])
 
 (defn new-field-state-container [ctx]
