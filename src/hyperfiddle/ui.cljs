@@ -11,6 +11,7 @@
     [contrib.ui.input :refer [keyword-input* edn-input*]]
     [contrib.ui.remark :as remark]
     [contrib.ui.tooltip :refer [tooltip-thick]]
+    [cuerdas.core :as str]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.core :as browser]
     [hypercrud.browser.link :as link :refer [links-here rel->link]]
@@ -85,19 +86,8 @@
                     (anchors :head i a ctx link/options-processor)
                     (iframes :head i a ctx link/options-processor)))
 
-        [d i _ '* _]
-        (fn [_ ctx props]
-          (let [entity (context/entity ctx)
-                read-only @(r/fmap controls/writable-entity? entity)
-                state (r/cursor (::state ctx) [::magic-new-a])]
-            (case d
-              :head [keyword-input* @state (r/partial reset! state)
-                     (merge props {:read-only read-only :placeholder ":task/title"})]
-              :body (let [on-change! #((:user-with! ctx) [[:db/add @(r/fmap :db/id entity) @state %]])]
-                      ; Cardinality many is not needed, because as soon as we assoc one value, we go through hyper-control
-                      [edn-input* nil on-change!
-                       (merge props {:read-only (or read-only (nil? @state))
-                                     :placeholder (pr-str "mow the lawn")})]))))
+        [d _ _ '* _] (case d :head form/magic-new-head
+                             :body form/magic-new-body)
 
         [:head i _ a _]
         (fn [field ctx props]
@@ -169,7 +159,7 @@ User renderers should not be exposed to the reaction."
   (assert @(:hypercrud.ui/display-mode ctx))
   (let [state (r/atom {::magic-new-a nil})]                 ; ^{:key (hash @(r/fmap keys (context/entity ctx)))}
     (fn [hyper-control ?f ctx props]
-      (let [ctx (assoc ctx ::state state)]
+      (let [ctx (assoc ctx :hyperfiddle.ui.form/state state)]
         (form/ui-block-border-wrap
           ctx (css "field" (:class props))
           (let [head-ctx (dissoc ctx :relation)]
