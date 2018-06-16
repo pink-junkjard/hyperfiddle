@@ -16,7 +16,9 @@
   (reagent/create-class
     {:reagent-render
      (fn [value change! props]
-       [:textarea (merge props {:default-value (str value) :auto-complete "off"})])
+       [:textarea (merge (select-keys props [:id :class])   ; #318 Warning: React does not recognize the `lineNumbers` prop on a DOM element
+                         {:default-value (str value)
+                          :auto-complete "off"})])
 
      :component-did-mount
      (fn [this]
