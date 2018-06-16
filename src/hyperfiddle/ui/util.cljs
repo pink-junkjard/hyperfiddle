@@ -6,9 +6,8 @@
     [contrib.reactive :as r]
     [contrib.string :refer [blank->nil]]
     [contrib.try :refer [try-either]]
-    [cuerdas.core :as str]
-    [hypercrud.ui.error :as ui-error]
-    [hypercrud.ui.safe-render :refer [user-portal]]))
+    [contrib.ui.safe-render :refer [user-portal]]
+    [hypercrud.ui.error :as ui-error]))
 
 
 ; defer eval until render cycle inside userportal

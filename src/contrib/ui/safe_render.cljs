@@ -1,4 +1,4 @@
-(ns hypercrud.ui.safe-render
+(ns contrib.ui.safe-render
   (:require [contrib.cljs-platform :refer [code-for-browser code-for-nodejs]]
             [cuerdas.core :as string]
             [reagent.core :as reagent]))
