@@ -22,7 +22,7 @@
   (let [entity (context/entity ctx)
         ;read-only (r/fmap (comp not controls/writable-entity?) entity) -- don't check this, '* always has a dbid and is writable
         state (r/cursor (::state ctx) [::magic-new-a])]
-    (println (str/format "magic-new-head: %s , %s , %s" @state (pr-str @entity)))
+    ;(println (str/format "magic-new-head: %s , %s , %s" @state (pr-str @entity)))
     [keyword-input* @state (r/partial reset! state)
      (merge props {:placeholder ":task/title"})]))
 
@@ -33,7 +33,7 @@
     (let [entity (context/entity ctx)
           read-only (r/fmap (comp not controls/writable-entity?) entity)
           state (r/cursor (::state ctx) [::magic-new-a])]
-      (println (str/format "magic-new-body: %s , %s , %s" @state @read-only (pr-str @entity)))
+      ;(println (str/format "magic-new-body: %s , %s , %s" @state @read-only (pr-str @entity)))
       ; Uncontrolled widget on purpose i think
       ; Cardinality many is not needed, because as soon as we assoc one value,
       ; we dispatch through a proper typed control
