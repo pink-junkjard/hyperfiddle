@@ -32,18 +32,18 @@
         label (or-str content (name rel))]
     (hyperfiddle.ui/link rel path ctx label props)))
 
+(defn control-arity-1-with-context "partial the ?f"
+  [?f value ctx props]
+  [with-react-context {:ctx ctx :props props} [?f value]])
+
 (defn field [content argument props ctx]
-  (let [?f (read-eval-with-bindings content)
-        props (-> props
+  (let [props (-> props
                   (dissoc :children)
                   (clojure.set/rename-keys {:className :class})
                   (update :class css "unp") #_"fix font size")
         path (unwrap (memoized-safe-read-edn-string (str "[" argument "]")))
-        ?f (if ?f (fn control [value ctx props]
-                    [with-react-context
-                     {:ctx ctx :props props}
-                     ; the whole point of the gymnastics is to apply ?f as arity-1 (so `str` works)
-                     [?f #_(wrap-naked-string :div ?f) value]]))]
+        ?f (read-eval-with-bindings content)
+        ?f (if ?f (r/partial control-arity-1-with-context ?f))]
     (hyperfiddle.ui/field path ctx ?f props)))
 
 (defn list- [content argument props ctx]
@@ -56,13 +56,9 @@
         (doall))])
 
 (defn value [content argument props ctx]
-  (let [?f (read-eval-with-bindings content)
-        path (unwrap (memoized-safe-read-edn-string (str "[" argument "]")))
-        ?f (if ?f (fn control [value ctx props]
-                    [with-react-context
-                     {:ctx ctx :props props}
-                     ; the whole point of the gymnastics is to apply ?f as arity-1 (so `str` works)
-                     [?f #_(wrap-naked-string :div ?f) value]]))]
+  (let [path (unwrap (memoized-safe-read-edn-string (str "[" argument "]")))
+        ?f (read-eval-with-bindings content)
+        ?f (if ?f (r/partial control-arity-1-with-context ?f))]
     (hyperfiddle.ui/value path ctx ?f props)))
 
 (def extensions
