@@ -101,16 +101,15 @@
 (defn hyperfiddle-live [rel ctx & fiddle-attrs]
   (let [state (r/atom {:edn-fiddle false :edn-result false})]
     (fn [rel ctx & fiddle-attrs]
-      [:div.hf-live.unp
-       [:div.row
-        ; Reverse order so it looks right on mobile, larger views reorder
-        (let [as-edn (r/cursor state [:edn-result])]
-          [:div.col-sm-6.col-sm-push-6
-           [:div "Result:" [contrib.ui/easy-checkbox as-edn " EDN?" "hf-live"]]
-           (browse rel [] ctx (if @as-edn (r/partial result-edn [])))])
-        (let [as-edn (r/cursor state [:edn-fiddle])
-              f (r/partial (if @as-edn result-edn docs-embed) fiddle-attrs)]
-          [:div.col-sm-6.col-sm-pull-6
-           [:div "Interactive Hyperfiddle editor:" [contrib.ui/easy-checkbox as-edn " EDN?" "hf-live"]]
-           (browse rel [] ctx f {:frag ":src" :class "devsrc"})])
-        ]])))
+      [:div.row.hf-live.unp
+       ; Reverse order so it looks right on mobile, larger views reorder
+       (let [as-edn (r/cursor state [:edn-result])]
+         [:div.col-sm-6.col-sm-push-6
+          [:div "Result:" [contrib.ui/easy-checkbox as-edn " EDN?" "hf-live"]]
+          (browse rel [] ctx (if @as-edn (r/partial result-edn [])))])
+       (let [as-edn (r/cursor state [:edn-fiddle])
+             f (r/partial (if @as-edn result-edn docs-embed) fiddle-attrs)]
+         [:div.col-sm-6.col-sm-pull-6
+          [:div "Interactive Hyperfiddle editor:" [contrib.ui/easy-checkbox as-edn " EDN?" "hf-live"]]
+          (browse rel [] ctx f {:frag ":src" :class "devsrc"})])
+       ])))
