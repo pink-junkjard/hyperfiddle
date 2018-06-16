@@ -1,7 +1,9 @@
 (ns hyperfiddle.core
   (:require
+    ; public deps available inside query
+    #?(:clj [contrib.datomic])
 
-    ; pull in public ui deps
+    ; public deps available for ui
     #?(:cljs [contrib.reagent])
     #?(:cljs [contrib.ui])
     #?(:cljs [hyperfiddle.ui])
