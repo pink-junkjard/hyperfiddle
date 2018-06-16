@@ -18,26 +18,23 @@
   (read-eval-with-bindings content ctx))
 
 (defn browse [content argument props ctx]
-  (let [kwargs (flatten (seq props))
-        [_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
+  (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
         rel (unwrap (memoized-safe-read-edn-string srel))
         path (unwrap (memoized-safe-read-edn-string (str "[" spath "]")))
         f? (read-eval-with-bindings content)]
-    (apply hyperfiddle.ui/browse rel path ctx f? kwargs)))
+    (hyperfiddle.ui/browse rel path ctx f? props)))
 
 (defn link [content argument props ctx]
-  (let [kwargs (flatten (seq props))
-        [_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
+  (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
         rel (unwrap (memoized-safe-read-edn-string srel))
         path (unwrap (memoized-safe-read-edn-string (str "[" spath "]")))
         ; https://github.com/medfreeman/remark-generic-extensions/issues/45
         label (or-str content (name rel))]
-    (apply hyperfiddle.ui/link rel path ctx label kwargs)))
+    (hyperfiddle.ui/link rel path ctx label props)))
 
 (defn field [content argument props ctx]
   (let [?f (read-eval-with-bindings content)
         props (-> props
-                  keywordize-keys
                   (dissoc :children)
                   (clojure.set/rename-keys {:className :class})
                   (update :class css "unp") #_"fix font size")
@@ -47,27 +44,26 @@
                      {:ctx ctx :props props}
                      ; the whole point of the gymnastics is to apply ?f as arity-1 (so `str` works)
                      [?f #_(wrap-naked-string :div ?f) value]]))]
-    (apply hyperfiddle.ui/field path ctx ?f (flatten (seq props)))))
+    (hyperfiddle.ui/field path ctx ?f props)))
 
 (defn list- [content argument props ctx]
-  [:ul.unp props
+  [:ul props
    (->> (:relations ctx)
         (r/unsequence hf/relation-keyfn)
         (map (fn [[relation k]]
+               ; set ::unp to suppress
                ^{:key k} [:li [hyperfiddle.ui/markdown content (context/relation ctx relation)]]))
         (doall))])
 
 (defn value [content argument props ctx]
   (let [?f (read-eval-with-bindings content)
-        props (keywordize-keys props)
-        path (unwrap (memoized-safe-read-edn-string (str "[" argument "]")))]
-    (apply (:hyperfiddle.ui/value ctx) path ctx
-           (if ?f (fn control [value ctx props]
+        path (unwrap (memoized-safe-read-edn-string (str "[" argument "]")))
+        ?f (if ?f (fn control [value ctx props]
                     [with-react-context
                      {:ctx ctx :props props}
                      ; the whole point of the gymnastics is to apply ?f as arity-1 (so `str` works)
-                     [?f #_(wrap-naked-string :div ?f) value]]))
-           (flatten (seq props)))))
+                     [?f #_(wrap-naked-string :div ?f) value]]))]
+    (hyperfiddle.ui/value path ctx ?f props)))
 
 (def extensions
   ; Div is not needed, use it with block syntax and it hits React.createElement and works
@@ -76,6 +72,8 @@
    "li" (fn [content argument props ctx]
           [:li.p (dissoc props :children) (:children props)])
    "p" (fn [content argument props ctx]
+         ; Really need a way to single here from below, to get rid of div.p
+         ; So that means signalling via this :children value
          (if (::unp ctx)
            (js/reactCreateFragment #js {"_" (:children props)})
            [:div.p (dissoc props :children) (:children props)]))
@@ -100,11 +98,13 @@
    "anchor" link
 
    "result" (fn [content argument props ctx]
-              [:div.unp (hyperfiddle.ui/result ctx (read-eval-with-bindings content))])
+              (hyperfiddle.ui/result (assoc ctx ::unp true)
+                                     (read-eval-with-bindings content)
+                                     (update props :class css "unp")))
    "value" value                                            ; uses relation to draw just value
    "field" field                                            ; uses relation to draw label and value
    "table" (letfn [(form [content ctx]
-                     [[hyperfiddle.ui/markdown content ctx]])]
+                     [[hyperfiddle.ui/markdown content (assoc ctx ::unp true)]])]
              (fn [content argument props ctx]
                [hyperfiddle.ui/table (r/partial form content) hf/sort-fn ctx]))
    "list" list-                                             ; renders ul/li, loops over relations

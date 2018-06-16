@@ -136,23 +136,20 @@ User renderers should not be exposed to the reaction."
 
 ; define nav-cmp here, and unify browser and navcmp
 
-(defn ^:export link [rel path ctx ?content & args]
-  (let [props (kwargs args)
-        link @(r/track link/rel->link rel path ctx)
+(defn ^:export link [rel path ctx ?content & [props]]
+  (let [link @(r/track link/rel->link rel path ctx)
         ctx (apply context/focus ctx path)]
     ;(assert (not render-inline?)) -- :new-fiddle is render-inline. The nav cmp has to sort this out before this unifies.
     [(:navigate-cmp ctx) (merge (link/build-link-props link ctx) props) (or ?content (name (:link/rel link))) (:class props)]))
 
-(defn ^:export browse [rel path ctx ?content & args]
-  (let [props (kwargs args)
-        link @(r/track link/rel->link rel path ctx)
+(defn ^:export browse [rel path ctx ?content & [props]]
+  (let [link @(r/track link/rel->link rel path ctx)
         ctx (apply context/focus ctx path)]
     ;(assert render-inline?)
-    (into
-      [browser/ui link
-       (if ?content (assoc ctx :user-renderer ?content #_(if ?content #(apply ?content %1 %2 %3 %4 args))) ctx)
-       (:class props)]
-      (apply concat (dissoc props :class :children nil)))))
+    [browser/ui link
+     (if ?content (assoc ctx :user-renderer ?content #_(if ?content #(apply ?content %1 %2 %3 %4 args))) ctx)
+     (:class props)
+     (dissoc props :class :children nil)]))
 
 (defn form-field "Form fields are label AND value. Table fields are label OR value."
   [hyper-control ?f ctx props]                              ; fiddle-src wants to fallback by passing nil here explicitly
@@ -186,41 +183,38 @@ User renderers should not be exposed to the reaction."
        ((or (:label-fn props) (control-fac ctx)) field ctx props)])))
 
 (defn ^:export field "Works in a form or table context. Draws label and/or value."
-  [[i a] ctx ?f & args]
+  [[i a] ctx ?f & [props]]
   (if-not (and (= '* a) (= :hyperfiddle.ui.layout/table (::layout ctx)))
     (let [view (case (::layout ctx) :hyperfiddle.ui.layout/table table-field form-field)
-          ctx (context/focus ctx i a)
-          props (kwargs args)
-          props (merge props {:class (apply css (:class props) (semantic-css ctx))})]
+          ctx (context/focus ctx i a)]
       ^{:key (str i a)}
-      [view hyper-control ?f ctx props])))
+      [view hyper-control ?f ctx (update props :class css (semantic-css ctx))])))
 
 (defn ^:export table "Semantic table; todo all markup should be injected.
 sort-fn :: (fn [col ctx v] v)"
-  [form sort-fn ctx]
+  [form sort-fn ctx & [props]]
   (let [sort-col (r/atom nil)]
-    (fn [form sort-fn ctx]
+    (fn [form sort-fn ctx & [props]]
       (let [ctx (assoc ctx ::layout (::layout ctx :hyperfiddle.ui.layout/table)
-                           ::sort/sort-col sort-col
-                           :hyperfiddle.ui.markdown-extensions/unp true)]
-        [:table {:class (css "ui-table" "unp" (semantic-css ctx))}
-         (->> (form ctx) (into [:thead]))                   ; strict
+                           ::sort/sort-col sort-col)]
+        [:table (update props :class css "ui-table" "unp" (semantic-css ctx))
+         (->> (form ctx props) (into [:thead]))             ; strict
          (->> (:relations ctx)
               (r/fmap (r/partial sort-fn sort-col ctx))
               (r/unsequence hf/relation-keyfn)
               (map (fn [[relation k]]
-                     (->> (form (context/relation ctx relation))
+                     (->> (form (context/relation ctx relation) props)
                           (into ^{:key k} [:tr]))))         ; strict
               (into [:tbody]))]))))
 
 (defn ^:export result "Default result renderer. Invoked as fn, returns seq-hiccup, hiccup or
 nil. call site must wrap with a Reagent component"
-  [ctx & [?f]]
+  [ctx & [?f props]]
   ; with-relations probably gets called here. What about the request side?
   (cond
     ?f [?f ctx]
-    (:relations ctx) [table (r/partial hf/form field) hf/sort-fn ctx]
-    (:relation ctx) (hf/form field ctx)))
+    (:relations ctx) [table (r/partial hf/form field) hf/sort-fn ctx props]
+    (:relation ctx) (fragment (hf/form field ctx props))))
 
 (def ^:export fiddle (-build-fiddle))
 

@@ -112,5 +112,5 @@
               f (r/partial (if @as-edn result-edn docs-embed) fiddle-attrs)]
           [:div.col-sm-6.col-sm-pull-6
            [:div "Interactive Hyperfiddle editor:" [contrib.ui/easy-checkbox as-edn " EDN?" "hf-live"]]
-           (browse rel [] ctx f :frag ":src" :class "devsrc")])
+           (browse rel [] ctx f {:frag ":src" :class "devsrc"})])
         ]])))

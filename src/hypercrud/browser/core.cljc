@@ -56,9 +56,8 @@
                [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])])]))])))
 
 #?(:cljs
-   (defn ui [link ctx ?class & args]                        ; TODO don't omit user props
-     (let [props (kwargs args)
-           error-comp (ui-error/error-comp ctx)
+   (defn ui [link ctx ?class & [props]]                     ; TODO don't omit user props
+     (let [error-comp (ui-error/error-comp ctx)
            link-props' (try-either (link/build-link-props link ctx))]
        [stale/loading (stale/can-be-loading? ctx) (cats/fmap :hidden link-props') ; todo we want the actual error from the link props
         (fn [e] [error-comp e])

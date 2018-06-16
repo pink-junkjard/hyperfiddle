@@ -10,7 +10,7 @@
   (hash (map #(or (:db/id %) %) relation)))
 
 (defn form "Field is invoked as fn"
-  [field {:keys [hypercrud.browser/ordered-fes] :as ctx}]
+  [field {:keys [hypercrud.browser/ordered-fes] :as ctx} props]
   (->> (r/unsequence ordered-fes)
        (mapcat (fn [[fe i]]
                  (concat
@@ -18,9 +18,9 @@
                         (r/fmap :fields)
                         (r/unsequence :attribute)
                         (mapv (fn [[_ a]]
-                                (field [i a] ctx nil))))
+                                (field [i a] ctx nil props))))
                    (case (:type @fe)
-                     :pull [(field [i] ctx nil)]            ; entity links
+                     :pull [(field [i] ctx nil props)]            ; entity links
                      :aggregate nil
                      :variable nil                          ; We don't gen links for scalars, don't know if its a ref
                      ))))
