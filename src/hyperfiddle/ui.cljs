@@ -161,7 +161,8 @@ User renderers should not be exposed to the reaction."
           ctx (css "field" (:class props))
           (let [head-ctx (dissoc ctx :relation)]
             [(or (:label-fn props) (hyper-control head-ctx)) (:hypercrud.browser/field head-ctx) head-ctx props])
-          [(or ?f (hyper-control ctx)) @(context/value ctx) ctx props])))))
+          (if (:relation ctx)                               ; naked has no body
+            [(or ?f (hyper-control ctx)) @(context/value ctx) ctx props]))))))
 
 (defn table-field "Form fields are label AND value. Table fields are label OR value."
   [control-fac ?f ctx props]
