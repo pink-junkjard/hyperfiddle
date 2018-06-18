@@ -10,6 +10,7 @@
     [contrib.ui]
     [contrib.ui.input :refer [keyword-input* edn-input*]]
     [contrib.ui.remark :as remark]
+    [contrib.ui.safe-render :refer [user-portal]]
     [contrib.ui.tooltip :refer [tooltip-thick]]
     [cuerdas.core :as str]
     [hypercrud.browser.context :as context]
@@ -28,7 +29,7 @@
 
 
 (defn ^:export control "this is a function, which returns component" [ctx]
-  (let [layout (-> (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block) name keyword)
+  (let [layout (-> (::layout ctx :hyperfiddle.ui.layout/block) name keyword)
         a (:hypercrud.browser/attribute ctx)
         attr (some-> ctx :hypercrud.browser/fat-attribute deref)
         display-mode (-> @(:hypercrud.ui/display-mode ctx) name keyword)
@@ -126,23 +127,22 @@
      (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/cardinality :db/ident))
      (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/isComponent (if :component)))]))
 
-(defn ^:export value "Naked value renderer. Does not work in tables. Use field [] if you want a naked th/td view.
+(defn ^:export value "Relation level value renderer. Works in forms and lists but not tables (which need head/body structure).
 User renderers should not be exposed to the reaction."
-  [[i a] ctx ?f & args]                                     ; Doesn't make sense in a table context bc what do you do in the header?
+  [[i a] ctx ?f & [props]]                                  ; Path should be optional, for disambiguation only. Naked is an error
   (let [ctx (context/focus ctx i a)
-        props (kwargs args)
-        props (merge props {:class (apply css (:class props) (semantic-css ctx))})]
+        props (update props :class css (semantic-css ctx))]
     [(or ?f (hyper-control ctx)) @(context/value ctx) ctx props]))
 
-; define nav-cmp here, and unify browser and navcmp
-
-(defn ^:export link [rel path ctx ?content & [props]]
+(defn ^:export link "Relation level link renderer. Works in forms and lists but not tables."
+  [rel path ctx ?content & [props]]                         ; path should be optional, for disambiguation only. Naked can be hard-linked in markdown?
   (let [link @(r/track link/rel->link rel path ctx)
         ctx (apply context/focus ctx path)]
     ;(assert (not render-inline?)) -- :new-fiddle is render-inline. The nav cmp has to sort this out before this unifies.
     [(:navigate-cmp ctx) (merge (link/build-link-props link ctx) props) (or ?content (name (:link/rel link))) (:class props)]))
 
-(defn ^:export browse [rel path ctx ?content & [props]]
+(defn ^:export browse "Relation level browse. Works in forms and lists but not tables."
+  [rel path ctx ?content & [props]]                         ; path should be optional, for disambiguation only. Naked can be hard-linked in markdown?
   (let [link @(r/track link/rel->link rel path ctx)
         ctx (apply context/focus ctx path)]
     ;(assert render-inline?)
@@ -151,52 +151,18 @@ User renderers should not be exposed to the reaction."
      (:class props)
      (dissoc props :class :children nil)]))
 
-(defn form-field "Form fields are label AND value. Table fields are label OR value."
-  [hyper-control ?f ctx props]                              ; fiddle-src wants to fallback by passing nil here explicitly
-  (assert @(:hypercrud.ui/display-mode ctx))
-  (let [state (r/atom {::magic-new-a nil})]                 ; ^{:key (hash @(r/fmap keys (context/entity ctx)))}
-    (fn [hyper-control ?f ctx props]
-      (let [ctx (assoc ctx :hyperfiddle.ui.form/state state)]
-        (form/ui-block-border-wrap
-          ctx (css "field" (:class props))
-          (let [head-ctx (dissoc ctx :relation)]
-            [(or (:label-fn props) (hyper-control head-ctx)) (:hypercrud.browser/field head-ctx) head-ctx props])
-          (if (:relation ctx)                               ; naked has no body
-            [(or ?f (hyper-control ctx)) @(context/value ctx) ctx props]))))))
-
-(defn table-field "Form fields are label AND value. Table fields are label OR value."
-  [control-fac ?f ctx props]
-  (let [{:keys [hypercrud.browser/field
-                hypercrud.browser/attribute]} ctx
-        [i a] [(:fe-pos ctx) attribute]
-        path (remove nil? [i a])]
-    (if (:relation ctx)
-      [:td {:class (css "field" (:class props) "truncate")
-            :style {:border-color (if i (form/border-color ctx))}}
-       ; todo unsafe execution of user code: control
-       [(or ?f (control-fac ctx)) @(context/value ctx) ctx props]]
-      [:th {:class (css "field" (:class props)
-                        (if (and i (sort/sortable? ctx path)) "sortable") ; hoist
-                        (some-> (sort/sort-direction ctx) name)) ; hoist
-            :style {:background-color (form/border-color ctx)}
-            :on-click (r/partial sort/toggle-sort! ctx path)}
-       ; Use f as the label control also, because there is hypermedia up there
-       ((or (:label-fn props) (control-fac ctx)) field ctx props)])))
-
 (defn ^:export field "Works in a form or table context. Draws label and/or value."
   [[i a] ctx ?f & [props]]
   (if-not (and (= '* a) (= :hyperfiddle.ui.layout/table (::layout ctx)))
-    (let [view (case (::layout ctx) :hyperfiddle.ui.layout/table table-field form-field)
-          ctx (context/focus ctx i a)]
+    (let [ctx (context/focus ctx i a)]
       ^{:key (str i a)}
-      [view hyper-control ?f ctx (update props :class css (semantic-css ctx))])))
+      [(form/-field ctx) hyper-control ?f ctx (update props :class css (semantic-css ctx))])))
 
-(defn ^:export table "Semantic table; todo all markup should be injected.
-sort-fn :: (fn [col ctx v] v)"
+(defn ^:export table "Semantic table"
   [form sort-fn ctx & [props]]
   (let [sort-col (r/atom nil)]
     (fn [form sort-fn ctx & [props]]
-      (let [ctx (assoc ctx ::layout (::layout ctx :hyperfiddle.ui.layout/table)
+      (let [ctx (assoc ctx ::layout :hyperfiddle.ui.layout/table
                            ::sort/sort-col sort-col)]
         [:table (update props :class css "ui-table" "unp" (semantic-css ctx))
          (->> (form ctx props) (into [:thead]))             ; strict
@@ -243,6 +209,7 @@ nil. call site must wrap with a Reagent component"
                                    extensions)))
 
 (defn ^:export markdown [& args]
+  ;[user-portal hypercrud.ui.error/error-block]
   (into [remark/markdown -remark-instance] args))
 
 (def ^:export img
