@@ -1,5 +1,6 @@
 (ns contrib.ui.remark
   (:require
+    [clojure.set]
     [clojure.string]
     [goog.object]
     [reagent.core :as reagent]))
@@ -55,3 +56,8 @@
              #js {:ctx ?ctx})))
 
        :child-context-types #js {:ctx js/propTypes.object}})))
+
+(defn cleanse-props [props]
+  (-> props
+      (dissoc :children)
+      (clojure.set/rename-keys {:className :class})))
