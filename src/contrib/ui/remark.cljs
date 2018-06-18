@@ -1,7 +1,6 @@
 (ns contrib.ui.remark
   (:require
-    [contrib.data :refer [map-values]]
-    [cuerdas.core :as str]
+    [clojure.string]
     [goog.object]
     [reagent.core :as reagent]))
 
@@ -33,7 +32,9 @@
         (.use js/remarkReact
               (clj->js
                 {"sanitize" false
-                 "remarkReactComponents" (map-values reagent/reactify-component extensions)})))))
+                 "remarkReactComponents" (reduce-kv (fn [m k v]
+                                                      (assoc m k (reagent/reactify-component v)))
+                                                    {} extensions)})))))
 
 (defn remark! [& [extensions]]
   ; remark creates react components which don't evaluate in this stack frame
@@ -44,7 +45,7 @@
       {:display-name "markdown"
        :reagent-render
        (fn [value & [?ctx]]
-         (when-not (or (nil? value) (str/blank? value))
+         (when-not (clojure.string/blank? value)
            (-remark-render remark-instance value)))
 
        :get-child-context
