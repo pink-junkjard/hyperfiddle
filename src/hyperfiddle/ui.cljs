@@ -196,92 +196,91 @@ nil. call site must wrap with a Reagent component"
      (result ctx)
      (field [] ctx nil)]))
 
-(def extensions
-  {"li" (fn [content argument props ctx]
-          [:li.p (dissoc props :children) (:children props)])
-
-   "p" (fn [content argument props ctx]
-         ; Really need a way to single here from below, to get rid of div.p
-         ; So that means signalling via this :children value
-         (if (::unp ctx)
-           (js/reactCreateFragment #js {"_" (:children props)})
-           [:div.p (dissoc props :children) (:children props)]))
-
-   "span" (fn [content argument props ctx]
-            [:span (dissoc props :children) content])
-
-   ; Is this comment true?::
-   ;   Div is not needed, use it with block syntax and it hits React.createElement and works
-   ;   see https://github.com/medfreeman/remark-generic-extensions/issues/30
-
-   "block" (fn [content argument props ctx]
-             [:div props [markdown content]])
-
-   "pre" (fn [content argument props ctx]
-           ; Remark generates pre>code; deep inspect and rip out the content
-           ; Don't hook :code because that is used by inline snippets
-           (let [content (-> props :children (goog.object/getValueByKeys 0 "props" "children" 0)) ; get(props, kw('children'))[0].props.children[0]
-                 content (str/rtrim content "\n") #_"Remark yields an unavoidable newline that we don't want"]
-             ; No way to get props here from userland
-             [contrib.ui/code-block {:read-only true} content #()]))
-
-   "CodeEditor" (fn [content argument props ctx]
-                  [contrib.ui/code-block props content #()])
-
-   "cljs" (fn [content argument props ctx]
-            (read-eval-with-bindings content ctx))
-
-   "browse" (fn [content argument props ctx]
-              (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
-                    rel (unwrap (memoized-safe-read-edn-string srel))
-                    path (unwrap (memoized-safe-read-edn-string (str "[" spath "]")))
-                    f? (read-eval-with-bindings content)]
-                (browse rel path ctx f? props)))
-
-   "anchor" (fn [content argument props ctx]
-              (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
-                    rel (unwrap (memoized-safe-read-edn-string srel))
-                    path (unwrap (memoized-safe-read-edn-string (str "[" spath "]")))
-                    ; https://github.com/medfreeman/remark-generic-extensions/issues/45
-                    label (or-str content (name rel))]
-                (link rel path ctx label props)))
-
-   "result" (fn [content argument props ctx]
-              (result (assoc ctx ::unp true)
-                      (read-eval-with-bindings content)
-                      (update props :class css "unp")))
-   "value" (fn [content argument props ctx]
-             (let [path (unwrap (memoized-safe-read-edn-string (str "[" argument "]")))
-                   ?f (read-eval-with-bindings content)
-                   ?f (if ?f (r/partial fix-arity-1-with-context ?f))]
-               (value path ctx ?f props)))
-
-   "field" (fn [content argument props ctx]
-             (let [props (-> props
-                             (dissoc :children)
-                             (clojure.set/rename-keys {:className :class})
-                             (update :class css "unp") #_"fix font size")
-                   path (unwrap (memoized-safe-read-edn-string (str "[" argument "]")))
-                   ?f (read-eval-with-bindings content)
-                   ?f (if ?f (r/partial fix-arity-1-with-context ?f))]
-               (hyperfiddle.ui/field path ctx ?f props)))
-
-   "table" (letfn [(form [content ctx]
-                     [[markdown content (assoc ctx ::unp true)]])]
-             (fn [content argument props ctx]
-               [table (r/partial form content) hf/sort-fn ctx]))
-
-   "list" (fn [content argument props ctx]
-            [:ul props
-             (->> (:relations ctx)
-                  (r/unsequence hf/relation-keyfn)
-                  (map (fn [[relation k]]
-                         ; set ::unp to suppress
-                         ^{:key k} [:li [markdown content (context/relation ctx relation)]]))
-                  (doall))])})
-
 ;[user-portal hypercrud.ui.error/error-block]
-(def ^:export markdown (remark/remark! extensions))
+(def ^:export markdown
+  (remark/remark!
+    {"li" (fn [content argument props ctx]
+            [:li.p (dissoc props :children) (:children props)])
+
+     "p" (fn [content argument props ctx]
+           ; Really need a way to single here from below, to get rid of div.p
+           ; So that means signalling via this :children value
+           (if (::unp ctx)
+             (js/reactCreateFragment #js {"_" (:children props)})
+             [:div.p (dissoc props :children) (:children props)]))
+
+     "span" (fn [content argument props ctx]
+              [:span (dissoc props :children) content])
+
+     ; Is this comment true?::
+     ;   Div is not needed, use it with block syntax and it hits React.createElement and works
+     ;   see https://github.com/medfreeman/remark-generic-extensions/issues/30
+
+     "block" (fn [content argument props ctx]
+               [:div props [markdown content]])
+
+     "pre" (fn [content argument props ctx]
+             ; Remark generates pre>code; deep inspect and rip out the content
+             ; Don't hook :code because that is used by inline snippets
+             (let [content (-> props :children (goog.object/getValueByKeys 0 "props" "children" 0)) ; get(props, kw('children'))[0].props.children[0]
+                   content (str/rtrim content "\n") #_"Remark yields an unavoidable newline that we don't want"]
+               ; No way to get props here from userland
+               [contrib.ui/code-block {:read-only true} content #()]))
+
+     "CodeEditor" (fn [content argument props ctx]
+                    [contrib.ui/code-block props content #()])
+
+     "cljs" (fn [content argument props ctx]
+              (read-eval-with-bindings content ctx))
+
+     "browse" (fn [content argument props ctx]
+                (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
+                      rel (unwrap (memoized-safe-read-edn-string srel))
+                      path (unwrap (memoized-safe-read-edn-string (str "[" spath "]")))
+                      f? (read-eval-with-bindings content)]
+                  (browse rel path ctx f? props)))
+
+     "anchor" (fn [content argument props ctx]
+                (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
+                      rel (unwrap (memoized-safe-read-edn-string srel))
+                      path (unwrap (memoized-safe-read-edn-string (str "[" spath "]")))
+                      ; https://github.com/medfreeman/remark-generic-extensions/issues/45
+                      label (or-str content (name rel))]
+                  (link rel path ctx label props)))
+
+     "result" (fn [content argument props ctx]
+                (result (assoc ctx ::unp true)
+                        (read-eval-with-bindings content)
+                        (update props :class css "unp")))
+     "value" (fn [content argument props ctx]
+               (let [path (unwrap (memoized-safe-read-edn-string (str "[" argument "]")))
+                     ?f (read-eval-with-bindings content)
+                     ?f (if ?f (r/partial fix-arity-1-with-context ?f))]
+                 (value path ctx ?f props)))
+
+     "field" (fn [content argument props ctx]
+               (let [props (-> props
+                               (dissoc :children)
+                               (clojure.set/rename-keys {:className :class})
+                               (update :class css "unp") #_"fix font size")
+                     path (unwrap (memoized-safe-read-edn-string (str "[" argument "]")))
+                     ?f (read-eval-with-bindings content)
+                     ?f (if ?f (r/partial fix-arity-1-with-context ?f))]
+                 (hyperfiddle.ui/field path ctx ?f props)))
+
+     "table" (letfn [(form [content ctx]
+                       [[markdown content (assoc ctx ::unp true)]])]
+               (fn [content argument props ctx]
+                 [table (r/partial form content) hf/sort-fn ctx]))
+
+     "list" (fn [content argument props ctx]
+              [:ul props
+               (->> (:relations ctx)
+                    (r/unsequence hf/relation-keyfn)
+                    (map (fn [[relation k]]
+                           ; set ::unp to suppress
+                           ^{:key k} [:li [markdown content (context/relation ctx relation)]]))
+                    (doall))])}))
 
 (def ^:export img
   (from-react-context
