@@ -5,24 +5,25 @@
     [contrib.css :refer [css css-slugify]]
     [contrib.data :refer [unwrap kwargs]]
     [contrib.reactive :as r]
-    [contrib.reagent :refer [from-react-context fragment]]
-    [contrib.string :refer [memoized-safe-read-edn-string blank->nil]]
+    [contrib.reagent :refer [from-react-context fragment fix-arity-1-with-context]]
+    [contrib.string :refer [memoized-safe-read-edn-string blank->nil or-str]]
     [contrib.ui]
     [contrib.ui.input :refer [keyword-input* edn-input*]]
     [contrib.ui.remark :as remark]
     [contrib.ui.safe-render :refer [user-portal]]
     [contrib.ui.tooltip :refer [tooltip-thick]]
     [cuerdas.core :as str]
+    [goog.object]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.core :as browser]
     [hypercrud.browser.link :as link :refer [links-here rel->link]]
     [hypercrud.ui.control.link-controls :refer [anchors iframes]]
     [hyperfiddle.data :as hf]
+    [hyperfiddle.eval :refer [read-eval-with-bindings]]
     [hyperfiddle.ui.docstring :refer [semantic-docstring]]
     [hyperfiddle.ui.controls :as controls]
     [hyperfiddle.ui.hacks]                                  ; exports
     [hyperfiddle.ui.form :as form]
-    [hyperfiddle.ui.markdown-extensions :refer [extensions]]
     [hyperfiddle.ui.select :refer [select]]
     [hyperfiddle.ui.sort :as sort]
     [hyperfiddle.ui.util :refer [attr-renderer]]))
@@ -183,6 +184,8 @@ nil. call site must wrap with a Reagent component"
     (:relations ctx) [table (r/partial hf/form field) hf/sort-fn ctx props]
     (:relation ctx) (fragment (hf/form field ctx props))))
 
+(declare markdown)
+
 (def ^:export fiddle (-build-fiddle))
 
 (defn ^:export fiddle-xray [ctx class]
@@ -193,26 +196,105 @@ nil. call site must wrap with a Reagent component"
      (result ctx)
      (field [] ctx nil)]))
 
-(defn ui-bindings [ctx]                                     ; legacy
-  (assoc ctx
-    :anchor link                                            ; legacy
-    :browse browse
-    :field field
-    :cell field                                             ; legacy
-    ::value value
-    :browse' hf/browse'))
+(def extensions
+  {"li" (fn [content argument props ctx]
+          [:li.p (dissoc props :children) (:children props)])
 
-(def -remark-instance (remark/remark
-                        (reduce-kv (fn [acc k v]
-                                     (assoc acc k (remark/extension k v)))
-                                   (empty extensions)
-                                   extensions)))
+   "p" (fn [content argument props ctx]
+         ; Really need a way to single here from below, to get rid of div.p
+         ; So that means signalling via this :children value
+         (if (::unp ctx)
+           (js/reactCreateFragment #js {"_" (:children props)})
+           [:div.p (dissoc props :children) (:children props)]))
 
-(defn ^:export markdown [& args]
-  ;[user-portal hypercrud.ui.error/error-block]
-  (into [remark/markdown -remark-instance] args))
+   "span" (fn [content argument props ctx]
+            [:span (dissoc props :children) content])
+
+   ; Is this comment true?::
+   ;   Div is not needed, use it with block syntax and it hits React.createElement and works
+   ;   see https://github.com/medfreeman/remark-generic-extensions/issues/30
+
+   "block" (fn [content argument props ctx]
+             [:div props [markdown content]])
+
+   "pre" (fn [content argument props ctx]
+           ; Remark generates pre>code; deep inspect and rip out the content
+           ; Don't hook :code because that is used by inline snippets
+           (let [content (-> props :children (goog.object/getValueByKeys 0 "props" "children" 0)) ; get(props, kw('children'))[0].props.children[0]
+                 content (str/rtrim content "\n") #_"Remark yields an unavoidable newline that we don't want"]
+             ; No way to get props here from userland
+             [contrib.ui/code-block {:read-only true} content #()]))
+
+   "CodeEditor" (fn [content argument props ctx]
+                  [contrib.ui/code-block props content #()])
+
+   "cljs" (fn [content argument props ctx]
+            (read-eval-with-bindings content ctx))
+
+   "browse" (fn [content argument props ctx]
+              (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
+                    rel (unwrap (memoized-safe-read-edn-string srel))
+                    path (unwrap (memoized-safe-read-edn-string (str "[" spath "]")))
+                    f? (read-eval-with-bindings content)]
+                (browse rel path ctx f? props)))
+
+   "anchor" (fn [content argument props ctx]
+              (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
+                    rel (unwrap (memoized-safe-read-edn-string srel))
+                    path (unwrap (memoized-safe-read-edn-string (str "[" spath "]")))
+                    ; https://github.com/medfreeman/remark-generic-extensions/issues/45
+                    label (or-str content (name rel))]
+                (link rel path ctx label props)))
+
+   "result" (fn [content argument props ctx]
+              (result (assoc ctx ::unp true)
+                      (read-eval-with-bindings content)
+                      (update props :class css "unp")))
+   "value" (fn [content argument props ctx]
+             (let [path (unwrap (memoized-safe-read-edn-string (str "[" argument "]")))
+                   ?f (read-eval-with-bindings content)
+                   ?f (if ?f (r/partial fix-arity-1-with-context ?f))]
+               (value path ctx ?f props)))
+
+   "field" (fn [content argument props ctx]
+             (let [props (-> props
+                             (dissoc :children)
+                             (clojure.set/rename-keys {:className :class})
+                             (update :class css "unp") #_"fix font size")
+                   path (unwrap (memoized-safe-read-edn-string (str "[" argument "]")))
+                   ?f (read-eval-with-bindings content)
+                   ?f (if ?f (r/partial fix-arity-1-with-context ?f))]
+               (hyperfiddle.ui/field path ctx ?f props)))
+
+   "table" (letfn [(form [content ctx]
+                     [[markdown content (assoc ctx ::unp true)]])]
+             (fn [content argument props ctx]
+               [table (r/partial form content) hf/sort-fn ctx]))
+
+   "list" (fn [content argument props ctx]
+            [:ul props
+             (->> (:relations ctx)
+                  (r/unsequence hf/relation-keyfn)
+                  (map (fn [[relation k]]
+                         ; set ::unp to suppress
+                         ^{:key k} [:li [markdown content (context/relation ctx relation)]]))
+                  (doall))])})
+
+(let [-remark-instance (remark/remark-with-extensions! extensions)]
+  (defn ^:export markdown [& args]
+    ;[user-portal hypercrud.ui.error/error-block]
+    (into [remark/markdown -remark-instance] args)))
 
 (def ^:export img
   (from-react-context
     (fn [{:keys [ctx props]} value]
       [:img (merge props {:src value})])))
+
+(defn ui-bindings [ctx]                                     ; legacy
+  (assoc ctx
+    :anchor link
+    :browse browse
+    :field field
+    :cell field
+    ::value value
+    :browse' hf/browse'))

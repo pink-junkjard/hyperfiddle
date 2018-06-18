@@ -2,6 +2,7 @@
   (:require
     [contrib.data :refer [kwargs]]
     [contrib.reactive :as r]
+    [hyperfiddle.ui.form]
     ;[hypercrud.browser.core :as browser]
     [hypercrud.browser.link :as link]))
 

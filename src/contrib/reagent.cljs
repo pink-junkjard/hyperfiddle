@@ -37,3 +37,7 @@
                        (let [context (goog.object/get (.-context (reagent/current-component)) "cljs-context")]
                          (into [f context] args)))
      }))
+
+(defn fix-arity-1-with-context "partial the ?f"
+  [?f value ctx props]
+  [with-react-context {:ctx ctx :props props} [?f value]])
