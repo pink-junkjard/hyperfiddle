@@ -280,10 +280,8 @@ nil. call site must wrap with a Reagent component"
                          ^{:key k} [:li [markdown content (context/relation ctx relation)]]))
                   (doall))])})
 
-(let [-remark-instance (remark/remark-with-extensions! extensions)]
-  (defn ^:export markdown [& args]
-    ;[user-portal hypercrud.ui.error/error-block]
-    (into [remark/markdown -remark-instance] args)))
+;[user-portal hypercrud.ui.error/error-block]
+(def ^:export markdown (remark/remark! extensions))
 
 (def ^:export img
   (from-react-context

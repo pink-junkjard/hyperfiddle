@@ -80,12 +80,7 @@
   (if-let [reactSlickSlider (aget (global!) "reactSlickSlider")]
     (reagent/adapt-react-class reactSlickSlider)))
 
-; this one doesn't have extensions and no hf deps,
-; which helps break dump circular refs
-(def -remark-instance (remark/remark))
-
-(defn ^:export markdown [& args]
-  (into [remark/markdown -remark-instance] args))
+(def ^:export markdown (remark/remark!))
 
 (defn radio-option [props]
   [tooltip {:label (:tooltip props)}
