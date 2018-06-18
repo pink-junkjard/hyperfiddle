@@ -4,7 +4,8 @@
     [contrib.reagent :refer [fragment]]
     [contrib.ui :refer [markdown]]
     [hypercrud.types.Err :as Err]
-    [hyperfiddle.foundation :as foundation]))
+    [hyperfiddle.foundation :as foundation]
+    [contrib.reactive :as r]))
 
 
 (defn e->map [e]
@@ -33,6 +34,12 @@
      (if (:human-hint data) [markdown (:human-hint data)])
      #_(if (:query data) [markdown (str "```\n" (:query data) "\n```")])]))
 
+(defn error-block-with-stage [rt e & [?class]]
+  (fragment
+    [error-block e ?class]
+    #_(if (some-> e e->map :data :ident (= :db.error/datoms-conflict)))
+    [foundation/staging rt]))
+
 (defn error-comp [ctx]
   ; :find-element :attribute :value
   (cond
@@ -40,8 +47,4 @@
     (:hypercrud.browser/attribute ctx) error-inline         ; table: header or cell, form: header or cell
     (:hypercrud.browser/find-element ctx) error-inline
     ; browser including inline true links
-    :else (fn [e & [?class]]
-            (fragment
-              [error-block e ?class]
-              #_(if (some-> e e->map :data :ident (= :db.error/datoms-conflict)))
-              [foundation/staging (:peer ctx)]))))
+    :else (r/partial error-block-with-stage (:peer ctx))))
