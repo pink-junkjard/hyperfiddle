@@ -6,6 +6,11 @@
     [reagent.core :as reagent]))
 
 
+(defn adapt-props [props]
+  (-> props
+      (dissoc :content :argument)                           ; need children downstack
+      (clojure.set/rename-keys {:className :class})))
+
 (defn extension [name f]
   (reagent/create-class
     {:display-name (str "markdown-" name)
@@ -14,7 +19,7 @@
                        (let [ctx (goog.object/get (.-context (reagent/current-component)) "ctx")
                              content (if-not (= content "undefined") content)
                              argument (if-not (= argument "undefined") argument)]
-                         (f content argument (dissoc props :content :argument) ctx)))}))
+                         (f content argument (adapt-props props) ctx)))}))
 
 (defn -remark-render [remark-instance value]
   (let [c (-> remark-instance (.processSync value #js {"commonmark" true}) .-contents)
@@ -56,8 +61,3 @@
              #js {:ctx ?ctx})))
 
        :child-context-types #js {:ctx js/propTypes.object}})))
-
-(defn cleanse-props [props]
-  (-> props
-      (dissoc :children)
-      (clojure.set/rename-keys {:className :class})))

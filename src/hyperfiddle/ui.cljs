@@ -200,7 +200,7 @@ nil. call site must wrap with a Reagent component"
 (def ^:export markdown
   (remark/remark!
     {"li" (fn [content argument props ctx]
-            [:li.p (remark/cleanse-props props) (:children props)])
+            [:li.p (dissoc props :children) (:children props)])
 
      "p" (fn [content argument props ctx]
            ; Really need a way to single here from below, to get rid of div.p
@@ -210,14 +210,14 @@ nil. call site must wrap with a Reagent component"
              [:div.p (dissoc props :children) (:children props)]))
 
      "span" (fn [content argument props ctx]
-              [:span (remark/cleanse-props props) content])
+              [:span (remark/adapt-props props) content])
 
      ; Is this comment true?::
      ;   Div is not needed, use it with block syntax and it hits React.createElement and works
      ;   see https://github.com/medfreeman/remark-generic-extensions/issues/30
 
      "block" (fn [content argument props ctx]
-               [:div (remark/cleanse-props props) [markdown content]])
+               [:div props [markdown content (assoc ctx ::unp true)]])
 
      "pre" (fn [content argument props ctx]
              ; Remark generates pre>code; deep inspect and rip out the content
@@ -228,21 +228,24 @@ nil. call site must wrap with a Reagent component"
                [contrib.ui/code-block {:read-only true} content #()]))
 
      "CodeEditor" (fn [content argument props ctx]
-                    [contrib.ui/code-block (remark/cleanse-props props) content #()])
+                    [contrib.ui/code-block props content #()])
 
      "cljs" (fn [content argument props ctx]
               (read-eval-with-bindings content ctx))
 
+     "reagent" (fn [content argument props ctx]
+                 (read-eval-with-bindings content ctx))
+
      "f" (fn [content argument props ctx]
            (let [f (some->> (read-eval-with-bindings content) (r/partial fix-arity-1-with-context))]
-             [f argument ctx (remark/cleanse-props props)]))
+             [f argument ctx props]))
 
      "browse" (fn [content argument props ctx]
                 (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
                       rel (unwrap (memoized-safe-read-edn-string srel))
                       path (unwrap (memoized-safe-read-edn-string (str "[" spath "]")))
                       f? (read-eval-with-bindings content)]
-                  (browse rel path ctx f? (remark/cleanse-props props))))
+                  (browse rel path ctx f? props)))
 
      "anchor" (fn [content argument props ctx]
                 (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
@@ -250,31 +253,29 @@ nil. call site must wrap with a Reagent component"
                       path (unwrap (memoized-safe-read-edn-string (str "[" spath "]")))
                       ; https://github.com/medfreeman/remark-generic-extensions/issues/45
                       label (or-str content (name rel))]
-                  (link rel path ctx label (remark/cleanse-props props))))
+                  (link rel path ctx label props)))
 
      "result" (fn [content argument props ctx]
                 (result (assoc ctx ::unp true)
                         (read-eval-with-bindings content)
-                        (-> (remark/cleanse-props props) (update :class css "unp"))))
+                        (update props :class css "unp")))
      "value" (fn [content argument props ctx]
                (let [path (unwrap (memoized-safe-read-edn-string (str "[" argument "]")))
                      ?f (some->> (read-eval-with-bindings content) (r/partial fix-arity-1-with-context))]
-                 (value path ctx ?f (remark/cleanse-props props))))
+                 (value path ctx ?f props)))
 
      "field" (fn [content argument props ctx]
-               (let [props (-> (remark/cleanse-props props) (update :class css "unp"))
-                     path (unwrap (memoized-safe-read-edn-string (str "[" argument "]")))
+               (let [path (unwrap (memoized-safe-read-edn-string (str "[" argument "]")))
                      ?f (some->> (read-eval-with-bindings content) (r/partial fix-arity-1-with-context))]
-                 (hyperfiddle.ui/field path ctx ?f props)))
+                 (field path ctx ?f (update props :class css "unp"))))
 
      "table" (letfn [(form [content ctx]
                        [[markdown content (assoc ctx ::unp true)]])]
                (fn [content argument props ctx]
-                 ; (remark/clean-props props)
-                 [table (r/partial form content) hf/sort-fn ctx]))
+                 [table (r/partial form content) hf/sort-fn ctx #_props]))
 
      "list" (fn [content argument props ctx]
-              [:ul (remark/cleanse-props props)
+              [:ul props
                (->> (:relations ctx)
                     (r/unsequence hf/relation-keyfn)
                     (map (fn [[relation k]]
