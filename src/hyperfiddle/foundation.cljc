@@ -130,10 +130,12 @@
            selected-uri (r/atom source-uri)
            tabs-definition (->> @(runtime/state (:peer ctx) [::runtime/domain :domain/environment])
                                 (filter (fn [[k v]] (and (string? k) (string/starts-with? k "$") (is-uri? v))))
-                                (map (fn [[dbname uri]]
-                                       {:id uri :label dbname :uri uri}))
-                                (cons {:id source-uri :label "Source" :uri source-uri})
-                                (vec))
+                                (reduce (fn [acc [dbname uri]]
+                                          (if (contains? acc uri)
+                                            (update acc uri conj dbname)
+                                            (assoc acc uri [dbname])))
+                                        {source-uri ["Source"]})
+                                (mapv (fn [[uri labels]] {:id uri :label (string/join "/" labels)})))
            change-tab #(reset! selected-uri %)]
        (fn [ctx & [child]]
          (let [stage (runtime/state (:peer ctx) [:stage (:branch ctx) @selected-uri])]
