@@ -33,7 +33,8 @@
                            nil))))
 
      :component-will-unmount
-     (fn [this] (.toTextArea (aget this "codeMirrorRef")))
+     (fn [this]
+       (.toTextArea (aget this "codeMirrorRef")))
 
      :component-did-update
      (fn [this]
