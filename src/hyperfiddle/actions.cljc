@@ -175,14 +175,13 @@
                                          (let [tx (update-to-tempids get-state branch uri tx)]
                                            [:with branch uri tx]))
                                        tx)
-                    parent-branch (branch/decode-parent-branch branch)
-                    tx-groups (->> (get-in (get-state) [:stage branch])
-                                   (filter (fn [[uri tx]] (should-transact!? uri get-state)))
-                                   (into {}))]
-                (if (and (nil? parent-branch) (not (empty? tx-groups)))
-                  (do
-                    ; should the tx fn not be withd? if the transact! fails, do we want to run it again?
-                    (dispatch! (apply batch (concat with-actions on-start)))
+                    parent-branch (branch/decode-parent-branch branch)]
+                ; should the tx fn not be withd? if the transact! fails, do we want to run it again?
+                (dispatch! (apply batch (concat with-actions on-start)))
+                (let [tx-groups (->> (get-in (get-state) [:stage branch])
+                                     (filter (fn [[uri tx]] (should-transact!? uri get-state)))
+                                     (into {}))]
+                  (if (and (nil? parent-branch) (not (empty? tx-groups)))
                     ; todo what if transact throws?
                     (transact! rt invert-route tx-groups dispatch! get-state
                                :post-tx (let [clear-uris (->> (keys tx-groups)
@@ -191,20 +190,17 @@
                                           (concat clear-uris ; clear the uris that were transacted
                                                   [[:merge branch] ; merge the untransacted uris up
                                                    (discard-partition branch)])) ; clean up the partition
-                               :route app-route))
-                  (let [e (some-> app-route router/invalid-route?)
-                        actions (concat
-                                  with-actions
-                                  [[:merge branch]
+                               :route app-route)
+                    (let [e (some-> app-route router/invalid-route?)
+                          actions [[:merge branch]
                                    (cond
                                      e [:set-error e]
                                      app-route [:partition-route nil app-route] ; what about local-basis? why not specify branch?
                                      :else nil)
-                                   (discard-partition branch)]
-                                  on-start)]
-                    (if e
-                      (dispatch! (apply batch actions))
-                      (hydrate-partition rt parent-branch actions dispatch! get-state)))))))))
+                                   (discard-partition branch)]]
+                      (if e
+                        (dispatch! (apply batch actions))
+                        (hydrate-partition rt parent-branch actions dispatch! get-state))))))))))
 
 (defn reset-stage [rt tx]
   (fn [dispatch! get-state]
