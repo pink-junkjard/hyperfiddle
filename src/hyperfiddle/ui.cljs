@@ -227,8 +227,8 @@ nil. call site must wrap with a Reagent component"
      "cljs" (fn [content argument props ctx]
               (unwrap (read-eval-with-bindings content ctx)))
 
-     "reagent" (fn [content argument props ctx]
-                 (unwrap (read-eval-with-bindings content ctx)))
+     "render" (fn [content argument props ctx]
+                (unwrap (read-eval-with-bindings content ctx)))
 
      "f" (fn [content argument props ctx]
            (let [f (unwrap (read-eval-with-bindings content))
