@@ -1,7 +1,8 @@
 (ns hyperfiddle.database
   (:require [datomic.api :as d]
             [hyperfiddle.io.transact :as transact]
-            [hyperfiddle.security :as security]))
+            [hyperfiddle.security :as security]
+            [hyperfiddle.security.entity-ownership :as entity-ownership]))
 
 
 (defn provision! [uri owners domains-uri subject]
@@ -41,7 +42,7 @@
     @(d/transact conn domains-schema)
     @(d/transact conn [{:database/uri uri
                         :database/write-security ::security/custom
-                        :database/custom-write-sec (str `security/write-domains)
+                        :database/custom-write-sec (str `entity-ownership/write-domains)
                         :hyperfiddle/owners owners}])))
 
 (defn deprovision! [uri domains-uri subject]
