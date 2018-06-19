@@ -1,5 +1,5 @@
 (ns hyperfiddle.service.node.ssr
-  (:require [contrib.data :refer [unwrap]]
+  (:require [contrib.data :refer [map-values unwrap]]
             [contrib.reactive :as r]
             [contrib.template :refer [load-resource]]
             [goog.object :as object]
@@ -14,6 +14,7 @@
             [hyperfiddle.io.sync :refer [sync-rpc!]]
             [hyperfiddle.reducers :as reducers]
             [hyperfiddle.runtime :as runtime]
+            [hyperfiddle.security :as security]
             [hyperfiddle.state :as state]
             [promesa.core :as p]
             [reagent.dom.server :as reagent-server]
@@ -137,14 +138,9 @@
                              load-level)]
     (-> (foundation/bootstrap-data rt foundation/LEVEL-NONE load-level (.-path req) (::runtime/global-basis initial-state))
         (p/then (fn []
-                  (let [domain @(runtime/state rt [::runtime/domain])
-                        owner (foundation/domain-owner? user-id domain)
-                        writable (and (not= "www" (:domain/ident domain))
-                                      (or (not (:active-ide? host-env)) owner))
-                        action (if writable
-                                 [:enable-auto-transact]
-                                 [:disable-auto-transact])]
-                    (runtime/dispatch! rt action))))
+                  (let [auto-transact (->> @(runtime/state rt [::runtime/domain :domain/db-lookup])
+                                           (map-values #(security/attempt-to-transact? % @(runtime/state rt [::runtime/user-id]))))]
+                    (runtime/dispatch! rt [:set-auto-transact auto-transact]))))
         (p/then (constantly 200))
         (p/catch #(or (:hyperfiddle.io/http-status-code (ex-data %)) 500))
         (p/then (fn [http-status-code]
