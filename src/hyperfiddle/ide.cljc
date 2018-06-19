@@ -70,10 +70,7 @@
 ; despite being in the namespace (hyperfiddle.ide) which encompasses the union of target/user (bottom) and ide (top)
 (defn- *-ide-context [ctx]
   (-> ctx
-      (assoc :hypercrud.ui/display-mode (r/track identity :hypercrud.browser.browser-ui/user)
-
-             ; deprecated, use @(runtime/state rt [::runtime/domain])
-             :target-domain (:hypercrud.browser/domain ctx))
+      (assoc :hypercrud.ui/display-mode (r/track identity :hypercrud.browser.browser-ui/user))
       (context/source-mode)))
 
 (defn leaf-ide-context [ctx]
@@ -100,9 +97,6 @@
     ; IF we MUST to support that, this should probably be done higher up for both ide and user at the same time
     ; and SHOULD ONLY be applied for ide within ide (other user fns don't get access to these values)
     :target-route route                                     ; todo rename :target-route to :hyperfiddle.ide/target-route
-
-    ; deprecated, use @(runtime/state rt [::runtime/domain])
-    :target-domain (:hypercrud.browser/domain ctx)
     ))
 
 (defn leaf-target-context [ctx route]
