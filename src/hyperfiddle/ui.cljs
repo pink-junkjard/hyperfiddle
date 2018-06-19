@@ -11,7 +11,6 @@
     [contrib.ui.input :refer [keyword-input* edn-input*]]
     [contrib.ui.remark :as remark]
     [contrib.ui.safe-render :refer [user-portal]]
-    [contrib.ui.tooltip :refer [tooltip-thick]]
     [cuerdas.core :as str]
     [goog.object]
     [hypercrud.browser.context :as context]
@@ -20,7 +19,6 @@
     [hypercrud.ui.control.link-controls :refer [anchors iframes]]
     [hyperfiddle.data :as hf]
     [hyperfiddle.eval :refer [read-eval-with-bindings]]
-    [hyperfiddle.ui.docstring :refer [semantic-docstring]]
     [hyperfiddle.ui.controls :as controls]
     [hyperfiddle.ui.hacks]                                  ; exports
     [hyperfiddle.ui.form :as form]
@@ -48,16 +46,10 @@
         [:long :one] controls/long
         [:instant :one] controls/instant
         [:ref :one] controls/dbid                           ; nested form
-        [:ref :many] (fn [value ctx props] [:noscript]) #_edn-many ; nested table
+        [:ref :many] (constantly [:noscript]) #_edn-many    ; nested table
         [_ :one] controls/edn
         [_ :many] controls/edn-many
         ))))
-
-(defn label [field ctx props]
-  (let [help-md (semantic-docstring ctx)]
-    [tooltip-thick (if help-md
-                     [:div.docstring [contrib.ui/markdown help-md]])
-     [:label props (:label field) (if help-md [:sup "†"])]]))
 
 (defn ^:export hyper-control "Handles labels too because we show links there."
   [ctx]
@@ -73,41 +65,43 @@
       (match [d i type a rels]
 
         [:body i _ a (true :<< select?)]
-        (fn [value ctx props]
-          (fragment (anchors :body i a ctx link/options-processor) ; Order sensitive, here be floats
-                    [select value ctx props]
-                    (iframes :body i a ctx link/options-processor)))
+        (fn [value]
+          (fragment [anchors :body i a link/options-processor] ; Order sensitive, here be floats
+                    [select value]
+                    [iframes :body i a link/options-processor]))
 
         [:head i _ a (true :<< select?)]
-        (fn [field ctx props]
-          (fragment (if (and (= :xray display-mode)
-                             (not (:link/dependent? (rel->link :options ctx))))
-                      ; Float right
-                      [select nil ctx props])
-                    (if i [label field ctx props])
-                    (anchors :head i a ctx link/options-processor)
-                    (iframes :head i a ctx link/options-processor)))
+        (from-react-context
+          (fn [{:keys [ctx]} field]
+            (fragment (if (and (= :xray display-mode)
+                               (not (:link/dependent? (rel->link :options ctx))))
+                        ; Float right
+                        [select nil])
+                      (if i [form/label field])
+                      [anchors :head i a link/options-processor]
+                      [iframes :head i a link/options-processor])))
 
         [d _ _ '* _] (case d :head form/magic-new-head
                              :body form/magic-new-body)
 
         [:head i _ a _]
-        (fn [field ctx props]
-          (fragment (if i [label field ctx props])
-                    (anchors :head i a ctx)
-                    (iframes :head i a ctx)))
+        (fn [field]
+          (fragment (if i [form/label field])
+                    [anchors :head i a]
+                    [iframes :head i a]))
 
         [:body i (:or :aggregate :variable) _ _]
-        (fn [value ctx props]
-          (fragment [controls/string (str value) ctx props]
-                    (if i (anchors :body i a ctx))
-                    (if i (iframes :body i a ctx))))
+        (fn [value]
+          (fragment [controls/string (str value)]
+                    (if i [anchors :body i a])
+                    (if i [iframes :body i a])))
 
         [:body i _ a _]
-        (fn [value ctx props]
-          (fragment (if a [(control ctx) value ctx props])  ; element :pull ? I am missing a permutation which this this
-                    (if i (anchors :body i a ctx))
-                    (if i (iframes :body i a ctx))))
+        (from-react-context
+          (fn [{:keys [ctx]} value]
+            (fragment (if a [(control ctx) value])          ; element :pull ? I am missing a permutation which this this
+                      (if i [anchors :body i a])
+                      (if i [iframes :body i a]))))
         ))))
 
 (defn ^:export semantic-css [ctx]
@@ -133,7 +127,7 @@ User renderers should not be exposed to the reaction."
   [[i a] ctx ?f & [props]]                                  ; Path should be optional, for disambiguation only. Naked is an error
   (let [ctx (context/focus ctx i a)
         props (update props :class css (semantic-css ctx))]
-    [(or ?f (hyper-control ctx)) @(context/value ctx) ctx props]))
+    [fix-arity-1-with-context (or ?f (hyper-control ctx)) @(context/value ctx) ctx props]))
 
 (defn ^:export link "Relation level link renderer. Works in forms and lists but not tables."
   [rel path ctx ?content & [props]]                         ; path should be optional, for disambiguation only. Naked can be hard-linked in markdown?
@@ -237,8 +231,8 @@ nil. call site must wrap with a Reagent component"
                  (read-eval-with-bindings content ctx))
 
      "f" (fn [content argument props ctx]
-           (let [f (some->> (read-eval-with-bindings content) (r/partial fix-arity-1-with-context))]
-             [f argument ctx props]))
+           (let [f (read-eval-with-bindings content)]
+             [fix-arity-1-with-context f argument ctx props]))
 
      "browse" (fn [content argument props ctx]
                 (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)

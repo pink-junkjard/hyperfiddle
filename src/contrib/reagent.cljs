@@ -30,7 +30,7 @@
                               #js {"cljs-context" context})))
      }))
 
-(defn from-react-context [f]
+(defn from-react-context "extract react context" [f]
   (reagent/create-class
     {:context-types #js {"cljs-context" js/propTypes.object}
      :reagent-render (fn [& args]
@@ -38,6 +38,9 @@
                          (into [f context] args)))
      }))
 
-(defn fix-arity-1-with-context "partial the ?f"
+(defn fix-arity-1-with-context "f1-with-context (partial the ?f)"
   [?f value ctx props]
   [with-react-context {:ctx ctx :props props} [?f value]])
+
+;(defn inject-context [f context & args]
+;  [with-react-context context (into [f] args)])

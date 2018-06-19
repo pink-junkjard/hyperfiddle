@@ -3,7 +3,7 @@
     [cuerdas.core :as str]
     [contrib.pprint]
     [contrib.reactive :as r]
-    [contrib.reagent :refer [fragment]]
+    [contrib.reagent :refer [fragment fix-arity-1-with-context from-react-context]]
     [contrib.ui]
     [hypercrud.types.URI :refer [is-uri?]]
     [hyperfiddle.ide.fiddles.topnav :refer [shadow-fiddle]]
@@ -22,8 +22,10 @@
                 [(:navigate-cmp ctx) props $db])))
        (doall)))
 
-(defn control-with-unders [frag value ctx props]
-  [:div [(hyper-control ctx) value ctx props] frag])
+(letfn [(f [frag {:keys [ctx]} value]
+          [:div [(hyper-control ctx) value] frag])]
+  (defn control-with-unders [frag]
+    (from-react-context (r/partial f frag))))
 
 (def underdocs
   {:fiddle/pull "See [:fiddle/pull examples](http://www.hyperfiddle.net/:docs!fiddle-pull/) and the

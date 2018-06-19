@@ -2,6 +2,7 @@
   (:require [clojure.set :as set]
             [contrib.datomic-tx :as tx]
             [contrib.reactive :as r]
+            [contrib.reagent :refer [with-react-context fix-arity-1-with-context]]
             [hypercrud.browser.context :as context]
             [hyperfiddle.ui :refer [field hyper-control]]))
 
@@ -28,55 +29,60 @@
           (into {} entity)
           tx))
 
-(defn- build-valueType-and-cardinality-renderer [special-attrs-state]
-  (let [user-with! (fn [ctx user-with! tx]
-                     (let [entity @(context/entity ctx)
-                           new-entity (merge-in-tx entity tx ctx)]
-                       (case [(has-required-attrs? entity) (has-required-attrs? new-entity)]
-                         [false false]
-                         (swap! special-attrs-state tx/into-tx tx)
+(letfn [(user-with! [special-attrs-state ctx tx]
+          (let [user-with! (:user-with! ctx)
+                entity @(context/entity ctx)
+                new-entity (merge-in-tx entity tx ctx)]
+            (case [(has-required-attrs? entity) (has-required-attrs? new-entity)]
+              [false false]
+              (swap! special-attrs-state tx/into-tx tx)
 
-                         [false true]
-                         (do
-                           (user-with! (tx/into-tx @special-attrs-state tx))
-                           (reset! special-attrs-state nil))
+              [false true]
+              (do
+                (user-with! (tx/into-tx @special-attrs-state tx))
+                (reset! special-attrs-state nil))
 
-                         [true false]
-                         ; todo this case WILL throw (going from a valid tx to invalid)
-                         (user-with! tx)
+              [true false]
+              ; todo this case WILL throw (going from a valid tx to invalid)
+              (user-with! tx)
 
-                         [true true]
-                         (user-with! tx))))]
-    (fn [value ctx props]
-      [(hyper-control ctx)
-       value
-       (update ctx :user-with! #(r/partial user-with! ctx %))
-       props])))
+              [true true]
+              (user-with! tx))))]
+  (defn- build-valueType-and-cardinality-renderer [special-attrs-state]
+    (with-react-context
+      (fn [{:keys [ctx props]} value]
+        [fix-arity-1-with-context                           ; rebind with updated context
+         (hyper-control ctx)
+         value
+         (update ctx :user-with! (r/partial user-with! special-attrs-state ctx))
+         props]))))
 
-(defn- build-ident-renderer [special-attrs-state]
-  (let [user-with! (fn [ctx user-with! tx]
-                     (let [entity @(:cell-data ctx)
-                           new-entity (merge-in-tx entity tx ctx)]
-                       (case [(has-required-attrs? entity) (has-required-attrs? new-entity)]
-                         [false false]
-                         (user-with! tx)
+(letfn [(user-with! [special-attrs-state ctx tx]
+          (let [entity @(:cell-data ctx)
+                new-entity (merge-in-tx entity tx ctx)]
+            (case [(has-required-attrs? entity) (has-required-attrs? new-entity)]
+              [false false]
+              ((:user-with! ctx) tx)
 
-                         [false true]
-                         (do
-                           (user-with! (tx/into-tx @special-attrs-state tx))
-                           (reset! special-attrs-state nil))
+              [false true]
+              (do
+                ((:user-with! ctx) (tx/into-tx @special-attrs-state tx))
+                (reset! special-attrs-state nil))
 
-                         [true false]
-                         ; todo this case WILL throw (going from a valid tx to invalid)
-                         (user-with! tx)
+              [true false]
+              ; todo this case WILL throw (going from a valid tx to invalid)
+              ((:user-with! ctx) tx)
 
-                         [true true]
-                         (user-with! tx))))]
-    (fn [value ctx props]
-      [(hyper-control ctx)
-       value
-       (update ctx :user-with! #(r/partial user-with! ctx %))
-       props])))
+              [true true]
+              ((:user-with! ctx) tx))))]
+  (defn- build-ident-renderer [special-attrs-state]
+    (with-react-context
+      (fn [{:keys [ctx props]} value]
+        [fix-arity-1-with-context                           ; rebind with updated context
+         (hyper-control ctx)
+         value
+         (update ctx :user-with! (r/partial user-with! special-attrs-state ctx))
+         props]))))
 
 (declare renderer)
 
@@ -99,4 +105,4 @@
           [:div]
           (for [k attrs]
             (let [ro (read-only? k result)]
-              (field [0 k] ctx (controls k) :read-only ro))))))))
+              (field [0 k] ctx (controls k) {:read-only ro}))))))))
