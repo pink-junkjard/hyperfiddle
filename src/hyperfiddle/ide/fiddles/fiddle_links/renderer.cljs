@@ -1,6 +1,7 @@
 (ns hyperfiddle.ide.fiddles.fiddle-links.renderer
   (:require [cats.monad.either :as either]
             [contrib.reactive :as r]
+            [contrib.reagent :refer [from-react-context fix-arity-1-with-context]]
             [hypercrud.browser.base :as base]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.system-fiddle :as system-fiddle]
@@ -17,9 +18,13 @@
           shadow? @(r/fmap :hypercrud/sys? entity)]
       (or sys? shadow?))))
 
-(defn read-only-cell [value ctx props]
-  ; Need to delay until we have the value ctx to compute this, which means its a value renderer not a field prop
-  [(hyper-control ctx) value ctx (assoc props :read-only (read-only? ctx))])
+(def read-only-cell
+  (from-react-context
+    (fn [{:keys [ctx props]} value]
+      ; Need to delay until we have the value ctx to compute this, which means its a value renderer not a field prop
+      [fix-arity-1-with-context                             ; rebind updated props
+       (hyper-control ctx) value ctx
+       (assoc props :read-only (read-only? ctx))])))
 
 (defn links->result [links]
   (->> @links
