@@ -225,20 +225,21 @@ nil. call site must wrap with a Reagent component"
                     [contrib.ui/code-block props content #()])
 
      "cljs" (fn [content argument props ctx]
-              (read-eval-with-bindings content ctx))
+              (unwrap (read-eval-with-bindings content ctx)))
 
      "reagent" (fn [content argument props ctx]
-                 (read-eval-with-bindings content ctx))
+                 (unwrap (read-eval-with-bindings content ctx)))
 
      "f" (fn [content argument props ctx]
-           (let [f (read-eval-with-bindings content)]
-             [fix-arity-1-with-context f argument ctx props]))
+           (let [f (unwrap (read-eval-with-bindings content))
+                 v (unwrap (memoized-safe-read-edn-string argument))]
+             [fix-arity-1-with-context f v ctx props]))
 
      "browse" (fn [content argument props ctx]
                 (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
                       rel (unwrap (memoized-safe-read-edn-string srel))
                       path (unwrap (memoized-safe-read-edn-string (str "[" spath "]")))
-                      f? (read-eval-with-bindings content)]
+                      f? (unwrap (read-eval-with-bindings content))]
                   (browse rel path ctx f? props)))
 
      "anchor" (fn [content argument props ctx]
@@ -251,16 +252,16 @@ nil. call site must wrap with a Reagent component"
 
      "result" (fn [content argument props ctx]
                 (result (assoc ctx ::unp true)
-                        (read-eval-with-bindings content)
+                        (unwrap (read-eval-with-bindings content))
                         (update props :class css "unp")))
      "value" (fn [content argument props ctx]
                (let [path (unwrap (memoized-safe-read-edn-string (str "[" argument "]")))
-                     ?f (some->> (read-eval-with-bindings content) (r/partial fix-arity-1-with-context))]
+                     ?f (some->> (unwrap (read-eval-with-bindings content)) (r/partial fix-arity-1-with-context))]
                  (value path ctx ?f props)))
 
      "field" (fn [content argument props ctx]
                (let [path (unwrap (memoized-safe-read-edn-string (str "[" argument "]")))
-                     ?f (some->> (read-eval-with-bindings content) (r/partial fix-arity-1-with-context))]
+                     ?f (some->> (unwrap (read-eval-with-bindings content)) (r/partial fix-arity-1-with-context))]
                  (field path ctx ?f (update props :class css "unp"))))
 
      "table" (letfn [(form [content ctx]
