@@ -179,7 +179,7 @@
                 ; should the tx fn not be withd? if the transact! fails, do we want to run it again?
                 (dispatch! (apply batch (concat with-actions on-start)))
                 (let [tx-groups (->> (get-in (get-state) [:stage branch])
-                                     (filter (fn [[uri tx]] (should-transact!? uri get-state)))
+                                     (filter (fn [[uri tx]] (and (should-transact!? uri get-state) (not (empty? tx)))))
                                      (into {}))]
                   (if (and (nil? parent-branch) (not (empty? tx-groups)))
                     ; todo what if transact throws?
