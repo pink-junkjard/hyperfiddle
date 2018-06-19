@@ -1,5 +1,6 @@
 (ns hyperfiddle.ide.fiddles.topnav
   (:require [cats.core :refer [fmap]]
+            [clojure.string :as string]
             [contrib.data :refer [kwargs unwrap]]
             [contrib.datomic-tx :as tx]
             [contrib.reactive :as r]
@@ -14,11 +15,12 @@
             [hypercrud.browser.router :as router]
             [hypercrud.browser.system-fiddle :as system-fiddle]
             [hypercrud.types.Entity :refer [->Entity shadow-entity]]
+            [hypercrud.types.URI :refer [is-uri?]]
             [hyperfiddle.actions :as actions]
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.runtime :as runtime]
             [hyperfiddle.security :as security]
-            [hyperfiddle.ui :as ui]))
+            [hyperfiddle.ui :as ui :refer [markdown]]))
 
 
 ; inline sys-link data when the entity is a system-fiddle
@@ -61,8 +63,9 @@
                               ; mostly copied from browser-ui
                               (let [kwargs (kwargs args)
                                     link (-> @(r/track link/rel->link rel path ctx) (assoc :link/managed? true))
-                                    props (-> (link/build-link-props link ctx true)
-                                              #_(dissoc :style) #_"custom renderers don't want colored links")]
+                                    props (into (link/build-link-props link ctx true)
+                                                (:props kwargs)
+                                                #_(dissoc :style) #_"custom renderers don't want colored links")]
                                 [(:navigate-cmp ctx) props label (:class kwargs)]))]
     [:div {:class class}
      [:div.left-nav
@@ -93,8 +96,23 @@
                                    [:span "src"]))
                         :tooltip "View fiddle source" :target :hypercrud.browser.browser-ui/src :value value :change! change!
                         :disabled (or (not src-mode) no-target-fiddle)})])
-      (let [dirty? (not @(r/fmap empty? (runtime/state (:peer ctx) [:stage nil])))]
-        (fake-managed-anchor :stage [] ctx "stage" :class (when dirty? "stage-dirty")))
+      (let [tooltip [:div {:style {:text-align "left"}}
+                     [markdown
+                      (->> @(runtime/state (:peer ctx) [::runtime/domain :domain/environment])
+                           (filter (fn [[k v]] (and (string? k) (string/starts-with? k "$") (is-uri? v))))
+                           (cons ["Source" @(runtime/state (:peer ctx) [::runtime/domain :domain/fiddle-repo])])
+                           (map (fn [[dbname uri]]
+                                  (let [prefix (if @(runtime/state (:peer ctx) [::runtime/auto-transact uri])
+                                                 "- [x] "
+                                                 "- [ ] ")]
+                                    (str prefix dbname " (" uri ")"))))
+                           (string/join "\n")
+                           (str "##### Auto-transact:\n\n"))
+                      {::ui/unp true}]]
+            dirty? (not @(r/fmap empty? (runtime/state (:peer ctx) [:stage nil])))]
+        (fake-managed-anchor :stage [] ctx "stage"
+                             :props {:tooltip [:info tooltip]}
+                             :class (when dirty? "stage-dirty")))
       (ui/link :new-fiddle [] ctx "new-fiddle" #_#_:tooltip (if-not (writes-allowed? ctx) [:warning "Domain owners only"]))
       [tooltip {:label "Domain administration"} (ui/link :domain [] ctx "domain")]
       (if @(runtime/state (:peer ctx) [::runtime/user-id])
