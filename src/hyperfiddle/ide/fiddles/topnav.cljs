@@ -2,10 +2,9 @@
   (:require [cats.core :refer [fmap]]
             [clojure.string :as string]
             [contrib.data :refer [kwargs unwrap]]
-            [contrib.datomic-tx :as tx]
             [contrib.reactive :as r]
             [contrib.reader :refer [read-edn-string]]
-            [contrib.reagent :refer [fragment]]
+            [contrib.reagent :refer [fragment from-react-context]]
             [contrib.rfc3986 :refer [encode-ednish encode-rfc3986-pchar]]
             [contrib.ui :refer [radio-option]]
             [contrib.ui.tooltip :refer [tooltip]]
@@ -20,7 +19,8 @@
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.runtime :as runtime]
             [hyperfiddle.security :as security]
-            [hyperfiddle.ui :as ui :refer [markdown]]))
+            [hyperfiddle.ui :as ui :refer [markdown]]
+            [hyperfiddle.ui.controls :refer [entity-change!]]))
 
 
 ; inline sys-link data when the entity is a system-fiddle
@@ -123,17 +123,17 @@
         [ui/browse :account [] ctx]
         [:span.nav-link.auth [:a {:href (foundation/stateless-login-url ctx)} "Login"]])]]))
 
-(defn ^:export qe-picker-control [value ctx props]
-  (let [enums [:query :entity :blank]
-        entity (context/entity ctx)
-        change! #((:user-with! ctx) (tx/update-entity-attr @entity @(:hypercrud.browser/fat-attribute ctx) %))
-        options (->> enums
-                     (map #(radio-option
-                             {:label (case % :query "query" :entity "pull" :blank "blank")
-                              :target %
-                              :value value
-                              :change! change!})))]
-    [:span.qe.radio-group (apply fragment :_ options)]))
+(def ^:export qe-picker-control
+  (from-react-context
+    (fn [{:keys [ctx props]} value]
+      (let [options (->> [:query :entity :blank]
+                         (map #(radio-option
+                                 {:label (case % :query "query" :entity "pull" :blank "blank")
+                                  :target %
+                                  :value value
+                                  :change! (r/partial entity-change! ctx)})))]
+        [:span.qe.radio-group props
+         (apply fragment options)]))))
 
 (defn stage-ui-buttons [selected-uri stage ctx]
   (let [writes-allowed? (let [hf-db @(runtime/state (:peer ctx) [::runtime/domain :domain/db-lookup @selected-uri])

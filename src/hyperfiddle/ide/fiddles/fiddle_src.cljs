@@ -66,7 +66,7 @@
      (when-not embed-mode (field [0 :fiddle/links] ctx-real (controls :fiddle/links)))
      (when-not embed-mode (link :hyperfiddle/remove [0] ctx "Remove fiddle"))]))
 
-(defn hacked-links [value ctx props]
+(defn hacked-links [value]
   (let [links (->> value
                    (remove :link/disabled?)
                    (map #(select-keys % [:link/rel :link/path :link/fiddle :link/render-inline? :link/formula]))
