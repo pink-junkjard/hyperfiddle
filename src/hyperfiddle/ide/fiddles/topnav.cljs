@@ -100,12 +100,16 @@
                      [markdown
                       (->> @(runtime/state (:peer ctx) [::runtime/domain :domain/environment])
                            (filter (fn [[k v]] (and (string? k) (string/starts-with? k "$") (is-uri? v))))
-                           (cons ["Source" @(runtime/state (:peer ctx) [::runtime/domain :domain/fiddle-repo])])
-                           (map (fn [[dbname uri]]
+                           (reduce (fn [acc [dbname uri]]
+                                     (if (contains? acc uri)
+                                       (update acc uri conj dbname)
+                                       (assoc acc uri [dbname])))
+                                   {@(runtime/state (:peer ctx) [::runtime/domain :domain/fiddle-repo]) ["Source"]})
+                           (map (fn [[uri dbnames]]
                                   (let [prefix (if @(runtime/state (:peer ctx) [::runtime/auto-transact uri])
                                                  "- [x] "
                                                  "- [ ] ")]
-                                    (str prefix dbname " (" uri ")"))))
+                                    (str prefix (string/join "/" dbnames) " (" uri ")"))))
                            (string/join "\n")
                            (str "##### Auto-transact:\n\n"))
                       {::ui/unp true}]]
