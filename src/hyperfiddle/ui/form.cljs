@@ -65,8 +65,10 @@
         (ui-block-border-wrap
           ctx (css "field" (:class props))
           (let [head-ctx (dissoc ctx :relation)]
+            ^{:key :form-head}
             [fix-arity-1-with-context (or (:label-fn props) (hyper-control head-ctx)) (:hypercrud.browser/field head-ctx) head-ctx props])
           (if (:relation ctx)                               ; naked has no body
+            ^{:key :form-body}
             [fix-arity-1-with-context (or ?f (hyper-control ctx)) @(context/value ctx) ctx props]))))))
 
 (defn table-field "Form fields are label AND value. Table fields are label OR value."
