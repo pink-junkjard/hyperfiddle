@@ -42,20 +42,18 @@
   (let [ctx-real (dissoc ctx-real :user-renderer)           ; this needs to not escape this level; inline links can't ever get it
         ctx (shadow-fiddle ctx-real)
         controls
-        {:fiddle/pull (r/partial control-with-unders (fragment :_ [:span.schema "schema: " (schema-links ctx)] [:div.hf-underdoc [markdown (:fiddle/pull underdocs)]]))
-         :fiddle/query (r/partial control-with-unders (fragment :_ [:span.schema "schema: " (schema-links ctx)] [:div.hf-underdoc [markdown (:fiddle/query underdocs)]]))
+        {:fiddle/pull (r/partial control-with-unders (fragment [:span.schema "schema: " (schema-links ctx)] [:div.hf-underdoc [markdown (:fiddle/pull underdocs)]]))
+         :fiddle/query (r/partial control-with-unders (fragment [:span.schema "schema: " (schema-links ctx)] [:div.hf-underdoc [markdown (:fiddle/query underdocs)]]))
          :fiddle/markdown (r/partial control-with-unders [:div.hf-underdoc [markdown (:fiddle/markdown underdocs)]])
          :fiddle/css (r/partial control-with-unders [:div.hf-underdoc [markdown (:fiddle/css underdocs)]])
          :fiddle/renderer (r/partial control-with-unders [:div.hf-underdoc [markdown (:fiddle/renderer underdocs)]])
-         :fiddle/links (r/partial control-with-unders [:div.hf-underdoc [markdown (:fiddle/links underdocs)]])
-         }]
+         :fiddle/links (r/partial control-with-unders [:div.hf-underdoc [markdown (:fiddle/links underdocs)]])}]
     [:div {:class class}
      [:h3 (str @(r/cursor (:hypercrud.browser/result ctx) [:fiddle/ident])) " source"]
      (field [0 :fiddle/ident] ctx nil)
      (field [0 :fiddle/type] ctx nil)
      (case @(r/cursor (:hypercrud.browser/result ctx) [:fiddle/type])
-       :entity (fragment :_
-                         (field [0 :fiddle/pull-database] ctx nil)
+       :entity (fragment (field [0 :fiddle/pull-database] ctx nil)
                          (field [0 :fiddle/pull] ctx (controls :fiddle/pull)))
        :query (field [0 :fiddle/query] ctx (controls :fiddle/query))
        :blank nil
@@ -82,8 +80,8 @@
         ctx (shadow-fiddle ctx-real)
         {:keys [:fiddle/ident]} @(:hypercrud.browser/result ctx)
         controls
-        {:fiddle/pull (r/partial control-with-unders (fragment :_ [:span.schema "schema: " (schema-links ctx)]))
-         :fiddle/query (r/partial control-with-unders (fragment :_ [:span.schema "schema: " (schema-links ctx)]))
+        {:fiddle/pull (r/partial control-with-unders (fragment [:span.schema "schema: " (schema-links ctx)]))
+         :fiddle/query (r/partial control-with-unders (fragment [:span.schema "schema: " (schema-links ctx)]))
          :fiddle/links hacked-links}]
     (fn [ctx-real class & {:keys [embed-mode]}]
       (into
