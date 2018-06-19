@@ -3,7 +3,8 @@
             [datomic.api :as d]
             [hyperfiddle.integration-fixtures :as fixtures]
             [hyperfiddle.io.transact :as transact]
-            [hyperfiddle.security :as security])
+            [hyperfiddle.security :as security]
+            [hyperfiddle.security.entity-ownership :as entity-ownership])
   (:import (java.util UUID)))
 
 
@@ -46,7 +47,7 @@
      (fixtures/db-fixture fixtures/test-uri #{db-owner} db-owner
                           :schema schema
                           :security ::security/custom
-                          :custom-write-sec (str `security/write-domains))]))
+                          :custom-write-sec (str `entity-ownership/write-domains))]))
 
 (deftest test-merging-tx-statements []
   (let [email "asdf@example.com"]

@@ -15,9 +15,10 @@
             [hypercrud.browser.system-fiddle :as system-fiddle]
             [hypercrud.types.Entity :refer [->Entity shadow-entity]]
             [hyperfiddle.actions :as actions]
-            [hyperfiddle.foundation :as foundation :refer [staging]]
+            [hyperfiddle.foundation :as foundation]
             [hyperfiddle.runtime :as runtime]
-            [hyperfiddle.ui :as ui :refer [markdown]]))
+            [hyperfiddle.security :as security]
+            [hyperfiddle.ui :as ui]))
 
 
 ; inline sys-link data when the entity is a system-fiddle
@@ -50,15 +51,9 @@
 (defn src-mode? [frag]
   (= :src (some-> frag read-edn-string)))
 
-(defn writes-allowed? [ctx]
-  (or (not (get-in ctx [:host-env :active-ide?]))
-      @(r/fmap (r/partial foundation/domain-owner? @(runtime/state (:peer ctx) [::runtime/user-id]))
-               (runtime/state (:peer ctx) [::runtime/domain]))))
-
 (defn renderer [ctx class]
   {:pre [(or (:relations ctx) (:relation ctx))]}
   (let [display-mode @(runtime/state (:peer ctx) [:display-mode])
-        dirty? (not (empty? @(runtime/state (:peer ctx) [:stage])))
         {:keys [hypercrud.browser/result
                 hypercrud.browser/fiddle] :as ctx} (shadow-fiddle ctx)
         ; hack until hyperfiddle.net#156 is complete
@@ -98,12 +93,8 @@
                                    [:span "src"]))
                         :tooltip "View fiddle source" :target :hypercrud.browser.browser-ui/src :value value :change! change!
                         :disabled (or (not src-mode) no-target-fiddle)})])
-
-      (if @(runtime/state (:peer ctx) [::runtime/auto-transact])
-        (fragment :_ [:input {:id ::auto-transact :type "checkbox" :checked true
-                              :on-click (fn [] (runtime/dispatch! (:peer ctx) [:disable-auto-transact]))}]
-                  [:label {:for ::auto-transact} "auto-transact"])
-        (fake-managed-anchor :stage [] ctx "stage" :class (if dirty? "stage-dirty")))
+      (let [dirty? (not @(r/fmap empty? (runtime/state (:peer ctx) [:stage nil])))]
+        (fake-managed-anchor :stage [] ctx "stage" :class (when dirty? "stage-dirty")))
       (ui/link :new-fiddle [] ctx "new-fiddle" #_#_:tooltip (if-not (writes-allowed? ctx) [:warning "Domain owners only"]))
       [tooltip {:label "Domain administration"} (ui/link :domain [] ctx "domain")]
       (if @(runtime/state (:peer ctx) [::runtime/user-id])
@@ -122,33 +113,36 @@
                               :change! change!})))]
     [:span.qe.radio-group (apply fragment :_ options)]))
 
-(defn ^:export stage-ui [ctx]
-  (let [writes-allowed? (writes-allowed? ctx)
-        anonymous? (nil? @(runtime/state (:peer ctx) [::runtime/user-id]))
-        stage @(runtime/state (:peer ctx) [:stage])]
-    [:div.hyperfiddle-topnav-stage
-     (ui/fiddle ctx)                                        ; for docstring
-     (let [disabled? (or (not writes-allowed?) (not (empty? stage)))]
-       [tooltip (cond (and anonymous? (not writes-allowed?)) {:status :warning :label "Please login"}
-                      (not writes-allowed?) {:status :warning :label "Writes restricted"}
-                      (not (empty? stage)) {:status :warning :label "please transact! all changes first"})
-        [:button {:disabled disabled?
-                  :style (if disabled? {:pointer-events "none"})
-                  :on-click (fn [] (runtime/dispatch! (:peer ctx) [:enable-auto-transact]))}
-         "Enable auto-transact"]])
-     (let [disabled? (or (not writes-allowed?) (empty? stage))]
-       [tooltip (cond (and (not writes-allowed?) anonymous?) {:status :warning :label "Please login"}
-                      (not writes-allowed?) {:status :warning :label "Writes restricted"}
-                      (empty? stage) {:status :warning :label "no changes"})
-        [:button {:disabled disabled?
-                  :style (if disabled? {:pointer-events "none"})
-                  :on-click (fn []
-                              ; specifically dont use the SplitRuntime protocol here. the only thing that makes sense is whats in the context from the route
-                              (let [nil-branch-aux {:hyperfiddle.ide/foo "page"}]
-                                (runtime/dispatch! (:peer ctx) (actions/manual-transact! (:peer ctx) (:hypercrud.browser/invert-route ctx) nil-branch-aux))))}
-         "transact!"]])
-     [staging (:peer ctx)]
-     [markdown "Hyperfiddle always generates valid transactions, if it doesn't, please file a bug.
+(defn stage-ui-buttons [selected-uri stage ctx]
+  (let [writes-allowed? (let [hf-db @(runtime/state (:peer ctx) [::runtime/domain :domain/db-lookup @selected-uri])
+                              subject @(runtime/state (:peer ctx) [::runtime/user-id])]
+                          (security/attempt-to-transact? hf-db subject))
+        anonymous? (nil? @(runtime/state (:peer ctx) [::runtime/user-id]))]
+    (fragment
+      :_
+      (let [disabled? (or (not writes-allowed?) (not (empty? @stage)))]
+        [tooltip (cond (and anonymous? (not writes-allowed?)) {:status :warning :label "Please login"}
+                       (not writes-allowed?) {:status :warning :label "Writes restricted"}
+                       (not (empty? @stage)) {:status :warning :label "please transact! all changes first"})
+         [:button {:disabled disabled?
+                   :style (if disabled? {:pointer-events "none"})
+                   :on-click (fn [] (runtime/dispatch! (:peer ctx) [:toggle-auto-transact @selected-uri]))}
+          (str (if @(runtime/state (:peer ctx) [::runtime/auto-transact @selected-uri]) "Disable" "Enable") " auto-transact")]])
+      (let [disabled? (or (not writes-allowed?) (empty? @stage))]
+        [tooltip (cond (and (not writes-allowed?) anonymous?) {:status :warning :label "Please login"}
+                       (not writes-allowed?) {:status :warning :label "Writes restricted"}
+                       (empty? @stage) {:status :warning :label "no changes"})
+         [:button {:disabled disabled?
+                   :style (if disabled? {:pointer-events "none"})
+                   :on-click (fn []
+                               (let [invert-route (:hypercrud.browser/invert-route ctx)
+                                     ; specifically dont use the SplitRuntime protocol here. the only thing that makes sense is whats in the context from the route
+                                     nil-branch-aux {:hyperfiddle.ide/foo "page"}
+                                     action (actions/manual-transact-uri! (:peer ctx) invert-route nil-branch-aux @selected-uri)]
+                                 (runtime/dispatch! (:peer ctx) action)))}
+          "transact!"]]))))
 
-*WARNING:* Datomic schema alterations cannot be used in the same transaction, for now you'll
-need to transact the schema before using, see [#6](https://github.com/hyperfiddle/hyperfiddle/issues/6)."]]))
+(defn ^:export stage-ui [ctx]
+  [:div.hyperfiddle-topnav-stage
+   (ui/fiddle ctx)                                          ; for docstring
+   [foundation/staging ctx stage-ui-buttons]])

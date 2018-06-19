@@ -1,5 +1,7 @@
 (ns hyperfiddle.ide
-  (:require [clojure.string :as str]
+  (:require [cats.core :refer [mlet return]]
+            [cats.labs.promise]
+            [clojure.string :as str]
     #?(:cljs [contrib.css :refer [css]])
             [contrib.data :refer [unwrap]]
             [contrib.reactive :as r]
@@ -21,7 +23,6 @@
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-one!]]
             [hyperfiddle.runtime :as runtime]
-            [promesa.core :as p]
             [taoensso.timbre :as timbre]
 
     ; pull in the entire ide app for reference from user-land
@@ -35,22 +36,26 @@
 
 
 (defn domain [rt domain-eid]
-  (let [domain-basis (if-let [global-basis @(runtime/state rt [::runtime/global-basis])]
-                       (:domain global-basis)
-                       (->> @(runtime/state rt [::runtime/partitions])
-                            (some (fn [[_ partition]]
-                                    (->> (:local-basis partition)
-                                         (filter (fn [[k _]] (= foundation/domain-uri k)))
-                                         seq)))))
-        stage nil
-        request (foundation/domain-request domain-eid rt)]
-    (-> (hydrate-one! rt (into {} domain-basis) stage request)
-        (p/then (fn [domain]
-                  (if (nil? (:db/id domain))
-                    ; terminate when domain not found
-                    (throw (ex-info "Domain not found" {:hyperfiddle.io/http-status-code 404
-                                                        :domain-eid domain-eid}))
-                    (foundation/process-domain domain)))))))
+  (let [domains-basis (->> (if-let [global-basis @(runtime/state rt [::runtime/global-basis])]
+                             (:domain global-basis)
+                             (->> @(runtime/state rt [::runtime/partitions])
+                                  (some (fn [[_ partition]]
+                                          (->> (:local-basis partition)
+                                               (filter (fn [[k _]] (= foundation/domain-uri k)))
+                                               seq)))))
+                           (into {}))
+        stage nil]
+    (mlet [raw-domain (->> (foundation/domain-request domain-eid rt)
+                           (hydrate-one! rt domains-basis stage))
+           :let [domain (if (nil? (:db/id raw-domain))
+                          ; terminate when domain not found
+                          (throw (ex-info "Domain not found" {:hyperfiddle.io/http-status-code 404
+                                                              :domain-eid domain-eid}))
+                          (foundation/process-domain raw-domain))]
+           ; todo env databases should just be modeled as refs and pulled in one req
+           dbs (->> (foundation/databases-request rt nil domain)
+                    (hydrate-one! rt domains-basis stage))]
+      (return (assoc domain :domain/db-lookup (into {} dbs))))))
 
 (defn magic-ide-fiddle? [fiddle-ident domain-ident]
   (and (not= foundation/source-domain-ident domain-ident)

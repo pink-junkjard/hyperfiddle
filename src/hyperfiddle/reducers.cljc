@@ -30,7 +30,8 @@
                      (remove (fn [[branch multi-color-tx]] (empty? multi-color-tx)))
                      (into {})))]
     (-> (case action
-          :transact!-success nil
+          :transact!-success (let [[uris] args]
+                               {nil (apply dissoc (get stage nil) uris)})
 
           :discard-partition (let [[branch] args]
                                (discard stage branch))
@@ -48,7 +49,8 @@
                        (discard branch)))
 
           :reset-stage (first args)
-
+          :reset-stage-uri (let [[branch uri tx] args]
+                             (assoc-in stage [branch uri] tx))
           stage)
         clean)))
 
@@ -160,11 +162,9 @@
 (defn auto-transact-reducer [auto-tx action & args]
   (case action
     :set-auto-transact (first args)
-    :enable-auto-transact true
-    :disable-auto-transact false
-    (if (boolean? auto-tx)
-      auto-tx
-      true)))
+    :toggle-auto-transact (let [[uri] args]
+                            (update auto-tx uri not))
+    (or auto-tx {})))
 
 (defn user-id-reducer [user-id action & args]
   (case action

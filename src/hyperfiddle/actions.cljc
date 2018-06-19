@@ -11,6 +11,7 @@
             [hypercrud.util.branch :as branch]
             [hyperfiddle.io.util :refer [v-not-nil?]]
             [hyperfiddle.runtime :as runtime]
+            [hyperfiddle.security :as security]
             [promesa.core :as p]
             [taoensso.timbre :as timbre]))
 
@@ -137,7 +138,7 @@
                    (dispatch! [:transact!-failure e])
                    (throw e)))
         (p/then (fn [{:keys [tempid->id]}]
-                  (dispatch! (apply batch [:transact!-success] post-tx))
+                  (dispatch! (apply batch [:transact!-success (keys tx-groups)] post-tx))
                   ; todo should just call foundation/bootstrap-data
                   (mlet [_ (refresh-global-basis rt dispatch! get-state)
                          _ (refresh-domain rt dispatch! get-state)
@@ -151,14 +152,16 @@
                     ; currently this new route breaks the back button
                     (set-route rt route' nil keep-popovers? true dispatch! get-state)))))))
 
-(defn should-transact!? [branch get-state]
-  (and (nil? branch) (::runtime/auto-transact (get-state))))
+(defn should-transact!? [uri get-state]
+  (and (get-in (get-state) [::runtime/auto-transact uri])
+       (security/attempt-to-transact? (get-in (get-state) [::runtime/domain :domain/db-lookup uri])
+                                      (get-in (get-state) [::runtime/user-id]))))
 
 (defn with [rt invert-route branch uri tx]
   (fn [dispatch! get-state]
     (let [tx (update-to-tempids get-state branch uri tx)]
-      (if (should-transact!? branch get-state)
-        (transact! rt invert-route {uri tx} dispatch! get-state)
+      (if (and (nil? branch) (should-transact!? uri get-state))
+        (transact! rt invert-route {uri tx} dispatch! get-state :post-tx [[:reset-stage-uri branch uri nil]])
         (hydrate-partition rt branch [[:with branch uri tx]] dispatch! get-state)))))
 
 (defn open-popover [branch popover-id]
@@ -172,14 +175,22 @@
                                          (let [tx (update-to-tempids get-state branch uri tx)]
                                            [:with branch uri tx]))
                                        tx)
-                    parent-branch (branch/decode-parent-branch branch)]
-                (if (should-transact!? parent-branch get-state)
+                    parent-branch (branch/decode-parent-branch branch)
+                    tx-groups (->> (get-in (get-state) [:stage branch])
+                                   (filter (fn [[uri tx]] (should-transact!? uri get-state)))
+                                   (into {}))]
+                (if (and (nil? parent-branch) (not (empty? tx-groups)))
                   (do
                     ; should the tx fn not be withd? if the transact! fails, do we want to run it again?
                     (dispatch! (apply batch (concat with-actions on-start)))
                     ; todo what if transact throws?
-                    (transact! rt invert-route (get-in (get-state) [:stage branch]) dispatch! get-state
-                               :post-tx [(discard-partition branch)]
+                    (transact! rt invert-route tx-groups dispatch! get-state
+                               :post-tx (let [clear-uris (->> (keys tx-groups)
+                                                              (map (fn [uri] [:reset-stage-uri branch uri nil]))
+                                                              vec)]
+                                          (concat clear-uris ; clear the uris that were transacted
+                                                  [[:merge branch] ; merge the untransacted uris up
+                                                   (discard-partition branch)])) ; clean up the partition
                                :route app-route))
                   (let [e (some-> app-route router/invalid-route?)
                         actions (concat
@@ -201,12 +212,19 @@
     (when (not= tx (:stage (get-state)))
       (hydrate-partition rt nil [[:reset-stage tx]] dispatch! get-state))))
 
-(defn manual-transact! [peer invert-route nil-branch-aux]
+(defn reset-stage-uri [rt branch uri tx]
+  (fn [dispatch! get-state]
+    ; check if auto-tx is OFF first?
+    (when (not= tx (get-in (get-state) [:stage branch uri]))
+      (hydrate-partition rt nil [[:reset-stage-uri branch uri tx]] dispatch! get-state))))
+
+(defn manual-transact-uri! [peer invert-route nil-branch-aux uri]
   (fn [dispatch! get-state]
     ; todo do something when child branches exist and are not nil: hyperfiddle/hyperfiddle#99
     ; can only transact one branch
-    (let [tx-groups (get-in (get-state) [:stage nil])]
-      (transact! peer invert-route tx-groups dispatch! get-state))))
+    (let [tx-groups (-> (get-in (get-state) [:stage nil])
+                        (select-keys [uri]))]
+      (transact! peer invert-route tx-groups dispatch! get-state :post-tx [[:reset-stage-uri nil uri]]))))
 
 (defn set-user-id [rt user-id]
   (fn [dispatch! get-state]

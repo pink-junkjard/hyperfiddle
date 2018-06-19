@@ -2,7 +2,8 @@
   (:require [clojure.test :refer [compose-fixtures deftest is use-fixtures testing]]
             [hyperfiddle.integration-fixtures :as fixtures]
             [hyperfiddle.io.transact :as transact]
-            [hyperfiddle.security :as security])
+            [hyperfiddle.security :as security]
+            [hyperfiddle.security.entity-ownership :as entity-ownership])
   (:import (java.util UUID)))
 
 

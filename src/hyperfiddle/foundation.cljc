@@ -1,24 +1,31 @@
 (ns hyperfiddle.foundation
   (:refer-clojure :exclude [read-string])
   (:require [cats.monad.either :as either :refer [branch left right]]
+            [clojure.string :as string]
     #?(:cljs [contrib.css :refer [css]])
             [contrib.base-64-url-safe :as base64-url-safe]
             [contrib.data :refer [update-existing]]
             [contrib.eval :as eval]
             [contrib.reactive :as r]
             [contrib.reader :refer [read-string read-edn-string]]
+    #?(:cljs [contrib.reagent :refer [fragment]])
             [contrib.pprint :refer [pprint-str]]
+    #?(:cljs [contrib.ui :refer [code]])
+    #?(:cljs [contrib.ui.tooltip :refer [tooltip]])
             [hypercrud.browser.routing :as routing]
             [hypercrud.browser.router :as router]
             [hypercrud.client.core :as hc]
             [hypercrud.types.Entity :refer [shadow-entity]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
+            [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hypercrud.types.Err :as Err]
-    #?(:cljs [contrib.ui :refer [code]])
+            [hypercrud.types.URI :refer [is-uri?]]
     #?(:cljs [hypercrud.ui.stale :as stale])
             [hyperfiddle.actions :as actions]
             [hyperfiddle.runtime :as runtime]
-            [promesa.core :as p]))
+    ;#?(:cljs [hyperfiddle.ui :refer [markdown]])
+            [promesa.core :as p]
+    #?(:cljs [re-com.tabs :refer [horizontal-tabs]])))
 
 
 (def domain-uri #uri "datomic:free://datomic:4334/domains")
@@ -60,8 +67,18 @@
                     :domain/router
                     :domain/home-route]))
 
-(defn domain-owner? [user-id domain]
-  (contains? (set (:hyperfiddle/owners domain)) user-id))
+(defn databases-request [rt branch domain]
+  ; todo env databases should just be modeled as refs and pulled in domain-request
+  (->> (:domain/environment domain)
+       (filter (fn [[k v]] (and (string? k) (string/starts-with? k "$") (is-uri? v))))
+       (map second)
+       (cons (:domain/fiddle-repo domain))
+       (vector)
+       (into [(hc/db rt domain-uri branch)])
+       (->QueryRequest
+         '[:find ?uri (pull ?db [{:database/write-security [:db/ident]} :hyperfiddle/owners])
+           :in $ [?uri ...]
+           :where [?db :database/uri ?uri]])))
 
 #?(:cljs
    (defn error-cmp [e]
@@ -108,11 +125,33 @@
                 (f route ctx)))))))
 
 #?(:cljs
-   (defn staging [peer]
-     (let [stage-val @(runtime/state peer [:stage])
-           edn (pprint-str stage-val 70)]
-       ; todo this can throw
-       [code edn #(runtime/dispatch! peer (actions/reset-stage peer (read-edn-string %)))])))
+   (defn ^:export staging [ctx & [child]]
+     (let [source-uri @(runtime/state (:peer ctx) [::runtime/domain :domain/fiddle-repo])
+           selected-uri (r/atom source-uri)
+           tabs-definition (->> @(runtime/state (:peer ctx) [::runtime/domain :domain/environment])
+                                (filter (fn [[k v]] (and (string? k) (string/starts-with? k "$") (is-uri? v))))
+                                (map (fn [[dbname uri]]
+                                       {:id uri :label dbname :uri uri}))
+                                (cons {:id source-uri :label "Source" :uri source-uri})
+                                (vec))
+           change-tab #(reset! selected-uri %)]
+       (fn [ctx & [child]]
+         (let [stage (runtime/state (:peer ctx) [:stage (:branch ctx) @selected-uri])]
+           (fragment
+             :topnav
+             [horizontal-tabs
+              :model selected-uri
+              :tabs tabs-definition
+              :on-change change-tab]
+             [:h4 (str @selected-uri)]
+             (when child [child selected-uri stage ctx])
+             [code
+              (pprint-str @stage 70)
+              #(runtime/dispatch! (:peer ctx) (actions/reset-stage-uri (:peer ctx) (:branch ctx) @selected-uri (read-edn-string %)))]
+             #_[markdown "Hyperfiddle always generates valid transactions, if it doesn't, please file a bug.
+
+*WARNING:* Datomic schema alterations cannot be used in the same transaction, for now you'll
+need to transact the schema before using, see [#6](https://github.com/hyperfiddle/hyperfiddle/issues/6)."]))))))
 
 #?(:cljs
    (defn leaf-view [route ctx f]
@@ -140,8 +179,11 @@
      [:div {:class (apply css @(runtime/state (:peer ctx) [:pressed-keys]))}
       [:style {:dangerouslySetInnerHTML {:__html (:domain/css (:hypercrud.browser/domain ctx))}}]
       (f route ctx)                                         ; nil, seq or reagent component
-      (if @(runtime/state (:peer ctx) [:staging-open])
-        [staging (:peer ctx)])]))
+      (when @(runtime/state (:peer ctx) [:staging-open])
+        (let [stage-val @(runtime/state (:peer ctx) [:stage])
+              edn (pprint-str stage-val 70)]
+          ; todo this can throw
+          [code edn #(runtime/dispatch! (:peer ctx) (actions/reset-stage (:peer ctx) (read-edn-string %)))]))]))
 
 #?(:cljs
    (defn page-or-leaf1 [page-or-leaf route ctx f]

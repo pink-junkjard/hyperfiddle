@@ -47,14 +47,6 @@
         (fn []
           (runtime/dispatch! (:peer root-ctx) (actions/toggle-staging))))
 
-  (aset global "transact"
-        (fn []
-          ; no idea what this means copy pasted from topnav
-          (runtime/dispatch! (:peer root-ctx)
-                             (actions/manual-transact! (:peer root-ctx)
-                                                       (:hypercrud.browser/invert-route root-ctx)
-                                                       {:hyperfiddle.ide/foo "page"}))))
-
   (aset global "root_ctx" root-ctx)
 
   (aset global "dispatch"

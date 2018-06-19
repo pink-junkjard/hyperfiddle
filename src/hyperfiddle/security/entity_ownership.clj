@@ -1,29 +1,11 @@
-(ns hyperfiddle.security
-  (:require [contrib.data :refer [cond-let map-keys]]
-            [datomic.api :as d]
-            [hypercrud.util.identity :refer [tempid?]]
-            [loom.alg :as alg]
-            [loom.graph :as graph]))
+(ns hyperfiddle.security.entity-ownership
+  (:require
+    [datomic.api :as d]
+    [hyperfiddle.security :as security]
+    [hypercrud.util.identity :refer [tempid?]]
+    [loom.alg :as alg]
+    [loom.graph :as graph]))
 
-
-(def root "hyperfiddle.security/root")                      ; todo uuid/real account
-
-(defn tx-validation-failure [& {:as data-map}]
-  (ex-info "user tx failed validation" (into {:hyperfiddle.io/http-status-code 403} data-map)))
-
-(defn write-allow-anonymous [hf-db subject tx]
-  tx)
-
-(defn write-authenticated-users-only [hf-db subject tx]
-  (if (nil? subject)
-    (throw (tx-validation-failure))
-    tx))
-
-(defn write-owner-only [hf-db subject tx]
-  (if (-> (into #{root} (:hyperfiddle/owners hf-db))
-          (contains? subject))
-    tx
-    (throw (tx-validation-failure))))
 
 (defn entid [db ident]
   (if (tempid? ident)
@@ -149,7 +131,7 @@
                                (map (partial ->existing-eids db)))
             :when (not (empty? existing-eids))]
       (when-not (apply (:can-merge? config) existing-eids)
-        (throw (tx-validation-failure))))
+        (throw (security/tx-validation-failure))))
 
     (->> (alg/connected-components identity-graph)
          (mapcat (fn [eids]
@@ -188,14 +170,14 @@
 
 (defn write-domains [hf-db subject tx]
   (if (nil? subject)
-    (throw (tx-validation-failure))
+    (throw (security/tx-validation-failure))
     (let [db (d/db (d/connect (str (:database/uri hf-db))))
           parent-lookup (build-parent-lookup db)
           owners (fn [eid]
                    (let [eid (or (parent-lookup eid) eid)
                          e (d/entity db eid)]
                      (into #{} (:hyperfiddle/owners e))))
-          has-permissions? (if (= root subject)
+          has-permissions? (if (= security/root subject)
                              (constantly true)
                              #(contains? % subject))
           config {:can-merge? (fn [eid & rest]
