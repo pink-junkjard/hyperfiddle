@@ -84,10 +84,8 @@
   (-> (into {} domain) (update-existing :domain/environment read-string) #_"todo this can throw"))
 
 (defn context [ctx source-domain user-domain-insecure]
-  (let [domain @(runtime/state (:peer ctx) [::runtime/domain])
-        _ (assert domain "Bootstrapping failed to fetch the domain")
-        domain (merge (process-domain domain)               ; Secure first, which is backwards, see `domain-request` comment
-                      (into {} user-domain-insecure))]
+  ; Secure first, which is backwards, see `domain-request` comment
+  (let [domain (into @(runtime/state (:peer ctx) [::runtime/domain]) user-domain-insecure)]
     (assoc ctx
       :hypercrud.browser/domain domain
       :hypercrud.browser/invert-route (r/partial routing/invert-route domain)

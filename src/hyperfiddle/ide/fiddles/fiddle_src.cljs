@@ -7,12 +7,12 @@
     [contrib.ui]
     [hypercrud.types.URI :refer [is-uri?]]
     [hyperfiddle.ide.fiddles.topnav :refer [shadow-fiddle]]
-    [hyperfiddle.ui :refer [markdown]]
-    [hyperfiddle.ui :refer [browse field link hyper-control]]))
+    [hyperfiddle.runtime :as runtime]
+    [hyperfiddle.ui :refer [browse field hyper-control link markdown]]))
 
 
 (defn schema-links [ctx]
-  (->> (-> ctx :target-domain :domain/environment)
+  (->> @(runtime/state (:peer ctx) [::runtime/domain :domain/environment])
        (filter (fn [[k v]] (and (str/starts-with? k "$") (is-uri? v))))
        sort
        (map (fn [[$db _]]

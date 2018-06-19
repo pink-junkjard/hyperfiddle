@@ -71,7 +71,7 @@
                                 [(:navigate-cmp ctx) props label (:class kwargs)]))]
     [:div {:class class}
      [:div.left-nav
-      [tooltip {:label "Home"} [:a.hf-auto-nav {:href "/"} (get-in ctx [:target-domain :domain/ident])]]
+      [tooltip {:label "Home"} [:a.hf-auto-nav {:href "/"} @(runtime/state (:peer ctx) [::runtime/domain :domain/ident])]]
       [tooltip {:label "This fiddle"}                       ; also a good place for the route
        [:span.hf-auto-nav (some-> @(r/cursor (:hypercrud.browser/result ctx) [:fiddle/ident]) str)]
        #_[tooltip {:label nil} (fake-managed-anchor :shortcuts [] ctx "shortcuts")]]]

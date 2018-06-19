@@ -50,7 +50,7 @@
                     ; terminate when domain not found
                     (throw (ex-info "Domain not found" {:hyperfiddle.io/http-status-code 404
                                                         :domain-eid domain-eid}))
-                    domain))))))
+                    (foundation/process-domain domain)))))))
 
 (defn magic-ide-fiddle? [fiddle-ident domain-ident]
   (and (not= foundation/source-domain-ident domain-ident)
@@ -66,7 +66,9 @@
 (defn- *-ide-context [ctx]
   (-> ctx
       (assoc :hypercrud.ui/display-mode (r/track identity :hypercrud.browser.browser-ui/user)
-             :target-domain (:hypercrud.browser/domain ctx)) ; todo rename :target-domain to :hyperfiddle.ide/target-domain
+
+             ; deprecated, use @(runtime/state rt [::runtime/domain])
+             :target-domain (:hypercrud.browser/domain ctx))
       (context/source-mode)))
 
 (defn leaf-ide-context [ctx]
@@ -92,8 +94,10 @@
     ; these target values only exists to allow the topnav to render in the bottom/user
     ; IF we MUST to support that, this should probably be done higher up for both ide and user at the same time
     ; and SHOULD ONLY be applied for ide within ide (other user fns don't get access to these values)
-    :target-domain (:hypercrud.browser/domain ctx)          ; todo rename :target-domain to :hyperfiddle.ide/target-domain
     :target-route route                                     ; todo rename :target-route to :hyperfiddle.ide/target-route
+
+    ; deprecated, use @(runtime/state rt [::runtime/domain])
+    :target-domain (:hypercrud.browser/domain ctx)
     ))
 
 (defn leaf-target-context [ctx route]

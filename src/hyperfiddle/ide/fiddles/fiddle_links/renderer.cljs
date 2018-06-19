@@ -7,6 +7,7 @@
             [hypercrud.browser.system-link :refer [system-link?]]
             [hypercrud.ui.error :as ui-error]
             [hyperfiddle.data :refer [form sort-fn]]
+            [hyperfiddle.runtime :as runtime]
             [hyperfiddle.ui :refer [hyper-control field table fiddle]]))
 
 (defn read-only? [ctx]
@@ -32,7 +33,7 @@
 (defn renderer [ctx class]
   (-> (base/data-from-route (:target-route ctx)
                             (assoc ctx
-                              :hypercrud.browser/domain (:target-domain ctx)
+                              :hypercrud.browser/domain @(runtime/state (:peer ctx) [::runtime/domain])
                               :keep-disabled-anchors? true))
       (either/branch
         (fn [e]
