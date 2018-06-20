@@ -150,7 +150,7 @@ User renderers should not be exposed to the reaction."
   [[i a] ctx ?f & [props]]
   (if-not (and (= '* a) (= :hyperfiddle.ui.layout/table (::layout ctx)))
     (let [ctx (context/focus ctx i a)]
-      ^{:key (str i a)}
+      ^{:key (str i a (hash @(r/fmap keys (context/entity ctx))) #_ "clear magic new state")}
       [(form/-field ctx) hyper-control ?f ctx (update props :class css (semantic-css ctx))])))
 
 (defn ^:export table "Semantic table"
