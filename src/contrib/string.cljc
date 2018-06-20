@@ -1,7 +1,6 @@
 (ns contrib.string
   (:require [cats.monad.either :as either]
             [clojure.string]
-            [contrib.pprint]
             [contrib.data :refer [orp]]
             [contrib.reader :refer [read-edn-string]]
             [contrib.try :refer [try-either]]
@@ -39,8 +38,6 @@
     (either/right nil)))
 
 (def memoized-safe-read-edn-string (memoize safe-read-edn-string))
-
-(def ^:export ^:deprecated pprint-str contrib.pprint/pprint-str)
 
 (defn or-str [& args]                                       ; todo macro
   (apply orp str/empty-or-nil? args))
