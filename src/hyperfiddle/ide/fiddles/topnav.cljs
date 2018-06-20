@@ -104,7 +104,9 @@
                                      (if (contains? acc uri)
                                        (update acc uri conj dbname)
                                        (assoc acc uri [dbname])))
-                                   {@(runtime/state (:peer ctx) [::runtime/domain :domain/fiddle-repo]) ["Source"]})
+                                   {@(runtime/state (:peer ctx) [::runtime/domain :domain/fiddle-repo]) ["Source"]
+                                    ; domains-uri shouldn't need to be accessed
+                                    foundation/domain-uri ["Domains"]})
                            (map (fn [[uri dbnames]]
                                   (let [prefix (if @(runtime/state (:peer ctx) [::runtime/auto-transact uri])
                                                  "- [x] "

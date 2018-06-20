@@ -72,7 +72,7 @@
   (->> (:domain/environment domain)
        (filter (fn [[k v]] (and (string? k) (string/starts-with? k "$") (is-uri? v))))
        (map second)
-       (cons (:domain/fiddle-repo domain))
+       (into #{(:domain/fiddle-repo domain) domain-uri})
        (vector)
        (into [(hc/db rt domain-uri branch)])
        (->QueryRequest
@@ -134,7 +134,9 @@
                                           (if (contains? acc uri)
                                             (update acc uri conj dbname)
                                             (assoc acc uri [dbname])))
-                                        {source-uri ["Source"]})
+                                        {source-uri ["Source"]
+                                         ; domains-uri shouldn't need to be accessed
+                                         domain-uri ["Domains"]})
                                 (mapv (fn [[uri labels]] {:id uri :label (string/join "/" labels)})))
            change-tab #(reset! selected-uri %)]
        (fn [ctx & [child]]
