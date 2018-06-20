@@ -20,7 +20,9 @@
 #?(:clj (defmacro mpprint-str [& args] (apply slow-pprint-str args)))
 
 (defn pprint-datoms-str [vv]
-  (->> vv
-       (map #(str " " (pr-str %)))
-       (interpose "\n")
-       (str/format "[%s]")))
+  (-> vv
+      (->> (mapv pr-str))
+      (->> (map str (cons "[" (repeat " "))))
+      (->> (interpose "\n"))
+      (->> (apply str))
+      (str "]")))

@@ -9,7 +9,7 @@
             [contrib.reactive :as r]
             [contrib.reader :refer [read-string read-edn-string]]
     #?(:cljs [contrib.reagent :refer [fragment]])
-            [contrib.pprint :refer [pprint-str]]
+            [contrib.pprint :refer [pprint-str pprint-datoms-str]]
     #?(:cljs [contrib.ui :refer [code]])
     #?(:cljs [contrib.ui.tooltip :refer [tooltip]])
             [hypercrud.browser.routing :as routing]
@@ -148,7 +148,7 @@
               :tabs tabs-definition
               :on-change change-tab]
              [code
-              (pprint-str @stage 70)
+              (pprint-datoms-str @stage)
               #(runtime/dispatch! (:peer ctx) (actions/reset-stage-uri (:peer ctx) (:branch ctx) @selected-uri (read-edn-string %)))]
              (when child [child selected-uri stage ctx])
              #_[markdown "Hyperfiddle always generates valid transactions, if it doesn't, please file a bug.
