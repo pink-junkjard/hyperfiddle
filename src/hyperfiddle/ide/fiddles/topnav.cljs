@@ -119,7 +119,7 @@
         (fake-managed-anchor :stage [] ctx "stage"
                              :props {:tooltip [:info tooltip]}
                              :class (when dirty? "stage-dirty")))
-      (ui/link :new-fiddle [] ctx "new-fiddle" #_#_:tooltip (if-not (writes-allowed? ctx) [:warning "Domain owners only"]))
+      (ui/link :new-fiddle [] ctx "new-fiddle")
       [tooltip {:label "Domain administration"} (ui/link :domain [] ctx "domain")]
       (if @(runtime/state (:peer ctx) [::runtime/user-id])
         [ui/browse :account [] ctx]
