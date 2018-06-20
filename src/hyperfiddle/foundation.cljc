@@ -147,11 +147,10 @@
               :model selected-uri
               :tabs tabs-definition
               :on-change change-tab]
-             [:h4 (str @selected-uri)]
-             (when child [child selected-uri stage ctx])
              [code
               (pprint-str @stage 70)
               #(runtime/dispatch! (:peer ctx) (actions/reset-stage-uri (:peer ctx) (:branch ctx) @selected-uri (read-edn-string %)))]
+             (when child [child selected-uri stage ctx])
              #_[markdown "Hyperfiddle always generates valid transactions, if it doesn't, please file a bug.
 
 *WARNING:* Datomic schema alterations cannot be used in the same transaction, for now you'll
