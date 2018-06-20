@@ -105,11 +105,11 @@
        ; Reverse order so it looks right on mobile, larger views reorder
        (let [as-edn (r/cursor state [:edn-result])]
          [:div.col-sm-6.col-sm-push-6
-          [:div "Result:" [contrib.ui/easy-checkbox as-edn " EDN?" "hf-live"]]
+          [:div "Result:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
           (browse rel [] ctx (if @as-edn (r/partial result-edn [])))])
        (let [as-edn (r/cursor state [:edn-fiddle])
              f (r/partial (if @as-edn result-edn docs-embed) fiddle-attrs)]
          [:div.col-sm-6.col-sm-pull-6
-          [:div "Interactive Hyperfiddle editor:" [contrib.ui/easy-checkbox as-edn " EDN?" "hf-live"]]
+          [:div "Interactive Hyperfiddle editor:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
           (browse rel [] ctx f {:frag ":src" :class "devsrc"})])
        ])))

@@ -54,7 +54,7 @@
 (def ^:export boolean
   (from-react-context
     (fn [{:keys [ctx props]} value]
-      [contrib.ui/checkbox value
+      [contrib.ui/easy-checkbox "" value
        (r/partial entity-change! ctx (not value))
        (update props :read-only #(or % (not @(r/fmap writable-entity? (context/entity ctx)))))])))
 

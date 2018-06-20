@@ -5,7 +5,7 @@
     [contrib.cljs-platform :refer [global!]]
     [contrib.pprint :refer [pprint-str]]
     [contrib.reactive :as r]
-    [contrib.string :refer [safe-read-edn-string]]
+    [contrib.string :refer [safe-read-edn-string blank->nil]]
     [contrib.ui.codemirror :refer [-codemirror]]
     [contrib.ui.tooltip :refer [tooltip]]
     [contrib.ui.remark :as remark]
@@ -13,20 +13,15 @@
     [reagent.core :as reagent]
     [taoensso.timbre :as timbre]))
 
+(defn easy-checkbox [label value change! & [props]]
+  (let [control [:input (merge props {:type "checkbox" :checked value :on-change change!})]]
+    (if (blank->nil label)
+      [:label (merge props {:style {:font-weight "400"}})
+       control " " label]
+      control)))
 
-(defn ^:export checkbox [value change! & [props]]
-  [:input {:type "checkbox"
-           :class (:class props)
-           :checked value
-           :disabled (:read-only props)
-           :on-change change!}])
-
-(defn ^:export easy-checkbox [r label & [?class]]
-  [:label {:style {:font-weight "400"} :class ?class}
-   [:input {:type "checkbox"
-            :class ?class
-            :checked @r :on-change #(swap! r not)}]
-   (str " " label)])
+(defn ^:export easy-checkbox-boolean [label r & [props]]
+  (easy-checkbox label @r #(swap! r not) props))
 
 (defn ^:export code [value ?change! props]
   (let [defaults {:lineNumbers true
@@ -37,6 +32,13 @@
     ; There is nothing to be done about invalid css down here.
     ; You'd have to write CodeMirror implementation-specific css.
     [-codemirror value ?change! props]))
+
+(defn ^:export checkbox-no-label [value change! & [props]]
+  [:input {:type "checkbox"
+           :class (:class props)
+           :checked value
+           :disabled (:read-only props)
+           :on-change change!}])
 
 (defn ^:export code-block [props value ?change!]
   (let [props (rename-keys props {:read-only :readOnly})]
