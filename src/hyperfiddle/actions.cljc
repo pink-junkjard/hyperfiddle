@@ -167,8 +167,9 @@
 (defn open-popover [branch popover-id]
   [:open-popover branch popover-id])
 
-(defn stage-popover [rt invert-route branch rel swap-fn-async & on-start]
+(defn stage-popover [rt invert-route branch link swap-fn-async & on-start]
   (fn [dispatch! get-state]
+    (dispatch! [:txfn (:link/rel link) (:link/path link)])
     (p/then (swap-fn-async (get-in (get-state) [:stage branch] {}))
             (fn [{:keys [tx app-route]}]
               (let [with-actions (mapv (fn [[uri tx]]
@@ -177,7 +178,7 @@
                                        tx)
                     parent-branch (branch/decode-parent-branch branch)]
                 ; should the tx fn not be withd? if the transact! fails, do we want to run it again?
-                (dispatch! (apply batch (concat [[:txfn rel]] with-actions on-start)))
+                (dispatch! (apply batch (concat with-actions on-start)))
                 (let [tx-groups (->> (get-in (get-state) [:stage branch])
                                      (filter (fn [[uri tx]] (and (should-transact!? uri get-state) (not (empty? tx)))))
                                      (into {}))]
