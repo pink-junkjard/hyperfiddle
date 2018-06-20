@@ -148,10 +148,14 @@ User renderers should not be exposed to the reaction."
 
 (defn ^:export field "Works in a form or table context. Draws label and/or value."
   [[i a] ctx ?f & [props]]
-  (if-not (and (= '* a) (= :hyperfiddle.ui.layout/table (::layout ctx)))
-    (let [ctx (context/focus ctx i a)]
-      ^{:key (str i a (hash @(r/fmap keys (context/entity ctx))) #_ "clear magic new state")}
-      [(form/-field ctx) hyper-control ?f ctx (update props :class css (semantic-css ctx))])))
+  (let [ctx (context/focus ctx i a)
+        is-magic-new (= '* a)
+        magic-new-key (if is-magic-new (hash @(r/fmap keys (context/entity ctx))))] ; guard against crashes for nil cell-data
+    (if-not (and (= :hyperfiddle.ui.layout/table (::layout ctx))
+                 is-magic-new)
+      (let [ctx (context/focus ctx i a)]
+        ^{:key (str i a magic-new-key #_"reset magic new state")}
+        [(form/-field ctx) hyper-control ?f ctx (update props :class css (semantic-css ctx))]))))
 
 (defn ^:export table "Semantic table"
   [form sort-fn ctx & [props]]
