@@ -2,7 +2,7 @@
   #?(:cljs (:require-macros [contrib.pprint]))
   (:require
     [clojure.pprint]
-    [cuerdas.core :as str]
+    [contrib.string :refer [blank->nil]]
     [net.cgrand.packed-printer :as packed-printer]))
 
 
@@ -25,4 +25,5 @@
       (->> (map str (cons "[" (repeat " "))))
       (->> (interpose "\n"))
       (->> (apply str))
-      (str "]")))
+      (as-> s (if (blank->nil s)
+                (str s "]")))))
