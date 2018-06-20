@@ -6,7 +6,7 @@
             [contrib.reader :refer [read-edn-string]]
             [contrib.reagent :refer [fragment from-react-context]]
             [contrib.rfc3986 :refer [encode-ednish encode-rfc3986-pchar]]
-            [contrib.ui :refer [radio-option]]
+            [contrib.ui :refer [radio-option easy-checkbox]]
             [contrib.ui.tooltip :refer [tooltip]]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.fiddle :as fiddle]
@@ -137,34 +137,36 @@
         [:span.qe.radio-group props
          (apply fragment options)]))))
 
-(defn stage-ui-buttons [selected-uri stage ctx]
-  (let [writes-allowed? (let [hf-db @(runtime/state (:peer ctx) [::runtime/domain :domain/db-lookup @selected-uri])
-                              subject @(runtime/state (:peer ctx) [::runtime/user-id])]
-                          (security/attempt-to-transact? hf-db subject))
-        anonymous? (nil? @(runtime/state (:peer ctx) [::runtime/user-id]))]
-    (fragment
-      :_
-      (let [disabled? (or (not writes-allowed?) (not (empty? @stage)))]
-        [tooltip (cond (and anonymous? (not writes-allowed?)) {:status :warning :label "Please login"}
-                       (not writes-allowed?) {:status :warning :label "Writes restricted"}
-                       (not (empty? @stage)) {:status :warning :label "please transact! all changes first"})
-         [:button {:disabled disabled?
-                   :style (if disabled? {:pointer-events "none"})
-                   :on-click (fn [] (runtime/dispatch! (:peer ctx) [:toggle-auto-transact @selected-uri]))}
-          (str (if @(runtime/state (:peer ctx) [::runtime/auto-transact @selected-uri]) "Disable" "Enable") " auto-transact")]])
-      (let [disabled? (or (not writes-allowed?) (empty? @stage))]
+(letfn [(toggle-auto-transact! [ctx selected-uri]
+          (runtime/dispatch! (:peer ctx) [:toggle-auto-transact @selected-uri]))]
+  (defn stage-ui-buttons [selected-uri stage ctx]
+    (let [writes-allowed? (let [hf-db @(runtime/state (:peer ctx) [::runtime/domain :domain/db-lookup @selected-uri])
+                                subject @(runtime/state (:peer ctx) [::runtime/user-id])]
+                            (security/attempt-to-transact? hf-db subject))
+          anonymous? (nil? @(runtime/state (:peer ctx) [::runtime/user-id]))]
+      (fragment
         [tooltip (cond (and (not writes-allowed?) anonymous?) {:status :warning :label "Please login"}
                        (not writes-allowed?) {:status :warning :label "Writes restricted"}
                        (empty? @stage) {:status :warning :label "no changes"})
-         [:button {:disabled disabled?
-                   :style (if disabled? {:pointer-events "none"})
-                   :on-click (fn []
-                               (let [invert-route (:hypercrud.browser/invert-route ctx)
-                                     ; specifically dont use the SplitRuntime protocol here. the only thing that makes sense is whats in the context from the route
-                                     nil-branch-aux {:hyperfiddle.ide/foo "page"}
-                                     action (actions/manual-transact-uri! (:peer ctx) invert-route nil-branch-aux @selected-uri)]
-                                 (runtime/dispatch! (:peer ctx) action)))}
-          "transact!"]]))))
+         (let [disabled? (or (not writes-allowed?) (empty? @stage))]
+           [:button {:disabled disabled?
+                     :style (if disabled? {:pointer-events "none"})
+                     :on-click (fn []
+                                 (let [invert-route (:hypercrud.browser/invert-route ctx)
+                                       ; specifically dont use the SplitRuntime protocol here. the only thing that makes sense is whats in the context from the route
+                                       nil-branch-aux {:hyperfiddle.ide/foo "page"}
+                                       action (actions/manual-transact-uri! (:peer ctx) invert-route nil-branch-aux @selected-uri)]
+                                   (runtime/dispatch! (:peer ctx) action)))}
+            "transact!"])]
+        " "
+        [tooltip (cond (and anonymous? (not writes-allowed?)) {:status :warning :label "Please login"}
+                       (not writes-allowed?) {:status :warning :label "Writes restricted"}
+                       (not (empty? @stage)) {:status :warning :label "please transact! all changes first"})
+         (let [is-disabled (or (not writes-allowed?) (not (empty? @stage)))
+               is-auto-transact @(runtime/state (:peer ctx) [::runtime/auto-transact @selected-uri])]
+           [easy-checkbox "auto-transact" is-auto-transact
+            (r/partial toggle-auto-transact! ctx selected-uri)
+            {:disabled is-disabled :style (if is-disabled {:pointer-events "none"})}])]))))
 
 (defn ^:export stage-ui [ctx]
   [:div.hyperfiddle-topnav-stage
