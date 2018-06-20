@@ -7,7 +7,7 @@
 (deftest test-constantly []
   #?(:cljs                                                  ; clj implementation not yet implemented
      (is (= (r/constantly 1) (r/constantly 1))))
-
+  (is (not= (r/constantly 1) nil))
   (is (= 1 ((r/constantly 1) "asdf"))))
 
 (deftest test-fapply []

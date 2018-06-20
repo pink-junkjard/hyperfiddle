@@ -54,7 +54,7 @@
      (-invoke [_ a b c d e f g h i j k l m n o p q r s t] v)
      (-invoke [_ a b c d e f g h i j k l m n o p q r s t rest] v)
      IEquiv
-     (-equiv [_ other] (= v (.-v other)))
+     (-equiv [_ other] (and (instance? Constantly other) (= v (.-v other))))
      IHash
      (-hash [_] (hash v))))
 
