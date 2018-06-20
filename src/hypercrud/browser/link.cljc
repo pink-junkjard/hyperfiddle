@@ -135,7 +135,8 @@
                                   ; return the result to the action, it could be a promise
                                   result))]
                   (runtime/dispatch! (:peer ctx)
-                                     (actions/stage-popover (:peer ctx) (:hypercrud.browser/invert-route ctx) child-branch swap-fn
+                                     (actions/stage-popover (:peer ctx) (:hypercrud.browser/invert-route ctx) child-branch
+                                                            (:link/rel link) swap-fn ; the swap-fn could be determined via the link rel
                                                             (actions/close-popover (:branch ctx) popover-id))))))))
         ; todo something better with these exceptions (could be user error)
         (p/catch (fn [err]

@@ -8,18 +8,21 @@
             value
             reducer-map)))
 
-(defn dispatch! [state-atom root-reducer action-or-func]
+(defn dispatch! [state-atom root-reducer action-or-func & [f!]]
   (if #?(:clj  (fn? action-or-func)
          :cljs (goog/isFunction action-or-func))
-    (action-or-func (partial dispatch! state-atom root-reducer) (fn [] @state-atom))
+    (action-or-func #(dispatch! state-atom root-reducer % f!) (fn [] @state-atom))
 
     (let [[action & args] action-or-func]
       (if (= :batch action)
         (swap! state-atom (fn [state]
                             (reduce (fn [state [action & args]]
+                                      (if f! (apply f! action args))
                                       ; todo what if action = func?
                                       (apply root-reducer state action args))
                                     state
                                     args)))
-        (swap! state-atom #(apply root-reducer % action args)))))
+        (do
+          (if f! (apply f! action args))
+          (swap! state-atom #(apply root-reducer % action args))))))
   nil)
