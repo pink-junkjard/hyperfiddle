@@ -59,20 +59,16 @@
         {:keys [hypercrud.browser/result
                 hypercrud.browser/fiddle] :as ctx} (shadow-fiddle ctx)
         ; hack until hyperfiddle.net#156 is complete
-        fake-managed-anchor (fn [rel path ctx label & args]
-                              ; mostly copied from browser-ui
-                              (let [kwargs (kwargs args)
-                                    link (-> @(r/track link/rel->link rel path ctx) (assoc :link/managed? true))
-                                    props (into (link/build-link-props link ctx true)
-                                                (:props kwargs)
-                                                #_(dissoc :style) #_"custom renderers don't want colored links")]
-                                [(:navigate-cmp ctx) props label (:class kwargs)]))]
+        fake-managed-anchor (fn [rel path ctx label & [props]]
+                              (let [link (-> @(r/track link/rel->link rel path ctx) (assoc :link/managed? true))
+                                    props (merge (link/build-link-props link ctx true) props)]
+                                [(:navigate-cmp ctx) props label (:class props)]))]
     [:div {:class class}
      [:div.left-nav
       [tooltip {:label "Home"} [:a.hf-auto-nav {:href "/"} @(runtime/state (:peer ctx) [::runtime/domain :domain/ident])]]
       [tooltip {:label "This fiddle"}                       ; also a good place for the route
-       [:span.hf-auto-nav (some-> @(r/cursor (:hypercrud.browser/result ctx) [:fiddle/ident]) str)]
-       #_[tooltip {:label nil} (fake-managed-anchor :shortcuts [] ctx "shortcuts")]]]
+       [:span.hf-auto-nav (some-> @(r/cursor (:hypercrud.browser/result ctx) [:fiddle/ident]) str)]]
+      (fake-managed-anchor :fiddle-shortcuts [] ctx "shortcuts" {:tooltip [nil "Fiddles in this domain"]})]
 
      [:div.right-nav {:key "right-nav"}                     ; CAREFUL; this key prevents popover flickering
 
@@ -116,9 +112,7 @@
                            (str "##### Auto-transact:\n\n"))
                       {::ui/unp true}]]
             dirty? (not @(r/fmap empty? (runtime/state (:peer ctx) [:stage nil])))]
-        (fake-managed-anchor :stage [] ctx "stage"
-                             :props {:tooltip [:info tooltip]}
-                             :class (when dirty? "stage-dirty")))
+        (fake-managed-anchor :stage [] ctx "stage" {:tooltip [nil tooltip] :class (when dirty? "stage-dirty")}))
       (ui/link :new-fiddle [] ctx "new-fiddle")
       [tooltip {:label "Domain administration"} (ui/link :domain [] ctx "domain")]
       (if @(runtime/state (:peer ctx) [::runtime/user-id])
