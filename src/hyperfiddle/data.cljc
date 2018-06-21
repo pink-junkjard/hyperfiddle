@@ -26,7 +26,7 @@
                      ))))
        doall))
 
-(defn browse' [rel path ctx]
+(defn ^:export browse [rel path ctx]
   ; context is not set for this call
   (->> (base/data-from-link @(r/track link/rel->link rel path ctx) ctx)
        (fmap :hypercrud.browser/result)

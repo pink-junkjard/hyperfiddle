@@ -286,12 +286,3 @@ nil. call site must wrap with a Reagent component"
   (from-react-context
     (fn [{:keys [ctx props]} value]
       [:img (merge props {:src value})])))
-
-(defn ui-bindings [ctx]                                     ; legacy
-  (assoc ctx
-    :anchor link
-    :browse browse
-    :field field
-    :cell field
-    ::value value
-    :browse' hf/browse'))
