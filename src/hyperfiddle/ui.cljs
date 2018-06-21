@@ -247,6 +247,7 @@ nil. call site must wrap with a Reagent component"
                       f? (unwrap (read-eval-with-bindings content))]
                   (browse rel path ctx f? props)))
 
+     ; legacy
      "anchor" (fn [content argument props ctx]
                 (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
                       rel (unwrap (memoized-safe-read-edn-string srel))
@@ -254,6 +255,14 @@ nil. call site must wrap with a Reagent component"
                       ; https://github.com/medfreeman/remark-generic-extensions/issues/45
                       label (or-str content (name rel))]
                   (link rel path ctx label props)))
+
+     "link" (fn [content argument props ctx]
+              (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
+                    rel (unwrap (memoized-safe-read-edn-string srel))
+                    path (unwrap (memoized-safe-read-edn-string (str "[" spath "]")))
+                    ; https://github.com/medfreeman/remark-generic-extensions/issues/45
+                    label (or-str content (name rel))]
+                (link rel path ctx label props)))
 
      "result" (fn [content argument props ctx]
                 (result (assoc ctx ::unp true)
