@@ -235,7 +235,8 @@ nil. call site must wrap with a Reagent component"
      "f" (fn [content argument props ctx]
            (let [f (unwrap (read-eval-with-bindings content))
                  v (unwrap (memoized-safe-read-edn-string argument))]
-             [fix-arity-1-with-context f v ctx props]))
+             (if f
+               [fix-arity-1-with-context f v ctx props])))
 
      "browse" (fn [content argument props ctx]
                 (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
