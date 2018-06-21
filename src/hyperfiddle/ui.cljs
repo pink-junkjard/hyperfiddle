@@ -260,12 +260,12 @@ nil. call site must wrap with a Reagent component"
                         (update props :class css "unp")))
      "value" (fn [content argument props ctx]
                (let [path (unwrap (memoized-safe-read-edn-string (str "[" argument "]")))
-                     ?f (some->> (unwrap (read-eval-with-bindings content)) (r/partial fix-arity-1-with-context))]
+                     ?f (some->> (unwrap (read-eval-with-bindings content)))]
                  (value path ctx ?f props)))
 
      "field" (fn [content argument props ctx]
                (let [path (unwrap (memoized-safe-read-edn-string (str "[" argument "]")))
-                     ?f (some->> (unwrap (read-eval-with-bindings content)) (r/partial fix-arity-1-with-context))]
+                     ?f (some->> (unwrap (read-eval-with-bindings content)))]
                  (field path ctx ?f (update props :class css "unp"))))
 
      "table" (letfn [(form [content ctx]
