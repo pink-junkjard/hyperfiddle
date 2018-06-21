@@ -4,20 +4,20 @@
     [cats.monad.either :as either]
     [contrib.css :refer [css-slugify css]]
     [contrib.reactive :as r]
+    [contrib.reagent-native-events :refer [button=]]
+    [contrib.rfc3986 :refer [encode-rfc3986-pchar encode-ednish]]
     [contrib.string :refer [blank->nil]]
     [contrib.ui.safe-render :refer [user-portal]]
     [hypercrud.browser.base :as base]
     [hypercrud.browser.context :as context]
+    [hypercrud.browser.router :as router]
     [hypercrud.browser.routing :as routing]
     [hypercrud.types.ThinEntity :refer [->ThinEntity]]
     [hypercrud.ui.error :as ui-error]
-    [hyperfiddle.actions :as actions]
-    [hyperfiddle.foundation :as foundation]
     [hyperfiddle.ide.fiddles.fiddle-src :as fiddle-src]
     [hyperfiddle.ide.fiddles.topnav :as topnav]
     [hyperfiddle.ui :refer [fiddle-xray]]
-    [hyperfiddle.ui.util :as util]
-    [hyperfiddle.runtime :as runtime]))
+    [hyperfiddle.ui.util :as util]))
 
 
 (defn auto-ui-css-class [ctx]
@@ -26,9 +26,18 @@
           (css-slugify (some-> ident namespace))
           (css-slugify ident)])))
 
-(defn page-on-click [rt branch branch-aux route event]
-  (when (and route (.-altKey event))
-    (runtime/dispatch! rt (fn [dispatch! get-state]
+(defn page-on-click "middle-click will open in new tab; alt-middle-click will open srcmode in new tab"
+  [rt branch branch-aux route event]
+  (when (and route (button= :middle event))
+    (let [should-target-src (.-altKey event)
+          route (if should-target-src
+                  (router/assoc-frag route (encode-rfc3986-pchar (encode-ednish (pr-str :src))))
+                  route)]
+      (js/window.open (router/encode route) "_blank"))
+
+    ; Do we even need to drill down into this tab under any circumstances? I suspect not.
+    ; Can always middle click and then close this tab.
+    #_(runtime/dispatch! rt (fn [dispatch! get-state]
                             (when (foundation/navigable? route (get-state))
                               (actions/set-route rt route branch false false dispatch! get-state))))
     (.stopPropagation event)))
