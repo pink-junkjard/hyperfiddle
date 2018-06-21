@@ -12,11 +12,12 @@
           :route                                            ; Route is unrelated to the hyper-control ontology
           :fe-pos :uri :user-with!
           :cell-data
-          :value                                            ; conflicts with browser_ui/:value
+          :value
           :hyperfiddle.ui/layout
 
           :hypercrud.browser/attribute
           :hypercrud.browser/fat-attribute
+          :hypercrud.browser/field
           :hypercrud.browser/fiddle
           :hypercrud.browser/find-element
           :hypercrud.browser/links
@@ -117,8 +118,8 @@
     ;(with-relations)                                    ; already here
     ;(relation (reactive/atom [domain]))                 ; already here
     (cond-> ctx
-            (and i) (set-find-element i)
-            (and i a) (set-attribute a))))
+      (and i) (set-find-element i)
+      (and i a) (set-attribute a))))
 
 (defn legacy-cell-data [ctx]
   {:pre [(:fe-pos ctx)]}
