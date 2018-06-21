@@ -228,6 +228,7 @@ nil. call site must wrap with a Reagent component"
      "CodeEditor" (fn [content argument props ctx]
                     [contrib.ui/code-block props content #()])
 
+     ; legacy, same as :render. Used in litepay and www. Search for "!cljs" and "cljs:"
      "cljs" (fn [content argument props ctx]
               (unwrap (read-eval-with-bindings content ctx)))
 
