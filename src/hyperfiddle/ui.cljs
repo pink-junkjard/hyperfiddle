@@ -225,12 +225,9 @@ nil. call site must wrap with a Reagent component"
                ; No way to get props here from userland
                [contrib.ui/code-block {:read-only true} content #()]))
 
+     ; legacy, use ``` to generate pre
      "CodeEditor" (fn [content argument props ctx]
                     [contrib.ui/code-block props content #()])
-
-     ; legacy, same as :render. Used in litepay and www. Search for "!cljs" and "cljs:"
-     "cljs" (fn [content argument props ctx]
-              (unwrap (read-eval-with-bindings content ctx)))
 
      "render" (fn [content argument props ctx]
                 (unwrap (read-eval-with-bindings content ctx)))
@@ -246,15 +243,6 @@ nil. call site must wrap with a Reagent component"
                       path (unwrap (memoized-safe-read-edn-string (str "[" spath "]")))
                       f? (unwrap (read-eval-with-bindings content))]
                   (browse rel path ctx f? props)))
-
-     ; legacy
-     "anchor" (fn [content argument props ctx]
-                (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
-                      rel (unwrap (memoized-safe-read-edn-string srel))
-                      path (unwrap (memoized-safe-read-edn-string (str "[" spath "]")))
-                      ; https://github.com/medfreeman/remark-generic-extensions/issues/45
-                      label (or-str content (name rel))]
-                  (link rel path ctx label props)))
 
      "link" (fn [content argument props ctx]
               (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
