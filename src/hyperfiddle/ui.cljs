@@ -171,10 +171,9 @@ User renderers should not be exposed to the reaction."
 
 (defn ^:export result "Default result renderer. Invoked as fn, returns seq-hiccup, hiccup or
 nil. call site must wrap with a Reagent component"
-  [ctx & [?f props]]
+  [ctx & [props]]
   ; with-relations probably gets called here. What about the request side?
   (cond
-    ?f [?f ctx]
     (:relations ctx) [table (r/partial hf/form field) hf/sort-fn ctx props]
     (:relation ctx) (fragment (hf/form field ctx props))))
 
@@ -251,9 +250,10 @@ nil. call site must wrap with a Reagent component"
                   (link rel path ctx label props)))
 
      "result" (fn [content argument props ctx]
-                (result (assoc ctx ::unp true)
-                        (unwrap (read-eval-with-bindings content))
-                        (update props :class css "unp")))
+                (let [ctx (assoc ctx ::unp true)]
+                  (if-let [f (unwrap (read-eval-with-bindings content))]
+                    [f ctx]
+                    (result ctx (update props :class css "unp")))))
      "value" (fn [content argument props ctx]
                (let [path (unwrap (memoized-safe-read-edn-string (str "[" argument "]")))
                      ?f (some->> (unwrap (read-eval-with-bindings content)) (r/partial fix-arity-1-with-context))]
