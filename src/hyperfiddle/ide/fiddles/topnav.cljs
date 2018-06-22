@@ -117,7 +117,7 @@
       [tooltip {:label "Domain administration"} (ui/link :domain [] ctx "domain")]
       (if @(runtime/state (:peer ctx) [::runtime/user-id])
         [ui/browse :account [] ctx]
-        [:span.nav-link.auth [:a {:href (foundation/stateless-login-url ctx)} "Login"]])]]))
+        [:a {:href (foundation/stateless-login-url ctx)} "login"])]]))
 
 (def ^:export qe-picker-control
   (from-react-context
