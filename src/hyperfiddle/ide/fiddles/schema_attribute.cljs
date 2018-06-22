@@ -2,7 +2,7 @@
   (:require [clojure.set :as set]
             [contrib.datomic-tx :as tx]
             [contrib.reactive :as r]
-            [contrib.reagent :refer [with-react-context fix-arity-1-with-context]]
+            [contrib.reagent :refer [from-react-context fix-arity-1-with-context]]
             [hypercrud.browser.context :as context]
             [hyperfiddle.ui :refer [field hyper-control]]))
 
@@ -49,16 +49,16 @@
               [true true]
               (user-with! tx))))]
   (defn- build-valueType-and-cardinality-renderer [special-attrs-state]
-    (with-react-context
+    (from-react-context
       (fn [{:keys [ctx props]} value]
         [fix-arity-1-with-context                           ; rebind with updated context
          (hyper-control ctx)
          value
-         (update ctx :user-with! (r/partial user-with! special-attrs-state ctx))
+         (assoc ctx :user-with! (r/partial user-with! special-attrs-state ctx))
          props]))))
 
 (letfn [(user-with! [special-attrs-state ctx tx]
-          (let [entity @(:cell-data ctx)
+          (let [entity @(context/entity ctx)
                 new-entity (merge-in-tx entity tx ctx)]
             (case [(has-required-attrs? entity) (has-required-attrs? new-entity)]
               [false false]
@@ -76,12 +76,12 @@
               [true true]
               ((:user-with! ctx) tx))))]
   (defn- build-ident-renderer [special-attrs-state]
-    (with-react-context
+    (from-react-context
       (fn [{:keys [ctx props]} value]
         [fix-arity-1-with-context                           ; rebind with updated context
          (hyper-control ctx)
          value
-         (update ctx :user-with! (r/partial user-with! special-attrs-state ctx))
+         (assoc ctx :user-with! (r/partial user-with! special-attrs-state ctx))
          props]))))
 
 (declare renderer)
