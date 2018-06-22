@@ -153,7 +153,7 @@
 
 #?(:cljs
    (defn managed-popover-body [link route popover-id child-branch dont-branch? close! cancel! ctx]
-     [:div.hyperfiddle-popover-body
+     [:div.hyperfiddle-popover-body                         ; wrpaper helps with popover max-width, hard to layout without this
       ; NOTE: this ctx logic and structure is the same as the popover branch of browser-request/recurse-request
       (let [ctx (cond-> (context/clean ctx)                 ; hack clean for block level errors
                   (not dont-branch?) (assoc :branch child-branch))]
