@@ -133,7 +133,7 @@
 
 (letfn [(toggle-auto-transact! [ctx selected-uri]
           (runtime/dispatch! (:peer ctx) [:toggle-auto-transact @selected-uri]))]
-  (defn stage-ui-buttons [selected-uri stage ctx]
+  (defn ^:export stage-ui-buttons [selected-uri stage ctx]
     (let [writes-allowed? (let [hf-db @(runtime/state (:peer ctx) [::runtime/domain :domain/db-lookup @selected-uri])
                                 subject @(runtime/state (:peer ctx) [::runtime/user-id])]
                             (security/attempt-to-transact? hf-db subject))
@@ -161,8 +161,3 @@
            [easy-checkbox "auto-transact" is-auto-transact
             (r/partial toggle-auto-transact! ctx selected-uri)
             {:disabled is-disabled :style (if is-disabled {:pointer-events "none"})}])]))))
-
-(defn ^:export stage-ui [ctx]
-  [:div.hyperfiddle-topnav-stage
-   (ui/fiddle ctx)                                          ; for docstring
-   [foundation/staging ctx stage-ui-buttons]])
