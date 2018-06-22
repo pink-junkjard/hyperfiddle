@@ -34,13 +34,6 @@
     ; You'd have to write CodeMirror implementation-specific css.
     [-codemirror value ?change! props]))
 
-(defn ^:export checkbox-no-label [value change! & [props]]
-  [:input {:type "checkbox"
-           :class (:class props)
-           :checked value
-           :disabled (:read-only props)
-           :on-change change!}])
-
 (defn ^:export code-block [props value ?change!]
   (let [props (rename-keys props {:read-only :readOnly})]
     [code value ?change! props]))
