@@ -30,3 +30,22 @@
 
 (defmacro track [c & args]
   (into ['contrib.reactive-debug/track-cmp (str c) c] args))
+
+
+(comment
+
+  ; if you are trying to figure out what args have changed on child
+  ; just change that second to last line to
+  ; [contrib.reactive-debug/track-cmp "child" child @num]
+
+  (defn child [a]
+    [:pre (pr-str a)])
+
+  (defn thing []
+    (let [num (r/atom nil)]
+      (fn []
+        [:div
+         [:h2 "Math.random:"]
+         [child @num]
+         [:button {:on-click #(reset! num (js/Math.random))} "Force render"]])))
+  )
