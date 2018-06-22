@@ -6,7 +6,7 @@
     [contrib.pprint :refer [pprint-str]]
     [contrib.reactive :as r]
     [contrib.string :refer [safe-read-edn-string blank->nil]]
-    [contrib.ui.codemirror :refer [-codemirror]]
+    [contrib.ui.codemirror :refer [-codemirror camel-keys]]
     [contrib.ui.tooltip :refer [tooltip]]
     [contrib.ui.remark :as remark]
     [re-com.core :as re-com]
@@ -28,7 +28,8 @@
                   :matchBrackets true
                   :autoCloseBrackets true
                   :viewportMargin js/Infinity}
-        props (merge defaults props)]
+        ; Reagent as/element tampers with keys, we have to fix them
+        props (merge defaults (camel-keys props))]
     ; There is nothing to be done about invalid css down here.
     ; You'd have to write CodeMirror implementation-specific css.
     [-codemirror value ?change! props]))
