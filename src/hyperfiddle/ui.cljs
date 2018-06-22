@@ -218,12 +218,14 @@ nil. call site must wrap with a Reagent component"
                [:div props [markdown content (assoc ctx ::unp true)]])
 
      "pre" (fn [content argument props ctx]
-             ; Remark generates pre>code; deep inspect and rip out the content
-             ; Don't hook :code because that is used by inline snippets
-             (let [content (-> props :children (goog.object/getValueByKeys 0 "props" "children" 0)) ; get(props, kw('children'))[0].props.children[0]
-                   content (str/rtrim content "\n") #_"Remark yields an unavoidable newline that we don't want"]
-               ; No way to get props here from userland
-               [contrib.ui/code-block {:read-only true} content #()]))
+             ; detect ``` legacy syntax, no props or argument
+             (if-let [children (:children props)]
+               ; Remark generates pre>code; deep inspect and rip out the content
+               ; Don't hook :code because that is used by inline snippets
+               (let [content (goog.object/getValueByKeys children 0 "props" "children" 0)
+                     content (str/rtrim content "\n") #_"Remark yields an unavoidable newline that we don't want"]
+                 [contrib.ui/code-block {:read-only true} content #()])
+               [contrib.ui/code-block props content #()]))
 
      ; legacy, use ``` to generate pre
      "CodeEditor" (fn [content argument props ctx]
