@@ -224,12 +224,12 @@ nil. call site must wrap with a Reagent component"
                ; Don't hook :code because that is used by inline snippets
                (let [content (goog.object/getValueByKeys children 0 "props" "children" 0)
                      content (str/rtrim content "\n") #_"Remark yields an unavoidable newline that we don't want"]
-                 [contrib.ui/code-block {:read-only true} content #()])
-               [contrib.ui/code-block props content #()]))
+                 [contrib.ui/code content #() {:read-only true}])
+               [contrib.ui/code content #() props]))
 
      ; legacy, use ``` to generate pre
      "CodeEditor" (fn [content argument props ctx]
-                    [contrib.ui/code-block props content #()])
+                    [contrib.ui/code content #() props])
 
      "render" (fn [content argument props ctx]
                 (unwrap (read-eval-with-bindings content ctx)))

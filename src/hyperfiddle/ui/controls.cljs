@@ -6,7 +6,7 @@
     [contrib.reactive :as r]
     [contrib.reagent :refer [from-react-context]]
     [contrib.string :refer [empty->nil]]
-    [contrib.ui :refer [code-block code-inline-block edn-block edn-inline-block]]
+    [contrib.ui]                                            ; avoid collisions
     [contrib.ui.input :as input]
     [contrib.ui.recom-date :refer [recom-date]]
 
@@ -95,27 +95,20 @@
   (from-react-context
     (fn [{:keys [ctx props]} value]
       (let [control (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
-                      :hyperfiddle.ui.layout/block code-block
-                      :hyperfiddle.ui.layout/table code-inline-block)]
-        ; code has backwards args - props first
-        [control
-         (update props :read-only #(or % (not @(r/fmap writable-entity? (context/entity ctx)))))
-         value
-         (r/partial entity-change! ctx)]))))
+                      :hyperfiddle.ui.layout/block contrib.ui/code
+                      :hyperfiddle.ui.layout/table contrib.ui/code-inline-block)]
+        [control value (r/partial entity-change! ctx)
+         (update props :read-only #(or % (not @(r/fmap writable-entity? (context/entity ctx)))))]))))
 
-(def ^:export markdown-editor
+(def ^:export markdown-editor                               ; This is legacy; :mode=markdown should be bound in userland
   (from-react-context
     (fn [{:keys [ctx props]} value]
       (let [widget (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
-                     :hyperfiddle.ui.layout/block code-block
-                     :hyperfiddle.ui.layout/table code-inline-block)]
-        ;code has backwards args - props first
-        [widget
-         (-> props
-             (update :read-only #(or % (not @(r/fmap writable-entity? (context/entity ctx)))))
-             (assoc :mode "markdown" :lineWrapping true))
-         value
-         (r/partial entity-change! ctx)]))))
+                     :hyperfiddle.ui.layout/block contrib.ui/code
+                     :hyperfiddle.ui.layout/table contrib.ui/code-inline-block)]
+        [widget value (r/partial entity-change! ctx)
+         (-> (update props :read-only #(or % (not @(r/fmap writable-entity? (context/entity ctx)))))
+             (assoc :mode "markdown" :lineWrapping true))]))))
 
 (def ^:export edn-many
   (letfn [(change! [ctx value user-val]
@@ -130,8 +123,8 @@
         (let [valueType @(r/cursor (:hypercrud.browser/fat-attribute ctx) [:db/valueType :db/ident])
               value (set (if (= valueType :db.type/ref) (map :db/id value) value))
               widget (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
-                       :hyperfiddle.ui.layout/block edn-block
-                       :hyperfiddle.ui.layout/table edn-inline-block)]
+                       :hyperfiddle.ui.layout/block contrib.ui/edn
+                       :hyperfiddle.ui.layout/table contrib.ui/edn-inline-block)]
           [widget value
            (r/partial change! ctx value)
            (update props :read-only #(or % (not @(r/fmap writable-entity? (context/entity ctx)))))])))))
@@ -140,8 +133,8 @@
   (from-react-context
     (fn [{:keys [ctx props]} value]
       (let [widget (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
-                     :hyperfiddle.ui.layout/table edn-inline-block
-                     :hyperfiddle.ui.layout/block edn-block)]
+                     :hyperfiddle.ui.layout/table contrib.ui/edn-inline-block
+                     :hyperfiddle.ui.layout/block contrib.ui/edn)]
         [widget value
          (r/partial entity-change! ctx)
          (update props :read-only #(or % (not @(r/fmap writable-entity? (context/entity ctx)))))]))))

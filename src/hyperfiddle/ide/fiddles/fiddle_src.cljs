@@ -94,8 +94,7 @@
               (as-> $ (if (seq attrs) (select-keys $ attrs) $))
               hyperfiddle.ui.hacks/pull-soup->tree
               (contrib.pprint/pprint-str 40))]
-    [contrib.ui/code-block {:read-only true} s]))
-
+    [contrib.ui/code s #() {:read-only true}]))
 ; This is in source control because all hyperblogs want it.
 ; But, they also want to tweak it surely. Can we store this with the fiddle ontology?
 (defn hyperfiddle-live [rel ctx & fiddle-attrs]
