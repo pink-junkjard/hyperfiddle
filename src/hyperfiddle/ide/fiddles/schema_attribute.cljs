@@ -62,7 +62,7 @@
          (assoc ctx :user-with! (r/partial user-with! special-attrs-state ctx))
          props]))))
 
-(letfn [(user-with! [special-attrs-state ctx tx]
+(letfn [(user-with!' [special-attrs-state ctx tx]
           (let [entity @(context/entity ctx)
                 new-entity (merge-in-tx entity tx ctx)]
             (case [(completed? entity) (completed? new-entity)]
@@ -86,7 +86,7 @@
         [fix-arity-1-with-context                           ; rebind with updated context
          (hyper-control ctx)
          value
-         (assoc ctx :user-with! (r/partial user-with! special-attrs-state ctx))
+         (assoc ctx :user-with! (r/partial user-with!' special-attrs-state ctx))
          props]))))
 
 (declare renderer)
