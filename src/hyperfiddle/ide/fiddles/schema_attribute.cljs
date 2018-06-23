@@ -7,13 +7,18 @@
             [hyperfiddle.ui :refer [field hyper-control]]))
 
 
-(def special-case-attrs #{:db/ident :db/cardinality :db/valueType})
+(def special-attrs #{:db/ident :db/cardinality :db/valueType})
 
-(defn- has-required-attrs? [entity] (set/subset? special-case-attrs (set (keys entity))))
+(defn- completed? [entity] (set/subset? special-attrs (set (keys entity))))
 
-(defn- read-only? [attr record]
-  (not (or (has-required-attrs? record)
-           (#{:db/ident :db/doc :db/valueType :db/cardinality} attr))))
+
+; The rule is you can't stage anything until it's a valid Datomic attribute.
+; So only the special attrs are editable at first.
+; Once that is completed, the rest are editable.
+(defn- read-only? [k record]
+  (cond
+    (special-attrs k) false
+    :else (not (completed? record))))
 
 (defn- merge-in-tx [entity tx ctx]
   (reduce (fn [entity [op e a v]]
@@ -33,7 +38,7 @@
           (let [user-with! (:user-with! ctx)
                 entity @(context/entity ctx)
                 new-entity (merge-in-tx entity tx ctx)]
-            (case [(has-required-attrs? entity) (has-required-attrs? new-entity)]
+            (case [(completed? entity) (completed? new-entity)]
               [false false]
               (swap! special-attrs-state tx/into-tx tx)
 
@@ -60,7 +65,7 @@
 (letfn [(user-with! [special-attrs-state ctx tx]
           (let [entity @(context/entity ctx)
                 new-entity (merge-in-tx entity tx ctx)]
-            (case [(has-required-attrs? entity) (has-required-attrs? new-entity)]
+            (case [(completed? entity) (completed? new-entity)]
               [false false]
               ((:user-with! ctx) tx)
 
