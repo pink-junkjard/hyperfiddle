@@ -5,7 +5,9 @@
     [contrib.cljs-platform :refer [global!]]
     [contrib.pprint :refer [pprint-str]]
     [contrib.reactive :as r]
+    [contrib.reactive-debug :refer [track-cmp]]
     [contrib.string :refer [safe-read-edn-string blank->nil]]
+    [contrib.ui.input :refer [adapt-props]]
     [contrib.ui.codemirror :refer [-codemirror camel-keys]]
     [contrib.ui.tooltip :refer [tooltip]]
     [contrib.ui.remark :as remark]
@@ -14,7 +16,7 @@
     [taoensso.timbre :as timbre]))
 
 (defn easy-checkbox [label value change! & [props]]
-  (let [control [:input (merge props {:type "checkbox" :checked value :on-change change!})]]
+  (let [control [:input (adapt-props (merge props {:type "checkbox" :checked value :on-change change!}))]]
     (if (blank->nil label)
       [:label (merge props {:style {:font-weight "400"}})
        control " " label]
