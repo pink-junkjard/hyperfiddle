@@ -208,7 +208,8 @@ nil. call site must wrap with a Reagent component"
              [:div.p (dissoc props :children) (:children props)]))
 
      "span" (fn [content argument props ctx]
-              [:span (remark/adapt-props props) content])
+              [:span (remark/adapt-props props)
+               [markdown content (assoc ctx ::unp true)]])
 
      ; Is this comment true?::
      ;   Div is not needed, use it with block syntax and it hits React.createElement and works
