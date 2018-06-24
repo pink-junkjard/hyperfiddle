@@ -1,6 +1,7 @@
 (ns hyperfiddle.ide.fiddles.fiddle-src
   (:require
     [cuerdas.core :as str]
+    [clojure.pprint]
     [contrib.pprint]
     [contrib.reactive :as r]
     [contrib.reagent :refer [fragment fix-arity-1-with-context from-react-context]]
@@ -68,12 +69,12 @@
   (let [links (->> value
                    (remove :link/disabled?)
                    (map #(select-keys % [:link/rel :link/path :link/fiddle :link/render-inline? :link/formula]))
-                   (map #(update % :link/fiddle :fiddle/ident))
-                   (map pr-str)
-                   (interpose "\n"))]
+                   (map #(update % :link/fiddle :fiddle/ident)))]
     [:div
-     [:pre (if (seq links) links "No links or only auto links")]
-     [:div.hf-underdoc [markdown "Due to an issue in the live embed, the links are shown as EDN until we fix it."]]]))
+     [:pre (if (seq links)
+             (with-out-str (clojure.pprint/print-table links))
+             "No links or only auto links")]
+     [:div.hf-underdoc [markdown "Links are not editable for now due to an issue"]]]))
 
 (defn docs-embed [attrs ctx-real class & {:keys [embed-mode]}]
   (let [ctx-real (dissoc ctx-real :user-renderer)           ; this needs to not escape this level; inline links can't ever get it
