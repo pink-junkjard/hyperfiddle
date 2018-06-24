@@ -86,7 +86,8 @@
          :fiddle/links hacked-links}]
     (fn [ctx-real class & {:keys [embed-mode]}]
       (into
-        [:div {:class class}]
+        [:div {:class class}
+         #_[:h5 (str @(r/cursor (:hypercrud.browser/result ctx) [:fiddle/ident])) " source"]]
         (for [k attrs]
           (field [0 k] ctx (controls k)))))))
 
