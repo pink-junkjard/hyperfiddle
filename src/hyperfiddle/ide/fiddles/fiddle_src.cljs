@@ -100,14 +100,14 @@
 (defn hyperfiddle-live [rel ctx & fiddle-attrs]
   (let [state (r/atom {:edn-fiddle false :edn-result false})]
     (fn [rel ctx & fiddle-attrs]
-      [:div.row.hf-live.unp
+      [:div.row.hf-live.unp.no-gutters
        (let [as-edn (r/cursor state [:edn-result])]
-         [:div.col-sm.order-sm-2.order-xs-1
+         [:div.result.col-sm.order-sm-2.order-xs-1
           [:div "Result:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
           (browse rel [] ctx (if @as-edn (r/partial result-edn [])))])
        (let [as-edn (r/cursor state [:edn-fiddle])
              f (r/partial (if @as-edn result-edn docs-embed) fiddle-attrs)]
-         [:div.col-sm.order-sm-1.order-xs-2
+         [:div.src.col-sm.order-sm-1.order-xs-2
           [:div "Interactive Hyperfiddle editor:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
           (browse rel [] ctx f {:frag ":src" :class "devsrc"})])
        ])))
