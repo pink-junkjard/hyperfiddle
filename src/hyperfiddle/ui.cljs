@@ -197,6 +197,10 @@ nil. call site must wrap with a Reagent component"
 ;[user-portal hypercrud.ui.error/error-block]
 (def ^:export markdown
   (remark/remark!
+
+    ; Content is text, or more markdown, or code
+    ; Argument is semantic: a url, or a hyperfiddle ident (or a second optional content? Caption, row-renderer)
+
     {"li" (fn [content argument props ctx]
             [:li.p (dissoc props :children) (:children props)])
 
@@ -216,7 +220,14 @@ nil. call site must wrap with a Reagent component"
      ;   see https://github.com/medfreeman/remark-generic-extensions/issues/30
 
      "block" (fn [content argument props ctx]
+               ; Should presence of argument trigger a figure and caption?
                [:div props [markdown content (assoc ctx ::unp true)]])
+
+     ; This is a custom markdown extension example.
+     "figure" (fn [content argument props ctx]
+                [:figure.figure props
+                 [markdown content ctx]
+                 [:figcaption.figure-caption [markdown argument (assoc ctx ::unp true)]]])
 
      "pre" (fn [content argument props ctx]
              ; detect ``` legacy syntax, no props or argument
@@ -280,11 +291,10 @@ nil. call site must wrap with a Reagent component"
                (->> (:relations ctx)
                     (r/unsequence hf/relation-keyfn)
                     (map (fn [[relation k]]
-                           ; set ::unp to suppress
                            ^{:key k} [:li [markdown content (context/relation ctx relation)]]))
                     (doall))])}))
 
 (def ^:export img
   (from-react-context
-    (fn [{:keys [ctx props]} value]
+    (fn [{:keys [props]} value]
       [:img (merge props {:src value})])))
