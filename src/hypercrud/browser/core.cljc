@@ -68,6 +68,8 @@
             ; all errors will always route through as (either/right nil)
             (let [route' (routing/build-route' link (context/legacy-ctx ctx))]
               [stale/loading (stale/can-be-loading? ctx) (cats/fmap #(router/assoc-frag % (:frag props)) route')
-               (fn [e] [error-comp e])
+               (fn [e]
+                 [error-comp e])
                ; legacy-ctx is set in build-link-props, and this is "downtree" from that
-               (fn [route] [ui-from-route route ctx (css ?class (css-slugify (:link/rel link)))])])))])))
+               (fn [route]
+                 [ui-from-route route ctx (css ?class (css-slugify (:link/rel link)))])])))])))
