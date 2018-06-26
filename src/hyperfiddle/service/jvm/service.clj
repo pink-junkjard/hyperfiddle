@@ -141,11 +141,11 @@
                                            ~(with-user env)
                                            http/promise->chan]
           ["/global-basis" {:get [:global-basis http-global-basis]}]
-          ["/local-basis/:global-basis/:encoded-route/:branch/:branch-aux" {:get [:local-basis-get http-local-basis]}]
-          ["/local-basis/:global-basis/:encoded-route/:branch/:branch-aux" {:post [:local-basis-post http-local-basis]}]
+          ["/local-basis/:global-basis/:branch/:branch-aux/:encoded-route" {:get [:local-basis-get http-local-basis]}]
+          ["/local-basis/:global-basis/:branch/:branch-aux/:encoded-route" {:post [:local-basis-post http-local-basis]}]
           ["/hydrate-requests/:local-basis" {:post [:hydrate-requests http-hydrate-requests]}]
-          ["/hydrate-route/:local-basis/:encoded-route/:branch/:branch-aux" {:get [:hydrate-route-get http-hydrate-route]}]
-          ["/hydrate-route/:local-basis/:encoded-route/:branch/:branch-aux" {:post [:hydrate-route-post http-hydrate-route]}]
+          ["/hydrate-route/:local-basis/:branch/:branch-aux/:encoded-route" {:get [:hydrate-route-get http-hydrate-route]}]
+          ["/hydrate-route/:local-basis/:branch/:branch-aux/:encoded-route" {:post [:hydrate-route-post http-hydrate-route]}]
           ["/transact" {:post [:transact! http-transact!]}]
           ["/sync" {:post [:latest http-sync]}]
           ]]])))
