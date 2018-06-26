@@ -1,17 +1,18 @@
 (ns hyperfiddle.io.hydrate-route
-  (:require [clojure.set :as set]
-            [cuerdas.core :as str]
-            [contrib.base-64-url-safe :as base-64-url-safe]
-            [contrib.data :refer [map-keys]]
-            [contrib.performance :as perf]
-            [hypercrud.client.peer :as peer]
-            [hypercrud.types.EntityRequest :refer [#?(:cljs EntityRequest)]]
-            [hypercrud.types.QueryRequest :refer [#?(:cljs QueryRequest)]]
-            [hyperfiddle.io.http.core :refer [http-request!]]
-            [hyperfiddle.reducers :as reducers]             ; this import is immoral
-            [hyperfiddle.runtime :as runtime]
-            [promesa.core :as p]
-            [taoensso.timbre :as timbre])
+  (:require
+    [clojure.set :as set]
+    [cuerdas.core :as str]
+    [contrib.base-64-url-safe :as base-64-url-safe]
+    [contrib.data :refer [map-keys]]
+    [contrib.performance :as perf]
+    [hypercrud.client.peer :as peer]
+    [hypercrud.types.EntityRequest :refer [#?(:cljs EntityRequest)]]
+    [hypercrud.types.QueryRequest :refer [#?(:cljs QueryRequest)]]
+    [hyperfiddle.io.http.core :refer [http-request!]]
+    [hyperfiddle.reducers :as reducers]                     ; this import is immoral
+    [hyperfiddle.runtime :as runtime]
+    [promesa.core :as p]
+    [taoensso.timbre :as timbre])
   #?(:clj
      (:import
        (hypercrud.types.EntityRequest EntityRequest)
