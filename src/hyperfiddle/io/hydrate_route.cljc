@@ -81,10 +81,10 @@
 
 (defn hydrate-route-rpc! [service-uri local-basis route branch branch-aux stage & [jwt]]
   ; matrix params instead of path params
-  (-> (merge {:url (str/format "%(service-uri)shydrate-route/$local-basis/$encoded-route/$branch/$branch-aux"
+  (-> (merge {:url (str/format "%(service-uri)shydrate-route/$local-basis/$branch/$branch-aux/$encoded-route"
                                {:service-uri service-uri
                                 :local-basis (base-64-url-safe/encode (pr-str local-basis))
-                                :encoded-route (base-64-url-safe/encode (pr-str route))
+                                :encoded-route (base-64-url-safe/encode (pr-str route)) ; flag
                                 :branch (base-64-url-safe/encode (pr-str branch))
                                 :branch-aux (base-64-url-safe/encode (pr-str branch-aux))})
               :accept :application/transit+json :as :auto}

@@ -6,7 +6,7 @@
 
 
 (defn local-basis-rpc! [service-uri global-basis route branch branch-aux & [jwt]]
-  (-> {:url (str/format "%(service-uri)slocal-basis/$global-basis/$encoded-route/$branch/$branch-aux"
+  (-> {:url (str/format "%(service-uri)slocal-basis/$global-basis/$branch/$branch-aux/$encoded-route"
                         {:service-uri service-uri
                          :global-basis (base-64-url-safe/encode (pr-str global-basis))
                          :encoded-route (base-64-url-safe/encode (pr-str route))
