@@ -1,6 +1,5 @@
 (ns hyperfiddle.service.http
-  (:require [contrib.base-64-url-safe :as base-64-url-safe]
-            [contrib.reactive :as r]
+  (:require [contrib.reactive :as r]
             [contrib.reader :refer [read-edn-string]]
             [hypercrud.browser.router :as router]
             [hypercrud.types.Err :refer [->Err]]
@@ -47,13 +46,18 @@
                    (timbre/error e)
                    (e->platform-response e))))))
 
+(defn normalize-router-params [params]
+  ; bide yields :0, pedestal yields :encoded-route
+  (clojure.set/rename-keys params {:0 :encoded-route}))
+
 (defn local-basis-handler [->Runtime & {:keys [host-env path-params user-id jwt]}]
   (try
-    (let [global-basis (-> (:global-basis path-params) base-64-url-safe/decode read-edn-string) ; todo this can throw
-          route (-> (:encoded-route path-params) base-64-url-safe/decode read-edn-string)
+    (let [path-params (normalize-router-params path-params)
+          global-basis (router/-decode-url-ednish (:global-basis path-params)) ; todo this can throw
+          route (router/decode (str "/" (:encoded-route path-params)))
           _ (when-let [e (router/invalid-route? route)] (throw e))
-          branch (some-> (:branch path-params) base-64-url-safe/decode read-edn-string)
-          branch-aux (some-> (:branch-aux path-params) base-64-url-safe/decode read-edn-string)
+          branch (some-> (:branch path-params) router/-decode-url-ednish)
+          branch-aux (some-> (:branch-aux path-params) router/-decode-url-ednish)
           initial-state {::runtime/user-id user-id
                          ::runtime/global-basis global-basis
                          ::runtime/partitions {branch {:route route
@@ -75,11 +79,12 @@
 
 (defn hydrate-route-handler [->Runtime & {:keys [host-env path-params request-body user-id jwt]}]
   (try
-    (let [local-basis (-> (:local-basis path-params) base-64-url-safe/decode read-edn-string) ; todo this can throw
-          route (-> (:encoded-route path-params) base-64-url-safe/decode read-edn-string)
+    (let [path-params (normalize-router-params path-params)
+          local-basis (-> (:local-basis path-params) router/-decode-url-ednish) ; todo this can throw
+          route (-> (str "/" (:encoded-route path-params)) router/decode)
           _ (when-let [e (router/invalid-route? route)] (throw e))
-          branch (some-> (:branch path-params) base-64-url-safe/decode read-edn-string)
-          branch-aux (some-> (:branch-aux path-params) base-64-url-safe/decode read-edn-string)
+          branch (some-> (:branch path-params) router/-decode-url-ednish)
+          branch-aux (some-> (:branch-aux path-params) router/-decode-url-ednish)
           initial-state (-> {::runtime/user-id user-id
                              :stage request-body
                              ; should this be constructed with reducers?

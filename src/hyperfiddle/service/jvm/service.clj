@@ -1,7 +1,6 @@
 (ns hyperfiddle.service.jvm.service
   (:refer-clojure :exclude [sync])
-  (:require [contrib.base-64-url-safe :as base-64-url-safe]
-            [contrib.reader :refer [read-edn-string]]
+  (:require [contrib.reader :refer [read-edn-string]]
             [hypercrud.transit :as hc-t]
             [hypercrud.types.Err :refer [->Err]]
             [hyperfiddle.foundation :as foundation]
@@ -23,7 +22,8 @@
             [io.pedestal.interceptor.helpers :as interceptor]
             [promesa.core :as p]
             [ring.util.response :as ring-resp]
-            [taoensso.timbre :as timbre])
+            [taoensso.timbre :as timbre]
+            [hypercrud.browser.router :as router])
   (:import (com.auth0.jwt.exceptions JWTVerificationException)
            (java.util UUID)))
 
@@ -53,7 +53,7 @@
 (defn http-hydrate-requests [req]
   (try
     (let [{:keys [body-params path-params]} req
-          local-basis (some-> (:local-basis path-params) base-64-url-safe/decode read-edn-string)
+          local-basis (some-> (:local-basis path-params) router/-decode-url-ednish)
           {staged-branches :staged-branches request :request} body-params
           r (hydrate-requests local-basis request staged-branches (:user-id req))]
       (ring-resp/response r))
@@ -141,11 +141,11 @@
                                            ~(with-user env)
                                            http/promise->chan]
           ["/global-basis" {:get [:global-basis http-global-basis]}]
-          ["/local-basis/:global-basis/:branch/:branch-aux/:encoded-route" {:get [:local-basis-get http-local-basis]}]
-          ["/local-basis/:global-basis/:branch/:branch-aux/:encoded-route" {:post [:local-basis-post http-local-basis]}]
+          ["/local-basis/:global-basis/:branch/:branch-aux/*encoded-route" {:get [:local-basis-get http-local-basis]}]
+          ["/local-basis/:global-basis/:branch/:branch-aux/*encoded-route" {:post [:local-basis-post http-local-basis]}]
           ["/hydrate-requests/:local-basis" {:post [:hydrate-requests http-hydrate-requests]}]
-          ["/hydrate-route/:local-basis/:branch/:branch-aux/:encoded-route" {:get [:hydrate-route-get http-hydrate-route]}]
-          ["/hydrate-route/:local-basis/:branch/:branch-aux/:encoded-route" {:post [:hydrate-route-post http-hydrate-route]}]
+          ["/hydrate-route/:local-basis/:branch/:branch-aux/*encoded-route" {:get [:hydrate-route-get http-hydrate-route]}]
+          ["/hydrate-route/:local-basis/:branch/:branch-aux/*encoded-route" {:post [:hydrate-route-post http-hydrate-route]}]
           ["/transact" {:post [:transact! http-transact!]}]
           ["/sync" {:post [:latest http-sync]}]
           ]]])))
