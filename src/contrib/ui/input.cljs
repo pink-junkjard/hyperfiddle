@@ -4,6 +4,7 @@
     [clojure.set :refer [rename-keys]]
     [contrib.css :refer [css]]
     [contrib.reactive :as r]
+    [contrib.reactive-debug :refer [track-cmp]]
     [contrib.string :refer [safe-read-edn-string]]))
 
 

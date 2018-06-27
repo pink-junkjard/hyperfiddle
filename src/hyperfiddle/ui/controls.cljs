@@ -4,6 +4,7 @@
     [clojure.set :as set]
     [contrib.datomic-tx :as tx]
     [contrib.reactive :as r]
+    [contrib.reactive-debug :refer [track-cmp]]
     [contrib.reagent :refer [from-react-context]]
     [contrib.string :refer [empty->nil]]
     [contrib.ui]                                            ; avoid collisions

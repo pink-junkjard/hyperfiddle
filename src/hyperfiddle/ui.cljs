@@ -6,6 +6,7 @@
     [contrib.data :refer [unwrap kwargs]]
     [contrib.reactive :as r]
     [contrib.reagent :refer [from-react-context fragment fix-arity-1-with-context]]
+    [contrib.reactive-debug :refer [track-cmp]]
     [contrib.string :refer [memoized-safe-read-edn-string blank->nil or-str]]
     [contrib.ui]
     [contrib.ui.input :refer [keyword-input* edn-input*]]
@@ -17,15 +18,24 @@
     [hypercrud.browser.core :as browser]
     [hypercrud.browser.link :as link :refer [links-here rel->link]]
     [hypercrud.ui.control.link-controls :refer [anchors iframes]]
+    [hypercrud.ui.error :as ui-error]
     [hyperfiddle.data :as hf]
     [hyperfiddle.eval :refer [read-eval-with-bindings]]
     [hyperfiddle.ui.controls :as controls]
+    [hyperfiddle.ui.hyper-controls :refer [hyper-select hyper-select-head hyper-label hyper-scalar]]
     [hyperfiddle.ui.hacks]                                  ; exports
     [hyperfiddle.ui.form :as form]
     [hyperfiddle.ui.select :refer [select]]
     [hyperfiddle.ui.sort :as sort]
-    [hyperfiddle.ui.util :refer [attr-renderer]]))
+    [hyperfiddle.ui.util :refer [safe-reagent-f eval-renderer-comp]]))
 
+
+(def attr-renderer
+  (from-react-context
+    (fn [{:keys [ctx props]} value]
+      (let [attr (some-> ctx :hypercrud.browser/fat-attribute deref)
+            renderer (blank->nil (:attribute/renderer attr))]
+        (safe-reagent-f (ui-error/error-comp ctx) eval-renderer-comp nil renderer value)))))
 
 (defn ^:export control "this is a function, which returns component" [ctx]
   (let [layout (-> (::layout ctx :hyperfiddle.ui.layout/block) name keyword)
@@ -38,7 +48,7 @@
         renderer (blank->nil (:attribute/renderer attr))]
 
     (if renderer
-      (attr-renderer renderer ctx)
+      attr-renderer
       (match [type cardinality]
         [:boolean :one] controls/boolean
         [:keyword :one] controls/keyword
@@ -51,57 +61,33 @@
         [_ :many] controls/edn-many
         ))))
 
+(def hyper-control'
+  (from-react-context
+    (fn [{:keys [ctx props]} value]
+      (let [i (:fe-pos ctx)
+            a (:hypercrud.browser/attribute ctx)]
+        (fragment (if a [(control ctx) value])              ; element :pull ? I am missing a permutation which this this
+                  (if i [anchors :body i a])
+                  (if i [iframes :body i a]))))))
+
 (defn ^:export hyper-control "Handles labels too because we show links there."
   [ctx]
   {:post [(not (nil? %))]}
   (let [display-mode (-> @(:hypercrud.ui/display-mode ctx) name keyword)
         d (-> (:relation ctx) (if :body :head))             ; Be careful, data/form oversets this and must be unset at call site
-        i (:fe-pos ctx)
-        {:keys [type]} (if i @(:hypercrud.browser/find-element ctx))
+        {:keys [type]} (if (:fe-pos ctx) @(:hypercrud.browser/find-element ctx))
         a (:hypercrud.browser/attribute ctx)
         rels (->> (links-here ctx) (map :link/rel) (into #{}))]
 
     (letfn [(select? [rels] (contains? rels :options))]
-      (match [d i type a rels]
-
-        [:body i _ a (true :<< select?)]
-        (fn [value]
-          (fragment [anchors :body i a link/options-processor] ; Order sensitive, here be floats
-                    [select value]
-                    [iframes :body i a link/options-processor]))
-
-        [:head i _ a (true :<< select?)]
-        (from-react-context
-          (fn [{:keys [ctx]} field]
-            (fragment (if (and (= :xray display-mode)
-                               (not (:link/dependent? (rel->link :options ctx))))
-                        ; Float right
-                        [select nil])
-                      (if i [form/label field])
-                      [anchors :head i a link/options-processor]
-                      [iframes :head i a link/options-processor])))
-
-        [d _ _ '* _] (case d :head form/magic-new-head
-                             :body form/magic-new-body)
-
-        [:head i _ a _]
-        (fn [field]
-          (fragment (if i [form/label field])
-                    [anchors :head i a]
-                    [iframes :head i a]))
-
-        [:body i (:or :aggregate :variable) _ _]
-        (fn [value]
-          (fragment [controls/string (str value)]
-                    (if i [anchors :body i a])
-                    (if i [iframes :body i a])))
-
-        [:body i _ a _]
-        (from-react-context
-          (fn [{:keys [ctx]} value]
-            (fragment (if a [(control ctx) value])          ; element :pull ? I am missing a permutation which this this
-                      (if i [anchors :body i a])
-                      (if i [iframes :body i a]))))
+      (match [d type a rels]
+        [:body _ _ (true :<< select?)] hyper-select
+        [:head _ _ (true :<< select?)] hyper-select-head
+        [:head _ '* _] form/magic-new-head
+        [:body _ '* _] form/magic-new-body
+        [:head _ _ _] hyper-label
+        [:body (:or :aggregate :variable) _ _] hyper-scalar
+        [:body _ _ _] hyper-control'
         ))))
 
 (defn ^:export semantic-css [ctx]

@@ -1,5 +1,6 @@
 (ns contrib.reagent
   (:require
+    [contrib.reactive-debug :refer [track-cmp]]
     [goog.object]
     [reagent.core :as reagent]))
 
