@@ -39,16 +39,42 @@
    `class` are in lexical scope. No `(ns (:require ...))` yet so vars must be fully qualified."
    :fiddle/links "See [:fiddle/links examples](http://www.hyperfiddle.net/:docs!fiddle-links/)."})
 
+(def controls
+  {:fiddle/pull (from-react-context
+                  (fn [{:keys [ctx props]} value]
+                    [:div
+                     [(hyper-control ctx) value]
+                     (fragment [:span.schema "schema: " (schema-links ctx)] [:div.hf-underdoc [markdown (:fiddle/pull underdocs)]])]))
+   :fiddle/query (from-react-context
+                   (fn [{:keys [ctx props]} value]
+                     [:div
+                      [(hyper-control ctx) value]
+                      (fragment [:span.schema "schema: " (schema-links ctx)] [:div.hf-underdoc [markdown (:fiddle/query underdocs)]])]))
+   :fiddle/markdown (from-react-context
+                      (fn [{:keys [ctx props]} value]
+                        [:div
+                         [(hyper-control ctx) value]
+                         [:div.hf-underdoc [markdown (:fiddle/markdown underdocs)]]]))
+   :fiddle/css (from-react-context
+                 (fn [{:keys [ctx props]} value]
+                   [:div
+                    [(hyper-control ctx) value]
+                    [:div.hf-underdoc [markdown (:fiddle/css underdocs)]]]))
+   :fiddle/renderer (from-react-context
+                      (fn [{:keys [ctx props]} value]
+                        [:div
+                         [(hyper-control ctx) value]
+                         [:div.hf-underdoc [markdown (:fiddle/renderer underdocs)]]]))
+   :fiddle/links (from-react-context
+                   (fn [{:keys [ctx props]} value]
+                     [:div
+                      [(hyper-control ctx) value]
+                      [:div.hf-underdoc [markdown (:fiddle/links underdocs)]]]))
+   })
+
 (defn fiddle-src-renderer [ctx-real class & {:keys [embed-mode]}]
   (let [ctx-real (dissoc ctx-real :user-renderer)           ; this needs to not escape this level; inline links can't ever get it
-        ctx (shadow-fiddle ctx-real)
-        controls
-        {:fiddle/pull (r/partial control-with-unders (fragment [:span.schema "schema: " (schema-links ctx)] [:div.hf-underdoc [markdown (:fiddle/pull underdocs)]]))
-         :fiddle/query (r/partial control-with-unders (fragment [:span.schema "schema: " (schema-links ctx)] [:div.hf-underdoc [markdown (:fiddle/query underdocs)]]))
-         :fiddle/markdown (r/partial control-with-unders [:div.hf-underdoc [markdown (:fiddle/markdown underdocs)]])
-         :fiddle/css (r/partial control-with-unders [:div.hf-underdoc [markdown (:fiddle/css underdocs)]])
-         :fiddle/renderer (r/partial control-with-unders [:div.hf-underdoc [markdown (:fiddle/renderer underdocs)]])
-         :fiddle/links (r/partial control-with-unders [:div.hf-underdoc [markdown (:fiddle/links underdocs)]])}]
+        ctx (shadow-fiddle ctx-real)]
     [:div {:class class}
      [:h3 (str @(r/cursor (:hypercrud.browser/result ctx) [:fiddle/ident])) " source"]
      (field [0 :fiddle/ident] ctx nil)
