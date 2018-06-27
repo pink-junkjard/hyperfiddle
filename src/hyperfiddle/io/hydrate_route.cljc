@@ -2,9 +2,9 @@
   (:require
     [clojure.set :as set]
     [cuerdas.core :as str]
-    [contrib.base-64-url-safe :as base-64-url-safe]
     [contrib.data :refer [map-keys]]
     [contrib.performance :as perf]
+    [hypercrud.browser.router :as router]
     [hypercrud.client.peer :as peer]
     [hypercrud.types.EntityRequest :refer [#?(:cljs EntityRequest)]]
     [hypercrud.types.QueryRequest :refer [#?(:cljs QueryRequest)]]
@@ -81,12 +81,12 @@
 
 (defn hydrate-route-rpc! [service-uri local-basis route branch branch-aux stage & [jwt]]
   ; matrix params instead of path params
-  (-> (merge {:url (str/format "%(service-uri)shydrate-route/$local-basis/$branch/$branch-aux/$encoded-route"
+  (-> (merge {:url (str/format "%(service-uri)shydrate-route/$local-basis/$branch/$branch-aux$encoded-route"
                                {:service-uri service-uri
-                                :local-basis (base-64-url-safe/encode (pr-str local-basis))
-                                :encoded-route (base-64-url-safe/encode (pr-str route)) ; flag
-                                :branch (base-64-url-safe/encode (pr-str branch))
-                                :branch-aux (base-64-url-safe/encode (pr-str branch-aux))})
+                                :local-basis (router/-encode-pchar local-basis)
+                                :encoded-route (router/encode route) ; includes "/"
+                                :branch (router/-encode-pchar branch)
+                                :branch-aux (router/-encode-pchar branch-aux)})
               :accept :application/transit+json :as :auto}
              (when jwt {:auth {:bearer jwt}})
              (if (empty? stage)

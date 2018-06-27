@@ -1,8 +1,8 @@
 (ns hyperfiddle.io.hydrate-requests
   (:require [cats.core :as cats]
             [cats.monad.either :as either]
-            [contrib.base-64-url-safe :as base-64-url-safe]
             [cuerdas.core :as str]
+            [hypercrud.browser.router :as router]
     #?(:clj
             [hyperfiddle.io.datomic.hydrate-requests :as datomic-hydrate-requests])
             [hyperfiddle.io.http.core :refer [http-request!]]
@@ -38,7 +38,7 @@
 (defn hydrate-requests-rpc! [service-uri local-basis stage-val requests & [jwt]]
   (let [staged-branches (stage-val->staged-branches stage-val)
         ; Note the UI-facing interface contains stage-val; the API accepts staged-branches
-        req (into {:url (str service-uri "hydrate-requests/" ((comp base-64-url-safe/encode pr-str) local-basis)) ; serialize kvseq
+        req (into {:url (str service-uri "hydrate-requests/" (router/-encode-pchar local-basis)) ; serialize kvseq
                    :accept :application/transit+json :as :auto
                    :method :post                            ; hydrate-requests always has a POST body, though it has a basis and is cachable
                    :form {:staged-branches staged-branches :request requests}

@@ -1,17 +1,18 @@
 (ns hyperfiddle.io.global-basis
   (:refer-clojure :exclude [compare])
-  (:require [cats.core :as cats :refer [mlet]]
-            [cats.labs.promise]
-            [clojure.set :as set]
-            [contrib.data :refer [filter-keys]]
-            [contrib.performance :as perf]
-            [cuerdas.core :as str]
-            [hyperfiddle.foundation :as foundation]
-            [hyperfiddle.io.http.core :refer [http-request!]]
-            [hyperfiddle.io.hydrate-requests :refer [hydrate-all-or-nothing!]]
-            [hyperfiddle.runtime :as api]
-            [promesa.core :as p]
-            [taoensso.timbre :as timbre]))
+  (:require
+    [cats.core :as cats :refer [mlet]]
+    [cats.labs.promise]
+    [clojure.set :as set]
+    [contrib.data :refer [filter-keys]]
+    [contrib.performance :as perf]
+    [cuerdas.core :as str]
+    [hyperfiddle.foundation :as foundation]
+    [hyperfiddle.io.http.core :refer [http-request!]]
+    [hyperfiddle.io.hydrate-requests :refer [hydrate-all-or-nothing!]]
+    [hyperfiddle.runtime :as api]
+    [promesa.core :as p]
+    [taoensso.timbre :as timbre]))
 
 
 (defn uris-for-domain [domain]
