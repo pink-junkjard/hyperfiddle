@@ -53,6 +53,7 @@
    :fiddle/cljs-ns
    :fiddle/renderer
    :fiddle/type
+   :fiddle/hydrate-result-as-fiddle
    '*                                                       ; For hyperblog, so we can access :hyperblog.post/title etc from the fiddle renderer
    ])
 
@@ -118,7 +119,7 @@
       (not= (count params') (count query-holes)) (either/left {:message "missing params" :data {:query q :params params' :unused unused}})
       :else-valid (either/right params'))))
 
-(defn request-for-fiddle [fiddle ctx]
+(defn request-for-fiddle [fiddle ctx]                       ; depends on route
   (case @(r/cursor fiddle [:fiddle/type])
     :query (mlet [q (memoized-safe-read-edn-string @(r/cursor fiddle [:fiddle/query]))
                   args (validate-query-params q (get-in ctx [:route 1]) ctx)]

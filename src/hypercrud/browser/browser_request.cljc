@@ -86,7 +86,13 @@
                                                (mapcat #(recurse-request % ctx))))))))))))
       (cond (:relation ctx) (form-requests ctx)
             (:relations ctx) (table-requests ctx)
-            :blank nil))))
+            :blank nil)
+
+      (if @(r/fmap :fiddle/hydrate-result-as-fiddle (:hypercrud.browser/fiddle ctx))
+        ; This only makes sense on :fiddle/type :query because it has arbitrary arguments
+        ; EntityRequest args are too structured.
+        (let [[_ [inner-fiddle & inner-args]] (:route ctx)]
+          (request-from-route [inner-fiddle inner-args] ctx))))))
 
 (defn request-from-route [route ctx]
   (let [ctx (-> (context/clean ctx)

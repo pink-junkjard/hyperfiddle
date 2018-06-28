@@ -88,6 +88,7 @@
      (field [0 :fiddle/markdown] ctx (controls :fiddle/markdown))
      (field [0 :fiddle/css] ctx (controls :fiddle/css))
      (field [0 :fiddle/renderer] ctx (controls :fiddle/renderer))
+     (field [0 :fiddle/hydrate-result-as-fiddle] ctx nil)
      (when-not embed-mode (field [0 :fiddle/links] ctx-real (controls :fiddle/links)))
      (when-not embed-mode (link :hyperfiddle/remove [0] ctx "Remove fiddle"))]))
 
