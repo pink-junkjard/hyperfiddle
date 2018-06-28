@@ -6,6 +6,7 @@
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.io.bindings :refer [*subject*]]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-requests]]
+            [hyperfiddle.io.rpc-router :refer [decode-basis]]
             [hyperfiddle.io.sync :refer [sync]]
             [hyperfiddle.io.transact :refer [transact!]]
             [hyperfiddle.service.cookie :as cookie]
@@ -53,7 +54,7 @@
 (defn http-hydrate-requests [req]
   (try
     (let [{:keys [body-params path-params]} req
-          local-basis (some-> (:local-basis path-params) router/-decode-url-ednish)
+          local-basis (decode-basis (:local-basis path-params))
           {staged-branches :staged-branches request :request} body-params
           r (hydrate-requests local-basis request staged-branches (:user-id req))]
       (ring-resp/response r))

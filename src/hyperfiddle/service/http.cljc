@@ -5,6 +5,7 @@
             [hypercrud.types.Err :refer [->Err]]
             [contrib.uri :refer [->URI]]
             [hyperfiddle.actions :as actions]
+            [hyperfiddle.io.rpc-router :refer [decode-basis]]
             [hyperfiddle.reducers :as reducers]
             [hyperfiddle.runtime :as runtime :refer [map->HostEnvironment]]
             [promesa.core :as p]
@@ -53,7 +54,7 @@
 (defn local-basis-handler [->Runtime & {:keys [host-env path-params user-id jwt]}]
   (try
     (let [path-params (normalize-router-params path-params)
-          global-basis (router/-decode-url-ednish (:global-basis path-params)) ; todo this can throw
+          global-basis (decode-basis (:global-basis path-params)) ; todo this can throw
           route (router/decode (str "/" (:encoded-route path-params)))
           _ (when-let [e (router/invalid-route? route)] (throw e))
           branch (some-> (:branch path-params) router/-decode-url-ednish)
@@ -80,7 +81,7 @@
 (defn hydrate-route-handler [->Runtime & {:keys [host-env path-params request-body user-id jwt]}]
   (try
     (let [path-params (normalize-router-params path-params)
-          local-basis (-> (:local-basis path-params) router/-decode-url-ednish) ; todo this can throw
+          local-basis (decode-basis (:local-basis path-params)) ; todo this can throw
           route (-> (str "/" (:encoded-route path-params)) router/decode)
           _ (when-let [e (router/invalid-route? route)] (throw e))
           branch (some-> (:branch path-params) router/-decode-url-ednish)
