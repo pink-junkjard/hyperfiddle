@@ -9,6 +9,7 @@
     [hypercrud.types.EntityRequest :refer [#?(:cljs EntityRequest)]]
     [hypercrud.types.QueryRequest :refer [#?(:cljs QueryRequest)]]
     [hyperfiddle.io.http.core :refer [http-request!]]
+    [hyperfiddle.io.rpc-router :refer [encode-basis]]
     [hyperfiddle.reducers :as reducers]                     ; this import is immoral
     [hyperfiddle.runtime :as runtime]
     [promesa.core :as p]
@@ -83,7 +84,7 @@
   ; matrix params instead of path params
   (-> (merge {:url (str/format "%(service-uri)shydrate-route/$local-basis/$branch/$branch-aux$encoded-route"
                                {:service-uri service-uri
-                                :local-basis (router/-encode-pchar local-basis)
+                                :local-basis (encode-basis local-basis)
                                 :encoded-route (router/encode route) ; includes "/"
                                 :branch (router/-encode-pchar branch)
                                 :branch-aux (router/-encode-pchar branch-aux)})
