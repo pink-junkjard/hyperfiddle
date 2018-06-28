@@ -1,6 +1,6 @@
 (ns hyperfiddle.readers
   (:require [hypercrud.types.ThinEntity :refer [read-ThinEntity]]
-            [hypercrud.types.URI :refer [read-URI]]))
+            [contrib.uri :refer [read-URI]]))
 
 
 (def entity #(list `read-ThinEntity %))

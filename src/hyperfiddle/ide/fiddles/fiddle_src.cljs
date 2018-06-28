@@ -6,7 +6,7 @@
     [contrib.reactive :as r]
     [contrib.reagent :refer [fragment fix-arity-1-with-context from-react-context]]
     [contrib.ui]
-    [hypercrud.types.URI :refer [is-uri?]]
+    [contrib.uri :refer [is-uri?]]
     [hyperfiddle.ide.fiddles.topnav :refer [shadow-fiddle]]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.ui :refer [browse field hyper-control link markdown]]))

@@ -1,4 +1,4 @@
-(ns hypercrud.types.URI)
+(ns contrib.uri)
 
 
 #?(:cljs

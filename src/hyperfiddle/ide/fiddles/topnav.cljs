@@ -15,7 +15,7 @@
             [hypercrud.browser.router :as router]
             [hypercrud.browser.system-fiddle :as system-fiddle]
             [hypercrud.types.Entity :refer [->Entity shadow-entity]]
-            [hypercrud.types.URI :refer [is-uri?]]
+            [contrib.uri :refer [is-uri?]]
             [hyperfiddle.actions :as actions]
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.runtime :as runtime]

@@ -19,7 +19,7 @@
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hypercrud.types.Err :as Err]
-            [hypercrud.types.URI :refer [is-uri?]]
+            [contrib.uri :refer [is-uri?]]
     #?(:cljs [hypercrud.ui.stale :as stale])
             [hyperfiddle.actions :as actions]
             [hyperfiddle.runtime :as runtime]
