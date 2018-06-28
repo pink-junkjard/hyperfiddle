@@ -28,5 +28,5 @@
 
 (defn safe-reagent-f [with-error f & args]
   ^{:key (hash f)}
-  [track-cmp "safe-reagent-f" user-portal with-error
+  [user-portal with-error
    (into [f] args)])
