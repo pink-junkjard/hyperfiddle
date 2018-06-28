@@ -1,7 +1,8 @@
 (ns hypercrud.browser.router
   (:require [contrib.data :refer [rtrim-coll orp]]
+            [contrib.ednish :refer [encode-ednish decode-ednish]]
             [contrib.reader :as reader]
-            [contrib.rfc3986 :refer [encode-rfc3986-pchar decode-rfc3986-pchar encode-ednish decode-ednish]]
+            [contrib.rfc3986 :refer [encode-rfc3986-pchar decode-rfc3986-pchar]]
             [contrib.string :refer [split-first empty->nil]]
             [cuerdas.core :as str]))
 

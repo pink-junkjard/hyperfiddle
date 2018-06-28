@@ -1,8 +1,7 @@
 (ns contrib.rfc3986-test
   (:require [clojure.test :refer [deftest is]]
             [contrib.reader]                                ; [hyperfiddle.readers]  i think is real dependency
-            [contrib.rfc3986 :refer [encode-rfc3986-pchar decode-rfc3986-pchar
-                                     encode-ednish decode-ednish]]))
+            [contrib.rfc3986 :refer [encode-rfc3986-pchar decode-rfc3986-pchar]]))
 
 (deftest url-encode-1
   []
@@ -25,13 +24,3 @@
   ;(is (= ((comp decode-rfc3986-pchar encode-rfc3986-pchar) "위키백과:대문")))
   )
 
-(deftest ednish-1
-  []
-  (is (= (encode-ednish (pr-str :hyperfiddle.blog/post))
-         ":hyperfiddle.blog!post"))
-  (is (= (encode-ednish (pr-str "kobe"))
-         "'kobe'"))
-  (is (= (encode-ednish (pr-str #entity["$" [:user/sub "google-oauth2|116635422485042503270"]]))
-         "~entity('$',(:user!sub,'google-oauth2|116635422485042503270'))"))
-  (is (= (encode-ednish (pr-str #{"events" "news"}))
-         "~{'news','events'}")))
