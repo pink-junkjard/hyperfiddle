@@ -3,7 +3,7 @@
             [contrib.reader :refer [read-edn-string]]
             [hypercrud.browser.router :as router]
             [hypercrud.types.Err :refer [->Err]]
-            [hypercrud.types.URI :refer [->URI]]
+            [contrib.uri :refer [->URI]]
             [hyperfiddle.actions :as actions]
             [hyperfiddle.reducers :as reducers]
             [hyperfiddle.runtime :as runtime :refer [map->HostEnvironment]]
