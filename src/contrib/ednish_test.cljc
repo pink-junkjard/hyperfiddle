@@ -1,7 +1,9 @@
 (ns contrib.ednish-test
   (:require
     [clojure.test :refer [deftest is]]
-    [contrib.ednish :refer [encode-ednish decode-ednish]]))
+    [contrib.ednish :refer [encode-ednish decode-ednish]]
+    [contrib.reader] #_"[hyperfiddle.readers]  i think is real dependency"
+    ))
 
 
 (deftest ednish-1
