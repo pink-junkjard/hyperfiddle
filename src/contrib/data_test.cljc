@@ -1,6 +1,6 @@
 (ns contrib.data-test
   (:require [clojure.test :refer [deftest is]]
-            [contrib.data :refer [cond-let map-pad pad rtrim-coll fix-arity fvor]]))
+            [contrib.data :refer [cond-let map-pad pad rtrim-coll fix-arity fvor take-to]]))
 
 
 (comment
@@ -12,6 +12,13 @@
   []
   (is (= ((map-pad 0) + [1 1 1] [1 1 1 1]) '(2 2 2 1)))
   )
+
+(deftest test-take-to []
+  (is (= (take-to #(not= % 4) (range 10))
+         (range 5)))
+
+  (is (= (take-to #{:a :b} [:a :b :a :c :a :b :a])
+         (list :a :b :a :c))))
 
 (deftest test-cond-let []
   (is (= 2 (cond-let

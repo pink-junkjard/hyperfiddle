@@ -30,6 +30,15 @@
     (apply update m k f args)
     m))
 
+(defn take-to
+  "Returns a lazy sequence of successive items from coll while (pred item) returns true.
+  Unlike take-while, it includes the last item."
+  [pred coll]
+  (lazy-seq
+    (when-let [s (seq coll)]
+      (let [me (first s)]
+        (cons me (when (pred me) (take-to pred (rest s))))))))
+
 (defn parse-query-element [q query-element]
   ; return value is symbols, not strings
   (let [last-kw (atom nil)
