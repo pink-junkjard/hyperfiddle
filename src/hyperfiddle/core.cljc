@@ -7,6 +7,7 @@
     #?(:cljs [contrib.reagent])
     #?(:cljs [contrib.ui])
     #?(:cljs [hyperfiddle.ui])
+    #?(:cljs [hyperfiddle.ide.hf-live])
     ))
 
 

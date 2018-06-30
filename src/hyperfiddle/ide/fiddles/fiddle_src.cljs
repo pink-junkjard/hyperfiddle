@@ -9,9 +9,10 @@
     [contrib.ui]
     [contrib.uri :refer [is-uri?]]
     [hyperfiddle.ide.fiddles.topnav :refer [shadow-fiddle]]
+    #_[hyperfiddle.ide.hf-live :as hf-live]                 ;cycle
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.ui :refer [browse field hyper-control link markdown]]
-    [hypercrud.browser.router :as router]))
+    ))
 
 
 (defn schema-links [ctx]
@@ -24,11 +25,6 @@
                 ^{:key $db}
                 [(:navigate-cmp ctx) props $db])))
        (doall)))
-
-(letfn [(f [frag {:keys [ctx]} value]
-          [:div [(hyper-control ctx) value] frag])]
-  (defn control-with-unders [frag]
-    (from-react-context (r/partial f frag))))
 
 (def underdocs
   {:fiddle/pull "See [:fiddle/pull examples](http://www.hyperfiddle.net/:docs!fiddle-pull/) and the
@@ -94,73 +90,17 @@
      (when-not embed-mode (field [0 :fiddle/links] ctx-real (controls :fiddle/links)))
      (when-not embed-mode (link :hyperfiddle/remove [0] ctx "Remove fiddle"))]))
 
-(defn hacked-links [value]
-  (let [links (->> value
-                   (remove :link/disabled?)
-                   (map #(select-keys % [:link/rel :link/path :link/fiddle :link/render-inline? :link/formula]))
-                   (map #(update % :link/fiddle :fiddle/ident)))]
-    [:div
-     [:pre (if (seq links)
-             (with-out-str (clojure.pprint/print-table links))
-             "No links or only auto links")]
-     [:div.hf-underdoc [markdown "Links are not editable for now due to an issue"]]]))
-
-(defn docs-embed [attrs ctx-real class & {:keys [embed-mode]}]
-  (let [ctx-real (dissoc ctx-real :user-renderer)           ; this needs to not escape this level; inline links can't ever get it
-        ctx (shadow-fiddle ctx-real)
-        {:keys [:fiddle/ident]} @(:hypercrud.browser/result ctx)
-        controls
-        {:fiddle/pull (r/partial control-with-unders (fragment [:span.schema "schema: " (schema-links ctx)]))
-         :fiddle/query (r/partial control-with-unders (fragment [:span.schema "schema: " (schema-links ctx)]))
-         :fiddle/links hacked-links}]
-    (fn [ctx-real class & {:keys [embed-mode]}]
-      (into
-        [:div {:class class}
-         #_[:h5 (str @(r/cursor (:hypercrud.browser/result ctx) [:fiddle/ident])) " source"]]
-        (for [k attrs]
-          (field [0 k] ctx (controls k)))))))
-
-(defn result-edn [attrs {:keys [hypercrud.browser/result]}]
-  (let [s (-> @result
-              (as-> $ (if (seq attrs) (select-keys $ attrs) $))
-              hyperfiddle.ui.hacks/pull-soup->tree
-              (contrib.pprint/pprint-str 40))]
-    [contrib.ui/code s #() {:read-only true}]))
-
-; This is in source control because all hyperblogs want it.
-; But, they also want to tweak it surely. Can we store this with the fiddle ontology?
-(defn hyperfiddle-live [rel ctx & fiddle-attrs]
+(defn ^:deprecated hyperfiddle-live [rel ctx & fiddle-attrs]
   (let [state (r/atom {:edn-fiddle false :edn-result false})]
     (fn [rel ctx & fiddle-attrs]
       [:div.row.hf-live.unp.no-gutters
        (let [as-edn (r/cursor state [:edn-result])]
          [:div.result.col-sm.order-sm-2.order-xs-1
           [:div "Result:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
-          (browse rel [] ctx (if @as-edn (r/partial result-edn [])))])
+          (browse rel [] ctx (if @as-edn (r/partial hyperfiddle.ide.hf-live/result-edn [])))])
        (let [as-edn (r/cursor state [:edn-fiddle])
-             f (r/partial (if @as-edn result-edn docs-embed) fiddle-attrs)]
+             f (r/partial (if @as-edn hyperfiddle.ide.hf-live/result-edn hyperfiddle.ide.hf-live/docs-embed) fiddle-attrs)]
          [:div.src.col-sm.order-sm-1.order-xs-2
           [:div "Interactive Hyperfiddle editor:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
           (browse rel [] ctx f {:frag ":src" :class "devsrc"})])
-       ])))
-
-
-(defn hyperfiddle-live' "better arity that works in !browse" [& fiddle-attrs]
-  (let [state (r/atom {:edn-fiddle false :edn-result false})]
-    (fn [ctx class]
-      [:div.row.hf-live.unp.no-gutters
-       (let [as-edn (r/cursor state [:edn-result])]
-         [:div.result.col-sm.order-sm-2.order-xs-1
-          [:div "Result:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
-          [hypercrud.browser.browser-ui/ui-comp
-           (assoc ctx :user-renderer (if @as-edn (r/partial result-edn [])))
-           class]])
-       (let [as-edn (r/cursor state [:edn-fiddle])
-             f (r/partial (if @as-edn result-edn docs-embed) fiddle-attrs)]
-         [:div.src.col-sm.order-sm-1.order-xs-2
-          [:div "Interactive Hyperfiddle editor:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
-          [hypercrud.browser.browser-ui/ui-comp
-           (assoc ctx :route (router/assoc-frag (:route ctx) ":src")
-                      :user-renderer f)
-           (css class "devsrc")]])
        ])))
