@@ -145,9 +145,7 @@
        ])))
 
 
-(defn hyperfiddle-live' "This new arity can be used in a fiddle/renderer to wrap itself in a hf-live without
-needing to insert a parent fiddle to link to us"
-  [fiddle-renderer & fiddle-attrs]
+(defn hyperfiddle-live' "better arity that works in !browse" [& fiddle-attrs]
   (let [state (r/atom {:edn-fiddle false :edn-result false})]
     (fn [ctx class]
       [:div.row.hf-live.unp.no-gutters
@@ -155,7 +153,7 @@ needing to insert a parent fiddle to link to us"
          [:div.result.col-sm.order-sm-2.order-xs-1
           [:div "Result:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
           [hypercrud.browser.browser-ui/ui-comp
-           (assoc ctx :user-renderer (if @as-edn (r/partial result-edn []) fiddle-renderer))
+           (assoc ctx :user-renderer (if @as-edn (r/partial result-edn [])))
            class]])
        (let [as-edn (r/cursor state [:edn-fiddle])
              f (r/partial (if @as-edn result-edn docs-embed) fiddle-attrs)]
@@ -163,6 +161,6 @@ needing to insert a parent fiddle to link to us"
           [:div "Interactive Hyperfiddle editor:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
           [hypercrud.browser.browser-ui/ui-comp
            (assoc ctx :route (router/assoc-frag (:route ctx) ":src")
-             :user-renderer f)
+                      :user-renderer f)
            (css class "devsrc")]])
        ])))
