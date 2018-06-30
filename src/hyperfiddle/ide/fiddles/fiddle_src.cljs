@@ -5,7 +5,7 @@
     [contrib.css :refer [css]]
     [contrib.pprint]
     [contrib.reactive :as r]
-    [contrib.reagent :refer [fragment fix-arity-1-with-context from-react-context]]
+    [contrib.reagent :refer [fragment from-react-context]]
     [contrib.ui]
     [contrib.uri :refer [is-uri?]]
     [hyperfiddle.ide.fiddles.topnav :refer [shadow-fiddle]]
