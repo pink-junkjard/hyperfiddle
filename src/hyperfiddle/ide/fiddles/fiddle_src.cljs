@@ -2,6 +2,7 @@
   (:require
     [cuerdas.core :as str]
     [clojure.pprint]
+    [contrib.css :refer [css]]
     [contrib.pprint]
     [contrib.reactive :as r]
     [contrib.reagent :refer [fragment fix-arity-1-with-context from-react-context]]
@@ -9,7 +10,8 @@
     [contrib.uri :refer [is-uri?]]
     [hyperfiddle.ide.fiddles.topnav :refer [shadow-fiddle]]
     [hyperfiddle.runtime :as runtime]
-    [hyperfiddle.ui :refer [browse field hyper-control link markdown]]))
+    [hyperfiddle.ui :refer [browse field hyper-control link markdown]]
+    [hypercrud.browser.router :as router]))
 
 
 (defn schema-links [ctx]
@@ -124,6 +126,7 @@
               hyperfiddle.ui.hacks/pull-soup->tree
               (contrib.pprint/pprint-str 40))]
     [contrib.ui/code s #() {:read-only true}]))
+
 ; This is in source control because all hyperblogs want it.
 ; But, they also want to tweak it surely. Can we store this with the fiddle ontology?
 (defn hyperfiddle-live [rel ctx & fiddle-attrs]
@@ -139,4 +142,27 @@
          [:div.src.col-sm.order-sm-1.order-xs-2
           [:div "Interactive Hyperfiddle editor:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
           (browse rel [] ctx f {:frag ":src" :class "devsrc"})])
+       ])))
+
+
+(defn hyperfiddle-live' "This new arity can be used in a fiddle/renderer to wrap itself in a hf-live without
+needing to insert a parent fiddle to link to us"
+  [fiddle-renderer & fiddle-attrs]
+  (let [state (r/atom {:edn-fiddle false :edn-result false})]
+    (fn [ctx class]
+      [:div.row.hf-live.unp.no-gutters
+       (let [as-edn (r/cursor state [:edn-result])]
+         [:div.result.col-sm.order-sm-2.order-xs-1
+          [:div "Result:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
+          [hypercrud.browser.browser-ui/ui-comp
+           (assoc ctx :user-renderer (if @as-edn (r/partial result-edn []) fiddle-renderer))
+           class]])
+       (let [as-edn (r/cursor state [:edn-fiddle])
+             f (r/partial (if @as-edn result-edn docs-embed) fiddle-attrs)]
+         [:div.src.col-sm.order-sm-1.order-xs-2
+          [:div "Interactive Hyperfiddle editor:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
+          [hypercrud.browser.browser-ui/ui-comp
+           (assoc ctx :route (router/assoc-frag (:route ctx) ":src")
+             :user-renderer f)
+           (css class "devsrc")]])
        ])))
