@@ -9,6 +9,7 @@
 
 
 (defn adapt-props [props]
+  ; :placeholder, etc is allowed and pass through
   (rename-keys props {:read-only :disabled}))
 
 (defn read-string-or-nil [code-str]
