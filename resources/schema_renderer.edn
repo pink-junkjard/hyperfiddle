@@ -1,17 +1,21 @@
-(let [hide-datomic (reagent.core/atom true)
-      hide-archived (reagent.core/atom true)
+(let [hide-datomic (contrib.reactive/atom true)
+      hide-archived (contrib.reactive/atom true)
+      needle (contrib.reactive/atom nil)
       db-attr? #(<= (:db/id %) 62)
       archived? #(cuerdas.core/starts-with? (namespace (:db/ident %)) "zzz") ; "zzz/" and "zzz.", we are inconsistent. It should be modeled and queried and never shown
       do-filter-reactive (fn [xs]                           ; perf sensitive
                            (as-> xs xs
                              (if @hide-datomic (remove db-attr? xs) xs)
-                             (if @hide-archived (remove archived? xs) xs)))]
+                             (if @hide-archived (remove archived? xs) xs)
+                             (if (contrib.string/blank->nil @needle)
+                               (filter #(cuerdas.core/includes? (-> % :db/ident str) @needle) xs) xs)))]
   (fn [ctx class]
     [:div {:class class}
      [hyperfiddle.ui/markdown (-> ctx :hypercrud.browser/fiddle deref :db/doc)]
-     [:label {:style {:font-weight "400"}} [:input {:type "checkbox" :checked @hide-datomic :on-change #(swap! hide-datomic not)}] " hide Datomic system attributes"]
-     [:br]
-     [:label {:style {:font-weight "400"}} [:input {:type "checkbox" :checked @hide-archived :on-change #(swap! hide-archived not)}] " hide Hyperfiddle archived attributes"]
+     [:label.d-block [:input {:type "checkbox" :checked @hide-datomic :on-change #(swap! hide-datomic not)}] " hide Datomic system attributes"]
+     [:label.d-block [:input {:type "checkbox" :checked @hide-archived :on-change #(swap! hide-archived not)}] " hide Hyperfiddle archived attributes"]
+     [contrib.ui.input/input* @needle #(do (reset! needle %))
+      {:placeholder ":task/title"}] [:code (pr-str @needle)]
      (let [ctx (-> ctx
                  (dissoc :relation :relations)
                  (update :hypercrud.browser/result (partial contrib.reactive/fmap do-filter-reactive #_(contrib.reactive/partial filter f?)))
