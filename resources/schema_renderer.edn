@@ -15,7 +15,7 @@
      [:label.d-block [:input {:type "checkbox" :checked @hide-datomic :on-change #(swap! hide-datomic not)}] " hide Datomic system attributes"]
      [:label.d-block [:input {:type "checkbox" :checked @hide-archived :on-change #(swap! hide-archived not)}] " hide Hyperfiddle archived attributes"]
      [contrib.ui.input/input* @needle #(do (reset! needle %))
-      {:placeholder ":task/title"}] [:code (pr-str @needle)]
+      {:placeholder ":task/title"}]
      (let [ctx (-> ctx
                  (dissoc :relation :relations)
                  (update :hypercrud.browser/result (partial contrib.reactive/fmap do-filter-reactive #_(contrib.reactive/partial filter f?)))
