@@ -64,10 +64,15 @@
   (let [state (r/atom {:edn-fiddle false :edn-result false})]
     (fn [ctx class]
       [:div.row.hf-live.unp.no-gutters
-       (let [as-edn (r/cursor state [:edn-result])]
+       (let [as-edn (r/cursor state [:edn-result])
+             f (if @as-edn (r/partial result-edn []))]
          [:div.result.col-sm.order-sm-2.order-xs-1
           [:div "Result:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
-          [ui-comp (assoc ctx :user-renderer (if @as-edn (r/partial result-edn []))) class]])
+          ; Careful: Reagent deep bug in prop comparison https://github.com/hyperfiddle/hyperfiddle/issues/340
+          (let [ctx (if f
+                      (assoc ctx :user-renderer f)
+                      (dissoc ctx :user-renderer)) #_"infinite recursion somehow"]
+            [ui-comp ctx class])])
        (let [as-edn (r/cursor state [:edn-fiddle])
              f (r/partial (if @as-edn result-edn docs-embed) fiddle-attrs)]
          [:div.src.col-sm.order-sm-1.order-xs-2
