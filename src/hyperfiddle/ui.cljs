@@ -64,7 +64,7 @@
       (fragment (when (and (not (#{:head :body} (last (:hypercrud.browser/path ctx))))
                            (keyword? (last (:hypercrud.browser/path ctx))))
                   [(control ctx) value])
-                (when (some->> (:hypercrud.browser/fields ctx) (r/fmap nil?) deref)
+                (when-not (some->> (:hypercrud.browser/fields ctx) (r/fmap nil?) deref)
                   [:div [result ctx]])
                 [anchors (:hypercrud.browser/path ctx)]
                 [iframes (:hypercrud.browser/path ctx)]))))
