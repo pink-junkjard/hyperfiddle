@@ -25,7 +25,6 @@
     [hyperfiddle.ui.hyper-controls :refer [hyper-select hyper-select-head hyper-label]]
     [hyperfiddle.ui.hacks]                                  ; exports
     [hyperfiddle.ui.form :as form]
-    [hyperfiddle.ui.select :refer [select]]
     [hyperfiddle.ui.sort :as sort]
     [hyperfiddle.ui.util :refer [safe-reagent-f eval-renderer-comp]]))
 
@@ -42,10 +41,10 @@
         renderer (blank->nil (:attribute/renderer attr))]
     (cond
       (not attr) controls/string
-      renderer (attr-renderer renderer ctx)
+      ;renderer (attr-renderer renderer ctx)
       :else (let [type (some-> attr :db/valueType :db/ident name keyword)
                   cardinality (some-> attr :db/cardinality :db/ident name keyword)]
-              (match [type cardinality]
+              (match* [type cardinality]
                 [:boolean :one] controls/boolean
                 [:keyword :one] controls/keyword
                 [:string :one] controls/string
@@ -80,8 +79,8 @@
         options? (-> (->> (links-here ctx) (map :link/rel) (into #{})) ; reactivity is terrible here
                      (contains? :options))]
     (match* [head-or-body (last (:hypercrud.browser/path ctx)) options?]
-      [:body _ true] hyper-select
-      [:head _ true] hyper-select-head
+      ;[:body _ true] hyper-select
+      ;[:head _ true] hyper-select-head
       [:head '* _] form/magic-new-head
       [:body '* _] form/magic-new-body
       [:head _ _] hyper-label
