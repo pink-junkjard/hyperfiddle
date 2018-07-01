@@ -13,6 +13,7 @@
     contrib.reactive-test
     contrib.rfc3986-test
     contrib.string-test
+    contrib.ui-test
     hypercrud.browser.auto-link-formula-test
     hypercrud.browser.auto-link-txfn-test
     hypercrud.browser.fiddle-test
@@ -35,6 +36,7 @@
     'contrib.reactive-test
     'contrib.rfc3986-test
     'contrib.string-test
+    'contrib.ui-test
     'hypercrud.browser.auto-link-formula-test
     'hypercrud.browser.auto-link-txfn-test
     'hypercrud.browser.fiddle-test

@@ -6,7 +6,7 @@
             [hypercrud.types.Err :refer [->Err #?(:cljs Err)]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest #?(:cljs QueryRequest)]]
             [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
-            [hypercrud.types.URI :refer [->URI #?(:cljs URI)]]
+            [contrib.uri :refer [->URI #?(:cljs URI)]]
             [hyperfiddle.runtime :refer [map->HostEnvironment #?(:cljs HostEnvironment)]])
   #?(:clj
      (:import (hypercrud.types.DbVal DbVal)

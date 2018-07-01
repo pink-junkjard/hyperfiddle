@@ -4,20 +4,21 @@
     [cats.monad.either :as either]
     [contrib.css :refer [css-slugify css]]
     [contrib.reactive :as r]
+    [contrib.reagent-native-events :refer [button=]]
+    [contrib.rfc3986 :refer [encode-rfc3986-pchar]]
+    [contrib.ednish :refer [encode-ednish]]
     [contrib.string :refer [blank->nil]]
     [contrib.ui.safe-render :refer [user-portal]]
     [hypercrud.browser.base :as base]
     [hypercrud.browser.context :as context]
+    [hypercrud.browser.router :as router]
     [hypercrud.browser.routing :as routing]
     [hypercrud.types.ThinEntity :refer [->ThinEntity]]
     [hypercrud.ui.error :as ui-error]
-    [hyperfiddle.actions :as actions]
-    [hyperfiddle.foundation :as foundation]
     [hyperfiddle.ide.fiddles.fiddle-src :as fiddle-src]
     [hyperfiddle.ide.fiddles.topnav :as topnav]
     [hyperfiddle.ui :refer [fiddle-xray]]
-    [hyperfiddle.ui.util :as util]
-    [hyperfiddle.runtime :as runtime]))
+    [hyperfiddle.ui.util :as util]))
 
 
 (defn auto-ui-css-class [ctx]
@@ -26,12 +27,28 @@
           (css-slugify (some-> ident namespace))
           (css-slugify ident)])))
 
-(defn page-on-click [rt branch branch-aux route event]
-  (when (and route (.-altKey event))
-    (runtime/dispatch! rt (fn [dispatch! get-state]
-                            (when (foundation/navigable? route (get-state))
-                              (actions/set-route rt route branch false false dispatch! get-state))))
-    (.stopPropagation event)))
+(defn page-on-click "middle-click will open in new tab; alt-middle-click will open srcmode in new tab"
+  [rt branch branch-aux route event]
+  (when route
+    (let [anchor (-> event .-path (aget 0) (.matches "a"))
+          anchor-descendant (-> event .-path (aget 0) (.matches "a *"))]
+      (when-not (or anchor anchor-descendant)
+        (let [open-new-tab (or (button= :middle event)
+                               (and (button= :left event)
+                                    (.-metaKey event)))]
+          (cond
+            open-new-tab (let [target-src (.-altKey event)
+                               route (if target-src
+                                       (router/assoc-frag route (encode-rfc3986-pchar (encode-ednish (pr-str :src))))
+                                       route)]
+                           (.stopPropagation event)
+                           (js/window.open (router/encode route) "_blank"))
+
+            ; Do we even need to drill down into this tab under any circumstances? I suspect not.
+            ; Can always middle click and then close this tab.
+            #_#_:else (runtime/dispatch! rt (fn [dispatch! get-state]
+                                              (when (foundation/navigable? route (get-state))
+                                                (actions/set-route rt route branch false false dispatch! get-state))))))))))
 
 (defn build-wrapped-render-expr-str [user-str] (str "(fn [ctx & [class]]\n" user-str ")"))
 
@@ -57,8 +74,14 @@
        (case @(:hypercrud.ui/display-mode ctx)
          ::user (if-let [user-renderer (:user-renderer ctx)]
                   [user-renderer ctx class]
-                  [util/eval-renderer-comp
-                   (some-> @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/cljs-ns]) blank->nil)
-                   (some-> @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/renderer]) blank->nil build-wrapped-render-expr-str)
-                   ctx class])
+                  (let [fiddle (:hypercrud.browser/fiddle ctx)]
+                    [util/eval-renderer-comp
+                     (some-> @(r/cursor fiddle [:fiddle/cljs-ns]) blank->nil)
+                     (some-> @(r/cursor fiddle [:fiddle/renderer]) blank->nil build-wrapped-render-expr-str)
+                     ctx class
+                     ; If userland crashes, reactions don't take hold, we need to reset here.
+                     ; Cheaper to pass this as a prop than to hash everything
+                     ; Userland will never see this param as it isn't specified in the wrapped render expr.
+                     @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/markdown]) ; for good luck
+                     ]))
          ::xray [fiddle-xray ctx class])))])

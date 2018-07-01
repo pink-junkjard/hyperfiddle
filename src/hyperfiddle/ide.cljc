@@ -167,8 +167,7 @@
      (let [src-mode (let [[_ _ _ frag] route] (topnav/src-mode? frag)) ; Immoral - :src bit is tunneled in userland fragment space
            ctx (-> ctx
                    (assoc :navigate-cmp (r/partial navigate-cmp/navigate-cmp (r/partial runtime/encode-route (:peer ctx)))
-                          :alpha.hypercrud.browser/ui-comp browser-ui/ui-comp)
-                   (ui/ui-bindings))
+                          :alpha.hypercrud.browser/ui-comp browser-ui/ui-comp))
            ide-ctx (page-ide-context ctx route)]
 
        (fragment

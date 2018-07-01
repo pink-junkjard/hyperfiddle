@@ -2,18 +2,23 @@
   (:require [clojure.set :as set]
             [contrib.datomic-tx :as tx]
             [contrib.reactive :as r]
-            [contrib.reagent :refer [with-react-context fix-arity-1-with-context]]
+            [contrib.reagent :refer [from-react-context fix-arity-1-with-context]]
             [hypercrud.browser.context :as context]
             [hyperfiddle.ui :refer [field hyper-control]]))
 
 
-(def special-case-attrs #{:db/ident :db/cardinality :db/valueType})
+(def special-attrs #{:db/ident :db/cardinality :db/valueType})
 
-(defn- has-required-attrs? [entity] (set/subset? special-case-attrs (set (keys entity))))
+(defn- completed? [entity] (set/subset? special-attrs (set (keys entity))))
 
-(defn- read-only? [attr record]
-  (not (or (has-required-attrs? record)
-           (#{:db/ident :db/doc :db/valueType :db/cardinality} attr))))
+
+; The rule is you can't stage anything until it's a valid Datomic attribute.
+; So only the special attrs are editable at first.
+; Once that is completed, the rest are editable.
+(defn- read-only? [k record]
+  (cond
+    (special-attrs k) false
+    :else (not (completed? record))))
 
 (defn- merge-in-tx [entity tx ctx]
   (reduce (fn [entity [op e a v]]
@@ -33,7 +38,7 @@
           (let [user-with! (:user-with! ctx)
                 entity @(get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
                 new-entity (merge-in-tx entity tx ctx)]
-            (case [(has-required-attrs? entity) (has-required-attrs? new-entity)]
+            (case [(completed? entity) (completed? new-entity)]
               [false false]
               (swap! special-attrs-state tx/into-tx tx)
 
@@ -49,18 +54,18 @@
               [true true]
               (user-with! tx))))]
   (defn- build-valueType-and-cardinality-renderer [special-attrs-state]
-    (with-react-context
+    (from-react-context
       (fn [{:keys [ctx props]} value]
         [fix-arity-1-with-context                           ; rebind with updated context
          (hyper-control ctx)
          value
-         (update ctx :user-with! (r/partial user-with! special-attrs-state ctx))
+         (assoc ctx :user-with! (r/partial user-with! special-attrs-state ctx))
          props]))))
 
-(letfn [(user-with! [special-attrs-state ctx tx]
-          (let [entity @(:cell-data ctx)
+(letfn [(user-with!' [special-attrs-state ctx tx]
+          (let [entity @(context/entity ctx)
                 new-entity (merge-in-tx entity tx ctx)]
-            (case [(has-required-attrs? entity) (has-required-attrs? new-entity)]
+            (case [(completed? entity) (completed? new-entity)]
               [false false]
               ((:user-with! ctx) tx)
 
@@ -76,12 +81,12 @@
               [true true]
               ((:user-with! ctx) tx))))]
   (defn- build-ident-renderer [special-attrs-state]
-    (with-react-context
+    (from-react-context
       (fn [{:keys [ctx props]} value]
         [fix-arity-1-with-context                           ; rebind with updated context
          (hyper-control ctx)
          value
-         (update ctx :user-with! (r/partial user-with! special-attrs-state ctx))
+         (assoc ctx :user-with! (r/partial user-with!' special-attrs-state ctx))
          props]))))
 
 (declare renderer)

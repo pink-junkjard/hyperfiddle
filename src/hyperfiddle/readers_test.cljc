@@ -9,7 +9,7 @@
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.Err :refer [->Err]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
-            [hypercrud.types.URI :refer [->URI]])
+            [contrib.uri :refer [->URI]])
   (:import #?(:clj java.util.Date)))
 
 

@@ -4,8 +4,13 @@
     [clojure.set :refer [rename-keys]]
     [contrib.css :refer [css]]
     [contrib.reactive :as r]
+    [contrib.reactive-debug :refer [track-cmp]]
     [contrib.string :refer [safe-read-edn-string]]))
 
+
+(defn adapt-props [props]
+  ; :placeholder, etc is allowed and pass through
+  (rename-keys props {:read-only :disabled}))
 
 (defn read-string-or-nil [code-str]
   (either/branch (safe-read-edn-string code-str)
@@ -17,7 +22,7 @@
     (fn [value on-change! parse-string to-string valid? props]
       ; todo this valid check should NOT be nil punning
       (let [valid?' (valid? @intermediate-val)]
-        [:input (merge (rename-keys props {:read-only :disabled})
+        [:input (merge (adapt-props props)
                        {:type "text"
                         :class (css (if-not valid?' "invalid") (:class props))
                         :value @intermediate-val

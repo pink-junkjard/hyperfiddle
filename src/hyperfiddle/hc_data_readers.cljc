@@ -6,7 +6,7 @@
             [hypercrud.types.Err :refer [read-Err]]
             [hypercrud.types.QueryRequest :refer [read-QueryRequest]]
             [hypercrud.types.ThinEntity :refer [read-ThinEntity]]
-            [hypercrud.types.URI :refer [read-URI]]))
+            [contrib.uri :refer [read-URI]]))
 
 
 (def hc-data-readers

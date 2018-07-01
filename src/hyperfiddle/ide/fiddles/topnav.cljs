@@ -5,7 +5,8 @@
             [contrib.reactive :as r]
             [contrib.reader :refer [read-edn-string]]
             [contrib.reagent :refer [fragment from-react-context]]
-            [contrib.rfc3986 :refer [encode-ednish encode-rfc3986-pchar]]
+            [contrib.rfc3986 :refer [encode-rfc3986-pchar]]
+            [contrib.ednish :refer [encode-ednish]]
             [contrib.ui :refer [radio-option easy-checkbox]]
             [contrib.ui.tooltip :refer [tooltip]]
             [hypercrud.browser.context :as context]
@@ -14,7 +15,7 @@
             [hypercrud.browser.router :as router]
             [hypercrud.browser.system-fiddle :as system-fiddle]
             [hypercrud.types.Entity :refer [->Entity shadow-entity]]
-            [hypercrud.types.URI :refer [is-uri?]]
+            [contrib.uri :refer [is-uri?]]
             [hyperfiddle.actions :as actions]
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.runtime :as runtime]
@@ -58,21 +59,17 @@
         {:keys [hypercrud.browser/result
                 hypercrud.browser/fiddle] :as ctx} (shadow-fiddle ctx)
         ; hack until hyperfiddle.net#156 is complete
-        fake-managed-anchor (fn [rel relative-path ctx label & args]
-                              ; mostly copied from browser-ui
-                              (let [kwargs (kwargs args)
-                                    ctx (context/focus ctx relative-path)
+        fake-managed-anchor (fn [rel relative-path ctx label & [props]]
+                              (let [ctx (context/focus ctx relative-path)
                                     link (-> @(r/track link/rel->link rel ctx) (assoc :link/managed? true))
-                                    props (into (link/build-link-props link ctx true)
-                                                (:props kwargs)
-                                                #_(dissoc :style) #_"custom renderers don't want colored links")]
-                                [(:navigate-cmp ctx) props label (:class kwargs)]))]
+                                    props (merge (link/build-link-props link ctx true) props)]
+                                [(:navigate-cmp ctx) props label (:class props)]))]
     [:div {:class class}
      [:div.left-nav
       [tooltip {:label "Home"} [:a.hf-auto-nav {:href "/"} @(runtime/state (:peer ctx) [::runtime/domain :domain/ident])]]
       [tooltip {:label "This fiddle"}                       ; also a good place for the route
-       [:span.hf-auto-nav (some-> @(r/cursor (:hypercrud.browser/result ctx) [:fiddle/ident]) str)]
-       #_[tooltip {:label nil} (fake-managed-anchor :shortcuts [] ctx "shortcuts")]]]
+       [:span.hf-auto-nav (some-> @(r/cursor (:hypercrud.browser/result ctx) [:fiddle/ident]) str)]]
+      (fake-managed-anchor :fiddle-shortcuts [] ctx "shortcuts" {:tooltip [nil "Fiddles in this domain"]})]
 
      [:div.right-nav {:key "right-nav"}                     ; CAREFUL; this key prevents popover flickering
 
@@ -116,14 +113,12 @@
                            (str "##### Auto-transact:\n\n"))
                       {::ui/unp true}]]
             dirty? (not @(r/fmap empty? (runtime/state (:peer ctx) [:stage nil])))]
-        (fake-managed-anchor :stage [] ctx "stage"
-                             :props {:tooltip [:info tooltip]}
-                             :class (when dirty? "stage-dirty")))
+        (fake-managed-anchor :stage [] ctx "stage" {:tooltip [nil tooltip] :class (when dirty? "stage-dirty")}))
       (ui/link :new-fiddle [] ctx "new-fiddle")
       [tooltip {:label "Domain administration"} (ui/link :domain [] ctx "domain")]
       (if @(runtime/state (:peer ctx) [::runtime/user-id])
         [ui/browse :account [] ctx]
-        [:span.nav-link.auth [:a {:href (foundation/stateless-login-url ctx)} "Login"]])]]))
+        [:a {:href (foundation/stateless-login-url ctx)} "login"])]]))
 
 (def ^:export qe-picker-control
   (from-react-context
@@ -139,7 +134,7 @@
 
 (letfn [(toggle-auto-transact! [ctx selected-uri]
           (runtime/dispatch! (:peer ctx) [:toggle-auto-transact @selected-uri]))]
-  (defn stage-ui-buttons [selected-uri stage ctx]
+  (defn ^:export stage-ui-buttons [selected-uri stage ctx]
     (let [writes-allowed? (let [hf-db @(runtime/state (:peer ctx) [::runtime/domain :domain/db-lookup @selected-uri])
                                 subject @(runtime/state (:peer ctx) [::runtime/user-id])]
                             (security/attempt-to-transact? hf-db subject))
@@ -167,8 +162,3 @@
            [easy-checkbox "auto-transact" is-auto-transact
             (r/partial toggle-auto-transact! ctx selected-uri)
             {:disabled is-disabled :style (if is-disabled {:pointer-events "none"})}])]))))
-
-(defn ^:export stage-ui [ctx]
-  [:div.hyperfiddle-topnav-stage
-   (ui/fiddle ctx)                                          ; for docstring
-   [foundation/staging ctx stage-ui-buttons]])

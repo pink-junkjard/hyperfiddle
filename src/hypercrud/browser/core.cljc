@@ -7,7 +7,7 @@
     [contrib.reactive :as r]
     #?(:cljs [contrib.reagent :refer [fragment]])
     [contrib.try :refer [try-either]]
-    #?(:cljs [contrib.ui.native-event-listener :refer [native-on-click-listener]])
+    #?(:cljs [contrib.reagent-native-events :refer [native-click-listener]])
     [hypercrud.browser.base :as base]
     [hypercrud.browser.browser-request :as browser-request]
     [hypercrud.browser.link :as link]
@@ -39,18 +39,18 @@
        [stale/loading (stale/can-be-loading? ctx) either-v
         (fn [e]
           (let [on-click (r/partial click-fn route)]
-            [native-on-click-listener {:on-click on-click}
+            [native-click-listener {:on-click on-click}
              [error-comp e (css "hyperfiddle-error" ?class "ui")]]))
         (fn [ctx]                                           ; fresh clean ctx
           (let [on-click (r/partial click-fn (:route ctx))]
-            [native-on-click-listener {:on-click on-click}
+            [native-click-listener {:on-click on-click}
              (fragment
                [(:alpha.hypercrud.browser/ui-comp ctx) ctx (css ?class "ui")]
                [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])])]))
         (fn [ctx]
           (let [on-click (r/partial click-fn (:route ctx))]
             ; use the stale ctx's route, otherwise alt clicking while loading could take you to the new route, which is jarring
-            [native-on-click-listener {:on-click on-click}
+            [native-click-listener {:on-click on-click}
              (fragment
                [(:alpha.hypercrud.browser/ui-comp ctx) ctx (css "hyperfiddle-loading" ?class "ui")]
                [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])])]))])))
@@ -68,6 +68,8 @@
             ; all errors will always route through as (either/right nil)
             (let [route' (routing/build-route' link ctx)]
               [stale/loading (stale/can-be-loading? ctx) (cats/fmap #(router/assoc-frag % (:frag props)) route')
-               (fn [e] [error-comp e])
+               (fn [e]
+                 [error-comp e])
                ; legacy-ctx is set in build-link-props, and this is "downtree" from that
-               (fn [route] [ui-from-route route ctx (css ?class (css-slugify (:link/rel link)))])])))])))
+               (fn [route]
+                 [ui-from-route route ctx (css ?class (css-slugify (:link/rel link)))])])))])))

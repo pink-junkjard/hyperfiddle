@@ -6,6 +6,7 @@
     [contrib.data :refer [take-to unwrap]]
     [contrib.reactive :as r]
     [contrib.reagent :refer [from-react-context fragment fix-arity-1-with-context]]
+    [contrib.reactive-debug :refer [track-cmp]]
     [contrib.string :refer [memoized-safe-read-edn-string blank->nil or-str]]
     [contrib.ui]
     [contrib.ui.input :refer [keyword-input* edn-input*]]
@@ -16,16 +17,25 @@
     [hypercrud.browser.context :as context]
     [hypercrud.browser.core :as browser]
     [hypercrud.browser.link :as link :refer [links-here rel->link]]
-    [hypercrud.ui.control.link-controls :as link-controls]
+    [hypercrud.ui.control.link-controls :refer [anchors iframes]]
+    [hypercrud.ui.error :as ui-error]
     [hyperfiddle.data :as hf]
     [hyperfiddle.eval :refer [read-eval-with-bindings]]
     [hyperfiddle.ui.controls :as controls]
+    [hyperfiddle.ui.hyper-controls :refer [hyper-select hyper-select-head hyper-label]]
     [hyperfiddle.ui.hacks]                                  ; exports
     [hyperfiddle.ui.form :as form]
     [hyperfiddle.ui.select :refer [select]]
     [hyperfiddle.ui.sort :as sort]
-    [hyperfiddle.ui.util :refer [attr-renderer]]))
+    [hyperfiddle.ui.util :refer [safe-reagent-f eval-renderer-comp]]))
 
+
+(def attr-renderer
+  (from-react-context
+    (fn [{:keys [ctx props]} value]
+      (let [attr (some-> ctx :hypercrud.browser/fat-attribute deref)
+            renderer (blank->nil (:attribute/renderer attr))]
+        (safe-reagent-f (ui-error/error-comp ctx) eval-renderer-comp nil renderer value)))))
 
 (defn ^:export control "this is a function, which returns component" [ctx]
   (let [attr (some-> ctx :hypercrud.browser/fat-attribute deref)
@@ -35,7 +45,7 @@
       renderer (attr-renderer renderer ctx)
       :else (let [type (some-> attr :db/valueType :db/ident name keyword)
                   cardinality (some-> attr :db/cardinality :db/ident name keyword)]
-              (match* [type cardinality]
+              (match [type cardinality]
                 [:boolean :one] controls/boolean
                 [:keyword :one] controls/keyword
                 [:string :one] controls/string
@@ -49,37 +59,33 @@
 
 (declare result)
 
+(def hyper-control'
+  (from-react-context
+    (fn [{:keys [ctx props]} value]
+      (fragment (when (and (not (#{:head :body} (last (:hypercrud.browser/path ctx))))
+                           (keyword? (last (:hypercrud.browser/path ctx))))
+                  [(control ctx) value])
+                (when (some->> (:hypercrud.browser/fields ctx) (r/fmap nil?) deref)
+                  [:div [result ctx]])
+                [anchors (:hypercrud.browser/path ctx)]
+                [iframes (:hypercrud.browser/path ctx)]))))
+
 (defn ^:export hyper-control "Handles labels too because we show links there."
   [ctx]
   {:post [(not (nil? %))]}
   (let [head-or-body (->> (:hypercrud.browser/path ctx)
                           (reverse)
                           (take-to (comp not #{:head :body})) ; todo head/body attr collision
-                          (last))]
-    (match* [head-or-body (last (:hypercrud.browser/path ctx))] ; this core match is overkill
-      [:head '*] form/magic-new-head
-      [:body '*] form/magic-new-body
-
-      [:head _]
-      (fn [field]
-        (fragment (when field [form/label field])
-                  [link-controls/anchors (:hypercrud.browser/path ctx)]
-                  [link-controls/iframes (:hypercrud.browser/path ctx)]))
-
-      [:body _]
-      (let [options? (-> (->> (links-here ctx) (map :link/rel) (into #{})) ; reactivity is terrible here
-                         (contains? :options))]
-        (from-react-context
-          (fn [{:keys [ctx]} value]
-            (fragment (when (and (not options?)
-                                 (not (#{:head :body} (last (:hypercrud.browser/path ctx))))
-                                 (keyword? (last (:hypercrud.browser/path ctx))))
-                        [(control ctx) value])
-                      (when (some-> (:hypercrud.browser/fields ctx) deref)
-                        [:div [result ctx]])
-                      [link-controls/anchors (:hypercrud.browser/path ctx) (when options? link/options-processor)]
-                      (when options? [select value])
-                      [link-controls/iframes (:hypercrud.browser/path ctx) (when options? link/options-processor)])))))))
+                          (last))
+        options? (-> (->> (links-here ctx) (map :link/rel) (into #{})) ; reactivity is terrible here
+                     (contains? :options))]
+    (match* [head-or-body (last (:hypercrud.browser/path ctx)) options?]
+      [:body _ true] hyper-select
+      [:head _ true] hyper-select-head
+      [:head '* _] form/magic-new-head
+      [:body '* _] form/magic-new-body
+      [:head _ _] hyper-label
+      [:body _ _] hyper-control')))
 
 (defn ^:export semantic-css [ctx]
   ; Include the fiddle level ident css.
@@ -128,11 +134,14 @@ User renderers should not be exposed to the reaction."
 ; (defmulti field ::layout)
 (defn ^:export field "Works in a form or table context. Draws label and/or value."
   [relative-path ctx ?f & [props]]
-  ^{:key (str relative-path)}
-  (case (:hyperfiddle.ui/layout ctx)
-    :hyperfiddle.ui.layout/table (when-not (= '* (last relative-path))
-                                   [form/table-field hyper-control relative-path ctx ?f props])
-    [form/form-field hyper-control relative-path ctx ?f props]))
+  (let [is-magic-new (= '* (last relative-path))]
+    (case (:hyperfiddle.ui/layout ctx)
+      :hyperfiddle.ui.layout/table (when-not is-magic-new
+                                     ^{:key (str relative-path)}
+                                     [form/table-field hyper-control relative-path ctx ?f props])
+      (let [magic-new-key (when is-magic-new #_(hash @(r/fmap keys (context/entity ctx))))] ; guard against crashes for nil cell-data
+        ^{:key (str relative-path magic-new-key #_"reset magic new state")}
+        [form/form-field hyper-control relative-path ctx ?f props]))))
 
 (defn ^:export table "Semantic table"
   [form sort-fn ctx & [props]]
@@ -177,6 +186,10 @@ nil. call site must wrap with a Reagent component"
 ;[user-portal hypercrud.ui.error/error-block]
 (def ^:export markdown
   (remark/remark!
+
+    ; Content is text, or more markdown, or code
+    ; Argument is semantic: a url, or a hyperfiddle ident (or a second optional content? Caption, row-renderer)
+
     {"li" (fn [content argument props ctx]
             [:li.p (dissoc props :children) (:children props)])
 
@@ -188,28 +201,36 @@ nil. call site must wrap with a Reagent component"
              [:div.p (dissoc props :children) (:children props)]))
 
      "span" (fn [content argument props ctx]
-              [:span (remark/adapt-props props) content])
+              [:span (remark/adapt-props props)
+               [markdown content (assoc ctx ::unp true)]])
 
      ; Is this comment true?::
      ;   Div is not needed, use it with block syntax and it hits React.createElement and works
      ;   see https://github.com/medfreeman/remark-generic-extensions/issues/30
 
      "block" (fn [content argument props ctx]
+               ; Should presence of argument trigger a figure and caption?
                [:div props [markdown content (assoc ctx ::unp true)]])
 
+     ; This is a custom markdown extension example.
+     "figure" (fn [content argument props ctx]
+                [:figure.figure props
+                 [markdown content ctx]
+                 [:figcaption.figure-caption [markdown argument (assoc ctx ::unp true)]]])
+
      "pre" (fn [content argument props ctx]
-             ; Remark generates pre>code; deep inspect and rip out the content
-             ; Don't hook :code because that is used by inline snippets
-             (let [content (-> props :children (goog.object/getValueByKeys 0 "props" "children" 0)) ; get(props, kw('children'))[0].props.children[0]
-                   content (str/rtrim content "\n") #_"Remark yields an unavoidable newline that we don't want"]
-               ; No way to get props here from userland
-               [contrib.ui/code-block {:read-only true} content #()]))
+             ; detect ``` legacy syntax, no props or argument
+             (if-let [children (:children props)]
+               ; Remark generates pre>code; deep inspect and rip out the content
+               ; Don't hook :code because that is used by inline snippets
+               (let [content (goog.object/getValueByKeys children 0 "props" "children" 0)
+                     content (str/rtrim content "\n") #_"Remark yields an unavoidable newline that we don't want"]
+                 [contrib.ui/code content #() {:read-only true}])
+               [contrib.ui/code content #() props]))
 
+     ; legacy, use ``` to generate pre
      "CodeEditor" (fn [content argument props ctx]
-                    [contrib.ui/code-block props content #()])
-
-     "cljs" (fn [content argument props ctx]
-              (unwrap (read-eval-with-bindings content ctx)))
+                    [contrib.ui/code content #() props])
 
      "render" (fn [content argument props ctx]
                 (unwrap (read-eval-with-bindings content ctx)))
@@ -217,7 +238,8 @@ nil. call site must wrap with a Reagent component"
      "f" (fn [content argument props ctx]
            (let [f (unwrap (read-eval-with-bindings content))
                  v (unwrap (memoized-safe-read-edn-string argument))]
-             [fix-arity-1-with-context f v ctx props]))
+             (if f
+               [fix-arity-1-with-context f v ctx props])))
 
      "browse" (fn [content argument props ctx]
                 (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
@@ -227,14 +249,14 @@ nil. call site must wrap with a Reagent component"
                       f? (unwrap (read-eval-with-bindings content))]
                   (browse rel path ctx f? props)))
 
-     "anchor" (fn [content argument props ctx]
-                (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
-                      rel (unwrap (memoized-safe-read-edn-string srel))
-                      path (unwrap (memoized-safe-read-edn-string (str "[" spath "]")))
-                      path (cons :body path)                ; hack to put off migrations
-                      ; https://github.com/medfreeman/remark-generic-extensions/issues/45
-                      label (or-str content (name rel))]
-                  (link rel path ctx label props)))
+     "link" (fn [content argument props ctx]
+              (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
+                    rel (unwrap (memoized-safe-read-edn-string srel))
+                    path (unwrap (memoized-safe-read-edn-string (str "[" spath "]")))
+                    path (cons :body path)                  ; hack to put off migrations
+                    ; https://github.com/medfreeman/remark-generic-extensions/issues/45
+                    label (or-str content (name rel))]
+                (link rel path ctx label props)))
 
      "result" (fn [content argument props ctx]
                 (let [ctx (assoc ctx ::unp true)]
@@ -244,12 +266,12 @@ nil. call site must wrap with a Reagent component"
      "value" (fn [content argument props ctx]
                (let [path (unwrap (memoized-safe-read-edn-string (str "[" argument "]")))
                      path (cons :body path)                 ; hack to put off migrations
-                     ?f (some->> (unwrap (read-eval-with-bindings content)) (r/partial fix-arity-1-with-context))]
+                     ?f (some->> (unwrap (read-eval-with-bindings content)))]
                  (value path ctx ?f props)))
 
      "field" (fn [content argument props ctx]
                (let [path (unwrap (memoized-safe-read-edn-string (str "[" argument "]")))
-                     ?f (some->> (unwrap (read-eval-with-bindings content)) (r/partial fix-arity-1-with-context))]
+                     ?f (some->> (unwrap (read-eval-with-bindings content)))]
                  (field path ctx ?f (update props :class css "unp"))))
 
      "table" (letfn [(form [content ctx]
@@ -262,20 +284,10 @@ nil. call site must wrap with a Reagent component"
                (->> (:hypercrud.browser/data ctx)
                     (r/unsequence hf/relation-keyfn)
                     (map (fn [[relation k]]
-                           ; set ::unp to suppress
                            ^{:key k} [:li [markdown content (context/body ctx relation)]]))
                     (doall))])}))
 
 (def ^:export img
   (from-react-context
-    (fn [{:keys [ctx props]} value]
+    (fn [{:keys [props]} value]
       [:img (merge props {:src value})])))
-
-(defn ui-bindings [ctx]                                     ; legacy
-  (assoc ctx
-    :anchor link
-    :browse browse
-    :field field
-    :cell field
-    ::value value
-    :browse' hf/browse'))

@@ -12,7 +12,7 @@
   (hash (map #(or (:db/id %) %) relation)))
 
 (letfn [(should-flatten? [m-field] (not (nil? (::field/source-symbol m-field))))]
-  (defn form "Field is invoked as fn"
+  (defn form "Field is invoked as fn"                       ; because it unifies with request fn side
     [f-field ctx & [props]]                                 ; todo props shouldn't be passed through here
     (-> (->> (r/unsequence ::field/path-segment (:hypercrud.browser/fields ctx))
              (mapcat (fn [[m-field path-segment]]
@@ -27,7 +27,7 @@
         ;vec (conj (f-field [] ctx nil props))               ; row/relation
         doall)))
 
-(defn browse' [rel relative-path ctx]
+(defn ^:export browse [rel relative-path ctx]
   ; context is not set for this call
   (let [ctx (context/focus ctx relative-path)]
     (->> (base/data-from-link @(r/track link/rel->link rel ctx) ctx)

@@ -2,7 +2,7 @@
   (:require [cats.monad.either :as either]
             [contrib.reactive :as r]
             [hypercrud.types.DbVal :refer [->DbVal]]
-            [hypercrud.types.URI :refer [is-uri?]]
+            [contrib.uri :refer [is-uri?]]
             [hyperfiddle.io.util :refer [process-result]]))
 
 

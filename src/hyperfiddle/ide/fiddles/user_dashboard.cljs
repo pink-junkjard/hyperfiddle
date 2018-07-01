@@ -1,9 +1,10 @@
 (ns hyperfiddle.ide.fiddles.user-dashboard
-  (:require [contrib.reactive :as r]
-            [hyperfiddle.ui :refer [markdown]]
-            [contrib.ui.native-event-listener :refer [native-on-click-listener]]
-            [hyperfiddle.actions :as actions]
-            [hyperfiddle.runtime :as runtime]))
+  (:require
+    [contrib.reactive :as r]
+    [hyperfiddle.ui :refer [markdown]]
+    [contrib.reagent-native-events :refer [native-click-listener]]
+    [hyperfiddle.actions :as actions]
+    [hyperfiddle.runtime :as runtime]))
 
 
 (defn logout! [rt e]
@@ -14,7 +15,7 @@
 (defn renderer [ctx]
   [:div.hyperfiddle-user-dashboard
    (when @(runtime/state (:peer ctx) [::runtime/user-id])
-     [native-on-click-listener
+     [native-click-listener
       {:key :logout :on-click (r/partial logout! (:peer ctx))}
       ; todo https://auth0.com/docs/logout
       [:span.nav-link.auth {:key :logout}

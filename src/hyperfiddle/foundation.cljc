@@ -19,7 +19,7 @@
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hypercrud.types.Err :as Err]
-            [hypercrud.types.URI :refer [is-uri?]]
+            [contrib.uri :refer [is-uri?]]
     #?(:cljs [hypercrud.ui.stale :as stale])
             [hyperfiddle.actions :as actions]
             [hyperfiddle.runtime :as runtime]
@@ -131,13 +131,12 @@
            tabs-definition (->> @(runtime/state (:peer ctx) [::runtime/domain :domain/environment])
                                 (filter (fn [[k v]] (and (string? k) (string/starts-with? k "$") (is-uri? v))))
                                 (reduce (fn [acc [dbname uri]]
-                                          (if (contains? acc uri)
-                                            (update acc uri conj dbname)
-                                            (assoc acc uri [dbname])))
-                                        {source-uri ["Source"]
+                                          (update acc uri (fnil conj '()) dbname))
+                                        {source-uri '("src")
                                          ; domains-uri shouldn't need to be accessed
-                                         domain-uri ["Domains"]})
-                                (mapv (fn [[uri labels]] {:id uri :label (string/join "/" labels)})))
+                                         domain-uri '("domain")})
+                                (mapv (fn [[uri labels]] {:id uri :label (string/join " " labels)}))
+                                (sort-by :label))
            change-tab #(reset! selected-uri %)]
        (fn [ctx & [child]]
          (let [stage (runtime/state (:peer ctx) [:stage (:branch ctx) @selected-uri])]

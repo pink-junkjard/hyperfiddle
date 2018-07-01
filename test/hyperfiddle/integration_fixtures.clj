@@ -1,5 +1,5 @@
 (ns hyperfiddle.integration-fixtures
-  (:require [hypercrud.types.URI :refer [->URI]]
+  (:require [contrib.uri :refer [->URI]]
             [hyperfiddle.database :as db]
             [hyperfiddle.io.transact :as transact]))
 

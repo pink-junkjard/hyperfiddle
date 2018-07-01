@@ -3,7 +3,7 @@
             [clojure.string :as string]
             [hypercrud.client.core :as hc]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
-            [hypercrud.types.URI :refer [#?(:cljs URI)]]
+            [contrib.uri :refer [#?(:cljs URI)]]
             [contrib.data :refer [group-by-assume-unique map-values]]
             [contrib.reactive :as r])
   #?(:clj

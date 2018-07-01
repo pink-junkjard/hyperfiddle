@@ -1,14 +1,18 @@
 (ns hyperfiddle.ide.fiddles.fiddle-src
   (:require
     [cuerdas.core :as str]
+    [clojure.pprint]
+    [contrib.css :refer [css]]
     [contrib.pprint]
     [contrib.reactive :as r]
-    [contrib.reagent :refer [fragment fix-arity-1-with-context from-react-context]]
+    [contrib.reagent :refer [fragment from-react-context]]
     [contrib.ui]
-    [hypercrud.types.URI :refer [is-uri?]]
+    [contrib.uri :refer [is-uri?]]
     [hyperfiddle.ide.fiddles.topnav :refer [shadow-fiddle]]
+    #_[hyperfiddle.ide.hf-live :as hf-live]                 ;cycle
     [hyperfiddle.runtime :as runtime]
-    [hyperfiddle.ui :refer [browse field hyper-control link markdown]]))
+    [hyperfiddle.ui :refer [browse field hyper-control link markdown]]
+    ))
 
 
 (defn schema-links [ctx]
@@ -22,11 +26,6 @@
                 [(:navigate-cmp ctx) props $db])))
        (doall)))
 
-(letfn [(f [frag {:keys [ctx]} value]
-          [:div [(hyper-control ctx) value] frag])]
-  (defn control-with-unders [frag]
-    (from-react-context (r/partial f frag))))
-
 (def underdocs
   {:fiddle/pull "See [:fiddle/pull examples](http://www.hyperfiddle.net/:docs!fiddle-pull/) and the
   [Datomic pull docs](https://docs.datomic.com/on-prem/pull.html)."
@@ -38,16 +37,42 @@
    `class` are in lexical scope. No `(ns (:require ...))` yet so vars must be fully qualified."
    :fiddle/links "See [:fiddle/links examples](http://www.hyperfiddle.net/:docs!fiddle-links/)."})
 
+(def controls
+  {:fiddle/pull (from-react-context
+                  (fn [{:keys [ctx props]} value]
+                    [:div
+                     [(hyper-control ctx) value]
+                     (fragment [:span.schema "schema: " (schema-links ctx)] [:div.hf-underdoc [markdown (:fiddle/pull underdocs)]])]))
+   :fiddle/query (from-react-context
+                   (fn [{:keys [ctx props]} value]
+                     [:div
+                      [(hyper-control ctx) value]
+                      (fragment [:span.schema "schema: " (schema-links ctx)] [:div.hf-underdoc [markdown (:fiddle/query underdocs)]])]))
+   :fiddle/markdown (from-react-context
+                      (fn [{:keys [ctx props]} value]
+                        [:div
+                         [(hyper-control ctx) value]
+                         [:div.hf-underdoc [markdown (:fiddle/markdown underdocs)]]]))
+   :fiddle/css (from-react-context
+                 (fn [{:keys [ctx props]} value]
+                   [:div
+                    [(hyper-control ctx) value]
+                    [:div.hf-underdoc [markdown (:fiddle/css underdocs)]]]))
+   :fiddle/renderer (from-react-context
+                      (fn [{:keys [ctx props]} value]
+                        [:div
+                         [(hyper-control ctx) value]
+                         [:div.hf-underdoc [markdown (:fiddle/renderer underdocs)]]]))
+   :fiddle/links (from-react-context
+                   (fn [{:keys [ctx props]} value]
+                     [:div
+                      [(hyper-control ctx) value]
+                      [:div.hf-underdoc [markdown (:fiddle/links underdocs)]]]))
+   })
+
 (defn fiddle-src-renderer [ctx-real class & {:keys [embed-mode]}]
   (let [ctx-real (dissoc ctx-real :user-renderer)           ; this needs to not escape this level; inline links can't ever get it
-        ctx (shadow-fiddle ctx-real)
-        controls
-        {:fiddle/pull (r/partial control-with-unders (fragment [:span.schema "schema: " (schema-links ctx)] [:div.hf-underdoc [markdown (:fiddle/pull underdocs)]]))
-         :fiddle/query (r/partial control-with-unders (fragment [:span.schema "schema: " (schema-links ctx)] [:div.hf-underdoc [markdown (:fiddle/query underdocs)]]))
-         :fiddle/markdown (r/partial control-with-unders [:div.hf-underdoc [markdown (:fiddle/markdown underdocs)]])
-         :fiddle/css (r/partial control-with-unders [:div.hf-underdoc [markdown (:fiddle/css underdocs)]])
-         :fiddle/renderer (r/partial control-with-unders [:div.hf-underdoc [markdown (:fiddle/renderer underdocs)]])
-         :fiddle/links (r/partial control-with-unders [:div.hf-underdoc [markdown (:fiddle/links underdocs)]])}]
+        ctx (shadow-fiddle ctx-real)]
     [:div {:class class}
      [:h3 (str @(r/cursor (:hypercrud.browser/result ctx) [:fiddle/ident])) " source"]
      (field [0 :fiddle/ident] ctx nil)
@@ -61,55 +86,21 @@
      (field [0 :fiddle/markdown] ctx (controls :fiddle/markdown))
      (field [0 :fiddle/css] ctx (controls :fiddle/css))
      (field [0 :fiddle/renderer] ctx (controls :fiddle/renderer))
+     (field [0 :fiddle/hydrate-result-as-fiddle] ctx nil)
      (field [0 :fiddle/links] ctx (controls :fiddle/links))
      (when-not embed-mode (link :hyperfiddle/remove [:body 0] ctx "Remove fiddle"))]))
 
-(defn hacked-links [value]
-  (let [links (->> value
-                   (remove :link/disabled?)
-                   (map #(select-keys % [:link/rel :link/path :link/fiddle :link/render-inline? :link/formula]))
-                   (map #(update % :link/fiddle :fiddle/ident))
-                   (map pr-str)
-                   (interpose "\n"))]
-    [:div
-     [:pre (if (seq links) links "No links or only auto links")]
-     [:div.hf-underdoc [markdown "Due to an issue in the live embed, the links are shown as EDN until we fix it."]]]))
-
-(defn docs-embed [attrs ctx-real class & {:keys [embed-mode]}]
-  (let [ctx-real (dissoc ctx-real :user-renderer)           ; this needs to not escape this level; inline links can't ever get it
-        ctx (shadow-fiddle ctx-real)
-        {:keys [:fiddle/ident]} @(:hypercrud.browser/result ctx)
-        controls
-        {:fiddle/pull (r/partial control-with-unders (fragment [:span.schema "schema: " (schema-links ctx)]))
-         :fiddle/query (r/partial control-with-unders (fragment [:span.schema "schema: " (schema-links ctx)]))
-         :fiddle/links hacked-links}]
-    (fn [ctx-real class & {:keys [embed-mode]}]
-      (into
-        [:div {:class class}]
-        (for [k attrs]
-          (field [0 k] ctx (controls k)))))))
-
-(defn result-edn [attrs {:keys [hypercrud.browser/result]}]
-  (let [s (-> @result
-              (as-> $ (if (seq attrs) (select-keys $ attrs) $))
-              hyperfiddle.ui.hacks/pull-soup->tree
-              (contrib.pprint/pprint-str 40))]
-    [contrib.ui/code-block {:read-only true} s]))
-
-; This is in source control because all hyperblogs want it.
-; But, they also want to tweak it surely. Can we store this with the fiddle ontology?
-(defn hyperfiddle-live [rel ctx & fiddle-attrs]
+(defn ^:deprecated hyperfiddle-live [rel ctx & fiddle-attrs]
   (let [state (r/atom {:edn-fiddle false :edn-result false})]
     (fn [rel ctx & fiddle-attrs]
-      [:div.row.hf-live.unp
-       ; Reverse order so it looks right on mobile, larger views reorder
+      [:div.row.hf-live.unp.no-gutters
        (let [as-edn (r/cursor state [:edn-result])]
-         [:div.col-sm-6.col-sm-push-6
+         [:div.result.col-sm.order-sm-2.order-xs-1
           [:div "Result:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
-          (browse rel [] ctx (if @as-edn (r/partial result-edn [])))])
+          (browse rel [] ctx (if @as-edn (r/partial hyperfiddle.ide.hf-live/result-edn [])))])
        (let [as-edn (r/cursor state [:edn-fiddle])
-             f (r/partial (if @as-edn result-edn docs-embed) fiddle-attrs)]
-         [:div.col-sm-6.col-sm-pull-6
+             f (r/partial (if @as-edn hyperfiddle.ide.hf-live/result-edn hyperfiddle.ide.hf-live/docs-embed) fiddle-attrs)]
+         [:div.src.col-sm.order-sm-1.order-xs-2
           [:div "Interactive Hyperfiddle editor:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
           (browse rel [] ctx f {:frag ":src" :class "devsrc"})])
        ])))

@@ -7,9 +7,7 @@
     #?(:cljs [contrib.reagent])
     #?(:cljs [contrib.ui])
     #?(:cljs [hyperfiddle.ui])
-    #?(:cljs [hypercrud.ui.attribute.markdown-editor])      ; legacy
-    #?(:cljs [hypercrud.ui.attribute.code])                 ; legacy
-    #?(:cljs [hypercrud.ui.result])                         ; legacy
+    #?(:cljs [hyperfiddle.ide.hf-live])
     ))
 
 

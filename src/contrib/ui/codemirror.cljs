@@ -1,7 +1,13 @@
 (ns contrib.ui.codemirror
   (:require
+    [cuerdas.core :as str]
     [reagent.core :as reagent]))
 
+
+(defn camel-keys "Bad anti-abstraction to undo Reagent's key obfuscating" [m]
+  (reduce-kv (fn [acc k v]
+               (assoc acc (keyword (str/camel (name k))) v))
+             {} m))
 
 (defn sync-changed-props! [ref props]
   (doseq [[prop val] props]
@@ -10,8 +16,8 @@
 
 (def -codemirror
 
-  ;; all usages of value (from react lifecycle) need to be (str value), because
-  ;; codemirror throws NPE if value is nil
+  ; all usages of value (from react lifecycle) need to be (str value), because
+  ; codemirror throws NPE if value is nil
 
   (reagent/create-class
     {:reagent-render
@@ -22,8 +28,15 @@
 
      :component-did-mount
      (fn [this]
-       (let [[_ value change! props] (reagent/argv this)    ;[value change! props] (reagent/props this)
-             ref (.fromTextArea js/CodeMirror (reagent/dom-node this) (clj->js props))]
+       ; Codemirror will default to the first mode loaded in preamble
+       (let [[_ value change! props] (reagent/argv this)
+             ref (js/CodeMirror.fromTextArea (reagent/dom-node this) (clj->js props))]
+
+         ; Props are a shitshow. Remark is stringly, and codemirror wants js types.
+         ; set `lineNumber=` to disable line numbers (empty string is falsey).
+         ; Also, reagent/as-element keyword-cases all the props into keywords, so
+         ; they must be camelized before we get here.
+
          (aset this "codeMirrorRef" ref)
          (.on ref "blur" (fn [_ e]
                            (let [[_ value change! props] (reagent/argv this)
