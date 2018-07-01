@@ -48,8 +48,9 @@
               (update :hypercrud.browser/parent (fnil into {}) (select-keys ctx [:hypercrud.browser/data
                                                                                  :hypercrud.browser/data-cardinality]))
               (assoc
-                :hypercrud.browser/data (r/fapply (r/fmap ::field/get-value (:hypercrud.browser/field ctx))
-                                                  (:hypercrud.browser/data ctx))
+                :hypercrud.browser/data (let [f (r/fmap ::field/get-value (:hypercrud.browser/field ctx))]
+                                          (assert @f "focusing on a non-pulled attribute")
+                                          (r/fapply f (:hypercrud.browser/data ctx)))
                 :hypercrud.browser/data-cardinality cardinality)))
         (query-type [query]
           (-> (parser/parse-query query)
@@ -102,7 +103,7 @@
             :blank ctx
             ctx))
         ; find-field is silly;  we already map over the fields to determine which paths to focus...
-        (find-field [path-segment fields](first (filter #(= (::field/path-segment %) path-segment) fields)))
+        (find-field [path-segment fields] (first (filter #(= (::field/path-segment %) path-segment) fields)))
         (focus-segment [ctx path-segment]
           (cond
             ; todo cannot conflict with :db/ident :head
