@@ -7,13 +7,13 @@
             [hypercrud.browser.system-fiddle :as system-fiddle]
             [hypercrud.browser.system-link :refer [system-link?]]
             [hypercrud.ui.error :as ui-error]
-            [hyperfiddle.data :refer [form sort-fn]]
+            [hyperfiddle.data :refer [sort-fn]]
             [hyperfiddle.runtime :as runtime]
             [hyperfiddle.ui :refer [hyper-control field table fiddle]]))
 
 (defn read-only? [ctx]
-  (if (:relation ctx)                                       ; be robust to being called on labels
-    (let [entity (context/entity ctx)
+  (if (:hypercrud.browser/data ctx)                         ; be robust to being called on labels
+    (let [entity (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
           sys? (system-link? @(r/fmap :db/id entity))
           shadow? @(r/fmap :hypercrud/sys? entity)]
       (or sys? shadow?))))
@@ -35,8 +35,8 @@
                  (dissoc link :link/fiddle)
                  link)))))
 
-(defn renderer [ctx class]
-  (-> (base/data-from-route (:target-route ctx)
+(defn renderer [ctx class] nil
+  #_(-> (base/data-from-route (:target-route ctx)
                             (assoc ctx
                               :hypercrud.browser/domain @(runtime/state (:peer ctx) [::runtime/domain])
                               :keep-disabled-anchors? true))
@@ -47,9 +47,9 @@
            (fiddle ctx)])
         (fn [{:keys [:hypercrud.browser/links]}]
           (let [ctx (-> ctx
-                        (dissoc :relation :relations)
+                        (dissoc :hypercrud.browser/data :hypercrud.browser/data-cardinality :hypercrud.browser/path)
                         (assoc :hypercrud.browser/result (r/track links->result links))
-                        context/with-relations)]
+                        (context/focus [:body]))]
             [:div {:class class}
              [table
               #_(partial form (fn [path ctx ?f & args] (field path ctx ?f :read-only (read-only? ctx))))

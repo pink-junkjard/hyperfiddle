@@ -1,22 +1,30 @@
 (ns hyperfiddle.ui.form
   (:require
-    [contrib.css :refer [css css-slugify]]
+    [contrib.css :refer [css]]
     [contrib.reactive :as r]
     [contrib.reagent :refer [fragment from-react-context fix-arity-1-with-context]]
     [contrib.ui.input :refer [keyword-input* edn-input*]]
     [contrib.ui.tooltip :refer [tooltip-thick]]
     [hypercrud.browser.context :as context]
+    [hypercrud.browser.find-element :as field]
     [hypercrud.browser.system-link :refer [system-link?]]
     [hypercrud.ui.connection-color :refer [connection-color]]
     [hyperfiddle.ui.controls :as controls]
     [hyperfiddle.ui.docstring :refer [semantic-docstring]]
-    [hyperfiddle.ui.sort :as sort]
-    [cuerdas.core :as str]))
+    [hyperfiddle.ui.sort :as sort]))
 
 
-(defn border-color [ctx]
-  (let [shadow-link @(r/fmap system-link? (r/fmap :db/id (context/entity ctx)))]
-    (if-not shadow-link (connection-color ctx))))
+(letfn [(shadow-link? [ctx]
+          (if (or (nil? ctx)
+                  (nil? (:hypercrud.browser/data ctx))
+                  (#{:head :body} (last (:hypercrud.browser/path ctx))))
+            false
+            (if-let [dbid @(r/fmap :db/id (:hypercrud.browser/data ctx))]
+              (system-link? dbid)
+              (shadow-link? (:hypercrud.browser/parent ctx)))))]
+  (defn border-color [ctx]
+    (when-not (shadow-link? ctx)                            ; this hack for sys links editor is quite the PITA
+      (connection-color ctx))))
 
 (defn ui-block-border-wrap [ctx class & children]
   [:div {:class class :style {:border-color (border-color ctx)}}
@@ -33,11 +41,11 @@
 
 
 (letfn [(change! [ctx state v]
-          ((:user-with! ctx) [[:db/add @(r/fmap :db/id (context/entity ctx)) @state v]]))]
+          ((:user-with! ctx) [[:db/add @(r/fmap :db/id (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])) @state v]]))]
   (def magic-new-body
     (from-react-context
       (fn [{:keys [ctx props]} value]
-        (let [read-only (r/fmap (comp not controls/writable-entity?) (context/entity ctx))
+        (let [read-only (r/fmap (comp not controls/writable-entity?) (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))
               state (r/cursor (::state ctx) [::magic-new-a])]
           ;(println (str/format "magic-new-body: %s , %s , %s" @state @read-only (pr-str @entity)))
           ; Uncontrolled widget on purpose i think
@@ -54,44 +62,47 @@
       (let [help-md (semantic-docstring ctx)]
         [tooltip-thick (if help-md
                          [:div.docstring [contrib.ui/markdown help-md]])
-         [:label props (:label field) (if help-md [:sup "†"])]]))))
+         [:label props (::field/label field) (if help-md [:sup "†"])]]))))
 
 (defn form-field "Form fields are label AND value. Table fields are label OR value."
-  [hyper-control ?f ctx props]                              ; fiddle-src wants to fallback by passing nil here explicitly
+  [hyper-control relative-path ctx ?f props]                ; fiddle-src wants to fallback by passing nil here explicitly
   (assert @(:hypercrud.ui/display-mode ctx))
   (let [state (r/atom {::magic-new-a nil})]                 ; ^{:key (hash @(r/fmap keys (context/entity ctx)))}
-    (fn [hyper-control ?f ctx props]
-      (let [ctx (assoc ctx :hyperfiddle.ui.form/state state)]
+    (fn [hyper-control relative-path ctx ?f props]
+      (let [ctx (assoc ctx :hyperfiddle.ui.form/state state)
+            ; we want the wrapper div to have the :body styles, so build the head before polluting the ctx with :body
+            head (let [ctx (context/focus ctx (cons :head relative-path))]
+                   ^{:key :form-head}
+                   [fix-arity-1-with-context (or (:label-fn props) (hyper-control ctx))
+                    (some-> (:hypercrud.browser/field ctx) deref) ; todo unbreak reactivity
+                    ctx props])
+            ctx (context/focus ctx (cons :body relative-path))
+            props (update props :class css (hyperfiddle.ui/semantic-css ctx))]
         (ui-block-border-wrap
           ctx (css "field" (:class props))
-          (let [head-ctx (dissoc ctx :relation)]
-            ^{:key :form-head}
-            [fix-arity-1-with-context (or (:label-fn props) (hyper-control head-ctx)) (:hypercrud.browser/field head-ctx) head-ctx props])
-          (if (:relation ctx)                               ; naked has no body
+          head
+          (let [data @(:hypercrud.browser/data ctx)]        ; todo why consciously break reactivity
+            #_(if (:relation ctx))                          ; naked has no body
             ^{:key :form-body}
-            [fix-arity-1-with-context (or ?f (hyper-control ctx)) @(context/value ctx) ctx props]))))))
+            [fix-arity-1-with-context (or ?f (hyper-control ctx)) data ctx props]))))))
 
 (defn table-field "Form fields are label AND value. Table fields are label OR value."
-  [control-fac ?f ctx props]
-  (let [{:keys [hypercrud.browser/field
-                hypercrud.browser/attribute]} ctx
-        [i a] [(:fe-pos ctx) attribute]
-        path (remove nil? [i a])]
-    (if (:relation ctx)
-      [:td {:class (css "field" (:class props) "truncate")
-            :style {:border-color (if i (border-color ctx))}}
-       ; todo unsafe execution of user code: control
-       [fix-arity-1-with-context (or ?f (control-fac ctx)) @(context/value ctx) ctx props]]
-      [:th {:class (css "field" (:class props)
-                        (if (and i (sort/sortable? ctx path)) "sortable") ; hoist
-                        (some-> (sort/sort-direction ctx) name)) ; hoist
-            :style {:background-color (border-color ctx)}
-            :on-click (r/partial sort/toggle-sort! ctx path)}
-       ; Use f as the label control also, because there is hypermedia up there
-       [fix-arity-1-with-context (or (:label-fn props) (control-fac ctx)) field ctx props]])))
-
-; (defmulti -field "Form fields are label AND value. Table fields are label OR value." ::layout)
-(defn -field [ctx]
-  (case (:hyperfiddle.ui/layout ctx)
-    :hyperfiddle.ui.layout/table table-field
-    form-field))
+  [control-fac relative-path ctx ?f props]
+  (let [head-or-body (last (:hypercrud.browser/path ctx))   ; this is ugly and not uniform with form-field
+        ctx (context/focus ctx relative-path)
+        props (update props :class css (hyperfiddle.ui/semantic-css ctx))]
+    (case head-or-body
+      :head [:th {:class (css "field" (:class props)
+                              (when (sort/sortable? ctx nil) "sortable") ; hoist
+                              (some-> (sort/sort-direction ctx) name)) ; hoist
+                  :style {:background-color (border-color ctx)}
+                  :on-click (r/partial sort/toggle-sort! ctx nil)}
+             ; Use f as the label control also, because there is hypermedia up there
+             [fix-arity-1-with-context (or (:label-fn props) (control-fac ctx))
+              (some-> (:hypercrud.browser/field ctx) deref) ; todo unbreak reactivity
+              ctx props]]
+      :body (let [data @(:hypercrud.browser/data ctx)]      ; todo why consciously break reactivity
+              [:td {:class (css "field" (:class props) "truncate")
+                    :style {:border-color (when (:hypercrud.browser/source-symbol ctx) (border-color ctx))}}
+               ; todo unsafe execution of user code: control
+               [fix-arity-1-with-context (or ?f (control-fac ctx)) data ctx props]]))))

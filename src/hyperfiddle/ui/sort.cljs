@@ -14,10 +14,11 @@
        (not-any? link/popover-link?)))
 
 (defn sortable? [ctx path]
-  (and (hf/attr-sortable? @(:hypercrud.browser/find-element ctx)
-                          (:attribute (:hypercrud.browser/field ctx))
-                          ctx)
-       @(r/track links-dont-break-sorting? path ctx)))
+  false
+  #_(and (hf/attr-sortable? @(:hypercrud.browser/find-element ctx)
+                            (:attribute (:hypercrud.browser/field ctx))
+                            ctx)
+         @(r/track links-dont-break-sorting? path ctx)))
 
 (defn sort-direction [ctx]
   (let [[sort-fe-pos sort-attr direction] @(::sort-col ctx)]

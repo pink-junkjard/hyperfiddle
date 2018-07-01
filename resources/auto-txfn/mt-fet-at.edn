@@ -1,6 +1,6 @@
 (fn [ctx multi-color-tx modal-route]
   (let [[_ [{entity-id :db/id}]] modal-route                ; e.g. table-cell value or form-field value
-        parent-id (:db/id @(hypercrud.browser.context/entity ctx)) ; e.g. table-row entity or form entity
+        parent-id (:db/id @(get-in ctx [:hypercurd.browser/parent :hypercrud.browser/data])) ; e.g. table-row entity or form entity
         attr (:hypercrud.browser/attribute ctx)
         parent-child-ref (contrib.datomic-tx/edit-entity parent-id attr [] [entity-id])]
     {:tx {(:uri ctx) parent-child-ref}}))

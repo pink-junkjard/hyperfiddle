@@ -19,7 +19,7 @@
 (defn entity-change! [ctx value]
   ; Sometimes value is partialed, sometimes not, depends on the widget's change! interface which is inconsistent
   (let [value (empty->nil value) #_"safe for non-strings"]
-    ((:user-with! ctx) (tx/update-entity-attr @(context/entity ctx)
+    ((:user-with! ctx) (tx/update-entity-attr @(get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
                                               @(:hypercrud.browser/fat-attribute ctx)
                                               value))))
 
@@ -30,21 +30,21 @@
 (def ^:export keyword
   (from-react-context
     (fn [{:keys [ctx props]} value]
-      (let [props (update props :read-only #(or % (not @(r/fmap writable-entity? (context/entity ctx)))))
+      (let [props (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))
             on-change! (r/partial entity-change! ctx)]
         [input/keyword-input* value on-change! props]))))
 
 (def ^:export string
   (from-react-context
     (fn [{:keys [ctx props]} value]
-      (let [props (update props :read-only #(or % (not @(r/fmap writable-entity? (context/entity ctx)))))
+      (let [props (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))
             on-change! (r/partial entity-change! ctx)]
         [input/input* value on-change! props]))))
 
 (def ^:export long
   (from-react-context
     (fn [{:keys [ctx props]} value]
-      (let [props (update props :read-only #(or % (not @(r/fmap writable-entity? (context/entity ctx)))))
+      (let [props (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))
             on-change! (r/partial entity-change! ctx)]
         [input/validated-input value on-change!
          #(js/parseInt % 10) (fnil str "")
@@ -56,7 +56,7 @@
     (fn [{:keys [ctx props]} value]
       [contrib.ui/easy-checkbox "" value
        (r/partial entity-change! ctx (not value))
-       (update props :read-only #(or % (not @(r/fmap writable-entity? (context/entity ctx)))))])))
+       (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))])))
 
 (def ^:export tristate-boolean
   (letfn [(adapter [e]
@@ -69,7 +69,7 @@
     (from-react-context
       (fn [{:keys [ctx props]} value]
         (let [option-props {:disabled (or (cljs.core/boolean (:read-only props))
-                                          (not @(r/fmap writable-entity? (context/entity ctx))))}]
+                                          (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))))}]
           [:select (-> (dissoc props :label-fn)
                        (merge {:value (if (nil? value) "" (str value))
                                :on-change (r/partial change! ctx)}))
@@ -82,14 +82,14 @@
     (fn [{:keys [ctx props]} value]
       [input/id-input value
        (r/partial entity-change! ctx)
-       (update props :read-only #(or % (not @(r/fmap writable-entity? (context/entity ctx)))))])))
+       (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))])))
 
 (def ^:export instant
   (from-react-context
     (fn [{:keys [ctx props]} value]
       [recom-date value
        (r/partial entity-change! ctx)
-       (update props :read-only #(or % (not @(r/fmap writable-entity? (context/entity ctx)))))])))
+       (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))])))
 
 (def ^:export code
   (from-react-context
@@ -99,7 +99,7 @@
                       :hyperfiddle.ui.layout/table code-inline-block)]
         ; code has backwards args - props first
         [control
-         (update props :read-only #(or % (not @(r/fmap writable-entity? (context/entity ctx)))))
+         (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))
          value
          (r/partial entity-change! ctx)]))))
 
@@ -112,7 +112,7 @@
         ;code has backwards args - props first
         [widget
          (-> props
-             (update :read-only #(or % (not @(r/fmap writable-entity? (context/entity ctx)))))
+             (update :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))
              (assoc :mode "markdown" :lineWrapping true))
          value
          (r/partial entity-change! ctx)]))))
@@ -122,7 +122,7 @@
             (let [user-val (set user-val)
                   rets (set/difference value user-val)
                   adds (set/difference user-val value)]
-              ((:user-with! ctx) (tx/edit-entity (:db/id @(context/entity ctx))
+              ((:user-with! ctx) (tx/edit-entity @(r/fmap :db/id (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))
                                                  (:hypercrud.browser/attribute ctx)
                                                  rets adds))))]
     (from-react-context
@@ -134,7 +134,7 @@
                        :hyperfiddle.ui.layout/table edn-inline-block)]
           [widget value
            (r/partial change! ctx value)
-           (update props :read-only #(or % (not @(r/fmap writable-entity? (context/entity ctx)))))])))))
+           (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))])))))
 
 (def ^:export edn
   (from-react-context
@@ -144,7 +144,7 @@
                      :hyperfiddle.ui.layout/block edn-block)]
         [widget value
          (r/partial entity-change! ctx)
-         (update props :read-only #(or % (not @(r/fmap writable-entity? (context/entity ctx)))))]))))
+         (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))]))))
 
 ;(defn textarea* [{:keys [value on-change] :as props}]       ; unused
 ;  (let [on-change #(let [newval (.. % -target -value)]

@@ -4,6 +4,7 @@
             [contrib.reactive :as r]
             [contrib.string :refer [memoized-safe-read-edn-string]]
             [hypercrud.browser.dbname :as dbname]
+            [hypercrud.browser.find-element :as field]
             [hypercrud.browser.context :as context]
             [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
             [hypercrud.types.ThinEntity :refer [->ThinEntity]]
@@ -23,63 +24,68 @@
     (->ThinEntity (dbname/uri->dbname (:uri ctx) ctx) id)))
 
 ; todo there are collisions when two links share the same 'location'
-(defn deterministic-ident
-  ([ctx]
-   (deterministic-ident
-     (:hypercrud.browser/find-element ctx)
-     (context/entity ctx)
-     (:hypercrud.browser/fat-attribute ctx)
-     (context/value ctx)))
-  ([fe cell-data attr v]
-    ; Need comment explaining why.
-    ; [fe e a v] quad is sufficient to answer "where are we".
-    ; Why Db is omitted?
-    ; Why value is only inspected in :many for unique hashing?
-   (-> (str (some-> fe (r/cursor [:name]) deref) "."
-            (if cell-data
-              (or @(r/fmap :db/id cell-data)
-                  (hash @cell-data))) "."
-            (if attr @(r/fmap :db/ident attr)) "."
-            (if attr (case @(r/cursor attr [:db/cardinality :db/ident])
-                       :db.cardinality/one nil
-                       :db.cardinality/many (hash (into #{} (mapv :db/id @v))) ; todo scalar
-                       nil nil #_":db/id has a faked attribute with no cardinality, need more thought to make elegant")))
-       hash abs-normalized - str)))
+(defn deterministic-ident [ctx]
+  (-> (str (:hypercrud.browser/path ctx) "."
+           (if-let [data (:hypercrud.browser/data ctx)]
+             (case (:hypercrud.browser/data-cardinality ctx)
+               :db.cardinality/one @(r/fmap :db/id data)
+               :db.cardinality/many (hash (into #{} @(r/fmap (partial mapv :db/id) data))) ; todo scalar
+               nil nil #_":db/id has a faked attribute with no cardinality, need more thought to make elegant")))
+      hash abs-normalized - str))
 
 (let [get-uri (fn [default cell-data]
                 (if (instance? Entity cell-data)
                   (.-uri cell-data)
                   default))]
   (defn auto-entity [ctx]
-    (let [uri @(r/fmap (partial get-uri (:uri ctx)) (:cell-data ctx))]
-      (->ThinEntity (dbname/uri->dbname uri ctx) (deterministic-ident ctx)))))
+    (->ThinEntity (dbname/uri->dbname (:uri ctx) ctx) (deterministic-ident ctx))))
 
-(defn -auto-formula-impl [ctx path & {:keys [create? dependent?]}]
-  (case {:fe (not (nil? (first path))) :c? (or create? false) :d? (or dependent? false)}
-    {:fe true :c? false :d? true} (if (nil? (second path))
-                                    (when @(r/cursor (:hypercrud.browser/ordered-fes ctx) [(first path) :entity])
-                                      "(comp deref :cell-data)")
-                                    (let [dbname (str @(r/cursor (:hypercrud.browser/ordered-fes ctx) [(first path) :source-symbol]))]
-                                      (case @(r/cursor (:hypercrud.browser/schemas ctx) [dbname (second path) :db/cardinality :db/ident])
-                                        :db.cardinality/one "(comp deref :value)"
+(defn- field-at-path [path ordered-fields]
+  (loop [[segment & rest] path
+         fields ordered-fields]
+    (cond
+      (#{:head :body} segment) (recur rest fields)
+      (integer? segment) (let [field (get fields segment)]
+                           (if (seq rest)
+                             (recur rest (::field/children field))
+                             field))
+      :else (let [field (first (filter #(= (::field/path-segment %) segment) fields))]
+              (if (seq rest)
+                (recur rest (::field/children field))
+                field)))))
 
-                                        ; "find children of parent entity at attr". See base ->EntityRequest
-                                        :db.cardinality/many (when @(r/cursor (:hypercrud.browser/ordered-fes ctx) [(first path) :entity])
-                                                               "(juxt (comp deref :cell-data) :hypercrud.browser/attribute)")
+(defn -auto-formula-impl [ctx path & {:keys [create?] :or {create? false}}] ; todo clean up these args, remove ctx
+  (if create?
+    (if (empty? path)
+      "hypercrud.browser.auto-link-formula/auto-entity-from-stage"
+      (when (::field/data-has-id? (field-at-path path @(:hypercrud.browser/fields ctx))) ; todo better reactivity
+        ; todo d? false used to be "hypercrud.browser.auto-link-formula/auto-entity-from-stage"
+        "hypercrud.browser.auto-link-formula/auto-entity"))
+    (when (::field/data-has-id? (field-at-path path @(:hypercrud.browser/fields ctx)))
+      "(comp deref :hypercrud.browser/data)"))
 
-                                        ; the attribute doesnt exist
-                                        nil "(comp deref :value)")))
-    {:fe true :c? false :d? false} nil
-    {:fe true :c? true :d? true} (when @(r/cursor (:hypercrud.browser/ordered-fes ctx) [(first path) :entity])
-                                   "hypercrud.browser.auto-link-formula/auto-entity")
-    {:fe true :c? true :d? false} "hypercrud.browser.auto-link-formula/auto-entity-from-stage"
+  #_(case {:fe (not (nil? (first path))) :c? create?}
+      {:fe true :c? false} (if (nil? (second path))
+                             (when @(r/cursor (:hypercrud.browser/ordered-fes ctx) [(first path) :entity])
+                               "(comp deref :cell-data)")
+                             (let [dbname (str @(r/cursor (:hypercrud.browser/ordered-fes ctx) [(first path) :source-symbol]))]
+                               (case @(r/cursor (:hypercrud.browser/schemas ctx) [dbname (second path) :db/cardinality :db/ident])
+                                 :db.cardinality/one "(comp deref :value)"
 
-    ; no fe = index or relation links
-    {:fe false :c? false :d? true} nil
-    {:fe false :c? false :d? false} nil
-    {:fe false :c? true :d? true} nil
-    {:fe false :c? true :d? false} (when (nil? (second path))
-                                     "hypercrud.browser.auto-link-formula/auto-entity-from-stage")))
+                                 ; "find children of parent entity at attr". See base ->EntityRequest
+                                 :db.cardinality/many (when @(r/cursor (:hypercrud.browser/ordered-fes ctx) [(first path) :entity])
+                                                        "(juxt (comp deref :cell-data) :hypercrud.browser/attribute)")
+
+                                 ; the attribute doesnt exist
+                                 nil "(comp deref :value)")))
+      {:fe true :c? true} (when @(r/cursor (:hypercrud.browser/ordered-fes ctx) [(first path) :entity])
+                            ; todo d? false used to be "hypercrud.browser.auto-link-formula/auto-entity-from-stage"
+                            "hypercrud.browser.auto-link-formula/auto-entity")
+
+      ; no fe = index or relation links
+      {:fe false :c? false} nil
+      {:fe false :c? true} (when (empty? path)
+                             "hypercrud.browser.auto-link-formula/auto-entity-from-stage")))
 
 (defn auto-formula [ctx link]
   (-> (memoized-safe-read-edn-string (str "[" (:link/path link) "]"))
@@ -88,4 +94,4 @@
           (timbre/error e)
           nil)
         (fn [path]
-          (-auto-formula-impl ctx path :create? (:link/create? link) :dependent? (:link/dependent? link))))))
+          (-auto-formula-impl ctx path :create? (:link/create? link))))))

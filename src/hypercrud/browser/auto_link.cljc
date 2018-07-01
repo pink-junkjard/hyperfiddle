@@ -39,7 +39,7 @@
 ; todo tighter reactivity
 (defn auto-links [ctx]
   (let [fiddle (:hypercrud.browser/fiddle ctx)
-        sys-links (system-link/system-links @fiddle @(:hypercrud.browser/ordered-fes ctx) @(:hypercrud.browser/schemas ctx))
+        sys-links (system-link/system-links @(:hypercrud.browser/fields ctx) @(:hypercrud.browser/schemas ctx))
         links (->> (merge-links sys-links @(r/cursor fiddle [:fiddle/links]))
                    (map (partial auto-link ctx)))]
     (if (:keep-disabled-anchors? ctx)

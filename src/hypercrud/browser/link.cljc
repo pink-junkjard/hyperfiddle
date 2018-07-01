@@ -38,23 +38,13 @@
 (def options-processor (partial remove options-link?))
 
 (defn links-here [ctx]
-  (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
-    (->> @(:hypercrud.browser/links ctx)
-         (filter (same-path-as? path)))))
+  (->> @(:hypercrud.browser/links ctx)
+       (filter (same-path-as? (:hypercrud.browser/path ctx)))))
 
-(defn rel->link
-  ([rel ctx] (rel->link rel [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)] ctx))
-  ([rel path ctx]
-    ; Context focus isn't set yet, we are looking up the link to set the context.
-   (->> @(:hypercrud.browser/links ctx)
-        (filter (same-path-as? path))
-        (filter #(= (:link/rel %) rel))
-        first)))
-
-(defn options-link [ctx]
-  ; Needs to work with longer paths
-  (let [path [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
-    (rel->link :options path ctx)))
+(defn rel->link [rel ctx]
+  (->> (links-here ctx)
+       (filter #(= (:link/rel %) rel))
+       first))
 
 ; todo belongs in routing ns
 ; this is same business logic as base/request-for-link
@@ -121,7 +111,7 @@
             (p/promise
               (fn [resolve! reject!]
                 (let [swap-fn (fn [multi-color-tx]
-                                (let [result (let [result (user-txfn (context/legacy-ctx ctx) multi-color-tx route)]
+                                (let [result (let [result (user-txfn ctx multi-color-tx route)]
                                                ; txfn may be sync or async
                                                (if-not (p/promise? result) (p/resolved result) result))]
                                   ; let the caller of this :stage fn know the result
@@ -183,8 +173,7 @@
   ; - broken user txfn
   ; - broken user visible fn
   ; If these fns are ommitted (nil), its not an error.
-  (let [ctx (context/legacy-ctx ctx)
-        route' (routing/build-route' link ctx)
+  (let [route' (routing/build-route' link ctx)
         hypercrud-props (build-link-props-raw route' link ctx)
         popover-props (if (popover-link? link)
                         (if-let [route (and (:link/managed? link) (either/right? route') (cats/extract route'))]

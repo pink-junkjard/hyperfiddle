@@ -1,39 +1,42 @@
 (ns hyperfiddle.data
   (:require
-    [cats.core :refer [mlet fmap]]
+    [cats.core :refer [fmap]]
     [contrib.reactive :as r]
     [hypercrud.browser.base :as base]
-    [hypercrud.browser.link :as link]))
+    [hypercrud.browser.find-element :as field]
+    [hypercrud.browser.link :as link]
+    [hypercrud.browser.context :as context]))
 
 
 (defn relation-keyfn [relation]
   (hash (map #(or (:db/id %) %) relation)))
 
-(defn form "Field is invoked as fn"
-  [field {:keys [hypercrud.browser/ordered-fes] :as ctx} props]
-  (->> (r/unsequence ordered-fes)
-       (mapcat (fn [[fe i]]
-                 (concat
-                   (->> fe
-                        (r/fmap :fields)
-                        (r/unsequence :attribute)
-                        (mapv (fn [[_ a]]
-                                (field [i a] ctx nil props))))
-                   (case (:type @fe)
-                     :pull [(field [i] ctx nil props)]            ; entity links
-                     :aggregate nil
-                     :variable nil                          ; We don't gen links for scalars, don't know if its a ref
-                     ))))
-       doall))
+(letfn [(should-flatten? [m-field] (not (nil? (::field/source-symbol m-field))))]
+  (defn form "Field is invoked as fn"
+    [f-field ctx & [props]]                                 ; todo props shouldn't be passed through here
+    (-> (->> (r/unsequence ::field/path-segment (:hypercrud.browser/fields ctx))
+             (mapcat (fn [[m-field path-segment]]
+                       ; this is silly why are we tossing the m-field data structure
+                       (cond->> [(f-field [path-segment] ctx nil props)] ; entity links
+                         @(r/fmap should-flatten? m-field)  ; this only happens once at the top for a fe pull expressions
+                         (concat (->> (r/fmap ::field/children m-field)
+                                      (r/unsequence ::field/path-segment)
+                                      (mapv (fn [[m-child-field child-segment]]
+                                              ; this is silly why are we tossing the m-child-field data structure
+                                              (f-field [path-segment child-segment] ctx nil props)))))))))
+        ;vec (conj (f-field [] ctx nil props))               ; row/relation
+        doall)))
 
-(defn browse' [rel path ctx]
+(defn browse' [rel relative-path ctx]
   ; context is not set for this call
-  (->> (base/data-from-link @(r/track link/rel->link rel path ctx) ctx)
-       (fmap :hypercrud.browser/result)
-       (fmap deref)))
+  (let [ctx (context/focus ctx relative-path)]
+    (->> (base/data-from-link @(r/track link/rel->link rel ctx) ctx)
+         (fmap :hypercrud.browser/result)
+         (fmap deref))))
 
-(defn attr-sortable? [fe attribute ctx]
-  (if-let [dbname (some-> (:source-symbol fe) str)]
+(defn attr-sortable? [source-symbol attribute ctx]
+  false
+  #_(if-let [dbname (some-> source-symbol str)]
     (let [{:keys [:db/cardinality :db/valueType]} @(r/cursor (:hypercrud.browser/schemas ctx) [dbname attribute])]
       (and
         (= (:db/ident cardinality) :db.cardinality/one)
@@ -56,7 +59,7 @@
 
 (defn sort-fn [sort-col ctx relations-val]
   (let [[sort-fe-pos sort-attr direction] @sort-col
-        fe @(r/cursor (:hypercrud.browser/ordered-fes ctx) [sort-fe-pos])
+        fe @(r/cursor (:hypercrud.browser/fields ctx) [sort-fe-pos])
         attr (->> (map :attribute (:fields fe))
                   (filter #(= % sort-attr))
                   first)]

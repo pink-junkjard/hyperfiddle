@@ -10,12 +10,10 @@
   (let [ctx {:cell (constantly [:pre])
              :hypercrud.browser/attribute (r/atom nil)
              :hypercrud.browser/fiddle (r/atom nil)
-             :hypercrud.browser/find-element (r/atom nil)
+             :hypercrud.browser/fields (r/atom [])
              :hypercrud.browser/links (r/atom nil)
-             :hypercrud.browser/ordered-fes (r/atom [])
              :hypercrud.browser/request (r/atom nil)
              :hypercrud.browser/result (r/atom [])
-             :relations (r/atom [])
              :hypercrud.browser/schema (r/atom nil)
              :hypercrud.browser/schemas (r/atom nil)}]
     ; just test it renderers something
@@ -25,12 +23,10 @@
   (let [ctx {:cell (constantly [:pre])
              :hypercrud.browser/attribute (r/atom nil)
              :hypercrud.browser/fiddle (r/atom nil)
-             :hypercrud.browser/find-element (r/atom nil)
+             :hypercrud.browser/fields (r/atom [])
              :hypercrud.browser/links (r/atom nil)
-             :hypercrud.browser/ordered-fes (r/atom [])
              :hypercrud.browser/request (r/atom nil)
              :hypercrud.browser/result (r/atom nil)
-             :relation (r/atom nil)
              :hypercrud.browser/schema (r/atom nil)
              :hypercrud.browser/schemas (r/atom nil)}]
     ; just test it renderers something

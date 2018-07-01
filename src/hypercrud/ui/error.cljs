@@ -45,6 +45,6 @@
   (cond
     (:hypercrud.ui/error ctx) ((:hypercrud.ui/error ctx) ctx)
     (:hypercrud.browser/attribute ctx) error-inline         ; table: header or cell, form: header or cell
-    (:hypercrud.browser/find-element ctx) error-inline
+    (integer? (last (:hypercrud.browser/path ctx))) error-inline
     ; browser including inline true links
     :else (r/partial error-block-with-stage ctx)))

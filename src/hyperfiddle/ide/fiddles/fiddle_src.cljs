@@ -61,8 +61,8 @@
      (field [0 :fiddle/markdown] ctx (controls :fiddle/markdown))
      (field [0 :fiddle/css] ctx (controls :fiddle/css))
      (field [0 :fiddle/renderer] ctx (controls :fiddle/renderer))
-     (when-not embed-mode (field [0 :fiddle/links] ctx-real (controls :fiddle/links)))
-     (when-not embed-mode (link :hyperfiddle/remove [0] ctx "Remove fiddle"))]))
+     (field [0 :fiddle/links] ctx (controls :fiddle/links))
+     (when-not embed-mode (link :hyperfiddle/remove [:body 0] ctx "Remove fiddle"))]))
 
 (defn hacked-links [value]
   (let [links (->> value

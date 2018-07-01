@@ -7,7 +7,7 @@
             [hypercrud.browser.auto-link :refer [auto-links]]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.fiddle :as fiddle]
-            [hypercrud.browser.find-element :as find-element]
+            [hypercrud.browser.find-element :as field]
             [hypercrud.browser.q-util :as q-util]
             [hypercrud.browser.routing :as routing]
             [hypercrud.browser.system-fiddle :as system-fiddle]
@@ -144,25 +144,27 @@
                        (if-let [?request @request]
                          @(hc/hydrate peer branch ?request)
                          (either/right nil)))]
-  (defn process-results [fiddle request ctx]
+  (defn process-results [fiddle request ctx]                ; todo rename to (context/result)
     (mlet [reactive-schemas @(r/apply-inner-r (schema-util/hydrate-schema ctx))
            reactive-result @(r/apply-inner-r (r/track nil-or-hydrate (:peer ctx) (:branch ctx) request))
            :let [ctx (assoc ctx
+                       :hypercrud.browser/path []
                        :hypercrud.browser/fiddle fiddle     ; for :db/doc
                        :hypercrud.browser/request request
                        :hypercrud.browser/result reactive-result
                        ; For tx/entity->statements in userland.
-                       :hypercrud.browser/schemas reactive-schemas)
-                 ctx (context/with-relations ctx)]
+                       :hypercrud.browser/schemas reactive-schemas)]
            ctx (user-bindings/user-bindings ctx)
-           reactive-fes @(r/apply-inner-r (r/track find-element/auto-find-elements ctx))
-           :let [ctx (assoc ctx :hypercrud.browser/ordered-fes reactive-fes)
+           reactive-fields @(r/apply-inner-r (r/track field/auto-fields ctx))
+           :let [ctx (assoc ctx :hypercrud.browser/fields reactive-fields)
                  ctx (assoc ctx :hypercrud.browser/links (r/track auto-links ctx))
                  ctx (if (and (= :entity @(r/cursor fiddle [:fiddle/type]))
                               ; e is nil on the EntityRequest
                               (-> ctx :route second first nil?))
                        (assoc ctx :read-only (r/constantly true))
-                       ctx)]]
+                       ctx)
+                 ctx (context/focus ctx [:body])           ; todo remove, call (focus ctx [:body]) when you need the data
+                 ]]
       (cats/return ctx))))
 
 (defn data-from-route [route ctx]                           ; todo rename

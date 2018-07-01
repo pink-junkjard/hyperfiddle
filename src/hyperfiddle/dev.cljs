@@ -23,17 +23,9 @@
   (aset global "hc_where" (fn [ctx]
                             (-> ctx
                                 (select-keys [:route        ; ordered for glance debugging
-                                              :hypercrud.browser/attribute
-                                              :fe-pos
-                                              :hypercrud.browser/find-element
-                                              :relation
-                                              :relations])
-                                (update-existing :hypercrud.browser/find-element deref)
-                                (update-existing :relations deref)
-                                (update-existing :relation deref)
-                                (update-existing :cell-data deref)
-                                (assoc :cell-data @(context/entity ctx))
-                                (assoc :value @(context/value ctx))
+                                              :hypercrud.browser/data
+                                              :hypercrud.browser/path])
+                                (update-existing :hypercrud.browser/data deref)
                                 (pprint-str 150))))
   (aset global "hc_route" (fn [ctx] (-> ctx :route pprint-str)))
   (aset global "hc_root_route" (fn []

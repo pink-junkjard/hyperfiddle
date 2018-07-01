@@ -24,34 +24,34 @@
                               :db/cardinality {:db/ident :db.cardinality/one}}
                   :some/attr-many {:db/ident :some/attr-many
                                    :db/cardinality {:db/ident :db.cardinality/many}}}
-        base-ctx {:hypercrud.browser/ordered-fes (r/atom [{:entity true
-                                                           :source-symbol '$}])
+        base-ctx {:hypercrud.browser/fields (r/atom [{:entity true
+                                                      :source-symbol '$}])
                   :hypercrud.browser/schemas (r/atom {"$" $-schema})}]
 
-    (let [f (eval-formula (-auto-formula-impl base-ctx [0] :create? false :dependent? true))
+    (let [f (eval-formula (-auto-formula-impl base-ctx [0] :create? false))
           e (->Entity #uri "test" {:db/id "entity"})
           ctx (assoc base-ctx :cell-data (r/atom e))]
       (is (= (f ctx) e)))
 
-    (let [f (eval-formula (-auto-formula-impl base-ctx [0 :some/attr] :create? false :dependent? true))
+    (let [f (eval-formula (-auto-formula-impl base-ctx [0 :some/attr] :create? false))
           ctx (assoc base-ctx :value (r/atom 1))]
       (is (= (f ctx) 1)))
 
-    (let [f (eval-formula (-auto-formula-impl base-ctx [0 :some/attr-many] :create? false :dependent? true))
+    (let [f (eval-formula (-auto-formula-impl base-ctx [0 :some/attr-many] :create? false))
           e (->Entity #uri "test" {:db/id "entity"})
           ctx (assoc base-ctx
                 :cell-data (r/atom e)
                 :hypercrud.browser/attribute :some/attr-many)]
       (is (= (f ctx) [e :some/attr-many])))
 
-    (let [f (eval-formula (-auto-formula-impl base-ctx [0 :some/non-real-attr] :create? false :dependent? true))
+    (let [f (eval-formula (-auto-formula-impl base-ctx [0 :some/non-real-attr] :create? false))
           ctx (assoc base-ctx :value (r/atom 1))]
       (is (= (f ctx) 1)))
 
-    (let [f (eval-formula (-auto-formula-impl base-ctx [0] :create? false :dependent? false))
+    (let [f (eval-formula (-auto-formula-impl base-ctx [0] :create? false))
           ctx base-ctx]
       (is (nil? (f ctx))))
 
-    (let [f (eval-formula (-auto-formula-impl base-ctx [0 :some/attr] :create? false :dependent? false))
+    (let [f (eval-formula (-auto-formula-impl base-ctx [0 :some/attr] :create? false))
           ctx base-ctx]
       (is (nil? (f ctx))))))

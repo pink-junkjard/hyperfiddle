@@ -8,64 +8,87 @@
             [datascript.parser :as parser]))
 
 
-(defrecord FindElement [name
-                        entity                              ; semantic bit for formulas (can't navigate scalar fes)
-                        fields
-                        source-symbol
-                        type])
-
-(defrecord Field [id label attribute cell-data->value])
+(defn- last-arg-first [f & args]
+  (apply f (last args) (drop-last 1 args)))
 
 (def keyword->label #(some-> % name str))
 
-(defn variable->fe [element]
-  (let [name (str (:symbol element))]
-    (map->FindElement
-      {:name name
-       :entity false
-       :fields [(map->Field {:id (hash name)
-                             :label name
-                             :attribute nil
-                             :cell-data->value identity})]
-       :source-symbol nil
-       :type :variable})))
+(defn variable->fe [fe-pos element]
+  {::children nil
+   ::data-has-id? false
+   ::label (str (:symbol element))
+   ::get-value (r/partial last-arg-first get fe-pos)
+   ::path-segment fe-pos
+   ::source-symbol nil})
 
 (let [alias->value (fn [alias cell-data] (get cell-data alias))]
-  (defn attr-with-opts-or-expr [fe-name list-or-vec]
+  (defn attr-with-opts-or-expr [is-ref? list-or-vec]
     (if (#{'default 'limit} (first list-or-vec))
       (let [attr (second list-or-vec)]
-        (map->Field {:id (hash [fe-name attr])
-                     :label (keyword->label attr)
-                     :attribute attr
-                     :cell-data->value attr}))
+        {::children nil
+         ::data-has-id? (is-ref? attr)
+         ::label (keyword->label attr)
+         ::get-value attr
+         ::path-segment attr
+         ::source-symbol nil})
       ; otherwise attr-with-opts
       (let [[attr & {:as opts}] list-or-vec]
-        (map->Field {:id (hash [fe-name attr])
-                     :-alias (:as opts)
-                     :label (if-let [alias (:as opts)]
-                              (if (string? alias) alias (pr-str alias))
-                              (keyword->label attr))
-                     :attribute attr
-                     :cell-data->value (or (some->> (:as opts) (r/partial alias->value)) attr)})))))
+        {::-alias (:as opts)
+         ::children nil
+         ::data-has-id? (is-ref? attr)
+         ::label (if-let [alias (:as opts)]
+                   (if (string? alias) alias (pr-str alias))
+                   (keyword->label attr))
+         ::get-value (or (some->> (:as opts) (r/partial alias->value)) attr)
+         ::path-segment attr
+         ::source-symbol nil}))))
 
-(defn pull->fields [pull-pattern inferred-attrs fe-name]
+(defn entity? [pull-pattern]
+  (boolean (some #{'* :db/id} pull-pattern)))
+
+(defn infer-attrs [data path]
+  (let [f (reduce (fn [f segment]
+                    (comp
+                      (fn [data]
+                        (cond
+                          (map? data) (get data segment)
+                          (or (vector? data) (seq? data)) (map #(get % segment) data)
+                          :else nil))
+                      f))
+                  identity
+                  path)
+        data-at-path (f data)]
+    (->> (cond
+           (map? data-at-path) [data-at-path]
+           (or (vector? data-at-path) (seq? data-at-path)) (flatten data-at-path)
+           :else nil)
+         (mapcat keys)
+         (into #{}))))
+
+(defn pull->fields [is-ref? pull-pattern data path]         ; todo inferred attrs needs to walk
   (let [explicit-fields (reduce (fn [acc sym]
+                                  ; ::entity? is whether dbid exists while nested
                                   (cond
-                                    (map? sym) (->> (keys sym)
-                                                    (map (fn [k]
-                                                           (if (or (vector? k) (seq? k))
-                                                             (attr-with-opts-or-expr fe-name k)
-                                                             (map->Field {:id (hash [fe-name k])
-                                                                          :label (keyword->label k)
-                                                                          :attribute k
-                                                                          :cell-data->value k}))))
+                                    (map? sym) (->> sym
+                                                    (map (fn [[k v]]
+                                                           (-> (if (or (vector? k) (seq? k))
+                                                                 (attr-with-opts-or-expr is-ref? k)
+                                                                 {::label (keyword->label k)
+                                                                  ::get-value k
+                                                                  ::path-segment k
+                                                                  ::source-symbol nil})
+                                                               (assoc ::children (pull->fields is-ref? v data (conj path k))
+                                                                      ::data-has-id? (entity? v)))))
                                                     (into acc))
-                                    (or (vector? sym) (seq? sym)) (conj acc (attr-with-opts-or-expr fe-name sym))
+                                    (or (vector? sym) (seq? sym)) (conj acc (attr-with-opts-or-expr is-ref? sym))
                                     (= '* sym) (conj acc sym)
-                                    :else (conj acc (map->Field {:id (hash [fe-name sym])
-                                                                 :label (keyword->label sym)
-                                                                 :attribute sym
-                                                                 :cell-data->value sym}))))
+                                    :else (conj acc
+                                                {::children nil
+                                                 ::data-has-id? (is-ref? sym)
+                                                 ::label (keyword->label sym)
+                                                 ::get-value sym
+                                                 ::path-segment sym
+                                                 ::source-symbol nil})))
                                 []
                                 pull-pattern)]
     (->> explicit-fields
@@ -73,123 +96,119 @@
                    (if (= '* field-or-wildcard)
                      (let [explicit-attrs (->> explicit-fields
                                                (remove #(= '* %))
-                                               (map #(or (:-alias %) (:attribute %))))]
+                                               (map #(or (::-alias %) (::path-segment %))))]
                        (concat
-                         (->> (set/difference (set inferred-attrs) (set explicit-attrs))
+                         (->> (set/difference (infer-attrs data path) (set explicit-attrs))
                               (sort)
-                              (map #(map->Field {:id (hash [fe-name %])
-                                                 :label (keyword->label %)
-                                                 :attribute %
-                                                 :cell-data->value %})))
-                         [(map->Field {:id (hash [fe-name '*])
-                                       :label nil
-                                       :attribute '*
-                                       :cell-data->value nil})]))
+                              (map (fn [attr]
+                                     {::children nil
+                                      ::data-has-id? false
+                                      ::label (keyword->label attr)
+                                      ::get-value attr
+                                      ::path-segment attr
+                                      ::source-symbol nil})))
+                         [{::children nil
+                           ::data-has-id? false
+                           ::label "*"
+                           ::get-value (r/constantly nil)
+                           ::path-segment '*                ; does this even make sense?
+                           ::source-symbol nil}]))
                      [field-or-wildcard])))
-         (remove #(= :db/id (:attribute %)))
+         (remove #(= :db/id (::path-segment %)))
          vec)))
 
-(defn entity? [pull-pattern]
-  (boolean (some #{'* :db/id} pull-pattern)))
+(defn build-is-ref? [schemas source-symbol]
+  (fn [attr]
+    (= :db.type/ref (get-in schemas [(str source-symbol) attr :db/valueType :db/ident]))))
 
-(defn pull-cell->fe [cell source-symbol fe-name pull-pattern]
-  (map->FindElement
-    {:name fe-name
-     :entity (entity? pull-pattern)
-     :fields (let [splat? (not (empty? (filter #(= '* %) pull-pattern)))
-                   splat-attrs (when splat? (keys cell))]
-               (pull->fields pull-pattern splat-attrs fe-name))
-     :source-symbol source-symbol
-     :type :pull}))
+(defn pull-cell->fe [schemas fe-pos cell source-symbol fe-name pull-pattern]
+  {::children (pull->fields (build-is-ref? schemas source-symbol) pull-pattern cell [])
+   ::data-has-id? (entity? pull-pattern)
+   ::get-value (r/partial last-arg-first get fe-pos)
+   ::label fe-name
+   ::path-segment fe-pos
+   ::source-symbol source-symbol})
 
-(defn pull-many-cells->fe [column-cells source-symbol fe-name pull-pattern]
-  (map->FindElement
-    {:name fe-name
-     :entity (entity? pull-pattern)
-     :fields (let [splat? (not (empty? (filter #(= '* %) pull-pattern)))
-                   splat-attrs (when splat?
-                                 (->> column-cells
-                                      (map keys)
-                                      (reduce into #{})))]
-               (pull->fields pull-pattern splat-attrs fe-name))
-     :source-symbol source-symbol
-     :type :pull}))
+(defn pull-many-cells->fe [schemas fe-pos column-cells source-symbol fe-name pull-pattern]
+  {::children (pull->fields (build-is-ref? schemas source-symbol) pull-pattern column-cells [])
+   ::data-has-id? (entity? pull-pattern)
+   ::label fe-name
+   ::get-value (r/partial last-arg-first get fe-pos)
+   ::path-segment fe-pos
+   ::source-symbol source-symbol})
 
-(defn aggregate->fe [element]
-  (let [name (str (cons (get-in element [:fn :symbol])
-                        (map #(second (first %))
-                             (:args element))))]
-    (map->FindElement
-      {:name name
-       :entity false
-       :fields [(map->Field {:id (hash name)
-                             :label name
-                             :attribute nil
-                             :cell-data->value identity})]
-       :source-symbol nil
-       :type :aggregate})))
+(defn aggregate->fe [fe-pos element]
+  {::children nil
+   ::data-has-id? false
+   ::get-value (r/partial last-arg-first get fe-pos)
+   ::label (str (cons (get-in element [:fn :symbol])
+                      (map #(second (first %))
+                           (:args element))))
+   ::path-segment fe-pos
+   ::source-symbol nil})
 
-(defn auto-fe-one-cell [element cell]
+(defn auto-fe-one-cell [schemas fe-pos element cell]
   (condp = (type element)
     datascript.parser.Variable
-    (variable->fe element)
+    (variable->fe fe-pos element)
 
     datascript.parser.Pull
-    (pull-cell->fe cell
+    (pull-cell->fe schemas fe-pos cell
                    (get-in element [:source :symbol])
                    (get-in element [:variable :symbol])
                    (get-in element [:pattern :value]))
 
     datascript.parser.Aggregate
-    (aggregate->fe element)))
+    (aggregate->fe fe-pos element)))
 
-(defn auto-fe-many-cells [element column-cells]
+(defn auto-fe-many-cells [schemas fe-pos element column-cells]
   (condp = (type element)
     datascript.parser.Variable
-    (variable->fe element)
+    (variable->fe fe-pos element)
 
     datascript.parser.Pull
-    (pull-many-cells->fe column-cells
+    (pull-many-cells->fe schemas fe-pos column-cells
                          (get-in element [:source :symbol])
                          (get-in element [:variable :symbol])
                          (get-in element [:pattern :value]))
 
     datascript.parser.Aggregate
-    (aggregate->fe element)))
+    (aggregate->fe fe-pos element)))
 
-(defn auto-find-elements [{:keys [:hypercrud.browser/result :hypercrud.browser/request] :as ctx}]
-  (case @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/type])
-    :entity (let [dbname @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/pull-database])
-                  source-symbol (symbol dbname)
-                  fe-name "entity"
-                  pull-pattern @(r/cursor request [:pull-exp])]
-              (either/right
-                (if-let [a @(r/cursor request [:a])]
-                  (case @(r/cursor (:hypercrud.browser/schemas ctx) [dbname a :db/cardinality :db/ident])
-                    :db.cardinality/one
-                    [(pull-cell->fe @result source-symbol fe-name pull-pattern)]
+(defn auto-fields [{:keys [:hypercrud.browser/result :hypercrud.browser/request] :as ctx}]
+  (let [schemas @(:hypercrud.browser/schemas ctx)]          ; todo tighter reactivity
+    (case @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/type])
+      :entity (let [dbname @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/pull-database])
+                    source-symbol (symbol dbname)
+                    fe-name nil #_"entity"                  ; using "entity" as fe-name makes sense, but is terrible as a label
+                    pull-pattern @(r/cursor request [:pull-exp])]
+                (either/right
+                  (if-let [a @(r/cursor request [:a])]
+                    (case @(r/cursor (:hypercrud.browser/schemas ctx) [dbname a :db/cardinality :db/ident])
+                      :db.cardinality/one
+                      [(pull-cell->fe schemas 0 @result source-symbol fe-name pull-pattern)]
 
-                    :db.cardinality/many
-                    [(pull-many-cells->fe @result source-symbol fe-name pull-pattern)])
-                  [(pull-cell->fe @result source-symbol fe-name pull-pattern)])))
+                      :db.cardinality/many
+                      [(pull-many-cells->fe schemas 0 @result source-symbol fe-name pull-pattern)])
+                    [(pull-cell->fe schemas 0 @result source-symbol fe-name pull-pattern)])))
 
-    :query (mlet [{:keys [qfind]} (try-either (parser/parse-query @(r/cursor request [:query])))]
-             (cats/return
-               (condp = (type qfind)
-                 datascript.parser.FindRel (let [results-by-column (transpose @result)]
-                                             (->> (:elements qfind)
-                                                  (map-indexed (fn [idx element]
-                                                                 (auto-fe-many-cells element (get results-by-column idx))))
-                                                  vec))
-                 datascript.parser.FindColl [(auto-fe-many-cells (:element qfind) @result)]
-                 datascript.parser.FindTuple (let [result-value @result]
-                                               (assert (or (nil? result-value) (vector? result-value)) (str "Expected list, got " (type result-value)))
+      :query (mlet [{:keys [qfind]} (try-either (parser/parse-query @(r/cursor request [:query])))]
+               (cats/return
+                 (condp = (type qfind)
+                   datascript.parser.FindRel (let [results-by-column (transpose @result)]
                                                (->> (:elements qfind)
-                                                    (map-indexed (fn [idx element]
-                                                                   (auto-fe-one-cell element (get result-value idx))))
+                                                    (map-indexed (fn [fe-pos element]
+                                                                   (auto-fe-many-cells schemas fe-pos element (get results-by-column fe-pos))))
                                                     vec))
-                 datascript.parser.FindScalar [(auto-fe-one-cell (:element qfind) @result)])))
+                   datascript.parser.FindColl [(auto-fe-many-cells schemas 0 (:element qfind) @result)]
+                   datascript.parser.FindTuple (let [result-value @result]
+                                                 (assert (or (nil? result-value) (vector? result-value)) (str "Expected list, got " (type result-value)))
+                                                 (->> (:elements qfind)
+                                                      (map-indexed (fn [fe-pos element]
+                                                                     (auto-fe-one-cell schemas fe-pos element (get result-value fe-pos))))
+                                                      vec))
+                   datascript.parser.FindScalar [(auto-fe-one-cell schemas 0 (:element qfind) @result)])))
 
-    :blank (either/right [])
+      :blank (either/right [])
 
-    (either/right [])))
+      (either/right []))))

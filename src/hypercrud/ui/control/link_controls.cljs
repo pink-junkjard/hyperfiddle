@@ -19,20 +19,20 @@
   ; kwargs (dissoc props :class)
   [hypercrud.browser.core/ui @link-ref ctx (:class props)])
 
-(defn ui-contextual-links [body-or-head i a embed links ?processor]
+(defn ui-contextual-links [path embed links ?processor]
   (->> (reduce (fn [links f] (f links)) @links (if ?processor [?processor]))
        ((if embed filter remove) (fn [link]
                                    (and (not (link/popover-link? link))
                                         (:link/render-inline? link))))
-       ((case body-or-head :body filter :head remove) :link/dependent?)
+       ;((case body-or-head :body filter :head remove) :link/dependent?)
        ; path filtering is the most expensive, do it last
-       (filter (link/same-path-as? (remove nil? [i a])))
+       (filter (link/same-path-as? path))
        vec))
 
 (def anchors
   (from-react-context
-    (fn [{:keys [ctx props]} body-or-head i a & [?f]]   ; ?f should just be set of omitted rels
-      (->> (r/track ui-contextual-links body-or-head i a false (:hypercrud.browser/links ctx) ?f)
+    (fn [{:keys [ctx props]} path & [?f]]   ; ?f should just be set of omitted rels
+      (->> (r/track ui-contextual-links path false (:hypercrud.browser/links ctx) ?f)
            (r/unsequence :db/id)
            (map (fn [[link-ref link-id]]
                   (if (not= :hyperfiddle.ui.layout/table (:hyperfiddle.ui/layout ctx))
@@ -43,8 +43,8 @@
 
 (def iframes
   (from-react-context
-    (fn [{:keys [ctx props]} body-or-head i a & [?f]]
-      (->> (r/track ui-contextual-links body-or-head i a true (:hypercrud.browser/links ctx) ?f)
+    (fn [{:keys [ctx props]} path & [?f]]
+      (->> (r/track ui-contextual-links path true (:hypercrud.browser/links ctx) ?f)
            (r/unsequence :db/id)
            (map (fn [[link-ref link-id]]
                   (if (not= :hyperfiddle.ui.layout/table (:hyperfiddle.ui/layout ctx))

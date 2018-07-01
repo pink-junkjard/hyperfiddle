@@ -12,9 +12,9 @@
    [:br]
    [:label {:style {:font-weight "400"}} [:input {:type "checkbox" :checked @hide-archived :on-change #(swap! hide-archived not)}] " hide Hyperfiddle archived attributes"]
    (let [ctx (-> ctx
-               (dissoc :relation :relations)
+               (dissoc :hypercrud.browser/data :hypercrud.browser/data-cardinality)
                (update :hypercrud.browser/result (partial contrib.reactive/fmap do-filter-reactive #_(contrib.reactive/partial filter f?)))
-               (hypercrud.browser.context/with-relations))]
+               (hypercrud.browser.context/focus [:body]))]
      [hyperfiddle.ui/table
       (fn [ctx]
         [(hyperfiddle.ui/field [0 :db/ident] ctx)

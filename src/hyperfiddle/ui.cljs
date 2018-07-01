@@ -3,7 +3,7 @@
   (:require
     [clojure.core.match :refer [match match*]]
     [contrib.css :refer [css css-slugify]]
-    [contrib.data :refer [unwrap kwargs]]
+    [contrib.data :refer [take-to unwrap]]
     [contrib.reactive :as r]
     [contrib.reagent :refer [from-react-context fragment fix-arity-1-with-context]]
     [contrib.string :refer [memoized-safe-read-edn-string blank->nil or-str]]
@@ -16,7 +16,7 @@
     [hypercrud.browser.context :as context]
     [hypercrud.browser.core :as browser]
     [hypercrud.browser.link :as link :refer [links-here rel->link]]
-    [hypercrud.ui.control.link-controls :refer [anchors iframes]]
+    [hypercrud.ui.control.link-controls :as link-controls]
     [hyperfiddle.data :as hf]
     [hyperfiddle.eval :refer [read-eval-with-bindings]]
     [hyperfiddle.ui.controls :as controls]
@@ -28,154 +28,139 @@
 
 
 (defn ^:export control "this is a function, which returns component" [ctx]
-  (let [layout (-> (::layout ctx :hyperfiddle.ui.layout/block) name keyword)
-        a (:hypercrud.browser/attribute ctx)
-        attr (some-> ctx :hypercrud.browser/fat-attribute deref)
-        display-mode (-> @(:hypercrud.ui/display-mode ctx) name keyword)
-        type (some-> attr :db/valueType :db/ident name keyword)
-        cardinality (some-> attr :db/cardinality :db/ident name keyword)
-        isComponent (some-> attr :db/isComponent (if :component))
+  (let [attr (some-> ctx :hypercrud.browser/fat-attribute deref)
         renderer (blank->nil (:attribute/renderer attr))]
+    (cond
+      (not attr) controls/string
+      renderer (attr-renderer renderer ctx)
+      :else (let [type (some-> attr :db/valueType :db/ident name keyword)
+                  cardinality (some-> attr :db/cardinality :db/ident name keyword)]
+              (match* [type cardinality]
+                [:boolean :one] controls/boolean
+                [:keyword :one] controls/keyword
+                [:string :one] controls/string
+                [:long :one] controls/long
+                [:instant :one] controls/instant
+                [:ref :one] controls/dbid                   ; nested form
+                [:ref :many] (constantly [:noscript]) #_edn-many ; nested table
+                [_ :one] controls/edn
+                [_ :many] controls/edn-many
+                )))))
 
-    (if renderer
-      (attr-renderer renderer ctx)
-      (match [type cardinality]
-        [:boolean :one] controls/boolean
-        [:keyword :one] controls/keyword
-        [:string :one] controls/string
-        [:long :one] controls/long
-        [:instant :one] controls/instant
-        [:ref :one] controls/dbid                           ; nested form
-        [:ref :many] (constantly [:noscript]) #_edn-many    ; nested table
-        [_ :one] controls/edn
-        [_ :many] controls/edn-many
-        ))))
+(declare result)
 
 (defn ^:export hyper-control "Handles labels too because we show links there."
   [ctx]
   {:post [(not (nil? %))]}
-  (let [display-mode (-> @(:hypercrud.ui/display-mode ctx) name keyword)
-        d (-> (:relation ctx) (if :body :head))             ; Be careful, data/form oversets this and must be unset at call site
-        i (:fe-pos ctx)
-        {:keys [type]} (if i @(:hypercrud.browser/find-element ctx))
-        a (:hypercrud.browser/attribute ctx)
-        rels (->> (links-here ctx) (map :link/rel) (into #{}))]
+  (let [head-or-body (->> (:hypercrud.browser/path ctx)
+                          (reverse)
+                          (take-to (comp not #{:head :body})) ; todo head/body attr collision
+                          (last))]
+    (match* [head-or-body (last (:hypercrud.browser/path ctx))] ; this core match is overkill
+      [:head '*] form/magic-new-head
+      [:body '*] form/magic-new-body
 
-    (letfn [(select? [rels] (contains? rels :options))]
-      (match [d i type a rels]
+      [:head _]
+      (fn [field]
+        (fragment (when field [form/label field])
+                  [link-controls/anchors (:hypercrud.browser/path ctx)]
+                  [link-controls/iframes (:hypercrud.browser/path ctx)]))
 
-        [:body i _ a (true :<< select?)]
-        (fn [value]
-          (fragment [anchors :body i a link/options-processor] ; Order sensitive, here be floats
-                    [select value]
-                    [iframes :body i a link/options-processor]))
-
-        [:head i _ a (true :<< select?)]
-        (from-react-context
-          (fn [{:keys [ctx]} field]
-            (fragment (if (and (= :xray display-mode)
-                               (not (:link/dependent? (rel->link :options ctx))))
-                        ; Float right
-                        [select nil])
-                      (if i [form/label field])
-                      [anchors :head i a link/options-processor]
-                      [iframes :head i a link/options-processor])))
-
-        [d _ _ '* _] (case d :head form/magic-new-head
-                             :body form/magic-new-body)
-
-        [:head i _ a _]
-        (fn [field]
-          (fragment (if i [form/label field])
-                    [anchors :head i a]
-                    [iframes :head i a]))
-
-        [:body i (:or :aggregate :variable) _ _]
-        (fn [value]
-          (fragment [controls/string (str value)]
-                    (if i [anchors :body i a])
-                    (if i [iframes :body i a])))
-
-        [:body i _ a _]
+      [:body _]
+      (let [options? (-> (->> (links-here ctx) (map :link/rel) (into #{})) ; reactivity is terrible here
+                         (contains? :options))]
         (from-react-context
           (fn [{:keys [ctx]} value]
-            (fragment (if a [(control ctx) value])          ; element :pull ? I am missing a permutation which this this
-                      (if i [anchors :body i a])
-                      (if i [iframes :body i a]))))
-        ))))
+            (fragment (when (and (not options?)
+                                 (not (#{:head :body} (last (:hypercrud.browser/path ctx))))
+                                 (keyword? (last (:hypercrud.browser/path ctx))))
+                        [(control ctx) value])
+                      (when (some-> (:hypercrud.browser/fields ctx) deref)
+                        [:div [result ctx]])
+                      [link-controls/anchors (:hypercrud.browser/path ctx) (when options? link/options-processor)]
+                      (when options? [select value])
+                      [link-controls/iframes (:hypercrud.browser/path ctx) (when options? link/options-processor)])))))))
 
 (defn ^:export semantic-css [ctx]
   ; Include the fiddle level ident css.
   ; Semantic css needs to be prefixed with - to avoid collisions. todo
-  (let [[i a] [(:fe-pos ctx) (:hypercrud.browser/attribute ctx)]]
-    ["hyperfiddle"
-     (css-slugify (some-> ctx :hypercrud.browser/find-element deref :source-symbol)) ; color
-     (css-slugify (cond a "attribute" i "element" :else "naked"))
-     (css-slugify (-> (:relation ctx) (if :body :head)))
-     (css-slugify i)                                        ; same info as name, but by index which is more robust
-     (css-slugify (some-> ctx :hypercrud.browser/find-element deref :type))
-     (css-slugify (some-> ctx :hypercrud.browser/find-element deref :name)) ; works on aggregate
-     ;(css-slugify (some-> ctx :hypercrud.browser/find-element der  ef :entity (if :entity :scalar))) ; not helpful
-     (if i (css-slugify a))                                 ; see attribute-schema-human
-     (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/valueType :db/ident))
-     (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :attribute/renderer #_label/fqn->name))
-     (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/cardinality :db/ident))
-     (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/isComponent (if :component)))]))
+  (let [[i a] [nil nil]]
+    (concat
+      ["hyperfiddle"
+       (css-slugify (:hypercrud.browser/source-symbol ctx)) ; color
+       (css-slugify (cond a "attribute" i "element" :else "naked"))
+       (css-slugify (-> (:TODO-IN-HEAD ctx) (if :head :body))) ; todo this is shit
+       (css-slugify i)                                      ; same info as name, but by index which is more robust
+       ;(css-slugify (some-> ctx :hypercrud.browser/find-element deref :type))
+       ;(css-slugify (some-> ctx :hypercrud.browser/find-element deref :name)) ; works on aggregate
+       (if i (css-slugify a))                               ; see attribute-schema-human
+       (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/valueType :db/ident))
+       (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :attribute/renderer #_label/fqn->name))
+       (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/cardinality :db/ident))
+       (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/isComponent (if :component)))]
+      (map css-slugify (:path ctx)))))
 
 (defn ^:export value "Relation level value renderer. Works in forms and lists but not tables (which need head/body structure).
 User renderers should not be exposed to the reaction."
-  [[i a] ctx ?f & [props]]                                  ; Path should be optional, for disambiguation only. Naked is an error
-  (let [ctx (context/focus ctx i a)
-        props (update props :class css (semantic-css ctx))]
-    [fix-arity-1-with-context (or ?f (hyper-control ctx)) @(context/value ctx) ctx props]))
+  [relative-path ctx ?f & [props]]                          ; Path should be optional, for disambiguation only. Naked is an error
+  (let [ctx (context/focus ctx (cons :body relative-path))
+        props (update props :class css (semantic-css ctx))
+        data @(:hypercrud.browser/data ctx)]
+    [fix-arity-1-with-context (or ?f (hyper-control ctx)) data ctx props]))
 
 (defn ^:export link "Relation level link renderer. Works in forms and lists but not tables."
-  [rel path ctx ?content & [props]]                         ; path should be optional, for disambiguation only. Naked can be hard-linked in markdown?
-  (let [link @(r/track link/rel->link rel path ctx)
-        ctx (apply context/focus ctx path)]
+  [rel relative-path ctx ?content & [props]]                ; path should be optional, for disambiguation only. Naked can be hard-linked in markdown?
+  (let [ctx (context/focus ctx relative-path)
+        link @(r/track link/rel->link rel ctx)]
     ;(assert (not render-inline?)) -- :new-fiddle is render-inline. The nav cmp has to sort this out before this unifies.
     [(:navigate-cmp ctx) (merge (link/build-link-props link ctx) props) (or ?content (name (:link/rel link))) (:class props)]))
 
 (defn ^:export browse "Relation level browse. Works in forms and lists but not tables."
-  [rel path ctx ?content & [props]]                         ; path should be optional, for disambiguation only. Naked can be hard-linked in markdown?
-  (let [link @(r/track link/rel->link rel path ctx)
-        ctx (apply context/focus ctx path)]
+  [rel relative-path ctx ?content & [props]]                ; path should be optional, for disambiguation only. Naked can be hard-linked in markdown?
+  (let [ctx (context/focus ctx relative-path)
+        link @(r/track link/rel->link rel ctx)]
     ;(assert render-inline?)
     [browser/ui link
      (if ?content (assoc ctx :user-renderer ?content #_(if ?content #(apply ?content %1 %2 %3 %4 args))) ctx)
      (:class props)
      (dissoc props :class :children nil)]))
 
+; (defmulti field ::layout)
 (defn ^:export field "Works in a form or table context. Draws label and/or value."
-  [[i a] ctx ?f & [props]]
-  (if-not (and (= '* a) (= :hyperfiddle.ui.layout/table (::layout ctx)))
-    (let [ctx (context/focus ctx i a)]
-      ^{:key (str i a)}
-      [(form/-field ctx) hyper-control ?f ctx (update props :class css (semantic-css ctx))])))
+  [relative-path ctx ?f & [props]]
+  ^{:key (str relative-path)}
+  (case (:hyperfiddle.ui/layout ctx)
+    :hyperfiddle.ui.layout/table (when-not (= '* (last relative-path))
+                                   [form/table-field hyper-control relative-path ctx ?f props])
+    [form/form-field hyper-control relative-path ctx ?f props]))
 
 (defn ^:export table "Semantic table"
   [form sort-fn ctx & [props]]
   (let [sort-col (r/atom nil)]
     (fn [form sort-fn ctx & [props]]
-      (let [ctx (assoc ctx ::layout :hyperfiddle.ui.layout/table
-                           ::sort/sort-col sort-col)]
+      (let [ctx (assoc ctx ::sort/sort-col sort-col)]
         [:table (update props :class css "ui-table" "unp" (semantic-css ctx))
-         (->> (form ctx props) (into [:thead]))             ; strict
-         (->> (:relations ctx)
-              (r/fmap (r/partial sort-fn sort-col ctx))
-              (r/unsequence hf/relation-keyfn)
+         (let [ctx (context/focus ctx [:head])]
+           (->> (form ctx props) (into [:thead])))          ; strict
+         (->> (:hypercrud.browser/data ctx)
+              ;(r/fmap (r/partial sort-fn sort-col ctx))
+              (r/unsequence hf/relation-keyfn)              ; todo support nested tables
               (map (fn [[relation k]]
-                     (->> (form (context/relation ctx relation) props)
+                     (->> (form (context/body ctx relation) props)
                           (into ^{:key k} [:tr]))))         ; strict
               (into [:tbody]))]))))
 
 (defn ^:export result "Default result renderer. Invoked as fn, returns seq-hiccup, hiccup or
 nil. call site must wrap with a Reagent component"
   [ctx & [props]]
-  ; with-relations probably gets called here. What about the request side?
-  (cond
-    (:relations ctx) [table (r/partial hf/form field) hf/sort-fn ctx props]
-    (:relation ctx) (fragment (hf/form field ctx props))))
+  ; focus should probably get called here. What about the request side?
+  (condp = (:hypercrud.browser/data-cardinality ctx)
+    :db.cardinality/one (let [ctx (assoc ctx ::layout :hyperfiddle.ui.layout/block)]
+                          (fragment (hf/form field ctx props)))
+    :db.cardinality/many (let [ctx (assoc ctx ::layout :hyperfiddle.ui.layout/table)]
+                           [table (r/partial hf/form field) hf/sort-fn ctx props])
+    ; blank fiddles
+    nil))
 
 (declare markdown)
 
@@ -238,6 +223,7 @@ nil. call site must wrap with a Reagent component"
                 (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
                       rel (unwrap (memoized-safe-read-edn-string srel))
                       path (unwrap (memoized-safe-read-edn-string (str "[" spath "]")))
+                      path (cons :body path)                ; hack to put off migrations
                       f? (unwrap (read-eval-with-bindings content))]
                   (browse rel path ctx f? props)))
 
@@ -245,6 +231,7 @@ nil. call site must wrap with a Reagent component"
                 (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
                       rel (unwrap (memoized-safe-read-edn-string srel))
                       path (unwrap (memoized-safe-read-edn-string (str "[" spath "]")))
+                      path (cons :body path)                ; hack to put off migrations
                       ; https://github.com/medfreeman/remark-generic-extensions/issues/45
                       label (or-str content (name rel))]
                   (link rel path ctx label props)))
@@ -256,6 +243,7 @@ nil. call site must wrap with a Reagent component"
                     (result ctx (update props :class css "unp")))))
      "value" (fn [content argument props ctx]
                (let [path (unwrap (memoized-safe-read-edn-string (str "[" argument "]")))
+                     path (cons :body path)                 ; hack to put off migrations
                      ?f (some->> (unwrap (read-eval-with-bindings content)) (r/partial fix-arity-1-with-context))]
                  (value path ctx ?f props)))
 
@@ -271,11 +259,11 @@ nil. call site must wrap with a Reagent component"
 
      "list" (fn [content argument props ctx]
               [:ul props
-               (->> (:relations ctx)
+               (->> (:hypercrud.browser/data ctx)
                     (r/unsequence hf/relation-keyfn)
                     (map (fn [[relation k]]
                            ; set ::unp to suppress
-                           ^{:key k} [:li [markdown content (context/relation ctx relation)]]))
+                           ^{:key k} [:li [markdown content (context/body ctx relation)]]))
                     (doall))])}))
 
 (def ^:export img

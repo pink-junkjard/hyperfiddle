@@ -32,7 +32,7 @@
                                        renderer (get-in ctx [:fields attribute :label-renderer] default-label-renderer)]
                                    (try-either (renderer value ctx)))))))
                   relation
-                  @(:hypercrud.browser/ordered-fes ctx))
+                  @(:hypercrud.browser/fields ctx))
              (apply concat)
              sequence
              (fmap #(->> % (interpose ", ") (remove nil?) (apply str))))]
@@ -41,7 +41,7 @@
 (defn select-anchor-renderer' [props option-props ctx]
   ; hack in the selected value if we don't have options hydrated?
   ; Can't, since we only have the #DbId hydrated, and it gets complicated with relaton vs entity etc
-  (let [no-options? (empty? @(:relations ctx))
+  (let [no-options? @(r/fmap empty? (:hypercrud.browser/data ctx))
         props (-> props
                   (update :on-change (fn [on-change]
                                        (fn [e]
@@ -54,7 +54,7 @@
         label-fn (:label-fn props label-fn)]
     [:select (dissoc props :label-fn)
      (conj
-       (->> @(:relations ctx)
+       (->> @(:hypercrud.browser/data ctx)
             (mapv (juxt (comp :db/id first) #(label-fn % ctx)))
             (sort-by second)
             (map (fn [[id label]]
@@ -68,7 +68,7 @@
   (case @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/type])
     :entity [select-error-cmp "Only fiddle type `query` is supported for select options"]
     :blank [select-error-cmp "Only fiddle type `query` is supported for select options"]
-    :query (if (:relations ctx)
+    :query (if (= :db.cardinality/many (:hypercrud.browser/data-cardinality ctx))
              [select-anchor-renderer' props option-props ctx]
              [select-error-cmp "Tuples and scalars are unsupported for select options. Please fix your options query to return a relation or collection"])
     ; default
@@ -77,19 +77,19 @@
 (def always-user (atom :hypercrud.browser.browser-ui/user))
 
 (let [on-change (fn [ctx id]                                ;reconstruct the typed value
-                  ((:user-with! ctx) (tx/update-entity-attr @(context/entity ctx)
+                  ((:user-with! ctx) (tx/update-entity-attr @(get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
                                                             @(:hypercrud.browser/fat-attribute ctx) id)))
       dom-value (fn [value]                                 ; nil, kw or eid
                   (if (nil? value) "" (str (:db/id value))))]
   (def select
     (from-react-context
       (fn [{:keys [ctx props]} value]
-        (let [options-link @(r/track link/options-link ctx)]
+        (let [options-link @(r/track link/rel->link :options ctx)]
           (either/branch
             (link/eval-hc-props (:hypercrud/props options-link) ctx)
             (fn [e] [(ui-error/error-comp ctx) e])
             (fn [hc-props]
-              (let [entity (context/entity ctx)
+              (let [entity @(get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
                     option-props {:disabled (or (boolean (:read-only props))
                                                 @(r/fmap nil? entity) ; no value at all
                                                 (not @(r/fmap controls/writable-entity? entity)))}

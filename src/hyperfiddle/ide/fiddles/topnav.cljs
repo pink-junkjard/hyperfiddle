@@ -39,9 +39,9 @@
           [_ [e]] route                                     ; [:hyperfiddle/topnav [#entity["$" [:fiddle/ident :hyperfiddle.system/remove]]]]
           [_ target-fiddle-ident] (:db/id e)]
       (-> ctx
-          (dissoc :relation :relations)
+          (dissoc :hypercrud.browser/data :hypercrud.browser/data-cardinality :hypercrud.browser/path)
           (update :hypercrud.browser/result (partial r/fmap (r/partial -shadow-fiddle target-fiddle-ident)))
-          (context/with-relations)))))
+          (context/focus [:body])))))
 
 (defn any-loading? [peer]
   (some (comp not nil? :hydrate-id val) @(runtime/state peer [::runtime/partitions])))
@@ -54,15 +54,15 @@
   (= :src (some-> frag read-edn-string)))
 
 (defn renderer [ctx class]
-  {:pre [(or (:relations ctx) (:relation ctx))]}
   (let [display-mode @(runtime/state (:peer ctx) [:display-mode])
         {:keys [hypercrud.browser/result
                 hypercrud.browser/fiddle] :as ctx} (shadow-fiddle ctx)
         ; hack until hyperfiddle.net#156 is complete
-        fake-managed-anchor (fn [rel path ctx label & args]
+        fake-managed-anchor (fn [rel relative-path ctx label & args]
                               ; mostly copied from browser-ui
                               (let [kwargs (kwargs args)
-                                    link (-> @(r/track link/rel->link rel path ctx) (assoc :link/managed? true))
+                                    ctx (context/focus ctx relative-path)
+                                    link (-> @(r/track link/rel->link rel ctx) (assoc :link/managed? true))
                                     props (into (link/build-link-props link ctx true)
                                                 (:props kwargs)
                                                 #_(dissoc :style) #_"custom renderers don't want colored links")]

@@ -31,7 +31,7 @@
 
 (letfn [(user-with! [special-attrs-state ctx tx]
           (let [user-with! (:user-with! ctx)
-                entity @(context/entity ctx)
+                entity @(get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
                 new-entity (merge-in-tx entity tx ctx)]
             (case [(has-required-attrs? entity) (has-required-attrs? new-entity)]
               [false false]
@@ -97,9 +97,9 @@
                   :db/ident (build-ident-renderer special-attrs-state)}]
     (fn [ctx]
       (let [ctx (-> ctx
-                    (dissoc :relation :relations)
+                    (dissoc :hypercrud.browser/data :hypercrud.browser/data-cardinality :hypercrud.browser/path)
                     (update :hypercrud.browser/result (partial r/fmap reactive-merge))
-                    (context/with-relations))
+                    (context/focus [:body]))
             result @(:hypercrud.browser/result ctx)]
         (into
           [:div]

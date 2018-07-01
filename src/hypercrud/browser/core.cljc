@@ -66,7 +66,7 @@
             [:noscript]
             ; link-props swallows bad routes (shorts them to nil),
             ; all errors will always route through as (either/right nil)
-            (let [route' (routing/build-route' link (context/legacy-ctx ctx))]
+            (let [route' (routing/build-route' link ctx)]
               [stale/loading (stale/can-be-loading? ctx) (cats/fmap #(router/assoc-frag % (:frag props)) route')
                (fn [e] [error-comp e])
                ; legacy-ctx is set in build-link-props, and this is "downtree" from that
