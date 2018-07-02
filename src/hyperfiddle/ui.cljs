@@ -212,7 +212,7 @@ nil. call site must wrap with a Reagent component"
      ; This is a custom markdown extension example.
      "figure" (fn [content argument props ctx]
                 [:figure.figure props
-                 [markdown content ctx]
+                 [markdown content (assoc ctx ::unp true)]  ; it's an image or pre or other block element
                  [:figcaption.figure-caption [markdown argument (assoc ctx ::unp true)]]])
 
      "pre" (fn [content argument props ctx]
