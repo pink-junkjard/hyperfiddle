@@ -7,6 +7,7 @@
 
 
 (defn relation-keyfn [relation]
+  {:pre [(not (r/reactive? relation))]}
   ; This keyfn is very tricky, read https://github.com/hyperfiddle/hyperfiddle/issues/341
   (hash (map #(or (:db/id %) %) relation)))
 

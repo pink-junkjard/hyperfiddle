@@ -4,6 +4,7 @@
             [contrib.reactive :as r]
             [contrib.reagent :refer [from-react-context fix-arity-1-with-context]]
             [hypercrud.browser.context :as context]
+            [hyperfiddle.data :as data]
             [hyperfiddle.ui :refer [field hyper-control]]))
 
 
@@ -107,6 +108,7 @@
                     (context/with-relations))
             result @(:hypercrud.browser/result ctx)]
         (into
+          ^{:key (data/relation-keyfn @(:relation ctx))}
           [:div]
           (for [k attrs]
             (let [ro (read-only? k result)]
