@@ -229,11 +229,7 @@ nil. call site must wrap with a Reagent component"
                      content (str/rtrim content "\n") #_"Remark yields an unavoidable newline that we don't want"]
                  [contrib.ui/code content #() {:read-only true}])
                [contrib.ui/code content #() props]))
-
-     ; legacy, use ``` to generate pre
-     "CodeEditor" (fn [content argument props ctx]
-                    [contrib.ui/code content #() props])
-
+     
      "render" (fn [content argument props ctx]
                 (unwrap (read-eval-with-bindings content ctx)))
 
