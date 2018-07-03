@@ -105,6 +105,7 @@
         (into
           ^{:key (data/relation-keyfn @(:relation ctx))}
           [:div {:class class}
+           [markdown "See [Datomic schema docs](https://docs.datomic.com/on-prem/schema.html)."]
            (let [k :db/ident] (field [0 k] ctx (controls k) {:read-only (read-only? k result)}))
            (let [k :db/valueType] (field [0 k] ctx (controls k) {:read-only (read-only? k result)}))
            (let [k :db/cardinality] (field [0 k] ctx (controls k) {:read-only (read-only? k result)}))
