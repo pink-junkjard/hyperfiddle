@@ -167,7 +167,9 @@ nil. call site must wrap with a Reagent component"
   (cond
     ?f [?f ctx]
     (:relations ctx) [table (r/partial hf/form field) hf/sort-fn ctx props]
-    (:relation ctx) (fragment (hf/form field ctx props))))
+    (:relation ctx) (apply fragment
+                           (-> (hf/relation-keyfn @(:relation ctx)) str keyword)
+                           (hf/form field ctx props))))
 
 (declare markdown)
 

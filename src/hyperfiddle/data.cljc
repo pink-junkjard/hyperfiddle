@@ -7,6 +7,7 @@
 
 
 (defn relation-keyfn [relation]
+  ; This keyfn is very tricky, read https://github.com/hyperfiddle/hyperfiddle/issues/341
   (hash (map #(or (:db/id %) %) relation)))
 
 (defn form "Field is invoked as fn"                         ; because it unifies with request fn side
