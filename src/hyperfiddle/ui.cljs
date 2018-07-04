@@ -171,6 +171,8 @@ nil. call site must wrap with a Reagent component"
                            (-> (hf/relation-keyfn @(:relation ctx)) str keyword)
                            (hf/form field ctx props))))
 
+(declare markdown)
+
 (def ^:export fiddle (-build-fiddle))
 
 (defn ^:export fiddle-xray [ctx class]
