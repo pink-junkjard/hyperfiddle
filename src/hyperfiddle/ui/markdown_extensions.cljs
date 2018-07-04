@@ -1,4 +1,4 @@
-(ns hyperfiddle.ui.markdown
+(ns hyperfiddle.ui.markdown-extensions
   (:require
     [contrib.data :refer [unwrap]]
     [contrib.string :refer [memoized-safe-read-edn-string blank->nil or-str]]

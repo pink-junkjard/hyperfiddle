@@ -24,7 +24,7 @@
     [hyperfiddle.ui.controls :as controls]
     [hyperfiddle.ui.hyper-controls :refer [hyper-select hyper-select-head hyper-label hyper-scalar]]
     [hyperfiddle.ui.hacks]                                  ; exports
-    [hyperfiddle.ui.markdown]
+    [hyperfiddle.ui.markdown-extensions]
     [hyperfiddle.ui.form :as form]
     [hyperfiddle.ui.select :refer [select]]
     [hyperfiddle.ui.sort :as sort]
@@ -204,7 +204,7 @@ nil. call site must wrap with a Reagent component"
               [:span (remark/adapt-props props)
                [markdown content (assoc ctx ::unp true)]])
 
-     "a" hyperfiddle.ui.markdown/a
+     "a" hyperfiddle.ui.markdown-extensions/a
 
      ; Is this comment true?::
      ;   Div is not needed, use it with block syntax and it hits React.createElement and works
