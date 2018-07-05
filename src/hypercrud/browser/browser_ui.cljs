@@ -30,8 +30,8 @@
 (defn page-on-click "middle-click will open in new tab; alt-middle-click will open srcmode in new tab"
   [rt branch branch-aux route event]
   (when route
-    (let [anchor (-> event .-path (aget 0) (.matches "a"))
-          anchor-descendant (-> event .-path (aget 0) (.matches "a *"))]
+    (let [anchor (-> (.composedPath event) (aget 0) (.matches "a"))
+          anchor-descendant (-> (.composedPath event) (aget 0) (.matches "a *"))]
       (when-not (or anchor anchor-descendant)
         (let [open-new-tab (or (button= :middle event)
                                (and (button= :left event)
