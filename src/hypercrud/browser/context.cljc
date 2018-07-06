@@ -111,8 +111,10 @@
           {:pre [a
                  (:hypercrud.browser/find-element ctx)]
            :post [(:hypercrud.browser/attribute %)]}
-          (let [fields @(r/cursor (:hypercrud.browser/find-element ctx) [:fields #_i])]
-            (field ctx (first (filter #(= (:attribute %) a) fields)))))]
+          (let [fields @(r/cursor (:hypercrud.browser/find-element ctx) [:fields #_i])
+                field-meta (first (filter #(= (:attribute %) a) fields))]
+            (assert field-meta (str "Missing field: " a))
+            (field ctx field-meta)))]
   (defn focus [ctx i a]
     ;(with-relations)                                    ; already here
     ;(relation (reactive/atom [domain]))                 ; already here
