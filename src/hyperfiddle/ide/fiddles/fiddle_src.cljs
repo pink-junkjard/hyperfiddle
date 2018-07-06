@@ -88,6 +88,10 @@
      (field [0 :fiddle/renderer] ctx (controls :fiddle/renderer))
      (field [0 :fiddle/hydrate-result-as-fiddle] ctx nil)
      (when-not embed-mode (field [0 :fiddle/links] ctx-real (controls :fiddle/links)))
+     (doall
+       (for [k (remove #(= (namespace %) "fiddle")
+                       (-> @(:hypercrud.browser/ordered-fes ctx) first :fields (->> (map :attribute))))]
+         (field [0 k] ctx nil)))
      (when-not embed-mode (link :hyperfiddle/remove [0] ctx "Remove fiddle"))]))
 
 (defn ^:deprecated hyperfiddle-live [rel ctx & fiddle-attrs]
