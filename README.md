@@ -1,7 +1,7 @@
 # hyperfiddle.cljc — a Hypermedia Function <http://www.hyperfiddle.net/>
 
 Hyperfiddle isolates your web clients from I/O, so your code can stay pure. If React.js is managed DOM,
- Hyperfiddle is managed network and database.
+ Hyperfiddle is managed network and database. This technique has paradigm-changing implications and enables a new kind of composable primitive for constructing web software.
 
 ## Dependency coordinates — Todo
 
