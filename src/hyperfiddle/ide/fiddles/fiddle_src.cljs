@@ -94,18 +94,3 @@
                        (-> @(:hypercrud.browser/ordered-fes ctx) first :fields (->> (map :attribute))))]
          (field [0 k] ctx nil)))
      (when-not embed-mode (link :hyperfiddle/remove [0] ctx "Remove fiddle"))]))
-
-(defn ^:deprecated hyperfiddle-live [rel ctx & fiddle-attrs]
-  (let [state (r/atom {:edn-fiddle false :edn-result false})]
-    (fn [rel ctx & fiddle-attrs]
-      [:div.row.hf-live.unp.no-gutters
-       (let [as-edn (r/cursor state [:edn-result])]
-         [:div.result.col-sm.order-sm-2.order-xs-1
-          [:div "Result:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
-          (browse rel [] ctx (if @as-edn (r/partial hyperfiddle.ide.hf-live/result-edn [])))])
-       (let [as-edn (r/cursor state [:edn-fiddle])
-             f (r/partial (if @as-edn hyperfiddle.ide.hf-live/result-edn hyperfiddle.ide.hf-live/docs-embed) fiddle-attrs)]
-         [:div.src.col-sm.order-sm-1.order-xs-2
-          [:div "Interactive Hyperfiddle editor:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
-          (browse rel [] ctx f {:frag ":src" :class "devsrc"})])
-       ])))
