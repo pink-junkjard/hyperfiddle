@@ -72,10 +72,10 @@
           (let [ctx (if f
                       (assoc ctx :user-renderer f)
                       (dissoc ctx :user-renderer)) #_"infinite recursion somehow"]
-            [ui-comp ctx class])])
+            [ui-comp ctx (str class " hf-live")])])
        (let [as-edn (r/cursor state [:edn-fiddle])
              f (r/partial (if @as-edn result-edn docs-embed) fiddle-attrs)]
          [:div.src.col-sm.order-sm-1.order-xs-2
           [:div "Interactive Hyperfiddle editor:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
-          [ui-comp (assoc ctx :route (router/assoc-frag (:route ctx) ":src") :user-renderer f) (css class "devsrc")]])
+          [ui-comp (assoc ctx :route (router/assoc-frag (:route ctx) ":src") :user-renderer f) (css class "devsrc hf-live")]])
        ])))
