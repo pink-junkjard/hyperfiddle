@@ -4,7 +4,8 @@
             [contrib.reactive :as r]
             [contrib.reagent :refer [from-react-context fix-arity-1-with-context]]
             [hypercrud.browser.context :as context]
-            [hyperfiddle.ui :refer [field hyper-control]]))
+            [hyperfiddle.data :as data]
+            [hyperfiddle.ui :refer [field hyper-control markdown]]))
 
 
 (def special-attrs #{:db/ident :db/cardinality :db/valueType})
@@ -89,25 +90,28 @@
          (assoc ctx :user-with! (r/partial user-with!' special-attrs-state ctx))
          props]))))
 
-(declare renderer)
-
-(def attrs [:db/ident :db/valueType :db/cardinality :db/doc
-            :db/unique :db/isComponent :db/fulltext])
-
-(defn renderer [ctx]
+(defn renderer [ctx class]
   (let [special-attrs-state (r/atom nil)
         reactive-merge #(merge-in-tx % @special-attrs-state ctx)
         controls {:db/cardinality (build-valueType-and-cardinality-renderer special-attrs-state)
                   :db/valueType (build-valueType-and-cardinality-renderer special-attrs-state)
                   :db/ident (build-ident-renderer special-attrs-state)}]
-    (fn [ctx]
+    (fn [ctx class]
       (let [ctx (-> ctx
                     (dissoc :hypercrud.browser/data :hypercrud.browser/data-cardinality :hypercrud.browser/path)
                     (update :hypercrud.browser/result (partial r/fmap reactive-merge))
                     (context/focus [:body]))
             result @(:hypercrud.browser/result ctx)]
         (into
-          [:div]
-          (for [k attrs]
-            (let [ro (read-only? k result)]
-              (field [0 k] ctx (controls k) {:read-only ro}))))))))
+          ^{:key (data/relation-keyfn @(:hypercrud.browser/data ctx))}
+          [:div {:class class}
+           [markdown "See [Datomic schema docs](https://docs.datomic.com/on-prem/schema.html)."]
+           (let [k :db/ident] (field [0 k] ctx (controls k) {:read-only (read-only? k result)}))
+           (let [k :db/valueType] (field [0 k] ctx (controls k) {:read-only (read-only? k result)}))
+           (let [k :db/cardinality] (field [0 k] ctx (controls k) {:read-only (read-only? k result)}))
+           (let [k :db/doc] (field [0 k] ctx (controls k) {:read-only (read-only? k result)}))
+           (let [k :db/unique] (field [0 k] ctx (controls k) {:read-only (read-only? k result)}))
+           [markdown "!block[Careful: below is not validated, don't stage invalid schema]{.alert .alert-warning style=\"margin-bottom: 0\"}"]
+           (let [k :db/isComponent] (field [0 k] ctx (controls k) {:read-only (read-only? k result)}))
+           (let [k :db/fulltext] (field [0 k] ctx (controls k) {:read-only (read-only? k result)}))
+           ])))))

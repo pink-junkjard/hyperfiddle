@@ -11,12 +11,16 @@
             [hyperfiddle.runtime :as runtime]
             [hyperfiddle.ui :refer [hyper-control field table fiddle]]))
 
+
+(def editable-if-shadowed?
+  #{:link/disabled? :link/render-inline? :link/fiddle :link/formula :link/tx-fn :hypercrud/props})
+
 (defn read-only? [ctx]
   (if (:hypercrud.browser/data ctx)                         ; be robust to being called on labels
     (let [entity (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
           sys? (system-link? @(r/fmap :db/id entity))
           shadow? @(r/fmap :hypercrud/sys? entity)]
-      (or sys? shadow?))))
+      (or sys? (and shadow? (editable-if-shadowed? (:hypercrud.browser/attribute ctx)))))))
 
 (def read-only-cell
   (from-react-context
@@ -54,17 +58,17 @@
              [table
               #_(partial form (fn [path ctx ?f & args] (field path ctx ?f :read-only (read-only? ctx))))
               (fn [ctx]
-                [(field [0 :link/disabled?] ctx nil)
+                [(field [0 :link/disabled?] ctx read-only-cell)
                  (field [0 :link/rel] ctx read-only-cell)
                  (field [0 :link/dependent?] ctx read-only-cell)
                  (field [0 :link/path] ctx read-only-cell)
-                 (field [0 :link/render-inline?] ctx nil)
-                 (field [0 :link/fiddle] ctx nil)
+                 (field [0 :link/render-inline?] ctx read-only-cell)
+                 (field [0 :link/fiddle] ctx read-only-cell)
                  (field [0 :link/create?] ctx read-only-cell)
                  (field [0 :link/managed?] ctx read-only-cell)
-                 (field [0 :link/formula] ctx nil)
-                 (field [0 :link/tx-fn] ctx nil)
-                 (field [0 :hypercrud/props] ctx nil)
+                 (field [0 :link/formula] ctx read-only-cell)
+                 (field [0 :link/tx-fn] ctx read-only-cell)
+                 (field [0 :hypercrud/props] ctx read-only-cell)
                  (field [0] ctx nil)])
               sort-fn
               ctx]])))))

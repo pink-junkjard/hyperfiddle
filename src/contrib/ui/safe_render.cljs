@@ -1,6 +1,6 @@
 (ns contrib.ui.safe-render
   (:require [contrib.cljs-platform :refer [code-for-browser code-for-nodejs]]
-            [cuerdas.core :as string]
+            [contrib.reagent :refer [fragment]]
             [reagent.core :as reagent]))
 
 
@@ -11,16 +11,9 @@
 
 (code-for-nodejs
   (defn user-portal [with-error & children]
-    [:div.hyperfiddle-userportal
-     {:dangerouslySetInnerHTML
-      {:__html
-       (try
-         ; todo just make a fragment and render it to string
-         (->> children
-              (map reagent-server/render-to-string)
-              (string/join "\n"))
-         (catch :default e                                  ; sometimes we throw loading hashmaps
-           (reagent-server/render-to-string [with-error e])))}}]))
+    ; No portal in SSR, so errors will crash the whole page.
+    ; IDE doesn't SSR so use the IDE to fix it.
+    (apply fragment children)))
 
 (code-for-browser
   (defn user-portal [with-error & children]
@@ -28,18 +21,14 @@
           e-state (reagent/atom nil)]
       (reagent/create-class
         {:reagent-render (fn [with-error & children]
-                           (into [:div.hyperfiddle-userportal]
-                                 (let [e @e-state]
-                                   (if (and @show-error e)
-                                     (do
-                                       (reset! show-error false) ; only show the error once, retry after that
-                                       [[with-error e]])
-                                     children))))
+                           (apply fragment
+                                  (let [e @e-state]
+                                    (if (and @show-error e)
+                                      (do
+                                        (reset! show-error false) ; only show the error once, retry after that
+                                        [[with-error e]])
+                                      children))))
 
          :component-did-catch (fn [#_this e info]           ; args will need updating in reagent0.8.x
                                 (reset! show-error true)
                                 (reset! e-state e))}))))
-
-(defn portal-markup [control & args]
-  [:div.hyperfiddle-userportal
-   (into [control] args)])

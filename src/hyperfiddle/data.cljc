@@ -9,6 +9,8 @@
 
 
 (defn relation-keyfn [relation]
+  {:pre [(not (r/reactive? relation))]}
+  ; This keyfn is very tricky, read https://github.com/hyperfiddle/hyperfiddle/issues/341
   (hash (map #(or (:db/id %) %) relation)))
 
 (letfn [(should-flatten? [m-field] (not (nil? (::field/source-symbol m-field))))]

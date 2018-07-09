@@ -52,7 +52,8 @@
                                            (on-change id)))))
                   (update :disabled #(or % no-options?)))
         label-fn (:label-fn props label-fn)]
-    [:select (dissoc props :label-fn)
+    [:select.ui (dissoc props :label-fn)
+     ; .ui is because options are an iframe and need the pink box
      (conj
        (->> @(:hypercrud.browser/data ctx)
             (mapv (juxt (comp :db/id first) #(label-fn % ctx)))

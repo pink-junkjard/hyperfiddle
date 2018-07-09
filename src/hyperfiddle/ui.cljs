@@ -24,6 +24,7 @@
     [hyperfiddle.ui.controls :as controls]
     [hyperfiddle.ui.hyper-controls :refer [hyper-select hyper-select-head hyper-label]]
     [hyperfiddle.ui.hacks]                                  ; exports
+    [hyperfiddle.ui.markdown-extensions]
     [hyperfiddle.ui.form :as form]
     [hyperfiddle.ui.sort :as sort]
     [hyperfiddle.ui.util :refer [safe-reagent-f eval-renderer-comp]]))
@@ -164,7 +165,9 @@ nil. call site must wrap with a Reagent component"
   ; focus should probably get called here. What about the request side?
   (condp = (:hypercrud.browser/data-cardinality ctx)
     :db.cardinality/one (let [ctx (assoc ctx ::layout :hyperfiddle.ui.layout/block)]
-                          (fragment (hf/form field ctx props)))
+                          (apply fragment
+                                 (-> (hf/relation-keyfn @(:hypercrud.browser/data ctx)) str keyword)
+                                 (hf/form field ctx props)))
     :db.cardinality/many (let [ctx (assoc ctx ::layout :hyperfiddle.ui.layout/table)]
                            [table (r/partial hf/form field) hf/sort-fn ctx props])
     ; blank fiddles
@@ -203,6 +206,8 @@ nil. call site must wrap with a Reagent component"
               [:span (remark/adapt-props props)
                [markdown content (assoc ctx ::unp true)]])
 
+     "a" hyperfiddle.ui.markdown-extensions/a
+
      ; Is this comment true?::
      ;   Div is not needed, use it with block syntax and it hits React.createElement and works
      ;   see https://github.com/medfreeman/remark-generic-extensions/issues/30
@@ -214,7 +219,7 @@ nil. call site must wrap with a Reagent component"
      ; This is a custom markdown extension example.
      "figure" (fn [content argument props ctx]
                 [:figure.figure props
-                 [markdown content ctx]
+                 [markdown content (assoc ctx ::unp true)]  ; it's an image or pre or other block element
                  [:figcaption.figure-caption [markdown argument (assoc ctx ::unp true)]]])
 
      "pre" (fn [content argument props ctx]
@@ -226,11 +231,7 @@ nil. call site must wrap with a Reagent component"
                      content (str/rtrim content "\n") #_"Remark yields an unavoidable newline that we don't want"]
                  [contrib.ui/code content #() {:read-only true}])
                [contrib.ui/code content #() props]))
-
-     ; legacy, use ``` to generate pre
-     "CodeEditor" (fn [content argument props ctx]
-                    [contrib.ui/code content #() props])
-
+     
      "render" (fn [content argument props ctx]
                 (unwrap (read-eval-with-bindings content ctx)))
 

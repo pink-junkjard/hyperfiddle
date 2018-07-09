@@ -27,15 +27,15 @@
        (doall)))
 
 (def underdocs
-  {:fiddle/pull "See [:fiddle/pull examples](http://www.hyperfiddle.net/:docs!fiddle-pull/) and the
+  {:fiddle/pull "See [:fiddle/pull examples](http://www.hyperfiddle.net/:docs/:fiddle-pull/) and the
   [Datomic pull docs](https://docs.datomic.com/on-prem/pull.html)."
-   :fiddle/query "See [:fiddle/query examples](http://www.hyperfiddle.net/:docs!fiddle-query/) and the
+   :fiddle/query "See [:fiddle/query examples](http://www.hyperfiddle.net/:docs/:fiddle-query/) and the
    [Datomic query docs](https://docs.datomic.com/on-prem/query.html)."
-   :fiddle/markdown "See [:fiddle/markdown examples](http://www.hyperfiddle.net/:docs!fiddle-markdown/)."
-   :fiddle/css "See [:fiddle/css examples](http://www.hyperfiddle.net/:docs!fiddle-css/)."
-   :fiddle/renderer "See [:fiddle/renderer examples](http://www.hyperfiddle.net/:docs!fiddle-renderer/). `ctx` and
+   :fiddle/markdown "See [:fiddle/markdown examples](http://www.hyperfiddle.net/:docs/:fiddle-markdown/)."
+   :fiddle/css "See [:fiddle/css examples](http://www.hyperfiddle.net/:docs/:fiddle-css/)."
+   :fiddle/renderer "See [:fiddle/renderer examples](http://www.hyperfiddle.net/:docs/:fiddle-renderer/). `ctx` and
    `class` are in lexical scope. No `(ns (:require ...))` yet so vars must be fully qualified."
-   :fiddle/links "See [:fiddle/links examples](http://www.hyperfiddle.net/:docs!fiddle-links/)."})
+   :fiddle/links "See [:fiddle/links examples](http://www.hyperfiddle.net/:docs/:fiddle-links/)."})
 
 (def controls
   {:fiddle/pull (from-react-context
@@ -88,19 +88,9 @@
      (field [0 :fiddle/renderer] ctx (controls :fiddle/renderer))
      (field [0 :fiddle/hydrate-result-as-fiddle] ctx nil)
      (field [0 :fiddle/links] ctx (controls :fiddle/links))
+     [:div.p "Additional attributes"]
+     (doall
+       (for [k (remove #(= (namespace %) "fiddle")
+                       (-> @(:hypercrud.browser/ordered-fes ctx) first :fields (->> (map :attribute))))]
+         (field [0 k] ctx nil)))
      (when-not embed-mode (link :hyperfiddle/remove [:body 0] ctx "Remove fiddle"))]))
-
-(defn ^:deprecated hyperfiddle-live [rel ctx & fiddle-attrs]
-  (let [state (r/atom {:edn-fiddle false :edn-result false})]
-    (fn [rel ctx & fiddle-attrs]
-      [:div.row.hf-live.unp.no-gutters
-       (let [as-edn (r/cursor state [:edn-result])]
-         [:div.result.col-sm.order-sm-2.order-xs-1
-          [:div "Result:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
-          (browse rel [] ctx (if @as-edn (r/partial hyperfiddle.ide.hf-live/result-edn [])))])
-       (let [as-edn (r/cursor state [:edn-fiddle])
-             f (r/partial (if @as-edn hyperfiddle.ide.hf-live/result-edn hyperfiddle.ide.hf-live/docs-embed) fiddle-attrs)]
-         [:div.src.col-sm.order-sm-1.order-xs-2
-          [:div "Interactive Hyperfiddle editor:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
-          (browse rel [] ctx f {:frag ":src" :class "devsrc"})])
-       ])))
