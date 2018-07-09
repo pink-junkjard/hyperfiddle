@@ -93,10 +93,10 @@
         props (update props :class css (hyperfiddle.ui/semantic-css ctx))]
     (case head-or-body
       :head [:th {:class (css "field" (:class props)
-                              (when (sort/sortable? ctx nil) "sortable") ; hoist
-                              (some-> (sort/sort-direction ctx) name)) ; hoist
+                              (when (sort/sortable? ctx) "sortable") ; hoist
+                              (some-> (sort/sort-direction relative-path ctx) name)) ; hoist
                   :style {:background-color (border-color ctx)}
-                  :on-click (r/partial sort/toggle-sort! ctx nil)}
+                  :on-click (r/partial sort/toggle-sort! relative-path ctx)}
              ; Use f as the label control also, because there is hypermedia up there
              [fix-arity-1-with-context (or (:label-fn props) (control-fac ctx))
               (some-> (:hypercrud.browser/field ctx) deref) ; todo unbreak reactivity

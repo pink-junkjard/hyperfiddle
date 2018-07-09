@@ -1,34 +1,53 @@
 (ns hyperfiddle.ui.sort
   (:require [contrib.css :refer [css-slugify css]]
             [contrib.reactive :as r]
-            [hypercrud.browser.link :as link]
-            [hyperfiddle.data :as hf]))
+            [hypercrud.browser.link :as link]))
 
 
 ; sorting currently breaks click handling in popovers
-(defn links-dont-break-sorting? [path ctx]
+(defn links-dont-break-sorting? [ctx]
   (->> @(:hypercrud.browser/links ctx)
-       (filter (link/same-path-as? path))
+       (filter (link/same-path-as? (:hypercrud.browser/path ctx)))
        (remove :link/dependent?)
        (link/options-processor)
        (not-any? link/popover-link?)))
 
-(defn sortable? [ctx path]
-  false
-  #_(and (hf/attr-sortable? @(:hypercrud.browser/find-element ctx)
-                            (:attribute (:hypercrud.browser/field ctx))
-                            ctx)
-         @(r/track links-dont-break-sorting? path ctx)))
+(defn sortable? [ctx]
+  (let [?dbname (some-> (:hypercrud.browser/source-symbol ctx) str)
+        ?last-segment (last (:hypercrud.browser/path ctx))]
+    (and
+      (if (and ?dbname (not (integer? ?last-segment)))      ; [fe attr] or [attr], NOT [fe] or []
+        (let [{:keys [:db/cardinality :db/valueType]} @(r/cursor (:hypercrud.browser/schemas ctx) [?dbname ?last-segment])]
+          (and
+            (= (:db/ident cardinality) :db.cardinality/one)
+            ; ref requires more work (inspect label-prop)
+            (contains? #{:db.type/keyword
+                         :db.type/string
+                         :db.type/boolean
+                         :db.type/long
+                         :db.type/bigint
+                         :db.type/float
+                         :db.type/double
+                         :db.type/bigdec
+                         :db.type/instant
+                         :db.type/uuid
+                         :db.type/uri
+                         :db.type/bytes
+                         :db.type/code}
+                       (:db/ident valueType))))
+        ; [fe] when aggregates or variables
+        (and (not ?dbname) ?last-segment))
+      @(r/track links-dont-break-sorting? ctx))))
 
-(defn sort-direction [ctx]
-  (let [[sort-fe-pos sort-attr direction] @(::sort-col ctx)]
-    (if (and (= (:fe-pos ctx) sort-fe-pos) (= sort-attr (:attribute (:hypercrud.browser/field ctx))))
+(defn sort-direction [relative-path ctx]
+  (let [[sort-path direction] @(::sort-col ctx)]
+    (when (= sort-path relative-path)
       direction)))
 
-(defn toggle-sort! [ctx path]
-  (if (sortable? ctx path)
+(defn toggle-sort! [relative-path ctx]
+  (when (sortable? ctx)
     (reset! (::sort-col ctx)
-            (case (sort-direction ctx)
-              :asc [(:fe-pos ctx) (:attribute (:hypercrud.browser/field ctx)) :desc]
+            (case (sort-direction relative-path ctx)
+              :asc [relative-path :desc]
               :desc nil
-              [(:fe-pos ctx) (:attribute (:hypercrud.browser/field ctx)) :asc]))))
+              [relative-path :asc]))))

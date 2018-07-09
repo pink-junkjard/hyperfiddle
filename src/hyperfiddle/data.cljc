@@ -36,42 +36,12 @@
          (fmap :hypercrud.browser/result)
          (fmap deref))))
 
-(defn attr-sortable? [source-symbol attribute ctx]
-  false
-  #_(if-let [dbname (some-> source-symbol str)]
-    (let [{:keys [:db/cardinality :db/valueType]} @(r/cursor (:hypercrud.browser/schemas ctx) [dbname attribute])]
-      (and
-        (= (:db/ident cardinality) :db.cardinality/one)
-        ; ref requires more work (inspect label-prop)
-        (contains? #{:db.type/keyword
-                     :db.type/string
-                     :db.type/boolean
-                     :db.type/long
-                     :db.type/bigint
-                     :db.type/float
-                     :db.type/double
-                     :db.type/bigdec
-                     :db.type/instant
-                     :db.type/uuid
-                     :db.type/uri
-                     :db.type/bytes
-                     :db.type/code}
-                   (:db/ident valueType))))
-    (not (nil? fe))))
-
-(defn sort-fn [sort-col ctx relations-val]
-  (let [[sort-fe-pos sort-attr direction] @sort-col
-        fe @(r/cursor (:hypercrud.browser/fields ctx) [sort-fe-pos])
-        attr (->> (map :attribute (:fields fe))
-                  (filter #(= % sort-attr))
-                  first)]
-    (if (attr-sortable? fe attr ctx)
-      (let [sort-fn (if sort-attr
-                      #(get-in % [sort-fe-pos sort-attr])
-                      #(get % sort-fe-pos))]
-        (sort-by sort-fn
-                 (case direction
-                   :asc #(compare %1 %2)
-                   :desc #(compare %2 %1))
-                 relations-val))
+(defn sort-fn [sort-col relations-val]
+  (let [[path direction] @sort-col]
+    (if path
+      (sort-by #(get-in % path)
+               (case direction
+                 :asc #(compare %1 %2)
+                 :desc #(compare %2 %1))
+               relations-val)
       relations-val)))

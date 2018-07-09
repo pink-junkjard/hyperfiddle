@@ -152,7 +152,7 @@ User renderers should not be exposed to the reaction."
          (let [ctx (context/focus ctx [:head])]
            (->> (form ctx props) (into [:thead])))          ; strict
          (->> (:hypercrud.browser/data ctx)
-              ;(r/fmap (r/partial sort-fn sort-col ctx))
+              (r/fmap (r/partial sort-fn sort-col))
               (r/unsequence hf/relation-keyfn)              ; todo support nested tables
               (map (fn [[relation k]]
                      (->> (form (context/body ctx relation) props)
