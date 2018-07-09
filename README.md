@@ -20,6 +20,7 @@ Hyperfiddle makes data-sync invisible with immutability:
 * Transport layer independence – swap transport stratgies (e.g. REST, websocket) without changing your app
 * Dynamic transport stratigies can automatically balance caching and latency
 * Platform independence – run on any platform (e.g. browser, Node, mobile) without changing your app
+* Data-driven everything: application as a value
 
 **Framework or library?** Neither: Hyperfiddle is more like Apache or Nginx, it's part of your infra stack.
 There is a server library for making custom servers (e.g. integrations and control over data sync) and a
