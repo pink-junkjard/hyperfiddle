@@ -8,6 +8,7 @@
     [contrib.reagent :refer [fragment from-react-context]]
     [contrib.ui]
     [contrib.uri :refer [is-uri?]]
+    [hypercrud.browser.find-element :as field]
     [hyperfiddle.ide.fiddles.topnav :refer [shadow-fiddle]]
     #_[hyperfiddle.ide.hf-live :as hf-live]                 ;cycle
     [hyperfiddle.runtime :as runtime]
@@ -89,8 +90,11 @@
      (field [0 :fiddle/hydrate-result-as-fiddle] ctx nil)
      (field [0 :fiddle/links] ctx (controls :fiddle/links))
      [:div.p "Additional attributes"]
-     (doall
-       (for [k (remove #(= (namespace %) "fiddle")
-                       (-> @(:hypercrud.browser/ordered-fes ctx) first :fields (->> (map :attribute))))]
-         (field [0 k] ctx nil)))
+     (->> @(:hypercrud.browser/fields ctx)
+          first
+          ::field/children
+          (map ::field/path-segment)
+          (remove #(= (namespace %) "fiddle"))
+          (map #(field [0 %] ctx nil))
+          (doall))
      (when-not embed-mode (link :hyperfiddle/remove [:body 0] ctx "Remove fiddle"))]))
