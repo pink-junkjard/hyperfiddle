@@ -1,7 +1,7 @@
 # hyperfiddle.cljc — a Hypermedia Function <http://www.hyperfiddle.net/>
 
 Hyperfiddle isolates your web clients from I/O, so your code can stay pure. If React.js is managed DOM,
- Hyperfiddle is managed network and database. This technique has paradigm-changing implications and enables a new kind of composable primitive for constructing web software.
+ Hyperfiddle is managed network and database. This enables a new kind of composable primitive for constructing web software, with paradigm-changing implications.
 
 ## Dependency coordinates — Todo
 
@@ -11,14 +11,16 @@ Hyperfiddle isolates your web clients from I/O, so your code can stay pure. If R
 
 **The hardest part of web dev is I/O:** data sync between database, various services, UI and then back to the database. An async, slow, failure-prone concern wired throughout the full stack, and the reason why we all code the same web boilerplate over and over again, year after year – a collosal, industry-wide failure to abstract.
 
-Hyperfiddle makes data-sync invisible with immutability— If React.js is managed DOM, Hyperfiddle is managed database and network.
+Hyperfiddle makes data-sync invisible with immutability:
 
 * Fiddle graph captures service inter-dependencies as data (query X depends on queries Y and Z)
 * Fiddle graph captures application essense (API, UI, database) as one concern – no frontend/backend dichotemy
+* Optimizing I/O runtime – data sync reduces to a graph partitioning problem
 * Managed data sync – Userland is not concerned with effects, async, errors or latency
 * Transport layer independence – swap transport stratgies (e.g. REST, websocket) without changing your app
-* Optimizing I/O runtime – dynamically adjust transport strategies to balance caching and latency
+* Dynamic transport stratigies can automatically balance caching and latency
 * Platform independence – run on any platform (e.g. browser, Node, mobile) without changing your app
+* Data-driven everything: application as a value
 
 **Framework or library?** Neither: Hyperfiddle is more like Apache or Nginx, it's part of your infra stack.
 There is a server library for making custom servers (e.g. integrations and control over data sync) and a
