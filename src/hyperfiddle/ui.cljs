@@ -42,7 +42,7 @@
         renderer (blank->nil (:attribute/renderer attr))]
     (cond
       (not attr) controls/string
-      ;renderer (attr-renderer renderer ctx)
+      renderer attr-renderer
       :else (let [type (some-> attr :db/valueType :db/ident name keyword)
                   cardinality (some-> attr :db/cardinality :db/ident name keyword)]
               (match* [type cardinality]
