@@ -66,7 +66,8 @@
       (fragment (when (and (not (#{:head :body} (last (:hypercrud.browser/path ctx))))
                            (keyword? (last (:hypercrud.browser/path ctx))))
                   [(control ctx) value])
-                (when-not (some->> (:hypercrud.browser/fields ctx) (r/fmap nil?) deref)
+                (when (and (not (some->> (:hypercrud.browser/fields ctx) (r/fmap nil?) deref)) ; only when there are child fields
+                           (not (integer? (last (:hypercrud.browser/path ctx))))) ; ignore fe fields
                   [:div [result ctx]])
                 [anchors (:hypercrud.browser/path ctx)]
                 [iframes (:hypercrud.browser/path ctx)]))))
