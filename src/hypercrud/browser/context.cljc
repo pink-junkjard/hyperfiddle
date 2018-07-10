@@ -109,8 +109,7 @@
             ; todo cannot conflict with :db/ident :head
             (and (= path-segment :head) #_(nil? (:hypercrud.browser/data-cardinality ctx)))
             (-> ctx
-                (assoc :TODO-IN-HEAD true                   ; todo if we are in a head, we dont have data to set
-                       :hypercrud.browser/parent (select-keys ctx [:hypercrud.browser/data
+                (assoc :hypercrud.browser/parent (select-keys ctx [:hypercrud.browser/data
                                                                    :hypercrud.browser/data-cardinality
                                                                    :hypercrud.browser/path]))
                 (update :hypercrud.browser/path conj :head)
@@ -141,8 +140,8 @@
                                                    :hypercrud.browser/fat-attribute fat-attribute
                                                    :hypercrud.browser/field field
                                                    :hypercrud.browser/fields (r/fmap ::field/children field)))
-                                       ; todo if we are in a head, we dont have data to set
-                                       (not (:TODO-IN-HEAD ctx)) (set-data @(r/cursor fat-attribute [:db/cardinality :db/ident]))))
+                                       ; if we are in a head, we dont have data to set
+                                       (not (some #{:head} (:hypercrud.browser/path ctx))) (set-data @(r/cursor fat-attribute [:db/cardinality :db/ident]))))
 
             (integer? path-segment) (let [field (r/fmap (r/partial find-field path-segment) (:hypercrud.browser/fields ctx))
                                           source-symbol @(r/cursor field [::field/source-symbol])
@@ -158,8 +157,8 @@
                                                          :hypercrud.browser/source-symbol source-symbol
                                                          :uri uri ; todo why cant internals get the uri from source-symbol at the last second
                                                          :user-with! (r/partial user-with (:peer ctx) (:hypercrud.browser/invert-route ctx) (:branch ctx) uri)))
-                                        ; todo if we are in a head, we dont have data to set
-                                        (not (:TODO-IN-HEAD ctx)) (set-data :db.cardinality/one)))))]
+                                        ; if we are in a head, we dont have data to set
+                                        (not (some #{:head} (:hypercrud.browser/path ctx))) (set-data :db.cardinality/one)))))]
   (defn focus [ctx relative-path]
     (reduce focus-segment ctx relative-path)))
 
