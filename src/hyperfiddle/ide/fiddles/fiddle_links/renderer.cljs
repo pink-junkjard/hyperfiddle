@@ -1,7 +1,7 @@
 (ns hyperfiddle.ide.fiddles.fiddle-links.renderer
   (:require [cats.monad.either :as either]
             [contrib.reactive :as r]
-            [contrib.reagent :refer [from-react-context fix-arity-1-with-context]]
+            [contrib.reagent :refer [from-react-context with-react-context]]
             [hypercrud.browser.base :as base]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.system-fiddle :as system-fiddle]
@@ -26,9 +26,9 @@
   (from-react-context
     (fn [{:keys [ctx props]} value]
       ; Need to delay until we have the value ctx to compute this, which means its a value renderer not a field prop
-      [fix-arity-1-with-context                             ; rebind updated props
-       (hyper-control ctx) value ctx
-       (assoc props :read-only (read-only? ctx))])))
+      [with-react-context {:ctx (assoc props :read-only (read-only? ctx)) ; rebind updated props
+                           :props props}
+       [(hyper-control ctx) value]])))
 
 (defn links->result [links]
   (->> @links

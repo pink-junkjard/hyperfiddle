@@ -2,7 +2,7 @@
   (:require
     [contrib.css :refer [css]]
     [contrib.reactive :as r]
-    [contrib.reagent :refer [fragment from-react-context fix-arity-1-with-context]]
+    [contrib.reagent :refer [fragment from-react-context with-react-context]]
     [contrib.ui.input :refer [keyword-input* edn-input*]]
     [contrib.ui.tooltip :refer [tooltip-thick]]
     [hypercrud.browser.context :as context]
@@ -71,11 +71,11 @@
     (fn [hyper-control relative-path ctx ?f props]
       (let [ctx (assoc ctx :hyperfiddle.ui.form/state state)
             ; we want the wrapper div to have the :body styles, so build the head before polluting the ctx with :body
-            head (let [ctx (context/focus ctx (cons :head relative-path))]
+            head (let [ctx (context/focus ctx (cons :head relative-path))
+                       field (some-> (:hypercrud.browser/field ctx) deref)] ; todo unbreak reactivity
                    ^{:key :form-head}
-                   [fix-arity-1-with-context (or (:label-fn props) (hyper-control ctx))
-                    (some-> (:hypercrud.browser/field ctx) deref) ; todo unbreak reactivity
-                    ctx props])
+                   [with-react-context {:ctx ctx :props props}
+                    [(or (:label-fn props) (hyper-control ctx)) field]])
             ctx (context/focus ctx (cons :body relative-path))
             props (update props :class css (hyperfiddle.ui/semantic-css ctx))]
         (ui-block-border-wrap
@@ -84,7 +84,8 @@
           (let [data @(:hypercrud.browser/data ctx)]        ; todo why consciously break reactivity
             #_(if (:relation ctx))                          ; naked has no body
             ^{:key :form-body}
-            [fix-arity-1-with-context (or ?f (hyper-control ctx)) data ctx props]))))))
+            [with-react-context {:ctx ctx :props props}
+             [(or ?f (hyper-control ctx)) data]]))))))
 
 (defn table-field "Form fields are label AND value. Table fields are label OR value."
   [control-fac relative-path ctx ?f props]
@@ -98,11 +99,12 @@
                   :style {:background-color (border-color ctx)}
                   :on-click (r/partial sort/toggle-sort! relative-path ctx)}
              ; Use f as the label control also, because there is hypermedia up there
-             [fix-arity-1-with-context (or (:label-fn props) (control-fac ctx))
-              (some-> (:hypercrud.browser/field ctx) deref) ; todo unbreak reactivity
-              ctx props]]
+             (let [field (some-> (:hypercrud.browser/field ctx) deref)] ; todo unbreak reactivity
+               [with-react-context {:ctx ctx :props props}
+                [(or (:label-fn props) (control-fac ctx)) field]])]
       :body (let [data @(:hypercrud.browser/data ctx)]      ; todo why consciously break reactivity
               [:td {:class (css "field" (:class props) "truncate")
                     :style {:border-color (when (:hypercrud.browser/source-symbol ctx) (border-color ctx))}}
                ; todo unsafe execution of user code: control
-               [fix-arity-1-with-context (or ?f (control-fac ctx)) data ctx props]]))))
+               [with-react-context {:ctx ctx :props props}
+                [(or ?f (control-fac ctx)) data]]]))))

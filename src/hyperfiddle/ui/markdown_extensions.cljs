@@ -2,7 +2,7 @@
   (:require
     [contrib.data :refer [unwrap]]
     [contrib.string :refer [memoized-safe-read-edn-string blank->nil or-str]]
-    [contrib.reagent :refer [from-react-context fragment fix-arity-1-with-context]]
+    [contrib.reagent :refer [from-react-context fragment]]
     [contrib.ui.remark :as remark]
     [cuerdas.core :as str]
     [goog.object]

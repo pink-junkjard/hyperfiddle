@@ -2,7 +2,7 @@
   (:require [clojure.set :as set]
             [contrib.datomic-tx :as tx]
             [contrib.reactive :as r]
-            [contrib.reagent :refer [from-react-context fix-arity-1-with-context]]
+            [contrib.reagent :refer [from-react-context with-react-context]]
             [hypercrud.browser.context :as context]
             [hyperfiddle.data :as data]
             [hyperfiddle.ui :refer [field hyper-control markdown]]))
@@ -57,11 +57,10 @@
   (defn- build-valueType-and-cardinality-renderer [special-attrs-state]
     (from-react-context
       (fn [{:keys [ctx props]} value]
-        [fix-arity-1-with-context                           ; rebind with updated context
-         (hyper-control ctx)
-         value
-         (assoc ctx :user-with! (r/partial user-with! special-attrs-state ctx))
-         props]))))
+        ; rebind with updated context
+        [with-react-context {:ctx (assoc ctx :user-with! (r/partial user-with! special-attrs-state ctx))
+                             :props props}
+         [(hyper-control ctx) value]]))))
 
 (letfn [(user-with!' [special-attrs-state ctx tx]
           (let [entity @(context/entity ctx)
@@ -84,11 +83,10 @@
   (defn- build-ident-renderer [special-attrs-state]
     (from-react-context
       (fn [{:keys [ctx props]} value]
-        [fix-arity-1-with-context                           ; rebind with updated context
-         (hyper-control ctx)
-         value
-         (assoc ctx :user-with! (r/partial user-with!' special-attrs-state ctx))
-         props]))))
+        ; rebind with updated context
+        [with-react-context {:ctx (assoc ctx :user-with! (r/partial user-with!' special-attrs-state ctx))
+                             :props props}
+         [(hyper-control ctx) value]]))))
 
 (defn renderer [ctx class]
   (let [special-attrs-state (r/atom nil)

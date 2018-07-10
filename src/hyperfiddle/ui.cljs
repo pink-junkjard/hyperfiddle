@@ -5,7 +5,7 @@
     [contrib.css :refer [css css-slugify]]
     [contrib.data :refer [take-to unwrap]]
     [contrib.reactive :as r]
-    [contrib.reagent :refer [from-react-context fragment fix-arity-1-with-context]]
+    [contrib.reagent :refer [fragment from-react-context with-react-context]]
     [contrib.reactive-debug :refer [track-cmp]]
     [contrib.string :refer [memoized-safe-read-edn-string blank->nil or-str]]
     [contrib.ui]
@@ -112,7 +112,8 @@ User renderers should not be exposed to the reaction."
   (let [ctx (context/focus ctx (cons :body relative-path))
         props (update props :class css (semantic-css ctx))
         data @(:hypercrud.browser/data ctx)]
-    [fix-arity-1-with-context (or ?f (hyper-control ctx)) data ctx props]))
+    [with-react-context {:ctx ctx :props props}
+     [(or ?f (hyper-control ctx)) data]]))
 
 (defn ^:export link "Relation level link renderer. Works in forms and lists but not tables."
   [rel relative-path ctx ?content & [props]]                ; path should be optional, for disambiguation only. Naked can be hard-linked in markdown?
@@ -231,7 +232,7 @@ nil. call site must wrap with a Reagent component"
                      content (str/rtrim content "\n") #_"Remark yields an unavoidable newline that we don't want"]
                  [contrib.ui/code content #() {:read-only true}])
                [contrib.ui/code content #() props]))
-     
+
      "render" (fn [content argument props ctx]
                 (unwrap (read-eval-with-bindings content ctx)))
 
@@ -239,7 +240,8 @@ nil. call site must wrap with a Reagent component"
            (let [f (unwrap (read-eval-with-bindings content))
                  v (unwrap (memoized-safe-read-edn-string argument))]
              (if f
-               [fix-arity-1-with-context f v ctx props])))
+               [with-react-context {:ctx ctx :props props}
+                [f v]])))
 
      "browse" (fn [content argument props ctx]
                 (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
