@@ -76,7 +76,7 @@
         ; This only makes sense on :fiddle/type :query because it has arbitrary arguments
         ; EntityRequest args are too structured.
         (let [[_ [inner-fiddle & inner-args]] (:route ctx)]
-          (request-from-route [inner-fiddle inner-args] ctx))))))
+          (request-from-route [inner-fiddle (vec inner-args)] ctx))))))
 
 (defn request-from-route [route ctx]
   (let [ctx (-> (context/clean ctx)
