@@ -19,7 +19,8 @@
      (let [ctx (-> ctx
                  (dissoc :hypercrud.browser/data :hypercrud.browser/data-cardinality)
                  (update :hypercrud.browser/result (partial contrib.reactive/fmap do-filter-reactive #_(contrib.reactive/partial filter f?)))
-                 (hypercrud.browser.context/focus [:body]))]
+                 (hypercrud.browser.context/focus [:body])
+                 (assoc :hyperfiddle.ui/layout :hyperfiddle.ui.layout/table))]
        [hyperfiddle.ui/table
         (fn [ctx]
           [(hyperfiddle.ui/field [0 :db/ident] ctx)

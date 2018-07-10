@@ -47,20 +47,20 @@
                     :link/fiddle (db-cardinality-options $db)
                     :link/render-inline? true
                     :link/rel :options
-                    :link/path "0 :db/cardinality"}
+                    :link/path ":body 0 :db/cardinality"}
                    {:db/id (keyword "hyperfiddle.schema.db-unique-options" $db)
                     :link/fiddle (db-unique-options $db)
                     :link/render-inline? true
                     :link/rel :options
-                    :link/path "0 :db/unique"}
+                    :link/path ":body 0 :db/unique"}
                    {:db/id (keyword "hyperfiddle.schema.db-valueType-options" $db)
                     :link/fiddle (db-valueType-options $db)
                     :link/render-inline? true
                     :link/rel :options
-                    :link/path "0 :db/valueType"}
+                    :link/path ":body 0 :db/valueType"}
                    {:db/id :system-anchor-remove            ; XXX
                     :link/rel :hyperfiddle/remove
-                    :link/path "0"
+                    :link/path ":body 0"
                     :link/disabled? true}}})
 
 (defn schema [$db]
@@ -79,26 +79,26 @@
                     :link/fiddle (db-cardinality-options $db)
                     :link/render-inline? true
                     :link/rel :options
-                    :link/path "0 :db/cardinality"}
+                    :link/path ":body 0 :db/cardinality"}
                    {:db/id (keyword "hyperfiddle.schema.db-unique-options-link" $db)
                     :link/fiddle (db-unique-options $db)
                     :link/render-inline? true
                     :link/rel :options
-                    :link/path "0 :db/unique"}
+                    :link/path ":body 0 :db/unique"}
                    {:db/id (keyword "hyperfiddle.schema.db-valueType-options" $db)
                     :link/fiddle (db-valueType-options $db)
                     :link/render-inline? true
                     :link/rel :options
-                    :link/path "0 :db/valueType"}
+                    :link/path ":body 0 :db/valueType"}
                    {:db/id :system-anchor-edit              ; XXX
                     :link/rel :hyperfiddle/edit
-                    :link/path "0"
+                    :link/path ":body 0"
                     :link/fiddle (db-attribute-edit $db)}
                    {:db/id :system-anchor-new               ; XXX
                     :link/rel :hyperfiddle/new
-                    :link/path "0"
+                    :link/path ":body 0"
                     :link/fiddle (db-attribute-edit $db)}
                    {:db/id :system-anchor-remove            ; XXX
                     :link/rel :hyperfiddle/remove
-                    :link/path "0"
+                    :link/path ":body 0"
                     :link/disabled? true}}})
