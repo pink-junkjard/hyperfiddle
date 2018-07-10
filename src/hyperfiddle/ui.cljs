@@ -2,6 +2,7 @@
   (:require-macros [hyperfiddle.ui :refer [-build-fiddle]])
   (:require
     [clojure.core.match :refer [match match*]]
+    [clojure.string :as string]
     [contrib.css :refer [css css-slugify]]
     [contrib.data :refer [take-to unwrap]]
     [contrib.reactive :as r]
@@ -90,21 +91,27 @@
 (defn ^:export semantic-css [ctx]
   ; Include the fiddle level ident css.
   ; Semantic css needs to be prefixed with - to avoid collisions. todo
-  (let [[i a] [nil nil]]
-    (concat
-      ["hyperfiddle"
-       (css-slugify (:hypercrud.browser/source-symbol ctx)) ; color
-       (css-slugify (cond a "attribute" i "element" :else "naked"))
-       (css-slugify (-> (:TODO-IN-HEAD ctx) (if :head :body))) ; todo this is shit
-       (css-slugify i)                                      ; same info as name, but by index which is more robust
-       ;(css-slugify (some-> ctx :hypercrud.browser/find-element deref :type))
-       ;(css-slugify (some-> ctx :hypercrud.browser/find-element deref :name)) ; works on aggregate
-       (if i (css-slugify a))                               ; see attribute-schema-human
-       (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/valueType :db/ident))
-       (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :attribute/renderer #_label/fqn->name))
-       (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/cardinality :db/ident))
-       (css-slugify (some-> ctx :hypercrud.browser/fat-attribute deref :db/isComponent (if :component)))]
-      (map css-slugify (:path ctx)))))
+  (->> (:hypercrud.browser/path ctx)
+       (remove #{:head :body})
+       (concat
+         ["hyperfiddle"
+          (:hypercrud.browser/source-symbol ctx)            ; color
+          (let [last-segment (last (:hypercrud.browser/path ctx))]
+            (cond
+              (keyword? last-segment) "attribute"
+              (integer? last-segment) "element"
+              :else "naked"))
+          (or (some #{:head} (:hypercrud.browser/path ctx)) ; could be first nested in a body
+              (some #{:body} (:hypercrud.browser/path ctx)))
+          (->> (:hypercrud.browser/path ctx)                ; generate a unique selector for each location
+               (remove #{:head :body})
+               (map css-slugify)
+               (string/join "/"))
+          (some-> ctx :hypercrud.browser/fat-attribute deref :db/valueType :db/ident)
+          (some-> ctx :hypercrud.browser/fat-attribute deref :attribute/renderer #_label/fqn->name)
+          (some-> ctx :hypercrud.browser/fat-attribute deref :db/cardinality :db/ident)
+          (some-> ctx :hypercrud.browser/fat-attribute deref :db/isComponent (if :component))])
+       (map css-slugify)))
 
 (defn ^:export value "Relation level value renderer. Works in forms and lists but not tables (which need head/body structure).
 User renderers should not be exposed to the reaction."
