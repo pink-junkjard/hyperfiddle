@@ -55,9 +55,10 @@
 (def ^:export boolean
   (from-react-context
     (fn [{:keys [ctx props]} value]
-      [contrib.ui/easy-checkbox "" value
-       (r/partial entity-change! ctx (not value))
-       (update props :read-only #(or % (not @(r/fmap writable-entity? (context/entity ctx)))))])))
+      [:div
+       [contrib.ui/easy-checkbox "" value
+        (r/partial entity-change! ctx (not value))
+        (update props :read-only #(or % (not @(r/fmap writable-entity? (context/entity ctx)))))]])))
 
 (def ^:export tristate-boolean
   (letfn [(adapter [e]
