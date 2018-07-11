@@ -6,13 +6,10 @@
             [hypercrud.browser.dbname :as dbname]
             [hypercrud.browser.find-element :as field]
             [hypercrud.browser.context :as context]
-            [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
             [hypercrud.types.ThinEntity :refer [->ThinEntity]]
             [hypercrud.util.branch :as branch]
             [hyperfiddle.runtime :as runtime]
-            [taoensso.timbre :as timbre])
-  #?(:clj
-     (:import (hypercrud.types.Entity Entity))))
+            [taoensso.timbre :as timbre]))
 
 
 (defn ^:export auto-entity-from-stage [ctx]
@@ -33,12 +30,8 @@
                nil nil #_":db/id has a faked attribute with no cardinality, need more thought to make elegant")))
       hash abs-normalized - str))
 
-(let [get-uri (fn [default cell-data]
-                (if (instance? Entity cell-data)
-                  (.-uri cell-data)
-                  default))]
-  (defn auto-entity [ctx]
-    (->ThinEntity (dbname/uri->dbname (:uri ctx) ctx) (deterministic-ident ctx))))
+(defn ^:export auto-entity [ctx]
+  (->ThinEntity (dbname/uri->dbname (:uri ctx) ctx) (deterministic-ident ctx)))
 
 (defn- field-at-path [path ordered-fields]
   (loop [[segment & rest] path
@@ -54,15 +47,6 @@
                 (recur rest (::field/children field))
                 field)))))
 
-(defn -auto-formula-impl [ctx path & {:keys [create?] :or {create? false}}] ; todo clean up these args, remove ctx
-  (if create?
-    (if (empty? path)
-      "hypercrud.browser.auto-link-formula/auto-entity-from-stage"
-      (when (::field/data-has-id? (field-at-path path @(:hypercrud.browser/fields ctx))) ; todo better reactivity
-        "hypercrud.browser.auto-link-formula/auto-entity"))
-    (when (::field/data-has-id? (field-at-path path @(:hypercrud.browser/fields ctx)))
-      "(comp deref :hypercrud.browser/data)")))
-
 (defn auto-formula [ctx link]
   (-> (memoized-safe-read-edn-string (str "[" (:link/path link) "]"))
       (either/branch
@@ -70,4 +54,10 @@
           (timbre/error e)
           nil)
         (fn [path]
-          (-auto-formula-impl ctx path :create? (:link/create? link))))))
+          (if (:link/create? link)
+            (if (empty? path)
+              "hypercrud.browser.auto-link-formula/auto-entity-from-stage"
+              (when (::field/data-has-id? (field-at-path path @(:hypercrud.browser/fields ctx))) ; todo better reactivity
+                "hypercrud.browser.auto-link-formula/auto-entity"))
+            (when (::field/data-has-id? (field-at-path path @(:hypercrud.browser/fields ctx)))
+              "(comp deref :hypercrud.browser/data)"))))))
