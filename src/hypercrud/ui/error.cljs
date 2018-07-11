@@ -4,6 +4,7 @@
     [contrib.reactive :as r]
     [contrib.reagent :refer [fragment]]
     [contrib.ui :refer [markdown]]
+    [hypercrud.browser.context :as context]
     [hypercrud.types.Err :as Err]
     [hyperfiddle.foundation :as foundation]))
 
@@ -45,6 +46,6 @@
   (cond
     (:hypercrud.ui/error ctx) ((:hypercrud.ui/error ctx) ctx)
     (:hypercrud.browser/attribute ctx) error-inline         ; table: header or cell, form: header or cell
-    (integer? (last (:hypercrud.browser/path ctx))) error-inline
+    (context/find-element-segment? (last (:hypercrud.browser/path ctx))) error-inline
     ; browser including inline true links
     :else (r/partial error-block-with-stage ctx)))

@@ -63,11 +63,10 @@
 (def hyper-control'
   (from-react-context
     (fn [{:keys [ctx props]} value]
-      (fragment (when (and (not (#{:head :body} (last (:hypercrud.browser/path ctx))))
-                           (keyword? (last (:hypercrud.browser/path ctx))))
+      (fragment (when (context/attribute-segment? (last (:hypercrud.browser/path ctx)))
                   [(control ctx) value])
                 (when (and (not (some->> (:hypercrud.browser/fields ctx) (r/fmap nil?) deref)) ; only when there are child fields
-                           (not (integer? (last (:hypercrud.browser/path ctx))))) ; ignore fe fields
+                           (not (context/find-element-segment? (last (:hypercrud.browser/path ctx))))) ; ignore fe fields
                   [:div [result ctx]])
                 [anchors (:hypercrud.browser/path ctx)]
                 [iframes (:hypercrud.browser/path ctx)]))))
@@ -99,8 +98,8 @@
           (:hypercrud.browser/source-symbol ctx)            ; color
           (let [last-segment (last (:hypercrud.browser/path ctx))]
             (cond
-              (keyword? last-segment) "attribute"
-              (integer? last-segment) "element"
+              (context/attribute-segment? last-segment) "attribute"
+              (context/find-element-segment? last-segment) "element"
               :else "naked"))
           (or (some #{:head} (:hypercrud.browser/path ctx)) ; could be first nested in a body
               (some #{:body} (:hypercrud.browser/path ctx)))

@@ -1,6 +1,7 @@
 (ns hyperfiddle.ui.sort
   (:require [contrib.css :refer [css-slugify css]]
             [contrib.reactive :as r]
+            [hypercrud.browser.context :as context]
             [hypercrud.browser.link :as link]))
 
 
@@ -16,7 +17,7 @@
   (let [?dbname (some-> (:hypercrud.browser/source-symbol ctx) str)
         ?last-segment (last (:hypercrud.browser/path ctx))]
     (and
-      (if (and ?dbname (not (integer? ?last-segment)))      ; [fe attr] or [attr], NOT [fe] or []
+      (if (and ?dbname (not (context/find-element-segment? ?last-segment))) ; [fe attr] or [attr], NOT [fe] or []
         (let [{:keys [:db/cardinality :db/valueType]} @(r/cursor (:hypercrud.browser/schemas ctx) [?dbname ?last-segment])]
           (and
             (= (:db/ident cardinality) :db.cardinality/one)

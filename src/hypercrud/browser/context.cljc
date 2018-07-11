@@ -38,6 +38,14 @@
               (fn [domain]
                 (assoc-in (:hypercrud.browser/source-domain ctx) [:domain/environment "$"] (:domain/fiddle-repo domain))))))
 
+(defn attribute-segment? [path-segment]
+  (and (not (contains? #{:head :body} path-segment))        ; todo cannot conflict with :db/ident :head | :body
+       (or (keyword? path-segment)
+           (= '* path-segment))))
+
+(defn find-element-segment? [path-segment]
+  (integer? path-segment))
+
 (letfn [(default [default-v v] (or v default-v))
         (user-with [rt invert-route branch uri tx]
           (runtime/dispatch! rt (actions/with rt invert-route branch uri tx)))
@@ -129,7 +137,7 @@
                                                 :hypercrud.browser/fat-attribute))
                 :db.cardinality/many (throw (ex-info ":body is invalid directly on card/many" {:path (:hypercrud.browser/path ctx)}))))
 
-            (keyword path-segment)
+            (attribute-segment? path-segment)
             (let [field (r/fmap (r/partial find-field path-segment) (:hypercrud.browser/fields ctx))
                   fat-attribute (->> (r/cursor (:hypercrud.browser/schema ctx) [path-segment])
                                      (r/fmap (r/partial default {:db/ident path-segment})))]
@@ -144,7 +152,7 @@
                 ; if we are in a head, we dont have data to set
                 (not (some #{:head} (:hypercrud.browser/path ctx))) (set-data @(r/cursor fat-attribute [:db/cardinality :db/ident]))))
 
-            (integer? path-segment)
+            (find-element-segment? path-segment)
             (let [field (r/fmap (r/partial find-field path-segment) (:hypercrud.browser/fields ctx))
                   source-symbol @(r/cursor field [::field/source-symbol])
                   dbname (str source-symbol)

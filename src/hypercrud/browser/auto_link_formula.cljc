@@ -45,10 +45,10 @@
          fields ordered-fields]
     (cond
       (#{:head :body} segment) (recur rest fields)
-      (integer? segment) (let [field (get fields segment)]
-                           (if (seq rest)
-                             (recur rest (::field/children field))
-                             field))
+      (context/find-element-segment? segment) (let [field (get fields segment)]
+                                                (if (seq rest)
+                                                  (recur rest (::field/children field))
+                                                  field))
       :else (let [field (first (filter #(= (::field/path-segment %) segment) fields))]
               (if (seq rest)
                 (recur rest (::field/children field))
