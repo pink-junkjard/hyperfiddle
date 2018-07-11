@@ -129,36 +129,38 @@
                                                 :hypercrud.browser/fat-attribute))
                 :db.cardinality/many (throw (ex-info ":body is invalid directly on card/many" {:path (:hypercrud.browser/path ctx)}))))
 
-            (keyword path-segment) (let [field (r/fmap (r/partial find-field path-segment) (:hypercrud.browser/fields ctx))
-                                         fat-attribute (->> (r/cursor (:hypercrud.browser/schema ctx) [path-segment])
-                                                            (r/fmap (r/partial default {:db/ident path-segment})))]
-                                     (cond-> (-> ctx
-                                                 (set-parent)
-                                                 (update :hypercrud.browser/path conj path-segment)
-                                                 (assoc
-                                                   :hypercrud.browser/attribute path-segment
-                                                   :hypercrud.browser/fat-attribute fat-attribute
-                                                   :hypercrud.browser/field field
-                                                   :hypercrud.browser/fields (r/fmap ::field/children field)))
-                                       ; if we are in a head, we dont have data to set
-                                       (not (some #{:head} (:hypercrud.browser/path ctx))) (set-data @(r/cursor fat-attribute [:db/cardinality :db/ident]))))
+            (keyword path-segment)
+            (let [field (r/fmap (r/partial find-field path-segment) (:hypercrud.browser/fields ctx))
+                  fat-attribute (->> (r/cursor (:hypercrud.browser/schema ctx) [path-segment])
+                                     (r/fmap (r/partial default {:db/ident path-segment})))]
+              (cond-> (-> ctx
+                          (set-parent)
+                          (update :hypercrud.browser/path conj path-segment)
+                          (assoc
+                            :hypercrud.browser/attribute path-segment
+                            :hypercrud.browser/fat-attribute fat-attribute
+                            :hypercrud.browser/field field
+                            :hypercrud.browser/fields (r/fmap ::field/children field)))
+                ; if we are in a head, we dont have data to set
+                (not (some #{:head} (:hypercrud.browser/path ctx))) (set-data @(r/cursor fat-attribute [:db/cardinality :db/ident]))))
 
-            (integer? path-segment) (let [field (r/fmap (r/partial find-field path-segment) (:hypercrud.browser/fields ctx))
-                                          source-symbol @(r/cursor field [::field/source-symbol])
-                                          dbname (str source-symbol)
-                                          uri (when dbname
-                                                (get-in ctx [:hypercrud.browser/domain :domain/environment dbname]))]
-                                      (cond-> (-> ctx
-                                                  (set-parent)
-                                                  (update :hypercrud.browser/path conj path-segment)
-                                                  (assoc :hypercrud.browser/field field
-                                                         :hypercrud.browser/fields (r/fmap ::field/children field)
-                                                         :hypercrud.browser/schema (r/cursor (:hypercrud.browser/schemas ctx) [dbname])
-                                                         :hypercrud.browser/source-symbol source-symbol
-                                                         :uri uri ; todo why cant internals get the uri from source-symbol at the last second
-                                                         :user-with! (r/partial user-with (:peer ctx) (:hypercrud.browser/invert-route ctx) (:branch ctx) uri)))
-                                        ; if we are in a head, we dont have data to set
-                                        (not (some #{:head} (:hypercrud.browser/path ctx))) (set-data :db.cardinality/one)))))]
+            (integer? path-segment)
+            (let [field (r/fmap (r/partial find-field path-segment) (:hypercrud.browser/fields ctx))
+                  source-symbol @(r/cursor field [::field/source-symbol])
+                  dbname (str source-symbol)
+                  uri (when dbname
+                        (get-in ctx [:hypercrud.browser/domain :domain/environment dbname]))]
+              (cond-> (-> ctx
+                          (set-parent)
+                          (update :hypercrud.browser/path conj path-segment)
+                          (assoc :hypercrud.browser/field field
+                                 :hypercrud.browser/fields (r/fmap ::field/children field)
+                                 :hypercrud.browser/schema (r/cursor (:hypercrud.browser/schemas ctx) [dbname])
+                                 :hypercrud.browser/source-symbol source-symbol
+                                 :uri uri                   ; todo why cant internals get the uri from source-symbol at the last second
+                                 :user-with! (r/partial user-with (:peer ctx) (:hypercrud.browser/invert-route ctx) (:branch ctx) uri)))
+                ; if we are in a head, we dont have data to set
+                (not (some #{:head} (:hypercrud.browser/path ctx))) (set-data :db.cardinality/one)))))]
   (defn focus [ctx relative-path]
     (reduce focus-segment ctx relative-path)))
 
