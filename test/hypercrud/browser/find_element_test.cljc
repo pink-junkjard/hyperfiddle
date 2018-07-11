@@ -148,7 +148,8 @@
             #_(test-partial-splat ~fiddle ~pull->request ~result-builder)))))
 
 (deftest blank []
-  (is (= [] @(auto-fields {:hypercrud.browser/fiddle (r/atom {:fiddle/type :blank})}))))
+  (is (= [] @(auto-fields {:hypercrud.browser/schemas (r/atom nil)
+                           :hypercrud.browser/fiddle (r/atom {:fiddle/type :blank})}))))
 
 (deftest entity []
   (pull->attr-tests {:fiddle/type :entity
