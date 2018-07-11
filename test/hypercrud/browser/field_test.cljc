@@ -4,21 +4,22 @@
             [contrib.reactive :as r]
             [hypercrud.browser.field :as field :refer [auto-fields infer-attrs]]
             [hypercrud.types.DbVal :refer [->DbVal]]
+            [hypercrud.types.Entity :refer [->Entity]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hypercrud.types.ThinEntity :refer [->ThinEntity]]))
 
 
 (deftest test-infer-attr []
-  (let [data {:a/x 1
-              :a/y [{:b/x 2
-                     :b/y [{:asdf 1}
-                           {:qwerty 3}]
-                     :b/z {:c/a 1}}
-                    {:b/x 3
-                     :b/y [{:asdf2 1}]
-                     :b/z {:c/b 2}}]
-              :a/z {:c/x 5}}]
+  (let [data (->Entity nil {:a/x 1
+                            :a/y [(->Entity nil {:b/x 2
+                                                 :b/y [{:asdf 1}
+                                                       {:qwerty 3}]
+                                                 :b/z {:c/a 1}})
+                                  (->Entity nil {:b/x 3
+                                                 :b/y [{:asdf2 1}]
+                                                 :b/z {:c/b 2}})]
+                            :a/z {:c/x 5}})]
     (is (= (infer-attrs data []) #{:a/x :a/y :a/z}))
     (is (= (infer-attrs data [:a/y]) #{:b/x :b/y :b/z}))
     (is (= (infer-attrs data [:a/y :b/y]) #{:asdf :qwerty :asdf2}))
@@ -144,8 +145,8 @@
    (defmacro pull->attr-tests [fiddle pull->request result-builder]
      (macroexpand
        `(do (test-defined-pull ~fiddle ~pull->request)
-            #_(test-splat ~fiddle ~pull->request ~result-builder)
-            #_(test-partial-splat ~fiddle ~pull->request ~result-builder)))))
+            (test-splat ~fiddle ~pull->request ~result-builder)
+            (test-partial-splat ~fiddle ~pull->request ~result-builder)))))
 
 (deftest blank []
   (is (= [] @(auto-fields {:hypercrud.browser/schemas (r/atom nil)

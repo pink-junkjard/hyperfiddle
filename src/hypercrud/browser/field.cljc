@@ -5,7 +5,8 @@
             [contrib.data :refer [transpose]]
             [contrib.reactive :as r]
             [contrib.try :refer [try-either]]
-            [datascript.parser :as parser]))
+            [datascript.parser :as parser]
+            [hypercrud.types.Entity :refer [entity?]]))
 
 
 (defn- last-arg-first [f & args]
@@ -43,7 +44,7 @@
          ::path-segment attr
          ::source-symbol nil}))))
 
-(defn entity? [pull-pattern]
+(defn entity-pull? [pull-pattern]
   (boolean (some #{'* :db/id} pull-pattern)))
 
 (defn infer-attrs [data path]
@@ -51,7 +52,7 @@
                     (comp
                       (fn [data]
                         (cond
-                          (map? data) (get data segment)
+                          (or (map? data) (entity? data)) (get data segment)
                           (or (vector? data) (seq? data)) (map #(get % segment) data)
                           :else nil))
                       f))
@@ -59,7 +60,7 @@
                   path)
         data-at-path (f data)]
     (->> (cond
-           (map? data-at-path) [data-at-path]
+           (or (map? data-at-path) (entity? data-at-path)) [data-at-path]
            (or (vector? data-at-path) (seq? data-at-path)) (flatten data-at-path)
            :else nil)
          (mapcat keys)
@@ -78,7 +79,7 @@
                                                                   ::path-segment k
                                                                   ::source-symbol nil})
                                                                (assoc ::children (pull->fields is-ref? v data (conj path k))
-                                                                      ::data-has-id? (entity? v)))))
+                                                                      ::data-has-id? (entity-pull? v)))))
                                                     (into acc))
                                     (or (vector? sym) (seq? sym)) (conj acc (attr-with-opts-or-expr is-ref? sym))
                                     (= '* sym) (conj acc sym)
@@ -123,7 +124,7 @@
 
 (defn pull-cell->fe [schemas fe-pos cell source-symbol fe-name pull-pattern]
   {::children (pull->fields (build-is-ref? schemas source-symbol) pull-pattern cell [])
-   ::data-has-id? (entity? pull-pattern)
+   ::data-has-id? (entity-pull? pull-pattern)
    ::get-value (r/partial last-arg-first get fe-pos)
    ::label fe-name
    ::path-segment fe-pos
@@ -131,7 +132,7 @@
 
 (defn pull-many-cells->fe [schemas fe-pos column-cells source-symbol fe-name pull-pattern]
   {::children (pull->fields (build-is-ref? schemas source-symbol) pull-pattern column-cells [])
-   ::data-has-id? (entity? pull-pattern)
+   ::data-has-id? (entity-pull? pull-pattern)
    ::label fe-name
    ::get-value (r/partial last-arg-first get fe-pos)
    ::path-segment fe-pos
