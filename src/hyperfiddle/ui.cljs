@@ -160,16 +160,23 @@ User renderers should not be exposed to the reaction."
                           (into ^{:key k} [:tr]))))         ; strict
               (into [:tbody]))]))))
 
+(defn hint [ctx]
+  (if (and (-> (:fiddle/type @(:hypercrud.browser/fiddle ctx)) (= :entity))
+           (nil? (:db/id @(:hypercrud.browser/result ctx))))
+    [:pre "Warning, JT case"]))
+
 (defn ^:export result "Default result renderer. Invoked as fn, returns seq-hiccup, hiccup or
 nil. call site must wrap with a Reagent component"
   [ctx & [?f props]]
   ; with-relations probably gets called here. What about the request side?
-  (cond
-    ?f [?f ctx]
-    (:relations ctx) [table (r/partial hf/form field) hf/sort-fn ctx props]
-    (:relation ctx) (apply fragment
-                           (-> (hf/relation-keyfn @(:relation ctx)) str keyword)
-                           (hf/form field ctx props))))
+  (fragment
+    (hint ctx)
+    (cond
+      ?f [?f ctx]
+      (:relations ctx) [table (r/partial hf/form field) hf/sort-fn ctx props]
+      (:relation ctx) (apply fragment
+                             (-> (hf/relation-keyfn @(:relation ctx)) str keyword)
+                             (hf/form field ctx props)))))
 
 (declare markdown)
 
@@ -255,6 +262,9 @@ nil. call site must wrap with a Reagent component"
                 (link rel path ctx label props)))
 
      "result" (fn [content argument props ctx]
+                (let [{:hypercrud.browser/fiddle
+                       :hypercrud.browser/result} ctx]
+                  (println "2" (pr-str @fiddle)))
                 (result (assoc ctx ::unp true)
                         (unwrap (read-eval-with-bindings content))
                         (update props :class css "unp")))
