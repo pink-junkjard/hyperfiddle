@@ -36,7 +36,6 @@
     'contrib.rfc3986-test
     'contrib.string-test
     'contrib.ui-test
-    'hypercrud.browser.auto-link-formula-test
     'hypercrud.browser.auto-link-txfn-test
     'hypercrud.browser.fiddle-test
     'hypercrud.browser.find-element-test
