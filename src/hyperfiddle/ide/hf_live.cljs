@@ -60,7 +60,7 @@
 
 ; This is in source control because all hyperblogs want it.
 ; But, they also want to tweak it surely. Can we store this with the fiddle ontology?
-(defn hf-live "better arity that works in !browse" [& fiddle-attrs]
+(defn ^:export hf-live [& fiddle-attrs]
   (let [state (r/atom {:edn-fiddle false :edn-result false})]
     (fn [ctx class]
       [:div.row.hf-live.unp.no-gutters
