@@ -8,46 +8,44 @@
 
 (def mock-links
   (for [rel [:my/link :options]
-        path [nil "0" "0 :some/attr"]
-        dependent? [true false]
+        path [nil
+              ":body"
+              ":head 0"
+              ":body 0"
+              ":head 0 :some/attr"
+              ":body 0 :some/attr"]
         render-inline? [true false]
         managed? [true false]]
     {:link/rel rel
      :link/path path
-     :link/dependent? dependent?
      :link/render-inline? render-inline?
      :link/managed? managed?}))
 
 (deftest x []
   (is (= (set (for [rel [:my/link :options]]
                 {:link/rel rel
-                 :link/path nil
-                 :link/dependent? true
+                 :link/path ":body"
                  :link/render-inline? true
                  :link/managed? false}))
-         (set (link-controls/ui-contextual-links :body nil nil true (r/atom mock-links) nil))))
+         (set (link-controls/ui-contextual-links [:body] true (r/atom mock-links) nil))))
 
   (is (= (apply set/union (for [rel [:my/link :options]]
                             #{{:link/rel rel
-                               :link/path "0"
-                               :link/dependent? false
+                               :link/path ":head 0"
                                :link/render-inline? false
                                :link/managed? true}
                               {:link/rel rel
-                               :link/path "0"
-                               :link/dependent? false
+                               :link/path ":head 0"
                                :link/render-inline? false
                                :link/managed? false}
                               {:link/rel rel
-                               :link/path "0"
-                               :link/dependent? false
+                               :link/path ":head 0"
                                :link/render-inline? true
                                :link/managed? true}}))
-         (into #{} (link-controls/ui-contextual-links :head 0 nil false (r/atom mock-links) nil))))
+         (into #{} (link-controls/ui-contextual-links [:head 0] false (r/atom mock-links) nil))))
 
   (is (= (set [{:link/rel :my/link
-                :link/path "0 :some/attr"
-                :link/dependent? false
+                :link/path ":head 0 :some/attr"
                 :link/render-inline? true
                 :link/managed? false}])
-         (set (link-controls/ui-contextual-links :head 0 :some/attr true (r/atom mock-links) link/options-processor)))))
+         (set (link-controls/ui-contextual-links [:head 0 :some/attr] true (r/atom mock-links) link/options-processor)))))
