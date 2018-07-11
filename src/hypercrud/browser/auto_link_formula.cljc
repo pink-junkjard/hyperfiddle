@@ -59,33 +59,9 @@
     (if (empty? path)
       "hypercrud.browser.auto-link-formula/auto-entity-from-stage"
       (when (::field/data-has-id? (field-at-path path @(:hypercrud.browser/fields ctx))) ; todo better reactivity
-        ; todo d? false used to be "hypercrud.browser.auto-link-formula/auto-entity-from-stage"
         "hypercrud.browser.auto-link-formula/auto-entity"))
     (when (::field/data-has-id? (field-at-path path @(:hypercrud.browser/fields ctx)))
-      "(comp deref :hypercrud.browser/data)"))
-
-  #_(case {:fe (not (nil? (first path))) :c? create?}
-      {:fe true :c? false} (if (nil? (second path))
-                             (when @(r/cursor (:hypercrud.browser/ordered-fes ctx) [(first path) :entity])
-                               "(comp deref :cell-data)")
-                             (let [dbname (str @(r/cursor (:hypercrud.browser/ordered-fes ctx) [(first path) :source-symbol]))]
-                               (case @(r/cursor (:hypercrud.browser/schemas ctx) [dbname (second path) :db/cardinality :db/ident])
-                                 :db.cardinality/one "(comp deref :value)"
-
-                                 ; "find children of parent entity at attr". See base ->EntityRequest
-                                 :db.cardinality/many (when @(r/cursor (:hypercrud.browser/ordered-fes ctx) [(first path) :entity])
-                                                        "(juxt (comp deref :cell-data) :hypercrud.browser/attribute)")
-
-                                 ; the attribute doesnt exist
-                                 nil "(comp deref :value)")))
-      {:fe true :c? true} (when @(r/cursor (:hypercrud.browser/ordered-fes ctx) [(first path) :entity])
-                            ; todo d? false used to be "hypercrud.browser.auto-link-formula/auto-entity-from-stage"
-                            "hypercrud.browser.auto-link-formula/auto-entity")
-
-      ; no fe = index or relation links
-      {:fe false :c? false} nil
-      {:fe false :c? true} (when (empty? path)
-                             "hypercrud.browser.auto-link-formula/auto-entity-from-stage")))
+      "(comp deref :hypercrud.browser/data)")))
 
 (defn auto-formula [ctx link]
   (-> (memoized-safe-read-edn-string (str "[" (:link/path link) "]"))
