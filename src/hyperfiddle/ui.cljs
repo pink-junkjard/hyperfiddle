@@ -147,7 +147,10 @@ User renderers should not be exposed to the reaction."
       :hyperfiddle.ui.layout/table (when-not is-magic-new
                                      ^{:key (str relative-path)}
                                      [form/table-field hyper-control relative-path ctx ?f props])
-      (let [magic-new-key (when is-magic-new #_(hash @(r/fmap keys (context/entity ctx))))] ; guard against crashes for nil cell-data
+      (let [magic-new-key (when is-magic-new
+                            (let [ctx (context/focus ctx (cons :body relative-path))]
+                              ; guard against crashes for nil data
+                              (hash (some->> ctx :hypercrud.browser/parent :hypercrud.browser/data (r/fmap keys) deref))))]
         ^{:key (str relative-path magic-new-key #_"reset magic new state")}
         [form/form-field hyper-control relative-path ctx ?f props]))))
 

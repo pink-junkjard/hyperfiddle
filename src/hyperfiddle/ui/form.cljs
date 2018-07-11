@@ -69,7 +69,7 @@
   (assert @(:hypercrud.ui/display-mode ctx))
   (let [state (r/atom {::magic-new-a nil})]
     (fn [hyper-control relative-path ctx ?f props]
-      (let [ctx (assoc ctx :hyperfiddle.ui.form/state state)
+      (let [ctx (assoc ctx ::state state)
             ; we want the wrapper div to have the :body styles, so build the head before polluting the ctx with :body
             head (let [ctx (context/focus ctx (cons :head relative-path))
                        field (some-> (:hypercrud.browser/field ctx) deref)] ; todo unbreak reactivity
