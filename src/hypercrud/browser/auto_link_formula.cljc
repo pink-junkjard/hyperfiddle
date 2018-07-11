@@ -4,7 +4,7 @@
             [contrib.reactive :as r]
             [contrib.string :refer [memoized-safe-read-edn-string]]
             [hypercrud.browser.dbname :as dbname]
-            [hypercrud.browser.find-element :as field]
+            [hypercrud.browser.field :as field]
             [hypercrud.browser.context :as context]
             [hypercrud.types.ThinEntity :refer [->ThinEntity]]
             [hypercrud.util.branch :as branch]

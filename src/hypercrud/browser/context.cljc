@@ -2,7 +2,7 @@
   (:require
     [contrib.reactive :as r]
     [datascript.parser :as parser]
-    [hypercrud.browser.find-element :as field]
+    [hypercrud.browser.field :as field]
     [hyperfiddle.actions :as actions]
     [hyperfiddle.runtime :as runtime]))
 

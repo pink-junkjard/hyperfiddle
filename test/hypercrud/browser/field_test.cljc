@@ -1,8 +1,8 @@
-(ns hypercrud.browser.find-element-test
-  #?(:cljs (:require-macros [hypercrud.browser.find-element-test :refer [pull->attr-tests test-defined-pull test-partial-splat test-splat]]))
+(ns hypercrud.browser.field-test
+  #?(:cljs (:require-macros [hypercrud.browser.field-test :refer [pull->attr-tests test-defined-pull test-partial-splat test-splat]]))
   (:require [clojure.test :refer [deftest is testing]]
             [contrib.reactive :as r]
-            [hypercrud.browser.find-element :as field :refer [auto-fields infer-attrs]]
+            [hypercrud.browser.field :as field :refer [auto-fields infer-attrs]]
             [hypercrud.types.DbVal :refer [->DbVal]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]

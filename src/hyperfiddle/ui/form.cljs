@@ -6,7 +6,7 @@
     [contrib.ui.input :refer [keyword-input* edn-input*]]
     [contrib.ui.tooltip :refer [tooltip-thick]]
     [hypercrud.browser.context :as context]
-    [hypercrud.browser.find-element :as field]
+    [hypercrud.browser.field :as field]
     [hypercrud.browser.system-link :refer [system-link?]]
     [hypercrud.ui.connection-color :refer [connection-color]]
     [hyperfiddle.ui.controls :as controls]

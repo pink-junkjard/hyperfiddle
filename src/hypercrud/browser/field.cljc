@@ -1,4 +1,4 @@
-(ns hypercrud.browser.find-element
+(ns hypercrud.browser.field
   (:require [cats.core :as cats :refer [mlet]]
             [cats.monad.either :as either]
             [clojure.set :as set]

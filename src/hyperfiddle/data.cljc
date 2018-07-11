@@ -3,7 +3,7 @@
     [cats.core :refer [fmap]]
     [contrib.reactive :as r]
     [hypercrud.browser.base :as base]
-    [hypercrud.browser.find-element :as field]
+    [hypercrud.browser.field :as field]
     [hypercrud.browser.link :as link]
     [hypercrud.browser.context :as context]))
 

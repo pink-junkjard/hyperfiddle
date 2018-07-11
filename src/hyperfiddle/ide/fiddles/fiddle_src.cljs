@@ -8,7 +8,7 @@
     [contrib.reagent :refer [fragment from-react-context]]
     [contrib.ui]
     [contrib.uri :refer [is-uri?]]
-    [hypercrud.browser.find-element :as field]
+    [hypercrud.browser.field :as field]
     [hyperfiddle.ide.fiddles.topnav :refer [shadow-fiddle]]
     #_[hyperfiddle.ide.hf-live :as hf-live]                 ;cycle
     [hyperfiddle.runtime :as runtime]

@@ -1,7 +1,7 @@
 (ns hypercrud.browser.system-link
   (:require
     [clojure.string :as string]
-    [hypercrud.browser.find-element :as field]
+    [hypercrud.browser.field :as field]
     [hypercrud.browser.system-fiddle :as system-fiddle]))
 
 

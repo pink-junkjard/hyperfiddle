@@ -7,7 +7,7 @@
             [hypercrud.browser.auto-link :refer [auto-links]]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.fiddle :as fiddle]
-            [hypercrud.browser.find-element :as field]
+            [hypercrud.browser.field :as field]
             [hypercrud.browser.q-util :as q-util]
             [hypercrud.browser.routing :as routing]
             [hypercrud.browser.system-fiddle :as system-fiddle]
