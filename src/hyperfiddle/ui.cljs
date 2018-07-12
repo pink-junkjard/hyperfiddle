@@ -23,10 +23,11 @@
     [hyperfiddle.data :as hf]
     [hyperfiddle.eval :refer [read-eval-with-bindings]]
     [hyperfiddle.ui.controls :as controls]
-    [hyperfiddle.ui.hyper-controls :refer [hyper-select hyper-select-head hyper-label]]
+    [hyperfiddle.ui.hyper-controls :refer [hyper-select-head hyper-label]]
     [hyperfiddle.ui.hacks]                                  ; exports
     [hyperfiddle.ui.markdown-extensions]
     [hyperfiddle.ui.form :as form]
+    [hyperfiddle.ui.select :refer [select]]
     [hyperfiddle.ui.sort :as sort]
     [hyperfiddle.ui.util :refer [safe-reagent-f eval-renderer-comp]]))
 
@@ -63,13 +64,17 @@
 (def hyper-control'
   (from-react-context
     (fn [{:keys [ctx props]} value]
-      (fragment (when (context/attribute-segment? (last (:hypercrud.browser/path ctx)))
-                  [(control ctx) value])
-                (when (and (not (some->> (:hypercrud.browser/fields ctx) (r/fmap nil?) deref)) ; only when there are child fields
-                           (not (context/find-element-segment? (last (:hypercrud.browser/path ctx))))) ; ignore fe fields
-                  [:div [result ctx]])
-                [anchors (:hypercrud.browser/path ctx)]
-                [iframes (:hypercrud.browser/path ctx)]))))
+      (let [options? (-> (->> (links-here ctx) (map :link/rel) (into #{})) ; reactivity is terrible here
+                         (contains? :options))]
+        (fragment (when (and (not options?)
+                             (context/attribute-segment? (last (:hypercrud.browser/path ctx))))
+                    [(control ctx) value])
+                  (when (and (not (some->> (:hypercrud.browser/fields ctx) (r/fmap nil?) deref)) ; only when there are child fields
+                             (not (context/find-element-segment? (last (:hypercrud.browser/path ctx))))) ; ignore fe fields
+                    [:div [result ctx]])
+                  [anchors (:hypercrud.browser/path ctx) (when options? link/options-processor)] ; Order sensitive, here be floats
+                  (when options? [select value])
+                  [iframes (:hypercrud.browser/path ctx) (when options? link/options-processor)])))))
 
 (defn ^:export hyper-control "Handles labels too because we show links there."
   [ctx]
@@ -81,7 +86,6 @@
         options? (-> (->> (links-here ctx) (map :link/rel) (into #{})) ; reactivity is terrible here
                      (contains? :options))]
     (match* [head-or-body (last (:hypercrud.browser/path ctx)) options?]
-      ;[:body _ true] hyper-select
       ;[:head _ true] hyper-select-head
       [:head '* _] form/magic-new-head
       [:body '* _] form/magic-new-body

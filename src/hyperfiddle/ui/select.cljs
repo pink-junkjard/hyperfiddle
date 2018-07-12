@@ -90,7 +90,7 @@
             (link/eval-hc-props (:hypercrud/props options-link) ctx)
             (fn [e] [(ui-error/error-comp ctx) e])
             (fn [hc-props]
-              (let [entity @(get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]) ; how can this be loading??
+              (let [entity (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]) ; how can this be loading??
                     option-props {:disabled (or (boolean (:read-only props))
                                                 @(r/fmap nil? entity) ; no value at all
                                                 (not @(r/fmap controls/writable-entity? entity)))}
