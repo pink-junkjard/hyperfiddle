@@ -22,7 +22,7 @@
          s-path (string/join " " path)]
      (-> (->> (::field/children field)
               (filter ::field/data-has-id?)
-              (map #(body-links-for-field parent-fiddle dbname schema % path (::field/data-has-id? field))))
+              (mapcat #(body-links-for-field parent-fiddle dbname schema % path (::field/data-has-id? field))))
          (cond->>
            (and (::field/data-has-id? field)
                 (or (context/find-element-segment? (::field/path-segment field))
