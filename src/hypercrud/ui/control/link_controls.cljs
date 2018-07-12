@@ -24,7 +24,6 @@
        ((if embed filter remove) (fn [link]
                                    (and (not (link/popover-link? link))
                                         (:link/render-inline? link))))
-       ;((case body-or-head :body filter :head remove) :link/dependent?)
        ; path filtering is the most expensive, do it last
        (filter (link/same-path-as? path))
        vec))

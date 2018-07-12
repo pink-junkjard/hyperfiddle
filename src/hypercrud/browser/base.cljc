@@ -32,7 +32,6 @@
    {:fiddle/links [:db/id
                    :hypercrud/props
                    :link/create?
-                   :link/dependent?
                    :link/disabled?
                    {:link/fiddle [:db/id
                                   :fiddle/ident             ; routing

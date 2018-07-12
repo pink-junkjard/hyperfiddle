@@ -9,7 +9,6 @@
 (defn links-dont-break-sorting? [ctx]
   (->> @(:hypercrud.browser/links ctx)
        (filter (link/same-path-as? (:hypercrud.browser/path ctx)))
-       (remove :link/dependent?)
        (link/options-processor)
        (not-any? link/popover-link?)))
 

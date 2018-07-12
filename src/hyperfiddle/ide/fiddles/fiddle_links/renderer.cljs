@@ -60,7 +60,6 @@
               (fn [ctx]
                 [(field [0 :link/disabled?] ctx read-only-cell)
                  (field [0 :link/rel] ctx read-only-cell)
-                 (field [0 :link/dependent?] ctx read-only-cell)
                  (field [0 :link/path] ctx read-only-cell)
                  (field [0 :link/render-inline?] ctx read-only-cell)
                  (field [0 :link/fiddle] ctx read-only-cell)

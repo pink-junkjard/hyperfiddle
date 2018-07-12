@@ -35,14 +35,12 @@
 (defn head-field [relative-path ctx & _]                    ; params noisey because data/form has crap for UI
   (let [ctx (context/focus ctx (cons :head relative-path))] ; todo :head links should fall out with link/class
     (->> @(:hypercrud.browser/links ctx)
-         (remove :link/dependent?)
          (filter (link/same-path-as? (:hypercrud.browser/path ctx)))
          (mapcat #(recurse-request % ctx)))))
 
 (defn body-field [relative-path ctx & _]                    ; params noisey because data/form has crap for UI
   (let [ctx (context/focus ctx relative-path)]              ; todo nested fields
     (->> @(:hypercrud.browser/links ctx)
-         (filter :link/dependent?)
          (filter (link/same-path-as? (:hypercrud.browser/path ctx)))
          (mapcat #(recurse-request % ctx)))))
 
@@ -53,7 +51,6 @@
   (let [ctx (update ctx :hypercrud.browser/links (partial r/fmap filter-inline))]
     (concat
       (->> @(:hypercrud.browser/links ctx)
-           (remove :link/dependent?)
            (filter (link/same-path-as? []))
            (mapcat #(recurse-request % ctx)))
       (condp = (:hypercrud.browser/data-cardinality ctx)
