@@ -51,12 +51,13 @@
         (for [k attrs]
           (field [0 k] ctx (controls k)))))))
 
-(defn result-edn [attrs {:keys [hypercrud.browser/result]}]
+(defn result-edn [attrs {:keys [hypercrud.browser/result]} class]
   (let [s (-> @result
               (as-> $ (if (seq attrs) (select-keys $ attrs) $))
               hyperfiddle.ui.hacks/pull-soup->tree
               (contrib.pprint/pprint-str 40))]
-    [contrib.ui/code s #() {:read-only true}]))
+    [contrib.ui/code s #() {:read-only true
+                            :class class #_ "Class ends up not on the codemirror, todo"}]))
 
 ; This is in source control because all hyperblogs want it.
 ; But, they also want to tweak it surely. Can we store this with the fiddle ontology?
@@ -71,7 +72,8 @@
           ; Careful: Reagent deep bug in prop comparison https://github.com/hyperfiddle/hyperfiddle/issues/340
           (let [ctx (if f
                       (assoc ctx :user-renderer f)
-                      (dissoc ctx :user-renderer)) #_"infinite recursion somehow"]
+                      (dissoc ctx :user-renderer #_"infinite recursion somehow"
+                              :hyperfiddle.ui/unp))]
             [ui-comp ctx (str class " hf-live")])])
        (let [as-edn (r/cursor state [:edn-fiddle])
              f (r/partial (if @as-edn result-edn docs-embed) fiddle-attrs)]
