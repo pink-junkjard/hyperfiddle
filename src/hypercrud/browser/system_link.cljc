@@ -24,6 +24,21 @@
               (filter ::field/data-has-id?)
               (map #(body-links-for-field parent-fiddle dbname schema % path (::field/data-has-id? field))))
          (cond->>
+           (and (::field/data-has-id? field)
+                (or (context/find-element-segment? (::field/path-segment field))
+                    (= :db.cardinality/one (get-in schema [(::field/path-segment field) :db/cardinality :db/ident]))))
+           (cons {:db/id (keyword "hyperfiddle.browser.system-link" (str "remove-" (hash path)))
+                  :hypercrud/sys? true
+                  :link/disabled? (and (context/attribute-segment? (::field/path-segment field))
+                                       ; no child fields -> no nested pull -> probably just want to see options
+                                       (nil? (::field/children field)))
+                  :link/rel :hyperfiddle/remove
+                  :link/path s-path
+                  :link/render-inline? true
+                  :link/fiddle system-fiddle/fiddle-blank-system-remove
+                  :link/managed? true
+                  :link/tx-fn retract-formula})
+
            (or (and (context/find-element-segment? (::field/path-segment field))
                     (not= :entity (:fiddle/type parent-fiddle)))
                (= :db.cardinality/one (get-in schema [(::field/path-segment field) :db/cardinality :db/ident])))
@@ -48,22 +63,7 @@
                   :link/render-inline? true
                   :link/fiddle (system-fiddle/fiddle-system-edit dbname)
                   :link/create? true
-                  :link/managed? true})
-
-           (and (::field/data-has-id? field)
-                (or (context/find-element-segment? (::field/path-segment field))
-                    (= :db.cardinality/one (get-in schema [(::field/path-segment field) :db/cardinality :db/ident]))))
-           (cons {:db/id (keyword "hyperfiddle.browser.system-link" (str "remove-" (hash path)))
-                  :hypercrud/sys? true
-                  :link/disabled? (and (context/attribute-segment? (::field/path-segment field))
-                                       ; no child fields -> no nested pull -> probably just want to see options
-                                       (nil? (::field/children field)))
-                  :link/rel :hyperfiddle/remove
-                  :link/path s-path
-                  :link/render-inline? true
-                  :link/fiddle system-fiddle/fiddle-blank-system-remove
-                  :link/managed? true
-                  :link/tx-fn retract-formula}))))))
+                  :link/managed? true}))))))
 
 (defn system-links
   "All sys links can be matched and merged with user-links. Matching is determined by link/rel and link/path"
