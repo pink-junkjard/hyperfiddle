@@ -55,9 +55,10 @@
 (def ^:export boolean
   (from-react-context
     (fn [{:keys [ctx props]} value]
-      [contrib.ui/easy-checkbox "" value
-       (r/partial entity-change! ctx (not value))
-       (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))])))
+      [:div
+       [contrib.ui/easy-checkbox "" value
+        (r/partial entity-change! ctx (not value))
+        (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))]])))
 
 (def ^:export tristate-boolean
   (letfn [(adapter [e]

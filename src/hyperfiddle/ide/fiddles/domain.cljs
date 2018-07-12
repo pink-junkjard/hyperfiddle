@@ -7,4 +7,5 @@
   (from-react-context
     (fn [{:keys [ctx props]} value]
       (let [href (str "http://" value "." (get-in ctx [:host-env :ide/root]))]
-        [:a (merge props {:href href}) href]))))
+        [:div
+         [:a (merge props {:href href}) href]]))))
