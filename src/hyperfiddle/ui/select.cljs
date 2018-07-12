@@ -1,11 +1,12 @@
 (ns hyperfiddle.ui.select
-  (:require [cats.core :refer [fmap sequence]]
+  (:require [cats.core :as cats :refer [fmap]]
             [cats.monad.either :as either]
             [contrib.datomic-tx :as tx]
             [contrib.reactive :as r]
             [contrib.reagent :refer [from-react-context]]
             [contrib.try :refer [try-either]]
             [hypercrud.browser.core :as browser]
+            [hypercrud.browser.field :as field]
             [hypercrud.browser.link :as link]
             [hypercrud.ui.error :as ui-error]
             [hypercrud.browser.context :as context]
@@ -20,21 +21,20 @@
       cljs.core/Keyword (name v)
       (str v)))
 
-(defn label-fn [relation ctx]                               ; It's perfectly possible to properly report this error properly upstream. (later - is it?)
+(defn label-fn [data ctx]                                   ; It's perfectly possible to properly report this error properly upstream. (later - is it?)
   ; This whole thing is legacy, migrate it to link props
   (let [label'
-        (->> (map (fn [cell-data fe]
-                    (->> (:fields fe)
-                         (mapv (fn [field {:keys [attribute]}]
+        (->> (map (fn [data field]
+                    (->> (::field/children field)
+                         (mapv (fn [{:keys [::field/get-value ::field/path-segment]}]
                                  ; Custom label renderers? Can't use the attribute renderer, since that
                                  ; is how we are in a select options in the first place.
-                                 (let [value ((:cell-data->value field) cell-data)
-                                       renderer (get-in ctx [:fields attribute :label-renderer] default-label-renderer)]
-                                   (try-either (renderer value ctx)))))))
-                  relation
+                                 (let [renderer (get-in ctx [:fields path-segment :label-renderer] default-label-renderer)]
+                                   (try-either (renderer (get-value data) ctx)))))))
+                  data
                   @(:hypercrud.browser/fields ctx))
              (apply concat)
-             sequence
+             cats/sequence
              (fmap #(->> % (interpose ", ") (remove nil?) (apply str))))]
     (either/branch label' pr-str identity)))
 
