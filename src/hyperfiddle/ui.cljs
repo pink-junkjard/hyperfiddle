@@ -264,9 +264,6 @@ nil. call site must wrap with a Reagent component"
                 (link rel path ctx label props)))
 
      "result" (fn [content argument props ctx]
-                (let [{:hypercrud.browser/fiddle
-                       :hypercrud.browser/result} ctx]
-                  (println "2" (pr-str @fiddle)))
                 (result (assoc ctx ::unp true)
                         (unwrap (read-eval-with-bindings content))
                         (update props :class css "unp")))
