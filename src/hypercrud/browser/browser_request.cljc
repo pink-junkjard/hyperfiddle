@@ -38,11 +38,33 @@
          (filter (link/same-path-as? (:hypercrud.browser/path ctx)))
          (mapcat #(recurse-request % ctx)))))
 
+(declare result)
+
 (defn body-field [relative-path ctx & _]                    ; params noisey because data/form has crap for UI
-  (let [ctx (context/focus ctx relative-path)]              ; todo nested fields
+  (let [ctx (context/focus ctx relative-path)]
     (->> @(:hypercrud.browser/links ctx)
          (filter (link/same-path-as? (:hypercrud.browser/path ctx)))
-         (mapcat #(recurse-request % ctx)))))
+         (mapcat #(recurse-request % ctx))
+         (concat (when (not (some->> (:hypercrud.browser/fields ctx) (r/fmap nil?) deref))
+                   (result ctx))))))
+
+(defn result [ctx]
+  (condp = (:hypercrud.browser/data-cardinality ctx)
+    :db.cardinality/one (->> ctx
+                             (hf/form (fn [path ctx & _]
+                                        (concat (head-field path (context/focus ctx [:head]))
+                                                (body-field path (context/focus ctx [:body])))))
+                             flatten)
+    :db.cardinality/many (concat
+                           (->> (hf/form head-field (context/focus ctx [:head]))
+                                (flatten))
+                           (->> (r/unsequence (:hypercrud.browser/data ctx)) ; the request side does NOT need the cursors to be equiv between loops
+                                (mapcat (fn [[relation i]]
+                                          (->> (context/body ctx relation)
+                                               (hf/form body-field)
+                                               flatten)))))
+    ; blank fiddles
+    nil))
 
 (defn- filter-inline [links] (filter :link/render-inline? links))
 
@@ -53,22 +75,7 @@
       (->> @(:hypercrud.browser/links ctx)
            (filter (link/same-path-as? []))
            (mapcat #(recurse-request % ctx)))
-      (condp = (:hypercrud.browser/data-cardinality ctx)
-        :db.cardinality/one (->> ctx
-                                 (hf/form (fn [path ctx & _]
-                                            (concat (head-field path (context/focus ctx [:head]))
-                                                    (body-field path (context/focus ctx [:body])))))
-                                 flatten)
-        :db.cardinality/many (concat
-                               (->> (hf/form head-field (context/focus ctx [:head]))
-                                    (flatten))
-                               (->> (r/unsequence (:hypercrud.browser/data ctx)) ; the request side does NOT need the cursors to be equiv between loops
-                                    (mapcat (fn [[relation i]]
-                                              (->> (context/body ctx relation)
-                                                   (hf/form body-field)
-                                                   flatten)))))
-        ; blank fiddles
-        nil)
+      (result ctx)
       (if @(r/fmap :fiddle/hydrate-result-as-fiddle (:hypercrud.browser/fiddle ctx))
         ; This only makes sense on :fiddle/type :query because it has arbitrary arguments
         ; EntityRequest args are too structured.
