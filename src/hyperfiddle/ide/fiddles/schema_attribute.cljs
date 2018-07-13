@@ -63,7 +63,7 @@
          [(hyper-control ctx) value]]))))
 
 (letfn [(user-with!' [special-attrs-state ctx tx]
-          (let [entity nil #_@(context/entity ctx)
+          (let [entity @(get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
                 new-entity (merge-in-tx entity tx ctx)]
             (case [(completed? entity) (completed? new-entity)]
               [false false]
