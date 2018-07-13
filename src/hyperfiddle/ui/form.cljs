@@ -17,7 +17,7 @@
 (letfn [(shadow-link? [ctx]
           (if (or (nil? ctx)
                   (nil? (:hypercrud.browser/data ctx))
-                  (#{:head :body} (last (:hypercrud.browser/path ctx))))
+                  (= :head (last (:hypercrud.browser/path ctx))))
             false
             (if-let [dbid @(r/fmap :db/id (:hypercrud.browser/data ctx))]
               (system-link? dbid)
