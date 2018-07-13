@@ -6,6 +6,7 @@
             [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
             [hypercrud.transit :as transit]
+            [hypercrud.ui.error :as error]
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.ide :as ide]
             [hyperfiddle.io.global-basis :refer [global-basis-rpc!]]
@@ -42,7 +43,17 @@
       [:meta {:charset "UTF-8"}]
       [:script {:id "build" :type "text/plain" :dangerouslySetInnerHTML {:__html (:BUILD env)}}]]
      [:body
-      [:div {:id "root"} app-component]
+      [:div
+       {:id "root"
+        :dangerouslySetInnerHTML
+        {:__html
+         (try
+           (reagent-server/render-to-string app-component)
+           (catch :default e
+             (reagent-server/render-to-string [:div
+                                               [:h1 "Javascript mounting..."]
+                                               [:h2 "SSR failed on:"]
+                                               [error/error-block e]])))}}]
       (when (and hyperfiddle-dns? (:ANALYTICS env))
         [:div {:dangerouslySetInnerHTML {:__html analytics}}])
       (when serve-js?
