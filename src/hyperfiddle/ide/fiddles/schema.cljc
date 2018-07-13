@@ -96,7 +96,7 @@
                     :link/fiddle (db-attribute-edit $db)}
                    {:db/id :system-anchor-new               ; XXX
                     :link/rel :hyperfiddle/new
-                    :link/path ":body 0"
+                    :link/path ":head 0"
                     :link/fiddle (db-attribute-edit $db)}
                    {:db/id :system-anchor-remove            ; XXX
                     :link/rel :hyperfiddle/remove
