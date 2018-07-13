@@ -21,8 +21,9 @@
   (from-react-context
     (fn [{:keys [ctx props]} value]
       ; Need to delay until we have the value ctx to compute this, which means its a value renderer not a field prop
-      [with-react-context {:ctx (assoc props :read-only (read-only? ctx)) ; rebind updated props
-                           :props props}
+      [with-react-context {:ctx ctx
+                           ; rebind updated props
+                           :props (assoc props :read-only (read-only? ctx))}
        [(hyper-control ctx) value]])))
 
 (defn renderer [ctx class]
