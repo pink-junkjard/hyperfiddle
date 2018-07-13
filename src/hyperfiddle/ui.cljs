@@ -61,7 +61,7 @@
 
 (declare result)
 
-(def hyper-control'
+(defn hyper-control' [& [?result]]
   (from-react-context
     (fn [{:keys [ctx props]} value]
       (let [options? (-> (->> (links-here ctx) (map :link/rel) (into #{})) ; reactivity is terrible here
@@ -70,13 +70,13 @@
         (fragment (when (and (not options?) (not child-fields?))
                     [(control ctx) value])
                   (when (and child-fields? (not (context/find-element-segment? (last (:hypercrud.browser/path ctx))))) ; ignore fe fields
-                    [:div [result ctx]])
+                    [:div [(or ?result result) ctx]])
                   [anchors (:hypercrud.browser/path ctx) (when options? link/options-processor)] ; Order sensitive, here be floats
                   (when options? [select value])
                   [iframes (:hypercrud.browser/path ctx) (when options? link/options-processor)])))))
 
 (defn ^:export hyper-control "Handles labels too because we show links there."
-  [ctx]
+  [ctx & [?result]]
   {:post [(not (nil? %))]}
   (let [head-or-body (->> (:hypercrud.browser/path ctx)
                           (reverse)
@@ -89,7 +89,7 @@
       [:head '* _] form/magic-new-head
       [:body '* _] form/magic-new-body
       [:head _ _] hyper-label
-      [:body _ _] hyper-control')))
+      [:body _ _] (hyper-control' ?result))))
 
 (defn ^:export semantic-css [ctx]
   ; Include the fiddle level ident css.

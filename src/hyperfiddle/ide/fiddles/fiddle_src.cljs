@@ -15,6 +15,7 @@
     [hypercrud.browser.system-fiddle :as system-fiddle]
     [hypercrud.types.Entity :refer [shadow-entity]]
     [hyperfiddle.ide.fiddles.topnav :refer [shadow-fiddle]]
+    [hyperfiddle.ide.fiddles.fiddle-links.renderer :as links-fiddle]
     #_[hyperfiddle.ide.hf-live :as hf-live]                 ;cycle
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.ui :refer [browse field hyper-control link markdown]]))
@@ -98,7 +99,8 @@
    :fiddle/links (from-react-context
                    (fn [{:keys [ctx props]} value]
                      [:div
-                      [(hyper-control ctx) value]
+                      (let [result (fn [ctx] [links-fiddle/renderer ctx])]
+                        [(hyper-control ctx result) value])
                       [:div.hf-underdoc [markdown (:fiddle/links underdocs)]]]))
    })
 
