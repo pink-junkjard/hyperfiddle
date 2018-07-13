@@ -15,7 +15,7 @@
     (let [entity (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
           sys? (system-link? @(r/fmap :db/id entity))
           shadow? @(r/fmap :hypercrud/sys? entity)]
-      (or sys? (and shadow? (editable-if-shadowed? (:hypercrud.browser/attribute ctx)))))))
+      (or sys? (and shadow? (not (editable-if-shadowed? (:hypercrud.browser/attribute ctx))))))))
 
 (def read-only-cell
   (from-react-context
