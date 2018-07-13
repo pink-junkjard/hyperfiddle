@@ -48,7 +48,7 @@
         :dangerouslySetInnerHTML
         {:__html
          (try
-           (reagent-server/render-to-string app-component)
+           (reagent-server/render-to-static-markup app-component)
            (catch :default e
              (reagent-server/render-to-string [:div
                                                [:h1 "Javascript mounting..."]
