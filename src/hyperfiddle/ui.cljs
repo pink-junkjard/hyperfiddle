@@ -119,7 +119,7 @@
 (defn ^:export value "Relation level value renderer. Works in forms and lists but not tables (which need head/body structure).
 User renderers should not be exposed to the reaction."
   [relative-path ctx ?f & [props]]                          ; Path should be optional, for disambiguation only. Naked is an error
-  (let [ctx (context/focus ctx (cons :body relative-path))
+  (let [ctx (context/focus ctx relative-path)
         props (update props :class css (semantic-css ctx))
         data @(:hypercrud.browser/data ctx)]
     [with-react-context {:ctx ctx :props props}
