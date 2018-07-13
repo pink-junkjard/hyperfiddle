@@ -26,21 +26,20 @@
                            :props (assoc props :read-only (read-only? ctx))}
        [(hyper-control ctx) value]])))
 
-(defn renderer [ctx class]
-  #_[:div {:class class}
-     [table
-      #_(partial form (fn [path ctx ?f & args] (field path ctx ?f :read-only (read-only? ctx))))
-      (fn [ctx]
-        [(field [0 :link/disabled?] ctx read-only-cell)
-         (field [0 :link/rel] ctx read-only-cell)
-         (field [0 :link/path] ctx read-only-cell)
-         (field [0 :link/render-inline?] ctx read-only-cell)
-         (field [0 :link/fiddle] ctx read-only-cell)
-         (field [0 :link/create?] ctx read-only-cell)
-         (field [0 :link/managed?] ctx read-only-cell)
-         (field [0 :link/formula] ctx read-only-cell)
-         (field [0 :link/tx-fn] ctx read-only-cell)
-         (field [0 :hypercrud/props] ctx read-only-cell)
-         (field [0] ctx nil)])
-      sort-fn
-      ctx]])
+(defn renderer [ctx]
+  [table
+   #_(partial form (fn [path ctx ?f & args] (field path ctx ?f :read-only (read-only? ctx))))
+   (fn [ctx]
+     [(field [:link/disabled?] ctx read-only-cell)
+      (field [:link/rel] ctx read-only-cell)
+      (field [:link/path] ctx read-only-cell)
+      (field [:link/render-inline?] ctx read-only-cell)
+      (field [:link/fiddle] ctx read-only-cell)
+      (field [:link/create?] ctx read-only-cell)
+      (field [:link/managed?] ctx read-only-cell)
+      (field [:link/formula] ctx read-only-cell)
+      (field [:link/tx-fn] ctx read-only-cell)
+      (field [:hypercrud/props] ctx read-only-cell)
+      #_(field [] ctx nil)])
+   sort-fn
+   ctx])
