@@ -109,9 +109,6 @@
                 (shadow-fiddle)
                 (shadow-links))]
     [:div {:class class}
-     (->> @(:hypercrud.browser/links ctx)
-            (map (fn [%] [:pre {:key (hash %)} (js/pprint-str %)]))
-            doall)
      [:h3 (str @(r/cursor (:hypercrud.browser/result ctx) [:fiddle/ident])) " source"]
      (field [0 :fiddle/ident] ctx nil)
      (field [0 :fiddle/type] ctx nil)
