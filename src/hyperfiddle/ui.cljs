@@ -67,9 +67,7 @@
       (let [options? (-> (->> (links-here ctx) (map :link/rel) (into #{})) ; reactivity is terrible here
                          (contains? :options))
             child-fields? (not (some->> (:hypercrud.browser/fields ctx) (r/fmap nil?) deref))]
-        (fragment (when (and (not options?)
-                             (not child-fields?)
-                             (context/attribute-segment? (last (:hypercrud.browser/path ctx))))
+        (fragment (when (and (not options?) (not child-fields?))
                     [(control ctx) value])
                   (when (and child-fields? (not (context/find-element-segment? (last (:hypercrud.browser/path ctx))))) ; ignore fe fields
                     [:div [result ctx]])
