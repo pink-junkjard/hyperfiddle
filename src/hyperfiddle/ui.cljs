@@ -269,7 +269,6 @@ nil. call site must wrap with a Reagent component"
                 (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
                       rel (unwrap (memoized-safe-read-edn-string srel))
                       path (unwrap (memoized-safe-read-edn-string (str "[" spath "]")))
-                      path (cons :body path)                ; hack to put off migrations
                       f? (unwrap (read-eval-with-bindings content))]
                   (browse rel path ctx f? props)))
 
@@ -277,7 +276,6 @@ nil. call site must wrap with a Reagent component"
               (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
                     rel (unwrap (memoized-safe-read-edn-string srel))
                     path (unwrap (memoized-safe-read-edn-string (str "[" spath "]")))
-                    path (cons :body path)                  ; hack to put off migrations
                     ; https://github.com/medfreeman/remark-generic-extensions/issues/45
                     label (or-str content (name rel))]
                 (link rel path ctx label props)))
@@ -289,7 +287,6 @@ nil. call site must wrap with a Reagent component"
                     (result ctx (update props :class css "unp")))))
      "value" (fn [content argument props ctx]
                (let [path (unwrap (memoized-safe-read-edn-string (str "[" argument "]")))
-                     path (cons :body path)                 ; hack to put off migrations
                      ?f (some->> (unwrap (read-eval-with-bindings content)))]
                  (value path ctx ?f props)))
 
