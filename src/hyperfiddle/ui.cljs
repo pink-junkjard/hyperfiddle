@@ -161,7 +161,8 @@ User renderers should not be exposed to the reaction."
   [form sort-fn ctx & [props]]
   (let [sort-col (r/atom nil)]
     (fn [form sort-fn ctx & [props]]
-      (let [ctx (assoc ctx ::sort/sort-col sort-col)]
+      (let [ctx (assoc ctx ::sort/sort-col sort-col
+                           ::layout :hyperfiddle.ui.layout/table)]
         [:table (update props :class css "ui-table" "unp" (semantic-css ctx))
          (let [ctx (context/focus ctx [:head])]
            (->> (form ctx props) (into [:thead])))          ; strict
@@ -191,8 +192,7 @@ nil. call site must wrap with a Reagent component"
                             (apply fragment
                                    (-> (hf/relation-keyfn @(:hypercrud.browser/data ctx)) str keyword)
                                    (hf/form field ctx props)))
-      :db.cardinality/many (let [ctx (assoc ctx ::layout :hyperfiddle.ui.layout/table)]
-                             [table (r/partial hf/form field) hf/sort-fn ctx props])
+      :db.cardinality/many [table (r/partial hf/form field) hf/sort-fn ctx props]
       ; blank fiddles
       nil)))
 
