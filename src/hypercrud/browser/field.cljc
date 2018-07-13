@@ -78,8 +78,10 @@
                                                                   ::get-value k
                                                                   ::path-segment k
                                                                   ::source-symbol nil})
-                                                               (assoc ::children (pull->fields is-ref? v data (conj path k))
-                                                                      ::data-has-id? (entity-pull? v)))))
+                                                               (assoc ::children (when-not (number? v) ; short on recursive-limit https://github.com/hyperfiddle/hyperfiddle/issues/363
+                                                                                   (pull->fields is-ref? v data (conj path k)))
+                                                                      ::data-has-id? (and (not (number? v)) ; short on recursive-limit https://github.com/hyperfiddle/hyperfiddle/issues/363
+                                                                                          (entity-pull? v))))))
                                                     (into acc))
                                     (or (vector? sym) (seq? sym)) (conj acc (attr-with-opts-or-expr is-ref? sym))
                                     (= '* sym) (conj acc sym)
