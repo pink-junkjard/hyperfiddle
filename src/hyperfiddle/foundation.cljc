@@ -93,7 +93,7 @@
          [:fieldset [:legend "(pr-str e)"]
           [:pre (pr-str e)]]
          [:fieldset [:legend "(ex-data e)"]                 ; network error
-          [:pre (:data e)]]                                 ; includes :body key
+          [:pre (str (:data e))]]                           ; includes :body key
          [:fieldset [:legend "(.-stack e)"]                 ; network error
           [:pre (.-stack e)]]])]))
 
@@ -206,7 +206,7 @@ need to transact the schema before using, see [#6](https://github.com/hyperfiddl
                       (when (either/left? source-domain) @source-domain))]
          [:div                                              ; necessary wrapper div, it is the react root
           [error-cmp e]
-          [staging (:peer ctx)]]
+          [staging ctx]]
          (let [ctx (context ctx @source-domain @user-domain-insecure)
                domain (:hypercrud.browser/domain ctx)]
            ; f is nil, seq or reagent component
