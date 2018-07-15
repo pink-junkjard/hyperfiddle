@@ -30,31 +30,41 @@
          (cond->>
            (and (::field/data-has-id? field)
                 (or (context/find-element-segment? (::field/path-segment field))
-                    (= :db.cardinality/one (get-in schema [(::field/path-segment field) :db/cardinality :db/ident]))))
-           (cons {:db/id (keyword "hyperfiddle.browser.system-link" (str "remove-" (hash path)))
-                  :hypercrud/sys? true
-                  :link/disabled? (and (context/attribute-segment? (::field/path-segment field))
-                                       ; no child fields -> no nested pull -> probably just want to see options
-                                       (nil? (::field/children field)))
-                  :link/rel :hyperfiddle/remove
-                  :link/path s-path
-                  :link/render-inline? true
-                  :link/fiddle system-fiddle/fiddle-blank-system-remove
-                  :link/managed? true
-                  :link/tx-fn retract-formula})
+                    (and (context/attribute-segment? (::field/path-segment field))
+                         (not= '* (::field/path-segment field)))))
+           (cons (let [path (if (= :db.cardinality/many (get-in schema [(::field/path-segment field) :db/cardinality :db/ident]))
+                              (conj path :body)
+                              path)
+                       s-path (string/join " " path)]
+                   {:db/id (keyword "hyperfiddle.browser.system-link" (str "remove-" (hash path)))
+                    :hypercrud/sys? true
+                    :link/disabled? (and (context/attribute-segment? (::field/path-segment field))
+                                         ; no child fields -> no nested pull -> probably just want to see options
+                                         (nil? (::field/children field)))
+                    :link/rel :hyperfiddle/remove
+                    :link/path s-path
+                    :link/render-inline? true
+                    :link/fiddle system-fiddle/fiddle-blank-system-remove
+                    :link/managed? true
+                    :link/tx-fn retract-formula}))
 
            (or (and (context/find-element-segment? (::field/path-segment field))
                     (not= :entity (:fiddle/type parent-fiddle)))
-               (= :db.cardinality/one (get-in schema [(::field/path-segment field) :db/cardinality :db/ident])))
-           (cons {:db/id (keyword "hyperfiddle.browser.system-link" (str "edit-" (hash path)))
-                  :hypercrud/sys? true
-                  :link/disabled? (and (context/attribute-segment? (::field/path-segment field))
-                                       ; no child fields -> no nested pull -> probably just want to see options
-                                       (nil? (::field/children field)))
-                  :link/rel :hyperfiddle/edit
-                  :link/path s-path
-                  :link/fiddle (system-fiddle/fiddle-system-edit dbname)
-                  :link/managed? false})
+               (and (context/attribute-segment? (::field/path-segment field))
+                    (not= '* (::field/path-segment field))))
+           (cons (let [path (if (= :db.cardinality/many (get-in schema [(::field/path-segment field) :db/cardinality :db/ident]))
+                              (conj path :body)
+                              path)
+                       s-path (string/join " " path)]
+                   {:db/id (keyword "hyperfiddle.browser.system-link" (str "edit-" (hash path)))
+                    :hypercrud/sys? true
+                    :link/disabled? (and (context/attribute-segment? (::field/path-segment field))
+                                         ; no child fields -> no nested pull -> probably just want to see options
+                                         (nil? (::field/children field)))
+                    :link/rel :hyperfiddle/edit
+                    :link/path s-path
+                    :link/fiddle (system-fiddle/fiddle-system-edit dbname)
+                    :link/managed? false}))
 
            parent-has-id?
            (cons {:db/id (keyword "hyperfiddle.browser.system-link" (str "new-" (hash path)))

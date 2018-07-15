@@ -17,6 +17,7 @@
     hypercrud.browser.auto-link-txfn-test
     hypercrud.browser.fiddle-test
     hypercrud.browser.field-test
+    hypercrud.browser.nested-pull-test
     hypercrud.browser.router-test
     hypercrud.browser.system-link-test
     hypercrud.ui.control.link-controls-test
@@ -39,6 +40,7 @@
     'hypercrud.browser.auto-link-txfn-test
     'hypercrud.browser.fiddle-test
     'hypercrud.browser.field-test
+    'hypercrud.browser.nested-pull-test
     'hypercrud.browser.router-test
     'hypercrud.browser.system-link-test
     'hypercrud.ui.control.link-controls-test
