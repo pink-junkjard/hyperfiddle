@@ -64,5 +64,9 @@
               "hypercrud.browser.auto-link-formula/auto-entity-from-stage"
               (when (::field/data-has-id? (field-at-path path @(:hypercrud.browser/fields ctx))) ; todo better reactivity
                 "hypercrud.browser.auto-link-formula/auto-entity"))
-            (when (::field/data-has-id? (field-at-path path @(:hypercrud.browser/fields ctx)))
+            (when (-> (if (= :body (last path))
+                        (drop-last path)                    ; links on :body should defer to the parent field
+                        path)
+                      (field-at-path @(:hypercrud.browser/fields ctx))
+                      ::field/data-has-id?)
               "(comp deref :hypercrud.browser/data)"))))))

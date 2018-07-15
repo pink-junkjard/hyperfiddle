@@ -45,8 +45,9 @@
     (->> @(:hypercrud.browser/links ctx)
          (filter (link/same-path-as? (:hypercrud.browser/path ctx)))
          (mapcat #(recurse-request % ctx))
-         (concat (when (not (some->> (:hypercrud.browser/fields ctx) (r/fmap nil?) deref))
-                   (result ctx))))))
+         (concat (let [child-fields? (not (some->> (:hypercrud.browser/fields ctx) (r/fmap nil?) deref))]
+                   (when (and child-fields? (context/attribute-segment? (last (:hypercrud.browser/path ctx)))) ; ignore relation and fe fields
+                     (result ctx)))))))
 
 (defn result [ctx]
   (condp = (:hypercrud.browser/data-cardinality ctx)

@@ -13,7 +13,7 @@
     [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
     [hypercrud.browser.system-fiddle :as system-fiddle]
-    [hypercrud.types.Entity :refer [shadow-entity]]
+    [hypercrud.types.Entity :refer [->Entity shadow-entity]]
     [hyperfiddle.ide.fiddles.topnav :refer [shadow-fiddle]]
     [hyperfiddle.ide.fiddles.fiddle-links.renderer :as links-fiddle]
     #_[hyperfiddle.ide.hf-live :as hf-live]                 ;cycle
@@ -21,17 +21,19 @@
     [hyperfiddle.ui :refer [browse field hyper-control link markdown]]))
 
 
-(defn process-links [links]
+(defn process-links [uri links]
   (->> links
        ;(sort-by (juxt :link/disabled :link/rel)
        ;         (fn [[a b] [a' b']] (if (= a a') (< b b') (< a a'))))
        (mapv (fn [link]
-               (if (system-fiddle/system-fiddle? (get-in link [:link/fiddle :db/ident]))
-                 (dissoc link :link/fiddle)
-                 link)))))
+               (->> (if (system-fiddle/system-fiddle? (get-in link [:link/fiddle :db/ident]))
+                      (dissoc link :link/fiddle)
+                      link)
+                    (->Entity uri))))))
 
 (defn inject-links [fiddle-ref links-ref]
-  (shadow-entity @fiddle-ref #(assoc % :fiddle/links (process-links @links-ref))))
+  (let [fiddle @fiddle-ref]
+    (shadow-entity fiddle #(assoc % :fiddle/links (process-links (some-> fiddle .-uri) @links-ref)))))
 
 ; todo does this merge with shadow-fiddle?
 ; not sure if other downstream consumers of shadow-fiddle can run data-from-route

@@ -26,8 +26,9 @@
                                       (mapv (fn [[m-child-field child-segment]]
                                               ; this is silly why are we tossing the m-child-field data structure
                                               (f-field [path-segment child-segment] ctx nil props)))))))))
-        ;vec (conj (f-field [] ctx nil props))               ; row/relation
-        doall)))
+        vec (conj (f-field [] ctx nil props))               ; row/relation
+        ; this result can be directly inserted as children in a reagemnt component, CANNOT be a vector
+        seq)))
 
 (defn ^:export browse [rel relative-path ctx]
   ; context is not set for this call

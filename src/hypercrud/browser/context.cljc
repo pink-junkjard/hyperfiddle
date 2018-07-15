@@ -68,7 +68,8 @@
                              ))
                     (update :hypercrud.browser/path conj :body)
                     (dissoc :hypercrud.browser/attribute
-                            :hypercrud.browser/fat-attribute))]
+                            :hypercrud.browser/fat-attribute
+                            :hypercrud.browser/field))]
     (case (:hypercrud.browser/data-cardinality ctx)
       :db.cardinality/one new-ctx
       :db.cardinality/many (assoc new-ctx :hypercrud.browser/data ?data))))
@@ -148,7 +149,8 @@
                 (dissoc :hypercrud.browser/attribute
                         :hypercrud.browser/data
                         :hypercrud.browser/data-cardinality
-                        :hypercrud.browser/fat-attribute))
+                        :hypercrud.browser/fat-attribute
+                        :hypercrud.browser/field))
 
             ; todo cannot conflict with :db/ident :body
             (and (= path-segment :body) #_(not= :db.cardinality/one (:hypercrud.browser/data-cardinality ctx)))

@@ -40,6 +40,6 @@
       (field [:link/formula] ctx read-only-cell)
       (field [:link/tx-fn] ctx read-only-cell)
       (field [:hypercrud/props] ctx read-only-cell)
-      #_(field [] ctx nil)])
+      (field [] ctx nil)])
    sort-fn
    ctx])
