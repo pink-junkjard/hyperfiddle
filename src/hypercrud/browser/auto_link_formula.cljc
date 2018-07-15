@@ -21,14 +21,19 @@
     (->ThinEntity (dbname/uri->dbname (:uri ctx) ctx) id)))
 
 ; todo there are collisions when two links share the same 'location'
-(defn deterministic-ident [ctx]
-  (-> (str (:hypercrud.browser/path ctx) "."
-           (if-let [data (:hypercrud.browser/data ctx)]
-             (case (:hypercrud.browser/data-cardinality ctx)
-               :db.cardinality/one @(r/fmap :db/id data)
-               :db.cardinality/many (hash (into #{} @(r/fmap (partial mapv :db/id) data))) ; todo scalar
-               nil nil #_":db/id has a faked attribute with no cardinality, need more thought to make elegant")))
-      hash abs-normalized - str))
+(letfn [(hash-data [ctx]
+          (when-let [data (:hypercrud.browser/data ctx)]
+            (case (:hypercrud.browser/data-cardinality ctx)
+              :db.cardinality/one @(r/fmap :db/id data)
+              :db.cardinality/many (hash (into #{} @(r/fmap (partial mapv :db/id) data))) ; todo scalar
+              nil nil #_":db/id has a faked attribute with no cardinality, need more thought to make elegant")))]
+  (defn deterministic-ident [ctx]
+    (-> (str (:hypercrud.browser/path ctx) "."
+             ; todo recurse all the way up the path?
+             ; in essence just data + parent-data is relative not fully qualified, which technically is not unique
+             (hash-data (:hypercrud.browser/parent ctx)) "."
+             (hash-data ctx))
+        hash abs-normalized - str)))
 
 (defn ^:export auto-entity [ctx]
   (->ThinEntity (dbname/uri->dbname (:uri ctx) ctx) (deterministic-ident ctx)))
