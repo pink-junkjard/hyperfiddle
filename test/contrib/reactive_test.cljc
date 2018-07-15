@@ -17,6 +17,12 @@
   (is (not= (r/comp inc inc) nil))
   (is (= 3 ((r/comp inc inc) 1))))
 
+(deftest test-fmap []
+  (let [a (r/atom 1)]
+    #?(:cljs                                                ; clj implementation not yet implemented
+       (is (= (r/fmap inc a) (r/fmap inc a))))
+    (is (= 2 @(r/fmap inc a)))))
+
 (deftest test-fapply []
   (let [reactive-inc (r/atom inc)]
     (is (= 2 @(r/fapply reactive-inc (r/atom 1)))))
