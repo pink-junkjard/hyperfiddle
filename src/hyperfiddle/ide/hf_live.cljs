@@ -1,44 +1,24 @@
 (ns hyperfiddle.ide.hf-live
   (:require
-    [clojure.pprint]
     [contrib.css :refer [css]]
     [contrib.pprint]
     [contrib.reactive :as r]
     [contrib.reagent :refer [fragment from-react-context]]
     [contrib.ui]
+    [hypercrud.browser.browser-ui :refer [ui-comp]]
     [hypercrud.browser.router :as router]
+    [hyperfiddle.ide.fiddles.fiddle-links.renderer :as links-fiddle]
     [hyperfiddle.ide.fiddles.fiddle-src :as fiddle-src]
     [hyperfiddle.ide.fiddles.topnav :refer [shadow-fiddle]]
-    [hyperfiddle.ui :refer [browse field hyper-control link markdown]]
-    [hypercrud.browser.browser-ui :refer [ui-comp]]
-    ))
+    [hyperfiddle.ui :refer [browse field hyper-control link markdown]]))
 
-
-(defn hacked-links [value]
-  (let [links (->> value
-                   (remove :link/disabled?)
-                   (map #(select-keys % [:link/rel :link/path :link/fiddle :link/render-inline? :link/formula]))
-                   (map #(update % :link/fiddle :fiddle/ident)))]
-    [:div
-     [:pre (if (seq links)
-             (with-out-str (clojure.pprint/print-table links))
-             "No links or only auto links")]
-     [:div.hf-underdoc [markdown "Links are not editable for now due to an issue"]]]))
-
-(def controls
-  {:fiddle/pull (from-react-context
-                  (fn [{:keys [ctx props]} value]
-                    [:div
-                     [(hyper-control ctx) value]
-                     [:span.schema "schema: " (fiddle-src/schema-links ctx)]]))
-
-   :fiddle/query (from-react-context
-                   (fn [{:keys [ctx props]} value]
-                     [:div
-                      [(hyper-control ctx) value]
-                      [:span.schema "schema: " (fiddle-src/schema-links ctx)]]))
-
-   :fiddle/links hacked-links})
+(def controls (assoc fiddle-src/controls
+                :fiddle/links (from-react-context
+                                (fn [{:keys [ctx props]} value]
+                                  [:div
+                                   (let [result (fn [ctx] [links-fiddle/renderer ctx true])]
+                                     [(hyper-control ctx result) value])
+                                   [:div.hf-underdoc [markdown (:fiddle/links fiddle-src/underdocs)]]]))))
 
 (defn docs-embed [attrs ctx-real class & {:keys [embed-mode]}]
   (let [ctx-real (dissoc ctx-real :user-renderer)           ; this needs to not escape this level; inline links can't ever get it
