@@ -1,5 +1,5 @@
 (ns contrib.reactive
-  (:refer-clojure :exclude [atom constantly partial])
+  (:refer-clojure :exclude [atom comp constantly partial])
   (:require [cats.core :as cats]
             [contrib.data :as util]
     #?(:cljs [reagent.core :as reagent])
@@ -61,6 +61,65 @@
 (defn constantly [v]
   #?(:clj  (clojure.core/constantly v)
      :cljs (->Constantly v)))
+
+#?(:cljs
+   (deftype Comp [cf fs]
+     Fn
+     IFn
+     (-invoke [_]
+       (cf))
+     (-invoke [_ a]
+       (cf a))
+     (-invoke [_ a b]
+       (cf a b))
+     (-invoke [_ a b c]
+       (cf a b c))
+     (-invoke [_ a b c d]
+       (cf a b c d))
+     (-invoke [_ a b c d e]
+       (cf a b c d e))
+     (-invoke [_ a b c d e f]
+       (cf a b c d e f))
+     (-invoke [_ a b c d e f g]
+       (cf a b c d e f g))
+     (-invoke [_ a b c d e f g h]
+       (cf a b c d e f g h))
+     (-invoke [_ a b c d e f g h i]
+       (cf a b c d e f g h i))
+     (-invoke [_ a b c d e f g h i j]
+       (cf a b c d e f g h i j))
+     (-invoke [_ a b c d e f g h i j k]
+       (cf a b c d e f g h i j k))
+     (-invoke [_ a b c d e f g h i j k l]
+       (cf a b c d e f g h i j k l))
+     (-invoke [_ a b c d e f g h i j k l m]
+       (cf a b c d e f g h i j k l m))
+     (-invoke [_ a b c d e f g h i j k l m n]
+       (cf a b c d e f g h i j k l m n))
+     (-invoke [_ a b c d e f g h i j k l m n o]
+       (cf a b c d e f g h i j k l m n o))
+     (-invoke [_ a b c d e f g h i j k l m n o p]
+       (cf a b c d e f g h i j k l m n o p))
+     (-invoke [_ a b c d e f g h i j k l m n o p q]
+       (cf a b c d e f g h i j k l m n o p q))
+     (-invoke [_ a b c d e f g h i j k l m n o p q r]
+       (cf a b c d e f g h i j k l m n o p q r))
+     (-invoke [_ a b c d e f g h i j k l m n o p q r s]
+       (cf a b c d e f g h i j k l m n o p q r s))
+     (-invoke [_ a b c d e f g h i j k l m n o p q r s t]
+       (cf a b c d e f g h i j k l m n o p q r s t))
+     (-invoke [_ a b c d e f g h i j k l m n o p q r s t rest]
+       (apply cf a b c d e f g h i j k l m n o p q r s t rest))
+     IEquiv
+     (-equiv [_ other] (and (instance? Comp other) (= fs (.-fs other))))
+     IHash
+     (-hash [_] (hash fs))))
+
+#?(:cljs (defn comp
+           ([] identity)
+           ([f] f)
+           ([f & fs] (->Comp (apply clojure.core/comp f fs) (cons f fs))))
+   :clj  (def comp clojure.core/comp))
 
 (defn track [f & args]
   ; todo support more than just IDeref
