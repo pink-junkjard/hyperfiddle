@@ -60,7 +60,7 @@
           nil)
         (fn [path]
           (if (:link/create? link)
-            (if (empty? path)
+            (if (some #{:head} path)
               "hypercrud.browser.auto-link-formula/auto-entity-from-stage"
               (when (::field/data-has-id? (field-at-path path @(:hypercrud.browser/fields ctx))) ; todo better reactivity
                 "hypercrud.browser.auto-link-formula/auto-entity"))
