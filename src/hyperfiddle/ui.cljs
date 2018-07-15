@@ -64,7 +64,10 @@
 (defn hyper-control' [& [?result]]
   (from-react-context
     (fn [{:keys [ctx props]} value]
-      (let [options? (-> (->> (links-here ctx) (map :link/rel) (into #{})) ; reactivity is terrible here
+      (let [options? (-> (->> (r/track links-here ctx)
+                              (r/fmap (r/partial map :link/rel))
+                              deref
+                              (into #{}))
                          (contains? :options))
             child-fields? (not (some->> (:hypercrud.browser/fields ctx) (r/fmap nil?) deref))]
         (fragment (when (and (not options?) (not child-fields?))
@@ -82,7 +85,10 @@
                           (reverse)
                           (take-to (comp not #{:head :body})) ; todo head/body attr collision
                           (last))
-        options? (-> (->> (links-here ctx) (map :link/rel) (into #{})) ; reactivity is terrible here
+        options? (-> (->> (r/track links-here ctx)
+                          (r/fmap (r/partial map :link/rel))
+                          deref
+                          (into #{}))
                      (contains? :options))]
     (match* [head-or-body (last (:hypercrud.browser/path ctx)) options?]
       ;[:head _ true] hyper-select-head

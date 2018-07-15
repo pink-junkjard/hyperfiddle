@@ -1,5 +1,6 @@
 (ns hyperfiddle.ui.hyper-controls
   (:require
+    [contrib.reactive :as r]
     [contrib.reactive-debug :refer [track-cmp]]
     [contrib.reagent :refer [fragment from-react-context]]
     [hypercrud.browser.link :as link :refer [rel->link]]
@@ -13,7 +14,7 @@
     (fn [{:keys [ctx props]} field]
       (let [display-mode (-> @(:hypercrud.ui/display-mode ctx) name keyword)]
         (fragment (if (and (= :xray display-mode)
-                           (not (:link/dependent? (rel->link :options ctx))))
+                           (not (:link/dependent? @(r/track rel->link :options ctx))))
                     ; Float right
                     [select nil])
                   (when field [form/label field])
