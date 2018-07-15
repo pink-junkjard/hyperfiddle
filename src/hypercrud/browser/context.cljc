@@ -154,7 +154,7 @@
             ; todo cannot conflict with :db/ident :body
             (and (= path-segment :body) #_(not= :db.cardinality/one (:hypercrud.browser/data-cardinality ctx)))
             (if (nil? (:hypercrud.browser/data ctx))
-              (initial-focus ctx)
+              (initial-focus ctx)                           ; todo this isn't :body, this is :hypercrud.browser/result
               (body ctx))
 
             (attribute-segment? path-segment)
