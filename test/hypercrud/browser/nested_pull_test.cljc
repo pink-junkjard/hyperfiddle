@@ -100,10 +100,7 @@
                    fields)]
       (is (= expected actual)))
 
-    (let [links (try (system-links fiddle fields @(:hypercrud.browser/schemas ctx))
-                     (catch Exception e
-                       (println (pr-str e))
-                       (throw e)))
+    (let [links (system-links fiddle fields @(:hypercrud.browser/schemas ctx))
           expected #{{:link/path ":head 0" :link/rel :hyperfiddle/new}
                      {:link/path ":body 0" :link/rel :hyperfiddle/edit}
                      {:link/path ":body 0" :link/rel :hyperfiddle/remove}
