@@ -1,6 +1,7 @@
 (ns hypercrud.browser.field-test
   #?(:cljs (:require-macros [hypercrud.browser.field-test :refer [pull->attr-tests test-defined-pull test-partial-splat test-splat]]))
   (:require [clojure.test :refer [deftest is testing]]
+            [contrib.data :as data]
             [contrib.reactive :as r]
             [hypercrud.browser.field :as field :refer [auto-fields infer-attrs]]
             [hypercrud.types.DbVal :refer [->DbVal]]
@@ -26,53 +27,53 @@
     (is (= (infer-attrs data [:a/y :b/z]) #{:c/a :c/b}))
     (is (= (infer-attrs data [:a/z]) #{:c/x}))))
 
-(def test-dbname "test")
-(def test-schema {:a/j {:db/ident :a/j
-                        :db/cardinality {:db/ident :db.cardinality/one}
-                        :db/valueType {:db/ident :db.type/string}}
-                  :a/k {:db/ident :a/k
-                        :db/cardinality {:db/ident :db.cardinality/one}
-                        :db/valueType {:db/ident :db.type/string}}
-                  :a/s {:db/ident :a/s
-                        :db/cardinality {:db/ident :db.cardinality/one}
-                        :db/valueType {:db/ident :db.type/ref}}
-                  :a/t {:db/ident :a/t
-                        :db/cardinality {:db/ident :db.cardinality/one}
-                        :db/valueType {:db/ident :db.type/ref}}
-                  :a/u {:db/ident :a/u
-                        :db/cardinality {:db/ident :db.cardinality/many}
-                        :db/valueType {:db/ident :db.type/ref}}
-                  :a/v {:db/ident :a/v
-                        :db/cardinality {:db/ident :db.cardinality/many}
-                        :db/valueType {:db/ident :db.type/string}}
-                  :a/x {:db/ident :a/x
-                        :db/cardinality {:db/ident :db.cardinality/one}
-                        :db/valueType {:db/ident :db.type/ref}}
-                  :a/y {:db/ident :a/y
-                        :db/cardinality {:db/ident :db.cardinality/one}
-                        :db/valueType {:db/ident :db.type/string}}
-                  :a/z {:db/ident :a/z
-                        :db/cardinality {:db/ident :db.cardinality/one}
-                        :db/valueType {:db/ident :db.type/string}}
-                  :b/x {:db/ident :b/x
-                        :db/cardinality {:db/ident :db.cardinality/one}
-                        :db/valueType {:db/ident :db.type/string}}
-                  :b/y {:db/ident :b/y
-                        :db/cardinality {:db/ident :db.cardinality/one}
-                        :db/valueType {:db/ident :db.type/string}}
-                  :e/a-one {:db/ident :e/a-one
-                            :db/cardinality {:db/ident :db.cardinality/one}
-                            :db/valueType {:db/ident :db.type/ref}}
-                  :e/a-many {:db/ident :e/a-many
-                             :db/cardinality {:db/ident :db.cardinality/many}
-                             :db/valueType {:db/ident :db.type/ref}}})
+(def test-schema
+  (->> [{:db/ident :a/j
+         :db/cardinality {:db/ident :db.cardinality/one}
+         :db/valueType {:db/ident :db.type/string}}
+        {:db/ident :a/k
+         :db/cardinality {:db/ident :db.cardinality/one}
+         :db/valueType {:db/ident :db.type/string}}
+        {:db/ident :a/s
+         :db/cardinality {:db/ident :db.cardinality/one}
+         :db/valueType {:db/ident :db.type/ref}}
+        {:db/ident :a/t
+         :db/cardinality {:db/ident :db.cardinality/one}
+         :db/valueType {:db/ident :db.type/ref}}
+        {:db/ident :a/u
+         :db/cardinality {:db/ident :db.cardinality/many}
+         :db/valueType {:db/ident :db.type/ref}}
+        {:db/ident :a/v
+         :db/cardinality {:db/ident :db.cardinality/many}
+         :db/valueType {:db/ident :db.type/string}}
+        {:db/ident :a/x
+         :db/cardinality {:db/ident :db.cardinality/one}
+         :db/valueType {:db/ident :db.type/ref}}
+        {:db/ident :a/y
+         :db/cardinality {:db/ident :db.cardinality/one}
+         :db/valueType {:db/ident :db.type/string}}
+        {:db/ident :a/z
+         :db/cardinality {:db/ident :db.cardinality/one}
+         :db/valueType {:db/ident :db.type/string}}
+        {:db/ident :b/x
+         :db/cardinality {:db/ident :db.cardinality/one}
+         :db/valueType {:db/ident :db.type/string}}
+        {:db/ident :b/y
+         :db/cardinality {:db/ident :db.cardinality/one}
+         :db/valueType {:db/ident :db.type/string}}
+        {:db/ident :e/a-one
+         :db/cardinality {:db/ident :db.cardinality/one}
+         :db/valueType {:db/ident :db.type/ref}}
+        {:db/ident :e/a-many
+         :db/cardinality {:db/ident :db.cardinality/many}
+         :db/valueType {:db/ident :db.type/ref}}]
+       (data/group-by-assume-unique :db/ident)))
 
 (defn build-ctx [fiddle request result]
-  {:route [nil [(->ThinEntity test-dbname 1)]]
-   :hypercrud.browser/fiddle (r/atom fiddle)
+  {:hypercrud.browser/fiddle (r/atom fiddle)
    :hypercrud.browser/request (r/atom request)
    :hypercrud.browser/result (r/atom result)
-   :hypercrud.browser/schemas (r/atom {test-dbname test-schema})})
+   :hypercrud.browser/schemas (r/atom {"$" test-schema})})
 
 #?(:clj
    (defmacro test-defined-pull [fiddle pull->request]
@@ -154,19 +155,19 @@
 
 (deftest entity []
   (pull->attr-tests {:fiddle/type :entity
-                     :fiddle/pull-database test-dbname}
+                     :fiddle/pull-database "$"}
                     #(->EntityRequest 1 nil (->DbVal nil nil) %)
                     (partial apply merge)))
 
 (deftest entity-attr-one []
   (pull->attr-tests {:fiddle/type :entity
-                     :fiddle/pull-database test-dbname}
+                     :fiddle/pull-database "$"}
                     #(->EntityRequest 1 :e/a-one (->DbVal nil nil) %)
                     (partial apply merge)))
 
 (deftest entity-attr-many []
   (pull->attr-tests {:fiddle/type :entity
-                     :fiddle/pull-database test-dbname}
+                     :fiddle/pull-database "$"}
                     #(->EntityRequest 1 :e/a-many (->DbVal nil nil) %)
                     identity))
 
