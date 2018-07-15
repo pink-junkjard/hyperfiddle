@@ -54,9 +54,10 @@
                                                                          :hypercrud.browser/data-cardinality])))
 
 (defn body [ctx & [?data]]
-  {:pre [(case (:hypercrud.browser/data-cardinality ctx)
-           :db.cardinality/one (nil? ?data)
-           :db.cardinality/many (r/reactive? ?data))]}
+  (case (:hypercrud.browser/data-cardinality ctx)
+    :db.cardinality/one (assert (nil? ?data))
+    :db.cardinality/many (do (assert ?data (str "`:body` is invalid directly on card/many. current path: " (pr-str (:hypercrud.browser/path ctx))))
+                             (assert (r/reactive? ?data))))
   (let [new-ctx (-> ctx
                     (set-parent)
                     (set-parent-data)
@@ -70,9 +71,7 @@
                             :hypercrud.browser/fat-attribute))]
     (case (:hypercrud.browser/data-cardinality ctx)
       :db.cardinality/one new-ctx
-      :db.cardinality/many (if ?data
-                             (assoc new-ctx :hypercrud.browser/data ?data)
-                             (throw (ex-info ":body is invalid directly on card/many" {:path (:hypercrud.browser/path ctx)}))))))
+      :db.cardinality/many (assoc new-ctx :hypercrud.browser/data ?data))))
 
 (letfn [(default [default-v v] (or v default-v))
         (user-with [rt invert-route branch uri tx]
