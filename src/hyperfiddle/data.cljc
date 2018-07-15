@@ -26,7 +26,18 @@
                                       (mapv (fn [[m-child-field child-segment]]
                                               ; this is silly why are we tossing the m-child-field data structure
                                               (f-field [path-segment child-segment] ctx nil props)))))))))
-        vec (conj (f-field [] ctx nil props))               ; row/relation
+        vec
+        (cond->
+          (not (and (some #(% (:hypercrud.browser/path ctx)) [empty? #{[:head] [:body]}])
+                    (->> (r/track link/links-at [:head] (:hypercrud.browser/links ctx))
+                         (r/fmap empty?)
+                         deref)
+                    (->> (r/track link/links-at [:body] (:hypercrud.browser/links ctx))
+                         (r/fmap empty?)
+                         deref)))
+          ; row/relation; omit if result-row & no links. eventually we should probably always display
+          (conj (f-field [] ctx nil props)))
+
         ; this result can be directly inserted as children in a reagemnt component, CANNOT be a vector
         seq)))
 

@@ -37,9 +37,11 @@
 
 (def options-processor (partial remove options-link?))
 
+(defn links-at [path links-ref]
+  (filter (same-path-as? path) @links-ref))
+
 (defn links-here [ctx]
-  (->> @(:hypercrud.browser/links ctx)
-       (filter (same-path-as? (:hypercrud.browser/path ctx)))))
+  (links-at (:hypercrud.browser/path ctx) (:hypercrud.browser/links ctx)))
 
 (defn rel->link [rel ctx]
   (->> (links-here ctx)
