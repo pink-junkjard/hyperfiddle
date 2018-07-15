@@ -46,15 +46,40 @@
 (defn find-element-segment? [path-segment]
   (integer? path-segment))
 
+(defn- set-parent [ctx]
+  (assoc ctx :hypercrud.browser/parent (select-keys ctx [:hypercrud.browser/parent :hypercrud.browser/path])))
+
+(defn- set-parent-data [ctx]
+  (update ctx :hypercrud.browser/parent (fnil into {}) (select-keys ctx [:hypercrud.browser/data
+                                                                         :hypercrud.browser/data-cardinality])))
+
+(defn body [ctx & [?data]]
+  {:pre [(case (:hypercrud.browser/data-cardinality ctx)
+           :db.cardinality/one (nil? ?data)
+           :db.cardinality/many (r/reactive? ?data))]}
+  (let [new-ctx (-> ctx
+                    (set-parent)
+                    (set-parent-data)
+                    (assoc :hypercrud.browser/data-cardinality
+                           (if (empty? (:hypercrud.browser/path ctx))
+                             :db.cardinality/many           ; list of fe's when setting from results
+                             :db.cardinality/one            ; always one map when nested data
+                             ))
+                    (update :hypercrud.browser/path conj :body)
+                    (dissoc :hypercrud.browser/attribute
+                            :hypercrud.browser/fat-attribute))]
+    (case (:hypercrud.browser/data-cardinality ctx)
+      :db.cardinality/one new-ctx
+      :db.cardinality/many (if ?data
+                             (assoc new-ctx :hypercrud.browser/data ?data)
+                             (throw (ex-info ":body is invalid directly on card/many" {:path (:hypercrud.browser/path ctx)}))))))
+
 (letfn [(default [default-v v] (or v default-v))
         (user-with [rt invert-route branch uri tx]
           (runtime/dispatch! rt (actions/with rt invert-route branch uri tx)))
-        (set-parent [ctx]
-          (assoc ctx :hypercrud.browser/parent (select-keys ctx [:hypercrud.browser/parent :hypercrud.browser/path])))
         (set-data [ctx cardinality]
           (-> ctx
-              (update :hypercrud.browser/parent (fnil into {}) (select-keys ctx [:hypercrud.browser/data
-                                                                                 :hypercrud.browser/data-cardinality]))
+              (set-parent-data)
               (assoc
                 :hypercrud.browser/data (let [f (r/fmap ::field/get-value (:hypercrud.browser/field ctx))]
                                           (assert @f "focusing on a non-pulled attribute")
@@ -130,12 +155,7 @@
             (and (= path-segment :body) #_(not= :db.cardinality/one (:hypercrud.browser/data-cardinality ctx)))
             (if (nil? (:hypercrud.browser/data ctx))
               (initial-focus ctx)
-              (case (:hypercrud.browser/data-cardinality ctx)
-                :db.cardinality/one (-> ctx
-                                        (update :hypercrud.browser/path conj :body)
-                                        (dissoc :hypercrud.browser/attribute
-                                                :hypercrud.browser/fat-attribute))
-                :db.cardinality/many (throw (ex-info ":body is invalid directly on card/many" {:path (:hypercrud.browser/path ctx)}))))
+              (body ctx))
 
             (attribute-segment? path-segment)
             (let [field (r/fmap (r/partial find-field path-segment) (:hypercrud.browser/fields ctx))
@@ -171,11 +191,3 @@
                 (not (some #{:head} (:hypercrud.browser/path ctx))) (set-data :db.cardinality/one)))))]
   (defn focus [ctx relative-path]
     (reduce focus-segment ctx relative-path)))
-
-(defn body [ctx data]
-  {:pre [(r/reactive? data)]}
-  (-> ctx
-      (update :hypercrud.browser/path conj :body)
-      (dissoc :hypercrud.browser/attribute
-              :hypercrud.browser/fat-attribute)
-      (assoc :hypercrud.browser/data data)))
