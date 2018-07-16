@@ -211,8 +211,7 @@ nil. call site must wrap with a Reagent component"
                 #_:hypercrud.browser/result]} ctx]
     [:div {:class class}
      [:h3 (some-> @fiddle :fiddle/ident name)]
-     (result ctx)
-     (field [] ctx nil)]))
+     (result ctx)]))
 
 ;[user-portal hypercrud.ui.error/error-block]
 (def ^:export markdown
