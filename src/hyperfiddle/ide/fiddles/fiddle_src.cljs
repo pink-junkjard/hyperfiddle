@@ -1,5 +1,6 @@
 (ns hyperfiddle.ide.fiddles.fiddle-src
   (:require
+    [cats.core :as cats]
     [cats.monad.either :as either]
     [clojure.pprint]
     [contrib.css :refer [css]]
@@ -14,6 +15,7 @@
     [hypercrud.browser.field :as field]
     [hypercrud.browser.system-fiddle :as system-fiddle]
     [hypercrud.types.Entity :refer [->Entity shadow-entity]]
+    [hypercrud.ui.error :as error]
     [hyperfiddle.ide.fiddles.topnav :refer [shadow-fiddle]]
     [hyperfiddle.ide.fiddles.fiddle-links.renderer :as links-fiddle]
     #_[hyperfiddle.ide.hf-live :as hf-live]                 ;cycle
@@ -38,17 +40,15 @@
 ; todo does this merge with shadow-fiddle?
 ; not sure if other downstream consumers of shadow-fiddle can run data-from-route
 (defn shadow-links [ctx]
-  (let [links-ref (either/branch
-                    (base/data-from-route (:target-route ctx)
-                                          (assoc ctx
-                                            :hypercrud.browser/domain @(runtime/state (:peer ctx) [::runtime/domain])
-                                            :keep-disabled-anchors? true))
-                    (fn [e] (throw e))
-                    :hypercrud.browser/links)]
-    (-> ctx
-        (dissoc :hypercrud.browser/data :hypercrud.browser/data-cardinality :hypercrud.browser/path)
-        (update :hypercrud.browser/result #(r/track inject-links % links-ref))
-        (context/focus [:body]))))
+  (->> (base/data-from-route (:target-route ctx)
+                             (assoc ctx
+                               :hypercrud.browser/domain @(runtime/state (:peer ctx) [::runtime/domain])
+                               :keep-disabled-anchors? true))
+       (cats/fmap (fn [{:keys [:hypercrud.browser/links]}]
+                    (-> ctx
+                        (dissoc :hypercrud.browser/data :hypercrud.browser/data-cardinality :hypercrud.browser/path)
+                        (update :hypercrud.browser/result #(r/track inject-links % links))
+                        (context/focus [:body]))))))
 
 (defn schema-links [ctx]
   (->> @(runtime/state (:peer ctx) [::runtime/domain :domain/environment])
@@ -110,8 +110,9 @@
   (let [ctx (-> ctx
                 (dissoc :user-renderer)                     ; this needs to not escape this level; inline links can't ever get it
                 ; these two shadow calls are inefficient, throwing away work
-                (shadow-fiddle)
-                (shadow-links))]
+                (shadow-fiddle))
+        ectx (shadow-links ctx)
+        ctx (either/branch ectx (constantly ctx) identity)]
     [:div {:class class}
      [:h3 (str @(r/cursor (:hypercrud.browser/result ctx) [:fiddle/ident])) " source"]
      (field [0 :fiddle/ident] ctx nil)
@@ -126,6 +127,10 @@
      (field [0 :fiddle/css] ctx (controls :fiddle/css))
      (field [0 :fiddle/renderer] ctx (controls :fiddle/renderer))
      (field [0 :fiddle/hydrate-result-as-fiddle] ctx nil)
+     (when (either/left? ectx)
+       [:div
+        [:h5 "Unable to shadow links:"]
+        [error/error-block @ectx]])
      (field [0 :fiddle/links] ctx (controls :fiddle/links))
      [:div.p "Additional attributes"]
      (->> @(:hypercrud.browser/fields ctx)
