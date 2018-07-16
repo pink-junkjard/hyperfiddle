@@ -82,7 +82,7 @@
               (set-parent-data)
               (assoc
                 :hypercrud.browser/data (let [f (r/fmap ::field/get-value (:hypercrud.browser/field ctx))]
-                                          (assert @f "focusing on a non-pulled attribute")
+                                          (assert @f (str "focusing on a non-pulled attribute: " (pr-str (:hypercrud.browser/path ctx)) "."))
                                           (r/fapply f (:hypercrud.browser/data ctx)))
                 :hypercrud.browser/data-cardinality cardinality)))
         (query-type [query]
