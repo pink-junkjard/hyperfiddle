@@ -93,14 +93,18 @@
        (r/partial entity-change! ctx)
        (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))])))
 
-(def ^:export code
+(defn- code-mode [& [mode]]
   (from-react-context
     (fn [{:keys [ctx props]} value]
       (let [control (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
                       :hyperfiddle.ui.layout/block contrib.ui/code
                       :hyperfiddle.ui.layout/table contrib.ui/code-inline-block)]
         [control value (r/partial entity-change! ctx)
-         (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))]))))
+         (cond-> (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))
+           mode (assoc :mode mode))]))))
+
+(def ^:export code (code-mode))
+(def ^:export css (code-mode "css"))
 
 (def ^:export markdown-editor                               ; This is legacy; :mode=markdown should be bound in userland
   (from-react-context
