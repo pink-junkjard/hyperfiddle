@@ -64,31 +64,35 @@
                          [:div.docstring [contrib.ui/markdown help-md]])
          [:label props (::field/label field) (if help-md [:sup "†"])]]))))
 
+(defn- head [hyper-control ctx props]
+  (let [field (some-> (:hypercrud.browser/field ctx) deref)] ; todo unbreak reactivity
+    [with-react-context {:ctx ctx :props props}
+     [(or (:label-fn props) (hyper-control ctx)) field]]))
+
+(defn- body [hyper-control ctx ?f props]
+  (let [data @(:hypercrud.browser/data ctx)]                ; todo why consciously break reactivity
+    [with-react-context {:ctx ctx :props props}
+     ; todo unsafe execution of user code: control
+     [(or ?f (hyper-control ctx)) data]]))
+
 (defn form-field "Form fields are label AND value. Table fields are label OR value."
   [hyper-control relative-path ctx ?f props]                ; fiddle-src wants to fallback by passing nil here explicitly
   (assert @(:hypercrud.ui/display-mode ctx))
   (let [state (r/atom {::magic-new-a nil})]
     (fn [hyper-control relative-path ctx ?f props]
       (let [ctx (assoc ctx ::state state)
-            ; we want the wrapper div to have the :body styles, so build the head before polluting the ctx with :body
-            head (let [ctx (context/focus ctx (cons :head relative-path))
-                       field (some-> (:hypercrud.browser/field ctx) deref)] ; todo unbreak reactivity
-                   ^{:key :form-head}
-                   [with-react-context {:ctx ctx :props props}
-                    [(or (:label-fn props) (hyper-control ctx)) field]])
-            ctx (context/focus ctx (cons :body relative-path))
-            props (update props :class css (hyperfiddle.ui/semantic-css ctx))]
+            ; we want the wrapper div to have the :body styles, so careful not to pollute the head ctx with :body
+            body-ctx (context/focus ctx (cons :body relative-path))
+            props (update props :class css (hyperfiddle.ui/semantic-css body-ctx))]
         (ui-block-border-wrap
-          ctx (css "field" (:class props))
-          head
-          (let [data @(:hypercrud.browser/data ctx)]        ; todo why consciously break reactivity
-            #_(if (:relation ctx))                          ; naked has no body
-            ^{:key :form-body}
-            [with-react-context {:ctx ctx :props props}
-             [(or ?f (hyper-control ctx)) data]]))))))
+          body-ctx (css "field" (:class props))
+          ^{:key :form-head}
+          [head hyper-control (context/focus ctx (cons :head relative-path)) props]
+          ^{:key :form-body}
+          [body hyper-control body-ctx ?f props])))))
 
 (defn table-field "Form fields are label AND value. Table fields are label OR value."
-  [control-fac relative-path ctx ?f props]
+  [hyper-control relative-path ctx ?f props]
   (let [head-or-body (last (:hypercrud.browser/path ctx))   ; this is ugly and not uniform with form-field
         ctx (context/focus ctx relative-path)
         props (update props :class css (hyperfiddle.ui/semantic-css ctx))]
@@ -99,12 +103,7 @@
                   :style {:background-color (border-color ctx)}
                   :on-click (r/partial sort/toggle-sort! relative-path ctx)}
              ; Use f as the label control also, because there is hypermedia up there
-             (let [field (some-> (:hypercrud.browser/field ctx) deref)] ; todo unbreak reactivity
-               [with-react-context {:ctx ctx :props props}
-                [(or (:label-fn props) (control-fac ctx)) field]])]
-      :body (let [data @(:hypercrud.browser/data ctx)]      ; todo why consciously break reactivity
-              [:td {:class (css "field" (:class props) "truncate")
-                    :style {:border-color (when (:hypercrud.browser/source-symbol ctx) (border-color ctx))}}
-               ; todo unsafe execution of user code: control
-               [with-react-context {:ctx ctx :props props}
-                [(or ?f (control-fac ctx)) data]]]))))
+             [head hyper-control ctx props]]
+      :body [:td {:class (css "field" (:class props) "truncate")
+                  :style {:border-color (when (:hypercrud.browser/source-symbol ctx) (border-color ctx))}}
+             [body hyper-control ctx ?f props]])))
