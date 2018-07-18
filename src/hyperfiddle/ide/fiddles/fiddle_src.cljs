@@ -15,6 +15,7 @@
     [hypercrud.browser.field :as field]
     [hypercrud.browser.system-fiddle :as system-fiddle]
     [hypercrud.types.Entity :refer [->Entity shadow-entity]]
+    [hypercrud.ui.control.link-controls :refer [anchors]]
     [hypercrud.ui.error :as error]
     [hyperfiddle.ide.fiddles.topnav :refer [shadow-fiddle]]
     [hyperfiddle.ide.fiddles.fiddle-links.renderer :as links-fiddle]
@@ -101,8 +102,8 @@
    :fiddle/links (from-react-context
                    (fn [{:keys [ctx props]} value]
                      [:div
-                      (let [result (fn [ctx] [links-fiddle/renderer ctx])]
-                        [(hyper-control ctx result) value])
+                      [:div [links-fiddle/renderer ctx]]
+                      [anchors (:hypercrud.browser/path ctx)]
                       [:div.hf-underdoc [markdown (:fiddle/links underdocs)]]]))
    })
 

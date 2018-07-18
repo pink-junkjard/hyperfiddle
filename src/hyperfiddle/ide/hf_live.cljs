@@ -7,6 +7,7 @@
     [contrib.ui]
     [hypercrud.browser.browser-ui :refer [ui-comp]]
     [hypercrud.browser.router :as router]
+    [hypercrud.ui.control.link-controls :refer [anchors]]
     [hyperfiddle.ide.fiddles.fiddle-links.renderer :as links-fiddle]
     [hyperfiddle.ide.fiddles.fiddle-src :as fiddle-src]
     [hyperfiddle.ide.fiddles.topnav :refer [shadow-fiddle]]
@@ -16,8 +17,8 @@
                 :fiddle/links (from-react-context
                                 (fn [{:keys [ctx props]} value]
                                   [:div
-                                   (let [result (fn [ctx] [links-fiddle/renderer ctx true])]
-                                     [(hyper-control ctx result) value])
+                                   [:div [links-fiddle/renderer ctx true]]
+                                   [anchors (:hypercrud.browser/path ctx)]
                                    [:div.hf-underdoc [markdown (:fiddle/links fiddle-src/underdocs)]]]))))
 
 (defn docs-embed [attrs ctx-real class & {:keys [embed-mode]}]
