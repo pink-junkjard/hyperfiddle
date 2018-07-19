@@ -141,4 +141,4 @@
           (remove #(= (namespace %) "fiddle"))
           (map #(field [0 %] ctx nil))
           (doall))
-     (when-not embed-mode (link :hyperfiddle/remove [:body 0] ctx "Remove fiddle"))]))
+     (when-not embed-mode (link :hyperfiddle/remove [:body 0] ctx "Remove fiddle" {:class "btn-outline-danger"}))]))
