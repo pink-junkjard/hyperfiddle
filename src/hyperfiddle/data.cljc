@@ -28,7 +28,7 @@
                                               (f-field [path-segment child-segment] ctx nil props)))))))))
         vec
         (cond->
-          (not (and (some #(% (:hypercrud.browser/path ctx)) [empty? #{[:head] [:body]}])
+          (not (and #_(some #(% (:hypercrud.browser/path ctx)) [empty? #{[:head] [:body]}]) ; (empty? path)    or path = [:head]    or path = [:body]
                     (->> (r/track link/links-at [:head] (:hypercrud.browser/links ctx))
                          (r/fmap empty?)
                          deref)
