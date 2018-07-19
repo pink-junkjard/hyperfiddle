@@ -84,12 +84,13 @@
             ; we want the wrapper div to have the :body styles, so careful not to pollute the head ctx with :body
             body-ctx (context/focus ctx (cons :body relative-path))
             props (update props :class css (hyperfiddle.ui/semantic-css body-ctx))]
+        ; It is the driver-fn's job to elide this field if it will be empty
         (ui-block-border-wrap
           body-ctx (css "field" (:class props))
           ^{:key :form-head}
           [head hyper-control (context/focus ctx (cons :head relative-path)) props]
           ^{:key :form-body}
-          [body hyper-control body-ctx ?f props])))))
+          [:div [body hyper-control body-ctx ?f props]])))))
 
 (defn table-field "Form fields are label AND value. Table fields are label OR value."
   [hyper-control relative-path ctx ?f props]

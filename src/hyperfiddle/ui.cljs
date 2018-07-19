@@ -73,7 +73,7 @@
         (fragment (when (and (not options?) (not child-fields?))
                     [(control ctx) value])
                   (when (and child-fields? (context/attribute-segment? (last (:hypercrud.browser/path ctx)))) ; ignore relation and fe fields
-                    [:div [result ctx]])
+                    [result ctx])
                   [anchors (:hypercrud.browser/path ctx) (when options? link/options-processor)] ; Order sensitive, here be floats
                   (when options? [select value])
                   [iframes (:hypercrud.browser/path ctx) (when options? link/options-processor)])))))
