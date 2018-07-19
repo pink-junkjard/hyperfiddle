@@ -1,10 +1,12 @@
 (ns hyperfiddle.ui
   (:require-macros [hyperfiddle.ui :refer [-build-fiddle]])
   (:require
+    [cats.core :refer [fmap]]
     [clojure.core.match :refer [match match*]]
     [clojure.string :as string]
     [contrib.css :refer [css css-slugify]]
     [contrib.data :refer [take-to unwrap]]
+    [contrib.eval :as eval]
     [contrib.reactive :as r]
     [contrib.reagent :refer [fragment]]
     [contrib.reactive-debug :refer [track-cmp]]
@@ -21,7 +23,6 @@
     [hypercrud.ui.control.link-controls :refer [anchors iframes]]
     [hypercrud.ui.error :as ui-error]
     [hyperfiddle.data :as hf]
-    [hyperfiddle.eval :refer [read-eval-with-bindings]]
     [hyperfiddle.ui.controls :as controls]
     [hyperfiddle.ui.hyper-controls :refer [hyper-select-head hyper-label]]
     [hyperfiddle.ui.hacks]                                  ; exports
@@ -214,103 +215,105 @@ nil. call site must wrap with a Reagent component"
      [:h3 (some-> @fiddle :fiddle/ident name)]
      (result ctx)]))
 
-;[user-portal hypercrud.ui.error/error-block]
-(def ^:export markdown
-  (remark/remark!
+(let [memoized-safe-eval (memoize eval/safe-eval-string)]
+  (def ^:export markdown
+    (remark/remark!
 
-    ; Content is text, or more markdown, or code
-    ; Argument is semantic: a url, or a hyperfiddle ident (or a second optional content? Caption, row-renderer)
+      ; Content is text, or more markdown, or code
+      ; Argument is semantic: a url, or a hyperfiddle ident (or a second optional content? Caption, row-renderer)
 
-    {"li" (fn [content argument props ctx]
-            [:li.p (dissoc props :children) (:children props)])
+      {"li" (fn [content argument props ctx]
+              [:li.p (dissoc props :children) (:children props)])
 
-     "p" (fn [content argument props ctx]
-           ; Really need a way to single here from below, to get rid of div.p
-           ; So that means signalling via this :children value
-           (if (::unp ctx)
-             (js/reactCreateFragment #js {"_" (:children props)})
-             [:div.p (dissoc props :children) (:children props)]))
+       "p" (fn [content argument props ctx]
+             ; Really need a way to single here from below, to get rid of div.p
+             ; So that means signalling via this :children value
+             (if (::unp ctx)
+               (js/reactCreateFragment #js {"_" (:children props)})
+               [:div.p (dissoc props :children) (:children props)]))
 
-     "span" (fn [content argument props ctx]
-              [:span (remark/adapt-props props)
-               [markdown content (assoc ctx ::unp true)]])
+       "span" (fn [content argument props ctx]
+                [:span (remark/adapt-props props)
+                 [markdown content (assoc ctx ::unp true)]])
 
-     "a" hyperfiddle.ui.markdown-extensions/a
+       "a" hyperfiddle.ui.markdown-extensions/a
 
-     ; Is this comment true?::
-     ;   Div is not needed, use it with block syntax and it hits React.createElement and works
-     ;   see https://github.com/medfreeman/remark-generic-extensions/issues/30
+       ; Is this comment true?::
+       ;   Div is not needed, use it with block syntax and it hits React.createElement and works
+       ;   see https://github.com/medfreeman/remark-generic-extensions/issues/30
 
-     "block" (fn [content argument props ctx]
-               ; Should presence of argument trigger a figure and caption?
-               [:div props [markdown content (assoc ctx ::unp true)]])
+       "block" (fn [content argument props ctx]
+                 ; Should presence of argument trigger a figure and caption?
+                 [:div props [markdown content (assoc ctx ::unp true)]])
 
-     ; This is a custom markdown extension example.
-     "figure" (fn [content argument props ctx]
-                [:figure.figure props
-                 [markdown content (assoc ctx ::unp true)]  ; it's an image or pre or other block element
-                 [:figcaption.figure-caption [markdown argument (assoc ctx ::unp true)]]])
+       ; This is a custom markdown extension example.
+       "figure" (fn [content argument props ctx]
+                  [:figure.figure props
+                   [markdown content (assoc ctx ::unp true)] ; it's an image or pre or other block element
+                   [:figcaption.figure-caption [markdown argument (assoc ctx ::unp true)]]])
 
-     "pre" (fn [content argument props ctx]
-             ; detect ``` legacy syntax, no props or argument
-             (if-let [children (:children props)]
-               ; Remark generates pre>code; deep inspect and rip out the content
-               ; Don't hook :code because that is used by inline snippets
-               (let [content (goog.object/getValueByKeys children 0 "props" "children" 0)
-                     content (str/rtrim content "\n") #_"Remark yields an unavoidable newline that we don't want"]
-                 [contrib.ui/code content #() {:read-only true}])
-               [contrib.ui/code content #() props]))
+       "pre" (fn [content argument props ctx]
+               ; detect ``` legacy syntax, no props or argument
+               (if-let [children (:children props)]
+                 ; Remark generates pre>code; deep inspect and rip out the content
+                 ; Don't hook :code because that is used by inline snippets
+                 (let [content (goog.object/getValueByKeys children 0 "props" "children" 0)
+                       content (str/rtrim content "\n") #_"Remark yields an unavoidable newline that we don't want"]
+                   [contrib.ui/code content #() {:read-only true}])
+                 [contrib.ui/code content #() props]))
 
-     "render" (fn [content argument props ctx]
-                (unwrap (read-eval-with-bindings content ctx)))
+       "render" (fn [content argument props ctx]
+                  (->> (memoized-safe-eval (str "(fn [ctx] \n" content "\n)"))
+                       (fmap (fn [f] (f ctx)))
+                       (unwrap)))
 
-     "f" (fn [content argument props ctx]
-           (let [f (unwrap (read-eval-with-bindings content))
-                 v (unwrap (memoized-safe-read-edn-string argument))]
-             (when f [f v])))
+       "f" (fn [content argument props ctx]
+             (let [f (unwrap (memoized-safe-eval content))
+                   v (unwrap (memoized-safe-read-edn-string argument))]
+               (when f [f v])))
 
-     "browse" (fn [content argument props ctx]
+       "browse" (fn [content argument props ctx]
+                  (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
+                        rel (unwrap (memoized-safe-read-edn-string srel))
+                        path (unwrap (memoized-safe-read-edn-string (str "[" spath "]")))
+                        f? (unwrap (memoized-safe-eval content))]
+                    (browse rel path ctx f? props)))
+
+       "link" (fn [content argument props ctx]
                 (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
                       rel (unwrap (memoized-safe-read-edn-string srel))
                       path (unwrap (memoized-safe-read-edn-string (str "[" spath "]")))
-                      f? (unwrap (read-eval-with-bindings content))]
-                  (browse rel path ctx f? props)))
+                      ; https://github.com/medfreeman/remark-generic-extensions/issues/45
+                      label (or-str content (name rel))]
+                  (link rel path ctx label props)))
 
-     "link" (fn [content argument props ctx]
-              (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
-                    rel (unwrap (memoized-safe-read-edn-string srel))
-                    path (unwrap (memoized-safe-read-edn-string (str "[" spath "]")))
-                    ; https://github.com/medfreeman/remark-generic-extensions/issues/45
-                    label (or-str content (name rel))]
-                (link rel path ctx label props)))
+       "result" (fn [content argument props ctx]
+                  (let [ctx (assoc ctx ::unp true)]
+                    (if-let [f (unwrap (memoized-safe-eval content))]
+                      [f ctx]
+                      (result ctx (update props :class css "unp")))))
+       "value" (fn [content argument props ctx]
+                 (let [path (unwrap (memoized-safe-read-edn-string (str "[" argument "]")))
+                       ?f (some->> (unwrap (memoized-safe-eval content)))]
+                   (value path ctx ?f props)))
 
-     "result" (fn [content argument props ctx]
-                (let [ctx (assoc ctx ::unp true)]
-                  (if-let [f (unwrap (read-eval-with-bindings content))]
-                    [f ctx]
-                    (result ctx (update props :class css "unp")))))
-     "value" (fn [content argument props ctx]
-               (let [path (unwrap (memoized-safe-read-edn-string (str "[" argument "]")))
-                     ?f (some->> (unwrap (read-eval-with-bindings content)))]
-                 (value path ctx ?f props)))
+       "field" (fn [content argument props ctx]
+                 (let [path (unwrap (memoized-safe-read-edn-string (str "[" argument "]")))
+                       ?f (some->> (unwrap (memoized-safe-eval content)))]
+                   (field path ctx ?f (update props :class css "unp"))))
 
-     "field" (fn [content argument props ctx]
-               (let [path (unwrap (memoized-safe-read-edn-string (str "[" argument "]")))
-                     ?f (some->> (unwrap (read-eval-with-bindings content)))]
-                 (field path ctx ?f (update props :class css "unp"))))
+       "table" (letfn [(form [content ctx]
+                         [[markdown content (assoc ctx ::unp true)]])]
+                 (fn [content argument props ctx]
+                   [table (r/partial form content) hf/sort-fn ctx #_props]))
 
-     "table" (letfn [(form [content ctx]
-                       [[markdown content (assoc ctx ::unp true)]])]
-               (fn [content argument props ctx]
-                 [table (r/partial form content) hf/sort-fn ctx #_props]))
-
-     "list" (fn [content argument props ctx]
-              [:ul props
-               (->> (:hypercrud.browser/data ctx)
-                    (r/unsequence hf/relation-keyfn)
-                    (map (fn [[relation k]]
-                           ^{:key k} [:li [markdown content (context/body ctx relation)]]))
-                    (doall))])}))
+       "list" (fn [content argument props ctx]
+                [:ul props
+                 (->> (:hypercrud.browser/data ctx)
+                      (r/unsequence hf/relation-keyfn)
+                      (map (fn [[relation k]]
+                             ^{:key k} [:li [markdown content (context/body ctx relation)]]))
+                      (doall))])})))
 
 (defn ^:export img [ref props ctx]
   [:img (merge props {:src @ref})])
