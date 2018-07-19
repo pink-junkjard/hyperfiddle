@@ -3,7 +3,7 @@
     [contrib.css :refer [css]]
     [contrib.pprint]
     [contrib.reactive :as r]
-    [contrib.reagent :refer [fragment from-react-context]]
+    [contrib.reagent :refer [fragment]]
     [contrib.ui]
     [hypercrud.browser.browser-ui :refer [ui-comp]]
     [hypercrud.browser.router :as router]
@@ -14,12 +14,11 @@
     [hyperfiddle.ui :refer [browse field hyper-control link markdown]]))
 
 (def controls (assoc fiddle-src/controls
-                :fiddle/links (from-react-context
-                                (fn [{:keys [ctx props]} value]
-                                  [:div
-                                   [:div [links-fiddle/renderer ctx true]]
-                                   [anchors (:hypercrud.browser/path ctx)]
-                                   [:div.hf-underdoc [markdown (:fiddle/links fiddle-src/underdocs)]]]))))
+                :fiddle/links (fn [ref props ctx]
+                                [:div
+                                 [:div [links-fiddle/renderer ctx true]]
+                                 [anchors (:hypercrud.browser/path ctx) props ctx]
+                                 [:div.hf-underdoc [markdown (:fiddle/links fiddle-src/underdocs)]]])))
 
 (defn docs-embed [attrs ctx-real class & {:keys [embed-mode]}]
   (let [ctx-real (dissoc ctx-real :user-renderer)           ; this needs to not escape this level; inline links can't ever get it
@@ -38,7 +37,7 @@
               hyperfiddle.ui.hacks/pull-soup->tree
               (contrib.pprint/pprint-str 40))]
     [contrib.ui/code s #() {:read-only true
-                            :class class #_ "Class ends up not on the codemirror, todo"}]))
+                            :class class #_"Class ends up not on the codemirror, todo"}]))
 
 ; This is in source control because all hyperblogs want it.
 ; But, they also want to tweak it surely. Can we store this with the fiddle ontology?

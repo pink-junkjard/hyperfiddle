@@ -2,7 +2,6 @@
   (:require [clojure.set :as set]
             [contrib.datomic-tx :as tx]
             [contrib.reactive :as r]
-            [contrib.reagent :refer [from-react-context with-react-context]]
             [hypercrud.browser.context :as context]
             [hyperfiddle.data :as data]
             [hyperfiddle.ui :refer [field hyper-control markdown]]))
@@ -55,12 +54,9 @@
               [true true]
               (user-with! tx))))]
   (defn- build-valueType-and-cardinality-renderer [special-attrs-state]
-    (from-react-context
-      (fn [{:keys [ctx props]} value]
-        ; rebind with updated context
-        [with-react-context {:ctx (assoc ctx :user-with! (r/partial user-with! special-attrs-state ctx))
-                             :props props}
-         [(hyper-control ctx) value]]))))
+    (fn [ref props ctx]
+      (let [ctx (assoc ctx :user-with! (r/partial user-with! special-attrs-state ctx))]
+        [hyper-control props ctx]))))
 
 (letfn [(user-with!' [special-attrs-state ctx tx]
           (let [entity @(get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
@@ -81,35 +77,34 @@
               [true true]
               ((:user-with! ctx) tx))))]
   (defn- build-ident-renderer [special-attrs-state]
-    (from-react-context
-      (fn [{:keys [ctx props]} value]
-        ; rebind with updated context
-        [with-react-context {:ctx (assoc ctx :user-with! (r/partial user-with!' special-attrs-state ctx))
-                             :props props}
-         [(hyper-control ctx) value]]))))
+    (fn [ref props ctx]
+      (let [ctx (assoc ctx :user-with! (r/partial user-with!' special-attrs-state ctx))]
+        [hyper-control props ctx]))))
 
 (defn renderer [ctx class]
   (let [special-attrs-state (r/atom nil)
         reactive-merge #(merge-in-tx % @special-attrs-state ctx)
         controls {:db/cardinality (build-valueType-and-cardinality-renderer special-attrs-state)
                   :db/valueType (build-valueType-and-cardinality-renderer special-attrs-state)
-                  :db/ident (build-ident-renderer special-attrs-state)}]
+                  :db/ident (build-ident-renderer special-attrs-state)}
+        field-for-ident (fn [ident ctx]
+                          (let [read-only @(r/fmap (r/partial read-only? ident) (:hypercrud.browser/result ctx))]
+                            (field [0 ident] ctx (controls ident) {:read-only read-only})))]
     (fn [ctx class]
       (let [ctx (-> ctx
                     (dissoc :hypercrud.browser/data :hypercrud.browser/data-cardinality :hypercrud.browser/path)
                     (update :hypercrud.browser/result (partial r/fmap reactive-merge))
-                    (context/focus [:body]))
-            result @(:hypercrud.browser/result ctx)]
+                    (context/focus [:body]))]
         (into
           ^{:key (data/relation-keyfn @(:hypercrud.browser/data ctx))}
           [:div {:class class}
            [markdown "See [Datomic schema docs](https://docs.datomic.com/on-prem/schema.html)."]
-           (let [k :db/ident] (field [0 k] ctx (controls k) {:read-only (read-only? k result)}))
-           (let [k :db/valueType] (field [0 k] ctx (controls k) {:read-only (read-only? k result)}))
-           (let [k :db/cardinality] (field [0 k] ctx (controls k) {:read-only (read-only? k result)}))
-           (let [k :db/doc] (field [0 k] ctx (controls k) {:read-only (read-only? k result)}))
-           (let [k :db/unique] (field [0 k] ctx (controls k) {:read-only (read-only? k result)}))
+           [field-for-ident :db/ident ctx]
+           [field-for-ident :db/valueType ctx]
+           [field-for-ident :db/cardinality ctx]
+           [field-for-ident :db/doc ctx]
+           [field-for-ident :db/unique ctx]
            [markdown "!block[Careful: below is not validated, don't stage invalid schema]{.alert .alert-warning style=\"margin-bottom: 0\"}"]
-           (let [k :db/isComponent] (field [0 k] ctx (controls k) {:read-only (read-only? k result)}))
-           (let [k :db/fulltext] (field [0 k] ctx (controls k) {:read-only (read-only? k result)}))
+           [field-for-ident :db/isComponent ctx]
+           [field-for-ident :db/fulltext ctx]
            ])))))

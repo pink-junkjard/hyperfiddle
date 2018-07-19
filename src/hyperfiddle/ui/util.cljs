@@ -3,12 +3,7 @@
     [cats.core :refer [>>=]]
     [cats.monad.either :as either]
     [contrib.eval :as eval]
-    [contrib.reactive :as r]
-    [contrib.reactive-debug :refer [track-cmp]]
-    [contrib.string :refer [blank->nil]]
-    [contrib.try :refer [try-either]]
-    [contrib.ui.safe-render :refer [user-portal]]
-    [hypercrud.ui.error :as ui-error]))
+    [contrib.try :refer [try-either]]))
 
 
 ; defer eval until render cycle inside userportal
@@ -25,8 +20,3 @@
           (throw e))
         (fn [f]
           (into [f] args))))))
-
-(defn safe-reagent-f [with-error f & args]
-  ^{:key (hash f)}
-  [user-portal with-error
-   (into [f] args)])

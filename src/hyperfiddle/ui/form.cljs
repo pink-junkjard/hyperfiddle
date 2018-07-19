@@ -2,7 +2,7 @@
   (:require
     [contrib.css :refer [css]]
     [contrib.reactive :as r]
-    [contrib.reagent :refer [fragment from-react-context with-react-context]]
+    [contrib.reagent :refer [fragment]]
     [contrib.ui.input :refer [keyword-input* edn-input*]]
     [contrib.ui.tooltip :refer [tooltip-thick]]
     [hypercrud.browser.context :as context]
@@ -26,57 +26,44 @@
     (when-not (shadow-link? ctx)                            ; this hack for sys links editor is quite the PITA
       (connection-color ctx))))
 
+; todo pave me
 (defn ui-block-border-wrap [ctx class & children]
   [:div {:class class :style {:border-color (border-color ctx)}}
    (apply fragment children)])
 
-(def magic-new-head
-  (from-react-context
-    (fn [{:keys [ctx props]} field]
-      (let [#_#_read-only (r/fmap (comp not controls/writable-entity?) (context/entity ctx)) ;-- don't check this, '* always has a dbid and is writable
-            state (r/cursor (::state ctx) [::magic-new-a])]
-        ;(println (str/format "magic-new-head: %s , %s , %s" @state (pr-str @entity)))
-        [keyword-input* @state (r/partial reset! state)
-         (merge props {:placeholder ":task/title"})]))))
+(defn magic-new-head [props ctx]
+  (let [#_#_read-only (r/fmap (comp not controls/writable-entity?) (context/entity ctx)) ;-- don't check this, '* always has a dbid and is writable
+        state (r/cursor (::state ctx) [::magic-new-a])]
+    ;(println (str/format "magic-new-head: %s , %s , %s" @state (pr-str @entity)))
+    [keyword-input* @state (r/partial reset! state)
+     (merge props {:placeholder ":task/title"})]))
 
 
 (letfn [(change! [ctx state v]
           ((:user-with! ctx) [[:db/add @(r/fmap :db/id (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])) @state v]]))]
-  (def magic-new-body
-    (from-react-context
-      (fn [{:keys [ctx props]} value]
-        (let [read-only (r/fmap (comp not controls/writable-entity?) (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))
-              state (r/cursor (::state ctx) [::magic-new-a])]
-          ;(println (str/format "magic-new-body: %s , %s , %s" @state @read-only (pr-str @entity)))
-          ; Uncontrolled widget on purpose i think
-          ; Cardinality many is not needed, because as soon as we assoc one value,
-          ; we dispatch through a proper typed control
-          [edn-input* nil (r/partial change! ctx state)
-           (merge props {:read-only (let [_ [@state @read-only]] ; force reactions
-                                      (or (nil? @state) @read-only))
-                         :placeholder (pr-str "mow the lawn")})])))))
+  (defn magic-new-body [props ctx]
+    (let [read-only (r/fmap (comp not controls/writable-entity?) (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))
+          state (r/cursor (::state ctx) [::magic-new-a])]
+      ;(println (str/format "magic-new-body: %s , %s , %s" @state @read-only (pr-str @entity)))
+      ; Uncontrolled widget on purpose i think
+      ; Cardinality many is not needed, because as soon as we assoc one value,
+      ; we dispatch through a proper typed control
+      [edn-input* nil (r/partial change! ctx state)
+       (merge props {:read-only (let [_ [@state @read-only]] ; force reactions
+                                  (or (nil? @state) @read-only))
+                     :placeholder (pr-str "mow the lawn")})])))
 
-(def label
-  (from-react-context
-    (fn [{:keys [ctx props]} field]
-      (let [help-md (semantic-docstring ctx)]
-        [tooltip-thick (if help-md
-                         [:div.docstring [contrib.ui/markdown help-md]])
-         [:label props (::field/label field) (if help-md [:sup "†"])]]))))
-
-(defn- head [hyper-control ctx props]
-  (let [field (some-> (:hypercrud.browser/field ctx) deref)] ; todo unbreak reactivity
-    [with-react-context {:ctx ctx :props props}
-     [(or (:label-fn props) (hyper-control ctx)) field]]))
-
-(defn- body [hyper-control ctx ?f props]
-  (let [data @(:hypercrud.browser/data ctx)]                ; todo why consciously break reactivity
-    [with-react-context {:ctx ctx :props props}
-     ; todo unsafe execution of user code: control
-     [(or ?f (hyper-control ctx)) data]]))
+(defn label [props ctx]
+  (when-let [label (some->> (:hypercrud.browser/field ctx)
+                            (r/fmap ::field/label)
+                            deref)]
+    (let [help-md (semantic-docstring ctx)]
+      [tooltip-thick (if help-md
+                       [:div.docstring [contrib.ui/markdown help-md]])
+       [:label props label (if help-md [:sup "†"])]])))
 
 (defn form-field "Form fields are label AND value. Table fields are label OR value."
-  [hyper-control relative-path ctx ?f props]                ; fiddle-src wants to fallback by passing nil here explicitly
+  [hyper-control relative-path ctx ?f props]                ; ?f :: (ref props ctx) => DOM
   (assert @(:hypercrud.ui/display-mode ctx))
   (let [state (r/atom {::magic-new-a nil})]
     (fn [hyper-control relative-path ctx ?f props]
@@ -88,12 +75,15 @@
         (ui-block-border-wrap
           body-ctx (css "field" (:class props))
           ^{:key :form-head}
-          [head hyper-control (context/focus ctx (cons :head relative-path)) props]
+          [(or (:label-fn props) hyper-control) props (context/focus ctx (cons :head relative-path))]
           ^{:key :form-body}
-          [:div [body hyper-control body-ctx ?f props]])))))
+          [:div
+           (if ?f
+             [?f (:hypercrud.browser/data body-ctx) props body-ctx]
+             [hyper-control props body-ctx])])))))
 
 (defn table-field "Form fields are label AND value. Table fields are label OR value."
-  [hyper-control relative-path ctx ?f props]
+  [hyper-control relative-path ctx ?f props]                ; ?f :: (ref props ctx) => DOM
   (let [head-or-body (last (:hypercrud.browser/path ctx))   ; this is ugly and not uniform with form-field
         ctx (context/focus ctx relative-path)
         props (update props :class css (hyperfiddle.ui/semantic-css ctx))]
@@ -104,7 +94,9 @@
                   :style {:background-color (border-color ctx)}
                   :on-click (r/partial sort/toggle-sort! relative-path ctx)}
              ; Use f as the label control also, because there is hypermedia up there
-             [head hyper-control ctx props]]
+             [(or (:label-fn props) hyper-control) props ctx]]
       :body [:td {:class (css "field" (:class props) "truncate")
                   :style {:border-color (when (:hypercrud.browser/source-symbol ctx) (border-color ctx))}}
-             [body hyper-control ctx ?f props]])))
+             (if ?f
+               [?f (:hypercrud.browser/data ctx) props ctx]
+               [hyper-control props ctx])])))

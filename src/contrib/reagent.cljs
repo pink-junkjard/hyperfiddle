@@ -38,6 +38,3 @@
                        (let [context (goog.object/get (.-context (reagent/current-component)) "cljs-context")]
                          (into [f context] args)))
      }))
-
-;(defn inject-context [f context & args]
-;  [with-react-context context (into [f] args)])

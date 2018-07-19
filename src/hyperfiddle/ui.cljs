@@ -6,7 +6,7 @@
     [contrib.css :refer [css css-slugify]]
     [contrib.data :refer [take-to unwrap]]
     [contrib.reactive :as r]
-    [contrib.reagent :refer [fragment from-react-context with-react-context]]
+    [contrib.reagent :refer [fragment]]
     [contrib.reactive-debug :refer [track-cmp]]
     [contrib.string :refer [memoized-safe-read-edn-string blank->nil or-str]]
     [contrib.ui]
@@ -29,17 +29,19 @@
     [hyperfiddle.ui.form :as form]
     [hyperfiddle.ui.select :refer [select]]
     [hyperfiddle.ui.sort :as sort]
-    [hyperfiddle.ui.util :refer [safe-reagent-f eval-renderer-comp]]))
+    [hyperfiddle.ui.util :refer [eval-renderer-comp]]))
 
 
-(def attr-renderer
-  (from-react-context
-    (fn [{:keys [ctx props]} value]
-      (let [attr (some-> ctx :hypercrud.browser/fat-attribute deref)
-            renderer (blank->nil (:attribute/renderer attr))]
-        (safe-reagent-f (ui-error/error-comp ctx) eval-renderer-comp nil renderer value)))))
+(defn attr-renderer [ref props ctx]
+  (let [renderer (some->> ctx :hypercrud.browser/fat-attribute
+                          (r/fmap :attribute/renderer)
+                          (r/fmap blank->nil)
+                          deref)]
+    ^{:key (hash renderer)}
+    [user-portal (ui-error/error-comp ctx)
+     [eval-renderer-comp nil renderer ref props ctx]]))
 
-(defn ^:export control "this is a function, which returns component" [ctx]
+(defn ^:export control "this is a function, which returns component" [ctx] ; returns Func[(ref, props, ctx) => DOM]
   (let [attr (some-> ctx :hypercrud.browser/fat-attribute deref)
         renderer (blank->nil (:attribute/renderer attr))]
     (cond
@@ -61,25 +63,23 @@
 
 (declare result)
 
-(def hyper-control'
-  (from-react-context
-    (fn [{:keys [ctx props]} value]
-      (let [options? (-> (->> (r/track links-here ctx)
-                              (r/fmap (r/partial map :link/rel))
-                              deref
-                              (into #{}))
-                         (contains? :options))
-            child-fields? (not (some->> (:hypercrud.browser/fields ctx) (r/fmap nil?) deref))]
-        (fragment (when (and (not options?) (not child-fields?))
-                    [(control ctx) value])
-                  (when (and child-fields? (context/attribute-segment? (last (:hypercrud.browser/path ctx)))) ; ignore relation and fe fields
-                    [result ctx])
-                  [anchors (:hypercrud.browser/path ctx) (when options? link/options-processor)] ; Order sensitive, here be floats
-                  (when options? [select value])
-                  [iframes (:hypercrud.browser/path ctx) (when options? link/options-processor)])))))
+(defn- hyper-control' [props ctx]
+  (let [options? (-> (->> (r/track links-here ctx)
+                          (r/fmap (r/partial map :link/rel))
+                          deref
+                          (into #{}))
+                     (contains? :options))
+        child-fields? (not (some->> (:hypercrud.browser/fields ctx) (r/fmap nil?) deref))]
+    (fragment (when (and (not options?) (not child-fields?))
+                [(control ctx) (:hypercrud.browser/data ctx) props ctx])
+              (when (and child-fields? (context/attribute-segment? (last (:hypercrud.browser/path ctx)))) ; ignore relation and fe fields
+                [result ctx])
+              [anchors (:hypercrud.browser/path ctx) props ctx (when options? link/options-processor)] ; Order sensitive, here be floats
+              (when options? [select props ctx])
+              [iframes (:hypercrud.browser/path ctx) props ctx (when options? link/options-processor)])))
 
 (defn ^:export hyper-control "Handles labels too because we show links there."
-  [ctx]
+  [props ctx]
   {:post [(not (nil? %))]}
   (let [head-or-body (->> (:hypercrud.browser/path ctx)
                           (reverse)
@@ -92,10 +92,10 @@
                      (contains? :options))]
     (match* [head-or-body (last (:hypercrud.browser/path ctx)) options?]
       ;[:head _ true] hyper-select-head
-      [:head '* _] form/magic-new-head
-      [:body '* _] form/magic-new-body
-      [:head _ _] hyper-label
-      [:body _ _] hyper-control')))
+      [:head '* _] [form/magic-new-head props ctx]
+      [:body '* _] [form/magic-new-body props ctx]
+      [:head _ _] [hyper-label props ctx]
+      [:body _ _] [hyper-control' props ctx])))
 
 (defn ^:export semantic-css [ctx]
   ; Include the fiddle level ident css.
@@ -124,12 +124,13 @@
 
 (defn ^:export value "Relation level value renderer. Works in forms and lists but not tables (which need head/body structure).
 User renderers should not be exposed to the reaction."
-  [relative-path ctx ?f & [props]]                          ; Path should be optional, for disambiguation only. Naked is an error
+  ; Path should be optional, for disambiguation only. Naked is an error
+  [relative-path ctx ?f & [props]]                          ; ?f :: (ref, props, ctx) => DOM
   (let [ctx (context/focus ctx relative-path)
-        props (update props :class css (semantic-css ctx))
-        data @(:hypercrud.browser/data ctx)]
-    [with-react-context {:ctx ctx :props props}
-     [(or ?f (hyper-control ctx)) data]]))
+        props (update props :class css (semantic-css ctx))]
+    (if ?f
+      [?f (:hypercrud.browser/data ctx) props ctx]
+      [hyper-control props ctx])))
 
 (defn ^:export link "Relation level link renderer. Works in forms and lists but not tables."
   [rel relative-path ctx ?content & [props]]                ; path should be optional, for disambiguation only. Naked can be hard-linked in markdown?
@@ -150,7 +151,7 @@ User renderers should not be exposed to the reaction."
 
 ; (defmulti field ::layout)
 (defn ^:export field "Works in a form or table context. Draws label and/or value."
-  [relative-path ctx ?f & [props]]
+  [relative-path ctx ?f & [props]]                          ; ?f :: (ref, props, ctx) => DOM
   (let [is-magic-new (= '* (last relative-path))]
     (case (:hyperfiddle.ui/layout ctx)
       :hyperfiddle.ui.layout/table (when-not is-magic-new
@@ -266,9 +267,7 @@ nil. call site must wrap with a Reagent component"
      "f" (fn [content argument props ctx]
            (let [f (unwrap (read-eval-with-bindings content))
                  v (unwrap (memoized-safe-read-edn-string argument))]
-             (if f
-               [with-react-context {:ctx ctx :props props}
-                [f v]])))
+             (when f [f v])))
 
      "browse" (fn [content argument props ctx]
                 (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
@@ -313,7 +312,5 @@ nil. call site must wrap with a Reagent component"
                            ^{:key k} [:li [markdown content (context/body ctx relation)]]))
                     (doall))])}))
 
-(def ^:export img
-  (from-react-context
-    (fn [{:keys [props]} value]
-      [:img (merge props {:src value})])))
+(defn ^:export img [ref props ctx]
+  [:img (merge props {:src @ref})])

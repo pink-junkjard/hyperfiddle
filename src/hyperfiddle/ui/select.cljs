@@ -3,13 +3,11 @@
             [cats.monad.either :as either]
             [contrib.datomic-tx :as tx]
             [contrib.reactive :as r]
-            [contrib.reagent :refer [from-react-context]]
             [contrib.try :refer [try-either]]
             [hypercrud.browser.core :as browser]
             [hypercrud.browser.field :as field]
             [hypercrud.browser.link :as link]
             [hypercrud.ui.error :as ui-error]
-            [hypercrud.browser.context :as context]
             [hyperfiddle.ui.controls :as controls]))
 
 
@@ -82,22 +80,20 @@
                                                             @(:hypercrud.browser/fat-attribute ctx) id)))
       dom-value (fn [value]                                 ; nil, kw or eid
                   (if (nil? value) "" (str (:db/id value))))]
-  (def select
-    (from-react-context
-      (fn [{:keys [ctx props]} value]
-        (let [options-link @(r/track link/rel->link :options ctx)]
-          (either/branch
-            (link/eval-hc-props (:hypercrud/props options-link) ctx)
-            (fn [e] [(ui-error/error-comp ctx) e])
-            (fn [hc-props]
-              (let [entity (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]) ; how can this be loading??
-                    option-props {:disabled (or (boolean (:read-only props))
-                                                @(r/fmap nil? entity) ; no value at all
-                                                (not @(r/fmap controls/writable-entity? entity)))}
-                    props (merge props hc-props {:on-change (r/partial on-change ctx)
-                                                 :value (dom-value value)})
-                    f (r/partial select-anchor-renderer props option-props)]
-                [browser/ui options-link (assoc ctx
-                                           :hypercrud.ui/display-mode always-user
-                                           :user-renderer f)
-                 (:class props)]))))))))
+  (defn select [props ctx]
+    (let [options-link @(r/track link/rel->link :options ctx)]
+      (either/branch
+        (link/eval-hc-props (:hypercrud/props options-link) ctx)
+        (fn [e] [(ui-error/error-comp ctx) e])
+        (fn [hc-props]
+          (let [entity (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]) ; how can this be loading??
+                option-props {:disabled (or (boolean (:read-only props))
+                                            @(r/fmap nil? entity) ; no value at all
+                                            (not @(r/fmap controls/writable-entity? entity)))}
+                props (merge props hc-props {:on-change (r/partial on-change ctx)
+                                             :value @(r/fmap dom-value (:hypercrud.browser/data ctx))})
+                f (r/partial select-anchor-renderer props option-props)]
+            [browser/ui options-link (assoc ctx
+                                       :hypercrud.ui/display-mode always-user
+                                       :user-renderer f)
+             (:class props)]))))))

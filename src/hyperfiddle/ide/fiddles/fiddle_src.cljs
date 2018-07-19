@@ -6,7 +6,7 @@
     [contrib.css :refer [css]]
     [contrib.pprint]
     [contrib.reactive :as r]
-    [contrib.reagent :refer [fragment from-react-context]]
+    [contrib.reagent :refer [fragment]]
     [contrib.ui]
     [contrib.uri :refer [is-uri?]]
     [cuerdas.core :as str]
@@ -74,37 +74,33 @@
    :fiddle/links "See [:fiddle/links examples](http://www.hyperfiddle.net/:docs/:fiddle-links/)."})
 
 (def controls
-  {:fiddle/pull (from-react-context
-                  (fn [{:keys [ctx props]} value]
-                    [:div
-                     [(hyper-control ctx) value]
-                     (fragment [:span.schema "schema: " (schema-links ctx)] [:div.hf-underdoc [markdown (:fiddle/pull underdocs)]])]))
-   :fiddle/query (from-react-context
-                   (fn [{:keys [ctx props]} value]
-                     [:div
-                      [(hyper-control ctx) value]
-                      (fragment [:span.schema "schema: " (schema-links ctx)] [:div.hf-underdoc [markdown (:fiddle/query underdocs)]])]))
-   :fiddle/markdown (from-react-context
-                      (fn [{:keys [ctx props]} value]
-                        [:div
-                         [(hyper-control ctx) value]
-                         [:div.hf-underdoc [markdown (:fiddle/markdown underdocs)]]]))
-   :fiddle/css (from-react-context
-                 (fn [{:keys [ctx props]} value]
+  {:fiddle/pull (fn [ref props ctx]
+                  [:div
+                   [hyper-control props ctx]
+                   [:span.schema "schema: " (schema-links ctx)]
+                   [:div.hf-underdoc [markdown (:fiddle/pull underdocs)]]])
+   :fiddle/query (fn [ref props ctx]
                    [:div
-                    [(hyper-control ctx) value]
-                    [:div.hf-underdoc [markdown (:fiddle/css underdocs)]]]))
-   :fiddle/renderer (from-react-context
-                      (fn [{:keys [ctx props]} value]
-                        [:div
-                         [(hyper-control ctx) value]
-                         [:div.hf-underdoc [markdown (:fiddle/renderer underdocs)]]]))
-   :fiddle/links (from-react-context
-                   (fn [{:keys [ctx props]} value]
-                     [:div
-                      [:div [links-fiddle/renderer ctx]]
-                      [anchors (:hypercrud.browser/path ctx)]
-                      [:div.hf-underdoc [markdown (:fiddle/links underdocs)]]]))
+                    [hyper-control props ctx]
+                    [:span.schema "schema: " (schema-links ctx)]
+                    [:div.hf-underdoc [markdown (:fiddle/query underdocs)]]])
+   :fiddle/markdown (fn [ref props ctx]
+                      [:div
+                       [hyper-control props ctx]
+                       [:div.hf-underdoc [markdown (:fiddle/markdown underdocs)]]])
+   :fiddle/css (fn [ref props ctx]
+                 [:div
+                  [hyper-control props ctx]
+                  [:div.hf-underdoc [markdown (:fiddle/css underdocs)]]])
+   :fiddle/renderer (fn [ref props ctx]
+                      [:div
+                       [hyper-control props ctx]
+                       [:div.hf-underdoc [markdown (:fiddle/renderer underdocs)]]])
+   :fiddle/links (fn [ref props ctx]
+                   [:div
+                    [:div [links-fiddle/renderer ctx]]
+                    [anchors (:hypercrud.browser/path ctx) props ctx]
+                    [:div.hf-underdoc [markdown (:fiddle/links underdocs)]]])
    })
 
 (defn fiddle-src-renderer [ctx class & {:keys [embed-mode]}]

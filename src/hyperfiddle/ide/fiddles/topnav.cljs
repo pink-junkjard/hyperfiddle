@@ -4,7 +4,7 @@
             [contrib.data :refer [kwargs unwrap]]
             [contrib.reactive :as r]
             [contrib.reader :refer [read-edn-string]]
-            [contrib.reagent :refer [fragment from-react-context]]
+            [contrib.reagent :refer [fragment]]
             [contrib.rfc3986 :refer [encode-rfc3986-pchar]]
             [contrib.ednish :refer [encode-ednish]]
             [contrib.ui :refer [radio-option easy-checkbox]]
@@ -120,17 +120,15 @@
         [ui/browse :account [] ctx]
         [:a {:href (foundation/stateless-login-url ctx)} "login"])]]))
 
-(def ^:export qe-picker-control
-  (from-react-context
-    (fn [{:keys [ctx props]} value]
-      (let [options (->> [:query :entity :blank]
-                         (map #(radio-option
-                                 {:label (case % :query "query" :entity "pull" :blank "blank")
-                                  :target %
-                                  :value value
-                                  :change! (r/partial entity-change! ctx)})))]
-        [:span.qe.radio-group props
-         (apply fragment options)]))))
+(defn ^:export qe-picker-control [ref props ctx]
+  (let [options (->> [:query :entity :blank]
+                     (map #(radio-option
+                             {:label (case % :query "query" :entity "pull" :blank "blank")
+                              :target %
+                              :value @ref
+                              :change! (r/partial entity-change! ctx)})))]
+    [:span.qe.radio-group props
+     (apply fragment options)]))
 
 (letfn [(toggle-auto-transact! [ctx selected-uri]
           (runtime/dispatch! (:peer ctx) [:toggle-auto-transact @selected-uri]))]

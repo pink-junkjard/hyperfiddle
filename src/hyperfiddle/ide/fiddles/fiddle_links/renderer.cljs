@@ -1,7 +1,6 @@
 (ns hyperfiddle.ide.fiddles.fiddle-links.renderer
   (:require
     [contrib.reactive :as r]
-    [contrib.reagent :refer [from-react-context with-react-context]]
     [hypercrud.browser.system-link :refer [system-link?]]
     [hyperfiddle.data :refer [sort-fn]]
     [hyperfiddle.ui :refer [hyper-control field table]]))
@@ -17,26 +16,19 @@
           shadow? @(r/fmap :hypercrud/sys? entity)]
       (or sys? (and shadow? (not (editable-if-shadowed? (:hypercrud.browser/attribute ctx))))))))
 
-(def read-only-cell
-  (from-react-context
-    (fn [{:keys [ctx props]} value]
-      ; Need to delay until we have the value ctx to compute this, which means its a value renderer not a field prop
-      [with-react-context {:ctx ctx
-                           ; rebind updated props
-                           :props (assoc props :read-only (read-only? ctx))}
-       [(hyper-control ctx) value]])))
+(defn read-only-cell [ref props ctx]
+  ; Need to delay until we have the value ctx to compute this, which means its a value renderer not a field prop
+  (let [props (assoc props :read-only (read-only? ctx))]
+    [hyper-control props ctx]))
 
 
 (letfn [(remove-children [field] (dissoc field :hypercrud.browser.field/children))]
-  (def hf-live-link-fiddle
-    (from-react-context
-      (fn [{:keys [ctx props]} value]
-        (let [ctx (-> ctx
-                      (update :hypercrud.browser/field #(r/fmap remove-children %))
-                      (assoc :hypercrud.browser/fields (r/track identity nil)))]
-          [with-react-context {:ctx ctx
-                               :props (assoc props :read-only (read-only? ctx))}
-           [(hyper-control ctx) value]])))))
+  (defn hf-live-link-fiddle [ref props ctx]
+    (let [ctx (-> ctx
+                  (update :hypercrud.browser/field #(r/fmap remove-children %))
+                  (assoc :hypercrud.browser/fields (r/track identity nil)))
+          props (assoc props :read-only (read-only? ctx))]
+      [hyper-control props ctx])))
 
 (defn renderer [ctx & [embed-mode]]
   [table
