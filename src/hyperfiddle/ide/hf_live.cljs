@@ -3,22 +3,12 @@
     [contrib.css :refer [css]]
     [contrib.pprint]
     [contrib.reactive :as r]
-    [contrib.reagent :refer [fragment]]
     [contrib.ui]
     [hypercrud.browser.browser-ui :refer [ui-comp]]
     [hypercrud.browser.router :as router]
-    [hypercrud.ui.control.link-controls :refer [anchors]]
-    [hyperfiddle.ide.fiddles.fiddle-links.renderer :as links-fiddle]
     [hyperfiddle.ide.fiddles.fiddle-src :as fiddle-src]
     [hyperfiddle.ide.fiddles.topnav :refer [shadow-fiddle]]
-    [hyperfiddle.ui :refer [browse field hyper-control link markdown]]))
-
-(def controls (assoc fiddle-src/controls
-                :fiddle/links (fn [ref props ctx]
-                                [:div
-                                 [:div [links-fiddle/renderer ctx true]]
-                                 [anchors (:hypercrud.browser/path ctx) props ctx]
-                                 [:div.hf-underdoc [markdown (:fiddle/links fiddle-src/underdocs)]]])))
+    [hyperfiddle.ui :refer [field]]))
 
 (defn docs-embed [attrs ctx-real class & {:keys [embed-mode]}]
   (let [ctx-real (dissoc ctx-real :user-renderer)           ; this needs to not escape this level; inline links can't ever get it
@@ -29,7 +19,7 @@
         [:div {:class class}
          #_[:h5 (str @(r/cursor (:hypercrud.browser/result ctx) [:fiddle/ident])) " source"]]
         (for [k attrs]
-          (field [0 k] ctx (controls k)))))))
+          (field [0 k] ctx (fiddle-src/controls k) {:embed-mode true}))))))
 
 (defn result-edn [attrs {:keys [hypercrud.browser/result]} class]
   (let [s (-> @result
