@@ -1,9 +1,7 @@
 (ns hyperfiddle.eval
   (:require
     [cats.core :refer [fmap]]
-    [cats.monad.either :as either]
-    [contrib.eval :as eval]
-    [contrib.try :refer [try-either]]))
+    [contrib.eval :as eval]))
 
 
 (let [memoized-eval (memoize eval/safe-eval-string)]
