@@ -269,8 +269,8 @@ nil. call site must wrap with a Reagent component"
 
        "f" (fn [content argument props ctx]
              (let [f (unwrap (memoized-safe-eval content))
-                   v (unwrap (memoized-safe-read-edn-string argument))]
-               (when f [f v])))
+                   val (unwrap (memoized-safe-read-edn-string argument))]
+               (when f [f (r/track identity val) props ctx])))
 
        "browse" (fn [content argument props ctx]
                   (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
