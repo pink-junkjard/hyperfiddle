@@ -74,6 +74,10 @@
   (if-let [reactSlickSlider (aget (global!) "reactSlickSlider")]
     (reagent/adapt-react-class reactSlickSlider)))
 
+(def ^:export ReactGifPlayer
+  (if-let [ReactGifPlayer (aget (global!) "ReactGifPlayer")]
+    (reagent/adapt-react-class ReactGifPlayer)))
+
 (def ^:export markdown (remark/remark!))
 
 (defn radio-option [props]
