@@ -16,7 +16,6 @@
              :hypercrud.browser/links (r/atom nil)
              :hypercrud.browser/request (r/atom nil)
              :hypercrud.browser/result (r/atom [])
-             :hypercrud.browser/schema (r/atom nil)
              :hypercrud.browser/schemas (r/atom nil)}]
     ; just test it renderers something
     #_(is (not (nil? (test-renderer-str (:fiddle/renderer (schema/schema "$")) ctx))))))
@@ -29,7 +28,6 @@
              :hypercrud.browser/links (r/atom nil)
              :hypercrud.browser/request (r/atom nil)
              :hypercrud.browser/result (r/atom nil)
-             :hypercrud.browser/schema (r/atom nil)
              :hypercrud.browser/schemas (r/atom nil)}]
     ; just test it renderers something
     ; Working, but missing a find-element etc mock. We need actual context mocks.

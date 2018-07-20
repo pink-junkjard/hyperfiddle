@@ -27,7 +27,6 @@
           :hypercrud.browser/request
           :hypercrud.browser/result
           :hypercrud.browser/source-symbol
-          :hypercrud.browser/schema
           :hypercrud.browser/schemas))
 
 (defn source-mode [ctx]
@@ -160,7 +159,7 @@
 
             (attribute-segment? path-segment)
             (let [field (r/fmap (r/partial find-field path-segment) (:hypercrud.browser/fields ctx))
-                  fat-attribute (->> (r/cursor (:hypercrud.browser/schema ctx) [path-segment])
+                  fat-attribute (->> (r/cursor (:hypercrud.browser/schemas ctx) [(str (:hypercrud.browser/source-symbol ctx)) path-segment])
                                      (r/fmap (r/partial default {:db/ident path-segment})))]
               (cond-> (-> ctx
                           (set-parent)
@@ -184,7 +183,6 @@
                           (update :hypercrud.browser/path conj path-segment)
                           (assoc :hypercrud.browser/field field
                                  :hypercrud.browser/fields (r/fmap ::field/children field)
-                                 :hypercrud.browser/schema (r/cursor (:hypercrud.browser/schemas ctx) [dbname])
                                  :hypercrud.browser/source-symbol source-symbol
                                  :uri uri                   ; todo why cant internals get the uri from source-symbol at the last second
                                  :user-with! (r/partial user-with (:peer ctx) (:hypercrud.browser/invert-route ctx) (:branch ctx) uri)))
