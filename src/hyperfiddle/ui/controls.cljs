@@ -15,12 +15,15 @@
     ))
 
 
+(defn entity-change->tx [ctx value]
+  (let [value (empty->nil value)                            ; safe for non-strings
+        entity @(get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
+        attribute @(:hypercrud.browser/fat-attribute ctx)]
+    (tx/update-entity-attr entity attribute value)))
+
 (defn entity-change! [ctx value]
   ; Sometimes value is partialed, sometimes not, depends on the widget's change! interface which is inconsistent
-  (let [value (empty->nil value) #_"safe for non-strings"]
-    ((:user-with! ctx) (tx/update-entity-attr @(get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
-                                              @(:hypercrud.browser/fat-attribute ctx)
-                                              value))))
+  ((:user-with ctx) (entity-change->tx ctx value)))
 
 (defn writable-entity? [entity-val]
   ; If the db/id was not pulled, we cannot write through to the entity

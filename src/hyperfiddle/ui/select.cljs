@@ -75,10 +75,7 @@
 
 (def always-user (atom :hypercrud.browser.browser-ui/user))
 
-(let [on-change (fn [ctx id]                                ;reconstruct the typed value
-                  ((:user-with! ctx) (tx/update-entity-attr @(get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
-                                                            @(:hypercrud.browser/fat-attribute ctx) id)))
-      dom-value (fn [value]                                 ; nil, kw or eid
+(let [dom-value (fn [value]                                 ; nil, kw or eid
                   (if (nil? value) "" (str (:db/id value))))]
   (defn select [props ctx]
     (let [options-link @(r/track link/rel->link :options ctx)]
@@ -90,8 +87,9 @@
                 option-props {:disabled (or (boolean (:read-only props))
                                             @(r/fmap nil? entity) ; no value at all
                                             (not @(r/fmap controls/writable-entity? entity)))}
-                props (merge props hc-props {:on-change (r/partial on-change ctx)
-                                             :value @(r/fmap dom-value (:hypercrud.browser/data ctx))})
+                props (-> {:on-change (r/partial controls/entity-change! ctx)}
+                          (merge props hc-props)
+                          (assoc :value @(r/fmap dom-value (:hypercrud.browser/data ctx))))
                 f (r/partial select-anchor-renderer props option-props)]
             [browser/ui options-link (assoc ctx
                                        :hypercrud.ui/display-mode always-user
