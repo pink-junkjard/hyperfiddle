@@ -76,35 +76,35 @@
 (def controls
   {:fiddle/pull (fn [ref props ctx]
                   [:div
-                   [hyper-control props ctx]
+                   [hyper-control (dissoc props :embed-mode) ctx]
                    [:span.schema "schema: " (schema-links ctx)]
                    (when-not (:embed-mode props)
                      [:div.hf-underdoc [markdown (:fiddle/pull underdocs)]])])
    :fiddle/query (fn [ref props ctx]
                    [:div
-                    [hyper-control props ctx]
+                    [hyper-control (dissoc props :embed-mode) ctx]
                     [:span.schema "schema: " (schema-links ctx)]
                     (when-not (:embed-mode props)
                       [:div.hf-underdoc [markdown (:fiddle/query underdocs)]])])
    :fiddle/markdown (fn [ref props ctx]
                       [:div
-                       [hyper-control props ctx]
+                       [hyper-control (dissoc props :embed-mode) ctx]
                        (when-not (:embed-mode props)
                          [:div.hf-underdoc [markdown (:fiddle/markdown underdocs)]])])
    :fiddle/css (fn [ref props ctx]
                  [:div
-                  [hyper-control props ctx]
+                  [hyper-control (dissoc props :embed-mode) ctx]
                   (when-not (:embed-mode props)
                     [:div.hf-underdoc [markdown (:fiddle/css underdocs)]])])
    :fiddle/renderer (fn [ref props ctx]
                       [:div
-                       [hyper-control props ctx]
+                       [hyper-control (dissoc props :embed-mode) ctx]
                        (when-not (:embed-mode props)
                          [:div.hf-underdoc [markdown (:fiddle/renderer underdocs)]])])
    :fiddle/links (fn [ref props ctx]
                    [:div
                     [:div [links-fiddle/renderer ctx (:embed-mode props)]]
-                    [anchors (:hypercrud.browser/path ctx) props ctx]
+                    [anchors (:hypercrud.browser/path ctx) (dissoc props :embed-mode) ctx]
                     (when-not (:embed-mode props)
                       [:div.hf-underdoc [markdown (:fiddle/links underdocs)]])])
    })

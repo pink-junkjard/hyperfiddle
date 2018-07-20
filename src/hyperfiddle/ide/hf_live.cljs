@@ -18,8 +18,10 @@
       (into
         [:div {:class class}
          #_[:h5 (str @(r/cursor (:hypercrud.browser/result ctx) [:fiddle/ident])) " source"]]
-        (for [k attrs]
-          (field [0 k] ctx (fiddle-src/controls k) {:embed-mode true}))))))
+        (for [k attrs
+              :let [?f (fiddle-src/controls k)
+                    props (when ?f {:embed-mode true})]]
+          (field [0 k] ctx ?f props))))))
 
 (defn result-edn [attrs {:keys [hypercrud.browser/result]} class]
   (let [s (-> @result
