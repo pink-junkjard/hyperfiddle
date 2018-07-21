@@ -17,8 +17,8 @@ Hyperfiddle makes data-sync invisible with immutability:
 * Fiddle graph captures application essense (API, UI, database) as one concern – no frontend/backend dichotemy
 * Optimizing I/O runtime – data sync reduces to a graph partitioning problem
 * Managed data sync – Userland is not concerned with effects, async, errors or latency
-* Transport layer independence – swap transport stratgies (e.g. REST, websocket) without changing your app
-* Dynamic transport stratigies can automatically balance caching and latency
+* Transport layer independence – swap transport strategies (e.g. REST, websocket) without changing your app
+* Dynamic transport strategies can automatically balance caching and latency
 * Platform independence – run on any platform (e.g. browser, Node, mobile) without changing your app
 * Data-driven everything: application as a value
 
