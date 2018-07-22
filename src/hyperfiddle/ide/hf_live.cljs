@@ -23,12 +23,25 @@
                     props (when ?f {:embed-mode true})]]
           (field [0 k] ctx ?f props))))))
 
-(defn result-edn [attrs {:keys [hypercrud.browser/result]} class]
+(defn result-edn [attrs {:keys [hypercrud.browser/result
+                                hypercrud.browser/fiddle] :as ctx} class]
   (let [s (-> @result
               (as-> $ (if (seq attrs) (select-keys $ attrs) $))
               hyperfiddle.ui.hacks/pull-soup->tree
-              (contrib.pprint/pprint-str 40))]
-    [contrib.ui/code s #() {:read-only true
+              (contrib.pprint/pprint-str 50))
+
+        links (-> (:fiddle/links @fiddle)
+                  (->> (map (fn [{:keys [:link/rel :link/path]}]
+                              (let [path (contrib.data/unwrap (contrib.string/memoized-safe-read-edn-string (str "[" path "]")))]
+                                (str
+                                  "; " rel " " path "\n"
+                                  (-> (hyperfiddle.data/browse rel path ctx)
+                                      (contrib.data/unwrap)
+                                      hyperfiddle.ui.hacks/pull-soup->tree
+                                      (contrib.pprint/pprint-str 50))))))
+                       (interpose "\n\n")))]
+
+    [contrib.ui/code (apply str s "\n\n" links) #() {:read-only true
                             :class class #_"Class ends up not on the codemirror, todo"}]))
 
 ; This is in source control because all hyperblogs want it.
