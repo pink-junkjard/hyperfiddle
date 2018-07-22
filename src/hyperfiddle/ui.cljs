@@ -224,12 +224,14 @@ nil. call site must wrap with a Reagent component"
 
         links (-> (:fiddle/links @fiddle)
                   (->> (mapcat (fn [{:keys [:link/rel :link/path]}]
-                                 [[:h4 (str rel " " path)]
-                                  (render-edn
-                                    (-> (hyperfiddle.data/browse rel (contrib.data/unwrap (contrib.string/memoized-safe-read-edn-string (str "[" path "]"))) ctx)
-                                        (contrib.data/unwrap)
-                                        hyperfiddle.ui.hacks/pull-soup->tree
-                                        (contrib.pprint/pprint-str 160)))]))))]
+                                 (let [path (unwrap (memoized-safe-read-edn-string (str "[" path "]")))
+                                       ctx (unwrap (hyperfiddle.data/browse rel path ctx))
+                                       [_ args] (:route ctx)]
+                                   [[:h5 (->> [rel path (seq args)] (map pr-str) (interpose " ") (apply str))]
+                                    (render-edn
+                                      (-> @(:hypercrud.browser/result ctx)
+                                          hyperfiddle.ui.hacks/pull-soup->tree
+                                          (contrib.pprint/pprint-str 160)))])))))]
     [:div {:class class}
      [:h3 (some-> @fiddle :fiddle/ident name)]
      (render-edn s)

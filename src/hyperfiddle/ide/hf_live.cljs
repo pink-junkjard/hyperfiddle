@@ -1,5 +1,6 @@
 (ns hyperfiddle.ide.hf-live
   (:require
+    [cats.core :refer [fmap]]
     [contrib.css :refer [css]]
     [contrib.pprint]
     [contrib.reactive :as r]
@@ -36,7 +37,7 @@
                                 (str
                                   "; " rel " " path "\n"
                                   (-> (hyperfiddle.data/browse rel path ctx)
-                                      (contrib.data/unwrap)
+                                      (->> (fmap :hypercrud.browser/result) (fmap deref) contrib.data/unwrap)
                                       hyperfiddle.ui.hacks/pull-soup->tree
                                       (contrib.pprint/pprint-str 50))))))
                        (interpose "\n\n")))]

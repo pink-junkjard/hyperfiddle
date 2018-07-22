@@ -41,12 +41,11 @@
         ; this result can be directly inserted as children in a reagemnt component, CANNOT be a vector
         seq)))
 
-(defn ^:export browse [rel relative-path ctx]
+(defn ^:export browse "Hydrate a context, returns Either[Loading|Error,ctx]"
+  [rel relative-path ctx]
   ; context is not set for this call
   (let [ctx (context/focus ctx relative-path)]
-    (->> (base/data-from-link @(r/track link/rel->link rel ctx) ctx)
-         (fmap :hypercrud.browser/result)
-         (fmap deref))))
+    (base/data-from-link @(r/track link/rel->link rel ctx) ctx)))
 
 (defn sort-fn [sort-col relations-val]
   (let [[path direction] @sort-col]
