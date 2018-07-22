@@ -17,7 +17,7 @@
     [hypercrud.ui.error :as ui-error]
     [hyperfiddle.ide.fiddles.fiddle-src :as fiddle-src]
     [hyperfiddle.ide.fiddles.topnav :as topnav]
-    [hyperfiddle.ui :refer [fiddle-xray]]
+    [hyperfiddle.ui :refer [fiddle-xray fiddle-api]]
     [hyperfiddle.ui.util :as util]))
 
 
@@ -84,4 +84,5 @@
                      ; Userland will never see this param as it isn't specified in the wrapped render expr.
                      @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/markdown]) ; for good luck
                      ]))
-         ::xray [fiddle-xray ctx class])))])
+         ::xray [fiddle-xray ctx class]
+         ::api [fiddle-api ctx class])))])

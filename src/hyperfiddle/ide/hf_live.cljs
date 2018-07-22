@@ -26,7 +26,7 @@
 (defn result-edn [attrs {:keys [hypercrud.browser/result
                                 hypercrud.browser/fiddle] :as ctx} class]
   (let [s (-> @result
-              (as-> $ (if (seq attrs) (select-keys $ attrs) $))
+              (as-> $ (if (seq attrs) (select-keys $ attrs) $)) ; omit elided fiddle attrs
               hyperfiddle.ui.hacks/pull-soup->tree
               (contrib.pprint/pprint-str 50))
 

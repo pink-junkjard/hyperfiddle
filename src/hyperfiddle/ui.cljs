@@ -215,6 +215,26 @@ nil. call site must wrap with a Reagent component"
      [:h3 (some-> @fiddle :fiddle/ident name)]
      (result ctx)]))
 
+(defn ^:export fiddle-api [{:keys [hypercrud.browser/result
+                                   hypercrud.browser/fiddle] :as ctx} class]
+  (let [render-edn (fn [edn-str] [contrib.ui/code edn-str #() {:read-only true}])
+        s (-> @result
+              hyperfiddle.ui.hacks/pull-soup->tree
+              (contrib.pprint/pprint-str 160))
+
+        links (-> (:fiddle/links @fiddle)
+                  (->> (mapcat (fn [{:keys [:link/rel :link/path]}]
+                                 [[:h4 (str rel " " path)]
+                                  (render-edn
+                                    (-> (hyperfiddle.data/browse rel (contrib.data/unwrap (contrib.string/memoized-safe-read-edn-string (str "[" path "]"))) ctx)
+                                        (contrib.data/unwrap)
+                                        hyperfiddle.ui.hacks/pull-soup->tree
+                                        (contrib.pprint/pprint-str 160)))]))))]
+    [:div {:class class}
+     [:h3 (some-> @fiddle :fiddle/ident name)]
+     (render-edn s)
+     (apply fragment links)]))
+
 (let [memoized-safe-eval (memoize eval/safe-eval-string)]
   (def ^:export markdown
     (remark/remark!

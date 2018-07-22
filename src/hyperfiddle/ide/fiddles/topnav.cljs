@@ -80,6 +80,8 @@
             change! #(runtime/dispatch! (:peer ctx) (actions/set-display-mode %))
             value (if src-mode :src display-mode)]
         [:span.radio-group
+         (radio-option {:label "api" :tooltip "What the API client sees" :target :hypercrud.browser.browser-ui/api :change! change! :value value
+                        :disabled (or src-mode no-target-fiddle)})
          (radio-option {:label "data" :tooltip "Ignore :fiddle/renderer" :target :hypercrud.browser.browser-ui/xray :change! change! :value value
                         :disabled (or src-mode no-target-fiddle)})
          (radio-option {:label "view" :tooltip "Use :fiddle/renderer" :target :hypercrud.browser.browser-ui/user :value value :change! change!
