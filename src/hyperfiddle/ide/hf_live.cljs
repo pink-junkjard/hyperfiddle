@@ -51,7 +51,7 @@
     (fn [ctx class]
       [:div.row.hf-live.unp.no-gutters
        (let [as-edn (r/cursor state [:edn-result])
-             f (if @as-edn (r/partial result-edn []))]
+             f (if @as-edn hyperfiddle.ui/fiddle-api)]
          [:div.result.col-sm.order-sm-2.order-xs-1
           [:div "Result:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
           ; Careful: Reagent deep bug in prop comparison https://github.com/hyperfiddle/hyperfiddle/issues/340
