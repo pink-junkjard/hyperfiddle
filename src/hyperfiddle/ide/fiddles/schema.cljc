@@ -42,7 +42,7 @@
                       :db/isComponent
                       :db/fulltext])
    :fiddle/pull-database $db
-   :fiddle/renderer (str '[hyperfiddle.ide.fiddles.schema-attribute/renderer ctx])
+   :fiddle/renderer (str '[hyperfiddle.ide.fiddles.schema-attribute/renderer ctx class])
    :fiddle/links #{{:db/id (keyword "hyperfiddle.schema.db-cardinality-options" $db)
                     :link/fiddle (db-cardinality-options $db)
                     :link/render-inline? true
