@@ -1,6 +1,7 @@
 {:require [hyperfiddle.test-runner]
  :init-fns [hyperfiddle.test-runner/run]
- :compiler-options {:optimizations :none
+ :compiler-options {:checked-arrays :warn
+                    :optimizations :none
                     :preloads [hyperfiddle.test-preamble]
                     :target :nodejs
                     :warnings {:munged-namespace false}}}
