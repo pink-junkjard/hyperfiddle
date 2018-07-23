@@ -198,7 +198,7 @@
                (let [ctx (page-target-context ctx route)]
                  [browser/ui-from-route route ctx (css "container-fluid" "hyperfiddle-user"
                                                        (when (get-in ctx [:host-env :active-ide?]) "hyperfiddle-ide")
-                                                       (some-> ctx :hypercrud.ui/display-mode deref name))]))))))))
+                                                       (some-> ctx :hypercrud.ui/display-mode deref name (->> (str "display-mode-"))))]))))))))
 
 #?(:cljs
    (defn view [[fiddle :as route] ctx]                      ; pass most as ref for reactions
