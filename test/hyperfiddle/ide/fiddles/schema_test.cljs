@@ -4,7 +4,6 @@
             [contrib.pprint :refer [slow-pprint-str]]
             [hypercrud.browser.browser-ui-test :refer [test-renderer-str]]
             [hyperfiddle.ide.fiddles.schema :as schema]
-            [hyperfiddle.ide.fiddles.schema-attribute :refer [read-only?]]
             ))
 
 
