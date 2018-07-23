@@ -7,19 +7,12 @@
     [hyperfiddle.runtime :as runtime]))
 
 
-(defn logout! [rt e]
-  (runtime/dispatch! rt (actions/set-user-id rt nil))
-  (.preventDefault e)
-  (.stopPropagation e))
-
 (defn renderer [ctx]
   [:div.hyperfiddle-user-dashboard
    (when @(runtime/state (:peer ctx) [::runtime/user-id])
-     [native-click-listener
-      {:key :logout :on-click (r/partial logout! (:peer ctx))}
+     [:span.nav-link.auth {:key :logout}
       ; todo https://auth0.com/docs/logout
-      [:span.nav-link.auth {:key :logout}
-       [:a {:href "/logout"} "logout"]]])
+      [:a {:href "/logout" :data-pushy-ignore true} "logout"]])
    [hyperfiddle.ui/markdown (some-> ctx :hypercrud.browser/fiddle deref :fiddle/markdown) ctx]
    [:ul.link-list
     (->> @(:hypercrud.browser/result ctx)
