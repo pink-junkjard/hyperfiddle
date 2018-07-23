@@ -40,7 +40,7 @@
 
 
 (letfn [(change! [ctx state v]
-          ((:user-with! ctx) [[:db/add @(r/fmap :db/id (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])) @state v]]))]
+          (context/with-tx! ctx [[:db/add @(r/fmap :db/id (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])) @state v]]))]
   (defn magic-new-body [props ctx]
     (let [read-only (r/fmap (comp not controls/writable-entity?) (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))
           state (r/cursor (::state ctx) [::magic-new-a])]

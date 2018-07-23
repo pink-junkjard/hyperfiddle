@@ -8,6 +8,7 @@
     [contrib.ui]                                            ; avoid collisions
     [contrib.ui.input :as input]
     [contrib.ui.recom-date :refer [recom-date]]
+    [hypercrud.browser.context :as context]
 
     ; This file is the hyperfiddle adapter for the controls, it has to generate
     ; datomic edits and knows about entity dbid. Perhaps the entity-attribute should be
@@ -23,7 +24,7 @@
 
 (defn entity-change! [ctx value]
   ; Sometimes value is partialed, sometimes not, depends on the widget's change! interface which is inconsistent
-  ((:user-with ctx) (entity-change->tx ctx value)))
+  (context/with-tx! ctx (entity-change->tx ctx value)))
 
 (defn writable-entity? [entity-val]
   ; If the db/id was not pulled, we cannot write through to the entity
@@ -92,7 +93,7 @@
 (def ^:export code (code-mode))
 (def ^:export css (code-mode "css"))
 
-(defn ^:export markdown-editor [ref props ctx]            ; This is legacy; :mode=markdown should be bound in userland
+(defn ^:export markdown-editor [ref props ctx]              ; This is legacy; :mode=markdown should be bound in userland
   (let [widget (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
                  :hyperfiddle.ui.layout/block contrib.ui/code
                  :hyperfiddle.ui.layout/table contrib.ui/code-inline-block)]
@@ -107,9 +108,9 @@
             (let [user-val (set user-val)
                   rets (set/difference value user-val)
                   adds (set/difference user-val value)]
-              ((:user-with! ctx) (tx/edit-entity @(r/fmap :db/id (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))
-                                                 (:hypercrud.browser/attribute ctx)
-                                                 rets adds))))]
+              (context/with-tx! ctx (tx/edit-entity @(r/fmap :db/id (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))
+                                                    (:hypercrud.browser/attribute ctx)
+                                                    rets adds))))]
     (let [valueType @(r/cursor (:hypercrud.browser/fat-attribute ctx) [:db/valueType :db/ident])
           value (set (if (= valueType :db.type/ref) (map :db/id @ref) @ref))
           widget (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)

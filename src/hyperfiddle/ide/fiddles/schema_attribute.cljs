@@ -29,8 +29,7 @@
           tx))
 
 (defn valueType-and-cardinality-with-tx! [special-attrs-state ctx tx]
-  (let [user-with! (:user-with! ctx)
-        entity @(get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
+  (let [entity @(get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
         new-entity (merge-in-tx entity tx ctx)]
     (case [(completed? entity) (completed? new-entity)]
       [false false]
@@ -38,34 +37,34 @@
 
       [false true]
       (do
-        (user-with! (tx/into-tx @special-attrs-state tx))
+        (context/with-tx! ctx (tx/into-tx @special-attrs-state tx))
         (reset! special-attrs-state nil))
 
       [true false]
       ; todo this case WILL throw (going from a valid tx to invalid)
-      (user-with! tx)
+      (context/with-tx! ctx tx)
 
       [true true]
-      (user-with! tx))))
+      (context/with-tx! ctx tx))))
 
 (defn ident-with-tx! [special-attrs-state ctx tx]
   (let [entity @(get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
         new-entity (merge-in-tx entity tx ctx)]
     (case [(completed? entity) (completed? new-entity)]
       [false false]
-      ((:user-with! ctx) tx)
+      (context/with-tx! ctx tx)
 
       [false true]
       (do
-        ((:user-with! ctx) (tx/into-tx @special-attrs-state tx))
+        (context/with-tx! ctx (tx/into-tx @special-attrs-state tx))
         (reset! special-attrs-state nil))
 
       [true false]
       ; todo this case WILL throw (going from a valid tx to invalid)
-      ((:user-with! ctx) tx)
+      (context/with-tx! ctx tx)
 
       [true true]
-      ((:user-with! ctx) tx))))
+      (context/with-tx! ctx tx))))
 
 (defn renderer [ctx class]
   (let [special-attrs-state (r/atom nil)

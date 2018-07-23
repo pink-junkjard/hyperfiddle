@@ -12,7 +12,6 @@
   (dissoc ctx
           :route                                            ; Route is unrelated to the hyper-control ontology
           :uri                                              ; todo deprecate
-          :user-with!                                       ; todo namespace
           :hyperfiddle.ui/layout
 
           :hypercrud.browser/attribute
@@ -45,6 +44,11 @@
 (defn find-element-segment? [path-segment]
   (integer? path-segment))
 
+(defn with-tx! [ctx tx]
+  (let [uri (get-in ctx [:hypercrud.browser/domain :domain/environment (str (:hypercrud.browser/source-symbol ctx))])
+        invert-route (:hypercrud.browser/invert-route ctx)]
+    (runtime/dispatch! (:peer ctx) (actions/with (:peer ctx) invert-route (:branch ctx) uri tx))))
+
 (defn- set-parent [ctx]
   (assoc ctx :hypercrud.browser/parent (select-keys ctx [:hypercrud.browser/parent :hypercrud.browser/path])))
 
@@ -74,8 +78,6 @@
       :db.cardinality/many (assoc new-ctx :hypercrud.browser/data ?data))))
 
 (letfn [(default [default-v v] (or v default-v))
-        (user-with [rt invert-route branch uri tx]
-          (runtime/dispatch! rt (actions/with rt invert-route branch uri tx)))
         (set-data [ctx cardinality]
           (-> ctx
               (set-parent-data)
@@ -184,8 +186,8 @@
                           (assoc :hypercrud.browser/field field
                                  :hypercrud.browser/fields (r/fmap ::field/children field)
                                  :hypercrud.browser/source-symbol source-symbol
-                                 :uri uri                   ; todo why cant internals get the uri from source-symbol at the last second
-                                 :user-with! (r/partial user-with (:peer ctx) (:hypercrud.browser/invert-route ctx) (:branch ctx) uri)))
+                                 ; todo why cant internals get the uri from source-symbol at the last second
+                                 :uri uri))
                 ; if we are in a head, we dont have data to set
                 (not (some #{:head} (:hypercrud.browser/path ctx))) (set-data :db.cardinality/one)))))]
   (defn focus [ctx relative-path]
