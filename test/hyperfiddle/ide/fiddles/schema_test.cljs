@@ -32,29 +32,3 @@
     ; just test it renderers something
     ; Working, but missing a find-element etc mock. We need actual context mocks.
     #_(is (not (nil? (test-renderer-str (:fiddle/renderer (schema/db-attribute-edit "$")) ctx))))))
-
-(deftest readonly-test
-  []
-
-  (let [record {}]
-    (assert (not (read-only? :db/ident record)))
-    (assert (not (read-only? :db/cardinality record)))
-    (assert (not (read-only? :db/valueType record)))
-    (assert (read-only? :db/unique record))
-    (assert (read-only? :db/isComponent record)))
-
-  (let [record {:db/ident :hello}]
-    (assert (not (read-only? :db/ident record)))
-    (assert (not (read-only? :db/cardinality record)))
-    (assert (not (read-only? :db/valueType record)))
-    (assert (read-only? :db/unique record))
-    (assert (read-only? :db/isComponent record)))
-
-  (let [record {:db/ident :hello :db/cardinality :one :db/valueType :string}]
-    (assert (not (read-only? :db/ident record)))
-    (assert (not (read-only? :db/cardinality record)))
-    (assert (not (read-only? :db/valueType record)))
-    (assert (not (read-only? :db/unique record)))
-    (assert (not (read-only? :db/isComponent record))))
-
-  )
