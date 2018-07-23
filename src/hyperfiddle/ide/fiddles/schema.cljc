@@ -70,27 +70,16 @@
                    ; pprint-str is slow and its runtime generated so can't define it as a .edn resource with whitespace
                    ; Real problem is that userland can even see this string - its a sys fiddle, you shouldn't see it in the IDE
                    (str [:in $db :find [(list 'pull $db '?attr
-                                              [:db/id :db/ident :db/valueType :db/cardinality :db/unique
+                                              [:db/id
+                                               :db/ident
+                                               {:db/valueType [:db/ident]}
+                                               {:db/cardinality [:db/ident]}
+                                               {:db/unique [:db/ident]}
                                                :db/isComponent :db/fulltext :db/doc]) '...]
                          :where [$db :db.part/db :db.install/attribute '?attr]]))
    :fiddle/type :query
    :fiddle/renderer (load-resource "schema_renderer.edn")
-   :fiddle/links #{{:db/id (keyword "hyperfiddle.schema.db-cardinality-options-link" $db)
-                    :link/fiddle (db-cardinality-options $db)
-                    :link/render-inline? true
-                    :link/rel :options
-                    :link/path ":body 0 :db/cardinality"}
-                   {:db/id (keyword "hyperfiddle.schema.db-unique-options-link" $db)
-                    :link/fiddle (db-unique-options $db)
-                    :link/render-inline? true
-                    :link/rel :options
-                    :link/path ":body 0 :db/unique"}
-                   {:db/id (keyword "hyperfiddle.schema.db-valueType-options" $db)
-                    :link/fiddle (db-valueType-options $db)
-                    :link/render-inline? true
-                    :link/rel :options
-                    :link/path ":body 0 :db/valueType"}
-                   {:db/id :system-anchor-edit              ; XXX
+   :fiddle/links #{{:db/id :system-anchor-edit              ; XXX
                     :link/rel :hyperfiddle/edit
                     :link/path ":body 0"
                     :link/fiddle (db-attribute-edit $db)}
