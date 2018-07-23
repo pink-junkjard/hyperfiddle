@@ -222,8 +222,7 @@ nil. call site must wrap with a Reagent component"
             [:dt "route"] [:dd (pr-str (:route ctx))]]])
         (title-link [rel path ctx]
           [:dl
-           [:dt "link/rel"] [:dd (pr-str rel)]
-           [:dt "link/path"] [:dd (pr-str path)]
+           [:dt "link"] [:dd (pr-str rel) " " (pr-str path)]
            [:dt "route"] [:dd (pr-str (:route ctx))]])]
   (defn ^:export fiddle-api [{:keys [hypercrud.browser/result
                                      hypercrud.browser/fiddle] :as ctx} class]
