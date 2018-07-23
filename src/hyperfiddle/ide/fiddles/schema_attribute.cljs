@@ -95,16 +95,15 @@
                     (dissoc :hypercrud.browser/data :hypercrud.browser/data-cardinality :hypercrud.browser/path)
                     (update :hypercrud.browser/result (partial r/fmap reactive-merge))
                     (context/focus [:body]))]
-        (into
-          ^{:key (data/relation-keyfn @(:hypercrud.browser/data ctx))}
-          [:div {:class class}
-           [markdown "See [Datomic schema docs](https://docs.datomic.com/on-prem/schema.html)."]
-           [field-for-ident :db/ident ctx]
-           [field-for-ident :db/valueType ctx]
-           [field-for-ident :db/cardinality ctx]
-           [field-for-ident :db/doc ctx]
-           [field-for-ident :db/unique ctx]
-           [markdown "!block[Careful: below is not validated, don't stage invalid schema]{.alert .alert-warning style=\"margin-bottom: 0\"}"]
-           [field-for-ident :db/isComponent ctx]
-           [field-for-ident :db/fulltext ctx]
-           ])))))
+        ^{:key (data/relation-keyfn @(:hypercrud.browser/data ctx))}
+        [:div {:class class}
+         [markdown "See [Datomic schema docs](https://docs.datomic.com/on-prem/schema.html)."]
+         [field-for-ident :db/ident ctx]
+         [field-for-ident :db/valueType ctx]
+         [field-for-ident :db/cardinality ctx]
+         [field-for-ident :db/doc ctx]
+         [field-for-ident :db/unique ctx]
+         [markdown "!block[Careful: below is not validated, don't stage invalid schema]{.alert .alert-warning style=\"margin-bottom: 0\"}"]
+         [field-for-ident :db/isComponent ctx]
+         [field-for-ident :db/fulltext ctx]
+         ]))))
