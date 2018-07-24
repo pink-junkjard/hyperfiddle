@@ -123,24 +123,32 @@
          `(let [result# (~result-builder [{:db/id 1
                                            :a/k "uiop"
                                            :a/s {}
-                                           "T" {}
+                                           "T" {:db/id 12 :b/x "tyui"}
                                            :a/u [{:db/id 31 :b/y "fghj"}
                                                  {:db/id 32 :b/y "qazwsx"}]
                                            :a/z "asdf"}
                                           {:db/id 2
                                            :a/j "qwerty"
                                            :a/s {}
+                                           "T" {:db/id 12 :b/y "dfgh"}
                                            :a/v ["vbnm"]
                                            :a/x {:db/id 21 :b/x "hjkl"}
                                            :a/z "zxcv"}])
-                attributes# (->> @(auto-fields (build-ctx ~fiddle (~pull->request ~pull) result#))
-                                 (mapcat ::field/children)
-                                 (mapv ::field/path-segment))]
+                attr-level-fields# (->> @(auto-fields (build-ctx ~fiddle (~pull->request ~pull) result#))
+                                        (mapcat ::field/children))
+                attributes# (mapv ::field/path-segment attr-level-fields#)]
             ; can only test order of defined attributes in relation to splat
             (is (~'= :a/a (first attributes#)))
             (is (~'= :a/z (last attributes#)))
             (is (~'= (count attributes#) (count (into #{} attributes#))))
-            (is (~'= #{:a/a :a/j :a/k :a/s :a/t :a/u :a/v :a/x :a/z (symbol "*")} (into #{} attributes#))))))))
+            (is (~'= #{:a/a :a/j :a/k :a/s :a/t :a/u :a/v :a/x :a/z (symbol "*")} (into #{} attributes#)))
+            (is (~'= #{:b/x :b/y (symbol "*")}
+                  (->> attr-level-fields#
+                       (filter (comp #(= % :a/t) ::field/path-segment))
+                       first
+                       ::field/children
+                       (mapv ::field/path-segment)
+                       (into #{})))))))))
 
 #?(:clj
    (defmacro pull->attr-tests [fiddle pull->request result-builder]
@@ -153,17 +161,24 @@
   (is (= [] @(auto-fields {:hypercrud.browser/schemas (r/atom nil)
                            :hypercrud.browser/fiddle (r/atom {:fiddle/type :blank})}))))
 
+(letfn [(f [a b]
+          (cond
+            (map? a) (merge-with f a b)
+            (vector? a) (concat a b)
+            :else b))]
+  (def merge-into-one (partial apply merge-with f)))
+
 (deftest entity []
   (pull->attr-tests {:fiddle/type :entity
                      :fiddle/pull-database "$"}
                     #(->EntityRequest 1 nil (->DbVal nil nil) %)
-                    (partial apply merge)))
+                    merge-into-one))
 
 (deftest entity-attr-one []
   (pull->attr-tests {:fiddle/type :entity
                      :fiddle/pull-database "$"}
                     #(->EntityRequest 1 :e/a-one (->DbVal nil nil) %)
-                    (partial apply merge)))
+                    merge-into-one))
 
 (deftest entity-attr-many []
   (pull->attr-tests {:fiddle/type :entity
@@ -184,9 +199,9 @@
 (deftest query-tuple []
   (pull->attr-tests {:fiddle/type :query}
                     #(->QueryRequest [:find [(list 'pull '?e %)] :in '$ '?e] {"$" nil "?e" 1})
-                    (comp vector (partial apply merge))))
+                    (comp vector merge-into-one)))
 
 (deftest query-scalar []
   (pull->attr-tests {:fiddle/type :query}
                     #(->QueryRequest [:find (list 'pull '?e %) '. :in '$ '?e] {"$" nil "?e" 1})
-                    (partial apply merge)))
+                    merge-into-one))

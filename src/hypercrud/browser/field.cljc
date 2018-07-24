@@ -47,17 +47,17 @@
 (defn entity-pull? [pull-pattern]
   (boolean (some #{'* :db/id} pull-pattern)))
 
-(defn infer-attrs [data path]
-  (let [f (reduce (fn [f segment]
+(defn infer-attrs [data get-values]
+  (let [f (reduce (fn [f get-value]
                     (comp
                       (fn [data]
                         (cond
-                          (or (map? data) (entity? data)) (get data segment)
-                          (or (vector? data) (seq? data)) (map #(get % segment) data)
+                          (or (map? data) (entity? data)) (get-value data)
+                          (or (vector? data) (seq? data)) (map get-value data)
                           :else nil))
                       f))
                   identity
-                  path)
+                  get-values)
         data-at-path (f data)]
     (->> (cond
            (or (map? data-at-path) (entity? data-at-path)) [data-at-path]
@@ -66,22 +66,22 @@
          (mapcat keys)
          (into #{}))))
 
-(defn pull->fields [is-ref? pull-pattern data path]         ; todo inferred attrs needs to walk
+(defn pull->fields [is-ref? pull-pattern data get-values]
   (let [explicit-fields (reduce (fn [acc sym]
-                                  ; ::entity? is whether dbid exists while nested
                                   (cond
                                     (map? sym) (->> sym
                                                     (map (fn [[k v]]
-                                                           (-> (if (or (vector? k) (seq? k))
-                                                                 (attr-with-opts-or-expr is-ref? k)
-                                                                 {::label (keyword->label k)
-                                                                  ::get-value k
-                                                                  ::path-segment k
-                                                                  ::source-symbol nil})
-                                                               (assoc ::children (when-not (number? v) ; short on recursive-limit https://github.com/hyperfiddle/hyperfiddle/issues/363
-                                                                                   (pull->fields is-ref? v data (conj path k)))
-                                                                      ::data-has-id? (and (not (number? v)) ; short on recursive-limit https://github.com/hyperfiddle/hyperfiddle/issues/363
-                                                                                          (entity-pull? v))))))
+                                                           (let [field (if (or (vector? k) (seq? k))
+                                                                         (attr-with-opts-or-expr is-ref? k)
+                                                                         {::label (keyword->label k)
+                                                                          ::get-value k
+                                                                          ::path-segment k
+                                                                          ::source-symbol nil})]
+                                                             (assoc field
+                                                               ::children (when-not (number? v) ; short on recursive-limit https://github.com/hyperfiddle/hyperfiddle/issues/363
+                                                                            (pull->fields is-ref? v data (conj get-values (::get-value field))))
+                                                               ::data-has-id? (and (not (number? v)) ; short on recursive-limit https://github.com/hyperfiddle/hyperfiddle/issues/363
+                                                                                   (entity-pull? v))))))
                                                     (into acc))
                                     (or (vector? sym) (seq? sym)) (conj acc (attr-with-opts-or-expr is-ref? sym))
                                     (= '* sym) (conj acc sym)
@@ -101,7 +101,7 @@
                                                (remove #(= '* %))
                                                (map #(or (::-alias %) (::path-segment %))))]
                        (concat
-                         (->> (set/difference (infer-attrs data path) (set explicit-attrs))
+                         (->> (set/difference (infer-attrs data get-values) (set explicit-attrs))
                               (sort)
                               (map (fn [attr]
                                      {::children nil
