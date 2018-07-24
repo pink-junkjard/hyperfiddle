@@ -2,7 +2,7 @@
   (:require
     [clojure.set :refer [rename-keys]]
     [goog.date.UtcDateTime]
-    [contrib.ui.input :as input]
+    [contrib.ui.input :as input :refer [adapt-props]]
     [re-com.core :as re-com]))
 
 
@@ -25,8 +25,12 @@
 
 (defn recom-date [value change! props]
   ; (new goog.date.UtcDateTime(new Date())).toIsoString()
-  (let [props (rename-keys props {:disabled :disabled?})
-        props (select-keys props [:class :disabled? :id])]
+  (let [props (-> props
+                  adapt-props
+                  (update :class #(str % (if (:disabled props) " disabled")))
+                  (rename-keys {:disabled :disabled?})
+                  (select-keys [:class :disabled? :id]))]
+    ; I don't think :class does anything
     (into
       [re-com/datepicker-dropdown
        :model (if value (goog.date.UtcDateTime. value))     ; not reactive
