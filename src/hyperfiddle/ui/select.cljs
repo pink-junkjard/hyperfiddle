@@ -3,7 +3,7 @@
             [cats.monad.either :as either]
             [contrib.datomic-tx :as tx]
             [contrib.reactive :as r]
-            [contrib.try :refer [try-either]]
+            [contrib.try$ :refer [try-either]]
             [hypercrud.browser.core :as browser]
             [hypercrud.browser.field :as field]
             [hypercrud.browser.link :as link]

@@ -6,7 +6,7 @@
     [contrib.data :refer [kwargs]]
     [contrib.reactive :as r]
     #?(:cljs [contrib.reagent :refer [fragment]])
-    [contrib.try :refer [try-either]]
+    [contrib.try$ :refer [try-either]]
     #?(:cljs [contrib.reagent-native-events :refer [native-click-listener]])
     [hypercrud.browser.base :as base]
     [hypercrud.browser.browser-request :as browser-request]

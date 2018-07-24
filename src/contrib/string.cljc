@@ -3,7 +3,7 @@
             [clojure.string]
             [contrib.data :refer [orp]]
             [contrib.reader :refer [read-edn-string]]
-            [contrib.try :refer [try-either]]
+            [contrib.try$ :refer [try-either]]
             [cuerdas.core :as str]))
 
 

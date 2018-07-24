@@ -4,7 +4,7 @@
                [cljs.js :as cljs]
                [cljs.tagged-literals :as tags]])
     [clojure.string :as string]
-    [contrib.try :refer [try-either]]
+    [contrib.try$ :refer [try-either]]
     ; This is contrib code, shouldn't be hyperfiddle deps
     [hyperfiddle.hc_data_readers :refer [hc-data-readers]]
     [hyperfiddle.readers :as hc-readers]))

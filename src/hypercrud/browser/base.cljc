@@ -3,7 +3,7 @@
             [cats.monad.either :as either]
             [contrib.reactive :as r]
             [contrib.string :refer [memoized-safe-read-edn-string]]
-            [contrib.try :refer [try-either]]
+            [contrib.try$ :refer [try-either]]
             [hypercrud.browser.auto-link :refer [auto-links]]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.fiddle :as fiddle]

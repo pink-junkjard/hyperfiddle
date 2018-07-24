@@ -3,7 +3,7 @@
     [cats.core :refer [>>=]]
     [cats.monad.either :as either]
     [contrib.eval :as eval]
-    [contrib.try :refer [try-either]]))
+    [contrib.try$ :refer [try-either]]))
 
 
 ; defer eval until render cycle inside userportal

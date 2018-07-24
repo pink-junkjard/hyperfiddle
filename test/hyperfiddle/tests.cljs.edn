@@ -4,5 +4,4 @@
                     ;:checked-arrays :warn                   ; this is too noisey due because of reagent0.7
                     :optimizations :none
                     :preloads [hyperfiddle.test-preamble]
-                    :target :nodejs
-                    :warnings {:munged-namespace false}}}
+                    :target :nodejs}}

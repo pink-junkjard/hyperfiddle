@@ -1,4 +1,4 @@
-(ns contrib.char
+(ns contrib.char$
   (:require [clojure.set :as set]
             [clojure.string :as str]))
 

@@ -6,7 +6,7 @@
             [contrib.reactive :as r]
             [contrib.pprint :refer [pprint-str]]
             [contrib.string :refer [memoized-safe-read-edn-string]]
-            [contrib.try :refer [try-either try-promise]]
+            [contrib.try$ :refer [try-either try-promise]]
             [cuerdas.core :as string]
             [hypercrud.browser.base :as base]
             [hypercrud.browser.context :as context]

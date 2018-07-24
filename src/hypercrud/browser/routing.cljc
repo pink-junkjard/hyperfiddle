@@ -5,7 +5,7 @@
             [clojure.walk :as walk]
             [contrib.data :refer [xorxs]]
             [contrib.eval :as eval]
-            [contrib.try :refer [try-either]]
+            [contrib.try$ :refer [try-either]]
             [cuerdas.core :as string]
             [hypercrud.browser.context :as context]         ; allowed here
             [hypercrud.browser.dbname :as dbname]

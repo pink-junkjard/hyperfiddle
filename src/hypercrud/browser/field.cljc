@@ -4,7 +4,7 @@
             [clojure.set :as set]
             [contrib.data :refer [transpose]]
             [contrib.reactive :as r]
-            [contrib.try :refer [try-either]]
+            [contrib.try$ :refer [try-either]]
             [datascript.parser :as parser]
             [hypercrud.types.Entity :refer [entity?]]))
 

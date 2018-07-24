@@ -3,7 +3,7 @@
             [cats.monad.either :as either]
             [contrib.eval :as eval]
             [contrib.reactive :as r]
-            [contrib.try :refer [try-either]]
+            [contrib.try$ :refer [try-either]]
             [cuerdas.core :as string]
             [taoensso.timbre :as timbre]))
 

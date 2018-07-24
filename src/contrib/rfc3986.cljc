@@ -1,7 +1,7 @@
 (ns contrib.rfc3986
   (:require [clojure.string :as str]
             [clojure.set :as set]
-            [contrib.char :refer [char-code dec->hex hex->dec char->hex-str hex-str->char]]
+            [contrib.char$ :refer [char-code dec->hex hex->dec char->hex-str hex-str->char]]
             [contrib.string :refer [split-first]]))
 
 

@@ -1,6 +1,6 @@
 (ns hypercrud.browser.system-fiddle
   (:require [cuerdas.core :as str]
-            [contrib.try :refer [try-either]]
+            [contrib.try$ :refer [try-either]]
             [hyperfiddle.ide.fiddles.errors :as errors]
             [hyperfiddle.ide.fiddles.schema :as schema]
             [hypercrud.types.Entity :refer [->Entity]]))
