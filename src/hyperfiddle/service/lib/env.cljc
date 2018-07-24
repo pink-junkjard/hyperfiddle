@@ -2,7 +2,8 @@
   (:require
     #?(:cljs [cljs.nodejs :as node])
     [clojure.string :as string]
-    [contrib.data :refer [update-existing]])
+    [contrib.data :refer [update-existing]]
+    #?(:cljs [goog.object :as object]))
   #?(:clj
      (:import [clojure.lang ILookup])))
 
@@ -25,8 +26,8 @@
                          :cljs (let [raw-env (.-env node/process)]
                                  (reify
                                    ILookup
-                                   (-lookup [o k] (aget raw-env k))
-                                   (-lookup [o k not-found] (or (aget raw-env k) not-found)))))]
+                                   (-lookup [o k] (object/get raw-env k))
+                                   (-lookup [o k not-found] (object/get raw-env k not-found)))))]
               (-> (->> (concat required optional)
                        (reduce (fn [acc k]
                                  (assoc acc k (get env (name k))))
