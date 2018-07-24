@@ -1,6 +1,7 @@
 (ns contrib.ui.codemirror
   (:require
     [cuerdas.core :as str]
+    [goog.object :as object]
     [reagent.core :as reagent]))
 
 
@@ -37,7 +38,7 @@
          ; Also, reagent/as-element keyword-cases all the props into keywords, so
          ; they must be camelized before we get here.
 
-         (aset this "codeMirrorRef" ref)
+         (object/set this "codeMirrorRef" ref)
          (.on ref "blur" (fn [_ e]
                            (let [[_ value change! props] (reagent/argv this)
                                  value' (.getValue ref)]
@@ -47,10 +48,10 @@
 
      :component-will-unmount
      (fn [this]
-       (.toTextArea (aget this "codeMirrorRef")))
+       (.toTextArea (object/get this "codeMirrorRef")))
 
      :component-did-update
      (fn [this]
        (let [[_ value change! props] (reagent/argv this)
-             ref (aget this "codeMirrorRef")]
+             ref (object/get this "codeMirrorRef")]
          (sync-changed-props! ref (assoc props :value (str value)))))}))

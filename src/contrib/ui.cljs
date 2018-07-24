@@ -11,6 +11,7 @@
     [contrib.ui.codemirror :refer [-codemirror camel-keys]]
     [contrib.ui.tooltip :refer [tooltip]]
     [contrib.ui.remark :as remark]
+    [goog.object :as object]
     [re-com.core :as re-com]
     [reagent.core :as reagent]
     [taoensso.timbre :as timbre]))
@@ -71,11 +72,11 @@
 (def ^:export ReactSlickSlider
   ; Prevents failure in tests, this is omitted from test preamble
   ; We don't have a way to differentiate tests-node from runtime-node, so check presence
-  (if-let [reactSlickSlider (aget (global!) "reactSlickSlider")]
+  (if-let [reactSlickSlider (object/get (global!) "reactSlickSlider")]
     (reagent/adapt-react-class reactSlickSlider)))
 
 (def ^:export ReactGifPlayer
-  (if-let [ReactGifPlayer (aget (global!) "ReactGifPlayer")]
+  (if-let [ReactGifPlayer (object/get (global!) "ReactGifPlayer")]
     (reagent/adapt-react-class ReactGifPlayer)))
 
 (def ^:export markdown (remark/remark!))

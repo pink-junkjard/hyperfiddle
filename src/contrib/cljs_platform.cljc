@@ -1,4 +1,5 @@
 (ns contrib.cljs-platform
+  #?(:cljs (:require [goog.object :as object]))
   #?(:cljs (:require-macros [contrib.cljs-platform])))
 
 
@@ -39,7 +40,7 @@
 #?(:cljs                                                    ; runtime only
    (defn merge-user! [m]
      (let [g (global!)]
-       (if-not (aget g "user") (aset g "user" #js {}))
+       (if-not (object/get g "user") (object/set g "user" #js {}))
        (doseq [[k v] m]
          ; They are referenced using FFI syntax: `js/user.docs-fiddle-ident-link`
-         (aset js/user k v)))))
+         (object/set js/user k v)))))
