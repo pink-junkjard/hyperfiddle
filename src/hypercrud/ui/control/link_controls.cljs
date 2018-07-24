@@ -1,11 +1,10 @@
 (ns hypercrud.ui.control.link-controls
   (:require
-    [contrib.data :refer [kwargs]]
     [contrib.reactive :as r]
     [contrib.reagent :refer [fragment]]
-    [hyperfiddle.ui.form]
-    ;[hypercrud.browser.core :as browser]
-    [hypercrud.browser.link :as link]))
+    [hypercrud.browser.core :as browser]
+    [hypercrud.browser.link :as link]
+    [hypercrud.ui.connection-color :refer [border-color]]))
 
 
 (defn prompt [link-ref]
@@ -17,7 +16,7 @@
 
 (defn- reactive-ui [link-ref ctx props]
   ; kwargs (dissoc props :class)
-  [hypercrud.browser.core/ui @link-ref ctx (:class props)])
+  [browser/ui @link-ref ctx (:class props)])
 
 (defn ui-contextual-links [path embed links ?processor]
   (->> (reduce (fn [links f] (f links)) @links (if ?processor [?processor]))
@@ -33,7 +32,8 @@
        (r/unsequence :db/id)
        (map (fn [[link-ref link-id]]
               (if (not= :hyperfiddle.ui.layout/table (:hyperfiddle.ui/layout ctx))
-                ^{:key (hash link-id)} [hyperfiddle.ui.form/ui-block-border-wrap ctx nil [reactive-nav-cmp link-ref ctx props]]
+                ^{:key (hash link-id)} [:div {:style {:border-color (border-color ctx)}}
+                                        [reactive-nav-cmp link-ref ctx props]]
                 ^{:key (hash link-id)} [reactive-nav-cmp link-ref ctx props])))
        (doall)
        (apply fragment)))
@@ -43,7 +43,8 @@
        (r/unsequence :db/id)
        (map (fn [[link-ref link-id]]
               (if (not= :hyperfiddle.ui.layout/table (:hyperfiddle.ui/layout ctx))
-                ^{:key (hash link-id)} [hyperfiddle.ui.form/ui-block-border-wrap ctx nil [reactive-ui link-ref ctx (:class props)]]
+                ^{:key (hash link-id)} [:div {:style {:border-color (border-color ctx)}}
+                                        [reactive-ui link-ref ctx (:class props)]]
                 ^{:key (hash link-id)} [reactive-ui link-ref ctx props])))
        (doall)
        (apply fragment)))

@@ -12,7 +12,7 @@
     [contrib.reactive-debug :refer [track-cmp]]
     [contrib.string :refer [memoized-safe-read-edn-string blank->nil or-str]]
     [contrib.ui]
-    [contrib.ui.input :refer [keyword-input* edn-input*]]
+    [contrib.ui.input]
     [contrib.ui.remark :as remark]
     [contrib.ui.safe-render :refer [user-portal]]
     [cuerdas.core :as str]
@@ -24,7 +24,7 @@
     [hypercrud.ui.error :as ui-error]
     [hyperfiddle.data :as hf]
     [hyperfiddle.ui.controls :as controls]
-    [hyperfiddle.ui.hyper-controls :refer [hyper-select-head hyper-label]]
+    [hyperfiddle.ui.hyper-controls :refer [hyper-label hyper-select-head magic-new-body magic-new-head]]
     [hyperfiddle.ui.hacks]                                  ; exports
     [hyperfiddle.ui.markdown-extensions]
     [hyperfiddle.ui.form :as form]
@@ -93,8 +93,8 @@
                      (contains? :options))]
     (match* [head-or-body (last (:hypercrud.browser/path ctx)) options?]
       ;[:head _ true] hyper-select-head
-      [:head '* _] [form/magic-new-head props ctx]
-      [:body '* _] [form/magic-new-body props ctx]
+      [:head '* _] [magic-new-head props ctx]
+      [:body '* _] [magic-new-body props ctx]
       [:head _ _] [hyper-label props ctx]
       [:body _ _] [hyper-control' props ctx])))
 
