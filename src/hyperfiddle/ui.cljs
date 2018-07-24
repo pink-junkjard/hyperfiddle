@@ -20,6 +20,7 @@
     [hypercrud.browser.context :as context]
     [hypercrud.browser.core :as browser]
     [hypercrud.browser.link :as link :refer [links-here rel->link]]
+    [hypercrud.ui.connection-color :refer [border-color]]
     [hypercrud.ui.control.link-controls :refer [anchors iframes]]
     [hypercrud.ui.error :as ui-error]
     [hyperfiddle.data :as hf]
@@ -27,7 +28,6 @@
     [hyperfiddle.ui.hyper-controls :refer [hyper-label hyper-select-head magic-new-body magic-new-head]]
     [hyperfiddle.ui.hacks]                                  ; exports
     [hyperfiddle.ui.markdown-extensions]
-    [hyperfiddle.ui.form :as form]
     [hyperfiddle.ui.select :refer [select]]
     [hyperfiddle.ui.sort :as sort]
     [hyperfiddle.ui.util :refer [eval-renderer-comp]]))
@@ -150,6 +150,44 @@ User renderers should not be exposed to the reaction."
      (:class props)
      (dissoc props :class :children nil)]))
 
+(defn form-field "Form fields are label AND value. Table fields are label OR value."
+  [hyper-control relative-path ctx ?f props]                ; ?f :: (ref props ctx) => DOM
+  (let [state (r/atom {:hyperfiddle.ui.form/magic-new-a nil})]
+    (fn [hyper-control relative-path ctx ?f props]
+      (let [ctx (assoc ctx :hyperfiddle.ui.form/state state)
+            ; we want the wrapper div to have the :body styles, so careful not to pollute the head ctx with :body
+            body-ctx (context/focus ctx (cons :body relative-path))
+            props (update props :class css (semantic-css body-ctx))]
+        ; It is the driver-fn's job to elide this field if it will be empty
+        [:div {:class (css "field" (:class props))
+               :style {:border-color (border-color body-ctx)}}
+         ^{:key :form-head}
+         [(or (:label-fn props) hyper-control) props (context/focus ctx (cons :head relative-path))]
+         ^{:key :form-body}
+         [:div
+          (if ?f
+            [?f (:hypercrud.browser/data body-ctx) props body-ctx]
+            [hyper-control props body-ctx])]]))))
+
+(defn table-field "Form fields are label AND value. Table fields are label OR value."
+  [hyper-control relative-path ctx ?f props]                ; ?f :: (ref props ctx) => DOM
+  (let [head-or-body (last (:hypercrud.browser/path ctx))   ; this is ugly and not uniform with form-field
+        ctx (context/focus ctx relative-path)
+        props (update props :class css (semantic-css ctx))]
+    (case head-or-body
+      :head [:th {:class (css "field" (:class props)
+                              (when (sort/sortable? ctx) "sortable") ; hoist
+                              (some-> (sort/sort-direction relative-path ctx) name)) ; hoist
+                  :style {:background-color (border-color ctx)}
+                  :on-click (r/partial sort/toggle-sort! relative-path ctx)}
+             ; Use f as the label control also, because there is hypermedia up there
+             [(or (:label-fn props) hyper-control) props ctx]]
+      :body [:td {:class (css "field" (:class props) "truncate")
+                  :style {:border-color (when (:hypercrud.browser/source-symbol ctx) (border-color ctx))}}
+             (if ?f
+               [?f (:hypercrud.browser/data ctx) props ctx]
+               [hyper-control props ctx])])))
+
 ; (defmulti field ::layout)
 (defn ^:export field "Works in a form or table context. Draws label and/or value."
   [relative-path ctx ?f & [props]]                          ; ?f :: (ref, props, ctx) => DOM
@@ -157,13 +195,13 @@ User renderers should not be exposed to the reaction."
     (case (:hyperfiddle.ui/layout ctx)
       :hyperfiddle.ui.layout/table (when-not is-magic-new
                                      ^{:key (str relative-path)}
-                                     [form/table-field hyper-control relative-path ctx ?f props])
+                                     [table-field hyper-control relative-path ctx ?f props])
       (let [magic-new-key (when is-magic-new
                             (let [ctx (context/focus ctx (cons :body relative-path))]
                               ; guard against crashes for nil data
                               (hash (some->> ctx :hypercrud.browser/parent :hypercrud.browser/data (r/fmap keys) deref))))]
         ^{:key (str relative-path magic-new-key #_"reset magic new state")}
-        [form/form-field hyper-control relative-path ctx ?f props]))))
+        [form-field hyper-control relative-path ctx ?f props]))))
 
 (defn ^:export table "Semantic table"
   [form sort-fn ctx & [props]]
