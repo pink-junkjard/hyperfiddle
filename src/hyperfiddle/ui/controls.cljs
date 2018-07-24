@@ -6,7 +6,7 @@
     [contrib.reactive :as r]
     [contrib.string :refer [empty->nil]]
     [contrib.ui]                                            ; avoid collisions
-    [contrib.ui.input :as input]
+    [contrib.ui.input :as input :refer [adapt-props]]
     [contrib.ui.recom-date :refer [recom-date]]
     [hypercrud.browser.context :as context]
 
@@ -44,12 +44,14 @@
   (let [props (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))
         on-change! (r/partial entity-change! ctx)]
     [input/validated-input @ref on-change!
-     #(js/parseInt % 10) (fnil str "")
-     #(or #_(= "" %) (integer? (js/parseInt % 10)))
+     #(let [v (js/parseInt % 10)] (if (integer? v) v nil))
+     (fnil str "")
+     #(or (= "" %) (integer? (js/parseInt % 10)))
      props]))
 
 (defn ^:export boolean [ref props ctx]
-  [:div
+  ; wrapper div lets us style block while constraining checkbox clickable surface area inline
+  [:div (let [props (adapt-props props)] (update props :class #(str % (if (:disabled props) " disabled"))))
    [contrib.ui/easy-checkbox "" @ref
     (r/partial entity-change! ctx (not @ref))
     (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))]])
@@ -88,7 +90,7 @@
                     :hyperfiddle.ui.layout/table contrib.ui/code-inline-block)]
       [control @ref (r/partial entity-change! ctx)
        (cond-> (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))
-         mode (assoc :mode mode))])))
+               mode (assoc :mode mode))])))
 
 (def ^:export code (code-mode))
 (def ^:export css (code-mode "css"))

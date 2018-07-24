@@ -48,7 +48,9 @@
                                                     (let [id (js/parseInt select-value 10)]
                                                       (if (< id 0) (str id) id)))]
                                            (on-change id)))))
-                  (update :disabled #(or % no-options?)))
+                  ; Don't disable :select if there are options, we may want to see them. Make it look :disabled but allow the click
+                  (update :disabled #(or % no-options?))
+                  (update :class #(str % (if (:disabled option-props) " disabled"))))
         label-fn (:label-fn props label-fn)]
     [:select.ui (dissoc props :label-fn)
      ; .ui is because options are an iframe and need the pink box
@@ -84,9 +86,10 @@
         (fn [e] [(ui-error/error-comp ctx) e])
         (fn [hc-props]
           (let [entity (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]) ; how can this be loading??
-                option-props {:disabled (or (boolean (:read-only props))
-                                            @(r/fmap nil? entity) ; no value at all
-                                            (not @(r/fmap controls/writable-entity? entity)))}
+                disabled (or (boolean (:read-only props))
+                             @(r/fmap nil? entity) ; no value at all
+                             (not @(r/fmap controls/writable-entity? entity)))
+                option-props {:disabled disabled}
                 props (-> {:on-change (r/partial controls/entity-change! ctx)}
                           (merge props hc-props)
                           (assoc :value @(r/fmap dom-value (:hypercrud.browser/data ctx))))
