@@ -1,7 +1,7 @@
 (ns hyperfiddle.service.node.lib
   (:require
     [cats.monad.either :as either]
-    [contrib.try :refer [try-either]]
+    [contrib.try$ :refer [try-either]]
     [goog.object :as object]
     [hypercrud.transit :as transit]
     [hypercrud.types.Err :refer [->Err]]
