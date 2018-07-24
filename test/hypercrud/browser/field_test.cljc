@@ -55,6 +55,14 @@
         {:db/ident :a/z
          :db/cardinality {:db/ident :db.cardinality/one}
          :db/valueType {:db/ident :db.type/string}}
+        {:db/ident :a/comp-one
+         :db/cardinality {:db/ident :db.cardinality/one}
+         :db/valueType {:db/ident :db.type/ref}
+         :db/isComponent true}
+        {:db/ident :a/comp-many
+         :db/cardinality {:db/ident :db.cardinality/one}
+         :db/valueType {:db/ident :db.type/ref}
+         :db/isComponent true}
         {:db/ident :b/x
          :db/cardinality {:db/ident :db.cardinality/one}
          :db/valueType {:db/ident :db.type/string}}
@@ -97,21 +105,49 @@
    (defmacro test-splat [fiddle pull->request result-builder]
      (macroexpand
        `(let [result# (~result-builder [{:db/id 1
+                                         :a/comp-one {:db/id 15 :b/x "poiu"}
+                                         :a/comp-many [{:db/id 16 :b/x "mnbv"}
+                                                       {:db/id 17 :b/y "gfds"}]
                                          :a/y "qwerty"
                                          :a/z "asdf"}
                                         {:db/id 2
+                                         :a/comp-one {:db/id 25 :b/y "lkjh"}
+                                         :a/comp-many [{:db/id 26 :a/j "bvcx"}
+                                                       {:db/id 27 :b/y "trew"}]
                                          :a/x {:db/id 21 :b/x "hjkl"}
                                          :a/z "zxcv"}])
-              attributes# (->> @(auto-fields (build-ctx ~fiddle (~pull->request [(symbol "*")]) result#))
-                               (mapcat ::field/children)
-                               (mapv ::field/path-segment)
-                               (into #{}))]
+              attr-level-fields# (->> @(auto-fields (build-ctx ~fiddle (~pull->request [(symbol "*")]) result#))
+                                      (mapcat ::field/children))]
           ; cant test order with splat
-          (is (~'= #{:a/x :a/y :a/z (symbol "*")} attributes#))))))
+          (is (~'= #{:a/x :a/y :a/z :a/comp-one :a/comp-many (symbol "*")}
+                (->> attr-level-fields#
+                     (mapv ::field/path-segment)
+                     (into #{}))))
+
+          ; ensure sure splat -> nested components works
+          (is (~'= #{:b/x :b/y}
+                (->> attr-level-fields#
+                     (filter (comp #(= % :a/comp-one) ::field/path-segment))
+                     first
+                     ::field/children
+                     (mapv ::field/path-segment)
+                     (into #{}))))
+
+          ; ensure sure splat -> nested component works
+          (is (~'= #{:a/j :b/x :b/y}
+                (->> attr-level-fields#
+                     (filter (comp #(= % :a/comp-many) ::field/path-segment))
+                     first
+                     ::field/children
+                     (mapv ::field/path-segment)
+                     (into #{}))))
+          ))))
 
 #?(:clj
    (defmacro test-partial-splat [fiddle pull->request result-builder]
      (let [pull ''[:a/a
+                   [:a/comp-one :as "comp-one"]             ; rest of nesting comes for free on component
+                   :a/comp-many                             ; rest of nesting comes for free on component
                    *
                    (limit :a/v 1)
                    {(default :a/s {}) [*]
@@ -121,6 +157,9 @@
                    (default :a/z "a/z default")]]
        (macroexpand
          `(let [result# (~result-builder [{:db/id 1
+                                           "comp-one" {:db/id 15 :b/x "poiu"}
+                                           :a/comp-many [{:db/id 16 :b/x "mnbv"}
+                                                         {:db/id 17 :b/y "gfds"}]
                                            :a/k "uiop"
                                            :a/s {}
                                            "T" {:db/id 12 :b/x "tyui"}
@@ -128,6 +167,9 @@
                                                  {:db/id 32 :b/y "qazwsx"}]
                                            :a/z "asdf"}
                                           {:db/id 2
+                                           "comp-one" {:db/id 25 :b/y "lkjh"}
+                                           :a/comp-many [{:db/id 26 :a/j "bvcx"}
+                                                         {:db/id 27 :b/y "trew"}]
                                            :a/j "qwerty"
                                            :a/s {}
                                            "T" {:db/id 12 :b/y "dfgh"}
@@ -141,14 +183,29 @@
             (is (~'= :a/a (first attributes#)))
             (is (~'= :a/z (last attributes#)))
             (is (~'= (count attributes#) (count (into #{} attributes#))))
-            (is (~'= #{:a/a :a/j :a/k :a/s :a/t :a/u :a/v :a/x :a/z (symbol "*")} (into #{} attributes#)))
+            (is (~'= #{:a/a :a/j :a/k :a/s :a/t :a/u :a/v :a/x :a/z :a/comp-one :a/comp-many (symbol "*")} (into #{} attributes#)))
             (is (~'= #{:b/x :b/y (symbol "*")}
                   (->> attr-level-fields#
                        (filter (comp #(= % :a/t) ::field/path-segment))
                        first
                        ::field/children
                        (mapv ::field/path-segment)
-                       (into #{})))))))))
+                       (into #{}))))
+            (is (~'= #{:b/x :b/y}
+                  (->> attr-level-fields#
+                       (filter (comp #(= % :a/comp-one) ::field/path-segment))
+                       first
+                       ::field/children
+                       (mapv ::field/path-segment)
+                       (into #{}))))
+            (is (~'= #{:a/j :b/x :b/y}
+                  (->> attr-level-fields#
+                       (filter (comp #(= % :a/comp-many) ::field/path-segment))
+                       first
+                       ::field/children
+                       (mapv ::field/path-segment)
+                       (into #{}))))
+            )))))
 
 #?(:clj
    (defmacro pull->attr-tests [fiddle pull->request result-builder]

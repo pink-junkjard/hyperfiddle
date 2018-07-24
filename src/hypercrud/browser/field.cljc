@@ -14,6 +14,9 @@
 
 (def keyword->label #(some-> % name str))
 
+(defn is-ref? [schema attr] (= :db.type/ref (get-in schema [attr :db/valueType :db/ident])))
+(defn is-component? [schema attr] (boolean (get-in schema [attr :db/isComponent])))
+
 (defn variable->fe [fe-pos element]
   {::children nil
    ::data-has-id? false
@@ -23,11 +26,11 @@
    ::source-symbol nil})
 
 (let [alias->value (fn [alias cell-data] (get cell-data alias))]
-  (defn attr-with-opts-or-expr [is-ref? list-or-vec]
+  (defn attr-with-opts-or-expr [schema list-or-vec]
     (if (#{'default 'limit} (first list-or-vec))
       (let [attr (second list-or-vec)]
         {::children nil
-         ::data-has-id? (is-ref? attr)
+         ::data-has-id? (is-ref? schema attr)
          ::label (keyword->label attr)
          ::get-value attr
          ::path-segment attr
@@ -36,7 +39,7 @@
       (let [[attr & {:as opts}] list-or-vec]
         {::-alias (:as opts)
          ::children nil
-         ::data-has-id? (is-ref? attr)
+         ::data-has-id? (is-ref? schema attr)
          ::label (if-let [alias (:as opts)]
                    (if (string? alias) alias (pr-str alias))
                    (keyword->label attr))
@@ -66,7 +69,7 @@
          (mapcat keys)
          (into #{}))))
 
-(defn pull->fields [is-ref? pull-pattern data get-values]
+(defn pull->fields [schema pull-pattern data get-values]
   (let [explicit-fields (reduce (fn [acc sym]
                                   (cond
                                     (map? sym) (->> sym
@@ -79,15 +82,21 @@
                                                                           ::source-symbol nil})]
                                                              (assoc field
                                                                ::children (when-not (number? v) ; short on recursive-limit https://github.com/hyperfiddle/hyperfiddle/issues/363
-                                                                            (pull->fields is-ref? v data (conj get-values (::get-value field))))
+                                                                            (pull->fields schema v data (conj get-values (::get-value field))))
                                                                ::data-has-id? (and (not (number? v)) ; short on recursive-limit https://github.com/hyperfiddle/hyperfiddle/issues/363
                                                                                    (entity-pull? v))))))
                                                     (into acc))
-                                    (or (vector? sym) (seq? sym)) (conj acc (attr-with-opts-or-expr is-ref? sym))
+                                    (or (vector? sym) (seq? sym)) (let [field (attr-with-opts-or-expr schema sym)]
+                                                                    (->> (if (is-component? schema (::path-segment field))
+                                                                           (assoc field ::children (pull->fields schema [::implicit-splat] data (conj get-values (::get-value field))))
+                                                                           field)
+                                                                         (conj acc)))
                                     (= '* sym) (conj acc sym)
+                                    (= ::implicit-splat sym) (conj acc sym)
                                     :else (conj acc
-                                                {::children nil
-                                                 ::data-has-id? (is-ref? sym)
+                                                {::children (when (is-component? schema sym)
+                                                              (pull->fields schema [::implicit-splat] data (conj get-values sym)))
+                                                 ::data-has-id? (is-ref? schema sym)
                                                  ::label (keyword->label sym)
                                                  ::get-value sym
                                                  ::path-segment sym
@@ -96,7 +105,7 @@
                                 pull-pattern)]
     (->> explicit-fields
          (mapcat (fn [field-or-wildcard]
-                   (if (= '* field-or-wildcard)
+                   (if (#{'* ::implicit-splat} field-or-wildcard)
                      (let [explicit-attrs (->> explicit-fields
                                                (remove #(= '* %))
                                                (map #(or (::-alias %) (::path-segment %))))]
@@ -104,28 +113,26 @@
                          (->> (set/difference (infer-attrs data get-values) (set explicit-attrs))
                               (sort)
                               (map (fn [attr]
-                                     {::children nil
+                                     {::children (when (is-component? schema attr)
+                                                   (pull->fields schema [::implicit-splat] data (conj get-values attr)))
                                       ::data-has-id? false
                                       ::label (keyword->label attr)
                                       ::get-value attr
                                       ::path-segment attr
                                       ::source-symbol nil})))
-                         [{::children nil
-                           ::data-has-id? false
-                           ::label "*"
-                           ::get-value (r/constantly nil)
-                           ::path-segment '*                ; does this even make sense?
-                           ::source-symbol nil}]))
+                         (when (= '* field-or-wildcard)
+                           [{::children nil
+                             ::data-has-id? false
+                             ::label "*"
+                             ::get-value (r/constantly nil)
+                             ::path-segment '*              ; does this even make sense?
+                             ::source-symbol nil}])))
                      [field-or-wildcard])))
          (remove #(= :db/id (::path-segment %)))
          vec)))
 
-(defn build-is-ref? [schemas source-symbol]
-  (fn [attr]
-    (= :db.type/ref (get-in schemas [(str source-symbol) attr :db/valueType :db/ident]))))
-
 (defn pull-cell->fe [schemas fe-pos cell source-symbol fe-name pull-pattern]
-  {::children (pull->fields (build-is-ref? schemas source-symbol) pull-pattern cell [])
+  {::children (pull->fields (get schemas (str source-symbol)) pull-pattern cell [])
    ::data-has-id? (entity-pull? pull-pattern)
    ::get-value (r/partial last-arg-first get fe-pos)
    ::label fe-name
@@ -133,7 +140,7 @@
    ::source-symbol source-symbol})
 
 (defn pull-many-cells->fe [schemas fe-pos column-cells source-symbol fe-name pull-pattern]
-  {::children (pull->fields (build-is-ref? schemas source-symbol) pull-pattern column-cells [])
+  {::children (pull->fields (get schemas (str source-symbol)) pull-pattern column-cells [])
    ::data-has-id? (entity-pull? pull-pattern)
    ::label fe-name
    ::get-value (r/partial last-arg-first get fe-pos)
