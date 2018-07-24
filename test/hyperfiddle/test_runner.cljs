@@ -5,7 +5,7 @@
 
     ; NOT clj tests, this is only for CLJS tests
 
-    contrib.char-test
+    contrib.char$-test
     contrib.data-test
     #_contrib.datomic-errors-test
     contrib.datomic-tx-test
@@ -28,7 +28,7 @@
 
 (defn run []
   (doo-tests
-    'contrib.char-test
+    'contrib.char$-test
     'contrib.data-test
     #_'contrib.datomic-errors-test
     'contrib.datomic-tx-test
