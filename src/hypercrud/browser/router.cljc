@@ -55,7 +55,7 @@
       (-> frag decode-rfc3986-pchar decode-ednish empty->nil))))
 
 (defn assoc-frag [[fiddle ?datomic-args ?service-args ?initial-state] frag]
-  {:pre [fiddle (nil? ?initial-state)]}
+  {:pre [(nil? ?initial-state)]}
   (let [x (canonicalize fiddle ?datomic-args ?service-args frag)]
     x))
 
