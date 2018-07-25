@@ -16,5 +16,5 @@
 
 (defn fiddle-defaults [fiddle]
   (-> (data-defaults fiddle)
-      (update :fiddle/markdown or-str (str/fmt "### %s\n\n!result" (some-> fiddle :fiddle/ident name)))
+      (update :fiddle/markdown or-str (str/fmt "### %s" (some-> fiddle :fiddle/ident str)))
       (update :fiddle/renderer or-str #?(:clj nil :cljs (-> hyperfiddle.ui/fiddle meta :expr-str)))))

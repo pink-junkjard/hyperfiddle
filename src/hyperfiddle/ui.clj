@@ -8,7 +8,8 @@
   '(let [{:keys [:hypercrud.browser/fiddle
                  :hypercrud.browser/result]} ctx]
      [:div {:class class}
-      [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]]))
+      [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]
+      [hyperfiddle.ui/result ctx]]))
 
 (def expr-manually-formatted
   ; Format this manually:
@@ -19,7 +20,8 @@
 (let [{:keys [:hypercrud.browser/fiddle
               :hypercrud.browser/result]} ctx]
   [:div {:class class}
-   [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]])")
+   [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]
+   [hyperfiddle.ui/result ctx]])")
 
 (defmacro -build-fiddle []                                  ; Pretty print at compile-time
   `(with-meta (~'fn ~'[ctx & [class]] ~expr)
