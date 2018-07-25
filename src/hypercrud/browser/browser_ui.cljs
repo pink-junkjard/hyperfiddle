@@ -82,7 +82,7 @@
                      ; If userland crashes, reactions don't take hold, we need to reset here.
                      ; Cheaper to pass this as a prop than to hash everything
                      ; Userland will never see this param as it isn't specified in the wrapped render expr.
-                     @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/markdown]) ; for good luck
+                     @(:hypercrud.browser/fiddle ctx)       ; for good luck
                      ]))
          ::xray [fiddle-xray ctx class]
          ::api [fiddle-api ctx class])))])
