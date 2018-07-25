@@ -23,7 +23,7 @@
     [hypercrud.ui.connection-color :refer [border-color]]
     [hypercrud.ui.control.link-controls :refer [anchors iframes]]
     [hypercrud.ui.error :as ui-error]
-    [hyperfiddle.data :as hf]
+    [hyperfiddle.data :as data]
     [hyperfiddle.ui.controls :as controls]
     [hyperfiddle.ui.hyper-controls :refer [hyper-label hyper-select-head magic-new-body magic-new-head]]
     [hyperfiddle.ui.hacks]                                  ; exports
@@ -214,7 +214,7 @@ User renderers should not be exposed to the reaction."
            (->> (form ctx props) (into [:thead])))          ; strict
          (->> (:hypercrud.browser/data ctx)
               (r/fmap (r/partial sort-fn sort-col))
-              (r/unsequence hf/relation-keyfn)              ; todo support nested tables
+              (r/unsequence data/relation-keyfn)              ; todo support nested tables
               (map (fn [[relation k]]
                      (->> (form (context/body ctx relation) props)
                           (into ^{:key k} [:tr]))))         ; strict
@@ -234,11 +234,10 @@ nil. call site must wrap with a Reagent component"
   (fragment
     (hint ctx)
     (condp = (:hypercrud.browser/data-cardinality ctx)
-      :db.cardinality/one (let [ctx (assoc ctx ::layout :hyperfiddle.ui.layout/block)]
-                            (apply fragment
-                                   (-> (hf/relation-keyfn @(:hypercrud.browser/data ctx)) str keyword)
-                                   (hf/form field ctx props)))
-      :db.cardinality/many [table (r/partial hf/form field) hf/sort-fn ctx props]
+      :db.cardinality/one (let [ctx (assoc ctx ::layout :hyperfiddle.ui.layout/block)
+                                key (-> (data/relation-keyfn @(:hypercrud.browser/data ctx)) str keyword)]
+                            (apply fragment key (data/form field ctx props)))
+      :db.cardinality/many [table (r/partial data/form field) data/sort-fn ctx props]
       ; blank fiddles
       nil)))
 
@@ -368,12 +367,12 @@ nil. call site must wrap with a Reagent component"
        "table" (letfn [(form [content ctx]
                          [[markdown content (assoc ctx ::unp true)]])]
                  (fn [content argument props ctx]
-                   [table (r/partial form content) hf/sort-fn ctx #_props]))
+                   [table (r/partial form content) data/sort-fn ctx #_props]))
 
        "list" (fn [content argument props ctx]
                 [:ul props
                  (->> (:hypercrud.browser/data ctx)
-                      (r/unsequence hf/relation-keyfn)
+                      (r/unsequence data/relation-keyfn)
                       (map (fn [[relation k]]
                              ^{:key k} [:li [markdown content (context/body ctx relation)]]))
                       (doall))])})))
