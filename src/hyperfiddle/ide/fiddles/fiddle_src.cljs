@@ -69,8 +69,7 @@
    [Datomic query docs](https://docs.datomic.com/on-prem/query.html)."
    :fiddle/markdown "See [:fiddle/markdown examples](http://www.hyperfiddle.net/:docs/:fiddle-markdown/)."
    :fiddle/css "See [:fiddle/css examples](http://www.hyperfiddle.net/:docs/:fiddle-css/)."
-   :fiddle/renderer "See [:fiddle/renderer examples](http://www.hyperfiddle.net/:docs/:fiddle-renderer/). `ctx` and
-   `class` are in lexical scope. No `(ns (:require ...))` yet so vars must be fully qualified."
+   :fiddle/renderer "`ctx` and `class` are in lexical scope. No `(ns (:require ...))` yet so vars must be fully qualified. See [:fiddle/renderer docs](http://www.hyperfiddle.net/:docs/:fiddle-renderer/). "
    :fiddle/links "See [:fiddle/links examples](http://www.hyperfiddle.net/:docs/:fiddle-links/)."})
 
 (def controls
@@ -79,23 +78,23 @@
                    [hyper-control (dissoc props :embed-mode) ctx]
                    [:span.schema "schema: " (schema-links ctx)]
                    (when-not (:embed-mode props)
-                     [:div.hf-underdoc [markdown (:fiddle/pull underdocs)]])])
+                     #_[:div.hf-underdoc [markdown (:fiddle/pull underdocs)]])])
    :fiddle/query (fn [ref props ctx]
                    [:div
                     [hyper-control (dissoc props :embed-mode) ctx]
                     [:span.schema "schema: " (schema-links ctx)]
                     (when-not (:embed-mode props)
-                      [:div.hf-underdoc [markdown (:fiddle/query underdocs)]])])
+                      #_[:div.hf-underdoc [markdown (:fiddle/query underdocs)]])])
    :fiddle/markdown (fn [ref props ctx]
                       [:div
                        [hyper-control (dissoc props :embed-mode) ctx]
                        (when-not (:embed-mode props)
-                         [:div.hf-underdoc [markdown (:fiddle/markdown underdocs)]])])
+                         #_[:div.hf-underdoc [markdown (:fiddle/markdown underdocs)]])])
    :fiddle/css (fn [ref props ctx]
                  [:div
                   [hyper-control (dissoc props :embed-mode) ctx]
                   (when-not (:embed-mode props)
-                    [:div.hf-underdoc [markdown (:fiddle/css underdocs)]])])
+                    #_[:div.hf-underdoc [markdown (:fiddle/css underdocs)]])])
    :fiddle/renderer (fn [ref props ctx]
                       [:div
                        [hyper-control (dissoc props :embed-mode) ctx]
@@ -106,7 +105,7 @@
                     [:div [links-fiddle/renderer ctx (:embed-mode props)]]
                     [anchors (:hypercrud.browser/path ctx) (dissoc props :embed-mode) ctx]
                     (when-not (:embed-mode props)
-                      [:div.hf-underdoc [markdown (:fiddle/links underdocs)]])])
+                      #_[:div.hf-underdoc [markdown (:fiddle/links underdocs)]])])
    })
 
 (defn fiddle-src-renderer [ctx class & {:keys [embed-mode]}]
