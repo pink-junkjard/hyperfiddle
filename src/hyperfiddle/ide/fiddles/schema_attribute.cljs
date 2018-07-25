@@ -93,9 +93,9 @@
          ; The rule is you can't stage anything until it's a valid Datomic attribute.
          ; So only the special attrs are editable at first.
          ; Once that is completed, the rest are editable.
-         (field [0 :db/doc] ctx nil {:read-only valid-attr?})
-         (field [0 :db/unique] ctx nil {:read-only valid-attr?})
+         (field [0 :db/doc] ctx nil {:read-only (not valid-attr?)})
+         (field [0 :db/unique] ctx nil {:read-only (not valid-attr?)})
          [markdown "!block[Careful: below is not validated, don't stage invalid schema]{.alert .alert-warning style=\"margin-bottom: 0\"}"]
-         (field [0 :db/isComponent] ctx nil {:read-only valid-attr?})
-         (field [0 :db/fulltext] ctx nil {:read-only valid-attr?})
+         (field [0 :db/isComponent] ctx nil {:read-only (not valid-attr?)})
+         (field [0 :db/fulltext] ctx nil {:read-only (not valid-attr?)})
          ]))))
