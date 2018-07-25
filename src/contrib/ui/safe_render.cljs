@@ -4,9 +4,6 @@
             [reagent.core :as reagent]))
 
 
-(code-for-nodejs
-  (require '[reagent.dom.server :as reagent-server]))
-
 (declare user-portal)
 
 (code-for-nodejs
