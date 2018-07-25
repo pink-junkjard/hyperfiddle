@@ -126,15 +126,15 @@
        :query (field [0 :fiddle/query] ctx (controls :fiddle/query))
        :blank nil
        nil nil)
-     (field [0 :fiddle/markdown] ctx (controls :fiddle/markdown))
-     (field [0 :fiddle/css] ctx (controls :fiddle/css))
      (field [0 :fiddle/renderer] ctx (controls :fiddle/renderer))
-     (field [0 :fiddle/hydrate-result-as-fiddle] ctx nil)
+     (field [0 :fiddle/css] ctx (controls :fiddle/css))
+     (field [0 :fiddle/markdown] ctx (controls :fiddle/markdown))
      (when (either/left? ectx)
        [:div
         [:h5 "Unable to shadow links:"]
         [error/error-block @ectx]])
      (field [0 :fiddle/links] ctx (controls :fiddle/links))
+     (field [0 :fiddle/hydrate-result-as-fiddle] ctx nil)
      [:div.p "Additional attributes"]
      (->> @(:hypercrud.browser/fields ctx)
           first
