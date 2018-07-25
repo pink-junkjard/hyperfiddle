@@ -115,7 +115,7 @@
                               (map (fn [attr]
                                      {::children (when (is-component? schema attr)
                                                    (pull->fields schema [::implicit-splat] data (conj get-values attr)))
-                                      ::data-has-id? false
+                                      ::data-has-id? (is-ref? schema attr)
                                       ::label (keyword->label attr)
                                       ::get-value attr
                                       ::path-segment attr
