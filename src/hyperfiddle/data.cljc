@@ -13,6 +13,18 @@
   ; This keyfn is very tricky, read https://github.com/hyperfiddle/hyperfiddle/issues/341
   (hash (map #(or (:db/id %) %) relation)))
 
+(defn- relative-links-at [path-segment ctx]
+  (let [path (cond
+               (empty? (:hypercrud.browser/path ctx)) [path-segment]
+
+               (contains? #{:head :body} (last (:hypercrud.browser/path ctx)))
+               (-> (drop-last (:hypercrud.browser/path ctx))
+                   vec
+                   (conj path-segment))
+
+               :else (conj (:hypercrud.browser/path ctx) path-segment))]
+    (r/track link/links-at path (:hypercrud.browser/links ctx))))
+
 (letfn [(should-flatten? [m-field] (not (nil? (::field/source-symbol m-field))))]
   (defn form "Field is invoked as fn"                       ; because it unifies with request fn side
     [f-field ctx & [props]]                                 ; todo props shouldn't be passed through here
@@ -28,13 +40,8 @@
                                               (f-field [path-segment child-segment] ctx nil props)))))))))
         vec
         (cond->
-          (not (and #_(some #(% (:hypercrud.browser/path ctx)) [empty? #{[:head] [:body]}]) ; (empty? path)    or path = [:head]    or path = [:body]
-                    (->> (r/track link/links-at [:head] (:hypercrud.browser/links ctx))
-                         (r/fmap empty?)
-                         deref)
-                    (->> (r/track link/links-at [:body] (:hypercrud.browser/links ctx))
-                         (r/fmap empty?)
-                         deref)))
+          (or (not @(r/fmap empty? (relative-links-at :head ctx)))
+              (not @(r/fmap empty? (relative-links-at :body ctx))))
           ; row/relation; omit if result-row & no links. eventually we should probably always display
           (conj (f-field [] ctx nil props)))
 
