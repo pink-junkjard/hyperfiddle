@@ -2,7 +2,8 @@
   (:require
     [contrib.string :refer [blank->nil]]
     [contrib.reactive :as r]
-    [cuerdas.core :as str]))
+    [cuerdas.core :as str]
+    [hypercrud.browser.context :as context]))
 
 
 (defn fqn->name [s]
@@ -26,10 +27,10 @@
     attr))
 
 (defn semantic-docstring [ctx]
-  (let [dbdoc (some-> ctx :hypercrud.browser/fat-attribute (r/cursor [:db/doc]) deref blank->nil)
-        typedoc (some->> ctx :hypercrud.browser/fat-attribute
-                         (r/fmap attribute-schema-human)
-                         deref (interpose " ") (apply str))
+  (let [attr (context/hydrate-attribute ctx (:hypercrud.browser/attribute ctx))
+        dbdoc (some-> @(r/cursor attr [:db/doc]) blank->nil)
+        typedoc (some->> @(r/fmap attribute-schema-human attr)
+                         (interpose " ") (apply str))
         help-md (blank->nil
                   (str (if dbdoc (str dbdoc "\n\n"))        ; markdown needs double line-break
                        (if typedoc (str "`" typedoc "`"))))]

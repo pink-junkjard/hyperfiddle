@@ -34,8 +34,7 @@
 
 
 (defn attr-renderer [ref props ctx]
-  (let [renderer (some->> ctx :hypercrud.browser/fat-attribute
-                          (r/fmap :attribute/renderer)
+  (let [renderer (some->> (context/hydrate-attribute ctx (:hypercrud.browser/attribute ctx) :attribute/renderer)
                           (r/fmap blank->nil)
                           deref)]
     ^{:key (hash renderer)}
@@ -43,7 +42,7 @@
      [eval-renderer-comp nil renderer ref props ctx]]))
 
 (defn ^:export control "this is a function, which returns component" [ctx] ; returns Func[(ref, props, ctx) => DOM]
-  (let [attr (some-> ctx :hypercrud.browser/fat-attribute deref)
+  (let [attr @(context/hydrate-attribute ctx (:hypercrud.browser/attribute ctx))
         renderer (blank->nil (:attribute/renderer attr))]
     (cond
       (not attr) controls/string
@@ -116,11 +115,12 @@
           (->> (:hypercrud.browser/path ctx)                ; generate a unique selector for each location
                (remove #{:head :body})
                (map css-slugify)
-               (string/join "/"))
-          (some-> ctx :hypercrud.browser/fat-attribute deref :db/valueType :db/ident)
-          (some-> ctx :hypercrud.browser/fat-attribute deref :attribute/renderer #_label/fqn->name)
-          (some-> ctx :hypercrud.browser/fat-attribute deref :db/cardinality :db/ident)
-          (some-> ctx :hypercrud.browser/fat-attribute deref :db/isComponent (if :component))])
+               (string/join "/"))]
+         (let [attr (context/hydrate-attribute ctx (:hypercrud.browser/attribute ctx))]
+           [@(r/cursor attr [:db/valueType :db/ident])
+            @(r/cursor attr [:attribute/renderer])  #_label/fqn->name
+            @(r/cursor attr [:db/cardinality :db/ident])
+            (some-> @(r/cursor attr [:db/isComponent]) (if :component))]))
        (map css-slugify)))
 
 (defn ^:export value "Relation level value renderer. Works in forms and lists but not tables (which need head/body structure).

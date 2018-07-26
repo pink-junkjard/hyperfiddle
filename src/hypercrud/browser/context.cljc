@@ -17,7 +17,6 @@
           :hypercrud.browser/attribute
           :hypercrud.browser/data
           :hypercrud.browser/data-cardinality
-          :hypercrud.browser/fat-attribute
           :hypercrud.browser/fiddle
           :hypercrud.browser/field
           :hypercrud.browser/fields
@@ -49,6 +48,9 @@
         invert-route (:hypercrud.browser/invert-route ctx)]
     (runtime/dispatch! (:peer ctx) (actions/with (:peer ctx) invert-route (:branch ctx) uri tx))))
 
+(defn hydrate-attribute [ctx ident & ?more-path]
+  (r/cursor (:hypercrud.browser/schemas ctx) (concat [(str (:hypercrud.browser/source-symbol ctx)) ident] ?more-path)))
+
 (defn- set-parent [ctx]
   (assoc ctx :hypercrud.browser/parent (select-keys ctx [:hypercrud.browser/parent :hypercrud.browser/path])))
 
@@ -71,14 +73,12 @@
                              ))
                     (update :hypercrud.browser/path conj :body)
                     (dissoc :hypercrud.browser/attribute
-                            :hypercrud.browser/fat-attribute
                             :hypercrud.browser/field))]
     (case (:hypercrud.browser/data-cardinality ctx)
       :db.cardinality/one new-ctx
       :db.cardinality/many (assoc new-ctx :hypercrud.browser/data ?data))))
 
-(letfn [(default [default-v v] (or v default-v))
-        (set-data [ctx cardinality]
+(letfn [(set-data [ctx cardinality]
           (-> ctx
               (set-parent-data)
               (assoc
@@ -136,7 +136,6 @@
                 (dissoc :hypercrud.browser/attribute
                         :hypercrud.browser/data
                         :hypercrud.browser/data-cardinality
-                        :hypercrud.browser/fat-attribute
                         :hypercrud.browser/field))
 
             ; todo cannot conflict with :db/ident :body
@@ -146,19 +145,16 @@
               (body ctx))
 
             (attribute-segment? path-segment)
-            (let [field (r/fmap (r/partial find-field path-segment) (:hypercrud.browser/fields ctx))
-                  fat-attribute (->> (r/cursor (:hypercrud.browser/schemas ctx) [(str (:hypercrud.browser/source-symbol ctx)) path-segment])
-                                     (r/fmap (r/partial default {:db/ident path-segment})))]
+            (let [field (r/fmap (r/partial find-field path-segment) (:hypercrud.browser/fields ctx))]
               (cond-> (-> ctx
                           (set-parent)
                           (update :hypercrud.browser/path conj path-segment)
                           (assoc
                             :hypercrud.browser/attribute path-segment
-                            :hypercrud.browser/fat-attribute fat-attribute
                             :hypercrud.browser/field field
                             :hypercrud.browser/fields (r/fmap ::field/children field)))
                 ; if we are in a head, we dont have data to set
-                (not (some #{:head} (:hypercrud.browser/path ctx))) (set-data @(r/cursor fat-attribute [:db/cardinality :db/ident]))))
+                (not (some #{:head} (:hypercrud.browser/path ctx))) (set-data @(hydrate-attribute ctx path-segment :db/cardinality :db/ident))))
 
             (find-element-segment? path-segment)
             (let [field (r/fmap (r/partial find-field path-segment) (:hypercrud.browser/fields ctx))
