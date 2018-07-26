@@ -1,14 +1,15 @@
 (ns hyperfiddle.ui.select
-  (:require [cats.core :as cats :refer [fmap]]
-            [cats.monad.either :as either]
-            [contrib.datomic-tx :as tx]
-            [contrib.reactive :as r]
-            [contrib.try$ :refer [try-either]]
-            [hypercrud.browser.core :as browser]
-            [hypercrud.browser.field :as field]
-            [hypercrud.browser.link :as link]
-            [hypercrud.ui.error :as ui-error]
-            [hyperfiddle.ui.controls :as controls]))
+  (:require
+    [cats.context :refer-macros [with-context]]
+    [cats.core :as cats :refer [fmap]]
+    [cats.monad.either :as either]
+    [contrib.reactive :as r]
+    [contrib.try$ :refer [try-either]]
+    [hypercrud.browser.core :as browser]
+    [hypercrud.browser.field :as field]
+    [hypercrud.browser.link :as link]
+    [hypercrud.ui.error :as ui-error]
+    [hyperfiddle.ui.controls :as controls]))
 
 
 (defn default-label-renderer [v ctx]
@@ -21,19 +22,18 @@
 
 (defn label-fn [data ctx]                                   ; It's perfectly possible to properly report this error properly upstream. (later - is it?)
   ; This whole thing is legacy, migrate it to link props
-  (let [label'
-        (->> (map (fn [data field]
-                    (->> (::field/children field)
-                         (mapv (fn [{:keys [::field/get-value ::field/path-segment]}]
-                                 ; Custom label renderers? Can't use the attribute renderer, since that
-                                 ; is how we are in a select options in the first place.
-                                 (let [renderer (get-in ctx [:fields path-segment :label-renderer] default-label-renderer)]
-                                   (try-either (renderer (get-value data) ctx)))))))
-                  data
-                  @(:hypercrud.browser/fields ctx))
-             (apply concat)
-             cats/sequence
-             (fmap #(->> % (interpose ", ") (remove nil?) (apply str))))]
+  (let [elabels (->> (map (fn [data field]
+                            (->> (::field/children field)
+                                 (mapv (fn [{:keys [::field/get-value ::field/path-segment]}]
+                                         ; Custom label renderers? Can't use the attribute renderer, since that
+                                         ; is how we are in a select options in the first place.
+                                         (let [renderer (get-in ctx [:fields path-segment :label-renderer] default-label-renderer)]
+                                           (try-either (renderer (get-value data) ctx)))))))
+                          data
+                          @(:hypercrud.browser/fields ctx))
+                     (apply concat))
+        label' (->> (with-context either/context (cats/sequence elabels)) ; prevents cats no context set errors
+                    (fmap #(->> % (interpose ", ") (remove nil?) (apply str))))]
     (either/branch label' pr-str identity)))
 
 (defn select-anchor-renderer' [props option-props ctx]
@@ -87,7 +87,7 @@
         (fn [hc-props]
           (let [entity (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]) ; how can this be loading??
                 disabled (or (boolean (:read-only props))
-                             @(r/fmap nil? entity) ; no value at all
+                             @(r/fmap nil? entity)          ; no value at all
                              (not @(r/fmap controls/writable-entity? entity)))
                 option-props {:disabled disabled}
                 props (-> {:on-change (r/partial controls/entity-change! ctx)}
