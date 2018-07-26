@@ -42,7 +42,7 @@
             "&redirect_uri=" (str "http://" (get-in ctx [:host-env :hostname]) auth0-redirect-path)))))
 
 (defn domain-request [domain-eid peer]
-  (->EntityRequest domain-eid nil
+  (->EntityRequest domain-eid
                    (hc/db peer domain-uri nil)
                    [:db/id
                     :hyperfiddle/owners
@@ -60,7 +60,8 @@
                     ]))
 
 (defn domain-request-insecure [domain-eid peer branch]
-  (->EntityRequest domain-eid nil (hc/db peer domain-uri branch)
+  (->EntityRequest domain-eid
+                   (hc/db peer domain-uri branch)
                    [:db/id
                     :domain/code
                     :domain/css

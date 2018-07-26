@@ -92,24 +92,10 @@
               type))
         (initial-focus [ctx]
           (case @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/type]) ; fiddle/type not relevant outside this fn
-            :entity (if-let [a @(r/cursor (:hypercrud.browser/request ctx) [:a])]
-                      (let [dbname @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/pull-database])]
-                        (case @(r/cursor (:hypercrud.browser/schemas ctx) [dbname a :db/cardinality :db/ident])
-                          :db.cardinality/one
-                          (assoc ctx
-                            :hypercrud.browser/data (r/fmap vector (:hypercrud.browser/result ctx))
-                            :hypercrud.browser/data-cardinality :db.cardinality/one
-                            :hypercrud.browser/path [])
-
-                          :db.cardinality/many
-                          (assoc ctx
-                            :hypercrud.browser/data (r/fmap (r/partial mapv vector) (:hypercrud.browser/result ctx))
-                            :hypercrud.browser/data-cardinality :db.cardinality/many
-                            :hypercrud.browser/path [])))
-                      (assoc ctx
-                        :hypercrud.browser/data (r/fmap vector (:hypercrud.browser/result ctx))
-                        :hypercrud.browser/data-cardinality :db.cardinality/one
-                        :hypercrud.browser/path []))
+            :entity (assoc ctx
+                      :hypercrud.browser/data (r/fmap vector (:hypercrud.browser/result ctx))
+                      :hypercrud.browser/data-cardinality :db.cardinality/one
+                      :hypercrud.browser/path [])
             :query (condp = (query-type @(r/cursor (:hypercrud.browser/request ctx) [:query]))
                      datascript.parser.FindRel
                      (assoc ctx

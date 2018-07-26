@@ -193,14 +193,7 @@
                     fe-name nil #_"entity"                  ; using "entity" as fe-name makes sense, but is terrible as a label
                     pull-pattern @(r/cursor request [:pull-exp])]
                 (either/right
-                  (if-let [a @(r/cursor request [:a])]
-                    (case @(r/cursor (:hypercrud.browser/schemas ctx) [dbname a :db/cardinality :db/ident])
-                      :db.cardinality/one
-                      [(pull-cell->fe schemas 0 @result source-symbol fe-name pull-pattern)]
-
-                      :db.cardinality/many
-                      [(pull-many-cells->fe schemas 0 @result source-symbol fe-name pull-pattern)])
-                    [(pull-cell->fe schemas 0 @result source-symbol fe-name pull-pattern)])))
+                  [(pull-cell->fe schemas 0 @result source-symbol fe-name pull-pattern)]))
 
       :query (mlet [{:keys [qfind]} (try-either (parser/parse-query @(r/cursor request [:query])))]
                (cats/return

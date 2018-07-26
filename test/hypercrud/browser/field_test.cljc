@@ -68,13 +68,7 @@
          :db/valueType {:db/ident :db.type/string}}
         {:db/ident :b/y
          :db/cardinality {:db/ident :db.cardinality/one}
-         :db/valueType {:db/ident :db.type/string}}
-        {:db/ident :e/a-one
-         :db/cardinality {:db/ident :db.cardinality/one}
-         :db/valueType {:db/ident :db.type/ref}}
-        {:db/ident :e/a-many
-         :db/cardinality {:db/ident :db.cardinality/many}
-         :db/valueType {:db/ident :db.type/ref}}]
+         :db/valueType {:db/ident :db.type/string}}]
        (data/group-by-assume-unique :db/ident)))
 
 (defn build-ctx [fiddle request result]
@@ -228,20 +222,8 @@
 (deftest entity []
   (pull->attr-tests {:fiddle/type :entity
                      :fiddle/pull-database "$"}
-                    #(->EntityRequest 1 nil (->DbVal nil nil) %)
+                    #(->EntityRequest 1 (->DbVal nil nil) %)
                     merge-into-one))
-
-(deftest entity-attr-one []
-  (pull->attr-tests {:fiddle/type :entity
-                     :fiddle/pull-database "$"}
-                    #(->EntityRequest 1 :e/a-one (->DbVal nil nil) %)
-                    merge-into-one))
-
-(deftest entity-attr-many []
-  (pull->attr-tests {:fiddle/type :entity
-                     :fiddle/pull-database "$"}
-                    #(->EntityRequest 1 :e/a-many (->DbVal nil nil) %)
-                    identity))
 
 (deftest query-rel []
   (pull->attr-tests {:fiddle/type :query}

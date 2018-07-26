@@ -71,7 +71,7 @@
             _ (assert fiddle "missing fiddle-id")
             _ (assert (:hypercrud.browser/domain ctx) "missing domain")
             dbval (hc/db (:peer ctx) (get-in ctx [:hypercrud.browser/domain :domain/fiddle-repo]) (:branch ctx))]
-        (->EntityRequest (legacy-fiddle-ident->lookup-ref fiddle) nil dbval meta-pull-exp-for-link)))))
+        (->EntityRequest (legacy-fiddle-ident->lookup-ref fiddle) dbval meta-pull-exp-for-link)))))
 
 (defn validate-fiddle [fiddle]
   (if-not (:db/id fiddle)
@@ -127,12 +127,12 @@
     :entity
     (if-let [dbname @(r/cursor fiddle [:fiddle/pull-database])]
       (if-let [uri (get-in ctx [:hypercrud.browser/domain :domain/environment dbname])]
-        (let [[_ [?e a :as args]] (get-in ctx [:route])     ; Missing entity param is valid state now https://github.com/hyperfiddle/hyperfiddle/issues/268
+        (let [[_ [?e :as args]] (get-in ctx [:route])       ; Missing entity param is valid state now https://github.com/hyperfiddle/hyperfiddle/issues/268
               db (hc/db (:peer ctx) uri (:branch ctx))
               pull-exp (or (-> (memoized-safe-read-edn-string @(r/cursor fiddle [:fiddle/pull]))
                                (either/branch (constantly nil) identity))
                            ['*])]
-          (either/right (->EntityRequest (or (:db/id ?e) ?e) a db pull-exp)))
+          (either/right (->EntityRequest (or (:db/id ?e) ?e) db pull-exp)))
         (either/left (ex-info (str "Invalid :fiddle/pull-database " dbname) {})))
       (either/left (ex-info "Missing :fiddle/pull-database" {:fiddle @(r/cursor fiddle [:fiddle/ident])})))
 
@@ -163,7 +163,7 @@
                               (-> ctx :route second first nil?))
                        (assoc ctx :read-only (r/constantly true))
                        ctx)
-                 ctx (context/focus ctx [:body])           ; todo remove, call (focus ctx [:body]) when you need the data
+                 ctx (context/focus ctx [:body])            ; todo remove, call (focus ctx [:body]) when you need the data
                  ]]
       (cats/return ctx))))
 

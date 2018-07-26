@@ -37,18 +37,12 @@
 
 (defmulti hydrate-request* (fn [this & args] (class this)))
 
-(defmethod hydrate-request* EntityRequest [{:keys [e a db pull-exp]} get-secure-db-with]
+(defmethod hydrate-request* EntityRequest [{:keys [e db pull-exp]} get-secure-db-with]
   (let [{pull-db :db} (get-secure-db-with (:uri db) (:branch db))
-        pull-exp (if a [{a pull-exp}] pull-exp)
         pulled-tree (if (tempid? e)
-                      (if a
-                        nil
-                        ; todo return a positive id here
-                        {:db/id e})
-                      (d/pull pull-db pull-exp e))
-        pulled-tree (recursively-add-entity-types pulled-tree db)
-        pulled-tree (if a (get pulled-tree a) pulled-tree)]
-    pulled-tree))
+                      {:db/id e}
+                      (d/pull pull-db pull-exp e))]
+    (recursively-add-entity-types pulled-tree db)))
 
 (defn process-result [user-params fe result]
   (condp = (type fe)

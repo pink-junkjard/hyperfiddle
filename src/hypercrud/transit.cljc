@@ -37,7 +37,7 @@
    (t/write-handler (constantly "Entity") (fn [v] [(.-uri v) (.-coll v)]))
 
    EntityRequest
-   (t/write-handler (constantly "EReq") (fn [v] [(:e v) (:a v) (:db v) (:pull-exp v)]))
+   (t/write-handler (constantly "EReq") (fn [v] [(:e v) (:db v) (:pull-exp v)]))
 
    Err
    (t/write-handler (constantly "err") #(:msg %))
