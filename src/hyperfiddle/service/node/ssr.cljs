@@ -149,8 +149,10 @@
                              load-level)]
     (-> (foundation/bootstrap-data rt foundation/LEVEL-NONE load-level (.-path req) (::runtime/global-basis initial-state))
         (p/then (fn []
-                  (let [auto-transact (->> @(runtime/state rt [::runtime/domain :domain/db-lookup])
-                                           (map-values #(security/attempt-to-transact? % @(runtime/state rt [::runtime/user-id]))))]
+                  (let [auto-transact (->> @(runtime/state rt [::runtime/domain :domain/databases])
+                                           (map (juxt :domain.database/name (fn [{:keys [:domain.database/record]}]
+                                                                              (security/attempt-to-transact? record @(runtime/state rt [::runtime/user-id])))))
+                                           (into {}))]
                     (runtime/dispatch! rt [:set-auto-transact auto-transact]))))
         (p/then (constantly 200))
         (p/catch #(or (:hyperfiddle.io/http-status-code (ex-data %)) 500))
