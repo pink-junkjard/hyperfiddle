@@ -1,19 +1,15 @@
 (ns hypercrud.client.schema
   (:require [cats.core :as cats]
-            [clojure.string :as string]
             [hypercrud.client.core :as hc]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
-            [contrib.uri :refer [#?(:cljs URI)]]
             [contrib.data :refer [group-by-assume-unique map-values]]
-            [contrib.reactive :as r])
-  #?(:clj
-     (:import (java.net URI))))
+            [contrib.reactive :as r]))
 
 
 (defn hc-attr-request [ctx]
   (->QueryRequest '[:find [(pull ?attr [:attribute/ident :attribute/renderer :db/doc]) ...]
                     :where [?attr :attribute/ident]]
-                  [(hc/db (:peer ctx) (get-in ctx [:hypercrud.browser/domain :domain/fiddle-repo]) (:branch ctx))]))
+                  [(hc/db (:peer ctx) (get-in ctx [:hypercrud.browser/domain :domain/fiddle-database :database/uri]) (:branch ctx))]))
 
 (defn schema-request [dbval]
   (->QueryRequest '[:find [(pull ?attr [*
@@ -24,11 +20,11 @@
                   [dbval]))
 
 (defn schema-requests-for-link [ctx]
-  (->> (get-in ctx [:hypercrud.browser/domain :domain/environment])
-       (filter (fn [[k v]] (and (string? k) (string/starts-with? k "$") (instance? URI v))))
-       (map (fn [[dbname uri]]
-              (->> (hc/db (:peer ctx) uri (:branch ctx))
-                   (schema-request))))
+  (->> (get-in ctx [:hypercrud.browser/domain :domain/databases])
+       (map (fn [hf-db]
+              (let [uri (get-in hf-db [:domain.database/record :database/uri])]
+                (-> (hc/db (:peer ctx) uri (:branch ctx))
+                    schema-request))))
        (concat [(hc-attr-request ctx)])))
 
 (letfn [(with-root-data [ctx either-root-data]
@@ -39,13 +35,13 @@
                                                (group-by-assume-unique :attribute/ident)
                                                (map-values #(dissoc % :attribute/ident :db/id)))]
 
-                         (->> (get-in ctx [:hypercrud.browser/domain :domain/environment])
-                              (filter (fn [[k v]] (and (string? k) (string/starts-with? k "$") (instance? URI v))))
-                              (mapv (fn [[dbname uri]]
-                                      (let [request (schema-request (hc/db (:peer ctx) uri (:branch ctx)))]
+                         (->> (get-in ctx [:hypercrud.browser/domain :domain/databases])
+                              (mapv (fn [hf-db]
+                                      (let [uri (get-in hf-db [:domain.database/record :database/uri])
+                                            request (schema-request (hc/db (:peer ctx) uri (:branch ctx)))]
                                         (->> @(hc/hydrate (:peer ctx) (:branch ctx) request)
                                              (cats/fmap (fn [schema]
-                                                          [dbname
+                                                          [(:domain.database/name hf-db)
                                                            (->> schema
                                                                 (map #(into {} %))
                                                                 (group-by-assume-unique :db/ident)

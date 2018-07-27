@@ -15,8 +15,8 @@
             [hypercrud.browser.router :as router]
             [hypercrud.browser.system-fiddle :as system-fiddle]
             [hypercrud.types.Entity :refer [->Entity shadow-entity]]
-            [contrib.uri :refer [is-uri?]]
             [hyperfiddle.actions :as actions]
+            [hyperfiddle.domain :as domain]
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.runtime :as runtime]
             [hyperfiddle.security :as security]
@@ -97,13 +97,12 @@
                         :disabled (or (not src-mode) no-target-fiddle)})])
       (let [tooltip [:div {:style {:text-align "left"}}
                      [markdown
-                      (->> @(runtime/state (:peer ctx) [::runtime/domain :domain/environment])
-                           (filter (fn [[k v]] (and (string? k) (string/starts-with? k "$") (is-uri? v))))
-                           (reduce (fn [acc [dbname uri]]
-                                     (if (contains? acc uri)
-                                       (update acc uri conj dbname)
-                                       (assoc acc uri [dbname])))
-                                   {@(runtime/state (:peer ctx) [::runtime/domain :domain/fiddle-repo]) ["Source"]
+                      (->> @(runtime/state (:peer ctx) [::runtime/domain :domain/databases])
+                           (reduce (fn [acc {:keys [:domain.database/name :domain.database/record]}]
+                                     (if (contains? acc (:database/uri record))
+                                       (update acc (:database/uri record) conj name)
+                                       (assoc acc (:database/uri record) [name])))
+                                   {@(runtime/state (:peer ctx) [::runtime/domain :domain/fiddle-database :database/uri]) ["Source"]
                                     ; domains-uri shouldn't need to be accessed
                                     foundation/domain-uri ["Domains"]})
                            (map (fn [[uri dbnames]]
@@ -135,7 +134,9 @@
 (letfn [(toggle-auto-transact! [ctx selected-uri]
           (runtime/dispatch! (:peer ctx) [:toggle-auto-transact @selected-uri]))]
   (defn ^:export stage-ui-buttons [selected-uri stage ctx]
-    (let [writes-allowed? (let [hf-db @(runtime/state (:peer ctx) [::runtime/domain :domain/db-lookup @selected-uri])
+    (let [writes-allowed? (let [hf-db (->> (runtime/state (:peer ctx) [::runtime/domain :domain/databases])
+                                           (r/fmap (r/partial domain/db-for-uri @selected-uri))
+                                           deref)
                                 subject @(runtime/state (:peer ctx) [::runtime/user-id])]
                             (security/attempt-to-transact? hf-db subject))
           anonymous? (nil? @(runtime/state (:peer ctx) [::runtime/user-id]))]

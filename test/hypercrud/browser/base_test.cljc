@@ -8,7 +8,7 @@
 (def ctx {:peer nil
           :branch nil
           :hypercrud.browser/domain
-          {:domain/environment
+          {#_#_:domain/environment
            {"$" #uri "datomic:free://datomic:4334/~dustin.getz"
             "$seattle" #uri "datomic:free://datomic:4334/seattle"}}})
 (deftest validate-query-params-1

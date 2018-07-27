@@ -2,10 +2,9 @@
   (:require [cats.core :as cats :refer [mlet]]
             [cats.monad.either :as either]
             [clojure.string :as string]
-            [contrib.data :refer [tee parse-query-element]]
+            [contrib.data :refer [parse-query-element]]
             [contrib.string :refer [memoized-safe-read-edn-string]]
-            [hypercrud.client.core :as hc]
-            [taoensso.timbre :as timbre]))
+            [hypercrud.client.core :as hc]))
 
 
 (defn parse-holes [q]
@@ -27,9 +26,6 @@
       (either/left {:message (str "Invalid query '" (pr-str q) "', only vectors supported")}))))
 
 (defn build-dbhole-lookup [ctx]
-  (->> (get-in ctx [:hypercrud.browser/domain :domain/environment])
-       (filter (fn [[k _]] (and (string? k) (string/starts-with? k "$"))))
-       (map (juxt #(first %) (tee #(hc/db (:peer ctx) (second %) (:branch ctx))
-                                  #(if (nil? (second %))
-                                     (timbre/warn (second %) (keys ctx))))))
+  (->> (get-in ctx [:hypercrud.browser/domain :domain/databases])
+       (map (juxt :domain.database/name #(hc/db (:peer ctx) (get-in % [:domain.database/record :database/uri]) (:branch ctx))))
        (into {})))

@@ -8,10 +8,10 @@
             [contrib.try$ :refer [try-either]]
             [cuerdas.core :as string]
             [hypercrud.browser.context :as context]         ; allowed here
-            [hypercrud.browser.dbname :as dbname]
             [hypercrud.browser.router :as router]
             [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
             [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
+            [hyperfiddle.domain :as domain]
             [hyperfiddle.runtime :as runtime])
   #?(:clj
      (:import (hypercrud.types.Entity Entity)
@@ -25,7 +25,7 @@
                                      (instance? Entity v) (assert false "hyperfiddle/hyperfiddle.net#150")
 
                                      (instance? ThinEntity v)
-                                     (let [uri (get-in domain [:domain/environment (.-dbname v)])
+                                     (let [uri (domain/dbname->uri (.-dbname v) domain)
                                            id (invert-id (.-id v) uri)]
                                        (->ThinEntity (.-dbname v) id))
 
@@ -52,7 +52,7 @@
 
 (defn route [ctx route]                                     ; circular, this can be done sooner
   {:pre [(if-let [params (second route)] (vector? params) true) ; validate normalized already
-         (some-> ctx :hypercrud.browser/domain :domain/fiddle-repo)]}
+         (some-> ctx :hypercrud.browser/domain :domain/fiddle-database :database/uri)]}
   (assoc ctx :route (tempid->id route ctx)))
 
 (defn normalize-args [porps]
@@ -83,7 +83,7 @@
                            ; Technical debt. Once shadow-links are identities, this is just a mapv.
                            (walk/postwalk (fn [v]
                                             (if (instance? Entity v)
-                                              (let [dbname (some-> v .-uri (dbname/uri->dbname ctx))]
+                                              (let [dbname (some-> v .-uri (domain/uri->dbname (:hypercrud.browser/domain ctx)))]
                                                 (->ThinEntity dbname (or (:db/ident v) (:db/id v))))
                                               v)))
                            (into {}))]]

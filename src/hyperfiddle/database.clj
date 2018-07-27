@@ -31,7 +31,10 @@
    {:db/ident :domain/css :db/valueType :db.type/string :db/cardinality :db.cardinality/one}
    {:db/ident :domain/disable-javascript :db/valueType :db.type/boolean :db/cardinality :db.cardinality/one :db/doc "Elide Hyperfiddle javascript in production domains so client doesn't have to parse/eval it, this will decrease time-to-interaction on static sites like blogs. Counter-intuitively this will probably make your app overall slower because without javascript you can't take advantage of `Cache-control: Immutable` on api responses which get the entire static site in browser cache."}
    {:db/ident :domain/environment :db/valueType :db.type/string :db/cardinality :db.cardinality/one :db/doc "EDN map. Keys starting with `$` name datomic databases as seen from `datomic.api/q`, and their value must be a reachable datomic uri. Other entries are constants available to your fiddles, for example third-party API keys."}
-   {:db/ident :domain/fiddle-repo :db/valueType :db.type/uri :db/cardinality :db.cardinality/one :db/doc "Datomic database uri to store fiddle data. It can be the same as your environment databases."}
+   {:db/ident :domain/fiddle-database :db/valueType :db.type/ref :db/cardinality :db.cardinality/one :db/doc "Datomic database to store fiddle data. It can be the same as your environment databases."}
+   {:db/ident :domain/databases :db/valueType :db.type/ref :db/cardinality :db.cardinality/many :db/isComponent true}
+   {:db/ident :domain.database/name :db/valueType :db.type/string :db/cardinality :db.cardinality/one}
+   {:db/ident :domain.database/record :db/valueType :db.type/ref :db/cardinality :db.cardinality/one}
    {:db/ident :domain/home-route :db/valueType :db.type/string :db/cardinality :db.cardinality/one :db/doc "Index route for this domain, it can have parameters"}
    {:db/ident :domain/ident :db/valueType :db.type/string :db/cardinality :db.cardinality/one :db/unique :db.unique/identity :db/doc "Your subdomain. Use this uri to access your fiddles in dev mode."}
    {:db/ident :domain/router :db/valueType :db.type/string :db/cardinality :db.cardinality/one :db/doc "Experimental and undocumented userland router definition"}])

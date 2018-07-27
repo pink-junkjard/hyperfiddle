@@ -4,9 +4,7 @@
     [cats.core :as cats :refer [mlet]]
     [cats.labs.promise]
     [clojure.set :as set]
-    [contrib.data :refer [filter-keys]]
     [contrib.performance :as perf]
-    [cuerdas.core :as str]
     [hyperfiddle.foundation :as foundation]
     [hyperfiddle.io.http.core :refer [http-request!]]
     [hyperfiddle.io.hydrate-requests :refer [hydrate-all-or-nothing!]]
@@ -16,10 +14,9 @@
 
 
 (defn uris-for-domain [domain]
-  (->> (:domain/environment domain)
-       (filter-keys #(str/starts-with? % "$"))
-       vals
-       (cons (:domain/fiddle-repo domain))))
+  (->> (:domain/databases domain)
+       (map (comp :database/uri :domain.database/record))
+       (cons (get-in domain [:domain/fiddle-database :database/uri]))))
 
 (defn global-basis [rt domain-eid]                          ; this is foundation code, app-fn level (Just sees configured datomic URIs, no userland api fn)
   (perf/time-promise

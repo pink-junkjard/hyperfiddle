@@ -3,11 +3,11 @@
             [contrib.data :refer [abs-normalized]]
             [contrib.reactive :as r]
             [contrib.string :refer [memoized-safe-read-edn-string]]
-            [hypercrud.browser.dbname :as dbname]
             [hypercrud.browser.field :as field]
             [hypercrud.browser.context :as context]
             [hypercrud.types.ThinEntity :refer [->ThinEntity]]
             [hypercrud.util.branch :as branch]
+            [hyperfiddle.domain :as domain]
             [hyperfiddle.runtime :as runtime]
             [taoensso.timbre :as timbre]))
 
@@ -18,7 +18,7 @@
   (assert (:uri ctx) "no uri in dynamic scope (If it can't be inferred, add as bindings)")
   (let [branch-val (branch/branch-val (:uri ctx) (:branch ctx) @(runtime/state (:peer ctx) [:stage]))
         id (-> branch-val hash abs-normalized - str)]
-    (->ThinEntity (dbname/uri->dbname (:uri ctx) ctx) id)))
+    (->ThinEntity (domain/uri->dbname (:uri ctx) (:hypercrud.browser/domain ctx)) id)))
 
 ; todo there are collisions when two links share the same 'location'
 (letfn [(hash-data [ctx]
@@ -36,7 +36,7 @@
         hash abs-normalized - str)))
 
 (defn ^:export auto-entity [ctx]
-  (->ThinEntity (dbname/uri->dbname (:uri ctx) ctx) (deterministic-ident ctx)))
+  (->ThinEntity (domain/uri->dbname (:uri ctx) (:hypercrud.browser/domain ctx)) (deterministic-ident ctx)))
 
 (defn- field-at-path [path ordered-fields]
   (loop [[segment & rest] path

@@ -17,7 +17,7 @@
   (let [uri (:uri ctx)]
     (condp = uri
       nil no-conn
-      ;(get-in ctx [:hypercrud.browser/domain :domain/fiddle-repo]) root-conn
+      ;(get-in ctx [:hypercrud.browser/domain :domain/fiddle-database :database/uri]) root-conn
       (str/format "hsl(%s, %s%, %s%)"
                   (* 360 (mod (+ seed (* (hash uri) golden-ratio)) 1))
                   55  #_"Too bright hurts the eyes"

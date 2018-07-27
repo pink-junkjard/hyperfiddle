@@ -17,7 +17,8 @@
             [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
-            [hypercrud.types.ThinEntity :refer [#?(:cljs ThinEntity)]])
+            [hypercrud.types.ThinEntity :refer [#?(:cljs ThinEntity)]]
+            [hyperfiddle.domain :as domain])
   #?(:clj
      (:import (hypercrud.types.Entity Entity)
               (hypercrud.types.ThinEntity ThinEntity))))
@@ -70,7 +71,7 @@
       (let [[fiddle] (get-in ctx [:route])
             _ (assert fiddle "missing fiddle-id")
             _ (assert (:hypercrud.browser/domain ctx) "missing domain")
-            dbval (hc/db (:peer ctx) (get-in ctx [:hypercrud.browser/domain :domain/fiddle-repo]) (:branch ctx))]
+            dbval (hc/db (:peer ctx) (get-in ctx [:hypercrud.browser/domain :domain/fiddle-database :database/uri]) (:branch ctx))]
         (->EntityRequest (legacy-fiddle-ident->lookup-ref fiddle) dbval meta-pull-exp-for-link)))))
 
 (defn validate-fiddle [fiddle]
@@ -126,7 +127,7 @@
 
     :entity
     (if-let [dbname @(r/cursor fiddle [:fiddle/pull-database])]
-      (if-let [uri (get-in ctx [:hypercrud.browser/domain :domain/environment dbname])]
+      (if-let [uri (domain/dbname->uri dbname (:hypercrud.browser/domain ctx))]
         (let [[_ [?e :as args]] (get-in ctx [:route])       ; Missing entity param is valid state now https://github.com/hyperfiddle/hyperfiddle/issues/268
               db (hc/db (:peer ctx) uri (:branch ctx))
               pull-exp (or (-> (memoized-safe-read-edn-string @(r/cursor fiddle [:fiddle/pull]))

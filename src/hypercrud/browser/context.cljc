@@ -4,6 +4,7 @@
     [datascript.parser :as parser]
     [hypercrud.browser.field :as field]
     [hyperfiddle.actions :as actions]
+    [hyperfiddle.domain :as domain]
     [hyperfiddle.runtime :as runtime]))
 
 
@@ -33,7 +34,13 @@
              :hypercrud.ui/display-mode (r/track identity :hypercrud.browser.browser-ui/user))
       (update :hypercrud.browser/domain
               (fn [domain]
-                (assoc-in (:hypercrud.browser/source-domain ctx) [:domain/environment "$"] (:domain/fiddle-repo domain))))))
+                (update (:hypercrud.browser/source-domain ctx) :domain/databases
+                        (fn [dbs]
+                          (->> dbs
+                               (remove #(= "$" (:domain.database/name %)))
+                               (cons {:domain.database/name "$"
+                                      :domain.database/record (:domain/fiddle-database domain)})
+                               vec)))))))
 
 (defn attribute-segment? [path-segment]
   (and (not (contains? #{:head :body} path-segment))        ; todo cannot conflict with :db/ident :head | :body
@@ -44,7 +51,7 @@
   (integer? path-segment))
 
 (defn with-tx! [ctx tx]
-  (let [uri (get-in ctx [:hypercrud.browser/domain :domain/environment (str (:hypercrud.browser/source-symbol ctx))])
+  (let [uri (domain/dbname->uri (str (:hypercrud.browser/source-symbol ctx)) (:hypercrud.browser/domain ctx))
         invert-route (:hypercrud.browser/invert-route ctx)]
     (runtime/dispatch! (:peer ctx) (actions/with (:peer ctx) invert-route (:branch ctx) uri tx))))
 
@@ -161,7 +168,7 @@
                   source-symbol @(r/cursor field [::field/source-symbol])
                   dbname (str source-symbol)
                   uri (when dbname
-                        (get-in ctx [:hypercrud.browser/domain :domain/environment dbname]))]
+                        (domain/dbname->uri dbname (:hypercrud.browser/domain ctx)))]
               (cond-> (-> ctx
                           (set-parent)
                           (update :hypercrud.browser/path conj path-segment)

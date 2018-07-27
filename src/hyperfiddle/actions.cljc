@@ -10,6 +10,7 @@
             [hypercrud.types.Err :as Err]
             [hypercrud.util.branch :as branch]
             [hyperfiddle.io.util :refer [v-not-nil?]]
+            [hyperfiddle.domain :as domain]
             [hyperfiddle.runtime :as runtime]
             [hyperfiddle.security :as security]
             [promesa.core :as p]
@@ -154,8 +155,8 @@
 
 (defn should-transact!? [uri get-state]
   (and (get-in (get-state) [::runtime/auto-transact uri])
-       (security/attempt-to-transact? (get-in (get-state) [::runtime/domain :domain/db-lookup uri])
-                                      (get-in (get-state) [::runtime/user-id]))))
+       (let [hf-db (domain/db-for-uri uri (::runtime/domain (get-state)))]
+         (security/attempt-to-transact? hf-db (get-in (get-state) [::runtime/user-id])))))
 
 (defn with [rt invert-route branch uri tx]
   (fn [dispatch! get-state]

@@ -8,8 +8,6 @@
     [contrib.reactive :as r]
     [contrib.reagent :refer [fragment]]
     [contrib.ui]
-    [contrib.uri :refer [is-uri?]]
-    [cuerdas.core :as str]
     [hypercrud.browser.base :as base]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
@@ -52,8 +50,8 @@
                         (context/focus [:body]))))))
 
 (defn schema-links [ctx]
-  (->> @(runtime/state (:peer ctx) [::runtime/domain :domain/environment])
-       (filter (fn [[k v]] (and (str/starts-with? k "$") (is-uri? v))))
+  (->> @(runtime/state (:peer ctx) [::runtime/domain :domain/databases])
+       (map (juxt :domain.database/name (comp :database/uri :domain.database/record)))
        sort
        (map (fn [[$db _]]
               (let [props {:route [(keyword "hyperfiddle.schema" $db)]

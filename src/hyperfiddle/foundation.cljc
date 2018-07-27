@@ -19,7 +19,6 @@
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hypercrud.types.Err :as Err]
-            [contrib.uri :refer [is-uri?]]
     #?(:cljs [hypercrud.ui.stale :as stale])
             [hyperfiddle.actions :as actions]
             [hyperfiddle.runtime :as runtime]
@@ -47,9 +46,15 @@
                    [:db/id
                     :hyperfiddle/owners
                     :domain/aliases
+                    {:domain/databases [:domain.database/name
+                                        {:domain.database/record [:database/uri
+                                                                  {:database/write-security [:db/ident]}
+                                                                  :hyperfiddle/owners]}]
+                     :domain/fiddle-database [:database/uri
+                                              {:database/write-security [:db/ident]}
+                                              :hyperfiddle/owners]}
                     :domain/disable-javascript
                     :domain/environment
-                    :domain/fiddle-repo
                     :domain/ident
 
                     ; These are insecure fields, they should be redundant here, but there is order of operation issues
@@ -67,19 +72,6 @@
                     :domain/css
                     :domain/router
                     :domain/home-route]))
-
-(defn databases-request [rt branch domain]
-  ; todo env databases should just be modeled as refs and pulled in domain-request
-  (->> (:domain/environment domain)
-       (filter (fn [[k v]] (and (string? k) (string/starts-with? k "$") (is-uri? v))))
-       (map second)
-       (into #{(:domain/fiddle-repo domain) domain-uri})
-       (vector)
-       (into [(hc/db rt domain-uri branch)])
-       (->QueryRequest
-         '[:find ?uri (pull ?db [{:database/write-security [:db/ident]} :hyperfiddle/owners])
-           :in $ [?uri ...]
-           :where [?db :database/uri ?uri]])))
 
 #?(:cljs
    (defn error-cmp [e]
@@ -127,12 +119,12 @@
 
 #?(:cljs
    (defn ^:export staging [ctx & [child]]
-     (let [source-uri @(runtime/state (:peer ctx) [::runtime/domain :domain/fiddle-repo])
+     (let [source-uri @(runtime/state (:peer ctx) [::runtime/domain :domain/fiddle-database :database/uri])
            selected-uri (r/atom source-uri)
-           tabs-definition (->> @(runtime/state (:peer ctx) [::runtime/domain :domain/environment])
-                                (filter (fn [[k v]] (and (string? k) (string/starts-with? k "$") (is-uri? v))))
-                                (reduce (fn [acc [dbname uri]]
-                                          (update acc uri (fnil conj '()) dbname))
+           tabs-definition (->> @(runtime/state (:peer ctx) [::runtime/domain :domain/databases])
+                                (reduce (fn [acc hf-db]
+                                          (let [uri (get-in hf-db [:domain.database/record :database/uri])]
+                                            (update acc uri (fnil conj '()) (:domain.database/name hf-db))))
                                         {source-uri '("src")
                                          ; domains-uri shouldn't need to be accessed
                                          domain-uri '("domain")})

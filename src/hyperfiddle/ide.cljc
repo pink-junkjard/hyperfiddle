@@ -50,11 +50,8 @@
                           ; terminate when domain not found
                           (throw (ex-info "Domain not found" {:hyperfiddle.io/http-status-code 404
                                                               :domain-eid domain-eid}))
-                          (foundation/process-domain raw-domain))]
-           ; todo env databases should just be modeled as refs and pulled in one req
-           dbs (->> (foundation/databases-request rt nil domain)
-                    (hydrate-one! rt domains-basis stage))]
-      (return (assoc domain :domain/db-lookup (into {} dbs))))))
+                          (foundation/process-domain raw-domain))]]
+      (return domain))))
 
 (defn magic-ide-fiddle? [fiddle-ident domain-ident]
   (and (not= foundation/source-domain-ident domain-ident)
