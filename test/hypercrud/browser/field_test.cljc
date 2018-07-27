@@ -21,11 +21,14 @@
                                                  :b/y [{:asdf2 1}]
                                                  :b/z {:c/b 2}})]
                             :a/z {:c/x 5}})]
-    (is (= (infer-attrs data []) #{:a/x :a/y :a/z}))
-    (is (= (infer-attrs data [:a/y]) #{:b/x :b/y :b/z}))
-    (is (= (infer-attrs data [:a/y :b/y]) #{:asdf :qwerty :asdf2}))
-    (is (= (infer-attrs data [:a/y :b/z]) #{:c/a :c/b}))
-    (is (= (infer-attrs data [:a/z]) #{:c/x}))))
+    (doseq [[get-values expected] [[[] #{:a/x :a/y :a/z}]
+                                   [[:a/y] #{:b/x :b/y :b/z}]
+                                   [[:a/y :b/y] #{:asdf :qwerty :asdf2}]
+                                   [[:a/y :b/z] #{:c/a :c/b}]
+                                   [[:a/z] #{:c/x}]]]
+      (is (= expected (infer-attrs data get-values)))
+      (is (= expected (infer-attrs [data data] get-values)))        ; test resultsets
+      )))
 
 (def test-schema
   (->> [{:db/ident :a/j

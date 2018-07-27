@@ -56,7 +56,13 @@
                       (fn [data]
                         (cond
                           (or (map? data) (entity? data)) (get-value data)
-                          (or (vector? data) (seq? data)) (map get-value data)
+                          (or (vector? data) (seq? data)) (reduce (fn [acc data]
+                                                                    (let [sub-data (get-value data)]
+                                                                      (if (or (vector? sub-data) (seq? sub-data))
+                                                                        (concat acc sub-data)
+                                                                        (conj acc sub-data))))
+                                                                  []
+                                                                  data)
                           :else nil))
                       f))
                   identity
@@ -64,7 +70,7 @@
         data-at-path (f data)]
     (->> (cond
            (or (map? data-at-path) (entity? data-at-path)) [data-at-path]
-           (or (vector? data-at-path) (seq? data-at-path)) (flatten data-at-path)
+           (or (vector? data-at-path) (seq? data-at-path)) data-at-path
            :else nil)
          (mapcat keys)
          (into #{}))))
