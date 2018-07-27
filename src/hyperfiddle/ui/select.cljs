@@ -9,6 +9,7 @@
     [hypercrud.browser.field :as field]
     [hypercrud.browser.link :as link]
     [hypercrud.ui.error :as ui-error]
+    [hypercrud.types.Entity :refer [entity?]]
     [hyperfiddle.ui.controls :as controls]))
 
 
@@ -51,12 +52,17 @@
                   ; Don't disable :select if there are options, we may want to see them. Make it look :disabled but allow the click
                   (update :disabled #(or % no-options?))
                   (update :class #(str % (if (:disabled option-props) " disabled"))))
-        label-fn (:label-fn props label-fn)]
+        label-fn (:label-fn props label-fn)
+        id-fn (fn [relation]
+                (let [fe (first relation)]
+                  (if (or (entity? fe) (map? fe))           ; todo inspect datalog find-element
+                    (:db/id fe)
+                    fe)))]
     [:select.ui (dissoc props :label-fn)
      ; .ui is because options are an iframe and need the pink box
      (conj
        (->> @(:hypercrud.browser/data ctx)
-            (mapv (juxt (comp :db/id first) #(label-fn % ctx)))
+            (mapv (juxt id-fn #(label-fn % ctx)))
             (sort-by second)
             (map (fn [[id label]]
                    [:option (assoc option-props :key (str id) :value id) label])))
