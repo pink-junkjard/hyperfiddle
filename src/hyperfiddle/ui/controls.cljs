@@ -83,16 +83,19 @@
    (r/partial entity-change! ctx)
    (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))])
 
-(defn- code-mode [& [mode]]
+(defn- code-mode [& [mode static-props]]
   (fn [ref props ctx]
-    (let [control (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
+    (let [props (-> static-props
+                    (merge props)
+                    (update :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))))))
+          control (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
                     :hyperfiddle.ui.layout/block contrib.ui/code
                     :hyperfiddle.ui.layout/table contrib.ui/code-inline-block)]
       [control @ref (r/partial entity-change! ctx)
-       (cond-> (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))
+       (cond-> props
                mode (assoc :mode mode))])))
 
-(def ^:export code (code-mode))
+(def ^:export code (code-mode "clojure" {:parinfer false}))
 (def ^:export css (code-mode "css"))
 
 (defn ^:export markdown-editor [ref props ctx]              ; This is legacy; :mode=markdown should be bound in userland

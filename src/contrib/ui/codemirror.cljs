@@ -33,6 +33,12 @@
        (let [[_ value change! props] (reagent/argv this)
              ref (js/CodeMirror.fromTextArea (reagent/dom-node this) (clj->js props))]
 
+         (if (and (:parinfer props) (= "clojure" (:mode props)))
+           (do
+             (js/parinferCodeMirror.init ref)
+             ; `mode` is 'paren', 'indent', or 'smart'
+             (js/parinferCodeMirror.setMode ref "paren")))
+
          ; Props are a shitshow. Remark is stringly, and codemirror wants js types.
          ; set `lineNumber=` to disable line numbers (empty string is falsey).
          ; Also, reagent/as-element keyword-cases all the props into keywords, so
