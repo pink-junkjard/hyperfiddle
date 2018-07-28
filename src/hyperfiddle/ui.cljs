@@ -72,7 +72,7 @@
         child-fields? (not (some->> (:hypercrud.browser/fields ctx) (r/fmap nil?) deref))]
     (fragment (when (and (not options?) (not child-fields?))
                 [(control ctx) (:hypercrud.browser/data ctx) props ctx])
-              (when (and child-fields? (context/attribute-segment? (last (:hypercrud.browser/path ctx)))) ; ignore relation and fe fields
+              (when (and (not options?) child-fields? (context/attribute-segment? (last (:hypercrud.browser/path ctx)))) ; ignore relation and fe fields
                 [result ctx])
               [anchors (:hypercrud.browser/path ctx) props ctx (when options? link/options-processor)] ; Order sensitive, here be floats
               (when options? [select props ctx])
