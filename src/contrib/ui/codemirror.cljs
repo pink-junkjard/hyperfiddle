@@ -37,7 +37,9 @@
            (do
              (js/parinferCodeMirror.init ref)
              ; `mode` is 'paren', 'indent', or 'smart'
-             (js/parinferCodeMirror.setMode ref "paren")))
+             (.addKeyMap ref #js {"Ctrl-1" #(let [mode (goog.object/getValueByKeys ref "__parinfer__" "mode")
+                                                  mode (case mode "paren" "indent" "paren")]
+                                              (js/parinferCodeMirror.setMode ref mode))})))
 
          ; Props are a shitshow. Remark is stringly, and codemirror wants js types.
          ; set `lineNumber=` to disable line numbers (empty string is falsey).
