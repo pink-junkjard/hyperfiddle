@@ -15,6 +15,14 @@
     (if-not (= val (.getOption ref (name prop)))
       (.setOption ref (name prop) val))))
 
+(defn ensure-mode [ref new-mode]
+  (js/parinferCodeMirror.setMode ref new-mode)
+  #_(js/parinferCodeMirror.setOptions ref #js {"locus" (= new-mode "indent")})
+  (doto (-> ref .getWrapperElement .-classList)
+    (.remove "paren")
+    (.remove "indent")
+    (.add new-mode)))
+
 (def -codemirror
 
   ; all usages of value (from react lifecycle) need to be (str value), because
@@ -33,13 +41,12 @@
        (let [[_ value change! props] (reagent/argv this)
              ref (js/CodeMirror.fromTextArea (reagent/dom-node this) (clj->js props))]
 
-         (if (and (:parinfer props) (= "clojure" (:mode props)))
-           (do
-             (js/parinferCodeMirror.init ref)
-             ; `mode` is 'paren', 'indent', or 'smart'
-             (.addKeyMap ref #js {"Ctrl-1" #(let [mode (goog.object/getValueByKeys ref "__parinfer__" "mode")
-                                                  mode (case mode "paren" "indent" "paren")]
-                                              (js/parinferCodeMirror.setMode ref mode))})))
+         (when (and (:parinfer props) (= "clojure" (:mode props)))
+           ; `mode` is 'paren', 'indent', or 'smart'
+           (js/parinferCodeMirror.init ref "paren" #js {"locus" true})
+           (ensure-mode ref "paren")                        ; sets up css
+           (.addKeyMap ref #js {"Ctrl-1" #(let [cur-mode (goog.object/getValueByKeys ref "__parinfer__" "mode")]
+                                            (ensure-mode ref (case cur-mode "paren" "indent" "paren")))}))
 
          ; Props are a shitshow. Remark is stringly, and codemirror wants js types.
          ; set `lineNumber=` to disable line numbers (empty string is falsey).
