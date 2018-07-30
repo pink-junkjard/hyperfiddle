@@ -205,7 +205,8 @@ User renderers should not be exposed to the reaction."
 
 (defn ^:export table "Semantic table"
   [form sort-fn ctx & [props]]
-  (let [sort-col (r/atom nil)]
+  (let [sort-col (r/atom nil)
+        sort (fn [v] (sort-fn v sort-col))]
     (fn [form sort-fn ctx & [props]]
       (let [ctx (assoc ctx ::sort/sort-col sort-col
                            ::layout :hyperfiddle.ui.layout/table)]
@@ -213,8 +214,8 @@ User renderers should not be exposed to the reaction."
          (let [ctx (context/focus ctx [:head])]
            (->> (form ctx props) (into [:thead])))          ; strict
          (->> (:hypercrud.browser/data ctx)
-              (r/fmap (r/partial sort-fn sort-col))
-              (r/unsequence data/relation-keyfn)              ; todo support nested tables
+              (r/fmap sort)
+              (r/unsequence data/relation-keyfn)            ; todo support nested tables
               (map (fn [[relation k]]
                      (->> (form (context/body ctx relation) props)
                           (into ^{:key k} [:tr]))))         ; strict

@@ -59,7 +59,7 @@
   (let [ctx (context/focus ctx relative-path)]
     (base/data-from-link @(r/track link/rel->link rel ctx) ctx)))
 
-(defn sort-fn [sort-col relations-val]
+(defn sort-fn [relations-val sort-col]
   (let [[path direction] @sort-col]
     (if path
       (sort-by #(get-in % path)
