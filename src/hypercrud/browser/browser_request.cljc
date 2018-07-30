@@ -10,7 +10,7 @@
             [hypercrud.browser.popovers :as popovers]
             [hypercrud.browser.routing :as routing]
             [hypercrud.client.schema :as schema-util]
-            [hyperfiddle.data :as hf]
+            [hyperfiddle.data :as data]
             [hyperfiddle.runtime :as runtime]))
 
 
@@ -52,17 +52,17 @@
 (defn result [ctx]
   (condp = (:hypercrud.browser/data-cardinality ctx)
     :db.cardinality/one (->> ctx
-                             (hf/form (fn [path ctx & _]
-                                        (concat (head-field path (context/focus ctx [:head]))
-                                                (body-field path (context/focus ctx [:body])))))
+                             (data/form (fn [path ctx & _]
+                                          (concat (head-field path (context/focus ctx [:head]))
+                                                  (body-field path (context/focus ctx [:body])))))
                              flatten)
     :db.cardinality/many (concat
-                           (->> (hf/form head-field (context/focus ctx [:head]))
+                           (->> (data/form head-field (context/focus ctx [:head]))
                                 (flatten))
                            (->> (r/unsequence (:hypercrud.browser/data ctx)) ; the request side does NOT need the cursors to be equiv between loops
                                 (mapcat (fn [[relation i]]
                                           (->> (context/body ctx relation)
-                                               (hf/form body-field)
+                                               (data/form body-field)
                                                flatten)))))
     ; blank fiddles
     nil))
