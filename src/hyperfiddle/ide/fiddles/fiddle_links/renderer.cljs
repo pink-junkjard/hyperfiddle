@@ -1,9 +1,15 @@
 (ns hyperfiddle.ide.fiddles.fiddle-links.renderer
   (:require
+    [cats.core :as cats :refer [mlet]]
+    [cats.monad.either :as either]
     [contrib.reactive :as r]
+    [hypercrud.browser.base :as base]
+    [hypercrud.browser.link :as link]
     [hypercrud.browser.system-link :refer [system-link?]]
+    [hypercrud.client.core :as hc]
     [hyperfiddle.data :refer [sort-fn]]
-    [hyperfiddle.ui :refer [hyper-control field table]]))
+    [hyperfiddle.ui :refer [hyper-control field table]]
+    [hyperfiddle.ui.select :refer [select]]))
 
 
 (def editable-if-shadowed?
@@ -21,14 +27,24 @@
   (let [props (assoc props :read-only (read-only? ctx))]
     [hyper-control props ctx]))
 
-
 (letfn [(remove-children [field] (dissoc field :hypercrud.browser.field/children))]
   (defn hf-live-link-fiddle [ref props ctx]
     (let [ctx (-> ctx
                   (update :hypercrud.browser/field #(r/fmap remove-children %))
                   (assoc :hypercrud.browser/fields (r/track identity nil)))
           props (assoc props :read-only (read-only? ctx))]
-      [hyper-control props ctx])))
+      (-> (mlet [req (base/meta-request-for-fiddle (assoc ctx
+                                                     :route (hyperfiddle.ide/ide-fiddle-route (:target-route ctx) ctx)
+                                                     :branch nil))
+                 topnav-fiddle @(hc/hydrate (:peer ctx) nil req) ; todo tighter reactivity
+                 :let [options-link (->> (:fiddle/links topnav-fiddle)
+                                         (filter link/options-link?)
+                                         (filter (link/same-path-as? [:body 0 :fiddle/links :body :link/fiddle]))
+                                         first)]]
+            (cats/return options-link))
+          (either/branch
+            (fn [e] [:pre (pr-str e)])
+            (fn [options-link] [select options-link props ctx]))))))
 
 (defn renderer [ctx & [embed-mode]]
   [table

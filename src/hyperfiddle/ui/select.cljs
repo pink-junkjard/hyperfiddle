@@ -85,22 +85,24 @@
 
 (let [dom-value (fn [value]                                 ; nil, kw or eid
                   (if (nil? value) "" (str (:db/id value))))]
-  (defn select [props ctx]
-    (let [options-link @(r/track link/rel->link :options ctx)]
-      (either/branch
-        (link/eval-hc-props (:hypercrud/props options-link) ctx)
-        (fn [e] [(ui-error/error-comp ctx) e])
-        (fn [hc-props]
-          (let [entity (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]) ; how can this be loading??
-                disabled (or (boolean (:read-only props))
-                             @(r/fmap nil? entity)          ; no value at all
-                             (not @(r/fmap controls/writable-entity? entity)))
-                option-props {:disabled disabled}
-                props (-> {:on-change (r/partial controls/entity-change! ctx)}
-                          (merge props hc-props)
-                          (assoc :value @(r/fmap dom-value (:hypercrud.browser/data ctx))))
-                f (r/partial select-anchor-renderer props option-props)]
-            [browser/ui options-link (assoc ctx
-                                       :hypercrud.ui/display-mode always-user
-                                       :user-renderer f)
-             (:class props)]))))))
+  (defn select
+    ([props ctx]
+     (select @(r/track link/rel->link :options ctx) props ctx))
+    ([options-link props ctx]
+     (either/branch
+       (link/eval-hc-props (:hypercrud/props options-link) ctx)
+       (fn [e] [(ui-error/error-comp ctx) e])
+       (fn [hc-props]
+         (let [entity (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]) ; how can this be loading??
+               disabled (or (boolean (:read-only props))
+                            @(r/fmap nil? entity)           ; no value at all
+                            (not @(r/fmap controls/writable-entity? entity)))
+               option-props {:disabled disabled}
+               props (-> {:on-change (r/partial controls/entity-change! ctx)}
+                         (merge props hc-props)
+                         (assoc :value @(r/fmap dom-value (:hypercrud.browser/data ctx))))
+               f (r/partial select-anchor-renderer props option-props)]
+           [browser/ui options-link (assoc ctx
+                                      :hypercrud.ui/display-mode always-user
+                                      :user-renderer f)
+            (:class props)]))))))
