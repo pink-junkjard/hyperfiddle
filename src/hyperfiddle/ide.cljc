@@ -20,6 +20,7 @@
     #?(:cljs [hypercrud.ui.error :as ui-error])
     #?(:cljs [hyperfiddle.ui.navigate-cmp :as navigate-cmp])
     #?(:cljs [hypercrud.ui.stale :as stale])
+            [hyperfiddle.data]
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-one!]]
             [hyperfiddle.runtime :as runtime]
@@ -164,14 +165,19 @@
            ctx (-> ctx
                    (assoc :navigate-cmp (r/partial navigate-cmp/navigate-cmp (r/partial runtime/encode-route (:peer ctx)))
                           :alpha.hypercrud.browser/ui-comp browser-ui/ui-comp))
-           ide-ctx (page-ide-context ctx route)]
+           ide-ctx (page-ide-context ctx route)
+           ide-route (ide-fiddle-route route ctx)
+           ; Feature flags are needed in all ctxs
+           user (:hypercrud.browser/result @(hyperfiddle.data/browse :account [] @(base/data-from-route ide-route ide-ctx)))
+           ide-ctx (assoc ide-ctx ::user user)
+           ctx (assoc ctx ::user user)]
 
        (fragment
          :view-page
 
          ; Topnav
          (when (get-in ctx [:host-env :active-ide?])
-           [browser/ui-from-route (ide-fiddle-route route ctx)
+           [browser/ui-from-route ide-route
             (assoc ide-ctx :hypercrud.ui/error (r/constantly ui-error/error-inline)
                            #_#_:user-renderer hyperfiddle.ide.fiddles.topnav/renderer)
             "hidden-print"])

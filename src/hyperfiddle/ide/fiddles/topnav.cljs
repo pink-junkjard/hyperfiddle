@@ -118,7 +118,9 @@
       (ui/link :new-fiddle [] ctx "new-fiddle")
       [tooltip {:label "Domain administration"} (ui/link :domain [] ctx "domain")]
       (if @(runtime/state (:peer ctx) [::runtime/user-id])
-        [ui/browse :account [] ctx]
+        (let [{:keys [:hypercrud.browser/result]} @(hyperfiddle.data/browse :account [] ctx)]
+          (fake-managed-anchor :account [] ctx @(contrib.reactive/cursor result [:user/name])
+                               {:tooltip [nil (:user/email @result)]}))
         [:a {:href (foundation/stateless-login-url ctx)} "login"])]]))
 
 (defn ^:export qe-picker-control [ref props ctx]
