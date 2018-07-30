@@ -204,10 +204,10 @@ User renderers should not be exposed to the reaction."
         [form-field hyper-control relative-path ctx ?f props]))))
 
 (defn ^:export table "Semantic table"
-  [form sort-fn ctx & [props]]
+  [form ctx & [props]]
   (let [sort-col (r/atom nil)
-        sort (fn [v] (sort-fn v sort-col))]
-    (fn [form sort-fn ctx & [props]]
+        sort (fn [v] (hyperfiddle.ui.sort/sort-fn v sort-col))]
+    (fn [form ctx & [props]]
       (let [ctx (assoc ctx ::sort/sort-col sort-col
                            ::layout :hyperfiddle.ui.layout/table)]
         [:table (update props :class css "ui-table" "unp" (semantic-css ctx))
@@ -238,7 +238,7 @@ nil. call site must wrap with a Reagent component"
       :db.cardinality/one (let [ctx (assoc ctx ::layout :hyperfiddle.ui.layout/block)
                                 key (-> (data/relation-keyfn @(:hypercrud.browser/data ctx)) str keyword)]
                             (apply fragment key (data/form field ctx props)))
-      :db.cardinality/many [table (r/partial data/form field) data/sort-fn ctx props]
+      :db.cardinality/many [table (r/partial data/form field) ctx props]
       ; blank fiddles
       nil)))
 
@@ -368,7 +368,7 @@ nil. call site must wrap with a Reagent component"
        "table" (letfn [(form [content ctx]
                          [[markdown content (assoc ctx ::unp true)]])]
                  (fn [content argument props ctx]
-                   [table (r/partial form content) data/sort-fn ctx #_props]))
+                   [table (r/partial form content) ctx #_props]))
 
        "list" (fn [content argument props ctx]
                 [:ul props

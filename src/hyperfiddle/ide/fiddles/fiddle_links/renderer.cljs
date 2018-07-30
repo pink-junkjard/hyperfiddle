@@ -7,7 +7,6 @@
     [hypercrud.browser.link :as link]
     [hypercrud.browser.system-link :refer [system-link?]]
     [hypercrud.client.core :as hc]
-    [hyperfiddle.data :refer [sort-fn]]
     [hyperfiddle.ui :refer [hyper-control field table]]
     [hyperfiddle.ui.select :refer [select]]))
 
@@ -61,5 +60,4 @@
       (when-not embed-mode (field [:link/tx-fn] ctx read-only-cell))
       (when-not embed-mode (field [:hypercrud/props] ctx read-only-cell))
       (when-not embed-mode (field [] ctx nil))])
-   sort-fn
    ctx])

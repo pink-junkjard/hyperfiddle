@@ -59,13 +59,3 @@
   ; context is not set for this call
   (let [ctx (context/focus ctx relative-path)]
     (base/data-from-link @(r/track link/rel->link rel ctx) ctx)))
-
-(defn sort-fn [relations-val sort-col]
-  (let [[path direction] @sort-col]
-    (if path
-      (sort-by #(get-in % path)
-               (case direction
-                 :asc #(compare %1 %2)
-                 :desc #(compare %2 %1))
-               relations-val)
-      relations-val)))

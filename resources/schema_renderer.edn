@@ -31,5 +31,4 @@
            (hyperfiddle.ui/field [0 :db/fulltext] ctx nil {:read-only true})
            (hyperfiddle.ui/field [0 :db/doc] ctx)
            (hyperfiddle.ui/field [0] ctx)])
-        hyperfiddle.data/sort-fn
         ctx])]))
