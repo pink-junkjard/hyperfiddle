@@ -95,7 +95,12 @@
        (cond-> props
                mode (assoc :mode mode))])))
 
-(def ^:export code (code-mode "clojure" {:parinfer false}))
+(letfn [(clojure-editor [parinfer]
+          (code-mode "clojure" {:parinfer parinfer}))]
+  (defn ^:export code [ref props ctx]
+    @(->> (:hyperfiddle.ide/user ctx)
+          (contrib.reactive/fmap :hyperfiddle.ide/parinfer)
+          (contrib.reactive/fmap clojure-editor))))
 (def ^:export css (code-mode "css"))
 
 (defn ^:export markdown-editor [ref props ctx]              ; This is legacy; :mode=markdown should be bound in userland
