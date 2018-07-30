@@ -53,7 +53,8 @@
         ; this result can be directly inserted as children in a reagemnt component, CANNOT be a vector
         seq)))
 
-(defn ^:export browse "Hydrate a context, returns Either[Loading|Error,ctx]"
+(defn ^:export browse "Hydrate a context, returns Either[Loading|Error,ctx]
+  Navigate the fiddle graph, starting at the focus point, because there are dependencies in scope."
   [rel relative-path ctx]
   ; context is not set for this call
   (let [ctx (context/focus ctx relative-path)]
