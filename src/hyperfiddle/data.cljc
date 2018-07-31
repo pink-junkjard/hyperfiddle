@@ -27,7 +27,7 @@
 
 (letfn [(should-flatten? [m-field] (not (nil? (::field/source-symbol m-field))))]
   (defn form "Field is invoked as fn"                       ; because it unifies with request fn side
-    [f-field ctx & [props]]                                 ; todo props shouldn't be passed through here
+    [f-field ctx]
     (-> (->> (r/unsequence ::field/path-segment (:hypercrud.browser/fields ctx))
              (mapcat (fn [[m-field path-segment]]
                        ; this is silly why are we tossing the m-field data structure
@@ -37,18 +37,18 @@
                                     (r/unsequence ::field/path-segment)
                                     (mapv (fn [[m-child-field child-segment]]
                                             ; this is silly why are we tossing the m-child-field data structure
-                                            (f-field [path-segment child-segment] ctx nil props)))))
+                                            (f-field [path-segment child-segment] ctx)))))
 
                          (or (not (context/find-element-segment? path-segment))
                              (not @(r/fmap empty? (relative-links-at [:head path-segment] ctx)))
                              (not @(r/fmap empty? (relative-links-at [:body path-segment] ctx))))
-                         (conj (f-field [path-segment] ctx nil props))))))
+                         (conj (f-field [path-segment] ctx))))))
         vec
         (cond->
           (or (not @(r/fmap empty? (relative-links-at [:head] ctx)))
               (not @(r/fmap empty? (relative-links-at [:body] ctx))))
           ; row/relation; omit if result-row & no links. eventually we should probably always display
-          (conj (f-field [] ctx nil props)))
+          (conj (f-field [] ctx)))
 
         ; this result can be directly inserted as children in a reagemnt component, CANNOT be a vector
         seq)))

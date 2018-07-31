@@ -32,7 +32,7 @@
     ; if the anchor IS NOT a popover, this should be the same logic as widget/render-inline-anchors
     (request-from-link link ctx)))
 
-(defn head-field [relative-path ctx & _]                    ; params noisey because data/form has crap for UI
+(defn head-field [relative-path ctx]
   (let [ctx (context/focus ctx (cons :head relative-path))] ; todo :head links should fall out with link/class
     (->> @(:hypercrud.browser/links ctx)
          (filter (link/same-path-as? (:hypercrud.browser/path ctx)))
@@ -40,7 +40,7 @@
 
 (declare result)
 
-(defn body-field [relative-path ctx & _]                    ; params noisey because data/form has crap for UI
+(defn body-field [relative-path ctx]
   (let [ctx (context/focus ctx relative-path)]
     (->> @(:hypercrud.browser/links ctx)
          (filter (link/same-path-as? (:hypercrud.browser/path ctx)))
@@ -52,7 +52,7 @@
 (defn result [ctx]
   (condp = (:hypercrud.browser/data-cardinality ctx)
     :db.cardinality/one (->> ctx
-                             (data/form (fn [path ctx & _]
+                             (data/form (fn [path ctx]
                                           (concat (head-field path (context/focus ctx [:head]))
                                                   (body-field path (context/focus ctx [:body])))))
                              flatten)

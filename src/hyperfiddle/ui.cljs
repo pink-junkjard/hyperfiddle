@@ -194,7 +194,7 @@ User renderers should not be exposed to the reaction."
 
 ; (defmulti field ::layout)
 (defn ^:export field "Works in a form or table context. Draws label and/or value."
-  [relative-path ctx ?f & [props]]                          ; ?f :: (ref, props, ctx) => DOM
+  [relative-path ctx & [?f props]]                          ; ?f :: (ref, props, ctx) => DOM
   (let [is-magic-new (= '* (last relative-path))]
     (case (:hyperfiddle.ui/layout ctx)
       :hyperfiddle.ui.layout/table (when-not is-magic-new
@@ -216,12 +216,12 @@ User renderers should not be exposed to the reaction."
                            ::layout :hyperfiddle.ui.layout/table)]
         [:table (update props :class css "ui-table" "unp" (semantic-css ctx))
          (let [ctx (context/focus ctx [:head])]
-           (->> (form ctx props) (into [:thead])))          ; strict
+           (->> (form ctx) (into [:thead])))                ; strict
          (->> (:hypercrud.browser/data ctx)
               (r/fmap sort)
               (r/unsequence data/relation-keyfn)            ; todo support nested tables
               (map (fn [[relation k]]
-                     (->> (form (context/body ctx relation) props)
+                     (->> (form (context/body ctx relation))
                           (into ^{:key k} [:tr]))))         ; strict
               (into [:tbody]))]))))
 
@@ -232,19 +232,20 @@ User renderers should not be exposed to the reaction."
     [:div.alert.alert-warning "Warning: invalid route (d/pull requires an entity argument). To add a tempid entity to the URL, click here: "
      [:a {:href "~entity('$','tempid')"} [:code "~entity('$','tempid')"]] "."]))
 
-(defn ^:export result "Default result renderer. Invoked as fn, returns seq-hiccup, hiccup or
+(letfn [(field-with-props [props relative-path ctx] (field relative-path ctx nil props))]
+  (defn ^:export result "Default result renderer. Invoked as fn, returns seq-hiccup, hiccup or
 nil. call site must wrap with a Reagent component"
-  [ctx & [props]]
-  ; focus should probably get called here. What about the request side?
-  (fragment
-    (hint ctx)
-    (condp = (:hypercrud.browser/data-cardinality ctx)
-      :db.cardinality/one (let [ctx (assoc ctx ::layout :hyperfiddle.ui.layout/block)
-                                key (-> (data/relation-keyfn @(:hypercrud.browser/data ctx)) str keyword)]
-                            (apply fragment key (data/form field ctx props)))
-      :db.cardinality/many [table (r/partial data/form field) ctx props]
-      ; blank fiddles
-      nil)))
+    [ctx & [props]]
+    ; focus should probably get called here. What about the request side?
+    (fragment
+      (hint ctx)
+      (condp = (:hypercrud.browser/data-cardinality ctx)
+        :db.cardinality/one (let [ctx (assoc ctx ::layout :hyperfiddle.ui.layout/block)
+                                  key (-> (data/relation-keyfn @(:hypercrud.browser/data ctx)) str keyword)]
+                              (apply fragment key (data/form (r/partial field-with-props props) ctx)))
+        :db.cardinality/many [table (r/partial data/form (r/partial field-with-props props)) ctx props]
+        ; blank fiddles
+        nil))))
 
 (declare markdown)
 

@@ -21,14 +21,14 @@
        (unwrap)                                             ; todo cannot swallow this error
        (api-data)))
 
-(defn head-field [relative-path ctx & _]                    ; params noisey because data/form has crap for UI
+(defn head-field [relative-path ctx]
   (let [ctx (context/focus ctx (cons :head relative-path))] ; todo :head links should fall out with link/class
     (->> @(:hypercrud.browser/links ctx)
          (filter (link/same-path-as? (:hypercrud.browser/path ctx)))
          (map #(recurse-from-link % ctx))
          (apply merge))))
 
-(defn body-field [relative-path ctx & _]                    ; params noisey because data/form has crap for UI
+(defn body-field [relative-path ctx]
   (let [ctx (context/focus ctx relative-path)]
     (->> @(:hypercrud.browser/links ctx)
          (filter (link/same-path-as? (:hypercrud.browser/path ctx)))
@@ -42,7 +42,7 @@
 (defn with-result [ctx]
   (condp = (:hypercrud.browser/data-cardinality ctx)
     :db.cardinality/one (->> ctx
-                             (data/form (fn [path ctx & _]
+                             (data/form (fn [path ctx]
                                           (merge (head-field path (context/focus ctx [:head]))
                                                  (body-field path (context/focus ctx [:body])))))
                              (apply merge))
