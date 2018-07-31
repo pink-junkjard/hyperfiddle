@@ -21,13 +21,13 @@
           shadow? @(r/fmap :hypercrud/sys? entity)]
       (or sys? (and shadow? (not (editable-if-shadowed? (:hypercrud.browser/attribute ctx))))))))
 
-(defn read-only-cell [ref props ctx]
+(defn read-only-cell [val props ctx]
   ; Need to delay until we have the value ctx to compute this, which means its a value renderer not a field prop
   (let [props (assoc props :read-only (read-only? ctx))]
     [hyper-control props ctx]))
 
 (letfn [(remove-children [field] (dissoc field :hypercrud.browser.field/children))]
-  (defn hf-live-link-fiddle [ref props ctx]
+  (defn hf-live-link-fiddle [val props ctx]
     (let [ctx (-> ctx
                   (update :hypercrud.browser/field #(r/fmap remove-children %))
                   (assoc :hypercrud.browser/fields (r/track identity nil)))

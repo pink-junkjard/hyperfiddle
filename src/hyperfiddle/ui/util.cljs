@@ -9,7 +9,7 @@
 ; defer eval until render cycle inside userportal
 (let [safe-eval-string #(try-either (when % (eval/eval-string %))) ; don't actually need to safely eval, just want to memoize exceptions
       memoized-eval-string (memoize safe-eval-string)]
-  (defn eval-renderer-comp [?fiddle-cljs-ns-str fiddle-renderer-str & args]
+  (defn eval-renderer-comp [?fiddle-cljs-ns-str fiddle-renderer-str]
     (let [result (>>= (memoized-eval-string ?fiddle-cljs-ns-str)
                       (constantly
                         ; eval ns for the effect on the cljs namespaces
@@ -18,5 +18,4 @@
         result
         (fn [e]
           (throw e))
-        (fn [f]
-          (into [f] args))))))
+        (fn [f] f)))))

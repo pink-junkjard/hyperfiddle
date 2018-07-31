@@ -35,20 +35,22 @@
     [hyperfiddle.ui.util :refer [eval-renderer-comp]]))
 
 
-(defn attr-renderer [ref props ctx]
-  (let [renderer (some->> (context/hydrate-attribute ctx (:hypercrud.browser/attribute ctx) :attribute/renderer)
-                          (r/fmap blank->nil)
-                          deref)]
-    ^{:key (hash renderer)}
-    [user-portal (ui-error/error-comp ctx)
-     [eval-renderer-comp nil renderer ref props ctx]]))
+(defn attr-renderer [ctx]
+  (let [user-render-s (some->> (context/hydrate-attribute ctx (:hypercrud.browser/attribute ctx) :attribute/renderer)
+                               (r/fmap blank->nil)
+                               deref)
+        user-render (eval-renderer-comp nil user-render-s)]
+    (fn [val props ctx]
+      ^{:key (hash user-render-s)}                          ; broken key user-render-s
+      [user-portal (ui-error/error-comp ctx)
+       [user-render val props ctx]])))
 
 (defn ^:export control "this is a function, which returns component" [ctx] ; returns Func[(ref, props, ctx) => DOM]
   (let [attr @(context/hydrate-attribute ctx (:hypercrud.browser/attribute ctx))
         renderer (blank->nil (:attribute/renderer attr))]
     (cond
       (not attr) controls/string
-      renderer attr-renderer
+      renderer (attr-renderer ctx)                          ; needs to lift up to fix hash key on user-render-s
       :else (let [type (some-> attr :db/valueType :db/ident name keyword)
                   cardinality (some-> attr :db/cardinality :db/ident name keyword)]
               (match* [type cardinality]
@@ -73,7 +75,7 @@
                      (contains? :options))
         child-fields? (not (some->> (:hypercrud.browser/fields ctx) (r/fmap nil?) deref))]
     (fragment (when (and (not options?) (not child-fields?))
-                [(control ctx) (:hypercrud.browser/data ctx) props ctx])
+                [(control ctx) @(:hypercrud.browser/data ctx) props ctx])
               (when (and (not options?) child-fields? (context/attribute-segment? (last (:hypercrud.browser/path ctx)))) ; ignore relation and fe fields
                 [result ctx])
               [anchors (:hypercrud.browser/path ctx) props ctx (when options? link/options-processor)] ; Order sensitive, here be floats
@@ -132,7 +134,7 @@ User renderers should not be exposed to the reaction."
   (let [ctx (context/focus ctx relative-path)
         props (update props :class css (semantic-css ctx))]
     (if ?f
-      [?f (:hypercrud.browser/data ctx) props ctx]
+      [?f @(:hypercrud.browser/data ctx) props ctx]
       [hyper-control props ctx])))
 
 (defn ^:export link "Relation level link renderer. Works in forms and lists but not tables."
@@ -153,7 +155,7 @@ User renderers should not be exposed to the reaction."
      (dissoc props :class :children nil)]))
 
 (defn form-field "Form fields are label AND value. Table fields are label OR value."
-  [hyper-control relative-path ctx ?f props]                ; ?f :: (ref props ctx) => DOM
+  [hyper-control relative-path ctx ?f props]                ; ?f :: (val props ctx) => DOM
   (let [state (r/atom {:hyperfiddle.ui.form/magic-new-a nil})]
     (fn [hyper-control relative-path ctx ?f props]
       (let [ctx (assoc ctx :hyperfiddle.ui.form/state state)
@@ -168,11 +170,11 @@ User renderers should not be exposed to the reaction."
          ^{:key :form-body}
          [:div
           (if ?f
-            [?f (:hypercrud.browser/data body-ctx) props body-ctx]
+            [?f @(:hypercrud.browser/data body-ctx) props body-ctx]
             [hyper-control props body-ctx])]]))))
 
 (defn table-field "Form fields are label AND value. Table fields are label OR value."
-  [hyper-control relative-path ctx ?f props]                ; ?f :: (ref props ctx) => DOM
+  [hyper-control relative-path ctx ?f props]                ; ?f :: (val props ctx) => DOM
   (let [head-or-body (last (:hypercrud.browser/path ctx))   ; this is ugly and not uniform with form-field
         ctx (context/focus ctx relative-path)
         props (update props :class css (semantic-css ctx))]
@@ -187,7 +189,7 @@ User renderers should not be exposed to the reaction."
       :body [:td {:class (css "field" (:class props) "truncate")
                   :style {:border-color (when (:hypercrud.browser/source-symbol ctx) (border-color ctx))}}
              (if ?f
-               [?f (:hypercrud.browser/data ctx) props ctx]
+               [?f @(:hypercrud.browser/data ctx) props ctx]
                [hyper-control props ctx])])))
 
 ; (defmulti field ::layout)
@@ -327,7 +329,7 @@ nil. call site must wrap with a Reagent component"
        "f" (fn [content argument props ctx]
              (let [f (unwrap (memoized-safe-eval content))
                    val (unwrap (memoized-safe-read-edn-string argument))]
-               (when f [f (r/track identity val) props ctx])))
+               (when f [f val props ctx])))
 
        "browse" (fn [content argument props ctx]
                   (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
@@ -372,5 +374,5 @@ nil. call site must wrap with a Reagent component"
                              ^{:key k} [:li [markdown content (context/body ctx relation)]]))
                       (doall))])})))
 
-(defn ^:export img [ref props ctx]
-  [:img (merge props {:src @ref})])
+(defn ^:export img [val props ctx]
+  [:img (merge props {:src val})])

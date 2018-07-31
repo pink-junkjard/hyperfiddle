@@ -69,11 +69,11 @@
 (defn renderer [ctx class]
   (let [special-attrs-state (r/atom nil)
         reactive-merge #(merge-in-tx % @special-attrs-state ctx)
-        ident-f (fn [ref props ctx]
+        ident-f (fn [val props ctx]
                   (let [on-change! (r/comp (r/partial ident-with-tx! special-attrs-state ctx)
                                            (r/partial controls/entity-change->tx ctx))]
                     [input/keyword-input* @(:hypercrud.browser/data ctx) on-change! props]))
-        valueType-and-cardinality-f (fn [ref props ctx]
+        valueType-and-cardinality-f (fn [val props ctx]
                                       (let [on-change! (r/comp (r/partial valueType-and-cardinality-with-tx! special-attrs-state ctx)
                                                                (r/partial controls/entity-change->tx ctx))]
                                         [select (assoc props :on-change on-change!) ctx]))]

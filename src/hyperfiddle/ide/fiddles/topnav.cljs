@@ -123,12 +123,12 @@
                                {:tooltip [nil (:user/email @result)]}))
         [:a {:href (foundation/stateless-login-url ctx)} "login"])]]))
 
-(defn ^:export qe-picker-control [ref props ctx]
+(defn ^:export qe-picker-control [val props ctx]
   (let [options (->> [:query :entity :blank]
                      (map #(radio-option
                              {:label (case % :query "query" :entity "pull" :blank "blank")
                               :target %
-                              :value @ref
+                              :value val
                               :change! (r/partial entity-change! ctx)})))]
     [:span.qe.radio-group props
      (apply fragment options)]))

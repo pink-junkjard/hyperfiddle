@@ -71,34 +71,34 @@
    :fiddle/links "See [:fiddle/links examples](http://www.hyperfiddle.net/:docs/:fiddle-links/)."})
 
 (def controls
-  {:fiddle/pull (fn [ref props ctx]
+  {:fiddle/pull (fn [val props ctx]
                   [:div
                    [hyper-control (dissoc props :embed-mode) ctx]
                    [:span.schema "schema: " (schema-links ctx)]
                    (when-not (:embed-mode props)
                      #_[:div.hf-underdoc [markdown (:fiddle/pull underdocs)]])])
-   :fiddle/query (fn [ref props ctx]
+   :fiddle/query (fn [val props ctx]
                    [:div
                     [hyper-control (dissoc props :embed-mode) ctx]
                     [:span.schema "schema: " (schema-links ctx)]
                     (when-not (:embed-mode props)
                       #_[:div.hf-underdoc [markdown (:fiddle/query underdocs)]])])
-   :fiddle/markdown (fn [ref props ctx]
+   :fiddle/markdown (fn [val props ctx]
                       [:div
                        [hyper-control (dissoc props :embed-mode) ctx]
                        (when-not (:embed-mode props)
                          #_[:div.hf-underdoc [markdown (:fiddle/markdown underdocs)]])])
-   :fiddle/css (fn [ref props ctx]
+   :fiddle/css (fn [val props ctx]
                  [:div
                   [hyper-control (dissoc props :embed-mode) ctx]
                   (when-not (:embed-mode props)
                     #_[:div.hf-underdoc [markdown (:fiddle/css underdocs)]])])
-   :fiddle/renderer (fn [ref props ctx]
+   :fiddle/renderer (fn [val props ctx]
                       [:div
                        [hyper-control (dissoc props :embed-mode) ctx]
                        (when-not (:embed-mode props)
                          [:div.hf-underdoc [markdown (:fiddle/renderer underdocs)]])])
-   :fiddle/links (fn [ref props ctx]
+   :fiddle/links (fn [val props ctx]
                    [:div
                     [:div [links-fiddle/renderer ctx (:embed-mode props)]]
                     [anchors (:hypercrud.browser/path ctx) (dissoc props :embed-mode) ctx]

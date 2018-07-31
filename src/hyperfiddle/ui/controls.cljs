@@ -30,33 +30,33 @@
   ; If the db/id was not pulled, we cannot write through to the entity
   (cljs.core/boolean (:db/id entity-val)))
 
-(defn ^:export keyword [ref props ctx]
+(defn ^:export keyword [val props ctx]
   (let [props (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))
         on-change! (r/partial entity-change! ctx)]
-    [input/keyword-input* @ref on-change! props]))
+    [input/keyword-input* val on-change! props]))
 
-(defn ^:export string [ref props ctx]
+(defn ^:export string [val props ctx]
   (let [props (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))
         on-change! (r/partial entity-change! ctx)]
-    [input/input* @ref on-change! props]))
+    [input/input* val on-change! props]))
 
-(defn ^:export long [ref props ctx]
+(defn ^:export long [val props ctx]
   (let [props (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))
         on-change! (r/partial entity-change! ctx)]
-    [input/validated-input @ref on-change!
+    [input/validated-input val on-change!
      #(let [v (js/parseInt % 10)] (if (integer? v) v nil))
      (fnil str "")
      #(or (= "" %) (integer? (js/parseInt % 10)))
      props]))
 
-(defn ^:export boolean [ref props ctx]
+(defn ^:export boolean [val props ctx]
   ; wrapper div lets us style block while constraining checkbox clickable surface area inline
   [:div (let [props (adapt-props props)] (update props :class #(str % (if (:disabled props) " disabled"))))
-   [contrib.ui/easy-checkbox "" @ref
-    (r/partial entity-change! ctx (not @ref))
+   [contrib.ui/easy-checkbox "" val
+    (r/partial entity-change! ctx (not val))
     (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))]])
 
-(defn ^:export tristate-boolean [ref props ctx]
+(defn ^:export tristate-boolean [val props ctx]
   (letfn [(adapter [e]
             (case (.-target.value e)
               "" nil
@@ -67,55 +67,55 @@
     (let [option-props {:disabled (or (cljs.core/boolean (:read-only props))
                                       (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))))}]
       [:select (-> (dissoc props :label-fn)
-                   (merge {:value (if (nil? @ref) "" (str @ref))
+                   (merge {:value (if (nil? val) "" (str val))
                            :on-change (r/partial change! ctx)}))
        [:option (assoc option-props :key true :value "true") "True"]
        [:option (assoc option-props :key false :value "false") "False"]
        [:option (assoc option-props :key :nil :value "") "--"]])))
 
-(defn ^:export dbid [ref props ctx]
-  [input/id-input @ref
+(defn ^:export dbid [val props ctx]
+  [input/id-input val
    (r/partial entity-change! ctx)
    (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))])
 
-(defn ^:export instant [ref props ctx]
-  [recom-date @ref
+(defn ^:export instant [val props ctx]
+  [recom-date val
    (r/partial entity-change! ctx)
    (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))])
 
 (defn- code-mode [& [mode static-props]]
-  (fn [ref props ctx]
+  (fn [val props ctx]
     (let [props (-> static-props
                     (merge props)
                     (update :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))))))
           control (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
                     :hyperfiddle.ui.layout/block contrib.ui/code
                     :hyperfiddle.ui.layout/table contrib.ui/code-inline-block)]
-      [control @ref (r/partial entity-change! ctx)
+      [control val (r/partial entity-change! ctx)
        (cond-> props
                mode (assoc :mode mode))])))
 
 (letfn [(clojure-editor [parinfer]
           ; (code-mode) allocates a closure, be careful to keep it stable!
           (code-mode "clojure" {:parinfer parinfer}))]
-  (defn ^:export code [ref props ctx]
+  (defn ^:export code [val props ctx]
     (let [widget @(->> (:hyperfiddle.ide/user ctx)
                        (contrib.reactive/fmap :hyperfiddle.ide/parinfer)
                        (contrib.reactive/fmap clojure-editor) #_ "carefully track the final widget closure, not the bool")]
-      [widget ref props ctx])))
+      [widget val props ctx])))
 (def ^:export css (code-mode "css"))
 
-(defn ^:export markdown-editor [ref props ctx]              ; This is legacy; :mode=markdown should be bound in userland
+(defn ^:export markdown-editor [val props ctx]              ; This is legacy; :mode=markdown should be bound in userland
   (let [widget (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
                  :hyperfiddle.ui.layout/block contrib.ui/code
                  :hyperfiddle.ui.layout/table contrib.ui/code-inline-block)]
     ;code has backwards args - props first
-    [widget @ref (r/partial entity-change! ctx)
+    [widget val (r/partial entity-change! ctx)
      (-> props
          (update :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))
          (assoc :mode "markdown" :lineWrapping true))]))
 
-(defn ^:export edn-many [ref props ctx]
+(defn ^:export edn-many [val props ctx]
   (letfn [(change! [ctx value user-val]
             (let [user-val (set user-val)
                   rets (set/difference value user-val)
@@ -124,7 +124,7 @@
                                                     (:hypercrud.browser/attribute ctx)
                                                     rets adds))))]
     (let [valueType @(context/hydrate-attribute ctx (:hypercrud.browser/attribute ctx) :db/valueType :db/ident)
-          value (set (if (= valueType :db.type/ref) (map :db/id @ref) @ref))
+          value (set (if (= valueType :db.type/ref) (map :db/id val) val))
           widget (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
                    :hyperfiddle.ui.layout/block contrib.ui/edn
                    :hyperfiddle.ui.layout/table contrib.ui/edn-inline-block)]
@@ -132,11 +132,11 @@
        (r/partial change! ctx value)
        (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))])))
 
-(defn ^:export edn [ref props ctx]
+(defn ^:export edn [val props ctx]
   (let [widget (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
                  :hyperfiddle.ui.layout/table contrib.ui/edn-inline-block
                  :hyperfiddle.ui.layout/block contrib.ui/edn)]
-    [widget @ref
+    [widget val
      (r/partial entity-change! ctx)
      (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))]))
 

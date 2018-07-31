@@ -75,9 +75,9 @@
          ::user (if-let [user-renderer (:user-renderer ctx)]
                   [user-renderer ctx class]
                   (let [fiddle (:hypercrud.browser/fiddle ctx)]
-                    [util/eval-renderer-comp
-                     (some-> @(r/cursor fiddle [:fiddle/cljs-ns]) blank->nil)
-                     (some-> @(r/cursor fiddle [:fiddle/renderer]) blank->nil build-wrapped-render-expr-str)
+                    [(util/eval-renderer-comp
+                       (some-> @(r/cursor fiddle [:fiddle/cljs-ns]) blank->nil)
+                       (some-> @(r/cursor fiddle [:fiddle/renderer]) blank->nil build-wrapped-render-expr-str))
                      ctx class
                      ; If userland crashes, reactions don't take hold, we need to reset here.
                      ; Cheaper to pass this as a prop than to hash everything

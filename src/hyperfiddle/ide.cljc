@@ -180,8 +180,7 @@
          ; Topnav
          (when (get-in ctx [:host-env :active-ide?])
            [browser/ui-from-route ide-route
-            (assoc ide-ctx :hypercrud.ui/error (r/constantly ui-error/error-inline)
-                           #_#_:user-renderer hyperfiddle.ide.fiddles.topnav/renderer)
+            (assoc ide-ctx :hypercrud.ui/error (r/constantly ui-error/error-inline))
             "hidden-print"])
 
          ; Content area
