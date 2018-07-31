@@ -168,7 +168,7 @@
            ide-ctx (page-ide-context ctx route)
            ide-route (ide-fiddle-route route ctx)
            ; Feature flags are needed in all ctxs
-           user nil #_(:hypercrud.browser/result (unwrap (hyperfiddle.data/browse :account [] @(base/data-from-route ide-route ide-ctx))))
+           user (r/atom nil) #_(:hypercrud.browser/result (unwrap (hyperfiddle.data/browse :account [] @(base/data-from-route ide-route ide-ctx))))
            ide-ctx (assoc ide-ctx ::user user)
            ctx (assoc ctx ::user user)]
 
