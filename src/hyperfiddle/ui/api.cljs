@@ -11,6 +11,11 @@
 (declare api-data)
 (declare with-result)
 
+(defn recurse-from-route [route ctx]
+  (->> (base/data-from-route route ctx)
+       (unwrap)                                             ; todo cannot swallow this error
+       (api-data)))
+
 (defn recurse-from-link [link ctx]
   (->> (base/data-from-link link ctx)
        (unwrap)                                             ; todo cannot swallow this error
@@ -63,4 +68,9 @@
            (->> (link/links-here ctx)                       ; todo reactivity
                 (map #(recurse-from-link % ctx))
                 (apply merge))
+           (when @(r/fmap :fiddle/hydrate-result-as-fiddle (:hypercrud.browser/fiddle ctx))
+             ; This only makes sense on :fiddle/type :query because it has arbitrary arguments
+             ; EntityRequest args are too structured.
+             (let [[_ [inner-fiddle & inner-args]] (:route ctx)]
+               (recurse-from-route [inner-fiddle (vec inner-args)] ctx)))
            {(:route ctx) @(:hypercrud.browser/result ctx)})))
