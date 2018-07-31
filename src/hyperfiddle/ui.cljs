@@ -7,6 +7,7 @@
     [contrib.css :refer [css css-slugify]]
     [contrib.data :refer [take-to unwrap]]
     [contrib.eval :as eval]
+    [contrib.pprint :refer [pprint-str]]
     [contrib.reactive :as r]
     [contrib.reagent :refer [fragment]]
     [contrib.reactive-debug :refer [track-cmp]]
@@ -24,6 +25,7 @@
     [hypercrud.ui.control.link-controls :refer [anchors iframes]]
     [hypercrud.ui.error :as ui-error]
     [hyperfiddle.data :as data]
+    [hyperfiddle.ui.api]
     [hyperfiddle.ui.controls :as controls]
     [hyperfiddle.ui.hyper-controls :refer [hyper-label hyper-select-head magic-new-body magic-new-head]]
     [hyperfiddle.ui.hacks]                                  ; exports
@@ -253,30 +255,22 @@ nil. call site must wrap with a Reagent component"
      [:h3 (pr-str (:route ctx)) #_(some-> @fiddle :fiddle/ident str)]
      (result ctx)]))
 
-(letfn [(render-edn [edn-str] [contrib.ui/code edn-str #() {:read-only true}])
-        (title-fiddle [ctx]
-          [:h3
-           [:dl
-            [:dt "route"] [:dd (pr-str (:route ctx))]]])
-        (title-link [rel path ctx]
-          [:dl
-           [:dt "link"] [:dd (pr-str rel) " " (pr-str path)]
-           [:dt "route"] [:dd (pr-str (:route ctx))]])]
-  (defn ^:export fiddle-api [{:keys [hypercrud.browser/result
-                                     hypercrud.browser/fiddle] :as ctx} class]
-    (let [links (-> (:fiddle/links @fiddle)
-                    (->> (mapcat (fn [{:keys [:link/rel :link/path]}]
-                                   (let [path (unwrap (memoized-safe-read-edn-string (str "[" path "]")))
-                                         ctx (unwrap (hyperfiddle.data/browse rel path ctx))]
-                                     [(title-link rel path ctx)
-                                      (render-edn
-                                        (-> @(:hypercrud.browser/result ctx)
-                                            hyperfiddle.ui.hacks/pull-soup->tree
-                                            (contrib.pprint/pprint-str 160)))])))))]
+(letfn [(render-edn [edn-str] [contrib.ui/code edn-str #() {:read-only true}])]
+  (defn ^:export fiddle-api [ctx class]
+    (let [data (hyperfiddle.ui.api/api-data ctx)]
       [:div.hyperfiddle.display-mode-api {:class class}
-       (title-fiddle ctx)
-       (render-edn (-> @result hyperfiddle.ui.hacks/pull-soup->tree (contrib.pprint/pprint-str 160)))
-       (apply fragment links)])))
+       [:h3
+        [:dl
+         [:dt "route"] [:dd (pr-str (:route ctx))]]]
+       (render-edn (get data (:route ctx)))
+       (->> (dissoc data (:route ctx))
+            (map (fn [[route result]]
+                   ^{:key (str (hash route))}
+                   [:div
+                    [:dl [:dt "route"] [:dd (pr-str route)]]
+                    (-> (hyperfiddle.ui.hacks/pull-soup->tree result)
+                        (pprint-str 160)
+                        (render-edn))])))])))
 
 (let [memoized-safe-eval (memoize eval/safe-eval-string)]
   (def ^:export markdown
