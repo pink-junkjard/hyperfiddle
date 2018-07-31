@@ -96,11 +96,13 @@
                mode (assoc :mode mode))])))
 
 (letfn [(clojure-editor [parinfer]
+          ; (code-mode) allocates a closure, be careful to keep it stable!
           (code-mode "clojure" {:parinfer parinfer}))]
   (defn ^:export code [ref props ctx]
-    @(->> (:hyperfiddle.ide/user ctx)
-          (contrib.reactive/fmap :hyperfiddle.ide/parinfer)
-          (contrib.reactive/fmap clojure-editor))))
+    (let [widget @(->> (:hyperfiddle.ide/user ctx)
+                       (contrib.reactive/fmap :hyperfiddle.ide/parinfer)
+                       (contrib.reactive/fmap clojure-editor) #_ "carefully track the final widget closure, not the bool")]
+      [widget ref props ctx])))
 (def ^:export css (code-mode "css"))
 
 (defn ^:export markdown-editor [ref props ctx]              ; This is legacy; :mode=markdown should be bound in userland
