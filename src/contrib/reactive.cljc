@@ -128,7 +128,7 @@
 
 (defn fmap [f rv]
   {:pre [f]}
-  (assert (reactive? rv) (str rv))
+  (assert (reactive? rv) (str "fmap rv: " rv " did you pass nil instead of (r/atom nil)?"))
   (track (comp f deref) rv))
 
 (letfn [(-fapply [rf rv] (@rf @rv))]
