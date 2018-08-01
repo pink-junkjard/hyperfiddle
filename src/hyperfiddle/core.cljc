@@ -13,7 +13,7 @@
     #?(:cljs [hyperfiddle.ide.hf-live])
     ))
 
-#(:cljs (set! hyperfiddle.ui/markdown hyperfiddle.ui.markdown-extensions/markdown))
+#?(:cljs (set! hyperfiddle.ui/markdown hyperfiddle.ui.markdown-extensions/markdown))
 
 ; WARNING:
 ; Do not import from within hyperfiddle namespaces.
