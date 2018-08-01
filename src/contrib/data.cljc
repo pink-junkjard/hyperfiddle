@@ -126,3 +126,7 @@
   (if f
     (fn [& args]
       (apply f (take n args)))))
+
+(defn compare-by-index [ordering]
+  (let [index (into {} (map vector ordering (range)))]
+    #(compare (index %1) (index %2))))

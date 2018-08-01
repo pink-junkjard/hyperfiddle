@@ -1,6 +1,7 @@
 (ns hyperfiddle.ide.hf-live
   (:require
     [contrib.css :refer [css]]
+    [contrib.data :refer [compare-by-index]]
     [contrib.pprint]
     [contrib.reactive :as r]
     [contrib.ui]
@@ -11,15 +12,22 @@
     [hyperfiddle.ui :refer [fiddle-api field]]))
 
 ; This is an entity in the project namespace in the IDE fiddle-repo, probably
+(def attr-order [:fiddle/ident :fiddle/type :fiddle/pull-database :fiddle/pull :fiddle/query
+                 :fiddle/renderer :fiddle/css :fiddle/markdown :fiddle/links :fiddle/hydrate-result-as-fiddle])
 
 (defn docs-embed [attrs ctx-real class & {:keys [embed-mode]}]
   (let [ctx-real (dissoc ctx-real :user-renderer)           ; this needs to not escape this level; inline links can't ever get it
+        attrs (or (seq attrs)
+                  (clojure.set/intersection
+                    (-> @(:hypercrud.browser/result ctx-real)
+                        keys
+                        (->> (apply sorted-set-by (compare-by-index attr-order)))
+                        (disj :db/id))))
         ctx (shadow-fiddle ctx-real)
         {:keys [:fiddle/ident]} @(:hypercrud.browser/result ctx)]
     (fn [ctx-real class & {:keys [embed-mode]}]
       (into
-        [:div {:class class}
-         #_[:h5 (str @(r/cursor (:hypercrud.browser/result ctx) [:fiddle/ident])) " source"]]
+        [:div {:class class}]
         (for [k attrs
               :let [?f (fiddle-src/controls k)
                     props (when ?f {:embed-mode true})]]

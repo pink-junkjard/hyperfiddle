@@ -4,4 +4,4 @@
    (let [[_ [inner-fiddle & inner-args]] (:route ctx)]
      [hypercrud.browser.core/ui-from-route
       [inner-fiddle inner-args]
-      (assoc ctx :user-renderer (hyperfiddle.ide.hf-live/hf-live :fiddle/markdown :fiddle/renderer))])])
+      (assoc ctx :user-renderer (hyperfiddle.ide.hf-live/hf-live))])])

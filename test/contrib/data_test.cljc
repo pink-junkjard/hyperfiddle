@@ -1,6 +1,7 @@
 (ns contrib.data-test
   (:require [clojure.test :refer [deftest is]]
-            [contrib.data :refer [cond-let map-pad pad rtrim-coll fix-arity fvor take-to]]))
+            [contrib.data :refer [cond-let map-pad pad rtrim-coll fix-arity fvor take-to
+                                  compare-by-index]]))
 
 
 (comment
@@ -46,3 +47,12 @@
 
 (deftest fvor-1 []
   (is (= ((fvor #(.toLocaleDateString %) "–") nil) "–")))
+
+(def ordering [:fiddle/ident :fiddle/type :fiddle/pull-database :fiddle/pull :fiddle/query
+               :fiddle/renderer :fiddle/css :fiddle/markdown :fiddle/links :fiddle/hydrate-result-as-fiddle])
+(deftest compare-by-index-
+  []
+  (is (= (apply sorted-set-by
+                (compare-by-index ordering)
+                [:fiddle/renderer :fiddle/ident :fiddle/css :fiddle/markdown :fiddle/type])
+         (sorted-set :fiddle/ident :fiddle/type :fiddle/renderer :fiddle/css :fiddle/markdown))))
