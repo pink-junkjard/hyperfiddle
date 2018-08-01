@@ -24,9 +24,9 @@
        [hyperfiddle.ui/table
         (fn [ctx]
           [(hyperfiddle.ui/field [0 :db/ident] ctx)
-           (hyperfiddle.ui/field [0 :db/valueType] ctx #(hyperfiddle.ui.controls/string @(contrib.reactive/fmap (comp (fnil name :–) :db/ident) %) %2 %3) {:read-only true})
-           (hyperfiddle.ui/field [0 :db/cardinality] ctx #(hyperfiddle.ui.controls/string @(contrib.reactive/fmap (comp (fnil name :–) :db/ident) %) %2 %3) {:read-only true})
-           (hyperfiddle.ui/field [0 :db/unique] ctx #(hyperfiddle.ui.controls/string @(contrib.reactive/fmap (comp (fnil name :–) :db/ident) %) %2 %3) {:read-only true})
+           (hyperfiddle.ui/field [0 :db/valueType] ctx #(hyperfiddle.ui.controls/string ((comp (fnil name :–) :db/ident) %) %2 %3) {:read-only true})
+           (hyperfiddle.ui/field [0 :db/cardinality] ctx #(hyperfiddle.ui.controls/string ((comp (fnil name :–) :db/ident) %) %2 %3) {:read-only true})
+           (hyperfiddle.ui/field [0 :db/unique] ctx #(hyperfiddle.ui.controls/string ((comp (fnil name :–) :db/ident) %) %2 %3) {:read-only true})
            (hyperfiddle.ui/field [0 :db/isComponent] ctx)
            (hyperfiddle.ui/field [0 :db/fulltext] ctx nil {:read-only true})
            (hyperfiddle.ui/field [0 :db/doc] ctx)
