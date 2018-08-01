@@ -32,6 +32,8 @@
                               (empty extensions)
                               extensions)]
     (-> (js/remark)
+        (.use js/remarkComments #js {"beginMarker" "" "endMarker" ""})
+        (.use js/remarkToc)
         (.use js/remarkGenericExtensions
               (clj->js
                 {"elements" (into {} (map vector (keys extensions) (repeat {"html" {"properties" {"content" "::content::" "argument" "::argument::"}}})))}))
