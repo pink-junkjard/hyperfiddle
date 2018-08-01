@@ -59,3 +59,8 @@
   ; context is not set for this call
   (let [ctx (context/focus ctx relative-path)]
     (base/data-from-link @(r/track link/rel->link rel ctx) ctx)))
+
+(comment
+  (defn select [ctx rel & [class]]
+    (let [path class]                                       ; is class and path iso?
+      (hyperfiddle.data/browse rel ctx))))

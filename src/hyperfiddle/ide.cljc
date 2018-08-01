@@ -1,6 +1,7 @@
 (ns hyperfiddle.ide
-  (:require [cats.core :refer [mlet return]]
+  (:require [cats.core :refer [mlet return >>=]]
             [cats.labs.promise]
+            [cats.monad.either :refer [branch]]
             [clojure.string :as str]
     #?(:cljs [contrib.css :refer [css]])
             [contrib.data :refer [unwrap]]
@@ -167,12 +168,12 @@
                           :alpha.hypercrud.browser/ui-comp browser-ui/ui-comp))
            ide-ctx (page-ide-context ctx route)
            ide-route (ide-fiddle-route route ctx)
-           ; Feature flags are needed in all ctxs
-           user (mlet [a (base/data-from-route ide-route ide-ctx)
-                       a (hyperfiddle.data/browse :account [] a)]
-                  (:hypercrud.browser/result a))
-           ide-ctx (assoc ide-ctx ::user user)
-           ctx (assoc ctx ::user user)]
+           topnav-ctx (base/data-from-route ide-route ide-ctx)
+           account-ctx (>>= topnav-ctx #(hyperfiddle.data/browse :account [] %))
+           r?user (branch account-ctx (constantly (r/atom nil)) :hypercrud.browser/result)
+           ; Feature flags are needed in IDE and userland (for widgets)
+           ide-ctx (assoc ide-ctx ::user r?user)
+           ctx (assoc ctx ::user r?user)]
 
        (fragment
          :view-page
