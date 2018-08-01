@@ -78,7 +78,7 @@
                                                :db/isComponent :db/fulltext :db/doc]) '...]
                          :where [$db :db.part/db :db.install/attribute '?attr]]))
    :fiddle/type :query
-   :fiddle/renderer (load-resource "schema_renderer.edn")
+   :fiddle/renderer (load-resource "ide/schema_renderer.cljs")
    :fiddle/links #{{:db/id :system-anchor-edit              ; XXX
                     :link/rel :hyperfiddle/edit
                     :link/path ":body 0"

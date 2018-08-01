@@ -10,6 +10,8 @@
     [hyperfiddle.ide.fiddles.topnav :refer [shadow-fiddle]]
     [hyperfiddle.ui :refer [fiddle-api field]]))
 
+; This is an entity in the project namespace in the IDE fiddle-repo, probably
+
 (defn docs-embed [attrs ctx-real class & {:keys [embed-mode]}]
   (let [ctx-real (dissoc ctx-real :user-renderer)           ; this needs to not escape this level; inline links can't ever get it
         ctx (shadow-fiddle ctx-real)

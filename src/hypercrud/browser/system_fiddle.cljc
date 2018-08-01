@@ -1,9 +1,11 @@
 (ns hypercrud.browser.system-fiddle
-  (:require [cuerdas.core :as str]
-            [contrib.try$ :refer [try-either]]
-            [hyperfiddle.ide.fiddles.errors :as errors]
-            [hyperfiddle.ide.fiddles.schema :as schema]
-            [hypercrud.types.Entity :refer [->Entity]]))
+  (:require
+    [contrib.template :refer [load-resource]]
+    [contrib.try$ :refer [try-either]]
+    [cuerdas.core :as str]
+    [hyperfiddle.ide.fiddles.errors :as errors]
+    [hyperfiddle.ide.fiddles.schema :as schema]
+    [hypercrud.types.Entity :refer [->Entity]]))
 
 
 (defn system-fiddle? [fiddle-ident]
@@ -25,6 +27,11 @@
    :fiddle/type :blank
    :fiddle/renderer (str '[:p "Retract entity?"])})
 
+(def hf-live
+  {:fiddle/ident :hyperfiddle.system/hf-live
+   :fiddle/hydrate-result-as-fiddle true
+   :fiddle/renderer (load-resource "ide/hf_live_renderer.cljs")})
+
 (defn hydrate-system-fiddle [ident]
   (try-either                                               ; catch all the pre assertions
     (let [name' (name ident)]
@@ -33,6 +40,7 @@
                                (= name' "remove") fiddle-blank-system-remove
                                (= name' "not-found") errors/not-found
                                (= name' "unauthorized") errors/unauthorized
+                               (= name' "live") hf-live
                                (str/starts-with? name' "edit-") (fiddle-system-edit (str/strip-prefix name' "edit-")))
         "hyperfiddle.schema" (schema/schema name')
         "hyperfiddle.schema.db-cardinality-options" (schema/db-cardinality-options name')
