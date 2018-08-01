@@ -6,7 +6,6 @@
     [clojure.string :as string]
     [contrib.css :refer [css css-slugify]]
     [contrib.data :refer [take-to unwrap]]
-    [contrib.eval :as eval]
     [contrib.pprint :refer [pprint-str]]
     [contrib.reactive :as r]
     [contrib.reagent :refer [fragment]]
@@ -14,10 +13,7 @@
     [contrib.string :refer [memoized-safe-read-edn-string blank->nil or-str]]
     [contrib.ui]
     [contrib.ui.input]
-    [contrib.ui.remark :as remark]
     [contrib.ui.safe-render :refer [user-portal]]
-    [cuerdas.core :as str]
-    [goog.object]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.core :as browser]
     [hypercrud.browser.link :as link :refer [links-here rel->link]]
@@ -29,7 +25,6 @@
     [hyperfiddle.ui.controls :as controls]
     [hyperfiddle.ui.hyper-controls :refer [hyper-label hyper-select-head magic-new-body magic-new-head]]
     [hyperfiddle.ui.hacks]                                  ; exports
-    [hyperfiddle.ui.markdown-extensions]
     [hyperfiddle.ui.select :refer [select]]
     [hyperfiddle.ui.sort :as sort]
     [hyperfiddle.ui.util :refer [eval-renderer-comp]]))
@@ -247,8 +242,6 @@ nil. call site must wrap with a Reagent component"
         ; blank fiddles
         nil))))
 
-(declare markdown)
-
 (def ^:export fiddle (-build-fiddle))
 
 (defn ^:export fiddle-xray [ctx class]
@@ -276,105 +269,7 @@ nil. call site must wrap with a Reagent component"
                     [:dl [:dt "route"] [:dd (pr-str route)]]
                     (render-edn result)])))])))
 
-(let [memoized-safe-eval (memoize eval/safe-eval-string)]
-  (def ^:export markdown
-    (remark/remark!
-
-      ; Content is text, or more markdown, or code
-      ; Argument is semantic: a url, or a hyperfiddle ident (or a second optional content? Caption, row-renderer)
-
-      {"li" (fn [content argument props ctx]
-              [:li.p (dissoc props :children) (:children props)])
-
-       "p" (fn [content argument props ctx]
-             ; Really need a way to single here from below, to get rid of div.p
-             ; So that means signalling via this :children value
-             (if (::unp ctx)
-               (js/reactCreateFragment #js {"_" (:children props)})
-               [:div.p (dissoc props :children) (:children props)]))
-
-       "span" (fn [content argument props ctx]
-                [:span (remark/adapt-props props)
-                 [markdown content (assoc ctx ::unp true)]])
-
-       "a" hyperfiddle.ui.markdown-extensions/a
-
-       ; Is this comment true?::
-       ;   Div is not needed, use it with block syntax and it hits React.createElement and works
-       ;   see https://github.com/medfreeman/remark-generic-extensions/issues/30
-
-       "block" (fn [content argument props ctx]
-                 ; Should presence of argument trigger a figure and caption?
-                 [:div props [markdown content (assoc ctx ::unp true)]])
-
-       ; This is a custom markdown extension example.
-       "figure" (fn [content argument props ctx]
-                  [:figure.figure props
-                   [markdown content (assoc ctx ::unp true)] ; it's an image or pre or other block element
-                   [:figcaption.figure-caption [markdown argument (assoc ctx ::unp true)]]])
-
-       "pre" (fn [content argument props ctx]
-               ; detect ``` legacy syntax, no props or argument
-               (if-let [children (:children props)]
-                 ; Remark generates pre>code; deep inspect and rip out the content
-                 ; Don't hook :code because that is used by inline snippets
-                 (let [content (goog.object/getValueByKeys children 0 "props" "children" 0)
-                       content (str/rtrim content "\n") #_"Remark yields an unavoidable newline that we don't want"]
-                   [contrib.ui/code content #() {:read-only true}])
-                 [contrib.ui/code content #() props]))
-
-       "render" (fn [content argument props ctx]
-                  (->> (memoized-safe-eval (str "(fn [ctx] \n" content "\n)"))
-                       (fmap (fn [f] (f ctx)))
-                       (unwrap)))
-
-       "f" (fn [content argument props ctx]
-             (let [f (unwrap (memoized-safe-eval content))
-                   val (unwrap (memoized-safe-read-edn-string argument))]
-               (when f [f val props ctx])))
-
-       "browse" (fn [content argument props ctx]
-                  (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
-                        rel (unwrap (memoized-safe-read-edn-string srel))
-                        path (unwrap (memoized-safe-read-edn-string (str "[" spath "]")))
-                        f? (unwrap (memoized-safe-eval content))]
-                    (browse rel path ctx f? props)))
-
-       "link" (fn [content argument props ctx]
-                (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
-                      rel (unwrap (memoized-safe-read-edn-string srel))
-                      path (unwrap (memoized-safe-read-edn-string (str "[" spath "]")))
-                      ; https://github.com/medfreeman/remark-generic-extensions/issues/45
-                      label (or-str content (name rel))]
-                  (link rel path ctx label props)))
-
-       "result" (fn [content argument props ctx]
-                  (let [ctx (assoc ctx ::unp true)]
-                    (if-let [f (unwrap (memoized-safe-eval content))]
-                      [f ctx]
-                      (result ctx (update props :class css "unp")))))
-       "value" (fn [content argument props ctx]
-                 (let [path (unwrap (memoized-safe-read-edn-string (str "[" argument "]")))
-                       ?f (some->> (unwrap (memoized-safe-eval content)))]
-                   (value path ctx ?f props)))
-
-       "field" (fn [content argument props ctx]
-                 (let [path (unwrap (memoized-safe-read-edn-string (str "[" argument "]")))
-                       ?f (some->> (unwrap (memoized-safe-eval content)))]
-                   (field path ctx ?f (update props :class css "unp"))))
-
-       "table" (letfn [(form [content ctx]
-                         [[markdown content (assoc ctx ::unp true)]])]
-                 (fn [content argument props ctx]
-                   [table (r/partial form content) ctx #_props]))
-
-       "list" (fn [content argument props ctx]
-                [:ul props
-                 (->> (:hypercrud.browser/data ctx)
-                      (r/unsequence data/relation-keyfn)
-                      (map (fn [[relation k]]
-                             ^{:key k} [:li [markdown content (context/body ctx relation)]]))
-                      (doall))])})))
+(def ^:dynamic markdown)                                    ; this should be hf-contrib or something
 
 (defn ^:export img [val props ctx]
   [:img (merge props {:src val})])

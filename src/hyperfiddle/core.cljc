@@ -7,9 +7,13 @@
     #?(:cljs [contrib.reagent])
     #?(:cljs [contrib.ui])
     #?(:cljs [hyperfiddle.ui])
+
+    ; These things can hardcode hyperfiddle.ui, like userland
+    #?(:cljs [hyperfiddle.ui.markdown-extensions])
     #?(:cljs [hyperfiddle.ide.hf-live])
     ))
 
+(set! hyperfiddle.ui/markdown hyperfiddle.ui.markdown-extensions/markdown)
 
 ; WARNING:
 ; Do not import from within hyperfiddle namespaces.
