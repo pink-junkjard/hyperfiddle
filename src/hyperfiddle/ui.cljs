@@ -258,7 +258,10 @@ nil. call site must wrap with a Reagent component"
      [:h3 (pr-str (:route ctx)) #_(some-> @fiddle :fiddle/ident str)]
      (result ctx)]))
 
-(letfn [(render-edn [edn-str] [contrib.ui/code edn-str #() {:read-only true}])]
+(letfn [(render-edn [data]
+          (let [edn-str (-> (hyperfiddle.ui.hacks/pull-soup->tree data)
+                            (pprint-str 160))]
+            [contrib.ui/code edn-str #() {:read-only true}]))]
   (defn ^:export fiddle-api [ctx class]
     (let [data (hyperfiddle.ui.api/api-data ctx)]
       [:div.hyperfiddle.display-mode-api {:class class}
@@ -271,9 +274,7 @@ nil. call site must wrap with a Reagent component"
                    ^{:key (str (hash route))}
                    [:div
                     [:dl [:dt "route"] [:dd (pr-str route)]]
-                    (-> (hyperfiddle.ui.hacks/pull-soup->tree result)
-                        (pprint-str 160)
-                        (render-edn))])))])))
+                    (render-edn result)])))])))
 
 (let [memoized-safe-eval (memoize eval/safe-eval-string)]
   (def ^:export markdown
