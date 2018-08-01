@@ -8,7 +8,7 @@
     [hypercrud.browser.router :as router]
     [hyperfiddle.ide.fiddles.fiddle-src :as fiddle-src]
     [hyperfiddle.ide.fiddles.topnav :refer [shadow-fiddle]]
-    [hyperfiddle.ui :refer [field]]))
+    [hyperfiddle.ui :refer [fiddle-api field]]))
 
 (defn docs-embed [attrs ctx-real class & {:keys [embed-mode]}]
   (let [ctx-real (dissoc ctx-real :user-renderer)           ; this needs to not escape this level; inline links can't ever get it
@@ -38,7 +38,7 @@
     (fn [ctx class]
       [:div.row.hf-live.unp.no-gutters
        (let [as-edn (r/cursor state [:edn-result])
-             f (if @as-edn hyperfiddle.ui/fiddle-api)]
+             f (when @as-edn fiddle-api)]
          [:div.result.col-sm.order-sm-2.order-xs-1
           [:div "Result:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
           ; Careful: Reagent deep bug in prop comparison https://github.com/hyperfiddle/hyperfiddle/issues/340
