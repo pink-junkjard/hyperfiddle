@@ -1,5 +1,6 @@
 (ns contrib.ui.remark
   (:require
+    [contrib.cljs-platform :refer [global!]]
     [clojure.set]
     [clojure.string]
     [goog.object]
@@ -32,8 +33,8 @@
                               (empty extensions)
                               extensions)]
     (-> (js/remark)
-        (.use js/remarkComments #js {"beginMarker" "" "endMarker" ""})
-        (.use js/remarkToc)
+        (.use (goog.object/get (global!) "remarkComments") #js {"beginMarker" "" "endMarker" ""})
+        (.use (goog.object/get (global!) "remarkToc"))
         (.use js/remarkGenericExtensions
               (clj->js
                 {"elements" (into {} (map vector (keys extensions) (repeat {"html" {"properties" {"content" "::content::" "argument" "::argument::"}}})))}))
