@@ -10,7 +10,8 @@
     [cuerdas.core :as str]
     [goog.object]
     [hypercrud.browser.context :as context]
-    [hyperfiddle.data :as data]))
+    [hyperfiddle.data :as data]
+    [hyperfiddle.ui]))
 
 
 (defn a [content argument props ctx]
