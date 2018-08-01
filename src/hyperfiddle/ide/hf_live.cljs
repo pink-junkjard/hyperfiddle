@@ -1,6 +1,5 @@
 (ns hyperfiddle.ide.hf-live
   (:require
-    [cats.core :refer [fmap]]
     [contrib.css :refer [css]]
     [contrib.pprint]
     [contrib.reactive :as r]
@@ -24,25 +23,12 @@
                     props (when ?f {:embed-mode true})]]
           (field [0 k] ctx ?f props))))))
 
-(defn result-edn [attrs {:keys [hypercrud.browser/result
-                                hypercrud.browser/fiddle] :as ctx} class]
-  (let [s (-> @result
+(defn result-edn [attrs ctx class]
+  (let [s (-> @(:hypercrud.browser/result ctx)
               (as-> $ (if (seq attrs) (select-keys $ attrs) $)) ; omit elided fiddle attrs
               hyperfiddle.ui.hacks/pull-soup->tree
-              (contrib.pprint/pprint-str 50))
-
-        links (-> (:fiddle/links @fiddle)
-                  (->> (map (fn [{:keys [:link/rel :link/path]}]
-                              (let [path (contrib.data/unwrap (contrib.string/memoized-safe-read-edn-string (str "[" path "]")))]
-                                (str
-                                  "; " rel " " path "\n"
-                                  (-> (hyperfiddle.data/browse rel path ctx)
-                                      (->> (fmap :hypercrud.browser/result) (fmap deref) contrib.data/unwrap)
-                                      hyperfiddle.ui.hacks/pull-soup->tree
-                                      (contrib.pprint/pprint-str 50))))))
-                       (interpose "\n\n")))]
-
-    [contrib.ui/code (apply str s "\n\n" links) #() {:read-only true
+              (contrib.pprint/pprint-str 50))]
+    [contrib.ui/code s #() {:read-only true
                             :class class #_"Class ends up not on the codemirror, todo"}]))
 
 ; This is in source control because all hyperblogs want it.
