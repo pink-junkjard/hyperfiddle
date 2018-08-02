@@ -81,8 +81,6 @@
     ; default
     [select-error-cmp "Only fiddle type `query` is supported for select options"]))
 
-(def always-user (atom :hypercrud.browser.browser-ui/user))
-
 (let [dom-value (fn [value]                                 ; nil, kw or eid
                   (if (nil? value) "" (str (:db/id value))))]
   (defn select
@@ -103,6 +101,6 @@
                          (assoc :value @(r/fmap dom-value (:hypercrud.browser/data ctx))))
                f (r/partial select-anchor-renderer props option-props)]
            [browser/ui options-link (assoc ctx
-                                      :hypercrud.ui/display-mode always-user
+                                      :hypercrud.ui/display-mode (r/track identity :hypercrud.browser.browser-ui/user)
                                       :user-renderer f)
             (:class props)]))))))
