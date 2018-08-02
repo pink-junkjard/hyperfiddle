@@ -10,7 +10,7 @@
             [contrib.reader :refer [read-string read-edn-string]]
     #?(:cljs [contrib.reagent :refer [fragment]])
             [contrib.pprint :refer [pprint-str pprint-datoms-str]]
-    #?(:cljs [contrib.ui :refer [code]])
+    #?(:cljs [contrib.ui :refer [code markdown]])
     #?(:cljs [contrib.ui.tooltip :refer [tooltip]])
             [hypercrud.browser.routing :as routing]
             [hypercrud.browser.router :as router]
@@ -22,7 +22,6 @@
     #?(:cljs [hypercrud.ui.stale :as stale])
             [hyperfiddle.actions :as actions]
             [hyperfiddle.runtime :as runtime]
-    ;#?(:cljs [hyperfiddle.ui :refer [markdown]])
             [promesa.core :as p]
     #?(:cljs [re-com.tabs :refer [horizontal-tabs]])))
 
@@ -143,10 +142,9 @@
               (pprint-datoms-str @stage)
               #(runtime/dispatch! (:peer ctx) (actions/reset-stage-uri (:peer ctx) (:branch ctx) @selected-uri (read-edn-string %)))]
              (when child [child selected-uri stage ctx])
-             #_[markdown "Hyperfiddle always generates valid transactions, if it doesn't, please file a bug.
+             [markdown "Hyperfiddle always generates valid transactions, if it doesn't, please file a bug.
 
-*WARNING:* Datomic schema alterations cannot be used in the same transaction, for now you'll
-need to transact the schema before using, see [#6](https://github.com/hyperfiddle/hyperfiddle/issues/6)."]))))))
+*WARNING:* Datomic schema alterations cannot be used in the same transaction, see [#6](https://github.com/hyperfiddle/hyperfiddle/issues/6)."]))))))
 
 #?(:cljs
    (defn leaf-view [route ctx f]
