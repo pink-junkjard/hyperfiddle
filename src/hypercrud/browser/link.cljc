@@ -31,21 +31,12 @@
         false)
       #(= path %))))
 
-(defn options-link? [link]
-  ; don't care if its inline or not, just do the right thing.
-  (= :options (:link/rel link)))
-
-(def options-processor (partial remove options-link?))
-
 (defn links-at [path links-ref]
   (filter (same-path-as? path) @links-ref))
 
-(defn links-here [ctx]
-  (links-at (:hypercrud.browser/path ctx) (:hypercrud.browser/links ctx)))
-
 (defn rel->link [rel ctx]
-  (->> (links-here ctx)
-       (filter #(= (:link/rel %) rel))
+  (->> (filter #(= (:link/rel %) rel) @(:hypercrud.browser/links ctx))
+       (filter (same-path-as? (:hypercrud.browser/path ctx)))
        first))
 
 ; todo belongs in routing ns

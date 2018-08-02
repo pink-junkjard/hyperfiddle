@@ -65,7 +65,7 @@
   ; also no popovers can be opened, so remove managed
   (let [ctx (update ctx :hypercrud.browser/links (partial r/fmap (r/comp remove-managed filter-inline)))]
     (merge (with-result ctx)
-           (->> (link/links-here ctx)                       ; todo reactivity
+           (->> (link/links-at (:hypercrud.browser/path ctx) (:hypercrud.browser/links ctx))                     ; todo reactivity
                 (map #(recurse-from-link % ctx))
                 (apply merge))
            (when @(r/fmap :fiddle/hydrate-result-as-fiddle (:hypercrud.browser/fiddle ctx))

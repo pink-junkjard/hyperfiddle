@@ -1,9 +1,8 @@
-(ns hypercrud.ui.control.link-controls-test
+(ns hyperfiddle.ui.link-impl-test
   (:require [clojure.set :as set]
             [clojure.test :refer [deftest is]]
             [contrib.reactive :as r]
-            [hypercrud.browser.link :as link]
-            [hypercrud.ui.control.link-controls :as link-controls]))
+            [hyperfiddle.ui.link-impl :refer [contextual-links options-processor]]))
 
 
 (def mock-links
@@ -27,7 +26,7 @@
                  :link/path ":body"
                  :link/render-inline? true
                  :link/managed? false}))
-         (set (link-controls/ui-contextual-links [:body] true (r/atom mock-links) nil))))
+         (set (contextual-links [:body] true (r/atom mock-links) nil))))
 
   (is (= (apply set/union (for [rel [:my/link :options]]
                             #{{:link/rel rel
@@ -42,10 +41,10 @@
                                :link/path ":head 0"
                                :link/render-inline? true
                                :link/managed? true}}))
-         (into #{} (link-controls/ui-contextual-links [:head 0] false (r/atom mock-links) nil))))
+         (into #{} (contextual-links [:head 0] false (r/atom mock-links) nil))))
 
   (is (= (set [{:link/rel :my/link
                 :link/path ":head 0 :some/attr"
                 :link/render-inline? true
                 :link/managed? false}])
-         (set (link-controls/ui-contextual-links [:head 0 :some/attr] true (r/atom mock-links) link/options-processor)))))
+         (set (contextual-links [:head 0 :some/attr] true (r/atom mock-links) options-processor)))))

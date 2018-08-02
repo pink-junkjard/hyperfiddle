@@ -16,15 +16,16 @@
     [contrib.ui.safe-render :refer [user-portal]]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.core :as browser]
-    [hypercrud.browser.link :as link :refer [links-here rel->link]]
+    [hypercrud.browser.link :as link]
     [hypercrud.ui.connection-color :refer [border-color]]
-    [hypercrud.ui.control.link-controls :refer [anchors iframes]]
+    [hypercrud.ui.control.link-controls]                    ; legacy
     [hypercrud.ui.error :as ui-error]
     [hyperfiddle.data :as data]
     [hyperfiddle.ui.api]
     [hyperfiddle.ui.controls :as controls]
     [hyperfiddle.ui.hyper-controls :refer [hyper-label hyper-select-head magic-new-body magic-new-head]]
     [hyperfiddle.ui.hacks]                                  ; exports
+    [hyperfiddle.ui.link-impl :as ui-link :refer [anchors iframes]]
     [hyperfiddle.ui.select :refer [select]]
     [hyperfiddle.ui.sort :as sort]
     [hyperfiddle.ui.util :refer [eval-renderer-comp]]))
@@ -63,19 +64,15 @@
 (declare result)
 
 (defn- hyper-control' [props ctx]
-  (let [options? (-> (->> (r/track links-here ctx)
-                          (r/fmap (r/partial map :link/rel))
-                          deref
-                          (into #{}))
-                     (contains? :options))
+  (let [options? @(r/fmap (r/partial ui-link/draw-options? (:hypercrud.browser/path ctx)) (:hypercrud.browser/links ctx))
         child-fields? (not (some->> (:hypercrud.browser/fields ctx) (r/fmap nil?) deref))]
     (fragment (when (and (not options?) (not child-fields?))
                 [(control ctx) @(:hypercrud.browser/data ctx) props ctx])
               (when (and (not options?) child-fields? (context/attribute-segment? (last (:hypercrud.browser/path ctx)))) ; ignore relation and fe fields
                 [result ctx])
-              [anchors (:hypercrud.browser/path ctx) props ctx (when options? link/options-processor)] ; Order sensitive, here be floats
+              [anchors (:hypercrud.browser/path ctx) props ctx ui-link/options-processor] ; Order sensitive, here be floats
               (when options? [select props ctx])
-              [iframes (:hypercrud.browser/path ctx) props ctx (when options? link/options-processor)])))
+              [iframes (:hypercrud.browser/path ctx) props ctx ui-link/options-processor])))
 
 (defn ^:export hyper-control "Handles labels too because we show links there."
   [props ctx]
@@ -84,11 +81,7 @@
                           (reverse)
                           (take-to (comp not #{:head :body})) ; todo head/body attr collision
                           (last))
-        options? (-> (->> (r/track links-here ctx)
-                          (r/fmap (r/partial map :link/rel))
-                          deref
-                          (into #{}))
-                     (contains? :options))]
+        options? @(r/fmap (r/partial ui-link/draw-options? (:hypercrud.browser/path ctx)) (:hypercrud.browser/links ctx))]
     (match* [head-or-body (last (:hypercrud.browser/path ctx)) options?]
       ;[:head _ true] hyper-select-head
       [:head '* _] [magic-new-head props ctx]

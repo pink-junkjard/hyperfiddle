@@ -20,10 +20,10 @@
     hypercrud.browser.nested-pull-test
     hypercrud.browser.router-test
     hypercrud.browser.system-link-test
-    hypercrud.ui.control.link-controls-test
     hyperfiddle.ide.fiddles.schema_test
     hyperfiddle.ide-test
     hyperfiddle.readers-test
+    hyperfiddle.ui.link-impl-test
     ))
 
 (defn run []
@@ -43,8 +43,8 @@
     'hypercrud.browser.nested-pull-test
     'hypercrud.browser.router-test
     'hypercrud.browser.system-link-test
-    'hypercrud.ui.control.link-controls-test
     'hyperfiddle.ide.fiddles.schema_test
     'hyperfiddle.ide-test
     'hyperfiddle.readers-test
+    'hyperfiddle.ui.link-impl-test
     ))

@@ -2,14 +2,14 @@
   (:require [contrib.css :refer [css-slugify css]]
             [contrib.reactive :as r]
             [hypercrud.browser.context :as context]
-            [hypercrud.browser.link :as link]))
+            [hypercrud.browser.link :as link]
+            [hyperfiddle.ui.link-impl :as ui-link]))
 
 
 ; sorting currently breaks click handling in popovers
 (defn links-dont-break-sorting? [ctx]
   (->> @(:hypercrud.browser/links ctx)
-       (filter (link/same-path-as? (:hypercrud.browser/path ctx)))
-       (link/options-processor)
+       (filter (partial ui-link/draw-link? (:hypercrud.browser/path ctx)))
        (not-any? link/popover-link?)))
 
 (defn sortable? [ctx]
