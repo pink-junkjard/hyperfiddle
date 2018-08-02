@@ -50,6 +50,12 @@
 (defn find-element-segment? [path-segment]
   (integer? path-segment))
 
+(defn segment-type [segment]
+  (cond
+    (attribute-segment? segment) :attribute
+    (find-element-segment? segment) :element
+    :else :naked))
+
 (defn with-tx! [ctx tx]
   (let [uri (domain/dbname->uri (str (:hypercrud.browser/source-symbol ctx)) (:hypercrud.browser/domain ctx))
         invert-route (:hypercrud.browser/invert-route ctx)]

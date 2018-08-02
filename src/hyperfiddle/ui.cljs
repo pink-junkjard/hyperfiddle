@@ -62,39 +62,46 @@
 
 (declare result)
 
-(defn- hyper-control' [props ctx]
-  (let [options? (-> (->> (r/track links-here ctx)
-                          (r/fmap (r/partial map :link/rel))
-                          deref
-                          (into #{}))
-                     (contains? :options))
-        child-fields? (not (some->> (:hypercrud.browser/fields ctx) (r/fmap nil?) deref))]
-    (fragment (when (and (not options?) (not child-fields?))
-                [(control ctx) @(:hypercrud.browser/data ctx) props ctx])
-              (when (and (not options?) child-fields? (context/attribute-segment? (last (:hypercrud.browser/path ctx)))) ; ignore relation and fe fields
-                [result ctx])
-              [anchors (:hypercrud.browser/path ctx) props ctx (when options? link/options-processor)] ; Order sensitive, here be floats
-              (when options? [select props ctx])
-              [iframes (:hypercrud.browser/path ctx) props ctx (when options? link/options-processor)])))
+(defn control+ [val props ctx]
+  (fragment
+    [(control ctx) val props ctx]
+    [anchors (:hypercrud.browser/path ctx) props ctx]       ; Order sensitive, here be floats
+    [iframes (:hypercrud.browser/path ctx) props ctx]))
 
-(defn ^:export hyper-control "Handles labels too because we show links there."
-  [props ctx]
-  {:post [(not (nil? %))]}
-  (let [head-or-body (->> (:hypercrud.browser/path ctx)
-                          (reverse)
-                          (take-to (comp not #{:head :body})) ; todo head/body attr collision
-                          (last))
-        options? (-> (->> (r/track links-here ctx)
-                          (r/fmap (r/partial map :link/rel))
-                          deref
-                          (into #{}))
-                     (contains? :options))]
-    (match* [head-or-body (last (:hypercrud.browser/path ctx)) options?]
+(defn links-only+ [val props ctx]
+  (fragment
+    [(control ctx) val props ctx]
+    [anchors (:hypercrud.browser/path ctx) props ctx]       ; Order sensitive, here be floats
+    [iframes (:hypercrud.browser/path ctx) props ctx]))
+
+(defn result+ [val props ctx]
+  (fragment
+    [result ctx]                                            ; flipped args :(
+    [anchors (:hypercrud.browser/path ctx) props ctx]       ; Order sensitive, here be floats
+    [iframes (:hypercrud.browser/path ctx) props ctx]))
+
+(defn select+ [val props ctx]
+  (fragment
+    [anchors (:hypercrud.browser/path ctx) props ctx link/options-processor] ; Order sensitive, here be floats
+    [select props ctx]
+    [iframes (:hypercrud.browser/path ctx) props ctx link/options-processor]))
+
+(defn ^:export hyper-control "Handles labels too because we show links there." ; CTX is done after here. props and val only. But recursion needs to look again.
+  [ctx]
+  {:post [%]}
+  (let [head-or-body (->> (:hypercrud.browser/path ctx) (reverse) (take-to (comp not #{:head :body})) (last)) ; todo head/body attr collision
+        rels (->> (r/track links-here ctx) (r/fmap (r/partial map :link/rel)) deref (into #{}))
+        child-fields (not (some->> (:hypercrud.browser/fields ctx) (r/fmap nil?) deref))
+        segment-type (context/segment-type (last (:hypercrud.browser/path ctx)))]
+    (match* [head-or-body segment-type child-fields rels]
       ;[:head _ true] hyper-select-head
-      [:head '* _] [magic-new-head props ctx]
-      [:body '* _] [magic-new-body props ctx]
-      [:head _ _] [hyper-label props ctx]
-      [:body _ _] [hyper-control' props ctx])))
+      [:head '* _ _] magic-new-head
+      [:body '* _ _] magic-new-body
+      [:head _ _ _] hyper-label
+      [:body _ _ (true :<< #(contains? % :options))] select+
+      [:body :attribute true _] result+
+      [:body _ true _] links-only+
+      [:body _ false _] control+)))
 
 (defn ^:export semantic-css [ctx]
   ; Include the fiddle level ident css.
@@ -104,11 +111,7 @@
        (concat
          ["hyperfiddle"
           (:hypercrud.browser/source-symbol ctx)            ; color
-          (let [last-segment (last (:hypercrud.browser/path ctx))]
-            (cond
-              (context/attribute-segment? last-segment) "attribute"
-              (context/find-element-segment? last-segment) "element"
-              :else "naked"))
+          (name (context/segment-type (last (:hypercrud.browser/path ctx))))
           (or (some #{:head} (:hypercrud.browser/path ctx)) ; could be first nested in a body
               (some #{:body} (:hypercrud.browser/path ctx)))
           (->> (:hypercrud.browser/path ctx)                ; generate a unique selector for each location
@@ -130,7 +133,7 @@ User renderers should not be exposed to the reaction."
         props (update props :class css (semantic-css ctx))]
     (if ?f
       [?f @(:hypercrud.browser/data ctx) props ctx]
-      [hyper-control props ctx])))
+      [(hyper-control ctx) @(:hypercrud.browser/data ctx) props ctx])))
 
 (defn ^:export link "Relation level link renderer. Works in forms and lists but not tables."
   [rel relative-path ctx ?content & [props]]                ; path should be optional, for disambiguation only. Naked can be hard-linked in markdown?
@@ -156,17 +159,18 @@ User renderers should not be exposed to the reaction."
       (let [ctx (assoc ctx :hyperfiddle.ui.form/state state)
             ; we want the wrapper div to have the :body styles, so careful not to pollute the head ctx with :body
             body-ctx (context/focus ctx (cons :body relative-path))
+            head-ctx (context/focus ctx (cons :head relative-path))
             props (update props :class css (semantic-css body-ctx))]
         ; It is the driver-fn's job to elide this field if it will be empty
         [:div {:class (css "field" (:class props))
                :style {:border-color (border-color body-ctx)}}
          ^{:key :form-head}
-         [(or (:label-fn props) hyper-control) props (context/focus ctx (cons :head relative-path))]
+         [(or (:label-fn props) (hyper-control head-ctx)) @(:hypercrud.browser/data ctx) props head-ctx]
          ^{:key :form-body}
          [:div
           (if ?f
             [?f @(:hypercrud.browser/data body-ctx) props body-ctx]
-            [hyper-control props body-ctx])]]))))
+            [(hyper-control body-ctx) @(:hypercrud.browser/data body-ctx) props body-ctx])]]))))
 
 (defn table-field "Form fields are label AND value. Table fields are label OR value."
   [hyper-control relative-path ctx ?f props]                ; ?f :: (val props ctx) => DOM
@@ -180,12 +184,12 @@ User renderers should not be exposed to the reaction."
                   :style {:background-color (border-color ctx)}
                   :on-click (r/partial sort/toggle-sort! relative-path ctx)}
              ; Use f as the label control also, because there is hypermedia up there
-             [(or (:label-fn props) hyper-control) props ctx]]
+             [(or (:label-fn props) (hyper-control ctx)) props ctx]]
       :body [:td {:class (css "field" (:class props) "truncate")
                   :style {:border-color (when (:hypercrud.browser/source-symbol ctx) (border-color ctx))}}
              (if ?f
                [?f @(:hypercrud.browser/data ctx) props ctx]
-               [hyper-control props ctx])])))
+               [(hyper-control ctx) @(:hypercrud.browser/data ctx) props ctx])])))
 
 ; (defmulti field ::layout)
 (defn ^:export field "Works in a form or table context. Draws label and/or value."

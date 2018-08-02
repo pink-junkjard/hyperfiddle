@@ -24,7 +24,7 @@
 (defn read-only-cell [val props ctx]
   ; Need to delay until we have the value ctx to compute this, which means its a value renderer not a field prop
   (let [props (assoc props :read-only (read-only? ctx))]
-    [hyper-control props ctx]))
+    [(hyper-control ctx) val props ctx]))
 
 (letfn [(remove-children [field] (dissoc field :hypercrud.browser.field/children))]
   (defn hf-live-link-fiddle [val props ctx]

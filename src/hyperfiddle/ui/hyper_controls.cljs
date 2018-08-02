@@ -32,12 +32,12 @@
               [anchors (:hypercrud.browser/path ctx) props ctx link/options-processor]
               [iframes (:hypercrud.browser/path ctx) props ctx link/options-processor])))
 
-(defn hyper-label [props ctx]
+(defn hyper-label [val props ctx]
   (fragment [label props ctx]
             [anchors (:hypercrud.browser/path ctx) props ctx]
             [iframes (:hypercrud.browser/path ctx) props ctx]))
 
-(defn magic-new-head [props ctx]
+(defn magic-new-head [val props ctx]
   (let [#_#_read-only (r/fmap (comp not controls/writable-entity?) (context/entity ctx)) ;-- don't check this, '* always has a dbid and is writable
         state (r/cursor (:hyperfiddle.ui.form/state ctx) [:hyperfiddle.ui.form/magic-new-a])]
     ;(println (str/format "magic-new-head: %s , %s , %s" @state (pr-str @entity)))
@@ -46,7 +46,7 @@
 
 (letfn [(change! [ctx state v]
           (context/with-tx! ctx [[:db/add @(r/fmap :db/id (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])) @state v]]))]
-  (defn magic-new-body [props ctx]
+  (defn magic-new-body [val props ctx]
     (let [read-only (r/fmap (comp not controls/writable-entity?) (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))
           state (r/cursor (:hyperfiddle.ui.form/state ctx) [:hyperfiddle.ui.form/magic-new-a])]
       ;(println (str/format "magic-new-body: %s , %s , %s" @state @read-only (pr-str @entity)))
