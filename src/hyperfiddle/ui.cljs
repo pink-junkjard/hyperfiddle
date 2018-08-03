@@ -16,15 +16,16 @@
     [contrib.ui.safe-render :refer [user-portal]]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.core :as browser]
-    [hypercrud.browser.link :as link :refer [links-here rel->link]]
+    [hypercrud.browser.link :as link]
     [hypercrud.ui.connection-color :refer [border-color]]
-    [hypercrud.ui.control.link-controls :refer [anchors iframes]]
+    [hypercrud.ui.control.link-controls]                    ; legacy
     [hypercrud.ui.error :as ui-error]
     [hyperfiddle.data :as data]
     [hyperfiddle.ui.api]
     [hyperfiddle.ui.controls :as controls]
     [hyperfiddle.ui.hyper-controls :refer [hyper-label hyper-select-head magic-new-body magic-new-head]]
     [hyperfiddle.ui.hacks]                                  ; exports
+    [hyperfiddle.ui.link-impl :as ui-link :refer [anchors iframes]]
     [hyperfiddle.ui.select :refer [select]]
     [hyperfiddle.ui.sort :as sort]
     [hyperfiddle.ui.util :refer [eval-renderer-comp]]))
@@ -82,18 +83,23 @@
 
 (defn select+ [val props ctx]
   (fragment
-    [anchors (:hypercrud.browser/path ctx) props ctx link/options-processor] ; Order sensitive, here be floats
+    [anchors (:hypercrud.browser/path ctx) props ctx ui-link/options-processor] ; Order sensitive, here be floats
     [select props ctx]
-    [iframes (:hypercrud.browser/path ctx) props ctx link/options-processor]))
+    [iframes (:hypercrud.browser/path ctx) props ctx ui-link/options-processor]))
 
 (defn ^:export hyper-control "Handles labels too because we show links there." ; CTX is done after here. props and val only. But recursion needs to look again.
   [ctx]
   {:post [%]}
   (let [head-or-body (->> (:hypercrud.browser/path ctx) (reverse) (take-to (comp not #{:head :body})) (last)) ; todo head/body attr collision
-        rels (->> (r/track links-here ctx) (r/fmap (r/partial map :link/rel)) deref (into #{}))
+        rels (->> (:hypercrud.browser/links ctx)
+                  (r/fmap (fn [links]
+                            (->> links
+                                 (filter (r/partial ui-link/draw-link? (:hypercrud.browser/path ctx)))
+                                 (map :link/rel)
+                                 (into #{})))))
         child-fields (not (some->> (:hypercrud.browser/fields ctx) (r/fmap nil?) deref))
         segment-type (context/segment-type (last (:hypercrud.browser/path ctx)))]
-    (match* [head-or-body segment-type child-fields rels]
+    (match* [head-or-body segment-type child-fields @rels]
       ;[:head _ true] hyper-select-head
       [:head '* _ _] magic-new-head
       [:body '* _ _] magic-new-body
@@ -246,6 +252,8 @@ nil. call site must wrap with a Reagent component"
         ; blank fiddles
         nil))))
 
+(def ^:dynamic markdown)                                    ; this should be hf-contrib or something
+
 (def ^:export fiddle (-build-fiddle))
 
 (defn ^:export fiddle-xray [ctx class]
@@ -272,8 +280,6 @@ nil. call site must wrap with a Reagent component"
                    [:div
                     [:dl [:dt "route"] [:dd (pr-str route)]]
                     (render-edn result)])))])))
-
-(def ^:dynamic markdown)                                    ; this should be hf-contrib or something
 
 (defn ^:export img [val props ctx]
   [:img (merge props {:src val})])

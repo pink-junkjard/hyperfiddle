@@ -8,6 +8,7 @@
     [hypercrud.browser.system-link :refer [system-link?]]
     [hypercrud.client.core :as hc]
     [hyperfiddle.ui :refer [hyper-control field table]]
+    [hyperfiddle.ui.link-impl :as ui-link]
     [hyperfiddle.ui.select :refer [select]]))
 
 
@@ -37,7 +38,7 @@
                                                      :branch nil))
                  topnav-fiddle @(hc/hydrate (:peer ctx) nil req) ; todo tighter reactivity
                  :let [options-link (->> (:fiddle/links topnav-fiddle)
-                                         (filter link/options-link?)
+                                         (filter ui-link/options-link?)
                                          (filter (link/same-path-as? [:body 0 :fiddle/links :body :link/fiddle]))
                                          first)]]
             (cats/return options-link))
@@ -52,6 +53,7 @@
      [(when-not embed-mode (field [:link/disabled?] ctx read-only-cell))
       (field [:link/rel] ctx read-only-cell)
       (field [:link/path] ctx read-only-cell)
+      (field [:link/class] ctx read-only-cell)
       (field [:link/render-inline?] ctx read-only-cell)
       (field [:link/fiddle] ctx (if embed-mode hf-live-link-fiddle read-only-cell))
       (when-not embed-mode (field [:link/create?] ctx read-only-cell))

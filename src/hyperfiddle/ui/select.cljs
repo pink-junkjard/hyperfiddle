@@ -10,7 +10,8 @@
     [hypercrud.browser.link :as link]
     [hypercrud.ui.error :as ui-error]
     [hypercrud.types.Entity :refer [entity?]]
-    [hyperfiddle.ui.controls :as controls]))
+    [hyperfiddle.ui.controls :as controls]
+    [hyperfiddle.ui.link-impl :as ui-link]))
 
 
 (defn default-label-renderer [v ctx]
@@ -81,13 +82,14 @@
     ; default
     [select-error-cmp "Only fiddle type `query` is supported for select options"]))
 
-(def always-user (atom :hypercrud.browser.browser-ui/user))
-
 (let [dom-value (fn [value]                                 ; nil, kw or eid
                   (if (nil? value) "" (str (:db/id value))))]
   (defn select
     ([props ctx]
-     (select @(r/track link/rel->link :options ctx) props ctx))
+     (let [options-links @(r/fmap (r/partial ui-link/options-links (:hypercrud.browser/path ctx)) (:hypercrud.browser/links ctx))]
+       (if (> (count options-links) 1)
+         (throw (ex-info "Unable to select one :option link" {:links (map #(select-keys % [:link/path :link/class]) options-links)}))
+         (select (first options-links) props ctx))))
     ([options-link props ctx]
      (either/branch
        (link/eval-hc-props (:hypercrud/props options-link) ctx)
@@ -103,6 +105,6 @@
                          (assoc :value @(r/fmap dom-value (:hypercrud.browser/data ctx))))
                f (r/partial select-anchor-renderer props option-props)]
            [browser/ui options-link (assoc ctx
-                                      :hypercrud.ui/display-mode always-user
+                                      :hypercrud.ui/display-mode (r/track identity :hypercrud.browser.browser-ui/user)
                                       :user-renderer f)
             (:class props)]))))))

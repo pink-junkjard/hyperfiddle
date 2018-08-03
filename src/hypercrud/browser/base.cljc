@@ -32,6 +32,7 @@
    :fiddle/ident
    {:fiddle/links [:db/id
                    :hypercrud/props
+                   :link/class
                    :link/create?
                    :link/disabled?
                    {:link/fiddle [:db/id
