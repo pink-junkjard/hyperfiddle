@@ -170,8 +170,8 @@ User renderers should not be exposed to the reaction."
         ; It is the driver-fn's job to elide this field if it will be empty
         [:div {:class (css "field" (:class props))
                :style {:border-color (border-color body-ctx)}}
-         ^{:key :form-head}
-         [(or (:label-fn props) (hyper-control head-ctx)) @(:hypercrud.browser/data ctx) props head-ctx]
+         ^{:key :form-head}                                 ; Why is the data in the head?
+         [(or (:label-fn props) (hyper-control head-ctx)) nil props head-ctx]
          ^{:key :form-body}
          [:div
           (if ?f
@@ -190,7 +190,7 @@ User renderers should not be exposed to the reaction."
                   :style {:background-color (border-color ctx)}
                   :on-click (r/partial sort/toggle-sort! relative-path ctx)}
              ; Use f as the label control also, because there is hypermedia up there
-             [(or (:label-fn props) (hyper-control ctx)) props ctx]]
+             [(or (:label-fn props) (hyper-control ctx)) nil props ctx]]
       :body [:td {:class (css "field" (:class props) "truncate")
                   :style {:border-color (when (:hypercrud.browser/source-symbol ctx) (border-color ctx))}}
              (if ?f

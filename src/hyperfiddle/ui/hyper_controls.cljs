@@ -13,7 +13,7 @@
     [hyperfiddle.ui.select :refer [select]]))
 
 
-(defn label [props ctx]
+(defn label [_ props ctx]
   (when-let [label (some->> (:hypercrud.browser/field ctx)
                             (r/fmap ::field/label)
                             deref)]
@@ -22,22 +22,22 @@
                        [:div.docstring [contrib.ui/markdown help-md]])
        [:label props label (if help-md [:sup "†"])]])))
 
-(defn hyper-select-head [props ctx]
+(defn hyper-select-head [_ props ctx]
   (let [display-mode (-> @(:hypercrud.ui/display-mode ctx) name keyword)]
     (fragment (when (and (= :xray display-mode)
                          @(r/fmap (r/partial ui-link/draw-options? (:hypercrud.browser/path ctx)) (:hypercrud.browser/links ctx)))
                 ; Float right
                 [select props ctx])
-              [label props ctx]
+              [label _ props ctx]
               [anchors (:hypercrud.browser/path ctx) props ctx ui-link/options-processor]
               [iframes (:hypercrud.browser/path ctx) props ctx ui-link/options-processor])))
 
-(defn hyper-label [val props ctx]
-  (fragment [label props ctx]
+(defn hyper-label [_ props ctx]
+  (fragment [label _ props ctx]
             [anchors (:hypercrud.browser/path ctx) props ctx]
             [iframes (:hypercrud.browser/path ctx) props ctx]))
 
-(defn magic-new-head [val props ctx]
+(defn magic-new-head [_ props ctx]
   (let [#_#_read-only (r/fmap (comp not controls/writable-entity?) (context/entity ctx)) ;-- don't check this, '* always has a dbid and is writable
         state (r/cursor (:hyperfiddle.ui.form/state ctx) [:hyperfiddle.ui.form/magic-new-a])]
     ;(println (str/format "magic-new-head: %s , %s , %s" @state (pr-str @entity)))
