@@ -235,6 +235,8 @@ nil. call site must wrap with a Reagent component"
         ; blank fiddles
         nil))))
 
+(def ^:dynamic markdown)                                    ; this should be hf-contrib or something
+
 (def ^:export fiddle (-build-fiddle))
 
 (defn ^:export fiddle-xray [ctx class]
@@ -261,8 +263,6 @@ nil. call site must wrap with a Reagent component"
                    [:div
                     [:dl [:dt "route"] [:dd (pr-str route)]]
                     (render-edn result)])))])))
-
-(def ^:dynamic markdown)                                    ; this should be hf-contrib or something
 
 (defn ^:export img [val props ctx]
   [:img (merge props {:src val})])
