@@ -159,3 +159,34 @@
    (let [lookup (fmap (partial util/group-by-unique key-fn) rv)]
      (->> @(fmap (partial map key-fn) rv)
           (map (fn [key] [(cursor lookup [key]) key]))))))
+
+#?(:cljs
+   (deftype Closure [f x]
+     Fn
+     IFn
+     (-invoke [_] (f x))
+     (-invoke [_ a] (f x a))
+     (-invoke [_ a b] (f x a b))
+     (-invoke [_ a b c] (f x a b c))
+     (-invoke [_ a b c d] (f x a b c d))
+     (-invoke [_ a b c d e] (f x a b c d e))
+     (-invoke [_ a b c d e f] (f x a b c d e f))
+     (-invoke [_ a b c d e f g] (f x a b c d e f g))
+     (-invoke [_ a b c d e f g h] (f x a b c d e f g h))
+     (-invoke [_ a b c d e f g h i] (f x a b c d e f g h i))
+     (-invoke [_ a b c d e f g h i j] (f x a b c d e f g h i j))
+     (-invoke [_ a b c d e f g h i j k] (f x a b c d e f g h i j k))
+     (-invoke [_ a b c d e f g h i j k l] (f x a b c d e f g h i j k l))
+     (-invoke [_ a b c d e f g h i j k l m] (f x a b c d e f g h i j k l m))
+     (-invoke [_ a b c d e f g h i j k l m n] (f x a b c d e f g h i j k l m n))
+     (-invoke [_ a b c d e f g h i j k l m n o] (f x a b c d e f g h i j k l m n o))
+     (-invoke [_ a b c d e f g h i j k l m n o p] (f x a b c d e f g h i j k l m n o p))
+     (-invoke [_ a b c d e f g h i j k l m n o p q] (f x a b c d e f g h i j k l m n o p q))
+     (-invoke [_ a b c d e f g h i j k l m n o p q r] (f x a b c d e f g h i j k l m n o p q r))
+     (-invoke [_ a b c d e f g h i j k l m n o p q r s] (f x a b c d e f g h i j k l m n o p q r s))
+     (-invoke [_ a b c d e f g h i j k l m n o p q r s t] (f x a b c d e f g h i j k l m n o p q r s t))
+     (-invoke [_ a b c d e f g h i j k l m n o p q r s t rest] (apply f x a b c d e f g h i j k l m n o p q r s t rest))
+     IEquiv
+     (-equiv [_ other] (and (instance? Closure other) (= f (.-f other)) (= x (.-x other))))
+     IHash
+     (-hash [_] (hash [f x]))))

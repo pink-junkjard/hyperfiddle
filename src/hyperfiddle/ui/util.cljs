@@ -3,6 +3,7 @@
     [cats.core :refer [>>=]]
     [cats.monad.either :as either]
     [contrib.eval :as eval]
+    [contrib.reactive :as r]
     [contrib.try$ :refer [try-either]]))
 
 
@@ -11,7 +12,7 @@
       memoized-eval-string (memoize safe-eval-string)]
   (defn eval-renderer-comp [?fiddle-cljs-ns-str fiddle-renderer-str]
     (let [result (>>= (memoized-eval-string ?fiddle-cljs-ns-str)
-                      (constantly
+                      (r/constantly
                         ; eval ns for the effect on the cljs namespaces
                         (memoized-eval-string fiddle-renderer-str)))]
       (either/branch
