@@ -31,12 +31,22 @@
     [hyperfiddle.ui.util :refer [eval-renderer-comp]]))
 
 
-(defn attr-renderer [user-render-s]
-  (let [user-render (eval-renderer-comp nil user-render-s)]
-    (fn [val props ctx]
-      ^{:key (hash user-render-s)}                          ; broken key user-render-s
-      [user-portal (ui-error/error-comp ctx)
-       [user-render val props ctx]])))
+(defn user-component [user-fn val props ctx]
+  [user-portal (ui-error/error-comp ctx)
+   [user-fn val props ctx]])
+
+(defn user-control [?user-fn]
+  (if ?user-fn
+    (r/->Closure user-component ?user-fn)))
+
+(defn eval-renderer-comp+ [?f]
+  (if ?f
+    (eval-renderer-comp nil ?f)))
+
+(defn attr-renderer [ctx]
+  @(->> (context/hydrate-attribute ctx (:hypercrud.browser/attribute ctx))
+        (r/fmap (r/comp eval-renderer-comp+ blank->nil :attribute/renderer))
+        (r/fmap user-control)))
 
 (defn ^:export control "this is a function, which returns component" [ctx] ; returns Func[(ref, props, ctx) => DOM]
   (let [attr @(context/hydrate-attribute ctx (:hypercrud.browser/attribute ctx))]
@@ -91,16 +101,14 @@
         segment (last (:hypercrud.browser/path ctx))
         segment-type (context/segment-type segment)
         child-fields (not (some->> (:hypercrud.browser/fields ctx) (r/fmap nil?) deref))]
-    (match* [head-or-body segment-type segment child-fields @rels]
+    (match* [head-or-body segment-type segment child-fields @rels #_@user]
       ;[:head _ true] hyper-select-head
       [:head :attribute '* _ _] magic-new-head
       [:head _ _ _ _] hyper-label
       [:body :attribute '* _ _] magic-new-body
       [:body :attribute _ _ (true :<< #(contains? % :options))] select+
       [:body :attribute _ true _] result+
-      [:body :attribute _ false _] (or (some-> @(context/hydrate-attribute ctx (:hypercrud.browser/attribute ctx))
-                                               :attribute/renderer blank->nil attr-renderer)
-                                       control+)
+      [:body :attribute _ false _] (or (attr-renderer ctx) control+)
       [:body _ _ true _] links-only+                        ; what?
       [:body _ _ false _] controls/string                   ; aggregate, entity, what else?
       )))
@@ -127,6 +135,12 @@
             (some-> @(r/cursor attr [:db/isComponent]) (if :component))]))
        (map css-slugify)))
 
+(defn with-value "Separate the data reaction to avoid thrash everywhere else" [control props ctx]
+  [control @(:hypercrud.browser/data ctx) props ctx])
+
+(defn with-hyper-control "reactions" [props ctx]
+  [with-value (hyper-control ctx) props ctx])
+
 (defn ^:export value "Relation level value renderer. Works in forms and lists but not tables (which need head/body structure).
 User renderers should not be exposed to the reaction."
   ; Path should be optional, for disambiguation only. Naked is an error
@@ -134,8 +148,8 @@ User renderers should not be exposed to the reaction."
   (let [ctx (context/focus ctx relative-path)
         props (update props :class css (semantic-css ctx))]
     (if ?f
-      [?f @(:hypercrud.browser/data ctx) props ctx]
-      [(hyper-control ctx) @(:hypercrud.browser/data ctx) props ctx])))
+      [with-value ?f props ctx]
+      [with-value (hyper-control ctx) props ctx])))
 
 (defn ^:export link "Relation level link renderer. Works in forms and lists but not tables."
   [rel relative-path ctx ?content & [props]]                ; path should be optional, for disambiguation only. Naked can be hard-linked in markdown?
@@ -171,8 +185,8 @@ User renderers should not be exposed to the reaction."
          ^{:key :form-body}
          [:div
           (if ?f
-            [?f @(:hypercrud.browser/data body-ctx) props body-ctx]
-            [(hyper-control body-ctx) @(:hypercrud.browser/data body-ctx) props body-ctx])]]))))
+            [with-value ?f props body-ctx]
+            [with-value (hyper-control body-ctx) props body-ctx])]]))))
 
 (defn table-field "Form fields are label AND value. Table fields are label OR value."
   [hyper-control relative-path ctx ?f props]                ; ?f :: (val props ctx) => DOM
@@ -185,13 +199,12 @@ User renderers should not be exposed to the reaction."
                               (some-> (sort/sort-direction relative-path ctx) name)) ; hoist
                   :style {:background-color (border-color ctx)}
                   :on-click (r/partial sort/toggle-sort! relative-path ctx)}
-             ; Use f as the label control also, because there is hypermedia up there
              [(or (:label-fn props) (hyper-control ctx)) nil props ctx]]
       :body [:td {:class (css "field" (:class props) "truncate")
                   :style {:border-color (when (:hypercrud.browser/source-symbol ctx) (border-color ctx))}}
              (if ?f
-               [?f @(:hypercrud.browser/data ctx) props ctx]
-               [(hyper-control ctx) @(:hypercrud.browser/data ctx) props ctx])])))
+               [with-value ?f props ctx]
+               [with-value (hyper-control ctx) props ctx])])))
 
 ; (defmulti field ::layout)
 (defn ^:export field "Works in a form or table context. Draws label and/or value."
