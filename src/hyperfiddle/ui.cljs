@@ -28,25 +28,23 @@
     [hyperfiddle.ui.link-impl :as ui-link :refer [anchors iframes]]
     [hyperfiddle.ui.select :refer [select]]
     [hyperfiddle.ui.sort :as sort]
-    [hyperfiddle.ui.util :refer [eval-renderer-comp]]))
+    [hyperfiddle.ui.util :refer [eval-renderer-comp+]]))
 
 
-(defn user-component [user-fn val props ctx]
-  [user-portal (ui-error/error-comp ctx)
-   [user-fn val props ctx]])
-
-(defn user-control [?user-fn]
-  (if ?user-fn
-    (r/->Closure user-component ?user-fn)))
-
-(defn eval-renderer-comp+ [?f]
-  (if ?f
-    (eval-renderer-comp nil ?f)))
+(defn attr-renderer-control [val props ctx]
+  ; The only way to stabilize this is for this type signature to become a react class.
+  (let [?user-f @(->> (context/hydrate-attribute ctx (:hypercrud.browser/attribute ctx))
+                      (r/fmap (r/comp eval-renderer-comp+ blank->nil :attribute/renderer)))]
+    (if ?user-f
+      [user-portal (ui-error/error-comp ctx)
+       ; ?user-f is stable due to memoizing eval (and only due to this)
+       [?user-f val props ctx]])))
 
 (defn attr-renderer [ctx]
-  @(->> (context/hydrate-attribute ctx (:hypercrud.browser/attribute ctx))
-        (r/fmap (r/comp eval-renderer-comp+ blank->nil :attribute/renderer))
-        (r/fmap user-control)))
+  (if @(->> (context/hydrate-attribute ctx (:hypercrud.browser/attribute ctx))
+            (r/fmap (r/comp eval-renderer-comp+ blank->nil :attribute/renderer)))
+    ; This is the only way to stabilize this.
+    attr-renderer-control))
 
 (defn ^:export control "this is a function, which returns component" [ctx] ; returns Func[(ref, props, ctx) => DOM]
   (let [attr @(context/hydrate-attribute ctx (:hypercrud.browser/attribute ctx))]
@@ -135,21 +133,13 @@
             (some-> @(r/cursor attr [:db/isComponent]) (if :component))]))
        (map css-slugify)))
 
-(defn with-value "Separate the data reaction to avoid thrash everywhere else" [control props ctx]
-  [control @(:hypercrud.browser/data ctx) props ctx])
-
-(defn with-hyper-control "reactions" [props ctx]
-  [with-value (hyper-control ctx) props ctx])
-
 (defn ^:export value "Relation level value renderer. Works in forms and lists but not tables (which need head/body structure).
 User renderers should not be exposed to the reaction."
   ; Path should be optional, for disambiguation only. Naked is an error
   [relative-path ctx ?f & [props]]                          ; ?f :: (ref, props, ctx) => DOM
   (let [ctx (context/focus ctx relative-path)
         props (update props :class css (semantic-css ctx))]
-    (if ?f
-      [with-value ?f props ctx]
-      [with-value (hyper-control ctx) props ctx])))
+    [(or ?f (hyper-control ctx)) @(:hypercrud.browser/data ctx) props ctx]))
 
 (defn ^:export link "Relation level link renderer. Works in forms and lists but not tables."
   [rel relative-path ctx ?content & [props]]                ; path should be optional, for disambiguation only. Naked can be hard-linked in markdown?
@@ -180,13 +170,11 @@ User renderers should not be exposed to the reaction."
         ; It is the driver-fn's job to elide this field if it will be empty
         [:div {:class (css "field" (:class props))
                :style {:border-color (border-color body-ctx)}}
-         ^{:key :form-head}                                 ; Why is the data in the head?
+         ^{:key :form-head}
          [(or (:label-fn props) (hyper-control head-ctx)) nil props head-ctx]
          ^{:key :form-body}
          [:div
-          (if ?f
-            [with-value ?f props body-ctx]
-            [with-value (hyper-control body-ctx) props body-ctx])]]))))
+          [(or ?f (hyper-control body-ctx)) @(:hypercrud.browser/data body-ctx) props body-ctx]]]))))
 
 (defn table-field "Form fields are label AND value. Table fields are label OR value."
   [hyper-control relative-path ctx ?f props]                ; ?f :: (val props ctx) => DOM
@@ -202,9 +190,7 @@ User renderers should not be exposed to the reaction."
              [(or (:label-fn props) (hyper-control ctx)) nil props ctx]]
       :body [:td {:class (css "field" (:class props) "truncate")
                   :style {:border-color (when (:hypercrud.browser/source-symbol ctx) (border-color ctx))}}
-             (if ?f
-               [with-value ?f props ctx]
-               [with-value (hyper-control ctx) props ctx])])))
+             [(or ?f (hyper-control ctx)) @(:hypercrud.browser/data ctx) props ctx]])))
 
 ; (defmulti field ::layout)
 (defn ^:export field "Works in a form or table context. Draws label and/or value."

@@ -29,8 +29,3 @@
 
   (let [reactive-inc (r/atom (fn [a] (fn [b] (+ a b))))]
     (is (= 3 @(r/fapply reactive-inc (r/atom 1) (r/atom 2))))))
-
-(deftest closure-equiv
-  []
-  #?(:cljs
-     (is (= (r/->Closure inc 1) (r/->Closure inc 1)))))

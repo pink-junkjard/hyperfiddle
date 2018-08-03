@@ -79,13 +79,13 @@
                      #_[:div.hf-underdoc [markdown (:fiddle/pull underdocs)]])])
    :fiddle/query (fn [val props ctx]
                    [:div
-                    [hyperfiddle.ui/with-hyper-control (dissoc props :embed-mode) ctx]
+                    [(hyper-control ctx) @(:hypercrud.browser/data ctx) (dissoc props :embed-mode) ctx]
                     [:span.schema "schema: " (schema-links ctx)]
                     (when-not (:embed-mode props)
                       #_[:div.hf-underdoc [markdown (:fiddle/query underdocs)]])])
    :fiddle/markdown (fn [val props ctx]
                       [:div
-                       [hyperfiddle.ui/with-hyper-control (dissoc props :embed-mode) ctx]
+                       [(hyper-control ctx) val (dissoc props :embed-mode) ctx]
                        (when-not (:embed-mode props)
                          #_[:div.hf-underdoc [markdown (:fiddle/markdown underdocs)]])])
    :fiddle/css (fn [val props ctx]
@@ -95,7 +95,7 @@
                     #_[:div.hf-underdoc [markdown (:fiddle/css underdocs)]])])
    :fiddle/renderer (fn [val props ctx]
                       [:div
-                       [hyperfiddle.ui/with-hyper-control (dissoc props :embed-mode) ctx]
+                       [(hyper-control ctx) val (dissoc props :embed-mode) ctx]
                        (when-not (:embed-mode props)
                          [:div.hf-underdoc [markdown (:fiddle/renderer underdocs)]])])
    :fiddle/links (fn [val props ctx]

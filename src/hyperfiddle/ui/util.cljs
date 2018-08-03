@@ -20,3 +20,7 @@
         (fn [e]
           (throw e))
         (fn [f] f)))))
+
+(defn eval-renderer-comp+ [?f]
+  (if ?f
+    (eval-renderer-comp nil ?f)))
