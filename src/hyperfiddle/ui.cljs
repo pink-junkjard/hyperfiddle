@@ -31,35 +31,27 @@
     [hyperfiddle.ui.util :refer [eval-renderer-comp]]))
 
 
-(defn attr-renderer [ctx]
-  (let [user-render-s (some->> (context/hydrate-attribute ctx (:hypercrud.browser/attribute ctx) :attribute/renderer)
-                               (r/fmap blank->nil)
-                               deref)
-        user-render (eval-renderer-comp nil user-render-s)]
+(defn attr-renderer [user-render-s]
+  (let [user-render (eval-renderer-comp nil user-render-s)]
     (fn [val props ctx]
       ^{:key (hash user-render-s)}                          ; broken key user-render-s
       [user-portal (ui-error/error-comp ctx)
        [user-render val props ctx]])))
 
 (defn ^:export control "this is a function, which returns component" [ctx] ; returns Func[(ref, props, ctx) => DOM]
-  (let [attr @(context/hydrate-attribute ctx (:hypercrud.browser/attribute ctx))
-        renderer (blank->nil (:attribute/renderer attr))]
-    (cond
-      (not attr) controls/string
-      renderer (attr-renderer ctx)                          ; needs to lift up to fix hash key on user-render-s
-      :else (let [type (some-> attr :db/valueType :db/ident name keyword)
-                  cardinality (some-> attr :db/cardinality :db/ident name keyword)]
-              (match* [type cardinality]
-                [:boolean :one] controls/boolean
-                [:keyword :one] controls/keyword
-                [:string :one] controls/string
-                [:long :one] controls/long
-                [:instant :one] controls/instant
-                [:ref :one] controls/dbid                   ; nested form
-                [:ref :many] (constantly [:noscript]) #_edn-many ; nested table
-                [_ :one] controls/edn
-                [_ :many] controls/edn-many
-                )))))
+  (let [attr @(context/hydrate-attribute ctx (:hypercrud.browser/attribute ctx))]
+    (let [type (some-> attr :db/valueType :db/ident name keyword)
+          cardinality (some-> attr :db/cardinality :db/ident name keyword)]
+      (match* [type cardinality]
+        [:boolean :one] controls/boolean
+        [:keyword :one] controls/keyword
+        [:string :one] controls/string
+        [:long :one] controls/long
+        [:instant :one] controls/instant
+        [:ref :one] controls/dbid                           ; nested form
+        [:ref :many] (constantly [:noscript]) #_edn-many    ; nested table
+        [_ :one] controls/edn
+        [_ :many] controls/edn-many))))
 
 (declare result)
 
@@ -71,7 +63,6 @@
 
 (defn links-only+ [val props ctx]
   (fragment
-    [(control ctx) val props ctx]
     [anchors (:hypercrud.browser/path ctx) props ctx]       ; Order sensitive, here be floats
     [iframes (:hypercrud.browser/path ctx) props ctx]))
 
@@ -97,17 +88,22 @@
                                  (filter (r/partial ui-link/draw-link? (:hypercrud.browser/path ctx)))
                                  (map :link/rel)
                                  (into #{})))))
-        child-fields (not (some->> (:hypercrud.browser/fields ctx) (r/fmap nil?) deref))
-        segment-type (context/segment-type (last (:hypercrud.browser/path ctx)))]
-    (match* [head-or-body segment-type child-fields @rels]
+        segment (last (:hypercrud.browser/path ctx))
+        segment-type (context/segment-type segment)
+        child-fields (not (some->> (:hypercrud.browser/fields ctx) (r/fmap nil?) deref))]
+    (match* [head-or-body segment-type segment child-fields @rels]
       ;[:head _ true] hyper-select-head
-      [:head '* _ _] magic-new-head
-      [:body '* _ _] magic-new-body
-      [:head _ _ _] hyper-label
-      [:body _ _ (true :<< #(contains? % :options))] select+
-      [:body :attribute true _] result+
-      [:body _ true _] links-only+
-      [:body _ false _] control+)))
+      [:head :attribute '* _ _] magic-new-head
+      [:head _ _ _ _] hyper-label
+      [:body :attribute '* _ _] magic-new-body
+      [:body :attribute _ _ (true :<< #(contains? % :options))] select+
+      [:body :attribute _ true _] result+
+      [:body :attribute _ false _] (or (some-> @(context/hydrate-attribute ctx (:hypercrud.browser/attribute ctx))
+                                               :attribute/renderer blank->nil attr-renderer)
+                                       control+)
+      [:body _ _ true _] links-only+                        ; what?
+      [:body _ _ false _] controls/string                   ; aggregate, entity, what else?
+      )))
 
 (defn ^:export semantic-css [ctx]
   ; Include the fiddle level ident css.
