@@ -178,7 +178,7 @@
       ; fiddle request can be nil for no-arg pulls (just draw readonly form)
       (process-results fiddle fiddle-request ctx))))
 
-(defn from-link [link ctx with-route]
+(defn from-link [link ctx with-route]                       ; ctx is for formula and routing (tempids and domain)
   (mlet [route (routing/build-route' link ctx)]
     ; entire context must be encoded in the route
     (with-route route ctx)))

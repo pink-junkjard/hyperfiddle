@@ -57,6 +57,7 @@
 
 #?(:cljs
    (defn ui [link ctx ?class & [props]]                     ; TODO don't omit user props
+     {:pre [link ctx]}
      (let [error-comp (ui-error/error-comp ctx)]
        [stale/loading (stale/can-be-loading? ctx) (try-either (link/build-link-props link ctx)) ; todo we want the actual error from the link props
         (fn [e] [error-comp e])

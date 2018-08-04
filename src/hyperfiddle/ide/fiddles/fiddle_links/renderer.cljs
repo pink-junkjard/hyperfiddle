@@ -1,14 +1,13 @@
 (ns hyperfiddle.ide.fiddles.fiddle-links.renderer
   (:require
-    [cats.core :as cats :refer [mlet]]
+    [cats.core :refer [mlet]]
     [cats.monad.either :as either]
     [contrib.reactive :as r]
     [hypercrud.browser.base :as base]
-    [hypercrud.browser.link :as link]
     [hypercrud.browser.system-link :refer [system-link?]]
     [hypercrud.client.core :as hc]
+    [hyperfiddle.data :as data]
     [hyperfiddle.ui :refer [hyper-control field table]]
-    [hyperfiddle.ui.link-impl :as ui-link]
     [hyperfiddle.ui.select :refer [select]]))
 
 
@@ -37,11 +36,8 @@
                                                      :route (hyperfiddle.ide/ide-fiddle-route (:target-route ctx) ctx)
                                                      :branch nil))
                  topnav-fiddle @(hc/hydrate (:peer ctx) nil req) ; todo tighter reactivity
-                 :let [options-link (->> (:fiddle/links topnav-fiddle)
-                                         (filter ui-link/options-link?)
-                                         (filter (link/same-path-as? [:body 0 :fiddle/links :body :link/fiddle]))
-                                         first)]]
-            (cats/return options-link))
+                 :let [fake-ctx-wtf {:hypercrud.browser/links (r/track identity (:fiddle/links topnav-fiddle))}]]
+            (data/select+ fake-ctx-wtf :options "fiddle-options"))
           (either/branch
             (fn [e] [:pre (pr-str e)])
             (fn [options-link] [select options-link props ctx]))))))

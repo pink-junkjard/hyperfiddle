@@ -91,6 +91,7 @@
          (throw (ex-info "Unable to select one :option link" {:links (map #(select-keys % [:link/path :link/class]) options-links)}))
          (select (first options-links) props ctx))))
     ([options-link props ctx]
+     {:pre [options-link ctx]}
      (either/branch
        (link/eval-hc-props (:hypercrud/props options-link) ctx)
        (fn [e] [(ui-error/error-comp ctx) e])

@@ -1,7 +1,9 @@
 (ns hyperfiddle.data
   (:require
     [cats.core :refer [fmap]]
+    [cats.monad.either :refer [left right]]
     [contrib.reactive :as r]
+    [cuerdas.core :as str]
     [hypercrud.browser.base :as base]
     [hypercrud.browser.field :as field]
     [hypercrud.browser.link :as link]
@@ -60,7 +62,9 @@
   (let [ctx (context/focus ctx relative-path)]
     (base/data-from-link @(r/track link/rel->link rel ctx) ctx)))
 
-(comment
-  (defn select [ctx rel & [class]]
-    (let [path class]                                       ; is class and path iso?
-      (hyperfiddle.data/browse rel ctx))))
+(defn select+ "get a link for browsing later" [ctx rel & [class]]
+  (let [[x & xs] (link/select-all ctx rel class)]
+    (cond
+      xs (left (str/format "Too many links matched for rel: %s class: %s" (pr-str rel) class))
+      x (right x)
+      :else (left (str/format "no match for rel: %s class: %s" (pr-str rel) class)))))

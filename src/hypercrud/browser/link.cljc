@@ -5,7 +5,7 @@
             [contrib.eval :as eval]
             [contrib.reactive :as r]
             [contrib.pprint :refer [pprint-str]]
-            [contrib.string :refer [memoized-safe-read-edn-string]]
+            [contrib.string :refer [memoized-safe-read-edn-string blank->nil]]
             [contrib.try$ :refer [try-either try-promise]]
             [cuerdas.core :as string]
             [hypercrud.browser.base :as base]
@@ -38,6 +38,23 @@
   (->> (filter #(= (:link/rel %) rel) @(:hypercrud.browser/links ctx))
        (filter (same-path-as? (:hypercrud.browser/path ctx)))
        first))
+
+(defn same-class-as? [class {classes :link/class}]
+  (boolean ((set classes) class)))
+
+(defn select-all
+  ([ctx rel] {:pre [rel]}
+   (->> @(:hypercrud.browser/links ctx)
+        (filter #(= rel (:link/rel %)))))
+  ([ctx rel class] {:pre [(blank->nil class)]}
+   (->> (select-all ctx rel)
+        (filter (fn [link]
+                  (same-class-as? class link))))))
+
+(comment
+  ; Maybe this shouldn't exist, the caller should validate?
+  (defn select-one [ctx rel & [?class]]
+    (first (select-all ctx rel ?class))))
 
 ; todo belongs in routing ns
 ; this is same business logic as base/request-for-link
@@ -139,7 +156,7 @@
      [:div.hyperfiddle-popover-body                         ; wrpaper helps with popover max-width, hard to layout without this
       ; NOTE: this ctx logic and structure is the same as the popover branch of browser-request/recurse-request
       (let [ctx (cond-> (context/clean ctx)                 ; hack clean for block level errors
-                  (not dont-branch?) (assoc :branch child-branch))]
+                        (not dont-branch?) (assoc :branch child-branch))]
         [hypercrud.browser.core/ui-from-route route ctx])   ; cycle
       (when-not dont-branch?
         [:button {:on-click (r/partial stage! link route popover-id child-branch ctx)} "stage"])
