@@ -41,7 +41,8 @@
                                             ; this is silly why are we tossing the m-child-field data structure
                                             (f-field [path-segment child-segment] ctx)))))
 
-                         (or (not (context/find-element-segment? path-segment))
+                         (or (context/attribute-segment? path-segment)
+                             (nil? (::field/source-symbol m-field))
                              (not @(r/fmap empty? (relative-links-at [:head path-segment] ctx)))
                              (not @(r/fmap empty? (relative-links-at [:body path-segment] ctx))))
                          (conj (f-field [path-segment] ctx))))))
