@@ -22,22 +22,21 @@
 (defn popover-link? [link]
   (:link/managed? link))
 
-(defn same-path-as? [path]
-  (fn [link]
-    (either/branch
-      (memoized-safe-read-edn-string (str "[" (:link/path link) "]"))
-      (fn [e]
-        (timbre/error e)                                    ; swallow the error
-        false)
-      #(= path %))))
+(defn same-path-as? [path link]
+  (either/branch
+    (memoized-safe-read-edn-string (str "[" (:link/path link) "]"))
+    #(do (timbre/error %) false)
+    #(= path %)))
 
 (defn links-at [path links-ref]
-  (filter (same-path-as? path) @links-ref))
+  (filter (partial same-path-as? path) @links-ref))
 
-(defn rel->link [rel ctx]
+(defn select-all-at-path [ctx rel]
   (->> (filter #(= (:link/rel %) rel) @(:hypercrud.browser/links ctx))
-       (filter (same-path-as? (:hypercrud.browser/path ctx)))
-       first))
+       (filter (partial same-path-as? (:hypercrud.browser/path ctx)))))
+
+(defn rel->link "doesn't validate" [rel ctx]
+  (first (select-all-at-path ctx rel)))
 
 (defn same-class-as? [class {classes :link/class}]
   (boolean ((set classes) class)))

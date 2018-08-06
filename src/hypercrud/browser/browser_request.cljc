@@ -39,13 +39,13 @@
 (defn head-field [relative-path ctx]
   (let [ctx (context/focus ctx (cons :head relative-path))] ; todo :head links should fall out with link/class
     (->> @(:hypercrud.browser/links ctx)
-         (filter (link/same-path-as? (:hypercrud.browser/path ctx)))
+         (filter (partial link/same-path-as? (:hypercrud.browser/path ctx)))
          (mapcat #(request-from-link % ctx)))))
 
 (defn body-field [relative-path ctx]
   (let [ctx (context/focus ctx relative-path)]
     (->> @(:hypercrud.browser/links ctx)
-         (filter (link/same-path-as? (:hypercrud.browser/path ctx)))
+         (filter (partial link/same-path-as? (:hypercrud.browser/path ctx)))
          (mapcat #(request-from-link % ctx))
          (concat (let [child-fields? (not (some->> (:hypercrud.browser/fields ctx) (r/fmap nil?) deref))]
                    (when (and child-fields? (context/attribute-segment? (last (:hypercrud.browser/path ctx)))) ; ignore relation and fe fields
@@ -77,7 +77,7 @@
   (let [ctx (update ctx :hypercrud.browser/links (partial r/fmap (r/comp remove-managed filter-inline)))]
     (concat
       (->> @(:hypercrud.browser/links ctx)
-           (filter (link/same-path-as? []))
+           (filter (partial link/same-path-as? []))
            (mapcat #(request-from-link % ctx)))
       (with-result ctx)
       (if @(r/fmap :fiddle/hydrate-result-as-fiddle (:hypercrud.browser/fiddle ctx))
