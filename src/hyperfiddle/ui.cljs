@@ -93,7 +93,7 @@
         rels (->> (:hypercrud.browser/links ctx)
                   (r/fmap (fn [links]
                             (->> links
-                                 (filter (r/partial ui-link/draw-link? (:hypercrud.browser/path ctx)))
+                                 (filter (r/partial link/draw-link? (:hypercrud.browser/path ctx)))
                                  (map :link/rel)
                                  (into #{})))))
         segment (last (:hypercrud.browser/path ctx))

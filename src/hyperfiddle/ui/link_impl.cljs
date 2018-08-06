@@ -6,8 +6,7 @@
     [contrib.string :refer [memoized-safe-read-edn-string]]
     [hypercrud.browser.core :as browser]
     [hypercrud.browser.link :as link]
-    [hypercrud.ui.connection-color :refer [border-color]]
-    [taoensso.timbre :as timbre]))
+    [hypercrud.ui.connection-color :refer [border-color]]))
 
 
 (defn options-link? [link]
@@ -16,28 +15,10 @@
 
 (def options-processor (partial remove options-link?))
 
-(defn- read-path [s]
-  (either/branch
-    (memoized-safe-read-edn-string (str "[" s "]"))
-    (fn [e]
-      ; swallow the error, its too late to report anything to the dev
-      (timbre/error e)
-      nil)
-    identity))
-
-(defn draw-link? [ctx-path link]
-  (let [classes (->> (:link/class link)
-                     (map read-path)
-                     (remove nil?)
-                     (into #{}))]
-    (if (empty? classes)
-      (= ctx-path (read-path (:link/path link)))
-      (contains? classes ctx-path))))
-
 (defn options-links [path links]
   (->> links
        (filter options-link?)
-       (filter (partial draw-link? path))))
+       (filter (partial link/draw-link? path))))
 
 (defn draw-options? [path links]
   (not (empty? (options-links path links))))
@@ -59,7 +40,7 @@
                                    (and (not (link/popover-link? link))
                                         (:link/render-inline? link))))
        ; path filtering is the most expensive, do it last
-       (filter (partial draw-link? path))
+       (filter (partial link/draw-link? path))
        vec))
 
 (defn anchors [path props ctx & [?processor]]

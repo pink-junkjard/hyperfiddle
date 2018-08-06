@@ -28,6 +28,21 @@
     #(do (timbre/error %) false)
     #(= path %)))
 
+(defn- read-path [s]
+  (either/branch
+    (memoized-safe-read-edn-string (str "[" s "]"))
+    #(do (timbre/error %) nil)                              ; too late to report anything to the dev
+    identity))
+
+(defn draw-link? [ctx-path link]
+  (let [classes (->> (:link/class link)
+                     (map read-path)
+                     (remove nil?)
+                     (into #{}))]
+    (if (empty? classes)
+      (= ctx-path (read-path (:link/path link)))
+      (contains? classes ctx-path))))
+
 (defn links-at [path links-ref]
   (filter (partial same-path-as? path) @links-ref))
 
