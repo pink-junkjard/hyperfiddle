@@ -32,6 +32,7 @@
                   (update :hypercrud.browser/field #(r/fmap remove-children %))
                   (assoc :hypercrud.browser/fields (r/track identity nil)))
           props (assoc props :read-only (read-only? ctx))]
+      ; Hacks because hf-live is not yet modeled in the fiddle-graph, we hardcode knowledge of the IDE fiddle-graph instead
       (-> (mlet [req (base/meta-request-for-fiddle (assoc ctx
                                                      :route (hyperfiddle.ide/ide-fiddle-route (:target-route ctx) ctx)
                                                      :branch nil))

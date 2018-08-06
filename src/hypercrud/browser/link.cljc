@@ -42,14 +42,16 @@
 (defn same-class-as? [class {classes :link/class}]
   (boolean ((set classes) class)))
 
-(defn select-all
+(defn select-all "Find the closest match. Can it search parent scopes for :options ?"
   ([ctx rel] {:pre [rel]}
    (->> @(:hypercrud.browser/links ctx)
         (filter #(= rel (:link/rel %)))))
-  ([ctx rel class] {:pre [(blank->nil class)]}
+  ([ctx rel ?class]
    (->> (select-all ctx rel)
         (filter (fn [link]
-                  (same-class-as? class link))))))
+                  (if ?class
+                    (same-class-as? ?class link)
+                    true))))))
 
 (comment
   ; Maybe this shouldn't exist, the caller should validate?
