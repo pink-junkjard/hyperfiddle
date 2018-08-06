@@ -18,6 +18,7 @@
     [hyperfiddle.ide.fiddles.fiddle-links.renderer :as links-fiddle]
     #_[hyperfiddle.ide.hf-live :as hf-live]                 ;cycle
     [hyperfiddle.runtime :as runtime]
+    [hyperfiddle.ui.navigate-cmp :refer [navigate-cmp]]
     [hyperfiddle.ui :refer [browse field hyper-control link markdown]]
     [hyperfiddle.ui.link-impl :refer [anchors]]))
 
@@ -57,7 +58,7 @@
               (let [props {:route [(keyword "hyperfiddle.schema" $db)]
                            :target "_blank"}]
                 ^{:key $db}
-                [(:navigate-cmp ctx) props $db])))
+                [navigate-cmp ctx props $db])))
        (doall)))
 
 (def underdocs

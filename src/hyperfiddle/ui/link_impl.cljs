@@ -6,7 +6,8 @@
     [contrib.string :refer [memoized-safe-read-edn-string]]
     [hypercrud.browser.core :as browser]
     [hypercrud.browser.link :as link]
-    [hypercrud.ui.connection-color :refer [border-color]]))
+    [hypercrud.ui.connection-color :refer [border-color]]
+    [hyperfiddle.ui.navigate-cmp :refer [navigate-cmp]]))
 
 
 (defn options-link? [link]
@@ -28,7 +29,7 @@
 
 ; garbage wrapper for reactivity capturing
 (defn- reactive-nav-cmp [link-ref ctx props]
-  [(:navigate-cmp ctx) (merge (link/build-link-props @link-ref ctx) props) @(r/track prompt link-ref) (:class props)])
+  [navigate-cmp ctx (merge (link/build-link-props @link-ref ctx) props) @(r/track prompt link-ref) (:class props)])
 
 (defn- reactive-ui [link-ref ctx props]
   ; kwargs (dissoc props :class)

@@ -19,7 +19,6 @@
             [hypercrud.browser.system-fiddle :refer [system-fiddle?]]
     #?(:cljs [hyperfiddle.ui :as ui])
     #?(:cljs [hypercrud.ui.error :as ui-error])
-    #?(:cljs [hyperfiddle.ui.navigate-cmp :as navigate-cmp])
     #?(:cljs [hypercrud.ui.stale :as stale])
             [hyperfiddle.data]
             [hyperfiddle.foundation :as foundation]
@@ -163,9 +162,7 @@
 #?(:cljs
    (defn view-page [[fiddle :as route] ctx]
      (let [src-mode (let [[_ _ _ frag] route] (topnav/src-mode? frag)) ; Immoral - :src bit is tunneled in userland fragment space
-           ctx (-> ctx
-                   (assoc :navigate-cmp (r/partial navigate-cmp/navigate-cmp (r/partial runtime/encode-route (:peer ctx)))
-                          :alpha.hypercrud.browser/ui-comp browser-ui/ui-comp))
+           ctx (assoc ctx :alpha.hypercrud.browser/ui-comp browser-ui/ui-comp)
            ide-ctx (page-ide-context ctx route)
            ide-route (ide-fiddle-route route ctx)
            topnav-ctx (base/data-from-route ide-route ide-ctx)

@@ -21,7 +21,8 @@
             [hyperfiddle.runtime :as runtime]
             [hyperfiddle.security :as security]
             [hyperfiddle.ui :as ui :refer [markdown]]
-            [hyperfiddle.ui.controls :refer [entity-change!]]))
+            [hyperfiddle.ui.controls :refer [entity-change!]]
+            [hyperfiddle.ui.navigate-cmp :refer [navigate-cmp]]))
 
 
 ; inline sys-link data when the entity is a system-fiddle
@@ -63,7 +64,7 @@
                               (let [ctx (context/focus ctx relative-path)
                                     link (-> @(r/track link/rel->link rel ctx) (assoc :link/managed? true))
                                     props (merge (link/build-link-props link ctx true) props)]
-                                [(:navigate-cmp ctx) props label (:class props)]))]
+                                [navigate-cmp ctx props label (:class props)]))]
     [:div {:class class}
      [:div.left-nav
       [tooltip {:label "Home"} [:a.hf-auto-nav {:href "/"} @(runtime/state (:peer ctx) [::runtime/domain :domain/ident])]]

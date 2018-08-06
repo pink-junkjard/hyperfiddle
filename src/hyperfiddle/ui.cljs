@@ -26,6 +26,7 @@
     [hyperfiddle.ui.hyper-controls :refer [hyper-label hyper-select-head magic-new-body magic-new-head]]
     [hyperfiddle.ui.hacks]                                  ; exports
     [hyperfiddle.ui.link-impl :as ui-link :refer [anchors iframes]]
+    [hyperfiddle.ui.navigate-cmp :refer [navigate-cmp]]
     [hyperfiddle.ui.select :refer [select]]
     [hyperfiddle.ui.sort :as sort]
     [hyperfiddle.ui.util :refer [eval-renderer-comp+]]))
@@ -146,7 +147,7 @@ User renderers should not be exposed to the reaction."
   (let [ctx (context/focus ctx relative-path)
         link @(r/track link/rel->link rel ctx)]
     ;(assert (not render-inline?)) -- :new-fiddle is render-inline. The nav cmp has to sort this out before this unifies.
-    [(:navigate-cmp ctx) (merge (link/build-link-props link ctx) props) (or ?content (name (:link/rel link))) (:class props)]))
+    [navigate-cmp ctx (merge (link/build-link-props link ctx) props) (or ?content (name (:link/rel link))) (:class props)]))
 
 (defn ^:export browse "Relation level browse. Works in forms and lists but not tables."
   [rel relative-path ctx ?content & [props]]                ; path should be optional, for disambiguation only. Naked can be hard-linked in markdown?

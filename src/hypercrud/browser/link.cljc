@@ -1,26 +1,23 @@
 (ns hypercrud.browser.link
-  (:require [cats.core :as cats]
-            [cats.monad.either :as either]
-            [contrib.data :refer [unwrap]]
-            [contrib.eval :as eval]
-            [contrib.reactive :as r]
-            [contrib.pprint :refer [pprint-str]]
-            [contrib.string :refer [memoized-safe-read-edn-string blank->nil]]
-            [contrib.try$ :refer [try-either try-promise]]
-            [cuerdas.core :as string]
-            [hypercrud.browser.base :as base]
-            [hypercrud.browser.context :as context]
-            [hypercrud.browser.popovers :as popovers]
-            [hypercrud.browser.q-util :as q-util]
-            [hypercrud.browser.routing :as routing]
-            [hyperfiddle.actions :as actions]
-            [hyperfiddle.runtime :as runtime]
-            [promesa.core :as p]
-            [taoensso.timbre :as timbre]))
+  (:require
+    [cats.core :as cats]
+    [cats.monad.either :as either]
+    [contrib.data :refer [abs-normalized unwrap]]
+    [contrib.eval :as eval]
+    [contrib.pprint :refer [pprint-str]]
+    [contrib.reactive :as r]
+    [contrib.string :refer [memoized-safe-read-edn-string]]
+    [contrib.try$ :refer [try-either]]
+    [cuerdas.core :as string]
+    [hypercrud.browser.auto-link-formula :as auto-link-formula]
+    [hypercrud.browser.base :as base]
+    [hypercrud.browser.q-util :as q-util]
+    [hypercrud.browser.routing :as routing]
+    [hypercrud.util.branch :as branch]
+    [taoensso.timbre :as timbre]))
 
 
-(defn popover-link? [link]
-  (:link/managed? link))
+(defn popover-link? [link] (:link/managed? link))
 
 (defn- read-path [s]
   (either/branch
@@ -114,6 +111,7 @@
       user-props                                            ; e.g. disabled, tooltip, style, class - anything, it gets passed to a renderer maybe user renderer
       ; doesn't handle tx-fn - meant for the self-link. Weird and prob bad.
       {:route (unwrap unvalidated-route')
+       ; todo tooltip and class dont belong
        :tooltip (if-not (empty? errors)
                   [:warning (pprint-str errors)]
                   (if (:ide-active ctx)
@@ -124,68 +122,6 @@
                    (remove nil?)
                    (interpose " ")
                    (apply str))})))
-
-(let [safe-eval-string #(try-promise (eval/eval-string %))
-      memoized-eval-string (memoize safe-eval-string)]
-  (defn stage! [link route popover-id child-branch ctx]
-    (-> (let [tx-fn-str (:link/tx-fn link)]
-          (if (and (string? tx-fn-str) (not (string/blank? tx-fn-str)))
-            (memoized-eval-string tx-fn-str)
-            (p/resolved (constantly nil))))
-        (p/then
-          (fn [user-txfn]
-            (p/promise
-              (fn [resolve! reject!]
-                (let [swap-fn (fn [multi-color-tx]
-                                (let [result (let [result (user-txfn ctx multi-color-tx route)]
-                                               ; txfn may be sync or async
-                                               (if-not (p/promise? result) (p/resolved result) result))]
-                                  ; let the caller of this :stage fn know the result
-                                  ; This is super funky, a swap-fn should not be effecting, but seems like it would work.
-                                  (p/branch result
-                                            (fn [v] (resolve! nil))
-                                            (fn [e]
-                                              (reject! e)
-                                              (timbre/warn e)))
-
-                                  ; return the result to the action, it could be a promise
-                                  result))]
-                  (runtime/dispatch! (:peer ctx)
-                                     (actions/stage-popover (:peer ctx) (:hypercrud.browser/invert-route ctx) child-branch
-                                                            link swap-fn ; the swap-fn could be determined via the link rel
-                                                            (actions/close-popover (:branch ctx) popover-id))))))))
-        ; todo something better with these exceptions (could be user error)
-        (p/catch (fn [err]
-                   #?(:clj  (throw err)
-                      :cljs (js/alert (pprint-str err))))))))
-
-(defn close! [popover-id ctx]
-  (runtime/dispatch! (:peer ctx) (actions/close-popover (:branch ctx) popover-id)))
-
-(defn cancel! [popover-id child-branch ctx]
-  (runtime/dispatch! (:peer ctx) (actions/batch
-                                   (actions/close-popover (:branch ctx) popover-id)
-                                   (actions/discard-partition child-branch))))
-
-#?(:cljs
-   (defn managed-popover-body [link route popover-id child-branch dont-branch? close! cancel! ctx]
-     [:div.hyperfiddle-popover-body                         ; wrpaper helps with popover max-width, hard to layout without this
-      ; NOTE: this ctx logic and structure is the same as the popover branch of browser-request/recurse-request
-      (let [ctx (cond-> (context/clean ctx)                 ; hack clean for block level errors
-                        (not dont-branch?) (assoc :branch child-branch))]
-        [hypercrud.browser.core/ui-from-route route ctx])   ; cycle
-      (when-not dont-branch?
-        [:button {:on-click (r/partial stage! link route popover-id child-branch ctx)} "stage"])
-      (if dont-branch?
-        [:button {:on-click close!} "close"]
-        [:button {:on-click cancel!} "cancel"])]))
-
-(defn open! [route popover-id child-branch dont-branch? ctx]
-  (runtime/dispatch! (:peer ctx)
-                     (if dont-branch?
-                       (actions/open-popover (:branch ctx) popover-id)
-                       (actions/add-partition (:peer ctx) route child-branch (::runtime/branch-aux ctx)
-                                              (actions/open-popover (:branch ctx) popover-id)))))
 
 ; if this is driven by link, and not route, it needs memoized.
 ; the route is a fn of the formulas and the formulas can have effects
@@ -201,17 +137,13 @@
   ; If these fns are ommitted (nil), its not an error.
   (let [route' (routing/build-route' link ctx)
         hypercrud-props (build-link-props-raw route' link ctx)
-        popover-props (if (popover-link? link)
-                        (if-let [route (and (:link/managed? link) (either/right? route') (cats/extract route'))]
-                          ; If no route, there's nothing to draw, and the anchor tooltip shows the error.
-                          (let [popover-id (popovers/popover-id link ctx)
-                                child-branch (popovers/branch ctx link)
-                                open! (r/partial open! route popover-id child-branch dont-branch? ctx)
-                                close! (r/partial close! popover-id ctx)
-                                cancel! (r/partial cancel! popover-id child-branch ctx)]
-                            {:showing? (runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :popovers popover-id])
-                             :body #?(:cljs [managed-popover-body link route popover-id child-branch dont-branch? close! cancel! ctx]
-                                      :clj  nil)
-                             :open! open!
-                             :close! (if dont-branch? close! cancel!)})))]
+        popover-props (when (popover-link? link)
+                        (let [child-branch (let [child-id-str (-> [(auto-link-formula/deterministic-ident ctx) (:db/id link)]
+                                                                  hash abs-normalized - str)]
+                                             (branch/encode-branch-child (:branch ctx) child-id-str))]
+                          ; we should run the auto-formula logic to determine an appropriate auto-id fn
+                          {:popover-id child-branch         ; just use child-branch as popover-id
+                           :child-branch (when-not dont-branch? child-branch)
+                           ; todo clean up this type and stabalize reactions
+                           :link (r/track identity link)}))]
     (merge hypercrud-props {:popover popover-props})))
