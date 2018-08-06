@@ -83,29 +83,21 @@
    (r/partial entity-change! ctx)
    (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))])
 
-(defn- code-mode [& [mode static-props]]
-  (fn [val props ctx]
-    (let [props (-> static-props
-                    (merge props)
-                    (update :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))))))
-          control (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
-                    :hyperfiddle.ui.layout/block contrib.ui/code
-                    :hyperfiddle.ui.layout/table contrib.ui/code-inline-block)]
-      [control val (r/partial entity-change! ctx)
-       (cond-> props
-               mode (assoc :mode mode))])))
+(defn- code-mode [val props ctx]
+  (let [props (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))
+        control (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
+                  :hyperfiddle.ui.layout/block contrib.ui/code
+                  :hyperfiddle.ui.layout/table contrib.ui/code-inline-block)]
+    [control val (r/partial entity-change! ctx) props]))
 
-#_(letfn [(clojure-editor [parinfer]
-            ; (code-mode) allocates a closure, be careful to keep it stable!
-            (code-mode "clojure" {:parinfer parinfer}))]
-    (defn ^:export code1 [val props ctx]
-      (let [widget @(->> (:hyperfiddle.ide/user ctx)
-                         (contrib.reactive/fmap :hyperfiddle.ide/parinfer)
-                         (contrib.reactive/fmap clojure-editor) #_"carefully track the final widget closure, not the bool")]
-        [hyperfiddle.ui/with-value widget props ctx])))
+(defn ^:export code [val props ctx]
+  (let [props (-> props
+                  (update :mode #(or % "clojure"))
+                  (assoc :parinfer @(r/fmap :hyperfiddle.ide/parinfer (:hyperfiddle.ide/user ctx))))]
+    [code-mode val props ctx]))
 
-(def ^:export code (code-mode "clojure"))
-(def ^:export css (code-mode "css"))
+(defn ^:export css [val props ctx]
+  [code-mode val (update props :mode #(or % "css")) ctx])
 
 (defn ^:export markdown-editor [val props ctx]              ; This is legacy; :mode=markdown should be bound in userland
   (let [widget (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
