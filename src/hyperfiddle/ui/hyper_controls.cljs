@@ -19,7 +19,7 @@
                             deref)]
     (let [help-md (semantic-docstring ctx)]
       [tooltip-thick (if help-md
-                       [:div.docstring [contrib.ui/markdown help-md]])
+                       [:div.hyperfiddle.docstring [contrib.ui/markdown help-md]])
        [:label props label (if help-md [:sup "†"])]])))
 
 (defn hyper-select-head [_ props ctx]
