@@ -22,6 +22,7 @@
           :hypercrud.browser/field
           :hypercrud.browser/fields
           :hypercrud.browser/links
+          :hypercrud.browser/parent
           :hypercrud.browser/path
           :hypercrud.browser/request
           :hypercrud.browser/result
