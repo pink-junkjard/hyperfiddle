@@ -62,9 +62,9 @@
   (let [ctx (context/focus ctx relative-path)]
     (base/data-from-link @(r/track link/rel->link rel ctx) ctx)))
 
-(defn select+ "get a link for browsing later" [ctx rel & [?class]]
-  (let [[x & xs] (link/select-all ctx rel ?class)]
+(defn select+ "get a link for browsing later" [ctx rel & [?class ?path]]
+  (let [[x & xs] (link/select-all ctx rel ?class ?path)]
     (cond
-      xs (left (str/format "Too many links matched for rel: %s class: %s" (pr-str rel) ?class))
+      xs (left (str/format "Too many links matched for rel: %s class: %s path: %s" (pr-str rel) (pr-str ?class) ?path))
       x (right x)
-      :else (left (str/format "no match for rel: %s class: %s" (pr-str rel) ?class)))))
+      :else (left (str/format "no match for rel: %s class: %s path: %s" (pr-str rel) (pr-str ?class) ?path)))))

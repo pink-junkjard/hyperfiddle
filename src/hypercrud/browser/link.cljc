@@ -22,26 +22,20 @@
 (defn popover-link? [link]
   (:link/managed? link))
 
-(defn same-path-as? [path link]
-  (either/branch
-    (memoized-safe-read-edn-string (str "[" (:link/path link) "]"))
-    #(do (timbre/error %) false)
-    #(= path %)))
-
 (defn- read-path [s]
   (either/branch
     (memoized-safe-read-edn-string (str "[" s "]"))
     #(do (timbre/error %) nil)                              ; too late to report anything to the dev
     identity))
 
-(defn draw-link? [ctx-path link]
-  (let [classes (->> (:link/class link)
-                     (map read-path)
-                     (remove nil?)
-                     (into #{}))]
+(defn same-path-as? [path link]
+  (= path (read-path (:link/path link))))
+
+(defn draw-link? "Full semantics unclear" [path link]
+  (let [classes (->> (:link/class link) (map read-path) (remove nil?) (into #{}))]
     (if (empty? classes)
-      (= ctx-path (read-path (:link/path link)))
-      (contains? classes ctx-path))))
+      (= path (read-path (:link/path link)))
+      (contains? classes path))))
 
 (defn links-at [path links-ref]
   (filter (partial same-path-as? path) @links-ref))
@@ -65,6 +59,12 @@
         (filter (fn [link]
                   (if ?class
                     (same-class-as? ?class link)
+                    true)))))
+  ([ctx rel ?class ?path]
+   (->> (select-all ctx rel ?class)
+        (filter (fn [link]
+                  (if ?path
+                    (draw-link? ?path link)
                     true))))))
 
 (comment

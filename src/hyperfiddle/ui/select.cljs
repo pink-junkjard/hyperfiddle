@@ -3,6 +3,7 @@
     [cats.context :refer-macros [with-context]]
     [cats.core :as cats :refer [fmap]]
     [cats.monad.either :as either]
+    [contrib.data :refer [unwrap]]
     [contrib.reactive :as r]
     [contrib.try$ :refer [try-either]]
     [hypercrud.browser.core :as browser]
@@ -10,6 +11,7 @@
     [hypercrud.browser.link :as link]
     [hypercrud.ui.error :as ui-error]
     [hypercrud.types.Entity :refer [entity?]]
+    [hyperfiddle.data :as data]
     [hyperfiddle.ui.controls :as controls]
     [hyperfiddle.ui.link-impl :as ui-link]))
 
@@ -86,10 +88,8 @@
                   (if (nil? value) "" (str (:db/id value))))]
   (defn select
     ([props ctx]
-     (let [options-links @(r/fmap (r/partial ui-link/options-links (:hypercrud.browser/path ctx)) (:hypercrud.browser/links ctx))]
-       (if (> (count options-links) 1)
-         (throw (ex-info "Unable to select one :option link" {:links (map #(select-keys % [:link/path :link/class]) options-links)}))
-         (select (first options-links) props ctx))))
+     (let [link+ (data/select+ ctx :options nil (:hypercrud.browser/path ctx))]
+       (either/branch link+ select-error-cmp #(select % props ctx))))
     ([options-link props ctx]
      {:pre [options-link ctx]}
      (either/branch
