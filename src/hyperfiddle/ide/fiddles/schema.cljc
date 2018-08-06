@@ -47,17 +47,17 @@
                     :link/fiddle (db-cardinality-options $db)
                     :link/render-inline? true
                     :link/rel :options
-                    :link/class ":body 0 :db/cardinality"}
+                    :link/class #{":body 0 :db/cardinality"}}
                    {:db/id (keyword "hyperfiddle.schema.db-unique-options" $db)
                     :link/fiddle (db-unique-options $db)
                     :link/render-inline? true
                     :link/rel :options
-                    :link/class ":body 0 :db/unique"}
+                    :link/class #{":body 0 :db/unique"}}
                    {:db/id (keyword "hyperfiddle.schema.db-valueType-options" $db)
                     :link/fiddle (db-valueType-options $db)
                     :link/render-inline? true
                     :link/rel :options
-                    :link/class ":body 0 :db/valueType"}
+                    :link/class #{":body 0 :db/valueType"}}
                    {:db/id :system-anchor-remove            ; XXX
                     :link/rel :hyperfiddle/remove
                     :link/path ":body 0"
