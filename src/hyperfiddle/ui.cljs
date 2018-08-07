@@ -21,6 +21,7 @@
     [hypercrud.ui.control.link-controls]                    ; legacy
     [hypercrud.ui.error :as ui-error]
     [hyperfiddle.data :as data]
+    [hyperfiddle.runtime :as runtime]
     [hyperfiddle.ui.api]
     [hyperfiddle.ui.controls :as controls]
     [hyperfiddle.ui.hyper-controls :refer [hyper-label hyper-select-head magic-new-body magic-new-head]]
@@ -141,6 +142,12 @@ User renderers should not be exposed to the reaction."
   (let [ctx (context/focus ctx relative-path)
         props (update props :class css (semantic-css ctx))]
     [(or ?f (hyper-control ctx)) @(:hypercrud.browser/data ctx) props ctx]))
+
+(defn ^:export anchor [ctx props & children]
+  (let [props (-> props
+                  (dissoc :route)
+                  (assoc :href (some->> (:route props) (runtime/encode-route (:peer ctx)))))]
+    (into [:a props] children)))
 
 (defn ^:export link "Relation level link renderer. Works in forms and lists but not tables."
   [rel relative-path ctx ?content & [props]]                ; path should be optional, for disambiguation only. Naked can be hard-linked in markdown?

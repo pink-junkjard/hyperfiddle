@@ -17,16 +17,7 @@
 
 
 (defn dissoc-non-native-props [hypercrud-props]
-  (dissoc hypercrud-props :route :tooltip :popover :hidden))
-
-(defn anchor-cmp [route-encode hypercrud-props label]
-  {:pre [(not (:on-click hypercrud-props))]}
-  (let [anchor-props (-> hypercrud-props
-                         (dissoc-non-native-props)
-                         (assoc :href (if (:route hypercrud-props)
-                                        (route-encode (:route hypercrud-props))
-                                        nil #_"javascript:void 0;")))]
-    [:a anchor-props label]))
+  (dissoc hypercrud-props :tooltip :popover :hidden))
 
 (let [safe-eval-string #(try-promise (eval/eval-string %))
       memoized-eval-string (memoize safe-eval-string)]
@@ -102,6 +93,7 @@
       :position :below-center
       :anchor (let [btn-props (-> hypercrud-props
                                   (dissoc-non-native-props)
+                                  (dissoc :route)
                                   (assoc :on-click (r/partial open! route popover-id child-branch ctx))
                                   ; use twbs btn coloring but not "btn" itself
                                   (update :class #(css % "btn-default")))]
@@ -145,4 +137,4 @@
            {:status status :label label})
          (if (:popover hypercrud-props)
            [popover-cmp hypercrud-props label ctx]
-           [anchor-cmp (r/partial runtime/encode-route (:peer ctx)) hypercrud-props label])]))))
+           [hyperfiddle.ui/anchor ctx (dissoc-non-native-props hypercrud-props) label])]))))
