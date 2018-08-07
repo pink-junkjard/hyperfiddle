@@ -3,11 +3,12 @@
             [cats.monad.either :as either]
             [clojure.set :as set]
             [clojure.walk :as walk]
-            [contrib.data :refer [xorxs]]
+            [contrib.data :refer [unwrap xorxs]]
             [contrib.eval :as eval]
+            [contrib.string :refer [memoized-safe-read-edn-string]]
             [contrib.try$ :refer [try-either]]
             [cuerdas.core :as string]
-            [hypercrud.browser.context :as context]         ; allowed here
+            [hypercrud.browser.q-util :as q-util]
             [hypercrud.browser.router :as router]
             [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
             [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
@@ -77,7 +78,7 @@
                      (if (and (string? formula-str) (not (string/blank? formula-str)))
                        (memoized-eval-string formula-str)
                        (either/right (constantly nil))))
-           args (try-either (formula ctx #_ "This is a legacy ctx, which is set in build-link-props")) ; (r/fmap formula (context/value ctx))
+           args (try-either (formula ctx))
            :let [args (->> {:remove-this-wrapper args}      ; walk trees wants a map
                            ; shadow-links can be hdyrated here, and we need to talk them.
                            ; Technical debt. Once shadow-links are identities, this is just a mapv.
@@ -90,6 +91,23 @@
       ;_ (timbre/debug args (-> (:link/formula link) meta :str))
       (cats/return
         (id->tempid (router/canonicalize fiddle-id (normalize-args (:remove-this-wrapper args))) ctx)))))
+
+(defn validated-route' [fiddle route ctx]
+  ; We specifically hydrate this deep just so we can validate anchors like this.
+  (let [[_ [$1 :as params]] route]
+    (case (:fiddle/type fiddle)
+      :query (let [q (unwrap                                ; todo whats the point of this monad?
+                       (mlet [q (memoized-safe-read-edn-string (:fiddle/query fiddle))]
+                         (if (vector? q)
+                           (cats/return q)
+                           (either/left {:message (str "Invalid query '" (pr-str q) "', only vectors supported")}))))]
+               (q-util/validate-query-params q params ctx))
+      :entity (if (not= nil $1)
+                ; todo check conn
+                (either/right route)
+                (either/left {:message "malformed entity param" :data {:params params}}))
+      ; nil means :blank
+      (either/right route))))
 
 (def encode router/encode)
 (def decode router/decode)

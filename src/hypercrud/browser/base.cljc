@@ -14,14 +14,9 @@
             [hypercrud.browser.user-bindings :as user-bindings]
             [hypercrud.client.core :as hc]
             [hypercrud.client.schema :as schema-util]
-            [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
-            [hypercrud.types.ThinEntity :refer [#?(:cljs ThinEntity)]]
-            [hyperfiddle.domain :as domain])
-  #?(:clj
-     (:import (hypercrud.types.Entity Entity)
-              (hypercrud.types.ThinEntity ThinEntity))))
+            [hyperfiddle.domain :as domain]))
 
 
 (def meta-pull-exp-for-link
@@ -92,38 +87,10 @@
       (return
         (fiddle/fiddle-defaults fiddle)))))
 
-(defn- fix-param [param]
-  (cond
-    (instance? Entity param) (:db/id param)
-    (instance? ThinEntity param) (:db/id param)
-    :else param))
-
-(defn validate-query-params [q args ctx]
-  (mlet [query-holes (try-either (q-util/parse-holes q)) #_"normalizes for :in $"
-         :let [;_ (timbre/debug params query-holes q)
-               db-lookup (q-util/build-dbhole-lookup ctx)
-               ; Add in named database params that aren't formula params
-               [params' unused] (loop [acc []
-                                       args args
-                                       [x & xs] query-holes]
-                                  (let [is-db (.startsWith x "$")
-                                        next-arg (if is-db (get db-lookup x)
-                                                           (fix-param (first args)))
-                                        args (if is-db args (rest args))
-                                        acc (conj acc next-arg)]
-                                    (if xs
-                                      (recur acc args xs)
-                                      [acc args])))]]
-    ;(assert (= 0 (count (filter nil? params')))) ; datomic will give a data source error
-    ; validation. better to show the query and overlay the params or something?
-    (cond #_#_(seq unused) (either/left {:message "unused param" :data {:query q :params params' :unused unused}})
-      (not= (count params') (count query-holes)) (either/left {:message "missing params" :data {:query q :params params' :unused unused}})
-      :else-valid (either/right params'))))
-
 (defn request-for-fiddle [fiddle ctx]                       ; depends on route
   (case @(r/cursor fiddle [:fiddle/type])
     :query (mlet [q (memoized-safe-read-edn-string @(r/cursor fiddle [:fiddle/query]))
-                  args (validate-query-params q (get-in ctx [:route 1]) ctx)]
+                  args (q-util/validate-query-params q (get-in ctx [:route 1]) ctx)]
              (return (->QueryRequest q args)))
 
     :entity

@@ -10,8 +10,6 @@
     [contrib.try$ :refer [try-either]]
     [cuerdas.core :as string]
     [hypercrud.browser.auto-link-formula :as auto-link-formula]
-    [hypercrud.browser.base :as base]
-    [hypercrud.browser.q-util :as q-util]
     [hypercrud.browser.routing :as routing]
     [hypercrud.util.branch :as branch]
     [taoensso.timbre :as timbre]))
@@ -69,24 +67,6 @@
   (defn select-one [ctx rel & [?class]]
     (first (select-all ctx rel ?class))))
 
-; todo belongs in routing ns
-; this is same business logic as base/request-for-link
-; this is currently making assumptions on dbholes
-(defn validated-route' [fiddle route ctx]
-  ; We specifically hydrate this deep just so we can validate anchors like this.
-  (let [[_ [$1 :as params]] route]
-    (case (:fiddle/type fiddle)
-      ; todo check fe conn
-      ; todo merge in dbhole lookup, see: hypercrud.browser.base/request-for-link
-      :query (let [q (unwrap (q-util/safe-parse-query-validated fiddle))]
-               (base/validate-query-params q params ctx))
-      :entity (if (not= nil $1)                             ; handles `e` but no logic for `[e a]`
-                ; todo check fe conn
-                (either/right route)
-                (either/left {:message "malformed entity param" :data {:params params}}))
-      ; nil means :blank
-      (either/right route))))
-
 (let [memoized-eval-props (memoize eval/safe-eval-string)]
   (defn eval-hc-props [props-str ctx]
     (if (and (string? props-str) (not (string/blank? props-str)))
@@ -102,7 +82,7 @@
   ; each prop might have special rules about his default, for example :visible is default true, does this get handled here?
   (let [fiddle (:link/fiddle link)                          ; can be nil - in which case route is invalid
         [_ args :as route] (unwrap unvalidated-route')
-        validated-route' (validated-route' fiddle route ctx)
+        validated-route' (routing/validated-route' fiddle route ctx)
         user-props' (eval-hc-props (:hypercrud/props link) ctx)
         user-props (unwrap user-props')
         errors (->> [user-props' unvalidated-route' validated-route']
