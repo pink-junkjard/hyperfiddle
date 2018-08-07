@@ -18,13 +18,12 @@
           e-state (reagent/atom nil)]
       (reagent/create-class
         {:reagent-render (fn [with-error & children]
-                           (apply fragment
-                                  (let [e @e-state]
-                                    (if (and @show-error e)
-                                      (do
-                                        (reset! show-error false) ; only show the error once, retry after that
-                                        [[with-error e]])
-                                      children))))
+                           (let [e @e-state]
+                             (if (and @show-error e)
+                               (do
+                                 (reset! show-error false)  ; only show the error once, retry after that
+                                 [with-error e])
+                               (apply fragment children))))
 
          :component-did-catch (fn [#_this e info]           ; args will need updating in reagent0.8.x
                                 (reset! show-error true)
