@@ -33,7 +33,6 @@
     [hyperfiddle.ui.hyper-controls :refer [hyper-label hyper-select-head magic-new-body magic-new-head]]
     [hyperfiddle.ui.hacks]                                  ; exports
     [hyperfiddle.ui.link-impl :as ui-link :refer [anchors iframes]]
-    [hyperfiddle.ui.navigate-cmp]                           ; legacy
     [hyperfiddle.ui.popover :refer [popover-cmp]]
     [hyperfiddle.ui.select :refer [select]]
     [hyperfiddle.ui.sort :as sort]
