@@ -46,10 +46,11 @@
                     :link/managed? true
                     :link/tx-fn retract-formula}))
 
-           (or (and (context/find-element-segment? (::field/path-segment field))
-                    (not= :entity (:fiddle/type parent-fiddle)))
-               (and (context/attribute-segment? (::field/path-segment field))
-                    (not= '* (::field/path-segment field))))
+           (and (::field/data-has-id? field)
+                (or (and (context/find-element-segment? (::field/path-segment field))
+                         (not= :entity (:fiddle/type parent-fiddle)))
+                    (and (context/attribute-segment? (::field/path-segment field))
+                         (not= '* (::field/path-segment field)))))
            (cons (let [path (if (= :db.cardinality/many (get-in schema [(::field/path-segment field) :db/cardinality :db/ident]))
                               (conj path :body)
                               path)
