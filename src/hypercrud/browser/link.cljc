@@ -70,5 +70,3 @@
                      (try-either (f-or-v ctx))
                      (either/right f-or-v))))
       (either/right nil))))
-
-(defn ^:deprecated build-link-props-raw [& args] {})
