@@ -27,7 +27,7 @@
                                    [[:a/y :b/z] #{:c/a :c/b}]
                                    [[:a/z] #{:c/x}]]]
       (is (= expected (infer-attrs data get-values)))
-      (is (= expected (infer-attrs [data data] get-values)))        ; test resultsets
+      (is (= expected (infer-attrs [data data] get-values))) ; test resultsets
       )))
 
 (def test-schema
@@ -74,9 +74,8 @@
          :db/valueType {:db/ident :db.type/string}}]
        (data/group-by-assume-unique :db/ident)))
 
-(defn build-ctx [fiddle request result]
+(defn build-ctx [fiddle result]
   {:hypercrud.browser/fiddle (r/atom fiddle)
-   :hypercrud.browser/request (r/atom request)
    :hypercrud.browser/result (r/atom result)
    :hypercrud.browser/schemas (r/atom {"$" test-schema})})
 
@@ -93,7 +92,7 @@
                    [default :a/y "a/y default"]
                    :a/z]]
        (macroexpand
-         `(let [attributes# (->> @(auto-fields (build-ctx ~fiddle (~pull->request ~pull) nil))
+         `(let [attributes# (->> @(auto-fields (r/atom (~pull->request ~pull)) (build-ctx ~fiddle nil))
                                  (mapcat ::field/children)
                                  (mapv ::field/path-segment))]
             (is (~'= [:a/a :a/j :a/k :a/v :a/t :a/u :a/x :a/y :a/z] attributes#)))))))
@@ -113,7 +112,7 @@
                                                        {:db/id 27 :b/y "trew"}]
                                          :a/x {:db/id 21 :b/x "hjkl"}
                                          :a/z "zxcv"}])
-              attr-level-fields# (->> @(auto-fields (build-ctx ~fiddle (~pull->request [(symbol "*")]) result#))
+              attr-level-fields# (->> @(auto-fields (r/atom (~pull->request [(symbol "*")])) (build-ctx ~fiddle result#))
                                       (mapcat ::field/children))]
           ; cant test order with splat
           (is (~'= #{:a/x :a/y :a/z :a/comp-one :a/comp-many (symbol "*")}
@@ -173,7 +172,7 @@
                                            :a/v ["vbnm"]
                                            :a/x {:db/id 21 :b/x "hjkl"}
                                            :a/z "zxcv"}])
-                attr-level-fields# (->> @(auto-fields (build-ctx ~fiddle (~pull->request ~pull) result#))
+                attr-level-fields# (->> @(auto-fields (r/atom (~pull->request ~pull)) (build-ctx ~fiddle result#))
                                         (mapcat ::field/children))
                 attributes# (mapv ::field/path-segment attr-level-fields#)]
             ; can only test order of defined attributes in relation to splat
@@ -212,8 +211,8 @@
             (test-partial-splat ~fiddle ~pull->request ~result-builder)))))
 
 (deftest blank []
-  (is (= [] @(auto-fields {:hypercrud.browser/schemas (r/atom nil)
-                           :hypercrud.browser/fiddle (r/atom {:fiddle/type :blank})}))))
+  (is (= [] @(auto-fields nil {:hypercrud.browser/schemas (r/atom nil)
+                               :hypercrud.browser/fiddle (r/atom {:fiddle/type :blank})}))))
 
 (letfn [(f [a b]
           (cond

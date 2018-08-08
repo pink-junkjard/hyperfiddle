@@ -119,12 +119,11 @@
            :let [ctx (assoc ctx
                        :hypercrud.browser/path []
                        :hypercrud.browser/fiddle fiddle     ; for :db/doc
-                       :hypercrud.browser/request request
                        :hypercrud.browser/result reactive-result
                        ; For tx/entity->statements in userland.
                        :hypercrud.browser/schemas reactive-schemas)]
            ctx (user-bindings/user-bindings ctx)
-           reactive-fields @(r/apply-inner-r (r/track field/auto-fields ctx))
+           reactive-fields @(r/apply-inner-r (r/track field/auto-fields request ctx))
            :let [ctx (assoc ctx :hypercrud.browser/fields reactive-fields)
                  ctx (assoc ctx :hypercrud.browser/links (r/track auto-links ctx))
                  ctx (if (and (= :entity @(r/cursor fiddle [:fiddle/type]))

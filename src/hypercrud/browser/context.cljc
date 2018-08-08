@@ -1,6 +1,8 @@
 (ns hypercrud.browser.context
   (:require
+    [contrib.data :refer [unwrap]]
     [contrib.reactive :as r]
+    [contrib.string :refer [memoized-safe-read-edn-string]]
     [datascript.parser :as parser]
     [hypercrud.browser.field :as field]
     [hyperfiddle.actions :as actions]
@@ -25,7 +27,6 @@
           :hypercrud.browser/links
           :hypercrud.browser/parent
           :hypercrud.browser/path
-          :hypercrud.browser/request
           :hypercrud.browser/result
           :hypercrud.browser/source-symbol
           :hypercrud.browser/schemas))
@@ -103,17 +104,17 @@
                                           (assert @f (str "focusing on a non-pulled attribute: " (pr-str (:hypercrud.browser/path ctx)) "."))
                                           (r/fapply f (:hypercrud.browser/data ctx)))
                 :hypercrud.browser/data-cardinality cardinality)))
-        (query-type [query]
-          (-> (parser/parse-query query)
-              :qfind
-              type))
+        (query-type [s-query]
+          (-> (memoized-safe-read-edn-string s-query)
+              unwrap                                        ; known good if we got this far
+              parser/parse-query :qfind type))
         (initial-focus [ctx]
           (case @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/type]) ; fiddle/type not relevant outside this fn
             :entity (assoc ctx
                       :hypercrud.browser/data (r/fmap vector (:hypercrud.browser/result ctx))
                       :hypercrud.browser/data-cardinality :db.cardinality/one
                       :hypercrud.browser/path [])
-            :query (condp = (query-type @(r/cursor (:hypercrud.browser/request ctx) [:query]))
+            :query (condp = (query-type @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/query]))
                      datascript.parser.FindRel
                      (assoc ctx
                        :hypercrud.browser/data (r/fmap (r/partial mapv vec) (:hypercrud.browser/result ctx))

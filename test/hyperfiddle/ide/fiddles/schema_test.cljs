@@ -13,7 +13,6 @@
              :hypercrud.browser/fiddle (r/atom nil)
              :hypercrud.browser/fields (r/atom [])
              :hypercrud.browser/links (r/atom nil)
-             :hypercrud.browser/request (r/atom nil)
              :hypercrud.browser/result (r/atom [])
              :hypercrud.browser/schemas (r/atom nil)}]
     ; just test it renderers something
@@ -25,7 +24,6 @@
              :hypercrud.browser/fiddle (r/atom nil)
              :hypercrud.browser/fields (r/atom [])
              :hypercrud.browser/links (r/atom nil)
-             :hypercrud.browser/request (r/atom nil)
              :hypercrud.browser/result (r/atom nil)
              :hypercrud.browser/schemas (r/atom nil)}]
     ; just test it renderers something

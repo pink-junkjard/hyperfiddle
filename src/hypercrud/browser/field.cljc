@@ -191,7 +191,7 @@
     datascript.parser.Aggregate
     (aggregate->fe fe-pos element)))
 
-(defn auto-fields [{:keys [:hypercrud.browser/result :hypercrud.browser/request] :as ctx}]
+(defn auto-fields [request {:keys [:hypercrud.browser/result] :as ctx}]
   (let [schemas @(:hypercrud.browser/schemas ctx)]          ; todo tighter reactivity
     (case @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/type])
       :entity (let [dbname @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/pull-database])

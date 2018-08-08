@@ -26,9 +26,8 @@
          :db/valueType {:db/ident :db.type/ref}}]
        (data/group-by-assume-unique :db/ident)))
 
-(defn build-ctx [fiddle request result]
+(defn build-ctx [fiddle result]
   {:hypercrud.browser/fiddle (r/atom fiddle)
-   :hypercrud.browser/request (r/atom request)
    :hypercrud.browser/result (r/atom result)
    :hypercrud.browser/schemas (r/atom {"$" test-schema})})
 
@@ -50,8 +49,8 @@
                                   :in $ ?e]
                                 {"$" nil "?e" 1})
         result nil
-        ctx (build-ctx fiddle request result)
-        fields @(auto-fields ctx)]
+        ctx (build-ctx fiddle result)
+        fields @(auto-fields (r/atom request) ctx)]
 
     (let [expected [{::field/data-has-id? true
                      ::field/path-segment 0
