@@ -82,7 +82,7 @@
     :hypercrud.browser/page-on-click (let [branch-aux {:hyperfiddle.ide/foo "page"}]
                                        #?(:cljs (r/partial browser-ui/page-on-click (:peer ctx) nil branch-aux)))
     :hypercrud.ui/display-mode (runtime/state (:peer ctx) [:display-mode])
-    :hyperfiddle.ui/debug-tooltips (get-in ctx [:host-env :active-ide?])))
+    :hyperfiddle.ui/debug-tooltips (:active-ide? (runtime/host-env (:peer ctx)))))
 
 (defn leaf-target-context [ctx]
   (*-target-context ctx))
@@ -139,7 +139,7 @@
   {:pre [route (not (string? route))]}
   (case (get-in ctx [::runtime/branch-aux ::foo])
     "page" (into
-             (when true #_(get-in ctx [:host-env :active-ide?]) ; true for embedded src mode
+             (when true #_(:active-ide? (runtime/host-env (:peer ctx))) ; true for embedded src mode
                (browser/request-from-route (ide-fiddle-route route ctx) (page-ide-context ctx)))
              (if (magic-ide-fiddle? fiddle (get-in ctx [:hypercrud.browser/domain :domain/ident]))
                (browser/request-from-route route (page-ide-context ctx))
@@ -158,13 +158,14 @@
            r?user (branch account-ctx (constantly (r/track identity nil)) :hypercrud.browser/result)
            ; Feature flags are needed in IDE and userland (for widgets)
            ide-ctx (assoc ide-ctx ::user r?user)
-           ctx (assoc ctx ::user r?user)]
+           ctx (assoc ctx ::user r?user)
+           {:keys [:active-ide?]} (runtime/host-env (:peer ctx))]
 
        (fragment
          :view-page
 
          ; Topnav
-         (when (get-in ctx [:host-env :active-ide?])
+         (when active-ide?
            [browser/ui-from-route ide-route
             (assoc ide-ctx :hypercrud.ui/error (r/constantly ui-error/error-inline))
             "hidden-print"])
@@ -177,7 +178,7 @@
 
            (fragment
              :primary-content
-             (when (and (get-in ctx [:host-env :active-ide?]) src-mode) ; primary, blue background (IDE)   /:posts/:hello-world#:src
+             (when (and active-ide? src-mode)               ; primary, blue background (IDE)   /:posts/:hello-world#:src
                [browser/ui-from-route (ide-fiddle-route route ctx) ; srcmode is equal to topnav route but a diff renderer
                 (assoc ide-ctx :user-renderer fiddle-src-renderer)
                 (css "container-fluid" "devsrc")])
@@ -186,7 +187,7 @@
              (when-not src-mode                             ; primary, white background (User)   /:posts/:hello-world
                (let [ctx (page-target-context ctx)]
                  [browser/ui-from-route route ctx (css "container-fluid" "hyperfiddle-user"
-                                                       (when (get-in ctx [:host-env :active-ide?]) "hyperfiddle-ide")
+                                                       (when active-ide? "hyperfiddle-ide")
                                                        (some-> ctx :hypercrud.ui/display-mode deref name (->> (str "display-mode-"))))]))))))))
 
 #?(:cljs

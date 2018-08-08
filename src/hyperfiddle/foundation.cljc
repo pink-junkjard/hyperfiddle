@@ -33,12 +33,13 @@
 
 #?(:cljs
    (defn stateless-login-url [ctx]
-     (let [{:keys [domain client-id]} (get-in ctx [:hypercrud.browser/domain :domain/environment :auth0 (get-in ctx [:host-env :ide/root])])]
+     (let [{:keys [hostname :ide/root]} (runtime/host-env (:peer ctx))
+           {:keys [domain client-id]} (get-in ctx [:hypercrud.browser/domain :domain/environment :auth0 root])]
        (str domain "/login?"
             "client=" client-id
             "&scope=" "openid email profile"
             "&state=" (base64-url-safe/encode (runtime/encode-route (:peer ctx) (context/target-route ctx)))
-            "&redirect_uri=" (str "http://" (get-in ctx [:host-env :hostname]) auth0-redirect-path)))))
+            "&redirect_uri=" (str "http://" hostname auth0-redirect-path)))))
 
 (defn domain-request [domain-eid peer]
   (->EntityRequest domain-eid

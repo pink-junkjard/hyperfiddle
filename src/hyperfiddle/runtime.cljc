@@ -46,6 +46,9 @@
 (defprotocol DomainRegistry
   (domain [rt]))
 
+(defprotocol HostInfo
+  (host-env [rt]))
+
 (defrecord HostEnvironment [hostname service-uri active-ide?])
 
 (comment
