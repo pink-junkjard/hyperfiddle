@@ -3,6 +3,7 @@
             [contrib.reactive :as r]
             [contrib.template :refer [load-resource]]
             [goog.object :as object]
+            [hypercrud.browser.context :as context]
             [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
             [hypercrud.transit :as transit]
@@ -115,14 +116,14 @@
     (sync-rpc! (:service-uri host-env) dbs jwt))
 
   runtime/AppFnRenderPageRoot
-  (ssr [rt route]
+  (ssr [rt]
     (let [ctx {:host-env host-env
                :peer rt
                ::runtime/branch-aux {::ide/foo "page"}}]
-      [foundation/view :page route ctx (if (or (not (:active-ide? host-env))
-                                               (= "www" @(runtime/state rt [::runtime/domain :domain/ident])))
-                                         ide/view
-                                         (constantly [:div "loading... "]))]))
+      [foundation/view :page ctx (if (or (not (:active-ide? host-env))
+                                         (= "www" @(runtime/state rt [::runtime/domain :domain/ident])))
+                                   (r/partial ide/view (context/target-route ctx))
+                                   (constantly [:div "loading... "]))]))
 
   hc/Peer
   (hydrate [this branch request]
@@ -161,7 +162,7 @@
                         params {:host-env host-env
                                 :hyperfiddle.bootstrap/init-level browser-init-level}
                         html [full-html env @(runtime/state rt) serve-js? (boolean (:auth/root host-env)) params
-                              (runtime/ssr rt @(runtime/state rt [::runtime/partitions nil :route]))]]
+                              (runtime/ssr rt)]]
                     (doto res
                       (.status http-status-code)
                       (.type "html")

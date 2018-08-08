@@ -65,7 +65,7 @@
                          "ide" :leaf)]
       (hydrate-loop rt (request-fn-adapter local-basis route stage ctx
                                            #(HydrateRoute. host-env (r/atom %) root-reducer jwt ?subject)
-                                           #(foundation/api page-or-leaf route % ide/api))
+                                           #(foundation/api page-or-leaf % (partial ide/api route)))
                     local-basis branch stage data-cache)))
 
   runtime/AppFnHydrate
