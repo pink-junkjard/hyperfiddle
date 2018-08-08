@@ -1,7 +1,8 @@
 (ns hyperfiddle.ui
   (:require-macros [hyperfiddle.ui :refer [-build-fiddle]])
   (:require
-    [cats.core :refer [fmap]]
+    [cats.core :as cats :refer [fmap]]
+    [cats.monad.either :as either]
     [clojure.core.match :refer [match match*]]
     [clojure.string :as string]
     [contrib.css :refer [css css-slugify]]
@@ -11,15 +12,20 @@
     [contrib.reagent :refer [fragment]]
     [contrib.reactive-debug :refer [track-cmp]]
     [contrib.string :refer [memoized-safe-read-edn-string blank->nil or-str]]
+    [contrib.try$ :refer [try-either]]
     [contrib.ui]
     [contrib.ui.input]
     [contrib.ui.safe-render :refer [user-portal]]
+    [contrib.ui.tooltip :refer [tooltip tooltip-props]]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.core :as browser]
     [hypercrud.browser.link :as link]
+    [hypercrud.browser.router :as router]
+    [hypercrud.browser.routing :as routing]
     [hypercrud.ui.connection-color :refer [border-color]]
     [hypercrud.ui.control.link-controls]                    ; legacy
     [hypercrud.ui.error :as ui-error]
+    [hypercrud.ui.stale :as stale]
     [hyperfiddle.data :as data]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.ui.api]
@@ -27,7 +33,8 @@
     [hyperfiddle.ui.hyper-controls :refer [hyper-label hyper-select-head magic-new-body magic-new-head]]
     [hyperfiddle.ui.hacks]                                  ; exports
     [hyperfiddle.ui.link-impl :as ui-link :refer [anchors iframes]]
-    [hyperfiddle.ui.navigate-cmp :refer [navigate-cmp]]
+    [hyperfiddle.ui.navigate-cmp]                           ; legacy
+    [hyperfiddle.ui.popover :refer [popover-cmp]]
     [hyperfiddle.ui.select :refer [select]]
     [hyperfiddle.ui.sort :as sort]
     [hyperfiddle.ui.util :refer [eval-renderer-comp+]]))
@@ -149,22 +156,73 @@ User renderers should not be exposed to the reaction."
                   (assoc :href (some->> (:route props) (runtime/encode-route (:peer ctx)))))]
     (into [:a props] children)))
 
+(letfn [(prompt [link-ref ?label] (str (or ?label (some-> @(r/fmap :link/rel link-ref) name) "_")))
+        (p-build-route' [ctx link] (routing/build-route' link ctx))
+        (build-link-props [route'-ref link-ref ctx]         ; todo this function needs untangling; ui-from-route ignores most of this
+          ; this is a fine place to eval, put error message in the tooltip prop
+          ; each prop might have special rules about his default, for example :visible is default true, does this get handled here?
+          (let [unvalidated-route' @route'-ref
+                [_ args :as route] (unwrap unvalidated-route')
+                validated-route' (routing/validated-route' @(r/fmap :link/fiddle link-ref) route ctx)
+                user-props' (link/eval-hc-props @(r/fmap :hypercrud/props link-ref) ctx)
+                user-props (unwrap user-props')
+                errors (->> [user-props' unvalidated-route' validated-route']
+                            (filter either/left?) (map cats/extract) (into #{}))]
+            (merge
+              user-props                                    ; e.g. disabled, tooltip, style, class - anything, it gets passed to a renderer maybe user renderer
+              ; doesn't handle tx-fn - meant for the self-link. Weird and prob bad.
+              {:route (unwrap unvalidated-route')
+               :tooltip (if-not (empty? errors)
+                          [:warning (pprint-str errors)]
+                          (if (:ide-active ctx)
+                            [nil (pr-str args)]
+                            (:tooltip user-props)))
+               :class (->> [(:class user-props)
+                            (if-not (empty? errors) "invalid")]
+                           (remove nil?)
+                           (interpose " ")
+                           (apply str))})))]
+  (defn ui-from-link [link-ref ctx & [props ?label]]
+    (let [error-comp (ui-error/error-comp ctx)
+          route'-ref (r/fmap (r/partial p-build-route' ctx) link-ref)
+          link-props @(r/track build-link-props route'-ref link-ref ctx)]
+      (when-not (:hidden link-props)
+        (let [props (-> link-props
+                        (update :class css (:class props))
+                        (merge (dissoc props :class))
+                        (dissoc :hidden))]
+          (cond
+            @(r/fmap link/popover-link? link-ref)
+            (let [props (update props :class css "hf-auto-nav")] ; should this be in popover-cmp? what is this class?
+              [popover-cmp link-ref ctx props @(r/track prompt link-ref ?label)])
+
+            @(r/fmap :link/render-inline? link-ref)
+            ; link-props swallows bad routes (shorts them to nil),
+            ; all errors will always route through as (either/right nil)
+            [stale/loading (stale/can-be-loading? ctx) (fmap #(router/assoc-frag % (:frag props)) @route'-ref) ; what is this frag noise?
+             (fn [e] [error-comp e])
+             (fn [route]
+               [browser/ui-from-route route ctx (css (:class props) (css-slugify @(r/fmap :link/rel link-ref)))])]
+
+            :else [tooltip (tooltip-props props)
+                   (let [props (-> props
+                                   (update :class css "hf-auto-nav") ; should this be in anchor? what is this class?
+                                   (dissoc :tooltip))]
+                     ; what about class
+                     [anchor ctx props @(r/track prompt link-ref ?label)])]
+            ))))))
+
 (defn ^:export link "Relation level link renderer. Works in forms and lists but not tables."
-  [rel relative-path ctx ?content & [props]]                ; path should be optional, for disambiguation only. Naked can be hard-linked in markdown?
+  [rel relative-path ctx & [?label props]]                  ; path should be optional, for disambiguation only. Naked can be hard-linked in markdown?
   (let [ctx (context/focus ctx relative-path)
-        link @(r/track link/rel->link rel ctx)]
-    ;(assert (not render-inline?)) -- :new-fiddle is render-inline. The nav cmp has to sort this out before this unifies.
-    [navigate-cmp ctx (merge (link/build-link-props link ctx) props) (or ?content (name (:link/rel link))) (:class props)]))
+        link-ref (r/track link/rel->link rel ctx)]
+    [ui-from-link link-ref ctx props ?label]))
 
 (defn ^:export browse "Relation level browse. Works in forms and lists but not tables."
-  [rel relative-path ctx ?content & [props]]                ; path should be optional, for disambiguation only. Naked can be hard-linked in markdown?
+  [rel relative-path ctx & [?user-renderer props]]          ; path should be optional, for disambiguation only. Naked can be hard-linked in markdown?
   (let [ctx (context/focus ctx relative-path)
-        link @(r/track link/rel->link rel ctx)]
-    ;(assert render-inline?)
-    [browser/ui link
-     (if ?content (assoc ctx :user-renderer ?content #_(if ?content #(apply ?content %1 %2 %3 %4 args))) ctx)
-     (:class props)
-     (dissoc props :class :children nil)]))
+        link-ref (r/track link/rel->link rel ctx)]
+    [ui-from-link link-ref (assoc ctx :user-renderer ?user-renderer) props]))
 
 (defn form-field "Form fields are label AND value. Table fields are label OR value."
   [hyper-control relative-path ctx ?f props]                ; ?f :: (val props ctx) => DOM

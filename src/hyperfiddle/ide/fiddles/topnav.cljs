@@ -20,9 +20,8 @@
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.runtime :as runtime]
             [hyperfiddle.security :as security]
-            [hyperfiddle.ui :as ui :refer [markdown]]
-            [hyperfiddle.ui.controls :refer [entity-change!]]
-            [hyperfiddle.ui.navigate-cmp :refer [navigate-cmp]]))
+            [hyperfiddle.ui :as ui :refer [ui-from-link markdown]]
+            [hyperfiddle.ui.controls :refer [entity-change!]]))
 
 
 ; inline sys-link data when the entity is a system-fiddle
@@ -55,16 +54,18 @@
 (defn src-mode? [frag]
   (= :src (some-> frag read-edn-string)))
 
+(defn- set-managed [link] (assoc link :link/managed? true))
+
 (defn renderer [ctx class]
   (let [display-mode @(runtime/state (:peer ctx) [:display-mode])
         {:keys [hypercrud.browser/result
                 hypercrud.browser/fiddle] :as ctx} (shadow-fiddle ctx)
         ; hack until hyperfiddle.net#156 is complete
-        fake-managed-anchor (fn [rel relative-path ctx label & [props]]
+        fake-managed-anchor (fn [rel relative-path ctx & [?label props]]
                               (let [ctx (context/focus ctx relative-path)
-                                    link (-> @(r/track link/rel->link rel ctx) (assoc :link/managed? true))
-                                    props (merge (link/build-link-props link ctx true) props)]
-                                [navigate-cmp ctx props label (:class props)]))]
+                                    link-ref (->> (r/track link/rel->link rel ctx)
+                                                  (r/fmap set-managed))]
+                                [ui-from-link link-ref ctx (assoc props :dont-branch? true) ?label]))]
     [:div {:class class}
      [:div.left-nav
       [tooltip {:label "Home"} [:a.hf-auto-nav {:href "/"} @(runtime/state (:peer ctx) [::runtime/domain :domain/ident])]]

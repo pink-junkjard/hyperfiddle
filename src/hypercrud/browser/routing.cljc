@@ -78,19 +78,20 @@
                      (if (and (string? formula-str) (not (string/blank? formula-str)))
                        (memoized-eval-string formula-str)
                        (either/right (constantly nil))))
-           args (try-either (formula ctx))
-           :let [args (->> {:remove-this-wrapper args}      ; walk trees wants a map
-                           ; shadow-links can be hdyrated here, and we need to talk them.
-                           ; Technical debt. Once shadow-links are identities, this is just a mapv.
-                           (walk/postwalk (fn [v]
-                                            (if (instance? Entity v)
-                                              (let [dbname (some-> v .-uri (domain/uri->dbname (:hypercrud.browser/domain ctx)))]
-                                                (->ThinEntity dbname (or (:db/ident v) (:db/id v))))
-                                              v)))
-                           (into {}))]]
-      ;_ (timbre/debug args (-> (:link/formula link) meta :str))
+           args (try-either
+                  (->> {:remove-this-wrapper (formula ctx)} ; walk trees wants a map
+                       ; shadow-links can be hdyrated here, and we need to talk them.
+                       ; Technical debt. Once shadow-links are identities, this is just a mapv.
+                       (walk/postwalk (fn [v]
+                                        (if (instance? Entity v)
+                                          (let [dbname (some-> v .-uri (domain/uri->dbname (:hypercrud.browser/domain ctx)))]
+                                            (->ThinEntity dbname (or (:db/ident v) (:db/id v))))
+                                          v)))
+                       (into {})
+                       :remove-this-wrapper
+                       normalize-args))]
       (cats/return
-        (id->tempid (router/canonicalize fiddle-id (normalize-args (:remove-this-wrapper args))) ctx)))))
+        (id->tempid (router/canonicalize fiddle-id args) ctx)))))
 
 (defn validated-route' [fiddle route ctx]
   ; We specifically hydrate this deep just so we can validate anchors like this.

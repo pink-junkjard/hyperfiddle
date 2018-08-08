@@ -1,22 +1,15 @@
 (ns hypercrud.browser.core
   (:require
-    [cats.core :as cats]
     [cats.monad.either :as either]
-    #?(:cljs [contrib.css :refer [css-slugify css]])
-    [contrib.data :refer [kwargs]]
+    #?(:cljs [contrib.css :refer [ css]])
     [contrib.reactive :as r]
     #?(:cljs [contrib.reagent :refer [fragment]])
-    [contrib.try$ :refer [try-either]]
     #?(:cljs [contrib.reagent-native-events :refer [native-click-listener]])
     [hypercrud.browser.base :as base]
     [hypercrud.browser.browser-request :as browser-request]
-    [hypercrud.browser.link :as link]
     #?(:cljs [hypercrud.ui.error :as ui-error])
     #?(:cljs [hypercrud.ui.stale :as stale])
-    [hyperfiddle.runtime :as runtime]
-    [hypercrud.browser.routing :as routing]
-    [hypercrud.browser.router :as router]
-    [hypercrud.browser.context :as context]))
+    [hyperfiddle.runtime :as runtime]))
 
 
 (def data base/data-from-link)
@@ -54,22 +47,3 @@
              (fragment
                [(:alpha.hypercrud.browser/ui-comp ctx) ctx (css "hyperfiddle-loading" ?class "ui")]
                [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])])]))])))
-
-#?(:cljs
-   (defn ui [link ctx ?class & [props]]                     ; TODO don't omit user props
-     {:pre [link ctx]}
-     (let [error-comp (ui-error/error-comp ctx)]
-       [stale/loading (stale/can-be-loading? ctx) (try-either (link/build-link-props link ctx)) ; todo we want the actual error from the link props
-        (fn [e] [error-comp e])
-        (fn [link-props]
-          (if (:hidden link-props)
-            [:noscript]
-            ; link-props swallows bad routes (shorts them to nil),
-            ; all errors will always route through as (either/right nil)
-            (let [route' (routing/build-route' link ctx)]
-              [stale/loading (stale/can-be-loading? ctx) (cats/fmap #(router/assoc-frag % (:frag props)) route')
-               (fn [e]
-                 [error-comp e])
-               ; legacy-ctx is set in build-link-props, and this is "downtree" from that
-               (fn [route]
-                 [ui-from-route route ctx (css ?class (css-slugify (:link/rel link)))])])))])))

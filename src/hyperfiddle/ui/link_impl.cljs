@@ -1,13 +1,9 @@
 (ns hyperfiddle.ui.link-impl
   (:require
-    [cats.monad.either :as either]
     [contrib.reactive :as r]
     [contrib.reagent :refer [fragment]]
-    [contrib.string :refer [memoized-safe-read-edn-string]]
-    [hypercrud.browser.core :as browser]
     [hypercrud.browser.link :as link]
-    [hypercrud.ui.connection-color :refer [border-color]]
-    [hyperfiddle.ui.navigate-cmp :refer [navigate-cmp]]))
+    [hypercrud.ui.connection-color :refer [border-color]]))
 
 
 (defn options-link? [link]
@@ -24,17 +20,6 @@
 (defn draw-options? [path links]
   (not (empty? (options-links path links))))
 
-(defn- prompt [link-ref]
-  (str (or (some-> (:link/rel @link-ref) name) "_")))
-
-; garbage wrapper for reactivity capturing
-(defn- reactive-nav-cmp [link-ref ctx props]
-  [navigate-cmp ctx (merge (link/build-link-props @link-ref ctx) props) @(r/track prompt link-ref) (:class props)])
-
-(defn- reactive-ui [link-ref ctx props]
-  ; kwargs (dissoc props :class)
-  [browser/ui @link-ref ctx (:class props)])
-
 (defn contextual-links [path embed links ?processor]
   (->> (reduce (fn [links f] (f links)) @links (if ?processor [?processor]))
        ((if embed filter remove) (fn [link]
@@ -44,14 +29,19 @@
        (filter (partial link/draw-link? path))
        vec))
 
+; todo why does this not just happen inside hyperfiddle.ui/ui-from-link
+(defn- wrap-with-styles [ctx child]
+  (if (not= :hyperfiddle.ui.layout/table (:hyperfiddle.ui/layout ctx))
+    [:div {:style {:border-color (border-color ctx)}} child]
+    child))
+
 (defn anchors [path props ctx & [?processor]]
   (->> (r/track contextual-links path false (:hypercrud.browser/links ctx) ?processor)
        (r/unsequence :db/id)
        (map (fn [[link-ref link-id]]
-              (if (not= :hyperfiddle.ui.layout/table (:hyperfiddle.ui/layout ctx))
-                ^{:key (hash link-id)} [:div {:style {:border-color (border-color ctx)}}
-                                        [reactive-nav-cmp link-ref ctx props]]
-                ^{:key (hash link-id)} [reactive-nav-cmp link-ref ctx props])))
+              ^{:key (hash link-id)}
+              [wrap-with-styles ctx
+               [hyperfiddle.ui/ui-from-link link-ref ctx props]]))
        (doall)
        (apply fragment)))
 
@@ -59,9 +49,8 @@
   (->> (r/track contextual-links path true (:hypercrud.browser/links ctx) ?processor)
        (r/unsequence :db/id)
        (map (fn [[link-ref link-id]]
-              (if (not= :hyperfiddle.ui.layout/table (:hyperfiddle.ui/layout ctx))
-                ^{:key (hash link-id)} [:div {:style {:border-color (border-color ctx)}}
-                                        [reactive-ui link-ref ctx (:class props)]]
-                ^{:key (hash link-id)} [reactive-ui link-ref ctx props])))
+              ^{:key (hash link-id)}
+              [wrap-with-styles ctx
+               [hyperfiddle.ui/ui-from-link link-ref ctx props]]))
        (doall)
        (apply fragment)))

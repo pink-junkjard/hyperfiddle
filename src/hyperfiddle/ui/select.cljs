@@ -3,17 +3,14 @@
     [cats.context :refer-macros [with-context]]
     [cats.core :as cats :refer [fmap]]
     [cats.monad.either :as either]
-    [contrib.data :refer [unwrap]]
     [contrib.reactive :as r]
     [contrib.try$ :refer [try-either]]
-    [hypercrud.browser.core :as browser]
     [hypercrud.browser.field :as field]
     [hypercrud.browser.link :as link]
     [hypercrud.ui.error :as ui-error]
     [hypercrud.types.Entity :refer [entity?]]
     [hyperfiddle.data :as data]
-    [hyperfiddle.ui.controls :as controls]
-    [hyperfiddle.ui.link-impl :as ui-link]))
+    [hyperfiddle.ui.controls :as controls]))
 
 
 (defn default-label-renderer [v ctx]
@@ -93,7 +90,7 @@
     ([options-link props ctx]
      {:pre [options-link ctx]}
      (either/branch
-       (link/eval-hc-props (:hypercrud/props options-link) ctx)
+       (link/eval-hc-props @(r/fmap :hypercrud/props options-link) ctx)
        (fn [e] [(ui-error/error-comp ctx) e])
        (fn [hc-props]
          (let [entity (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]) ; how can this be loading??
@@ -104,8 +101,7 @@
                props (-> {:on-change (r/partial controls/entity-change! ctx)}
                          (merge props hc-props)
                          (assoc :value @(r/fmap dom-value (:hypercrud.browser/data ctx))))
-               f (r/partial select-anchor-renderer props option-props)]
-           [browser/ui options-link (assoc ctx
-                                      :hypercrud.ui/display-mode (r/track identity :hypercrud.browser.browser-ui/user)
-                                      :user-renderer f)
-            (:class props)]))))))
+               ctx (assoc ctx
+                     :hypercrud.ui/display-mode (r/track identity :hypercrud.browser.browser-ui/user)
+                     :user-renderer (r/partial select-anchor-renderer props option-props))]
+           [hyperfiddle.ui/ui-from-link options-link ctx (select-keys props [:class])]))))))

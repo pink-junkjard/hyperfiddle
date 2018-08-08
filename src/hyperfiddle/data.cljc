@@ -64,8 +64,9 @@
     (base/data-from-link @(r/track link/rel->link rel ctx) ctx)))
 
 (defn select+ "get a link for browsing later" [ctx rel & [?class ?path]]
-  (let [[x & xs] (link/select-all ctx rel ?class ?path)]
+  (let [link?s (r/track link/select-all ctx rel ?class ?path)
+        count @(r/fmap count link?s)]
     (cond
-      xs (left (str/format "Too many links matched for rel: %s class: %s path: %s" (pr-str rel) (pr-str ?class) ?path))
-      x (right x)
-      :else (left (str/format "no match for rel: %s class: %s path: %s" (pr-str rel) (pr-str ?class) ?path)))))
+      (= 1 count) (right (r/fmap first link?s))
+      (= 0 count) (left (str/format "no match for rel: %s class: %s path: %s" (pr-str rel) (pr-str ?class) ?path))
+      :else (left (str/format "Too many links matched for rel: %s class: %s path: %s" (pr-str rel) (pr-str ?class) ?path)))))
