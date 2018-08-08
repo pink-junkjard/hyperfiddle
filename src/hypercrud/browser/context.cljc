@@ -13,6 +13,7 @@
   (dissoc ctx
           :route                                            ; Route is unrelated to the hyper-control ontology
           :uri                                              ; todo deprecate
+          :hypercrud.ui/error
           :hyperfiddle.ui/layout
 
           :hypercrud.browser/attribute
