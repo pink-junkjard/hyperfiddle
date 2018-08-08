@@ -1,5 +1,6 @@
 (ns hyperfiddle.ui.api
   (:require
+    [cats.core :as cats]
     [contrib.data :refer [unwrap]]
     [contrib.reactive :as r]
     [hypercrud.browser.base :as base]
@@ -13,13 +14,15 @@
 
 (defn recurse-from-route [route ctx]
   (->> (base/data-from-route route ctx)
-       (unwrap)                                             ; todo cannot swallow this error
-       (api-data)))
+       (cats/fmap api-data)
+       ; todo cannot swallow this error
+       (unwrap)))
 
 (defn recurse-from-link [link ctx]
   (->> (base/data-from-link link ctx)
-       (unwrap)                                             ; todo cannot swallow this error
-       (api-data)))
+       (cats/fmap api-data)
+       ; todo cannot swallow this error
+       (unwrap)))
 
 (defn head-field [relative-path ctx]
   (let [ctx (context/focus ctx (cons :head relative-path))] ; todo :head links should fall out with link/class
