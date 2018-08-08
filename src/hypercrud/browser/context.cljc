@@ -57,6 +57,8 @@
     (find-element-segment? segment) :element
     :else :naked))
 
+(defn target-route [ctx] @(runtime/state (:peer ctx) [::runtime/partitions nil :route]))
+
 (defn with-tx! [ctx tx]
   (let [uri (domain/dbname->uri (str (:hypercrud.browser/source-symbol ctx)) (:hypercrud.browser/domain ctx))
         invert-route (:hypercrud.browser/invert-route ctx)]

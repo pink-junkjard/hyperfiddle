@@ -39,7 +39,7 @@
 ; todo does this merge with shadow-fiddle?
 ; not sure if other downstream consumers of shadow-fiddle can run data-from-route
 (defn shadow-links [ctx]
-  (->> (base/data-from-route (:target-route ctx)
+  (->> (base/data-from-route (context/target-route ctx)
                              (assoc ctx
                                :hypercrud.browser/domain @(runtime/state (:peer ctx) [::runtime/domain])
                                :keep-disabled-anchors? true))

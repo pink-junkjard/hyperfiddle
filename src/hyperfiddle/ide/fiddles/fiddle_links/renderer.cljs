@@ -4,6 +4,7 @@
     [cats.monad.either :as either]
     [contrib.reactive :as r]
     [hypercrud.browser.base :as base]
+    [hypercrud.browser.context :as context]
     [hypercrud.browser.system-link :refer [system-link?]]
     [hypercrud.client.core :as hc]
     [hyperfiddle.data :as data]
@@ -34,7 +35,7 @@
           props (assoc props :read-only (read-only? ctx))]
       ; Hacks because hf-live is not yet modeled in the fiddle-graph, we hardcode knowledge of the IDE fiddle-graph instead
       (-> (mlet [req (base/meta-request-for-fiddle (assoc ctx
-                                                     :route (hyperfiddle.ide/ide-fiddle-route (:target-route ctx) ctx)
+                                                     :route (hyperfiddle.ide/ide-fiddle-route (context/target-route ctx) ctx)
                                                      :branch nil))
                  topnav-fiddle @(hc/hydrate (:peer ctx) nil req) ; todo tighter reactivity
                  :let [fake-ctx-wtf {:hypercrud.browser/links (r/track identity (:fiddle/links topnav-fiddle))}]]

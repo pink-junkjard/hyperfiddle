@@ -77,7 +77,8 @@
 
       [loading-spinner ctx]
 
-      (let [src-mode (src-mode? (-> ctx :target-route (get 3)))
+      (let [target-route (context/target-route ctx)
+            src-mode (src-mode? (get target-route 3))
             no-target-fiddle (nil? (:db/id @result))        ; ide-route omits fiddle for ide routes
             change! #(runtime/dispatch! (:peer ctx) (actions/set-display-mode %))
             value (if src-mode :src display-mode)]
@@ -88,7 +89,7 @@
                         :disabled (or src-mode no-target-fiddle)})
          (radio-option {:label "view" :tooltip "Use :fiddle/renderer" :target :hypercrud.browser.browser-ui/user :value value :change! change!
                         :disabled (or src-mode no-target-fiddle)})
-         (radio-option {:label (let [root-rel-path (runtime/encode-route (:peer ctx) (router/dissoc-frag (:target-route ctx)))
+         (radio-option {:label (let [root-rel-path (runtime/encode-route (:peer ctx) (router/dissoc-frag target-route))
                                      href (if-not src-mode
                                             (str root-rel-path "#" (encode-rfc3986-pchar (encode-ednish (pr-str :src))))
                                             (str root-rel-path "#"))]

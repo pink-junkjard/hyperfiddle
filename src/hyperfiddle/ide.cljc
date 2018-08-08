@@ -71,37 +71,25 @@
       (context/source-mode)))
 
 (defn leaf-ide-context [ctx]
-  ; ide leaf-context does not have enough information to set hyperfiddle.ide/target-route
-  ; this means ide popovers CANNOT access it
   (*-ide-context ctx))
 
-(defn page-ide-context [ctx target-route]
-  {:pre [target-route]}
-  (-> (assoc ctx
-        ::runtime/branch-aux {::foo "ide"}
-        ; hyperfiddle.ide/target-route is ONLY available to inlined IDE (no deferred popovers)
-        :target-route target-route)                         ; todo rename :target-route to :hyperfiddle.ide/target-route
+(defn page-ide-context [ctx]
+  (-> (assoc ctx ::runtime/branch-aux {::foo "ide"})
       (*-ide-context)))
 
-(defn- *-target-context [ctx route]
+(defn- *-target-context [ctx]
   (assoc ctx
     :hypercrud.browser/page-on-click (let [branch-aux {:hyperfiddle.ide/foo "page"}]
                                        #?(:cljs (r/partial browser-ui/page-on-click (:peer ctx) nil branch-aux)))
     :hypercrud.ui/display-mode (runtime/state (:peer ctx) [:display-mode])
-    :ide-active (get-in ctx [:host-env :active-ide?])
+    :ide-active (get-in ctx [:host-env :active-ide?])))
 
-    ; these target values only exists to allow the topnav to render in the bottom/user
-    ; IF we MUST to support that, this should probably be done higher up for both ide and user at the same time
-    ; and SHOULD ONLY be applied for ide within ide (other user fns don't get access to these values)
-    :target-route route                                     ; todo rename :target-route to :hyperfiddle.ide/target-route
-    ))
+(defn leaf-target-context [ctx]
+  (*-target-context ctx))
 
-(defn leaf-target-context [ctx route]
-  (*-target-context ctx route))
-
-(defn page-target-context [ctx route]
+(defn page-target-context [ctx]
   (-> (assoc ctx ::runtime/branch-aux {::foo "user"})
-      (*-target-context route)))
+      (*-target-context)))
 
 (defn route-decode [rt path-and-frag]
   {:pre [(string? path-and-frag)]}
@@ -146,24 +134,24 @@
     #_(determine-local-basis (hydrate-route route ...))
     basis))
 
-; Reactive pattern obfuscates params
+; todo should summon route via context/target-route. but there is still tension in the data api for deferred popovers
 (defn api [[fiddle :as route] ctx]
   {:pre [route (not (string? route))]}
   (case (get-in ctx [::runtime/branch-aux ::foo])
     "page" (into
              (when true #_(get-in ctx [:host-env :active-ide?]) ; true for embedded src mode
-               (browser/request-from-route (ide-fiddle-route route ctx) (page-ide-context ctx route)))
+               (browser/request-from-route (ide-fiddle-route route ctx) (page-ide-context ctx)))
              (if (magic-ide-fiddle? fiddle (get-in ctx [:hypercrud.browser/domain :domain/ident]))
-               (browser/request-from-route route (page-ide-context ctx route))
-               (browser/request-from-route route (page-target-context ctx route))))
+               (browser/request-from-route route (page-ide-context ctx))
+               (browser/request-from-route route (page-target-context ctx))))
     "ide" (browser/request-from-route route (leaf-ide-context ctx))
-    "user" (browser/request-from-route route (leaf-target-context ctx route))))
+    "user" (browser/request-from-route route (leaf-target-context ctx))))
 
 #?(:cljs
    (defn view-page [[fiddle :as route] ctx]
      (let [src-mode (let [[_ _ _ frag] route] (topnav/src-mode? frag)) ; Immoral - :src bit is tunneled in userland fragment space
            ctx (assoc ctx :alpha.hypercrud.browser/ui-comp browser-ui/ui-comp)
-           ide-ctx (page-ide-context ctx route)
+           ide-ctx (page-ide-context ctx)
            ide-route (ide-fiddle-route route ctx)
            topnav-ctx (base/data-from-route ide-route ide-ctx)
            account-ctx (>>= topnav-ctx #(hyperfiddle.data/browse :account [] %))
@@ -196,12 +184,13 @@
 
              ; User content view in both prod and ide. What if src-mode and not-dev ? This draws nothing
              (when-not src-mode                             ; primary, white background (User)   /:posts/:hello-world
-               (let [ctx (page-target-context ctx route)]
+               (let [ctx (page-target-context ctx)]
                  [browser/ui-from-route route ctx (css "container-fluid" "hyperfiddle-user"
                                                        (when (get-in ctx [:host-env :active-ide?]) "hyperfiddle-ide")
                                                        (some-> ctx :hypercrud.ui/display-mode deref name (->> (str "display-mode-"))))]))))))))
 
 #?(:cljs
+   ; todo should summon route via context/target-route. but there is still tension in the data api for deferred popovers
    (defn view [[fiddle :as route] ctx]                      ; pass most as ref for reactions
      (case (namespace fiddle)
        ;"hyperfiddle.ide" [browser/ui-from-route route (leaf-ide-context ctx)]
@@ -210,4 +199,4 @@
          ; On SSR side this is only ever called as "page", but it could be differently (e.g. turbolinks)
          ; On Browser side, also only ever called as "page", but it could be configured differently (client side render the ide, server render userland...?)
          "ide" [browser/ui-from-route route (leaf-ide-context ctx)]
-         "user" [browser/ui-from-route route (leaf-target-context ctx route)]))))
+         "user" [browser/ui-from-route route (leaf-target-context ctx)]))))

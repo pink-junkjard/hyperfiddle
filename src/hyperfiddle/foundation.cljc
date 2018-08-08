@@ -12,6 +12,7 @@
             [contrib.pprint :refer [pprint-str pprint-datoms-str]]
     #?(:cljs [contrib.ui :refer [code markdown]])
     #?(:cljs [contrib.ui.tooltip :refer [tooltip]])
+            [hypercrud.browser.context :as context]
             [hypercrud.browser.routing :as routing]
             [hypercrud.browser.router :as router]
             [hypercrud.client.core :as hc]
@@ -36,7 +37,7 @@
        (str domain "/login?"
             "client=" client-id
             "&scope=" "openid email profile"
-            "&state=" (base64-url-safe/encode (runtime/encode-route (:peer ctx) (:target-route ctx)))
+            "&state=" (base64-url-safe/encode (runtime/encode-route (:peer ctx) (context/target-route ctx)))
             "&redirect_uri=" (str "http://" (get-in ctx [:host-env :hostname]) auth0-redirect-path)))))
 
 (defn domain-request [domain-eid peer]
@@ -105,7 +106,7 @@
     (:domain global-basis)
     (f global-basis route ctx)))
 
-(defn api [page-or-leaf route ctx f]
+(defn api [page-or-leaf ctx f]
   (let [source-domain-req (domain-request [:domain/ident source-domain-ident] (:peer ctx))
         user-domain-insecure-req (-> [:domain/ident @(runtime/state (:peer ctx) [::runtime/domain :domain/ident])]
                                      (domain-request-insecure (:peer ctx) (:branch ctx)))]
@@ -114,7 +115,7 @@
                 user-domain-insecure (hc/hydrate-api (:peer ctx) (:branch ctx) user-domain-insecure-req)]
             (when (and source-domain user-domain-insecure)
               (let [ctx (context ctx source-domain user-domain-insecure)]
-                (f route ctx)))))))
+                (f ctx)))))))
 
 #?(:cljs
    (defn ^:export staging [ctx & [child]]
@@ -147,10 +148,10 @@
 *WARNING:* Datomic schema alterations cannot be used in the same transaction, see [#6](https://github.com/hyperfiddle/hyperfiddle/issues/6)."]))))))
 
 #?(:cljs
-   (defn leaf-view [route ctx f]
+   (defn leaf-view [ctx f]
      ; A malformed stage can break bootstrap hydrates, but the root-page is bust, so ignore here
      ; Fix this by branching userland so bootstrap is sheltered from staging area? (There are chickens and eggs)
-     (f route ctx)))
+     (f ctx)))
 
 #?(:cljs
    (defn domain-init! [domain f]
@@ -167,11 +168,11 @@
              (f)))))))
 
 #?(:cljs
-   (defn page-view [route ctx f]
+   (defn page-view [ctx f]
      ; Necessary wrapper div, this is returned from react-render
      [:div {:class (apply css @(runtime/state (:peer ctx) [:pressed-keys]))}
       [:style {:dangerouslySetInnerHTML {:__html (:domain/css (:hypercrud.browser/domain ctx))}}]
-      (f route ctx)                                         ; nil, seq or reagent component
+      (f ctx)                                               ; nil, seq or reagent component
       (when @(runtime/state (:peer ctx) [:staging-open])
         (let [stage-val @(runtime/state (:peer ctx) [:stage])
               edn (pprint-str stage-val 70)]
@@ -179,15 +180,7 @@
           [code edn #(runtime/dispatch! (:peer ctx) (actions/reset-stage (:peer ctx) (read-edn-string %)))]))]))
 
 #?(:cljs
-   (defn page-or-leaf1 [page-or-leaf route ctx f]
-     (case page-or-leaf
-       ; The foundation comes with special root markup which means the foundation/view knows about page/user (not ide)
-       ; Can't ide/user (not page) be part of the userland route?
-       :page (page-view route ctx f)
-       :leaf (leaf-view route ctx f))))
-
-#?(:cljs
-   (defn view [page-or-leaf route ctx f]
+   (defn view [page-or-leaf ctx f]
      (let [source-domain @(hc/hydrate (:peer ctx) (:branch ctx) (domain-request [:domain/ident source-domain-ident] (:peer ctx)))
            user-domain-insecure (-> [:domain/ident @(runtime/state (:peer ctx) [::runtime/domain :domain/ident])]
                                     (domain-request-insecure (:peer ctx) (:branch ctx))
@@ -202,7 +195,12 @@
                domain (:hypercrud.browser/domain ctx)]
            ; f is nil, seq or reagent component
            ^{:key domain}
-           [domain-init! domain (r/partial page-or-leaf1 page-or-leaf route ctx f)])))))
+           [domain-init! domain
+            (case page-or-leaf
+              ; The foundation comes with special root markup which means the foundation/view knows about page/user (not ide)
+              ; Can't ide/user (not page) be part of the userland route?
+              :page (r/partial page-view ctx f)
+              :leaf (r/partial leaf-view ctx f))])))))
 
 (defn confirm [message]
   #?(:clj  (throw (ex-info "confirm unsupported by platform" nil))
