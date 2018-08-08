@@ -23,7 +23,6 @@
     [hypercrud.browser.router :as router]
     [hypercrud.browser.routing :as routing]
     [hypercrud.ui.connection-color :refer [border-color]]
-    [hypercrud.ui.control.link-controls]                    ; legacy
     [hypercrud.ui.error :as ui-error]
     [hypercrud.ui.stale :as stale]
     [hyperfiddle.data :as data]
