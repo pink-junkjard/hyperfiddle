@@ -18,6 +18,9 @@
   (state [rt] state-atom)
   (state [rt path] (r/cursor state-atom path))
 
+  runtime/HostInfo
+  (host-env [rt] host-env)
+
   runtime/AppFnGlobalBasis
   (global-basis [rt]
     (global-basis-rpc! (:service-uri host-env) jwt))
@@ -35,8 +38,7 @@
 
   runtime/AppValLocalBasis
   (local-basis [rt global-basis route branch branch-aux]
-    (let [ctx {:host-env host-env
-               :branch branch
+    (let [ctx {:branch branch
                ::runtime/branch-aux branch-aux
                :peer rt}
           ; this is ide

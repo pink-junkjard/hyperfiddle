@@ -75,6 +75,9 @@
   (state [rt] state-atom)
   (state [rt path] (r/cursor state-atom path))
 
+  runtime/HostInfo
+  (host-env [rt] host-env)
+
   runtime/AppFnGlobalBasis
   (global-basis [rt]
     (global-basis-rpc! (:service-uri host-env) jwt))
@@ -92,8 +95,7 @@
 
   runtime/AppValLocalBasis
   (local-basis [rt global-basis route branch branch-aux]
-    (let [ctx {:host-env host-env
-               :branch branch
+    (let [ctx {:branch branch
                :hyperfiddle.runtime/branch-aux branch-aux
                :peer rt}
           ; this is ide
@@ -117,8 +119,7 @@
 
   runtime/AppFnRenderPageRoot
   (ssr [rt]
-    (let [ctx {:host-env host-env
-               :peer rt
+    (let [ctx {:peer rt
                ::runtime/branch-aux {::ide/foo "page"}}]
       [foundation/view :page ctx (if (or (not (:active-ide? host-env))
                                          (= "www" @(runtime/state rt [::runtime/domain :domain/ident])))

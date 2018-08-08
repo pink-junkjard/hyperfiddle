@@ -21,6 +21,9 @@
   (state [rt] state-atom)
   (state [rt path] (r/cursor state-atom path))
 
+  runtime/HostInfo
+  (host-env [rt] host-env)
+
   runtime/AppFnGlobalBasis
   (global-basis [rt]
     (global-basis rt (:domain-eid host-env)))
@@ -38,8 +41,7 @@
 
   runtime/AppValLocalBasis
   (local-basis [rt global-basis route branch branch-aux]
-    (let [ctx {:host-env host-env
-               :branch branch
+    (let [ctx {:branch branch
                :hyperfiddle.runtime/branch-aux branch-aux
                :peer rt}
           ; this is ide
@@ -54,8 +56,7 @@
   (hydrate-route [rt local-basis route branch branch-aux stage]
     {:pre [route (not (string? route))]}
     (let [data-cache (-> @(runtime/state rt [::runtime/partitions branch]) (select-keys [:tempid-lookups :ptm]))
-          ctx {:host-env host-env
-               :branch branch
+          ctx {:branch branch
                :hyperfiddle.runtime/branch-aux branch-aux
                :peer rt}
           ; this is ide
