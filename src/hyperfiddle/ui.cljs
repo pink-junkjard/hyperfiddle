@@ -152,6 +152,7 @@ User renderers should not be exposed to the reaction."
 
 (defn ^:export anchor [ctx props & children]
   (let [props (-> props
+                  (update :class css "hf-auto-nav")
                   (dissoc :route)
                   (assoc :href (some->> (:route props) (runtime/encode-route (:peer ctx)))))]
     (into [:a props] children)))
@@ -205,9 +206,7 @@ User renderers should not be exposed to the reaction."
                [browser/ui-from-route route ctx (css (:class props) (css-slugify @(r/fmap :link/rel link-ref)))])]
 
             :else [tooltip (tooltip-props props)
-                   (let [props (-> props
-                                   (update :class css "hf-auto-nav") ; should this be in anchor? what is this class?
-                                   (dissoc :tooltip))]
+                   (let [props (dissoc props :tooltip)]
                      ; what about class
                      [anchor ctx props @(r/track prompt link-ref ?label)])]
             ))))))
