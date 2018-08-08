@@ -173,7 +173,7 @@ User renderers should not be exposed to the reaction."
               {:route (unwrap unvalidated-route')
                :tooltip (if-not (empty? errors)
                           [:warning (pprint-str errors)]
-                          (if (get-in ctx [:host-env :active-ide?])
+                          (if (:ide-active ctx)
                             [nil (pr-str args)]
                             (:tooltip user-props)))
                :class (->> [(:class user-props)
