@@ -173,7 +173,7 @@ User renderers should not be exposed to the reaction."
               {:route (unwrap unvalidated-route')
                :tooltip (if-not (empty? errors)
                           [:warning (pprint-str errors)]
-                          (if (:ide-active ctx)
+                          (if (:hyperfiddle.ui/debug-tooltips ctx)
                             [nil (pr-str args)]
                             (:tooltip user-props)))
                :class (->> [(:class user-props)
