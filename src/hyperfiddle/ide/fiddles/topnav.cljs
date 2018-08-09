@@ -115,7 +115,7 @@
                                     (str prefix (string/join "/" dbnames) " (" uri ")"))))
                            (string/join "\n")
                            (str "##### Auto-transact:\n\n"))
-                      {::ui/unp true}]]
+                      {:hyperfiddle.ui.markdown-extensions/unp true}]]
             dirty? (not @(r/fmap empty? (runtime/state (:peer ctx) [:stage nil])))]
         (fake-managed-anchor :stage [] ctx "stage" {:tooltip [nil tooltip] :class (when dirty? "stage-dirty")}))
       (ui/link :new-fiddle [] ctx "new-fiddle")

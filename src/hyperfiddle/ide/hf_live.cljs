@@ -53,7 +53,7 @@
           ; Careful: Reagent deep bug in prop comparison https://github.com/hyperfiddle/hyperfiddle/issues/340
           (let [ctx (if f
                       ctx
-                      (dissoc ctx :hyperfiddle.ui/unp))]
+                      (dissoc ctx :hyperfiddle.ui.markdown-extensions/unp))]
             [ui-comp ctx {:class (str class " hf-live")
                           :user-renderer f}])])
        (let [as-edn (r/cursor state [:edn-fiddle])
