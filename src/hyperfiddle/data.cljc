@@ -63,7 +63,7 @@
   (let [ctx (context/focus ctx relative-path)]
     (base/data-from-link @(r/track link/rel->link rel ctx) ctx)))
 
-(defn select+ "get a link for browsing later" [ctx rel & [?class ?path]]
+(defn select+ "get a link for browsing later" [ctx rel & [?class ?path]] ; Right[Reaction[Link]], Left[String]
   (let [link?s (r/track link/select-all ctx rel ?class ?path)
         count @(r/fmap count link?s)]
     (cond
