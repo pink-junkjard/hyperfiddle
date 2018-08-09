@@ -154,7 +154,9 @@
                   (let [auto-transact (->> @(runtime/state rt [::runtime/domain :domain/databases])
                                            (map :domain.database/record)
                                            (map (juxt :database/uri #(security/attempt-to-transact? % @(runtime/state rt [::runtime/user-id]))))
-                                           (into {}))]
+                                           ; todo domain-uri is an ugly hack
+                                           ; we are assuming the security. also users should not need this db all the time
+                                           (into {foundation/domain-uri (boolean @(runtime/state rt [::runtime/user-id]))}))]
                     (runtime/dispatch! rt [:set-auto-transact auto-transact]))))
         (p/then (constantly 200))
         (p/catch #(or (:hyperfiddle.io/http-status-code (ex-data %)) 500))
