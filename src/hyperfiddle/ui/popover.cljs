@@ -64,7 +64,7 @@
    ; NOTE: this ctx logic and structure is the same as the popover branch of browser-request/recurse-request
    (let [ctx (cond-> (context/clean ctx)                    ; hack clean for block level errors
                child-branch (assoc :branch child-branch))]
-     [hypercrud.browser.core/ui-from-route route ctx])      ; cycle
+     [hyperfiddle.ui/iframe ctx {:route route}])            ; cycle
    (when child-branch
      [:button {:on-click (r/partial stage! link-ref route popover-id child-branch ctx)} "stage"])
    (if child-branch

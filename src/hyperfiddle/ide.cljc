@@ -166,29 +166,31 @@
 
          ; Topnav
          (when active-ide?
-           [browser/ui-from-route ide-route
+           [ui/iframe
             (assoc ide-ctx :hypercrud.ui/error (r/constantly ui-error/error-inline))
-            "hidden-print"])
+            {:route ide-route
+             :class "hidden-print"}])
 
          ; Content area
          (if (magic-ide-fiddle? fiddle (get-in ctx [:hypercrud.browser/domain :domain/ident]))
 
            ^{:key :primary-content}
-           [browser/ui-from-route route ide-ctx "devsrc"]   ; primary, blue background (IDE), magic ide route like /hyperfiddle.ide/domain
+           [ui/iframe ide-ctx {:route route :class "devsrc"}] ; primary, blue background (IDE), magic ide route like /hyperfiddle.ide/domain
 
            (fragment
              :primary-content
              (when (and active-ide? src-mode)               ; primary, blue background (IDE)   /:posts/:hello-world#:src
-               [browser/ui-from-route (ide-fiddle-route route ctx) ; srcmode is equal to topnav route but a diff renderer
-                (assoc ide-ctx :user-renderer fiddle-src-renderer)
-                (css "container-fluid" "devsrc")])
+               [ui/iframe (assoc ide-ctx :user-renderer fiddle-src-renderer) ; srcmode is equal to topnav route but a diff renderer
+                {:route (ide-fiddle-route route ctx)
+                 :class (css "container-fluid" "devsrc")}])
 
              ; User content view in both prod and ide. What if src-mode and not-dev ? This draws nothing
              (when-not src-mode                             ; primary, white background (User)   /:posts/:hello-world
                (let [ctx (page-target-context ctx)]
-                 [browser/ui-from-route route ctx (css "container-fluid" "hyperfiddle-user"
-                                                       (when active-ide? "hyperfiddle-ide")
-                                                       (some-> ctx :hypercrud.ui/display-mode deref name (->> (str "display-mode-"))))]))))))))
+                 [ui/iframe ctx {:route route
+                                 :class (css "container-fluid" "hyperfiddle-user"
+                                             (when active-ide? "hyperfiddle-ide")
+                                             (some-> ctx :hypercrud.ui/display-mode deref name (->> (str "display-mode-"))))}]))))))))
 
 #?(:cljs
    ; todo should summon route via context/target-route. but there is still tension in the data api for deferred popovers
@@ -199,5 +201,5 @@
          "page" (view-page route ctx)                       ; component, seq-component or nil
          ; On SSR side this is only ever called as "page", but it could be differently (e.g. turbolinks)
          ; On Browser side, also only ever called as "page", but it could be configured differently (client side render the ide, server render userland...?)
-         "ide" [browser/ui-from-route route (leaf-ide-context ctx)]
-         "user" [browser/ui-from-route route (leaf-target-context ctx)]))))
+         "ide" [ui/iframe (leaf-ide-context ctx) {:route route}]
+         "user" [ui/iframe (leaf-target-context ctx) {:route route}]))))

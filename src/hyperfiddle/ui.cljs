@@ -11,6 +11,7 @@
     [contrib.reactive :as r]
     [contrib.reagent :refer [fragment]]
     [contrib.reactive-debug :refer [track-cmp]]
+    [contrib.reagent-native-events :refer [native-click-listener]]
     [contrib.string :refer [memoized-safe-read-edn-string blank->nil or-str]]
     [contrib.try$ :refer [try-either]]
     [contrib.ui]
@@ -18,7 +19,7 @@
     [contrib.ui.safe-render :refer [user-portal]]
     [contrib.ui.tooltip :refer [tooltip tooltip-props]]
     [hypercrud.browser.context :as context]
-    [hypercrud.browser.core :as browser]
+    [hypercrud.browser.base :as base]
     [hypercrud.browser.link :as link]
     [hypercrud.browser.router :as router]
     [hypercrud.browser.routing :as routing]
@@ -155,6 +156,32 @@ User renderers should not be exposed to the reaction."
                   (assoc :href (some->> (:route props) (runtime/encode-route (:peer ctx)))))]
     (into [:a props] children)))
 
+(letfn [(fiddle-css-renderer [s] [:style {:dangerouslySetInnerHTML {:__html @s}}])]
+  (defn ^:export iframe [ctx {:keys [route class] :as props}]
+    (let [click-fn (or (:hypercrud.browser/page-on-click ctx) (constantly nil)) ; parent ctx receives click event, not child frame
+          either-v (or (some-> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :error]) either/left)
+                       (base/data-from-route route ctx))
+          error-comp (ui-error/error-comp ctx)]
+      ; todo the 3 ui fns should be what is injected, not ui-comp
+      [stale/loading (stale/can-be-loading? ctx) either-v
+       (fn [e]
+         (let [on-click (r/partial click-fn route)]
+           [native-click-listener {:on-click on-click}
+            [error-comp e (css "hyperfiddle-error" class "ui")]]))
+       (fn [ctx]                                            ; fresh clean ctx
+         (let [on-click (r/partial click-fn (:route ctx))]
+           [native-click-listener {:on-click on-click}
+            (fragment
+              [(:alpha.hypercrud.browser/ui-comp ctx) ctx (css class "ui")]
+              [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])])]))
+       (fn [ctx]
+         (let [on-click (r/partial click-fn (:route ctx))]
+           ; use the stale ctx's route, otherwise alt clicking while loading could take you to the new route, which is jarring
+           [native-click-listener {:on-click on-click}
+            (fragment
+              [(:alpha.hypercrud.browser/ui-comp ctx) ctx (css "hyperfiddle-loading" class "ui")]
+              [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])])]))])))
+
 (letfn [(prompt [link-ref ?label] (str (or ?label (some-> @(r/fmap :link/rel link-ref) name) "_")))
         (p-build-route' [ctx link] (routing/build-route' link ctx))
         (build-link-props [route'-ref link-ref ctx]         ; todo this function needs untangling; ui-from-route ignores most of this
@@ -201,7 +228,10 @@ User renderers should not be exposed to the reaction."
             [stale/loading (stale/can-be-loading? ctx) (fmap #(router/assoc-frag % (:frag props)) @route'-ref) ; what is this frag noise?
              (fn [e] [error-comp e])
              (fn [route]
-               [browser/ui-from-route route ctx (css (:class props) (css-slugify @(r/fmap :link/rel link-ref)))])]
+               [iframe ctx (-> props
+                               (assoc :route route)
+                               (dissoc props :tooltip)
+                               (update :class css (css-slugify @(r/fmap :link/rel link-ref))))])]
 
             :else [tooltip (tooltip-props props)
                    (let [props (dissoc props :tooltip)]
