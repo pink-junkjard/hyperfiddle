@@ -180,9 +180,10 @@
            (fragment
              :primary-content
              (when (and active-ide? src-mode)               ; primary, blue background (IDE)   /:posts/:hello-world#:src
-               [ui/iframe (assoc ide-ctx :user-renderer fiddle-src-renderer) ; srcmode is equal to topnav route but a diff renderer
+               [ui/iframe ide-ctx                           ; srcmode is equal to topnav route but a diff renderer
                 {:route (ide-fiddle-route route ctx)
-                 :class (css "container-fluid" "devsrc")}])
+                 :class (css "container-fluid" "devsrc")
+                 :user-renderer fiddle-src-renderer}])
 
              ; User content view in both prod and ide. What if src-mode and not-dev ? This draws nothing
              (when-not src-mode                             ; primary, white background (User)   /:posts/:hello-world

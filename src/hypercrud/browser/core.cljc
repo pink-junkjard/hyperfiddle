@@ -1,7 +1,8 @@
 (ns hypercrud.browser.core
   (:require
     [hypercrud.browser.base :as base]
-    [hypercrud.browser.browser-request :as browser-request]))
+    [hypercrud.browser.browser-request :as browser-request]
+    [taoensso.timbre :as timbre]))
 
 
 (def data base/data-from-link)
@@ -14,4 +15,8 @@
 
 #?(:cljs
    (defn ^:deprecated ui-from-route [route ctx & [?class]]
-     (hyperfiddle.ui/iframe ctx {:route route :class ?class})))
+     (timbre/warn "Deprecated use of ui-from-route, migrate to hyperfiddle.ui/iframe")
+     (let [props (cond-> {:route route :class ?class}
+                   (:user-renderer ctx) (assoc :user-renderer (:user-renderer ctx)))
+           ctx (dissoc ctx :user-renderer)]
+       (hyperfiddle.ui/iframe ctx props))))

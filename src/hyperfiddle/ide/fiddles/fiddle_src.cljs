@@ -107,10 +107,8 @@
    })
 
 (defn fiddle-src-renderer [ctx class & {:keys [embed-mode]}]
-  (let [ctx (-> ctx
-                (dissoc :user-renderer)                     ; this needs to not escape this level; inline links can't ever get it
-                ; these two shadow calls are inefficient, throwing away work
-                (shadow-fiddle))
+  (let [ctx (shadow-fiddle ctx)
+        ; these two shadow calls are inefficient, throwing away work
         ectx (shadow-links ctx)
         ctx (either/branch ectx (constantly ctx) identity)]
     [:div {:class class}

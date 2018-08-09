@@ -16,8 +16,7 @@
                  :fiddle/renderer :fiddle/css :fiddle/markdown :fiddle/links :fiddle/hydrate-result-as-fiddle])
 
 (defn docs-embed [attrs ctx-real class & {:keys [embed-mode]}]
-  (let [ctx-real (dissoc ctx-real :user-renderer)           ; this needs to not escape this level; inline links can't ever get it
-        attrs (or (seq attrs)
+  (let [attrs (or (seq attrs)
                   (clojure.set/intersection
                     (-> @(:hypercrud.browser/result ctx-real)
                         keys
@@ -53,13 +52,15 @@
           [:div "Result:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
           ; Careful: Reagent deep bug in prop comparison https://github.com/hyperfiddle/hyperfiddle/issues/340
           (let [ctx (if f
-                      (assoc ctx :user-renderer f)
-                      (dissoc ctx :user-renderer #_"infinite recursion somehow"
-                              :hyperfiddle.ui/unp))]
-            [ui-comp ctx (str class " hf-live")])])
+                      ctx
+                      (dissoc ctx :hyperfiddle.ui/unp))]
+            [ui-comp ctx {:class (str class " hf-live")
+                          :user-renderer f}])])
        (let [as-edn (r/cursor state [:edn-fiddle])
              f (r/partial (if @as-edn result-edn docs-embed) fiddle-attrs)]
          [:div.src.col-sm.order-sm-1.order-xs-2
           [:div "Interactive Hyperfiddle editor:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
-          [ui-comp (assoc ctx :route (router/assoc-frag (:route ctx) ":src") :user-renderer f) (css class "devsrc hf-live")]])
+          [ui-comp (assoc ctx :route (router/assoc-frag (:route ctx) ":src"))
+           {:class (css class "devsrc hf-live")
+            :user-renderer f}]])
        ])))

@@ -52,7 +52,7 @@
 
 (defn build-wrapped-render-expr-str [user-str] (str "(fn [ctx & [class]]\n" user-str ")"))
 
-(defn src-mode [ctx & [?class]]
+(defn src-mode [ctx & [props]]
   (either/branch
     (mlet [request @(r/apply-inner-r (r/track base/meta-request-for-fiddle ctx))
            :let [fiddle (r/atom {:fiddle/type :entity
@@ -63,16 +63,16 @@
       (base/process-results fiddle request ctx))
     (fn [e] (throw e))                                      ; just throw, this is inside a user-portal
     (fn [ctx]
-      (let [f (or (:user-renderer ctx) fiddle-src/fiddle-src-renderer)]
-        [f ctx (css ?class (auto-ui-css-class ctx)) :embed-mode true]))))
+      (let [f (or (:user-renderer props) fiddle-src/fiddle-src-renderer)]
+        [f ctx (css (:class props) (auto-ui-css-class ctx)) :embed-mode true]))))
 
-(defn ui-comp [ctx & [?class]]
+(defn ui-comp [ctx & [props]]
   [user-portal (ui-error/error-comp ctx)
    (if (topnav/src-mode? (get (:route ctx) 3))
-     [src-mode ctx ?class]
-     (let [class (css ?class (auto-ui-css-class ctx))]
+     [src-mode ctx props]
+     (let [class (css (:class props) (auto-ui-css-class ctx))]
        (case @(:hypercrud.ui/display-mode ctx)
-         ::user (if-let [user-renderer (:user-renderer ctx)]
+         ::user (if-let [user-renderer (:user-renderer props)]
                   [user-renderer ctx class]
                   (let [fiddle (:hypercrud.browser/fiddle ctx)]
                     [(util/eval-renderer-comp

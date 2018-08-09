@@ -157,29 +157,30 @@ User renderers should not be exposed to the reaction."
     (into [:a props] children)))
 
 (letfn [(fiddle-css-renderer [s] [:style {:dangerouslySetInnerHTML {:__html @s}}])]
-  (defn ^:export iframe [ctx {:keys [route class] :as props}]
+  (defn ^:export iframe [ctx {:keys [route] :as props}]
     (let [click-fn (or (:hypercrud.browser/page-on-click ctx) (constantly nil)) ; parent ctx receives click event, not child frame
           either-v (or (some-> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :error]) either/left)
                        (base/data-from-route route ctx))
-          error-comp (ui-error/error-comp ctx)]
+          error-comp (ui-error/error-comp ctx)
+          props (dissoc props :route)]
       ; todo the 3 ui fns should be what is injected, not ui-comp
       [stale/loading (stale/can-be-loading? ctx) either-v
        (fn [e]
          (let [on-click (r/partial click-fn route)]
            [native-click-listener {:on-click on-click}
-            [error-comp e (css "hyperfiddle-error" class "ui")]]))
+            [error-comp e (css "hyperfiddle-error" (:class props) "ui")]]))
        (fn [ctx]                                            ; fresh clean ctx
          (let [on-click (r/partial click-fn (:route ctx))]
            [native-click-listener {:on-click on-click}
             (fragment
-              [(:alpha.hypercrud.browser/ui-comp ctx) ctx (css class "ui")]
+              [(:alpha.hypercrud.browser/ui-comp ctx) ctx (update props :class css "ui")]
               [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])])]))
        (fn [ctx]
          (let [on-click (r/partial click-fn (:route ctx))]
            ; use the stale ctx's route, otherwise alt clicking while loading could take you to the new route, which is jarring
            [native-click-listener {:on-click on-click}
             (fragment
-              [(:alpha.hypercrud.browser/ui-comp ctx) ctx (css "hyperfiddle-loading" class "ui")]
+              [(:alpha.hypercrud.browser/ui-comp ctx) ctx (update props :class css "hyperfiddle-loading" "ui")]
               [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])])]))])))
 
 (letfn [(prompt [link-ref ?label] (str (or ?label (some-> @(r/fmap :link/rel link-ref) name) "_")))
@@ -248,8 +249,11 @@ User renderers should not be exposed to the reaction."
 (defn ^:export browse "Relation level browse. Works in forms and lists but not tables."
   [rel relative-path ctx & [?user-renderer props]]          ; path should be optional, for disambiguation only. Naked can be hard-linked in markdown?
   (let [ctx (context/focus ctx relative-path)
-        link-ref (r/track link/rel->link rel ctx)]
-    [ui-from-link link-ref (assoc ctx :user-renderer ?user-renderer) props]))
+        link-ref (r/track link/rel->link rel ctx)
+        props (if ?user-renderer
+                (assoc props :user-renderer ?user-renderer)
+                props)]
+    [ui-from-link link-ref ctx props]))
 
 (defn form-field "Form fields are label AND value. Table fields are label OR value."
   [hyper-control relative-path ctx ?f props]                ; ?f :: (val props ctx) => DOM

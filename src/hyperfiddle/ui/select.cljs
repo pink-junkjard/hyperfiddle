@@ -102,6 +102,7 @@
                          (merge props hc-props)
                          (assoc :value @(r/fmap dom-value (:hypercrud.browser/data ctx))))
                ctx (assoc ctx
-                     :hypercrud.ui/display-mode (r/track identity :hypercrud.browser.browser-ui/user)
-                     :user-renderer (r/partial select-anchor-renderer props option-props))]
-           [hyperfiddle.ui/ui-from-link options-link ctx (select-keys props [:class])]))))))
+                     :hypercrud.ui/display-mode (r/track identity :hypercrud.browser.browser-ui/user))
+               props (-> (select-keys props [:class])
+                         (assoc :user-renderer (r/partial select-anchor-renderer props option-props)))]
+           [hyperfiddle.ui/ui-from-link options-link ctx props]))))))
