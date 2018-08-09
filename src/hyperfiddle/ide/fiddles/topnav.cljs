@@ -139,9 +139,7 @@
 (letfn [(toggle-auto-transact! [ctx selected-uri]
           (runtime/dispatch! (:peer ctx) [:toggle-auto-transact @selected-uri]))]
   (defn ^:export stage-ui-buttons [selected-uri stage ctx]
-    (let [writes-allowed? (let [hf-db (->> (runtime/state (:peer ctx) [::runtime/domain :domain/databases])
-                                           (r/fmap (r/partial domain/db-for-uri @selected-uri))
-                                           deref)
+    (let [writes-allowed? (let [hf-db (domain/db-for-uri @selected-uri @(runtime/state (:peer ctx) [::runtime/domain]))
                                 subject @(runtime/state (:peer ctx) [::runtime/user-id])]
                             (security/attempt-to-transact? hf-db subject))
           anonymous? (nil? @(runtime/state (:peer ctx) [::runtime/user-id]))]
