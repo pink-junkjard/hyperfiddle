@@ -117,8 +117,8 @@
       [:body :attribute _ _ (true :<< #(contains? % :options))] select+
       [:body :attribute _ true _] result+
       [:body :attribute _ false _] (or (attr-renderer ctx) control+)
-      [:body _ _ true _] links-only+                        ; what?
-      [:body _ _ false _] controls/string                   ; aggregate, entity, what else?
+      [:body _ _ true _] links-only+                        ; entity (:remove :edit)
+      [:body _ _ false _] controls/string                   ; aggregate, what else?
       )))
 
 (defn ^:export semantic-css [ctx]
