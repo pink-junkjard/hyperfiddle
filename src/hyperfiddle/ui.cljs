@@ -91,7 +91,9 @@
 (defn select+ [val props ctx]
   (fragment
     [anchors (:hypercrud.browser/path ctx) props ctx ui-link/options-processor] ; Order sensitive, here be floats
-    [select props ctx]
+    (if-let [link (:options props)]
+      [select (data/select+ ctx :options link) props ctx]
+      [select props ctx])
     [iframes (:hypercrud.browser/path ctx) props ctx ui-link/options-processor]))
 
 (defn ^:export hyper-control "Handles labels too because we show links there." ; CTX is done after here. props and val only. But recursion needs to look again.

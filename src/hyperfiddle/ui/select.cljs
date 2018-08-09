@@ -1,7 +1,7 @@
 (ns hyperfiddle.ui.select
   (:require
     [cats.context :refer-macros [with-context]]
-    [cats.core :as cats :refer [fmap]]
+    [cats.core :as cats :refer [fmap mlet return]]
     [cats.monad.either :as either]
     [contrib.reactive :as r]
     [contrib.try$ :refer [try-either]]
@@ -81,28 +81,29 @@
     ; default
     [select-error-cmp "Only fiddle type `query` is supported for select options"]))
 
+(defn compute-disabled [ctx props]
+  (let [entity (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])] ; how can this be loading??
+    (or (boolean (:read-only props))
+        @(r/fmap nil? entity)                               ; no value at all
+        (not @(r/fmap controls/writable-entity? entity)))))
+
 (let [dom-value (fn [value]                                 ; nil, kw or eid
                   (if (nil? value) "" (str (:db/id value))))]
   (defn select
-    ([props ctx]
-     (let [link+ (data/select+ ctx :options nil (:hypercrud.browser/path ctx))]
-       (either/branch link+ select-error-cmp #(select % props ctx))))
-    ([options-link props ctx]
-     {:pre [options-link ctx]}
-     (either/branch
-       (link/eval-hc-props @(r/fmap :hypercrud/props options-link) ctx)
-       (fn [e] [(ui-error/error-comp ctx) e])
-       (fn [hc-props]
-         (let [entity (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]) ; how can this be loading??
-               disabled (or (boolean (:read-only props))
-                            @(r/fmap nil? entity)           ; no value at all
-                            (not @(r/fmap controls/writable-entity? entity)))
-               option-props {:disabled disabled}
-               props (-> {:on-change (r/partial controls/entity-change! ctx)}
-                         (merge props hc-props)
-                         (assoc :value @(r/fmap dom-value (:hypercrud.browser/data ctx))))
-               ctx (assoc ctx
-                     :hypercrud.ui/display-mode (r/track identity :hypercrud.browser.browser-ui/user))
-               props (-> (select-keys props [:class])
-                         (assoc :user-renderer (r/partial select-anchor-renderer props option-props)))]
-           [hyperfiddle.ui/ui-from-link options-link ctx props]))))))
+    ([props ctx]                                            ; legacy auto interface
+     (select (data/select+ ctx :options nil (:hypercrud.browser/path ctx)) props ctx))
+    ([options-ref+ props ctx]
+     "This arity should take a selector string (class) instead of Right[Reaction[Link]], blocked on removing path backdoor"
+     {:pre [options-ref+ ctx]}
+     (-> (mlet [options-ref options-ref+
+                hc-props (link/eval-hc-props @(r/fmap :hypercrud/props options-ref) ctx)]
+           (return
+             (let [props (-> {:on-change (r/partial controls/entity-change! ctx)}
+                             (merge props hc-props)
+                             (assoc :value @(r/fmap dom-value (:hypercrud.browser/data ctx))))
+                   props (-> (select-keys props [:class])
+                             (assoc :user-renderer (r/partial select-anchor-renderer props {:disabled (compute-disabled ctx props)})))
+                   ctx (assoc ctx
+                         :hypercrud.ui/display-mode (r/track identity :hypercrud.browser.browser-ui/user))]
+               [hyperfiddle.ui/ui-from-link options-ref ctx props])))
+         (either/branch select-error-cmp identity)))))
