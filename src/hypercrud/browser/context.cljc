@@ -1,6 +1,6 @@
 (ns hypercrud.browser.context
   (:require
-    [contrib.data :refer [unwrap ancestry-common]]
+    [contrib.data :refer [unwrap ancestry-common ancestry-divergence]]
     [contrib.reactive :as r]
     [contrib.string :refer [memoized-safe-read-edn-string]]
     [datascript.parser :as parser]
@@ -194,8 +194,9 @@
   (defn focus [ctx relative-path]
     (reduce focus-segment ctx relative-path)))
 
-(defn refocus "focus common ancestor" [ctx root-path]
-  (let [ancestor-path (ancestry-common (:hypercrud.browser/path ctx) root-path)
-        unwind-offset (- (count (:hypercrud.browser/path ctx)) (count ancestor-path))
-        ancestor-ctx ((apply comp (repeat unwind-offset :hypercrud.browser/parent)) ctx)]
-    ancestor-ctx))
+(defn refocus "focus common ancestor" [ctx path]
+  (let [current-path (:hypercrud.browser/path ctx)
+        common-ancestor-path (ancestry-common current-path path)
+        unwind-offset (- (count current-path) (count common-ancestor-path))
+        common-ancestor-ctx ((apply comp (repeat unwind-offset :hypercrud.browser/parent)) ctx)]
+    (focus common-ancestor-ctx (ancestry-divergence path current-path))))

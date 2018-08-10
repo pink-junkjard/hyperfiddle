@@ -134,3 +134,11 @@
 (defn ancestry-common [as bs]
   (->> (take-while (partial apply =) (zip as bs))
        (map first)))
+
+(defn ancestry-divergence [as bs]
+  (->> (drop-while (partial apply =) (zip as bs))
+       (map first)))
+
+(comment
+  (ancestry-divergence [:body 0 :reg/gender] [:body 0 :reg/shirt-size])
+  )

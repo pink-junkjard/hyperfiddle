@@ -1,7 +1,7 @@
 (ns contrib.data-test
   (:require [clojure.test :refer [deftest is]]
             [contrib.data :refer [cond-let map-pad pad rtrim-coll fix-arity fvor take-to
-                                  compare-by-index ancestry-common]]))
+                                  compare-by-index ancestry-common ancestry-divergence]]))
 
 
 (comment
@@ -61,3 +61,8 @@
   []
   (is (= (ancestry-common [1 2 3 4 5 6] [1 2 3 4 10 11])
          '(1 2 3 4))))
+
+(deftest ancestry-divergence-1
+  []
+  (is (= (ancestry-divergence [1 2 3 4 5 6] [1 2 3 4 10 11])
+         '(5 6))))
