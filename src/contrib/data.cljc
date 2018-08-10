@@ -59,8 +59,9 @@
   ;(transpose [as bs])
   (map vector as bs))
 
-(defn pad [n zero coll]
-  (take n (concat coll (repeat zero))))
+(defn pad
+  ([zero coll] (concat coll (repeat zero)))
+  ([n zero coll] (take n (pad zero coll))))
 
 (defn map-pad [zero]
   (fn [f & cols]
@@ -136,10 +137,6 @@
        (map first)))
 
 (defn ancestry-divergence [as bs]
-  (->> (drop-while (partial apply =) ((map-pad nil) vector as bs))
+  ; pad bs only, not as
+  (->> (drop-while (partial apply =) (map vector as (pad nil bs)))
        (map first)))
-
-(comment
-  (ancestry-divergence [:body 0 :reg/gender] [:body 0 :reg/shirt-size])
-  (ancestry-divergence [:body 0 :reg/gender] [])
-  )

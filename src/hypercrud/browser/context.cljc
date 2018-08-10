@@ -195,6 +195,7 @@
     (reduce focus-segment ctx relative-path)))
 
 (defn refocus "focus common ancestor" [ctx path]
+  {:pre [ctx] :post [%]}
   (let [current-path (:hypercrud.browser/path ctx)
         common-ancestor-path (ancestry-common current-path path)
         unwind-offset (- (count current-path) (count common-ancestor-path))
