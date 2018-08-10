@@ -6,13 +6,13 @@
     [hypercrud.ui.connection-color :refer [border-color]]))
 
 
-(defn contextual-links [path embed links ?processor]
-  (->> (reduce (fn [links f] (f links)) @links (if ?processor [?processor]))
+(defn contextual-links [path embed links]
+  (->> @links
        ((if embed filter remove) (fn [link]
                                    (and (not (link/popover-link? link))
                                         (:link/render-inline? link))))
        ; path filtering is the most expensive, do it last
-       (filter (partial link/draw-link? path))
+       ;(filter (partial link/draw-link? path))
        vec))
 
 ; todo why does this not just happen inside hyperfiddle.ui/ui-from-link
@@ -21,8 +21,8 @@
     [:div {:style {:border-color (border-color ctx)}} child]
     child))
 
-(defn anchors [path props ctx & [?processor]]
-  (->> (r/track contextual-links path false (:hypercrud.browser/links ctx) ?processor)
+(defn anchors [path props ctx]
+  (->> (r/track contextual-links path false (:hypercrud.browser/links ctx))
        (r/unsequence :db/id)
        (map (fn [[link-ref link-id]]
               ^{:key (hash link-id)}
@@ -31,8 +31,10 @@
        (doall)
        (apply fragment)))
 
-(defn iframes [path props ctx & [?processor]]
-  (->> (r/track contextual-links path true (:hypercrud.browser/links ctx) ?processor)
+(defn iframes [path props ctx]
+  ; Draw things at or below this path until the next frame.
+
+  (->> (r/track contextual-links path true (:hypercrud.browser/links ctx))
        (r/unsequence :db/id)
        (map (fn [[link-ref link-id]]
               ^{:key (hash link-id)}

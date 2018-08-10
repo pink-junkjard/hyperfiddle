@@ -9,7 +9,7 @@
 ; sorting currently breaks click handling in popovers
 (defn links-dont-break-sorting? [ctx]
   (->> @(:hypercrud.browser/links ctx)
-       (filter (partial link/draw-link? (:hypercrud.browser/path ctx)))
+       ;(filter (partial link/draw-link? (:hypercrud.browser/path ctx)))
        (not-any? link/popover-link?)))
 
 (defn sortable? [ctx]

@@ -56,13 +56,13 @@
         ; this result can be directly inserted as children in a reagemnt component, CANNOT be a vector
         seq)))
 
-(defn ^:export select+ "get a link for browsing later" [ctx rel & [?class ?path]] ; Right[Reaction[Link]], Left[String]
-  (let [link?s (r/track link/select-all ctx rel ?class ?path)
+(defn ^:export select+ "get a link for browsing later" [ctx rel & [?class]] ; Right[Reaction[Link]], Left[String]
+  (let [link?s (r/track link/select-all ctx rel ?class)
         count @(r/fmap count link?s)]
     (cond
       (= 1 count) (right (r/fmap first link?s))
-      (= 0 count) (left (str/format "no match for rel: %s class: %s path: %s" (pr-str rel) (pr-str ?class) ?path))
-      :else (left (str/format "Too many links matched for rel: %s class: %s path: %s" (pr-str rel) (pr-str ?class) ?path)))))
+      (= 0 count) (left (str/format "no match for rel: %s class: %s path: %s" (pr-str rel) (pr-str ?class)))
+      :else (left (str/format "Too many links matched for rel: %s class: %s path: %s" (pr-str rel) (pr-str ?class))))))
 
 (defn ^:export browse+ "Navigate a link by hydrating its context accounting for dependencies in scope.
   returns Either[Loading|Error,ctx]."

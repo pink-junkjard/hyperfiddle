@@ -94,24 +94,17 @@
   [ctx]
   {:post [%]}
   (let [head-or-body (->> (:hypercrud.browser/path ctx) (reverse) (take-to (comp not #{:head :body})) (last)) ; todo head/body attr collision
-        rels (->> (:hypercrud.browser/links ctx)
-                  (r/fmap (fn [links]
-                            (->> links
-                                 (filter (r/partial link/draw-link? (:hypercrud.browser/path ctx)))
-                                 (map :link/rel)
-                                 (into #{})))))
         segment (last (:hypercrud.browser/path ctx))
         segment-type (context/segment-type segment)
         child-fields (not (some->> (:hypercrud.browser/fields ctx) (r/fmap nil?) deref))]
-    (match* [head-or-body segment-type segment child-fields @rels #_@user]
-      [:head :attribute '* _ _] magic-new-head
-      [:head _ _ _ _] hyper-label
-      [:body :attribute '* _ _] magic-new-body
-      ;[:body :attribute _ _ (true :<< #(contains? % :options))] select+
-      [:body :attribute _ true _] result+
-      [:body :attribute _ false _] (or (attr-renderer ctx) control+)
-      [:body _ _ true _] links-only+                        ; entity (:remove :edit)
-      [:body _ _ false _] controls/string                   ; aggregate, what else?
+    (match* [head-or-body segment-type segment child-fields #_@user]
+      [:head :attribute '* _] magic-new-head
+      [:head _ _ _] hyper-label
+      [:body :attribute '* _] magic-new-body
+      [:body :attribute _ true] result+
+      [:body :attribute _ false] (or (attr-renderer ctx) control+)
+      [:body _ _ true] links-only+                        ; entity (:remove :edit)
+      [:body _ _ false] controls/string                   ; aggregate, what else?
       )))
 
 (defn ^:export semantic-css [ctx]

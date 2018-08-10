@@ -20,12 +20,6 @@
 (defn same-path-as? [path link]
   (= path (read-path (:link/path link))))
 
-(defn draw-link? "Full semantics unclear" [path link]
-  (let [classes (->> (:link/class link) (map read-path) (remove nil?) (into #{}))]
-    (if (empty? classes)
-      (= path (read-path (:link/path link)))
-      (contains? classes path))))
-
 (defn links-at [path links-ref]
   (filter (partial same-path-as? path) @links-ref))
 
@@ -41,12 +35,6 @@
         (filter (fn [link]
                   (if ?class
                     (same-class-as? ?class link)
-                    true)))))
-  ([ctx rel ?class ?path]
-   (->> (select-all ctx rel ?class)
-        (filter (fn [link]
-                  (if ?path
-                    (draw-link? ?path link)
                     true))))))
 
 (comment
