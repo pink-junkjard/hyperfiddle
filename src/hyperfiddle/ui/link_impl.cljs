@@ -6,20 +6,6 @@
     [hypercrud.ui.connection-color :refer [border-color]]))
 
 
-(defn options-link? [link]
-  ; don't care if its inline or not, just do the right thing.
-  (= :options (:link/rel link)))
-
-(def options-processor (partial remove options-link?))
-
-(defn options-links [path links]
-  (->> links
-       (filter options-link?)
-       (filter (partial link/draw-link? path))))
-
-(defn draw-options? [path links]
-  (not (empty? (options-links path links))))
-
 (defn contextual-links [path embed links ?processor]
   (->> (reduce (fn [links f] (f links)) @links (if ?processor [?processor]))
        ((if embed filter remove) (fn [link]

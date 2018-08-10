@@ -8,7 +8,7 @@
     [hypercrud.browser.system-link :refer [system-link?]]
     [hypercrud.client.core :as hc]
     [hyperfiddle.data :as data]
-    [hyperfiddle.ui :refer [hyper-control field table]]
+    [hyperfiddle.ui :refer [hyper-control field table select+]]
     [hyperfiddle.ui.select :refer [select select-error-cmp]]))
 
 
@@ -27,6 +27,10 @@
   (let [props (assoc props :read-only (read-only? ctx))]
     [(hyper-control ctx) val props ctx]))
 
+(defn link-fiddle [val props ctx]
+  (let [props (assoc props :read-only (read-only? ctx))]
+    [select+ val props ctx]))
+
 (letfn [(remove-children [field] (dissoc field :hypercrud.browser.field/children))]
   (defn hf-live-link-fiddle [val props ctx]
     (let [ctx (-> ctx
@@ -40,7 +44,7 @@
                  topnav-fiddle @(hc/hydrate (:peer ctx) nil req) #_"todo tighter reactivity"]
             (return
               (let [ctx (merge ctx {:hypercrud.browser/links (r/track identity (:fiddle/links topnav-fiddle))})]
-                [select (data/select+ ctx :options "fiddle-options") props ctx])))
+                [select (data/select+ ctx :options (:options props)) props ctx])))
           (either/branch select-error-cmp identity))
       )))
 
@@ -53,7 +57,7 @@
       (field [:link/path] ctx read-only-cell)
       (field [:link/class] ctx read-only-cell)
       (field [:link/render-inline?] ctx read-only-cell)
-      (field [:link/fiddle] ctx (if embed-mode hf-live-link-fiddle read-only-cell))
+      (field [:link/fiddle] ctx (if embed-mode hf-live-link-fiddle link-fiddle) {:options "fiddle-options"})
       (when-not embed-mode (field [:link/create?] ctx read-only-cell))
       (when-not embed-mode (field [:link/managed?] ctx read-only-cell))
       (field [:link/formula] ctx read-only-cell)

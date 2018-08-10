@@ -30,7 +30,7 @@
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.ui.api]
     [hyperfiddle.ui.controls :as controls]
-    [hyperfiddle.ui.hyper-controls :refer [hyper-label hyper-select-head magic-new-body magic-new-head]]
+    [hyperfiddle.ui.hyper-controls :refer [hyper-label magic-new-body magic-new-head]]
     [hyperfiddle.ui.hacks]                                  ; exports
     [hyperfiddle.ui.link-impl :as ui-link :refer [anchors iframes]]
     [hyperfiddle.ui.popover :refer [popover-cmp]]
@@ -72,10 +72,7 @@
 (declare result)
 
 (defn control+ [val props ctx]
-  (fragment
-    [(control ctx) val props ctx]
-    [anchors (:hypercrud.browser/path ctx) props ctx]       ; Order sensitive, here be floats
-    [iframes (:hypercrud.browser/path ctx) props ctx]))
+  [(control ctx) val props ctx])
 
 (defn links-only+ [val props ctx]
   (fragment
@@ -89,12 +86,9 @@
     [iframes (:hypercrud.browser/path ctx) props ctx]))
 
 (defn select+ [val props ctx]
-  (fragment
-    [anchors (:hypercrud.browser/path ctx) props ctx ui-link/options-processor] ; Order sensitive, here be floats
-    (if-let [class (:options props)]
-      [select (data/select+ ctx :options class) props ctx]
-      [select props ctx])
-    [iframes (:hypercrud.browser/path ctx) props ctx ui-link/options-processor]))
+  (if-let [class (:options props)]
+    [select (data/select+ ctx :options class) props ctx]
+    [select props ctx]))
 
 (defn ^:export hyper-control "Handles labels too because we show links there." ; CTX is done after here. props and val only. But recursion needs to look again.
   [ctx]
@@ -110,7 +104,6 @@
         segment-type (context/segment-type segment)
         child-fields (not (some->> (:hypercrud.browser/fields ctx) (r/fmap nil?) deref))]
     (match* [head-or-body segment-type segment child-fields @rels #_@user]
-      ;[:head _ true] hyper-select-head
       [:head :attribute '* _ _] magic-new-head
       [:head _ _ _ _] hyper-label
       [:body :attribute '* _ _] magic-new-body

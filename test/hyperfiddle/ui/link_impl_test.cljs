@@ -2,7 +2,7 @@
   (:require [clojure.set :as set]
             [clojure.test :refer [deftest is]]
             [contrib.reactive :as r]
-            [hyperfiddle.ui.link-impl :refer [contextual-links options-processor]]))
+            [hyperfiddle.ui.link-impl :refer [contextual-links]]))
 
 
 (def mock-links
@@ -41,10 +41,4 @@
                                :link/path ":head 0"
                                :link/render-inline? true
                                :link/managed? true}}))
-         (into #{} (contextual-links [:head 0] false (r/atom mock-links) nil))))
-
-  (is (= (set [{:link/rel :my/link
-                :link/path ":head 0 :some/attr"
-                :link/render-inline? true
-                :link/managed? false}])
-         (set (contextual-links [:head 0 :some/attr] true (r/atom mock-links) options-processor)))))
+         (into #{} (contextual-links [:head 0] false (r/atom mock-links) nil)))))

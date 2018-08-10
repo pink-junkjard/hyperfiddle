@@ -22,16 +22,6 @@
                        [:div.hyperfiddle.docstring [contrib.ui/markdown help-md]])
        [:label props label (if help-md [:sup "†"])]])))
 
-(defn hyper-select-head [_ props ctx]
-  (let [display-mode (-> @(:hypercrud.ui/display-mode ctx) name keyword)]
-    (fragment (when (and (= :xray display-mode)
-                         @(r/fmap (r/partial ui-link/draw-options? (:hypercrud.browser/path ctx)) (:hypercrud.browser/links ctx)))
-                ; Float right
-                [select props ctx])
-              [label _ props ctx]
-              [anchors (:hypercrud.browser/path ctx) props ctx ui-link/options-processor]
-              [iframes (:hypercrud.browser/path ctx) props ctx ui-link/options-processor])))
-
 (defn hyper-label [_ props ctx]
   (fragment [label _ props ctx]
             [anchors (:hypercrud.browser/path ctx) props ctx]

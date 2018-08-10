@@ -121,8 +121,7 @@
       (ui/link :new-fiddle nil ctx "new-fiddle")
       [tooltip {:label "Domain administration"} (ui/link :domain nil ctx "domain")]
       (if @(runtime/state (:peer ctx) [::runtime/user-id])
-        (let [b (hyperfiddle.data/browse+ ctx :account)
-              {:keys [:hypercrud.browser/result]} @b]
+        (let [{:keys [:hypercrud.browser/result]} @(hyperfiddle.data/browse+ ctx :account)]
           (fake-managed-anchor :account ctx @(contrib.reactive/cursor result [:user/name])
                                {:tooltip [nil (:user/email @result)]}))
         [:a {:href (foundation/stateless-login-url ctx)} "login"])]]))
