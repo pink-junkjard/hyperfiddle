@@ -136,9 +136,10 @@
        (map first)))
 
 (defn ancestry-divergence [as bs]
-  (->> (drop-while (partial apply =) (zip as bs))
+  (->> (drop-while (partial apply =) ((map-pad nil) vector as bs))
        (map first)))
 
 (comment
   (ancestry-divergence [:body 0 :reg/gender] [:body 0 :reg/shirt-size])
+  (ancestry-divergence [:body 0 :reg/gender] [])
   )
