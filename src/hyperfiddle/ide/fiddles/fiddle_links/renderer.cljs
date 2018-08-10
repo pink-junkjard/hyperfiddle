@@ -3,12 +3,13 @@
     [cats.core :refer [mlet return]]
     [cats.monad.either :as either]
     [contrib.reactive :as r]
+    [contrib.reagent :refer [fragment]]
     [hypercrud.browser.base :as base]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.system-link :refer [system-link?]]
     [hypercrud.client.core :as hc]
     [hyperfiddle.data :as data]
-    [hyperfiddle.ui :refer [hyper-control field table select+]]
+    [hyperfiddle.ui :refer [hyper-control field table select+ link]]
     [hyperfiddle.ui.select :refer [select select-error-cmp]]))
 
 
@@ -28,8 +29,10 @@
     [(hyper-control ctx) val props ctx]))
 
 (defn link-fiddle [val props ctx]
-  (let [props (assoc props :read-only (read-only? ctx))]
-    [select+ val props ctx]))
+  (fragment
+    (link :hyperfiddle/new "fiddle" ctx)
+    (let [props (assoc props :read-only (read-only? ctx))]
+      [select+ val props ctx])))
 
 (letfn [(remove-children [field] (dissoc field :hypercrud.browser.field/children))]
   (defn hf-live-link-fiddle [val props ctx]
@@ -63,5 +66,8 @@
       (field [:link/formula] ctx read-only-cell)
       (when-not embed-mode (field [:link/tx-fn] ctx read-only-cell))
       (when-not embed-mode (field [:hypercrud/props] ctx read-only-cell))
-      (when-not embed-mode (field [] ctx nil))])
+      (when-not embed-mode (field [] ctx
+                                  (fn [val props ctx]
+                                    (link :hyperfiddle/remove "link" ctx)
+                                    )))])
    ctx])

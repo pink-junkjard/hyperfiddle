@@ -100,8 +100,9 @@
                          [:div.hf-underdoc [markdown (:fiddle/renderer underdocs)]])])
    :fiddle/links (fn [val props ctx]
                    [:div
+                    (link :hyperfiddle/new "link" ctx)
                     [:div [links-fiddle/renderer ctx (:embed-mode props)]]
-                    [anchors (:hypercrud.browser/path ctx) (dissoc props :embed-mode) ctx]
+                    #_[anchors (:hypercrud.browser/path ctx) (dissoc props :embed-mode) ctx]
                     (when-not (:embed-mode props)
                       #_[:div.hf-underdoc [markdown (:fiddle/links underdocs)]])])
    })

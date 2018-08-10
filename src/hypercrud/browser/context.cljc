@@ -80,7 +80,7 @@
 (defn body [ctx & [?data]]
   (case (:hypercrud.browser/data-cardinality ctx)
     :db.cardinality/one (assert (nil? ?data))
-    :db.cardinality/many (do (assert ?data (str "`:body` is invalid directly on card/many. current path: " (pr-str (:hypercrud.browser/path ctx))))
+    :db.cardinality/many (do (assert ?data (str "`:body` is invalid directly on card/many (do you need a table wrap?). current path: " (pr-str (:hypercrud.browser/path ctx))))
                              (assert (r/reactive? ?data))))
   (let [new-ctx (-> ctx
                     (set-parent)
