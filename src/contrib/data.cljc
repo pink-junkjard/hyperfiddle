@@ -130,3 +130,7 @@
 (defn compare-by-index [ordering]
   (let [index (into {} (map vector ordering (range)))]
     #(compare (index %1) (index %2))))
+
+(defn ancestry-common [as bs]
+  (->> (take-while (partial apply =) (zip as bs))
+       (map first)))

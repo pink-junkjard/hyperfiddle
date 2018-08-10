@@ -1,7 +1,7 @@
 (ns contrib.data-test
   (:require [clojure.test :refer [deftest is]]
             [contrib.data :refer [cond-let map-pad pad rtrim-coll fix-arity fvor take-to
-                                  compare-by-index]]))
+                                  compare-by-index ancestry-common]]))
 
 
 (comment
@@ -56,3 +56,8 @@
                 (compare-by-index ordering)
                 [:fiddle/renderer :fiddle/ident :fiddle/css :fiddle/markdown :fiddle/type])
          (sorted-set :fiddle/ident :fiddle/type :fiddle/renderer :fiddle/css :fiddle/markdown))))
+
+(deftest ancestry-common-1
+  []
+  (is (= (ancestry-common [1 2 3 4 5 6] [1 2 3 4 10 11])
+         '(1 2 3 4))))
