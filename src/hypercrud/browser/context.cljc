@@ -1,6 +1,6 @@
 (ns hypercrud.browser.context
   (:require
-    [contrib.data :refer [unwrap]]
+    [contrib.data :refer [unwrap ancestry-common]]
     [contrib.reactive :as r]
     [contrib.string :refer [memoized-safe-read-edn-string]]
     [datascript.parser :as parser]
@@ -69,12 +69,13 @@
 (defn hydrate-attribute [ctx ident & ?more-path]
   (r/cursor (:hypercrud.browser/schemas ctx) (concat [(str (:hypercrud.browser/source-symbol ctx)) ident] ?more-path)))
 
+(def data-keys [:hypercrud.browser/data :hypercrud.browser/data-cardinality])
+
 (defn- set-parent [ctx]
-  (assoc ctx :hypercrud.browser/parent (select-keys ctx [:hypercrud.browser/parent :hypercrud.browser/path])))
+  (assoc ctx :hypercrud.browser/parent (dissoc ctx data-keys)))
 
 (defn- set-parent-data [ctx]
-  (update ctx :hypercrud.browser/parent (fnil into {}) (select-keys ctx [:hypercrud.browser/data
-                                                                         :hypercrud.browser/data-cardinality])))
+  (update ctx :hypercrud.browser/parent (fnil into {}) (select-keys ctx data-keys)))
 
 (defn body [ctx & [?data]]
   (case (:hypercrud.browser/data-cardinality ctx)
@@ -147,7 +148,7 @@
             ; todo cannot conflict with :db/ident :head
             (and (= path-segment :head) #_(nil? (:hypercrud.browser/data-cardinality ctx)))
             (-> ctx
-                (assoc :hypercrud.browser/parent (select-keys ctx [:hypercrud.browser/data
+                (assoc :hypercrud.browser/parent ctx #_(select-keys ctx [:hypercrud.browser/data
                                                                    :hypercrud.browser/data-cardinality
                                                                    :hypercrud.browser/path]))
                 (update :hypercrud.browser/path conj :head)
@@ -192,3 +193,9 @@
                 (not (some #{:head} (:hypercrud.browser/path ctx))) (set-data :db.cardinality/one)))))]
   (defn focus [ctx relative-path]
     (reduce focus-segment ctx relative-path)))
+
+(defn refocus "focus common ancestor" [ctx root-path]
+  (let [ancestor-path (ancestry-common (:hypercrud.browser/path ctx) root-path)
+        unwind-offset (- (count (:hypercrud.browser/path ctx)) (count ancestor-path))
+        ancestor-ctx ((apply comp (repeat unwind-offset :hypercrud.browser/parent)) ctx)]
+    ancestor-ctx))

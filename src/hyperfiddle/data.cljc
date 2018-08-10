@@ -1,6 +1,6 @@
 (ns hyperfiddle.data
   (:require
-    [cats.core :refer [fmap]]
+    [cats.core :refer [fmap >>=]]
     [cats.monad.either :refer [left right]]
     [contrib.reactive :as r]
     [cuerdas.core :as str]
@@ -56,17 +56,17 @@
         ; this result can be directly inserted as children in a reagemnt component, CANNOT be a vector
         seq)))
 
-(defn ^:export browse "Hydrate a context, returns Either[Loading|Error,ctx]
-  Navigate the fiddle graph, starting at the focus point, because there are dependencies in scope."
-  [rel relative-path ctx]
-  ; context is not set for this call
-  (let [ctx (context/focus ctx relative-path)]
-    (base/data-from-link @(r/track link/rel->link rel ctx) ctx)))
-
-(defn select+ "get a link for browsing later" [ctx rel & [?class ?path]] ; Right[Reaction[Link]], Left[String]
+(defn ^:export select+ "get a link for browsing later" [ctx rel & [?class ?path]] ; Right[Reaction[Link]], Left[String]
   (let [link?s (r/track link/select-all ctx rel ?class ?path)
         count @(r/fmap count link?s)]
     (cond
       (= 1 count) (right (r/fmap first link?s))
       (= 0 count) (left (str/format "no match for rel: %s class: %s path: %s" (pr-str rel) (pr-str ?class) ?path))
       :else (left (str/format "Too many links matched for rel: %s class: %s path: %s" (pr-str rel) (pr-str ?class) ?path)))))
+
+(defn ^:export browse+ "Navigate a link by hydrating its context accounting for dependencies in scope.
+  returns Either[Loading|Error,ctx]."
+  [ctx rel & [?class]]
+  ; No focusing, can select from root, and data-from-link manufactures a new context
+  (>>= (select+ ctx rel ?class)
+       #(base/data-from-link @% ctx)))

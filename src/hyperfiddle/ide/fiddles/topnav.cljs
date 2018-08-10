@@ -16,6 +16,7 @@
             [hypercrud.browser.system-fiddle :as system-fiddle]
             [hypercrud.types.Entity :refer [->Entity shadow-entity]]
             [hyperfiddle.actions :as actions]
+            [hyperfiddle.data]
             [hyperfiddle.domain :as domain]
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.runtime :as runtime]
@@ -61,9 +62,8 @@
         {:keys [hypercrud.browser/result
                 hypercrud.browser/fiddle] :as ctx} (shadow-fiddle ctx)
         ; hack until hyperfiddle.net#156 is complete
-        fake-managed-anchor (fn [rel relative-path ctx & [?label props]]
-                              (let [ctx (context/focus ctx relative-path)
-                                    link-ref (->> (r/track link/rel->link rel ctx)
+        fake-managed-anchor (fn [rel #_class ctx & [?label props]]
+                              (let [link-ref (->> (unwrap (hyperfiddle.data/select+ ctx rel))
                                                   (r/fmap set-managed))]
                                 [ui-from-link link-ref ctx (assoc props :dont-branch? true) ?label]))]
     [:div {:class class}
@@ -71,7 +71,7 @@
       [tooltip {:label "Home"} [:a.hf-auto-nav {:href "/"} @(runtime/state (:peer ctx) [::runtime/domain :domain/ident])]]
       [tooltip {:label "This fiddle"}                       ; also a good place for the route
        [:span.hf-auto-nav (some-> @(r/cursor (:hypercrud.browser/result ctx) [:fiddle/ident]) str)]]
-      (fake-managed-anchor :fiddle-shortcuts [] ctx "shortcuts" {:tooltip [nil "Fiddles in this domain"]})]
+      (fake-managed-anchor :fiddle-shortcuts ctx "shortcuts" {:tooltip [nil "Fiddles in this domain"]})]
 
      [:div.right-nav {:key "right-nav"}                     ; CAREFUL; this key prevents popover flickering
 
@@ -117,12 +117,13 @@
                            (str "##### Auto-transact:\n\n"))
                       {:hyperfiddle.ui.markdown-extensions/unp true}]]
             dirty? (not @(r/fmap empty? (runtime/state (:peer ctx) [:stage nil])))]
-        (fake-managed-anchor :stage [] ctx "stage" {:tooltip [nil tooltip] :class (when dirty? "stage-dirty")}))
-      (ui/link :new-fiddle [] ctx "new-fiddle")
-      [tooltip {:label "Domain administration"} (ui/link :domain [] ctx "domain")]
+        (fake-managed-anchor :stage ctx "stage" {:tooltip [nil tooltip] :class (when dirty? "stage-dirty")}))
+      (ui/link :new-fiddle nil ctx "new-fiddle")
+      [tooltip {:label "Domain administration"} (ui/link :domain nil ctx "domain")]
       (if @(runtime/state (:peer ctx) [::runtime/user-id])
-        (let [{:keys [:hypercrud.browser/result]} @(hyperfiddle.data/browse :account [] ctx)]
-          (fake-managed-anchor :account [] ctx @(contrib.reactive/cursor result [:user/name])
+        (let [b (hyperfiddle.data/browse+ ctx :account)
+              {:keys [:hypercrud.browser/result]} @b]
+          (fake-managed-anchor :account ctx @(contrib.reactive/cursor result [:user/name])
                                {:tooltip [nil (:user/email @result)]}))
         [:a {:href (foundation/stateless-login-url ctx)} "login"])]]))
 

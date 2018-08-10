@@ -82,17 +82,17 @@
        "browse" (fn [content argument props ctx]
                   (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
                         rel (unwrap (memoized-safe-read-edn-string srel))
-                        path (unwrap (memoized-safe-read-edn-string (str "[" spath "]")))
+                        class (unwrap (memoized-safe-read-edn-string spath))
                         f? (unwrap (memoized-safe-eval content))]
-                    (hyperfiddle.ui/browse rel path ctx f? props)))
+                    (hyperfiddle.ui/browse rel class ctx f? props)))
 
        "link" (fn [content argument props ctx]
-                (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
-                      rel (unwrap (memoized-safe-read-edn-string srel))
-                      path (unwrap (memoized-safe-read-edn-string (str "[" spath "]")))
+                (let [[_ rel-s class-s] (re-find #"([^ ]*) ?(.*)" argument)
+                      rel (unwrap (memoized-safe-read-edn-string rel-s))
+                      class (unwrap (memoized-safe-read-edn-string class-s))
                       ; https://github.com/medfreeman/remark-generic-extensions/issues/45
                       label (or-str content (name rel))]
-                  (hyperfiddle.ui/link rel path ctx label props)))
+                  (hyperfiddle.ui/link rel class ctx label props)))
 
        "result" (fn [content argument props ctx]
                   (let [ctx (assoc ctx ::unp true)]

@@ -91,8 +91,8 @@
 (defn select+ [val props ctx]
   (fragment
     [anchors (:hypercrud.browser/path ctx) props ctx ui-link/options-processor] ; Order sensitive, here be floats
-    (if-let [link (:options props)]
-      [select (data/select+ ctx :options link) props ctx]
+    (if-let [class (:options props)]
+      [select (data/select+ ctx :options class) props ctx]
       [select props ctx])
     [iframes (:hypercrud.browser/path ctx) props ctx ui-link/options-processor]))
 
@@ -114,7 +114,7 @@
       [:head :attribute '* _ _] magic-new-head
       [:head _ _ _ _] hyper-label
       [:body :attribute '* _ _] magic-new-body
-      [:body :attribute _ _ (true :<< #(contains? % :options))] select+
+      ;[:body :attribute _ _ (true :<< #(contains? % :options))] select+
       [:body :attribute _ true _] result+
       [:body :attribute _ false _] (or (attr-renderer ctx) control+)
       [:body _ _ true _] links-only+                        ; entity (:remove :edit)
@@ -212,8 +212,10 @@ User renderers should not be exposed to the reaction."
                            (interpose " ")
                            (apply str))})))]
   (defn ui-from-link [link-ref ctx & [props ?label]]
-    (let [error-comp (ui-error/error-comp ctx)
-          route'-ref (r/fmap (r/partial p-build-route' ctx) link-ref)
+    {:pre [link-ref]}
+    (let [ctx (context/refocus ctx (link/read-path @(r/fmap :link/path link-ref)))
+          error-comp (ui-error/error-comp ctx)
+          route'-ref (r/fmap (r/partial p-build-route' ctx) link-ref) ; need to re-focus from the top
           link-props @(r/track build-link-props route'-ref link-ref ctx)]
       (when-not (:hidden link-props)
         (let [props (-> link-props
@@ -242,20 +244,20 @@ User renderers should not be exposed to the reaction."
                      [anchor ctx props @(r/track prompt link-ref ?label)])]
             ))))))
 
-(defn ^:export link "Relation level link renderer. Works in forms and lists but not tables."
-  [rel relative-path ctx & [?label props]]                  ; path should be optional, for disambiguation only. Naked can be hard-linked in markdown?
-  (let [ctx (context/focus ctx relative-path)
-        link-ref (r/track link/rel->link rel ctx)]
-    [ui-from-link link-ref ctx props ?label]))
+(defn ^:export link "Relation level link renderer. Works in forms and lists but not tables." ; this is dumb, use a field renderer
+  [rel class ctx & [?label props]]                          ; path should be optional, for disambiguation only. Naked can be hard-linked in markdown?
+  (either/branch
+    (data/select+ ctx rel class)
+    #(vector :span %)
+    (fn [link-ref]
+      [ui-from-link link-ref ctx props ?label])))
 
 (defn ^:export browse "Relation level browse. Works in forms and lists but not tables."
-  [rel relative-path ctx & [?user-renderer props]]          ; path should be optional, for disambiguation only. Naked can be hard-linked in markdown?
-  (let [ctx (context/focus ctx relative-path)
-        link-ref (r/track link/rel->link rel ctx)
-        props (if ?user-renderer
+  [rel class ctx & [?user-renderer props]]
+  (let [props (if ?user-renderer
                 (assoc props :user-renderer ?user-renderer)
                 props)]
-    [ui-from-link link-ref ctx props]))
+    [ui-from-link (unwrap (data/select+ ctx rel class)) ctx props]))
 
 (defn form-field "Form fields are label AND value. Table fields are label OR value."
   [hyper-control relative-path ctx ?f props]                ; ?f :: (val props ctx) => DOM

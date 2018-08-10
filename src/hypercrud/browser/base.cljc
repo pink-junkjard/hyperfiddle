@@ -8,6 +8,7 @@
             [hypercrud.browser.context :as context]
             [hypercrud.browser.fiddle :as fiddle]
             [hypercrud.browser.field :as field]
+            [hypercrud.browser.link :as link]
             [hypercrud.browser.q-util :as q-util]
             [hypercrud.browser.routing :as routing]
             [hypercrud.browser.system-fiddle :as system-fiddle]
@@ -145,9 +146,9 @@
       (process-results fiddle fiddle-request ctx))))
 
 (defn from-link [link ctx with-route]                       ; ctx is for formula and routing (tempids and domain)
-  (mlet [route (routing/build-route' link ctx)]
-    ; entire context must be encoded in the route
-    (with-route route ctx)))
+  (let [ctx (context/refocus ctx (link/read-path (:link/path link)))] ; symmetry with UI - popovers, txfn etc
+    (mlet [route (routing/build-route' link ctx)]
+      (with-route route ctx))))
 
 (defn data-from-link [link ctx]                             ; todo rename
   (from-link link ctx data-from-route))

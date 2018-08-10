@@ -18,7 +18,7 @@
     [hyperfiddle.ide.fiddles.fiddle-links.renderer :as links-fiddle]
     #_[hyperfiddle.ide.hf-live :as hf-live]                 ;cycle
     [hyperfiddle.runtime :as runtime]
-    [hyperfiddle.ui :refer [anchor browse field hyper-control link markdown]]
+    [hyperfiddle.ui :refer [anchor field hyper-control link markdown]]
     [hyperfiddle.ui.link-impl :refer [anchors]]))
 
 
@@ -138,4 +138,4 @@
           (remove #(= (namespace %) "fiddle"))
           (map #(field [0 %] ctx nil))
           (doall))
-     (when-not embed-mode (link :hyperfiddle/remove [:body 0] ctx "Remove fiddle" {:class "btn-outline-danger"}))]))
+     (when-not embed-mode (link :hyperfiddle/remove "fiddle" ctx "Remove fiddle" {:class "btn-outline-danger"}))]))

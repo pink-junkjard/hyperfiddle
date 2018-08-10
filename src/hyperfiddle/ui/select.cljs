@@ -91,7 +91,7 @@
                   (if (nil? value) "" (str (:db/id value))))]
   (defn select
     ([props ctx]                                            ; legacy auto interface
-     (select (data/select+ ctx :options nil (:hypercrud.browser/path ctx)) props ctx))
+     (select (data/select+ ctx :options nil) props ctx))
     ([options-ref+ props ctx]
      "This arity should take a selector string (class) instead of Right[Reaction[Link]], blocked on removing path backdoor"
      {:pre [options-ref+ ctx]}
