@@ -243,7 +243,11 @@ User renderers should not be exposed to the reaction."
   (let [props (if ?user-renderer
                 (assoc props :user-renderer ?user-renderer)
                 props)]
-    [ui-from-link (unwrap (data/select+ ctx rel class)) ctx props]))
+    (either/branch
+      (data/select+ ctx rel class)
+      #(vector :span %)
+      (fn [link-ref]
+        [ui-from-link link-ref ctx props]))))
 
 (defn form-field "Form fields are label AND value. Table fields are label OR value."
   [hyper-control relative-path ctx ?f props]                ; ?f :: (val props ctx) => DOM
