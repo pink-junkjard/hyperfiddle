@@ -150,7 +150,7 @@
   This is useful when the child cursors' references must be consistent across reorderings (which index does not provide).
   Like track's and fmap's `f`, `key-fn` MUST be stable across invocations to provide stable child references."
   ([rv]
-   {:pre [(reactive? rv) @(fmap #(or (seq %) (nil? %)) rv)]}
+   {:pre [(reactive? rv) @(fmap #(or (coll? %) (nil? %)) rv)]} ; vector and seq allowed, (seq %) breaks in the relation unsequence case not sure why
    (->> (range @(fmap count rv))
         ; cursur indexing by index silently fails if @rv is a list here
         (map (fn [index] [(cursor rv [index]) index]))))
