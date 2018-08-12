@@ -119,12 +119,6 @@
       [:head :element _ false] attribute-label              ; preserve old behavior
       [:body :element _ false] controls/string              ; aggregate, what else?
 
-      [:head :naked _ _] (constantly (case (:hyperfiddle.ui/layout ctx)
-                                       :hyperfiddle.ui.layout/table ["noscript"]
-                                       [:div "naked head"]))
-      [:body :naked _ _] (constantly (case (:hyperfiddle.ui/layout ctx)
-                                       :hyperfiddle.ui.layout/table ["noscript"]
-                                       [:div "naked body"]))
       )))
 
 (defn ^:export semantic-css [ctx]
