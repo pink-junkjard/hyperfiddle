@@ -23,25 +23,6 @@
 (defn links-at [path links-ref]
   (filter (partial same-path-as? path) @links-ref))
 
-(defn same-class-as? [class {classes :link/class}]
-  (boolean ((set classes) class)))
-
-(defn select-all "Find the closest match. Can it search parent scopes for :options ?"
-  ([ctx rel] {:pre [rel]}
-   (->> @(:hypercrud.browser/links ctx)
-        (filter #(= rel (:link/rel %)))))
-  ([ctx rel ?class]
-   (->> (select-all ctx rel)
-        (filter (fn [link]
-                  (if ?class
-                    (same-class-as? ?class link)
-                    true))))))
-
-(comment
-  ; Maybe this shouldn't exist, the caller should validate?
-  (defn select-one [ctx rel & [?class]]
-    (first (select-all ctx rel ?class))))
-
 (let [memoized-eval-props (memoize eval/safe-eval-string)]
   (defn eval-hc-props [props-str ctx]
     (if (and (string? props-str) (not (string/blank? props-str)))

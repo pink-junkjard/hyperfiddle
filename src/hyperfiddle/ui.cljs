@@ -30,9 +30,8 @@
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.ui.api]
     [hyperfiddle.ui.controls :as controls]
-    [hyperfiddle.ui.hyper-controls :refer [hyper-label magic-new-body magic-new-head]]
+    [hyperfiddle.ui.hyper-controls :refer [attribute-label entity-label magic-new-body magic-new-head]]
     [hyperfiddle.ui.hacks]                                  ; exports
-    [hyperfiddle.ui.link-impl :as ui-link :refer [anchors iframes]]
     [hyperfiddle.ui.popover :refer [popover-cmp]]
     [hyperfiddle.ui.select :refer [select]]
     [hyperfiddle.ui.sort :as sort]
@@ -70,25 +69,30 @@
         [_ :many] controls/edn-many))))
 
 (declare result)
+(declare link)
+(declare ui-from-link)
 
 (defn control+ [val props ctx]
   [(control ctx) val props ctx])
 
-(defn links-only+ [val props ctx]
-  (fragment
-    [anchors (:hypercrud.browser/path ctx) props ctx]       ; Order sensitive, here be floats
-    [iframes (:hypercrud.browser/path ctx) props ctx]))
+(defn entity [val props ctx]                                ; What about semantics we don't understand?
+  [:div #_(fragment)
+   (->> (concat
+          (data/select-all ctx :hyperfiddle/edit)
+          (data/select-all ctx :hyperfiddle/remove)
+          (data/select-all ctx :options))
+        (r/track identity)
+        (r/unsequence :db/id)
+        (map (fn [[rv k]]
+               ^{:key k}
+               [ui-from-link rv ctx props])))])
 
 (defn result+ [val props ctx]
-  (fragment
-    [result ctx]                                            ; flipped args :(
-    [anchors (:hypercrud.browser/path ctx) props ctx]       ; Order sensitive, here be floats
-    [iframes (:hypercrud.browser/path ctx) props ctx]))
+  ; This form has an entity field which will draw the links.
+  [result ctx])
 
 (defn select+ [val props ctx]
-  (if-let [class (:options props)]
-    [select (data/select+ ctx :options class) props ctx]
-    [select props ctx]))
+  [select (data/select+ ctx :options (:options props)) props ctx])
 
 (defn ^:export hyper-control "Handles labels too because we show links there." ; CTX is done after here. props and val only. But recursion needs to look again.
   [ctx]
@@ -99,12 +103,17 @@
         child-fields (not (some->> (:hypercrud.browser/fields ctx) (r/fmap nil?) deref))]
     (match* [head-or-body segment-type segment child-fields #_@user]
       [:head :attribute '* _] magic-new-head
-      [:head _ _ _] hyper-label
       [:body :attribute '* _] magic-new-body
+
+      [:head :attribute _ _] attribute-label
       [:body :attribute _ true] result+
       [:body :attribute _ false] (or (attr-renderer ctx) control+)
-      [:body _ _ true] links-only+                        ; entity (:remove :edit)
-      [:body _ _ false] controls/string                   ; aggregate, what else?
+
+      [:head _ _ true] entity-label
+      [:body _ _ true] entity                               ; entity (:remove :edit)
+
+      [:head _ _ false] attribute-label                     ; preserve old behavior
+      [:body _ _ false] controls/string                     ; aggregate, what else?
       )))
 
 (defn ^:export semantic-css [ctx]

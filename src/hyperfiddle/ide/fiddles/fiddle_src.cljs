@@ -18,8 +18,7 @@
     [hyperfiddle.ide.fiddles.fiddle-links.renderer :as links-fiddle]
     #_[hyperfiddle.ide.hf-live :as hf-live]                 ;cycle
     [hyperfiddle.runtime :as runtime]
-    [hyperfiddle.ui :refer [anchor field hyper-control link markdown]]
-    [hyperfiddle.ui.link-impl :refer [anchors]]))
+    [hyperfiddle.ui :refer [anchor field hyper-control link markdown]]))
 
 
 (defn process-links [uri links]
@@ -102,7 +101,6 @@
                    [:div
                     (link :hyperfiddle/new "link" ctx)
                     [:div [links-fiddle/renderer ctx (:embed-mode props)]]
-                    #_[anchors (:hypercrud.browser/path ctx) (dissoc props :embed-mode) ctx]
                     (when-not (:embed-mode props)
                       #_[:div.hf-underdoc [markdown (:fiddle/links underdocs)]])])
    })

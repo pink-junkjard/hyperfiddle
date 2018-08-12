@@ -1,15 +1,18 @@
 (ns hyperfiddle.ui.hyper-controls
   (:require
     [contrib.reactive :as r]
+    [contrib.reagent :refer [fragment]]
     [contrib.ui.input :refer [keyword-input* edn-input*]]
     [contrib.ui.tooltip :refer [tooltip-thick]]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
+    #_[hyperfiddle.ui]
+    [hyperfiddle.data :as data]
     [hyperfiddle.ui.controls :as controls]
     [hyperfiddle.ui.docstring :refer [semantic-docstring]]))
 
 
-(defn hyper-label [_ props ctx]
+(defn attribute-label [_ props ctx]
   (when-let [label (some->> (:hypercrud.browser/field ctx)
                             (r/fmap ::field/label)
                             deref)]
@@ -17,6 +20,16 @@
       [tooltip-thick (if help-md
                        [:div.hyperfiddle.docstring [contrib.ui/markdown help-md]])
        [:label props label (if help-md [:sup "†"])]])))
+
+(defn entity-label [_ props ctx]
+  [:div #_(fragment)
+   [attribute-label _ props ctx]
+   (->> (data/select-all ctx :hyperfiddle/new)
+        (r/track identity)
+        (r/unsequence :db/id)
+        (map (fn [[rv k]]
+               ^{:key k}
+               [hyperfiddle.ui/ui-from-link rv ctx props])))])
 
 (defn magic-new-head [_ props ctx]
   (let [#_#_read-only (r/fmap (comp not controls/writable-entity?) (context/entity ctx)) ;-- don't check this, '* always has a dbid and is writable

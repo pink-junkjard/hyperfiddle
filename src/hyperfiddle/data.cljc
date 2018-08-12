@@ -2,6 +2,7 @@
   (:require
     [cats.core :refer [fmap >>=]]
     [cats.monad.either :refer [left right]]
+    [contrib.data :refer [take-to]]
     [contrib.reactive :as r]
     [cuerdas.core :as str]
     [hypercrud.browser.base :as base]
@@ -56,8 +57,29 @@
         ; this result can be directly inserted as children in a reagemnt component, CANNOT be a vector
         seq)))
 
+(defn matches-path? [this-path link-path]
+  (->> (contrib.data/ancestry-divergence link-path this-path)
+       (drop-while (comp not #{:head :body}))
+       empty?))
+
+(defn ^:export select-all "List[Link]. Find the closest match. Can it search parent scopes for :options ?"
+  ; Not reactive! Track it outside. (r/track data/select-all ctx rel ?class)
+  ([ctx]
+   (->> @(:hypercrud.browser/links ctx)                     ; Reaction deref is why this belongs in a track
+        (filter (comp (partial matches-path? (:hypercrud.browser/path ctx))
+                      link/read-path :link/path))))
+  ([ctx rel] {:pre [rel]}
+   (->> (select-all ctx)
+        (filter #(= rel (:link/rel %)))))
+  ([ctx rel ?class]
+   (->> (select-all ctx rel)
+        (filter (fn [link]
+                  (if ?class
+                    (boolean ((set (:link/class link)) ?class))
+                    true))))))
+
 (defn ^:export select+ "get a link for browsing later" [ctx rel & [?class]] ; Right[Reaction[Link]], Left[String]
-  (let [link?s (r/track link/select-all ctx rel ?class)
+  (let [link?s (r/track select-all ctx rel ?class)
         count @(r/fmap count link?s)]
     (cond
       (= 1 count) (right (r/fmap first link?s))

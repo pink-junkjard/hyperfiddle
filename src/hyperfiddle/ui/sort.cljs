@@ -2,8 +2,7 @@
   (:require [contrib.css :refer [css-slugify css]]
             [contrib.reactive :as r]
             [hypercrud.browser.context :as context]
-            [hypercrud.browser.link :as link]
-            [hyperfiddle.ui.link-impl :as ui-link]))
+            [hypercrud.browser.link :as link]))
 
 
 ; sorting currently breaks click handling in popovers

@@ -68,4 +68,7 @@
   (is (= (ancestry-divergence [:body 0 :reg/gender] [:body 0 :reg/shirt-size]) '(:reg/gender)))
   (is (= (ancestry-divergence [:body 0 :user/user-id] '(:body 0 :reg/gender)) '(:user/user-id)))
   (is (= (ancestry-divergence [] [:body 0 :fiddle/links :body :link/fiddle]) '()))
+  (is (= (ancestry-divergence [:body 0] [:body 0 :fiddle/links :body :link/fiddle]) '()))
+  (is (= (ancestry-divergence [:body 0 :fiddle/links :body :link/fiddle] [:body 0]) '(:fiddle/links :body :link/fiddle)))
+  (is (= (ancestry-divergence [:body 0 :fiddle/links :body :link/fiddle] []) '(:body 0 :fiddle/links :body :link/fiddle)))
   )

@@ -23,7 +23,6 @@
     hyperfiddle.ide.fiddles.schema_test
     hyperfiddle.ide-test
     hyperfiddle.readers-test
-    hyperfiddle.ui.link-impl-test
     ))
 
 (defn run []
@@ -46,5 +45,4 @@
     'hyperfiddle.ide.fiddles.schema_test
     'hyperfiddle.ide-test
     'hyperfiddle.readers-test
-    'hyperfiddle.ui.link-impl-test
     ))
