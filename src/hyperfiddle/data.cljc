@@ -16,7 +16,7 @@
   ; This keyfn is very tricky, read https://github.com/hyperfiddle/hyperfiddle/issues/341
   (hash (map #(or (:db/id %) %) relation)))
 
-(defn- relative-links-at [path-segments ctx]
+(defn- relative-links-at [path-segments ctx]                ; scary
   (let [path (cond
                (empty? (:hypercrud.browser/path ctx)) path-segments
 
@@ -48,11 +48,11 @@
                              (not @(r/fmap empty? (relative-links-at [:body path-segment] ctx))))
                          (conj (f-field [path-segment] ctx))))))
         vec
-        (cond->
+#_        (cond->
           (or (not @(r/fmap empty? (relative-links-at [:head] ctx)))
-              (not @(r/fmap empty? (relative-links-at [:body] ctx))))
-          ; row/relation; omit if result-row & no links. eventually we should probably always display
-          (conj (f-field [] ctx)))
+              (not @(r/fmap empty? (relative-links-at [:body] ctx)))))
+        ; row/relation; omit if result-row & no links. eventually we should probably always display
+        (conj (f-field [] ctx))
 
         ; this result can be directly inserted as children in a reagemnt component, CANNOT be a vector
         seq)))

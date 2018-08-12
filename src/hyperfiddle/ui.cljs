@@ -110,11 +110,13 @@
       [:body :attribute _ true] result+
       [:body :attribute _ false] (or (attr-renderer ctx) control+)
 
-      [:head _ _ true] entity-label
-      [:body _ _ true] entity                               ; entity (:remove :edit)
+      [:head :element _ true] entity-label
+      [:body :element _ true] entity                        ; entity (:remove :edit)
 
-      [:head _ _ false] attribute-label                     ; preserve old behavior
-      [:body _ _ false] controls/string                     ; aggregate, what else?
+      [:head :element _ false] attribute-label              ; preserve old behavior
+      [:body :element _ false] controls/string              ; aggregate, what else?
+
+      [_ :naked _ _] (constantly [:noscript])
       )))
 
 (defn ^:export semantic-css [ctx]
@@ -260,22 +262,29 @@ User renderers should not be exposed to the reaction."
         [ui-from-link link-ref ctx props]))))
 
 (defn form-field "Form fields are label AND value. Table fields are label OR value."
+  ; It is the driver-fn's job to elide this field if it will be empty
   [hyper-control relative-path ctx ?f props]                ; ?f :: (val props ctx) => DOM
   (let [state (r/atom {:hyperfiddle.ui.form/magic-new-a nil})]
     (fn [hyper-control relative-path ctx ?f props]
       (let [ctx (assoc ctx :hyperfiddle.ui.form/state state)
+            is-naked (empty? relative-path)
             ; we want the wrapper div to have the :body styles, so careful not to pollute the head ctx with :body
-            body-ctx (context/focus ctx (cons :body relative-path))
-            head-ctx (context/focus ctx (cons :head relative-path))
+            body-ctx (context/focus ctx (if-not is-naked (cons :body relative-path)))
+            head-ctx (context/focus ctx (if-not is-naked (cons :head relative-path)))
             props (update props :class css (semantic-css body-ctx))]
-        ; It is the driver-fn's job to elide this field if it will be empty
         [:div {:class (css "field" (:class props))
                :style {:border-color (border-color body-ctx)}}
-         ^{:key :form-head}
-         [(or (:label-fn props) (hyper-control head-ctx)) nil props head-ctx]
-         ^{:key :form-body}
-         [:div
-          [(or ?f (hyper-control body-ctx)) @(:hypercrud.browser/data body-ctx) props body-ctx]]]))))
+         (if is-naked
+           (fragment
+             [:div "naked"]                                 ; hyper head control infinite loop
+             [:div "naked body"]
+             )
+           (fragment
+             ^{:key :form-head}
+             [(or (:label-fn props) (hyper-control head-ctx)) nil props head-ctx]
+             ^{:key :form-body}
+             [:div
+              [(or ?f (hyper-control body-ctx)) @(:hypercrud.browser/data body-ctx) props body-ctx]]))]))))
 
 (defn table-field "Form fields are label AND value. Table fields are label OR value."
   [hyper-control relative-path ctx ?f props]                ; ?f :: (val props ctx) => DOM
