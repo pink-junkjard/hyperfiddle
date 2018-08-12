@@ -81,6 +81,8 @@
           (data/select-all ctx :hyperfiddle/edit)
           (data/select-all ctx :hyperfiddle/remove)
           (data/select-all ctx :options))
+        (filter (comp (partial data/deps-not-over-satisfied? (:hypercrud.browser/path ctx))
+                      link/read-path :link/path))
         (r/track identity)
         (r/unsequence :db/id)
         (map (fn [[rv k]]
@@ -88,7 +90,6 @@
                [ui-from-link rv ctx props])))])
 
 (defn result+ [val props ctx]
-  ; This form has an entity field which will draw the links.
   [result ctx])
 
 (defn select+ [val props ctx]

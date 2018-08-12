@@ -57,8 +57,14 @@
         ; this result can be directly inserted as children in a reagemnt component, CANNOT be a vector
         seq)))
 
-(defn matches-path? [this-path link-path]
+(defn deps-satisfied? "Links in this :body strata" [this-path link-path]
   (->> (contrib.data/ancestry-divergence link-path this-path)
+       (drop-while (comp not #{:head :body}))
+       empty?))
+
+(defn deps-not-over-satisfied? [this-path link-path]
+  ; Reject non-repeating links in a repeating context e.g. :xray mode
+  (->> (contrib.data/ancestry-divergence this-path link-path)
        (drop-while (comp not #{:head :body}))
        empty?))
 
@@ -66,7 +72,7 @@
   ; Not reactive! Track it outside. (r/track data/select-all ctx rel ?class)
   ([ctx]
    (->> @(:hypercrud.browser/links ctx)                     ; Reaction deref is why this belongs in a track
-        (filter (comp (partial matches-path? (:hypercrud.browser/path ctx))
+        (filter (comp (partial deps-satisfied? (:hypercrud.browser/path ctx))
                       link/read-path :link/path))))
   ([ctx rel] {:pre [rel]}
    (->> (select-all ctx)

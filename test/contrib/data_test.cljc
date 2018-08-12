@@ -59,8 +59,14 @@
 
 (deftest ancestry-common-1
   []
-  (is (= (ancestry-common [1 2 3 4 5 6] [1 2 3 4 10 11])
-         '(1 2 3 4))))
+  (is (= (ancestry-common [1 2 3 4 5 6] [1 2 3 4 10 11]) '(1 2 3 4)))
+  (is (= (ancestry-common [:body 0 :reg/gender] [:body 0 :reg/shirt-size]) '(:body 0)))
+  (is (= (ancestry-common [:body 0 :user/user-id] '(:body 0 :reg/gender)) '(:body 0)))
+  (is (= (ancestry-common [] [:body 0 :fiddle/links :body :link/fiddle]) '()))
+  (is (= (ancestry-common [:body 0] [:body 0 :fiddle/links :body :link/fiddle]) '(:body 0)))
+  (is (= (ancestry-common [:body 0 :fiddle/links :body :link/fiddle] [:body 0]) '(:body 0)))
+  (is (= (ancestry-common [:body 0 :fiddle/links :body :link/fiddle] []) '()))
+  )
 
 (deftest ancestry-divergence-1
   []
