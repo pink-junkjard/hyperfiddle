@@ -46,7 +46,7 @@
                                vec)))))))
 
 (defn attribute-segment? [path-segment]
-  (and (not (contains? #{:head :body :naked} path-segment))        ; todo cannot conflict with :db/ident :head | :body
+  (and (not (contains? #{:head :body} path-segment))        ; todo cannot conflict with :db/ident :head | :body
        (or (keyword? path-segment)
            (= '* path-segment))))
 
@@ -145,15 +145,6 @@
         (find-field [path-segment fields] (first (filter #(= (::field/path-segment %) path-segment) fields)))
         (focus-segment [ctx path-segment]
           (cond
-            (and (= path-segment :naked))
-            (-> ctx
-                (assoc :hypercrud.browser/parent ctx)
-                (dissoc :hypercrud.browser/attribute
-                        :hypercrud.browser/data
-                        :hypercrud.browser/data-cardinality
-                        :hypercrud.browser/field)
-                (update :hypercrud.browser/path conj :naked)
-                (assoc :hypercrud.browser/attribute :naked))
 
             ; todo cannot conflict with :db/ident :head
             (and (= path-segment :head) #_(nil? (:hypercrud.browser/data-cardinality ctx)))
