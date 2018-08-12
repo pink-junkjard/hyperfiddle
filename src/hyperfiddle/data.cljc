@@ -48,16 +48,11 @@
                              (not @(r/fmap empty? (relative-links-at [:body path-segment] ctx))))
                          (conj (f-field [path-segment] ctx))))))
         vec
-#_        (cond->
-          (or (not @(r/fmap empty? (relative-links-at [:head] ctx)))
-              (not @(r/fmap empty? (relative-links-at [:body] ctx)))))
-        ; row/relation; omit if result-row & no links. eventually we should probably always display
-        (conj (f-field [] ctx))
-
         ; this result can be directly inserted as children in a reagemnt component, CANNOT be a vector
         seq)))
 
 (defn deps-satisfied? "Links in this :body strata" [this-path link-path]
+  ; TODO tighten - needs to understand WHICH find element is in scope
   (->> (contrib.data/ancestry-divergence link-path this-path)
        (drop-while (comp not #{:head :body}))
        empty?))

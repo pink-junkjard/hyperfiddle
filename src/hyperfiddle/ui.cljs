@@ -80,7 +80,10 @@
    (->> (concat
           (data/select-all ctx :hyperfiddle/edit)
           (data/select-all ctx :hyperfiddle/remove)
-          (data/select-all ctx :options))
+          (data/select-all ctx :options)
+          (data/select-all ctx :anchor)
+          (data/select-all ctx :button)
+          (data/select-all ctx :iframe))
         (filter (comp (partial data/deps-not-over-satisfied? (:hypercrud.browser/path ctx))
                       link/read-path :link/path))
         (r/track identity)
@@ -116,8 +119,12 @@
       [:head :element _ false] attribute-label              ; preserve old behavior
       [:body :element _ false] controls/string              ; aggregate, what else?
 
-      [:head :naked _ _] (constantly [:div "naked head"])
-      [:body :naked _ _] (constantly [:div "naked body"])
+      [:head :naked _ _] (constantly (case (:hyperfiddle.ui/layout ctx)
+                                       :hyperfiddle.ui.layout/table ["noscript"]
+                                       [:div "naked head"]))
+      [:body :naked _ _] (constantly (case (:hyperfiddle.ui/layout ctx)
+                                       :hyperfiddle.ui.layout/table ["noscript"]
+                                       [:div "naked body"]))
       )))
 
 (defn ^:export semantic-css [ctx]
@@ -184,7 +191,10 @@ User renderers should not be exposed to the reaction."
               [(:alpha.hypercrud.browser/ui-comp ctx) ctx (update props :class css "hyperfiddle-loading" "ui")]
               [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])])]))])))
 
-(letfn [(prompt [link-ref ?label] (str (or ?label (some-> @(r/fmap :link/rel link-ref) name) "_")))
+(letfn [(prompt [link-ref ?label] (str (or ?label
+                                           (some-> @(r/fmap :link/class link-ref) (->> (interpose " ") (apply str)) blank->nil)
+                                           (some-> @(r/fmap :link/rel link-ref) name)
+                                           "_")))
         (p-build-route' [ctx link] (routing/build-route' link ctx))
         (build-link-props [route'-ref link-ref ctx]         ; todo this function needs untangling; ui-from-route ignores most of this
           ; this is a fine place to eval, put error message in the tooltip prop
@@ -286,7 +296,8 @@ User renderers should not be exposed to the reaction."
   [hyper-control relative-path ctx ?f props]                ; ?f :: (val props ctx) => DOM
   (let [head-or-body (last (:hypercrud.browser/path ctx))   ; this is ugly and not uniform with form-field
         ctx (context/focus ctx relative-path)
-        props (update props :class css (semantic-css ctx))]
+        props (update props :class css (semantic-css ctx))
+        is-naked (empty? relative-path)]
     (case head-or-body
       :head [:th {:class (css "field" (:class props)
                               (when (sort/sortable? ctx) "sortable") ; hoist
@@ -296,7 +307,7 @@ User renderers should not be exposed to the reaction."
              [(or (:label-fn props) (hyper-control ctx)) nil props ctx]]
       :body [:td {:class (css "field" (:class props) "truncate")
                   :style {:border-color (when (:hypercrud.browser/source-symbol ctx) (border-color ctx))}}
-             [(or ?f (hyper-control ctx)) @(:hypercrud.browser/data ctx) props ctx]])))
+             [(or ?f (hyper-control ctx)) (if-not is-naked @(:hypercrud.browser/data ctx)) props ctx]])))
 
 ; (defmulti field ::layout)
 (defn ^:export field "Works in a form or table context. Draws label and/or value."
@@ -351,7 +362,18 @@ nil. call site must wrap with a Reagent component"
                               (apply fragment key (data/form (r/partial field-with-props props) ctx)))
         :db.cardinality/many [table (r/partial data/form (r/partial field-with-props props)) ctx props]
         ; blank fiddles
-        nil))))
+        nil)
+      (->> (concat (data/select-all ctx :options)
+                   (data/select-all ctx :iframe)
+                   (data/select-all ctx :anchor)
+                   (data/select-all ctx :button))
+           (filter (comp (partial data/deps-satisfied? (:hypercrud.browser/path ctx))
+                         link/read-path :link/path))
+           (r/track identity)
+           (r/unsequence :db/id)
+           (map (fn [[rv k]]
+                  ^{:key k}
+                  [ui-from-link rv ctx props]))))))
 
 (def ^:dynamic markdown)                                    ; this should be hf-contrib or something
 
