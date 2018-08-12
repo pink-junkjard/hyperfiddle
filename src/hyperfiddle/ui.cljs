@@ -116,7 +116,8 @@
       [:head :element _ false] attribute-label              ; preserve old behavior
       [:body :element _ false] controls/string              ; aggregate, what else?
 
-      [_ :naked _ _] (constantly [:noscript])
+      [:head :naked _ _] (constantly [:div "naked head"])
+      [:body :naked _ _] (constantly [:div "naked body"])
       )))
 
 (defn ^:export semantic-css [ctx]
@@ -269,22 +270,17 @@ User renderers should not be exposed to the reaction."
       (let [ctx (assoc ctx :hyperfiddle.ui.form/state state)
             is-naked (empty? relative-path)
             ; we want the wrapper div to have the :body styles, so careful not to pollute the head ctx with :body
-            body-ctx (context/focus ctx (if-not is-naked (cons :body relative-path)))
-            head-ctx (context/focus ctx (if-not is-naked (cons :head relative-path)))
+            body-ctx (context/focus ctx (cons :body (if is-naked '(:naked) relative-path)))
+            head-ctx (context/focus ctx (cons :head (if is-naked '(:naked) relative-path)))
             props (update props :class css (semantic-css body-ctx))]
         [:div {:class (css "field" (:class props))
                :style {:border-color (border-color body-ctx)}}
-         (if is-naked
-           (fragment
-             [:div "naked"]                                 ; hyper head control infinite loop
-             [:div "naked body"]
-             )
-           (fragment
-             ^{:key :form-head}
-             [(or (:label-fn props) (hyper-control head-ctx)) nil props head-ctx]
-             ^{:key :form-body}
-             [:div
-              [(or ?f (hyper-control body-ctx)) @(:hypercrud.browser/data body-ctx) props body-ctx]]))]))))
+         (fragment
+           ^{:key :form-head}
+           [(or (:label-fn props) (hyper-control head-ctx)) nil props head-ctx]
+           ^{:key :form-body}
+           [:div
+            [(or ?f (hyper-control body-ctx)) (if-not is-naked @(:hypercrud.browser/data body-ctx)) props body-ctx]])]))))
 
 (defn table-field "Form fields are label AND value. Table fields are label OR value."
   [hyper-control relative-path ctx ?f props]                ; ?f :: (val props ctx) => DOM
