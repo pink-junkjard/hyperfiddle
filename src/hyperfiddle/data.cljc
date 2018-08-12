@@ -84,8 +84,8 @@
         count @(r/fmap count link?s)]
     (cond
       (= 1 count) (right (r/fmap first link?s))
-      (= 0 count) (left (str/format "no match for rel: %s class: %s path: %s" (pr-str rel) (pr-str ?class)))
-      :else (left (str/format "Too many links matched for rel: %s class: %s path: %s" (pr-str rel) (pr-str ?class))))))
+      (= 0 count) (left (str/format "no match for rel: %s class: %s" (pr-str rel) (pr-str ?class)))
+      :else (left (str/format "Too many links matched for rel: %s class: %s" (pr-str rel) (pr-str ?class))))))
 
 (defn ^:export browse+ "Navigate a link by hydrating its context accounting for dependencies in scope.
   returns Either[Loading|Error,ctx]."
