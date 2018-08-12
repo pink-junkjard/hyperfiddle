@@ -22,6 +22,7 @@
     hypercrud.browser.system-link-test
     hyperfiddle.ide.fiddles.schema_test
     hyperfiddle.ide-test
+    hyperfiddle.data-test
     hyperfiddle.readers-test
     ))
 
@@ -44,5 +45,6 @@
     'hypercrud.browser.system-link-test
     'hyperfiddle.ide.fiddles.schema_test
     'hyperfiddle.ide-test
+    'hyperfiddle.data-test
     'hyperfiddle.readers-test
     ))
