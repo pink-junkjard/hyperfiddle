@@ -15,5 +15,6 @@
   (is (= (data/deps-satisfied? [] [:body 0]) false))
   (is (= (data/deps-satisfied? [:body 0] []) true))
   (is (= (data/deps-satisfied? [] [:body 0 :user/user-id]) false)) ; This becomes true if a relation can be implied in scope
+  (is (= (data/deps-satisfied? [:body] [:body 0 :user/user-id]) true))
   (is (= (data/deps-satisfied? [:body 0 :user/user-id] []) true))
   )
