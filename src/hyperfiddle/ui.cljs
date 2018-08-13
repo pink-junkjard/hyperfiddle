@@ -257,7 +257,8 @@ User renderers should not be exposed to the reaction."
 
 (defn ^:export browse "Relation level browse. Works in forms and lists but not tables."
   [rel class ctx & [?user-renderer props]]
-  (let [props (if ?user-renderer
+  (let [ctx (context/focus ctx [:body])                     ; first level links are in scope right away
+        props (if ?user-renderer
                 (assoc props :user-renderer ?user-renderer)
                 props)]
     (either/branch
