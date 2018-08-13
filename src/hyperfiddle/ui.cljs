@@ -84,8 +84,7 @@
           (data/select-all ctx :anchor)
           (data/select-all ctx :button)
           (data/select-all ctx :iframe))
-        (filter (comp (partial data/deps-not-over-satisfied? (:hypercrud.browser/path ctx))
-                      link/read-path :link/path))
+        (remove (comp (partial data/deps-over-satisfied? (:hypercrud.browser/path ctx)) link/read-path :link/path))
         (r/track identity)
         (r/unsequence :db/id)
         (map (fn [[rv k]]
@@ -359,8 +358,7 @@ nil. call site must wrap with a Reagent component"
                    (data/select-all ctx :iframe)
                    (data/select-all ctx :anchor)
                    (data/select-all ctx :button))
-           (filter (comp (partial data/deps-satisfied? (:hypercrud.browser/path ctx))
-                         link/read-path :link/path))
+           (remove (comp (partial data/deps-over-satisfied? (:hypercrud.browser/path ctx)) link/read-path :link/path))
            (r/track identity)
            (r/unsequence :db/id)
            (map (fn [[rv k]]

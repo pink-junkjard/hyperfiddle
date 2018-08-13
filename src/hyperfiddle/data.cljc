@@ -53,15 +53,18 @@
 
 (defn deps-satisfied? "Links in this :body strata" [this-path link-path]
   ; TODO tighten - needs to understand WHICH find element is in scope
-  (->> (contrib.data/ancestry-divergence link-path this-path)
-       (drop-while (comp not #{:head :body}))
-       empty?))
+  (let [left-divergence (contrib.data/ancestry-divergence link-path this-path)
+        more-splits (->> left-divergence (filter #(= :body %)) count)]
+    (= 0 more-splits)))
 
-(defn deps-not-over-satisfied? [this-path link-path]
-  ; Reject non-repeating links in a repeating context e.g. :xray mode
-  (->> (contrib.data/ancestry-divergence this-path link-path)
-       (drop-while (comp not #{:head :body}))
-       empty?))
+(defn link-path-floor [path]
+  (->> path
+       reverse
+       (drop-while #(= :attribute (context/segment-type %)))
+       reverse))
+
+(defn deps-over-satisfied? "satisfied but not over-satisfied" [this-path link-path]
+  (not= this-path (link-path-floor link-path)))
 
 (defn ^:export select-all "List[Link]. Find the closest match. Can it search parent scopes for :options ?"
   ; Not reactive! Track it outside. (r/track data/select-all ctx rel ?class)
