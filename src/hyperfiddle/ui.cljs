@@ -119,7 +119,7 @@
       [:head :element _ false] attribute-label              ; preserve old behavior
       [:body :element _ false] controls/string              ; aggregate, what else?
 
-      [:head :naked :head true] (r/constantly [:noscript])  ; This is a bug in src mode
+      [:head :naked _ _] (r/constantly [:noscript])  ; This is the fiddle links table – nested :head independent
       )))
 
 (defn ^:export semantic-css [ctx]
