@@ -119,6 +119,7 @@
       [:head :element _ false] attribute-label              ; preserve old behavior
       [:body :element _ false] controls/string              ; aggregate, what else?
 
+      [:head :naked :head true] (r/constantly [:noscript])  ; This is a bug in src mode
       )))
 
 (defn ^:export semantic-css [ctx]
@@ -272,26 +273,23 @@ User renderers should not be exposed to the reaction."
   (let [state (r/atom {:hyperfiddle.ui.form/magic-new-a nil})]
     (fn [hyper-control relative-path ctx ?f props]
       (let [ctx (assoc ctx :hyperfiddle.ui.form/state state)
-            is-naked (empty? relative-path)
-            ; we want the wrapper div to have the :body styles, so careful not to pollute the head ctx with :body
-            body-ctx (context/focus ctx (cons :body (if is-naked '(:naked) relative-path)))
-            head-ctx (context/focus ctx (cons :head (if is-naked '(:naked) relative-path)))
+            body-ctx (context/focus ctx (cons :body relative-path))
+            head-ctx (context/focus ctx (cons :head relative-path))
             props (update props :class css (semantic-css body-ctx))]
         [:div {:class (css "field" (:class props))
-               :style {:border-color (border-color body-ctx)}}
+               :style {:border-color (border-color body-ctx)}} ; wrapper div has :body stypes - why?
          (fragment
            ^{:key :form-head}
            [(or (:label-fn props) (hyper-control head-ctx)) nil props head-ctx]
            ^{:key :form-body}
            [:div
-            [(or ?f (hyper-control body-ctx)) (if-not is-naked @(:hypercrud.browser/data body-ctx)) props body-ctx]])]))))
+            [(or ?f (hyper-control body-ctx)) @(:hypercrud.browser/data body-ctx) props body-ctx]])]))))
 
 (defn table-field "Form fields are label AND value. Table fields are label OR value."
   [hyper-control relative-path ctx ?f props]                ; ?f :: (val props ctx) => DOM
   (let [head-or-body (last (:hypercrud.browser/path ctx))   ; this is ugly and not uniform with form-field
         ctx (context/focus ctx relative-path)
-        props (update props :class css (semantic-css ctx))
-        is-naked (empty? relative-path)]
+        props (update props :class css (semantic-css ctx))]
     (case head-or-body
       :head [:th {:class (css "field" (:class props)
                               (when (sort/sortable? ctx) "sortable") ; hoist
@@ -301,7 +299,7 @@ User renderers should not be exposed to the reaction."
              [(or (:label-fn props) (hyper-control ctx)) nil props ctx]]
       :body [:td {:class (css "field" (:class props) "truncate")
                   :style {:border-color (when (:hypercrud.browser/source-symbol ctx) (border-color ctx))}}
-             [(or ?f (hyper-control ctx)) (if-not is-naked @(:hypercrud.browser/data ctx)) props ctx]])))
+             [(or ?f (hyper-control ctx)) @(:hypercrud.browser/data ctx) props ctx]])))
 
 ; (defmulti field ::layout)
 (defn ^:export field "Works in a form or table context. Draws label and/or value."

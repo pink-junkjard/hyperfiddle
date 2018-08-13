@@ -68,6 +68,6 @@
       (when-not embed-mode (field [:hypercrud/props] ctx read-only-cell))
       (when-not embed-mode (field [] ctx
                                   (fn [val props ctx]
-                                    (link :hyperfiddle/remove "link" ctx)
+                                    (link :hyperfiddle/remove "link" ctx "remove")
                                     )))])
    ctx])
