@@ -45,7 +45,7 @@
                     :link/tx-fn retract-formula}))
 
            (and (::field/data-has-id? field)
-                (or (or (not (context/find-element-segment? (::field/path-segment field)))
+                (or (or (not (nil? (::field/path-segment field)))
                         (not= :entity (:fiddle/type parent-fiddle)))
                     (and (context/attribute-segment? (::field/path-segment field))
                          (not= '* (::field/path-segment field)))))
