@@ -18,7 +18,7 @@
   ([parent-fiddle dbname schema field]
    (body-links-for-field parent-fiddle dbname schema field [:body] false))
   ([parent-fiddle dbname schema field path parent-has-id?]
-   (let [path (conj path (::field/path-segment field))
+   (let [path (or (some->> (::field/path-segment field) (conj path)) path) ; fe wrapping causes spaces in paths
          s-path (string/join " " path)]
      (-> (->> (::field/children field)
               (filter ::field/data-has-id?)
