@@ -31,7 +31,7 @@
                                          (let [renderer (get-in ctx [:fields path-segment :label-renderer] default-label-renderer)]
                                            (try-either (renderer (get-value data) ctx)))))))
                           data
-                          @(:hypercrud.browser/fields ctx))
+                          @(r/fmap ::field/children (:hypercrud.browser/field ctx)))
                      (apply concat))
         label' (->> (with-context either/context (cats/sequence elabels)) ; prevents cats no context set errors
                     (fmap #(->> % (interpose ", ") (remove nil?) (apply str))))]
@@ -75,7 +75,7 @@
   (case @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/type])
     :entity [select-error-cmp "Only fiddle type `query` is supported for select options"]
     :blank [select-error-cmp "Only fiddle type `query` is supported for select options"]
-    :query (if (= :db.cardinality/many (:hypercrud.browser/data-cardinality ctx))
+    :query (if (= :db.cardinality/many @(r/fmap ::field/cardinality (:hypercrud.browser/field ctx)))
              [select-anchor-renderer' props option-props ctx]
              [select-error-cmp "Tuples and scalars are unsupported for select options. Please fix your options query to return a relation or collection"])
     ; default

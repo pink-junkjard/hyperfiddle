@@ -17,18 +17,16 @@
      [contrib.ui.input/input* @needle #(do (reset! needle %))
       {:placeholder ":task/title"}]
      (let [ctx (-> ctx
-                 (dissoc :hypercrud.browser/data :hypercrud.browser/data-cardinality)
-                 (update :hypercrud.browser/result (partial contrib.reactive/fmap do-filter-reactive #_(contrib.reactive/partial filter f?)))
-                 (hypercrud.browser.context/focus [:body])
-                 (assoc :hyperfiddle.ui/layout :hyperfiddle.ui.layout/table))]
+                   (update :hypercrud.browser/data (partial contrib.reactive/fmap do-filter-reactive))
+                   (assoc :hyperfiddle.ui/layout :hyperfiddle.ui.layout/table))]
        [hyperfiddle.ui/table
         (fn [ctx]
-          [(hyperfiddle.ui/field [0 :db/ident] ctx)
-           (hyperfiddle.ui/field [0 :db/valueType] ctx #(hyperfiddle.ui.controls/string ((comp (fnil name :–) :db/ident) %) %2 %3) {:read-only true})
-           (hyperfiddle.ui/field [0 :db/cardinality] ctx #(hyperfiddle.ui.controls/string ((comp (fnil name :–) :db/ident) %) %2 %3) {:read-only true})
-           (hyperfiddle.ui/field [0 :db/unique] ctx #(hyperfiddle.ui.controls/string ((comp (fnil name :–) :db/ident) %) %2 %3) {:read-only true})
-           (hyperfiddle.ui/field [0 :db/isComponent] ctx)
-           (hyperfiddle.ui/field [0 :db/fulltext] ctx nil {:read-only true})
-           (hyperfiddle.ui/field [0 :db/doc] ctx)
-           (hyperfiddle.ui/field [0] ctx)])
+          [(hyperfiddle.ui/field [:db/ident] ctx)
+           (hyperfiddle.ui/field [:db/valueType] ctx #(hyperfiddle.ui.controls/string ((comp (fnil name :–) :db/ident) %) %2 %3) {:read-only true})
+           (hyperfiddle.ui/field [:db/cardinality] ctx #(hyperfiddle.ui.controls/string ((comp (fnil name :–) :db/ident) %) %2 %3) {:read-only true})
+           (hyperfiddle.ui/field [:db/unique] ctx #(hyperfiddle.ui.controls/string ((comp (fnil name :–) :db/ident) %) %2 %3) {:read-only true})
+           (hyperfiddle.ui/field [:db/isComponent] ctx)
+           (hyperfiddle.ui/field [:db/fulltext] ctx nil {:read-only true})
+           (hyperfiddle.ui/field [:db/doc] ctx)
+           (hyperfiddle.ui/field [] ctx)])
         ctx])]))

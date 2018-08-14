@@ -16,7 +16,7 @@
   (let [?dbname (some-> (:hypercrud.browser/source-symbol ctx) str)
         ?last-segment (last (:hypercrud.browser/path ctx))]
     (and
-      (if (and ?dbname (not (context/find-element-segment? ?last-segment))) ; [fe attr] or [attr], NOT [fe] or []
+      (if (and ?dbname (context/attribute-segment? ?last-segment)) ; [fe attr] or [attr], NOT [fe] or []
         (let [{:keys [:db/cardinality :db/valueType]} @(r/cursor (:hypercrud.browser/schemas ctx) [?dbname ?last-segment])]
           (and
             (= (:db/ident cardinality) :db.cardinality/one)

@@ -45,7 +45,10 @@
   ; :find-element :attribute :value
   (cond
     (:hypercrud.ui/error ctx) ((:hypercrud.ui/error ctx) ctx)
-    (:hypercrud.browser/attribute ctx) error-inline         ; table: header or cell, form: header or cell
-    (context/find-element-segment? (last (:hypercrud.browser/path ctx))) error-inline
+
+    (and (> (count (:hypercrud.browser/path ctx)) 0)
+         (not= [:head] (:hypercrud.browser/path ctx))
+         (not= [:body] (:hypercrud.browser/path ctx))) error-inline
+
     ; browser including inline true links
     :else (r/partial error-block-with-stage ctx)))

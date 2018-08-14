@@ -18,12 +18,11 @@
 (defn docs-embed [attrs ctx-real class & {:keys [embed-mode]}]
   (let [attrs (or (seq attrs)
                   (clojure.set/intersection
-                    (-> @(:hypercrud.browser/result ctx-real)
+                    (-> @(:hypercrud.browser/data ctx-real)
                         keys
                         (->> (apply sorted-set-by (compare-by-index attr-order)))
                         (disj :db/id))))
-        ctx (shadow-fiddle ctx-real)
-        {:keys [:fiddle/ident]} @(:hypercrud.browser/result ctx)]
+        ctx (shadow-fiddle ctx-real)]
     (fn [ctx-real class & {:keys [embed-mode]}]
       (into
         [:div {:class class}]
@@ -33,7 +32,7 @@
           (field [0 k] ctx ?f props))))))
 
 (defn result-edn [attrs ctx class]
-  (let [s (-> @(:hypercrud.browser/result ctx)
+  (let [s (-> @(:hypercrud.browser/data ctx)
               (as-> $ (if (seq attrs) (select-keys $ attrs) $)) ; omit elided fiddle attrs
               hyperfiddle.ui.hacks/pull-soup->tree
               (contrib.pprint/pprint-str 50))]

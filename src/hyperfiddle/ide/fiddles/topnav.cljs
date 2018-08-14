@@ -35,14 +35,11 @@
             (nil? (:db/id fiddle-val)) fiddle-val
             :else (shadow-entity fiddle-val fiddle/fiddle-defaults)))]
   (defn shadow-fiddle [ctx]
-    {:pre [(-> ctx :hypercrud.browser/result)]}
+    {:pre [(-> ctx :hypercrud.browser/data)]}
     (let [route (:route ctx)
           [_ [e]] route                                     ; [:hyperfiddle/topnav [#entity["$" [:fiddle/ident :hyperfiddle.system/remove]]]]
           [_ target-fiddle-ident] (:db/id e)]
-      (-> ctx
-          (dissoc :hypercrud.browser/data :hypercrud.browser/data-cardinality :hypercrud.browser/path)
-          (update :hypercrud.browser/result (partial r/fmap (r/partial -shadow-fiddle target-fiddle-ident)))
-          (context/focus [:body])))))
+      (update ctx :hypercrud.browser/data (partial r/fmap (r/partial -shadow-fiddle target-fiddle-ident))))))
 
 (defn any-loading? [peer]
   (some (comp not nil? :hydrate-id val) @(runtime/state peer [::runtime/partitions])))
@@ -58,7 +55,7 @@
 
 (defn renderer [ctx class]
   (let [display-mode @(runtime/state (:peer ctx) [:display-mode])
-        {:keys [hypercrud.browser/result
+        {:keys [hypercrud.browser/data
                 hypercrud.browser/fiddle] :as ctx} (shadow-fiddle ctx)
         ; hack until hyperfiddle.net#156 is complete
         fake-managed-anchor (fn [rel relative-path ctx & [?label props]]
@@ -70,7 +67,7 @@
      [:div.left-nav
       [tooltip {:label "Home"} [:a.hf-auto-nav {:href "/"} @(runtime/state (:peer ctx) [::runtime/domain :domain/ident])]]
       [tooltip {:label "This fiddle"}                       ; also a good place for the route
-       [:span.hf-auto-nav (some-> @(r/cursor (:hypercrud.browser/result ctx) [:fiddle/ident]) str)]]
+       [:span.hf-auto-nav (some-> @(r/cursor (:hypercrud.browser/data ctx) [:fiddle/ident]) str)]]
       (fake-managed-anchor :fiddle-shortcuts [] ctx "shortcuts" {:tooltip [nil "Fiddles in this domain"]})]
 
      [:div.right-nav {:key "right-nav"}                     ; CAREFUL; this key prevents popover flickering
@@ -79,7 +76,7 @@
 
       (let [target-route (context/target-route ctx)
             src-mode (src-mode? (get target-route 3))
-            no-target-fiddle (nil? (:db/id @result))        ; ide-route omits fiddle for ide routes
+            no-target-fiddle (nil? (:db/id @data))          ; ide-route omits fiddle for ide routes
             change! #(runtime/dispatch! (:peer ctx) (actions/set-display-mode %))
             value (if src-mode :src display-mode)]
         [:span.radio-group
@@ -121,9 +118,9 @@
       (ui/link :new-fiddle [] ctx "new-fiddle")
       [tooltip {:label "Domain administration"} (ui/link :domain [] ctx "domain")]
       (if @(runtime/state (:peer ctx) [::runtime/user-id])
-        (let [{:keys [:hypercrud.browser/result]} @(hyperfiddle.data/browse :account [] ctx)]
-          (fake-managed-anchor :account [] ctx @(contrib.reactive/cursor result [:user/name])
-                               {:tooltip [nil (:user/email @result)]}))
+        (let [{:keys [:hypercrud.browser/data]} @(hyperfiddle.data/browse :account [] ctx)]
+          (fake-managed-anchor :account [] ctx @(r/fmap :user/name data)
+                               {:tooltip [nil @(r/fmap :user/email data)]}))
         [:a {:href (foundation/stateless-login-url ctx)} "login"])]]))
 
 (defn ^:export qe-picker-control [val props ctx]

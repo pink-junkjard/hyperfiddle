@@ -117,7 +117,7 @@
        "list" (fn [content argument props ctx]
                 [:ul props
                  (->> (:hypercrud.browser/data ctx)
-                      (r/unsequence data/relation-keyfn)
+                      (r/unsequence data/row-keyfn)
                       (map (fn [[relation k]]
                              ^{:key k} [:li [markdown content (context/body ctx relation)]]))
                       (doall))])})))

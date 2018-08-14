@@ -3,7 +3,7 @@
   (:require [clojure.test :refer [deftest is testing]]
             [contrib.data :as data]
             [contrib.reactive :as r]
-            [hypercrud.browser.field :as field :refer [auto-fields infer-attrs]]
+            [hypercrud.browser.field :as field :refer [auto-field infer-attrs]]
             [hypercrud.types.DbVal :refer [->DbVal]]
             [hypercrud.types.Entity :refer [->Entity]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
@@ -74,9 +74,9 @@
          :db/valueType {:db/ident :db.type/string}}]
        (data/group-by-assume-unique :db/ident)))
 
-(defn build-ctx [fiddle result]
+(defn build-ctx [fiddle result]                             ; this is starting to look a lot like base/process-results
   {:hypercrud.browser/fiddle (r/atom fiddle)
-   :hypercrud.browser/result (r/atom result)
+   :hypercrud.browser/data (r/atom result)
    :hypercrud.browser/schemas (r/atom {"$" test-schema})})
 
 #?(:clj
@@ -92,8 +92,12 @@
                    [default :a/y "a/y default"]
                    :a/z]]
        (macroexpand
-         `(let [attributes# (->> @(auto-fields (r/atom (~pull->request ~pull)) (build-ctx ~fiddle nil))
-                                 (mapcat ::field/children)
+         `(let [attributes# (->> @(auto-field (r/atom (~pull->request ~pull)) (build-ctx ~fiddle nil))
+                                 ::field/children
+                                 (mapcat (fn [field#]
+                                           (if (nil? (::field/source-symbol field#))
+                                             [field#]
+                                             (::field/children field#))))
                                  (mapv ::field/path-segment))]
             (is (~'= [:a/a :a/j :a/k :a/v :a/t :a/u :a/x :a/y :a/z] attributes#)))))))
 
@@ -112,8 +116,12 @@
                                                        {:db/id 27 :b/y "trew"}]
                                          :a/x {:db/id 21 :b/x "hjkl"}
                                          :a/z "zxcv"}])
-              attr-level-fields# (->> @(auto-fields (r/atom (~pull->request [(symbol "*")])) (build-ctx ~fiddle result#))
-                                      (mapcat ::field/children))]
+              attr-level-fields# (->> @(auto-field (r/atom (~pull->request [(symbol "*")])) (build-ctx ~fiddle result#))
+                                      ::field/children
+                                      (mapcat (fn [field#]
+                                                (if (nil? (::field/source-symbol field#))
+                                                  [field#]
+                                                  (::field/children field#)))))]
           ; cant test order with splat
           (is (~'= #{:a/x :a/y :a/z :a/comp-one :a/comp-many (symbol "*")}
                 (->> attr-level-fields#
@@ -172,8 +180,12 @@
                                            :a/v ["vbnm"]
                                            :a/x {:db/id 21 :b/x "hjkl"}
                                            :a/z "zxcv"}])
-                attr-level-fields# (->> @(auto-fields (r/atom (~pull->request ~pull)) (build-ctx ~fiddle result#))
-                                        (mapcat ::field/children))
+                attr-level-fields# (->> @(auto-field (r/atom (~pull->request ~pull)) (build-ctx ~fiddle result#))
+                                        ::field/children
+                                        (mapcat (fn [field#]
+                                                  (if (nil? (::field/source-symbol field#))
+                                                    [field#]
+                                                    (::field/children field#)))))
                 attributes# (mapv ::field/path-segment attr-level-fields#)]
             ; can only test order of defined attributes in relation to splat
             (is (~'= :a/a (first attributes#)))
@@ -211,8 +223,8 @@
             (test-partial-splat ~fiddle ~pull->request ~result-builder)))))
 
 (deftest blank []
-  (is (= [] @(auto-fields nil {:hypercrud.browser/schemas (r/atom nil)
-                               :hypercrud.browser/fiddle (r/atom {:fiddle/type :blank})}))))
+  (is (= [] @(auto-field nil {:hypercrud.browser/schemas (r/atom nil)
+                              :hypercrud.browser/fiddle (r/atom {:fiddle/type :blank})}))))
 
 (letfn [(f [a b]
           (cond

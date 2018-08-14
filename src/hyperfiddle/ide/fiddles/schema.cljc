@@ -47,20 +47,20 @@
                     :link/fiddle (db-cardinality-options $db)
                     :link/render-inline? true
                     :link/rel :options
-                    :link/class #{":body 0 :db/cardinality"}}
+                    :link/class #{":body :db/cardinality"}}
                    {:db/id (keyword "hyperfiddle.schema.db-unique-options" $db)
                     :link/fiddle (db-unique-options $db)
                     :link/render-inline? true
                     :link/rel :options
-                    :link/class #{":body 0 :db/unique"}}
+                    :link/class #{":body :db/unique"}}
                    {:db/id (keyword "hyperfiddle.schema.db-valueType-options" $db)
                     :link/fiddle (db-valueType-options $db)
                     :link/render-inline? true
                     :link/rel :options
-                    :link/class #{":body 0 :db/valueType"}}
+                    :link/class #{":body :db/valueType"}}
                    {:db/id :system-anchor-remove            ; XXX
                     :link/rel :hyperfiddle/remove
-                    :link/path ":body 0"
+                    :link/path ":body"
                     :link/disabled? true}}})
 
 (defn schema [$db]
@@ -81,13 +81,13 @@
    :fiddle/renderer (load-resource "ide/schema_renderer.cljs")
    :fiddle/links #{{:db/id :system-anchor-edit              ; XXX
                     :link/rel :hyperfiddle/edit
-                    :link/path ":body 0"
+                    :link/path ":body"
                     :link/fiddle (db-attribute-edit $db)}
                    {:db/id :system-anchor-new               ; XXX
                     :link/rel :hyperfiddle/new
-                    :link/path ":head 0"
+                    :link/path ":head"
                     :link/fiddle (db-attribute-edit $db)}
                    {:db/id :system-anchor-remove            ; XXX
                     :link/rel :hyperfiddle/remove
-                    :link/path ":body 0"
+                    :link/path ":body"
                     :link/disabled? true}}})

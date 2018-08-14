@@ -74,9 +74,7 @@
                   :link/create? true
                   :link/managed? true}))))))
 
-(defn system-links
-  "All sys links can be matched and merged with user-links. Matching is determined by link/rel and link/path"
-  [parent-fiddle fields schemas]
+(defn- system-links-impl [parent-fiddle fields schemas]
   (->> fields
        (filter ::field/source-symbol)
        (mapcat (fn [field]
@@ -94,3 +92,10 @@
                               :link/fiddle (system-fiddle/fiddle-system-edit dbname)
                               :link/create? true
                               :link/managed? true}))))))))
+
+(defn system-links
+  "All sys links can be matched and merged with user-links. Matching is determined by link/rel and link/path"
+  [parent-fiddle field schemas]
+  (if (::field/source-symbol field)
+    (system-links-impl parent-fiddle [field] schemas)       ; karl was lazy and never untangled the fe wrapping
+    (system-links-impl parent-fiddle (::field/children field) schemas)))

@@ -5,6 +5,7 @@
     [contrib.reactive :as r]
     [hypercrud.browser.base :as base]
     [hypercrud.browser.context :as context]
+    [hypercrud.browser.field :as field]
     [hypercrud.browser.link :as link]
     [hyperfiddle.data :as data]))
 
@@ -37,13 +38,13 @@
          (filter (partial link/same-path-as? (:hypercrud.browser/path ctx)))
          (map #(recurse-from-link % ctx))
          (apply merge)
-         (into (let [child-fields? (not (some->> (:hypercrud.browser/fields ctx) (r/fmap nil?) deref))]
+         (into (let [child-fields? (not @(r/fmap (r/comp nil? ::field/children) (:hypercrud.browser/field ctx)))]
                  (if (and child-fields? (context/attribute-segment? (last (:hypercrud.browser/path ctx)))) ; ignore relation and fe fields
                    (with-result ctx)
                    {}))))))
 
 (defn with-result [ctx]
-  (condp = (:hypercrud.browser/data-cardinality ctx)
+  (case @(r/fmap ::field/cardinality (:hypercrud.browser/field ctx))
     :db.cardinality/one (->> ctx
                              (data/form (fn [path ctx]
                                           (merge (head-field path (context/focus ctx [:head]))
@@ -52,8 +53,8 @@
     :db.cardinality/many (merge (->> (data/form head-field (context/focus ctx [:head]))
                                      (apply merge))
                                 (->> (r/unsequence (:hypercrud.browser/data ctx)) ; the request side does NOT need the cursors to be equiv between loops
-                                     (map (fn [[relation i]]
-                                            (->> (context/body ctx relation)
+                                     (map (fn [[row i]]
+                                            (->> (context/body ctx row)
                                                  (data/form body-field)
                                                  (apply merge))))
                                      (apply merge)))
@@ -68,7 +69,7 @@
   ; also no popovers can be opened, so remove managed
   (let [ctx (update ctx :hypercrud.browser/links (partial r/fmap (r/comp remove-managed filter-inline)))]
     (merge (with-result ctx)
-           (->> (link/links-at (:hypercrud.browser/path ctx) (:hypercrud.browser/links ctx))                     ; todo reactivity
+           (->> (link/links-at (:hypercrud.browser/path ctx) (:hypercrud.browser/links ctx)) ; todo reactivity
                 (map #(recurse-from-link % ctx))
                 (apply merge))
            (when @(r/fmap :fiddle/hydrate-result-as-fiddle (:hypercrud.browser/fiddle ctx))
@@ -76,4 +77,4 @@
              ; EntityRequest args are too structured.
              (let [[_ [inner-fiddle & inner-args]] (:route ctx)]
                (recurse-from-route [inner-fiddle (vec inner-args)] ctx)))
-           {(:route ctx) @(:hypercrud.browser/result ctx)})))
+           {(:route ctx) @(:hypercrud.browser/data ctx)})))

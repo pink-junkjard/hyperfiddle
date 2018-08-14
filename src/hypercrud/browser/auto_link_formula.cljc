@@ -23,7 +23,7 @@
 ; todo there are collisions when two links share the same 'location'
 (letfn [(hash-data [ctx]
           (when-let [data (:hypercrud.browser/data ctx)]
-            (case (:hypercrud.browser/data-cardinality ctx)
+            (case @(r/fmap ::field/cardinality (:hypercrud.browser/field ctx))
               :db.cardinality/one @(r/fmap :db/id data)
               :db.cardinality/many (hash (into #{} @(r/fmap (partial mapv :db/id) data))) ; todo scalar
               nil nil #_":db/id has a faked attribute with no cardinality, need more thought to make elegant")))]
@@ -38,19 +38,16 @@
 (defn ^:export auto-entity [ctx]
   (->ThinEntity (domain/uri->dbname (:uri ctx) (:hypercrud.browser/domain ctx)) (deterministic-ident ctx)))
 
-(defn- field-at-path [path ordered-fields]
-  (loop [[segment & rest] path
-         fields ordered-fields]
-    (cond
-      (#{:head :body} segment) (recur rest fields)
-      (context/find-element-segment? segment) (let [field (get fields segment)]
-                                                (if (seq rest)
-                                                  (recur rest (::field/children field))
-                                                  field))
-      :else (let [field (first (filter #(= (::field/path-segment %) segment) fields))]
-              (if (seq rest)
-                (recur rest (::field/children field))
-                field)))))
+(defn- field-at-path [path field]
+  (let [[segment & rest] path]
+    (if (#{:head :body} segment)
+      (field-at-path rest field)
+      (let [field (->> (::field/children field)
+                       (filter #(= (::field/path-segment %) segment))
+                       first)]
+        (if (seq rest)
+          (field-at-path rest field)
+          field)))))
 
 (defn auto-formula [ctx link]
   (-> (memoized-safe-read-edn-string (str "[" (:link/path link) "]"))
@@ -62,11 +59,16 @@
           (if (:link/create? link)
             (if (some #{:head} path)
               "hypercrud.browser.auto-link-formula/auto-entity-from-stage"
-              (when (::field/data-has-id? (field-at-path path @(:hypercrud.browser/fields ctx))) ; todo better reactivity
+              (when (->> (:hypercrud.browser/field ctx)
+                         (r/fmap (r/partial field-at-path path))
+                         (r/fmap ::field/data-has-id?)
+                         deref)
                 "hypercrud.browser.auto-link-formula/auto-entity"))
-            (when (-> (if (= :body (last path))
-                        (drop-last path)                    ; links on :body should defer to the parent field
-                        path)
-                      (field-at-path @(:hypercrud.browser/fields ctx))
-                      ::field/data-has-id?)
+            (when (let [path (if (= :body (last path))
+                               (drop-last path)             ; links on :body should defer to the parent field
+                               path)]
+                    (->> (:hypercrud.browser/field ctx)
+                         (r/fmap (r/partial field-at-path path))
+                         (r/fmap ::field/data-has-id?)
+                         deref))
               "(comp deref :hypercrud.browser/data)"))))))

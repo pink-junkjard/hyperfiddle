@@ -20,6 +20,7 @@
     [contrib.ui.tooltip :refer [tooltip tooltip-props]]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.base :as base]
+    [hypercrud.browser.field :as field]
     [hypercrud.browser.link :as link]
     [hypercrud.browser.router :as router]
     [hypercrud.browser.routing :as routing]
@@ -106,7 +107,7 @@
                                  (into #{})))))
         segment (last (:hypercrud.browser/path ctx))
         segment-type (context/segment-type segment)
-        child-fields (not (some->> (:hypercrud.browser/fields ctx) (r/fmap nil?) deref))]
+        child-fields (not @(r/fmap (r/comp nil? ::field/children) (:hypercrud.browser/field ctx)))]
     (match* [head-or-body segment-type segment child-fields @rels #_@user]
       ;[:head _ true] hyper-select-head
       [:head :attribute '* _ _] magic-new-head
@@ -130,8 +131,13 @@
           (name (context/segment-type (last (:hypercrud.browser/path ctx))))
           (or (some #{:head} (:hypercrud.browser/path ctx)) ; could be first nested in a body
               (some #{:body} (:hypercrud.browser/path ctx)))
-          (->> (:hypercrud.browser/path ctx)                ; generate a unique selector for each location
+          (->> (:hypercrud.browser/path ctx)                ; legacy unique selector for each location
                (remove #{:head :body})
+               (map css-slugify)
+               (string/join "/"))
+          (->> (:hypercrud.browser/path ctx)                ; actually generate a unique selector for each location
+               (remove #{:head :body})
+               (cons :hypercrud.browser/path)               ; need to prefix the path with something to differentiate between attr and single attr paths
                (map css-slugify)
                (string/join "/"))]
          (let [attr (context/hydrate-attribute ctx (:hypercrud.browser/attribute ctx))]
@@ -316,16 +322,16 @@ User renderers should not be exposed to the reaction."
            (->> (form ctx) (into [:thead])))                ; strict
          (->> (:hypercrud.browser/data ctx)
               (r/fmap sort)
-              (r/unsequence data/relation-keyfn)            ; todo support nested tables
-              (map (fn [[relation k]]
-                     (->> (form (context/body ctx relation))
+              (r/unsequence data/row-keyfn)
+              (map (fn [[row k]]
+                     (->> (form (context/body ctx row))
                           (into ^{:key k} [:tr]))))         ; strict
               (into [:tbody]))]))))
 
 (defn hint [{:keys [hypercrud.browser/fiddle
-                    hypercrud.browser/result]}]
+                    hypercrud.browser/data]}]
   (if (and (-> (:fiddle/type @fiddle) (= :entity))
-           (nil? (:db/id @result)))
+           (nil? (:db/id @data)))
     [:div.alert.alert-warning "Warning: invalid route (d/pull requires an entity argument). To add a tempid entity to the URL, click here: "
      [:a {:href "~entity('$','tempid')"} [:code "~entity('$','tempid')"]] "."]))
 
@@ -336,9 +342,9 @@ nil. call site must wrap with a Reagent component"
     ; focus should probably get called here. What about the request side?
     (fragment
       (hint ctx)
-      (condp = (:hypercrud.browser/data-cardinality ctx)
+      (case @(r/fmap ::field/cardinality (:hypercrud.browser/field ctx))
         :db.cardinality/one (let [ctx (assoc ctx ::layout :hyperfiddle.ui.layout/block)
-                                  key (-> (data/relation-keyfn @(:hypercrud.browser/data ctx)) str keyword)]
+                                  key (-> @(r/fmap data/row-keyfn (:hypercrud.browser/data ctx)) str keyword)]
                               (apply fragment key (data/form (r/partial field-with-props props) ctx)))
         :db.cardinality/many [table (r/partial data/form (r/partial field-with-props props)) ctx props]
         ; blank fiddles
@@ -349,8 +355,7 @@ nil. call site must wrap with a Reagent component"
 (def ^:export fiddle (-build-fiddle))
 
 (defn ^:export fiddle-xray [ctx class]
-  (let [{:keys [:hypercrud.browser/fiddle
-                #_:hypercrud.browser/result]} ctx]
+  (let [{:keys [:hypercrud.browser/fiddle]} ctx]
     [:div {:class class}
      [:h3 (pr-str (:route ctx)) #_(some-> @fiddle :fiddle/ident str)]
      (result ctx)]))

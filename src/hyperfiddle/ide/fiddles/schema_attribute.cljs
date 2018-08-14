@@ -78,24 +78,21 @@
                                                                (r/partial controls/entity-change->tx ctx))]
                                         [select (assoc props :on-change on-change!) ctx]))]
     (fn [ctx class]
-      (let [ctx (-> ctx
-                    (dissoc :hypercrud.browser/data :hypercrud.browser/data-cardinality :hypercrud.browser/path)
-                    (update :hypercrud.browser/result (partial r/fmap reactive-merge))
-                    (context/focus [:body]))
-            valid-attr? @(r/fmap completed? (:hypercrud.browser/result ctx))]
-        ^{:key (data/relation-keyfn @(:hypercrud.browser/data ctx))}
+      (let [ctx (update ctx :hypercrud.browser/data (partial r/fmap reactive-merge))
+            valid-attr? @(r/fmap completed? (:hypercrud.browser/data ctx))]
+        ^{:key @(r/fmap data/row-keyfn (:hypercrud.browser/data ctx))}
         [:div {:class class}
          [markdown "See [Datomic schema docs](https://docs.datomic.com/on-prem/schema.html)."]
-         (field [0 :db/ident] ctx ident-f)
-         (field [0 :db/valueType] ctx valueType-and-cardinality-f)
-         (field [0 :db/cardinality] ctx valueType-and-cardinality-f)
+         (field [:db/ident] ctx ident-f)
+         (field [:db/valueType] ctx valueType-and-cardinality-f)
+         (field [:db/cardinality] ctx valueType-and-cardinality-f)
 
          ; The rule is you can't stage anything until it's a valid Datomic attribute.
          ; So only the special attrs are editable at first.
          ; Once that is completed, the rest are editable.
-         (field [0 :db/doc] ctx nil {:read-only (not valid-attr?)})
-         (field [0 :db/unique] ctx nil {:read-only (not valid-attr?)})
+         (field [:db/doc] ctx nil {:read-only (not valid-attr?)})
+         (field [:db/unique] ctx nil {:read-only (not valid-attr?)})
          [markdown "!block[Careful: below is not validated, don't stage invalid schema]{.alert .alert-warning style=\"margin-bottom: 0\"}"]
-         (field [0 :db/isComponent] ctx nil {:read-only (not valid-attr?)})
-         (field [0 :db/fulltext] ctx nil {:read-only (not valid-attr?)})
+         (field [:db/isComponent] ctx nil {:read-only (not valid-attr?)})
+         (field [:db/fulltext] ctx nil {:read-only (not valid-attr?)})
          ]))))
