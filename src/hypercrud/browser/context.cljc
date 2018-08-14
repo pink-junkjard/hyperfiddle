@@ -105,8 +105,8 @@
             ; todo cannot conflict with :db/ident :head
             :head
             (-> ctx
-                (assoc :hypercrud.browser/parent (select-keys ctx [:hypercrud.browser/data
-                                                                   :hypercrud.browser/path]))
+                (set-parent)
+                (set-parent-data)
                 (update :hypercrud.browser/path conj :head)
                 (dissoc :hypercrud.browser/attribute
                         :hypercrud.browser/data))
