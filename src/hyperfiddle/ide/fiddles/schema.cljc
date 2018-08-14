@@ -47,17 +47,17 @@
                     :link/fiddle (db-cardinality-options $db)
                     :link/render-inline? true
                     :link/rel :options
-                    :link/class #{":body :db/cardinality"}}
+                    :link/class #{"cardinality-options"}}
                    {:db/id (keyword "hyperfiddle.schema.db-unique-options" $db)
                     :link/fiddle (db-unique-options $db)
                     :link/render-inline? true
                     :link/rel :options
-                    :link/class #{":body :db/unique"}}
+                    :link/class #{"unique-options"}}
                    {:db/id (keyword "hyperfiddle.schema.db-valueType-options" $db)
                     :link/fiddle (db-valueType-options $db)
                     :link/render-inline? true
                     :link/rel :options
-                    :link/class #{":body :db/valueType"}}
+                    :link/class #{"valueType-options"}}
                    {:db/id :system-anchor-remove            ; XXX
                     :link/rel :hyperfiddle/remove
                     :link/path ":body"
@@ -78,7 +78,7 @@
                                                :db/isComponent :db/fulltext :db/doc]) '...]
                          :where [$db :db.part/db :db.install/attribute '?attr]]))
    :fiddle/type :query
-   :fiddle/renderer (load-resource "ide/schema_renderer.cljs")
+   :fiddle/renderer (load-resource "ide/schema_renderer.cljs") 
    :fiddle/links #{{:db/id :system-anchor-edit              ; XXX
                     :link/rel :hyperfiddle/edit
                     :link/path ":body"

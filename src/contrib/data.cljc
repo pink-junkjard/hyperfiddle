@@ -59,8 +59,9 @@
   ;(transpose [as bs])
   (map vector as bs))
 
-(defn pad [n zero coll]
-  (take n (concat coll (repeat zero))))
+(defn pad
+  ([zero coll] (concat coll (repeat zero)))
+  ([n zero coll] (take n (pad zero coll))))
 
 (defn map-pad [zero]
   (fn [f & cols]
@@ -130,3 +131,12 @@
 (defn compare-by-index [ordering]
   (let [index (into {} (map vector ordering (range)))]
     #(compare (index %1) (index %2))))
+
+(defn ancestry-common [as bs]
+  (->> (take-while (partial apply =) (zip as bs))
+       (map first)))
+
+(defn ancestry-divergence [as bs]
+  ; pad bs only, not as
+  (->> (drop-while (partial apply =) (map vector as (pad nil bs)))
+       (map first)))

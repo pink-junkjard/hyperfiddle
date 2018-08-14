@@ -6,14 +6,13 @@
     [contrib.ui.tooltip :refer [tooltip-thick]]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
-    [hypercrud.browser.link :as link]
+    #_[hyperfiddle.ui]
+    [hyperfiddle.data :as data]
     [hyperfiddle.ui.controls :as controls]
-    [hyperfiddle.ui.docstring :refer [semantic-docstring]]
-    [hyperfiddle.ui.link-impl :as ui-link :refer [anchors iframes]]
-    [hyperfiddle.ui.select :refer [select]]))
+    [hyperfiddle.ui.docstring :refer [semantic-docstring]]))
 
 
-(defn label [_ props ctx]
+(defn attribute-label [_ props ctx]
   (when-let [label (some->> (:hypercrud.browser/field ctx)
                             (r/fmap ::field/label)
                             deref)]
@@ -22,20 +21,15 @@
                        [:div.hyperfiddle.docstring [contrib.ui/markdown help-md]])
        [:label props label (if help-md [:sup "†"])]])))
 
-(defn hyper-select-head [_ props ctx]
-  (let [display-mode (-> @(:hypercrud.ui/display-mode ctx) name keyword)]
-    (fragment (when (and (= :xray display-mode)
-                         @(r/fmap (r/partial ui-link/draw-options? (:hypercrud.browser/path ctx)) (:hypercrud.browser/links ctx)))
-                ; Float right
-                [select props ctx])
-              [label _ props ctx]
-              [anchors (:hypercrud.browser/path ctx) props ctx ui-link/options-processor]
-              [iframes (:hypercrud.browser/path ctx) props ctx ui-link/options-processor])))
-
-(defn hyper-label [_ props ctx]
-  (fragment [label _ props ctx]
-            [anchors (:hypercrud.browser/path ctx) props ctx]
-            [iframes (:hypercrud.browser/path ctx) props ctx]))
+(defn entity-label [_ props ctx]
+  [:div #_(fragment)
+   [attribute-label _ props ctx]
+   (->> (data/select-all ctx :hyperfiddle/new)
+        (r/track identity)
+        (r/unsequence :db/id)
+        (map (fn [[rv k]]
+               ^{:key k}
+               [hyperfiddle.ui/ui-from-link rv ctx props])))])
 
 (defn magic-new-head [_ props ctx]
   (let [#_#_read-only (r/fmap (comp not controls/writable-entity?) (context/entity ctx)) ;-- don't check this, '* always has a dbid and is writable

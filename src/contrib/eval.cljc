@@ -5,6 +5,7 @@
                [cljs.tagged-literals :as tags]])
     [clojure.string :as string]
     [contrib.try$ :refer [try-either]]
+    [cats.monad.either :as either]
     ; This is contrib code, shouldn't be hyperfiddle deps
     [hyperfiddle.hc_data_readers :refer [hc-data-readers]]
     [hyperfiddle.readers :as hc-readers]))
@@ -35,3 +36,17 @@
 
 (defn safe-eval-string [& args]
   (try-either (apply eval-string args)))
+
+(let [safe-eval-string #(try-either (when % (eval-string %)))
+      memoized-eval-string (memoize safe-eval-string)]
+  (defn ensure-fn [s]
+    (if-not (string? s)
+      s
+      (either/branch
+        (memoized-eval-string s)
+        #(constantly (pr-str %))                            ; print the compile error when invoked
+        (fn [user-fn]                                       ; eventually invoke this unsafe fn
+          #(either/branch
+             (try-either (user-fn %))
+             str                                            ; print the runtime error when invoked
+             identity))))))

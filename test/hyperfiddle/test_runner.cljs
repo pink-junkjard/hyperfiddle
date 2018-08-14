@@ -22,8 +22,8 @@
     hypercrud.browser.system-link-test
     hyperfiddle.ide.fiddles.schema_test
     hyperfiddle.ide-test
+    hyperfiddle.data-test
     hyperfiddle.readers-test
-    hyperfiddle.ui.link-impl-test
     ))
 
 (defn run []
@@ -45,6 +45,6 @@
     'hypercrud.browser.system-link-test
     'hyperfiddle.ide.fiddles.schema_test
     'hyperfiddle.ide-test
+    'hyperfiddle.data-test
     'hyperfiddle.readers-test
-    'hyperfiddle.ui.link-impl-test
     ))

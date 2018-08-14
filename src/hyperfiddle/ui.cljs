@@ -31,9 +31,8 @@
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.ui.api]
     [hyperfiddle.ui.controls :as controls]
-    [hyperfiddle.ui.hyper-controls :refer [hyper-label hyper-select-head magic-new-body magic-new-head]]
+    [hyperfiddle.ui.hyper-controls :refer [attribute-label entity-label magic-new-body magic-new-head]]
     [hyperfiddle.ui.hacks]                                  ; exports
-    [hyperfiddle.ui.link-impl :as ui-link :refer [anchors iframes]]
     [hyperfiddle.ui.popover :refer [popover-cmp]]
     [hyperfiddle.ui.select :refer [select]]
     [hyperfiddle.ui.sort :as sort]
@@ -71,53 +70,56 @@
         [_ :many] controls/edn-many))))
 
 (declare result)
+(declare link)
+(declare ui-from-link)
 
 (defn control+ [val props ctx]
-  (fragment
-    [(control ctx) val props ctx]
-    [anchors (:hypercrud.browser/path ctx) props ctx]       ; Order sensitive, here be floats
-    [iframes (:hypercrud.browser/path ctx) props ctx]))
+  [(control ctx) val props ctx])
 
-(defn links-only+ [val props ctx]
-  (fragment
-    [anchors (:hypercrud.browser/path ctx) props ctx]       ; Order sensitive, here be floats
-    [iframes (:hypercrud.browser/path ctx) props ctx]))
+(defn entity [val props ctx]                                ; What about semantics we don't understand?
+  [:div #_(fragment)
+   (->> (concat
+          (data/select-all ctx :hyperfiddle/edit)
+          (data/select-all ctx :hyperfiddle/remove)
+          (data/select-all ctx :options)
+          (data/select-all ctx :anchor)
+          (data/select-all ctx :button)
+          (data/select-all ctx :iframe))
+        (remove (comp (partial data/deps-over-satisfied? (:hypercrud.browser/path ctx)) link/read-path :link/path))
+        (r/track identity)
+        (r/unsequence :db/id)
+        (map (fn [[rv k]]
+               ^{:key k}
+               [ui-from-link rv ctx props])))])
 
 (defn result+ [val props ctx]
-  (fragment
-    [result ctx]                                            ; flipped args :(
-    [anchors (:hypercrud.browser/path ctx) props ctx]       ; Order sensitive, here be floats
-    [iframes (:hypercrud.browser/path ctx) props ctx]))
+  [result ctx])
 
 (defn select+ [val props ctx]
-  (fragment
-    [anchors (:hypercrud.browser/path ctx) props ctx ui-link/options-processor] ; Order sensitive, here be floats
-    [select props ctx]
-    [iframes (:hypercrud.browser/path ctx) props ctx ui-link/options-processor]))
+  [select (data/select+ ctx :options (:options props)) props ctx])
 
 (defn ^:export hyper-control "Handles labels too because we show links there." ; CTX is done after here. props and val only. But recursion needs to look again.
   [ctx]
   {:post [%]}
   (let [head-or-body (->> (:hypercrud.browser/path ctx) (reverse) (take-to (comp not #{:head :body})) (last)) ; todo head/body attr collision
-        rels (->> (:hypercrud.browser/links ctx)
-                  (r/fmap (fn [links]
-                            (->> links
-                                 (filter (r/partial link/draw-link? (:hypercrud.browser/path ctx)))
-                                 (map :link/rel)
-                                 (into #{})))))
         segment (last (:hypercrud.browser/path ctx))
         segment-type (context/segment-type segment)
         child-fields (not @(r/fmap (r/comp nil? ::field/children) (:hypercrud.browser/field ctx)))]
-    (match* [head-or-body segment-type segment child-fields @rels #_@user]
-      ;[:head _ true] hyper-select-head
-      [:head :attribute '* _ _] magic-new-head
-      [:head _ _ _ _] hyper-label
-      [:body :attribute '* _ _] magic-new-body
-      [:body :attribute _ _ (true :<< #(contains? % :options))] select+
-      [:body :attribute _ true _] result+
-      [:body :attribute _ false _] (or (attr-renderer ctx) control+)
-      [:body _ _ true _] links-only+                        ; what?
-      [:body _ _ false _] controls/string                   ; aggregate, entity, what else?
+    (match* [head-or-body segment-type segment child-fields #_@user]
+      [:head :attribute '* _] magic-new-head
+      [:body :attribute '* _] magic-new-body
+
+      [:head :attribute _ _] attribute-label
+      [:body :attribute _ true] result+
+      [:body :attribute _ false] (or (attr-renderer ctx) control+)
+
+      [:head :element _ true] entity-label
+      [:body :element _ true] entity                        ; entity (:remove :edit)
+
+      [:head :element _ false] attribute-label              ; preserve old behavior
+      [:body :element _ false] controls/string              ; aggregate, what else?
+
+      [:head :naked _ _] (r/constantly [:noscript])         ; This is the fiddle links table – nested :head independent
       )))
 
 (defn ^:export semantic-css [ctx]
@@ -189,7 +191,10 @@ User renderers should not be exposed to the reaction."
               [(:alpha.hypercrud.browser/ui-comp ctx) ctx (update props :class css "hyperfiddle-loading" "ui")]
               [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])])]))])))
 
-(letfn [(prompt [link-ref ?label] (str (or ?label (some-> @(r/fmap :link/rel link-ref) name) "_")))
+(letfn [(prompt [link-ref ?label] (str (or ?label
+                                           (some-> @(r/fmap :link/class link-ref) (->> (interpose " ") (apply str)) blank->nil)
+                                           (some-> @(r/fmap :link/rel link-ref) name)
+                                           "_")))
         (p-build-route' [ctx link] (routing/build-route' link ctx))
         (build-link-props [route'-ref link-ref ctx]         ; todo this function needs untangling; ui-from-route ignores most of this
           ; this is a fine place to eval, put error message in the tooltip prop
@@ -216,8 +221,10 @@ User renderers should not be exposed to the reaction."
                            (interpose " ")
                            (apply str))})))]
   (defn ui-from-link [link-ref ctx & [props ?label]]
-    (let [error-comp (ui-error/error-comp ctx)
-          route'-ref (r/fmap (r/partial p-build-route' ctx) link-ref)
+    {:pre [link-ref]}
+    (let [ctx (context/refocus ctx (link/read-path @(r/fmap :link/path link-ref)))
+          error-comp (ui-error/error-comp ctx)
+          route'-ref (r/fmap (r/partial p-build-route' ctx) link-ref) ; need to re-focus from the top
           link-props @(r/track build-link-props route'-ref link-ref ctx)]
       (when-not (:hidden link-props)
         (let [props (-> link-props
@@ -246,38 +253,42 @@ User renderers should not be exposed to the reaction."
                      [anchor ctx props @(r/track prompt link-ref ?label)])]
             ))))))
 
-(defn ^:export link "Relation level link renderer. Works in forms and lists but not tables."
-  [rel relative-path ctx & [?label props]]                  ; path should be optional, for disambiguation only. Naked can be hard-linked in markdown?
-  (let [ctx (context/focus ctx relative-path)
-        link-ref (r/track link/rel->link rel ctx)]
-    [ui-from-link link-ref ctx props ?label]))
+(defn ^:export link "Relation level link renderer. Works in forms and lists but not tables." ; this is dumb, use a field renderer
+  [rel class ctx & [?label props]]                          ; path should be optional, for disambiguation only. Naked can be hard-linked in markdown?
+  (either/branch
+    (data/select+ ctx rel class)
+    #(vector :span %)
+    (fn [link-ref]
+      [ui-from-link link-ref ctx props ?label])))
 
 (defn ^:export browse "Relation level browse. Works in forms and lists but not tables."
-  [rel relative-path ctx & [?user-renderer props]]          ; path should be optional, for disambiguation only. Naked can be hard-linked in markdown?
-  (let [ctx (context/focus ctx relative-path)
-        link-ref (r/track link/rel->link rel ctx)
-        props (if ?user-renderer
+  [rel class ctx & [?user-renderer props]]
+  (let [props (if ?user-renderer
                 (assoc props :user-renderer ?user-renderer)
                 props)]
-    [ui-from-link link-ref ctx props]))
+    (either/branch
+      (data/select+ ctx rel class)
+      #(vector :span %)
+      (fn [link-ref]
+        [ui-from-link link-ref ctx props]))))
 
 (defn form-field "Form fields are label AND value. Table fields are label OR value."
+  ; It is the driver-fn's job to elide this field if it will be empty
   [hyper-control relative-path ctx ?f props]                ; ?f :: (val props ctx) => DOM
   (let [state (r/atom {:hyperfiddle.ui.form/magic-new-a nil})]
     (fn [hyper-control relative-path ctx ?f props]
       (let [ctx (assoc ctx :hyperfiddle.ui.form/state state)
-            ; we want the wrapper div to have the :body styles, so careful not to pollute the head ctx with :body
             body-ctx (context/focus ctx (cons :body relative-path))
             head-ctx (context/focus ctx (cons :head relative-path))
             props (update props :class css (semantic-css body-ctx))]
-        ; It is the driver-fn's job to elide this field if it will be empty
         [:div {:class (css "field" (:class props))
-               :style {:border-color (border-color body-ctx)}}
-         ^{:key :form-head}
-         [(or (:label-fn props) (hyper-control head-ctx)) nil props head-ctx]
-         ^{:key :form-body}
-         [:div
-          [(or ?f (hyper-control body-ctx)) @(:hypercrud.browser/data body-ctx) props body-ctx]]]))))
+               :style {:border-color (border-color body-ctx)}} ; wrapper div has :body stypes - why?
+         (fragment
+           ^{:key :form-head}
+           [(or (:label-fn props) (hyper-control head-ctx)) nil props head-ctx]
+           ^{:key :form-body}
+           [:div
+            [(or ?f (hyper-control body-ctx)) @(:hypercrud.browser/data body-ctx) props body-ctx]])]))))
 
 (defn table-field "Form fields are label AND value. Table fields are label OR value."
   [hyper-control relative-path ctx ?f props]                ; ?f :: (val props ctx) => DOM
@@ -348,7 +359,17 @@ nil. call site must wrap with a Reagent component"
                               (apply fragment key (data/form (r/partial field-with-props props) ctx)))
         :db.cardinality/many [table (r/partial data/form (r/partial field-with-props props)) ctx props]
         ; blank fiddles
-        nil))))
+        nil)
+      (->> (concat (data/select-all ctx :options)
+                   (data/select-all ctx :iframe)
+                   (data/select-all ctx :anchor)
+                   (data/select-all ctx :button))
+           (remove (comp (partial data/deps-over-satisfied? (:hypercrud.browser/path ctx)) link/read-path :link/path))
+           (r/track identity)
+           (r/unsequence :db/id)
+           (map (fn [[rv k]]
+                  ^{:key k}
+                  [ui-from-link rv ctx props]))))))
 
 (def ^:dynamic markdown)                                    ; this should be hf-contrib or something
 

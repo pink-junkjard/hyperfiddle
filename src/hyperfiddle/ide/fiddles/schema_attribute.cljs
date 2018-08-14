@@ -76,7 +76,7 @@
         valueType-and-cardinality-f (fn [val props ctx]
                                       (let [on-change! (r/comp (r/partial valueType-and-cardinality-with-tx! special-attrs-state ctx)
                                                                (r/partial controls/entity-change->tx ctx))]
-                                        [select (assoc props :on-change on-change!) ctx]))]
+                                        [hyperfiddle.ui/select+ val (assoc props :on-change on-change!) ctx]))]
     (fn [ctx class]
       (let [ctx (update ctx :hypercrud.browser/data (partial r/fmap reactive-merge))
             valid-attr? @(r/fmap completed? (:hypercrud.browser/data ctx))]
@@ -84,14 +84,15 @@
         [:div {:class class}
          [markdown "See [Datomic schema docs](https://docs.datomic.com/on-prem/schema.html)."]
          (field [:db/ident] ctx ident-f)
-         (field [:db/valueType] ctx valueType-and-cardinality-f)
-         (field [:db/cardinality] ctx valueType-and-cardinality-f)
+         (field [:db/valueType] ctx valueType-and-cardinality-f {:options "valueType-options"})
+         (field [:db/cardinality] ctx valueType-and-cardinality-f {:options "cardinality-options"})
 
          ; The rule is you can't stage anything until it's a valid Datomic attribute.
          ; So only the special attrs are editable at first.
          ; Once that is completed, the rest are editable.
          (field [:db/doc] ctx nil {:read-only (not valid-attr?)})
-         (field [:db/unique] ctx nil {:read-only (not valid-attr?)})
+         (field [:db/unique] ctx hyperfiddle.ui/select+ {:read-only (not valid-attr?)
+                                                         :options "unique-options"})
          [markdown "!block[Careful: below is not validated, don't stage invalid schema]{.alert .alert-warning style=\"margin-bottom: 0\"}"]
          (field [:db/isComponent] ctx nil {:read-only (not valid-attr?)})
          (field [:db/fulltext] ctx nil {:read-only (not valid-attr?)})

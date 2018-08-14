@@ -7,7 +7,7 @@
             [hypercrud.browser.routing :as routing]
             [hyperfiddle.actions :as actions]
             [hyperfiddle.runtime :as runtime]
-            [hypercrud.browser.context :as context]))
+            [hyperfiddle.ui.hacks :refer [pull-soup->tree]]))
 
 
 (def ^:dynamic root-ctx)                                    ; debug backdoor to dispatch!
@@ -20,7 +20,7 @@
   (object/set global "kw" keyword)
   (object/set global "get" get)
   (object/set global "pprint" pprint/pprint)
-  (object/set global "pprint_str" pprint-str)
+  (object/set global "pprint_str" (comp pprint-str pull-soup->tree))
   (object/set global "hc_where" (fn [ctx]
                                   (-> ctx
                                       (select-keys [:route  ; ordered for glance debugging

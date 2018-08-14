@@ -1,5 +1,6 @@
 (ns hypercrud.browser.context
   (:require
+    [contrib.data :refer [ancestry-common ancestry-divergence]]
     [contrib.reactive :as r]
     [hypercrud.browser.field :as field]
     [hyperfiddle.actions :as actions]
@@ -64,7 +65,7 @@
   (r/cursor (:hypercrud.browser/schemas ctx) (concat [(str (:hypercrud.browser/source-symbol ctx)) ident] ?more-path)))
 
 (defn- set-parent [ctx]
-  (assoc ctx :hypercrud.browser/parent (select-keys ctx [:hypercrud.browser/parent :hypercrud.browser/path :hypercrud.browser/field])))
+  (assoc ctx :hypercrud.browser/parent (dissoc ctx :hypercrud.browser/data)))
 
 (defn- set-parent-data [ctx]
   (update ctx :hypercrud.browser/parent (fnil into {}) (select-keys ctx [:hypercrud.browser/data])))
@@ -84,7 +85,7 @@
   (let [cardinality @(r/fmap ::field/cardinality (:hypercrud.browser/field ctx))]
     (case cardinality
       :db.cardinality/one (assert (nil? ?data))
-      :db.cardinality/many (do (assert ?data (str "`:body` is invalid directly on card/many. current path: " (pr-str (:hypercrud.browser/path ctx))))
+      :db.cardinality/many (do (assert ?data (str "`:body` is invalid directly on card/many (do you need a table wrap?). current path: " (pr-str (:hypercrud.browser/path ctx))))
                                (assert (r/reactive? ?data))))
     (let [new-ctx (-> ctx
                       (set-parent)
@@ -136,3 +137,11 @@
                              (r/fapply f (:hypercrud.browser/data ctx)))))))))]
   (defn focus [ctx relative-path]
     (reduce focus-segment ctx relative-path)))
+
+(defn refocus "focus common ancestor" [ctx path]
+  {:pre [ctx] :post [%]}
+  (let [current-path (:hypercrud.browser/path ctx)
+        common-ancestor-path (ancestry-common current-path path)
+        unwind-offset (- (count current-path) (count common-ancestor-path))
+        common-ancestor-ctx ((apply comp (repeat unwind-offset :hypercrud.browser/parent)) ctx)]
+    (focus common-ancestor-ctx (ancestry-divergence path current-path))))

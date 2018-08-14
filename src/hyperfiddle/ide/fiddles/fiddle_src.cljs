@@ -18,8 +18,7 @@
     [hyperfiddle.ide.fiddles.fiddle-links.renderer :as links-fiddle]
     #_[hyperfiddle.ide.hf-live :as hf-live]                 ;cycle
     [hyperfiddle.runtime :as runtime]
-    [hyperfiddle.ui :refer [anchor browse field hyper-control link markdown]]
-    [hyperfiddle.ui.link-impl :refer [anchors]]))
+    [hyperfiddle.ui :refer [anchor field hyper-control link markdown]]))
 
 
 (defn process-links [uri links]
@@ -97,8 +96,8 @@
                          [:div.hf-underdoc [markdown (:fiddle/renderer underdocs)]])])
    :fiddle/links (fn [val props ctx]
                    [:div
+                    (link :hyperfiddle/new "link" ctx)
                     [:div [links-fiddle/renderer ctx (:embed-mode props)]]
-                    [anchors (:hypercrud.browser/path ctx) (dissoc props :embed-mode) ctx]
                     (when-not (:embed-mode props)
                       #_[:div.hf-underdoc [markdown (:fiddle/links underdocs)]])])
    })
@@ -134,4 +133,4 @@
           (remove #(= (namespace %) "fiddle"))
           (map #(field [%] ctx nil))
           (doall))
-     (when-not embed-mode (link :hyperfiddle/remove [:body] ctx "Remove fiddle" {:class "btn-outline-danger"}))]))
+     (when-not embed-mode (link :hyperfiddle/remove "fiddle" ctx "Remove fiddle" {:class "btn-outline-danger"}))]))
