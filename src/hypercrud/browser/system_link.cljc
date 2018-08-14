@@ -29,9 +29,7 @@
                           (body-links-for-field parent-fiddle dbname schema child-field path (::field/data-has-id? field))))))
          (cond->>
            (and (::field/data-has-id? field)
-                (or (context/find-element-segment? (::field/path-segment field))
-                    (and (context/attribute-segment? (::field/path-segment field))
-                         (not= '* (::field/path-segment field)))))
+                (not= '* (::field/path-segment field)))
            (cons (let [path (if (= :db.cardinality/many (get-in schema [(::field/path-segment field) :db/cardinality :db/ident]))
                               (conj path :body)
                               path)
