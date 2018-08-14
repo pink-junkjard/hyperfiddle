@@ -39,15 +39,18 @@
   (->ThinEntity (domain/uri->dbname (:uri ctx) (:hypercrud.browser/domain ctx)) (deterministic-ident ctx)))
 
 (defn- field-at-path [path field]
-  (let [[segment & rest] path]
-    (if (#{:head :body} segment)
-      (field-at-path rest field)
-      (let [field (->> (::field/children field)
-                       (filter #(= (::field/path-segment %) segment))
-                       first)]
-        (if (seq rest)
-          (field-at-path rest field)
-          field)))))
+  (if path
+    (let [[segment & rest] path]
+      (if (#{:head :body} segment)
+        (field-at-path rest field)
+        (let [field (->> (::field/children field)
+                         (filter #(= (::field/path-segment %) segment))
+                         first)]
+          (if (seq rest)
+            (field-at-path rest field)
+            field))))
+    (when (nil? (::field/path-segment field))
+      field)))
 
 (defn auto-formula [ctx link]
   (-> (memoized-safe-read-edn-string (str "[" (:link/path link) "]"))
@@ -64,8 +67,8 @@
                          (r/fmap ::field/data-has-id?)
                          deref)
                 "hypercrud.browser.auto-link-formula/auto-entity"))
-            (when (let [path (if (= :body (last path))
-                               (drop-last path)             ; links on :body should defer to the parent field
+            (when (let [path (if (and (= :body (last path)) (not= [:body path]))
+                               (drop-last path)             ; links on nested :body should defer to the parent field
                                path)]
                     (->> (:hypercrud.browser/field ctx)
                          (r/fmap (r/partial field-at-path path))
