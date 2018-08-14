@@ -45,8 +45,8 @@
                     :link/tx-fn retract-formula}))
 
            (and (::field/data-has-id? field)
-                (or (and (context/find-element-segment? (::field/path-segment field))
-                         (not= :entity (:fiddle/type parent-fiddle)))
+                (or (or (not (context/find-element-segment? (::field/path-segment field)))
+                        (not= :entity (:fiddle/type parent-fiddle)))
                     (and (context/attribute-segment? (::field/path-segment field))
                          (not= '* (::field/path-segment field)))))
            (cons (let [path (if (= :db.cardinality/many (get-in schema [(::field/path-segment field) :db/cardinality :db/ident]))
