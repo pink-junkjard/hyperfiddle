@@ -80,7 +80,7 @@
                        schema (get schemas dbname)]
                    (cond->> (body-links-for-field parent-fiddle dbname schema field)
                      (not= :entity (:fiddle/type parent-fiddle))
-                     (cons (let [path [:head (::field/path-segment field)]
+                     (cons (let [path (or (some->> (::field/path-segment field) (conj [:head])) [:head]) ; fe wrapping causes spaces in paths
                                  s-path (string/join " " path)]
                              {:db/id (keyword "hyperfiddle.browser.system-link" (str "new-" (hash path)))
                               :hypercrud/sys? true
