@@ -93,7 +93,10 @@
                       (dissoc :hypercrud.browser/attribute))]
       (case cardinality
         :db.cardinality/one new-ctx
-        :db.cardinality/many (assoc new-ctx :hypercrud.browser/data ?data)))))
+        :db.cardinality/many
+        (-> new-ctx
+            (assoc :hypercrud.browser/data ?data)
+            (update :hypercrud.browser/field (partial r/fmap (r/partial r/last-arg-first assoc ::field/cardinality :db.cardinality/one))))))))
 
 (letfn [(find-child-field [path-segment field]
           ; find-child-field is silly;  we already map over the fields to determine which paths to focus...

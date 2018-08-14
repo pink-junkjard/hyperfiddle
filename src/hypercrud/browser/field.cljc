@@ -9,9 +9,6 @@
             [hypercrud.types.Entity :refer [entity?]]))
 
 
-(defn- last-arg-first [f & args]
-  (apply f (last args) (drop-last 1 args)))
-
 (def keyword->label #(some-> % name str))
 
 (defn is-ref? [schema attr] (= :db.type/ref (get-in schema [attr :db/valueType :db/ident])))
@@ -22,7 +19,7 @@
    ::children nil
    ::data-has-id? false
    ::label (str (:symbol element))
-   ::get-value (r/partial last-arg-first get fe-pos)
+   ::get-value (r/partial r/last-arg-first get fe-pos)
    ::path-segment fe-pos
    ::source-symbol nil})
 
@@ -53,7 +50,7 @@
        ::label (if-let [alias (:as opts)]
                  (if (string? alias) alias (pr-str alias))
                  (keyword->label attr))
-       ::get-value (or (some->> (:as opts) (r/partial last-arg-first get)) attr)
+       ::get-value (or (some->> (:as opts) (r/partial r/last-arg-first get)) attr)
        ::path-segment attr
        ::source-symbol nil})))
 
@@ -164,7 +161,7 @@
   {::cardinality :db.cardinality/one
    ::children nil
    ::data-has-id? false
-   ::get-value (r/partial last-arg-first get fe-pos)
+   ::get-value (r/partial r/last-arg-first get fe-pos)
    ::label (str (cons (get-in element [:fn :symbol])
                       (map #(second (first %))
                            (:args element))))
@@ -209,7 +206,7 @@
                                                          {::cardinality :db.cardinality/one
                                                           ::children (pull->fields (get schemas (str source-symbol)) pull-pattern (get results-by-column fe-pos) [])
                                                           ::data-has-id? (entity-pull? pull-pattern)
-                                                          ::get-value (r/partial last-arg-first get fe-pos)
+                                                          ::get-value (r/partial r/last-arg-first get fe-pos)
                                                           ::label (get-in element [:variable :symbol])
                                                           ::path-segment fe-pos
                                                           ::source-symbol source-symbol})
@@ -258,7 +255,7 @@
                                                        {::cardinality :db.cardinality/one
                                                         ::children (pull->fields (get schemas (str source-symbol)) pull-pattern (get @data fe-pos) [])
                                                         ::data-has-id? (entity-pull? pull-pattern)
-                                                        ::get-value (r/partial last-arg-first get fe-pos)
+                                                        ::get-value (r/partial r/last-arg-first get fe-pos)
                                                         ::label (get-in element [:variable :symbol])
                                                         ::path-segment fe-pos
                                                         ::source-symbol source-symbol})

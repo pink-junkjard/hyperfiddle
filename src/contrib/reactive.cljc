@@ -27,6 +27,9 @@
 (defn partial [f & args]
   (apply #?(:clj clojure.core/partial :cljs reagent/partial) f args))
 
+(defn last-arg-first [f & args]
+  (apply f (last args) (drop-last 1 args)))
+
 #?(:cljs
    (deftype Constantly [v]
      Fn
