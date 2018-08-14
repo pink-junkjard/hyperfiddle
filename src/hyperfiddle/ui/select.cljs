@@ -6,36 +6,27 @@
     [contrib.reactive :as r]
     [contrib.try$ :refer [try-either]]
     [hypercrud.browser.field :as field]
-    [hypercrud.browser.link :as link]
-    [hypercrud.ui.error :as ui-error]
     [hypercrud.types.Entity :refer [entity?]]
     [hyperfiddle.data :as data]
-    [hyperfiddle.ui.controls :as controls]))
+    [hyperfiddle.ui.controls :as controls]
+    [contrib.eval]))
 
-
-(defn default-label-renderer [v ctx]
+(defn field-label [v]
   (if (instance? cljs.core/Keyword v)
     (name v)                                                ; A sensible default for userland whose idents usually share a long namespace.
-    (str v))
-  #_(condp (fn [x c] (instance? c x)) v
-      cljs.core/Keyword (name v)
-      (str v)))
+    (str v)))
 
-(defn label-fn [data ctx]                                   ; It's perfectly possible to properly report this error properly upstream. (later - is it?)
-  ; This whole thing is legacy, migrate it to link props
-  (let [elabels (->> (map (fn [data field]
-                            (->> (::field/children field)
-                                 (mapv (fn [{:keys [::field/get-value ::field/path-segment]}]
-                                         ; Custom label renderers? Can't use the attribute renderer, since that
-                                         ; is how we are in a select options in the first place.
-                                         (let [renderer (get-in ctx [:fields path-segment :label-renderer] default-label-renderer)]
-                                           (try-either (renderer (get-value data) ctx)))))))
-                          data
-                          @(:hypercrud.browser/fields ctx))
-                     (apply concat))
-        label' (->> (with-context either/context (cats/sequence elabels)) ; prevents cats no context set errors
-                    (fmap #(->> % (interpose ", ") (remove nil?) (apply str))))]
-    (either/branch label' pr-str identity)))
+(defn option-label [data ctx]
+  (->> (map (fn [data field]
+              (->> (::field/children field)
+                   (mapv (fn [{f ::field/get-value}]
+                           (field-label (f data))))))
+            data
+            @(:hypercrud.browser/fields ctx))
+       (apply concat)
+       (interpose ", ")
+       (remove nil?)
+       (apply str)))
 
 (defn select-anchor-renderer' [props option-props ctx]
   ; hack in the selected value if we don't have options hydrated?
@@ -52,13 +43,13 @@
                   ; Don't disable :select if there are options, we may want to see them. Make it look :disabled but allow the click
                   (update :disabled #(or % no-options?))
                   (update :class #(str % (if (:disabled option-props) " disabled"))))
-        label-fn (:label-fn props label-fn)
+        label-fn (contrib.eval/ensure-fn (:option-label props option-label))
         id-fn (fn [relation]
                 (let [fe (first relation)]
                   (if (or (entity? fe) (map? fe))           ; todo inspect datalog find-element
                     (:db/id fe)
                     fe)))]
-    [:select.ui (dissoc props :label-fn)
+    [:select.ui (dissoc props :option-label)
      ; .ui is because options are an iframe and need the pink box
      (conj
        (->> @(:hypercrud.browser/data ctx)
@@ -95,12 +86,11 @@
     ([options-ref+ props ctx]
      "This arity should take a selector string (class) instead of Right[Reaction[Link]], blocked on removing path backdoor"
      {:pre [options-ref+ ctx]}
-     (-> (mlet [options-ref options-ref+
-                hc-props (link/eval-hc-props @(r/fmap :hypercrud/props options-ref) ctx)]
+     (-> (mlet [options-ref options-ref+]
            (return
-             (let [props (-> {:on-change (r/partial controls/entity-change! ctx)}
-                             (merge props hc-props)
-                             (assoc :value @(r/fmap dom-value (:hypercrud.browser/data ctx))))
+             (let [props (-> props
+                             (assoc :on-change (r/partial controls/entity-change! ctx)
+                                    :value @(r/fmap dom-value (:hypercrud.browser/data ctx))))
                    props (-> (select-keys props [:class])
                              (assoc :user-renderer (r/partial select-anchor-renderer props {:disabled (compute-disabled ctx props)})))
                    ctx (assoc ctx

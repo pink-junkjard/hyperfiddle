@@ -60,7 +60,8 @@
       (field [:link/path] ctx read-only-cell)
       (field [:link/class] ctx read-only-cell)
       (field [:link/render-inline?] ctx read-only-cell)
-      (field [:link/fiddle] ctx (if embed-mode hf-live-link-fiddle link-fiddle) {:options "fiddle-options"})
+      (field [:link/fiddle] ctx (if embed-mode hf-live-link-fiddle link-fiddle) {:options "fiddle-options"
+                                                                                 :option-label (comp pr-str :fiddle/ident first)})
       (when-not embed-mode (field [:link/create?] ctx read-only-cell))
       (when-not embed-mode (field [:link/managed?] ctx read-only-cell))
       (field [:link/formula] ctx read-only-cell)
