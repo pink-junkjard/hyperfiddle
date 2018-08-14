@@ -118,12 +118,19 @@
                       {:hyperfiddle.ui.markdown-extensions/unp true}]]
             dirty? (not @(r/fmap empty? (runtime/state (:peer ctx) [:stage nil])))]
         (fake-managed-anchor :iframe "stage" ctx "stage" {:tooltip [nil tooltip] :class (when dirty? "stage-dirty")}))
-      (ui/link :button "new-fiddle" ctx "new-fiddle")
+      (ui/link :button "new-fiddle" ctx "new-fiddle" (let [hf-db @(hyperfiddle.runtime/state (:peer ctx) [:hyperfiddle.runtime/domain :domain/fiddle-database])
+                                                           subject @(hyperfiddle.runtime/state (:peer ctx) [:hyperfiddle.runtime/user-id])
+                                                           writes-allowed? (hyperfiddle.security/attempt-to-transact? hf-db subject)
+                                                           anonymous? (nil? subject)]
+                                                       {:disabled #_false (not writes-allowed?)
+                                                        :tooltip (cond (and anonymous? (not writes-allowed?)) [:warning "Please login"]
+                                                                       (not writes-allowed?) [:warning "Writes restricted"])}))
       [tooltip {:label "Domain administration"} (ui/link :anchor "domain" ctx "domain")]
       (if @(runtime/state (:peer ctx) [::runtime/user-id])
         (let [{:keys [:hypercrud.browser/result]} @(hyperfiddle.data/browse+ ctx :iframe "account")]
           (fake-managed-anchor :iframe "account" ctx @(contrib.reactive/cursor result [:user/name])
-                               {:tooltip [nil (:user/email @result)]}))
+                               {:hidden (not @(hyperfiddle.runtime/state (:peer ctx) [:hyperfiddle.runtime/user-id]))
+                                :tooltip [nil (:user/email @result)]}))
         [:a {:href (foundation/stateless-login-url ctx)} "login"])]]))
 
 (defn ^:export qe-picker-control [val props ctx]

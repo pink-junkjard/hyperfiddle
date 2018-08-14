@@ -190,27 +190,23 @@ User renderers should not be exposed to the reaction."
                                            (some-> @(r/fmap :link/rel link-ref) name)
                                            "_")))
         (p-build-route' [ctx link] (routing/build-route' link ctx))
-        (build-link-props [route'-ref link-ref ctx]         ; todo this function needs untangling; ui-from-route ignores most of this
+        (build-link-props [route'-ref link-ref ctx props]         ; todo this function needs untangling; ui-from-route ignores most of this
           ; this is a fine place to eval, put error message in the tooltip prop
           ; each prop might have special rules about his default, for example :visible is default true, does this get handled here?
           (let [unvalidated-route' @route'-ref
                 [_ args :as route] (unwrap unvalidated-route')
                 validated-route' (routing/validated-route' @(r/fmap :link/fiddle link-ref) route ctx)
-                user-props' (link/eval-hc-props @(r/fmap :hypercrud/props link-ref) ctx)
-                user-props (unwrap user-props')
-                errors (->> [user-props' unvalidated-route' validated-route']
+                errors (->> [unvalidated-route' validated-route']
                             (filter either/left?) (map cats/extract) (into #{}))]
             (merge
-              user-props                                    ; e.g. disabled, tooltip, style, class - anything, it gets passed to a renderer maybe user renderer
               ; doesn't handle tx-fn - meant for the self-link. Weird and prob bad.
               {:route (unwrap unvalidated-route')
                :tooltip (if-not (empty? errors)
                           [:warning (pprint-str errors)]
                           (if (:hyperfiddle.ui/debug-tooltips ctx)
                             [nil (pr-str args)]
-                            (:tooltip user-props)))
-               :class (->> [(:class user-props)
-                            (if-not (empty? errors) "invalid")]
+                            (:tooltip props)))
+               :class (->> [(if-not (empty? errors) "invalid")]
                            (remove nil?)
                            (interpose " ")
                            (apply str))})))]
@@ -219,11 +215,11 @@ User renderers should not be exposed to the reaction."
     (let [ctx (context/refocus ctx (link/read-path @(r/fmap :link/path link-ref)))
           error-comp (ui-error/error-comp ctx)
           route'-ref (r/fmap (r/partial p-build-route' ctx) link-ref) ; need to re-focus from the top
-          link-props @(r/track build-link-props route'-ref link-ref ctx)]
+          link-props @(r/track build-link-props route'-ref link-ref ctx props)] ; handles :class and :tooltip props
       (when-not (:hidden link-props)
         (let [props (-> link-props
                         (update :class css (:class props))
-                        (merge (dissoc props :class))
+                        (merge (dissoc props :class :tooltip))
                         (dissoc :hidden))]
           (cond
             @(r/fmap link/popover-link? link-ref)

@@ -14,7 +14,7 @@
 
 
 (def editable-if-shadowed?
-  #{:link/disabled? :link/render-inline? :link/fiddle :link/formula :link/tx-fn :hypercrud/props})
+  #{:link/disabled? :link/render-inline? :link/fiddle :link/formula :link/tx-fn})
 
 (defn read-only? [ctx]
   (if (:hypercrud.browser/data ctx)                         ; be robust to being called on labels
@@ -66,7 +66,6 @@
       (when-not embed-mode (field [:link/managed?] ctx read-only-cell))
       (field [:link/formula] ctx read-only-cell)
       (when-not embed-mode (field [:link/tx-fn] ctx read-only-cell))
-      (when-not embed-mode (field [:hypercrud/props] ctx read-only-cell))
       (when-not embed-mode (field [] ctx
                                   (fn [val props ctx]
                                     (link :hyperfiddle/remove "link" ctx "remove")
