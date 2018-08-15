@@ -120,6 +120,7 @@
       [:body :element _ false] controls/string              ; aggregate, what else?
 
       [:head :naked _ _] (r/constantly [:noscript])         ; This is the fiddle links table – nested :head independent
+      [:body :naked _ _] entity
       )))
 
 (defn ^:export semantic-css [ctx]
