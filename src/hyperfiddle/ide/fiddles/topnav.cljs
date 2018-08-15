@@ -1,7 +1,7 @@
 (ns hyperfiddle.ide.fiddles.topnav
   (:require [cats.core :refer [fmap]]
             [clojure.string :as string]
-            [contrib.data :refer [kwargs unwrap]]
+            [contrib.data :refer [unwrap]]
             [contrib.reactive :as r]
             [contrib.reader :refer [read-edn-string]]
             [contrib.reagent :refer [fragment]]
@@ -11,7 +11,6 @@
             [contrib.ui.tooltip :refer [tooltip]]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.fiddle :as fiddle]
-            [hypercrud.browser.link :as link]
             [hypercrud.browser.router :as router]
             [hypercrud.browser.system-fiddle :as system-fiddle]
             [hypercrud.types.Entity :refer [->Entity shadow-entity]]

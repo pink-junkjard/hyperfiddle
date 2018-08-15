@@ -1,11 +1,9 @@
 (ns hypercrud.browser.base
-  (:require [cats.core :as cats :refer [mlet return]]
+  (:require [cats.core :refer [mlet return]]
             [cats.monad.either :as either]
-            [contrib.data :refer [unwrap]]
             [contrib.reactive :as r]
             [contrib.string :refer [memoized-safe-read-edn-string]]
             [contrib.try$ :refer [try-either]]
-            [datascript.parser :as parser]
             [hypercrud.browser.auto-link :refer [auto-links]]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.fiddle :as fiddle]
@@ -139,7 +137,7 @@
                               (-> ctx :route second first nil?))
                        (assoc ctx :read-only (r/constantly true))
                        ctx)]]
-      (cats/return ctx))))
+      (return ctx))))
 
 (defn data-from-route [route ctx]                           ; todo rename
   (let [ctx (-> (context/clean ctx)

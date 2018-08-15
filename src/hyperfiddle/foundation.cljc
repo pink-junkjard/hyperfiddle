@@ -11,14 +11,12 @@
     #?(:cljs [contrib.reagent :refer [fragment]])
             [contrib.pprint :refer [pprint-str pprint-datoms-str]]
     #?(:cljs [contrib.ui :refer [code markdown]])
-    #?(:cljs [contrib.ui.tooltip :refer [tooltip]])
             [hypercrud.browser.context :as context]
             [hypercrud.browser.routing :as routing]
             [hypercrud.browser.router :as router]
             [hypercrud.client.core :as hc]
             [hypercrud.types.Entity :refer [shadow-entity]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
-            [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hypercrud.types.Err :as Err]
     #?(:cljs [hypercrud.ui.stale :as stale])
             [hyperfiddle.actions :as actions]

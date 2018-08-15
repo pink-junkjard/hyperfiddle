@@ -10,10 +10,8 @@
     [contrib.pprint :refer [pprint-str]]
     [contrib.reactive :as r]
     [contrib.reagent :refer [fragment]]
-    [contrib.reactive-debug :refer [track-cmp]]
     [contrib.reagent-native-events :refer [native-click-listener]]
-    [contrib.string :refer [memoized-safe-read-edn-string blank->nil or-str]]
-    [contrib.try$ :refer [try-either]]
+    [contrib.string :refer [blank->nil]]
     [contrib.ui]
     [contrib.ui.input]
     [contrib.ui.safe-render :refer [user-portal]]
@@ -225,7 +223,6 @@ User renderers should not be exposed to the reaction."
                          (base/data-from-route route ctx)))
           error-comp (ui-error/error-comp ctx)
           props (dissoc props :route)]
-      ; todo the 3 ui fns should be what is injected, not ui-comp
       [stale/loading (stale/can-be-loading? ctx) either-v
        (fn [e]
          (let [on-click (r/partial click-fn route)]
