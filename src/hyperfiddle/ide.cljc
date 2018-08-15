@@ -79,8 +79,8 @@
 
 (defn- *-target-context [ctx]
   (assoc ctx
-    :hypercrud.browser/page-on-click (let [branch-aux {:hyperfiddle.ide/foo "page"}]
-                                       #?(:cljs (r/partial browser-ui/page-on-click (:peer ctx) nil branch-aux)))
+    :hyperfiddle.ui/iframe-on-click (let [branch-aux {:hyperfiddle.ide/foo "page"}]
+                                      #?(:cljs (r/partial browser-ui/page-on-click (:peer ctx) nil branch-aux)))
     :hypercrud.ui/display-mode (runtime/state (:peer ctx) [:display-mode])
     :hyperfiddle.ui/debug-tooltips (:active-ide? (runtime/host-env (:peer ctx)))))
 
