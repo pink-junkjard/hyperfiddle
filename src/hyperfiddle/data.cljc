@@ -18,8 +18,6 @@
         (or (:db/id row) row))
       hash))
 
-(def ^:deprecated relation-keyfn row-keyfn)
-
 (defn- relative-links-at [path-segments ctx]                ; scary
   (let [path (cond
                (empty? (:hypercrud.browser/path ctx)) path-segments
