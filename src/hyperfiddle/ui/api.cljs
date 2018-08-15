@@ -45,18 +45,21 @@
 
 (defn with-result [ctx]
   (case @(r/fmap ::field/cardinality (:hypercrud.browser/field ctx))
-    :db.cardinality/one (->> ctx
-                             (data/form (fn [path ctx]
-                                          (merge (head-field path (context/focus ctx [:head]))
-                                                 (body-field path (context/focus ctx [:body])))))
+    :db.cardinality/one (->> (data/form ctx)
+                             (map (fn [path]
+                                    (merge (head-field path (context/focus ctx [:head]))
+                                           (body-field path (context/focus ctx [:body])))))
                              (apply merge))
-    :db.cardinality/many (merge (->> (data/form head-field (context/focus ctx [:head]))
-                                     (apply merge))
+    :db.cardinality/many (merge (let [ctx (context/focus ctx [:head])]
+                                  (->> (data/form ctx)
+                                       (map #(head-field % ctx))
+                                       (apply merge)))
                                 (->> (r/unsequence (:hypercrud.browser/data ctx)) ; the request side does NOT need the cursors to be equiv between loops
                                      (map (fn [[row i]]
-                                            (->> (context/body ctx row)
-                                                 (data/form body-field)
-                                                 (apply merge))))
+                                            (let [ctx (context/body ctx row)]
+                                              (->> (data/form ctx)
+                                                   (map #(body-field % ctx))
+                                                   (apply merge)))))
                                      (apply merge)))
     ; blank fiddles
     {}))

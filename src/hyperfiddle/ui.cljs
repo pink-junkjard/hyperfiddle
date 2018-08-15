@@ -372,22 +372,23 @@ User renderers should not be exposed to the reaction."
         ^{:key (str relative-path magic-new-key #_"reset magic new state")}
         [form-field relative-path ctx Body Head props]))))
 
-(defn ^:export table "Semantic table"                       ; this is just a widget
-  [form ctx & [props]]
+(defn ^:export table "Semantic table; columns driven externally" ; this is just a widget
+  [fields ctx & [props]]
   (let [sort-col (r/atom nil)
         sort (fn [v] (hyperfiddle.ui.sort/sort-fn v sort-col))]
-    (fn [form ctx & [props]]
+    (fn [fields ctx & [props]]
       (let [ctx (assoc ctx ::sort/sort-col sort-col
                            ::layout :hyperfiddle.ui.layout/table)]
         [:table (update props :class (fnil css "hyperfiddle") "ui-table" "unp") ; fnil case is iframe root (not a field :many)
          (let [ctx (context/focus ctx [:head])]
-           (->> (form ctx) (into [:thead])))                ; strict
+           (->> (fields ctx) (into [:thead])))              ; strict
          (->> (:hypercrud.browser/data ctx)
               (r/fmap sort)
               (r/unsequence data/row-keyfn)
               (map (fn [[row k]]
-                     (->> (form (context/body ctx row))
-                          (into ^{:key k} [:tr]))))         ; strict
+                     (let [ctx (context/body ctx row)]
+                       (->> (fields ctx)
+                            (into ^{:key k} [:tr])))))      ; strict
               (into [:tbody]))]))))
 
 (defn hint [{:keys [hypercrud.browser/fiddle
@@ -397,7 +398,10 @@ User renderers should not be exposed to the reaction."
     [:div.alert.alert-warning "Warning: invalid route (d/pull requires an entity argument). To add a tempid entity to the URL, click here: "
      [:a {:href "~entity('$','tempid')"} [:code "~entity('$','tempid')"]] "."]))
 
-(letfn [(field-with-props [props relative-path ctx] (field relative-path ctx nil props))] ; dissoc class ?
+(letfn [(field-with-props [ctx props relative-path] (field relative-path ctx nil props))
+        (fields [props ctx]
+          (->> (data/form ctx)
+               (map (r/partial field-with-props ctx props))))] ; dissoc class ?
   (defn ^:export result "Default result renderer. Invoked as fn, returns seq-hiccup, hiccup or
 nil. call site must wrap with a Reagent component"
     [val ctx & [props]]
@@ -407,8 +411,8 @@ nil. call site must wrap with a Reagent component"
       (case @(r/fmap ::field/cardinality (:hypercrud.browser/field ctx))
         :db.cardinality/one (let [ctx (assoc ctx ::layout :hyperfiddle.ui.layout/block)
                                   key (-> (data/row-keyfn val) str keyword)]
-                              (apply fragment key (data/form (r/partial field-with-props props) ctx)))
-        :db.cardinality/many [table (r/partial data/form (r/partial field-with-props props)) ctx props] ; Inherit parent class, either a field renderer (nested) or nothing (root)
+                              (apply fragment key (fields props ctx)))
+        :db.cardinality/many [table (r/partial fields props) ctx props] ; Inherit parent class, either a field renderer (nested) or nothing (root)
         ; blank fiddles
         nil)
       (->> (concat (data/select-all ctx :options)

@@ -31,33 +31,19 @@
     (r/track link/links-at path (:hypercrud.browser/links ctx))))
 
 (defn form "Field is invoked as fn"                         ; because it unifies with request fn side
-  [f-field ctx]                                             ; f-field :: (relative-path ctx) => Any
+  [ctx]                                                     ; f-field :: (relative-path ctx) => Any
   (-> (->> (r/fmap ::field/children (:hypercrud.browser/field ctx))
            (r/unsequence ::field/path-segment)
-           (mapcat (fn [[m-field path-segment]]
-                     ; this is silly why are we tossing the m-field data structure
-                     (cond-> []
-                       (not @(r/fmap (r/comp nil? ::field/source-symbol) m-field)) ; this only happens once at the top for relation queries
-                       (into (->> (r/fmap ::field/children m-field)
+           (mapcat (fn [[field path-segment]]
+                     (cond->> [[path-segment]]
+                       @(r/fmap (r/comp not nil? ::field/source-symbol) field) ; this only happens once at the top for relation queries
+                       (into (->> (r/fmap ::field/children field)
                                   (r/unsequence ::field/path-segment)
                                   (mapv (fn [[m-child-field child-segment]]
-                                          ; this is silly why are we tossing the m-child-field data structure
-                                          (f-field [path-segment child-segment] ctx)))))
-
-                       (or (context/attribute-segment? path-segment)
-                           @(r/fmap (r/comp nil? ::field/source-symbol) m-field)
-                           (not @(r/fmap empty? (relative-links-at [:head path-segment] ctx)))
-                           (not @(r/fmap empty? (relative-links-at [:body path-segment] ctx))))
-                       (conj (f-field [path-segment] ctx))))))
+                                          [path-segment child-segment]))))))))
       vec
-      (cond->
-        (or (not @(r/fmap empty? (relative-links-at [:head] ctx)))
-            (not @(r/fmap empty? (relative-links-at [:body] ctx))))
-        ; row/relation; omit if result-row & no links. eventually we should probably always display
-        (conj (f-field [] ctx)))
-
-      ; this result can be directly inserted as children in a reagemnt component, CANNOT be a vector
-      seq))
+      (conj [])                                             ; row level (entity or relation etc)
+      seq #_"no vectors in hiccup"))
 
 (defn deps-satisfied? "Links in this :body strata" [this-path link-path]
   ; TODO tighten - needs to understand WHICH find element is in scope

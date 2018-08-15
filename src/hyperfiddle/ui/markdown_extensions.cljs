@@ -109,10 +109,10 @@
                        ?f (some->> (unwrap (memoized-safe-eval content)))]
                    (hyperfiddle.ui/field path ctx ?f (update props :class css "unp"))))
 
-       "table" (letfn [(form [content ctx]
+       "table" (letfn [(fields [content props ctx]
                          [[markdown content (assoc ctx ::unp true)]])]
                  (fn [content argument props ctx]
-                   [hyperfiddle.ui/table (r/partial form content) ctx #_props]))
+                   [hyperfiddle.ui/table (r/partial fields content props) ctx #_props]))
 
        "list" (fn [content argument props ctx]
                 [:ul props
