@@ -49,7 +49,7 @@
           (either/branch select-error-cmp identity))
       )))
 
-(defn renderer [ctx & [embed-mode]]
+(defn renderer [val ctx {:keys [:embed-mode] :as props}]
   [table
    #_(partial form (fn [path ctx ?f & args] (field path ctx ?f :read-only (read-only? ctx))))
    (fn [ctx]
@@ -68,4 +68,5 @@
                                   (fn [val props ctx]
                                     (link :hyperfiddle/remove "link" ctx "remove")
                                     )))])
-   ctx])
+   ctx
+   props])

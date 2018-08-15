@@ -97,7 +97,7 @@
    :fiddle/links (fn [val props ctx]
                    [:div
                     (link :hyperfiddle/new "link" ctx)
-                    [:div [links-fiddle/renderer ctx (:embed-mode props)]]
+                    [:div [links-fiddle/renderer val ctx props]]
                     (when-not (:embed-mode props)
                       #_[:div.hf-underdoc [markdown (:fiddle/links underdocs)]])])
    })
