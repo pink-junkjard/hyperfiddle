@@ -94,7 +94,8 @@
         (r/unsequence :db/id)
         (map (fn [[rv k]]
                ^{:key k}
-               [ui-from-link rv ctx props])))])
+               [ui-from-link rv ctx props]))
+        doall)])
 
 (defn result+ [val props ctx]
   [result val ctx props])
@@ -421,7 +422,8 @@ nil. call site must wrap with a Reagent component"
            (r/unsequence :db/id)
            (map (fn [[rv k]]
                   ^{:key k}
-                  [ui-from-link rv ctx props]))))))
+                  [ui-from-link rv ctx props]))
+           doall))))
 
 (def ^:dynamic markdown)                                    ; this should be hf-contrib or something
 

@@ -29,7 +29,8 @@
         (r/unsequence :db/id)
         (map (fn [[rv k]]
                ^{:key k}
-               [hyperfiddle.ui/ui-from-link rv ctx props])))])
+               [hyperfiddle.ui/ui-from-link rv ctx props]))
+        doall)])
 
 (defn magic-new-head [_ props ctx]
   (let [#_#_read-only (r/fmap (comp not controls/writable-entity?) (context/entity ctx)) ;-- don't check this, '* always has a dbid and is writable
