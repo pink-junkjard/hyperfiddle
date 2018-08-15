@@ -98,7 +98,7 @@
                   (let [ctx (assoc ctx ::unp true)]
                     (if-let [f (unwrap (memoized-safe-eval content))]
                       [f ctx]
-                      (hyperfiddle.ui/result ctx (update props :class css "unp")))))
+                      (hyperfiddle.ui/result @(:hypercrud.browser/data ctx) ctx (update props :class css "unp")))))
        "value" (fn [content argument props ctx]
                  (let [path (unwrap (memoized-safe-read-edn-string (str "[" argument "]")))
                        ?f (some->> (unwrap (memoized-safe-eval content)))]

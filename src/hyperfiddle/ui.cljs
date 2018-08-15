@@ -56,7 +56,7 @@
     ; This is the only way to stabilize this.
     attr-renderer-control))
 
-(defn ^:export control "this is a function, which returns component" [ctx] ; returns Func[(ref, props, ctx) => DOM]
+(defn ^:export control' "this is a function, which returns component" [ctx] ; returns Func[(ref, props, ctx) => DOM]
   (let [attr @(context/hydrate-attribute ctx (:hypercrud.browser/attribute ctx))]
     (let [type (some-> attr :db/valueType :db/ident name keyword)
           cardinality (some-> attr :db/cardinality :db/ident name keyword)]
@@ -77,8 +77,8 @@
 (declare fiddle-api)
 (declare fiddle-xray)
 
-(defn control+ [val props ctx]
-  [(control ctx) val props ctx])
+(defn control [val props ctx]
+  [(control' ctx) val props ctx])
 
 (defn entity [val props ctx]                                ; What about semantics we don't understand?
   [:div #_(fragment)
@@ -97,12 +97,12 @@
                [ui-from-link rv ctx props])))])
 
 (defn result+ [val props ctx]
-  [result ctx])
+  [result val ctx props])
 
 (defn select+ [val props ctx]
   [select (data/select+ ctx :options (:options props)) props ctx])
 
-(defn ^:export hyper-control "Handles labels too because we show links there." ; CTX is done after here. props and val only. But recursion needs to look again.
+(defn hyper-control' "Handles labels too because we show links there." ; CTX is done after here. props and val only. But recursion needs to look again.
   [ctx]
   {:post [%]}
   (let [head-or-body (->> (:hypercrud.browser/path ctx) (reverse) (take-to (comp not #{:head :body})) (last)) ; todo head/body attr collision
@@ -115,7 +115,7 @@
 
       [:head :attribute _ _] attribute-label
       [:body :attribute _ true] result+
-      [:body :attribute _ false] (or (attr-renderer ctx) control+)
+      [:body :attribute _ false] (or (attr-renderer ctx) control)
 
       [:head :element _ true] entity-label
       [:body :element _ true] entity                        ; entity (:remove :edit)
@@ -126,6 +126,14 @@
       [:head :naked _ _] (r/constantly [:noscript])         ; This is the fiddle links table – nested :head independent
       [:body :naked _ _] entity
       )))
+
+(defn ^:export hyper-control [val props ctx]
+  [(hyper-control' ctx) val props ctx])
+
+(defn auto-link-css [link]                                  ; semantic-css
+  (->> (:link/class link)
+       (interpose " ")
+       (apply str)))
 
 (defn ^:export semantic-css [ctx]
   ; Include the fiddle level ident css.
@@ -160,7 +168,7 @@ User renderers should not be exposed to the reaction."
   [relative-path ctx ?f & [props]]                          ; ?f :: (ref, props, ctx) => DOM
   (let [ctx (context/focus ctx relative-path)
         props (update props :class css (semantic-css ctx))]
-    [(or ?f (hyper-control ctx)) @(:hypercrud.browser/data ctx) props ctx]))
+    [(or ?f hyper-control) @(:hypercrud.browser/data ctx) props ctx]))
 
 (defn ^:export anchor [ctx props & children]
   (let [props (-> props
@@ -169,7 +177,7 @@ User renderers should not be exposed to the reaction."
                   (assoc :href (some->> (:route props) (runtime/encode-route (:peer ctx)))))]
     (into [:a props] children)))
 
-(letfn [(auto-ui-css-class [ctx]
+(letfn [(auto-ui-css-class [ctx]                            ; semantic css
           (css (let [ident @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/ident])]
                  ["hyperfiddle"
                   (css-slugify (some-> ident namespace))
@@ -240,7 +248,7 @@ User renderers should not be exposed to the reaction."
                                            (some-> @(r/fmap :link/rel link-ref) name)
                                            "_")))
         (p-build-route' [ctx link] (routing/build-route' link ctx))
-        (build-link-props [route'-ref link-ref ctx props]         ; todo this function needs untangling; ui-from-route ignores most of this
+        (build-link-props [route'-ref link-ref ctx props]   ; todo this function needs untangling; ui-from-route ignores most of this
           ; this is a fine place to eval, put error message in the tooltip prop
           ; each prop might have special rules about his default, for example :visible is default true, does this get handled here?
           (let [unvalidated-route' @route'-ref
@@ -273,7 +281,7 @@ User renderers should not be exposed to the reaction."
                         (dissoc :hidden))]
           (cond
             @(r/fmap link/popover-link? link-ref)
-            (let [props (update props :class css "hf-auto-nav")] ; should this be in popover-cmp? what is this class?
+            (let [props (update props :class css "hf-auto-nav")] ; should this be in popover-cmp? what is this class? – unify with semantic css
               [popover-cmp link-ref ctx props @(r/track prompt link-ref ?label)])
 
             @(r/fmap :link/render-inline? link-ref)
@@ -282,14 +290,14 @@ User renderers should not be exposed to the reaction."
             [stale/loading (stale/can-be-loading? ctx) (fmap #(router/assoc-frag % (:frag props)) @route'-ref) ; what is this frag noise?
              (fn [e] [error-comp e])
              (fn [route]
-               [iframe ctx (-> props
+               [iframe ctx (-> props                        ; flagged - :class
                                (assoc :route route)
                                (dissoc props :tooltip)
-                               (update :class css (css-slugify @(r/fmap :link/rel link-ref))))])]
+                               (update :class css (css-slugify @(r/fmap auto-link-css link-ref))))])]
 
             :else [tooltip (tooltip-props props)
                    (let [props (dissoc props :tooltip)]
-                     ; what about class
+                     ; what about class - flagged
                      [anchor ctx props @(r/track prompt link-ref ?label)])]
             ))))))
 
@@ -314,9 +322,9 @@ User renderers should not be exposed to the reaction."
 
 (defn form-field "Form fields are label AND value. Table fields are label OR value."
   ; It is the driver-fn's job to elide this field if it will be empty
-  [hyper-control relative-path ctx ?f props]                ; ?f :: (val props ctx) => DOM
+  [relative-path ctx Body Head props]                       ; ?f :: (val props ctx) => DOM
   (let [state (r/atom {:hyperfiddle.ui.form/magic-new-a nil})]
-    (fn [hyper-control relative-path ctx ?f props]
+    (fn [relative-path ctx Body Head props]
       (let [ctx (assoc ctx :hyperfiddle.ui.form/state state)
             body-ctx (context/focus ctx (cons :body relative-path))
             head-ctx (context/focus ctx (cons :head relative-path))
@@ -325,13 +333,13 @@ User renderers should not be exposed to the reaction."
                :style {:border-color (border-color body-ctx)}} ; wrapper div has :body stypes - why?
          (fragment
            ^{:key :form-head}
-           [(or (:label-fn props) (hyper-control head-ctx)) nil props head-ctx]
+           [Head nil props head-ctx]
            ^{:key :form-body}
            [:div
-            [(or ?f (hyper-control body-ctx)) @(:hypercrud.browser/data body-ctx) props body-ctx]])]))))
+            [Body @(:hypercrud.browser/data body-ctx) props body-ctx]])]))))
 
 (defn table-field "Form fields are label AND value. Table fields are label OR value."
-  [hyper-control relative-path ctx ?f props]                ; ?f :: (val props ctx) => DOM
+  [relative-path ctx Body Head props]                       ; Body :: (val props ctx) => DOM, invoked as component
   (let [head-or-body (last (:hypercrud.browser/path ctx))   ; this is ugly and not uniform with form-field
         ctx (context/focus ctx relative-path)
         props (update props :class css (semantic-css ctx))]
@@ -341,34 +349,38 @@ User renderers should not be exposed to the reaction."
                               (some-> (sort/sort-direction relative-path ctx) name)) ; hoist
                   :style {:background-color (border-color ctx)}
                   :on-click (r/partial sort/toggle-sort! relative-path ctx)}
-             [(or (:label-fn props) (hyper-control ctx)) nil props ctx]]
+             [Head nil props ctx]]
       :body [:td {:class (css "field" (:class props) "truncate")
                   :style {:border-color (when (:hypercrud.browser/source-symbol ctx) (border-color ctx))}}
-             [(or ?f (hyper-control ctx)) @(:hypercrud.browser/data ctx) props ctx]])))
+             [Body @(:hypercrud.browser/data ctx) props ctx]])))
 
 ; (defmulti field ::layout)
 (defn ^:export field "Works in a form or table context. Draws label and/or value."
   [relative-path ctx & [?f props]]                          ; ?f :: (ref, props, ctx) => DOM
-  (let [is-magic-new (= '* (last relative-path))]
+  (let [Body (or ?f hyper-control)
+        Head (or (:label-fn props) hyper-control)
+        props (dissoc props :label-fn)
+        ; add semantic css here?
+        is-magic-new (= '* (last relative-path))]
     (case (:hyperfiddle.ui/layout ctx)
       :hyperfiddle.ui.layout/table (when-not is-magic-new
                                      ^{:key (str relative-path)}
-                                     [table-field hyper-control relative-path ctx ?f props])
+                                     [table-field relative-path ctx Body Head props])
       (let [magic-new-key (when is-magic-new
                             (let [ctx (context/focus ctx (cons :body relative-path))]
                               ; guard against crashes for nil data
                               (hash (some->> ctx :hypercrud.browser/parent :hypercrud.browser/data (r/fmap keys) deref))))]
         ^{:key (str relative-path magic-new-key #_"reset magic new state")}
-        [form-field hyper-control relative-path ctx ?f props]))))
+        [form-field relative-path ctx Body Head props]))))
 
-(defn ^:export table "Semantic table"
+(defn ^:export table "Semantic table"                       ; this is just a widget
   [form ctx & [props]]
   (let [sort-col (r/atom nil)
         sort (fn [v] (hyperfiddle.ui.sort/sort-fn v sort-col))]
     (fn [form ctx & [props]]
       (let [ctx (assoc ctx ::sort/sort-col sort-col
                            ::layout :hyperfiddle.ui.layout/table)]
-        [:table (update props :class css "ui-table" "unp" (semantic-css ctx))
+        [:table (update props :class (fnil css "hyperfiddle") "ui-table" "unp") ; fnil case is iframe root (not a field :many)
          (let [ctx (context/focus ctx [:head])]
            (->> (form ctx) (into [:thead])))                ; strict
          (->> (:hypercrud.browser/data ctx)
@@ -386,18 +398,18 @@ User renderers should not be exposed to the reaction."
     [:div.alert.alert-warning "Warning: invalid route (d/pull requires an entity argument). To add a tempid entity to the URL, click here: "
      [:a {:href "~entity('$','tempid')"} [:code "~entity('$','tempid')"]] "."]))
 
-(letfn [(field-with-props [props relative-path ctx] (field relative-path ctx nil props))]
+(letfn [(field-with-props [props relative-path ctx] (field relative-path ctx nil props))] ; dissoc class ?
   (defn ^:export result "Default result renderer. Invoked as fn, returns seq-hiccup, hiccup or
 nil. call site must wrap with a Reagent component"
-    [ctx & [props]]
+    [val ctx & [props]]
     ; focus should probably get called here. What about the request side?
     (fragment
       (hint ctx)
       (case @(r/fmap ::field/cardinality (:hypercrud.browser/field ctx))
         :db.cardinality/one (let [ctx (assoc ctx ::layout :hyperfiddle.ui.layout/block)
-                                  key (-> @(r/fmap data/row-keyfn (:hypercrud.browser/data ctx)) str keyword)]
+                                  key (-> (data/row-keyfn val) str keyword)]
                               (apply fragment key (data/form (r/partial field-with-props props) ctx)))
-        :db.cardinality/many [table (r/partial data/form (r/partial field-with-props props)) ctx props]
+        :db.cardinality/many [table (r/partial data/form (r/partial field-with-props props)) ctx props] ; Inherit parent class, either a field renderer (nested) or nothing (root)
         ; blank fiddles
         nil)
       (->> (concat (data/select-all ctx :options)
@@ -419,7 +431,7 @@ nil. call site must wrap with a Reagent component"
   (let [{:keys [:hypercrud.browser/fiddle]} ctx]
     [:div {:class class}
      [:h3 (pr-str (:route ctx)) #_(some-> @fiddle :fiddle/ident str)]
-     (result ctx)]))
+     (result @(:hypercrud.browser/data ctx) ctx #_{:class (css (semantic-css ctx))})]))
 
 (letfn [(render-edn [data]
           (let [edn-str (-> (hyperfiddle.ui.hacks/pull-soup->tree data)

@@ -26,7 +26,7 @@
 (defn read-only-cell [val props ctx]
   ; Need to delay until we have the value ctx to compute this, which means its a value renderer not a field prop
   (let [props (assoc props :read-only (read-only? ctx))]
-    [(hyper-control ctx) val props ctx]))
+    [hyper-control val props ctx]))
 
 (defn link-fiddle [val props ctx]
   (fragment

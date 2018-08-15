@@ -41,7 +41,7 @@
           [:label {:style {:font-weight "400" :display "block"}} [:input {:type "checkbox" :checked @hide-archived :on-change #(swap! hide-archived not)}] " hide Hyperfiddle archived attributes"]
           (let [ctx (-> ctx
                         (update :hypercrud.browser/data (partial contrib.reactive/fmap do-filter-reactive)))]
-            [hyperfiddle.ui/result ctx])]))))
+            [hyperfiddle.ui/result @(:hypercrud.browser/data ctx) ctx])]))))
 
 #_(deftest pprint-performance-1 []
 
