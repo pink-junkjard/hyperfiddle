@@ -67,7 +67,7 @@
         [:long :one] controls/long
         [:instant :one] controls/instant
         [:ref :one] controls/dbid                           ; nested form
-        [:ref :many] (constantly [:noscript]) #_edn-many    ; nested table
+        [:ref :many] (r/constantly nil) #_edn-many          ; nested table
         [_ :one] controls/edn
         [_ :many] controls/edn-many))))
 
@@ -124,7 +124,7 @@
       [:head :element _ false] attribute-label              ; preserve old behavior
       [:body :element _ false] controls/string              ; aggregate, what else?
 
-      [:head :naked _ _] (r/constantly [:noscript])         ; This is the fiddle links table – nested :head independent
+      [:head :naked _ _] (r/constantly nil)                 ; This is the fiddle links table – nested :head independent
       [:body :naked _ _] entity
       )))
 
