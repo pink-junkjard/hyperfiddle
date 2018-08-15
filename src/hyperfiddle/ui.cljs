@@ -38,21 +38,21 @@
     [hyperfiddle.ui.popover :refer [popover-cmp]]
     [hyperfiddle.ui.select :refer [select]]
     [hyperfiddle.ui.sort :as sort]
-    [hyperfiddle.ui.util :refer [eval-renderer-comp+ eval-renderer-comp]]))
+    [hyperfiddle.ui.util :refer [eval-renderer-comp]]))
 
 
 (defn attr-renderer-control [val props ctx]
   ; The only way to stabilize this is for this type signature to become a react class.
   (let [?user-f @(->> (context/hydrate-attribute ctx (:hypercrud.browser/attribute ctx))
-                      (r/fmap (r/comp eval-renderer-comp+ blank->nil :attribute/renderer)))]
+                      (r/fmap (r/comp blank->nil :attribute/renderer)))]
     (if ?user-f
       [user-portal (ui-error/error-comp ctx)
        ; ?user-f is stable due to memoizing eval (and only due to this)
-       [?user-f val props ctx]])))
+       [eval-renderer-comp nil ?user-f val props ctx]])))
 
 (defn attr-renderer [ctx]
   (if @(->> (context/hydrate-attribute ctx (:hypercrud.browser/attribute ctx))
-            (r/fmap (r/comp eval-renderer-comp+ blank->nil :attribute/renderer)))
+            (r/fmap (r/comp blank->nil :attribute/renderer)))
     ; This is the only way to stabilize this.
     attr-renderer-control))
 
@@ -190,9 +190,9 @@ User renderers should not be exposed to the reaction."
          :hypercrud.browser.browser-ui/user (if-let [user-renderer (:user-renderer props)]
                                               [user-renderer ctx class]
                                               (let [fiddle (:hypercrud.browser/fiddle ctx)]
-                                                [(eval-renderer-comp
-                                                   (some-> @(r/cursor fiddle [:fiddle/cljs-ns]) blank->nil)
-                                                   (some-> @(r/cursor fiddle [:fiddle/renderer]) blank->nil build-wrapped-render-expr-str))
+                                                [eval-renderer-comp
+                                                 (some-> @(r/cursor fiddle [:fiddle/cljs-ns]) blank->nil)
+                                                 (some-> @(r/cursor fiddle [:fiddle/renderer]) blank->nil build-wrapped-render-expr-str)
                                                  ctx class
                                                  ; If userland crashes, reactions don't take hold, we need to reset here.
                                                  ; Cheaper to pass this as a prop than to hash everything
