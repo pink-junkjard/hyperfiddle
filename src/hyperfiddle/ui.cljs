@@ -109,7 +109,7 @@
         segment (last (:hypercrud.browser/path ctx))
         segment-type (context/segment-type segment)
         child-fields (not @(r/fmap (r/comp nil? ::field/children) (:hypercrud.browser/field ctx)))]
-    (match* [head-or-body segment-type segment child-fields #_@user]
+    (match [head-or-body segment-type segment child-fields #_@user]
       [:head :attribute '* _] magic-new-head
       [:body :attribute '* _] magic-new-body
 
