@@ -19,7 +19,8 @@
             [hypercrud.client.schema :as schema-util]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
-            [hyperfiddle.domain :as domain]))
+            [hyperfiddle.domain :as domain]
+            [taoensso.timbre :as timbre]))
 
 
 (def meta-pull-exp-for-link
@@ -114,7 +115,10 @@
 (let [nil-or-hydrate (fn [peer branch request]
                        (if-let [?request @request]
                          @(hc/hydrate peer branch ?request)
-                         (either/right nil)))]
+                         (either/right nil)))
+      deprecated-deref (fn [v]
+                         (timbre/warn ":hypercrud.browser/result has been deprecated.  Please use :hypercrud.browser/data.")
+                         v)]
   (defn process-results [fiddle request ctx]                ; todo rename to (context/result)
     (mlet [reactive-schemas @(r/apply-inner-r (schema-util/hydrate-schema ctx))
            reactive-result @(r/apply-inner-r (r/track nil-or-hydrate (:peer ctx) (:branch ctx) request))
@@ -122,7 +126,7 @@
                        :hypercrud.browser/data reactive-result
                        :hypercrud.browser/fiddle fiddle     ; for :db/doc
                        :hypercrud.browser/path []
-                       :hypercrud.browser/result reactive-result ; legacy
+                       :hypercrud.browser/result (r/fmap deprecated-deref reactive-result) ; legacy
                        ; For tx/entity->statements in userland.
                        :hypercrud.browser/schemas reactive-schemas)]
            ctx (user-bindings/user-bindings ctx)
