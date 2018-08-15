@@ -1,7 +1,7 @@
 (ns hyperfiddle.ui
   (:require-macros [hyperfiddle.ui :refer [-build-fiddle]])
   (:require
-    [cats.core :as cats :refer [fmap]]
+    [cats.core :as cats :refer [fmap mlet]]
     [cats.monad.either :as either]
     [clojure.core.match :refer [match match*]]
     [clojure.string :as string]
@@ -20,10 +20,12 @@
     [contrib.ui.tooltip :refer [tooltip tooltip-props]]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.base :as base]
+    [hypercrud.browser.fiddle :as fiddle]
     [hypercrud.browser.field :as field]
     [hypercrud.browser.link :as link]
     [hypercrud.browser.router :as router]
     [hypercrud.browser.routing :as routing]
+    [hypercrud.types.ThinEntity :refer [->ThinEntity]]
     [hypercrud.ui.connection-color :refer [border-color]]
     [hypercrud.ui.error :as ui-error]
     [hypercrud.ui.stale :as stale]
@@ -36,7 +38,7 @@
     [hyperfiddle.ui.popover :refer [popover-cmp]]
     [hyperfiddle.ui.select :refer [select]]
     [hyperfiddle.ui.sort :as sort]
-    [hyperfiddle.ui.util :refer [eval-renderer-comp+]]))
+    [hyperfiddle.ui.util :refer [eval-renderer-comp+ eval-renderer-comp]]))
 
 
 (defn attr-renderer-control [val props ctx]
@@ -72,6 +74,8 @@
 (declare result)
 (declare link)
 (declare ui-from-link)
+(declare fiddle-api)
+(declare fiddle-xray)
 
 (defn control+ [val props ctx]
   [(control ctx) val props ctx])
@@ -165,11 +169,48 @@ User renderers should not be exposed to the reaction."
                   (assoc :href (some->> (:route props) (runtime/encode-route (:peer ctx)))))]
     (into [:a props] children)))
 
-(letfn [(fiddle-css-renderer [s] [:style {:dangerouslySetInnerHTML {:__html @s}}])]
+(letfn [(auto-ui-css-class [ctx]
+          (css (let [ident @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/ident])]
+                 ["hyperfiddle"
+                  (css-slugify (some-> ident namespace))
+                  (css-slugify ident)])))
+        (build-wrapped-render-expr-str [user-str] (str "(fn [ctx & [class]]\n" user-str ")"))]
+  (defn ui-comp [ctx & [props]]
+    [user-portal (ui-error/error-comp ctx)
+     (let [class (css (:class props) (auto-ui-css-class ctx))]
+       (case @(:hypercrud.ui/display-mode ctx)
+         :hypercrud.browser.browser-ui/user (if-let [user-renderer (:user-renderer props)]
+                                              [user-renderer ctx class]
+                                              (let [fiddle (:hypercrud.browser/fiddle ctx)]
+                                                [(eval-renderer-comp
+                                                   (some-> @(r/cursor fiddle [:fiddle/cljs-ns]) blank->nil)
+                                                   (some-> @(r/cursor fiddle [:fiddle/renderer]) blank->nil build-wrapped-render-expr-str))
+                                                 ctx class
+                                                 ; If userland crashes, reactions don't take hold, we need to reset here.
+                                                 ; Cheaper to pass this as a prop than to hash everything
+                                                 ; Userland will never see this param as it isn't specified in the wrapped render expr.
+                                                 @(:hypercrud.browser/fiddle ctx) ; for good luck
+                                                 ]))
+         :hypercrud.browser.browser-ui/xray [fiddle-xray ctx class]
+         :hypercrud.browser.browser-ui/api [fiddle-api ctx class]))]))
+
+(letfn [(fiddle-css-renderer [s] [:style {:dangerouslySetInnerHTML {:__html @s}}])
+        (src-mode [ctx]
+          (mlet [request @(r/apply-inner-r (r/track base/meta-request-for-fiddle ctx))
+                 :let [fiddle (->> {:fiddle/type :entity
+                                    :fiddle/pull-database "$"} ; turns out we dont need fiddle for much if we already know the request
+                                   (fiddle/fiddle-defaults)
+                                   (r/track identity))
+                       ctx (-> (context/source-mode ctx)
+                               (context/clean)
+                               (routing/route [nil [(->ThinEntity "$" [:fiddle/ident (first (:route ctx))])]]))]]
+            (base/process-results fiddle request ctx)))]
   (defn ^:export iframe [ctx {:keys [route] :as props}]
     (let [click-fn (or (:hyperfiddle.ui/iframe-on-click ctx) (constantly nil)) ; parent ctx receives click event, not child frame
           either-v (or (some-> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :error]) either/left)
-                       (base/data-from-route route ctx))
+                       (if (hyperfiddle.ide.fiddles.topnav/src-mode? (get route 3))
+                         (src-mode ctx)
+                         (base/data-from-route route ctx)))
           error-comp (ui-error/error-comp ctx)
           props (dissoc props :route)]
       ; todo the 3 ui fns should be what is injected, not ui-comp
@@ -182,14 +223,14 @@ User renderers should not be exposed to the reaction."
          (let [on-click (r/partial click-fn (:route ctx))]
            [native-click-listener {:on-click on-click}
             (fragment
-              [(:alpha.hypercrud.browser/ui-comp ctx) ctx (update props :class css "ui")]
+              [ui-comp ctx (update props :class css "ui")]
               [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])])]))
        (fn [ctx]
          (let [on-click (r/partial click-fn (:route ctx))]
            ; use the stale ctx's route, otherwise alt clicking while loading could take you to the new route, which is jarring
            [native-click-listener {:on-click on-click}
             (fragment
-              [(:alpha.hypercrud.browser/ui-comp ctx) ctx (update props :class css "hyperfiddle-loading" "ui")]
+              [ui-comp ctx (update props :class css "hyperfiddle-loading" "ui")]
               [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])])]))])))
 
 (letfn [(prompt [link-ref ?label] (str (or ?label

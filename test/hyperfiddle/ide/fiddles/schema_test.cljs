@@ -1,10 +1,10 @@
 (ns hyperfiddle.ide.fiddles.schema_test
-  (:require [clojure.test :refer [deftest is]]
-            [contrib.reactive :as r]
-            [contrib.pprint :refer [slow-pprint-str]]
-            [hypercrud.browser.browser-ui-test :refer [test-renderer-str]]
-            [hyperfiddle.ide.fiddles.schema :as schema]
-            ))
+  (:require
+    [clojure.test :refer [deftest is]]
+    [contrib.reactive :as r]
+    [hyperfiddle.ide.fiddles.schema :as schema]
+    [hyperfiddle.ui :refer [ui-comp]]
+    [reagent.dom.server :as dom-server]))
 
 
 (deftest schema-renderer []
@@ -15,7 +15,8 @@
              :hypercrud.browser/links (r/atom nil)
              :hypercrud.browser/schemas (r/atom nil)}]
     ; just test it renderers something
-    #_(is (not (nil? (test-renderer-str (:fiddle/renderer (schema/schema "$")) ctx))))))
+    #_(is (not (nil? (dom-server/render-to-static-markup
+                       [ui-comp ctx {:user-renderer (:fiddle/renderer (schema/schema "$"))}]))))))
 
 (deftest db-attribute-renderer []
   (let [ctx {:cell (constantly [:pre])
@@ -26,4 +27,5 @@
              :hypercrud.browser/schemas (r/atom nil)}]
     ; just test it renderers something
     ; Working, but missing a find-element etc mock. We need actual context mocks.
-    #_(is (not (nil? (test-renderer-str (:fiddle/renderer (schema/db-attribute-edit "$")) ctx))))))
+    #_(is (not (nil? (dom-server/render-to-static-markup
+                       [ui-comp ctx {:user-renderer (:fiddle/renderer (schema/db-attribute-edit "$"))}]))))))

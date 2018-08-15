@@ -102,7 +102,7 @@
                       #_[:div.hf-underdoc [markdown (:fiddle/links underdocs)]])])
    })
 
-(defn fiddle-src-renderer [ctx class & {:keys [embed-mode]}]
+(defn fiddle-src-renderer [ctx class]
   (let [ctx (shadow-fiddle ctx)
         ; these two shadow calls are inefficient, throwing away work
         ectx (shadow-links ctx)
@@ -133,4 +133,4 @@
           (remove #(= (namespace %) "fiddle"))
           (map #(field [%] ctx nil))
           (doall))
-     (when-not embed-mode (link :hyperfiddle/remove "fiddle" ctx "Remove fiddle" {:class "btn-outline-danger"}))]))
+     (link :hyperfiddle/remove "fiddle" ctx "Remove fiddle" {:class "btn-outline-danger"})]))

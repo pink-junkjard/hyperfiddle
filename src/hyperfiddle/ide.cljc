@@ -150,7 +150,6 @@
 #?(:cljs
    (defn view-page [[fiddle :as route] ctx]
      (let [src-mode (let [[_ _ _ frag] route] (topnav/src-mode? frag)) ; Immoral - :src bit is tunneled in userland fragment space
-           ctx (assoc ctx :alpha.hypercrud.browser/ui-comp browser-ui/ui-comp)
            ide-ctx (page-ide-context ctx)
            ide-route (ide-fiddle-route route ctx)
            topnav-ctx (base/data-from-route ide-route ide-ctx)

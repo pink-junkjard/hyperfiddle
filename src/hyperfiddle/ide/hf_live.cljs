@@ -5,17 +5,16 @@
     [contrib.pprint]
     [contrib.reactive :as r]
     [contrib.ui]
-    [hypercrud.browser.browser-ui :refer [ui-comp]]
     [hypercrud.browser.router :as router]
     [hyperfiddle.ide.fiddles.fiddle-src :as fiddle-src]
     [hyperfiddle.ide.fiddles.topnav :refer [shadow-fiddle]]
-    [hyperfiddle.ui :refer [fiddle-api field]]))
+    [hyperfiddle.ui :refer [fiddle-api field iframe ui-comp]]))
 
 ; This is an entity in the project namespace in the IDE fiddle-repo, probably
 (def attr-order [:fiddle/ident :fiddle/type :fiddle/pull-database :fiddle/pull :fiddle/query
                  :fiddle/renderer :fiddle/css :fiddle/markdown :fiddle/links :fiddle/hydrate-result-as-fiddle])
 
-(defn docs-embed [attrs ctx-real class & {:keys [embed-mode]}]
+(defn docs-embed [attrs ctx-real class]
   (let [attrs (or (seq attrs)
                   (clojure.set/intersection
                     (-> @(:hypercrud.browser/data ctx-real)
@@ -23,7 +22,7 @@
                         (->> (apply sorted-set-by (compare-by-index attr-order)))
                         (disj :db/id))))
         ctx (shadow-fiddle ctx-real)]
-    (fn [ctx-real class & {:keys [embed-mode]}]
+    (fn [ctx-real class]
       (into
         [:div {:class class}]
         (for [k attrs
@@ -59,7 +58,7 @@
              f (r/partial (if @as-edn result-edn docs-embed) fiddle-attrs)]
          [:div.src.col-sm.order-sm-1.order-xs-2
           [:div "Interactive Hyperfiddle editor:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
-          [ui-comp (assoc ctx :route (router/assoc-frag (:route ctx) ":src"))
-           {:class (css class "devsrc hf-live")
-            :user-renderer f}]])
+          [iframe ctx {:class (css class "devsrc hf-live")
+                       :route (router/assoc-frag (:route ctx) ":src")
+                       :user-renderer f}]])
        ])))
