@@ -19,7 +19,7 @@
 (defn entity-change->tx [ctx value]
   (let [value (empty->nil value)                            ; safe for non-strings
         entity @(get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
-        attribute @(context/hydrate-attribute ctx (:hypercrud.browser/attribute ctx))]
+        attribute @(context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)))]
     (tx/update-entity-attr entity attribute value)))
 
 (defn entity-change! [ctx value]
@@ -115,9 +115,9 @@
                   rets (set/difference value user-val)
                   adds (set/difference user-val value)]
               (context/with-tx! ctx (tx/edit-entity @(r/fmap :db/id (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))
-                                                    (:hypercrud.browser/attribute ctx)
+                                                    (last (:hypercrud.browser/path ctx))
                                                     rets adds))))]
-    (let [valueType @(context/hydrate-attribute ctx (:hypercrud.browser/attribute ctx) :db/valueType :db/ident)
+    (let [valueType @(context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)) :db/valueType :db/ident)
           value (set (if (= valueType :db.type/ref) (map :db/id val) val))
           widget (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
                    :hyperfiddle.ui.layout/block contrib.ui/edn

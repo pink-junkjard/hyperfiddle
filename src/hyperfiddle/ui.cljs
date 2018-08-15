@@ -43,7 +43,7 @@
 
 (defn attr-renderer-control [val props ctx]
   ; The only way to stabilize this is for this type signature to become a react class.
-  (let [?user-f @(->> (context/hydrate-attribute ctx (:hypercrud.browser/attribute ctx))
+  (let [?user-f @(->> (context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)))
                       (r/fmap (r/comp blank->nil :attribute/renderer)))]
     (if ?user-f
       [user-portal (ui-error/error-comp ctx)
@@ -51,13 +51,13 @@
        [eval-renderer-comp nil ?user-f val props ctx]])))
 
 (defn attr-renderer [ctx]
-  (if @(->> (context/hydrate-attribute ctx (:hypercrud.browser/attribute ctx))
+  (if @(->> (context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)))
             (r/fmap (r/comp blank->nil :attribute/renderer)))
     ; This is the only way to stabilize this.
     attr-renderer-control))
 
 (defn ^:export control' "this is a function, which returns component" [ctx] ; returns Func[(ref, props, ctx) => DOM]
-  (let [attr @(context/hydrate-attribute ctx (:hypercrud.browser/attribute ctx))]
+  (let [attr @(context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)))]
     (let [type (some-> attr :db/valueType :db/ident name keyword)
           cardinality (some-> attr :db/cardinality :db/ident name keyword)]
       (match* [type cardinality]
@@ -156,11 +156,12 @@
                (cons :hypercrud.browser/path)               ; need to prefix the path with something to differentiate between attr and single attr paths
                (map css-slugify)
                (string/join "/"))]
-         (let [attr (context/hydrate-attribute ctx (:hypercrud.browser/attribute ctx))]
-           [@(r/cursor attr [:db/valueType :db/ident])
-            @(r/cursor attr [:attribute/renderer])  #_label/fqn->name
-            @(r/cursor attr [:db/cardinality :db/ident])
-            (some-> @(r/cursor attr [:db/isComponent]) (if :component))]))
+         (when (context/attribute-segment? (last (:hypercrud.browser/path ctx)))
+           (let [attr (context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)))]
+             [@(r/cursor attr [:db/valueType :db/ident])
+              @(r/cursor attr [:attribute/renderer])  #_label/fqn->name
+              @(r/cursor attr [:db/cardinality :db/ident])
+              (some-> @(r/cursor attr [:db/isComponent]) (if :component))])))
        (map css-slugify)))
 
 (defn ^:export value "Relation level value renderer. Works in forms and lists but not tables (which need head/body structure).

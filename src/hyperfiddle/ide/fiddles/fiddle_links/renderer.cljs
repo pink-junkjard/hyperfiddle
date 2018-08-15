@@ -21,7 +21,7 @@
     (let [entity (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
           sys? (system-link? @(r/fmap :db/id entity))
           shadow? @(r/fmap :hypercrud/sys? entity)]
-      (or sys? (and shadow? (not (editable-if-shadowed? (:hypercrud.browser/attribute ctx))))))))
+      (or sys? (and shadow? (not (editable-if-shadowed? (last (:hypercrud.browser/path ctx)))))))))
 
 (defn read-only-cell [val props ctx]
   ; Need to delay until we have the value ctx to compute this, which means its a value renderer not a field prop

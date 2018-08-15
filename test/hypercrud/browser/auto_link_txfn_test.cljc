@@ -15,7 +15,7 @@
               eval/eval-string)
         uri (->URI "test")
         ctx {:uri uri
-             :hypercrud.browser/attribute :parent/child
+             :hypercrud.browser/path [:parent/child]
              :hypercrud.browser/parent {:hypercrud.browser/data (r/atom (->Entity uri {:db/id "parent"}))}}
         modal-route [nil [{:db/id "child"}]]]
     (is (= (f ctx nil modal-route)

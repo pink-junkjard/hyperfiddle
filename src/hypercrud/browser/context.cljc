@@ -16,7 +16,6 @@
           :hypercrud.ui/error
           :hyperfiddle.ui/layout
 
-          :hypercrud.browser/attribute
           :hypercrud.browser/data
           :hypercrud.browser/fiddle
           :hypercrud.browser/field
@@ -90,8 +89,7 @@
     (let [new-ctx (-> ctx
                       (set-parent)
                       (set-parent-data)
-                      (update :hypercrud.browser/path conj :body)
-                      (dissoc :hypercrud.browser/attribute))]
+                      (update :hypercrud.browser/path conj :body))]
       (case cardinality
         :db.cardinality/one new-ctx
         :db.cardinality/many
@@ -112,8 +110,7 @@
                 (set-parent)
                 (set-parent-data)
                 (update :hypercrud.browser/path conj :head)
-                (dissoc :hypercrud.browser/attribute
-                        :hypercrud.browser/data))
+                (dissoc :hypercrud.browser/data))
 
             ; todo cannot conflict with :db/ident :body
             :body (body ctx)
@@ -126,8 +123,6 @@
                           (assoc :hypercrud.browser/field field)
                           (set-data-source field))]
               (cond-> ctx
-                (attribute-segment? path-segment) (assoc :hypercrud.browser/attribute path-segment)
-
                 ; if we are in a head, we dont have data to set
                 (not (some #{:head} (:hypercrud.browser/path ctx)))
                 (-> (set-parent-data)

@@ -27,7 +27,7 @@
     attr))
 
 (defn semantic-docstring [ctx]
-  (let [attr (context/hydrate-attribute ctx (:hypercrud.browser/attribute ctx))
+  (let [attr (context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)))
         dbdoc (some-> @(r/cursor attr [:db/doc]) blank->nil)
         typedoc (some->> @(r/fmap attribute-schema-human attr)
                          (interpose " ") (apply str))

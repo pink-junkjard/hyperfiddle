@@ -9,7 +9,6 @@
 
 (deftest schema-renderer []
   (let [ctx {:cell (constantly [:pre])
-             :hypercrud.browser/attribute (r/atom nil)
              :hypercrud.browser/data (r/atom [])
              :hypercrud.browser/fiddle (r/atom nil)
              :hypercrud.browser/links (r/atom nil)
@@ -20,7 +19,6 @@
 
 (deftest db-attribute-renderer []
   (let [ctx {:cell (constantly [:pre])
-             :hypercrud.browser/attribute (r/atom nil)
              :hypercrud.browser/data (r/atom nil)
              :hypercrud.browser/fiddle (r/atom nil)
              :hypercrud.browser/links (r/atom nil)
