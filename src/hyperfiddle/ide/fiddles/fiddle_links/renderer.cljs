@@ -14,7 +14,7 @@
 
 
 (def editable-if-shadowed?
-  #{:link/disabled? :link/render-inline? :link/fiddle :link/formula :link/tx-fn :hypercrud/props})
+  #{:link/class :link/disabled? :link/render-inline? :link/fiddle :link/formula :link/tx-fn :hypercrud/props})
 
 (defn read-only? [ctx]
   (if (:hypercrud.browser/data ctx)                         ; be robust to being called on labels
