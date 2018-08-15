@@ -195,8 +195,10 @@ User renderers should not be exposed to the reaction."
          :hypercrud.browser.browser-ui/api [fiddle-api ctx class]))]))
 
 (letfn [(fiddle-css-renderer [s] [:style {:dangerouslySetInnerHTML {:__html @s}}])
-        (src-mode [ctx]
-          (mlet [request @(r/apply-inner-r (r/track base/meta-request-for-fiddle ctx))
+        (src-mode [route ctx]
+          (mlet [:let [ctx (-> (context/clean ctx)
+                               (routing/route route))]
+                 request @(r/apply-inner-r (r/track base/meta-request-for-fiddle ctx))
                  :let [fiddle (->> {:fiddle/type :entity
                                     :fiddle/pull-database "$"} ; turns out we dont need fiddle for much if we already know the request
                                    (fiddle/fiddle-defaults)
@@ -209,7 +211,7 @@ User renderers should not be exposed to the reaction."
     (let [click-fn (or (:hyperfiddle.ui/iframe-on-click ctx) (constantly nil)) ; parent ctx receives click event, not child frame
           either-v (or (some-> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :error]) either/left)
                        (if (hyperfiddle.ide.fiddles.topnav/src-mode? (get route 3))
-                         (src-mode ctx)
+                         (src-mode route ctx)
                          (base/data-from-route route ctx)))
           error-comp (ui-error/error-comp ctx)
           props (dissoc props :route)]
