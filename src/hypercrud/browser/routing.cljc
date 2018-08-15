@@ -5,6 +5,7 @@
             [clojure.walk :as walk]
             [contrib.data :refer [unwrap xorxs]]
             [contrib.eval :as eval]
+            [contrib.reactive :as r]
             [contrib.string :refer [memoized-safe-read-edn-string]]
             [contrib.try$ :refer [try-either]]
             [cuerdas.core :as string]
@@ -79,7 +80,7 @@
                        (memoized-eval-string formula-str)
                        (either/right (constantly nil))))
            args (try-either
-                  (->> {:remove-this-wrapper (formula ctx)} ; walk trees wants a map
+                  (->> {:remove-this-wrapper @(r/track formula ctx)} ; walk trees wants a map
                        ; shadow-links can be hdyrated here, and we need to talk them.
                        ; Technical debt. Once shadow-links are identities, this is just a mapv.
                        (walk/postwalk (fn [v]
