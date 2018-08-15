@@ -5,6 +5,7 @@
             [contrib.reactive :as r]
             [hypercrud.browser.base :as base]
             [hypercrud.browser.context :as context]
+            [hypercrud.browser.field :as field]
             [hypercrud.browser.link :as link]
             [hypercrud.browser.routing :as routing]
             [hypercrud.client.schema :as schema-util]
@@ -47,12 +48,12 @@
     (->> @(:hypercrud.browser/links ctx)
          (filter (partial link/same-path-as? (:hypercrud.browser/path ctx)))
          (mapcat #(request-from-link % ctx))
-         (concat (let [child-fields? (not (some->> (:hypercrud.browser/fields ctx) (r/fmap nil?) deref))]
+         (concat (let [child-fields? (not @(r/fmap (r/comp nil? ::field/children) (:hypercrud.browser/field ctx)))]
                    (when (and child-fields? (context/attribute-segment? (last (:hypercrud.browser/path ctx)))) ; ignore relation and fe fields
                      (with-result ctx)))))))
 
 (defn with-result [ctx]
-  (condp = (:hypercrud.browser/data-cardinality ctx)
+  (case @(r/fmap ::field/cardinality (:hypercrud.browser/field ctx))
     :db.cardinality/one (->> ctx
                              (data/form (fn [path ctx]
                                           (concat (head-field path (context/focus ctx [:head]))
@@ -62,8 +63,8 @@
                            (->> (data/form head-field (context/focus ctx [:head]))
                                 (flatten))
                            (->> (r/unsequence (:hypercrud.browser/data ctx)) ; the request side does NOT need the cursors to be equiv between loops
-                                (mapcat (fn [[relation i]]
-                                          (->> (context/body ctx relation)
+                                (mapcat (fn [[row i]]
+                                          (->> (context/body ctx row)
                                                (data/form body-field)
                                                flatten)))))
     ; blank fiddles

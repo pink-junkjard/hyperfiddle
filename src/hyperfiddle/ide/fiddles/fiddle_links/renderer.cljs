@@ -14,7 +14,7 @@
 
 
 (def editable-if-shadowed?
-  #{:link/disabled? :link/render-inline? :link/fiddle :link/formula :link/tx-fn})
+  #{:link/class :link/disabled? :link/render-inline? :link/fiddle :link/formula :link/tx-fn})
 
 (defn read-only? [ctx]
   (if (:hypercrud.browser/data ctx)                         ; be robust to being called on labels
@@ -36,9 +36,7 @@
 
 (letfn [(remove-children [field] (dissoc field :hypercrud.browser.field/children))]
   (defn hf-live-link-fiddle [val props ctx]
-    (let [ctx (-> ctx
-                  (update :hypercrud.browser/field #(r/fmap remove-children %))
-                  (assoc :hypercrud.browser/fields (r/track identity nil)))
+    (let [ctx (update ctx :hypercrud.browser/field #(r/fmap remove-children %))
           props (assoc props :read-only (read-only? ctx))]
       ; Hacks because hf-live is not yet modeled in the fiddle-graph, we hardcode knowledge of the IDE fiddle-graph instead
       (-> (mlet [req (base/meta-request-for-fiddle (assoc ctx

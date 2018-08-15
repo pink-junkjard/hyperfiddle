@@ -10,10 +10,9 @@
 (deftest schema-renderer []
   (let [ctx {:cell (constantly [:pre])
              :hypercrud.browser/attribute (r/atom nil)
+             :hypercrud.browser/data (r/atom [])
              :hypercrud.browser/fiddle (r/atom nil)
-             :hypercrud.browser/fields (r/atom [])
              :hypercrud.browser/links (r/atom nil)
-             :hypercrud.browser/result (r/atom [])
              :hypercrud.browser/schemas (r/atom nil)}]
     ; just test it renderers something
     #_(is (not (nil? (test-renderer-str (:fiddle/renderer (schema/schema "$")) ctx))))))
@@ -21,10 +20,9 @@
 (deftest db-attribute-renderer []
   (let [ctx {:cell (constantly [:pre])
              :hypercrud.browser/attribute (r/atom nil)
+             :hypercrud.browser/data (r/atom nil)
              :hypercrud.browser/fiddle (r/atom nil)
-             :hypercrud.browser/fields (r/atom [])
              :hypercrud.browser/links (r/atom nil)
-             :hypercrud.browser/result (r/atom nil)
              :hypercrud.browser/schemas (r/atom nil)}]
     ; just test it renderers something
     ; Working, but missing a find-element etc mock. We need actual context mocks.

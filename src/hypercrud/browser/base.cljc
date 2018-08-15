@@ -1,9 +1,11 @@
 (ns hypercrud.browser.base
   (:require [cats.core :as cats :refer [mlet return]]
             [cats.monad.either :as either]
+            [contrib.data :refer [unwrap]]
             [contrib.reactive :as r]
             [contrib.string :refer [memoized-safe-read-edn-string]]
             [contrib.try$ :refer [try-either]]
+            [datascript.parser :as parser]
             [hypercrud.browser.auto-link :refer [auto-links]]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.fiddle :as fiddle]
@@ -117,22 +119,22 @@
     (mlet [reactive-schemas @(r/apply-inner-r (schema-util/hydrate-schema ctx))
            reactive-result @(r/apply-inner-r (r/track nil-or-hydrate (:peer ctx) (:branch ctx) request))
            :let [ctx (assoc ctx
-                       :hypercrud.browser/path []
+                       :hypercrud.browser/data reactive-result
                        :hypercrud.browser/fiddle fiddle     ; for :db/doc
-                       :hypercrud.browser/result reactive-result
+                       :hypercrud.browser/path []
+                       :hypercrud.browser/result reactive-result ; legacy
                        ; For tx/entity->statements in userland.
                        :hypercrud.browser/schemas reactive-schemas)]
            ctx (user-bindings/user-bindings ctx)
-           reactive-fields @(r/apply-inner-r (r/track field/auto-fields request ctx))
-           :let [ctx (assoc ctx :hypercrud.browser/fields reactive-fields)
+           reactive-field @(r/apply-inner-r (r/track field/auto-field request ctx))
+           :let [ctx (-> (assoc ctx :hypercrud.browser/field reactive-field)
+                         (context/set-data-source reactive-field))
                  ctx (assoc ctx :hypercrud.browser/links (r/track auto-links ctx))
                  ctx (if (and (= :entity @(r/cursor fiddle [:fiddle/type]))
                               ; e is nil on the EntityRequest
                               (-> ctx :route second first nil?))
                        (assoc ctx :read-only (r/constantly true))
-                       ctx)
-                 ctx (context/focus ctx [:body])            ; todo remove, call (focus ctx [:body]) when you need the data
-                 ]]
+                       ctx)]]
       (cats/return ctx))))
 
 (defn data-from-route [route ctx]                           ; todo rename

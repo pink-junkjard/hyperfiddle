@@ -43,10 +43,7 @@
                                :hypercrud.browser/domain @(runtime/state (:peer ctx) [::runtime/domain])
                                :keep-disabled-anchors? true))
        (cats/fmap (fn [{:keys [:hypercrud.browser/links]}]
-                    (-> ctx
-                        (dissoc :hypercrud.browser/data :hypercrud.browser/data-cardinality :hypercrud.browser/path)
-                        (update :hypercrud.browser/result #(r/track inject-links % links))
-                        (context/focus [:body]))))))
+                    (update ctx :hypercrud.browser/data #(r/track inject-links % links))))))
 
 (defn schema-links [ctx]
   (->> @(runtime/state (:peer ctx) [::runtime/domain :domain/databases])
@@ -111,30 +108,29 @@
         ectx (shadow-links ctx)
         ctx (either/branch ectx (constantly ctx) identity)]
     [:div {:class class}
-     [:h3 (str @(r/cursor (:hypercrud.browser/result ctx) [:fiddle/ident])) " source"]
-     (field [0 :fiddle/ident] ctx nil)
-     (field [0 :fiddle/type] ctx nil)
-     (case @(r/cursor (:hypercrud.browser/result ctx) [:fiddle/type])
-       :entity (fragment (field [0 :fiddle/pull-database] ctx nil)
-                         (field [0 :fiddle/pull] ctx (controls :fiddle/pull)))
-       :query (field [0 :fiddle/query] ctx (controls :fiddle/query))
+     [:h3 (str @(r/cursor (:hypercrud.browser/data ctx) [:fiddle/ident])) " source"]
+     (field [:fiddle/ident] ctx nil)
+     (field [:fiddle/type] ctx nil)
+     (case @(r/cursor (:hypercrud.browser/data ctx) [:fiddle/type])
+       :entity (fragment (field [:fiddle/pull-database] ctx nil)
+                         (field [:fiddle/pull] ctx (controls :fiddle/pull)))
+       :query (field [:fiddle/query] ctx (controls :fiddle/query))
        :blank nil
        nil nil)
-     (field [0 :fiddle/renderer] ctx (controls :fiddle/renderer))
-     (field [0 :fiddle/css] ctx (controls :fiddle/css))
-     (field [0 :fiddle/markdown] ctx (controls :fiddle/markdown))
+     (field [:fiddle/renderer] ctx (controls :fiddle/renderer))
+     (field [:fiddle/css] ctx (controls :fiddle/css))
+     (field [:fiddle/markdown] ctx (controls :fiddle/markdown))
      (when (either/left? ectx)
        [:div
         [:h5 "Unable to shadow links:"]
         [error/error-block @ectx]])
-     (field [0 :fiddle/links] ctx (controls :fiddle/links))
-     (field [0 :fiddle/hydrate-result-as-fiddle] ctx nil)
+     (field [:fiddle/links] ctx (controls :fiddle/links))
+     (field [:fiddle/hydrate-result-as-fiddle] ctx nil)
      [:div.p "Additional attributes"]
-     (->> @(:hypercrud.browser/fields ctx)
-          first
-          ::field/children
+     (->> @(r/fmap ::field/children (:hypercrud.browser/field ctx))
+          ; todo tighter reactivity
           (map ::field/path-segment)
           (remove #(= (namespace %) "fiddle"))
-          (map #(field [0 %] ctx nil))
+          (map #(field [%] ctx nil))
           (doall))
      (when-not embed-mode (link :hyperfiddle/remove "fiddle" ctx "Remove fiddle" {:class "btn-outline-danger"}))]))

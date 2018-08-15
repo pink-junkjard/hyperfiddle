@@ -5,8 +5,8 @@
 
 
 (def expr
-  '(let [{:keys [:hypercrud.browser/fiddle
-                 :hypercrud.browser/result]} ctx]
+  '(let [{:keys [:hypercrud.browser/data
+                 :hypercrud.browser/fiddle]} ctx]
      [:div {:class class}
       [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]
       [hyperfiddle.ui/result ctx]]))
@@ -17,8 +17,8 @@
   ; - pretty printers suck at clojure, even the slow one
   ; embedded newline lets this pass the cursive clojure formatter
   "
-(let [{:keys [:hypercrud.browser/fiddle
-              :hypercrud.browser/result]} ctx]
+(let [{:keys [:hypercrud.browser/data
+              :hypercrud.browser/fiddle]} ctx]
   [:div {:class class}
    [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]
    [hyperfiddle.ui/result ctx]])")

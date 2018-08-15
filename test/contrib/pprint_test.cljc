@@ -40,9 +40,7 @@
           [:label {:style {:font-weight "400" :display "block"}} [:input {:type "checkbox" :checked @hide-datomic :on-change #(swap! hide-datomic not)}] " hide Datomic system attributes"]
           [:label {:style {:font-weight "400" :display "block"}} [:input {:type "checkbox" :checked @hide-archived :on-change #(swap! hide-archived not)}] " hide Hyperfiddle archived attributes"]
           (let [ctx (-> ctx
-                        (dissoc :hypercrud.browser/data :hypercrud.browser/data-cardinality :hypercrud.browser/path)
-                        (update :hypercrud.browser/result (partial contrib.reactive/fmap do-filter-reactive #_(contrib.reactive/partial filter f?)))
-                        (hypercrud.browser.context/focus ctx [:body]))]
+                        (update :hypercrud.browser/data (partial contrib.reactive/fmap do-filter-reactive)))]
             [hyperfiddle.ui/result ctx])]))))
 
 #_(deftest pprint-performance-1 []

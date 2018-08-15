@@ -3,7 +3,7 @@
             [clojure.walk :as walk]
             [contrib.data :as data]
             [contrib.reactive :as r]
-            [hypercrud.browser.field :as field :refer [auto-fields]]
+            [hypercrud.browser.field :as field :refer [auto-field]]
             [hypercrud.browser.system-link :refer [system-links]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]))
 
@@ -26,9 +26,9 @@
          :db/valueType {:db/ident :db.type/ref}}]
        (data/group-by-assume-unique :db/ident)))
 
-(defn build-ctx [fiddle result]
+(defn build-ctx [fiddle result]                             ; this is starting to look a lot like base/process-results
   {:hypercrud.browser/fiddle (r/atom fiddle)
-   :hypercrud.browser/result (r/atom result)
+   :hypercrud.browser/data (r/atom result)
    :hypercrud.browser/schemas (r/atom {"$" test-schema})})
 
 (deftest nested-tests []
@@ -50,7 +50,7 @@
                                 {"$" nil "?e" 1})
         result nil
         ctx (build-ctx fiddle result)
-        fields @(auto-fields (r/atom request) ctx)]
+        field @(auto-field (r/atom request) ctx)]
 
     (let [expected [{::field/data-has-id? true
                      ::field/path-segment 0
@@ -96,10 +96,10 @@
                             (remove (comp nil? second))
                             (into {}))
                        x))
-                   fields)]
+                   (::field/children field))]
       (is (= expected actual)))
 
-    (let [links (system-links fiddle fields @(:hypercrud.browser/schemas ctx))
+    (let [links (system-links fiddle field @(:hypercrud.browser/schemas ctx))
           expected #{{:link/path ":head 0" :link/rel :hyperfiddle/new}
                      {:link/path ":body 0" :link/rel :hyperfiddle/edit}
                      {:link/path ":body 0" :link/rel :hyperfiddle/remove}

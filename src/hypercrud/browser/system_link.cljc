@@ -18,7 +18,7 @@
   ([parent-fiddle dbname schema field]
    (body-links-for-field parent-fiddle dbname schema field [:body] false))
   ([parent-fiddle dbname schema field path parent-has-id?]
-   (let [path (conj path (::field/path-segment field))
+   (let [path (or (some->> (::field/path-segment field) (conj path)) path) ; fe wrapping causes spaces in paths
          s-path (string/join " " path)]
      (-> (->> (::field/children field)
               (filter ::field/data-has-id?)
@@ -29,9 +29,7 @@
                           (body-links-for-field parent-fiddle dbname schema child-field path (::field/data-has-id? field))))))
          (cond->>
            (and (::field/data-has-id? field)
-                (or (context/find-element-segment? (::field/path-segment field))
-                    (and (context/attribute-segment? (::field/path-segment field))
-                         (not= '* (::field/path-segment field)))))
+                (not= '* (::field/path-segment field)))
            (cons (let [path (if (= :db.cardinality/many (get-in schema [(::field/path-segment field) :db/cardinality :db/ident]))
                               (conj path :body)
                               path)
@@ -47,8 +45,8 @@
                     :link/tx-fn retract-formula}))
 
            (and (::field/data-has-id? field)
-                (or (and (context/find-element-segment? (::field/path-segment field))
-                         (not= :entity (:fiddle/type parent-fiddle)))
+                (or (or (not (nil? (::field/path-segment field)))
+                        (not= :entity (:fiddle/type parent-fiddle)))
                     (and (context/attribute-segment? (::field/path-segment field))
                          (not= '* (::field/path-segment field)))))
            (cons (let [path (if (= :db.cardinality/many (get-in schema [(::field/path-segment field) :db/cardinality :db/ident]))
@@ -74,9 +72,7 @@
                   :link/create? true
                   :link/managed? true}))))))
 
-(defn system-links
-  "All sys links can be matched and merged with user-links. Matching is determined by link/rel and link/path"
-  [parent-fiddle fields schemas]
+(defn- system-links-impl [parent-fiddle fields schemas]
   (->> fields
        (filter ::field/source-symbol)
        (mapcat (fn [field]
@@ -84,7 +80,7 @@
                        schema (get schemas dbname)]
                    (cond->> (body-links-for-field parent-fiddle dbname schema field)
                      (not= :entity (:fiddle/type parent-fiddle))
-                     (cons (let [path [:head (::field/path-segment field)]
+                     (cons (let [path (or (some->> (::field/path-segment field) (conj [:head])) [:head]) ; fe wrapping causes spaces in paths
                                  s-path (string/join " " path)]
                              {:db/id (keyword "hyperfiddle.browser.system-link" (str "new-" (hash path)))
                               :hypercrud/sys? true
@@ -94,3 +90,10 @@
                               :link/fiddle (system-fiddle/fiddle-system-edit dbname)
                               :link/create? true
                               :link/managed? true}))))))))
+
+(defn system-links
+  "All sys links can be matched and merged with user-links. Matching is determined by link/rel and link/path"
+  [parent-fiddle field schemas]
+  (if (::field/source-symbol field)
+    (system-links-impl parent-fiddle [field] schemas)       ; karl was lazy and never untangled the fe wrapping
+    (system-links-impl parent-fiddle (::field/children field) schemas)))
