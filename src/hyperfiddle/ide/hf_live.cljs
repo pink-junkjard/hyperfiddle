@@ -29,7 +29,7 @@
         (for [k attrs
               :let [?f (fiddle-src/controls k)
                     props (when ?f {:embed-mode true})]]
-          (field [0 k] ctx ?f props))))))
+          (field [k] ctx ?f props))))))
 
 (defn result-edn [attrs ctx class]
   (let [s (-> @(:hypercrud.browser/data ctx)
