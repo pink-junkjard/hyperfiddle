@@ -45,9 +45,10 @@
   (case @(r/fmap ::field/cardinality (:hypercrud.browser/field ctx))
     :db.cardinality/one (->> (data/form ctx)
                              (map (fn [path]
-                                    (let [ctx (context/focus ctx path)]
-                                      (merge (head-field (dissoc ctx :hypercrud.browser/data))
-                                             (body-field ctx)))))
+                                    (if (seq path)          ; scar - guard infinite recursion on [] links
+                                      (let [ctx (context/focus ctx path)]
+                                        (merge (head-field (dissoc ctx :hypercrud.browser/data))
+                                               (body-field ctx))))))
                              (apply merge))
     :db.cardinality/many (merge
                            (->> (data/form ctx)
@@ -58,7 +59,9 @@
                                 (map (fn [[row i]]
                                        (let [ctx (context/row ctx row)]
                                          (->> (data/form ctx)
-                                              (map #(body-field (context/focus ctx %)))
+                                              (map (fn [path]
+                                                     (if (seq path)
+                                                       (body-field (context/focus ctx path)))))
                                               (apply merge)))))
                                 (apply merge)))
     ; blank fiddles

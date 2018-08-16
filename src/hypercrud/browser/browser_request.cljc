@@ -49,7 +49,7 @@
   (case @(r/fmap ::field/cardinality (:hypercrud.browser/field ctx))
     :db.cardinality/one (->> (data/form ctx)
                              (map (fn [path]
-                                    (if (seq path)          ; scar
+                                    (if (seq path)          ; scar - guard infinite recursion on [] links
                                       (body-field (context/focus ctx path)))))
                              flatten)
     ; Spread across the rows and flip cardinality
@@ -57,7 +57,9 @@
                               (mapcat (fn [[row i]]
                                         (let [ctx (context/row ctx row)]
                                           (->> (data/form ctx)
-                                               (map #(body-field (context/focus ctx %)))
+                                               (map (fn [path]
+                                                      (if (seq path)
+                                                        (body-field (context/focus ctx path)))))
                                                flatten)))))
     ; blank fiddles
     nil))
