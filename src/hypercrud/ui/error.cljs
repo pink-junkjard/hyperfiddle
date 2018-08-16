@@ -4,7 +4,6 @@
     [contrib.reactive :as r]
     [contrib.reagent :refer [fragment]]
     [contrib.ui :refer [markdown]]
-    [hypercrud.browser.context :as context]
     [hypercrud.types.Err :as Err]
     [hyperfiddle.foundation :as foundation]))
 
@@ -43,12 +42,12 @@
 
 (defn error-comp [ctx]
   ; :find-element :attribute :value
+  (assert (not= [:head] (:hypercrud.browser/path ctx)))
+  (assert (not= [:body] (:hypercrud.browser/path ctx)))
   (cond
     (:hypercrud.ui/error ctx) ((:hypercrud.ui/error ctx) ctx)
 
-    (and (> (count (:hypercrud.browser/path ctx)) 0)
-         (not= [:head] (:hypercrud.browser/path ctx))
-         (not= [:body] (:hypercrud.browser/path ctx))) error-inline
+    (> (count (:hypercrud.browser/path ctx)) 0) error-inline
 
     ; browser including inline true links
     :else (r/partial error-block-with-stage ctx)))

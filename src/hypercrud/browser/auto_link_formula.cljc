@@ -41,7 +41,7 @@
 (defn- field-at-path [path field]
   (if path
     (let [[segment & rest] path]
-      (if (#{:head :body} segment)
+      (if (#{:head :body} segment)                          ; f'ed :head and :body
         (field-at-path rest field)
         (let [field (->> (::field/children field)
                          (filter #(= (::field/path-segment %) segment))
@@ -52,7 +52,7 @@
     (when (nil? (::field/path-segment field))
       field)))
 
-(defn auto-formula [ctx link]
+(defn auto-formula [ctx link]                               ; f'ed :head and :body
   (-> (memoized-safe-read-edn-string (str "[" (:link/path link) "]"))
       (either/branch
         (fn [e]
@@ -60,18 +60,16 @@
           nil)
         (fn [path]
           (if (:link/create? link)
-            (if (some #{:head} path)
+            (if (some #{:head} path)                        ; f'ed :head and :body - dispatch on :rel instead
               "hypercrud.browser.auto-link-formula/auto-entity-from-stage"
               (when (->> (:hypercrud.browser/field ctx)
                          (r/fmap (r/partial field-at-path path))
                          (r/fmap ::field/data-has-id?)
                          deref)
                 "hypercrud.browser.auto-link-formula/auto-entity"))
-            (when (let [path (if (and (= :body (last path)) (not= [:body path]))
-                               (drop-last path)             ; links on nested :body should defer to the parent field
-                               path)]
-                    (->> (:hypercrud.browser/field ctx)
-                         (r/fmap (r/partial field-at-path path))
-                         (r/fmap ::field/data-has-id?)
-                         deref))
+            (when path
+              (->> (:hypercrud.browser/field ctx)
+                   (r/fmap (r/partial field-at-path path))
+                   (r/fmap ::field/data-has-id?)
+                   deref)
               "(comp deref :hypercrud.browser/data)"))))))

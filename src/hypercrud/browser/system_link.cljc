@@ -15,51 +15,38 @@
   {:tx {(:uri ctx) [[:db.fn/retractEntity @(contrib.reactive/cursor (:hypercrud.browser/data ctx) [:db/id])]]}})")
 
 (defn body-links-for-field
-  ([parent-fiddle dbname schema field]
-   (body-links-for-field parent-fiddle dbname schema field [:body] false))
   ([parent-fiddle dbname schema field path parent-has-id?]
    (let [path (or (some->> (::field/path-segment field) (conj path)) path) ; fe wrapping causes spaces in paths
          s-path (string/join " " path)]
      (-> (->> (::field/children field)
               (filter ::field/data-has-id?)
               (mapcat (fn [child-field]
-                        (let [path (if (context/attribute-segment? (::field/path-segment field))
-                                     (conj path :body)
-                                     path)]
-                          (body-links-for-field parent-fiddle dbname schema child-field path (::field/data-has-id? field))))))
+                        (body-links-for-field parent-fiddle dbname schema child-field path (::field/data-has-id? field)))))
          (cond->>
            (and (::field/data-has-id? field)
                 (not= '* (::field/path-segment field)))
-           (cons (let [path (if (= :db.cardinality/many (get-in schema [(::field/path-segment field) :db/cardinality :db/ident]))
-                              (conj path :body)
-                              path)
-                       s-path (string/join " " path)]
-                   {:db/id (keyword "hyperfiddle.browser.system-link" (str "remove-" (hash path)))
-                    :hypercrud/sys? true
-                    :link/disabled? (context/attribute-segment? (::field/path-segment field))
-                    :link/rel :hyperfiddle/remove
-                    :link/path s-path
-                    :link/render-inline? true
-                    :link/fiddle system-fiddle/fiddle-blank-system-remove
-                    :link/managed? true
-                    :link/tx-fn retract-formula}))
+           (cons {:db/id (keyword "hyperfiddle.browser.system-link" (str "remove-" (hash path)))
+                  :hypercrud/sys? true
+                  :link/disabled? (context/attribute-segment? (::field/path-segment field))
+                  :link/rel :hyperfiddle/remove
+                  :link/path s-path
+                  :link/render-inline? true
+                  :link/fiddle system-fiddle/fiddle-blank-system-remove
+                  :link/managed? true
+                  :link/tx-fn retract-formula})
 
            (and (::field/data-has-id? field)
                 (or (or (not (nil? (::field/path-segment field)))
                         (not= :entity (:fiddle/type parent-fiddle)))
                     (and (context/attribute-segment? (::field/path-segment field))
                          (not= '* (::field/path-segment field)))))
-           (cons (let [path (if (= :db.cardinality/many (get-in schema [(::field/path-segment field) :db/cardinality :db/ident]))
-                              (conj path :body)
-                              path)
-                       s-path (string/join " " path)]
-                   {:db/id (keyword "hyperfiddle.browser.system-link" (str "edit-" (hash path)))
-                    :hypercrud/sys? true
-                    :link/disabled? (context/attribute-segment? (::field/path-segment field))
-                    :link/rel :hyperfiddle/edit
-                    :link/path s-path
-                    :link/fiddle (system-fiddle/fiddle-system-edit dbname)
-                    :link/managed? false}))
+           (cons {:db/id (keyword "hyperfiddle.browser.system-link" (str "edit-" (hash path)))
+                  :hypercrud/sys? true
+                  :link/disabled? (context/attribute-segment? (::field/path-segment field))
+                  :link/rel :hyperfiddle/edit
+                  :link/path s-path
+                  :link/fiddle (system-fiddle/fiddle-system-edit dbname)
+                  :link/managed? false})
 
            parent-has-id?
            (cons {:db/id (keyword "hyperfiddle.browser.system-link" (str "new-" (hash path)))
@@ -78,10 +65,10 @@
        (mapcat (fn [field]
                  (let [dbname (str (::field/source-symbol field))
                        schema (get schemas dbname)]
-                   (cond->> (body-links-for-field parent-fiddle dbname schema field)
+                   (cond->> (body-links-for-field parent-fiddle dbname schema field [] false)
                      (not= :entity (:fiddle/type parent-fiddle))
-                     (cons (let [path (or (some->> (::field/path-segment field) (conj [:head])) [:head]) ; fe wrapping causes spaces in paths
-                                 s-path (string/join " " path)]
+                     (cons (let [path (::field/path-segment field)
+                                 s-path (str path) #_(string/join " " path)]
                              {:db/id (keyword "hyperfiddle.browser.system-link" (str "new-" (hash path)))
                               :hypercrud/sys? true
                               :link/rel :hyperfiddle/new

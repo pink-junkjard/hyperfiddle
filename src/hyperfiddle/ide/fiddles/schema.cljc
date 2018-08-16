@@ -60,7 +60,6 @@
                     :link/class #{"valueType-options"}}
                    {:db/id :system-anchor-remove            ; XXX
                     :link/rel :hyperfiddle/remove
-                    :link/path ":body"
                     :link/disabled? true}}})
 
 (defn schema [$db]
@@ -81,13 +80,10 @@
    :fiddle/renderer (load-resource "ide/schema_renderer.cljs") 
    :fiddle/links #{{:db/id :system-anchor-edit              ; XXX
                     :link/rel :hyperfiddle/edit
-                    :link/path ":body"
                     :link/fiddle (db-attribute-edit $db)}
                    {:db/id :system-anchor-new               ; XXX
                     :link/rel :hyperfiddle/new
-                    :link/path ":head"
                     :link/fiddle (db-attribute-edit $db)}
                    {:db/id :system-anchor-remove            ; XXX
                     :link/rel :hyperfiddle/remove
-                    :link/path ":body"
                     :link/disabled? true}}})

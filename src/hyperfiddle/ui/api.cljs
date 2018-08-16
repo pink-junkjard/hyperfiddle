@@ -25,42 +25,42 @@
        ; todo cannot swallow this error
        (unwrap)))
 
-(defn head-field [relative-path ctx]
-  (let [ctx (context/focus ctx (cons :head relative-path))] ; todo :head links should fall out with link/class
-    (->> @(:hypercrud.browser/links ctx)
-         (filter (partial link/same-path-as? (:hypercrud.browser/path ctx)))
-         (map #(recurse-from-link % ctx))
-         (apply merge))))
+(defn head-field [ctx]
+  (->> @(:hypercrud.browser/links ctx)
+       (filter (partial link/same-path-as? (:hypercrud.browser/path ctx)))
+       (map #(recurse-from-link % ctx))
+       (apply merge)))
 
-(defn body-field [relative-path ctx]
-  (let [ctx (context/focus ctx relative-path)]
-    (->> @(:hypercrud.browser/links ctx)
-         (filter (partial link/same-path-as? (:hypercrud.browser/path ctx)))
-         (map #(recurse-from-link % ctx))
-         (apply merge)
-         (into (let [child-fields? (not @(r/fmap (r/comp nil? ::field/children) (:hypercrud.browser/field ctx)))]
-                 (if (and child-fields? (context/attribute-segment? (last (:hypercrud.browser/path ctx)))) ; ignore relation and fe fields
-                   (with-result ctx)
-                   {}))))))
+(defn body-field [ctx]
+  (->> @(:hypercrud.browser/links ctx)
+       (filter (partial link/same-path-as? (:hypercrud.browser/path ctx)))
+       (map #(recurse-from-link % ctx))
+       (apply merge)
+       (into (let [child-fields? (not @(r/fmap (r/comp nil? ::field/children) (:hypercrud.browser/field ctx)))]
+               (if (and child-fields? (context/attribute-segment? (last (:hypercrud.browser/path ctx)))) ; ignore relation and fe fields
+                 (with-result ctx)
+                 {})))))
 
 (defn with-result [ctx]
   (case @(r/fmap ::field/cardinality (:hypercrud.browser/field ctx))
     :db.cardinality/one (->> (data/form ctx)
                              (map (fn [path]
-                                    (merge (head-field path (context/focus ctx [:head]))
-                                           (body-field path (context/focus ctx [:body])))))
+                                    (let [ctx (context/focus ctx path)]
+                                      (merge (head-field (dissoc ctx :hypercrud.browser/data))
+                                             (body-field ctx)))))
                              (apply merge))
-    :db.cardinality/many (merge (let [ctx (context/focus ctx [:head])]
-                                  (->> (data/form ctx)
-                                       (map #(head-field % ctx))
-                                       (apply merge)))
-                                (->> (r/unsequence (:hypercrud.browser/data ctx)) ; the request side does NOT need the cursors to be equiv between loops
-                                     (map (fn [[row i]]
-                                            (let [ctx (context/body ctx row)]
-                                              (->> (data/form ctx)
-                                                   (map #(body-field % ctx))
-                                                   (apply merge)))))
-                                     (apply merge)))
+    :db.cardinality/many (merge
+                           (->> (data/form ctx)
+                                (map #(head-field (-> (context/focus ctx %)
+                                                      (dissoc :hypercrud.browser/data))))
+                                (apply merge))
+                           (->> (r/unsequence (:hypercrud.browser/data ctx)) ; the request side does NOT need the cursors to be equiv between loops
+                                (map (fn [[row i]]
+                                       (let [ctx (context/row ctx row)]
+                                         (->> (data/form ctx)
+                                              (map #(body-field (context/focus ctx %)))
+                                              (apply merge)))))
+                                (apply merge)))
     ; blank fiddles
     {}))
 

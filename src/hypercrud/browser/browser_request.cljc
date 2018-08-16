@@ -37,39 +37,28 @@
   (unwrap (base/from-link link ctx (fn [route ctx]
                                      (either/right (request-from-route route ctx))))))
 
-(defn head-field [relative-path ctx]
-  (let [ctx (context/focus ctx (cons :head relative-path))] ; todo :head links should fall out with link/class
-    (->> @(:hypercrud.browser/links ctx)
-         (filter (partial link/same-path-as? (:hypercrud.browser/path ctx)))
-         (mapcat #(request-from-link % ctx)))))
-
-(defn body-field [relative-path ctx]
-  (let [ctx (context/focus ctx relative-path)]
-    (->> @(:hypercrud.browser/links ctx)
-         (filter (partial link/same-path-as? (:hypercrud.browser/path ctx)))
-         (mapcat #(request-from-link % ctx))
-         (concat (let [child-fields? (not @(r/fmap (r/comp nil? ::field/children) (:hypercrud.browser/field ctx)))]
-                   (when (and child-fields? (context/attribute-segment? (last (:hypercrud.browser/path ctx)))) ; ignore relation and fe fields
-                     (with-result ctx)))))))
+(defn body-field [ctx]
+  (->> @(:hypercrud.browser/links ctx)
+       (filter (partial link/same-path-as? (:hypercrud.browser/path ctx)))
+       (mapcat #(request-from-link % ctx))
+       (concat (let [child-fields? (not @(r/fmap (r/comp nil? ::field/children) (:hypercrud.browser/field ctx)))]
+                 (when (and child-fields? (context/attribute-segment? (last (:hypercrud.browser/path ctx)))) ; ignore relation and fe fields
+                   (with-result ctx))))))
 
 (defn with-result [ctx]
   (case @(r/fmap ::field/cardinality (:hypercrud.browser/field ctx))
     :db.cardinality/one (->> (data/form ctx)
                              (map (fn [path]
-                                    (concat (head-field path (context/focus ctx [:head]))
-                                            (body-field path (context/focus ctx [:body])))))
+                                    (if (seq path)          ; scar
+                                      (body-field (context/focus ctx path)))))
                              flatten)
-    :db.cardinality/many (concat
-                           (let [ctx (context/focus ctx [:head])]
-                             (->> (data/form ctx)
-                                  (map #(head-field % ctx))
-                                  (flatten)))
-                           (->> (r/unsequence (:hypercrud.browser/data ctx)) ; the request side does NOT need the cursors to be equiv between loops
-                                (mapcat (fn [[row i]]
-                                          (let [ctx (context/body ctx row)]
-                                            (->> (data/form ctx)
-                                                 (map #(body-field % ctx))
-                                                 flatten))))))
+    ; Spread across the rows and flip cardinality
+    :db.cardinality/many (->> (r/unsequence (:hypercrud.browser/data ctx)) ; the request side does NOT need the cursors to be equiv between loops
+                              (mapcat (fn [[row i]]
+                                        (let [ctx (context/row ctx row)]
+                                          (->> (data/form ctx)
+                                               (map #(body-field (context/focus ctx %)))
+                                               flatten)))))
     ; blank fiddles
     nil))
 

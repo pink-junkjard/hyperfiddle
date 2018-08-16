@@ -18,18 +18,6 @@
         (or (:db/id row) row))
       hash))
 
-(defn- relative-links-at [path-segments ctx]                ; scary
-  (let [path (cond
-               (empty? (:hypercrud.browser/path ctx)) path-segments
-
-               (contains? #{:head :body} (last (:hypercrud.browser/path ctx)))
-               (-> (drop-last (:hypercrud.browser/path ctx))
-                   vec
-                   (concat path-segments))
-
-               :else (concat (:hypercrud.browser/path ctx) path-segments))]
-    (r/track link/links-at path (:hypercrud.browser/links ctx))))
-
 (defn form "Field is invoked as fn"                         ; because it unifies with request fn side
   [ctx]                                                     ; f-field :: (relative-path ctx) => Any
   (-> (->> (r/fmap ::field/children (:hypercrud.browser/field ctx))

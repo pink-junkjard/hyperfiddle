@@ -119,5 +119,6 @@
                  (->> (:hypercrud.browser/data ctx)
                       (r/unsequence data/row-keyfn)
                       (map (fn [[relation k]]
-                             ^{:key k} [:li [markdown content (context/body ctx relation)]]))
+                             ^{:key k}
+                             [:li [markdown content (assoc ctx :hypercrud.browser/data relation)]]))
                       (doall))])})))

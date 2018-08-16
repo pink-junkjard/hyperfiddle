@@ -104,7 +104,7 @@
 (defn hyper-control' "Handles labels too because we show links there." ; CTX is done after here. props and val only. But recursion needs to look again.
   [ctx]
   {:post [%]}
-  (let [head-or-body (->> (:hypercrud.browser/path ctx) (reverse) (take-to (comp not #{:head :body})) (last)) ; todo head/body attr collision
+  (let [head-or-body (if (contains? ctx :hypercrud.browser/data) :body :head)
         segment (last (:hypercrud.browser/path ctx))
         segment-type (context/segment-type segment)
         child-fields (not @(r/fmap (r/comp nil? ::field/children) (:hypercrud.browser/field ctx)))]
@@ -135,22 +135,20 @@
        (apply str)))
 
 (defn ^:export semantic-css [ctx]
+  (assert (empty? (filter #{:head :body} (:hypercrud.browser/path ctx))))
   ; Include the fiddle level ident css.
   ; Semantic css needs to be prefixed with - to avoid collisions. todo
   (->> (:hypercrud.browser/path ctx)
-       (remove #{:head :body})
        (concat
          ["hyperfiddle"
           (:hypercrud.browser/source-symbol ctx)            ; color
           (name (context/segment-type (last (:hypercrud.browser/path ctx))))
-          (or (some #{:head} (:hypercrud.browser/path ctx)) ; could be first nested in a body
-              (some #{:body} (:hypercrud.browser/path ctx)))
+          ;(or (some #{:head} (:hypercrud.browser/path ctx)) ; could be first nested in a body
+          ;    (some #{:body} (:hypercrud.browser/path ctx)))
           (->> (:hypercrud.browser/path ctx)                ; legacy unique selector for each location
-               (remove #{:head :body})
                (map css-slugify)
                (string/join "/"))
           (->> (:hypercrud.browser/path ctx)                ; actually generate a unique selector for each location
-               (remove #{:head :body})
                (cons :hypercrud.browser/path)               ; need to prefix the path with something to differentiate between attr and single attr paths
                (map css-slugify)
                (string/join "/"))]
@@ -321,28 +319,25 @@ User renderers should not be exposed to the reaction."
 
 (defn form-field "Form fields are label AND value. Table fields are label OR value."
   ; It is the driver-fn's job to elide this field if it will be empty
-  [relative-path ctx Body Head props]                       ; ?f :: (val props ctx) => DOM
+  [ctx Body Head props]                                     ; ?f :: (val props ctx) => DOM
   (let [state (r/atom {:hyperfiddle.ui.form/magic-new-a nil})]
-    (fn [relative-path ctx Body Head props]
+    (fn [ctx Body Head props]
       (let [ctx (assoc ctx :hyperfiddle.ui.form/state state)
-            body-ctx (context/focus ctx (cons :body relative-path))
-            head-ctx (context/focus ctx (cons :head relative-path))
-            props (update props :class css (semantic-css body-ctx))]
+            props (update props :class css (semantic-css ctx))]
         [:div {:class (css "field" (:class props))
-               :style {:border-color (border-color body-ctx)}} ; wrapper div has :body stypes - why?
+               :style {:border-color (border-color ctx)}}   ; wrapper div has :body stypes - why?
          (fragment
            ^{:key :form-head}
-           [Head nil props head-ctx]
+           [Head nil props (dissoc ctx :hypercrud.browser/data)]
            ^{:key :form-body}
            [:div
-            [Body @(:hypercrud.browser/data body-ctx) props body-ctx]])]))))
+            [Body @(:hypercrud.browser/data ctx) props ctx]])]))))
 
 (defn table-field "Form fields are label AND value. Table fields are label OR value."
   [relative-path ctx Body Head props]                       ; Body :: (val props ctx) => DOM, invoked as component
-  (let [head-or-body (last (:hypercrud.browser/path ctx))   ; this is ugly and not uniform with form-field
-        ctx (context/focus ctx relative-path)
-        props (update props :class css (semantic-css ctx))]
-    (case head-or-body
+  (let [props (update props :class css (semantic-css ctx))]
+    ; Presence of data to detect head vs body? Kind of dumb
+    (case (if @(:hypercrud.browser/data ctx) :body :head)   ; this is ugly and not uniform with form-field
       :head [:th {:class (css "field" (:class props)
                               (when (sort/sortable? ctx) "sortable") ; hoist
                               (some-> (sort/sort-direction relative-path ctx) name)) ; hoist
@@ -355,8 +350,10 @@ User renderers should not be exposed to the reaction."
 
 ; (defmulti field ::layout)
 (defn ^:export field "Works in a form or table context. Draws label and/or value."
+  ; Focus has probably happened outside.
   [relative-path ctx & [?f props]]                          ; ?f :: (ref, props, ctx) => DOM
-  (let [Body (or ?f hyper-control)
+  (let [ctx (context/focus ctx relative-path)               ; lifts to userland - (focus :reg/gender)
+        Body (or ?f hyper-control)
         Head (or (:label-fn props) hyper-control)
         props (dissoc props :label-fn)
         ; add semantic css here?
@@ -366,11 +363,10 @@ User renderers should not be exposed to the reaction."
                                      ^{:key (str relative-path)}
                                      [table-field relative-path ctx Body Head props])
       (let [magic-new-key (when is-magic-new
-                            (let [ctx (context/focus ctx (cons :body relative-path))]
-                              ; guard against crashes for nil data
-                              (hash (some->> ctx :hypercrud.browser/parent :hypercrud.browser/data (r/fmap keys) deref))))]
+                            ; guard against crashes for nil data
+                            (hash (some->> ctx :hypercrud.browser/parent :hypercrud.browser/data (r/fmap keys) deref)))]
         ^{:key (str relative-path magic-new-key #_"reset magic new state")}
-        [form-field relative-path ctx Body Head props]))))
+        [form-field ctx Body Head props]))))
 
 (defn ^:export table "Semantic table; columns driven externally" ; this is just a widget
   [fields ctx & [props]]
@@ -380,15 +376,13 @@ User renderers should not be exposed to the reaction."
       (let [ctx (assoc ctx ::sort/sort-col sort-col
                            ::layout :hyperfiddle.ui.layout/table)]
         [:table (update props :class (fnil css "hyperfiddle") "ui-table" "unp") ; fnil case is iframe root (not a field :many)
-         (let [ctx (context/focus ctx [:head])]
-           (->> (fields ctx) (into [:thead])))              ; strict
+         (->> (fields (dissoc ctx :hypercrud.browser/data)) (into [:thead])) ; strict
          (->> (:hypercrud.browser/data ctx)
               (r/fmap sort)
               (r/unsequence data/row-keyfn)
               (map (fn [[row k]]
-                     (let [ctx (context/body ctx row)]
-                       (->> (fields ctx)
-                            (into ^{:key k} [:tr])))))      ; strict
+                     (->> (fields (assoc ctx :hypercrud.browser/data row))
+                          (into ^{:key k} [:tr]))))         ; strict
               (into [:tbody]))]))))
 
 (defn hint [{:keys [hypercrud.browser/fiddle
