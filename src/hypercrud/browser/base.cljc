@@ -114,8 +114,8 @@
                        (if-let [?request @request]
                          @(hc/hydrate peer branch ?request)
                          (either/right nil)))
-      deprecated-deref (fn [v]
-                         (timbre/warn ":hypercrud.browser/result has been deprecated.  Please use :hypercrud.browser/data.")
+      deprecated-deref (fn [route v]
+                         (timbre/warn (str "Deprecated use of :hypercrud.browser/result at " route ".  Please migrate to :hypercrud.browser/data."))
                          v)]
   (defn process-results [fiddle request ctx]                ; todo rename to (context/result)
     (mlet [reactive-schemas @(r/apply-inner-r (schema-util/hydrate-schema ctx))
@@ -124,7 +124,7 @@
                        :hypercrud.browser/data reactive-result
                        :hypercrud.browser/fiddle fiddle     ; for :db/doc
                        :hypercrud.browser/path []
-                       :hypercrud.browser/result (r/fmap deprecated-deref reactive-result) ; legacy
+                       :hypercrud.browser/result (r/fmap (r/partial deprecated-deref (:route ctx)) reactive-result) ; legacy
                        ; For tx/entity->statements in userland.
                        :hypercrud.browser/schemas reactive-schemas)]
            ctx (user-bindings/user-bindings ctx)
