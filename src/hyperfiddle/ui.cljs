@@ -113,7 +113,7 @@
       [:body :attribute '* _] magic-new-body
 
       [:head :attribute _ _] attribute-label
-      [:body :attribute _ true] result+
+      [:body :attribute _ true] result+                     ; because there is always a dependency, we hit this in the nested head case now, infinite recursion
       [:body :attribute _ false] (or (attr-renderer ctx) control)
 
       [:head :element _ true] entity-label
@@ -121,9 +121,9 @@
 
       [:head :element _ false] attribute-label              ; preserve old behavior
       [:body :element _ false] controls/string              ; aggregate, what else?
-      
-      [:head :naked _ _] entity-label                       ; Schema new attr, and fiddle-links new link - needs to be split
-      [:body :naked _ _] entity
+
+      [:head :naked _ _] (r/constantly [:span "naked head"]) ; Schema new attr, and fiddle-links new link - needs to be split
+      [:body :naked _ _] (r/constantly [:span "naked body"])
       )))
 
 (defn ^:export hyper-control [val props ctx]
@@ -318,33 +318,32 @@ User renderers should not be exposed to the reaction."
         [ui-from-link link-ref ctx props]))))
 
 (defn form-field "Form fields are label AND value. Table fields are label OR value."
-  ; It is the driver-fn's job to elide this field if it will be empty
-  [ctx Body Head props]                                     ; ?f :: (val props ctx) => DOM
+  [relative-path ctx Body Head props]                       ; ?f :: (val props ctx) => DOM
   (let [state (r/atom {:hyperfiddle.ui.form/magic-new-a nil})]
-    (fn [ctx Body Head props]
-      (let [ctx (assoc ctx :hyperfiddle.ui.form/state state)
-            props (update props :class css (semantic-css ctx))]
+    (fn [relative-path ctx Body Head props]
+      (let [ctx (assoc ctx :hyperfiddle.ui.form/state state)]
         [:div {:class (css "field" (:class props))
                :style {:border-color (border-color ctx)}}   ; wrapper div has :body stypes - why?
          (fragment
            ^{:key :form-head}
            [Head nil props (dissoc ctx :hypercrud.browser/data)]
-           ^{:key :form-body}
-           [:div
-            [Body @(:hypercrud.browser/data ctx) props ctx]])]))))
+           (if (seq relative-path)                          ; megahax to guard infinite recursion on []
+             ^{:key :form-body}
+             [:div
+              [Body @(:hypercrud.browser/data ctx) props ctx]]))]))))
 
 (defn table-field "Form fields are label AND value. Table fields are label OR value."
   [relative-path ctx Body Head props]                       ; Body :: (val props ctx) => DOM, invoked as component
-  (let [props (update props :class css (semantic-css ctx))]
-    ; Presence of data to detect head vs body? Kind of dumb
-    (case (if (:hypercrud.browser/data ctx) :body :head)    ; this is ugly and not uniform with form-field NOTE: NO DEREF ON THIS NIL CHECK
-      :head [:th {:class (css "field" (:class props)
-                              (when (sort/sortable? ctx) "sortable") ; hoist
-                              (some-> (sort/sort-direction relative-path ctx) name)) ; hoist
-                  :style {:background-color (border-color ctx)}
-                  :on-click (r/partial sort/toggle-sort! relative-path ctx)}
-             [Head nil props ctx]]
-      :body [:td {:class (css "field" (:class props) "truncate")
+  ; Presence of data to detect head vs body? Kind of dumb
+  (case (if (:hypercrud.browser/data ctx) :body :head)      ; this is ugly and not uniform with form-field NOTE: NO DEREF ON THIS NIL CHECK
+    :head [:th {:class (css "field" (:class props)
+                            (when (sort/sortable? ctx) "sortable") ; hoist
+                            (some-> (sort/sort-direction relative-path ctx) name)) ; hoist
+                :style {:background-color (border-color ctx)}
+                :on-click (r/partial sort/toggle-sort! relative-path ctx)}
+           [Head nil props ctx]]
+    :body (if (seq relative-path)                           ; megahax to guard infinite recursion on []
+            [:td {:class (css "field" (:class props) "truncate")
                   :style {:border-color (when (:hypercrud.browser/source-symbol ctx) (border-color ctx))}}
              [Body @(:hypercrud.browser/data ctx) props ctx]])))
 
@@ -356,7 +355,7 @@ User renderers should not be exposed to the reaction."
         Body (or ?f hyper-control)
         Head (or (:label-fn props) hyper-control)
         props (dissoc props :label-fn)
-        ; add semantic css here?
+        props (update props :class css (semantic-css ctx))
         is-magic-new (= '* (last relative-path))]
     (case (:hyperfiddle.ui/layout ctx)
       :hyperfiddle.ui.layout/table (when-not is-magic-new
@@ -366,7 +365,7 @@ User renderers should not be exposed to the reaction."
                             ; guard against crashes for nil data
                             (hash (some->> ctx :hypercrud.browser/parent :hypercrud.browser/data (r/fmap keys) deref)))]
         ^{:key (str relative-path magic-new-key #_"reset magic new state")}
-        [form-field ctx Body Head props]))))
+        [form-field relative-path ctx Body Head props]))))
 
 (defn ^:export table "Semantic table; columns driven externally" ; this is just a widget
   [fields ctx & [props]]
