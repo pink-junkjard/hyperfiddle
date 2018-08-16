@@ -64,9 +64,10 @@
                              (->> (data/form ctx)
                                   (map #(head-field % ctx))
                                   (flatten)))
-                           (->> (r/unsequence (:hypercrud.browser/data ctx)) ; the request side does NOT need the cursors to be equiv between loops
-                                (mapcat (fn [[row i]]
-                                          (let [ctx (context/body ctx row)]
+                           (->> @(:hypercrud.browser/data ctx)
+                                (mapcat (fn [row]
+                                          ; the request side does NOT need the cursors to be equiv between loops
+                                          (let [ctx (context/body ctx (r/atom row))]
                                             (->> (data/form ctx)
                                                  (map #(body-field % ctx))
                                                  flatten))))))
