@@ -92,11 +92,13 @@
                         (update :hypercrud.browser/path conj path-segment)
                         (assoc :hypercrud.browser/field field)
                         (set-data-source field))]
-            (-> (set-parent-data ctx)
-                (assoc :hypercrud.browser/data
-                       (let [f (r/fmap ::field/get-value field)]
-                         (assert @f (str "focusing on a non-pulled attribute: " (pr-str (:hypercrud.browser/path ctx)) "."))
-                         (r/fapply f (:hypercrud.browser/data ctx)))))))]
+            (if-not (:hypercrud.browser/data ctx)
+              ctx                                           ; head
+              (-> (set-parent-data ctx)                     ; body
+                  (assoc :hypercrud.browser/data
+                         (let [f (r/fmap ::field/get-value field)]
+                           (assert @f (str "focusing on a non-pulled attribute: " (pr-str (:hypercrud.browser/path ctx)) "."))
+                           (r/fapply f (:hypercrud.browser/data ctx))))))))]
   (defn focus [ctx relative-path]
     (reduce focus-segment ctx relative-path)))
 

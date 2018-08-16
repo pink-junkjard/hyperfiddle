@@ -337,7 +337,7 @@ User renderers should not be exposed to the reaction."
   [relative-path ctx Body Head props]                       ; Body :: (val props ctx) => DOM, invoked as component
   (let [props (update props :class css (semantic-css ctx))]
     ; Presence of data to detect head vs body? Kind of dumb
-    (case (if @(:hypercrud.browser/data ctx) :body :head)   ; this is ugly and not uniform with form-field
+    (case (if (:hypercrud.browser/data ctx) :body :head)    ; this is ugly and not uniform with form-field NOTE: NO DEREF ON THIS NIL CHECK
       :head [:th {:class (css "field" (:class props)
                               (when (sort/sortable? ctx) "sortable") ; hoist
                               (some-> (sort/sort-direction relative-path ctx) name)) ; hoist
