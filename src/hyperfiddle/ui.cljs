@@ -381,7 +381,8 @@ User renderers should not be exposed to the reaction."
                            ::layout :hyperfiddle.ui.layout/table)]
         [:table (update props :class (fnil css "hyperfiddle") "ui-table" "unp") ; fnil case is iframe root (not a field :many)
          (let [ctx (context/focus ctx [:head])]
-           (->> (fields ctx) (into [:thead])))              ; strict
+           [:thead
+            (into [:tr] (fields ctx))])                     ; strict
          (->> (:hypercrud.browser/data ctx)
               (r/fmap sort)
               (r/unsequence data/row-keyfn)
