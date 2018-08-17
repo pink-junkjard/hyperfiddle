@@ -12,7 +12,6 @@
             [hypercrud.browser.q-util :as q-util]
             [hypercrud.browser.routing :as routing]
             [hypercrud.browser.system-fiddle :as system-fiddle]
-            [hypercrud.browser.user-bindings :as user-bindings]
             [hypercrud.client.core :as hc]
             [hypercrud.client.schema :as schema-util]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
@@ -24,7 +23,6 @@
 (def meta-pull-exp-for-link
   [:db/id
    :db/doc
-   :fiddle/bindings
    :fiddle/css
    :fiddle/ident
    {:fiddle/links [:db/id
@@ -127,7 +125,6 @@
                        :hypercrud.browser/result (r/fmap (r/partial deprecated-deref (:route ctx)) reactive-result) ; legacy
                        ; For tx/entity->statements in userland.
                        :hypercrud.browser/schemas reactive-schemas)]
-           ctx (user-bindings/user-bindings ctx)
            reactive-field @(r/apply-inner-r (r/track field/auto-field request ctx))
            :let [ctx (-> (assoc ctx :hypercrud.browser/field reactive-field)
                          (context/set-data-source reactive-field))
