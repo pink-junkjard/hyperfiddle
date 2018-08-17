@@ -20,18 +20,27 @@
 
 (defn form "Field is invoked as fn"                         ; because it unifies with request fn side
   [ctx]                                                     ; f-field :: (relative-path ctx) => Any
-  (-> (->> (r/fmap ::field/children (:hypercrud.browser/field ctx))
-           (r/unsequence ::field/path-segment)
-           (mapcat (fn [[field path-segment]]
-                     (cond->> [[path-segment]]
-                       @(r/fmap (r/comp not nil? ::field/source-symbol) field) ; this only happens once at the top for relation queries
-                       (into (->> (r/fmap ::field/children field)
-                                  (r/unsequence ::field/path-segment)
-                                  (mapv (fn [[m-child-field child-segment]]
-                                          [path-segment child-segment]))))))))
-      vec
-      (conj [])                                             ; row level (entity or relation etc)
-      seq #_"no vectors in hiccup"))
+  (let [paths
+        (-> (->> (r/fmap ::field/children (:hypercrud.browser/field ctx))
+                 (r/unsequence ::field/path-segment)
+                 (mapcat (fn [[field path-segment]]
+                           (-> [[path-segment]]
+                               #_(cond->>
+                                 @(r/fmap (r/comp not nil? ::field/source-symbol) field) ; this only happens once at the top for relation queries
+                                 (into (->> (r/fmap ::field/children field)
+                                            (r/unsequence ::field/path-segment)
+                                            (mapv (fn [[m-child-field child-segment]]
+                                                    [path-segment child-segment])))))))))
+            vec
+
+            )]
+    #_(conj paths [])
+    (if-not (= :relation (-> ctx :hypercrud.browser/field deref ::field/level)) ; omit relation-[]
+      (conj paths [])                                       ; entity-[]
+      paths
+      )
+
+    ))
 
 (defn deps-satisfied? "Links in this :body strata" [this-path link-path]
   ; TODO tighten - needs to understand WHICH find element is in scope

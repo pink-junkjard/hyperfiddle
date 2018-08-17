@@ -18,20 +18,21 @@
       last))
 
 (defn attribute-schema-human [attr]
-  ((juxt :db/ident
-         #(some-> % :attribute/renderer fqn->name)
+  ((juxt #_:db/ident
          #(some-> % :db/valueType :db/ident name)
          #(some-> % :db/cardinality :db/ident name)
          #(some-> % :db/isComponent (if :component) name)
-         #(some-> % :db/unique :db/ident name))
+         #(some-> % :db/unique :db/ident name)
+         #(some-> % :attribute/renderer fqn->name))
     attr))
 
 (defn semantic-docstring [ctx]
-  (let [attr (context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)))
+  (let [path (:hypercrud.browser/path ctx)
+        attr (context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)))
         dbdoc (some-> @(r/cursor attr [:db/doc]) blank->nil)
         typedoc (some->> @(r/fmap attribute-schema-human attr)
                          (interpose " ") (apply str))
         help-md (blank->nil
                   (str (if dbdoc (str dbdoc "\n\n"))        ; markdown needs double line-break
-                       (if typedoc (str "`" typedoc "`"))))]
+                       (if typedoc (str "`" path " " typedoc "`"))))]
     help-md))

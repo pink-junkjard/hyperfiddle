@@ -78,8 +78,15 @@
 (defn control [val props ctx]
   [(control' ctx) val props ctx])
 
+(defn result+ [val props ctx]
+  [result val ctx props])
+
+(defn select+ [val props ctx]
+  [select (data/select+ ctx :options (:options props)) props ctx])
+
 (defn entity [val props ctx]                                ; What about semantics we don't understand?
   [:div #_(fragment)
+   [result+ val props ctx]
    (->> (concat
           (data/select-all ctx :hyperfiddle/edit)
           (data/select-all ctx :hyperfiddle/remove)
@@ -95,39 +102,37 @@
                [ui-from-link rv ctx props]))
         doall)])
 
-(defn result+ [val props ctx]
-  [result val ctx props])
-
-(defn select+ [val props ctx]
-  [select (data/select+ ctx :options (:options props)) props ctx])
-
 (defn hyper-control' "Handles labels too because we show links there." ; CTX is done after here. props and val only. But recursion needs to look again.
   [ctx]
   {:post [%]}
-  (let [head-or-body (if (contains? ctx :hypercrud.browser/data) :body :head)
+  (let [level (-> ctx :hypercrud.browser/field deref ::field/level)
         segment (last (:hypercrud.browser/path ctx))
-        segment-type (context/segment-type segment)
+        segment-type (context/segment-type segment)         ; :element means :relation? no, naked. Relation is ortho
         child-fields (not @(r/fmap (r/comp nil? ::field/children) (:hypercrud.browser/field ctx)))]
-    (match [head-or-body segment-type segment child-fields #_@user]
-      [:head :attribute '* _] magic-new-head
-      [:body :attribute '* _] magic-new-body
-
-      [:head :attribute _ _] attribute-label
-      [:body :attribute _ true] result+                     ; because there is always a dependency, we hit this in the nested head case now, infinite recursion
-      [:body :attribute _ false] (or (attr-renderer ctx) control)
-
-      [:head :element _ true] entity-label
-      [:body :element _ true] entity                        ; entity (:remove :edit)
-
-      [:head :element _ false] attribute-label              ; preserve old behavior
-      [:body :element _ false] controls/string              ; aggregate, what else?
-
-      [:head :naked _ _] (r/constantly [:span "naked head"]) ; Schema new attr, and fiddle-links new link - needs to be split
-      [:body :naked _ _] (r/constantly [:span "naked body"])
+    (match* [level segment-type segment child-fields #_@user]
+      [nil :attribute '* _] magic-new-body
+      [nil :attribute _ true] result+                 ; because there is always a dependency, we hit this in the nested head case now, infinite recursion
+      [nil :attribute _ false] (or (attr-renderer ctx) control)
+      [nil :element _ true] entity                    ; entity (:remove :edit)
+      [nil :element _ false] controls/string          ; aggregate, what else?
       )))
 
 (defn ^:export hyper-control [val props ctx]
   [(hyper-control' ctx) val props ctx])
+
+(defn hyper-label [_ props ctx]
+  (let [level (-> ctx :hypercrud.browser/field deref ::field/level)
+        segment (last (:hypercrud.browser/path ctx))
+        segment-type (context/segment-type segment)         ; :element means :relation? no, naked. Relation is ortho
+        child-fields (not @(r/fmap (r/comp nil? ::field/children) (:hypercrud.browser/field ctx)))]
+    (match* [level segment-type segment child-fields #_@user]
+      [nil :attribute '* _] magic-new-head
+      [nil :attribute _ _] attribute-label            ; entity-[] ends up here
+      [nil :element _ true] entity-label
+      [nil :element _ false] attribute-label          ; preserve old behavior
+      [nil :naked _ _] (r/constantly [:span (str "naked entity head")]) ; Schema new attr, and fiddle-links new link - needs to be split
+      ;[:head :relation :naked seg _] (r/constantly [:span (str "naked relation head, seg: " (pr-str seg))]) ; Schema new attr, and fiddle-links new link - needs to be split
+      )))
 
 (defn auto-link-css [link]                                  ; semantic-css
   (->> (:link/class link)
@@ -353,7 +358,7 @@ User renderers should not be exposed to the reaction."
   [relative-path ctx & [?f props]]                          ; ?f :: (ref, props, ctx) => DOM
   (let [ctx (context/focus ctx relative-path)               ; lifts to userland - (focus :reg/gender)
         Body (or ?f hyper-control)
-        Head (or (:label-fn props) hyper-control)
+        Head (or (:label-fn props) hyper-label)
         props (dissoc props :label-fn)
         props (update props :class css (semantic-css ctx))
         is-magic-new (= '* (last relative-path))]

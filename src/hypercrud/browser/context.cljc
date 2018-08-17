@@ -51,6 +51,7 @@
   (cond
     (attribute-segment? segment) :attribute
     (find-element-segment? segment) :element
+    ; it can also be entity-[]
     :else :naked))
 
 (defn target-route [ctx] @(runtime/state (:peer ctx) [::runtime/partitions nil :route]))
@@ -114,7 +115,13 @@
               (partial r/fmap (r/partial r/last-arg-first assoc ::field/cardinality :db.cardinality/one)))))
 
 (defn refocus "focus common ancestor" [ctx path]
-  {:pre [ctx] :post [%]}
+  {:pre [ctx]
+   :post [%
+          (empty? (filter #{:head :body} (:hypercrud.browser/path %)))]}
+  (assert (empty? (filter #{:head :body} path)) path)
+  (assert (empty? (filter #{:head :body} (:hypercrud.browser/path ctx))) (:hypercrud.browser/path ctx))
+
+
   (let [current-path (:hypercrud.browser/path ctx)
         common-ancestor-path (ancestry-common current-path path)
         unwind-offset (- (count current-path) (count common-ancestor-path))

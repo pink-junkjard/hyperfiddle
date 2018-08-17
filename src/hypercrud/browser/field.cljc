@@ -193,7 +193,8 @@
                  (condp = (type qfind)
                    datascript.parser.FindRel
                    (let [results-by-column (transpose @data)]
-                     {::cardinality :db.cardinality/many
+                     {::level :relation
+                      ::cardinality :db.cardinality/many
                       ::children (->> (:elements qfind)
                                       (map-indexed (fn [fe-pos element]
                                                      (condp = (type element)
