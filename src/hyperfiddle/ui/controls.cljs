@@ -73,6 +73,11 @@
        [:option (assoc option-props :key false :value "false") "False"]
        [:option (assoc option-props :key :nil :value "") "--"]])))
 
+(defn ^:export ref [val props ctx]
+  [input/edn-input* val #_(or (:db/ident val) (:db/id val))
+   (r/partial entity-change! ctx)                           ; f'ed
+   (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))])
+
 (defn ^:export dbid [val props ctx]
   [input/id-input val
    (r/partial entity-change! ctx)

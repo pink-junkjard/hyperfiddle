@@ -54,39 +54,21 @@
     ; This is the only way to stabilize this.
     attr-renderer-control))
 
-(defn ^:export control' "this is a function, which returns component" [ctx] ; returns Func[(ref, props, ctx) => DOM]
-  (let [attr @(context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)))]
-    (let [type (some-> attr :db/valueType :db/ident name keyword)
-          cardinality (some-> attr :db/cardinality :db/ident name keyword)]
-      (match* [type cardinality]
-        [:boolean :one] controls/boolean
-        [:keyword :one] controls/keyword
-        [:string :one] controls/string
-        [:long :one] controls/long
-        [:instant :one] controls/instant
-        [:ref :one] controls/dbid                           ; nested form
-        [:ref :many] (r/constantly nil) #_edn-many          ; nested table
-        [_ :one] controls/edn
-        [_ :many] controls/edn-many))))
-
 (declare result)
+(declare entity-links)
+(declare result-2)
+(declare field)
+(declare hyper-control)
 (declare link)
 (declare ui-from-link)
 (declare fiddle-api)
 (declare fiddle-xray)
 
-(defn control [val props ctx]
-  [(control' ctx) val props ctx])
-
-(defn result+ [val props ctx]
-  [result val ctx props])
-
 (defn select+ [val props ctx]
   [select (data/select+ ctx :options (:options props)) props ctx])
 
-(defn entity [val props ctx]                                ; What about semantics we don't understand?
-  [:div #_(fragment)
-   [result+ val props ctx]
+(defn entity-links [val props ctx]                          ; What about semantics we don't understand?
+  [:div
    (->> (concat
           (data/select-all ctx :hyperfiddle/edit)
           (data/select-all ctx :hyperfiddle/remove)
@@ -102,23 +84,39 @@
                [ui-from-link rv ctx props]))
         doall)])
 
-(defn hyper-control' "Handles labels too because we show links there." ; CTX is done after here. props and val only. But recursion needs to look again.
-  [ctx]
-  {:post [%]}
-  (let [level (-> ctx :hypercrud.browser/field deref ::field/level)
-        segment (last (:hypercrud.browser/path ctx))
-        segment-type (context/segment-type segment)         ; :element means :relation? no, naked. Relation is ortho
-        child-fields (not @(r/fmap (r/comp nil? ::field/children) (:hypercrud.browser/field ctx)))]
-    (match* [level segment-type segment child-fields #_@user]
-      [nil :attribute '* _] magic-new-body
-      [nil :attribute _ true] result+                 ; because there is always a dependency, we hit this in the nested head case now, infinite recursion
-      [nil :attribute _ false] (or (attr-renderer ctx) control)
-      [nil :element _ true] entity                    ; entity (:remove :edit)
-      [nil :element _ false] controls/string          ; aggregate, what else?
-      )))
+(defn ^:export control "this is a function, which returns component"
+  [val props ctx]                                           ; returns Func[(ref, props, ctx) => DOM]
+  (let [segment (last (:hypercrud.browser/path ctx))
+        attr @(context/hydrate-attribute ctx segment)
+        type (or (some-> attr :db/valueType :db/ident name keyword) (context/segment-type-2 segment)) ; can include :element ? :aggregate, :entity
+        cardinality (some-> attr :db/cardinality :db/ident name keyword)]
+    (match* [type cardinality]
+      [:naked _] entity-links #_(r/constantly [:span "naked control (entity-links)"]) ; auto-form generates this on entity forms but never tables
 
-(defn ^:export hyper-control [val props ctx]
-  [(hyper-control' ctx) val props ctx])
+      ;[:element _] entity-links                             ; only happens in table? Could also be relation form? (Currently this is handled by child-form case)
+      #_#_[:aggregate _] controls/string                    ; entity, aggregate, what else?
+      #_#_[:entity _] entity-links
+
+      [:splat _] magic-new-body
+      [:boolean :one] controls/boolean
+      [:keyword :one] controls/keyword
+      [:string :one] controls/string
+      [:long :one] controls/long
+      [:instant :one] controls/instant
+      [:ref :one] controls/ref                              ; nested form - and causes recursion
+      [:ref :many] (constantly nil)                         ; nested table handled above
+      [_ :one] controls/edn
+      [_ :many] controls/edn-many)))
+
+(defn ^:export hyper-control "Handles labels too because we show links there." ; CTX is done after here. props and val only. But recursion needs to look again.
+  [val props ctx]
+  {:post [%]}
+  (let [is-children (not @(r/fmap (r/comp nil? ::field/children) (:hypercrud.browser/field ctx)))]
+    (or
+      (attr-renderer ctx)
+      (if is-children
+        (result val ctx props)
+        ((control val props ctx) val props ctx)))))
 
 (defn hyper-label [_ props ctx]
   (let [level (-> ctx :hypercrud.browser/field deref ::field/level)
@@ -127,9 +125,9 @@
         child-fields (not @(r/fmap (r/comp nil? ::field/children) (:hypercrud.browser/field ctx)))]
     (match* [level segment-type segment child-fields #_@user]
       [nil :attribute '* _] magic-new-head
-      [nil :attribute _ _] attribute-label            ; entity-[] ends up here
+      [nil :attribute _ _] attribute-label                  ; entity-[] ends up here
       [nil :element _ true] entity-label
-      [nil :element _ false] attribute-label          ; preserve old behavior
+      [nil :element _ false] attribute-label                ; preserve old behavior
       [nil :naked _ _] (r/constantly [:span (str "naked entity head")]) ; Schema new attr, and fiddle-links new link - needs to be split
       ;[:head :relation :naked seg _] (r/constantly [:span (str "naked relation head, seg: " (pr-str seg))]) ; Schema new attr, and fiddle-links new link - needs to be split
       )))
@@ -329,10 +327,19 @@ User renderers should not be exposed to the reaction."
       (let [ctx (assoc ctx :hyperfiddle.ui.form/state state)]
         [:div {:class (css "field" (:class props))
                :style {:border-color (border-color ctx)}}   ; wrapper div has :body stypes - why?
-         (fragment
-           ^{:key :form-head}
-           [Head nil props (dissoc ctx :hypercrud.browser/data)]
-           (if (seq relative-path)                          ; megahax to guard infinite recursion on []
+
+         (if-not (seq relative-path)
+           (fragment
+             ;^{:key :form-head}
+             ;[Head nil props (dissoc ctx :hypercrud.browser/data)]
+             #_(if (seq relative-path))                     ; megahax to guard infinite recursion on []
+             ^{:key :form-body}
+             [:div
+              [Body @(:hypercrud.browser/data ctx) props ctx]])
+           (fragment
+             ^{:key :form-head}
+             [Head nil props (dissoc ctx :hypercrud.browser/data)]
+             #_(if (seq relative-path))                     ; megahax to guard infinite recursion on []
              ^{:key :form-body}
              [:div
               [Body @(:hypercrud.browser/data ctx) props ctx]]))]))))
@@ -352,11 +359,9 @@ User renderers should not be exposed to the reaction."
                   :style {:border-color (when (:hypercrud.browser/source-symbol ctx) (border-color ctx))}}
              [Body @(:hypercrud.browser/data ctx) props ctx]])))
 
-; (defmulti field ::layout)
 (defn ^:export field "Works in a form or table context. Draws label and/or value."
-  ; Focus has probably happened outside.
   [relative-path ctx & [?f props]]                          ; ?f :: (ref, props, ctx) => DOM
-  (let [ctx (context/focus ctx relative-path)               ; lifts to userland - (focus :reg/gender)
+  (let [ctx (context/focus ctx relative-path)
         Body (or ?f hyper-control)
         Head (or (:label-fn props) hyper-label)
         props (dissoc props :label-fn)
@@ -380,12 +385,12 @@ User renderers should not be exposed to the reaction."
       (let [ctx (assoc ctx ::sort/sort-col sort-col
                            ::layout :hyperfiddle.ui.layout/table)]
         [:table (update props :class (fnil css "hyperfiddle") "ui-table" "unp") ; fnil case is iframe root (not a field :many)
-         (->> (fields (dissoc ctx :hypercrud.browser/data)) (into [:thead])) ; strict
+         (->> (fields #_props (dissoc ctx :hypercrud.browser/data)) (into [:thead])) ; strict
          (->> (:hypercrud.browser/data ctx)
               (r/fmap sort)
               (r/unsequence data/row-keyfn)
               (map (fn [[row k]]
-                     (->> (fields (assoc ctx :hypercrud.browser/data row))
+                     (->> (fields #_props (assoc ctx :hypercrud.browser/data row))
                           (into ^{:key k} [:tr]))))         ; strict
               (into [:tbody]))]))))
 
@@ -396,34 +401,25 @@ User renderers should not be exposed to the reaction."
     [:div.alert.alert-warning "Warning: invalid route (d/pull requires an entity argument). To add a tempid entity to the URL, click here: "
      [:a {:href "~entity('$','tempid')"} [:code "~entity('$','tempid')"]] "."]))
 
+(defn form [fields val ctx & [props]]
+  (let [ctx (assoc ctx ::layout :hyperfiddle.ui.layout/block)
+        key (-> (data/row-keyfn val) str keyword)]
+    (apply fragment key (fields #_props ctx))))
+
 (letfn [(field-with-props [ctx props relative-path] (field relative-path ctx nil props))
-        (fields [props ctx]
+        (fields [#_props ctx]
           (->> (data/form ctx)
-               (map (r/partial field-with-props ctx props))))] ; dissoc class ?
+               (map (r/partial field-with-props ctx {}))))] ; dissoc class ?
   (defn ^:export result "Default result renderer. Invoked as fn, returns seq-hiccup, hiccup or
 nil. call site must wrap with a Reagent component"
     [val ctx & [props]]
-    ; focus should probably get called here. What about the request side?
     (fragment
       (hint ctx)
       (case @(r/fmap ::field/cardinality (:hypercrud.browser/field ctx))
-        :db.cardinality/one (let [ctx (assoc ctx ::layout :hyperfiddle.ui.layout/block)
-                                  key (-> (data/row-keyfn val) str keyword)]
-                              (apply fragment key (fields props ctx)))
-        :db.cardinality/many [table (r/partial fields props) ctx props] ; Inherit parent class, either a field renderer (nested) or nothing (root)
-        ; blank fiddles
-        nil)
-      (->> (concat (data/select-all ctx :options)
-                   (data/select-all ctx :iframe)
-                   (data/select-all ctx :anchor)
-                   (data/select-all ctx :button))
-           (remove (comp (partial data/deps-over-satisfied? (:hypercrud.browser/path ctx)) link/read-path :link/path))
-           (r/track identity)
-           (r/unsequence :db/id)
-           (map (fn [[rv k]]
-                  ^{:key k}
-                  [ui-from-link rv ctx props]))
-           doall))))
+        :db.cardinality/one [form fields val ctx props]
+        :db.cardinality/many [table fields ctx props]           ; Inherit parent class, either a field renderer (nested) or nothing (root)
+        nil #_"blank fiddles")
+      (field [] ctx entity-links))))
 
 (def ^:dynamic markdown)                                    ; this should be hf-contrib or something
 

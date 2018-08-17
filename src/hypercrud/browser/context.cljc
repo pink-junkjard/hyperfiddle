@@ -54,6 +54,14 @@
     ; it can also be entity-[]
     :else :naked))
 
+(defn segment-type-2 [segment]
+  (cond
+    (= '* segment) :splat
+    (keyword? segment) :attribute
+    (integer? segment) :element
+    ; it can also be entity-[]
+    :else :naked))
+
 (defn target-route [ctx] @(runtime/state (:peer ctx) [::runtime/partitions nil :route]))
 
 (defn with-tx! [ctx tx]
