@@ -16,8 +16,7 @@
             [hypercrud.client.schema :as schema-util]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
-            [hyperfiddle.domain :as domain]
-            [taoensso.timbre :as timbre]))
+            [hyperfiddle.domain :as domain]))
 
 
 (def meta-pull-exp-for-link
