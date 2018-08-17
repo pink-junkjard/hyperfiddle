@@ -196,7 +196,7 @@
    ; todo should summon route via context/target-route. but there is still tension in the data api for deferred popovers
    (defn view [[fiddle :as route] ctx]                      ; pass most as ref for reactions
      (case (namespace fiddle)
-       ;"hyperfiddle.ide" [browser/ui-from-route route (leaf-ide-context ctx)]
+       ;"hyperfiddle.ide" [ui/iframe (leaf-ide-context ctx) {:route route}]
        (case (get-in ctx [::runtime/branch-aux ::foo])
          "page" (view-page route ctx)                       ; component, seq-component or nil
          ; On SSR side this is only ever called as "page", but it could be differently (e.g. turbolinks)

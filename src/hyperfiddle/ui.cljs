@@ -247,7 +247,7 @@ User renderers should not be exposed to the reaction."
                                            (some-> @(r/fmap :link/rel link-ref) name)
                                            "_")))
         (p-build-route' [ctx link] (routing/build-route' link ctx))
-        (build-link-props [route'-ref link-ref ctx props]   ; todo this function needs untangling; ui-from-route ignores most of this
+        (build-link-props [route'-ref link-ref ctx props]   ; todo this function needs untangling; iframe ignores most of this
           ; this is a fine place to eval, put error message in the tooltip prop
           ; each prop might have special rules about his default, for example :visible is default true, does this get handled here?
           (let [unvalidated-route' @route'-ref
