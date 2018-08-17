@@ -10,9 +10,9 @@
             [contrib.rfc3986 :refer [split-fragment]]
             [contrib.string :refer [safe-read-edn-string empty->nil]]
             [hypercrud.browser.base :as base]
+            [hypercrud.browser.browser-request :refer [request-from-route]]
     #?(:cljs [hypercrud.browser.browser-ui :as browser-ui])
             [hypercrud.browser.context :as context]
-            [hypercrud.browser.core :as browser]
             [hypercrud.browser.routing :as routing]
             [hypercrud.browser.router :as router]
             [hypercrud.browser.router-bidi :as router-bidi]
@@ -140,12 +140,12 @@
   (case (get-in ctx [::runtime/branch-aux ::foo])
     "page" (into
              (when true #_(:active-ide? (runtime/host-env (:peer ctx))) ; true for embedded src mode
-               (browser/request-from-route (ide-fiddle-route route ctx) (page-ide-context ctx)))
+               (request-from-route (ide-fiddle-route route ctx) (page-ide-context ctx)))
              (if (magic-ide-fiddle? fiddle (get-in ctx [:hypercrud.browser/domain :domain/ident]))
-               (browser/request-from-route route (page-ide-context ctx))
-               (browser/request-from-route route (page-target-context ctx))))
-    "ide" (browser/request-from-route route (leaf-ide-context ctx))
-    "user" (browser/request-from-route route (leaf-target-context ctx))))
+               (request-from-route route (page-ide-context ctx))
+               (request-from-route route (page-target-context ctx))))
+    "ide" (request-from-route route (leaf-ide-context ctx))
+    "user" (request-from-route route (leaf-target-context ctx))))
 
 #?(:cljs
    (defn view-page [[fiddle :as route] ctx]
