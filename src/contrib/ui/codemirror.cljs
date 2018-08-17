@@ -11,9 +11,9 @@
              {} m))
 
 (defn sync-changed-props! [ref props]
-  (doseq [[prop val] props]
-    (if-not (= val (.getOption ref (name prop)))
-      (.setOption ref (name prop) val))))
+  (doseq [[prop val] props
+          :when (not= val (.getOption ref (name prop)))]
+    (.setOption ref (name prop) val)))
 
 (defn ensure-mode [ref new-mode]
   (js/parinferCodeMirror.setMode ref new-mode)
@@ -68,5 +68,9 @@
      :component-did-update
      (fn [this]
        (let [[_ value change! props] (reagent/argv this)
-             ref (object/get this "codeMirrorRef")]
-         (sync-changed-props! ref (assoc props :value (str value)))))}))
+             ref (object/get this "codeMirrorRef")
+             new-value (str value)]
+         ; internal CM value state != ctor props
+         (when-not (= (.getValue ref) new-value)
+           (.setValue ref new-value))
+         (sync-changed-props! ref props)))}))
