@@ -88,9 +88,9 @@
      {:pre [options-ref+ ctx]}
      (-> (mlet [options-ref options-ref+]
            (return
-             (let [props (-> props
-                             (assoc :on-change (r/partial controls/entity-change! ctx)
-                                    :value @(r/fmap dom-value (:hypercrud.browser/data ctx))))
+             (let [default-props {:on-change (r/partial controls/entity-change! ctx)}
+                   props (-> (merge default-props props)
+                             (assoc :value @(r/fmap dom-value (:hypercrud.browser/data ctx))))
                    props (-> (select-keys props [:class])
                              (assoc :user-renderer (r/partial select-anchor-renderer props {:disabled (compute-disabled ctx props)})))
                    ctx (assoc ctx
