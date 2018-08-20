@@ -16,44 +16,6 @@
       ?message (assoc (->Err (str ?message)) :data (pprint-str (ex-data e)))
       :else (pr-str e))))
 
-(defn stage-reducer [stage action & args]
-  (let [discard (fn [stage branch]
-                  (dissoc stage branch))
-        with (fn [stage branch uri tx]
-               (update-in stage [branch uri] tx/into-tx tx))
-        clean (fn [stage]
-                (->> stage
-                     (map-values (fn [multi-color-tx]
-                                   (->> multi-color-tx
-                                        (remove (fn [[uri tx]] (nil? tx)))
-                                        (into {}))))
-                     (remove (fn [[branch multi-color-tx]] (empty? multi-color-tx)))
-                     (into {})))]
-    (-> (case action
-          :transact!-success (let [[uris] args]
-                               {nil (apply dissoc (get stage nil) uris)})
-
-          :discard-partition (let [[branch] args]
-                               (discard stage branch))
-
-          :with (let [[branch uri tx] args]
-                  (-> stage
-                      (with branch uri tx)))
-
-          :merge (let [[branch] args
-                       parent-branch (branch/decode-parent-branch branch)]
-                   (-> (reduce (fn [stage [uri tx]]
-                                 (with stage parent-branch uri tx))
-                               stage
-                               (get stage branch))
-                       (discard branch)))
-
-          :reset-stage (first args)
-          :reset-stage-uri (let [[branch uri tx] args]
-                             (assoc-in stage [branch uri] tx))
-          stage)
-        clean)))
-
 (defn fatal-error-reducer [error action & args]
   (case action
     :set-global-basis nil
@@ -82,75 +44,102 @@
     (or display-mode :hypercrud.browser.browser-ui/user)))
 
 (defn partitions-reducer [partitions action & args]
-  (->> (case action
-         :transact!-success (assoc-in partitions [nil :hydrate-id] "hack; dont flicker while page rebuilds")
+  (let [with (fn [partitions branch uri tx]
+               (update-in partitions [branch :stage uri] tx/into-tx tx))]
+    (->> (case action
+           :transact!-success
+           (let [[uris] args]
+             (-> partitions
+                 (assoc-in [nil :hydrate-id] "hack; dont flicker while page rebuilds")
+                 (update-in [nil :stage] #(apply dissoc % uris))
+                 (->> (map-values #(dissoc % :stage)))))
 
-         :add-partition (let [[branch route branch-aux] args]
-                          (update partitions branch
-                                  (fn [current-branch]
-                                    (if (router/compare-routes route (:route current-branch))
-                                      (assoc current-branch :route route)
-                                      {:route route
-                                       :hyperfiddle.runtime/branch-aux branch-aux}))))
+           :add-partition (let [[branch route branch-aux] args]
+                            (update partitions branch
+                                    (fn [current-branch]
+                                      (if (router/compare-routes route (:route current-branch))
+                                        (assoc current-branch :route route)
+                                        {:route route
+                                         :hyperfiddle.runtime/branch-aux branch-aux}))))
 
-         :discard-partition (let [[branch] args]
-                              (dissoc partitions branch))
+           :discard-partition (let [[branch] args]
+                                (dissoc partitions branch))
 
-         :partition-basis (let [[branch local-basis] args]
-                            (assoc-in partitions [branch :local-basis] local-basis))
+           :partition-basis (let [[branch local-basis] args]
+                              (assoc-in partitions [branch :local-basis] local-basis))
 
-         :partition-route (let [[branch route] args]
-                            (if (= route (get-in partitions [branch :route]))
-                              partitions
-                              (-> partitions
-                                  (assoc-in [branch :route] route)
-                                  #_(dissoc :error :ptm :tempid-lookups))))
+           :partition-route (let [[branch route] args]
+                              (if (= route (get-in partitions [branch :route]))
+                                partitions
+                                (-> partitions
+                                    (assoc-in [branch :route] route)
+                                    #_(dissoc :error :ptm :tempid-lookups))))
 
-         :hydrate!-start (let [[branch] args]
-                           (update partitions branch
-                                   (fn [partition]
-                                     (assoc partition
-                                       :hydrate-id
-                                       (hash (select-keys partition [:hyperfiddle.runtime/branch-aux :route :stage :local-basis]))))))
+           :with (let [[branch uri tx] args]
+                   (with partitions branch uri tx))
 
-         :hydrate!-success (let [[branch ptm tempid-lookups] args]
+           :merge (let [[branch] args
+                        parent-branch (branch/decode-parent-branch branch)]
+                    (-> (reduce (fn [partitions [uri tx]]
+                                  (with partitions parent-branch uri tx))
+                                partitions
+                                (get-in partitions [branch :stage]))
+                        (update branch dissoc :stage)))
+
+           :hydrate!-start (let [[branch] args]
                              (update partitions branch
                                      (fn [partition]
-                                       (-> partition
-                                           (dissoc :error :hydrate-id)
-                                           (assoc :ptm ptm
-                                                  :tempid-lookups tempid-lookups)))))
+                                       (assoc partition
+                                         :hydrate-id
+                                         (hash (select-keys partition [:hyperfiddle.runtime/branch-aux :route :stage :local-basis]))))))
 
-         :partition-error (let [[branch error] args]
-                            (update partitions branch
-                                    (fn [partition]
-                                      (-> partition
-                                          (dissoc :hydrate-id)
-                                          (assoc :error (serializable-error error))))))
+           :hydrate!-success (let [[branch ptm tempid-lookups] args]
+                               (update partitions branch
+                                       (fn [partition]
+                                         (-> partition
+                                             (dissoc :error :hydrate-id)
+                                             (assoc :ptm ptm
+                                                    :tempid-lookups tempid-lookups)))))
 
-         :open-popover (let [[branch popover-id] args]
-                         (update-in partitions [branch :popovers] conj popover-id))
+           :partition-error (let [[branch error] args]
+                              (update partitions branch
+                                      (fn [partition]
+                                        (-> partition
+                                            (dissoc :hydrate-id)
+                                            (assoc :error (serializable-error error))))))
 
-         :close-popover (let [[branch popover-id] args]
-                          (update-in partitions [branch :popovers] disj popover-id))
+           :open-popover (let [[branch popover-id] args]
+                           (update-in partitions [branch :popovers] conj popover-id))
 
-         (or partitions {}))
-       (map-values (fn [partition]
-                     ; apply defaults
-                     (->> {:hydrate-id identity
-                           :popovers #(or % #{})
+           :close-popover (let [[branch popover-id] args]
+                            (update-in partitions [branch :popovers] disj popover-id))
 
-                           ; data needed to hydrate a partition
-                           :route identity
-                           :hyperfiddle.runtime/branch-aux identity
-                           :stage identity
-                           :local-basis identity
+           :reset-stage-branch (let [[branch v] args]
+                                 (assoc-in partitions [branch :stage] v))
 
-                           ; response data of hydrating a partition
-                           :error identity
-                           :ptm identity
-                           :tempid-lookups identity}
-                          (reduce (fn [v [k f]] (update v k f)) partition))))))
+           :reset-stage-uri (let [[branch uri tx] args]
+                              (assoc-in partitions [branch :stage uri] tx))
+
+           (or partitions {}))
+         (map-values (fn [partition]
+                       ; apply defaults
+                       (->> {:hydrate-id identity
+                             :popovers #(or % #{})
+
+                             ; data needed to hydrate a partition
+                             :route identity
+                             :hyperfiddle.runtime/branch-aux identity
+                             :stage (fn [multi-color-tx]
+                                      (->> multi-color-tx
+                                           (remove (fn [[uri tx]] (nil? tx)))
+                                           (into {})))
+                             :local-basis identity
+
+                             ; response data of hydrating a partition
+                             :error identity
+                             :ptm identity
+                             :tempid-lookups identity}
+                            (reduce (fn [v [k f]] (update v k f)) partition)))))))
 
 (defn auto-transact-reducer [auto-tx action & args]
   (case action
@@ -173,10 +162,6 @@
 
                   ; user
                   :display-mode display-mode-reducer
-                  :pressed-keys pressed-keys-reducer
-
-                  ; needs migration
-                  :stage stage-reducer
-                  })
+                  :pressed-keys pressed-keys-reducer})
 
 (def root-reducer (state/combine-reducers reducer-map))

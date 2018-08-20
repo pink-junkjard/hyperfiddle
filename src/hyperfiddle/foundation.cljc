@@ -131,7 +131,7 @@
                                 (sort-by :label))
            change-tab #(reset! selected-uri %)]
        (fn [ctx & [child]]
-         (let [stage (runtime/state (:peer ctx) [:stage (:branch ctx) @selected-uri])]
+         (let [stage (runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :stage @selected-uri])]
            (fragment
              :topnav
              [horizontal-tabs
@@ -203,7 +203,8 @@
 
 (defn navigable? [route state]
   (and (not= route (get-in state [::runtime/partitions nil :route]))
-       (or (empty? (dissoc (:stage state) nil))
+       (or (->> (dissoc (::runtime/partitions state) nil)
+                (every? (comp empty? :stage second)))
            (confirm "Unstaged work will be lost on navigate, are you sure?"))))
 
 (def LEVEL-NONE 0)

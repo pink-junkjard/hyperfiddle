@@ -26,17 +26,16 @@
 
 (defn hydrate-partition [rt branch on-start dispatch! get-state]
   (dispatch! (apply batch [:hydrate!-start branch] on-start))
-  (let [{:keys [stage] :as state} (get-state)
+  (let [state (get-state)
         partition-state (fn [] (get-in state [::runtime/partitions branch]))
         {:keys [route local-basis hydrate-id ::runtime/branch-aux]} (partition-state)]
     (assert route)
     (assert (not (string? route)))
-    (-> (runtime/hydrate-route rt local-basis route branch branch-aux stage)
+    (-> (runtime/hydrate-route rt local-basis route branch branch-aux (map-values :stage (::runtime/partitions state)))
         (p/then (fn [{:keys [ptm tempid-lookups]}]
                   (let [partition-val (partition-state)]
                     (if (= hydrate-id (:hydrate-id partition-val))
-                      (let [ptm (map-keys (partial peer/partitioned-request partition-val stage) ptm)]
-                        (dispatch! [:hydrate!-success branch ptm tempid-lookups]))
+                      (dispatch! [:hydrate!-success branch ptm tempid-lookups])
                       (timbre/info (str "Ignoring response for " hydrate-id))))))
         (p/catch (fn [error]
                    (if (= hydrate-id (:hydrate-id (partition-state)))
@@ -112,11 +111,10 @@
               (p/then #(hydrate-partition rt branch nil dispatch! get-state))))))))
 
 (defn update-to-tempids [get-state branch uri tx]
-  (let [{:keys [stage ::runtime/partitions]} (get-state)
-        {:keys [tempid-lookups] :as partition-val} (get partitions branch)
+  (let [{:keys [tempid-lookups ptm]} (get-in (get-state) [::runtime/partitions branch])
         dbval (->DbVal uri branch)
         schema (let [schema-request (schema/schema-request dbval)]
-                 (-> (peer/hydrate-val partition-val stage schema-request)
+                 (-> (peer/hydrate-val schema-request ptm)
                      (either/branch (fn [e] (throw e)) identity)))
         id->tempid (get tempid-lookups uri)]
     (map (partial tx/stmt-id->tempid id->tempid schema) tx)))
@@ -169,7 +167,7 @@
 (defn stage-popover [rt invert-route branch link swap-fn-async & on-start]
   (fn [dispatch! get-state]
     (dispatch! [:txfn (:link/rel link) (:link/path link)])
-    (p/then (swap-fn-async (get-in (get-state) [:stage branch] {}))
+    (p/then (swap-fn-async (get-in (get-state) [::runtime/partitions branch :stage] {}))
             (fn [{:keys [tx app-route]}]
               (let [with-actions (mapv (fn [[uri tx]]
                                          (let [tx (update-to-tempids get-state branch uri tx)]
@@ -178,7 +176,7 @@
                     parent-branch (branch/decode-parent-branch branch)]
                 ; should the tx fn not be withd? if the transact! fails, do we want to run it again?
                 (dispatch! (apply batch (concat with-actions on-start)))
-                (let [tx-groups (->> (get-in (get-state) [:stage branch])
+                (let [tx-groups (->> (get-in (get-state) [::runtime/partitions branch :stage])
                                      (filter (fn [[uri tx]] (and (should-transact!? uri get-state) (not (empty? tx)))))
                                      (into {}))]
                   (if (and (nil? parent-branch) (not (empty? tx-groups)))
@@ -205,14 +203,14 @@
 (defn reset-stage-uri [rt branch uri tx]
   (fn [dispatch! get-state]
     ; check if auto-tx is OFF first?
-    (when (not= tx (get-in (get-state) [:stage branch uri]))
+    (when (not= tx (get-in (get-state) [::runtime/partitions branch :stage uri]))
       (hydrate-partition rt nil [[:reset-stage-uri branch uri tx]] dispatch! get-state))))
 
 (defn manual-transact-uri! [peer invert-route nil-branch-aux uri]
   (fn [dispatch! get-state]
     ; todo do something when child branches exist and are not nil: hyperfiddle/hyperfiddle#99
     ; can only transact one branch
-    (let [tx-groups (-> (get-in (get-state) [:stage nil])
+    (let [tx-groups (-> (get-in (get-state) [::runtime/partitions nil :stage])
                         (select-keys [uri]))]
       (transact! peer invert-route tx-groups dispatch! get-state :post-tx [[:reset-stage-uri nil uri]]))))
 
