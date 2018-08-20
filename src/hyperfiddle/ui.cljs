@@ -67,15 +67,26 @@
 (defn select+ [val props ctx]
   [select (data/select+ ctx :options (:options props)) props ctx])
 
-(defn entity-links [val props ctx]                          ; What about semantics we don't understand?
+(defn entity-links-iframe [val props ctx]
+  [:div
+   (->> (concat
+          (data/select-all ctx :options)
+          (data/select-all ctx :iframe))
+        (remove (comp (partial data/deps-over-satisfied? (:hypercrud.browser/path ctx)) link/read-path :link/path))
+        (r/track identity)
+        (r/unsequence :db/id)
+        (map (fn [[rv k]]
+               ^{:key k}
+               [ui-from-link rv ctx props]))
+        doall)])
+
+(defn entity-links [val props ctx]
   [:div
    (->> (concat
           (data/select-all ctx :hyperfiddle/edit)
           (data/select-all ctx :hyperfiddle/remove)
-          (data/select-all ctx :options)
           (data/select-all ctx :anchor)
-          (data/select-all ctx :button)
-          (data/select-all ctx :iframe))
+          (data/select-all ctx :button))
         (remove (comp (partial data/deps-over-satisfied? (:hypercrud.browser/path ctx)) link/read-path :link/path))
         (r/track identity)
         (r/unsequence :db/id)
@@ -91,7 +102,7 @@
         type (or (some-> attr :db/valueType :db/ident name keyword) (context/segment-type-2 segment)) ; can include :element ? :aggregate, :entity
         cardinality (some-> attr :db/cardinality :db/ident name keyword)]
     (match* [type cardinality]
-      [:naked _] entity-links #_(r/constantly [:span "naked control (entity-links)"]) ; auto-form generates this on entity forms but never tables
+      [:naked-or-element _] entity-links #_(r/constantly [:span "naked control (entity-links)"]) ; auto-form generates this on entity forms but never tables
 
       ;[:element _] entity-links                             ; only happens in table? Could also be relation form? (Currently this is handled by child-form case)
       #_#_[:aggregate _] controls/string                    ; entity, aggregate, what else?
@@ -121,15 +132,15 @@
 (defn hyper-label [_ props ctx]
   (let [level (-> ctx :hypercrud.browser/field deref ::field/level)
         segment (last (:hypercrud.browser/path ctx))
-        segment-type (context/segment-type segment)         ; :element means :relation? no, naked. Relation is ortho
+        segment-type (context/segment-type-2 segment)         ; :element means :relation? no, naked. Relation is ortho
         child-fields (not @(r/fmap (r/comp nil? ::field/children) (:hypercrud.browser/field ctx)))]
     (match* [level segment-type segment child-fields #_@user]
-      [nil :attribute '* _] magic-new-head
+      [nil :splat _ _] magic-new-head
       [nil :attribute _ _] attribute-label                  ; entity-[] ends up here
       [nil :element _ true] entity-label
       [nil :element _ false] attribute-label                ; preserve old behavior
-      [nil :naked _ _] (r/constantly [:span (str "naked entity head")]) ; Schema new attr, and fiddle-links new link - needs to be split
-      ;[:head :relation :naked seg _] (r/constantly [:span (str "naked relation head, seg: " (pr-str seg))]) ; Schema new attr, and fiddle-links new link - needs to be split
+      [nil :naked-or-element _ _] entity-label #_(r/constantly [:span (str "naked entity head")]) ; Schema new attr, and fiddle-links new link - needs to be split
+      ;[:head :relation :naked-or-element seg _] (r/constantly [:span (str "naked relation head, seg: " (pr-str seg))]) ; Schema new attr, and fiddle-links new link - needs to be split
       )))
 
 (defn auto-link-css [link]                                  ; semantic-css
@@ -145,7 +156,7 @@
        (concat
          ["hyperfiddle"
           (:hypercrud.browser/source-symbol ctx)            ; color
-          (name (context/segment-type (last (:hypercrud.browser/path ctx))))
+          (name (context/segment-type-2 (last (:hypercrud.browser/path ctx))))
           ;(or (some #{:head} (:hypercrud.browser/path ctx)) ; could be first nested in a body
           ;    (some #{:body} (:hypercrud.browser/path ctx)))
           (->> (:hypercrud.browser/path ctx)                ; legacy unique selector for each location
@@ -332,14 +343,12 @@ User renderers should not be exposed to the reaction."
            (fragment
              ;^{:key :form-head}
              ;[Head nil props (dissoc ctx :hypercrud.browser/data)]
-             #_(if (seq relative-path))                     ; megahax to guard infinite recursion on []
              ^{:key :form-body}
              [:div
               [Body @(:hypercrud.browser/data ctx) props ctx]])
            (fragment
              ^{:key :form-head}
              [Head nil props (dissoc ctx :hypercrud.browser/data)]
-             #_(if (seq relative-path))                     ; megahax to guard infinite recursion on []
              ^{:key :form-body}
              [:div
               [Body @(:hypercrud.browser/data ctx) props ctx]]))]))))
@@ -354,10 +363,10 @@ User renderers should not be exposed to the reaction."
                 :style {:background-color (border-color ctx)}
                 :on-click (r/partial sort/toggle-sort! relative-path ctx)}
            [Head nil props ctx]]
-    :body (if (seq relative-path)                           ; megahax to guard infinite recursion on []
-            [:td {:class (css "field" (:class props) "truncate")
-                  :style {:border-color (when (:hypercrud.browser/source-symbol ctx) (border-color ctx))}}
-             [Body @(:hypercrud.browser/data ctx) props ctx]])))
+    ; Field omits [] but table does not, because we use it to specifically draw repeating anchors with a field renderer.
+    :body [:td {:class (css "field" (:class props) "truncate")
+                :style {:border-color (when (:hypercrud.browser/source-symbol ctx) (border-color ctx))}}
+           [Body @(:hypercrud.browser/data ctx) props ctx]]))
 
 (defn ^:export field "Works in a form or table context. Draws label and/or value."
   [relative-path ctx & [?f props]]                          ; ?f :: (ref, props, ctx) => DOM
@@ -406,21 +415,25 @@ User renderers should not be exposed to the reaction."
         key (-> (data/row-keyfn val) str keyword)]
     (apply fragment key (fields #_props ctx))))
 
-(letfn [(columns [#_props ctx]
-          (-> ctx :hypercrud.browser/field deref ::field/children
-              (->> (map (fn [{path ::field/path-segment}]
-                          (field [path] ctx hyper-control {}))))))    ; dissoc class ?
+(letfn [(columns [ctx]
+          (concat
+            (->> (map (fn [{path ::field/path-segment}]
+                        (field [path] ctx hyper-control))
+                      (-> ctx :hypercrud.browser/field deref ::field/children)))
+            ; In both tables and forms, [] is meaningful for the edit link.
+            ; But iframes should be omitted, we draw those as if non-repeating.
+            [(field [] ctx entity-links)]))
         (columns-relation-product [ctx]
-          (-> ctx :hypercrud.browser/field deref ::field/children
-              (->> (mapcat (fn [{path ::field/path-segment
-                                 child-fields ::field/children}]
-                             (concat
-                               (map (fn [{child-path ::field/path-segment}]
-                                      (field [path child-path] ctx hyper-control {}))
-                                    child-fields)
-                               ; See how we explicitly render the entity-links here
-                               [(field [path] ctx entity-links {})])
-                             )))))]
+          (mapcat (fn [{path ::field/path-segment
+                        child-fields ::field/children}]
+                    (concat
+                      (map (fn [{child-path ::field/path-segment}]
+                             (field [path child-path] ctx hyper-control))
+                           child-fields)
+                      ; No [], that is meaningless in the relation case.
+                      ; See how we explicitly render the entity-links here
+                      [(field [path] ctx entity-links)]))
+                  (-> ctx :hypercrud.browser/field deref ::field/children)))]
   (defn ^:export result "Default result renderer. Invoked as fn, returns seq-hiccup, hiccup or
 nil. call site must wrap with a Reagent component"
     [val ctx & [props]]
@@ -434,7 +447,11 @@ nil. call site must wrap with a Reagent component"
           [nil :db.cardinality/many] [table columns ctx props] ; Inherit parent class, either a field renderer (nested) or nothing (root)
           [:relation _] [table columns-relation-product ctx props]
           [nil nil] nil #_"blank fiddles"))
-      (field [] ctx entity-links))))
+
+      ; Draw data lists here, even if they are repeating.
+      ; Unlike anchors and buttons, iframes and options aren't meant to be drawn at their path, it makes
+      ; more sense to draw them together as early as their dependency becomes possible to satisfy.
+      (field [] ctx entity-links-iframe))))
 
 (def ^:dynamic markdown)                                    ; this should be hf-contrib or something
 

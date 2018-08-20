@@ -24,7 +24,7 @@
                        (r/unsequence ::field/path-segment)
                        (mapcat (fn [[field path-segment]]
                                  (-> [[path-segment]]
-                                     #_(cond->>
+                                     (cond->>
                                          @(r/fmap (r/comp not nil? ::field/source-symbol) field) ; this only happens once at the top for relation queries
                                          (into (->> (r/fmap ::field/children field)
                                                     (r/unsequence ::field/path-segment)
@@ -44,7 +44,7 @@
 (defn link-path-floor [path]
   (->> path
        reverse
-       (drop-while #(= :attribute (context/segment-type %)))
+       (drop-while #(#{:attribute :splat} (context/segment-type-2 %)))
        reverse))
 
 (defn deps-over-satisfied? "satisfied but not over-satisfied" [this-path link-path]

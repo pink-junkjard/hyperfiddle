@@ -51,7 +51,6 @@
   (cond
     (attribute-segment? segment) :attribute
     (find-element-segment? segment) :element
-    ; it can also be entity-[]
     :else :naked))
 
 (defn segment-type-2 [segment]
@@ -59,8 +58,8 @@
     (= '* segment) :splat
     (keyword? segment) :attribute
     (integer? segment) :element
-    ; it can also be entity-[]
-    :else :naked))
+    ; it can also be entity-[], which has implied :element, this also happens in the query [?e ...] case
+    :else :naked-or-element))
 
 (defn target-route [ctx] @(runtime/state (:peer ctx) [::runtime/partitions nil :route]))
 
