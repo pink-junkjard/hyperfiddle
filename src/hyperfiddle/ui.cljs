@@ -385,7 +385,7 @@ User renderers should not be exposed to the reaction."
       (let [ctx (assoc ctx ::sort/sort-col sort-col
                            ::layout :hyperfiddle.ui.layout/table)]
         [:table (update props :class (fnil css "hyperfiddle") "ui-table" "unp") ; fnil case is iframe root (not a field :many)
-         (->> (fields #_props (dissoc ctx :hypercrud.browser/data)) (into [:thead])) ; strict
+         [:thead (->> (fields #_props (dissoc ctx :hypercrud.browser/data)) (into [:tr]))] ; strict
          (->> (:hypercrud.browser/data ctx)
               (r/fmap sort)
               (r/unsequence data/row-keyfn)
@@ -406,19 +406,34 @@ User renderers should not be exposed to the reaction."
         key (-> (data/row-keyfn val) str keyword)]
     (apply fragment key (fields #_props ctx))))
 
-(letfn [(field-with-props [ctx props relative-path] (field relative-path ctx nil props))
-        (fields [#_props ctx]
-          (->> (data/form ctx)
-               (map (r/partial field-with-props ctx {}))))] ; dissoc class ?
+(letfn [(columns [#_props ctx]
+          (-> ctx :hypercrud.browser/field deref ::field/children
+              (->> (map (fn [{path ::field/path-segment}]
+                          (field [path] ctx hyper-control {}))))))    ; dissoc class ?
+        (columns-relation-product [ctx]
+          (-> ctx :hypercrud.browser/field deref ::field/children
+              (->> (mapcat (fn [{path ::field/path-segment
+                                 child-fields ::field/children}]
+                             (concat
+                               (map (fn [{child-path ::field/path-segment}]
+                                      (field [path child-path] ctx hyper-control {}))
+                                    child-fields)
+                               ; See how we explicitly render the entity-links here
+                               [(field [path] ctx entity-links {})])
+                             )))))]
   (defn ^:export result "Default result renderer. Invoked as fn, returns seq-hiccup, hiccup or
 nil. call site must wrap with a Reagent component"
     [val ctx & [props]]
     (fragment
       (hint ctx)
-      (case @(r/fmap ::field/cardinality (:hypercrud.browser/field ctx))
-        :db.cardinality/one [form fields val ctx props]
-        :db.cardinality/many [table fields ctx props]           ; Inherit parent class, either a field renderer (nested) or nothing (root)
-        nil #_"blank fiddles")
+      (let [field (:hypercrud.browser/field ctx)
+            cardinality @(r/fmap ::field/cardinality field)
+            level @(r/fmap ::field/level field)]
+        (match* [level cardinality]
+          [nil :db.cardinality/one] [form columns val ctx props]
+          [nil :db.cardinality/many] [table columns ctx props] ; Inherit parent class, either a field renderer (nested) or nothing (root)
+          [:relation _] [table columns-relation-product ctx props]
+          [nil nil] nil #_"blank fiddles"))
       (field [] ctx entity-links))))
 
 (def ^:dynamic markdown)                                    ; this should be hf-contrib or something

@@ -35,19 +35,6 @@
       (vec paths)
       )))
 
-(defn form "Field is invoked as fn"                         ; because it unifies with request fn side
-  [ctx]                                                     ; f-field :: (relative-path ctx) => Any
-  (-> (->> (r/fmap ::field/children (:hypercrud.browser/field ctx))
-           (r/unsequence ::field/path-segment)
-           (mapcat (fn [[field path-segment]]
-                     (-> [[path-segment]]
-                         #_(cond->>
-                             @(r/fmap (r/comp not nil? ::field/source-symbol) field) ; this only happens once at the top for relation queries
-                             (into (->> (r/fmap ::field/children field)
-                                        (r/unsequence ::field/path-segment)
-                                        (mapv (fn [[m-child-field child-segment]]
-                                                [path-segment child-segment])))))))))))
-
 (defn deps-satisfied? "Links in this :body strata" [this-path link-path]
   ; TODO tighten - needs to understand WHICH find element is in scope
   (let [left-divergence (contrib.data/ancestry-divergence link-path this-path)
