@@ -36,7 +36,7 @@
            (r/unsequence ::field/path-segment)
            (mapcat (fn [[field path-segment]]
                      (cond->> [[path-segment]]
-                       @(r/fmap (r/comp not nil? ::field/source-symbol) field) ; this only happens once at the top for relation queries
+                       (context/find-element-segment? path-segment) ; this only happens once at the top for relation queries
                        (into (->> (r/fmap ::field/children field)
                                   (r/unsequence ::field/path-segment)
                                   (mapv (fn [[m-child-field child-segment]]
