@@ -86,17 +86,20 @@
           _ (when-let [e (router/invalid-route? route)] (throw e))
           branch (some-> (:branch path-params) router/-decode-url-ednish)
           branch-aux (some-> (:branch-aux path-params) router/-decode-url-ednish)
-          initial-state (-> {::runtime/user-id user-id
-                             :stage request-body
-                             ; should this be constructed with reducers?
-                             ; why dont we need to preheat the tempid lookups here for parent branches?
-                             ::runtime/partitions {branch {:local-basis local-basis
-                                                           :route route
-                                                           :hyperfiddle.runtime/branch-aux branch-aux}}})
+          initial-state (reduce (fn [state [branch v]]
+                                  (assoc-in state [::runtime/partitions branch :stage] v))
+                                {::runtime/user-id user-id
+                                 :stage request-body
+                                 ; should this be constructed with reducers?
+                                 ; why dont we need to preheat the tempid lookups here for parent branches?
+                                 ::runtime/partitions {branch {:local-basis local-basis
+                                                               :route route
+                                                               :hyperfiddle.runtime/branch-aux branch-aux}}}
+                                request-body)
           rt (->Runtime host-env (r/atom (reducers/root-reducer initial-state nil))
                         reducers/root-reducer jwt user-id)]
       (-> (actions/refresh-domain rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
-          (p/then (fn [_] (runtime/hydrate-route rt local-basis route branch branch-aux (:stage initial-state))))
+          (p/then (fn [_] (runtime/hydrate-route rt local-basis route branch branch-aux request-body)))
           (p/then (fn [data]
                     {:status 200
                      :headers {"Cache-Control" "max-age=31536000"} ; todo max-age=0 if POST
