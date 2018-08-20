@@ -68,32 +68,32 @@
   [select (data/select+ ctx :options (:options props)) props ctx])
 
 (defn entity-links-iframe [val props ctx]
-  [:div
-   (->> (concat
-          (data/select-all ctx :options)
-          (data/select-all ctx :iframe))
-        (remove (comp (partial data/deps-over-satisfied? (:hypercrud.browser/path ctx)) link/read-path :link/path))
-        (r/track identity)
-        (r/unsequence :db/id)
-        (map (fn [[rv k]]
-               ^{:key k}
-               [ui-from-link rv ctx props]))
-        doall)])
+  (fragment
+    (->> (concat
+           (data/select-all ctx :options)
+           (data/select-all ctx :iframe))
+         (remove (comp (partial data/deps-over-satisfied? (:hypercrud.browser/path ctx)) link/read-path :link/path))
+         (r/track identity)
+         (r/unsequence :db/id)
+         (map (fn [[rv k]]
+                ^{:key k}
+                [ui-from-link rv ctx props]))
+         doall)))
 
 (defn entity-links [val props ctx]
-  [:div
-   (->> (concat
-          (data/select-all ctx :hyperfiddle/edit)
-          (data/select-all ctx :hyperfiddle/remove)
-          (data/select-all ctx :anchor)
-          (data/select-all ctx :button))
-        (remove (comp (partial data/deps-over-satisfied? (:hypercrud.browser/path ctx)) link/read-path :link/path))
-        (r/track identity)
-        (r/unsequence :db/id)
-        (map (fn [[rv k]]
-               ^{:key k}
-               [ui-from-link rv ctx props]))
-        doall)])
+  (fragment
+    (->> (concat
+           (data/select-all ctx :hyperfiddle/edit)
+           (data/select-all ctx :hyperfiddle/remove)
+           (data/select-all ctx :anchor)
+           (data/select-all ctx :button))
+         (remove (comp (partial data/deps-over-satisfied? (:hypercrud.browser/path ctx)) link/read-path :link/path))
+         (r/track identity)
+         (r/unsequence :db/id)
+         (map (fn [[rv k]]
+                ^{:key k}
+                [ui-from-link rv ctx props]))
+         doall)))
 
 (defn ^:export control "this is a function, which returns component"
   [val props ctx]                                           ; returns Func[(ref, props, ctx) => DOM]
@@ -344,14 +344,12 @@ User renderers should not be exposed to the reaction."
              ;^{:key :form-head}
              ;[Head nil props (dissoc ctx :hypercrud.browser/data)]
              ^{:key :form-body}
-             [:div
-              [Body @(:hypercrud.browser/data ctx) props ctx]])
+             [Body @(:hypercrud.browser/data ctx) props ctx])
            (fragment
              ^{:key :form-head}
              [Head nil props (dissoc ctx :hypercrud.browser/data)]
              ^{:key :form-body}
-             [:div
-              [Body @(:hypercrud.browser/data ctx) props ctx]]))]))))
+             [Body @(:hypercrud.browser/data ctx) props ctx]))]))))
 
 (defn table-field "Form fields are label AND value. Table fields are label OR value."
   [relative-path ctx Body Head props]                       ; Body :: (val props ctx) => DOM, invoked as component
