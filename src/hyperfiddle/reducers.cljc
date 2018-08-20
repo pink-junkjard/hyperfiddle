@@ -73,13 +73,6 @@
     :hyperfiddle.runtime/set-domain (first args)
     domain))
 
-(defn staging-open-reducer [staging-open? action & args]
-  (case action
-    :toggle-staging (not staging-open?)
-    :partition-error (let [[branch error] args]
-                       (nil? branch))
-    (or staging-open? false)))
-
 (defn display-mode-reducer [display-mode action & args]
   (case action
     :toggle-display-mode (case display-mode
@@ -180,7 +173,6 @@
 
                   ; user
                   :display-mode display-mode-reducer
-                  :staging-open staging-open-reducer
                   :pressed-keys pressed-keys-reducer
 
                   ; needs migration

@@ -39,10 +39,6 @@
                                            pprint-str)))
   (object/set global "react_fragment" fragment)
 
-  (object/set global "toggle_stage"
-              (fn []
-                (runtime/dispatch! (:peer root-ctx) (actions/toggle-staging))))
-
   (object/set global "root_ctx" root-ctx)
 
   (object/set global "dispatch"

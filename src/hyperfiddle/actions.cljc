@@ -17,8 +17,6 @@
             [taoensso.timbre :as timbre]))
 
 
-(defn toggle-staging [] [:toggle-staging])
-
 (defn set-display-mode [display-mode]
   [:set-display-mode display-mode])
 
@@ -203,12 +201,6 @@
                       (if e
                         (dispatch! (apply batch actions))
                         (hydrate-partition rt parent-branch actions dispatch! get-state))))))))))
-
-(defn reset-stage [rt tx]
-  (fn [dispatch! get-state]
-    ; check if auto-tx is OFF first?
-    (when (not= tx (:stage (get-state)))
-      (hydrate-partition rt nil [[:reset-stage tx]] dispatch! get-state))))
 
 (defn reset-stage-uri [rt branch uri tx]
   (fn [dispatch! get-state]
