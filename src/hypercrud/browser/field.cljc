@@ -31,7 +31,7 @@
    ::path-segment nil
    ::source-symbol nil})
 
-(defn- attr-with-opts-or-expr [schema list-or-vec]
+(defn- attr-with-opts-or-expr [schema source-symbol list-or-vec]
   (if (#{'default 'limit} (first list-or-vec))
     (let [attr (second list-or-vec)]
       {::cardinality (get-in schema [attr :db/cardinality :db/ident])
@@ -40,7 +40,7 @@
        ::label (keyword->label attr)
        ::get-value attr
        ::path-segment attr
-       ::source-symbol nil})
+       ::source-symbol source-symbol})
     ; otherwise attr-with-opts
     (let [[attr & {:as opts}] list-or-vec]
       {::-alias (:as opts)
@@ -52,7 +52,7 @@
                  (keyword->label attr))
        ::get-value (or (some->> (:as opts) (r/partial r/last-arg-first get)) attr)
        ::path-segment attr
-       ::source-symbol nil})))
+       ::source-symbol source-symbol})))
 
 (defn entity-pull? [pull-pattern]
   (boolean (some #{'* :db/id} pull-pattern)))
@@ -82,27 +82,27 @@
          (mapcat keys)
          (into #{}))))
 
-(defn- pull->fields [schema pull-pattern data get-values]
+(defn- pull->fields [schema source-symbol pull-pattern data get-values]
   (let [explicit-fields (reduce (fn [acc sym]
                                   (cond
                                     (map? sym) (->> sym
                                                     (map (fn [[k v]]
                                                            (let [field (if (or (vector? k) (seq? k))
-                                                                         (attr-with-opts-or-expr is-ref? k)
+                                                                         (attr-with-opts-or-expr schema source-symbol k)
                                                                          {::cardinality (get-in schema [k :db/cardinality :db/ident])
                                                                           ::label (keyword->label k)
                                                                           ::get-value k
                                                                           ::path-segment k
-                                                                          ::source-symbol nil})]
+                                                                          ::source-symbol source-symbol})]
                                                              (assoc field
                                                                ::children (when-not (number? v) ; short on recursive-limit https://github.com/hyperfiddle/hyperfiddle/issues/363
-                                                                            (pull->fields schema v data (conj get-values (::get-value field))))
+                                                                            (pull->fields schema source-symbol v data (conj get-values (::get-value field))))
                                                                ::data-has-id? (and (not (number? v)) ; short on recursive-limit https://github.com/hyperfiddle/hyperfiddle/issues/363
                                                                                    (entity-pull? v))))))
                                                     (into acc))
-                                    (or (vector? sym) (seq? sym)) (let [field (attr-with-opts-or-expr schema sym)]
+                                    (or (vector? sym) (seq? sym)) (let [field (attr-with-opts-or-expr schema source-symbol sym)]
                                                                     (->> (if (is-component? schema (::path-segment field))
-                                                                           (assoc field ::children (pull->fields schema [::implicit-splat] data (conj get-values (::get-value field))))
+                                                                           (assoc field ::children (pull->fields schema source-symbol [::implicit-splat] data (conj get-values (::get-value field))))
                                                                            field)
                                                                          (conj acc)))
                                     (= '* sym) (conj acc sym)
@@ -110,12 +110,12 @@
                                     :else (conj acc
                                                 {::cardinality (get-in schema [sym :db/cardinality :db/ident])
                                                  ::children (when (is-component? schema sym)
-                                                              (pull->fields schema [::implicit-splat] data (conj get-values sym)))
+                                                              (pull->fields schema source-symbol [::implicit-splat] data (conj get-values sym)))
                                                  ::data-has-id? (is-ref? schema sym)
                                                  ::label (keyword->label sym)
                                                  ::get-value sym
                                                  ::path-segment sym
-                                                 ::source-symbol nil})))
+                                                 ::source-symbol source-symbol})))
                                 []
                                 pull-pattern)]
     (->> explicit-fields
@@ -130,12 +130,12 @@
                               (map (fn [attr]
                                      {::cardinality (get-in schema [attr :db/cardinality :db/ident])
                                       ::children (when (is-component? schema attr)
-                                                   (pull->fields schema [::implicit-splat] data (conj get-values attr)))
+                                                   (pull->fields schema source-symbol [::implicit-splat] data (conj get-values attr)))
                                       ::data-has-id? (is-ref? schema attr)
                                       ::label (keyword->label attr)
                                       ::get-value attr
                                       ::path-segment attr
-                                      ::source-symbol nil})))
+                                      ::source-symbol source-symbol})))
                          (when (= '* field-or-wildcard)
                            [{::cardinality :db.cardinality/one
                              ::children nil
@@ -143,14 +143,14 @@
                              ::label "*"
                              ::get-value (r/constantly nil)
                              ::path-segment '*              ; does this even make sense?
-                             ::source-symbol nil}])))
+                             ::source-symbol source-symbol}])))
                      [field-or-wildcard])))
          (remove #(= :db/id (::path-segment %)))
          vec)))
 
 (defn- pull-one [schemas cell source-symbol label pull-pattern]
   {::cardinality :db.cardinality/one
-   ::children (pull->fields (get schemas (str source-symbol)) pull-pattern cell [])
+   ::children (pull->fields (get schemas (str source-symbol)) source-symbol pull-pattern cell [])
    ::data-has-id? (entity-pull? pull-pattern)
    ::get-value identity
    ::label label
@@ -204,7 +204,7 @@
                                                        (let [source-symbol (get-in element [:source :symbol])
                                                              pull-pattern (get-in element [:pattern :value])]
                                                          {::cardinality :db.cardinality/one
-                                                          ::children (pull->fields (get schemas (str source-symbol)) pull-pattern (get results-by-column fe-pos) [])
+                                                          ::children (pull->fields (get schemas (str source-symbol)) source-symbol pull-pattern (get results-by-column fe-pos) [])
                                                           ::data-has-id? (entity-pull? pull-pattern)
                                                           ::get-value (r/partial r/last-arg-first get fe-pos)
                                                           ::label (get-in element [:variable :symbol])
@@ -230,7 +230,7 @@
                      (let [source-symbol (get-in qfind [:element :source :symbol])
                            pull-pattern (get-in qfind [:element :pattern :value])]
                        {::cardinality :db.cardinality/many
-                        ::children (pull->fields (get schemas (str source-symbol)) pull-pattern @data [])
+                        ::children (pull->fields (get schemas (str source-symbol)) source-symbol pull-pattern @data [])
                         ::data-has-id? (entity-pull? pull-pattern)
                         ::get-value identity
                         ::label (get-in qfind [:element :variable :symbol])
@@ -253,7 +253,7 @@
                                                      (let [source-symbol (get-in element [:source :symbol])
                                                            pull-pattern (get-in element [:pattern :value])]
                                                        {::cardinality :db.cardinality/one
-                                                        ::children (pull->fields (get schemas (str source-symbol)) pull-pattern (get @data fe-pos) [])
+                                                        ::children (pull->fields (get schemas (str source-symbol)) source-symbol pull-pattern (get @data fe-pos) [])
                                                         ::data-has-id? (entity-pull? pull-pattern)
                                                         ::get-value (r/partial r/last-arg-first get fe-pos)
                                                         ::label (get-in element [:variable :symbol])

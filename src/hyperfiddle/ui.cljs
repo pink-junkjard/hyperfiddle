@@ -141,7 +141,7 @@
        (remove #{:head :body})
        (concat
          ["hyperfiddle"
-          (:hypercrud.browser/source-symbol ctx)            ; color
+          (context/dbname ctx)                              ; color
           (name (context/segment-type (last (:hypercrud.browser/path ctx))))
           (or (some #{:head} (:hypercrud.browser/path ctx)) ; could be first nested in a body
               (some #{:body} (:hypercrud.browser/path ctx)))
@@ -350,7 +350,7 @@ User renderers should not be exposed to the reaction."
                   :on-click (r/partial sort/toggle-sort! relative-path ctx)}
              [Head nil props ctx]]
       :body [:td {:class (css "field" (:class props) "truncate")
-                  :style {:border-color (when (:hypercrud.browser/source-symbol ctx) (border-color ctx))}}
+                  :style {:border-color (border-color ctx)}}
              [Body @(:hypercrud.browser/data ctx) props ctx]])))
 
 ; (defmulti field ::layout)
