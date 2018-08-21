@@ -25,7 +25,7 @@
 (defn batch [& action-list] (cons :batch action-list))
 
 (defn hydrate-partition [rt branch on-start dispatch! get-state]
-  (dispatch! (apply batch [:hydrate!-start branch] on-start))
+  (dispatch! (apply batch (conj on-start [:hydrate!-start branch])))
   (let [{:keys [route local-basis hydrate-id ::runtime/branch-aux]} (get-in (get-state) [::runtime/partitions branch])]
     (assert route)
     (assert (not (string? route)))
