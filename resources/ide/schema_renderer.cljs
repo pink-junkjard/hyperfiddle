@@ -28,5 +28,5 @@
            (hyperfiddle.ui/field [:db/isComponent] ctx)
            (hyperfiddle.ui/field [:db/fulltext] ctx nil {:read-only true})
            (hyperfiddle.ui/field [:db/doc] ctx)
-           (hyperfiddle.ui/field [] ctx)])
+           (hyperfiddle.ui/field [] ctx hyperfiddle.ui/entity-links)])
         ctx])]))

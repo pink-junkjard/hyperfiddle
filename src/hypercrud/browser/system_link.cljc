@@ -1,6 +1,7 @@
 (ns hypercrud.browser.system-link
   (:require
     [clojure.string :as string]
+    [contrib.string :refer [blank->nil]]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
     [hypercrud.browser.system-fiddle :as system-fiddle]))
@@ -17,7 +18,7 @@
 (defn body-links-for-field
   ([parent-fiddle dbname schema field path parent-has-id?]
    (let [path (or (some->> (::field/path-segment field) (conj path)) path) ; fe wrapping causes spaces in paths
-         s-path (string/join " " path)]
+         ?spath (blank->nil (string/join " " path))]
      (-> (->> (::field/children field)
               (filter ::field/data-has-id?)
               (mapcat (fn [child-field]
@@ -29,7 +30,7 @@
                   :hypercrud/sys? true
                   :link/disabled? (context/attribute-segment? (::field/path-segment field))
                   :link/rel :hyperfiddle/remove
-                  :link/path s-path
+                  :link/path ?spath
                   :link/render-inline? true
                   :link/fiddle system-fiddle/fiddle-blank-system-remove
                   :link/managed? true
@@ -44,7 +45,7 @@
                   :hypercrud/sys? true
                   :link/disabled? (context/attribute-segment? (::field/path-segment field))
                   :link/rel :hyperfiddle/edit
-                  :link/path s-path
+                  :link/path ?spath
                   :link/fiddle (system-fiddle/fiddle-system-edit dbname)
                   :link/managed? false})
 
@@ -53,7 +54,7 @@
                   :hypercrud/sys? true
                   :link/disabled? (context/attribute-segment? (::field/path-segment field))
                   :link/rel :hyperfiddle/new
-                  :link/path s-path
+                  :link/path ?spath
                   :link/render-inline? true
                   :link/fiddle (system-fiddle/fiddle-system-edit dbname)
                   :link/create? true
@@ -68,11 +69,11 @@
                    (cond->> (body-links-for-field parent-fiddle dbname schema field [] false)
                      (not= :entity (:fiddle/type parent-fiddle))
                      (cons (let [path (::field/path-segment field)
-                                 s-path (str path) #_(string/join " " path)]
+                                 ?spath (blank->nil (str path)) #_(string/join " " path)]
                              {:db/id (keyword "hyperfiddle.browser.system-link" (str "new-" (hash path)))
                               :hypercrud/sys? true
                               :link/rel :hyperfiddle/new
-                              :link/path s-path
+                              :link/path ?spath
                               :link/render-inline? true
                               :link/fiddle (system-fiddle/fiddle-system-edit dbname)
                               :link/create? true
