@@ -26,19 +26,16 @@
 
 (defn hydrate-partition [rt branch on-start dispatch! get-state]
   (dispatch! (apply batch [:hydrate!-start branch] on-start))
-  (let [state (get-state)
-        partition-state (fn [] (get-in state [::runtime/partitions branch]))
-        {:keys [route local-basis hydrate-id ::runtime/branch-aux]} (partition-state)]
+  (let [{:keys [route local-basis hydrate-id ::runtime/branch-aux]} (get-in (get-state) [::runtime/partitions branch])]
     (assert route)
     (assert (not (string? route)))
-    (-> (runtime/hydrate-route rt local-basis route branch branch-aux (map-values :stage (::runtime/partitions state)))
+    (-> (runtime/hydrate-route rt local-basis route branch branch-aux (map-values :stage (::runtime/partitions (get-state))))
         (p/then (fn [{:keys [ptm tempid-lookups]}]
-                  (let [partition-val (partition-state)]
-                    (if (= hydrate-id (:hydrate-id partition-val))
-                      (dispatch! [:hydrate!-success branch ptm tempid-lookups])
-                      (timbre/info (str "Ignoring response for " hydrate-id))))))
+                  (if (= hydrate-id (get-in (get-state) [::runtime/partitions branch :hydrate-id]))
+                    (dispatch! [:hydrate!-success branch ptm tempid-lookups])
+                    (timbre/info (str "Ignoring response for " hydrate-id)))))
         (p/catch (fn [error]
-                   (if (= hydrate-id (:hydrate-id (partition-state)))
+                   (if (= hydrate-id (get-in (get-state) [::runtime/partitions branch :hydrate-id]))
                      (dispatch! [:partition-error branch error])
                      (timbre/info (str "Ignoring response for " hydrate-id)))
                    (throw error))))))
