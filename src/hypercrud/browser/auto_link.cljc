@@ -1,16 +1,28 @@
 (ns hypercrud.browser.auto-link
-  (:require [contrib.data :refer [map-values]]
-            [contrib.string :refer [blank->nil]]
+  (:require [cats.core :refer [mlet return]]
+            [contrib.ct :refer [unwrap]]
+            [contrib.data :refer [map-values]]
+            [contrib.string :refer [blank->nil memoized-safe-read-edn-string]]
+            [contrib.try$ :refer [try-either]]
             [contrib.reactive :as r]
+            [datascript.parser]
             [hypercrud.browser.fiddle :as fiddle]
-            [hypercrud.browser.system-link :as system-link]))
+            [hypercrud.browser.system-link :as system-link]
+            [taoensso.timbre :as timbre]))
 
 
 (defn auto-formula [link]
   ; This is for :anchor, :iframe, :option - anything in the system.
   ; handle root case, by inspecting the target fiddle query input args
-  "(comp deref :hypercrud.browser/data)"
-  )
+  (unwrap
+    #(timbre/warn %)
+    (mlet [q (memoized-safe-read-edn-string (-> link :link/fiddle :fiddle/query))
+           {qin :qin} (try-either (datascript.parser/parse-query q))]
+      ; [{:variable {:symbol $}}{:variable {:symbol ?gender}}]
+      (return
+        (if (seq (drop 1 qin))                              ; Removing the rules and src is hard with the bind wrappers so yolo
+          "(comp deref :hypercrud.browser/data)"
+          "(constantly nil)")))))
 
 (defn auto-link [ctx link]
   (let [auto-fn (fn [link attr auto-f]
