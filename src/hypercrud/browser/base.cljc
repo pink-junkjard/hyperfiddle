@@ -29,7 +29,6 @@
    :fiddle/ident
    {:fiddle/links [:db/id
                    :link/class
-                   :link/create?
                    :link/disabled?
                    {:link/fiddle [:db/id
                                   :fiddle/ident             ; routing

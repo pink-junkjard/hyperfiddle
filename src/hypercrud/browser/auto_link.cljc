@@ -2,11 +2,15 @@
   (:require [contrib.data :refer [map-values]]
             [contrib.string :refer [blank->nil]]
             [contrib.reactive :as r]
-            [hypercrud.browser.auto-link-formula :refer [auto-formula]]
-            [hypercrud.browser.auto-link-txfn :refer [auto-txfn]]
             [hypercrud.browser.fiddle :as fiddle]
             [hypercrud.browser.system-link :as system-link]))
 
+
+(defn auto-formula [link]
+  ; This is for :anchor, :iframe, :option - anything in the system.
+  ; handle root case, by inspecting the target fiddle query input args
+  "(comp deref :hypercrud.browser/data)"
+  )
 
 (defn auto-link [ctx link]
   (let [auto-fn (fn [link attr auto-f]
@@ -16,8 +20,7 @@
                       link)))]
     (-> link
         (update :link/fiddle #(fiddle/data-defaults (into {} %)))
-        (auto-fn :link/tx-fn auto-txfn)
-        (auto-fn :link/formula (partial auto-formula ctx)))))
+        (auto-fn :link/formula auto-formula))))
 
 (defn merge-links [sys-links links]
   (->> (reduce (fn [grouped-links sys-link]

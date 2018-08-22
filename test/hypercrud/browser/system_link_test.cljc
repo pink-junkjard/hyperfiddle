@@ -1,7 +1,10 @@
 (ns hypercrud.browser.system-link-test
-  (:require [clojure.test :refer [deftest is]]
+  (:require [clojure.string :as string]
+            [clojure.test :refer [deftest is]]
             [contrib.eval :as eval]
             [contrib.reactive :as r]
+            [contrib.template :as template]
+            [contrib.uri :refer [->URI]]
             [hypercrud.browser.system-link :refer [retract-formula]]
             [hypercrud.types.Entity :refer [->Entity]]))
 
@@ -34,3 +37,17 @@
     #_(is (= (f ctx nil nil)
            {:tx {uri [[:db.fn/retractEntity "child 1"]
                       [:db.fn/retractEntity "child 2"]]}}))))
+
+(deftest mt-fet-at
+  []
+  ; otherwise pointless, this test serves one important use: evaling and invoking mt-fet-at.edn in the build
+  (let [f (-> (template/load-resource "auto-txfn/mt-fet-at.edn")
+             string/trim
+             eval/eval-string)
+       uri (->URI "test")
+       ctx {:uri uri
+            :hypercrud.browser/path [:parent/child]
+            :hypercrud.browser/parent {:hypercrud.browser/data (r/atom (->Entity uri {:db/id "parent"}))}}
+       modal-route [nil [{:db/id "child"}]]]
+   (is (= (f ctx nil modal-route)
+          {:tx {uri [[:db/add "parent" :parent/child "child"]]}}))))

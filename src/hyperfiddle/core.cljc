@@ -6,6 +6,10 @@
     ; public deps available for ui
     #?(:cljs [contrib.reagent])
     #?(:cljs [contrib.ui])
+
+    ; public auto formulas
+    [hypercrud.browser.auto-link-formula]
+
     #?(:cljs [hyperfiddle.ui])
     #?(:cljs [hyperfiddle.ui.hacks])
 

@@ -2,6 +2,7 @@
   (:require
     [clojure.string :as string]
     [contrib.string :refer [blank->nil]]
+    [contrib.template :as template]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
     [hypercrud.browser.system-fiddle :as system-fiddle]))
@@ -15,14 +16,16 @@
   "(fn [ctx multi-color-tx modal-route]
   {:tx {(:uri ctx) [[:db.fn/retractEntity @(contrib.reactive/cursor (:hypercrud.browser/data ctx) [:db/id])]]}})")
 
-(defn body-links-for-field
+(def parent-child-txfn (-> (template/load-resource "auto-txfn/mt-fet-at.edn") string/trim))
+
+(defn nested-links-for-field
   ([parent-fiddle dbname schema field path parent-has-id?]
    (let [path (or (some->> (::field/path-segment field) (conj path)) path) ; fe wrapping causes spaces in paths
          ?spath (blank->nil (string/join " " path))]
      (-> (->> (::field/children field)
               (filter ::field/data-has-id?)
               (mapcat (fn [child-field]
-                        (body-links-for-field parent-fiddle dbname schema child-field path (::field/data-has-id? field)))))
+                        (nested-links-for-field parent-fiddle dbname schema child-field path (::field/data-has-id? field)))))
          (cond->>
            (and (::field/data-has-id? field)
                 (not= '* (::field/path-segment field)))
@@ -30,6 +33,7 @@
                   :hypercrud/sys? true
                   :link/disabled? (context/attribute-segment? (::field/path-segment field))
                   :link/rel :hyperfiddle/remove
+                  :link/formula "(comp deref :hypercrud.browser/data)"
                   :link/path ?spath
                   :link/render-inline? true
                   :link/fiddle system-fiddle/fiddle-blank-system-remove
@@ -45,6 +49,7 @@
                   :hypercrud/sys? true
                   :link/disabled? (context/attribute-segment? (::field/path-segment field))
                   :link/rel :hyperfiddle/edit
+                  :link/formula "(comp deref :hypercrud.browser/data)"
                   :link/path ?spath
                   :link/fiddle (system-fiddle/fiddle-system-edit dbname)
                   :link/managed? false})
@@ -54,29 +59,30 @@
                   :hypercrud/sys? true
                   :link/disabled? (context/attribute-segment? (::field/path-segment field))
                   :link/rel :hyperfiddle/new
+                  :link/formula "hypercrud.browser.auto-link-formula/auto-entity"
+                  :link/tx-fn parent-child-txfn
                   :link/path ?spath
                   :link/render-inline? true
                   :link/fiddle (system-fiddle/fiddle-system-edit dbname)
-                  :link/create? true
                   :link/managed? true}))))))
 
-(defn- system-links-impl [parent-fiddle fields schemas]
+(defn- system-links-impl [parent-fiddle fields schemas]     ; always the top - the root links, never parent-child
   (->> fields
        (filter ::field/source-symbol)
        (mapcat (fn [field]
                  (let [dbname (str (::field/source-symbol field))
                        schema (get schemas dbname)]
-                   (cond->> (body-links-for-field parent-fiddle dbname schema field [] false)
+                   (cond->> (nested-links-for-field parent-fiddle dbname schema field [] false)
                      (not= :entity (:fiddle/type parent-fiddle))
-                     (cons (let [path (::field/path-segment field)
-                                 ?spath (blank->nil (str path)) #_(string/join " " path)]
+                     (cons (let [path (::field/path-segment field)]
+                             ; nil path means `:find (count ?x) .`
                              {:db/id (keyword "hyperfiddle.browser.system-link" (str "new-" (hash path)))
                               :hypercrud/sys? true
                               :link/rel :hyperfiddle/new
-                              :link/path ?spath
+                              :link/formula "hypercrud.browser.auto-link-formula/auto-entity-from-stage"
+                              :link/path (blank->nil (str path))
                               :link/render-inline? true
                               :link/fiddle (system-fiddle/fiddle-system-edit dbname)
-                              :link/create? true
                               :link/managed? true}))))))))
 
 (defn system-links

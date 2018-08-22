@@ -14,7 +14,6 @@
     contrib.rfc3986-test
     contrib.string-test
     contrib.ui-test
-    hypercrud.browser.auto-link-txfn-test
     hypercrud.browser.fiddle-test
     hypercrud.browser.field-test
     hypercrud.browser.nested-pull-test
@@ -37,7 +36,6 @@
     'contrib.rfc3986-test
     'contrib.string-test
     'contrib.ui-test
-    'hypercrud.browser.auto-link-txfn-test
     'hypercrud.browser.fiddle-test
     'hypercrud.browser.field-test
     'hypercrud.browser.nested-pull-test
