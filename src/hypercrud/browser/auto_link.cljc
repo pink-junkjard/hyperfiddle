@@ -17,7 +17,7 @@
   (unwrap
     #(timbre/warn %)
     (mlet [q (memoized-safe-read-edn-string (-> link :link/fiddle :fiddle/query))
-           {qin :qin} (try-either (datascript.parser/parse-query q))]
+           {qin :qin} (try-either (if q (datascript.parser/parse-query q)))]
       ; [{:variable {:symbol $}}{:variable {:symbol ?gender}}]
       (return
         (if (seq (drop 1 qin))                              ; Removing the rules and src is hard with the bind wrappers so yolo
