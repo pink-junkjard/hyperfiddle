@@ -34,7 +34,8 @@
 
    "application/edn"
    (fn [body]
-     (print-fn #(clojure.pprint/pprint body)))
+     ; hyperfiddle/hyperfiddle.net#38
+     (print-fn #(pr body)))
 
    "application/transit+json"
    (fn [body]
