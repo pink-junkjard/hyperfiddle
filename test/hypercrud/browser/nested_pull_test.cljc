@@ -100,41 +100,41 @@
       (is (= expected actual)))
 
     (let [links (system-links fiddle field @(:hypercrud.browser/schemas ctx))
-          expected #{{:link/path ":head 0" :link/rel :hyperfiddle/new}
-                     {:link/path ":body 0" :link/rel :hyperfiddle/edit}
-                     {:link/path ":body 0" :link/rel :hyperfiddle/remove}
+          expected #{{:link/path "0" :link/rel :hyperfiddle/new}
+                     {:link/path "0" :link/rel :hyperfiddle/edit}
+                     {:link/path "0" :link/rel :hyperfiddle/remove}
 
-                     {:link/path ":body 0 :one-ref1" :link/rel :hyperfiddle/new}
-                     {:link/path ":body 0 :one-ref1" :link/rel :hyperfiddle/edit}
-                     {:link/path ":body 0 :one-ref1" :link/rel :hyperfiddle/remove}
+                     {:link/path "0 :one-ref1" :link/rel :hyperfiddle/new}
+                     {:link/path "0 :one-ref1" :link/rel :hyperfiddle/edit}
+                     {:link/path "0 :one-ref1" :link/rel :hyperfiddle/remove}
 
-                     {:link/path ":body 0 :one-ref2" :link/rel :hyperfiddle/new}
-                     {:link/path ":body 0 :one-ref2" :link/rel :hyperfiddle/edit}
-                     {:link/path ":body 0 :one-ref2" :link/rel :hyperfiddle/remove}
+                     {:link/path "0 :one-ref2" :link/rel :hyperfiddle/new}
+                     {:link/path "0 :one-ref2" :link/rel :hyperfiddle/edit}
+                     {:link/path "0 :one-ref2" :link/rel :hyperfiddle/remove}
 
-                     {:link/path ":body 0 :one-ref2 :body :one-ref1" :link/rel :hyperfiddle/new}
-                     {:link/path ":body 0 :one-ref2 :body :one-ref1" :link/rel :hyperfiddle/edit}
-                     {:link/path ":body 0 :one-ref2 :body :one-ref1" :link/rel :hyperfiddle/remove}
+                     {:link/path "0 :one-ref2 :one-ref1" :link/rel :hyperfiddle/new}
+                     {:link/path "0 :one-ref2 :one-ref1" :link/rel :hyperfiddle/edit}
+                     {:link/path "0 :one-ref2 :one-ref1" :link/rel :hyperfiddle/remove}
 
-                     {:link/path ":body 0 :one-ref2 :body :many-ref1" :link/rel :hyperfiddle/new}
-                     {:link/path ":body 0 :one-ref2 :body :many-ref1 :body" :link/rel :hyperfiddle/edit}
-                     {:link/path ":body 0 :one-ref2 :body :many-ref1 :body" :link/rel :hyperfiddle/remove}
+                     {:link/path "0 :one-ref2 :many-ref1" :link/rel :hyperfiddle/new}
+                     {:link/path "0 :one-ref2 :many-ref1" :link/rel :hyperfiddle/edit}
+                     {:link/path "0 :one-ref2 :many-ref1" :link/rel :hyperfiddle/remove}
 
-                     {:link/path ":body 0 :many-ref1" :link/rel :hyperfiddle/new}
-                     {:link/path ":body 0 :many-ref1 :body" :link/rel :hyperfiddle/edit}
-                     {:link/path ":body 0 :many-ref1 :body" :link/rel :hyperfiddle/remove}
+                     {:link/path "0 :many-ref1" :link/rel :hyperfiddle/new}
+                     {:link/path "0 :many-ref1" :link/rel :hyperfiddle/edit}
+                     {:link/path "0 :many-ref1" :link/rel :hyperfiddle/remove}
 
-                     {:link/path ":body 0 :many-ref2" :link/rel :hyperfiddle/new}
-                     {:link/path ":body 0 :many-ref2 :body" :link/rel :hyperfiddle/edit}
-                     {:link/path ":body 0 :many-ref2 :body" :link/rel :hyperfiddle/remove}
+                     {:link/path "0 :many-ref2" :link/rel :hyperfiddle/new}
+                     {:link/path "0 :many-ref2" :link/rel :hyperfiddle/edit}
+                     {:link/path "0 :many-ref2" :link/rel :hyperfiddle/remove}
 
-                     {:link/path ":body 0 :many-ref2 :body :one-ref1" :link/rel :hyperfiddle/new}
-                     {:link/path ":body 0 :many-ref2 :body :one-ref1" :link/rel :hyperfiddle/edit}
-                     {:link/path ":body 0 :many-ref2 :body :one-ref1" :link/rel :hyperfiddle/remove}
+                     {:link/path "0 :many-ref2 :one-ref1" :link/rel :hyperfiddle/new}
+                     {:link/path "0 :many-ref2 :one-ref1" :link/rel :hyperfiddle/edit}
+                     {:link/path "0 :many-ref2 :one-ref1" :link/rel :hyperfiddle/remove}
 
-                     {:link/path ":body 0 :many-ref2 :body :many-ref1" :link/rel :hyperfiddle/new}
-                     {:link/path ":body 0 :many-ref2 :body :many-ref1 :body" :link/rel :hyperfiddle/edit}
-                     {:link/path ":body 0 :many-ref2 :body :many-ref1 :body" :link/rel :hyperfiddle/remove}}
+                     {:link/path "0 :many-ref2 :many-ref1" :link/rel :hyperfiddle/new}
+                     {:link/path "0 :many-ref2 :many-ref1" :link/rel :hyperfiddle/edit}
+                     {:link/path "0 :many-ref2 :many-ref1" :link/rel :hyperfiddle/remove}}
           actual (->> links
                       (walk/prewalk (fn [x]
                                       (if (map? x)

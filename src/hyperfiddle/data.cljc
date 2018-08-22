@@ -35,11 +35,21 @@
       (vec paths)
       )))
 
-(defn deps-satisfied? "Links in this :body strata" [this-path link-path]
+(defn cardinality [ctx segment]
+  (field/field-at-path @(:hypercrud.browser/field ctx) segment))
+
+(defn deps-satisfied? "Links in this :body strata" [ctx link-path]
   ; TODO tighten - needs to understand WHICH find element is in scope
-  (let [left-divergence (contrib.data/ancestry-divergence link-path this-path)
-        more-splits (->> left-divergence (filter #(= :body %)) count)]
-    (= 0 more-splits)))
+  (let [this-path (:hypercrud.browser/path ctx)
+        left-divergence (contrib.data/ancestry-divergence link-path this-path)]
+    (loop [path (vec this-path)
+           [x & xs] left-divergence]
+      (if-not x
+        true
+        (let [next-path (conj path x)]
+          (case (cardinality ctx next-path)
+            :db.cardinality/many false
+            (recur next-path xs)))))))
 
 (defn link-path-floor [path]
   (->> path
@@ -54,7 +64,7 @@
   ; Not reactive! Track it outside. (r/track data/select-all ctx rel ?class)
   ([ctx]
    (->> @(:hypercrud.browser/links ctx)                     ; Reaction deref is why this belongs in a track
-        (filter (comp (partial deps-satisfied? (:hypercrud.browser/path ctx))
+        (filter (comp (partial deps-satisfied? ctx)
                       link/read-path :link/path))))
   ([ctx rel] {:pre [rel]}
    (->> (select-all ctx)
