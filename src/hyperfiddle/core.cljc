@@ -7,7 +7,6 @@
     #?(:cljs [contrib.reagent])
     #?(:cljs [contrib.ui])
     #?(:cljs [hyperfiddle.ui])
-    #?(:cljs [hyperfiddle.ui.hacks])
 
     ; These things can hardcode hyperfiddle.ui, like userland
     #?(:cljs [hyperfiddle.ui.markdown-extensions])

@@ -32,7 +32,6 @@
     [hyperfiddle.ui.api]
     [hyperfiddle.ui.controls :as controls]
     [hyperfiddle.ui.hyper-controls :refer [attribute-label entity-label magic-new-body magic-new-head]]
-    [hyperfiddle.ui.hacks]                                  ; exports
     [hyperfiddle.ui.popover :refer [popover-cmp]]
     [hyperfiddle.ui.select :refer [select]]
     [hyperfiddle.ui.sort :as sort]
@@ -439,8 +438,7 @@ nil. call site must wrap with a Reagent component"
      (result @(:hypercrud.browser/data ctx) ctx #_{:class (css (semantic-css ctx))})]))
 
 (letfn [(render-edn [data]
-          (let [edn-str (-> (hyperfiddle.ui.hacks/pull-soup->tree data)
-                            (pprint-str 160))]
+          (let [edn-str (pprint-str data 160)]
             [contrib.ui/code edn-str #() {:read-only true}]))]
   (defn ^:export fiddle-api [ctx class]
     (let [data (hyperfiddle.ui.api/api-data ctx)]
